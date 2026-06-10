@@ -205,6 +205,19 @@ type ExptLifecycleEvent struct {
 	SourceType SourceType `json:"source_type"`
 }
 
+// WebhookRetryEvent Webhook 重试 MQ 消息结构
+type WebhookRetryEvent struct {
+	DeliveryID string `json:"delivery_id"`
+	ExptID     int64  `json:"expt_id"`
+	SpaceID    int64  `json:"space_id"`
+	Event      string `json:"event"`
+	URL        string `json:"url"`
+	Payload    string `json:"payload"`
+	Timestamp  int64  `json:"timestamp"`
+	RetryCount int    `json:"retry_count"`
+	MaxRetries int    `json:"max_retries"`
+}
+
 type ExportScene int
 
 const (

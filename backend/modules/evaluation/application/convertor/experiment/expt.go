@@ -557,6 +557,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+	if cer.IsSetNotifications() {
+		param.NotificationConf = ConvertNotificationRulesToDomain(cer.GetNotifications())
+	}
 	return param, nil
 }
 

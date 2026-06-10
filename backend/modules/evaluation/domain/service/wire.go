@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/pipeline"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	taskrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/task"
+	webhookinfra "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 )
@@ -37,6 +38,11 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	NewSchedulerModeFactory,
 	NewExptTemplateManager,
 	NewEvaluationAnalysisService,
+	// Notification / Webhook
+	NewNotificationDispatcher,
+	NewWebhookDeliveryService,
+	rpc.NewNoopWebhookSecretProvider,
+	webhookinfra.NewWebhookHTTPClient,
 	// Infrastructure Sets
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,

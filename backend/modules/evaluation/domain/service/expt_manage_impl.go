@@ -830,6 +830,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
 	}
+	if req.NotificationConf != nil {
+		do.NotificationConf = req.NotificationConf
+	}
 	if req.Visibility != nil {
 		do.Visibility = *req.Visibility
 	}

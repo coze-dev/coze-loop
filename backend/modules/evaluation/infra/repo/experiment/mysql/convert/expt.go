@@ -71,6 +71,30 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 	return expt, nil
 }
 
+// NotificationConfToBytes 将 NotificationConf 序列化为 JSON bytes（用于 UpdateFields 写入 notification_conf 列）
+func NotificationConfToBytes(rules []entity.NotificationRule) (*[]byte, error) {
+	if len(rules) == 0 {
+		return nil, nil
+	}
+	bytes, err := json.Marshal(rules)
+	if err != nil {
+		return nil, errorx.Wrapf(err, "NotificationConf json marshal fail")
+	}
+	return &bytes, nil
+}
+
+// NotificationConfFromBytes 将 notification_conf JSON bytes 反序列化为 NotificationConf
+func NotificationConfFromBytes(data *[]byte) ([]entity.NotificationRule, error) {
+	if data == nil || len(*data) == 0 {
+		return nil, nil
+	}
+	var rules []entity.NotificationRule
+	if err := json.Unmarshal(*data, &rules); err != nil {
+		return nil, errorx.Wrapf(err, "NotificationConf json unmarshal fail")
+	}
+	return rules, nil
+}
+
 func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRef) (*entity.Experiment, error) {
 	evalConf := new(entity.EvaluationConfiguration)
 	if err := lo.TernaryF(

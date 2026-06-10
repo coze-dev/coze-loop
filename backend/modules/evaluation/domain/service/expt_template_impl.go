@@ -157,7 +157,8 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			CreatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 		},
-		ExptSource: param.ExptSource,
+		ExptSource:       param.ExptSource,
+		NotificationConf: param.NotificationConf,
 	}
 	if param.Visibility != nil {
 		template.Meta.Visibility = *param.Visibility
@@ -466,6 +467,13 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		TemplateConf:        param.TemplateConf,
 		BaseInfo:            baseInfo,
 		ExptInfo:            mergedExptInfo,
+	}
+
+	// 合并 NotificationConf（nil 表示不修改，保留已有值）
+	if param.NotificationConf != nil {
+		updatedTemplate.NotificationConf = param.NotificationConf
+	} else {
+		updatedTemplate.NotificationConf = existingTemplate.NotificationConf
 	}
 
 	// 如果 TemplateConf 为空，保持原有值

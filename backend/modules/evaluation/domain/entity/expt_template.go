@@ -37,6 +37,8 @@ type ExptTemplate struct {
 
 	// ExptSource 实验来源信息（存储在 template_conf JSON 中）
 	ExptSource *ExptSource
+
+	NotificationConf []NotificationRule `json:"notification_conf,omitempty"` // 通知配置
 }
 
 // ExptSource 实验来源信息
@@ -424,6 +426,7 @@ type CreateExptTemplateParam struct {
 	CronActivate            bool // 是否开启定时触发
 	CreateEvalTargetParam   *CreateEvalTargetParam
 	ExptSource              *ExptSource // 实验来源信息
+	NotificationConf        []NotificationRule
 }
 
 // UpdateExptTemplateParam 更新实验模板参数
@@ -441,7 +444,8 @@ type UpdateExptTemplateParam struct {
 	CronActivate            *bool // nil 表示不修改
 	CreateEvalTargetParam   *CreateEvalTargetParam
 	// ExptSource 实验来源信息；nil 表示不修改，由 service 层保留 DB 已有值
-	ExptSource *ExptSource
+	ExptSource       *ExptSource
+	NotificationConf []NotificationRule // nil 表示不修改
 }
 
 // UpdateExptTemplateMetaParam 更新实验模板 Meta 参数

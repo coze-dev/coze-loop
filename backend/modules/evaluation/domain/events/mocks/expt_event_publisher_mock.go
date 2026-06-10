@@ -153,3 +153,17 @@ func (mr *MockExptEventPublisherMockRecorder) PublishExptTurnResultFilterEvent(c
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptTurnResultFilterEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptTurnResultFilterEvent), ctx, event, duration)
 }
+
+// PublishWebhookRetryEvent mocks base method.
+func (m *MockExptEventPublisher) PublishWebhookRetryEvent(ctx context.Context, event *entity.WebhookRetryEvent, delay *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishWebhookRetryEvent", ctx, event, delay)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishWebhookRetryEvent indicates an expected call of PublishWebhookRetryEvent.
+func (mr *MockExptEventPublisherMockRecorder) PublishWebhookRetryEvent(ctx, event, delay any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishWebhookRetryEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishWebhookRetryEvent), ctx, event, delay)
+}
