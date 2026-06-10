@@ -27,7 +27,7 @@ const (
 	MetricTypePie        MetricType = "pie"         // 饼图
 
 	MetricSourceInnerStorage MetricSource = "storage"
-	MetricSourceAnnotation MetricSource = "annotation" // 数据来源 annotation 表（在线查 annotation 表，离线查 metric 表）
+	MetricSourceAnnotation   MetricSource = "annotation" // 数据来源 annotation 表（在线查 annotation 表，离线查 metric 表）
 
 	MetricGranularity1Min  MetricGranularity = "1min"
 	MetricGranularity1Hour MetricGranularity = "1hour"
@@ -109,9 +109,9 @@ const (
 	// Feedback相关指标
 	MetricNameFeedbackCount             = "feedback_count"
 	MetricNameFeedbackScore             = "feedback_score"
-	MetricNameFeedbackValueDistribution  = "feedback_value_distribution"
-	MetricNameFeedbackCountByKeyPie      = "feedback_count_by_key_pie"
-	MetricNameFeedbackCountBySourcePie   = "feedback_count_by_source_pie"
+	MetricNameFeedbackValueDistribution = "feedback_value_distribution"
+	MetricNameFeedbackCountByKeyPie     = "feedback_count_by_key_pie"
+	MetricNameFeedbackCountBySourcePie  = "feedback_count_by_source_pie"
 
 	// 复合指标计算
 	MetricOperatorDivide MetricOperator = "divide"

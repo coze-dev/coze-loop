@@ -1049,7 +1049,7 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 			Key:            anno.GetKey(),
 			OriginalKey:    originalKeys[i],
 			AnnotationType: loop_span.AnnotationType(anno.GetType()),
-			ValueType:      string(anno.GetValueType()),
+			ValueType:      anno.GetValueType(),
 		}
 		keyCount[k]++
 	}
@@ -1070,7 +1070,7 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 			OriginalKey:    ptr.Of(k.OriginalKey),
 		}
 		if k.ValueType != "" {
-			info.ValueType = ptr.Of(annodto.ValueType(k.ValueType))
+			info.ValueType = ptr.Of(k.ValueType)
 		}
 		simpleList = append(simpleList, info)
 	}
