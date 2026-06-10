@@ -85,18 +85,3 @@ func (mr *MockIMetricsServiceMockRecorder) TraverseMetrics(ctx, req any) *gomock
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TraverseMetrics", reflect.TypeOf((*MockIMetricsService)(nil).TraverseMetrics), ctx, req)
 }
-
-// TraverseFeedbackMetrics mocks base method.
-func (m *MockIMetricsService) TraverseFeedbackMetrics(ctx context.Context, req *service.TraverseFeedbackMetricsReq) (*service.TraverseFeedbackMetricsResp, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TraverseFeedbackMetrics", ctx, req)
-	ret0, _ := ret[0].(*service.TraverseFeedbackMetricsResp)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TraverseFeedbackMetrics indicates an expected call of TraverseFeedbackMetrics.
-func (mr *MockIMetricsServiceMockRecorder) TraverseFeedbackMetrics(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TraverseFeedbackMetrics", reflect.TypeOf((*MockIMetricsService)(nil).TraverseFeedbackMetrics), ctx, req)
-}

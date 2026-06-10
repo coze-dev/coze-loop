@@ -38,34 +38,8 @@ type IOfflineMetricRepo interface {
 	InsertMetrics(ctx context.Context, events []*entity.MetricEvent) error
 }
 
-// QueryFeedbackAggregationParam annotation 表 Feedback 聚合查询参数
-type QueryFeedbackAggregationParam struct {
-	Tenants   []string
-	StartDate string // e.g. "2026-06-02"
-}
-
-// FeedbackAggregationRow annotation 表 Feedback 聚合查询结果行
-type FeedbackAggregationRow struct {
-	SpaceID        string
-	AnnotationKey  string
-	PSM            string
-	AgentName      string
-	FeedbackSource string // annotation_type
-	ValueType      string
-	ValueString    string
-	Count          int64
-	AvgFloat       float64
-	MaxFloat       float64
-	MinFloat       float64
-	P50Float       float64
-	P90Float       float64
-	P99Float       float64
-}
-
-// IAnnotationMetricRepo annotation 表 Feedback 指标聚合查询接口
+// IAnnotationMetricRepo annotation 表 Feedback 指标查询接口
 type IAnnotationMetricRepo interface {
-	// QueryFeedbackAggregation 离线 CronJob 聚合查询（按天）
-	QueryFeedbackAggregation(ctx context.Context, param *QueryFeedbackAggregationParam) ([]*FeedbackAggregationRow, error)
 	// QueryFeedbackOnlineMetrics 在线实时查询（按时间范围）
 	QueryFeedbackOnlineMetrics(ctx context.Context, param *QueryFeedbackOnlineParam) (*GetMetricsResult, error)
 }
@@ -74,6 +48,7 @@ type IAnnotationMetricRepo interface {
 type QueryFeedbackOnlineParam struct {
 	Tenants           []string
 	WorkspaceID       string
+	GroupBySpaceID    bool
 	StartTime         int64 // ms timestamp
 	EndTime           int64 // ms timestamp
 	MetricNames       []string

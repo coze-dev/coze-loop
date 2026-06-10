@@ -81,7 +81,6 @@ type TraverseMetricDetail struct {
 type IMetricsService interface {
 	QueryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error)
 	TraverseMetrics(ctx context.Context, req *TraverseMetricsReq) (*TraverseMetricsResp, error)
-	TraverseFeedbackMetrics(ctx context.Context, req *TraverseFeedbackMetricsReq) (*TraverseFeedbackMetricsResp, error)
 	GetMetricGroupBy(metricName string) ([]string, error)
 }
 
@@ -469,12 +468,19 @@ func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *
 		param := &repo.QueryFeedbackOnlineParam{
 			Tenants:           tenants,
 			WorkspaceID:       strconv.FormatInt(req.WorkspaceID, 10),
+			GroupBySpaceID:    req.GroupBySpaceID,
 			StartTime:         req.StartTime,
 			EndTime:           req.EndTime,
 			MetricNames:       []string{metricName},
 			MetricExpressions: metricExpressions,
 			Filters:           req.FilterFields,
 			DrillDownFields:   req.DrillDownFields,
+		}
+		// GroupBySpaceID 时，添加 space_id 到 DrillDownFields（CK 层会按 space_id GROUP BY）
+		if req.GroupBySpaceID {
+			param.DrillDownFields = append(param.DrillDownFields, &loop_span.FilterField{
+				FieldName: loop_span.SpanFieldSpaceId,
+			})
 		}
 		// 把指标定义的 GroupBy 维度合并到 DrillDownFields
 		for _, dim := range mDef.GroupBy() {
