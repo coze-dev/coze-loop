@@ -181,7 +181,7 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	webhookDeliveryService := service.NewWebhookDeliveryService(iWebhookSecretProvider, iWebhookHTTPClient, exptEventPublisher)
 	notificationDispatcher := service.NewNotificationDispatcher(webhookDeliveryService, iNotifyRPCAdapter, iUserProvider)
 	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, notificationDispatcher)
-	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, componentIConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, serviceEvaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler)
+	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, componentIConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, serviceEvaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler, webhookDeliveryService)
 	return iExperimentApplication, nil
 }
 
@@ -417,7 +417,7 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	webhookDeliveryService := service.NewWebhookDeliveryService(iWebhookSecretProvider, iWebhookHTTPClient, exptEventPublisher)
 	notificationDispatcher := service.NewNotificationDispatcher(webhookDeliveryService, iNotifyRPCAdapter, iUserProvider)
 	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, notificationDispatcher)
-	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler)
+	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler, webhookDeliveryService)
 	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger)
 	return evalOpenAPIService, nil
 }

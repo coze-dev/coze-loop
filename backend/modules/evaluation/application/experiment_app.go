@@ -76,6 +76,15 @@ type experimentApplication struct {
 
 	// 实验模板管理服务
 	templateManager service.IExptTemplateManager
+
+	// 新增：Webhook 重试投递 service（供 webhook_retry consumer 消费 MQ 消息时使用）
+	webhookDelivery *service.WebhookDeliveryService
+}
+
+// GetWebhookDeliveryService 实现 consumer 包的 IWebhookDeliveryProvider 接口，
+// 用于在 consumer 启动时拿到 webhook 重试 service。
+func (e *experimentApplication) GetWebhookDeliveryService() *service.WebhookDeliveryService {
+	return e.webhookDelivery
 }
 
 func NewExperimentApplication(
@@ -98,6 +107,7 @@ func NewExperimentApplication(
 	templateManager service.IExptTemplateManager,
 	fileProvider rpc.IFileProvider,
 	lifecycleEventHandler service.ExptLifecycleEventHandler,
+	webhookDelivery *service.WebhookDeliveryService,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -119,6 +129,7 @@ func NewExperimentApplication(
 		evaluatorService:            evaluatorService,
 		templateManager:             templateManager,
 		fileProvider:                fileProvider,
+		webhookDelivery:             webhookDelivery,
 	}
 }
 

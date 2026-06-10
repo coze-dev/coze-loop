@@ -10,6 +10,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -18,14 +19,26 @@ func NewConsumerWorkers(
 	loader conf.IConfigLoader,
 	exptApp application.IExperimentApplication,
 ) ([]mq.IConsumerWorker, error) {
-	return []mq.IConsumerWorker{
+	workers := []mq.IConsumerWorker{
 		NewExptSchedulerEventConsumer(NewExptSchedulerConsumer(exptApp), loader),
 		NewExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
 		NewExptAggrCalculateEventConsumer(NewAggrCalculateConsumer(exptApp), loader),
 		NewExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
 		NewExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
 		NewExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp), loader),
-	}, nil
+	}
+	if wh, ok := exptApp.(IWebhookDeliveryProvider); ok && wh != nil {
+		if delivery := wh.GetWebhookDeliveryService(); delivery != nil {
+			workers = append(workers, NewWebhookDeliveryEventConsumer(NewWebhookRetryConsumer(delivery), loader))
+		}
+	}
+	return workers, nil
+}
+
+// IWebhookDeliveryProvider 由 application 实现，向 consumer 包暴露 webhook 重试 service。
+// 这样保持 cmd 层 NewConsumerWorkers 签名不变，避免 cmd 增加对 domain/service 的直接依赖。
+type IWebhookDeliveryProvider interface {
+	GetWebhookDeliveryService() *service.WebhookDeliveryService
 }
 
 func NewExptSchedulerEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
