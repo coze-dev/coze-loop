@@ -95,6 +95,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ExptTemplateMeta not valid, %w", err)
 		}
 	}
+	if p.Notifications != nil {
+		if err := p.Notifications.IsValid(); err != nil {
+			return fmt.Errorf("field Notifications not valid, %w", err)
+		}
+	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
@@ -212,6 +217,11 @@ func (p *ExptTemplate) IsValid() error {
 			return fmt.Errorf("field ScoreWeightConfig not valid, %w", err)
 		}
 	}
+	if p.Notifications != nil {
+		if err := p.Notifications.IsValid(); err != nil {
+			return fmt.Errorf("field Notifications not valid, %w", err)
+		}
+	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
@@ -276,6 +286,36 @@ func (p *ExperimentResultFilter) IsValid() error {
 			return fmt.Errorf("field KeywordSearch not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *WebhookAction) IsValid() error {
+	return nil
+}
+func (p *NotificationAction) IsValid() error {
+	if p.Webhook != nil {
+		if err := p.Webhook.IsValid(); err != nil {
+			return fmt.Errorf("field Webhook not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationCondition) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationRule) IsValid() error {
+	if p.Condition != nil {
+		if err := p.Condition.IsValid(); err != nil {
+			return fmt.Errorf("field Condition not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationConfig) IsValid() error {
 	return nil
 }
 func (p *RunError) IsValid() error {

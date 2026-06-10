@@ -105,6 +105,9 @@ struct Experiment {
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+
+    // 通知配置（实验级，整体序列化进 notification_conf BLOB）
+    110: optional NotificationConfig notifications
 }
 
 // 实验模板基础信息
@@ -152,6 +155,9 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+
+    // 通知配置（模板级，模板创建实验时继承到实验）
+    10: optional NotificationConfig notifications
 
     255: optional common.BaseInfo base_info
 }
@@ -516,6 +522,45 @@ enum FilterOperatorType {
     IsNull = 11 // 为空
     IsNotNull = 12 //非空
 
+}
+
+// ===============================
+// 实验通知配置（控制台域，int 枚举）
+// 复用本文件既有 Filters / FilterCondition / FilterField(field_type=ExptStatus) / FilterOperatorType(In/NotIn)
+// ===============================
+
+// 通知渠道类型
+enum NotificationChannelType {
+    Unknown = 0
+    Webhook = 1
+    Feishu  = 2
+}
+
+// Webhook 动作：一个 webhook action 携带多个 URL（多 URL = 同一 action 内列表，各 URL 独立投递/重试）
+struct WebhookAction {
+    1: optional list<string> urls
+}
+
+// 通知动作
+struct NotificationAction {
+    1: optional NotificationChannelType type        // webhook / feishu
+    2: optional WebhookAction webhook               // 仅 type=Webhook 时有值；feishu 无附加字段
+}
+
+// 通知条件：复用 Filters 语义（本期 field 固定 ExptStatus，operator ∈ {In, NotIn}）
+struct NotificationCondition {
+    1: optional Filters filters
+}
+
+// 通知规则
+struct NotificationRule {
+    1: optional NotificationCondition condition
+    2: optional list<NotificationAction> actions
+}
+
+// 通知配置（整体序列化进 notification_conf BLOB）
+struct NotificationConfig {
+    1: optional list<NotificationRule> rules
 }
 
 enum ExptAggregateCalculateStatus {

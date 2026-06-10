@@ -37,6 +37,11 @@ func (p *CreateExperimentRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.Notifications != nil {
+		if err := p.Notifications.IsValid(); err != nil {
+			return fmt.Errorf("field Notifications not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -81,6 +86,11 @@ func (p *SubmitExperimentRequest) IsValid() error {
 	if p.TimeRange != nil {
 		if err := p.TimeRange.IsValid(); err != nil {
 			return fmt.Errorf("field TimeRange not valid, %w", err)
+		}
+	}
+	if p.Notifications != nil {
+		if err := p.Notifications.IsValid(); err != nil {
+			return fmt.Errorf("field Notifications not valid, %w", err)
 		}
 	}
 	if p.Session != nil {
@@ -441,6 +451,11 @@ func (p *CreateExperimentTemplateRequest) IsValid() error {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
 		}
 	}
+	if p.Notifications != nil {
+		if err := p.Notifications.IsValid(); err != nil {
+			return fmt.Errorf("field Notifications not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -537,6 +552,11 @@ func (p *UpdateExperimentTemplateRequest) IsValid() error {
 	if p.ExptSource != nil {
 		if err := p.ExptSource.IsValid(); err != nil {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
+	if p.Notifications != nil {
+		if err := p.Notifications.IsValid(); err != nil {
+			return fmt.Errorf("field Notifications not valid, %w", err)
 		}
 	}
 	if p.Base != nil {

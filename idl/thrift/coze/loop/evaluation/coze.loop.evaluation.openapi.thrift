@@ -430,7 +430,9 @@ struct SubmitExperimentOApiRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
 
-    100: optional map<string, string> ext (api.body = 'ext')    
+    100: optional map<string, string> ext (api.body = 'ext')
+
+    110: optional experiment.NotificationConfig notifications (api.body = 'notifications')
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
@@ -968,6 +970,8 @@ struct CreateExptTemplateOApiRequest {
     20: optional SubmitExperimentEvalTargetParam create_eval_target_param (api.body="create_eval_target_param")
     21: optional i32 default_evaluators_concur_num (api.body="default_evaluators_concur_num")
     22: optional bool enable_extract_trajectory (api.body="enable_extract_trajectory", go.tag='json:"enable_extract_trajectory"')
+
+    40: optional experiment.NotificationConfig notifications (api.body="notifications")
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base

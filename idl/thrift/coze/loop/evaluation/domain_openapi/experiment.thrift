@@ -170,6 +170,9 @@ struct Experiment {
     // 离线实验分析状态
     61: optional OfflineExptAnalysisStatus offline_expt_analysis_status
 
+    // 通知配置
+    70: optional NotificationConfig notifications
+
     100: optional common.BaseInfo base_info
 }
 
@@ -300,6 +303,9 @@ struct ExptTemplate {
     4: optional ExptScoreWeight score_weight_config (go.tag = 'json:"score_weight_config"')
     5: optional bool enable_extract_trajectory
 
+    // 通知配置（模板级，模板创建实验时继承到实验）
+    10: optional NotificationConfig notifications
+
     100: optional common.BaseInfo base_info
 }
 
@@ -418,6 +424,43 @@ struct ExperimentFilterOption {
 struct ExperimentResultFilter {
     1: optional Filters filters
     2: optional KeywordSearch keyword_search
+}
+
+// ===============================
+// 实验通知配置（OpenAPI 域，字符串枚举）
+// 复用本文件既有 Filters / FilterCondition / FilterField(field_type=expt_status) / FilterOperatorType(in/not_in)
+// ===============================
+
+// 通知渠道类型（OpenAPI 字符串枚举）
+typedef string NotificationChannelType(ts.enum="true")
+const NotificationChannelType NotificationChannelType_Webhook = "webhook"
+const NotificationChannelType NotificationChannelType_Feishu  = "feishu"
+
+// Webhook 动作：一个 webhook action 携带多个 URL，各 URL 独立投递/重试
+struct WebhookAction {
+    1: optional list<string> urls
+}
+
+// 通知动作
+struct NotificationAction {
+    1: optional NotificationChannelType type
+    2: optional WebhookAction webhook
+}
+
+// 通知条件：复用 Filters 语义（本期 field 固定 expt_status，operator ∈ {in, not_in}）
+struct NotificationCondition {
+    1: optional Filters filters
+}
+
+// 通知规则
+struct NotificationRule {
+    1: optional NotificationCondition condition
+    2: optional list<NotificationAction> actions
+}
+
+// 通知配置
+struct NotificationConfig {
+    1: optional list<NotificationRule> rules
 }
 
 // ===============================
