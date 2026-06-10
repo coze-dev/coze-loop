@@ -108,12 +108,7 @@ const (
 
 	// Feedback相关指标
 	MetricNameFeedbackCount             = "feedback_count"
-	MetricNameFeedbackScoreAvg          = "feedback_score_avg"
-	MetricNameFeedbackScoreMax          = "feedback_score_max"
-	MetricNameFeedbackScoreMin          = "feedback_score_min"
-	MetricNameFeedbackScoreP50          = "feedback_score_p50"
-	MetricNameFeedbackScoreP90          = "feedback_score_p90"
-	MetricNameFeedbackScoreP99          = "feedback_score_p99"
+	MetricNameFeedbackScore             = "feedback_score"
 	MetricNameFeedbackValueDistribution  = "feedback_value_distribution"
 	MetricNameFeedbackCountByKeyPie      = "feedback_count_by_key_pie"
 	MetricNameFeedbackCountBySourcePie   = "feedback_count_by_source_pie"
