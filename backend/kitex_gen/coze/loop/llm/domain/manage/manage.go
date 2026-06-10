@@ -28,6 +28,8 @@ const (
 
 	ProtocolArkbot = "arkbot"
 
+	ProtocolMinimax = "minimax"
+
 	ParamTypeFloat = "float"
 
 	ParamTypeInt = "int"
