@@ -18,7 +18,7 @@ func (m *FeedbackCountBySourcePieMetric) Name() string {
 }
 
 func (m *FeedbackCountBySourcePieMetric) Type() entity.MetricType {
-	return entity.MetricTypeSummary
+	return entity.MetricTypePie
 }
 
 func (m *FeedbackCountBySourcePieMetric) Source() entity.MetricSource {
