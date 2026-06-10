@@ -52,6 +52,7 @@ i=1
 for file in $(ls "$BASE_INIT_PATH" | grep '\.sql$'); do
   echo "+ Init #$i: $file"
   mysql \
+    --default-character-set=utf8mb4 \
     -h "$MYSQL_HOST" \
     -u "$MYSQL_USER" \
     -D "$MYSQL_DATABASE" \
@@ -64,6 +65,7 @@ echo "Loading compatibility functions..."
 if [ -f "$ALTERS_PATH/alter_proc.sql" ]; then
   echo "+ Proc: alter_proc.sql"
   mysql \
+    --default-character-set=utf8mb4 \
     -h "$MYSQL_HOST" \
     -u "$MYSQL_USER" \
     -D "$MYSQL_DATABASE" \
@@ -88,6 +90,7 @@ if [ -d "$ALTERS_PATH" ]; then
 
     # Execute the file content through the compatibility system
     mysql \
+      --default-character-set=utf8mb4 \
       -h "$MYSQL_HOST" \
       -u "$MYSQL_USER" \
       -D "$MYSQL_DATABASE" \
