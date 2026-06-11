@@ -2851,7 +2851,7 @@ func TestTraceApplication_ListWorkspaceAnnotations(t *testing.T) {
 		assert.Len(t, resp.SimpleAnnotationList, 1)
 		// ValueType should be set because the annotation has ValueType "double"
 		assert.NotNil(t, resp.SimpleAnnotationList[0].ValueType)
-		assert.Equal(t, "double", string(*resp.SimpleAnnotationList[0].ValueType))
+		assert.Equal(t, "double", *resp.SimpleAnnotationList[0].ValueType)
 	})
 }
 

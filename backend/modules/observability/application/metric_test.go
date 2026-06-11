@@ -682,7 +682,6 @@ func TestMetricApplication_validateGetDrillDownValuesReq(t *testing.T) {
 	}
 }
 
-func ptr32(v int32) *int32 { return &v }
 func ptr64(v int64) *int64 { return &v }
 func ptrStr(v string) *string { return &v }
 
