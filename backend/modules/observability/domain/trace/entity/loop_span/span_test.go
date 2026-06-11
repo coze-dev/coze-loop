@@ -1681,3 +1681,68 @@ func TestSpan_GetMetaDataValue(t *testing.T) {
 		assert.Nil(t, span.GetMetaDataValue("nonexistent"))
 	})
 }
+
+func TestSpan_GetAnnotationSpanInfo(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		span *Span
+		want AnnotationSpanInfo
+	}{
+		{
+			name: "PSM set and TagsString has agent_name",
+			span: &Span{
+				PSM: "test-psm",
+				TagsString: map[string]string{
+					SpanFieldAgentName: "my-agent",
+				},
+			},
+			want: AnnotationSpanInfo{
+				PSM:       "test-psm",
+				AgentName: "my-agent",
+			},
+		},
+		{
+			name: "PSM set and TagsString nil",
+			span: &Span{
+				PSM:        "test-psm",
+				TagsString: nil,
+			},
+			want: AnnotationSpanInfo{
+				PSM: "test-psm",
+			},
+		},
+		{
+			name: "PSM set and TagsString exists but no agent_name key",
+			span: &Span{
+				PSM: "test-psm",
+				TagsString: map[string]string{
+					"other_key": "other_value",
+				},
+			},
+			want: AnnotationSpanInfo{
+				PSM: "test-psm",
+			},
+		},
+		{
+			name: "PSM set and TagsString has empty agent_name",
+			span: &Span{
+				PSM: "test-psm",
+				TagsString: map[string]string{
+					SpanFieldAgentName: "",
+				},
+			},
+			want: AnnotationSpanInfo{
+				PSM: "test-psm",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.span.GetAnnotationSpanInfo()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

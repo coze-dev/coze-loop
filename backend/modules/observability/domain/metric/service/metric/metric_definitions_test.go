@@ -424,11 +424,11 @@ var baseExpressionGenerators = map[string]func(entity.MetricGranularity) string{
 	entity.MetricNameToolTotalErrorCount:      countIfErrorExpr,
 	entity.MetricNameToolTotalSuccessCount:    countIfSuccessExpr,
 	// Feedback
-	entity.MetricNameFeedbackCount:             countExpr,
-	entity.MetricNameFeedbackScore:             valueFloatExpr,
-	entity.MetricNameFeedbackValueDistribution: countExpr,
-	entity.MetricNameFeedbackCountByKeyPie:     countExpr,
-	entity.MetricNameFeedbackCountBySourcePie:  countExpr,
+	entity.MetricNameFeedbackCount:              countExpr,
+	entity.MetricNameFeedbackScore:              valueFloatExpr,
+	entity.MetricNameFeedbackValueDistribution:  countExpr,
+	entity.MetricNameFeedbackCountByKeyPie:      countExpr,
+	entity.MetricNameFeedbackCountBySourcePie:   countExpr,
 }
 
 func countExpr(entity.MetricGranularity) string {

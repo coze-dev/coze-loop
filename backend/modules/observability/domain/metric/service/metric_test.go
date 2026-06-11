@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
@@ -265,6 +266,7 @@ type testMetricDefinition struct {
 	metricType entity.MetricType
 	groupBy    []*entity.Dimension
 	where      []*loop_span.FilterField
+	source     entity.MetricSource
 }
 
 func (d *testMetricDefinition) Name() string {
@@ -276,6 +278,9 @@ func (d *testMetricDefinition) Type() entity.MetricType {
 }
 
 func (d *testMetricDefinition) Source() entity.MetricSource {
+	if d.source != "" {
+		return d.source
+	}
 	return entity.MetricSourceInnerStorage
 }
 
@@ -672,4 +677,302 @@ func TestGetMetricGroupBy(t *testing.T) {
 		assert.Nil(t, keys)
 		assert.Contains(t, err.Error(), "groupby dimension has no alias")
 	})
+}
+
+func TestIsAllAnnotationSource(t *testing.T) {
+	t.Parallel()
+
+	annotationDef := &testMetricDefinition{
+		name:       "feedback_count",
+		metricType: entity.MetricTypeSummary,
+		source:     entity.MetricSourceAnnotation,
+	}
+	normalDef := &testMetricDefinition{
+		name:       "normal_metric",
+		metricType: entity.MetricTypeSummary,
+	}
+
+	svc := &MetricsService{
+		metricDefMap: map[string]entity.IMetricDefinition{
+			"feedback_count": annotationDef,
+			"normal_metric":  normalDef,
+		},
+	}
+
+	t.Run("all annotation source", func(t *testing.T) {
+		t.Parallel()
+		assert.True(t, svc.isAllAnnotationSource([]string{"feedback_count"}))
+	})
+
+	t.Run("mixed sources", func(t *testing.T) {
+		t.Parallel()
+		assert.False(t, svc.isAllAnnotationSource([]string{"feedback_count", "normal_metric"}))
+	})
+
+	t.Run("empty metric names", func(t *testing.T) {
+		t.Parallel()
+		assert.False(t, svc.isAllAnnotationSource([]string{}))
+	})
+
+	t.Run("unknown metric name", func(t *testing.T) {
+		t.Parallel()
+		assert.False(t, svc.isAllAnnotationSource([]string{"unknown"}))
+	})
+
+	t.Run("all normal source", func(t *testing.T) {
+		t.Parallel()
+		assert.False(t, svc.isAllAnnotationSource([]string{"normal_metric"}))
+	})
+}
+
+func TestWithAnnotationMetricRepo(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+
+	pMetrics := &entity.PlatformMetrics{
+		MetricGroups:       map[string]*entity.MetricGroup{},
+		DrillDownObjects:   map[string]*loop_span.FilterField{},
+		PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{},
+	}
+
+	svc, err := NewMetricsService(nil, nil, nil, nil, nil, pMetrics, WithAnnotationMetricRepo(annoRepoMock))
+	assert.NoError(t, err)
+	assert.NotNil(t, svc)
+
+	// 验证 annotationMetricRepo 已被设置
+	ms := svc.(*MetricsService)
+	assert.Equal(t, annoRepoMock, ms.annotationMetricRepo)
+}
+
+func TestQueryAnnotationMetrics_FallbackToOffline(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	oMetricRepoMock := repomocks.NewMockIOfflineMetricRepo(ctrl)
+
+	annotationDef := &testMetricDefinition{
+		name:       "feedback_count",
+		metricType: entity.MetricTypeSummary,
+		source:     entity.MetricSourceAnnotation,
+	}
+
+	pMetrics := &entity.PlatformMetrics{
+		MetricGroups: map[string]*entity.MetricGroup{
+			"feedback_group": {
+				MetricDefinitions: []entity.IMetricDefinition{annotationDef},
+			},
+		},
+		DrillDownObjects: map[string]*loop_span.FilterField{},
+		PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
+			loop_span.PlatformType("loop"): {
+				MetricGroups: []string{"feedback_group"},
+			},
+		},
+	}
+
+	traceConfigMock.EXPECT().GetMetricQueryConfig(gomock.Any()).Return(&config.MetricQueryConfig{
+		SupportOffline: false,
+	}).AnyTimes()
+
+	// annotationMetricRepo = nil 时 fallback 到离线查询
+	// 离线查询依赖 oMetricRepo
+	oMetricRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
+		Data: []map[string]any{{"feedback_count": "42"}},
+	}, nil).Times(1)
+
+	svc, err := NewMetricsService(nil, oMetricRepoMock, nil, nil, traceConfigMock, pMetrics)
+	assert.NoError(t, err)
+
+	resp, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{
+		PlatformType: loop_span.PlatformType("loop"),
+		WorkspaceID:  1,
+		MetricsNames: []string{"feedback_count"},
+		Granularity:  entity.MetricGranularity1Hour,
+		StartTime:    0,
+		EndTime:      0,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, "42", resp.Metrics["feedback_count"].Summary)
+}
+
+func TestQueryAnnotationMetrics_OnlinePath(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+
+	annotationDef := &testMetricDefinition{
+		name:       "feedback_count",
+		metricType: entity.MetricTypeSummary,
+		source:     entity.MetricSourceAnnotation,
+	}
+
+	pMetrics := &entity.PlatformMetrics{
+		MetricGroups: map[string]*entity.MetricGroup{
+			"feedback_group": {
+				MetricDefinitions: []entity.IMetricDefinition{annotationDef},
+			},
+		},
+		DrillDownObjects: map[string]*loop_span.FilterField{},
+		PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
+			loop_span.PlatformType("loop"): {
+				MetricGroups: []string{"feedback_group"},
+			},
+		},
+	}
+
+	// 不支持离线 -> 走在线 annotation 查询
+	traceConfigMock.EXPECT().GetMetricQueryConfig(gomock.Any()).Return(&config.MetricQueryConfig{
+		SupportOffline: false,
+	}).AnyTimes()
+
+	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
+	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
+		Data: []map[string]any{{"feedback_count": "100"}},
+	}, nil)
+
+	svc, err := NewMetricsService(nil, nil, tenantMock, nil, traceConfigMock, pMetrics, WithAnnotationMetricRepo(annoRepoMock))
+	assert.NoError(t, err)
+
+	resp, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{
+		PlatformType: loop_span.PlatformType("loop"),
+		WorkspaceID:  1,
+		MetricsNames: []string{"feedback_count"},
+		Granularity:  entity.MetricGranularity1Hour,
+		StartTime:    0,
+		EndTime:      0,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, "100", resp.Metrics["feedback_count"].Summary)
+}
+
+func TestQueryAnnotationMetrics_OnlineOfflineSplit(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	oMetricRepoMock := repomocks.NewMockIOfflineMetricRepo(ctrl)
+
+	annotationDef := &testMetricDefinition{
+		name:       "feedback_count",
+		metricType: entity.MetricTypeSummary,
+		source:     entity.MetricSourceAnnotation,
+	}
+
+	pMetrics := &entity.PlatformMetrics{
+		MetricGroups: map[string]*entity.MetricGroup{
+			"feedback_group": {
+				MetricDefinitions: []entity.IMetricDefinition{annotationDef},
+			},
+		},
+		DrillDownObjects: map[string]*loop_span.FilterField{},
+		PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
+			loop_span.PlatformType("loop"): {
+				MetricGroups: []string{"feedback_group"},
+			},
+		},
+	}
+
+	// 支持离线，且临界点 = 3 天前 -> 跨越分界
+	traceConfigMock.EXPECT().GetMetricQueryConfig(gomock.Any()).Return(&config.MetricQueryConfig{
+		SupportOffline:       true,
+		OfflineCriticalPoint: 3,
+	}).AnyTimes()
+
+	// 在线部分
+	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
+	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
+		Data: []map[string]any{{"feedback_count": "50"}},
+	}, nil)
+
+	// 离线部分
+	oMetricRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
+		Data: []map[string]any{{"feedback_count": "30"}},
+	}, nil)
+
+	svc, err := NewMetricsService(nil, oMetricRepoMock, tenantMock, nil, traceConfigMock, pMetrics, WithAnnotationMetricRepo(annoRepoMock))
+	assert.NoError(t, err)
+
+	// 查询时间跨越分界：开始时间 = 10天前，结束时间 = 现在
+	now := time.Now().UnixMilli()
+	tenDaysAgo := time.Now().Add(-10 * 24 * time.Hour).UnixMilli()
+
+	resp, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{
+		PlatformType: loop_span.PlatformType("loop"),
+		WorkspaceID:  1,
+		MetricsNames: []string{"feedback_count"},
+		Granularity:  entity.MetricGranularity1Hour,
+		StartTime:    tenDaysAgo,
+		EndTime:      now,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	// 在线 50 + 离线 30 = 80
+	assert.Equal(t, "80", resp.Metrics["feedback_count"].Summary)
+}
+
+func TestQueryAnnotationOnlineMetrics_TenantError(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+
+	annotationDef := &testMetricDefinition{
+		name:       "feedback_count",
+		metricType: entity.MetricTypeSummary,
+		source:     entity.MetricSourceAnnotation,
+	}
+
+	pMetrics := &entity.PlatformMetrics{
+		MetricGroups: map[string]*entity.MetricGroup{
+			"feedback_group": {
+				MetricDefinitions: []entity.IMetricDefinition{annotationDef},
+			},
+		},
+		DrillDownObjects: map[string]*loop_span.FilterField{},
+		PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
+			loop_span.PlatformType("loop"): {
+				MetricGroups: []string{"feedback_group"},
+			},
+		},
+	}
+
+	traceConfigMock.EXPECT().GetMetricQueryConfig(gomock.Any()).Return(&config.MetricQueryConfig{
+		SupportOffline: false,
+	}).AnyTimes()
+	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+
+	svc, err := NewMetricsService(nil, nil, tenantMock, nil, traceConfigMock, pMetrics, WithAnnotationMetricRepo(annoRepoMock))
+	assert.NoError(t, err)
+
+	resp, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{
+		PlatformType: loop_span.PlatformType("loop"),
+		WorkspaceID:  1,
+		MetricsNames: []string{"feedback_count"},
+		StartTime:    0,
+		EndTime:      0,
+	})
+	assert.Error(t, err)
+	assert.Nil(t, resp)
 }
