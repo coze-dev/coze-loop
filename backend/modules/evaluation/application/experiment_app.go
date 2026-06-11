@@ -483,6 +483,9 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	if len(req.ItemIds) > 100 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids exceeds maximum of 100"))
 	}
+	if err := validateNotificationRules(req.GetNotifications()); err != nil {
+		return nil, err
+	}
 
 	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
@@ -1666,6 +1669,29 @@ func hasDuplicates(slice []int64) bool {
 	}
 
 	return false
+}
+
+// validateNotificationRules verifies that each webhook action carries a non-empty URL.
+// A webhook action with empty URL would be saved silently and then fail at delivery
+// time — far away from the user's submit action — so reject it up front.
+func validateNotificationRules(rules []*domain_expt.NotificationRule) error {
+	for _, r := range rules {
+		if r == nil {
+			continue
+		}
+		for _, a := range r.Actions {
+			if a == nil {
+				continue
+			}
+			if a.GetType() == domain_expt.NotificationActionTypeWebhook {
+				if strings.TrimSpace(a.GetURL()) == "" {
+					return errorx.NewByCode(errno.CommonInvalidParamCode,
+						errorx.WithExtraMsg("webhook notification url cannot be empty"))
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (e *experimentApplication) AssociateAnnotationTag(ctx context.Context, req *expt.AssociateAnnotationTagReq) (r *expt.AssociateAnnotationTagResp, err error) {
