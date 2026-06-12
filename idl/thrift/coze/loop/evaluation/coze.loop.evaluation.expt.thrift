@@ -1,5 +1,6 @@
 namespace go coze.loop.evaluation.expt
 
+// BAM resync marker (force re-import for swimlane boe_6839386066 IDL alignment)
 include "../../../base.thrift"
 include "../data/domain/dataset.thrift"
 include "./domain/eval_set.thrift"
