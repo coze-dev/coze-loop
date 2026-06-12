@@ -134,6 +134,8 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				f.idGen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2, 3}, nil).AnyTimes()
 				f.publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				f.exptRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{Status: entity.ExptStatus_Processing}, nil).AnyTimes()
+				f.publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 				mode := entitymocks.NewMockExptSchedulerMode(ctrl)
 				mode.EXPECT().ExptStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -180,6 +182,8 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 					},
 				}).AnyTimes()
 				f.idGen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2, 3}, nil).AnyTimes()
+				f.exptRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{Status: entity.ExptStatus_Processing}, nil).AnyTimes()
+				f.publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.manager.EXPECT().CompleteRun(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.manager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				mode := entitymocks.NewMockExptSchedulerMode(ctrl)

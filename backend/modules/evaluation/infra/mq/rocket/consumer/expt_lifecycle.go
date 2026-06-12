@@ -11,25 +11,34 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type ExptLifecycleConsumer struct {
-	handler service.ExptLifecycleEventHandler
+	handler        service.ExptLifecycleEventHandler
+	webhookHandler mq.IConsumerHandler
 }
 
-func NewExptLifecycleConsumer(handler service.ExptLifecycleEventHandler) mq.IConsumerHandler {
+func NewExptLifecycleConsumer(handler service.ExptLifecycleEventHandler, webhookHandler mq.IConsumerHandler) mq.IConsumerHandler {
 	return &ExptLifecycleConsumer{
-		handler: handler,
+		handler:        handler,
+		webhookHandler: webhookHandler,
 	}
 }
 
 func (e *ExptLifecycleConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) (err error) {
+	logs.CtxInfo(ctx, "ExptLifecycleConsumer received message, tag: %v, msg_id: %v, body: %v", ext.Tag, ext.MsgID, string(ext.Body))
 	defer func() {
 		if err != nil {
 			logs.CtxError(ctx, "ExptLifecycleConsumer HandleMessage fail, err: %v", err)
 		}
 	}()
+
+	// 根据 Tag 路由：webhook_retry 走重试逻辑
+	if ext.Tag == rocket.TagWebhookRetry {
+		return e.webhookHandler.HandleMessage(ctx, ext)
+	}
 
 	event := &entity.ExptLifecycleEvent{}
 	body := ext.Body

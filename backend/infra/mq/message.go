@@ -11,6 +11,7 @@ type Message struct {
 	Topic         string
 	Body          []byte
 	Tag           string
+	Keys          []string
 	PartitionKey  string
 	Properties    map[string]string
 	DeferDuration time.Duration
@@ -33,6 +34,11 @@ func NewDeferMessage(topic string, deferDuration time.Duration, body []byte) *Me
 
 func (m *Message) WithTag(tag string) *Message {
 	m.Tag = tag
+	return m
+}
+
+func (m *Message) WithKeys(keys []string) *Message {
+	m.Keys = keys
 	return m
 }
 

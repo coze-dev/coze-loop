@@ -2435,6 +2435,60 @@ func TestOpenAPIExperimentFiltersDTO2Domain(t *testing.T) {
 		assert.Nil(t, got)
 		assert.Error(t, err)
 	})
+
+	t.Run("pure english string enums - evaluator_score greater_or_equal", func(t *testing.T) {
+		// 纯英文字符串枚举：field_type="evaluator_score", operator="greater_or_equal"
+		logicAnd := openapiExperiment.FilterLogicOp("and")
+		fieldType := openapiExperiment.FilterFieldType("evaluator_score")
+		operator := openapiExperiment.FilterOperatorType("greater_or_equal")
+		value := "0.8"
+		fieldKey := "7590095632841932802"
+
+		got, err := OpenAPIExperimentFiltersDTO2Domain(&openapiExperiment.Filters{
+			LogicOp: &logicAnd,
+			FilterConditions: []*openapiExperiment.FilterCondition{
+				{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType, FieldKey: &fieldKey},
+					Operator: &operator,
+					Value:    &value,
+				},
+			},
+		})
+		assert.NoError(t, err)
+		if assert.NotNil(t, got) && assert.Len(t, got.FilterConditions, 1) {
+			cond := got.FilterConditions[0]
+			assert.Equal(t, domainExpt.FieldType_EvaluatorScore, cond.Field.FieldType)
+			assert.Equal(t, fieldKey, gptr.Indirect(cond.Field.FieldKey))
+			assert.Equal(t, domainExpt.FilterOperatorType_GreaterOrEqual, cond.Operator)
+			assert.Equal(t, "0.8", cond.Value)
+		}
+	})
+
+	t.Run("pure english string enums - expt_status in", func(t *testing.T) {
+		// 纯英文字符串枚举：field_type="expt_status", operator="in"
+		logicAnd := openapiExperiment.FilterLogicOp("and")
+		fieldType := openapiExperiment.FilterFieldType("expt_status")
+		operator := openapiExperiment.FilterOperatorType("in")
+		value := "3,11,12"
+
+		got, err := OpenAPIExperimentFiltersDTO2Domain(&openapiExperiment.Filters{
+			LogicOp: &logicAnd,
+			FilterConditions: []*openapiExperiment.FilterCondition{
+				{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &operator,
+					Value:    &value,
+				},
+			},
+		})
+		assert.NoError(t, err)
+		if assert.NotNil(t, got) && assert.Len(t, got.FilterConditions, 1) {
+			cond := got.FilterConditions[0]
+			assert.Equal(t, domainExpt.FieldType_ExptStatus, cond.Field.FieldType)
+			assert.Equal(t, domainExpt.FilterOperatorType_In, cond.Operator)
+			assert.Equal(t, "3,11,12", cond.Value)
+		}
+	})
 }
 
 func TestOpenAPIExperimentFilterOptionDTO2Domain(t *testing.T) {
@@ -3091,4 +3145,230 @@ func Test_openAPIOfflineExptAnalysisStatusDO2DTO(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDomainNotificationConfToOpenAPI_FilterEnglishMapping(t *testing.T) {
+	t.Parallel()
+
+	t.Run("domain filter with numeric values returns english strings", func(t *testing.T) {
+		conf := &domainExpt.ExptNotificationConf{
+			Filter: &domainExpt.Filters{
+				LogicOp: gptr.Of(domainExpt.FilterLogicOp_And),
+				FilterConditions: []*domainExpt.FilterCondition{
+					{
+						Field:    &domainExpt.FilterField{FieldType: domainExpt.FieldType_ExptStatus},
+						Operator: domainExpt.FilterOperatorType_In,
+						Value:    "3,11,12",
+					},
+				},
+			},
+			Webhook: &domainExpt.WebhookNotificationConf{
+				Enable: true,
+				Urls:   gptr.Of("https://example.com/hook"),
+			},
+		}
+
+		result := domainNotificationConfToOpenAPI(conf)
+		require.NotNil(t, result)
+		require.NotNil(t, result.Filter)
+		assert.Equal(t, "and", string(*result.Filter.LogicOp))
+		require.Len(t, result.Filter.FilterConditions, 1)
+
+		cond := result.Filter.FilterConditions[0]
+		assert.Equal(t, "expt_status", string(*cond.Field.FieldType))
+		assert.Equal(t, "in", string(*cond.Operator))
+		assert.Equal(t, "processing,success,failed", *cond.Value)
+	})
+
+	t.Run("domain filter with JSON array numeric values", func(t *testing.T) {
+		conf := &domainExpt.ExptNotificationConf{
+			Filter: &domainExpt.Filters{
+				LogicOp: gptr.Of(domainExpt.FilterLogicOp_Or),
+				FilterConditions: []*domainExpt.FilterCondition{
+					{
+						Field:    &domainExpt.FilterField{FieldType: domainExpt.FieldType_ExptStatus},
+						Operator: domainExpt.FilterOperatorType_In,
+						Value:    `["11","12","13"]`,
+					},
+				},
+			},
+		}
+
+		result := domainNotificationConfToOpenAPI(conf)
+		require.NotNil(t, result)
+		require.NotNil(t, result.Filter)
+		assert.Equal(t, "or", string(*result.Filter.LogicOp))
+		require.Len(t, result.Filter.FilterConditions, 1)
+
+		cond := result.Filter.FilterConditions[0]
+		assert.Equal(t, "expt_status", string(*cond.Field.FieldType))
+		assert.Equal(t, `["success","failed","terminated"]`, *cond.Value)
+	})
+
+	t.Run("nil conf returns nil", func(t *testing.T) {
+		assert.Nil(t, domainNotificationConfToOpenAPI(nil))
+	})
+}
+
+func TestEntityNotificationConfToOpenAPI_FilterEnglishMapping(t *testing.T) {
+	t.Parallel()
+
+	t.Run("entity filter with numeric values returns english strings", func(t *testing.T) {
+		conf := &entity.ExptNotificationConf{
+			Filter: &entity.NotificationFilter{
+				LogicOp: gptr.Of(entity.FilterLogicOp(1)), // And
+				FilterConditions: []*entity.NotificationFilterCondition{
+					{
+						Field:    &entity.NotificationFilterField{FieldType: entity.NotificationFieldType(3)}, // ExptStatus
+						Operator: entity.NotificationOperatorType(7),                                          // In
+						Value:    "11,12,13",
+					},
+				},
+			},
+			Webhook: &entity.WebhookNotificationConf{
+				Enable: true,
+				Urls:   gptr.Of("https://example.com/hook"),
+			},
+		}
+
+		result := entityNotificationConfToOpenAPI(conf)
+		require.NotNil(t, result)
+		require.NotNil(t, result.Filter)
+		assert.Equal(t, "and", string(*result.Filter.LogicOp))
+		require.Len(t, result.Filter.FilterConditions, 1)
+
+		cond := result.Filter.FilterConditions[0]
+		assert.Equal(t, "expt_status", string(*cond.Field.FieldType))
+		assert.Equal(t, "in", string(*cond.Operator))
+		assert.Equal(t, "success,failed,terminated", *cond.Value)
+	})
+
+	t.Run("nil conf returns nil", func(t *testing.T) {
+		assert.Nil(t, entityNotificationConfToOpenAPI(nil))
+	})
+}
+
+func TestOpenAPINotificationConfDTO2Domain_EnglishValueInput(t *testing.T) {
+	t.Parallel()
+
+	t.Run("english comma-separated values converted to numeric", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOp("and")
+		fieldType := openapiExperiment.FilterFieldType("expt_status")
+		operator := openapiExperiment.FilterOperatorType("in")
+		value := "success,failed,terminated"
+
+		conf := &openapiExperiment.ExptNotificationConf{
+			Filter: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{
+						Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+						Operator: &operator,
+						Value:    &value,
+					},
+				},
+			},
+			Webhook: &openapiExperiment.WebhookNotificationConf{
+				Enable: gptr.Of(true),
+				Urls:   gptr.Of("https://example.com/hook"),
+			},
+		}
+
+		got, err := OpenAPINotificationConfDTO2Domain(conf)
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		require.NotNil(t, got.Filter)
+		require.Len(t, got.Filter.FilterConditions, 1)
+
+		cond := got.Filter.FilterConditions[0]
+		assert.Equal(t, domainExpt.FieldType_ExptStatus, cond.Field.GetFieldType())
+		assert.Equal(t, domainExpt.FilterOperatorType_In, cond.GetOperator())
+		assert.Equal(t, "11,12,13", cond.GetValue())
+	})
+
+	t.Run("english JSON array values converted to numeric", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOp("and")
+		fieldType := openapiExperiment.FilterFieldType("expt_status")
+		operator := openapiExperiment.FilterOperatorType("in")
+		value := `["success","failed","system_terminated"]`
+
+		conf := &openapiExperiment.ExptNotificationConf{
+			Filter: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{
+						Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+						Operator: &operator,
+						Value:    &value,
+					},
+				},
+			},
+		}
+
+		got, err := OpenAPINotificationConfDTO2Domain(conf)
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		require.Len(t, got.Filter.FilterConditions, 1)
+
+		cond := got.Filter.FilterConditions[0]
+		assert.Equal(t, `["11","12","14"]`, cond.GetValue())
+	})
+
+	t.Run("numeric values remain unchanged", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOp("and")
+		fieldType := openapiExperiment.FilterFieldType("expt_status")
+		operator := openapiExperiment.FilterOperatorType("in")
+		value := "3,11,12"
+
+		conf := &openapiExperiment.ExptNotificationConf{
+			Filter: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{
+						Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+						Operator: &operator,
+						Value:    &value,
+					},
+				},
+			},
+		}
+
+		got, err := OpenAPINotificationConfDTO2Domain(conf)
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		require.Len(t, got.Filter.FilterConditions, 1)
+		assert.Equal(t, "3,11,12", got.Filter.FilterConditions[0].GetValue())
+	})
+
+	t.Run("mixed english and numeric values", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOp("and")
+		fieldType := openapiExperiment.FilterFieldType("expt_status")
+		operator := openapiExperiment.FilterOperatorType("in")
+		value := "success,12,terminated"
+
+		conf := &openapiExperiment.ExptNotificationConf{
+			Filter: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{
+						Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+						Operator: &operator,
+						Value:    &value,
+					},
+				},
+			},
+		}
+
+		got, err := OpenAPINotificationConfDTO2Domain(conf)
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		require.Len(t, got.Filter.FilterConditions, 1)
+		assert.Equal(t, "11,12,13", got.Filter.FilterConditions[0].GetValue())
+	})
+
+	t.Run("nil conf returns nil", func(t *testing.T) {
+		got, err := OpenAPINotificationConfDTO2Domain(nil)
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
 }
