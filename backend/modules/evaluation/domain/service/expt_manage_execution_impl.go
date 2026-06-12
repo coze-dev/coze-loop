@@ -319,10 +319,13 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		return err
 	}
 
-	switch runMode {
-	case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
-		if err := e.sendNotifyCard(ctx, expt); err != nil {
-			logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
+	// 仅当 NotificationConf 为空时走老逻辑发送卡片，新逻辑由 lifecycle event handler 统一处理
+	if expt.NotificationConf == nil {
+		switch runMode {
+		case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
+			if err := e.sendNotifyCard(ctx, expt); err != nil {
+				logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
+			}
 		}
 	}
 	return nil
