@@ -1025,3 +1025,106 @@ func TestNewTraceConfigCenter(t *testing.T) {
 func stringPtr(s string) *string {
 	return &s
 }
+
+func TestTraceConfigCenter_GetSearchTraceTreeMaxSpanLimit(t *testing.T) {
+	type fields struct {
+		configLoader *confmocks.MockIConfigLoader
+	}
+	type args struct {
+		ctx         context.Context
+		workspaceID int64
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         int32
+	}{
+		{
+			name: "get default limit when workspace not in overrides",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), searchTraceTreeMaxSpanLimitCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(*config.SpaceAwareParam[int32])
+						cfg.Default = 10000
+						cfg.Overrides = map[int64]int32{100: 5000}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			args: args{ctx: context.Background(), workspaceID: 200},
+			want: 10000,
+		},
+		{
+			name: "get override limit when workspace in overrides",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), searchTraceTreeMaxSpanLimitCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(*config.SpaceAwareParam[int32])
+						cfg.Default = 10000
+						cfg.Overrides = map[int64]int32{100: 5000}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			args: args{ctx: context.Background(), workspaceID: 100},
+			want: 5000,
+		},
+		{
+			name: "get override limit larger than default",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), searchTraceTreeMaxSpanLimitCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(*config.SpaceAwareParam[int32])
+						cfg.Default = 10000
+						cfg.Overrides = map[int64]int32{100: 20000}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			args: args{ctx: context.Background(), workspaceID: 100},
+			want: 20000,
+		},
+		{
+			name: "fallback to default when unmarshal fails",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), searchTraceTreeMaxSpanLimitCfgKey, gomock.Any()).
+					Return(fmt.Errorf("config error"))
+				return fields{configLoader: mockLoader}
+			},
+			args: args{ctx: context.Background(), workspaceID: 100},
+			want: defaultSearchTraceTreeMaxSpanLimit,
+		},
+		{
+			name: "fallback to default when config value is zero",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), searchTraceTreeMaxSpanLimitCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(*config.SpaceAwareParam[int32])
+						cfg.Default = 0
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			args: args{ctx: context.Background(), workspaceID: 100},
+			want: defaultSearchTraceTreeMaxSpanLimit,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			f := tt.fieldsGetter(ctrl)
+			tr := &TraceConfigCenter{
+				IConfigLoader: f.configLoader,
+			}
+			got := tr.GetSearchTraceTreeMaxSpanLimit(tt.args.ctx, tt.args.workspaceID)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

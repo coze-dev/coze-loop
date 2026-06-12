@@ -60,6 +60,7 @@ const (
 	SpanFieldKeyResponseID           = "response_id"
 	SpanFieldThreadId                = "thread_id"
 	SpanFieldError                   = "error"
+	SpanFieldAgentName               = "agent_name"
 
 	SpanTypePrompt          = "prompt"
 	SpanTypeModel           = "model"
@@ -128,50 +129,12 @@ var TimeTagSlice = []string{
 	SpanFieldLogicDeleteDate,
 }
 
-var SpanStructFieldKeys = []string{
-	SpanFieldStartTime,
-	SpanFieldSpanId,
-	SpanFieldParentID,
-	SpanFieldTraceId,
-	SpanFieldDuration,
-	SpanFieldCallType,
-	SpanFieldPSM,
-	SpanFieldLogID,
-	SpanFieldSpaceId,
-	SpanFieldSpanName,
-	SpanFieldSpanType,
-	SpanFieldMethod,
-	SpanFieldStatusCode,
-	SpanFieldInput,
-	SpanFieldOutput,
-	SpanFieldObjectStorage,
-}
-
 const (
 	MetadataValueTypeString = "string"
 	MetadataValueTypeLong   = "long"
 	MetadataValueTypeDouble = "double"
 	MetadataValueTypeBool   = "bool"
 )
-
-var SpanStructFieldValueTypes = map[string]string{
-	SpanFieldStartTime:     MetadataValueTypeLong,
-	SpanFieldSpanId:        MetadataValueTypeString,
-	SpanFieldParentID:      MetadataValueTypeString,
-	SpanFieldTraceId:       MetadataValueTypeString,
-	SpanFieldDuration:      MetadataValueTypeLong,
-	SpanFieldCallType:      MetadataValueTypeString,
-	SpanFieldPSM:           MetadataValueTypeString,
-	SpanFieldLogID:         MetadataValueTypeString,
-	SpanFieldSpaceId:       MetadataValueTypeString,
-	SpanFieldSpanName:      MetadataValueTypeString,
-	SpanFieldSpanType:      MetadataValueTypeString,
-	SpanFieldMethod:        MetadataValueTypeString,
-	SpanFieldStatusCode:    MetadataValueTypeLong,
-	SpanFieldInput:         MetadataValueTypeString,
-	SpanFieldOutput:        MetadataValueTypeString,
-	SpanFieldObjectStorage: MetadataValueTypeString,
-}
 
 type SpanList []*Span
 

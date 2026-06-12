@@ -5,6 +5,7 @@ package loop_span
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
@@ -21,6 +22,14 @@ const (
 type StepType = string
 
 type TrajectoryList []*Trajectory
+
+// MetaKeyRule 单条 metadata key 匹配规则
+type MetaKeyRule struct {
+	// Key 匹配的 key 值
+	Key string `mapstructure:"key" json:"key"`
+	// MatchType 匹配模式: "exact" 完全匹配, "prefix" 前缀匹配
+	MatchType string `mapstructure:"match_type" json:"match_type"`
+}
 
 type Trajectory struct {
 	// trace_id
@@ -128,7 +137,7 @@ type MetricsInfo struct {
 	OutputTokens *int32 `json:"output_tokens,omitempty"`
 }
 
-func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
+func BuildTrajectoryFromSpans(spanList SpanList, metaKeyRules []MetaKeyRule) *Trajectory {
 	if len(spanList) == 0 {
 		return nil
 	}
@@ -159,6 +168,7 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 			Name:      &rootSpan.SpanName,
 			Input:     &rootSpan.Input,
 			Output:    &rootSpan.Output,
+			Metadata:  buildMetadata(rootSpan, metaKeyRules),
 			BasicInfo: buildBasicInfo(rootSpan),
 		}
 		rootSpanID = rootSpan.SpanID
@@ -187,8 +197,9 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 			Name:      &agentSpan.SpanName,
 			Input:     &agentSpan.Input,
 			Output:    &agentSpan.Output,
+			Metadata:  buildMetadata(agentSpan, metaKeyRules),
 			BasicInfo: buildBasicInfo(agentSpan),
-			Steps:     buildAgentSteps(agentSpan, spanMap),
+			Steps:     buildAgentSteps(agentSpan, spanMap, metaKeyRules),
 		}
 		agentSteps = append(agentSteps, agentStep)
 	}
@@ -241,7 +252,7 @@ func buildBasicInfo(span *Span) *BasicInfo {
 }
 
 // buildAgentSteps 构建agent的子步骤
-func buildAgentSteps(agentSpan *Span, spanMap map[string]*Span) []*Step {
+func buildAgentSteps(agentSpan *Span, spanMap map[string]*Span, metaKeyRules []MetaKeyRule) []*Step {
 	if agentSpan == nil {
 		return nil
 	}
@@ -252,7 +263,7 @@ func buildAgentSteps(agentSpan *Span, spanMap map[string]*Span) []*Step {
 
 	for _, childSpan := range childSpans {
 		// 深度遍历每个分支收集所有子节点，每个分支直到遇到agent节点为止
-		branchSteps := collectSubSteps(childSpan, spanMap)
+		branchSteps := collectSubSteps(childSpan, spanMap, metaKeyRules)
 		if len(branchSteps) > 0 {
 			steps = append(steps, branchSteps...)
 		}
@@ -287,7 +298,7 @@ func getDirectChildren(parentSpan *Span, spanMap map[string]*Span) []*Span {
 }
 
 // buildStep 构建步骤
-func buildStep(span *Span) *Step {
+func buildStep(span *Span, metaKeyRules []MetaKeyRule) *Step {
 	if span == nil {
 		return nil
 	}
@@ -300,6 +311,7 @@ func buildStep(span *Span) *Step {
 		Name:      &span.SpanName,
 		Input:     &span.Input,
 		Output:    &span.Output,
+		Metadata:  buildMetadata(span, metaKeyRules),
 		BasicInfo: buildBasicInfo(span),
 	}
 
@@ -312,7 +324,7 @@ func buildStep(span *Span) *Step {
 }
 
 // collectSubSteps 深度遍历分支，收集任意层级的普通子节点，直到遇到agent节点为止
-func collectSubSteps(startSpan *Span, spanMap map[string]*Span) []*Step {
+func collectSubSteps(startSpan *Span, spanMap map[string]*Span, metaKeyRules []MetaKeyRule) []*Step {
 	if startSpan == nil {
 		return nil
 	}
@@ -321,7 +333,7 @@ func collectSubSteps(startSpan *Span, spanMap map[string]*Span) []*Step {
 	stepType := getStepType(startSpan)
 
 	// 如果当前节点是agent节点，停止遍历
-	steps = append(steps, buildStep(startSpan))
+	steps = append(steps, buildStep(startSpan, metaKeyRules))
 	if stepType == StepTypeAgent {
 		return steps
 	}
@@ -329,7 +341,7 @@ func collectSubSteps(startSpan *Span, spanMap map[string]*Span) []*Step {
 	// 获取当前节点的子节点，继续深度遍历
 	children := getDirectChildren(startSpan, spanMap)
 	for _, child := range children {
-		childSteps := collectSubSteps(child, spanMap)
+		childSteps := collectSubSteps(child, spanMap, metaKeyRules)
 		if len(childSteps) > 0 {
 			steps = append(steps, childSteps...)
 		}
@@ -560,4 +572,58 @@ func calculateMetricsInfo(modelSteps, toolSteps []*Step) *MetricsInfo {
 
 func (t *Trajectory) MarshalString() (string, error) {
 	return json.MarshalString(t)
+}
+
+// buildMetadata 根据规则从 span 的各类 Tags 字段中提取允许的 metadata key
+func buildMetadata(span *Span, rules []MetaKeyRule) map[string]string {
+	if len(rules) == 0 || span == nil {
+		return nil
+	}
+	metadata := make(map[string]string)
+	for key, value := range span.TagsString {
+		if matchMetaKey(key, rules) {
+			metadata[key] = value
+		}
+	}
+	for key, value := range span.TagsLong {
+		if matchMetaKey(key, rules) {
+			metadata[key] = strconv.FormatInt(value, 10)
+		}
+	}
+	for key, value := range span.TagsDouble {
+		if matchMetaKey(key, rules) {
+			metadata[key] = strconv.FormatFloat(value, 'f', -1, 64)
+		}
+	}
+	for key, value := range span.TagsBool {
+		if matchMetaKey(key, rules) {
+			metadata[key] = strconv.FormatBool(value)
+		}
+	}
+	for key, value := range span.TagsByte {
+		if matchMetaKey(key, rules) {
+			metadata[key] = value
+		}
+	}
+	if len(metadata) == 0 {
+		return nil
+	}
+	return metadata
+}
+
+// matchMetaKey 判断 key 是否匹配规则列表中的任意规则
+func matchMetaKey(key string, rules []MetaKeyRule) bool {
+	for _, rule := range rules {
+		switch rule.MatchType {
+		case "exact":
+			if key == rule.Key {
+				return true
+			}
+		case "prefix":
+			if strings.HasPrefix(key, rule.Key) {
+				return true
+			}
+		}
+	}
+	return false
 }

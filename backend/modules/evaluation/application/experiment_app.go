@@ -1113,6 +1113,10 @@ func (e *experimentApplication) DeleteExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	if got.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("expt %d not found in space %d", req.GetExptID(), req.GetWorkspaceID())))
+	}
+
 	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
 		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
 		SpaceID:         req.GetWorkspaceID(),

@@ -2062,6 +2062,26 @@ func TestExperimentApplication_DeleteExperiment(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "workspace mismatch with experiment space",
+			req: &exptpb.DeleteExperimentRequest{
+				ExptID:      validExptID,
+				WorkspaceID: validWorkspaceID,
+			},
+			mockSetup: func() {
+				mismatchedExpt := &entity.Experiment{
+					ID:        validExptID,
+					SpaceID:   validWorkspaceID + 1,
+					Name:      "test_experiment_other_space",
+					Status:    entity.ExptStatus_Pending,
+					CreatedBy: validUserID,
+				}
+				mockManager.EXPECT().
+					Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).
+					Return(mismatchedExpt, nil)
+			},
+			wantErr: true,
+		},
+		{
 			name: "delete operation failed",
 			req: &exptpb.DeleteExperimentRequest{
 				ExptID:      validExptID,

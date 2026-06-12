@@ -1007,8 +1007,11 @@ func openAPIResultPayloadDO2DTO(result *entity.ExperimentResult) *openapiExperim
 	if payload.EvalSet != nil {
 		res.EvalSetTurn = evalsetopenapi.OpenAPITurnDO2DTO(payload.EvalSet.Turn)
 	}
-	if payload.EvaluatorOutput != nil && len(payload.EvaluatorOutput.EvaluatorRecords) > 0 {
-		res.EvaluatorRecords = openAPIEvaluatorRecordsMapDO2DTO(payload.EvaluatorOutput.EvaluatorRecords)
+	if payload.EvaluatorOutput != nil {
+		res.WeightedScore = result.Payload.EvaluatorOutput.WeightedScore
+		if len(payload.EvaluatorOutput.EvaluatorRecords) > 0 {
+			res.EvaluatorRecords = openAPIEvaluatorRecordsMapDO2DTO(payload.EvaluatorOutput.EvaluatorRecords)
+		}
 	}
 	if payload.TargetOutput != nil {
 		res.TargetRecord = openAPITargetRecordDO2DTO(payload.TargetOutput.EvalTargetRecord)

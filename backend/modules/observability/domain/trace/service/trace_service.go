@@ -130,11 +130,15 @@ type GetTraceReq struct {
 	SpanIDs      []string
 	WithDetail   bool
 	Filters      *loop_span.FilterFields
+	Limit        int32
+	PageToken    string
 }
 
 type GetTraceResp struct {
-	TraceId string
-	Spans   loop_span.SpanList
+	TraceId       string
+	Spans         loop_span.SpanList
+	NextPageToken string
+	HasMore       bool
 }
 
 type ListMetadataReq struct {
@@ -1212,17 +1216,24 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if !req.WithDetail {
 		limit = 10000
 	}
+	if req.Limit > 0 {
+		if !req.WithDetail || req.Limit < limit {
+			limit = req.Limit
+		}
+	}
 	traceResult, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
-		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
-		Tenants:     tenants,
-		LogID:       req.LogID,
-		TraceID:     req.TraceID,
-		StartAt:     req.StartTime,
-		EndAt:       req.EndTime,
-		Limit:       limit,
-		SpanIDs:     req.SpanIDs,
-		Filters:     req.Filters,
-		OmitColumns: omitColumns,
+		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:         tenants,
+		LogID:           req.LogID,
+		TraceID:         req.TraceID,
+		StartAt:         req.StartTime,
+		EndAt:           req.EndTime,
+		Limit:           limit,
+		SpanIDs:         req.SpanIDs,
+		Filters:         req.Filters,
+		OmitColumns:     omitColumns,
+		PageToken:       req.PageToken,
+		DescByStartTime: req.PageToken != "" || req.Limit > 0,
 	})
 	r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 	if err != nil {
@@ -1271,8 +1282,10 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	}
 	spans.SortByStartTime(false)
 	return &GetTraceResp{
-		TraceId: req.TraceID,
-		Spans:   spans,
+		TraceId:       req.TraceID,
+		Spans:         spans,
+		NextPageToken: traceResult.PageToken,
+		HasMore:       traceResult.HasMore,
 	}, nil
 }
 
@@ -1707,27 +1720,6 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 	}
 	keyInfoMap := make(map[string]*keyInfo)
 	for _, span := range listSpansResp.Spans {
-		for key := range span.SystemTagsString {
-			if info, ok := keyInfoMap[key]; ok {
-				info.count++
-			} else {
-				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeString}
-			}
-		}
-		for key := range span.SystemTagsLong {
-			if info, ok := keyInfoMap[key]; ok {
-				info.count++
-			} else {
-				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeLong}
-			}
-		}
-		for key := range span.SystemTagsDouble {
-			if info, ok := keyInfoMap[key]; ok {
-				info.count++
-			} else {
-				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeDouble}
-			}
-		}
 		for key := range span.TagsString {
 			if info, ok := keyInfoMap[key]; ok {
 				info.count++
@@ -1773,22 +1765,8 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 		return keys[i] < keys[j]
 	})
 
-	structFieldSet := make(map[string]struct{}, len(loop_span.SpanStructFieldKeys))
-	for _, k := range loop_span.SpanStructFieldKeys {
-		structFieldSet[k] = struct{}{}
-	}
-
-	items := make([]*trace.MetadataItemInfo, 0, len(loop_span.SpanStructFieldKeys)+len(keys))
-	for _, key := range loop_span.SpanStructFieldKeys {
-		items = append(items, &trace.MetadataItemInfo{
-			Key:       key,
-			ValueType: loop_span.SpanStructFieldValueTypes[key],
-		})
-	}
+	items := make([]*trace.MetadataItemInfo, 0, len(keys))
 	for _, key := range keys {
-		if _, ok := structFieldSet[key]; ok {
-			continue
-		}
 		items = append(items, &trace.MetadataItemInfo{
 			Key:       key,
 			ValueType: keyInfoMap[key].valueType,
@@ -2473,6 +2451,12 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		return nil, err
 	}
 
+	metaCfg := r.traceConfig.GetTrajectoryMetadataConfig(ctx)
+	var metaRules []loop_span.MetaKeyRule
+	if metaCfg != nil && metaCfg.Spaces != nil {
+		metaRules = metaCfg.Spaces[workspaceID]
+	}
+
 	allSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
 		Tenants: tenant,
 		Filters: &loop_span.FilterFields{
@@ -2527,7 +2511,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		}
 	}
 
-	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, ptr.Of(r.convertCustomNode(selectedSpans.Spans)), selectFilters)
+	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, ptr.Of(r.convertCustomNode(selectedSpans.Spans)), selectFilters, metaRules)
 	if err != nil {
 		return nil, err
 	}
@@ -2616,7 +2600,7 @@ func (r *TraceServiceImpl) getSelectFilters(traceIDs []string, trajectoryConfig 
 	return result
 }
 
-func (r *TraceServiceImpl) buildTrajectories(ctx context.Context, allSpans *loop_span.SpanList, selectedSpans *loop_span.SpanList, trajectoryConfig *loop_span.FilterFields) (map[string]*loop_span.Trajectory, error) {
+func (r *TraceServiceImpl) buildTrajectories(ctx context.Context, allSpans *loop_span.SpanList, selectedSpans *loop_span.SpanList, trajectoryConfig *loop_span.FilterFields, metaRules []loop_span.MetaKeyRule) (map[string]*loop_span.Trajectory, error) {
 	// traceID-trajectory
 	trajectoryMap := make(map[string]*loop_span.Trajectory)
 
@@ -2656,7 +2640,7 @@ func (r *TraceServiceImpl) buildTrajectories(ctx context.Context, allSpans *loop
 			return nil, err
 		}
 
-		trajectoryMap[traceID] = loop_span.BuildTrajectoryFromSpans(filteredSpans)
+		trajectoryMap[traceID] = loop_span.BuildTrajectoryFromSpans(filteredSpans, metaRules)
 	}
 	return trajectoryMap, nil
 }

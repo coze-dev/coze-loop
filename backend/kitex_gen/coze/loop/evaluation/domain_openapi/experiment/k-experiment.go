@@ -5635,6 +5635,20 @@ func (p *ResultPayload) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.DOUBLE {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 20:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField20(buf[offset:])
@@ -5716,6 +5730,20 @@ func (p *ResultPayload) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ResultPayload) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *float64
+	if v, l, err := thrift.Binary.ReadDouble(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WeightedScore = _field
+	return offset, nil
+}
+
 func (p *ResultPayload) FastReadField20(buf []byte) (int, error) {
 	offset := 0
 	_field := NewTurnSystemInfo()
@@ -5735,6 +5763,7 @@ func (p *ResultPayload) FastWrite(buf []byte) int {
 func (p *ResultPayload) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -5750,6 +5779,7 @@ func (p *ResultPayload) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field10Length()
 		l += p.field20Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -5790,6 +5820,15 @@ func (p *ResultPayload) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *ResultPayload) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWeightedScore() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.DOUBLE, 10)
+		offset += thrift.Binary.WriteDouble(buf[offset:], *p.WeightedScore)
+	}
+	return offset
+}
+
 func (p *ResultPayload) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSystemInfo() {
@@ -5826,6 +5865,15 @@ func (p *ResultPayload) field3Length() int {
 			_ = v
 			l += v.BLength()
 		}
+	}
+	return l
+}
+
+func (p *ResultPayload) field10Length() int {
+	l := 0
+	if p.IsSetWeightedScore() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.DoubleLength()
 	}
 	return l
 }
@@ -5876,6 +5924,11 @@ func (p *ResultPayload) DeepCopy(s interface{}) error {
 
 			p.EvaluatorRecords = append(p.EvaluatorRecords, _elem)
 		}
+	}
+
+	if src.WeightedScore != nil {
+		tmp := *src.WeightedScore
+		p.WeightedScore = &tmp
 	}
 
 	var _systemInfo *TurnSystemInfo

@@ -32,12 +32,15 @@ const (
 	metricQueryConfigKey               = "metric_query_config"
 	backfillCfgKey                     = "backfill_config"
 	reflowInsertCfgKey                 = "reflow_insert_config"
+	searchTraceTreeMaxSpanLimitCfgKey  = "search_trace_tree_max_span_limit"
+	trajectoryMetadataCfgKey           = "trajectory_metadata_config"
 
-	defaultBackfillDispatchBatchSize  = 10
-	defaultBackfillDispatchIntervalMs = 1000
-	defaultBackfillCkQueryLimit       = 100
-	defaultEvalSetInvokeBatchSize     = 1
-	defaultDatasetInvokeBatchSize     = 1
+	defaultBackfillDispatchBatchSize   = 10
+	defaultBackfillDispatchIntervalMs  = 1000
+	defaultBackfillCkQueryLimit        = 100
+	defaultEvalSetInvokeBatchSize      = 1
+	defaultDatasetInvokeBatchSize      = 1
+	defaultSearchTraceTreeMaxSpanLimit = 10000
 )
 
 type TraceConfigCenter struct {
@@ -256,6 +259,28 @@ func (t *TraceConfigCenter) GetReflowInsertConfig(ctx context.Context) *config.R
 		cfg.DatasetInvokeBatchSize.Default = defaultDatasetInvokeBatchSize
 	}
 	return cfg
+}
+
+func (t *TraceConfigCenter) GetTrajectoryMetadataConfig(ctx context.Context) *config.TrajectoryMetadataConfig {
+	cfg := &config.TrajectoryMetadataConfig{}
+	if err := t.UnmarshalKey(ctx, trajectoryMetadataCfgKey, cfg); err != nil {
+		logs.CtxWarn(ctx, "fail to unmarshal trajectory metadata cfg, %v", err)
+		return nil
+	}
+	return cfg
+}
+
+func (t *TraceConfigCenter) GetSearchTraceTreeMaxSpanLimit(ctx context.Context, workspaceID int64) int32 {
+	cfg := &config.SpaceAwareParam[int32]{}
+	if err := t.UnmarshalKey(ctx, searchTraceTreeMaxSpanLimitCfgKey, cfg); err != nil {
+		logs.CtxWarn(ctx, "fail to get search trace tree max span limit config, %v", err)
+		return defaultSearchTraceTreeMaxSpanLimit
+	}
+	limit := cfg.Get(workspaceID)
+	if limit <= 0 {
+		return defaultSearchTraceTreeMaxSpanLimit
+	}
+	return limit
 }
 
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {

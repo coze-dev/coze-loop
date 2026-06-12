@@ -2830,6 +2830,206 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "get trace with limit capped to system max",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.GetTraceParam) (*repo.GetTraceResult, error) {
+						assert.Equal(t, int32(1000), param.Limit)
+						assert.True(t, param.DescByStartTime)
+						return &repo.GetTraceResult{Spans: loop_span.SpanList{}}, nil
+					})
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any()).Return()
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					metrics:        metricsMock,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTraceReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					TraceID:      "123",
+					WithDetail:   true,
+					Limit:        5000, // exceeds 1000, should be capped
+				},
+			},
+			want: &GetTraceResp{
+				TraceId: "123",
+				Spans:   loop_span.SpanList{},
+			},
+		},
+		{
+			name: "get trace with limit smaller than max",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.GetTraceParam) (*repo.GetTraceResult, error) {
+						assert.Equal(t, int32(50), param.Limit)
+						assert.True(t, param.DescByStartTime)
+						return &repo.GetTraceResult{Spans: loop_span.SpanList{}}, nil
+					})
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any()).Return()
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					metrics:        metricsMock,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTraceReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					TraceID:      "123",
+					WithDetail:   true,
+					Limit:        50,
+				},
+			},
+			want: &GetTraceResp{
+				TraceId: "123",
+				Spans:   loop_span.SpanList{},
+			},
+		},
+		{
+			name: "get trace without detail and custom limit overrides default",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.GetTraceParam) (*repo.GetTraceResult, error) {
+						assert.Equal(t, int32(15000), param.Limit)
+						return &repo.GetTraceResult{Spans: loop_span.SpanList{}}, nil
+					})
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any()).Return()
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					metrics:        metricsMock,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTraceReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					TraceID:      "123",
+					WithDetail:   false,
+					Limit:        15000, // exceeds default 10000, should be used directly
+				},
+			},
+			want: &GetTraceResp{
+				TraceId: "123",
+				Spans:   loop_span.SpanList{},
+			},
+		},
+		{
+			name: "get trace without detail and limit smaller than default",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.GetTraceParam) (*repo.GetTraceResult, error) {
+						assert.Equal(t, int32(5000), param.Limit)
+						return &repo.GetTraceResult{Spans: loop_span.SpanList{}}, nil
+					})
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any()).Return()
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					metrics:        metricsMock,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTraceReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					TraceID:      "123",
+					WithDetail:   false,
+					Limit:        5000, // less than default 10000, should be used
+				},
+			},
+			want: &GetTraceResp{
+				TraceId: "123",
+				Spans:   loop_span.SpanList{},
+			},
+		},
+		{
+			name: "get trace with pagination token returns next page",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.GetTraceParam) (*repo.GetTraceResult, error) {
+						assert.Equal(t, "page_abc", param.PageToken)
+						assert.True(t, param.DescByStartTime)
+						return &repo.GetTraceResult{
+							Spans:     loop_span.SpanList{{TraceID: "123", SpanID: "s1"}},
+							PageToken: "page_def",
+							HasMore:   true,
+						}, nil
+					})
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any()).Return()
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					metrics:        metricsMock,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTraceReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					TraceID:      "123",
+					WithDetail:   true,
+					Limit:        10,
+					PageToken:    "page_abc",
+				},
+			},
+			want: &GetTraceResp{
+				TraceId:       "123",
+				Spans:         loop_span.SpanList{{TraceID: "123", SpanID: "s1"}},
+				NextPageToken: "page_def",
+				HasMore:       true,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

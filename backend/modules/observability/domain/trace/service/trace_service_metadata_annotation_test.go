@@ -114,18 +114,13 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		resp, err := svc.ListMetadata(ctx, req)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
-		structFieldCount := len(loop_span.SpanStructFieldKeys)
-		assert.Len(t, resp.MetadataItemList, structFieldCount+3)
-		for i, key := range loop_span.SpanStructFieldKeys {
-			assert.Equal(t, key, resp.MetadataItemList[i].Key)
-			assert.Equal(t, loop_span.SpanStructFieldValueTypes[key], resp.MetadataItemList[i].ValueType)
-		}
-		assert.Equal(t, "tag_a", resp.MetadataItemList[structFieldCount].Key)
-		assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[structFieldCount].ValueType)
-		assert.Equal(t, "tag_b", resp.MetadataItemList[structFieldCount+1].Key)
-		assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[structFieldCount+1].ValueType)
-		assert.Equal(t, "tag_c", resp.MetadataItemList[structFieldCount+2].Key)
-		assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[structFieldCount+2].ValueType)
+		assert.Len(t, resp.MetadataItemList, 3)
+		assert.Equal(t, "tag_a", resp.MetadataItemList[0].Key)
+		assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[0].ValueType)
+		assert.Equal(t, "tag_b", resp.MetadataItemList[1].Key)
+		assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[1].ValueType)
+		assert.Equal(t, "tag_c", resp.MetadataItemList[2].Key)
+		assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[2].ValueType)
 	})
 
 	t.Run("list spans error", func(t *testing.T) {
@@ -136,7 +131,7 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		assert.Nil(t, resp)
 	})
 
-	t.Run("empty spans returns only struct field keys", func(t *testing.T) {
+	t.Run("empty spans returns empty list", func(t *testing.T) {
 		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), req.PlatformType).Return(filterMock, nil)
 		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
 		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant1"}, nil)
@@ -149,11 +144,7 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		resp, err := svc.ListMetadata(ctx, req)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
-		assert.Len(t, resp.MetadataItemList, len(loop_span.SpanStructFieldKeys))
-		for i, key := range loop_span.SpanStructFieldKeys {
-			assert.Equal(t, key, resp.MetadataItemList[i].Key)
-			assert.Equal(t, loop_span.SpanStructFieldValueTypes[key], resp.MetadataItemList[i].ValueType)
-		}
+		assert.Len(t, resp.MetadataItemList, 0)
 	})
 
 	t.Run("mixed tag types return correct value_type", func(t *testing.T) {
@@ -163,14 +154,11 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 
 		spans := loop_span.SpanList{
 			{
-				SpanID:           "span1",
-				TagsString:       map[string]string{"str_tag": "val"},
-				TagsLong:         map[string]int64{"long_tag": 42},
-				TagsDouble:       map[string]float64{"double_tag": 3.14},
-				TagsBool:         map[string]bool{"bool_tag": true},
-				SystemTagsString: map[string]string{"sys_str": "v"},
-				SystemTagsLong:   map[string]int64{"sys_long": 1},
-				SystemTagsDouble: map[string]float64{"sys_double": 2.0},
+				SpanID:     "span1",
+				TagsString: map[string]string{"str_tag": "val"},
+				TagsLong:   map[string]int64{"long_tag": 42},
+				TagsDouble: map[string]float64{"double_tag": 3.14},
+				TagsBool:   map[string]bool{"bool_tag": true},
 			},
 		}
 
@@ -184,20 +172,14 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 
-		structFieldCount := len(loop_span.SpanStructFieldKeys)
-		tagItems := resp.MetadataItemList[structFieldCount:]
-
 		typeMap := make(map[string]string)
-		for _, item := range tagItems {
+		for _, item := range resp.MetadataItemList {
 			typeMap[item.Key] = item.ValueType
 		}
 		assert.Equal(t, loop_span.MetadataValueTypeString, typeMap["str_tag"])
 		assert.Equal(t, loop_span.MetadataValueTypeLong, typeMap["long_tag"])
 		assert.Equal(t, loop_span.MetadataValueTypeDouble, typeMap["double_tag"])
 		assert.Equal(t, loop_span.MetadataValueTypeBool, typeMap["bool_tag"])
-		assert.Equal(t, loop_span.MetadataValueTypeString, typeMap["sys_str"])
-		assert.Equal(t, loop_span.MetadataValueTypeLong, typeMap["sys_long"])
-		assert.Equal(t, loop_span.MetadataValueTypeDouble, typeMap["sys_double"])
 	})
 
 	t.Run("TagsByte returns string value type", func(t *testing.T) {
@@ -222,10 +204,9 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 
-		structFieldCount := len(loop_span.SpanStructFieldKeys)
-		assert.Len(t, resp.MetadataItemList, structFieldCount+1)
-		assert.Equal(t, "byte_tag", resp.MetadataItemList[structFieldCount].Key)
-		assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[structFieldCount].ValueType)
+		assert.Len(t, resp.MetadataItemList, 1)
+		assert.Equal(t, "byte_tag", resp.MetadataItemList[0].Key)
+		assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[0].ValueType)
 	})
 
 	t.Run("same key across multiple spans increments count for all tag types", func(t *testing.T) {
@@ -235,24 +216,18 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 
 		spans := loop_span.SpanList{
 			{
-				SpanID:           "span1",
-				SystemTagsString: map[string]string{"shared_sys": "a"},
-				SystemTagsLong:   map[string]int64{"shared_sys_long": 1},
-				SystemTagsDouble: map[string]float64{"shared_sys_double": 1.0},
-				TagsLong:         map[string]int64{"shared_long": 1},
-				TagsDouble:       map[string]float64{"shared_double": 1.1},
-				TagsBool:         map[string]bool{"shared_bool": true},
-				TagsByte:         map[string]string{"shared_byte": "x"},
+				SpanID:     "span1",
+				TagsLong:   map[string]int64{"shared_long": 1},
+				TagsDouble: map[string]float64{"shared_double": 1.1},
+				TagsBool:   map[string]bool{"shared_bool": true},
+				TagsByte:   map[string]string{"shared_byte": "x"},
 			},
 			{
-				SpanID:           "span2",
-				SystemTagsString: map[string]string{"shared_sys": "b"},
-				SystemTagsLong:   map[string]int64{"shared_sys_long": 2},
-				SystemTagsDouble: map[string]float64{"shared_sys_double": 2.0},
-				TagsLong:         map[string]int64{"shared_long": 2},
-				TagsDouble:       map[string]float64{"shared_double": 2.2},
-				TagsBool:         map[string]bool{"shared_bool": false},
-				TagsByte:         map[string]string{"shared_byte": "y"},
+				SpanID:     "span2",
+				TagsLong:   map[string]int64{"shared_long": 2},
+				TagsDouble: map[string]float64{"shared_double": 2.2},
+				TagsBool:   map[string]bool{"shared_bool": false},
+				TagsByte:   map[string]string{"shared_byte": "y"},
 			},
 		}
 
@@ -266,12 +241,10 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 
-		structFieldCount := len(loop_span.SpanStructFieldKeys)
-		tagItems := resp.MetadataItemList[structFieldCount:]
-		assert.Len(t, tagItems, 7)
+		assert.Len(t, resp.MetadataItemList, 4)
 	})
 
-	t.Run("tag key matching struct field key is deduped", func(t *testing.T) {
+	t.Run("all tag keys returned including those matching struct fields", func(t *testing.T) {
 		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), req.PlatformType).Return(filterMock, nil)
 		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
 		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant1"}, nil)
@@ -280,7 +253,7 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 			{
 				SpanID: "span1",
 				TagsString: map[string]string{
-					"trace_id":   "should-be-deduped",
+					"trace_id":   "some-value",
 					"custom_tag": "val",
 				},
 			},
@@ -296,9 +269,7 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 
-		structFieldCount := len(loop_span.SpanStructFieldKeys)
-		assert.Len(t, resp.MetadataItemList, structFieldCount+1)
-		assert.Equal(t, "custom_tag", resp.MetadataItemList[structFieldCount].Key)
+		assert.Len(t, resp.MetadataItemList, 2)
 	})
 }
 

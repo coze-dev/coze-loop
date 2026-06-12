@@ -7973,7 +7973,9 @@ type ResultPayload struct {
 	TargetRecord *eval_target.EvalTargetRecord `thrift:"target_record,2,optional" frugal:"2,optional,eval_target.EvalTargetRecord" form:"target_record" json:"target_record,omitempty" query:"target_record"`
 	// 评估器执行结果列表
 	EvaluatorRecords []*evaluator.EvaluatorRecord `thrift:"evaluator_records,3,optional" frugal:"3,optional,list<evaluator.EvaluatorRecord>" form:"evaluator_records" json:"evaluator_records,omitempty" query:"evaluator_records"`
-	SystemInfo       *TurnSystemInfo              `thrift:"system_info,20,optional" frugal:"20,optional,TurnSystemInfo" form:"system_info" json:"system_info,omitempty" query:"system_info"`
+	// 评估器加权得分
+	WeightedScore *float64        `thrift:"weighted_score,10,optional" frugal:"10,optional,double" form:"weighted_score" json:"weighted_score,omitempty" query:"weighted_score"`
+	SystemInfo    *TurnSystemInfo `thrift:"system_info,20,optional" frugal:"20,optional,TurnSystemInfo" form:"system_info" json:"system_info,omitempty" query:"system_info"`
 }
 
 func NewResultPayload() *ResultPayload {
@@ -8019,6 +8021,18 @@ func (p *ResultPayload) GetEvaluatorRecords() (v []*evaluator.EvaluatorRecord) {
 	return p.EvaluatorRecords
 }
 
+var ResultPayload_WeightedScore_DEFAULT float64
+
+func (p *ResultPayload) GetWeightedScore() (v float64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWeightedScore() {
+		return ResultPayload_WeightedScore_DEFAULT
+	}
+	return *p.WeightedScore
+}
+
 var ResultPayload_SystemInfo_DEFAULT *TurnSystemInfo
 
 func (p *ResultPayload) GetSystemInfo() (v *TurnSystemInfo) {
@@ -8039,6 +8053,9 @@ func (p *ResultPayload) SetTargetRecord(val *eval_target.EvalTargetRecord) {
 func (p *ResultPayload) SetEvaluatorRecords(val []*evaluator.EvaluatorRecord) {
 	p.EvaluatorRecords = val
 }
+func (p *ResultPayload) SetWeightedScore(val *float64) {
+	p.WeightedScore = val
+}
 func (p *ResultPayload) SetSystemInfo(val *TurnSystemInfo) {
 	p.SystemInfo = val
 }
@@ -8047,6 +8064,7 @@ var fieldIDToName_ResultPayload = map[int16]string{
 	1:  "eval_set_turn",
 	2:  "target_record",
 	3:  "evaluator_records",
+	10: "weighted_score",
 	20: "system_info",
 }
 
@@ -8060,6 +8078,10 @@ func (p *ResultPayload) IsSetTargetRecord() bool {
 
 func (p *ResultPayload) IsSetEvaluatorRecords() bool {
 	return p.EvaluatorRecords != nil
+}
+
+func (p *ResultPayload) IsSetWeightedScore() bool {
+	return p.WeightedScore != nil
 }
 
 func (p *ResultPayload) IsSetSystemInfo() bool {
@@ -8103,6 +8125,14 @@ func (p *ResultPayload) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.DOUBLE {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8184,6 +8214,17 @@ func (p *ResultPayload) ReadField3(iprot thrift.TProtocol) error {
 	p.EvaluatorRecords = _field
 	return nil
 }
+func (p *ResultPayload) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *float64
+	if v, err := iprot.ReadDouble(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WeightedScore = _field
+	return nil
+}
 func (p *ResultPayload) ReadField20(iprot thrift.TProtocol) error {
 	_field := NewTurnSystemInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -8209,6 +8250,10 @@ func (p *ResultPayload) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -8295,6 +8340,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ResultPayload) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWeightedScore() {
+		if err = oprot.WriteFieldBegin("weighted_score", thrift.DOUBLE, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteDouble(*p.WeightedScore); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *ResultPayload) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSystemInfo() {
 		if err = oprot.WriteFieldBegin("system_info", thrift.STRUCT, 20); err != nil {
@@ -8337,6 +8400,9 @@ func (p *ResultPayload) DeepEqual(ano *ResultPayload) bool {
 	if !p.Field3DeepEqual(ano.EvaluatorRecords) {
 		return false
 	}
+	if !p.Field10DeepEqual(ano.WeightedScore) {
+		return false
+	}
 	if !p.Field20DeepEqual(ano.SystemInfo) {
 		return false
 	}
@@ -8367,6 +8433,18 @@ func (p *ResultPayload) Field3DeepEqual(src []*evaluator.EvaluatorRecord) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ResultPayload) Field10DeepEqual(src *float64) bool {
+
+	if p.WeightedScore == src {
+		return true
+	} else if p.WeightedScore == nil || src == nil {
+		return false
+	}
+	if *p.WeightedScore != *src {
+		return false
 	}
 	return true
 }

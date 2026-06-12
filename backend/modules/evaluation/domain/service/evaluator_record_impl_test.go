@@ -276,6 +276,7 @@ func TestNewEvaluatorRecordServiceImpl(t *testing.T) {
 		mockUserInfoService,
 		mockExptRepo,
 		mockExptTurnResultRepo,
+		nil,
 	)
 	assert.NotNil(t, service)
 }
@@ -353,6 +354,7 @@ func TestEvaluatorRecordServiceImpl_recalculateWeightedScoreForTurn(t *testing.T
 		evaluatorRecordRepo: mockEvaluatorRecordRepo,
 		exptRepo:            mockExptRepo,
 		exptTurnResultRepo:  mockExptTurnResultRepo,
+		scoreCalculator:     NewEvaluatorScoreCalculator(nil, nil),
 	}
 
 	spaceID := int64(100)

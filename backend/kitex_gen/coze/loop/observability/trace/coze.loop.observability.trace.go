@@ -2730,6 +2730,9 @@ type GetTraceRequest struct {
 	EndTime      int64                `thrift:"end_time,4,required" frugal:"4,required,i64" json:"end_time" query:"end_time,required" `
 	PlatformType *common.PlatformType `thrift:"platform_type,8,optional" frugal:"8,optional,string" json:"platform_type,omitempty" query:"platform_type"`
 	SpanIds      []string             `thrift:"span_ids,9,optional" frugal:"9,optional,list<string>" json:"span_ids,omitempty" query:"span_ids"`
+	Filters      *filter.FilterFields `thrift:"filters,10,optional" frugal:"10,optional,filter.FilterFields" json:"filters,omitempty" query:"filters"`
+	PageSize     *int32               `thrift:"page_size,11,optional" frugal:"11,optional,i32" json:"page_size,omitempty" query:"page_size"`
+	PageToken    *string              `thrift:"page_token,12,optional" frugal:"12,optional,string" json:"page_token,omitempty" query:"page_token"`
 	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -2792,6 +2795,42 @@ func (p *GetTraceRequest) GetSpanIds() (v []string) {
 	return p.SpanIds
 }
 
+var GetTraceRequest_Filters_DEFAULT *filter.FilterFields
+
+func (p *GetTraceRequest) GetFilters() (v *filter.FilterFields) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilters() {
+		return GetTraceRequest_Filters_DEFAULT
+	}
+	return p.Filters
+}
+
+var GetTraceRequest_PageSize_DEFAULT int32
+
+func (p *GetTraceRequest) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return GetTraceRequest_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
+var GetTraceRequest_PageToken_DEFAULT string
+
+func (p *GetTraceRequest) GetPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageToken() {
+		return GetTraceRequest_PageToken_DEFAULT
+	}
+	return *p.PageToken
+}
+
 var GetTraceRequest_Base_DEFAULT *base.Base
 
 func (p *GetTraceRequest) GetBase() (v *base.Base) {
@@ -2821,6 +2860,15 @@ func (p *GetTraceRequest) SetPlatformType(val *common.PlatformType) {
 func (p *GetTraceRequest) SetSpanIds(val []string) {
 	p.SpanIds = val
 }
+func (p *GetTraceRequest) SetFilters(val *filter.FilterFields) {
+	p.Filters = val
+}
+func (p *GetTraceRequest) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+func (p *GetTraceRequest) SetPageToken(val *string) {
+	p.PageToken = val
+}
 func (p *GetTraceRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -2832,6 +2880,9 @@ var fieldIDToName_GetTraceRequest = map[int16]string{
 	4:   "end_time",
 	8:   "platform_type",
 	9:   "span_ids",
+	10:  "filters",
+	11:  "page_size",
+	12:  "page_token",
 	255: "Base",
 }
 
@@ -2841,6 +2892,18 @@ func (p *GetTraceRequest) IsSetPlatformType() bool {
 
 func (p *GetTraceRequest) IsSetSpanIds() bool {
 	return p.SpanIds != nil
+}
+
+func (p *GetTraceRequest) IsSetFilters() bool {
+	return p.Filters != nil
+}
+
+func (p *GetTraceRequest) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *GetTraceRequest) IsSetPageToken() bool {
+	return p.PageToken != nil
 }
 
 func (p *GetTraceRequest) IsSetBase() bool {
@@ -2916,6 +2979,30 @@ func (p *GetTraceRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3057,6 +3144,36 @@ func (p *GetTraceRequest) ReadField9(iprot thrift.TProtocol) error {
 	p.SpanIds = _field
 	return nil
 }
+func (p *GetTraceRequest) ReadField10(iprot thrift.TProtocol) error {
+	_field := filter.NewFilterFields()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Filters = _field
+	return nil
+}
+func (p *GetTraceRequest) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
+func (p *GetTraceRequest) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageToken = _field
+	return nil
+}
 func (p *GetTraceRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -3094,6 +3211,18 @@ func (p *GetTraceRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -3226,6 +3355,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
+func (p *GetTraceRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilters() {
+		if err = oprot.WriteFieldBegin("filters", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Filters.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *GetTraceRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+func (p *GetTraceRequest) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageToken() {
+		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 func (p *GetTraceRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -3275,6 +3458,15 @@ func (p *GetTraceRequest) DeepEqual(ano *GetTraceRequest) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.SpanIds) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Filters) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.PageSize) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.PageToken) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -3336,6 +3528,37 @@ func (p *GetTraceRequest) Field9DeepEqual(src []string) bool {
 	}
 	return true
 }
+func (p *GetTraceRequest) Field10DeepEqual(src *filter.FilterFields) bool {
+
+	if !p.Filters.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *GetTraceRequest) Field11DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *GetTraceRequest) Field12DeepEqual(src *string) bool {
+
+	if p.PageToken == src {
+		return true
+	} else if p.PageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *GetTraceRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
@@ -3347,6 +3570,8 @@ func (p *GetTraceRequest) Field255DeepEqual(src *base.Base) bool {
 type GetTraceResponse struct {
 	Spans             []*span.OutputSpan `thrift:"spans,1,required" frugal:"1,required,list<span.OutputSpan>" form:"spans,required" json:"spans,required" query:"spans,required"`
 	TracesAdvanceInfo *TraceAdvanceInfo  `thrift:"traces_advance_info,2,optional" frugal:"2,optional,TraceAdvanceInfo" form:"traces_advance_info" json:"traces_advance_info,omitempty" query:"traces_advance_info"`
+	NextPageToken     *string            `thrift:"next_page_token,3,optional" frugal:"3,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
+	HasMore           *bool              `thrift:"has_more,4,optional" frugal:"4,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
 	BaseResp          *base.BaseResp     `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
@@ -3376,6 +3601,30 @@ func (p *GetTraceResponse) GetTracesAdvanceInfo() (v *TraceAdvanceInfo) {
 	return p.TracesAdvanceInfo
 }
 
+var GetTraceResponse_NextPageToken_DEFAULT string
+
+func (p *GetTraceResponse) GetNextPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNextPageToken() {
+		return GetTraceResponse_NextPageToken_DEFAULT
+	}
+	return *p.NextPageToken
+}
+
+var GetTraceResponse_HasMore_DEFAULT bool
+
+func (p *GetTraceResponse) GetHasMore() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetHasMore() {
+		return GetTraceResponse_HasMore_DEFAULT
+	}
+	return *p.HasMore
+}
+
 var GetTraceResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *GetTraceResponse) GetBaseResp() (v *base.BaseResp) {
@@ -3393,6 +3642,12 @@ func (p *GetTraceResponse) SetSpans(val []*span.OutputSpan) {
 func (p *GetTraceResponse) SetTracesAdvanceInfo(val *TraceAdvanceInfo) {
 	p.TracesAdvanceInfo = val
 }
+func (p *GetTraceResponse) SetNextPageToken(val *string) {
+	p.NextPageToken = val
+}
+func (p *GetTraceResponse) SetHasMore(val *bool) {
+	p.HasMore = val
+}
 func (p *GetTraceResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -3400,11 +3655,21 @@ func (p *GetTraceResponse) SetBaseResp(val *base.BaseResp) {
 var fieldIDToName_GetTraceResponse = map[int16]string{
 	1:   "spans",
 	2:   "traces_advance_info",
+	3:   "next_page_token",
+	4:   "has_more",
 	255: "BaseResp",
 }
 
 func (p *GetTraceResponse) IsSetTracesAdvanceInfo() bool {
 	return p.TracesAdvanceInfo != nil
+}
+
+func (p *GetTraceResponse) IsSetNextPageToken() bool {
+	return p.NextPageToken != nil
+}
+
+func (p *GetTraceResponse) IsSetHasMore() bool {
+	return p.HasMore != nil
 }
 
 func (p *GetTraceResponse) IsSetBaseResp() bool {
@@ -3442,6 +3707,22 @@ func (p *GetTraceResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3521,6 +3802,28 @@ func (p *GetTraceResponse) ReadField2(iprot thrift.TProtocol) error {
 	p.TracesAdvanceInfo = _field
 	return nil
 }
+func (p *GetTraceResponse) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NextPageToken = _field
+	return nil
+}
+func (p *GetTraceResponse) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.HasMore = _field
+	return nil
+}
 func (p *GetTraceResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -3542,6 +3845,14 @@ func (p *GetTraceResponse) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -3608,6 +3919,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *GetTraceResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNextPageToken() {
+		if err = oprot.WriteFieldBegin("next_page_token", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.NextPageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *GetTraceResponse) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHasMore() {
+		if err = oprot.WriteFieldBegin("has_more", thrift.BOOL, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.HasMore); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 func (p *GetTraceResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
@@ -3647,6 +3994,12 @@ func (p *GetTraceResponse) DeepEqual(ano *GetTraceResponse) bool {
 	if !p.Field2DeepEqual(ano.TracesAdvanceInfo) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.NextPageToken) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.HasMore) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -3669,6 +4022,30 @@ func (p *GetTraceResponse) Field1DeepEqual(src []*span.OutputSpan) bool {
 func (p *GetTraceResponse) Field2DeepEqual(src *TraceAdvanceInfo) bool {
 
 	if !p.TracesAdvanceInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *GetTraceResponse) Field3DeepEqual(src *string) bool {
+
+	if p.NextPageToken == src {
+		return true
+	} else if p.NextPageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.NextPageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetTraceResponse) Field4DeepEqual(src *bool) bool {
+
+	if p.HasMore == src {
+		return true
+	} else if p.HasMore == nil || src == nil {
+		return false
+	}
+	if *p.HasMore != *src {
 		return false
 	}
 	return true

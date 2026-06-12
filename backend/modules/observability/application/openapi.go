@@ -49,6 +49,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+const (
+	// maxAnnotationValueSize is the maximum size of annotation value for string types (4MB)
+	maxAnnotationValueSize = 4 * 1024 * 1024
+)
+
 type IAnnotationQueueConsumer interface {
 	Send(context.Context, *entity.AnnotationEvent) error
 }
@@ -465,6 +470,9 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 		}
 		val = loop_span.NewLongValue(i)
 	case loop_span.AnnotationValueTypeString, loop_span.AnnotationValueTypeCategory:
+		if len(req.AnnotationValue) > maxAnnotationValueSize {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation_value too long, max 4MB"))
+		}
 		val = loop_span.NewStringValue(req.AnnotationValue)
 	case loop_span.AnnotationValueTypeBool:
 		b, err := strconv.ParseBool(req.AnnotationValue)
@@ -479,6 +487,9 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 		}
 		val = loop_span.NewDoubleValue(f)
 	default:
+		if len(req.AnnotationValue) > maxAnnotationValueSize {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("annotation_value too long, max 4MB"))
+		}
 		val = loop_span.NewStringValue(req.AnnotationValue)
 	}
 	if err := o.auth.CheckWorkspacePermission(ctx,

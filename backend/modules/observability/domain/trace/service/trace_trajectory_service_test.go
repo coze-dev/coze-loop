@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	configmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	tenantmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -105,7 +106,7 @@ func TestTraceServiceImpl_buildTrajectories(t *testing.T) {
 	all := loop_span.SpanList{root, child1, child2}
 	selected := loop_span.SpanList{child1}
 	trajectoryRule := &loop_span.FilterFields{FilterFields: []*loop_span.FilterField{{FieldName: loop_span.SpanFieldSpanType, FieldType: loop_span.FieldTypeString, Values: []string{"agent", "model", "tool"}, QueryType: ptr.Of(loop_span.QueryTypeEnumIn)}}}
-	res, err := svc.buildTrajectories(context.Background(), &all, &selected, trajectoryRule)
+	res, err := svc.buildTrajectories(context.Background(), &all, &selected, trajectoryRule, nil)
 	assert.NoError(t, err)
 	traj := res[traceID]
 	assert.NotNil(t, traj)
@@ -126,8 +127,10 @@ func TestTraceServiceImpl_GetTrajectories_and_ListTrajectory(t *testing.T) {
 	tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 	// 配置查询：返回空，走默认规则
 	repoMock.EXPECT().GetTrajectoryConfig(gomock.Any(), repo.GetTrajectoryConfigParam{WorkspaceId: 1}).Return(nil, nil).AnyTimes()
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTrajectoryMetadataConfig(gomock.Any()).Return(nil).AnyTimes()
 
-	svc := &TraceServiceImpl{traceRepo: repoMock, buildHelper: builder, tenantProvider: tenantProviderMock}
+	svc := &TraceServiceImpl{traceRepo: repoMock, buildHelper: builder, tenantProvider: tenantProviderMock, traceConfig: traceConfigMock}
 	// mock list all spans
 	traceIDs := []string{"tid"}
 	repoMock.EXPECT().ListSpansRepeat(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, p *repo.ListSpansParam) (*repo.ListSpansResult, error) {

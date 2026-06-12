@@ -305,7 +305,7 @@ func TestExptSchedulerImpl_RecordEvalItemRunLogs(t *testing.T) {
 				},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
-				f.ResultSvc.EXPECT().RecordItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				f.ResultSvc.EXPECT().RecordItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				mockMode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.ResultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.Publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -333,7 +333,7 @@ func TestExptSchedulerImpl_RecordEvalItemRunLogs(t *testing.T) {
 				Publisher: f.Publisher,
 			}
 
-			err := svc.recordEvalItemRunLogs(tt.args.ctx, tt.args.event, tt.args.completeItems, mockMode)
+			err := svc.recordEvalItemRunLogs(tt.args.ctx, tt.args.event, tt.args.completeItems, mockMode, nil)
 			if tt.assertErr != nil {
 				tt.assertErr(t, err)
 			}

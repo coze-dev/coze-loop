@@ -89,6 +89,7 @@ type MetricsService struct {
 	oMetricRepo     repo.IOfflineMetricRepo
 	metricDefMap    map[string]entity.IMetricDefinition
 	metricDrillDown map[string][]string
+	metricGroupMap  map[string]*entity.MetricGroup
 	buildHelper     trace_service.TraceFilterProcessorBuilder
 	tenantProvider  tenant.ITenantProvider
 	traceConfig     config.ITraceConfig
@@ -123,6 +124,7 @@ func NewMetricsService(
 func (m *MetricsService) registerMetrics() error {
 	metricDefMap := make(map[string]entity.IMetricDefinition)
 	metricDrillDown := make(map[string][]string)
+	metricGroupMap := make(map[string]*entity.MetricGroup)
 	for _, metricGroup := range m.pMetrics.MetricGroups {
 		var groupMetrics []entity.IMetricDefinition
 		for _, def := range metricGroup.MetricDefinitions {
@@ -152,10 +154,12 @@ func (m *MetricsService) registerMetrics() error {
 				return fmt.Errorf("metric name already belongs %s", name)
 			}
 			metricDrillDown[name] = metricGroup.DrillDownObjects
+			metricGroupMap[name] = metricGroup
 		}
 	}
 	m.metricDefMap = metricDefMap
 	m.metricDrillDown = metricDrillDown
+	m.metricGroupMap = metricGroupMap
 	logs.Info("%d metrics registered", len(metricDefMap))
 	return nil
 }

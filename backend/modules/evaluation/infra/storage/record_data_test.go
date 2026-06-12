@@ -61,6 +61,10 @@ func (f *fakeConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context
 	return nil
 }
 
+func (f *fakeConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
+	return nil, false
+}
+
 type nopReader struct{ buf *bytes.Reader }
 
 func newNopReader(b []byte) *nopReader                       { return &nopReader{buf: bytes.NewReader(b)} }

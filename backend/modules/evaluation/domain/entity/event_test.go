@@ -67,7 +67,7 @@ func TestExptItemEvalEvent_CtxTargetCalled(t *testing.T) {
 }
 
 func TestExptItemEvalEvent_IgnoreExistedEvaluatorResult(t *testing.T) {
-	t.Run("ctx init and target called: always false", func(t *testing.T) {
+	t.Run("ctx init and target called: always true", func(t *testing.T) {
 		ctx := ctxcache.Init(context.Background())
 
 		tests := []struct {
@@ -85,7 +85,7 @@ func TestExptItemEvalEvent_IgnoreExistedEvaluatorResult(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				e := &ExptItemEvalEvent{ExptRunMode: tt.runMode, RetryTimes: tt.retry}
 				e.WithCtxTargetCalled(ctx)
-				assert.False(t, e.IgnoreExistedEvaluatorResult(ctx))
+				assert.True(t, e.IgnoreExistedEvaluatorResult(ctx))
 			})
 		}
 	})
