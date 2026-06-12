@@ -985,9 +985,19 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 	}
 
 	// 3 days forward by default
+	startTime := time.Now().Add(-3 * 24 * time.Hour).UnixMilli()
+	if req.StartTime != nil && *req.StartTime > 0 {
+		startTime = *req.StartTime
+	}
+	var endTime int64
+	if req.EndTime != nil && *req.EndTime > 0 {
+		endTime = *req.EndTime
+	}
+
 	svcReq := &service.ListWorkspaceAnnotationsReq{
 		WorkspaceID:  req.WorkspaceID,
-		StartTime:    time.Now().Add(-3 * 24 * time.Hour).UnixMilli(),
+		StartTime:    startTime,
+		EndTime:      endTime,
 		PlatformType: platformType,
 	}
 
@@ -1029,6 +1039,7 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 		Key            string
 		OriginalKey    string
 		AnnotationType loop_span.AnnotationType
+		ValueType      string
 	}
 	keyCount := make(map[annoKey]int)
 	for i, anno := range annoWithInfo {
@@ -1039,6 +1050,7 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 			Key:            anno.GetKey(),
 			OriginalKey:    originalKeys[i],
 			AnnotationType: loop_span.AnnotationType(anno.GetType()),
+			ValueType:      anno.GetValueType(),
 		}
 		keyCount[k]++
 	}
@@ -1053,11 +1065,15 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 
 	simpleList := make([]*annodto.SimpleAnnotationInfo, 0, len(keys))
 	for _, k := range keys {
-		simpleList = append(simpleList, &annodto.SimpleAnnotationInfo{
+		info := &annodto.SimpleAnnotationInfo{
 			Key:            k.Key,
 			AnnotationType: ptr.Of(annodto.AnnotationType(k.AnnotationType)),
 			OriginalKey:    ptr.Of(k.OriginalKey),
-		})
+		}
+		if k.ValueType != "" {
+			info.ValueType = ptr.Of(k.ValueType)
+		}
+		simpleList = append(simpleList, info)
 	}
 
 	return &trace.ListWorkspaceAnnotationsResponse{

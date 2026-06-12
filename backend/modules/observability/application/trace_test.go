@@ -2820,6 +2820,82 @@ func TestTraceApplication_ListWorkspaceAnnotations(t *testing.T) {
 		assert.NotNil(t, resp)
 		assert.Len(t, resp.SimpleAnnotationList, 0)
 	})
+
+	t.Run("with custom StartTime and EndTime", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, req *service.ListWorkspaceAnnotationsReq) (*service.ListWorkspaceAnnotationsResp, error) {
+				// 验证 startTime 和 endTime 被正确传递
+				assert.Equal(t, int64(1000), req.StartTime)
+				assert.Equal(t, int64(2000), req.EndTime)
+				return &service.ListWorkspaceAnnotationsResp{
+					Annotations: loop_span.AnnotationList{},
+				}, nil
+			},
+		)
+
+		startTime := int64(1000)
+		endTime := int64(2000)
+		tr := &TraceApplication{authSvc: mockAuth, traceService: mockSvc}
+		resp, err := tr.ListWorkspaceAnnotations(context.Background(), &trace.ListWorkspaceAnnotationsRequest{
+			WorkspaceID: 123,
+			StartTime:   &startTime,
+			EndTime:     &endTime,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+	})
+
+	t.Run("ValueType populated in response", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockUser := rpcmock.NewMockIUserProvider(ctrl)
+		mockEval := rpcmock.NewMockIEvaluatorRPCAdapter(ctrl)
+		mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
+
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).Return(&service.ListWorkspaceAnnotationsResp{
+			Annotations: loop_span.AnnotationList{
+				{
+					Key:            "score",
+					AnnotationType: loop_span.AnnotationTypeManualFeedback,
+					Value: loop_span.AnnotationValue{
+						ValueType:  loop_span.AnnotationValueTypeDouble,
+						FloatValue: 0.9,
+					},
+					CreatedBy: "user1",
+					UpdatedBy: "user1",
+				},
+			},
+		}, nil)
+		mockUser.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, nil, nil).AnyTimes()
+		mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return(nil, nil, nil).AnyTimes()
+		mockTag.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
+		tr := &TraceApplication{
+			authSvc:      mockAuth,
+			traceService: mockSvc,
+			userSvc:      mockUser,
+			evalSvc:      mockEval,
+			tagSvc:       mockTag,
+		}
+		resp, err := tr.ListWorkspaceAnnotations(context.Background(), &trace.ListWorkspaceAnnotationsRequest{
+			WorkspaceID: 123,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Len(t, resp.SimpleAnnotationList, 1)
+		// ValueType should be set because the annotation has ValueType "double"
+		assert.NotNil(t, resp.SimpleAnnotationList[0].ValueType)
+		assert.Equal(t, "double", *resp.SimpleAnnotationList[0].ValueType)
+	})
 }
 
 func TestTraceApplication_ExtractSpanInfo(t *testing.T) {
