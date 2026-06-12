@@ -1,6 +1,6 @@
 namespace go coze.loop.evaluation.expt
 
-// BAM resync marker (force re-import for swimlane boe_6839386066 IDL alignment)
+// BAM resync marker v2 (force AGW packet adapter cache refresh)
 include "../../../base.thrift"
 include "../data/domain/dataset.thrift"
 include "./domain/eval_set.thrift"
