@@ -10,6 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 type FeedbackScoreMetric struct{}
@@ -31,7 +32,14 @@ func (m *FeedbackScoreMetric) Expression(_ entity.MetricGranularity) *entity.Exp
 }
 
 func (m *FeedbackScoreMetric) Where(_ context.Context, _ span_filter.Filter, _ *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return nil, nil
+	return []*loop_span.FilterField{
+		{
+			FieldName: "value_type",
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{"double", "long"},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+		},
+	}, nil
 }
 
 func (m *FeedbackScoreMetric) GroupBy() []*entity.Dimension {

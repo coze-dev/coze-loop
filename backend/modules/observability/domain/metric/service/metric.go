@@ -465,6 +465,24 @@ func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *
 		if expr := mDef.Expression(req.Granularity); expr != nil {
 			metricExpressions[metricName] = expr.Expression
 		}
+		// 合并指标定义的 Where 条件到 Filters
+		filters := req.FilterFields
+		whereFilters, err := mDef.Where(ctx, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		if len(whereFilters) > 0 {
+			if filters == nil {
+				filters = &loop_span.FilterFields{}
+			} else {
+				// 浅拷贝避免修改原始请求的 FilterFields
+				copied := *filters
+				copied.FilterFields = make([]*loop_span.FilterField, len(filters.FilterFields))
+				copy(copied.FilterFields, filters.FilterFields)
+				filters = &copied
+			}
+			filters.FilterFields = append(filters.FilterFields, whereFilters...)
+		}
 		param := &repo.QueryFeedbackOnlineParam{
 			Tenants:           tenants,
 			WorkspaceID:       strconv.FormatInt(req.WorkspaceID, 10),
@@ -473,7 +491,7 @@ func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *
 			EndTime:           req.EndTime,
 			MetricNames:       []string{metricName},
 			MetricExpressions: metricExpressions,
-			Filters:           req.FilterFields,
+			Filters:           filters,
 			DrillDownFields:   req.DrillDownFields,
 		}
 		// GroupBySpaceID 时，添加 space_id 到 DrillDownFields（CK 层会按 space_id GROUP BY）
