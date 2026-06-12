@@ -731,7 +731,7 @@ func TestWithAnnotationMetricRepo(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 	pMetrics := &entity.PlatformMetrics{
 		MetricGroups:       map[string]*entity.MetricGroup{},
@@ -811,7 +811,7 @@ func TestQueryAnnotationMetrics_OnlinePath(t *testing.T) {
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
 		name:       "feedback_count",
@@ -839,7 +839,7 @@ func TestQueryAnnotationMetrics_OnlinePath(t *testing.T) {
 	}).AnyTimes()
 
 	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
-	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
+	annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
 		Data: []map[string]any{{"feedback_count": "100"}},
 	}, nil)
 
@@ -867,7 +867,7 @@ func TestQueryAnnotationMetrics_OnlineOfflineSplit(t *testing.T) {
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 	oMetricRepoMock := repomocks.NewMockIOfflineMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
@@ -898,7 +898,7 @@ func TestQueryAnnotationMetrics_OnlineOfflineSplit(t *testing.T) {
 
 	// 在线部分
 	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
-	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
+	annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
 		Data: []map[string]any{{"feedback_count": "50"}},
 	}, nil)
 
@@ -936,7 +936,7 @@ func TestQueryAnnotationOnlineMetrics_TenantError(t *testing.T) {
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
 		name:       "feedback_count",
@@ -985,7 +985,7 @@ func TestQueryAnnotationOnlineMetrics_GroupBySpaceID(t *testing.T) {
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
 		name:       "feedback_count",
@@ -1012,13 +1012,12 @@ func TestQueryAnnotationOnlineMetrics_GroupBySpaceID(t *testing.T) {
 	}).AnyTimes()
 
 	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
-	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, param *repo.QueryFeedbackOnlineParam) (*repo.GetMetricsResult, error) {
-			// 验证 GroupBySpaceID 设置正确，且 space_id 被添加到 DrillDownFields
-			assert.True(t, param.GroupBySpaceID)
+	annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, param *repo.GetMetricsParam) (*repo.GetMetricsResult, error) {
+			// 验证 space_id 被添加到 GroupBys
 			hasSpaceID := false
-			for _, f := range param.DrillDownFields {
-				if f.FieldName == loop_span.SpanFieldSpaceId {
+			for _, dim := range param.GroupBys {
+				if dim.Field != nil && dim.Field.FieldName == loop_span.SpanFieldSpaceId {
 					hasSpaceID = true
 				}
 			}
@@ -1054,7 +1053,7 @@ func TestQueryAnnotationOnlineMetrics_GroupByAliasRename(t *testing.T) {
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
 		name:       "feedback_count",
@@ -1090,7 +1089,7 @@ func TestQueryAnnotationOnlineMetrics_GroupByAliasRename(t *testing.T) {
 
 	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
 	// 模拟返回数据中有 annotation_key 字段，应该被重命名为 key_alias
-	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
+	annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
 		Data: []map[string]any{{"feedback_count": "10", "annotation_key": "thumbsup"}},
 	}, nil)
 
@@ -1117,7 +1116,7 @@ func TestQueryAnnotationOnlineMetrics_TimeSeriesGranularity(t *testing.T) {
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
 		name:       "feedback_ts",
@@ -1144,8 +1143,8 @@ func TestQueryAnnotationOnlineMetrics_TimeSeriesGranularity(t *testing.T) {
 	}).AnyTimes()
 
 	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
-	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, param *repo.QueryFeedbackOnlineParam) (*repo.GetMetricsResult, error) {
+	annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, param *repo.GetMetricsParam) (*repo.GetMetricsResult, error) {
 			// 验证 TimeSeries 类型时 Granularity 被设置
 			assert.Equal(t, entity.MetricGranularity1Hour, param.Granularity)
 			return &repo.GetMetricsResult{
@@ -1180,7 +1179,7 @@ func TestQueryAnnotationMetrics_OnlineError_InSplitPath(t *testing.T) {
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
 		name:       "feedback_count",
@@ -1210,7 +1209,7 @@ func TestQueryAnnotationMetrics_OnlineError_InSplitPath(t *testing.T) {
 
 	// 在线部分返回错误 -> 整个查询应该失败
 	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
-	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+	annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 
 	svc, err := NewMetricsService(nil, nil, tenantMock, nil, traceConfigMock, pMetrics, WithAnnotationMetricRepo(annoRepoMock))
 	assert.NoError(t, err)
@@ -1238,7 +1237,7 @@ func TestQueryAnnotationMetrics_PlatformDefNil(t *testing.T) {
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
 		name:       "feedback_count",
@@ -1268,7 +1267,7 @@ func TestQueryAnnotationMetrics_PlatformDefNil(t *testing.T) {
 	}).AnyTimes()
 
 	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
-	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
+	annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
 		Data: []map[string]any{{"feedback_count": "77"}},
 	}, nil)
 
@@ -1296,7 +1295,7 @@ func TestQueryAnnotationOnlineMetrics_RepoError(t *testing.T) {
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-	annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+	annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
 		name:       "feedback_count",
@@ -1323,7 +1322,7 @@ func TestQueryAnnotationOnlineMetrics_RepoError(t *testing.T) {
 	}).AnyTimes()
 
 	tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
-	annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+	annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 
 	svc, err := NewMetricsService(nil, nil, tenantMock, nil, traceConfigMock, pMetrics, WithAnnotationMetricRepo(annoRepoMock))
 	assert.NoError(t, err)

@@ -1575,7 +1575,7 @@ func TestMetricsService_TraverseMetrics_AnnotationSource(t *testing.T) {
 		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 		builderMock := traceServicemocks.NewMockTraceFilterProcessorBuilder(ctrl)
 		traceCfgMock := configmocks.NewMockITraceConfig(ctrl)
-		annoRepoMock := repomocks.NewMockIAnnotationMetricRepo(ctrl)
+		annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
 
 		// 配置 TraceConfig：不走离线查询
 		traceCfgMock.EXPECT().GetMetricQueryConfig(gomock.Any()).Return(&config.MetricQueryConfig{
@@ -1586,10 +1586,9 @@ func TestMetricsService_TraverseMetrics_AnnotationSource(t *testing.T) {
 		tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
 
 		// annotation 在线查询返回一条 Summary 数据
-		annoRepoMock.EXPECT().QueryFeedbackOnlineMetrics(gomock.Any(), gomock.Any()).DoAndReturn(
-			func(_ context.Context, param *repo.QueryFeedbackOnlineParam) (*repo.GetMetricsResult, error) {
+		annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, param *repo.GetMetricsParam) (*repo.GetMetricsResult, error) {
 				assert.Equal(t, []string{"tenant-1"}, param.Tenants)
-				assert.Equal(t, []string{"annotation_metric"}, param.MetricNames)
 				return &repo.GetMetricsResult{Data: []map[string]any{{"annotation_metric": "456"}}}, nil
 			},
 		).Times(1)

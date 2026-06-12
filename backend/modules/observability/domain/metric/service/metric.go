@@ -87,7 +87,7 @@ type IMetricsService interface {
 type MetricsService struct {
 	metricRepo           repo.IMetricRepo
 	oMetricRepo          repo.IOfflineMetricRepo
-	annotationMetricRepo repo.IAnnotationMetricRepo
+	annotationMetricRepo repo.IMetricRepo
 	metricDefMap         map[string]entity.IMetricDefinition
 	metricDrillDown      map[string][]string
 	metricGroupMap       map[string]*entity.MetricGroup
@@ -130,7 +130,7 @@ func NewMetricsService(
 type MetricsServiceOption func(*MetricsService)
 
 // WithAnnotationMetricRepo 设置 annotation 指标仓储（用于 Feedback 离线指标）
-func WithAnnotationMetricRepo(r repo.IAnnotationMetricRepo) MetricsServiceOption {
+func WithAnnotationMetricRepo(r repo.IMetricRepo) MetricsServiceOption {
 	return func(s *MetricsService) {
 		s.annotationMetricRepo = r
 	}
@@ -451,110 +451,79 @@ func (m *MetricsService) queryAnnotationMetrics(ctx context.Context, req *QueryM
 
 // queryAnnotationOnlineMetrics 在线查询 annotation 表
 func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
+	mBuilder, err := m.buildAnnotationOnlineQuery(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	st := time.Now()
+	result, err := m.annotationMetricRepo.GetMetrics(ctx, mBuilder.mRepoReq)
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "query annotation online metrics for %v successfully, cost %v", mBuilder.metricNames, time.Since(st))
+	return &QueryMetricsResp{
+		Metrics: m.formatMetrics(result.Data, mBuilder),
+	}, nil
+}
+
+// buildAnnotationOnlineQuery 构建 annotation 在线查询参数，复用 buildMetricInfo
+func (m *MetricsService) buildAnnotationOnlineQuery(ctx context.Context, req *QueryMetricsReq) (*metricQueryBuilder, error) {
 	tenants, err := m.tenantProvider.GetMetricTenantsByPlatformType(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
 	}
-	retMetric := make(map[string]*entity.Metric)
-	for _, metricName := range req.MetricsNames {
-		mDef := m.metricDefMap[metricName]
-		if mDef == nil {
-			continue
-		}
-		metricExpressions := make(map[string]string)
-		if expr := mDef.Expression(req.Granularity); expr != nil {
-			metricExpressions[metricName] = expr.Expression
-		}
-		// 合并指标定义的 Where 条件到 Filters
-		filters := req.FilterFields
-		whereFilters, err := mDef.Where(ctx, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-		if len(whereFilters) > 0 {
-			if filters == nil {
-				filters = &loop_span.FilterFields{}
-			} else {
-				// 浅拷贝避免修改原始请求的 FilterFields
-				copied := *filters
-				copied.FilterFields = make([]*loop_span.FilterField, len(filters.FilterFields))
-				copy(copied.FilterFields, filters.FilterFields)
-				filters = &copied
-			}
-			filters.FilterFields = append(filters.FilterFields, whereFilters...)
-		}
-		param := &repo.QueryFeedbackOnlineParam{
-			Tenants:           tenants,
-			WorkspaceID:       strconv.FormatInt(req.WorkspaceID, 10),
-			GroupBySpaceID:    req.GroupBySpaceID,
-			StartTime:         req.StartTime,
-			EndTime:           req.EndTime,
-			MetricNames:       []string{metricName},
-			MetricExpressions: metricExpressions,
-			Filters:           filters,
-			DrillDownFields:   req.DrillDownFields,
-		}
-		// GroupBySpaceID 时，添加 space_id 到 DrillDownFields（CK 层会按 space_id GROUP BY）
-		if req.GroupBySpaceID {
-			param.DrillDownFields = append(param.DrillDownFields, &loop_span.FilterField{
-				FieldName: loop_span.SpanFieldSpaceId,
-			})
-		}
-		// 把指标定义的 GroupBy 维度合并到 DrillDownFields
-		for _, dim := range mDef.GroupBy() {
-			if dim.Field != nil {
-				param.DrillDownFields = append(param.DrillDownFields, dim.Field)
-			}
-		}
-		if mDef.Type() == entity.MetricTypeTimeSeries {
-			param.Granularity = req.Granularity
-		}
-		st := time.Now()
-		result, err := m.annotationMetricRepo.QueryFeedbackOnlineMetrics(ctx, param)
-		if err != nil {
-			return nil, err
-		}
-		logs.CtxInfo(ctx, "query annotation online metrics for [%s] successfully, cost %v", metricName, time.Since(st))
-
-		// 将 GroupBy 的 FieldName 重命名为 Alias，使在线查询结果与离线查询的列名一致
-		for _, dim := range mDef.GroupBy() {
-			if dim.Field != nil && dim.Alias != "" && dim.Field.FieldName != dim.Alias {
-				for _, row := range result.Data {
-					if v, ok := row[dim.Field.FieldName]; ok {
-						row[dim.Alias] = v
-						delete(row, dim.Field.FieldName)
-					}
-				}
-			}
-		}
-
-		// 构建 metricQueryBuilder 用于格式化
-		oExpression := mDef.OExpression()
-		if oExpression.MetricName == "" {
-			oExpression.MetricName = mDef.Name()
-		}
-		mBuilder := &metricQueryBuilder{
-			metricNames: []string{metricName},
-			granularity: req.Granularity,
-			mRepoReq: &repo.GetMetricsParam{
-				StartAt: req.StartTime,
-				EndAt:   req.EndTime,
-			},
-			mInfo: &metricInfo{
-				mType: mDef.Type(),
-				mAggregation: []*entity.Dimension{
-					{
-						OExpression: oExpression,
-						Alias:       mDef.Name(),
-					},
-				},
-			},
-		}
-		for k, v := range m.formatMetrics(result.Data, mBuilder) {
-			retMetric[k] = v
-		}
+	param := &repo.GetMetricsParam{
+		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:     tenants,
+		StartAt:     req.StartTime,
+		EndAt:       req.EndTime,
 	}
-	return &QueryMetricsResp{Metrics: retMetric}, nil
+	mBuilder := &metricQueryBuilder{
+		metricNames:   req.MetricsNames,
+		requestFilter: req.FilterFields,
+		granularity:   req.Granularity,
+	}
+	if err := m.buildMetricInfo(ctx, mBuilder); err != nil {
+		return nil, err
+	}
+	if mBuilder.mInfo.mType == entity.MetricTypeTimeSeries {
+		param.Granularity = req.Granularity
+	}
+	// annotation 不走 BuildBasicSpanFilter，直接合并 mWhere + requestFilter
+	var filterFields []*loop_span.FilterField
+	filterFields = append(filterFields, mBuilder.mInfo.mWhere...)
+	param.Filters = &loop_span.FilterFields{
+		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+		FilterFields: []*loop_span.FilterField{
+			{
+				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+				SubFilter:  &loop_span.FilterFields{FilterFields: filterFields},
+			},
+			{
+				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+				SubFilter:  req.FilterFields,
+			},
+		},
+	}
+	param.Aggregations = mBuilder.mInfo.mAggregation
+	param.GroupBys = mBuilder.mInfo.mGroupBy
+	for _, field := range req.DrillDownFields {
+		if field == nil {
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+		}
+		param.GroupBys = append(param.GroupBys, &entity.Dimension{
+			Field: field,
+			Alias: field.FieldName,
+		})
+	}
+	if req.GroupBySpaceID {
+		param.GroupBys = append(param.GroupBys, &entity.Dimension{
+			Field: &loop_span.FilterField{FieldName: loop_span.SpanFieldSpaceId},
+			Alias: loop_span.SpanFieldSpaceId,
+		})
+	}
+	mBuilder.mRepoReq = param
+	return mBuilder, nil
 }
 
 func (m *MetricsService) queryOnlineMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {

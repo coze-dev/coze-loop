@@ -37,23 +37,3 @@ type IOfflineMetricRepo interface {
 	IMetricRepo
 	InsertMetrics(ctx context.Context, events []*entity.MetricEvent) error
 }
-
-// IAnnotationMetricRepo annotation 表 Feedback 指标查询接口
-type IAnnotationMetricRepo interface {
-	// QueryFeedbackOnlineMetrics 在线实时查询（按时间范围）
-	QueryFeedbackOnlineMetrics(ctx context.Context, param *QueryFeedbackOnlineParam) (*GetMetricsResult, error)
-}
-
-// QueryFeedbackOnlineParam annotation 表在线查询参数
-type QueryFeedbackOnlineParam struct {
-	Tenants           []string
-	WorkspaceID       string
-	GroupBySpaceID    bool
-	StartTime         int64 // ms timestamp
-	EndTime           int64 // ms timestamp
-	MetricNames       []string
-	MetricExpressions map[string]string // metricName -> aggregation expression (e.g. "count()", "avg(value_float)")
-	Filters           *loop_span.FilterFields
-	Granularity       entity.MetricGranularity
-	DrillDownFields   []*loop_span.FilterField
-}
