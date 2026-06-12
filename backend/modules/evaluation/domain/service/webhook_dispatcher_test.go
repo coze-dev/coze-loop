@@ -91,6 +91,30 @@ func TestMatchNotificationFilter_BitsUT(t *testing.T) {
 		}
 		assert.True(t, matchNotificationFilter(ctx, f, entity.ExptStatus_Failed))
 	})
+
+	t.Run("condition with non-ExptStatus field type is skipped, returns false", func(t *testing.T) {
+		t.Parallel()
+		f := &entity.NotificationFilter{
+			FilterConditions: []*entity.NotificationFilterCondition{
+				{
+					Field:    &entity.NotificationFilterField{FieldType: 999}, // unknown field type
+					Operator: entity.NotificationOperatorType_In,
+					Value:    `["11"]`,
+				},
+			},
+		}
+		assert.False(t, matchNotificationFilter(ctx, f, entity.ExptStatus_Success))
+	})
+
+	t.Run("condition with nil field is skipped, returns false", func(t *testing.T) {
+		t.Parallel()
+		f := &entity.NotificationFilter{
+			FilterConditions: []*entity.NotificationFilterCondition{
+				{Field: nil, Operator: entity.NotificationOperatorType_In, Value: `["11"]`},
+			},
+		}
+		assert.False(t, matchNotificationFilter(ctx, f, entity.ExptStatus_Success))
+	})
 }
 
 func TestBuildWebhookPayload_BitsUT(t *testing.T) {
@@ -346,3 +370,4 @@ func TestMapExptStatusToEventType_BitsUT(t *testing.T) {
 		})
 	}
 }
+

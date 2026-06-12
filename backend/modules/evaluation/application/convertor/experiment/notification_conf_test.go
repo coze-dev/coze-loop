@@ -302,17 +302,17 @@ func TestEntityNotificationConfToOpenAPI_BitsUT(t *testing.T) {
 
 		got := entityNotificationConfToOpenAPI(conf)
 		if assert.NotNil(t, got) {
-			// Filter — all numeric fields are string in OpenAPI
+			// Filter — all numeric fields are converted to english strings in OpenAPI
 			if assert.NotNil(t, got.Filter) {
 				if assert.NotNil(t, got.Filter.LogicOp) {
-					assert.Equal(t, "2", *got.Filter.LogicOp) // Or = 2
+					assert.Equal(t, "or", *got.Filter.LogicOp) // Or
 				}
 				if assert.Len(t, got.Filter.FilterConditions, 1) {
 					fc := got.Filter.FilterConditions[0]
-					assert.Equal(t, "7", *fc.Operator) // In
+					assert.Equal(t, "in", *fc.Operator) // In
 					assert.Equal(t, `["v"]`, *fc.Value)
 					if assert.NotNil(t, fc.Field) {
-						assert.Equal(t, "3", *fc.Field.FieldType) // ExptStatus
+						assert.Equal(t, "expt_status", *fc.Field.FieldType) // ExptStatus
 						assert.Equal(t, "k", *fc.Field.FieldKey)
 					}
 				}
@@ -395,14 +395,14 @@ func TestDomainNotificationConfToOpenAPI_BitsUT(t *testing.T) {
 			// Filter
 			if assert.NotNil(t, got.Filter) {
 				if assert.NotNil(t, got.Filter.LogicOp) {
-					assert.Equal(t, "2", *got.Filter.LogicOp)
+					assert.Equal(t, "or", *got.Filter.LogicOp)
 				}
 				if assert.Len(t, got.Filter.FilterConditions, 1) {
 					fc := got.Filter.FilterConditions[0]
-					assert.Equal(t, "7", *fc.Operator)
+					assert.Equal(t, "in", *fc.Operator)
 					assert.Equal(t, `["a","b"]`, *fc.Value)
 					if assert.NotNil(t, fc.Field) {
-						assert.Equal(t, "3", *fc.Field.FieldType)
+						assert.Equal(t, "expt_status", *fc.Field.FieldType)
 						assert.Equal(t, "fk", *fc.Field.FieldKey)
 					}
 				}

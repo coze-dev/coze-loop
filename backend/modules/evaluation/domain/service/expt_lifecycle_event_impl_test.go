@@ -235,7 +235,7 @@ func TestSendNotifyCard(t *testing.T) {
 	t.Run("event ToStatus does not match expt Status, returns nil", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		handler, _ := newTestLifecycleEventHandler(ctrl)
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
 
 		event := &entity.ExptLifecycleEvent{
 			ToStatus: entity.ExptStatus_Success,
@@ -243,6 +243,7 @@ func TestSendNotifyCard(t *testing.T) {
 		expt := &entity.Experiment{
 			Status: entity.ExptStatus_Failed,
 		}
+		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{""}).Return([]*entity.UserInfo{}, nil)
 
 		err := handler.sendNotifyCard(ctx, event, expt)
 		assert.NoError(t, err)

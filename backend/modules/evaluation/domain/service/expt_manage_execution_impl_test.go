@@ -3587,7 +3587,7 @@ func TestBuildExptNotifyParam(t *testing.T) {
 		{
 			name: "unknown status returns empty",
 			expt: &entity.Experiment{
-				ID: 6, SpaceID: 600, Name: "expt6", Status: entity.ExptStatus_Processing,
+				ID: 6, SpaceID: 600, Name: "expt6", Status: entity.ExptStatus_Unknown,
 			},
 			wantCardID: "",
 			wantNil:    true,
