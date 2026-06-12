@@ -173,11 +173,7 @@ func (m *MetricsService) traverseMetric(ctx context.Context, param *metricTraver
 		}
 		var resp *QueryMetricsResp
 		var err error
-		if param.MetricDef.Source() == entity.MetricSourceAnnotation {
-			resp, err = m.queryAnnotationOnlineMetrics(reqCtx, qReq)
-		} else {
-			resp, err = m.queryOnlineMetrics(reqCtx, qReq)
-		}
+		resp, err = m.queryOnlineMetrics(reqCtx, qReq)
 		if err != nil {
 			logs.CtxWarn(reqCtx, "queryOnlineMetrics failed for metric %s, err: %v", metricName, err)
 			return err

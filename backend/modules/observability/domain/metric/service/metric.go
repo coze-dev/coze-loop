@@ -367,11 +367,6 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 }
 
 func (m *MetricsService) queryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
-	// annotation 类型指标走专用查询路径（在线查 annotation 表，离线查 metric 表）
-	if m.isAllAnnotationSource(req.MetricsNames) {
-		return m.queryAnnotationMetrics(ctx, req)
-	}
-
 	qCfg := m.traceConfig.GetMetricQueryConfig(ctx)
 	if !qCfg.SupportOffline { // 不支持离线指标
 		return m.queryOnlineMetrics(ctx, req)
@@ -415,59 +410,35 @@ func (m *MetricsService) isAllAnnotationSource(metricNames []string) bool {
 	return len(metricNames) > 0
 }
 
-// queryAnnotationMetrics annotation 类型指标查询，走在线/离线分流
-func (m *MetricsService) queryAnnotationMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
-	if m.annotationMetricRepo == nil {
-		// 没有注入 annotationMetricRepo 时 fallback 到离线查询
-		return m.queryOfflineMetrics(ctx, req)
+func (m *MetricsService) queryOnlineMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
+	// annotation source 且没有注入 annotationMetricRepo 时直接报错
+	if m.isAllAnnotationSource(req.MetricsNames) && m.annotationMetricRepo == nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode,
+			errorx.WithExtraMsg("annotation metric repo not configured, annotation online query not supported"))
 	}
-	qCfg := m.traceConfig.GetMetricQueryConfig(ctx)
-	if !qCfg.SupportOffline || m.pMetrics.PlatformMetricDefs[req.PlatformType] == nil {
-		// 不支持离线或不在离线范围内，直接走在线查 annotation 表
-		return m.queryAnnotationOnlineMetrics(ctx, req)
-	}
-	boundary := getDaysBeforeTimeStamp(qCfg.OfflineCriticalPoint)
-	if req.StartTime >= boundary {
-		return m.queryAnnotationOnlineMetrics(ctx, req)
-	} else if req.EndTime < boundary {
-		return m.queryOfflineMetrics(ctx, req)
-	} else {
-		start, end := req.StartTime, req.EndTime
-		req.StartTime, req.EndTime = boundary, end
-		onlineMetric, err := m.queryAnnotationOnlineMetrics(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-		req.StartTime, req.EndTime = start, boundary-1
-		offlineMetric, err := m.queryOfflineMetrics(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-		return &QueryMetricsResp{
-			Metrics: m.mergeMetrics(onlineMetric.Metrics, offlineMetric.Metrics),
-		}, nil
-	}
-}
-
-// queryAnnotationOnlineMetrics 在线查询 annotation 表
-func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
-	mBuilder, err := m.buildAnnotationOnlineQuery(ctx, req)
+	mBuilder, err := m.buildOnlineMetricQuery(ctx, req)
 	if err != nil {
 		return nil, err
+	} else if mBuilder == nil {
+		return &QueryMetricsResp{}, nil // 不再查询...
+	}
+	// 根据 source 选择 repo
+	metricRepo := m.metricRepo
+	if m.isAllAnnotationSource(req.MetricsNames) {
+		metricRepo = m.annotationMetricRepo
 	}
 	st := time.Now()
-	result, err := m.annotationMetricRepo.GetMetrics(ctx, mBuilder.mRepoReq)
+	result, err := metricRepo.GetMetrics(ctx, mBuilder.mRepoReq)
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "query annotation online metrics for %v successfully, cost %v", mBuilder.metricNames, time.Since(st))
+	logs.CtxInfo(ctx, "get metrics for %v successfully, cost %v", mBuilder.metricNames, time.Since(st))
 	return &QueryMetricsResp{
 		Metrics: m.formatMetrics(result.Data, mBuilder),
 	}, nil
 }
 
-// buildAnnotationOnlineQuery 构建 annotation 在线查询参数，复用 buildMetricInfo
-func (m *MetricsService) buildAnnotationOnlineQuery(ctx context.Context, req *QueryMetricsReq) (*metricQueryBuilder, error) {
+func (m *MetricsService) buildOnlineMetricQuery(ctx context.Context, req *QueryMetricsReq) (*metricQueryBuilder, error) {
 	tenants, err := m.tenantProvider.GetMetricTenantsByPlatformType(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
@@ -483,28 +454,54 @@ func (m *MetricsService) buildAnnotationOnlineQuery(ctx context.Context, req *Qu
 		requestFilter: req.FilterFields,
 		granularity:   req.Granularity,
 	}
+
+	// annotation source 不需要平台过滤器
+	isAnnotation := m.isAllAnnotationSource(req.MetricsNames)
+	if !isAnnotation {
+		filter, err := m.buildHelper.BuildPlatformRelatedFilter(ctx, req.PlatformType)
+		if err != nil {
+			return nil, err
+		}
+		mBuilder.filter = filter
+		mBuilder.spanEnv = &span_filter.SpanEnv{
+			WorkspaceID: req.WorkspaceID,
+			Source:      req.Source,
+		}
+	}
+
 	if err := m.buildMetricInfo(ctx, mBuilder); err != nil {
 		return nil, err
 	}
 	if mBuilder.mInfo.mType == entity.MetricTypeTimeSeries {
 		param.Granularity = req.Granularity
 	}
-	// annotation 不走 BuildBasicSpanFilter，直接合并 mWhere + requestFilter
-	var filterFields []*loop_span.FilterField
-	filterFields = append(filterFields, mBuilder.mInfo.mWhere...)
-	param.Filters = &loop_span.FilterFields{
-		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-		FilterFields: []*loop_span.FilterField{
-			{
-				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-				SubFilter:  &loop_span.FilterFields{FilterFields: filterFields},
+
+	// 构建过滤条件
+	if isAnnotation {
+		// annotation 不走 BuildBasicSpanFilter，直接合并 mWhere + requestFilter
+		param.Filters = &loop_span.FilterFields{
+			QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+			FilterFields: []*loop_span.FilterField{
+				{
+					QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+					SubFilter:  &loop_span.FilterFields{FilterFields: mBuilder.mInfo.mWhere},
+				},
+				{
+					QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+					SubFilter:  req.FilterFields,
+				},
 			},
-			{
-				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-				SubFilter:  req.FilterFields,
-			},
-		},
+		}
+	} else {
+		mFilter, err := m.buildFilter(ctx, mBuilder)
+		if err != nil {
+			return nil, err
+		} else if mFilter == nil {
+			return nil, nil
+		}
+		param.Filters = mFilter
 	}
+
 	param.Aggregations = mBuilder.mInfo.mAggregation
 	param.GroupBys = mBuilder.mInfo.mGroupBy
 	for _, field := range req.DrillDownFields {
@@ -523,79 +520,8 @@ func (m *MetricsService) buildAnnotationOnlineQuery(ctx context.Context, req *Qu
 		})
 	}
 	mBuilder.mRepoReq = param
-	return mBuilder, nil
-}
-
-func (m *MetricsService) queryOnlineMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
-	mBuilder, err := m.buildOnlineMetricQuery(ctx, req)
-	if err != nil {
-		return nil, err
-	} else if mBuilder == nil {
-		return &QueryMetricsResp{}, nil // 不再查询...
-	}
-	st := time.Now()
-	result, err := m.metricRepo.GetMetrics(ctx, mBuilder.mRepoReq)
-	if err != nil {
-		return nil, err
-	}
-	logs.CtxInfo(ctx, "get metrics for %v successfully, cost %v", mBuilder.metricNames, time.Since(st))
-	return &QueryMetricsResp{
-		Metrics: m.formatMetrics(result.Data, mBuilder),
-	}, nil
-}
-
-func (m *MetricsService) buildOnlineMetricQuery(ctx context.Context, req *QueryMetricsReq) (*metricQueryBuilder, error) {
-	filter, err := m.buildHelper.BuildPlatformRelatedFilter(ctx, req.PlatformType)
-	if err != nil {
-		return nil, err
-	}
-	tenants, err := m.tenantProvider.GetMetricTenantsByPlatformType(ctx, req.PlatformType)
-	if err != nil {
-		return nil, err
-	}
-	param := &repo.GetMetricsParam{
-		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
-		Tenants:     tenants,
-		StartAt:     req.StartTime,
-		EndAt:       req.EndTime,
-	}
-	mBuilder := &metricQueryBuilder{
-		metricNames: req.MetricsNames,
-		filter:      filter,
-		spanEnv: &span_filter.SpanEnv{
-			WorkspaceID: req.WorkspaceID,
-			Source:      req.Source,
-		},
-		requestFilter: req.FilterFields,
-		granularity:   req.Granularity,
-	}
-	if err := m.buildMetricInfo(ctx, mBuilder); err != nil {
-		return nil, err
-	}
-	if mBuilder.mInfo.mType == entity.MetricTypeTimeSeries {
-		param.Granularity = req.Granularity
-	}
-	mFilter, err := m.buildFilter(ctx, mBuilder)
-	if err != nil {
-		return nil, err
-	} else if mFilter == nil {
-		return nil, nil
-	}
-	param.Aggregations = mBuilder.mInfo.mAggregation
-	param.GroupBys = mBuilder.mInfo.mGroupBy
-	param.Filters = mFilter
-	for _, field := range req.DrillDownFields {
-		if field == nil {
-			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
-		}
-		param.GroupBys = append(param.GroupBys, &entity.Dimension{
-			Field: field,
-			Alias: field.FieldName,
-		})
-	}
-	mBuilder.mRepoReq = param
-	// rewrite filter
-	if req.GroupBySpaceID {
+	// rewrite filter for span source
+	if !isAnnotation && req.GroupBySpaceID {
 		_ = param.Filters.Traverse(func(f *loop_span.FilterField) error {
 			if f.FieldName == loop_span.SpanFieldSpaceId { // always true
 				if len(f.Values) != 0 && f.Values[0] == "0" { // space id not passed

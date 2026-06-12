@@ -748,14 +748,13 @@ func TestWithAnnotationMetricRepo(t *testing.T) {
 	assert.Equal(t, annoRepoMock, ms.annotationMetricRepo)
 }
 
-func TestQueryAnnotationMetrics_FallbackToOffline(t *testing.T) {
+func TestQueryAnnotationMetrics_ErrorWhenNoAnnotationRepo(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
-	oMetricRepoMock := repomocks.NewMockIOfflineMetricRepo(ctrl)
 
 	annotationDef := &testMetricDefinition{
 		name:       "feedback_count",
@@ -781,13 +780,8 @@ func TestQueryAnnotationMetrics_FallbackToOffline(t *testing.T) {
 		SupportOffline: false,
 	}).AnyTimes()
 
-	// annotationMetricRepo = nil 时 fallback 到离线查询
-	// 离线查询依赖 oMetricRepo
-	oMetricRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(&repo.GetMetricsResult{
-		Data: []map[string]any{{"feedback_count": "42"}},
-	}, nil).Times(1)
-
-	svc, err := NewMetricsService(nil, oMetricRepoMock, nil, nil, traceConfigMock, pMetrics)
+	// annotationMetricRepo = nil 时应报错
+	svc, err := NewMetricsService(nil, nil, nil, nil, traceConfigMock, pMetrics)
 	assert.NoError(t, err)
 
 	resp, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{
@@ -798,9 +792,8 @@ func TestQueryAnnotationMetrics_FallbackToOffline(t *testing.T) {
 		StartTime:    0,
 		EndTime:      0,
 	})
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.Equal(t, "42", resp.Metrics["feedback_count"].Summary)
+	assert.Error(t, err)
+	assert.Nil(t, resp)
 }
 
 func TestQueryAnnotationMetrics_OnlinePath(t *testing.T) {
