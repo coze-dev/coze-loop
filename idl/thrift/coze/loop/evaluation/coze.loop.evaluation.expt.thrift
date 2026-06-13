@@ -45,6 +45,8 @@ struct CreateExperimentRequest {
 
     50: optional expt.ExptTriggerType trigger_type
 
+    // ★ 非空 = 新路径开关: 写 eval_set_source_type=MultiSetConfig, 兼容字段 2/4/7/20/21/25/40/42 被忽略
+    70: optional list<expt.EvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
 
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
@@ -102,10 +104,15 @@ struct SubmitExperimentRequest {
     // 指定执行的评测集条目ID列表
     70: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
 
-    // 通知配置
-    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
+
+    // ★ 非空 = 新路径开关: 写 eval_set_source_type=MultiSetConfig, 兼容字段 2/4/7/20/21/25/40/42 被忽略
+    // 注: 70 号已被 item_ids 占用, 取 75
+    75: optional list<expt.EvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
 
     100: optional map<string, string> ext (api.body = 'ext')
+
+    // 通知配置
+    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     200: optional common.Session session
 
