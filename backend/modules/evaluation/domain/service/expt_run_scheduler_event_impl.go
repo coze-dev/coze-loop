@@ -480,9 +480,23 @@ func (e *ExptSchedulerImpl) terminateZombieEvaluatorRecords(ctx context.Context,
 		if rl == nil || rl.EvaluatorResultIds == nil {
 			continue
 		}
-		for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
-			if resID > 0 {
-				recordIDSet[resID] = struct{}{}
+		// ★ 支持新旧两种格式
+		if rl.EvaluatorResultIds.IsNewFormat() {
+			for _, r := range rl.EvaluatorResultIds.Registered {
+				if r != nil && r.RecordID > 0 {
+					recordIDSet[r.RecordID] = struct{}{}
+				}
+			}
+			for _, r := range rl.EvaluatorResultIds.Inline {
+				if r != nil && r.RecordID > 0 {
+					recordIDSet[r.RecordID] = struct{}{}
+				}
+			}
+		} else {
+			for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
+				if resID > 0 {
+					recordIDSet[resID] = struct{}{}
+				}
 			}
 		}
 	}

@@ -133,6 +133,7 @@ type ExptSubmitExec struct {
 	exptStatsRepo            repo.IExptStatsRepo
 	exptItemResultRepo       repo.IExptItemResultRepo
 	exptTurnResultRepo       repo.IExptTurnResultRepo
+	exptItemRefRepo          repo.IExptItemRefRepo // ★
 	idgenerator              idgen.IIDGenerator
 	evaluationSetItemService EvaluationSetItemService
 	exptRepo                 repo.IExperimentRepo
@@ -162,8 +163,9 @@ func NewExptSubmitMode(
 	evaluatorRecordService EvaluatorRecordService,
 	resultSvc ExptResultService,
 	templateManager IExptTemplateManager,
+	exptItemRefRepo ...repo.IExptItemRefRepo, // variadic for backward compat
 ) *ExptSubmitExec {
-	return &ExptSubmitExec{
+	exec := &ExptSubmitExec{
 		manager:                  manager,
 		exptItemResultRepo:       exptItemResultRepo,
 		exptStatsRepo:            exptStatsRepo,
@@ -178,6 +180,10 @@ func NewExptSubmitMode(
 		resultSvc:                resultSvc,
 		templateManager:          templateManager,
 	}
+	if len(exptItemRefRepo) > 0 {
+		exec.exptItemRefRepo = exptItemRefRepo[0]
+	}
+	return exec
 }
 
 func NewExptTrialRunMode(
@@ -505,6 +511,11 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 
 	if exist {
 		return nil
+	}
+
+	// ★ 新路径: MultiSetConfig 走 expt_item_ref 扁平调度
+	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		return e.exptStartMultiSet(ctx, event, expt)
 	}
 
 	var (
@@ -1830,4 +1841,179 @@ func (e *ExptRetryItemsExec) PublishResult(ctx context.Context, turnEvaluatorRef
 		return nil
 	}
 	return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).publishResult(ctx, turnEvaluatorRefs, event)
+}
+
+// =====================================================================================
+// ★ exptStartMultiSet: MultiSetConfig 新路径 — 从 eval_conf.EvalSetConfigs 扁平化到 expt_item_ref
+// =====================================================================================
+
+// exptStartMultiSet 实现多评测集模式的首次调度:
+//  1. 遍历 eval_conf.EvalSetConfigs
+//  2. 按 set 分页拉取 item 列表 (adapter 层 ItemVersionID=0)
+//  3. 每 item 构建 ExptItemRef (item_config 含该 set 的 evaluator/target 配置)
+//  4. 批量写入 expt_item_ref
+//  5. 批量创建 expt_item_result + expt_turn_result
+func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
+	if e.exptItemRefRepo == nil {
+		return errorx.New("exptItemRefRepo is nil, cannot run multi-set ExptStart")
+	}
+	evalConf := expt.EvalConf
+	if evalConf == nil || len(evalConf.EvalSetConfigs) == 0 {
+		return errorx.New("exptStartMultiSet: no eval_set_configs in eval_conf, expt_id=%d", expt.ID)
+	}
+
+	const pageSize = int32(100)
+	pageSizePtr := pageSize
+	itemIdx := int32(0)
+	totalItemCnt := 0
+
+	for _, setConf := range evalConf.EvalSetConfigs {
+		if setConf == nil {
+			continue
+		}
+
+		// 构建该 set 下每 item 共享的 item_config (per-set 级配置下沉到行)
+		baseItemConfig := buildItemConfigFromSetConf(setConf)
+
+		var pageToken *string
+		for loop := 0; loop < 10000; loop++ {
+			logs.CtxInfo(ctx, "exptStartMultiSet scan item, expt_id=%d, set_id=%d, set_ver_id=%d, page_token=%v",
+				event.ExptID, setConf.EvalSetID, setConf.EvalSetVersionID, gptr.Indirect(pageToken))
+
+			var items []*entity.EvaluationSetItem
+			var total *int64
+			var nextPageToken *string
+			if err := backoff.RetryThreeSeconds(ctx, func() error {
+				var retryErr error
+				items, total, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+					SpaceID:         event.SpaceID,
+					EvaluationSetID: setConf.EvalSetID,
+					VersionID:       &setConf.EvalSetVersionID,
+					PageSize:        &pageSizePtr,
+					PageToken:       pageToken,
+				})
+				return retryErr
+			}); err != nil {
+				return err
+			}
+
+			// 构建 expt_item_ref 行
+			itemRefs := make([]*entity.ExptItemRef, 0, len(items))
+			eirs := make([]*entity.ExptItemResult, 0, len(items))
+			var allTurns []*entity.ExptTurnResult
+
+			turnCnt := 0
+			for _, item := range items {
+				turnCnt += len(item.Turns)
+			}
+
+			ids, err := e.idgenerator.GenMultiIDs(ctx, len(items)*2+turnCnt)
+			if err != nil {
+				return err
+			}
+			idIdx := 0
+
+			for _, item := range items {
+				// ExptItemRef
+				ref := &entity.ExptItemRef{
+					ID:               ids[idIdx],
+					SpaceID:          event.SpaceID,
+					ExptID:           event.ExptID,
+					ItemID:           item.ItemID,
+					ItemVersionID:    0, // DataSet 暂无版本, adapter 层填 0
+					EvalSetID:        setConf.EvalSetID,
+					EvalSetVersionID: setConf.EvalSetVersionID,
+					ItemConfig:       baseItemConfig,
+					OrderIdx:         itemIdx,
+				}
+				itemRefs = append(itemRefs, ref)
+				idIdx++
+
+				// ExptItemResult
+				eir := &entity.ExptItemResult{
+					ID:            ids[idIdx],
+					SpaceID:       event.SpaceID,
+					ExptID:        event.ExptID,
+					ExptRunID:     event.ExptRunID,
+					ItemID:        item.ItemID,
+					ItemVersionID: 0,
+					ItemIdx:       itemIdx,
+					Status:        entity.ItemRunState_Queueing,
+				}
+				eirs = append(eirs, eir)
+				itemIdx++
+				idIdx++
+
+				// ExptTurnResult (按 item_config.turn_indexes 过滤; 暂无 turn_indexes 则全量)
+				for turnIdx, turn := range item.Turns {
+					etr := &entity.ExptTurnResult{
+						ID:            ids[idIdx],
+						SpaceID:       event.SpaceID,
+						ExptID:        event.ExptID,
+						ExptRunID:     event.ExptRunID,
+						ItemID:        item.ItemID,
+						ItemVersionID: 0,
+						TurnID:        turn.ID,
+						TurnIdx:       int32(turnIdx),
+						Status:        int32(entity.TurnRunState_Queueing),
+					}
+					allTurns = append(allTurns, etr)
+					idIdx++
+				}
+			}
+
+			// 批量写入 expt_item_ref
+			if err := e.exptItemRefRepo.BatchCreate(ctx, itemRefs); err != nil {
+				return errorx.Wrapf(err, "exptStartMultiSet BatchCreate expt_item_ref fail, expt_id=%d", event.ExptID)
+			}
+
+			// 批量写入 expt_item_result + expt_turn_result
+			if err := e.createItemTurnResults(ctx, eirs, allTurns, event.Session); err != nil {
+				return err
+			}
+
+			totalItemCnt += len(items)
+			pageToken = nextPageToken
+			if int64(totalItemCnt) >= gptr.Indirect(total) || len(items) == 0 || pageToken == nil || *pageToken == "" {
+				break
+			}
+		}
+	}
+
+	return e.finishExptStart(ctx, event, expt, totalItemCnt, makeStartIdemKey(event))
+}
+
+// buildItemConfigFromSetConf 将 per-set 配置下沉为 ExptItemConfig (同 set 所有 item 共享)
+func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig) *entity.ExptItemConfig {
+	cfg := &entity.ExptItemConfig{}
+
+	// evaluator_conf
+	for _, ec := range setConf.EvaluatorConfs {
+		if ec == nil {
+			continue
+		}
+		itemEv := &entity.ItemEvaluatorConf{
+			EvaluatorVersionID: ec.EvaluatorVersionID,
+			Alias:              ec.Alias,
+			FromEvalSet:        ec.FromEvalSet,
+			FromTarget:         ec.FromTarget,
+			DynamicParam:       ec.RuntimeParam,
+			Filter:             ec.Filter,
+			FilterMode:         ec.FilterMode,
+			ScoreWeight:        ec.ScoreWeight,
+		}
+		cfg.EvaluatorConfs = append(cfg.EvaluatorConfs, itemEv)
+	}
+
+	// eval_target_conf (本期只取第一个 target conf)
+	if len(setConf.TargetConfs) > 0 && setConf.TargetConfs[0] != nil {
+		tc := setConf.TargetConfs[0]
+		cfg.EvalTargetConf = &entity.ItemTargetConf{
+			TargetVersionID: tc.TargetVersionID,
+			FieldMapping:    tc.FieldMapping,
+			DynamicConf:     tc.RuntimeParam,
+		}
+	}
+
+	return cfg
 }

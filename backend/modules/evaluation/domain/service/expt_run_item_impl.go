@@ -159,10 +159,14 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	}
 
 	clone.EvaluatorResultIds = &entity.EvaluatorResults{
-		EvalVerIDToResID: make(map[int64]int64, len(result.EvaluatorResults)),
+		Registered: make([]*entity.RegisteredEvalResult, 0, len(result.EvaluatorResults)),
 	}
 	for _, er := range result.EvaluatorResults {
-		clone.EvaluatorResultIds.EvalVerIDToResID[er.EvaluatorVersionID] = er.ID
+		clone.EvaluatorResultIds.Registered = append(clone.EvaluatorResultIds.Registered, &entity.RegisteredEvalResult{
+			VersionID: er.EvaluatorVersionID,
+			Alias:     er.Alias,
+			RecordID:  er.ID,
+		})
 		if er.EvaluatorOutputData != nil && er.EvaluatorOutputData.EvaluatorRunError != nil && er.EvaluatorOutputData.EvaluatorRunError.Code > 0 {
 			evalErr = errno.NewEvaluatorResultErr(er.EvaluatorOutputData.EvaluatorRunError.Message)
 		}
