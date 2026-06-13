@@ -216,30 +216,40 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 		turnEvaluatorRefs = append(turnEvaluatorRefs, NewTurnEvaluatorResultRefs(0, result.ExptID, result.ID, spaceID, rl.EvaluatorResultIds)...)
 
-		// 计算并回写当前轮次的汇总得分（EnableScoreWeight 为 false 或未配置正权重时为等权平均）
-		if rl.EvaluatorResultIds != nil && len(rl.EvaluatorResultIds.EvalVerIDToResID) > 0 {
-			evaluatorResultIDs := make([]int64, 0, len(rl.EvaluatorResultIds.EvalVerIDToResID))
-			for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
-				evaluatorResultIDs = append(evaluatorResultIDs, resID)
+		// 计算并回写当前轮次的汇总得分
+		// ★ 支持新旧两种 EvaluatorResults 格式提取 record IDs
+		var evaluatorResultIDs []int64
+		if rl.EvaluatorResultIds != nil {
+			if rl.EvaluatorResultIds.IsNewFormat() {
+				for _, r := range rl.EvaluatorResultIds.Registered {
+					if r != nil && r.RecordID > 0 {
+						evaluatorResultIDs = append(evaluatorResultIDs, r.RecordID)
+					}
+				}
+				// Inline 记录不参与加权评分计算
+			} else {
+				for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
+					evaluatorResultIDs = append(evaluatorResultIDs, resID)
+				}
 			}
+		}
 
-			if len(evaluatorResultIDs) > 0 {
-				records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
-				if err != nil {
-					logs.CtxError(ctx, "[ExptEval] RecordItemRunLogs BatchGetEvaluatorRecord failed, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, err=%v",
-						exptID, exptRunID, itemID, tid, err)
-				} else {
-					version2Record := make(map[int64]*entity.EvaluatorRecord, len(records))
-					for _, r := range records {
-						if r == nil {
-							continue
-						}
-						version2Record[r.EvaluatorVersionID] = r
+		if len(evaluatorResultIDs) > 0 {
+			records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
+			if err != nil {
+				logs.CtxError(ctx, "[ExptEval] RecordItemRunLogs BatchGetEvaluatorRecord failed, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, err=%v",
+					exptID, exptRunID, itemID, tid, err)
+			} else {
+				version2Record := make(map[int64]*entity.EvaluatorRecord, len(records))
+				for _, r := range records {
+					if r == nil {
+						continue
 					}
+					version2Record[r.EvaluatorVersionID] = r
+				}
 
-					if ws := e.scoreCalculator.CalculateWeightedScore(ctx, expt, version2Record, scoreWeights); ws != nil {
-						result.WeightedScore = ws
-					}
+				if ws := e.scoreCalculator.CalculateWeightedScore(ctx, expt, version2Record, scoreWeights); ws != nil {
+					result.WeightedScore = ws
 				}
 			}
 		}
@@ -290,6 +300,43 @@ func NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID int64, evaluat
 		return nil
 	}
 
+	// ★ 新格式: Registered + Inline 双数组
+	if evaluatorResults.IsNewFormat() {
+		refs := make([]*entity.ExptTurnEvaluatorResultRef, 0)
+		for _, r := range evaluatorResults.Registered {
+			if r == nil {
+				continue
+			}
+			refs = append(refs, &entity.ExptTurnEvaluatorResultRef{
+				ID:                 id,
+				ExptID:             exptID,
+				SpaceID:            spaceID,
+				ExptTurnResultID:   turnResultID,
+				EvaluatorVersionID: r.VersionID,
+				EvaluatorResultID:  r.RecordID,
+				SourceType:         int32(entity.EvaluatorRecordSourceTypeBuiltin),
+				Alias:              r.Alias,
+			})
+		}
+		for _, r := range evaluatorResults.Inline {
+			if r == nil {
+				continue
+			}
+			refs = append(refs, &entity.ExptTurnEvaluatorResultRef{
+				ID:                 id,
+				ExptID:             exptID,
+				SpaceID:            spaceID,
+				ExptTurnResultID:   turnResultID,
+				EvaluatorVersionID: 0, // Inline 写 0 哨兵
+				EvaluatorResultID:  r.RecordID,
+				SourceType:         int32(entity.EvaluatorRecordSourceTypeInline),
+				InlineKey:          r.InlineKey,
+			})
+		}
+		return refs
+	}
+
+	// 老格式: EvalVerIDToResID map
 	refs := make([]*entity.ExptTurnEvaluatorResultRef, 0, len(evaluatorResults.EvalVerIDToResID))
 	for evalVerID, evalResID := range evaluatorResults.EvalVerIDToResID {
 		refs = append(refs, &entity.ExptTurnEvaluatorResultRef{
