@@ -32,6 +32,7 @@ func newExptTurnResult(db *gorm.DB, opts ...gen.DOOption) exptTurnResult {
 	_exptTurnResult.ExptID = field.NewInt64(tableName, "expt_id")
 	_exptTurnResult.ExptRunID = field.NewInt64(tableName, "expt_run_id")
 	_exptTurnResult.ItemID = field.NewInt64(tableName, "item_id")
+	_exptTurnResult.ItemVersionID = field.NewInt64(tableName, "item_version_id")
 	_exptTurnResult.TurnID = field.NewInt64(tableName, "turn_id")
 	_exptTurnResult.TurnIdx = field.NewInt32(tableName, "turn_idx")
 	_exptTurnResult.Status = field.NewInt32(tableName, "status")
@@ -59,6 +60,7 @@ type exptTurnResult struct {
 	ExptID         field.Int64   // 实验 id
 	ExptRunID      field.Int64   // 实验运行 id
 	ItemID         field.Int64   // item_id
+	ItemVersionID  field.Int64   // item 自身版本号; 0=旧数据/无版本概念; turn 级筛选用; 真值源 expt_item_ref
 	TurnID         field.Int64   // turn_id
 	TurnIdx        field.Int32   // turn 序号
 	Status         field.Int32   // 状态
@@ -91,6 +93,7 @@ func (e *exptTurnResult) updateTableName(table string) *exptTurnResult {
 	e.ExptID = field.NewInt64(table, "expt_id")
 	e.ExptRunID = field.NewInt64(table, "expt_run_id")
 	e.ItemID = field.NewInt64(table, "item_id")
+	e.ItemVersionID = field.NewInt64(table, "item_version_id")
 	e.TurnID = field.NewInt64(table, "turn_id")
 	e.TurnIdx = field.NewInt32(table, "turn_idx")
 	e.Status = field.NewInt32(table, "status")
@@ -130,12 +133,13 @@ func (e *exptTurnResult) GetFieldByName(fieldName string) (field.OrderExpr, bool
 }
 
 func (e *exptTurnResult) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 16)
+	e.fieldMap = make(map[string]field.Expr, 17)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_id"] = e.ExptID
 	e.fieldMap["expt_run_id"] = e.ExptRunID
 	e.fieldMap["item_id"] = e.ItemID
+	e.fieldMap["item_version_id"] = e.ItemVersionID
 	e.fieldMap["turn_id"] = e.TurnID
 	e.fieldMap["turn_idx"] = e.TurnIdx
 	e.fieldMap["status"] = e.Status
