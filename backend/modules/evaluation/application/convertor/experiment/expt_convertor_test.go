@@ -111,6 +111,119 @@ func TestEvalConfConvert_ConvertToEntity_TargetConfAlwaysCreated(t *testing.T) {
 	}
 }
 
+func TestConvertCreateReq_OldPath(t *testing.T) {
+	// 老路径: EvalSetConfigs 为空时，走 EvalConfConvert，ExptConf 非 nil，EvalSetConfigs 为空
+	req := &expt.CreateExperimentRequest{
+		WorkspaceID:     1001,
+		TargetVersionID: gptr.Of(int64(10)),
+		Name:            gptr.Of("test-expt"),
+	}
+	param, err := ConvertCreateReq(req, nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, param)
+	// 老路径：ExptConf 由 EvalConfConvert 生成，不为 nil
+	assert.NotNil(t, param.ExptConf)
+	// 老路径：EvalSetConfigs 为空
+	assert.Empty(t, param.EvalSetConfigs)
+	// 基础字段映射正确
+	assert.Equal(t, int64(1001), param.WorkspaceID)
+	assert.Equal(t, "test-expt", param.Name)
+}
+
+func TestConvertCreateReq_EvalSetConfigs(t *testing.T) {
+	// 新路径: 有 EvalSetConfigs 时，EvalSetConfigs 非空，ExptConf 为 nil
+	req := &expt.CreateExperimentRequest{
+		WorkspaceID: 2002,
+		Name:        gptr.Of("multi-set-expt"),
+		EvalSetConfigs: []*domain_expt.EvalSetConfig{
+			{
+				EvalSetID:        111,
+				EvalSetVersionID: 222,
+				EvaluatorConfs: []*domain_expt.ExptEvaluatorConf{
+					{
+						EvaluatorID:        10,
+						EvaluatorVersionID: 20,
+						Alias:              gptr.Of("judge_A"),
+					},
+				},
+			},
+		},
+	}
+	param, err := ConvertCreateReq(req, nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, param)
+	// 新路径：ExptConf 为 nil（不走 EvalConfConvert）
+	assert.Nil(t, param.ExptConf)
+	// 新路径：EvalSetConfigs 非空
+	assert.Len(t, param.EvalSetConfigs, 1)
+	// EvalSetID / EvalSetVersionID 正确
+	assert.Equal(t, int64(111), param.EvalSetConfigs[0].EvalSetID)
+	assert.Equal(t, int64(222), param.EvalSetConfigs[0].EvalSetVersionID)
+	// EvaluatorConfs[0].Alias 正确
+	assert.Len(t, param.EvalSetConfigs[0].EvaluatorConfs, 1)
+	assert.Equal(t, "judge_A", param.EvalSetConfigs[0].EvaluatorConfs[0].Alias)
+}
+
+func TestConvertEvalSetConfigsDTOToDO(t *testing.T) {
+	// 构造 2 个 EvalSetConfig，每个有不同 EvalSetID 和多个 ExptEvaluatorConf
+	dtos := []*domain_expt.EvalSetConfig{
+		{
+			EvalSetID:        100,
+			EvalSetVersionID: 101,
+			EvaluatorConfs: []*domain_expt.ExptEvaluatorConf{
+				{
+					EvaluatorID:        1,
+					EvaluatorVersionID: 11,
+					Alias:              gptr.Of("alpha"),
+				},
+				{
+					EvaluatorID:        2,
+					EvaluatorVersionID: 22,
+					Alias:              gptr.Of("beta"),
+				},
+			},
+		},
+		{
+			EvalSetID:        200,
+			EvalSetVersionID: 201,
+			EvaluatorConfs: []*domain_expt.ExptEvaluatorConf{
+				{
+					EvaluatorID:        3,
+					EvaluatorVersionID: 33,
+					Alias:              gptr.Of("gamma"),
+				},
+			},
+		},
+	}
+
+	// 通过 ConvertCreateReq 的新路径间接触发 convertEvalSetConfigsDTOToDO
+	req := &expt.CreateExperimentRequest{
+		WorkspaceID:    999,
+		EvalSetConfigs: dtos,
+	}
+	param, err := ConvertCreateReq(req, nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, param)
+
+	// 长度断言
+	assert.Len(t, param.EvalSetConfigs, 2)
+
+	// 第一个 EvalSetConfig
+	cfg0 := param.EvalSetConfigs[0]
+	assert.Equal(t, int64(100), cfg0.EvalSetID)
+	assert.Equal(t, int64(101), cfg0.EvalSetVersionID)
+	assert.Len(t, cfg0.EvaluatorConfs, 2)
+	assert.Equal(t, "alpha", cfg0.EvaluatorConfs[0].Alias)
+	assert.Equal(t, "beta", cfg0.EvaluatorConfs[1].Alias)
+
+	// 第二个 EvalSetConfig
+	cfg1 := param.EvalSetConfigs[1]
+	assert.Equal(t, int64(200), cfg1.EvalSetID)
+	assert.Equal(t, int64(201), cfg1.EvalSetVersionID)
+	assert.Len(t, cfg1.EvaluatorConfs, 1)
+	assert.Equal(t, "gamma", cfg1.EvaluatorConfs[0].Alias)
+}
+
 func TestToTargetFieldMappingDO_AlwaysReturnsValidConf(t *testing.T) {
 	tests := []struct {
 		name                  string
