@@ -22,6 +22,9 @@ func (ExptTurnEvaluatorResultRefConvertor) DO2PO(ref *entity.ExptTurnEvaluatorRe
 		EvaluatorVersionID: ref.EvaluatorVersionID,
 		EvaluatorResultID:  ref.EvaluatorResultID,
 		ExptID:             ref.ExptID,
+		SourceType:         ref.SourceType, // ★
+		InlineKey:          ref.InlineKey,  // ★
+		Alias_:             ref.Alias,      // ★ gorm_gen 将 alias 生成为 Alias_
 	}
 }
 
@@ -33,5 +36,8 @@ func (ExptTurnEvaluatorResultRefConvertor) PO2DO(ref *model.ExptTurnEvaluatorRes
 		EvaluatorVersionID: ref.EvaluatorVersionID,
 		EvaluatorResultID:  ref.EvaluatorResultID,
 		ExptID:             ref.ExptID,
+		SourceType:         ref.SourceType, // ★
+		InlineKey:          ref.InlineKey,  // ★
+		Alias:              ref.Alias_,     // ★
 	}
 }

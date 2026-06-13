@@ -31,6 +31,7 @@ func (ExptTurnResultRunLogConvertor) DO2PO(log *entity.ExptTurnResultRunLog) (*m
 		ExptID:             log.ExptID,
 		ExptRunID:          log.ExptRunID,
 		ItemID:             log.ItemID,
+		ItemVersionID:      log.ItemVersionID, // ★
 		TurnID:             log.TurnID,
 		Status:             int32(log.Status),
 		LogID:              log.LogID,
@@ -57,6 +58,7 @@ func (ExptTurnResultRunLogConvertor) PO2DO(log *model.ExptTurnResultRunLog) (*en
 		ExptID:             log.ExptID,
 		ExptRunID:          log.ExptRunID,
 		ItemID:             log.ItemID,
+		ItemVersionID:      log.ItemVersionID, // ★
 		TurnID:             log.TurnID,
 		Status:             entity.TurnRunState(log.Status),
 		LogID:              log.LogID,

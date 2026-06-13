@@ -54,6 +54,7 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		TargetVersionID: e.TargetVersionID,
 		ExperimentRunID: e.ExperimentRunID,
 		ItemID:          e.ItemID,
+		ItemVersionID:   e.ItemVersionID, // ★
 		TurnID:          e.TurnID,
 		LogID:           e.LogID,
 		TraceID:         e.TraceID,
@@ -106,6 +107,7 @@ func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, err
 		TargetVersionID:      m.TargetVersionID,
 		ExperimentRunID:      m.ExperimentRunID,
 		ItemID:               m.ItemID,
+		ItemVersionID:        m.ItemVersionID, // ★
 		TurnID:               m.TurnID,
 		LogID:                m.LogID,
 		TraceID:              m.TraceID,

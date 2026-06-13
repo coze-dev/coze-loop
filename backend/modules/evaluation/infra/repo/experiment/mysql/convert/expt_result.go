@@ -33,15 +33,16 @@ func (ExptItemResultConvertor) PO2RunLogPO(id int64, result *model.ExptItemResul
 
 func (ExptItemResultConvertor) PO2DO(rl *model.ExptItemResult) *entity.ExptItemResult {
 	po := &entity.ExptItemResult{
-		ID:        rl.ID,
-		SpaceID:   rl.SpaceID,
-		ExptID:    rl.ExptID,
-		ExptRunID: rl.ExptRunID,
-		ItemID:    rl.ItemID,
-		ItemIdx:   gptr.Indirect(rl.ItemIdx),
-		Status:    entity.ItemRunState(rl.Status),
-		ErrMsg:    conv.UnsafeBytesToString(gptr.Indirect(rl.ErrMsg)),
-		LogID:     rl.LogID,
+		ID:            rl.ID,
+		SpaceID:       rl.SpaceID,
+		ExptID:        rl.ExptID,
+		ExptRunID:     rl.ExptRunID,
+		ItemID:        rl.ItemID,
+		ItemVersionID: rl.ItemVersionID, // ★
+		ItemIdx:       gptr.Indirect(rl.ItemIdx),
+		Status:        entity.ItemRunState(rl.Status),
+		ErrMsg:        conv.UnsafeBytesToString(gptr.Indirect(rl.ErrMsg)),
+		LogID:         rl.LogID,
 	}
 	// 反序列化 Ext 字段
 	if rl.Ext != nil && len(*rl.Ext) > 0 {
@@ -55,15 +56,16 @@ func (ExptItemResultConvertor) PO2DO(rl *model.ExptItemResult) *entity.ExptItemR
 
 func (ExptItemResultConvertor) DO2PO(result *entity.ExptItemResult) *model.ExptItemResult {
 	po := &model.ExptItemResult{
-		ID:        result.ID,
-		SpaceID:   result.SpaceID,
-		ExptID:    result.ExptID,
-		ExptRunID: result.ExptRunID,
-		ItemID:    result.ItemID,
-		ItemIdx:   gptr.Of(result.ItemIdx),
-		Status:    int32(result.Status),
-		ErrMsg:    gptr.Of(conv.UnsafeStringToBytes(result.ErrMsg)),
-		LogID:     result.LogID,
+		ID:            result.ID,
+		SpaceID:       result.SpaceID,
+		ExptID:        result.ExptID,
+		ExptRunID:     result.ExptRunID,
+		ItemID:        result.ItemID,
+		ItemVersionID: result.ItemVersionID, // ★
+		ItemIdx:       gptr.Of(result.ItemIdx),
+		Status:        int32(result.Status),
+		ErrMsg:        gptr.Of(conv.UnsafeStringToBytes(result.ErrMsg)),
+		LogID:         result.LogID,
 	}
 	// 序列化 Ext 字段
 	if len(result.Ext) > 0 {
@@ -84,14 +86,15 @@ type ExptTurnResultConvertor struct{}
 
 func (ExptTurnResultConvertor) PO2DO(tr *model.ExptTurnResult, evaluatorResults *entity.EvaluatorResults) *entity.ExptTurnResult {
 	return &entity.ExptTurnResult{
-		ID:             tr.ID,
-		SpaceID:        tr.SpaceID,
-		ExptID:         tr.ExptID,
-		ExptRunID:      tr.ExptRunID,
-		ItemID:         tr.ItemID,
-		TurnID:         tr.TurnID,
-		Status:         tr.Status,
-		TraceID:        tr.TraceID,
+		ID:            tr.ID,
+		SpaceID:       tr.SpaceID,
+		ExptID:        tr.ExptID,
+		ExptRunID:     tr.ExptRunID,
+		ItemID:        tr.ItemID,
+		ItemVersionID: tr.ItemVersionID, // ★
+		TurnID:        tr.TurnID,
+		Status:        tr.Status,
+		TraceID:       tr.TraceID,
 		TargetResultID: tr.TargetResultID,
 		LogID:          tr.LogID,
 		ErrMsg:         conv.UnsafeBytesToString(gptr.Indirect(tr.ErrMsg)),
@@ -105,14 +108,15 @@ func (ExptTurnResultConvertor) PO2DO(tr *model.ExptTurnResult, evaluatorResults 
 
 func (ExptTurnResultConvertor) DO2PO(tr *entity.ExptTurnResult) *model.ExptTurnResult {
 	return &model.ExptTurnResult{
-		ID:             tr.ID,
-		SpaceID:        tr.SpaceID,
-		ExptID:         tr.ExptID,
-		ExptRunID:      tr.ExptRunID,
-		ItemID:         tr.ItemID,
-		TurnID:         tr.TurnID,
-		Status:         tr.Status,
-		TraceID:        tr.TraceID,
+		ID:            tr.ID,
+		SpaceID:       tr.SpaceID,
+		ExptID:        tr.ExptID,
+		ExptRunID:     tr.ExptRunID,
+		ItemID:        tr.ItemID,
+		ItemVersionID: tr.ItemVersionID, // ★
+		TurnID:        tr.TurnID,
+		Status:        tr.Status,
+		TraceID:       tr.TraceID,
 		TargetResultID: tr.TargetResultID,
 		LogID:          tr.LogID,
 		ErrMsg:         gptr.Of(conv.UnsafeStringToBytes(tr.ErrMsg)),

@@ -24,7 +24,12 @@ func ConvertEvaluatorRecordDO2PO(do *entity.EvaluatorRecord) *model.EvaluatorRec
 		ExperimentID:       gptr.Of(do.ExperimentID),
 		ExperimentRunID:    do.ExperimentRunID,
 		ItemID:             do.ItemID,
+		ItemVersionID:      do.ItemVersionID,      // ★
 		EvaluatorVersionID: do.EvaluatorVersionID,
+		SourceType:         int32(do.SourceType),  // ★
+		InlineKey:          do.InlineKey,          // ★
+		Alias_:             do.Alias,              // ★ gorm_gen 将 alias 生成为 Alias_
+		TargetRecordID:     do.TargetRecordID,     // ★
 		TurnID:             do.TurnID,
 		LogID:              gptr.Of(do.LogID),
 		TraceID:            do.TraceID,
@@ -97,7 +102,12 @@ func ConvertEvaluatorRecordPO2DO(po *model.EvaluatorRecord) (*entity.EvaluatorRe
 	}
 	do.ExperimentRunID = po.ExperimentRunID
 	do.ItemID = po.ItemID
+	do.ItemVersionID = po.ItemVersionID           // ★
 	do.EvaluatorVersionID = po.EvaluatorVersionID
+	do.SourceType = entity.EvaluatorRecordSourceType(po.SourceType) // ★
+	do.InlineKey = po.InlineKey                   // ★
+	do.Alias = po.Alias_                          // ★
+	do.TargetRecordID = po.TargetRecordID         // ★
 	do.TraceID = po.TraceID
 	if po.LogID != nil {
 		do.LogID = *po.LogID
