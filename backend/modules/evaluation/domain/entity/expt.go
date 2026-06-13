@@ -178,6 +178,47 @@ func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
 	if e == nil {
 		return nil
 	}
+	// ★ 新路径 (MultiSetConfig): 从 EvalConf.EvalSetConfigs 构建带 alias/filter/binding_config 的 ref 行
+	if e.EvalSetSourceType == ExptEvalSetSourceType_MultiSetConfig && e.EvalConf != nil && len(e.EvalConf.EvalSetConfigs) > 0 {
+		refs := make([]*ExptEvaluatorRef, 0)
+		for _, setConf := range e.EvalConf.EvalSetConfigs {
+			for _, evConf := range setConf.EvaluatorConfs {
+				ref := &ExptEvaluatorRef{
+					SpaceID:            e.SpaceID,
+					ExptID:             e.ID,
+					EvalSetID:          setConf.EvalSetID,
+					EvaluatorID:        evConf.EvaluatorID,
+					EvaluatorVersionID: evConf.EvaluatorVersionID,
+					Alias:              evConf.Alias,
+				}
+				// 序列化 filter + binding_config 快照（仅供查询）
+				if evConf.Filter != nil {
+					if b, err := json.Marshal(evConf.Filter); err == nil {
+						ref.Filter = b
+					}
+				}
+				// binding_config = {IngressConf, RunConf, ScoreWeight}
+				bindingSnap := struct {
+					FromEvalSet  []*FieldConf      `json:"from_eval_set,omitempty"`
+					FromTarget   []*FieldConf      `json:"from_target,omitempty"`
+					RuntimeParam map[string]string `json:"runtime_param,omitempty"`
+					ScoreWeight  *float64          `json:"score_weight,omitempty"`
+				}{
+					FromEvalSet:  evConf.FromEvalSet,
+					FromTarget:   evConf.FromTarget,
+					RuntimeParam: evConf.RuntimeParam,
+					ScoreWeight:  evConf.ScoreWeight,
+				}
+				if b, err := json.Marshal(bindingSnap); err == nil {
+					ref.BindingConfig = b
+				}
+				refs = append(refs, ref)
+			}
+		}
+		return refs
+	}
+
+	// 老路径 (SingleSet): 从 EvaluatorVersionRef 构建
 	cnt := len(e.EvaluatorVersionRef)
 	refs := make([]*ExptEvaluatorRef, 0, cnt)
 	for _, evr := range e.EvaluatorVersionRef {

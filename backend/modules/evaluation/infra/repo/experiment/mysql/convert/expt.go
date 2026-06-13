@@ -51,6 +51,7 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		Visibility:                int32(experiment.Visibility),
 		ThreadID:                  experiment.ThreadID,
 		TriggerType:               experiment.TriggerType,
+		EvalSetSourceType:         int32(experiment.EvalSetSourceType), // ★
 	}
 
 	if experiment.MaxAliveTime != 0 {
@@ -117,6 +118,7 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		ThreadID:                  expt.ThreadID,
 		TrialRunItemCount:         gptr.Indirect(expt.TrialRunItemCount),
 		TriggerType:               expt.TriggerType,
+		EvalSetSourceType:         entity.ExptEvalSetSourceType(expt.EvalSetSourceType), // ★
 	}
 
 	// 如果数据库中有模板 ID，则在 ExptTemplateMeta 中回填 ID，方便上层按模板 ID 查询和聚合

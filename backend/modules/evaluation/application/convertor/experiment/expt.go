@@ -445,7 +445,51 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.SetExptSource(fallback)
 	}
 
+	// ★ 新增段位 110~119: 多评测集读视图
+	res.EvalSetSourceType = gptr.Of(domain_expt.ExptEvalSetSourceType(experiment.EvalSetSourceType))
+	if experiment.EvalConf != nil && len(experiment.EvalConf.EvalSetConfigs) > 0 {
+		// eval_set_configs 回显: 直接从 eval_conf 反序列化结果转 DTO (与 Create 入参同构)
+		res.EvalSetConfigs = convertEvalSetConfigsDOToDTO(experiment.EvalConf.EvalSetConfigs)
+	}
+	// evaluators_concur_num 回显: 从 EvaluatorsConf 取
+	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
+		res.EvaluatorsConcurNum = gptr.Of(int32(*experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum))
+	}
+
 	return res
+}
+
+// convertEvalSetConfigsDOToDTO 将 domain EvalSetConfig 转回 IDL DTO (回显用)
+func convertEvalSetConfigsDOToDTO(dos []*entity.EvalSetConfig) []*domain_expt.EvalSetConfig {
+	if len(dos) == 0 {
+		return nil
+	}
+	dtos := make([]*domain_expt.EvalSetConfig, 0, len(dos))
+	for _, do := range dos {
+		if do == nil {
+			continue
+		}
+		dto := &domain_expt.EvalSetConfig{
+			EvalSetID:        do.EvalSetID,
+			EvalSetVersionID: do.EvalSetVersionID,
+		}
+		for _, ec := range do.EvaluatorConfs {
+			if ec == nil {
+				continue
+			}
+			evDTO := &domain_expt.ExptEvaluatorConf{
+				EvaluatorID:        ec.EvaluatorID,
+				EvaluatorVersionID: ec.EvaluatorVersionID,
+				Alias:              gptr.Of(ec.Alias),
+				FilterMode:         gptr.Of(ec.FilterMode),
+				ScoreWeight:        ec.ScoreWeight,
+			}
+			dto.EvaluatorConfs = append(dto.EvaluatorConfs, evDTO)
+		}
+		dtos = append(dtos, dto)
+	}
+	return dtos
 }
 
 func ToExptStatsDTO(stats *entity.ExptStats, aggrResult *entity.ExptAggregateResult) *domain_expt.ExptStatistics {
@@ -545,11 +589,18 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetThreadID() {
 		param.ThreadID = cer.ThreadID
 	}
-	evaluationConfiguration, err := NewEvalConfConvert().ConvertToEntity(cer, evaluatorVersionRunConfigs)
-	if err != nil {
-		return nil, err
+
+	// ★ 新路径: eval_set_configs 非空时转换为 domain EvalSetConfigs
+	if len(cer.GetEvalSetConfigs()) > 0 {
+		param.EvalSetConfigs = convertEvalSetConfigsDTOToDO(cer.GetEvalSetConfigs())
+	} else {
+		// 老路径: 走 EvalConfConvert
+		evaluationConfiguration, err := NewEvalConfConvert().ConvertToEntity(cer, evaluatorVersionRunConfigs)
+		if err != nil {
+			return nil, err
+		}
+		param.ExptConf = evaluationConfiguration
 	}
-	param.ExptConf = evaluationConfiguration
 
 	if cer.IsSetExptTemplateID() {
 		param.ExptTemplateID = cer.GetExptTemplateID()
@@ -558,6 +609,79 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
 	return param, nil
+}
+
+// convertEvalSetConfigsDTOToDO 将 IDL EvalSetConfig 列表转换为 domain EvalSetConfig
+func convertEvalSetConfigsDTOToDO(dtos []*domain_expt.EvalSetConfig) []*entity.EvalSetConfig {
+	if len(dtos) == 0 {
+		return nil
+	}
+	dos := make([]*entity.EvalSetConfig, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		do := &entity.EvalSetConfig{
+			EvalSetID:        dto.GetEvalSetID(),
+			EvalSetVersionID: dto.GetEvalSetVersionID(),
+		}
+		// item_filter
+		if dto.IsSetItemFilter() {
+			do.ItemFilter = convertExptFilterDTOToDO(dto.ItemFilter)
+		}
+		// evaluator_confs
+		for _, ec := range dto.EvaluatorConfs {
+			if ec == nil {
+				continue
+			}
+			evConf := &entity.ExptEvaluatorConf{
+				EvaluatorID:        ec.GetEvaluatorID(),
+				EvaluatorVersionID: ec.GetEvaluatorVersionID(),
+				Alias:              ec.GetAlias(),
+				FilterMode:         ec.GetFilterMode(),
+				ScoreWeight:        ec.ScoreWeight,
+			}
+			// field mappings
+			for _, fm := range ec.FromEvalSet {
+				if fm != nil {
+					evConf.FromEvalSet = append(evConf.FromEvalSet, &entity.FieldConf{FieldName: fm.GetFieldName(), FromField: fm.GetFromFieldName()})
+				}
+			}
+			for _, fm := range ec.FromTarget {
+				if fm != nil {
+					evConf.FromTarget = append(evConf.FromTarget, &entity.FieldConf{FieldName: fm.GetFieldName(), FromField: fm.GetFromFieldName()})
+				}
+			}
+			if ec.IsSetFilter() {
+				evConf.Filter = convertExptFilterDTOToDO(ec.Filter)
+			}
+			do.EvaluatorConfs = append(do.EvaluatorConfs, evConf)
+		}
+		dos = append(dos, do)
+	}
+	return dos
+}
+
+// convertExptFilterDTOToDO 将 IDL ExptFilter 转换为 domain ExptItemFilter
+func convertExptFilterDTOToDO(dto *domain_expt.ExptFilter) *entity.ExptItemFilter {
+	if dto == nil {
+		return nil
+	}
+	do := &entity.ExptItemFilter{
+		QueryAndOr: dto.GetQueryAndOr(),
+	}
+	for _, ff := range dto.FilterFields {
+		if ff == nil {
+			continue
+		}
+		do.FilterFields = append(do.FilterFields, &entity.ExptItemFilterField{
+			FieldName: ff.GetFieldName(),
+			FieldType: ff.GetFieldType(),
+			Values:    ff.Values,
+			QueryType: ff.GetQueryType(),
+		})
+	}
+	return do
 }
 
 func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {

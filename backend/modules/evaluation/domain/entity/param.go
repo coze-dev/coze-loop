@@ -314,6 +314,8 @@ type CreateExptParam struct {
 	ItemRetryNum          *int                     `json:"item_retry_num,omitempty"`
 	TrialRunItemCount     int64                    `json:"trial_run_item_count"`
 	TriggerType           string                   `json:"trigger_type,omitempty"`
+	// ★ 新增: 多评测集配置 (非空 = MultiSetConfig 新路径)
+	EvalSetConfigs []*EvalSetConfig `json:"eval_set_configs,omitempty"`
 }
 
 type ExptRunCheckOption struct {
