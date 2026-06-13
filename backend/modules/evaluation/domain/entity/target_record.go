@@ -25,6 +25,8 @@ type EvalTargetRecord struct {
 	ExperimentRunID int64
 	// 评测集数据项ID
 	ItemID int64
+	// ★ item 自身版本号; 0=旧数据/无版本; 从 expt_item_ref 同步
+	ItemVersionID int64
 	// 评测集数据项轮次ID
 	TurnID int64
 	// 链路ID
