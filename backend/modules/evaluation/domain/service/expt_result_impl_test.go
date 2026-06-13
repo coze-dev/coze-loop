@@ -7701,3 +7701,91 @@ func TestExptResultServiceImpl_exportListTurnResultByCursor(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestNewTurnEvaluatorResultRefs_NewFormat(t *testing.T) {
+	const (
+		id           int64 = 1
+		exptID       int64 = 2
+		turnResultID int64 = 3
+		spaceID      int64 = 4
+	)
+
+	t.Run("nil evaluatorResults returns nil", func(t *testing.T) {
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, nil)
+		assert.Nil(t, refs)
+	})
+
+	t.Run("old format EvalVerIDToResID → SourceType=0, InlineKey='', Alias=''", func(t *testing.T) {
+		er := &entity.EvaluatorResults{
+			EvalVerIDToResID: map[int64]int64{100: 200},
+		}
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, er)
+		require.Len(t, refs, 1)
+		ref := refs[0]
+		assert.Equal(t, id, ref.ID)
+		assert.Equal(t, exptID, ref.ExptID)
+		assert.Equal(t, spaceID, ref.SpaceID)
+		assert.Equal(t, turnResultID, ref.ExptTurnResultID)
+		assert.Equal(t, int64(100), ref.EvaluatorVersionID)
+		assert.Equal(t, int64(200), ref.EvaluatorResultID)
+		assert.Equal(t, int32(0), ref.SourceType)
+		assert.Equal(t, "", ref.InlineKey)
+		assert.Equal(t, "", ref.Alias)
+	})
+
+	t.Run("new format Registered → SourceType=EvaluatorRecordSourceTypeBuiltin(1), correct Alias", func(t *testing.T) {
+		er := &entity.EvaluatorResults{
+			Registered: []*entity.RegisteredEvalResult{
+				{VersionID: 10, Alias: "myAlias", RecordID: 99},
+			},
+		}
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, er)
+		require.Len(t, refs, 1)
+		ref := refs[0]
+		assert.Equal(t, int32(entity.EvaluatorRecordSourceTypeBuiltin), ref.SourceType)
+		assert.Equal(t, int64(10), ref.EvaluatorVersionID)
+		assert.Equal(t, int64(99), ref.EvaluatorResultID)
+		assert.Equal(t, "myAlias", ref.Alias)
+		assert.Equal(t, "", ref.InlineKey)
+	})
+
+	t.Run("new format Inline → SourceType=EvaluatorRecordSourceTypeInline(2), correct InlineKey, EvaluatorVersionID=0", func(t *testing.T) {
+		er := &entity.EvaluatorResults{
+			Inline: []*entity.InlineEvalResult{
+				{InlineKey: "k1", RecordID: 77},
+			},
+		}
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, er)
+		require.Len(t, refs, 1)
+		ref := refs[0]
+		assert.Equal(t, int32(entity.EvaluatorRecordSourceTypeInline), ref.SourceType)
+		assert.Equal(t, int64(0), ref.EvaluatorVersionID)
+		assert.Equal(t, int64(77), ref.EvaluatorResultID)
+		assert.Equal(t, "k1", ref.InlineKey)
+		assert.Equal(t, "", ref.Alias)
+	})
+
+	t.Run("mixed Registered+Inline → both parts present", func(t *testing.T) {
+		er := &entity.EvaluatorResults{
+			Registered: []*entity.RegisteredEvalResult{
+				{VersionID: 10, Alias: "a1", RecordID: 11},
+				{VersionID: 20, Alias: "", RecordID: 22},
+			},
+			Inline: []*entity.InlineEvalResult{
+				{InlineKey: "ik1", RecordID: 33},
+			},
+		}
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, er)
+		require.Len(t, refs, 3)
+
+		// first two should be Registered/Builtin
+		for _, ref := range refs[:2] {
+			assert.Equal(t, int32(entity.EvaluatorRecordSourceTypeBuiltin), ref.SourceType)
+		}
+		// last should be Inline
+		inlineRef := refs[2]
+		assert.Equal(t, int32(entity.EvaluatorRecordSourceTypeInline), inlineRef.SourceType)
+		assert.Equal(t, "ik1", inlineRef.InlineKey)
+		assert.Equal(t, int64(0), inlineRef.EvaluatorVersionID)
+	})
+}
