@@ -455,9 +455,16 @@ type ExptEvaluatorRef struct {
 	BindingConfig      []byte // ★ binding 配置快照 JSON; 仅供查询
 }
 
+// ExptEvalSetItemCount per eval_set item 计数 (IExptItemRefRepo.CountByEvalSetGrouped 结果)
+type ExptEvalSetItemCount struct {
+	ExptID           int64
+	EvalSetID        int64
+	EvalSetVersionID int64
+	ItemCount        int64
+}
+
 // filter
-type ExptListFilter struct {
-	FuzzyName string
+type ExptListFilter struct {	FuzzyName string
 	Includes  *ExptFilterFields
 	Excludes  *ExptFilterFields
 }
