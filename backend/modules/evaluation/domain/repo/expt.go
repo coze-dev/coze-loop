@@ -10,7 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IEvalAsyncRepo,IExptInsightAnalysisRecordRepo
+//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IEvalAsyncRepo,IExptInsightAnalysisRecordRepo,IExptItemRefRepo
 type IExperimentRepo interface {
 	Create(ctx context.Context, expt *entity.Experiment, exptEvaluatorRefs []*entity.ExptEvaluatorRef) error
 	Update(ctx context.Context, expt *entity.Experiment) error
@@ -163,4 +163,18 @@ type IExptInsightAnalysisRecordRepo interface {
 	UpdateFeedbackVote(ctx context.Context, feedbackVote *entity.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
 	GetFeedbackVoteByUser(ctx context.Context, spaceID, exptID, recordID int64, userID string, opts ...db.Option) (*entity.ExptInsightAnalysisFeedbackVote, error)
 	CountFeedbackVote(ctx context.Context, spaceID, exptID, recordID int64) (int64, int64, error)
+}
+
+// IExptItemRefRepo ★ 实验绑定 item 扁平集合 (首次调度 ExptStart 写入, 单行执行唯一配置源)
+type IExptItemRefRepo interface {
+	// BatchCreate 分页批量写入 expt_item_ref (幂等: UNIQUE(space_id,expt_id,item_id))
+	BatchCreate(ctx context.Context, items []*entity.ExptItemRef) error
+	// ListByExptID 分页扫描实验的所有 item ref (调度时用)
+	ListByExptID(ctx context.Context, spaceID, exptID int64, cursor, limit int64) ([]*entity.ExptItemRef, int64, error)
+	// GetByExptIDAndItemID 按 (expt_id, item_id) 精确查询单行 (单行执行读配置用)
+	GetByExptIDAndItemID(ctx context.Context, spaceID, exptID, itemID int64) (*entity.ExptItemRef, error)
+	// MGetByExptIDAndItemIDs 按 (expt_id, item_ids) 批量查询 (retry 时读 item_config 用)
+	MGetByExptIDAndItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptItemRef, error)
+	// CountByEvalSetGrouped 按 eval_set_id 分组统计实验的 item 数 (供 eval_set_details.item_count 用)
+	CountByEvalSetGrouped(ctx context.Context, spaceID int64, exptIDs []int64) (map[int64][]*entity.ExptEvalSetItemCount, error)
 }
