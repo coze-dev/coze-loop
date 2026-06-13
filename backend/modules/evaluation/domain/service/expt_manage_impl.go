@@ -830,6 +830,23 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
 	}
+
+	// ★ 设置实验模式分流列 (读接口和执行链路的唯一分流依据)
+	if len(req.EvalSetConfigs) > 0 {
+		do.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
+		// 将完整的多评测集配置序列化进 eval_conf，供调度期读取
+		if do.EvalConf == nil {
+			do.EvalConf = &entity.EvaluationConfiguration{}
+		}
+		do.EvalConf.EvalSetConfigs = req.EvalSetConfigs
+		// 新实验主集标签: 前端可传，无则用第一个 set 兜底
+		if do.EvalSetID == 0 && len(req.EvalSetConfigs) > 0 {
+			do.EvalSetID = req.EvalSetConfigs[0].EvalSetID
+			do.EvalSetVersionID = req.EvalSetConfigs[0].EvalSetVersionID
+		}
+	} else {
+		do.EvalSetSourceType = entity.ExptEvalSetSourceType_SingleSet
+	}
 	if req.Visibility != nil {
 		do.Visibility = *req.Visibility
 	}
