@@ -30,9 +30,14 @@ func newEvaluatorRecord(db *gorm.DB, opts ...gen.DOOption) evaluatorRecord {
 	_evaluatorRecord.ID = field.NewInt64(tableName, "id")
 	_evaluatorRecord.SpaceID = field.NewInt64(tableName, "space_id")
 	_evaluatorRecord.EvaluatorVersionID = field.NewInt64(tableName, "evaluator_version_id")
+	_evaluatorRecord.SourceType = field.NewInt32(tableName, "source_type")
+	_evaluatorRecord.InlineKey = field.NewString(tableName, "inline_key")
+	_evaluatorRecord.Alias_ = field.NewString(tableName, "alias")
+	_evaluatorRecord.TargetRecordID = field.NewInt64(tableName, "target_record_id")
 	_evaluatorRecord.ExperimentID = field.NewInt64(tableName, "experiment_id")
 	_evaluatorRecord.ExperimentRunID = field.NewInt64(tableName, "experiment_run_id")
 	_evaluatorRecord.ItemID = field.NewInt64(tableName, "item_id")
+	_evaluatorRecord.ItemVersionID = field.NewInt64(tableName, "item_version_id")
 	_evaluatorRecord.TurnID = field.NewInt64(tableName, "turn_id")
 	_evaluatorRecord.LogID = field.NewString(tableName, "log_id")
 	_evaluatorRecord.TraceID = field.NewString(tableName, "trace_id")
@@ -59,10 +64,15 @@ type evaluatorRecord struct {
 	ALL                field.Asterisk
 	ID                 field.Int64   // idgen id
 	SpaceID            field.Int64   // 空间id
-	EvaluatorVersionID field.Int64   // 评估器版本id
+	EvaluatorVersionID field.Int64   // 评估器版本id; Inline 行写 0 哨兵(NOT NULL 不改,避免大表重建)
+	SourceType         field.Int32   // 0=旧数据(语义同 Builtin) / 1=Builtin(注册评估器,含别名实例) / 2=Inline(target output 内嵌)
+	InlineKey          field.String  // 仅 Inline: target output __inline_evaluators__ 的 key; 与 alias 至多一个非空
+	Alias_             field.String  // 仅 Builtin 别名实例: 实验创建时用户输入(judge_A/judge_B)
+	TargetRecordID     field.Int64   // Inline 回指来源 eval_target_record.id; Builtin 为 0
 	ExperimentID       field.Int64   // 实验id
 	ExperimentRunID    field.Int64   // 实验执行id
 	ItemID             field.Int64   // 评估集行id
+	ItemVersionID      field.Int64   // item 自身版本号; 0=旧数据/无版本概念; 从 expt_item_ref 同步
 	TurnID             field.Int64   // 评估集行轮次id
 	LogID              field.String  // log id
 	TraceID            field.String  // trace id
@@ -95,9 +105,14 @@ func (e *evaluatorRecord) updateTableName(table string) *evaluatorRecord {
 	e.ID = field.NewInt64(table, "id")
 	e.SpaceID = field.NewInt64(table, "space_id")
 	e.EvaluatorVersionID = field.NewInt64(table, "evaluator_version_id")
+	e.SourceType = field.NewInt32(table, "source_type")
+	e.InlineKey = field.NewString(table, "inline_key")
+	e.Alias_ = field.NewString(table, "alias")
+	e.TargetRecordID = field.NewInt64(table, "target_record_id")
 	e.ExperimentID = field.NewInt64(table, "experiment_id")
 	e.ExperimentRunID = field.NewInt64(table, "experiment_run_id")
 	e.ItemID = field.NewInt64(table, "item_id")
+	e.ItemVersionID = field.NewInt64(table, "item_version_id")
 	e.TurnID = field.NewInt64(table, "turn_id")
 	e.LogID = field.NewString(table, "log_id")
 	e.TraceID = field.NewString(table, "trace_id")
@@ -139,13 +154,18 @@ func (e *evaluatorRecord) GetFieldByName(fieldName string) (field.OrderExpr, boo
 }
 
 func (e *evaluatorRecord) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 19)
+	e.fieldMap = make(map[string]field.Expr, 24)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["evaluator_version_id"] = e.EvaluatorVersionID
+	e.fieldMap["source_type"] = e.SourceType
+	e.fieldMap["inline_key"] = e.InlineKey
+	e.fieldMap["alias"] = e.Alias_
+	e.fieldMap["target_record_id"] = e.TargetRecordID
 	e.fieldMap["experiment_id"] = e.ExperimentID
 	e.fieldMap["experiment_run_id"] = e.ExperimentRunID
 	e.fieldMap["item_id"] = e.ItemID
+	e.fieldMap["item_version_id"] = e.ItemVersionID
 	e.fieldMap["turn_id"] = e.TurnID
 	e.fieldMap["log_id"] = e.LogID
 	e.fieldMap["trace_id"] = e.TraceID

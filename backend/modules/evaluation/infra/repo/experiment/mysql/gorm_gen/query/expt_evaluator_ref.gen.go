@@ -30,8 +30,12 @@ func newExptEvaluatorRef(db *gorm.DB, opts ...gen.DOOption) exptEvaluatorRef {
 	_exptEvaluatorRef.ID = field.NewInt64(tableName, "id")
 	_exptEvaluatorRef.SpaceID = field.NewInt64(tableName, "space_id")
 	_exptEvaluatorRef.ExptID = field.NewInt64(tableName, "expt_id")
+	_exptEvaluatorRef.EvalSetID = field.NewInt64(tableName, "eval_set_id")
 	_exptEvaluatorRef.EvaluatorID = field.NewInt64(tableName, "evaluator_id")
 	_exptEvaluatorRef.EvaluatorVersionID = field.NewInt64(tableName, "evaluator_version_id")
+	_exptEvaluatorRef.Alias_ = field.NewString(tableName, "alias")
+	_exptEvaluatorRef.Filter = field.NewBytes(tableName, "filter")
+	_exptEvaluatorRef.BindingConfig = field.NewBytes(tableName, "binding_config")
 	_exptEvaluatorRef.CreatedAt = field.NewTime(tableName, "created_at")
 	_exptEvaluatorRef.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_exptEvaluatorRef.DeletedAt = field.NewField(tableName, "deleted_at")
@@ -46,14 +50,18 @@ type exptEvaluatorRef struct {
 	exptEvaluatorRefDo exptEvaluatorRefDo
 
 	ALL                field.Asterisk
-	ID                 field.Int64 // id
-	SpaceID            field.Int64 // 空间 id
-	ExptID             field.Int64 // 实验 id
-	EvaluatorID        field.Int64 // 评估器 id
-	EvaluatorVersionID field.Int64 // 评估器版本 id
-	CreatedAt          field.Time  // 创建时间
-	UpdatedAt          field.Time  // 更新时间
-	DeletedAt          field.Field // 删除时间
+	ID                 field.Int64  // id
+	SpaceID            field.Int64  // 空间 id
+	ExptID             field.Int64  // 实验 id
+	EvalSetID          field.Int64  // 该 binding 归属的评测集 id(反查标签); 0=老数据/单 set
+	EvaluatorID        field.Int64  // 评估器 id
+	EvaluatorVersionID field.Int64  // 评估器版本 id
+	Alias_             field.String // 别名: 同 (evaluator_id, evaluator_version_id) 多实例区分(judge_A/judge_B); 默认实例为空串
+	Filter             field.Bytes  // 行级过滤配置快照, json: {filter_fields: [...], filter_mode: 0 None/1 Include/2 Exclude}; 仅供查询
+	BindingConfig      field.Bytes  // binding 配置快照, json: {IngressConf, RunConf, ScoreWeight}; 仅供查询
+	CreatedAt          field.Time   // 创建时间
+	UpdatedAt          field.Time   // 更新时间
+	DeletedAt          field.Field  // 删除时间
 
 	fieldMap map[string]field.Expr
 }
@@ -73,8 +81,12 @@ func (e *exptEvaluatorRef) updateTableName(table string) *exptEvaluatorRef {
 	e.ID = field.NewInt64(table, "id")
 	e.SpaceID = field.NewInt64(table, "space_id")
 	e.ExptID = field.NewInt64(table, "expt_id")
+	e.EvalSetID = field.NewInt64(table, "eval_set_id")
 	e.EvaluatorID = field.NewInt64(table, "evaluator_id")
 	e.EvaluatorVersionID = field.NewInt64(table, "evaluator_version_id")
+	e.Alias_ = field.NewString(table, "alias")
+	e.Filter = field.NewBytes(table, "filter")
+	e.BindingConfig = field.NewBytes(table, "binding_config")
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
@@ -106,12 +118,16 @@ func (e *exptEvaluatorRef) GetFieldByName(fieldName string) (field.OrderExpr, bo
 }
 
 func (e *exptEvaluatorRef) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 8)
+	e.fieldMap = make(map[string]field.Expr, 12)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_id"] = e.ExptID
+	e.fieldMap["eval_set_id"] = e.EvalSetID
 	e.fieldMap["evaluator_id"] = e.EvaluatorID
 	e.fieldMap["evaluator_version_id"] = e.EvaluatorVersionID
+	e.fieldMap["alias"] = e.Alias_
+	e.fieldMap["filter"] = e.Filter
+	e.fieldMap["binding_config"] = e.BindingConfig
 	e.fieldMap["created_at"] = e.CreatedAt
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt

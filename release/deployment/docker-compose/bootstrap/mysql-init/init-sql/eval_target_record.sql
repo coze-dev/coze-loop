@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `eval_target_record`
     `target_version_id` bigint unsigned NOT NULL COMMENT '版本ID',
     `experiment_run_id` bigint unsigned NOT NULL COMMENT '实验执行id',
     `item_id`           bigint unsigned NOT NULL COMMENT '评测集行id',
+    `item_version_id`   bigint unsigned NOT NULL DEFAULT '0' COMMENT 'item 自身版本号; 0=旧数据/无版本概念; 从 expt_item_ref 同步',
     `turn_id`           bigint unsigned NOT NULL COMMENT '评测集行轮次id',
     `log_id`            varchar(255)    NOT NULL COMMENT 'log id',
     `trace_id`          varchar(255)    NOT NULL COMMENT 'trace id',

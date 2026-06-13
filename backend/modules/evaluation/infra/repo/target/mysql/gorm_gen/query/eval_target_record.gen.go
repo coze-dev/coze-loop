@@ -33,6 +33,7 @@ func newTargetRecord(db *gorm.DB, opts ...gen.DOOption) targetRecord {
 	_targetRecord.TargetVersionID = field.NewInt64(tableName, "target_version_id")
 	_targetRecord.ExperimentRunID = field.NewInt64(tableName, "experiment_run_id")
 	_targetRecord.ItemID = field.NewInt64(tableName, "item_id")
+	_targetRecord.ItemVersionID = field.NewInt64(tableName, "item_version_id")
 	_targetRecord.TurnID = field.NewInt64(tableName, "turn_id")
 	_targetRecord.LogID = field.NewString(tableName, "log_id")
 	_targetRecord.TraceID = field.NewString(tableName, "trace_id")
@@ -59,6 +60,7 @@ type targetRecord struct {
 	TargetVersionID field.Int64  // 版本ID
 	ExperimentRunID field.Int64  // 实验执行id
 	ItemID          field.Int64  // 评测集行id
+	ItemVersionID   field.Int64  // item 自身版本号; 0=旧数据/无版本概念; 从 expt_item_ref 同步
 	TurnID          field.Int64  // 评测集行轮次id
 	LogID           field.String // log id
 	TraceID         field.String // trace id
@@ -90,6 +92,7 @@ func (t *targetRecord) updateTableName(table string) *targetRecord {
 	t.TargetVersionID = field.NewInt64(table, "target_version_id")
 	t.ExperimentRunID = field.NewInt64(table, "experiment_run_id")
 	t.ItemID = field.NewInt64(table, "item_id")
+	t.ItemVersionID = field.NewInt64(table, "item_version_id")
 	t.TurnID = field.NewInt64(table, "turn_id")
 	t.LogID = field.NewString(table, "log_id")
 	t.TraceID = field.NewString(table, "trace_id")
@@ -127,13 +130,14 @@ func (t *targetRecord) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (t *targetRecord) fillFieldMap() {
-	t.fieldMap = make(map[string]field.Expr, 15)
+	t.fieldMap = make(map[string]field.Expr, 16)
 	t.fieldMap["id"] = t.ID
 	t.fieldMap["space_id"] = t.SpaceID
 	t.fieldMap["target_id"] = t.TargetID
 	t.fieldMap["target_version_id"] = t.TargetVersionID
 	t.fieldMap["experiment_run_id"] = t.ExperimentRunID
 	t.fieldMap["item_id"] = t.ItemID
+	t.fieldMap["item_version_id"] = t.ItemVersionID
 	t.fieldMap["turn_id"] = t.TurnID
 	t.fieldMap["log_id"] = t.LogID
 	t.fieldMap["trace_id"] = t.TraceID

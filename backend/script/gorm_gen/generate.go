@@ -194,6 +194,7 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		"expt_item_result",
 		"expt_item_result_run_log",
 		"expt_turn_result_run_log",
+		"expt_item_ref",
 		"expt_run_log",
 		"expt_aggr_result",
 		"expt_turn_result_filter_key_mapping",
@@ -239,10 +240,12 @@ func generateForEvaluationEvaluator(db *gorm.DB) {
 	g.UseDB(db)
 
 	evaluatorModel := g.GenerateModelAs("evaluator", "Evaluator")
+	evaluatorVersionModel := g.GenerateModelAs("evaluator_version", "EvaluatorVersion")
 	evaluatorTagModel := g.GenerateModelAs("evaluator_tag", "EvaluatorTag")
-	evaluatorRecordModel := g.GenerateModelAs("evaluator_template", "EvaluatorTemplate")
+	evaluatorTemplateModel := g.GenerateModelAs("evaluator_template", "EvaluatorTemplate")
+	evaluatorRecordModel := g.GenerateModelAs("evaluator_record", "EvaluatorRecord")
 
-	g.ApplyBasic(evaluatorModel, evaluatorTagModel, evaluatorRecordModel)
+	g.ApplyBasic(evaluatorModel, evaluatorVersionModel, evaluatorTagModel, evaluatorTemplateModel, evaluatorRecordModel)
 	g.Execute()
 }
 

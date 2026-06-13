@@ -31,6 +31,9 @@ func newExptTurnEvaluatorResultRef(db *gorm.DB, opts ...gen.DOOption) exptTurnEv
 	_exptTurnEvaluatorResultRef.SpaceID = field.NewInt64(tableName, "space_id")
 	_exptTurnEvaluatorResultRef.ExptTurnResultID = field.NewInt64(tableName, "expt_turn_result_id")
 	_exptTurnEvaluatorResultRef.EvaluatorVersionID = field.NewInt64(tableName, "evaluator_version_id")
+	_exptTurnEvaluatorResultRef.SourceType = field.NewInt32(tableName, "source_type")
+	_exptTurnEvaluatorResultRef.InlineKey = field.NewString(tableName, "inline_key")
+	_exptTurnEvaluatorResultRef.Alias_ = field.NewString(tableName, "alias")
 	_exptTurnEvaluatorResultRef.EvaluatorResultID = field.NewInt64(tableName, "evaluator_result_id")
 	_exptTurnEvaluatorResultRef.CreatedAt = field.NewTime(tableName, "created_at")
 	_exptTurnEvaluatorResultRef.UpdatedAt = field.NewTime(tableName, "updated_at")
@@ -47,15 +50,18 @@ type exptTurnEvaluatorResultRef struct {
 	exptTurnEvaluatorResultRefDo exptTurnEvaluatorResultRefDo
 
 	ALL                field.Asterisk
-	ID                 field.Int64 // id
-	SpaceID            field.Int64 // 空间 id
-	ExptTurnResultID   field.Int64 // 实验 turn result id
-	EvaluatorVersionID field.Int64 // 评估器版本 id
-	EvaluatorResultID  field.Int64 // 评估器结果 id
-	CreatedAt          field.Time  // 创建时间
-	UpdatedAt          field.Time  // 更新时间
-	DeletedAt          field.Field // 删除时间
-	ExptID             field.Int64 // 实验 id
+	ID                 field.Int64  // id
+	SpaceID            field.Int64  // 空间 id
+	ExptTurnResultID   field.Int64  // 实验 turn result id
+	EvaluatorVersionID field.Int64  // 评估器版本 id; Inline 行写 0 哨兵
+	SourceType         field.Int32  // 0=旧数据(语义同 Builtin) / 1=Builtin / 2=Inline
+	InlineKey          field.String // 仅 Inline: target output __inline_evaluators__ 的 key
+	Alias_             field.String // 仅 Builtin 别名实例; 与 inline_key 至多一个非空
+	EvaluatorResultID  field.Int64  // 评估器结果 id
+	CreatedAt          field.Time   // 创建时间
+	UpdatedAt          field.Time   // 更新时间
+	DeletedAt          field.Field  // 删除时间
+	ExptID             field.Int64  // 实验 id
 
 	fieldMap map[string]field.Expr
 }
@@ -76,6 +82,9 @@ func (e *exptTurnEvaluatorResultRef) updateTableName(table string) *exptTurnEval
 	e.SpaceID = field.NewInt64(table, "space_id")
 	e.ExptTurnResultID = field.NewInt64(table, "expt_turn_result_id")
 	e.EvaluatorVersionID = field.NewInt64(table, "evaluator_version_id")
+	e.SourceType = field.NewInt32(table, "source_type")
+	e.InlineKey = field.NewString(table, "inline_key")
+	e.Alias_ = field.NewString(table, "alias")
 	e.EvaluatorResultID = field.NewInt64(table, "evaluator_result_id")
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
@@ -111,11 +120,14 @@ func (e *exptTurnEvaluatorResultRef) GetFieldByName(fieldName string) (field.Ord
 }
 
 func (e *exptTurnEvaluatorResultRef) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 9)
+	e.fieldMap = make(map[string]field.Expr, 12)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_turn_result_id"] = e.ExptTurnResultID
 	e.fieldMap["evaluator_version_id"] = e.EvaluatorVersionID
+	e.fieldMap["source_type"] = e.SourceType
+	e.fieldMap["inline_key"] = e.InlineKey
+	e.fieldMap["alias"] = e.Alias_
 	e.fieldMap["evaluator_result_id"] = e.EvaluatorResultID
 	e.fieldMap["created_at"] = e.CreatedAt
 	e.fieldMap["updated_at"] = e.UpdatedAt

@@ -19,8 +19,10 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
 		db:                db,
 		Evaluator:         newEvaluator(db, opts...),
+		EvaluatorRecord:   newEvaluatorRecord(db, opts...),
 		EvaluatorTag:      newEvaluatorTag(db, opts...),
 		EvaluatorTemplate: newEvaluatorTemplate(db, opts...),
+		EvaluatorVersion:  newEvaluatorVersion(db, opts...),
 	}
 }
 
@@ -28,8 +30,10 @@ type Query struct {
 	db *gorm.DB
 
 	Evaluator         evaluator
+	EvaluatorRecord   evaluatorRecord
 	EvaluatorTag      evaluatorTag
 	EvaluatorTemplate evaluatorTemplate
+	EvaluatorVersion  evaluatorVersion
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -38,8 +42,10 @@ func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
 		db:                db,
 		Evaluator:         q.Evaluator.clone(db),
+		EvaluatorRecord:   q.EvaluatorRecord.clone(db),
 		EvaluatorTag:      q.EvaluatorTag.clone(db),
 		EvaluatorTemplate: q.EvaluatorTemplate.clone(db),
+		EvaluatorVersion:  q.EvaluatorVersion.clone(db),
 	}
 }
 
@@ -55,22 +61,28 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
 		db:                db,
 		Evaluator:         q.Evaluator.replaceDB(db),
+		EvaluatorRecord:   q.EvaluatorRecord.replaceDB(db),
 		EvaluatorTag:      q.EvaluatorTag.replaceDB(db),
 		EvaluatorTemplate: q.EvaluatorTemplate.replaceDB(db),
+		EvaluatorVersion:  q.EvaluatorVersion.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
 	Evaluator         *evaluatorDo
+	EvaluatorRecord   *evaluatorRecordDo
 	EvaluatorTag      *evaluatorTagDo
 	EvaluatorTemplate *evaluatorTemplateDo
+	EvaluatorVersion  *evaluatorVersionDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
 		Evaluator:         q.Evaluator.WithContext(ctx),
+		EvaluatorRecord:   q.EvaluatorRecord.WithContext(ctx),
 		EvaluatorTag:      q.EvaluatorTag.WithContext(ctx),
 		EvaluatorTemplate: q.EvaluatorTemplate.WithContext(ctx),
+		EvaluatorVersion:  q.EvaluatorVersion.WithContext(ctx),
 	}
 }
 

@@ -32,6 +32,7 @@ func newExptItemResult(db *gorm.DB, opts ...gen.DOOption) exptItemResult {
 	_exptItemResult.ExptID = field.NewInt64(tableName, "expt_id")
 	_exptItemResult.ExptRunID = field.NewInt64(tableName, "expt_run_id")
 	_exptItemResult.ItemID = field.NewInt64(tableName, "item_id")
+	_exptItemResult.ItemVersionID = field.NewInt64(tableName, "item_version_id")
 	_exptItemResult.ItemIdx = field.NewInt32(tableName, "item_idx")
 	_exptItemResult.Status = field.NewInt32(tableName, "status")
 	_exptItemResult.ErrMsg = field.NewBytes(tableName, "err_msg")
@@ -50,20 +51,21 @@ func newExptItemResult(db *gorm.DB, opts ...gen.DOOption) exptItemResult {
 type exptItemResult struct {
 	exptItemResultDo exptItemResultDo
 
-	ALL       field.Asterisk
-	ID        field.Int64  // id
-	SpaceID   field.Int64  // 空间 id
-	ExptID    field.Int64  // 实验 id
-	ExptRunID field.Int64  // 实验运行 id
-	ItemID    field.Int64  // item_id
-	ItemIdx   field.Int32  // item 序号
-	Status    field.Int32  // 状态
-	ErrMsg    field.Bytes  // 错误信息
-	CreatedAt field.Time   // 创建时间
-	UpdatedAt field.Time   // 更新时间
-	DeletedAt field.Field  // 删除时间
-	LogID     field.String // 日志 id
-	Ext       field.Bytes  // 补充信息
+	ALL           field.Asterisk
+	ID            field.Int64  // id
+	SpaceID       field.Int64  // 空间 id
+	ExptID        field.Int64  // 实验 id
+	ExptRunID     field.Int64  // 实验运行 id
+	ItemID        field.Int64  // item_id
+	ItemVersionID field.Int64  // item 自身版本号; 0=旧数据/无版本概念; 真值源 expt_item_ref
+	ItemIdx       field.Int32  // item 序号
+	Status        field.Int32  // 状态
+	ErrMsg        field.Bytes  // 错误信息
+	CreatedAt     field.Time   // 创建时间
+	UpdatedAt     field.Time   // 更新时间
+	DeletedAt     field.Field  // 删除时间
+	LogID         field.String // 日志 id
+	Ext           field.Bytes  // 补充信息
 
 	fieldMap map[string]field.Expr
 }
@@ -85,6 +87,7 @@ func (e *exptItemResult) updateTableName(table string) *exptItemResult {
 	e.ExptID = field.NewInt64(table, "expt_id")
 	e.ExptRunID = field.NewInt64(table, "expt_run_id")
 	e.ItemID = field.NewInt64(table, "item_id")
+	e.ItemVersionID = field.NewInt64(table, "item_version_id")
 	e.ItemIdx = field.NewInt32(table, "item_idx")
 	e.Status = field.NewInt32(table, "status")
 	e.ErrMsg = field.NewBytes(table, "err_msg")
@@ -121,12 +124,13 @@ func (e *exptItemResult) GetFieldByName(fieldName string) (field.OrderExpr, bool
 }
 
 func (e *exptItemResult) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 13)
+	e.fieldMap = make(map[string]field.Expr, 14)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_id"] = e.ExptID
 	e.fieldMap["expt_run_id"] = e.ExptRunID
 	e.fieldMap["item_id"] = e.ItemID
+	e.fieldMap["item_version_id"] = e.ItemVersionID
 	e.fieldMap["item_idx"] = e.ItemIdx
 	e.fieldMap["status"] = e.Status
 	e.fieldMap["err_msg"] = e.ErrMsg

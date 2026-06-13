@@ -14,25 +14,30 @@ const TableNameEvaluatorRecord = "evaluator_record"
 
 // EvaluatorRecord NDB_SHARE_TABLE;评估器执行结果
 type EvaluatorRecord struct {
-	ID                 int64          `gorm:"column:id;type:bigint(20) unsigned;primaryKey;comment:idgen id" json:"id"`                                  // idgen id
-	SpaceID            int64          `gorm:"column:space_id;type:bigint(20) unsigned;not null;comment:空间id" json:"space_id"`                            // 空间id
-	EvaluatorVersionID int64          `gorm:"column:evaluator_version_id;type:bigint(20) unsigned;not null;comment:评估器版本id" json:"evaluator_version_id"` // 评估器版本id
-	ExperimentID       *int64         `gorm:"column:experiment_id;type:bigint(20) unsigned;comment:实验id" json:"experiment_id"`                           // 实验id
-	ExperimentRunID    int64          `gorm:"column:experiment_run_id;type:bigint(20) unsigned;not null;comment:实验执行id" json:"experiment_run_id"`        // 实验执行id
-	ItemID             int64          `gorm:"column:item_id;type:bigint(20) unsigned;not null;comment:评估集行id" json:"item_id"`                            // 评估集行id
-	TurnID             int64          `gorm:"column:turn_id;type:bigint(20) unsigned;not null;comment:评估集行轮次id" json:"turn_id"`                          // 评估集行轮次id
-	LogID              *string        `gorm:"column:log_id;type:varchar(255);comment:log id" json:"log_id"`                                              // log id
-	TraceID            string         `gorm:"column:trace_id;type:varchar(255);not null;comment:trace id" json:"trace_id"`                               // trace id
-	Score              *float64       `gorm:"column:score;type:decimal(10,4);comment:得分" json:"score"`                                                   // 得分
-	Status             int32          `gorm:"column:status;type:int(11);not null;comment:执行状态" json:"status"`                                            // 执行状态
-	CreatedAt          time.Time      `gorm:"column:created_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`        // 创建时间
-	UpdatedAt          time.Time      `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`        // 更新时间
-	DeletedAt          gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                           // 删除时间
-	InputData          *[]byte        `gorm:"column:input_data;type:mediumblob binary;comment:输入, json" json:"input_data"`                               // 输入, json
-	OutputData         *[]byte        `gorm:"column:output_data;type:mediumblob binary;comment:执行结果, json" json:"output_data"`                           // 执行结果, json
-	CreatedBy          string         `gorm:"column:created_by;type:varchar(128);not null;default:0;comment:创建人" json:"created_by"`                      // 创建人
-	UpdatedBy          string         `gorm:"column:updated_by;type:varchar(128);not null;default:0;comment:更新人" json:"updated_by"`                      // 更新人
-	Ext                *[]byte        `gorm:"column:ext;type:mediumblob binary;comment:补充信息, json" json:"ext"`                                           // 补充信息, json
+	ID                 int64          `gorm:"column:id;type:bigint(20) unsigned;primaryKey;comment:idgen id" json:"id"`                                                                                 // idgen id
+	SpaceID            int64          `gorm:"column:space_id;type:bigint(20) unsigned;not null;comment:空间id" json:"space_id"`                                                                           // 空间id
+	EvaluatorVersionID int64          `gorm:"column:evaluator_version_id;type:bigint(20) unsigned;not null;comment:评估器版本id; Inline 行写 0 哨兵(NOT NULL 不改,避免大表重建)" json:"evaluator_version_id"`            // 评估器版本id; Inline 行写 0 哨兵(NOT NULL 不改,避免大表重建)
+	SourceType         int32          `gorm:"column:source_type;type:tinyint(4) unsigned;not null;comment:0=旧数据(语义同 Builtin) / 1=Builtin(注册评估器,含别名实例) / 2=Inline(target output 内嵌)" json:"source_type"` // 0=旧数据(语义同 Builtin) / 1=Builtin(注册评估器,含别名实例) / 2=Inline(target output 内嵌)
+	InlineKey          string         `gorm:"column:inline_key;type:varchar(64);not null;comment:仅 Inline: target output __inline_evaluators__ 的 key; 与 alias 至多一个非空" json:"inline_key"`                // 仅 Inline: target output __inline_evaluators__ 的 key; 与 alias 至多一个非空
+	Alias_             string         `gorm:"column:alias;type:varchar(64);not null;comment:仅 Builtin 别名实例: 实验创建时用户输入(judge_A/judge_B)" json:"alias"`                                                   // 仅 Builtin 别名实例: 实验创建时用户输入(judge_A/judge_B)
+	TargetRecordID     int64          `gorm:"column:target_record_id;type:bigint(20) unsigned;not null;comment:Inline 回指来源 eval_target_record.id; Builtin 为 0" json:"target_record_id"`                 // Inline 回指来源 eval_target_record.id; Builtin 为 0
+	ExperimentID       *int64         `gorm:"column:experiment_id;type:bigint(20) unsigned;comment:实验id" json:"experiment_id"`                                                                          // 实验id
+	ExperimentRunID    int64          `gorm:"column:experiment_run_id;type:bigint(20) unsigned;not null;comment:实验执行id" json:"experiment_run_id"`                                                       // 实验执行id
+	ItemID             int64          `gorm:"column:item_id;type:bigint(20) unsigned;not null;comment:评估集行id" json:"item_id"`                                                                           // 评估集行id
+	ItemVersionID      int64          `gorm:"column:item_version_id;type:bigint(20) unsigned;not null;comment:item 自身版本号; 0=旧数据/无版本概念; 从 expt_item_ref 同步" json:"item_version_id"`                      // item 自身版本号; 0=旧数据/无版本概念; 从 expt_item_ref 同步
+	TurnID             int64          `gorm:"column:turn_id;type:bigint(20) unsigned;not null;comment:评估集行轮次id" json:"turn_id"`                                                                         // 评估集行轮次id
+	LogID              *string        `gorm:"column:log_id;type:varchar(255);comment:log id" json:"log_id"`                                                                                             // log id
+	TraceID            string         `gorm:"column:trace_id;type:varchar(255);not null;comment:trace id" json:"trace_id"`                                                                              // trace id
+	Score              *float64       `gorm:"column:score;type:decimal(10,4);comment:得分" json:"score"`                                                                                                  // 得分
+	Status             int32          `gorm:"column:status;type:int(11);not null;comment:执行状态" json:"status"`                                                                                           // 执行状态
+	CreatedAt          time.Time      `gorm:"column:created_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                       // 创建时间
+	UpdatedAt          time.Time      `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                       // 更新时间
+	DeletedAt          gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                                                                          // 删除时间
+	InputData          *[]byte        `gorm:"column:input_data;type:mediumblob binary;comment:输入, json" json:"input_data"`                                                                              // 输入, json
+	OutputData         *[]byte        `gorm:"column:output_data;type:mediumblob binary;comment:执行结果, json" json:"output_data"`                                                                          // 执行结果, json
+	CreatedBy          string         `gorm:"column:created_by;type:varchar(128);not null;default:0;comment:创建人" json:"created_by"`                                                                     // 创建人
+	UpdatedBy          string         `gorm:"column:updated_by;type:varchar(128);not null;default:0;comment:更新人" json:"updated_by"`                                                                     // 更新人
+	Ext                *[]byte        `gorm:"column:ext;type:mediumblob binary;comment:补充信息, json" json:"ext"`                                                                                          // 补充信息, json
 }
 
 // TableName EvaluatorRecord's table name

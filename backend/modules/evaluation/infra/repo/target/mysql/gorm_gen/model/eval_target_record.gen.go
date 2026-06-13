@@ -14,21 +14,22 @@ const TableNameTargetRecord = "eval_target_record"
 
 // TargetRecord NDB_SHARE_TABLE;评估对象记录信息
 type TargetRecord struct {
-	ID              int64          `gorm:"column:id;type:bigint(20) unsigned;primaryKey;comment:id" json:"id"`                                 // id
-	SpaceID         int64          `gorm:"column:space_id;type:bigint(20) unsigned;not null;comment:空间id" json:"space_id"`                     // 空间id
-	TargetID        int64          `gorm:"column:target_id;type:bigint(20) unsigned;not null;comment:评测对象id" json:"target_id"`                 // 评测对象id
-	TargetVersionID int64          `gorm:"column:target_version_id;type:bigint(20) unsigned;not null;comment:版本ID" json:"target_version_id"`   // 版本ID
-	ExperimentRunID int64          `gorm:"column:experiment_run_id;type:bigint(20) unsigned;not null;comment:实验执行id" json:"experiment_run_id"` // 实验执行id
-	ItemID          int64          `gorm:"column:item_id;type:bigint(20) unsigned;not null;comment:评测集行id" json:"item_id"`                     // 评测集行id
-	TurnID          int64          `gorm:"column:turn_id;type:bigint(20) unsigned;not null;comment:评测集行轮次id" json:"turn_id"`                   // 评测集行轮次id
-	LogID           string         `gorm:"column:log_id;type:varchar(255);not null;comment:log id" json:"log_id"`                              // log id
-	TraceID         string         `gorm:"column:trace_id;type:varchar(255);not null;comment:trace id" json:"trace_id"`                        // trace id
-	InputData       *[]byte        `gorm:"column:input_data;type:mediumblob binary;comment:输入, json" json:"input_data"`                        // 输入, json
-	OutputData      *[]byte        `gorm:"column:output_data;type:mediumblob binary;comment:输出, json" json:"output_data"`                      // 输出, json
-	Status          int32          `gorm:"column:status;type:int(11);not null;comment:执行状态" json:"status"`                                     // 执行状态
-	CreatedAt       time.Time      `gorm:"column:created_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"` // 创建时间
-	UpdatedAt       time.Time      `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"` // 更新时间
-	DeletedAt       gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                    // 删除时间
+	ID              int64          `gorm:"column:id;type:bigint(20) unsigned;primaryKey;comment:id" json:"id"`                                                                  // id
+	SpaceID         int64          `gorm:"column:space_id;type:bigint(20) unsigned;not null;comment:空间id" json:"space_id"`                                                      // 空间id
+	TargetID        int64          `gorm:"column:target_id;type:bigint(20) unsigned;not null;comment:评测对象id" json:"target_id"`                                                  // 评测对象id
+	TargetVersionID int64          `gorm:"column:target_version_id;type:bigint(20) unsigned;not null;comment:版本ID" json:"target_version_id"`                                    // 版本ID
+	ExperimentRunID int64          `gorm:"column:experiment_run_id;type:bigint(20) unsigned;not null;comment:实验执行id" json:"experiment_run_id"`                                  // 实验执行id
+	ItemID          int64          `gorm:"column:item_id;type:bigint(20) unsigned;not null;comment:评测集行id" json:"item_id"`                                                      // 评测集行id
+	ItemVersionID   int64          `gorm:"column:item_version_id;type:bigint(20) unsigned;not null;comment:item 自身版本号; 0=旧数据/无版本概念; 从 expt_item_ref 同步" json:"item_version_id"` // item 自身版本号; 0=旧数据/无版本概念; 从 expt_item_ref 同步
+	TurnID          int64          `gorm:"column:turn_id;type:bigint(20) unsigned;not null;comment:评测集行轮次id" json:"turn_id"`                                                    // 评测集行轮次id
+	LogID           string         `gorm:"column:log_id;type:varchar(255);not null;comment:log id" json:"log_id"`                                                               // log id
+	TraceID         string         `gorm:"column:trace_id;type:varchar(255);not null;comment:trace id" json:"trace_id"`                                                         // trace id
+	InputData       *[]byte        `gorm:"column:input_data;type:mediumblob binary;comment:输入, json" json:"input_data"`                                                         // 输入, json
+	OutputData      *[]byte        `gorm:"column:output_data;type:mediumblob binary;comment:输出, json" json:"output_data"`                                                       // 输出, json
+	Status          int32          `gorm:"column:status;type:int(11);not null;comment:执行状态" json:"status"`                                                                      // 执行状态
+	CreatedAt       time.Time      `gorm:"column:created_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                  // 创建时间
+	UpdatedAt       time.Time      `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                  // 更新时间
+	DeletedAt       gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                                                     // 删除时间
 }
 
 // TableName TargetRecord's table name
