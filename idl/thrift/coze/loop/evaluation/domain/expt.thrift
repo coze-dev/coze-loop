@@ -6,6 +6,8 @@ include "evaluator.thrift"
 include "eval_set.thrift"
 include "../../data/domain/tag.thrift"
 include "../../data/domain/dataset.thrift"
+
+// 注意，此处这个
 include "../../data/domain/filter.thrift"
 include "../../observability/domain/filter.thrift"
 include "../../observability/domain/task.thrift"
