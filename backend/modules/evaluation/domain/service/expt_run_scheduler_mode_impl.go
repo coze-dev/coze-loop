@@ -60,6 +60,7 @@ func NewSchedulerModeFactory(
 	idgenerator idgen.IIDGenerator,
 	evaluationSetItemService EvaluationSetItemService,
 	exptRepo repo.IExperimentRepo,
+	exptItemRefRepo repo.IExptItemRefRepo,
 	idem idem.IdempotentService,
 	configer component.IConfiger,
 	publisher events.ExptEventPublisher,
@@ -77,6 +78,7 @@ func NewSchedulerModeFactory(
 		idgenerator:              idgenerator,
 		evaluationSetItemService: evaluationSetItemService,
 		exptRepo:                 exptRepo,
+		exptItemRefRepo:          exptItemRefRepo,
 		idem:                     idem,
 		configer:                 configer,
 		publisher:                publisher,
@@ -97,6 +99,7 @@ type DefaultSchedulerModeFactory struct {
 	idgenerator              idgen.IIDGenerator
 	evaluationSetItemService EvaluationSetItemService
 	exptRepo                 repo.IExperimentRepo
+	exptItemRefRepo          repo.IExptItemRefRepo // ★ MultiSetConfig 实验 exptStartMultiSet 用
 	idem                     idem.IdempotentService
 	configer                 component.IConfiger
 	publisher                events.ExptEventPublisher
@@ -112,9 +115,9 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 ) (entity.ExptSchedulerMode, error) {
 	switch mode {
 	case entity.EvaluationModeSubmit:
-		return NewExptSubmitMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.resultSvc, f.templateManager), nil
+		return NewExptSubmitMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.resultSvc, f.templateManager, f.exptItemRefRepo), nil
 	case entity.EvaluationModeTrialRun:
-		return NewExptTrialRunMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.resultSvc, f.templateManager), nil
+		return NewExptTrialRunMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.resultSvc, f.templateManager, f.exptItemRefRepo), nil
 	case entity.EvaluationModeFailRetry:
 		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	case entity.EvaluationModeAppend:
@@ -200,9 +203,10 @@ func NewExptTrialRunMode(
 	evaluatorRecordService EvaluatorRecordService,
 	resultSvc ExptResultService,
 	templateManager IExptTemplateManager,
+	exptItemRefRepo ...repo.IExptItemRefRepo, // variadic for backward compat (同 NewExptSubmitMode)
 ) *ExptTrialRunExec {
 	return &ExptTrialRunExec{
-		ExptSubmitExec: NewExptSubmitMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, evaluationSetItemService, exptRepo, idem, configer, publisher, evaluatorRecordService, resultSvc, templateManager),
+		ExptSubmitExec: NewExptSubmitMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, evaluationSetItemService, exptRepo, idem, configer, publisher, evaluatorRecordService, resultSvc, templateManager, exptItemRefRepo...),
 	}
 }
 
