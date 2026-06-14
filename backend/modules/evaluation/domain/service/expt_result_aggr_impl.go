@@ -103,50 +103,22 @@ func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, sp
 		return err
 	}
 
-	turnEvaluatorResultRefs, err := e.exptTurnResultRepo.GetTurnEvaluatorResultRefByExptID(ctx, spaceID, experimentID)
+	// 新实验类型 (MultiSetConfig): 不算 evaluator 维度的平均分聚合 —
+	// 多评测集 + alias 多实例场景下"单一 evaluator 平均分"语义不成立, 前端按 per-set 分组展示。
+	// Target 性能指标 (latency/tokens) 和 Annotation 聚合不受影响,继续算。
+	expt, err := e.experimentRepo.GetByID(ctx, experimentID, spaceID)
 	if err != nil {
 		return err
 	}
 
-	evaluatorVersionID2AggregatorGroup := make(map[int64]*AggregatorGroup)
-	if len(turnEvaluatorResultRefs) > 0 {
-		evaluatorResultIDs := make([]int64, 0)
-		evaluatorVersionID2ResultIDs := make(map[int64][]int64)
-		for _, turnEvaluatorResultRef := range turnEvaluatorResultRefs {
-			evaluatorResultIDs = append(evaluatorResultIDs, turnEvaluatorResultRef.EvaluatorResultID)
-			if _, ok := evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID]; !ok {
-				evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = make([]int64, 0)
-			}
-			evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = append(evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID], turnEvaluatorResultRef.EvaluatorResultID)
-		}
-
-		evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
+	var evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup
+	if expt == nil || expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+		evaluatorVersionID2AggregatorGroup, err = e.computeEvaluatorAggrGroup(ctx, spaceID, experimentID)
 		if err != nil {
 			return err
 		}
-		recordMap := make(map[int64]*entity.EvaluatorRecord)
-		for _, record := range evaluatorRecords {
-			recordMap[record.ID] = record
-		}
-
-		for evaluatorVersionID, resultIDs := range evaluatorVersionID2ResultIDs {
-			aggregatorGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
-			evaluatorVersionID2AggregatorGroup[evaluatorVersionID] = aggregatorGroup
-			for _, resultID := range resultIDs {
-				evalResult, ok := recordMap[resultID]
-				if !ok || evalResult == nil {
-					continue
-				}
-				if evalResult.EvaluatorOutputData == nil {
-					continue
-				}
-				score, hasScore := effectiveEvaluatorResultScoreForAggr(evalResult.EvaluatorOutputData.EvaluatorResult)
-				if !hasScore {
-					continue
-				}
-				aggregatorGroup.Append(score)
-			}
-		}
+	} else {
+		evaluatorVersionID2AggregatorGroup = map[int64]*AggregatorGroup{}
 	}
 
 	tmag, err := e.buildExptTargetMtrAggregatorGroup(ctx, spaceID, experimentID)
@@ -155,6 +127,63 @@ func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, sp
 	}
 
 	return e.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existed)
+}
+
+// computeEvaluatorAggrGroup 从 expt_turn_evaluator_result_ref 拉评估结果, 按 evaluator_version_id 分组聚合分数。
+// 老实验类型的 evaluator 维度聚合走这条路径。Status=Skipped 的占位 record (filter 不命中) 不计入聚合。
+func (e *ExptAggrResultServiceImpl) computeEvaluatorAggrGroup(ctx context.Context, spaceID, experimentID int64) (map[int64]*AggregatorGroup, error) {
+	evaluatorVersionID2AggregatorGroup := make(map[int64]*AggregatorGroup)
+
+	turnEvaluatorResultRefs, err := e.exptTurnResultRepo.GetTurnEvaluatorResultRefByExptID(ctx, spaceID, experimentID)
+	if err != nil {
+		return nil, err
+	}
+	if len(turnEvaluatorResultRefs) == 0 {
+		return evaluatorVersionID2AggregatorGroup, nil
+	}
+
+	evaluatorResultIDs := make([]int64, 0)
+	evaluatorVersionID2ResultIDs := make(map[int64][]int64)
+	for _, turnEvaluatorResultRef := range turnEvaluatorResultRefs {
+		evaluatorResultIDs = append(evaluatorResultIDs, turnEvaluatorResultRef.EvaluatorResultID)
+		if _, ok := evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID]; !ok {
+			evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = make([]int64, 0)
+		}
+		evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = append(evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID], turnEvaluatorResultRef.EvaluatorResultID)
+	}
+
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
+	if err != nil {
+		return nil, err
+	}
+	recordMap := make(map[int64]*entity.EvaluatorRecord)
+	for _, record := range evaluatorRecords {
+		// ★ Skipped 过滤: filter 不命中产的占位 record 不计入聚合
+		if record == nil || record.Status == entity.EvaluatorRunStatusSkipped {
+			continue
+		}
+		recordMap[record.ID] = record
+	}
+
+	for evaluatorVersionID, resultIDs := range evaluatorVersionID2ResultIDs {
+		aggregatorGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
+		evaluatorVersionID2AggregatorGroup[evaluatorVersionID] = aggregatorGroup
+		for _, resultID := range resultIDs {
+			evalResult, ok := recordMap[resultID]
+			if !ok || evalResult == nil {
+				continue
+			}
+			if evalResult.EvaluatorOutputData == nil {
+				continue
+			}
+			score, hasScore := effectiveEvaluatorResultScoreForAggr(evalResult.EvaluatorOutputData.EvaluatorResult)
+			if !hasScore {
+				continue
+			}
+			aggregatorGroup.Append(score)
+		}
+	}
+	return evaluatorVersionID2AggregatorGroup, nil
 }
 
 func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx context.Context, spaceID, exptID int64) (*targetMtrAggrGroup, error) {
@@ -289,7 +318,16 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 
 // createWeightedScoreAggrResult 基于行级 WeightedScore 计算聚合指标
 // 只统计成功的轮次（TurnRunState_Success）
+// 新实验类型（MultiSetConfig）跳过——多评测集+alias 多实例场景下"实验级一个加权分"语义不成立
 func (e *ExptAggrResultServiceImpl) createWeightedScoreAggrResult(ctx context.Context, spaceID, experimentID int64) (*entity.ExptAggrResult, error) {
+	expt, err := e.experimentRepo.GetByID(ctx, experimentID, spaceID)
+	if err != nil {
+		return nil, err
+	}
+	if expt != nil && expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		return nil, nil
+	}
+
 	const (
 		limit  = int64(500)
 		maxTry = 10000
@@ -369,6 +407,16 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 	if param.FieldType != entity.FieldType_EvaluatorScore {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid field type"))
 	}
+
+	// 新实验类型 (MultiSetConfig) 不写 evaluator 维度聚合, 直接返回 —
+	// 增量 update event 理论上对新实验不会触发(创建侧也跳过), 这里是兜底防御。
+	exptForCheck, err := e.experimentRepo.GetByID(ctx, param.ExperimentID, param.SpaceID)
+	if err != nil {
+		return err
+	}
+	if exptForCheck != nil && exptForCheck.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		return nil
+	}
 	// If initial calculation not finished, return error for MQ retry
 	_, err = e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_EvaluatorScore), param.FieldKey)
 	if err != nil {
@@ -392,7 +440,7 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 		return err
 	}
 
-	evaluatorVersionID, err := strconv.ParseInt(param.FieldKey, 10, 64)
+	evaluatorVersionID, _, err := entity.ParseEvaluatorScoreFieldKey(param.FieldKey)
 	if err != nil {
 		return err
 	}
@@ -412,6 +460,10 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 	}
 	recordMap := make(map[int64]*entity.EvaluatorRecord)
 	for _, record := range evaluatorRecords {
+		// ★ Skipped 过滤: filter 不命中产的占位 record 不计入聚合
+		if record == nil || record.Status == entity.EvaluatorRunStatusSkipped {
+			continue
+		}
 		recordMap[record.ID] = record
 	}
 
@@ -595,7 +647,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 				}
 				annotationResults[tagKeyID] = annotationResult
 			case int32(entity.FieldType_EvaluatorScore):
-				evaluatorVersionID, err := strconv.ParseInt(fieldResult.FieldKey, 10, 64)
+				evaluatorVersionID, _, err := entity.ParseEvaluatorScoreFieldKey(fieldResult.FieldKey)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse evaluator version id from field key %s, err: %v", fieldResult.FieldKey, err)
 				}

@@ -2760,6 +2760,9 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 	mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	// createWeightedScoreAggrResult 内部会查 expt 做 MultiSetConfig 分流判断
+	mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return((*entity.Experiment)(nil), nil).AnyTimes()
 
 	svc := &ExptAggrResultServiceImpl{
 		exptAggrResultRepo: mockExptAggrResultRepo,
@@ -2911,9 +2914,14 @@ func TestExptAggrResultServiceImpl_createWeightedScoreAggrResult(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	// MultiSetConfig 分流: 返回 nil expt → 不进 guard, 走原逻辑
+	mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return((*entity.Experiment)(nil), nil).AnyTimes()
 
 	svc := &ExptAggrResultServiceImpl{
 		exptTurnResultRepo: mockExptTurnResultRepo,
+		experimentRepo:     mockExperimentRepo,
 	}
 
 	ctx := context.Background()
@@ -3042,12 +3050,17 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	// UpdateExptAggrResult / createWeightedScoreAggrResult 都会查 expt 做 MultiSetConfig 分流
+	mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return((*entity.Experiment)(nil), nil).AnyTimes()
 
 	svc := &ExptAggrResultServiceImpl{
 		exptAggrResultRepo:     mockExptAggrResultRepo,
 		exptTurnResultRepo:     mockExptTurnResultRepo,
 		evaluatorRecordService: mockEvaluatorRecordService,
 		metric:                 mockMetric,
+		experimentRepo:         mockExperimentRepo,
 	}
 
 	ctx := context.Background()
