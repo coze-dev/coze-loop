@@ -484,7 +484,7 @@ type ExptTurnEvalCtx struct {
 
 type ExptTurnRunResult struct {
 	TargetResult     *EvalTargetRecord
-	EvaluatorResults map[int64]*EvaluatorRecord
+	EvaluatorResults []*EvaluatorRecord // slice, not map — supports alias multi-instances of same versionID
 	EvalErr          error
 	AsyncAbort       bool
 }
@@ -501,7 +501,7 @@ func (e *ExptTurnRunResult) SetTargetResult(er *EvalTargetRecord) *ExptTurnRunRe
 	return e
 }
 
-func (e *ExptTurnRunResult) SetEvaluatorResults(er map[int64]*EvaluatorRecord) *ExptTurnRunResult {
+func (e *ExptTurnRunResult) SetEvaluatorResults(er []*EvaluatorRecord) *ExptTurnRunResult {
 	e.EvaluatorResults = er
 	return e
 }
@@ -522,7 +522,12 @@ func (e *ExptTurnRunResult) GetEvaluatorRecord(evaluatorVersionID int64) *Evalua
 	if e == nil {
 		return nil
 	}
-	return e.EvaluatorResults[evaluatorVersionID]
+	for _, r := range e.EvaluatorResults {
+		if r != nil && r.EvaluatorVersionID == evaluatorVersionID {
+			return r
+		}
+	}
+	return nil
 }
 
 func (e *ExptTurnRunResult) AbortWithTargetResult(expt *Experiment) bool {
