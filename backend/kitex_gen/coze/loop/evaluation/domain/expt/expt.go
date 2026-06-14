@@ -1126,6 +1126,8 @@ type Experiment struct {
 	Ext         map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 	// 离线实验分析状态
 	OfflineExptAnalysisStatus *OfflineExptAnalysisStatus `thrift:"offline_expt_analysis_status,101,optional" frugal:"101,optional,OfflineExptAnalysisStatus" form:"offline_expt_analysis_status" json:"offline_expt_analysis_status,omitempty" query:"offline_expt_analysis_status"`
+	// 通知配置
+	Notifications *NotificationConfig `thrift:"notifications,110,optional" frugal:"110,optional,NotificationConfig" form:"notifications" json:"notifications,omitempty" query:"notifications"`
 }
 
 func NewExperiment() *Experiment {
@@ -1590,6 +1592,18 @@ func (p *Experiment) GetOfflineExptAnalysisStatus() (v OfflineExptAnalysisStatus
 	}
 	return *p.OfflineExptAnalysisStatus
 }
+
+var Experiment_Notifications_DEFAULT *NotificationConfig
+
+func (p *Experiment) GetNotifications() (v *NotificationConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotifications() {
+		return Experiment_Notifications_DEFAULT
+	}
+	return p.Notifications
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1704,6 +1718,9 @@ func (p *Experiment) SetExt(val map[string]string) {
 func (p *Experiment) SetOfflineExptAnalysisStatus(val *OfflineExptAnalysisStatus) {
 	p.OfflineExptAnalysisStatus = val
 }
+func (p *Experiment) SetNotifications(val *NotificationConfig) {
+	p.Notifications = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:   "id",
@@ -1744,6 +1761,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	71:  "expt_source",
 	100: "ext",
 	101: "offline_expt_analysis_status",
+	110: "notifications",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1896,6 +1914,10 @@ func (p *Experiment) IsSetExt() bool {
 
 func (p *Experiment) IsSetOfflineExptAnalysisStatus() bool {
 	return p.OfflineExptAnalysisStatus != nil
+}
+
+func (p *Experiment) IsSetNotifications() bool {
+	return p.Notifications != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -2215,6 +2237,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 101:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 110:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField110(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2710,6 +2740,14 @@ func (p *Experiment) ReadField101(iprot thrift.TProtocol) error {
 	p.OfflineExptAnalysisStatus = _field
 	return nil
 }
+func (p *Experiment) ReadField110(iprot thrift.TProtocol) error {
+	_field := NewNotificationConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Notifications = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2867,6 +2905,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField110(oprot); err != nil {
+			fieldId = 110
 			goto WriteFieldError
 		}
 	}
@@ -3614,6 +3656,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
+func (p *Experiment) writeField110(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotifications() {
+		if err = oprot.WriteFieldBegin("notifications", thrift.STRUCT, 110); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Notifications.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 110 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 110 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -3741,6 +3801,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field101DeepEqual(ano.OfflineExptAnalysisStatus) {
+		return false
+	}
+	if !p.Field110DeepEqual(ano.Notifications) {
 		return false
 	}
 	return true
@@ -4158,6 +4221,13 @@ func (p *Experiment) Field101DeepEqual(src *OfflineExptAnalysisStatus) bool {
 		return false
 	}
 	if *p.OfflineExptAnalysisStatus != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field110DeepEqual(src *NotificationConfig) bool {
+
+	if !p.Notifications.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -6272,7 +6342,9 @@ type ExptTemplate struct {
 	ExptInfo                *ExptInfo         `thrift:"expt_info,5,optional" frugal:"5,optional,ExptInfo" form:"expt_info" json:"expt_info,omitempty" query:"expt_info"`
 	ExptSource              *ExptSource       `thrift:"expt_source,6,optional" frugal:"6,optional,ExptSource" form:"expt_source" json:"expt_source,omitempty" query:"expt_source"`
 	EnableExtractTrajectory *bool             `thrift:"enable_extract_trajectory,7,optional" frugal:"7,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty" query:"enable_extract_trajectory"`
-	BaseInfo                *common.BaseInfo  `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	// 通知配置
+	Notifications *NotificationConfig `thrift:"notifications,10,optional" frugal:"10,optional,NotificationConfig" form:"notifications" json:"notifications,omitempty" query:"notifications"`
+	BaseInfo      *common.BaseInfo    `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewExptTemplate() *ExptTemplate {
@@ -6366,6 +6438,18 @@ func (p *ExptTemplate) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var ExptTemplate_Notifications_DEFAULT *NotificationConfig
+
+func (p *ExptTemplate) GetNotifications() (v *NotificationConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotifications() {
+		return ExptTemplate_Notifications_DEFAULT
+	}
+	return p.Notifications
+}
+
 var ExptTemplate_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *ExptTemplate) GetBaseInfo() (v *common.BaseInfo) {
@@ -6398,6 +6482,9 @@ func (p *ExptTemplate) SetExptSource(val *ExptSource) {
 func (p *ExptTemplate) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *ExptTemplate) SetNotifications(val *NotificationConfig) {
+	p.Notifications = val
+}
 func (p *ExptTemplate) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -6410,6 +6497,7 @@ var fieldIDToName_ExptTemplate = map[int16]string{
 	5:   "expt_info",
 	6:   "expt_source",
 	7:   "enable_extract_trajectory",
+	10:  "notifications",
 	255: "base_info",
 }
 
@@ -6439,6 +6527,10 @@ func (p *ExptTemplate) IsSetExptSource() bool {
 
 func (p *ExptTemplate) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *ExptTemplate) IsSetNotifications() bool {
+	return p.Notifications != nil
 }
 
 func (p *ExptTemplate) IsSetBaseInfo() bool {
@@ -6514,6 +6606,14 @@ func (p *ExptTemplate) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6615,6 +6715,14 @@ func (p *ExptTemplate) ReadField7(iprot thrift.TProtocol) error {
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *ExptTemplate) ReadField10(iprot thrift.TProtocol) error {
+	_field := NewNotificationConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Notifications = _field
+	return nil
+}
 func (p *ExptTemplate) ReadField255(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -6656,6 +6764,10 @@ func (p *ExptTemplate) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -6806,6 +6918,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *ExptTemplate) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotifications() {
+		if err = oprot.WriteFieldBegin("notifications", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Notifications.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *ExptTemplate) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 255); err != nil {
@@ -6858,6 +6988,9 @@ func (p *ExptTemplate) DeepEqual(ano *ExptTemplate) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Notifications) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseInfo) {
@@ -6916,6 +7049,13 @@ func (p *ExptTemplate) Field7DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplate) Field10DeepEqual(src *NotificationConfig) bool {
+
+	if !p.Notifications.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -28070,6 +28210,1169 @@ func (p *ExptInsightAnalysisFeedbackVote) Field2DeepEqual(src *FeedbackActionTyp
 		return false
 	}
 	if strings.Compare(*p.FeedbackActionType, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+// ========================================
+// 通知配置（Notification Config）
+// ========================================
+// 通知筛选条件
+type NotificationFilterCondition struct {
+	// 运算符：In（包含）/ NotIn（不包含），复用已有 FilterOperatorType
+	Operator *FilterOperatorType `thrift:"operator,1,optional" frugal:"1,optional,FilterOperatorType" form:"operator" json:"operator,omitempty" query:"operator"`
+	// 用户可见状态值列表，可多选: "processing", "success", "failed", "terminated"
+	StatusValues []string `thrift:"status_values,2,optional" frugal:"2,optional,list<string>" form:"status_values" json:"status_values,omitempty" query:"status_values"`
+}
+
+func NewNotificationFilterCondition() *NotificationFilterCondition {
+	return &NotificationFilterCondition{}
+}
+
+func (p *NotificationFilterCondition) InitDefault() {
+}
+
+var NotificationFilterCondition_Operator_DEFAULT FilterOperatorType
+
+func (p *NotificationFilterCondition) GetOperator() (v FilterOperatorType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOperator() {
+		return NotificationFilterCondition_Operator_DEFAULT
+	}
+	return *p.Operator
+}
+
+var NotificationFilterCondition_StatusValues_DEFAULT []string
+
+func (p *NotificationFilterCondition) GetStatusValues() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatusValues() {
+		return NotificationFilterCondition_StatusValues_DEFAULT
+	}
+	return p.StatusValues
+}
+func (p *NotificationFilterCondition) SetOperator(val *FilterOperatorType) {
+	p.Operator = val
+}
+func (p *NotificationFilterCondition) SetStatusValues(val []string) {
+	p.StatusValues = val
+}
+
+var fieldIDToName_NotificationFilterCondition = map[int16]string{
+	1: "operator",
+	2: "status_values",
+}
+
+func (p *NotificationFilterCondition) IsSetOperator() bool {
+	return p.Operator != nil
+}
+
+func (p *NotificationFilterCondition) IsSetStatusValues() bool {
+	return p.StatusValues != nil
+}
+
+func (p *NotificationFilterCondition) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_NotificationFilterCondition[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *NotificationFilterCondition) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *FilterOperatorType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := FilterOperatorType(v)
+		_field = &tmp
+	}
+	p.Operator = _field
+	return nil
+}
+func (p *NotificationFilterCondition) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.StatusValues = _field
+	return nil
+}
+
+func (p *NotificationFilterCondition) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("NotificationFilterCondition"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *NotificationFilterCondition) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOperator() {
+		if err = oprot.WriteFieldBegin("operator", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.Operator)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *NotificationFilterCondition) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatusValues() {
+		if err = oprot.WriteFieldBegin("status_values", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.StatusValues)); err != nil {
+			return err
+		}
+		for _, v := range p.StatusValues {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *NotificationFilterCondition) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("NotificationFilterCondition(%+v)", *p)
+
+}
+
+func (p *NotificationFilterCondition) DeepEqual(ano *NotificationFilterCondition) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Operator) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.StatusValues) {
+		return false
+	}
+	return true
+}
+
+func (p *NotificationFilterCondition) Field1DeepEqual(src *FilterOperatorType) bool {
+
+	if p.Operator == src {
+		return true
+	} else if p.Operator == nil || src == nil {
+		return false
+	}
+	if *p.Operator != *src {
+		return false
+	}
+	return true
+}
+func (p *NotificationFilterCondition) Field2DeepEqual(src []string) bool {
+
+	if len(p.StatusValues) != len(src) {
+		return false
+	}
+	for i, v := range p.StatusValues {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// Webhook 配置
+type WebhookConfig struct {
+	// Webhook URL 列表，每个 URL 须以 http:// 或 https:// 开头
+	Urls []string `thrift:"urls,1,optional" frugal:"1,optional,list<string>" form:"urls" json:"urls,omitempty" query:"urls"`
+}
+
+func NewWebhookConfig() *WebhookConfig {
+	return &WebhookConfig{}
+}
+
+func (p *WebhookConfig) InitDefault() {
+}
+
+var WebhookConfig_Urls_DEFAULT []string
+
+func (p *WebhookConfig) GetUrls() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetUrls() {
+		return WebhookConfig_Urls_DEFAULT
+	}
+	return p.Urls
+}
+func (p *WebhookConfig) SetUrls(val []string) {
+	p.Urls = val
+}
+
+var fieldIDToName_WebhookConfig = map[int16]string{
+	1: "urls",
+}
+
+func (p *WebhookConfig) IsSetUrls() bool {
+	return p.Urls != nil
+}
+
+func (p *WebhookConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebhookConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *WebhookConfig) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Urls = _field
+	return nil
+}
+
+func (p *WebhookConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("WebhookConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *WebhookConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUrls() {
+		if err = oprot.WriteFieldBegin("urls", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.Urls)); err != nil {
+			return err
+		}
+		for _, v := range p.Urls {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *WebhookConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WebhookConfig(%+v)", *p)
+
+}
+
+func (p *WebhookConfig) DeepEqual(ano *WebhookConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Urls) {
+		return false
+	}
+	return true
+}
+
+func (p *WebhookConfig) Field1DeepEqual(src []string) bool {
+
+	if len(p.Urls) != len(src) {
+		return false
+	}
+	for i, v := range p.Urls {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// 飞书消息配置
+type LarkNotifyConfig struct {
+	// 是否开启飞书消息通知
+	Enabled *bool `thrift:"enabled,1,optional" frugal:"1,optional,bool" form:"enabled" json:"enabled,omitempty" query:"enabled"`
+}
+
+func NewLarkNotifyConfig() *LarkNotifyConfig {
+	return &LarkNotifyConfig{}
+}
+
+func (p *LarkNotifyConfig) InitDefault() {
+}
+
+var LarkNotifyConfig_Enabled_DEFAULT bool
+
+func (p *LarkNotifyConfig) GetEnabled() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnabled() {
+		return LarkNotifyConfig_Enabled_DEFAULT
+	}
+	return *p.Enabled
+}
+func (p *LarkNotifyConfig) SetEnabled(val *bool) {
+	p.Enabled = val
+}
+
+var fieldIDToName_LarkNotifyConfig = map[int16]string{
+	1: "enabled",
+}
+
+func (p *LarkNotifyConfig) IsSetEnabled() bool {
+	return p.Enabled != nil
+}
+
+func (p *LarkNotifyConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_LarkNotifyConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *LarkNotifyConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Enabled = _field
+	return nil
+}
+
+func (p *LarkNotifyConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("LarkNotifyConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *LarkNotifyConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnabled() {
+		if err = oprot.WriteFieldBegin("enabled", thrift.BOOL, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Enabled); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *LarkNotifyConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LarkNotifyConfig(%+v)", *p)
+
+}
+
+func (p *LarkNotifyConfig) DeepEqual(ano *LarkNotifyConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Enabled) {
+		return false
+	}
+	return true
+}
+
+func (p *LarkNotifyConfig) Field1DeepEqual(src *bool) bool {
+
+	if p.Enabled == src {
+		return true
+	} else if p.Enabled == nil || src == nil {
+		return false
+	}
+	if *p.Enabled != *src {
+		return false
+	}
+	return true
+}
+
+// 通知渠道配置
+type NotificationChannelConfig struct {
+	// Webhook 渠道
+	Webhook *WebhookConfig `thrift:"webhook,1,optional" frugal:"1,optional,WebhookConfig" form:"webhook" json:"webhook,omitempty" query:"webhook"`
+	// 飞书消息渠道
+	Lark *LarkNotifyConfig `thrift:"lark,2,optional" frugal:"2,optional,LarkNotifyConfig" form:"lark" json:"lark,omitempty" query:"lark"`
+}
+
+func NewNotificationChannelConfig() *NotificationChannelConfig {
+	return &NotificationChannelConfig{}
+}
+
+func (p *NotificationChannelConfig) InitDefault() {
+}
+
+var NotificationChannelConfig_Webhook_DEFAULT *WebhookConfig
+
+func (p *NotificationChannelConfig) GetWebhook() (v *WebhookConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWebhook() {
+		return NotificationChannelConfig_Webhook_DEFAULT
+	}
+	return p.Webhook
+}
+
+var NotificationChannelConfig_Lark_DEFAULT *LarkNotifyConfig
+
+func (p *NotificationChannelConfig) GetLark() (v *LarkNotifyConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLark() {
+		return NotificationChannelConfig_Lark_DEFAULT
+	}
+	return p.Lark
+}
+func (p *NotificationChannelConfig) SetWebhook(val *WebhookConfig) {
+	p.Webhook = val
+}
+func (p *NotificationChannelConfig) SetLark(val *LarkNotifyConfig) {
+	p.Lark = val
+}
+
+var fieldIDToName_NotificationChannelConfig = map[int16]string{
+	1: "webhook",
+	2: "lark",
+}
+
+func (p *NotificationChannelConfig) IsSetWebhook() bool {
+	return p.Webhook != nil
+}
+
+func (p *NotificationChannelConfig) IsSetLark() bool {
+	return p.Lark != nil
+}
+
+func (p *NotificationChannelConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_NotificationChannelConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *NotificationChannelConfig) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewWebhookConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Webhook = _field
+	return nil
+}
+func (p *NotificationChannelConfig) ReadField2(iprot thrift.TProtocol) error {
+	_field := NewLarkNotifyConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Lark = _field
+	return nil
+}
+
+func (p *NotificationChannelConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("NotificationChannelConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *NotificationChannelConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWebhook() {
+		if err = oprot.WriteFieldBegin("webhook", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Webhook.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *NotificationChannelConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLark() {
+		if err = oprot.WriteFieldBegin("lark", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Lark.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *NotificationChannelConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("NotificationChannelConfig(%+v)", *p)
+
+}
+
+func (p *NotificationChannelConfig) DeepEqual(ano *NotificationChannelConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Webhook) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Lark) {
+		return false
+	}
+	return true
+}
+
+func (p *NotificationChannelConfig) Field1DeepEqual(src *WebhookConfig) bool {
+
+	if !p.Webhook.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *NotificationChannelConfig) Field2DeepEqual(src *LarkNotifyConfig) bool {
+
+	if !p.Lark.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+// 通知总配置
+type NotificationConfig struct {
+	// 通知条件
+	FilterCondition *NotificationFilterCondition `thrift:"filter_condition,1,optional" frugal:"1,optional,NotificationFilterCondition" form:"filter_condition" json:"filter_condition,omitempty" query:"filter_condition"`
+	// 通知渠道
+	Channels *NotificationChannelConfig `thrift:"channels,2,optional" frugal:"2,optional,NotificationChannelConfig" form:"channels" json:"channels,omitempty" query:"channels"`
+}
+
+func NewNotificationConfig() *NotificationConfig {
+	return &NotificationConfig{}
+}
+
+func (p *NotificationConfig) InitDefault() {
+}
+
+var NotificationConfig_FilterCondition_DEFAULT *NotificationFilterCondition
+
+func (p *NotificationConfig) GetFilterCondition() (v *NotificationFilterCondition) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilterCondition() {
+		return NotificationConfig_FilterCondition_DEFAULT
+	}
+	return p.FilterCondition
+}
+
+var NotificationConfig_Channels_DEFAULT *NotificationChannelConfig
+
+func (p *NotificationConfig) GetChannels() (v *NotificationChannelConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetChannels() {
+		return NotificationConfig_Channels_DEFAULT
+	}
+	return p.Channels
+}
+func (p *NotificationConfig) SetFilterCondition(val *NotificationFilterCondition) {
+	p.FilterCondition = val
+}
+func (p *NotificationConfig) SetChannels(val *NotificationChannelConfig) {
+	p.Channels = val
+}
+
+var fieldIDToName_NotificationConfig = map[int16]string{
+	1: "filter_condition",
+	2: "channels",
+}
+
+func (p *NotificationConfig) IsSetFilterCondition() bool {
+	return p.FilterCondition != nil
+}
+
+func (p *NotificationConfig) IsSetChannels() bool {
+	return p.Channels != nil
+}
+
+func (p *NotificationConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_NotificationConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *NotificationConfig) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewNotificationFilterCondition()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.FilterCondition = _field
+	return nil
+}
+func (p *NotificationConfig) ReadField2(iprot thrift.TProtocol) error {
+	_field := NewNotificationChannelConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Channels = _field
+	return nil
+}
+
+func (p *NotificationConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("NotificationConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *NotificationConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilterCondition() {
+		if err = oprot.WriteFieldBegin("filter_condition", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.FilterCondition.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *NotificationConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetChannels() {
+		if err = oprot.WriteFieldBegin("channels", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Channels.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *NotificationConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("NotificationConfig(%+v)", *p)
+
+}
+
+func (p *NotificationConfig) DeepEqual(ano *NotificationConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.FilterCondition) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Channels) {
+		return false
+	}
+	return true
+}
+
+func (p *NotificationConfig) Field1DeepEqual(src *NotificationFilterCondition) bool {
+
+	if !p.FilterCondition.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *NotificationConfig) Field2DeepEqual(src *NotificationChannelConfig) bool {
+
+	if !p.Channels.DeepEqual(src) {
 		return false
 	}
 	return true

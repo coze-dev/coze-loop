@@ -105,6 +105,9 @@ struct Experiment {
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+
+    // 通知配置
+    110: optional NotificationConfig notifications
 }
 
 // 实验模板基础信息
@@ -152,6 +155,9 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+
+    // 通知配置
+    10: optional NotificationConfig notifications
 
     255: optional common.BaseInfo base_info
 }
@@ -728,4 +734,44 @@ const FeedbackActionType FeedbackActionType_Cancel_Downvote = "Cancel_Downvote"
 const FeedbackActionType FeedbackActionType_Create_Comment = "Create_Comment"
 const FeedbackActionType FeedbackActionType_Update_Comment = "Update_Comment"
 const FeedbackActionType FeedbackActionType_Delete_Comment = "Delete_Comment"
+
+// ========================================
+// 通知配置（Notification Config）
+// ========================================
+
+// 通知筛选条件
+struct NotificationFilterCondition {
+    // 运算符：In（包含）/ NotIn（不包含），复用已有 FilterOperatorType
+    1: optional FilterOperatorType operator
+    // 用户可见状态值列表，可多选: "processing", "success", "failed", "terminated"
+    2: optional list<string> status_values
+}
+
+// Webhook 配置
+struct WebhookConfig {
+    // Webhook URL 列表，每个 URL 须以 http:// 或 https:// 开头
+    1: optional list<string> urls
+}
+
+// 飞书消息配置
+struct LarkNotifyConfig {
+    // 是否开启飞书消息通知
+    1: optional bool enabled
+}
+
+// 通知渠道配置
+struct NotificationChannelConfig {
+    // Webhook 渠道
+    1: optional WebhookConfig webhook
+    // 飞书消息渠道
+    2: optional LarkNotifyConfig lark
+}
+
+// 通知总配置
+struct NotificationConfig {
+    // 通知条件
+    1: optional NotificationFilterCondition filter_condition
+    // 通知渠道
+    2: optional NotificationChannelConfig channels
+}
 
