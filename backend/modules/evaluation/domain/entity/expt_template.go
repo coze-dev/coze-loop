@@ -37,6 +37,9 @@ type ExptTemplate struct {
 
 	// ExptSource 实验来源信息（存储在 template_conf JSON 中）
 	ExptSource *ExptSource
+
+	// Notifications 通知配置（Webhook / 飞书消息）
+	Notifications *NotificationConfig
 }
 
 // ExptSource 实验来源信息
@@ -423,7 +426,8 @@ type CreateExptTemplateParam struct {
 	Visibility              *Visibility
 	CronActivate            bool // 是否开启定时触发
 	CreateEvalTargetParam   *CreateEvalTargetParam
-	ExptSource              *ExptSource // 实验来源信息
+	ExptSource              *ExptSource        // 实验来源信息
+	Notifications           *NotificationConfig // 通知配置
 }
 
 // UpdateExptTemplateParam 更新实验模板参数
@@ -441,7 +445,8 @@ type UpdateExptTemplateParam struct {
 	CronActivate            *bool // nil 表示不修改
 	CreateEvalTargetParam   *CreateEvalTargetParam
 	// ExptSource 实验来源信息；nil 表示不修改，由 service 层保留 DB 已有值
-	ExptSource *ExptSource
+	ExptSource    *ExptSource
+	Notifications *NotificationConfig // 通知配置；nil 表示不修改
 }
 
 // UpdateExptTemplateMetaParam 更新实验模板 Meta 参数

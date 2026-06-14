@@ -60,6 +60,7 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		rocket.ExptTurnResultFilterRMQKey,
 		rocket.ExptExportCSVEventRMQKey,
 		rocket.ExptLifecycleEventRMQKey,
+		rocket.WebhookDeliveryEventRMQKey,
 	} {
 		p := &producer{}
 
@@ -159,6 +160,45 @@ func (e *exptEventPublisher) PublishExptTurnResultFilterEvent(ctx context.Contex
 
 func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
 	return e.batchSend(ctx, rocket.ExptLifecycleEventRMQKey, []any{event}, duration)
+}
+
+// webhookRetryDelays maps retry count (1-based) to delay duration.
+// Retry 1 = 1 min, Retry 2 = 5 min, Retry 3 = 30 min.
+var webhookRetryDelays = map[int]time.Duration{
+	1: 1 * time.Minute,
+	2: 5 * time.Minute,
+	3: 30 * time.Minute,
+}
+
+func (e *exptEventPublisher) PublishWebhookDeliveryEvent(ctx context.Context, event *entity.WebhookDeliveryEvent, delayLevel int) error {
+	p, ok := e.producers[rocket.WebhookDeliveryEventRMQKey]
+	if !ok {
+		return fmt.Errorf("rmq producer not found %v", rocket.WebhookDeliveryEventRMQKey)
+	}
+
+	bytes, err := json.Marshal(event)
+	if err != nil {
+		return errorx.Wrapf(err, "json marshal webhook delivery event fail")
+	}
+
+	var msg *mq.Message
+	if d, ok := webhookRetryDelays[delayLevel]; ok && delayLevel > 0 {
+		msg = mq.NewDeferMessage(p.cfg.Topic, d, bytes)
+	} else {
+		msg = mq.NewMessage(p.cfg.Topic, bytes)
+	}
+
+	if env := os.Getenv(XttEnv); env != "" {
+		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck
+	}
+	resp, err := p.p.Send(ctx, msg)
+	if err != nil {
+		return errorx.Wrapf(err, "send webhook delivery event fail, delivery_id: %v, retry_count: %v", event.DeliveryID, event.RetryCount)
+	}
+
+	logs.CtxInfo(ctx, "webhook delivery event sent, delivery_id: %v, retry_count: %v, delay_level: %v, message_id: %v, offset: %v",
+		event.DeliveryID, event.RetryCount, delayLevel, resp.MessageID, resp.Offset)
+	return nil
 }
 
 func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []any, duration *time.Duration) error {
