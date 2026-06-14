@@ -4,6 +4,7 @@
 package experiment
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/bytedance/gg/gcond"
@@ -682,6 +683,11 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		// EvaluatorVersionIds 已在 application 层 (resolveEvaluatorVersionIDsFromEvalSetConfigs) 提取并回填到 cer，
 		// 这里通过 cer.GetEvaluatorVersionIds() 透传，无需重复展开。
 		fillTopLevelIdentityFromEvalSetConfigs(cer, param)
+		// ★ 连接器兜底: 从 eval_set_configs 展开构建 ConnectorConf (EvaluatorsConf + TargetConf)。
+		// 新路径权威源是 EvalSetConfigs，但 CreateExpt.CheckRun → CheckConnector 仍按老连接器结构
+		// (EvalConf.ConnectorConf) 做同步字段映射校验。此处由 eval_set_configs 的 evaluator_confs
+		// 字段映射构建等价的老连接器，使两侧由同一份输入派生、天然一致，校验得以通过。
+		param.ExptConf = buildExptConfFromEvalSetConfigs(cer, evaluatorVersionRunConfigs)
 	} else {
 		// 老路径: 走 EvalConfConvert
 		evaluationConfiguration, err := NewEvalConfConvert().ConvertToEntity(cer, evaluatorVersionRunConfigs)
@@ -737,6 +743,124 @@ func fillTopLevelIdentityFromEvalSetConfigs(cer *expt.CreateExperimentRequest, p
 			}
 		}
 	}
+}
+
+// buildExptConfFromEvalSetConfigs 新路径 (MultiSetConfig) 连接器兜底构建。
+// 把 eval_set_configs[].evaluator_confs / target_confs 的字段映射展平成老连接器结构
+// (EvaluationConfiguration.ConnectorConf)，供 CheckConnector 同步字段映射校验使用。
+//
+// 收敛规则 (本期, 与 ValidateEvalSetConfigs 约束一致):
+//   - EvaluatorsConf: 跨 set 聚合全部 evaluator_confs，按 (evaluator_version_id, alias) 去重，
+//     每个 conf 的 from_eval_set→EvalSetAdapter、from_target→TargetAdapter；
+//   - TargetConf: 顶层未显式传 target 时，取首个含 target_confs 的 set 的 target_confs[0]
+//     (本期 len<=1，各 set 与实验级一致) 作为 IngressConf 的 EvalSetAdapter 字段映射；
+//   - ScoreWeight / RunConf 复用既有 evaluatorVersionRunConfigs 与 conf.score_weight。
+//
+// 注: 这里仅为通过同步校验而派生老连接器；EvalSetConfigs 仍是落库与调度的权威源。
+func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfigMap map[int64]*evaluatordto.EvaluatorRunConfig) *entity.EvaluationConfiguration {
+	configs := cer.GetEvalSetConfigs()
+	if len(configs) == 0 {
+		return nil
+	}
+
+	ec := &entity.EvaluationConfiguration{
+		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
+		Ext:           cer.Ext,
+	}
+	if cer.GetItemRetryNum() > 0 {
+		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
+	}
+	if cer.IsSetEnableExtractTrajectory() {
+		ec.EnableExtractTrajectory = gptr.Of(cer.GetEnableExtractTrajectory())
+	}
+
+	// TargetConf: 取首个含 target_confs 的 set 的 target_confs[0]
+	targetVersionID := cer.GetTargetVersionID()
+	var targetMapping *domain_expt.TargetFieldMapping
+	var targetRuntimeParam *common.RuntimeParam
+	for _, sc := range configs {
+		if sc == nil || len(sc.GetTargetConfs()) == 0 {
+			continue
+		}
+		tc := sc.GetTargetConfs()[0]
+		if tc == nil {
+			continue
+		}
+		if targetVersionID == 0 {
+			targetVersionID = tc.GetTargetVersionID()
+		}
+		targetMapping = tc.GetFieldMapping()
+		targetRuntimeParam = tc.GetRuntimeParam()
+		break
+	}
+	// 顶层显式 target_field_mapping 优先 (与老路径语义一致)
+	if cer.GetTargetFieldMapping() != nil {
+		targetMapping = cer.GetTargetFieldMapping()
+	}
+	if cer.GetTargetRuntimeParam() != nil {
+		targetRuntimeParam = cer.GetTargetRuntimeParam()
+	}
+	ec.ConnectorConf.TargetConf = &entity.TargetConf{
+		TargetVersionID: targetVersionID,
+		IngressConf:     toTargetFieldMappingDO(targetMapping, targetRuntimeParam),
+	}
+
+	// EvaluatorsConf: 跨 set 聚合 evaluator_confs，按 (version_id, alias) 去重
+	evalConfs := make([]*entity.EvaluatorConf, 0)
+	seen := make(map[string]struct{})
+	for _, sc := range configs {
+		if sc == nil {
+			continue
+		}
+		for _, evc := range sc.GetEvaluatorConfs() {
+			if evc == nil || evc.GetEvaluatorVersionID() == 0 {
+				continue
+			}
+			key := fmt.Sprintf("%d#%s", evc.GetEvaluatorVersionID(), evc.GetAlias())
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+
+			esf := make([]*entity.FieldConf, 0, len(evc.GetFromEvalSet()))
+			for _, fm := range evc.GetFromEvalSet() {
+				if fm != nil {
+					esf = append(esf, &entity.FieldConf{FieldName: fm.GetFieldName(), FromField: fm.GetFromFieldName()})
+				}
+			}
+			tf := make([]*entity.FieldConf, 0, len(evc.GetFromTarget()))
+			for _, fm := range evc.GetFromTarget() {
+				if fm != nil {
+					tf = append(tf, &entity.FieldConf{FieldName: fm.GetFieldName(), FromField: fm.GetFromFieldName()})
+				}
+			}
+
+			var runConf *evaluatordto.EvaluatorRunConfig
+			if len(runConfigMap) > 0 {
+				runConf = runConfigMap[evc.GetEvaluatorVersionID()]
+			}
+			conf := &entity.EvaluatorConf{
+				EvaluatorVersionID: evc.GetEvaluatorVersionID(),
+				EvaluatorID:        evc.GetEvaluatorID(),
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{FieldConfs: esf},
+					TargetAdapter:  &entity.FieldAdapter{FieldConfs: tf},
+				},
+				RunConf:     evaluator.ConvertEvaluatorRunConfDTO2DO(runConf),
+				ScoreWeight: evc.ScoreWeight,
+			}
+			evalConfs = append(evalConfs, conf)
+		}
+	}
+	if len(evalConfs) > 0 {
+		evalsConf := &entity.EvaluatorsConf{
+			EvaluatorConcurNum: ptr.ConvIntPtr[int32, int](cer.EvaluatorsConcurNum),
+			EvaluatorConf:      evalConfs,
+		}
+		ec.ConnectorConf.EvaluatorsConf = evalsConf
+	}
+
+	return ec
 }
 
 // convertEvalSetConfigsDTOToDO 将 IDL EvalSetConfig 列表转换为 domain EvalSetConfig
