@@ -536,7 +536,7 @@ func ConvertExptTurnResultFilter(filters *domain_expt.Filters) (*entity.ExptTurn
 				if err != nil {
 					return nil, err
 				}
-				evaluatorVersionID, err := strconv.ParseInt(filterCondition.GetField().GetFieldKey(), 10, 64)
+				evaluatorVersionID, _, err := entity.ParseEvaluatorScoreFieldKey(filterCondition.GetField().GetFieldKey())
 				if err != nil {
 					return nil, err
 				}
