@@ -445,6 +445,11 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.SetExptSource(fallback)
 	}
 
+	// Notifications
+	if experiment.Notifications != nil {
+		res.Notifications = convertNotificationConfigToDTO(experiment.Notifications)
+	}
+
 	return res
 }
 
@@ -557,7 +562,78 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+	if cer.IsSetNotifications() {
+		param.Notifications = convertNotificationConfig(cer.GetNotifications())
+	}
 	return param, nil
+}
+
+// convertNotificationConfigToDTO converts domain entity NotificationConfig to IDL NotificationConfig
+func convertNotificationConfigToDTO(src *entity.NotificationConfig) *domain_expt.NotificationConfig {
+	if src == nil {
+		return nil
+	}
+	dst := &domain_expt.NotificationConfig{}
+	if src.FilterCondition != nil {
+		fc := &domain_expt.NotificationFilterCondition{
+			StatusValues: src.FilterCondition.StatusValues,
+		}
+		switch src.FilterCondition.Operator {
+		case entity.NotificationFilterOperatorType_In:
+			op := domain_expt.FilterOperatorType_In
+			fc.Operator = &op
+		case entity.NotificationFilterOperatorType_NotIn:
+			op := domain_expt.FilterOperatorType_NotIn
+			fc.Operator = &op
+		}
+		dst.FilterCondition = fc
+	}
+	if src.Channels != nil {
+		channels := &domain_expt.NotificationChannelConfig{}
+		if src.Channels.Webhook != nil {
+			channels.Webhook = &domain_expt.WebhookConfig{Urls: src.Channels.Webhook.URLs}
+		}
+		if src.Channels.Lark != nil {
+			channels.Lark = &domain_expt.LarkNotifyConfig{Enabled: src.Channels.Lark.Enabled}
+		}
+		dst.Channels = channels
+	}
+	return dst
+}
+
+// convertNotificationConfig converts IDL NotificationConfig to domain entity NotificationConfig
+func convertNotificationConfig(src *domain_expt.NotificationConfig) *entity.NotificationConfig {
+	if src == nil {
+		return nil
+	}
+	dst := &entity.NotificationConfig{}
+	if fc := src.GetFilterCondition(); fc != nil {
+		cond := &entity.NotificationFilterCondition{
+			StatusValues: fc.GetStatusValues(),
+		}
+		if fc.Operator != nil {
+			switch *fc.Operator {
+			case domain_expt.FilterOperatorType_In:
+				cond.Operator = entity.NotificationFilterOperatorType_In
+			case domain_expt.FilterOperatorType_NotIn:
+				cond.Operator = entity.NotificationFilterOperatorType_NotIn
+			default:
+				cond.Operator = entity.NotificationFilterOperatorType_Unknown
+			}
+		}
+		dst.FilterCondition = cond
+	}
+	if ch := src.GetChannels(); ch != nil {
+		channels := &entity.NotificationChannelConfig{}
+		if wh := ch.GetWebhook(); wh != nil {
+			channels.Webhook = &entity.WebhookConfig{URLs: wh.GetUrls()}
+		}
+		if lk := ch.GetLark(); lk != nil {
+			channels.Lark = &entity.LarkNotifyConfig{Enabled: lk.Enabled}
+		}
+		dst.Channels = channels
+	}
+	return dst
 }
 
 func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {

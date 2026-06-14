@@ -158,6 +158,7 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 		},
 		ExptSource: param.ExptSource,
+		Notifications: param.Notifications,
 	}
 	if param.Visibility != nil {
 		template.Meta.Visibility = *param.Visibility
@@ -478,6 +479,12 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		}
 	}
 
+	// 增量更新请求未带 notifications 时，保留 DB 中已有的 notifications
+	if updatedTemplate.TemplateConf != nil && updatedTemplate.TemplateConf.Notifications == nil &&
+		existingTemplate.TemplateConf != nil && existingTemplate.TemplateConf.Notifications != nil {
+		updatedTemplate.TemplateConf.Notifications = existingTemplate.TemplateConf.Notifications
+	}
+
 	// 显式传入 expt_source（含 Scheduler 等）时覆盖到 TemplateConf；
 	// 当 templateConf 还未初始化（请求未带字段映射等），克隆现有再写入，避免污染其他字段。
 	if param.ExptSource != nil {
@@ -485,6 +492,15 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 			updatedTemplate.TemplateConf = &entity.ExptTemplateConfiguration{}
 		}
 		updatedTemplate.TemplateConf.ExptSource = param.ExptSource
+	}
+
+	// 显式传入 notifications 时覆盖到 TemplateConf
+	if param.Notifications != nil {
+		if updatedTemplate.TemplateConf == nil {
+			updatedTemplate.TemplateConf = &entity.ExptTemplateConfiguration{}
+		}
+		updatedTemplate.TemplateConf.Notifications = param.Notifications
+		updatedTemplate.Notifications = param.Notifications
 	}
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重

@@ -51,6 +51,10 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
+	if req.IsSetNotifications() {
+		param.Notifications = convertNotificationConfig(req.GetNotifications())
+	}
+
 	return param, nil
 }
 
@@ -261,9 +265,12 @@ func buildTemplateConfForCreate(
 	}
 
 	if targetFieldMapping == nil && len(evaluatorConfs) == 0 {
-		// 即使没有字段映射，也需要设置 ExptSource
+		// 即使没有字段映射，也需要设置 ExptSource 和 Notifications
 		if param.ExptSource != nil {
 			templateConf.ExptSource = param.ExptSource
+		}
+		if param.Notifications != nil {
+			templateConf.Notifications = param.Notifications
 		}
 		return templateConf
 	}
@@ -286,10 +293,13 @@ func buildTemplateConfForCreate(
 		templateConf.ExptSource = param.ExptSource
 	}
 
+	// 设置 Notifications
+	if param.Notifications != nil {
+		templateConf.Notifications = param.Notifications
+	}
+
 	return templateConf
 }
-
-// toTargetFieldMappingDOForTemplate 转换目标字段映射（用于模板）
 func toTargetFieldMappingDOForTemplate(mapping *domain_expt.TargetFieldMapping, rtp *entity.RuntimeParam) *entity.TargetIngressConf {
 	tic := &entity.TargetIngressConf{EvalSetAdapter: &entity.FieldAdapter{}}
 
@@ -481,6 +491,11 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	// 填充 ExptSource
 	if es := ExptSourceDO2DTO(template.ExptSource); es != nil {
 		dto.SetExptSource(es)
+	}
+
+	// 填充 Notifications
+	if template.Notifications != nil {
+		dto.Notifications = convertNotificationConfigToDTO(template.Notifications)
 	}
 
 	return dto
@@ -1402,6 +1417,10 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 
 	if req.IsSetExptSource() && req.GetExptSource() != nil {
 		param.ExptSource = exptSourceDTO2DO(req.GetExptSource())
+	}
+
+	if req.IsSetNotifications() {
+		param.Notifications = convertNotificationConfig(req.GetNotifications())
 	}
 
 	return param, nil

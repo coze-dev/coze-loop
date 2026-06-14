@@ -82,6 +82,10 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 	}
 
 	if template.TemplateConf != nil {
+		// 确保 Notifications 在持久化前被写入 TemplateConf
+		if template.Notifications != nil && template.TemplateConf.Notifications == nil {
+			template.TemplateConf.Notifications = template.Notifications
+		}
 		bytes, err := json.Marshal(template.TemplateConf)
 		if err != nil {
 			return nil, errorx.Wrapf(err, "ExptTemplateConfiguration json marshal fail")
@@ -268,6 +272,12 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		exptSource = templateConf.ExptSource
 	}
 
+	// 从 TemplateConf 中提取 Notifications
+	var notifications *entity.NotificationConfig
+	if templateConf != nil && templateConf.Notifications != nil {
+		notifications = templateConf.Notifications
+	}
+
 	return &entity.ExptTemplate{
 		Meta:                meta,
 		TripleConfig:        tripleConfig,
@@ -277,6 +287,7 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		BaseInfo:            baseInfo,
 		ExptInfo:            exptInfo,
 		ExptSource:          exptSource,
+		Notifications:       notifications,
 	}, nil
 }
 

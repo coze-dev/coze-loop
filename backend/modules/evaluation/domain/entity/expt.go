@@ -236,9 +236,10 @@ type EvaluationConfiguration struct {
 	ConnectorConf           Connector
 	ItemConcurNum           *int
 	ItemRetryNum            *int
-	TimeRange               *TaskTimeRangeDO `json:"time_range,omitempty"`
+	TimeRange               *TaskTimeRangeDO  `json:"time_range,omitempty"`
 	EnableExtractTrajectory *bool
 	Ext                     map[string]string
+	Notifications           *NotificationConfig `json:"notifications,omitempty"`
 }
 
 type Connector struct {

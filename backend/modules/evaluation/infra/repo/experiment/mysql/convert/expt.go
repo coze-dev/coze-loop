@@ -126,5 +126,10 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		}
 	}
 
+	// 从 EvalConf 中恢复 Notifications 到 Experiment 顶层字段
+	if res.EvalConf != nil && res.EvalConf.Notifications != nil {
+		res.Notifications = res.EvalConf.Notifications
+	}
+
 	return res, nil
 }

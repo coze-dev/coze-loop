@@ -825,6 +825,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		SourceID:            req.SourceID,
 		TrialRunItemCount:   req.TrialRunItemCount,
 		TriggerType:         triggerType,
+		Notifications:       req.Notifications,
 
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
@@ -853,6 +854,14 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 				break
 			}
 		}
+	}
+
+	// 将 Notifications 配置写入 EvalConf 以便随 eval_conf 列一起持久化
+	if do.Notifications != nil {
+		if do.EvalConf == nil {
+			do.EvalConf = &entity.EvaluationConfiguration{}
+		}
+		do.EvalConf.Notifications = do.Notifications
 	}
 
 	if versionedTargetID != nil {
