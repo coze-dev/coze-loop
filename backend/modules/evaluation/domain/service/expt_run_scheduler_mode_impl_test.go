@@ -1996,6 +1996,7 @@ func TestNewSchedulerModeFactory(t *testing.T) {
 	idgenerator := idgenmocks.NewMockIIDGenerator(ctrl)
 	evaluationSetItemService := svcmocks.NewMockEvaluationSetItemService(ctrl)
 	exptRepo := mock_repo.NewMockIExperimentRepo(ctrl)
+	exptItemRefRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
 	idem := idemmocks.NewMockIdempotentService(ctrl)
 	configer := configmocks.NewMockIConfiger(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
@@ -2013,6 +2014,7 @@ func TestNewSchedulerModeFactory(t *testing.T) {
 		idgenerator,
 		evaluationSetItemService,
 		exptRepo,
+		exptItemRefRepo,
 		idem,
 		configer,
 		publisher,
@@ -5189,6 +5191,7 @@ func TestSchedulerModeFactory_NewSchedulerMode_RetryAll(t *testing.T) {
 	idgenerator := idgenmocks.NewMockIIDGenerator(ctrl)
 	evaluationSetItemService := svcmocks.NewMockEvaluationSetItemService(ctrl)
 	exptRepo := mock_repo.NewMockIExperimentRepo(ctrl)
+	exptItemRefRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
 	idem := idemmocks.NewMockIdempotentService(ctrl)
 	configer := configmocks.NewMockIConfiger(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
@@ -5206,6 +5209,7 @@ func TestSchedulerModeFactory_NewSchedulerMode_RetryAll(t *testing.T) {
 		idgenerator,
 		evaluationSetItemService,
 		exptRepo,
+		exptItemRefRepo,
 		idem,
 		configer,
 		publisher,
