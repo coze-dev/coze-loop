@@ -1,0 +1,41 @@
+Build Gate Evidence - OSS Repo (coze-loop)
+===========================================
+
+Date: 2026-06-15
+Branch: feat/experiment-notification-webhook
+
+Command: cd backend && go build ./modules/evaluation/...
+Result: PASS (exit code 0, no output = clean build)
+
+Commits on branch:
+- afcb4f51 feat(evaluation): add IDL and codegen for experiment notification webhook
+- a7f8c9b0 feat(evaluation): add webhook notification domain + infra layer
+- 8515e02e feat(evaluation): add notification config passthrough across all layers
+
+Files modified (Phase 0-4):
+  Domain Layer:
+  - backend/modules/evaluation/domain/entity/notification.go (NEW)
+  - backend/modules/evaluation/domain/entity/expt.go (Notifications field)
+  - backend/modules/evaluation/domain/entity/expt_template.go (Notifications field + ExptTemplateConfiguration)
+  - backend/modules/evaluation/domain/entity/param.go (CreateExptParam.Notifications)
+  - backend/modules/evaluation/domain/events/publisher.go (PublishWebhookDeliveryEvent)
+  - backend/modules/evaluation/domain/service/webhook_signature.go (NEW)
+  - backend/modules/evaluation/domain/service/lark_notifier.go (NEW)
+  - backend/modules/evaluation/domain/service/webhook_delivery.go (NEW)
+  - backend/modules/evaluation/domain/service/webhook_delivery_impl.go (NEW)
+  - backend/modules/evaluation/domain/service/wire.go (NewWebhookDeliveryHandler, NewWebhookLifecycleEventHandler)
+
+  Infra Layer:
+  - backend/modules/evaluation/infra/mq/rocket/conf.go (WebhookDeliveryEventRMQKey)
+  - backend/modules/evaluation/infra/mq/rocket/producer/expt_event_pub.go (PublishWebhookDeliveryEvent)
+  - backend/modules/evaluation/infra/repo/experiment/mysql/convert/expt.go (Notifications from EvalConf)
+  - backend/modules/evaluation/infra/repo/experiment/mysql/convert/expt_template.go (Notifications from TemplateConf)
+
+  Application Layer:
+  - backend/modules/evaluation/application/convertor/experiment/expt.go (convertNotificationConfig, convertNotificationConfigToDTO)
+  - backend/modules/evaluation/application/convertor/experiment/expt_template.go (Notifications passthrough)
+  - backend/modules/evaluation/application/experiment_app.go (Notifications in SubmitExperiment)
+
+  Domain Service:
+  - backend/modules/evaluation/domain/service/expt_manage_impl.go (Notifications in CreateExpt)
+  - backend/modules/evaluation/domain/service/expt_template_impl.go (Notifications in Create/Update)

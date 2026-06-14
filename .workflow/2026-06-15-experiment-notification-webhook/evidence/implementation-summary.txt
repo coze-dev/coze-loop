@@ -1,0 +1,82 @@
+Feature Implementation Summary - Experiment Notification Webhook
+=================================================================
+
+Date: 2026-06-15
+Branch: feat/experiment-notification-webhook (both repos)
+
+## Architecture Overview
+
+The experiment notification webhook feature enables users to receive HTTP webhook
+callbacks and Lark notifications when experiment status changes (e.g., success, failed,
+terminated). The architecture follows the existing DDD layered pattern with Open Core
+model:
+
+```
+[Experiment Status Change]
+    |
+    v
+[ExptLifecycleEvent published to MQ]
+    |
+    v
+[WebhookLifecycleEventConsumerHandler] (commercial consumer, separate CG)
+    |
+    v
+[WebhookLifecycleEventHandlerImpl] (OSS domain service)
+    |-- Loads experiment + notifications config from DB
+    |-- Matches notification filter condition
+    |-- For each webhook URL:
+    |     |
+    |     v
+    |   [PublishWebhookDeliveryEvent to MQ]
+    |     |
+    |     v
+    |   [WebhookDeliveryEventConsumerHandler] (commercial consumer)
+    |     |
+    |     v
+    |   [WebhookDeliveryHandlerImpl] (OSS domain service)
+    |     |-- Sign payload (HMAC-SHA256 via IWebhookSignatureProvider)
+    |     |-- HTTP POST to webhook URL
+    |     |-- On failure: retry via delayed MQ (1min, 5min, 30min)
+    |
+    |-- If Lark enabled:
+          |
+          v
+        [ILarkNotifier.NotifyExperimentStatusChange]
+```
+
+## Completed Phases
+
+### Phase 0: IDL + Codegen (commit afcb4f51)
+- NotificationConfig, NotificationFilterCondition, WebhookConfig, LarkNotifyConfig
+- Notifications field added to Experiment, ExptTemplate, Create/Update/Submit requests
+- FilterOperatorType_In (7), FilterOperatorType_NotIn (8)
+
+### Phase 1-2: Domain + Infra Layer (commit a7f8c9b0)
+- Domain entities: NotificationConfig, WebhookDeliveryEvent, filter matching logic
+- Domain interfaces: IWebhookSignatureProvider, ILarkNotifier, WebhookDeliveryHandler, WebhookLifecycleEventHandler
+- Domain impl: WebhookDeliveryHandlerImpl (HTTP POST + retry), WebhookLifecycleEventHandlerImpl (condition matching + dispatch)
+- Infra: WebhookDeliveryEventRMQKey, PublishWebhookDeliveryEvent with DeferDuration
+
+### Phase 3-4: Convertor/Application + Storage (commit 8515e02e)
+- Bidirectional type mapping: IDL FilterOperatorType (7/8) <-> Domain NotificationFilterOperatorType (1/2)
+- Notifications passthrough in all CRUD paths for experiments and templates
+- JSON blob storage: Notifications embedded in eval_conf (experiments) and template_conf (templates)
+- No DDL migration needed
+
+### Phase 5: Commercial Consumers + Wire DI (commit b6d07ea50)
+- Consumer handlers: WebhookDeliveryEventConsumerHandler, WebhookLifecycleEventConsumerHandler
+- Consumer workers with RMQ config keys
+- Wire DI: NoopWebhookSignatureProvider + NoopLarkNotifier (MVP)
+- All 10 YAML config files updated
+- Consumer registration in mustInitOfflineAnalysisConsumers
+
+### Phase 6: API Handler Transparency
+- VERIFIED: Codegen handlers automatically serialize/deserialize Notifications field
+- No manual handler changes needed
+
+## Remaining Work (Post-MVP)
+1. Replace NoopWebhookSignatureProvider with DKMS-backed implementation
+2. Replace NoopLarkNotifier with real Lark bot implementation
+3. Remove local replace directive from commercial go.mod before merge
+4. Create MQ topics in all regions (BOE, CN, ALISG, Asia-SouthEastBD)
+5. Bits deployment + AGW route verification (no new routes needed)
