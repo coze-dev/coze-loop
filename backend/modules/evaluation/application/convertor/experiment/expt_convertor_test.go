@@ -4,10 +4,12 @@
 package experiment
 
 import (
+	"context"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
@@ -132,7 +134,8 @@ func TestConvertCreateReq_OldPath(t *testing.T) {
 }
 
 func TestConvertCreateReq_EvalSetConfigs(t *testing.T) {
-	// 新路径: 有 EvalSetConfigs 时，EvalSetConfigs 非空，ExptConf 为 nil
+	// 新路径: 有 EvalSetConfigs 时，EvalSetConfigs 非空；
+	// 同时 ExptConf 由 eval_set_configs 兜底派生 (方案A)，供 CheckConnector 同步字段映射校验。
 	req := &expt.CreateExperimentRequest{
 		WorkspaceID: 2002,
 		Name:        gptr.Of("multi-set-expt"),
@@ -145,6 +148,12 @@ func TestConvertCreateReq_EvalSetConfigs(t *testing.T) {
 						EvaluatorID:        10,
 						EvaluatorVersionID: 20,
 						Alias:              gptr.Of("judge_A"),
+						FromEvalSet: []*domain_expt.FieldMapping{
+							{FieldName: gptr.Of("input"), FromFieldName: gptr.Of("input")},
+						},
+						FromTarget: []*domain_expt.FieldMapping{
+							{FieldName: gptr.Of("output"), FromFieldName: gptr.Of("actual_output")},
+						},
 					},
 				},
 			},
@@ -153,8 +162,6 @@ func TestConvertCreateReq_EvalSetConfigs(t *testing.T) {
 	param, err := ConvertCreateReq(req, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, param)
-	// 新路径：ExptConf 为 nil（不走 EvalConfConvert）
-	assert.Nil(t, param.ExptConf)
 	// 新路径：EvalSetConfigs 非空
 	assert.Len(t, param.EvalSetConfigs, 1)
 	// EvalSetID / EvalSetVersionID 正确
@@ -163,6 +170,23 @@ func TestConvertCreateReq_EvalSetConfigs(t *testing.T) {
 	// EvaluatorConfs[0].Alias 正确
 	assert.Len(t, param.EvalSetConfigs[0].EvaluatorConfs, 1)
 	assert.Equal(t, "judge_A", param.EvalSetConfigs[0].EvaluatorConfs[0].Alias)
+
+	// ★ 方案A: ExptConf 兜底派生，ConnectorConf.EvaluatorsConf 由 eval_set_configs 展开
+	assert.NotNil(t, param.ExptConf)
+	require.NotNil(t, param.ExptConf.ConnectorConf.EvaluatorsConf)
+	evConfs := param.ExptConf.ConnectorConf.EvaluatorsConf.EvaluatorConf
+	require.Len(t, evConfs, 1)
+	assert.Equal(t, int64(20), evConfs[0].EvaluatorVersionID)
+	// EvaluatorConf.Valid 要求 IngressConf 非空且至少一个 adapter 存在
+	require.NotNil(t, evConfs[0].IngressConf)
+	require.NotNil(t, evConfs[0].IngressConf.EvalSetAdapter)
+	require.Len(t, evConfs[0].IngressConf.EvalSetAdapter.FieldConfs, 1)
+	assert.Equal(t, "input", evConfs[0].IngressConf.EvalSetAdapter.FieldConfs[0].FieldName)
+	require.NotNil(t, evConfs[0].IngressConf.TargetAdapter)
+	require.Len(t, evConfs[0].IngressConf.TargetAdapter.FieldConfs, 1)
+	assert.Equal(t, "output", evConfs[0].IngressConf.TargetAdapter.FieldConfs[0].FieldName)
+	// 通过 EvaluatorConf.Valid 校验 (与 checkEvaluatorsConnector 等价)
+	assert.NoError(t, evConfs[0].Valid(context.Background()))
 }
 
 func TestConvertEvalSetConfigsDTOToDO(t *testing.T) {
