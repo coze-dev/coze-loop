@@ -484,12 +484,6 @@ func (p *ExptInsightAnalysisFeedbackComment) IsValid() error {
 func (p *ExptInsightAnalysisFeedbackVote) IsValid() error {
 	return nil
 }
-func (p *ExptFilter) IsValid() error {
-	return nil
-}
-func (p *ExptFilterField) IsValid() error {
-	return nil
-}
 func (p *ExptTargetConf) IsValid() error {
 	if p.FieldMapping != nil {
 		if err := p.FieldMapping.IsValid(); err != nil {

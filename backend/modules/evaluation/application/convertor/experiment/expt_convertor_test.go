@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	domain_filter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 )
 
@@ -333,4 +334,118 @@ func TestToTargetFieldMappingDO_AlwaysReturnsValidConf(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestConvertEvalSetConfigs_FilterReuseAndTargetConf 覆盖 filter 复用(data filter.Filter) +
+// target_confs / runtime_param 转换 + DTO→DO→DTO 回显往返不丢字段。
+func TestConvertEvalSetConfigs_FilterReuseAndTargetConf(t *testing.T) {
+	dtos := []*domain_expt.EvalSetConfig{
+		{
+			EvalSetID:        100,
+			EvalSetVersionID: 101,
+			ItemFilter: &domain_filter.Filter{
+				QueryAndOr: gptr.Of(domain_filter.QueryRelation("and")),
+				FilterFields: []*domain_filter.FilterField{
+					{
+						FieldName: "item_id",
+						FieldType: domain_filter.FieldType("long"),
+						QueryType: gptr.Of(domain_filter.QueryType("in")),
+						Values:    []string{"1", "2"},
+					},
+				},
+			},
+			TargetConfs: []*domain_expt.ExptTargetConf{
+				{
+					TargetID:        gptr.Of(int64(7)),
+					TargetVersionID: gptr.Of(int64(70)),
+					RuntimeParam:    &common.RuntimeParam{JSONValue: gptr.Of(`{"temperature":0.5}`)},
+					FieldMapping: &domain_expt.TargetFieldMapping{
+						FromEvalSet: []*domain_expt.FieldMapping{
+							{FieldName: gptr.Of("input"), FromFieldName: gptr.Of("question")},
+						},
+					},
+				},
+			},
+			EvaluatorConfs: []*domain_expt.ExptEvaluatorConf{
+				{
+					EvaluatorID:        10,
+					EvaluatorVersionID: 20,
+					Alias:              gptr.Of("judge_A"),
+					RuntimeParam:       &common.RuntimeParam{JSONValue: gptr.Of(`{"model":"x"}`)},
+					Filter: &domain_filter.Filter{
+						FilterFields: []*domain_filter.FilterField{
+							{FieldName: "lang", FieldType: domain_filter.FieldType("tag"), QueryType: gptr.Of(domain_filter.QueryType("eq")), Values: []string{"zh"}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	dos := convertEvalSetConfigsDTOToDO(dtos)
+	assert.Len(t, dos, 1)
+	do := dos[0]
+
+	assert.NotNil(t, do.ItemFilter)
+	assert.Equal(t, "and", do.ItemFilter.QueryAndOr)
+	assert.Len(t, do.ItemFilter.FilterFields, 1)
+	assert.Equal(t, "item_id", do.ItemFilter.FilterFields[0].FieldName)
+	assert.Equal(t, "long", do.ItemFilter.FilterFields[0].FieldType)
+	assert.Equal(t, "in", do.ItemFilter.FilterFields[0].QueryType)
+	assert.Equal(t, []string{"1", "2"}, do.ItemFilter.FilterFields[0].Values)
+
+	assert.Len(t, do.TargetConfs, 1)
+	assert.Equal(t, int64(7), do.TargetConfs[0].TargetID)
+	assert.Equal(t, int64(70), do.TargetConfs[0].TargetVersionID)
+	assert.Equal(t, `{"temperature":0.5}`, do.TargetConfs[0].RuntimeParam[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	assert.Len(t, do.TargetConfs[0].FieldMapping, 1)
+	assert.Equal(t, "input", do.TargetConfs[0].FieldMapping[0].FieldName)
+	assert.Equal(t, "question", do.TargetConfs[0].FieldMapping[0].FromField)
+
+	assert.Len(t, do.EvaluatorConfs, 1)
+	assert.Equal(t, `{"model":"x"}`, do.EvaluatorConfs[0].RuntimeParam[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	assert.NotNil(t, do.EvaluatorConfs[0].Filter)
+	assert.Equal(t, "lang", do.EvaluatorConfs[0].Filter.FilterFields[0].FieldName)
+	assert.Equal(t, "tag", do.EvaluatorConfs[0].Filter.FilterFields[0].FieldType)
+
+	back := convertEvalSetConfigsDOToDTO(dos)
+	assert.Len(t, back, 1)
+	b := back[0]
+	assert.NotNil(t, b.ItemFilter)
+	assert.Equal(t, "item_id", b.ItemFilter.FilterFields[0].FieldName)
+	assert.Equal(t, "in", string(b.ItemFilter.FilterFields[0].GetQueryType()))
+	assert.Len(t, b.TargetConfs, 1)
+	assert.Equal(t, int64(7), b.TargetConfs[0].GetTargetID())
+	assert.Equal(t, `{"temperature":0.5}`, b.TargetConfs[0].GetRuntimeParam().GetJSONValue())
+	assert.Len(t, b.EvaluatorConfs, 1)
+	assert.Equal(t, "judge_A", b.EvaluatorConfs[0].GetAlias())
+	assert.Equal(t, `{"model":"x"}`, b.EvaluatorConfs[0].GetRuntimeParam().GetJSONValue())
+	assert.NotNil(t, b.EvaluatorConfs[0].Filter)
+	assert.Equal(t, "lang", b.EvaluatorConfs[0].Filter.FilterFields[0].FieldName)
+}
+
+// TestConvertCreateReq_NewPath_TopLevelIdentity 验证新路径顶层身份兜底。
+func TestConvertCreateReq_NewPath_TopLevelIdentity(t *testing.T) {
+	req := &expt.CreateExperimentRequest{
+		WorkspaceID: 2002,
+		EvalSetConfigs: []*domain_expt.EvalSetConfig{
+			{
+				EvalSetID:        111,
+				EvalSetVersionID: 222,
+				TargetConfs: []*domain_expt.ExptTargetConf{
+					{TargetID: gptr.Of(int64(9)), TargetVersionID: gptr.Of(int64(90))},
+				},
+				EvaluatorConfs: []*domain_expt.ExptEvaluatorConf{
+					{EvaluatorID: 10, EvaluatorVersionID: 20},
+				},
+			},
+		},
+	}
+	param, err := ConvertCreateReq(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(111), param.EvalSetID)
+	assert.Equal(t, int64(222), param.EvalSetVersionID)
+	assert.NotNil(t, param.TargetID)
+	assert.Equal(t, int64(9), *param.TargetID)
+	assert.Equal(t, int64(90), param.TargetVersionID)
 }
