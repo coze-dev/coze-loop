@@ -272,11 +272,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		if err != nil {
 			return nil, err
 		}
-		recordMap := make(map[int64]*entity.EvaluatorRecord)
-		for _, record := range evaluatorRecords {
-			recordMap[record.EvaluatorVersionID] = record
-		}
-		etec.ExptTurnRunResult.EvaluatorResults = recordMap
+		etec.ExptTurnRunResult.EvaluatorResults = evaluatorRecords
 	}
 
 	return etec, nil

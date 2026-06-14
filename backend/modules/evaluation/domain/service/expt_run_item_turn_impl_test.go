@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 
@@ -368,7 +367,7 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent(t *testing.T) {
 	inputData := &entity.EvaluatorInputData{
 		InputFields: map[string]*entity.Content{},
 	}
-	var recordMap sync.Map
+	var collector evalRecordCollector
 
 	mockEvaluatorRecord := &entity.EvaluatorRecord{
 		ID:     202,
@@ -405,13 +404,12 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent(t *testing.T) {
 		},
 	)
 
-	err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &recordMap)
+	err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &collector)
 	assert.NoError(t, err)
 
-	// verify recordMap
-	val, ok := recordMap.Load(int64(101))
-	assert.True(t, ok)
-	assert.Equal(t, mockEvaluatorRecord, val)
+	// verify collector has the record
+	assert.Len(t, collector.records, 1)
+	assert.Equal(t, mockEvaluatorRecord, collector.records[0])
 }
 
 func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testing.T) {
@@ -458,7 +456,7 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 	inputData := &entity.EvaluatorInputData{
 		InputFields: map[string]*entity.Content{},
 	}
-	var recordMap sync.Map
+	var collector evalRecordCollector
 
 	tests := []struct {
 		name      string
@@ -489,7 +487,7 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
-			err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &recordMap)
+			err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &collector)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -2810,8 +2808,8 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_EdgeCases(t *testing.T) {
 					Event: &entity.ExptItemEvalEvent{}, // Event required: CallEvaluators uses Event.IgnoreExistedTargetResult()
 				},
 				ExptTurnRunResult: &entity.ExptTurnRunResult{
-					EvaluatorResults: map[int64]*entity.EvaluatorRecord{
-						1: {ID: 1, Status: entity.EvaluatorRunStatusSuccess},
+					EvaluatorResults: []*entity.EvaluatorRecord{
+						{ID: 1, EvaluatorVersionID: 1, Status: entity.EvaluatorRunStatusSuccess},
 					},
 				},
 			},
@@ -3612,24 +3610,36 @@ func TestDefaultExptTurnEvaluationImpl_CheckBenefit_EdgeCases(t *testing.T) {
 func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T) {
 	t.Parallel()
 
+	// helper to find record by versionID in result slice
+	findRecord := func(records []*entity.EvaluatorRecord, vID int64) *entity.EvaluatorRecord {
+		for _, r := range records {
+			if r != nil && r.EvaluatorVersionID == vID {
+				return r
+			}
+		}
+		return nil
+	}
+
 	tests := []struct {
 		name           string
 		service        func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl
-		input          map[int64]*entity.EvaluatorRecord
+		input          []*entity.EvaluatorRecord
 		wantErr        bool
-		validateResult func(t *testing.T, result map[int64]*entity.EvaluatorRecord)
+		validateResult func(t *testing.T, result []*entity.EvaluatorRecord)
 	}{
 		{
 			name: "nil evaluatorRecordService - skip refresh",
 			service: func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl {
 				return &DefaultExptTurnEvaluationImpl{}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, result[101].Status)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				r := findRecord(result, 101)
+				assert.NotNil(t, r)
+				assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, r.Status)
 			},
 		},
 		{
@@ -3638,28 +3648,29 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				mockRecordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
-				102: {ID: 202, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusFail},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
+				{ID: 202, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusFail},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusSuccess, result[101].Status)
-				assert.Equal(t, entity.EvaluatorRunStatusFail, result[102].Status)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				assert.Equal(t, entity.EvaluatorRunStatusSuccess, findRecord(result, 101).Status)
+				assert.Equal(t, entity.EvaluatorRunStatusFail, findRecord(result, 102).Status)
 			},
 		},
 		{
-			name: "nil record in map - skip",
+			name: "nil record in slice - skip",
 			service: func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl {
 				mockRecordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: nil,
+			input: []*entity.EvaluatorRecord{
+				nil,
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Nil(t, result[101])
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				assert.Len(t, result, 1)
+				assert.Nil(t, result[0])
 			},
 		},
 		{
@@ -3671,13 +3682,14 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusSuccess, result[101].Status)
-				assert.Equal(t, int64(201), result[101].ID)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				r := findRecord(result, 101)
+				assert.Equal(t, entity.EvaluatorRunStatusSuccess, r.Status)
+				assert.Equal(t, int64(201), r.ID)
 			},
 		},
 		{
@@ -3689,12 +3701,12 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, result[101].Status)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, findRecord(result, 101).Status)
 			},
 		},
 		{
@@ -3704,8 +3716,8 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				mockRecordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(201), false).Return(nil, errors.New("db error"))
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: true,
 		},
@@ -3718,27 +3730,27 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 301, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
-				102: {ID: 302, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 301, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
+				{ID: 302, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusSuccess, result[101].Status)
-				assert.Equal(t, int64(301), result[101].ID)
-				assert.Equal(t, entity.EvaluatorRunStatusSuccess, result[102].Status)
-				assert.Equal(t, int64(302), result[102].ID)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				assert.Equal(t, entity.EvaluatorRunStatusSuccess, findRecord(result, 101).Status)
+				assert.Equal(t, int64(301), findRecord(result, 101).ID)
+				assert.Equal(t, entity.EvaluatorRunStatusSuccess, findRecord(result, 102).Status)
+				assert.Equal(t, int64(302), findRecord(result, 102).ID)
 			},
 		},
 		{
-			name: "empty map - no-op",
+			name: "empty slice - no-op",
 			service: func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl {
 				mockRecordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input:   map[int64]*entity.EvaluatorRecord{},
+			input:   []*entity.EvaluatorRecord{},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
 				assert.Empty(t, result)
 			},
 		},
@@ -3822,7 +3834,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 		prepare        func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl
 		etec           func() *entity.ExptTurnEvalCtx
 		wantErr        bool
-		validateResult func(t *testing.T, results map[int64]*entity.EvaluatorRecord)
+		validateResult func(t *testing.T, results []*entity.EvaluatorRecord)
 	}{
 		{
 			name: "async evaluator refreshed to success after sync evaluator completes",
@@ -3856,7 +3868,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 			},
 			etec:    baseEtec,
 			wantErr: false,
-			validateResult: func(t *testing.T, results map[int64]*entity.EvaluatorRecord) {
+			validateResult: func(t *testing.T, results []*entity.EvaluatorRecord) {
 				assert.Len(t, results, 1)
 				for _, record := range results {
 					assert.Equal(t, entity.EvaluatorRunStatusSuccess, record.Status)
@@ -3895,7 +3907,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 			},
 			etec:    baseEtec,
 			wantErr: false,
-			validateResult: func(t *testing.T, results map[int64]*entity.EvaluatorRecord) {
+			validateResult: func(t *testing.T, results []*entity.EvaluatorRecord) {
 				assert.Len(t, results, 1)
 				for _, record := range results {
 					assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)

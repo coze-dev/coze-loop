@@ -309,9 +309,9 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	return targetRecord, nil
 }
 
-func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) (map[int64]*entity.EvaluatorRecord, error) {
+func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) ([]*entity.EvaluatorRecord, error) {
 	if e.skipEvaluatorNode(etec.Expt) {
-		return make(map[int64]*entity.EvaluatorRecord), nil
+		return nil, nil
 	}
 
 	if etec.Event.AsyncEvaluatorReportTrigger {
@@ -320,14 +320,14 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	}
 
 	expt := etec.Expt
-	evaluatorResults := make(map[int64]*entity.EvaluatorRecord)
+	evaluatorResults := make([]*entity.EvaluatorRecord, 0, len(expt.Evaluators))
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))
 
 	for _, evaluatorVersion := range expt.Evaluators {
 		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
 
 		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
-			evaluatorResults[evaluatorVersion.GetEvaluatorVersionID()] = existResult
+			evaluatorResults = append(evaluatorResults, existResult)
 			continue
 		} else {
 			logs.CtxInfo(ctx, "[ExptTurnEval] Ignore existed evaluator result: %v", json.Jsonify(existResult))
@@ -347,9 +347,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	}
 
 	runEvalRes, evalErr := e.callEvaluators(ctx, pendingEvaluatorVersionIDs, etec, targetResult, etec.History)
-	for evID, result := range runEvalRes {
-		evaluatorResults[evID] = result
-	}
+	evaluatorResults = append(evaluatorResults, runEvalRes...)
 
 	if evalErr == nil {
 		evaluatorResults, evalErr = e.refreshAsyncEvaluatorRecords(ctx, evaluatorResults)
@@ -358,11 +356,11 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	return evaluatorResults, evalErr
 }
 
-func (e *DefaultExptTurnEvaluationImpl) refreshAsyncEvaluatorRecords(ctx context.Context, evaluatorResults map[int64]*entity.EvaluatorRecord) (map[int64]*entity.EvaluatorRecord, error) {
+func (e *DefaultExptTurnEvaluationImpl) refreshAsyncEvaluatorRecords(ctx context.Context, evaluatorResults []*entity.EvaluatorRecord) ([]*entity.EvaluatorRecord, error) {
 	if e.evaluatorRecordService == nil {
 		return evaluatorResults, nil
 	}
-	for evID, record := range evaluatorResults {
+	for i, record := range evaluatorResults {
 		if record == nil || record.Status != entity.EvaluatorRunStatusAsyncInvoking {
 			continue
 		}
@@ -372,17 +370,32 @@ func (e *DefaultExptTurnEvaluationImpl) refreshAsyncEvaluatorRecords(ctx context
 		}
 		if updatedRecord != nil {
 			logs.CtxInfo(ctx, "[ExptTurnEval] refreshed async evaluator record, record_id: %v, old_status: %v, new_status: %v", record.ID, record.Status, updatedRecord.Status)
-			evaluatorResults[evID] = updatedRecord
+			evaluatorResults[i] = updatedRecord
 		}
 	}
 	return evaluatorResults, nil
 }
 
+// evalRecordCollector 线程安全地收集评估结果，替代 sync.Map 的 int64 key，支持 alias 多实例同 versionID 场景。
+type evalRecordCollector struct {
+	mu      sync.Mutex
+	records []*entity.EvaluatorRecord
+}
+
+func (c *evalRecordCollector) store(r *entity.EvaluatorRecord) {
+	if r == nil {
+		return
+	}
+	c.mu.Lock()
+	c.records = append(c.records, r)
+	c.mu.Unlock()
+}
+
 func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, execEvaluatorVersionIDs []int64, etec *entity.ExptTurnEvalCtx,
 	targetResult *entity.EvalTargetRecord, history []*entity.Message,
-) (map[int64]*entity.EvaluatorRecord, error) {
+) ([]*entity.EvaluatorRecord, error) {
 	var (
-		recordMap      sync.Map
+		collector      evalRecordCollector
 		item           = etec.EvalSetItem
 		expt           = etec.Expt
 		turn           = etec.Turn
@@ -455,15 +468,13 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		}); interceptErr != nil {
 			logs.CtxWarn(ctx, "[CallEvaluators] ShouldInterceptEvaluator failed, evaluator_version_id: %d, err: %v", evForCapture.GetEvaluatorVersionID(), interceptErr)
 		} else if intercepted {
-			if evaluatorRecord != nil {
-				recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
-			}
+			collector.store(evaluatorRecord)
 			continue
 		}
 
 		if evForCapture.IsAsync() {
 			pool.Add(func() error {
-				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, &recordMap)
+				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, &collector)
 			})
 		} else {
 			pool.Add(func() error {
@@ -485,21 +496,14 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 					return err
 				}
 
-				recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
+				collector.store(evaluatorRecord)
 				return nil
 			})
 		}
 	}
 
 	err = pool.Exec(ctx)
-	records := make(map[int64]*entity.EvaluatorRecord, len(expt.Evaluators))
-	recordMap.Range(func(key, value interface{}) bool {
-		record, _ := value.(*entity.EvaluatorRecord)
-		records[key.(int64)] = record
-		return true
-	})
-
-	return records, err
+	return collector.records, err
 }
 
 func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
@@ -508,7 +512,7 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 	ec *entity.EvaluatorConf,
 	etec *entity.ExptTurnEvalCtx,
 	inputData *entity.EvaluatorInputData,
-	recordMap *sync.Map,
+	collector *evalRecordCollector,
 ) error {
 	var err error
 	defer func() { e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil) }()
@@ -541,7 +545,7 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 		return err
 	}
 
-	recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
+	collector.store(evaluatorRecord)
 	return nil
 }
 

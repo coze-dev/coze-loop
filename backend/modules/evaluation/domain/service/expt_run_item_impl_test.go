@@ -450,7 +450,7 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		}
 		result := &entity.ExptTurnRunResult{
 			TargetResult:     &entity.EvalTargetRecord{ID: 10},
-			EvaluatorResults: map[int64]*entity.EvaluatorRecord{1: {ID: 100, EvaluatorVersionID: 1}},
+			EvaluatorResults: []*entity.EvaluatorRecord{{ID: 100, EvaluatorVersionID: 1}},
 		}
 		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
 		err := executor.storeTurnRunResult(context.Background(), etec, result)
