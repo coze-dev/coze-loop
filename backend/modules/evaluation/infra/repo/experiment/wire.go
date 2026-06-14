@@ -19,6 +19,7 @@ var ExperimentRepoSet = wire.NewSet(
 	NewExptAggrResultRepo,
 	NewExptItemResultRepo,
 	NewExptTurnResultRepo,
+	NewExptItemRefRepo,
 	NewExptRunLogRepo,
 	NewExptTurnResultFilterRepo,
 	NewExptAnnotateRepo,
