@@ -516,6 +516,9 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.Ext,
+		// ★ 新路径透传: Submit 的 eval_set_configs (75 号) 与 Create 同构，
+		// 非空时由 CreateExperiment 走 MultiSetConfig 路径，否则保持老单评测集行为。
+		EvalSetConfigs: req.EvalSetConfigs,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -635,6 +638,13 @@ func (e *experimentApplication) validateEvaluatorVersionsBelongToWorkspace(ctx c
 
 func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
 	workspaceID := req.GetWorkspaceID()
+
+	// ★ 新路径 (MultiSetConfig): evaluator 身份/运行时/权重均收敛进 eval_set_configs[].evaluator_confs，
+	// 这里只需把所有 (evaluator_version_id) 抽出去重，供下游 getExptTupleByID 拉详情做空间归属校验。
+	// runConfig / score_weight 不再从老平铺字段映射（新路径权威源是 EvaluatorConf 自身的 RuntimeParam/ScoreWeight）。
+	if len(req.GetEvalSetConfigs()) > 0 {
+		return e.resolveEvaluatorVersionIDsFromEvalSetConfigs(ctx, req)
+	}
 
 	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
 	// 对于直接传入的 evaluator_version_id，需要校验是否属于当前空间（预置评估器除外）
@@ -787,6 +797,44 @@ func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx cont
 	}
 
 	return evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, nil
+}
+
+// resolveEvaluatorVersionIDsFromEvalSetConfigs 新路径 (MultiSetConfig) 的 evaluator 版本解析。
+// 遍历 eval_set_configs[].evaluator_confs 收集去重后的 evaluator_version_id，并做空间归属校验。
+// runConfig / score_weight 在新路径下随 EvaluatorConf 落入 eval_conf，无需在此映射，返回空 map 占位。
+func (e *experimentApplication) resolveEvaluatorVersionIDsFromEvalSetConfigs(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
+	workspaceID := req.GetWorkspaceID()
+
+	seen := make(map[int64]struct{})
+	evalVersionIDs := make([]int64, 0)
+	for _, sc := range req.GetEvalSetConfigs() {
+		if sc == nil {
+			continue
+		}
+		for _, ec := range sc.GetEvaluatorConfs() {
+			if ec == nil {
+				continue
+			}
+			verID := ec.GetEvaluatorVersionID()
+			if verID == 0 {
+				continue
+			}
+			if _, ok := seen[verID]; ok {
+				continue
+			}
+			seen[verID] = struct{}{}
+			evalVersionIDs = append(evalVersionIDs, verID)
+		}
+	}
+
+	// 空间归属校验（预置评估器除外，复用老路径同款规则）
+	if len(evalVersionIDs) > 0 && workspaceID > 0 {
+		if err := e.validateEvaluatorVersionsBelongToWorkspace(ctx, evalVersionIDs, workspaceID); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	return evalVersionIDs, make(map[int64]*evaluatordto.EvaluatorRunConfig), make(map[int64]float64), nil
 }
 
 func (e *experimentApplication) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest) (r *expt.CheckExperimentNameResponse, err error) {

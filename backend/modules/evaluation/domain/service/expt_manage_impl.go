@@ -833,6 +833,10 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 
 	// ★ 设置实验模式分流列 (读接口和执行链路的唯一分流依据)
 	if len(req.EvalSetConfigs) > 0 {
+		// 新路径入参校验: set 去重 / (version,alias) 唯一 / filter 白名单 / alias 合法 / target_confs len<=1
+		if err := entity.ValidateEvalSetConfigs(req.EvalSetConfigs); err != nil {
+			return nil, err
+		}
 		do.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
 		// 将完整的多评测集配置序列化进 eval_conf，供调度期读取
 		if do.EvalConf == nil {

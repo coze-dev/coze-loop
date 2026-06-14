@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
+	domain_filter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
@@ -474,6 +475,10 @@ func convertEvalSetConfigsDOToDTO(dos []*entity.EvalSetConfig) []*domain_expt.Ev
 			EvalSetID:        do.EvalSetID,
 			EvalSetVersionID: do.EvalSetVersionID,
 		}
+		// item_filter 回显
+		if do.ItemFilter != nil {
+			dto.ItemFilter = convertExptFilterDOToDTO(do.ItemFilter)
+		}
 		for _, ec := range do.EvaluatorConfs {
 			if ec == nil {
 				continue
@@ -484,12 +489,92 @@ func convertEvalSetConfigsDOToDTO(dos []*entity.EvalSetConfig) []*domain_expt.Ev
 				Alias:              gptr.Of(ec.Alias),
 				FilterMode:         gptr.Of(ec.FilterMode),
 				ScoreWeight:        ec.ScoreWeight,
+				FromEvalSet:        fieldConfsToFieldMappingDTO(ec.FromEvalSet),
+				FromTarget:         fieldConfsToFieldMappingDTO(ec.FromTarget),
+				RuntimeParam:       runtimeParamMapToDTO(ec.RuntimeParam),
+			}
+			if ec.Filter != nil {
+				evDTO.Filter = convertExptFilterDOToDTO(ec.Filter)
 			}
 			dto.EvaluatorConfs = append(dto.EvaluatorConfs, evDTO)
+		}
+		// target_confs 回显
+		for _, tc := range do.TargetConfs {
+			if tc == nil {
+				continue
+			}
+			tDTO := &domain_expt.ExptTargetConf{
+				TargetID:        gptr.Of(tc.TargetID),
+				TargetVersionID: gptr.Of(tc.TargetVersionID),
+				Alias:           gptr.Of(tc.Alias),
+				RuntimeParam:    runtimeParamMapToDTO(tc.RuntimeParam),
+			}
+			if len(tc.FieldMapping) > 0 {
+				tDTO.FieldMapping = &domain_expt.TargetFieldMapping{
+					FromEvalSet: fieldConfsToFieldMappingDTO(tc.FieldMapping),
+				}
+			}
+			dto.TargetConfs = append(dto.TargetConfs, tDTO)
 		}
 		dtos = append(dtos, dto)
 	}
 	return dtos
+}
+
+// fieldConfsToFieldMappingDTO 将 domain FieldConf 列表回显为 IDL FieldMapping 列表。
+func fieldConfsToFieldMappingDTO(fcs []*entity.FieldConf) []*domain_expt.FieldMapping {
+	if len(fcs) == 0 {
+		return nil
+	}
+	out := make([]*domain_expt.FieldMapping, 0, len(fcs))
+	for _, fc := range fcs {
+		if fc == nil {
+			continue
+		}
+		out = append(out, &domain_expt.FieldMapping{
+			FieldName:     gptr.Of(fc.FieldName),
+			FromFieldName: gptr.Of(fc.FromField),
+		})
+	}
+	return out
+}
+
+// runtimeParamMapToDTO 将 domain 的 runtime_param map 回显为 common.RuntimeParam ({json_value})。
+func runtimeParamMapToDTO(m map[string]string) *common.RuntimeParam {
+	if len(m) == 0 {
+		return nil
+	}
+	v, ok := m[consts.FieldAdapterBuiltinFieldNameRuntimeParam]
+	if !ok || len(v) == 0 {
+		return nil
+	}
+	return &common.RuntimeParam{JSONValue: gptr.Of(v)}
+}
+
+// convertExptFilterDOToDTO 将 domain ExptItemFilter 回显为 data filter.Filter。
+func convertExptFilterDOToDTO(do *entity.ExptItemFilter) *domain_filter.Filter {
+	if do == nil {
+		return nil
+	}
+	out := &domain_filter.Filter{}
+	if len(do.QueryAndOr) > 0 {
+		out.QueryAndOr = gptr.Of(domain_filter.QueryRelation(do.QueryAndOr))
+	}
+	for _, ff := range do.FilterFields {
+		if ff == nil {
+			continue
+		}
+		field := &domain_filter.FilterField{
+			FieldName: ff.FieldName,
+			FieldType: domain_filter.FieldType(ff.FieldType),
+			Values:    ff.Values,
+		}
+		if len(ff.QueryType) > 0 {
+			field.QueryType = gptr.Of(domain_filter.QueryType(ff.QueryType))
+		}
+		out.FilterFields = append(out.FilterFields, field)
+	}
+	return out
 }
 
 func ToExptStatsDTO(stats *entity.ExptStats, aggrResult *entity.ExptAggregateResult) *domain_expt.ExptStatistics {
@@ -593,6 +678,10 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	// ★ 新路径: eval_set_configs 非空时转换为 domain EvalSetConfigs
 	if len(cer.GetEvalSetConfigs()) > 0 {
 		param.EvalSetConfigs = convertEvalSetConfigsDTOToDO(cer.GetEvalSetConfigs())
+		// 顶层身份兜底: 供下游 getExptTupleByID 解析评测集/评测对象详情并做空间归属校验。
+		// EvaluatorVersionIds 已在 application 层 (resolveEvaluatorVersionIDsFromEvalSetConfigs) 提取并回填到 cer，
+		// 这里通过 cer.GetEvaluatorVersionIds() 透传，无需重复展开。
+		fillTopLevelIdentityFromEvalSetConfigs(cer, param)
 	} else {
 		// 老路径: 走 EvalConfConvert
 		evaluationConfiguration, err := NewEvalConfConvert().ConvertToEntity(cer, evaluatorVersionRunConfigs)
@@ -609,6 +698,45 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
 	return param, nil
+}
+
+// fillTopLevelIdentityFromEvalSetConfigs 新路径 (MultiSetConfig) 顶层身份兜底。
+// 新路径下评测集/评测对象身份收敛进 eval_set_configs，但下游 CreateExpt.getExptTupleByID 仍按
+// 顶层 EvalSetID/EvalSetVersionID/TargetID 解析三元组详情并做权限校验，故在此用 configs 兜底回填：
+//   - 评测集: 取首个 set 作为"主集"标签 (与 CreateExpt 内主集兜底一致)；
+//   - 评测对象: 顶层未显式传时，取首个 set 的 target_confs[0] (本期 len<=1, 各 set 与实验级一致)。
+// 仅在顶层字段缺省时填充，不覆盖调用方显式传入的值。
+func fillTopLevelIdentityFromEvalSetConfigs(cer *expt.CreateExperimentRequest, param *entity.CreateExptParam) {
+	configs := cer.GetEvalSetConfigs()
+	if len(configs) == 0 {
+		return
+	}
+
+	// 主集标签兜底
+	if param.EvalSetID == 0 {
+		if first := configs[0]; first != nil {
+			param.EvalSetID = first.GetEvalSetID()
+			param.EvalSetVersionID = first.GetEvalSetVersionID()
+		}
+	}
+
+	// 评测对象兜底: 顶层未传 target 时，从首个含 target_confs 的 set 取
+	if (param.TargetID == nil || *param.TargetID == 0) && param.TargetVersionID == 0 {
+		for _, sc := range configs {
+			if sc == nil || len(sc.GetTargetConfs()) == 0 {
+				continue
+			}
+			tc := sc.GetTargetConfs()[0]
+			if tc == nil {
+				continue
+			}
+			if tid := tc.GetTargetID(); tid != 0 {
+				param.TargetID = gptr.Of(tid)
+				param.TargetVersionID = tc.GetTargetVersionID()
+				break
+			}
+		}
+	}
 }
 
 // convertEvalSetConfigsDTOToDO 将 IDL EvalSetConfig 列表转换为 domain EvalSetConfig
@@ -640,6 +768,7 @@ func convertEvalSetConfigsDTOToDO(dtos []*domain_expt.EvalSetConfig) []*entity.E
 				Alias:              ec.GetAlias(),
 				FilterMode:         ec.GetFilterMode(),
 				ScoreWeight:        ec.ScoreWeight,
+				RuntimeParam:       runtimeParamDTOToMap(ec.GetRuntimeParam()),
 			}
 			// field mappings
 			for _, fm := range ec.FromEvalSet {
@@ -657,18 +786,52 @@ func convertEvalSetConfigsDTOToDO(dtos []*domain_expt.EvalSetConfig) []*entity.E
 			}
 			do.EvaluatorConfs = append(do.EvaluatorConfs, evConf)
 		}
+		// target_confs
+		for _, tc := range dto.GetTargetConfs() {
+			if tc == nil {
+				continue
+			}
+			tConf := &entity.ExptTargetConf{
+				TargetID:        tc.GetTargetID(),
+				TargetVersionID: tc.GetTargetVersionID(),
+				Alias:           tc.GetAlias(),
+				RuntimeParam:    runtimeParamDTOToMap(tc.GetRuntimeParam()),
+			}
+			// target field_mapping: 仅 from_eval_set 维度 (DTO TargetFieldMapping)
+			if fmap := tc.GetFieldMapping(); fmap != nil {
+				for _, fm := range fmap.GetFromEvalSet() {
+					if fm != nil {
+						tConf.FieldMapping = append(tConf.FieldMapping, &entity.FieldConf{FieldName: fm.GetFieldName(), FromField: fm.GetFromFieldName()})
+					}
+				}
+			}
+			do.TargetConfs = append(do.TargetConfs, tConf)
+		}
 		dos = append(dos, do)
 	}
 	return dos
 }
 
-// convertExptFilterDTOToDO 将 IDL ExptFilter 转换为 domain ExptItemFilter
-func convertExptFilterDTOToDO(dto *domain_expt.ExptFilter) *entity.ExptItemFilter {
+// runtimeParamDTOToMap 将 common.RuntimeParam ({json_value}) 落回 domain 的 map 表示，
+// 与老路径一致用固定 key (builtin_runtime_param) 承载序列化后的运行时参数，避免新增维度。
+func runtimeParamDTOToMap(rtp *common.RuntimeParam) map[string]string {
+	if rtp == nil || len(rtp.GetJSONValue()) == 0 {
+		return nil
+	}
+	return map[string]string{
+		consts.FieldAdapterBuiltinFieldNameRuntimeParam: rtp.GetJSONValue(),
+	}
+}
+
+// convertExptFilterDTOToDO 将 data filter.Filter 转换为 domain ExptItemFilter
+// item 圈选 / evaluator 行级过滤复用 data/domain/filter.thrift 的 Filter/FilterField，
+// 这里把生成的枚举 typedef (QueryRelation/FieldType/QueryType，底层均为 string) 落回 domain 的纯 string 表示。
+func convertExptFilterDTOToDO(dto *domain_filter.Filter) *entity.ExptItemFilter {
 	if dto == nil {
 		return nil
 	}
 	do := &entity.ExptItemFilter{
-		QueryAndOr: dto.GetQueryAndOr(),
+		QueryAndOr: string(dto.GetQueryAndOr()),
 	}
 	for _, ff := range dto.FilterFields {
 		if ff == nil {
@@ -676,9 +839,9 @@ func convertExptFilterDTOToDO(dto *domain_expt.ExptFilter) *entity.ExptItemFilte
 		}
 		do.FilterFields = append(do.FilterFields, &entity.ExptItemFilterField{
 			FieldName: ff.GetFieldName(),
-			FieldType: ff.GetFieldType(),
+			FieldType: string(ff.GetFieldType()),
 			Values:    ff.Values,
-			QueryType: ff.GetQueryType(),
+			QueryType: string(ff.GetQueryType()),
 		})
 	}
 	return do

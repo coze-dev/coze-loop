@@ -17,8 +17,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	filter0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 )
 
 var (
@@ -28,8 +29,9 @@ var (
 	_ = eval_set.KitexUnusedProtection
 	_ = eval_target.KitexUnusedProtection
 	_ = evaluator.KitexUnusedProtection
-	_ = filter.KitexUnusedProtection
+	_ = filter0.KitexUnusedProtection
 	_ = task.KitexUnusedProtection
+	_ = filter.KitexUnusedProtection
 )
 
 // unused protection
@@ -4997,7 +4999,7 @@ func (p *ExptSource) FastReadField2(buf []byte) (int, error) {
 
 func (p *ExptSource) FastReadField100(buf []byte) (int, error) {
 	offset := 0
-	_field := filter.NewSpanFilterFields()
+	_field := filter0.NewSpanFilterFields()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -5202,9 +5204,9 @@ func (p *ExptSource) DeepCopy(s interface{}) error {
 		p.SourceID = &tmp
 	}
 
-	var _spanFilterFields *filter.SpanFilterFields
+	var _spanFilterFields *filter0.SpanFilterFields
 	if src.SpanFilterFields != nil {
-		_spanFilterFields = &filter.SpanFilterFields{}
+		_spanFilterFields = &filter0.SpanFilterFields{}
 		if err := _spanFilterFields.DeepCopy(src.SpanFilterFields); err != nil {
 			return err
 		}
@@ -19946,526 +19948,6 @@ func (p *ExptInsightAnalysisFeedbackVote) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *ExptFilter) FastRead(buf []byte) (int, error) {
-
-	var err error
-	var offset int
-	var l int
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetFilterFields bool = false
-	for {
-		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
-		offset += l
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField1(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 2:
-			if fieldTypeId == thrift.LIST {
-				l, err = p.FastReadField2(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-				issetFilterFields = true
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-			offset += l
-			if err != nil {
-				goto SkipFieldError
-			}
-		}
-	}
-
-	if !issetFilterFields {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-	return offset, nil
-ReadFieldBeginError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptFilter[fieldId]), err)
-SkipFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_ExptFilter[fieldId]))
-}
-
-func (p *ExptFilter) FastReadField1(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.QueryAndOr = _field
-	return offset, nil
-}
-
-func (p *ExptFilter) FastReadField2(buf []byte) (int, error) {
-	offset := 0
-
-	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
-	offset += l
-	if err != nil {
-		return offset, err
-	}
-	_field := make([]*ExptFilterField, 0, size)
-	values := make([]ExptFilterField, size)
-	for i := 0; i < size; i++ {
-		_elem := &values[i]
-		_elem.InitDefault()
-		if l, err := _elem.FastRead(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-		}
-
-		_field = append(_field, _elem)
-	}
-	p.FilterFields = _field
-	return offset, nil
-}
-
-func (p *ExptFilter) FastWrite(buf []byte) int {
-	return p.FastWriteNocopy(buf, nil)
-}
-
-func (p *ExptFilter) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p != nil {
-		offset += p.fastWriteField1(buf[offset:], w)
-		offset += p.fastWriteField2(buf[offset:], w)
-	}
-	offset += thrift.Binary.WriteFieldStop(buf[offset:])
-	return offset
-}
-
-func (p *ExptFilter) BLength() int {
-	l := 0
-	if p != nil {
-		l += p.field1Length()
-		l += p.field2Length()
-	}
-	l += thrift.Binary.FieldStopLength()
-	return l
-}
-
-func (p *ExptFilter) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetQueryAndOr() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.QueryAndOr)
-	}
-	return offset
-}
-
-func (p *ExptFilter) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
-	listBeginOffset := offset
-	offset += thrift.Binary.ListBeginLength()
-	var length int
-	for _, v := range p.FilterFields {
-		length++
-		offset += v.FastWriteNocopy(buf[offset:], w)
-	}
-	thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
-	return offset
-}
-
-func (p *ExptFilter) field1Length() int {
-	l := 0
-	if p.IsSetQueryAndOr() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.QueryAndOr)
-	}
-	return l
-}
-
-func (p *ExptFilter) field2Length() int {
-	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.ListBeginLength()
-	for _, v := range p.FilterFields {
-		_ = v
-		l += v.BLength()
-	}
-	return l
-}
-
-func (p *ExptFilter) DeepCopy(s interface{}) error {
-	src, ok := s.(*ExptFilter)
-	if !ok {
-		return fmt.Errorf("%T's type not matched %T", s, p)
-	}
-
-	if src.QueryAndOr != nil {
-		var tmp string
-		if *src.QueryAndOr != "" {
-			tmp = kutils.StringDeepCopy(*src.QueryAndOr)
-		}
-		p.QueryAndOr = &tmp
-	}
-
-	if src.FilterFields != nil {
-		p.FilterFields = make([]*ExptFilterField, 0, len(src.FilterFields))
-		for _, elem := range src.FilterFields {
-			var _elem *ExptFilterField
-			if elem != nil {
-				_elem = &ExptFilterField{}
-				if err := _elem.DeepCopy(elem); err != nil {
-					return err
-				}
-			}
-
-			p.FilterFields = append(p.FilterFields, _elem)
-		}
-	}
-
-	return nil
-}
-
-func (p *ExptFilterField) FastRead(buf []byte) (int, error) {
-
-	var err error
-	var offset int
-	var l int
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetFieldName bool = false
-	var issetFieldType bool = false
-	for {
-		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
-		offset += l
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField1(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-				issetFieldName = true
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 2:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField2(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-				issetFieldType = true
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 3:
-			if fieldTypeId == thrift.LIST {
-				l, err = p.FastReadField3(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 4:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField4(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-			offset += l
-			if err != nil {
-				goto SkipFieldError
-			}
-		}
-	}
-
-	if !issetFieldName {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetFieldType {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-	return offset, nil
-ReadFieldBeginError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptFilterField[fieldId]), err)
-SkipFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_ExptFilterField[fieldId]))
-}
-
-func (p *ExptFilterField) FastReadField1(buf []byte) (int, error) {
-	offset := 0
-
-	var _field string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = v
-	}
-	p.FieldName = _field
-	return offset, nil
-}
-
-func (p *ExptFilterField) FastReadField2(buf []byte) (int, error) {
-	offset := 0
-
-	var _field string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = v
-	}
-	p.FieldType = _field
-	return offset, nil
-}
-
-func (p *ExptFilterField) FastReadField3(buf []byte) (int, error) {
-	offset := 0
-
-	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
-	offset += l
-	if err != nil {
-		return offset, err
-	}
-	_field := make([]string, 0, size)
-	for i := 0; i < size; i++ {
-		var _elem string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_elem = v
-		}
-
-		_field = append(_field, _elem)
-	}
-	p.Values = _field
-	return offset, nil
-}
-
-func (p *ExptFilterField) FastReadField4(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.QueryType = _field
-	return offset, nil
-}
-
-func (p *ExptFilterField) FastWrite(buf []byte) int {
-	return p.FastWriteNocopy(buf, nil)
-}
-
-func (p *ExptFilterField) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p != nil {
-		offset += p.fastWriteField1(buf[offset:], w)
-		offset += p.fastWriteField2(buf[offset:], w)
-		offset += p.fastWriteField3(buf[offset:], w)
-		offset += p.fastWriteField4(buf[offset:], w)
-	}
-	offset += thrift.Binary.WriteFieldStop(buf[offset:])
-	return offset
-}
-
-func (p *ExptFilterField) BLength() int {
-	l := 0
-	if p != nil {
-		l += p.field1Length()
-		l += p.field2Length()
-		l += p.field3Length()
-		l += p.field4Length()
-	}
-	l += thrift.Binary.FieldStopLength()
-	return l
-}
-
-func (p *ExptFilterField) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.FieldName)
-	return offset
-}
-
-func (p *ExptFilterField) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.FieldType)
-	return offset
-}
-
-func (p *ExptFilterField) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetValues() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 3)
-		listBeginOffset := offset
-		offset += thrift.Binary.ListBeginLength()
-		var length int
-		for _, v := range p.Values {
-			length++
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
-		}
-		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
-	}
-	return offset
-}
-
-func (p *ExptFilterField) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetQueryType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.QueryType)
-	}
-	return offset
-}
-
-func (p *ExptFilterField) field1Length() int {
-	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.StringLengthNocopy(p.FieldName)
-	return l
-}
-
-func (p *ExptFilterField) field2Length() int {
-	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.StringLengthNocopy(p.FieldType)
-	return l
-}
-
-func (p *ExptFilterField) field3Length() int {
-	l := 0
-	if p.IsSetValues() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.Values {
-			_ = v
-			l += thrift.Binary.StringLengthNocopy(v)
-		}
-	}
-	return l
-}
-
-func (p *ExptFilterField) field4Length() int {
-	l := 0
-	if p.IsSetQueryType() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.QueryType)
-	}
-	return l
-}
-
-func (p *ExptFilterField) DeepCopy(s interface{}) error {
-	src, ok := s.(*ExptFilterField)
-	if !ok {
-		return fmt.Errorf("%T's type not matched %T", s, p)
-	}
-
-	if src.FieldName != "" {
-		p.FieldName = kutils.StringDeepCopy(src.FieldName)
-	}
-
-	if src.FieldType != "" {
-		p.FieldType = kutils.StringDeepCopy(src.FieldType)
-	}
-
-	if src.Values != nil {
-		p.Values = make([]string, 0, len(src.Values))
-		for _, elem := range src.Values {
-			var _elem string
-			if elem != "" {
-				_elem = kutils.StringDeepCopy(elem)
-			}
-			p.Values = append(p.Values, _elem)
-		}
-	}
-
-	if src.QueryType != nil {
-		var tmp string
-		if *src.QueryType != "" {
-			tmp = kutils.StringDeepCopy(*src.QueryType)
-		}
-		p.QueryType = &tmp
-	}
-
-	return nil
-}
-
 func (p *ExptTargetConf) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -21268,7 +20750,7 @@ func (p *ExptEvaluatorConf) FastReadField11(buf []byte) (int, error) {
 
 func (p *ExptEvaluatorConf) FastReadField20(buf []byte) (int, error) {
 	offset := 0
-	_field := NewExptFilter()
+	_field := filter.NewFilter()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -21671,9 +21153,9 @@ func (p *ExptEvaluatorConf) DeepCopy(s interface{}) error {
 		}
 	}
 
-	var _filter *ExptFilter
+	var _filter *filter.Filter
 	if src.Filter != nil {
-		_filter = &ExptFilter{}
+		_filter = &filter.Filter{}
 		if err := _filter.DeepCopy(src.Filter); err != nil {
 			return err
 		}
@@ -21883,7 +21365,7 @@ func (p *EvalSetConfig) FastReadField2(buf []byte) (int, error) {
 
 func (p *EvalSetConfig) FastReadField10(buf []byte) (int, error) {
 	offset := 0
-	_field := NewExptFilter()
+	_field := filter.NewFilter()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -22153,9 +21635,9 @@ func (p *EvalSetConfig) DeepCopy(s interface{}) error {
 
 	p.EvalSetVersionID = src.EvalSetVersionID
 
-	var _itemFilter *ExptFilter
+	var _itemFilter *filter.Filter
 	if src.ItemFilter != nil {
-		_itemFilter = &ExptFilter{}
+		_itemFilter = &filter.Filter{}
 		if err := _itemFilter.DeepCopy(src.ItemFilter); err != nil {
 			return err
 		}
