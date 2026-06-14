@@ -10,6 +10,7 @@ import (
 var ExperimentMySQLDAOSet = wire.NewSet(
 	NewExptDAO,
 	NewExptEvaluatorRefDAO,
+	NewExptItemRefDAO,
 	NewExptRunLogDAO,
 	NewExptStatsDAO,
 	NewExptTurnResultDAO,

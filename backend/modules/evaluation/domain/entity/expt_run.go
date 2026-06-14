@@ -425,6 +425,11 @@ type ExptItemEvalCtx struct {
 	EvalSetItem *EvaluationSetItem
 
 	ExistItemEvalResult *ExptItemEvalResult
+
+	// ItemConfig 单行执行的唯一配置源(仅 MultiSetConfig 新实验类型)。来自 expt_item_ref.item_config,
+	// 含该 item 行级的 EvaluatorConfs (含 alias / filter / FilterMode) 和 EvalTargetConf。
+	// 老实验类型 (DataSet) 或读取失败时为 nil, 执行侧据此回退到 expt 级 EvaluatorsConf 老路径。
+	ItemConfig *ExptItemConfig
 }
 
 func (e *ExptItemEvalCtx) GetRecordEvalLogID(ctx context.Context) (logID string) {
@@ -524,6 +529,22 @@ func (e *ExptTurnRunResult) GetEvaluatorRecord(evaluatorVersionID int64) *Evalua
 	}
 	for _, r := range e.EvaluatorResults {
 		if r != nil && r.EvaluatorVersionID == evaluatorVersionID {
+			return r
+		}
+	}
+	return nil
+}
+
+// GetEvaluatorRecordByVerAlias 按 (versionID, alias) 双键定位 record。新实验类型 (MultiSetConfig)
+// 下同一 versionID 可能有多个 alias 实例, 老的 GetEvaluatorRecord 只按 versionID 查找会返回首个匹配,
+// 在 alias 多实例场景下会导致后续实例被"误判为已完成"而跳过执行。
+// 老实验类型 (alias 恒空) 调用本方法和 GetEvaluatorRecord 等价。
+func (e *ExptTurnRunResult) GetEvaluatorRecordByVerAlias(evaluatorVersionID int64, alias string) *EvaluatorRecord {
+	if e == nil {
+		return nil
+	}
+	for _, r := range e.EvaluatorResults {
+		if r != nil && r.EvaluatorVersionID == evaluatorVersionID && r.Alias == alias {
 			return r
 		}
 	}

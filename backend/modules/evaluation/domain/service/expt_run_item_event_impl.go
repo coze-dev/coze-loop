@@ -39,6 +39,7 @@ type ExptItemEventEvalServiceImpl struct {
 	exptTurnResultRepo       repo.IExptTurnResultRepo
 	exptStatsRepo            repo.IExptStatsRepo
 	experimentRepo           repo.IExperimentRepo
+	exptItemRefRepo          repo.IExptItemRefRepo // ★ 新实验类型 (MultiSetConfig) 读 item_config 用
 	configer                 component.IConfiger
 	quotaRepo                repo.QuotaRepo
 	mutex                    lock.ILocker
@@ -63,6 +64,7 @@ func NewExptRecordEvalService(
 	exptTurnResultRepo repo.IExptTurnResultRepo,
 	exptStatsRepo repo.IExptStatsRepo,
 	experimentRepo repo.IExperimentRepo,
+	exptItemRefRepo repo.IExptItemRefRepo,
 	quotaRepo repo.QuotaRepo,
 	mutex lock.ILocker,
 	idem idem.IdempotentService,
@@ -84,6 +86,7 @@ func NewExptRecordEvalService(
 		exptTurnResultRepo:       exptTurnResultRepo,
 		exptStatsRepo:            exptStatsRepo,
 		experimentRepo:           experimentRepo,
+		exptItemRefRepo:          exptItemRefRepo,
 		configer:                 configer,
 		quotaRepo:                quotaRepo,
 		mutex:                    mutex,
@@ -320,11 +323,26 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 		return nil, err
 	}
 
+	// ★ 新实验类型 (MultiSetConfig): 读 expt_item_ref 拿 item_config (单行执行的唯一配置源)。
+	// 老实验类型: ItemConfig 留 nil, 执行侧 fallback 到 expt 级 EvaluatorsConf 老路径。
+	// 即使是新实验类型, 读不到 ref 也不阻塞 (例如 Append/Online 边界场景), 降级为 nil。
+	var itemConfig *entity.ExptItemConfig
+	if exptDetail.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && e.exptItemRefRepo != nil {
+		ref, refErr := e.exptItemRefRepo.GetByExptIDAndItemID(ctx, event.SpaceID, event.ExptID, event.EvalSetItemID)
+		if refErr != nil {
+			logs.CtxWarn(ctx, "BuildExptRecordEvalCtx GetByExptIDAndItemID fail, expt_id: %v, item_id: %v, err: %v, fallback to legacy path",
+				event.ExptID, event.EvalSetItemID, refErr)
+		} else if ref != nil {
+			itemConfig = ref.ItemConfig
+		}
+	}
+
 	return &entity.ExptItemEvalCtx{
 		Event:               event,
 		Expt:                exptDetail,
 		EvalSetItem:         items[0],
 		ExistItemEvalResult: existResult,
+		ItemConfig:          itemConfig,
 	}, nil
 }
 

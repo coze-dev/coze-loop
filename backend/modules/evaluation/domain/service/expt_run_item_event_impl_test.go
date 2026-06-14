@@ -35,6 +35,7 @@ func TestNewExptRecordEvalService(t *testing.T) {
 		repoMocks.NewMockIExptTurnResultRepo(ctrl),
 		repoMocks.NewMockIExptStatsRepo(ctrl),
 		repoMocks.NewMockIExperimentRepo(ctrl),
+		repoMocks.NewMockIExptItemRefRepo(ctrl),
 		repoMocks.NewMockQuotaRepo(ctrl),
 		lockmocks.NewMockILocker(ctrl),
 		idemmocks.NewMockIdempotentService(ctrl),

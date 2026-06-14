@@ -324,7 +324,17 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))
 
 	for _, evaluatorVersion := range expt.Evaluators {
-		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
+		versionID := evaluatorVersion.GetEvaluatorVersionID()
+
+		// ★ 新实验类型 (ItemConfig 非 nil): 按行级 EvaluatorConfs.Filter 判断是否跑该 evaluator。
+		// filter 不命中 → 直接跳过, 不进入 pending 队列, 不实际调用 evaluator service。
+		// 注意: 当前实现暂未为同 versionID 的多 alias 实例独立判定; 多 alias 实例 + per-alias filter
+		// 的完整支持依赖 evaluatorService.RunEvaluator API 扩展 Alias/SourceType, 留 tech debt。
+		if etec.ItemConfig != nil && !shouldRunEvaluatorByItemConfig(ctx, etec, versionID) {
+			continue
+		}
+
+		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(versionID)
 
 		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
 			evaluatorResults = append(evaluatorResults, existResult)
@@ -333,7 +343,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 			logs.CtxInfo(ctx, "[ExptTurnEval] Ignore existed evaluator result: %v", json.Jsonify(existResult))
 		}
 
-		pendingEvaluatorVersionIDs = append(pendingEvaluatorVersionIDs, evaluatorVersion.GetEvaluatorVersionID())
+		pendingEvaluatorVersionIDs = append(pendingEvaluatorVersionIDs, versionID)
 	}
 
 	logs.CtxInfo(ctx, "CallEvaluators with pending evaluator version ids: %v", pendingEvaluatorVersionIDs)
