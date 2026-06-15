@@ -13743,6 +13743,20 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 20:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField20(buf[offset:])
@@ -14012,6 +14026,20 @@ func (p *SubmitExperimentOApiRequest) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentOApiRequest) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EvalSetSourceType = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentOApiRequest) FastReadField20(buf []byte) (int, error) {
 	offset := 0
 
@@ -14130,6 +14158,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField45(buf[offset:], w)
 		offset += p.fastWriteField46(buf[offset:], w)
@@ -14162,6 +14191,7 @@ func (p *SubmitExperimentOApiRequest) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 		l += p.field20Length()
 		l += p.field22Length()
 		l += p.field45Length()
@@ -14272,6 +14302,15 @@ func (p *SubmitExperimentOApiRequest) fastWriteField9(buf []byte, w thrift.Nocop
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetSourceType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 10)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.EvalSetSourceType)
 	}
 	return offset
 }
@@ -14436,6 +14475,15 @@ func (p *SubmitExperimentOApiRequest) field9Length() int {
 			_ = v
 			l += v.BLength()
 		}
+	}
+	return l
+}
+
+func (p *SubmitExperimentOApiRequest) field10Length() int {
+	l := 0
+	if p.IsSetEvalSetSourceType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -14606,6 +14654,11 @@ func (p *SubmitExperimentOApiRequest) DeepCopy(s interface{}) error {
 
 			p.EvalSetConfigs = append(p.EvalSetConfigs, _elem)
 		}
+	}
+
+	if src.EvalSetSourceType != nil {
+		tmp := *src.EvalSetSourceType
+		p.EvalSetSourceType = &tmp
 	}
 
 	if src.ItemConcurNum != nil {

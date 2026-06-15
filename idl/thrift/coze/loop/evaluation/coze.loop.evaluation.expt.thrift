@@ -45,8 +45,11 @@ struct CreateExperimentRequest {
 
     50: optional expt.ExptTriggerType trigger_type
 
-    // ★ 非空 = 新路径开关: 写 eval_set_source_type=MultiSetConfig, 兼容字段 2/4/7/20/21/25/40/42 被忽略
+    // ★ 多评测集配置 (item-centric 新路径权威源); 仅当 eval_set_source_type == MultiSetConfig(2) 时生效
     70: optional list<expt.EvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
+    // ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
+    // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
+    71: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
 
     100: optional map<string, string> ext (api.body = 'ext')
 
@@ -101,9 +104,12 @@ struct SubmitExperimentRequest {
     // 指定执行的评测集条目ID列表
     70: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
 
-    // ★ 非空 = 新路径开关: 写 eval_set_source_type=MultiSetConfig, 兼容字段 2/4/7/20/21/25/40/42 被忽略
+    // ★ 多评测集配置 (item-centric 新路径权威源); 仅当 eval_set_source_type == MultiSetConfig(2) 时生效
     // 注: 70 号已被 item_ids 占用, 取 75
     75: optional list<expt.EvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
+    // ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
+    // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
+    76: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
 
     100: optional map<string, string> ext (api.body = 'ext')
 

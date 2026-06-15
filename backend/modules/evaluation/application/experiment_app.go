@@ -131,6 +131,16 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
 
+	// ★ 唯一分流硬校验: eval_set_source_type 与 eval_set_configs 必须一致 (所有入口最终汇入此处)。
+	isMulti := req.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig
+	hasConfigs := len(req.GetEvalSetConfigs()) > 0
+	if isMulti && !hasConfigs {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_source_type=MultiSetConfig requires non-empty eval_set_configs"))
+	}
+	if !isMulti && hasConfigs {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs is only allowed when eval_set_source_type=MultiSetConfig"))
+	}
+
 	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）、runconfig 和 score weight
 	evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, err := e.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
 	if err != nil {
@@ -516,9 +526,10 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.Ext,
-		// ★ 新路径透传: Submit 的 eval_set_configs (75 号) 与 Create 同构，
-		// 非空时由 CreateExperiment 走 MultiSetConfig 路径，否则保持老单评测集行为。
-		EvalSetConfigs: req.EvalSetConfigs,
+		// ★ 新路径透传: Submit 的 eval_set_configs (75 号) 与 Create 同构。
+		// 分流唯一以 eval_set_source_type 为准 (== MultiSetConfig 走新路径), configs 仅作权威源数据。
+		EvalSetConfigs:    req.EvalSetConfigs,
+		EvalSetSourceType: req.EvalSetSourceType,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -642,7 +653,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx cont
 	// ★ 新路径 (MultiSetConfig): evaluator 身份/运行时/权重均收敛进 eval_set_configs[].evaluator_confs，
 	// 这里只需把所有 (evaluator_version_id) 抽出去重，供下游 getExptTupleByID 拉详情做空间归属校验。
 	// runConfig / score_weight 不再从老平铺字段映射（新路径权威源是 EvaluatorConf 自身的 RuntimeParam/ScoreWeight）。
-	if len(req.GetEvalSetConfigs()) > 0 {
+	if req.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig {
 		return e.resolveEvaluatorVersionIDsFromEvalSetConfigs(ctx, req)
 	}
 
@@ -965,7 +976,7 @@ func (e *experimentApplication) SubmitExptFromTemplate(ctx context.Context, req 
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
 	}
 
-	submitReq := experiment.OpenAPITemplateToSubmitExperimentRequest(template, name, req.GetWorkspaceID())
+	submitReq := expeinternal / cmd / evaluation / experiment.goriment.OpenAPITemplateToSubmitExperimentRequest(template, name, req.GetWorkspaceID())
 	if submitReq == nil {
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("failed to build submit request from template"))
 	}

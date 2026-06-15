@@ -832,7 +832,8 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	}
 
 	// ★ 设置实验模式分流列 (读接口和执行链路的唯一分流依据)
-	if len(req.EvalSetConfigs) > 0 {
+	// 信任入参透传的 EvalSetSourceType (== MultiSetConfig 走新路径), 不再从 len(EvalSetConfigs) 派生。
+	if req.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
 		// 新路径入参校验: set 去重 / (version,alias) 唯一 / filter 白名单 / alias 合法 / target_confs len<=1
 		if err := entity.ValidateEvalSetConfigs(req.EvalSetConfigs); err != nil {
 			return nil, err

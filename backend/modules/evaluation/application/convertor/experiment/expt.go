@@ -664,6 +664,8 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		SourceID:              cer.GetSourceID(),
 		TrialRunItemCount:     cer.GetTrialRunItemCount(),
 		ExptConf:              nil,
+		// ★ 分流依据透传: 不再从 len(EvalSetConfigs) 派生, 唯一以 eval_set_source_type 为准
+		EvalSetSourceType: entity.ExptEvalSetSourceType(cer.GetEvalSetSourceType()),
 	}
 	if cer.IsSetVisibility() {
 		if cer.GetVisibility() == domain_expt.VisibilityHidden {
@@ -676,8 +678,8 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		param.ThreadID = cer.ThreadID
 	}
 
-	// ★ 新路径: eval_set_configs 非空时转换为 domain EvalSetConfigs
-	if len(cer.GetEvalSetConfigs()) > 0 {
+	// ★ 新路径: 仅当 eval_set_source_type == MultiSetConfig(2) 时转换 EvalSetConfigs (不再用 len 判断)
+	if cer.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig {
 		param.EvalSetConfigs = convertEvalSetConfigsDTOToDO(cer.GetEvalSetConfigs())
 		// 顶层身份兜底: 供下游 getExptTupleByID 解析评测集/评测对象详情并做空间归属校验。
 		// EvaluatorVersionIds 已在 application 层 (resolveEvaluatorVersionIDsFromEvalSetConfigs) 提取并回填到 cer，

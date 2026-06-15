@@ -137,8 +137,9 @@ func TestConvertCreateReq_EvalSetConfigs(t *testing.T) {
 	// 新路径: 有 EvalSetConfigs 时，EvalSetConfigs 非空；
 	// 同时 ExptConf 由 eval_set_configs 兜底派生 (方案A)，供 CheckConnector 同步字段映射校验。
 	req := &expt.CreateExperimentRequest{
-		WorkspaceID: 2002,
-		Name:        gptr.Of("multi-set-expt"),
+		WorkspaceID:       2002,
+		Name:              gptr.Of("multi-set-expt"),
+		EvalSetSourceType: gptr.Of(domain_expt.ExptEvalSetSourceType_MultiSetConfig),
 		EvalSetConfigs: []*domain_expt.EvalSetConfig{
 			{
 				EvalSetID:        111,
@@ -189,6 +190,32 @@ func TestConvertCreateReq_EvalSetConfigs(t *testing.T) {
 	assert.NoError(t, evConfs[0].Valid(context.Background()))
 }
 
+// 反例: 带 EvalSetConfigs 但 eval_set_source_type 缺省 (非 MultiSetConfig) → 必须走老路径,
+// 不解析 EvalSetConfigs, ExptConf 由 EvalConfConvert 生成。锁定"仅 source_type==2 走新路径"语义。
+func TestConvertCreateReq_EvalSetConfigs_WithoutSourceType_TakesOldPath(t *testing.T) {
+	req := &expt.CreateExperimentRequest{
+		WorkspaceID: 2002,
+		Name:        gptr.Of("multi-set-expt-no-type"),
+		// 故意不设 EvalSetSourceType (缺省 = SingleSet)
+		EvalSetConfigs: []*domain_expt.EvalSetConfig{
+			{
+				EvalSetID:        111,
+				EvalSetVersionID: 222,
+				EvaluatorConfs: []*domain_expt.ExptEvaluatorConf{
+					{EvaluatorID: 10, EvaluatorVersionID: 20, Alias: gptr.Of("judge_A")},
+				},
+			},
+		},
+	}
+	param, err := ConvertCreateReq(req, nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, param)
+	// 老路径: 不解析 EvalSetConfigs
+	assert.Empty(t, param.EvalSetConfigs)
+	// 老路径: ExptConf 由 EvalConfConvert 生成 (非 nil)
+	assert.NotNil(t, param.ExptConf)
+}
+
 func TestConvertEvalSetConfigsDTOToDO(t *testing.T) {
 	// 构造 2 个 EvalSetConfig，每个有不同 EvalSetID 和多个 ExptEvaluatorConf
 	dtos := []*domain_expt.EvalSetConfig{
@@ -223,8 +250,9 @@ func TestConvertEvalSetConfigsDTOToDO(t *testing.T) {
 
 	// 通过 ConvertCreateReq 的新路径间接触发 convertEvalSetConfigsDTOToDO
 	req := &expt.CreateExperimentRequest{
-		WorkspaceID:    999,
-		EvalSetConfigs: dtos,
+		WorkspaceID:       999,
+		EvalSetSourceType: gptr.Of(domain_expt.ExptEvalSetSourceType_MultiSetConfig),
+		EvalSetConfigs:    dtos,
 	}
 	param, err := ConvertCreateReq(req, nil)
 	assert.NoError(t, err)
@@ -451,7 +479,8 @@ func TestConvertEvalSetConfigs_FilterReuseAndTargetConf(t *testing.T) {
 // TestConvertCreateReq_NewPath_TopLevelIdentity 验证新路径顶层身份兜底。
 func TestConvertCreateReq_NewPath_TopLevelIdentity(t *testing.T) {
 	req := &expt.CreateExperimentRequest{
-		WorkspaceID: 2002,
+		WorkspaceID:       2002,
+		EvalSetSourceType: gptr.Of(domain_expt.ExptEvalSetSourceType_MultiSetConfig),
 		EvalSetConfigs: []*domain_expt.EvalSetConfig{
 			{
 				EvalSetID:        111,

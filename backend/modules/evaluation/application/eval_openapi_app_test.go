@@ -2056,8 +2056,9 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi_EvalSetConfigs(t *testing.T
 
 	buildReq := func() *openapi.SubmitExperimentOApiRequest {
 		return &openapi.SubmitExperimentOApiRequest{
-			WorkspaceID: gptr.Of(workspaceID),
-			Name:        gptr.Of("multi-set-openapi-expt"),
+			WorkspaceID:       gptr.Of(workspaceID),
+			Name:              gptr.Of("multi-set-openapi-expt"),
+			EvalSetSourceType: gptr.Of(int32(2)), // ★ 唯一分流开关: 走新路径
 			EvalSetConfigs: []*openapiExperiment.OpenAPIEvalSetConfig{
 				{
 					EvalSetID:      gptr.Of(evalSetID),
@@ -2123,6 +2124,8 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi_EvalSetConfigs(t *testing.T
 		}
 		// 断言下游内部 req 走新路径: EvalSetConfigs 非空且解析正确
 		if assert.NotNil(t, fakeApp.lastReq) {
+			// ★ 透传分流依据: OpenAPI i32(2) -> kitex enum MultiSetConfig
+			assert.Equal(t, domainexpt.ExptEvalSetSourceType_MultiSetConfig, fakeApp.lastReq.GetEvalSetSourceType())
 			require.Len(t, fakeApp.lastReq.EvalSetConfigs, 1)
 			sc := fakeApp.lastReq.EvalSetConfigs[0]
 			assert.Equal(t, evalSetID, sc.EvalSetID)
@@ -2172,6 +2175,37 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi_EvalSetConfigs(t *testing.T
 		statusErr, ok := errorx.FromStatusError(err)
 		assert.True(t, ok)
 		assert.Equal(t, int32(errno.ResourceNotFoundCode), statusErr.Code())
+	})
+
+	// ★ 硬校验反例: source_type=2 但 configs 为空 → 早失败 InvalidParam
+	t.Run("source type 2 without configs", func(t *testing.T) {
+		t.Parallel()
+		app := &EvalOpenAPIApplication{metric: &fakeOpenAPIMetric{}}
+		req := &openapi.SubmitExperimentOApiRequest{
+			WorkspaceID:       gptr.Of(workspaceID),
+			Name:              gptr.Of("bad-no-configs"),
+			EvalSetSourceType: gptr.Of(int32(2)),
+		}
+		resp, err := app.SubmitExperimentOApi(context.Background(), req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		assert.Equal(t, int32(errno.CommonInvalidParamCode), statusErr.Code())
+	})
+
+	// ★ 硬校验反例: 传了 configs 但 source_type 缺省(非2) → 早失败 InvalidParam
+	t.Run("configs without source type 2", func(t *testing.T) {
+		t.Parallel()
+		app := &EvalOpenAPIApplication{metric: &fakeOpenAPIMetric{}}
+		req := buildReq()
+		req.EvalSetSourceType = nil // 缺省 → 不应被允许携带 configs
+		resp, err := app.SubmitExperimentOApi(context.Background(), req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		assert.Equal(t, int32(errno.CommonInvalidParamCode), statusErr.Code())
 	})
 }
 
