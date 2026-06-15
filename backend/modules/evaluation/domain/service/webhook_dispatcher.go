@@ -157,7 +157,7 @@ func (d *WebhookDispatcher) doPost(ctx context.Context, url string, body []byte,
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close()        //nolint:errcheck
 	io.Copy(io.Discard, resp.Body) //nolint:errcheck
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

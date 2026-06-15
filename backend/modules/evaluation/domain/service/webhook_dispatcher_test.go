@@ -370,4 +370,3 @@ func TestMapExptStatusToEventType_BitsUT(t *testing.T) {
 		})
 	}
 }
-

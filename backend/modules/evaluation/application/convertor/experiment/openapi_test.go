@@ -3171,12 +3171,12 @@ func TestDomainNotificationConfToOpenAPI_FilterEnglishMapping(t *testing.T) {
 		result := domainNotificationConfToOpenAPI(conf)
 		require.NotNil(t, result)
 		require.NotNil(t, result.Filter)
-		assert.Equal(t, "and", string(*result.Filter.LogicOp))
+		assert.Equal(t, "and", *result.Filter.LogicOp)
 		require.Len(t, result.Filter.FilterConditions, 1)
 
 		cond := result.Filter.FilterConditions[0]
-		assert.Equal(t, "expt_status", string(*cond.Field.FieldType))
-		assert.Equal(t, "in", string(*cond.Operator))
+		assert.Equal(t, "expt_status", *cond.Field.FieldType)
+		assert.Equal(t, "in", *cond.Operator)
 		assert.Equal(t, "processing,success,failed", *cond.Value)
 	})
 
@@ -3197,11 +3197,11 @@ func TestDomainNotificationConfToOpenAPI_FilterEnglishMapping(t *testing.T) {
 		result := domainNotificationConfToOpenAPI(conf)
 		require.NotNil(t, result)
 		require.NotNil(t, result.Filter)
-		assert.Equal(t, "or", string(*result.Filter.LogicOp))
+		assert.Equal(t, "or", *result.Filter.LogicOp)
 		require.Len(t, result.Filter.FilterConditions, 1)
 
 		cond := result.Filter.FilterConditions[0]
-		assert.Equal(t, "expt_status", string(*cond.Field.FieldType))
+		assert.Equal(t, "expt_status", *cond.Field.FieldType)
 		assert.Equal(t, `["success","failed","terminated"]`, *cond.Value)
 	})
 
@@ -3234,12 +3234,12 @@ func TestEntityNotificationConfToOpenAPI_FilterEnglishMapping(t *testing.T) {
 		result := entityNotificationConfToOpenAPI(conf)
 		require.NotNil(t, result)
 		require.NotNil(t, result.Filter)
-		assert.Equal(t, "and", string(*result.Filter.LogicOp))
+		assert.Equal(t, "and", *result.Filter.LogicOp)
 		require.Len(t, result.Filter.FilterConditions, 1)
 
 		cond := result.Filter.FilterConditions[0]
-		assert.Equal(t, "expt_status", string(*cond.Field.FieldType))
-		assert.Equal(t, "in", string(*cond.Operator))
+		assert.Equal(t, "expt_status", *cond.Field.FieldType)
+		assert.Equal(t, "in", *cond.Operator)
 		assert.Equal(t, "success,failed,terminated", *cond.Value)
 	})
 

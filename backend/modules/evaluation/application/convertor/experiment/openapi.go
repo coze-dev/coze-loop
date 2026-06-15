@@ -2791,7 +2791,7 @@ func entityNotificationConfToOpenAPI(conf *entity.ExptNotificationConf) *openapi
 			}
 			if cond.Field != nil {
 				fc.Field = &openapiExperiment.FilterField{
-					FieldType: gptr.Of(openapiExperiment.FilterFieldType(domainFieldTypeToOpenAPI(fieldType))),
+					FieldType: gptr.Of(domainFieldTypeToOpenAPI(fieldType)),
 					FieldKey:  cond.Field.FieldKey,
 				}
 			}
@@ -2836,7 +2836,7 @@ func domainNotificationConfToOpenAPI(conf *domainExpt.ExptNotificationConf) *ope
 			}
 			if cond.Field != nil {
 				fc.Field = &openapiExperiment.FilterField{
-					FieldType: gptr.Of(openapiExperiment.FilterFieldType(domainFieldTypeToOpenAPI(fieldType))),
+					FieldType: gptr.Of(domainFieldTypeToOpenAPI(fieldType)),
 					FieldKey:  cond.Field.FieldKey,
 				}
 			}

@@ -103,7 +103,7 @@ func TestWebhookRetryConsumer_SignatureVerification(t *testing.T) {
 
 		if !verifySignature(secret, ts, nonce, sig) {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("invalid signature"))
+			_, _ = w.Write([]byte("invalid signature"))
 			return
 		}
 
@@ -111,7 +111,7 @@ func TestWebhookRetryConsumer_SignatureVerification(t *testing.T) {
 		tsInt, _ := strconv.ParseInt(ts, 10, 64)
 		if abs64(time.Now().Unix()-tsInt) > 300 {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("request expired"))
+			_, _ = w.Write([]byte("request expired"))
 			return
 		}
 
@@ -376,7 +376,7 @@ func TestWebhookRetryConsumer_PayloadIntegrity(t *testing.T) {
 		}
 
 		body, _ := io.ReadAll(r.Body)
-		json.Unmarshal(body, &receivedPayload)
+		_ = json.Unmarshal(body, &receivedPayload)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()

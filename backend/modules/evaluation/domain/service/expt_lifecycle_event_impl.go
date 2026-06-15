@@ -57,7 +57,7 @@ func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Con
 		switch event.ToStatus {
 		case entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
 			logs.CtxInfo(ctx, "feishu_notification: legacy expt, sending card for terminal status, expt_id: %d, to_status: %v", expt.ID, event.ToStatus)
-			h.sendNotifyCard(ctx, event, expt)
+			_ = h.sendNotifyCard(ctx, event, expt)
 		default:
 			logs.CtxInfo(ctx, "feishu_notification: legacy expt, skip non-terminal status, expt_id: %d, to_status: %v", expt.ID, event.ToStatus)
 		}
@@ -83,7 +83,7 @@ func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Con
 		expt.ID, event.ToStatus, matched, matched)
 
 	if matched {
-		h.sendNotifyCard(ctx, event, expt)
+		_ = h.sendNotifyCard(ctx, event, expt)
 	}
 }
 
