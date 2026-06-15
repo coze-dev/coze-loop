@@ -7,8 +7,9 @@ include "eval_set.thrift"
 include "../../data/domain/tag.thrift"
 include "../../data/domain/dataset.thrift"
 
-// 注意，此处这个
-include "../../data/domain/filter.thrift"
+// data 侧 filter 重命名为 data_filter.thrift, 别名 data_filter, 与下方 observability filter 区分
+// (二者 basename 若同名, BAM 解析器无法消歧; 重命名后 data_filter.Filter 无歧义)
+include "../../data/domain/data_filter.thrift"
 include "../../observability/domain/filter.thrift"
 include "../../observability/domain/task.thrift"
 
@@ -754,8 +755,8 @@ enum ExptEvalSetSourceType {
     MultiSetConfig = 2 // 新实验: 多评测集+配置, 权威源 eval_conf.eval_set_configs
 }
 
-// 说明: item 圈选 / evaluator 行级过滤复用 data/domain/filter.thrift 的 Filter/FilterField
-// (别名 filter, 与 observability filter 同名, thriftgo 自动以 filter0 区分; filter.Filter 仅 data 侧定义, 无歧义)
+// 说明: item 圈选 / evaluator 行级过滤复用 data/domain/data_filter.thrift 的 Filter/FilterField
+// (别名 data_filter, 与 observability filter 区分以便 BAM/thriftgo 无歧义解析)
 // 用法: 全集 = 不传; 点选 = item_id in [...]; 条件圈选 = tag 条件
 // 校验白名单(应用层): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
 
@@ -784,7 +785,7 @@ struct ExptEvaluatorConf {
     10: optional list<FieldMapping> from_eval_set    // 评测集字段 → evaluator 输入
     11: optional list<FieldMapping> from_target      // target 输出 → evaluator 输入
 
-    20: optional filter.Filter filter                // 行级过滤: 命中才执行本 binding (复用 data filter.Filter)
+    20: optional data_filter.Filter filter           // 行级过滤: 命中才执行本 binding (复用 data data_filter.Filter)
     21: optional i32 filter_mode                     // 0 None / 1 Include / 2 Exclude
 
     30: optional common.RuntimeParam runtime_param   // alias 多实例核心动机: 同 version 不同参数
@@ -799,7 +800,7 @@ struct EvalSetConfig {
     1: required i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
     2: required i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"') // 版本锁定, 不允许滚动 latest
 
-    10: optional filter.Filter item_filter           // 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data filter.Filter)
+    10: optional data_filter.Filter item_filter       // 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter)
 
     20: optional list<ExptTargetConf> target_confs   // 本期 len<=1; 不传=继承 request 顶层 target
     30: optional list<ExptEvaluatorConf> evaluator_confs // (evaluator_version_id, alias) 在 set 内唯一

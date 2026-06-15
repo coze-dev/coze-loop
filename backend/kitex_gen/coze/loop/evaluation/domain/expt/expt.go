@@ -28558,8 +28558,8 @@ func (p *ExptInsightAnalysisFeedbackVote) Field2DeepEqual(src *FeedbackActionTyp
 	return true
 }
 
-// 说明: item 圈选 / evaluator 行级过滤复用 data/domain/filter.thrift 的 Filter/FilterField
-// (别名 filter, 与 observability filter 同名, thriftgo 自动以 filter0 区分; filter.Filter 仅 data 侧定义, 无歧义)
+// 说明: item 圈选 / evaluator 行级过滤复用 data/domain/data_filter.thrift 的 Filter/FilterField
+// (别名 data_filter, 与 observability filter 区分以便 BAM/thriftgo 无歧义解析)
 // 用法: 全集 = 不传; 点选 = item_id in [...]; 条件圈选 = tag 条件
 // 校验白名单(应用层): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
 // per-set target 运行配置; 本期 len<=1, alias 恒空 (多 target 实例预留口子)
@@ -29234,7 +29234,7 @@ type ExptEvaluatorConf struct {
 	FromEvalSet []*FieldMapping `thrift:"from_eval_set,10,optional" frugal:"10,optional,list<FieldMapping>" form:"from_eval_set" json:"from_eval_set,omitempty" query:"from_eval_set"`
 	// target 输出 → evaluator 输入
 	FromTarget []*FieldMapping `thrift:"from_target,11,optional" frugal:"11,optional,list<FieldMapping>" form:"from_target" json:"from_target,omitempty" query:"from_target"`
-	// 行级过滤: 命中才执行本 binding (复用 data filter.Filter)
+	// 行级过滤: 命中才执行本 binding (复用 data data_filter.Filter)
 	Filter *filter.Filter `thrift:"filter,20,optional" frugal:"20,optional,filter.Filter" form:"filter" json:"filter,omitempty" query:"filter"`
 	// 0 None / 1 Include / 2 Exclude
 	FilterMode *int32 `thrift:"filter_mode,21,optional" frugal:"21,optional,i32" form:"filter_mode" json:"filter_mode,omitempty" query:"filter_mode"`
@@ -30227,7 +30227,7 @@ type EvalSetConfig struct {
 	EvalSetID int64 `thrift:"eval_set_id,1,required" frugal:"1,required,i64" json:"eval_set_id" form:"eval_set_id,required" query:"eval_set_id,required"`
 	// 版本锁定, 不允许滚动 latest
 	EvalSetVersionID int64 `thrift:"eval_set_version_id,2,required" frugal:"2,required,i64" json:"eval_set_version_id" form:"eval_set_version_id,required" query:"eval_set_version_id,required"`
-	// 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data filter.Filter)
+	// 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter)
 	ItemFilter *filter.Filter `thrift:"item_filter,10,optional" frugal:"10,optional,filter.Filter" form:"item_filter" json:"item_filter,omitempty" query:"item_filter"`
 	// 本期 len<=1; 不传=继承 request 顶层 target
 	TargetConfs []*ExptTargetConf `thrift:"target_confs,20,optional" frugal:"20,optional,list<ExptTargetConf>" form:"target_confs" json:"target_confs,omitempty" query:"target_confs"`
