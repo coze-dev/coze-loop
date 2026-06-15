@@ -226,7 +226,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 				}
 			}
 			return fields, nil
-		case entity.EvalTargetTypeCustomAgent, entity.EvalTargetTypeA2AAgent:
+		case entity.EvalTargetTypeCustomAgent, entity.EvalTargetTypeA2AAgent, entity.EvalTargetTypeSandboxAgent:
 			fields, err := e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
 			if err != nil {
 				return nil, err

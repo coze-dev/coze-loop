@@ -230,6 +230,8 @@ func mapOpenAPIEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (dom
 		return domaindoEvalTarget.EvalTargetType_VolcengineAgent, nil
 	case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
 		return domaindoEvalTarget.EvalTargetType_CustomRPCServer, nil
+	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
+		return domaindoEvalTarget.EvalTargetType_SandboxAgent, nil
 	default:
 		return 0, fmt.Errorf("unsupported eval target type: %s", openapiType)
 	}
@@ -1749,6 +1751,10 @@ func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion, typ ent
 		if versionDO.CustomRPCServer != nil {
 			contentDTO.CustomRPCServer = OpenAPICustomRPCServerDO2DTO(versionDO.CustomRPCServer)
 		}
+	case entity.EvalTargetTypeSandboxAgent:
+		if versionDO.SandboxAgent != nil {
+			contentDTO.SandboxAgent = OpenAPISandboxAgentDO2DTO(versionDO.SandboxAgent)
+		}
 	}
 
 	versionDTO.EvalTargetContent = contentDTO
@@ -1785,6 +1791,8 @@ func convertEntityEvalTargetTypeToOpenAPI(typ entity.EvalTargetType) openapiEval
 		return openapiEvalTarget.EvalTargetTypeVolcengineAgent
 	case entity.EvalTargetTypeCustomRPCServer:
 		return openapiEvalTarget.EvalTargetTypeCustomRPCServer
+	case entity.EvalTargetTypeSandboxAgent:
+		return openapiEvalTarget.EvalTargetTypeSandboxAgent
 	default:
 		return ""
 	}
@@ -1836,6 +1844,30 @@ func OpenAPICustomEvalTargetDO2DTO(do *entity.CustomEvalTarget) *openapiEvalTarg
 		Name:      do.Name,
 		AvatarURL: do.AvatarURL,
 		Ext:       do.Ext,
+	}
+}
+
+func OpenAPISandboxAgentDO2DTO(do *entity.SandboxAgent) *openapiEvalTarget.SandboxAgent {
+	if do == nil {
+		return nil
+	}
+	envs := make([]*openapiEvalTarget.SandboxEnvVar, 0, len(do.Envs))
+	for _, e := range do.Envs {
+		if e == nil {
+			continue
+		}
+		envs = append(envs, &openapiEvalTarget.SandboxEnvVar{
+			Key:   gptr.Of(e.Key),
+			Value: gptr.Of(e.Value),
+		})
+	}
+	return &openapiEvalTarget.SandboxAgent{
+		Name:          gptr.Of(do.Name),
+		Type:          gptr.Of(openapiEvalTarget.SandboxAgentType(do.Type)),
+		ModelName:     gptr.Of(do.ModelName),
+		AgentSetupCmd: gptr.Of(do.AgentSetupCmd),
+		AgentRunCmd:   gptr.Of(do.AgentRunCmd),
+		Envs:          envs,
 	}
 }
 
