@@ -717,6 +717,15 @@ func roundEvaluatorOutputScore(outputData *entity.EvaluatorOutputData) {
 	}
 }
 
+// normalizeEvaluatorRecordSourceType 给运行期写入端兜底:
+// 调用方未显式声明 source_type (零值) 时, 默认按 Builtin 处理, 与 evaluator_record 表语义对齐.
+func normalizeEvaluatorRecordSourceType(t entity.EvaluatorRecordSourceType) entity.EvaluatorRecordSourceType {
+	if t == entity.EvaluatorRecordSourceTypeUnknown {
+		return entity.EvaluatorRecordSourceTypeBuiltin
+	}
+	return t
+}
+
 // ShouldInterceptEvaluator 判断评估器是否应劫持本次评估，劫持时创建记录并返回
 func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, bool, error) {
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
@@ -821,6 +830,8 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 		ItemID:              request.ItemID,
 		TurnID:              request.TurnID,
 		EvaluatorVersionID:  request.EvaluatorVersionID,
+		Alias:               request.Alias,
+		SourceType:          normalizeEvaluatorRecordSourceType(request.SourceType),
 		TraceID:             traceID,
 		LogID:               logID,
 		EvaluatorInputData:  request.InputData,
@@ -899,6 +910,8 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		ItemID:              request.ItemID,
 		TurnID:              request.TurnID,
 		EvaluatorVersionID:  request.EvaluatorVersionID,
+		Alias:               request.Alias,
+		SourceType:          normalizeEvaluatorRecordSourceType(request.SourceType),
 		TraceID:             traceID,
 		LogID:               logID,
 		EvaluatorInputData:  request.InputData,

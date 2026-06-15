@@ -4,11 +4,9 @@
 package service
 
 import (
-	"context"
 	"strings"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 // FilterMode 语义 (per ItemEvaluatorConf.FilterMode):
@@ -147,33 +145,3 @@ func matchByQueryType(queryType, actual string, values []string) bool {
 	}
 }
 
-// shouldRunEvaluatorByItemConfig 桥接 ExptTurnEvalCtx.ItemConfig 与 filter matcher:
-// 找到 versionID 对应的 EvaluatorConf (第一个), 用其 Filter/FilterMode 判断是否应该跑。
-//
-// ⚠️ 当前限制 (tech debt): 同 versionID 多 alias 实例只取第一个 conf 做判定。
-// 完整的 per-alias 独立判定 + Skipped 占位 record 持久化, 依赖 evaluatorService.RunEvaluator API
-// 扩展 Alias/SourceType 字段后续 PR 实施。
-func shouldRunEvaluatorByItemConfig(ctx context.Context, etec *entity.ExptTurnEvalCtx, versionID int64) bool {
-	if etec == nil || etec.ItemConfig == nil {
-		return true
-	}
-	var conf *entity.ItemEvaluatorConf
-	for _, c := range etec.ItemConfig.EvaluatorConfs {
-		if c != nil && c.EvaluatorVersionID == versionID {
-			conf = c
-			break
-		}
-	}
-	if conf == nil {
-		// ItemConfig 未声明该 evaluator binding (老数据 / 不一致态), 默认放行
-		return true
-	}
-	run, err := ShouldRunByFilter(conf.Filter, conf.FilterMode, etec.EvalSetItem, etec.Turn)
-	if err != nil {
-		logs.CtxWarn(ctx, "[CallEvaluators] filter match error, version_id: %d, alias: %s, err: %v — default RUN", versionID, conf.Alias, err)
-	}
-	if !run {
-		logs.CtxInfo(ctx, "[CallEvaluators] skip evaluator by filter, version_id: %d, alias: %s, filter_mode: %d", versionID, conf.Alias, conf.FilterMode)
-	}
-	return run
-}
