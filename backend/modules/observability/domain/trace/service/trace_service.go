@@ -1713,30 +1713,34 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 		return nil, err
 	}
 	type keyInfo struct {
-		count     int
-		valueType string
+		count       int
+		valueType   string
+		isSystemTag bool
 	}
 	keyInfoMap := make(map[string]*keyInfo)
 	for _, span := range listSpansResp.Spans {
 		for key := range span.SystemTagsString {
 			if info, ok := keyInfoMap[key]; ok {
 				info.count++
+				info.isSystemTag = true
 			} else {
-				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeString}
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeString, isSystemTag: true}
 			}
 		}
 		for key := range span.SystemTagsLong {
 			if info, ok := keyInfoMap[key]; ok {
 				info.count++
+				info.isSystemTag = true
 			} else {
-				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeLong}
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeLong, isSystemTag: true}
 			}
 		}
 		for key := range span.SystemTagsDouble {
 			if info, ok := keyInfoMap[key]; ok {
 				info.count++
+				info.isSystemTag = true
 			} else {
-				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeDouble}
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeDouble, isSystemTag: true}
 			}
 		}
 		for key := range span.TagsString {
@@ -1790,19 +1794,23 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 	}
 
 	items := make([]*trace.MetadataItemInfo, 0, len(loop_span.SpanStructFieldKeys)+len(keys))
+	falseVal := false
 	for _, key := range loop_span.SpanStructFieldKeys {
 		items = append(items, &trace.MetadataItemInfo{
-			Key:       key,
-			ValueType: loop_span.SpanStructFieldValueTypes[key],
+			Key:         key,
+			ValueType:   loop_span.SpanStructFieldValueTypes[key],
+			IsSystemTag: &falseVal,
 		})
 	}
 	for _, key := range keys {
 		if _, ok := structFieldSet[key]; ok {
 			continue
 		}
+		isSystemTag := keyInfoMap[key].isSystemTag
 		items = append(items, &trace.MetadataItemInfo{
-			Key:       key,
-			ValueType: keyInfoMap[key].valueType,
+			Key:         key,
+			ValueType:   keyInfoMap[key].valueType,
+			IsSystemTag: &isSystemTag,
 		})
 	}
 
