@@ -38,6 +38,7 @@ type IAnnotationDao interface {
 	Insert(context.Context, *InsertAnnotationParam) error
 	Get(context.Context, *GetAnnotationParam) (*Annotation, error)
 	List(context.Context, *ListAnnotationsParam) ([]*Annotation, error)
+	GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error)
 }
 
 type Annotation struct {
