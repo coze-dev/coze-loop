@@ -464,6 +464,20 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 71:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField71(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -995,6 +1009,22 @@ func (p *CreateExperimentRequest) FastReadField70(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateExperimentRequest) FastReadField71(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *expt.ExptEvalSetSourceType
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := expt.ExptEvalSetSourceType(v)
+		_field = &tmp
+	}
+	p.EvalSetSourceType = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -1087,6 +1117,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField70(buf[offset:], w)
+		offset += p.fastWriteField71(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -1127,6 +1158,7 @@ func (p *CreateExperimentRequest) BLength() int {
 		l += p.field60Length()
 		l += p.field50Length()
 		l += p.field70Length()
+		l += p.field71Length()
 		l += p.field100Length()
 		l += p.field200Length()
 		l += p.field255Length()
@@ -1426,6 +1458,15 @@ func (p *CreateExperimentRequest) fastWriteField70(buf []byte, w thrift.NocopyWr
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *CreateExperimentRequest) fastWriteField71(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetSourceType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 71)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.EvalSetSourceType))
 	}
 	return offset
 }
@@ -1740,6 +1781,15 @@ func (p *CreateExperimentRequest) field70Length() int {
 	return l
 }
 
+func (p *CreateExperimentRequest) field71Length() int {
+	l := 0
+	if p.IsSetEvalSetSourceType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *CreateExperimentRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -1985,6 +2035,11 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 
 			p.EvalSetConfigs = append(p.EvalSetConfigs, _elem)
 		}
+	}
+
+	if src.EvalSetSourceType != nil {
+		tmp := *src.EvalSetSourceType
+		p.EvalSetSourceType = &tmp
 	}
 
 	if src.Ext != nil {
@@ -2634,6 +2689,20 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 76:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField76(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -3169,6 +3238,22 @@ func (p *SubmitExperimentRequest) FastReadField75(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentRequest) FastReadField76(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *expt.ExptEvalSetSourceType
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := expt.ExptEvalSetSourceType(v)
+		_field = &tmp
+	}
+	p.EvalSetSourceType = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -3262,6 +3347,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField70(buf[offset:], w)
 		offset += p.fastWriteField75(buf[offset:], w)
+		offset += p.fastWriteField76(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -3303,6 +3389,7 @@ func (p *SubmitExperimentRequest) BLength() int {
 		l += p.field60Length()
 		l += p.field70Length()
 		l += p.field75Length()
+		l += p.field76Length()
 		l += p.field100Length()
 		l += p.field200Length()
 		l += p.field255Length()
@@ -3610,6 +3697,15 @@ func (p *SubmitExperimentRequest) fastWriteField75(buf []byte, w thrift.NocopyWr
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentRequest) fastWriteField76(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetSourceType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 76)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.EvalSetSourceType))
 	}
 	return offset
 }
@@ -3933,6 +4029,15 @@ func (p *SubmitExperimentRequest) field75Length() int {
 	return l
 }
 
+func (p *SubmitExperimentRequest) field76Length() int {
+	l := 0
+	if p.IsSetEvalSetSourceType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *SubmitExperimentRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -4183,6 +4288,11 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 
 			p.EvalSetConfigs = append(p.EvalSetConfigs, _elem)
 		}
+	}
+
+	if src.EvalSetSourceType != nil {
+		tmp := *src.EvalSetSourceType
+		p.EvalSetSourceType = &tmp
 	}
 
 	if src.Ext != nil {

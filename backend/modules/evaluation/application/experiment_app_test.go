@@ -369,6 +369,34 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 			wantErr:  true,
 			wantCode: 0, // Don't expect specific error code since it's a fmt.Errorf
 		},
+		{
+			// ★ 硬校验: source_type=MultiSetConfig 但 eval_set_configs 为空 → InvalidParam
+			name: "source type multi without configs",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID:       validWorkspaceID,
+				Name:              gptr.Of("test_experiment"),
+				EvalSetSourceType: gptr.Of(expt.ExptEvalSetSourceType_MultiSetConfig),
+			},
+			mockSetup: func() {}, // 校验在任何 mock 调用前早失败
+			wantResp:  nil,
+			wantErr:   true,
+			wantCode:  errno.CommonInvalidParamCode,
+		},
+		{
+			// ★ 硬校验: 带 eval_set_configs 但 source_type 缺省(非 MultiSetConfig) → InvalidParam
+			name: "configs without source type multi",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				Name:        gptr.Of("test_experiment"),
+				EvalSetConfigs: []*expt.EvalSetConfig{
+					{EvalSetID: 111, EvalSetVersionID: 222},
+				},
+			},
+			mockSetup: func() {}, // 校验在任何 mock 调用前早失败
+			wantResp:  nil,
+			wantErr:   true,
+			wantCode:  errno.CommonInvalidParamCode,
+		},
 	}
 
 	for _, tt := range tests {

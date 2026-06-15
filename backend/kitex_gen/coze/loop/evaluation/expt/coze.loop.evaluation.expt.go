@@ -60,11 +60,14 @@ type CreateExperimentRequest struct {
 	// 关联的智能评测会话ID
 	ThreadID    *string               `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
 	TriggerType *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
-	// ★ 非空 = 新路径开关: 写 eval_set_source_type=MultiSetConfig, 兼容字段 2/4/7/20/21/25/40/42 被忽略
+	// ★ 多评测集配置 (item-centric 新路径权威源); 仅当 eval_set_source_type == MultiSetConfig(2) 时生效
 	EvalSetConfigs []*expt.EvalSetConfig `thrift:"eval_set_configs,70,optional" frugal:"70,optional,list<expt.EvalSetConfig>" form:"eval_set_configs" json:"eval_set_configs,omitempty"`
-	Ext            map[string]string     `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Session        *common.Session       `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base           *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
+	// 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
+	EvalSetSourceType *expt.ExptEvalSetSourceType `thrift:"eval_set_source_type,71,optional" frugal:"71,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
+	Ext               map[string]string           `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Session           *common.Session             `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base              *base.Base                  `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateExperimentRequest() *CreateExperimentRequest {
@@ -417,6 +420,18 @@ func (p *CreateExperimentRequest) GetEvalSetConfigs() (v []*expt.EvalSetConfig) 
 	return p.EvalSetConfigs
 }
 
+var CreateExperimentRequest_EvalSetSourceType_DEFAULT expt.ExptEvalSetSourceType
+
+func (p *CreateExperimentRequest) GetEvalSetSourceType() (v expt.ExptEvalSetSourceType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSetSourceType() {
+		return CreateExperimentRequest_EvalSetSourceType_DEFAULT
+	}
+	return *p.EvalSetSourceType
+}
+
 var CreateExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *CreateExperimentRequest) GetExt() (v map[string]string) {
@@ -539,6 +554,9 @@ func (p *CreateExperimentRequest) SetTriggerType(val *expt.ExptTriggerType) {
 func (p *CreateExperimentRequest) SetEvalSetConfigs(val []*expt.EvalSetConfig) {
 	p.EvalSetConfigs = val
 }
+func (p *CreateExperimentRequest) SetEvalSetSourceType(val *expt.ExptEvalSetSourceType) {
+	p.EvalSetSourceType = val
+}
 func (p *CreateExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -579,6 +597,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	60:  "thread_id",
 	50:  "trigger_type",
 	70:  "eval_set_configs",
+	71:  "eval_set_source_type",
 	100: "ext",
 	200: "session",
 	255: "Base",
@@ -694,6 +713,10 @@ func (p *CreateExperimentRequest) IsSetTriggerType() bool {
 
 func (p *CreateExperimentRequest) IsSetEvalSetConfigs() bool {
 	return p.EvalSetConfigs != nil
+}
+
+func (p *CreateExperimentRequest) IsSetEvalSetSourceType() bool {
+	return p.EvalSetSourceType != nil
 }
 
 func (p *CreateExperimentRequest) IsSetExt() bool {
@@ -955,6 +978,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 70:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField70(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 71:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField71(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1397,6 +1428,18 @@ func (p *CreateExperimentRequest) ReadField70(iprot thrift.TProtocol) error {
 	p.EvalSetConfigs = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField71(iprot thrift.TProtocol) error {
+
+	var _field *expt.ExptEvalSetSourceType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := expt.ExptEvalSetSourceType(v)
+		_field = &tmp
+	}
+	p.EvalSetSourceType = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -1563,6 +1606,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField70(oprot); err != nil {
 			fieldId = 70
+			goto WriteFieldError
+		}
+		if err = p.writeField71(oprot); err != nil {
+			fieldId = 71
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -2158,6 +2205,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 70 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField71(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSetSourceType() {
+		if err = oprot.WriteFieldBegin("eval_set_source_type", thrift.I32, 71); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.EvalSetSourceType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 71 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 71 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -2323,6 +2388,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field70DeepEqual(ano.EvalSetConfigs) {
+		return false
+	}
+	if !p.Field71DeepEqual(ano.EvalSetSourceType) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -2670,6 +2738,18 @@ func (p *CreateExperimentRequest) Field70DeepEqual(src []*expt.EvalSetConfig) bo
 	}
 	return true
 }
+func (p *CreateExperimentRequest) Field71DeepEqual(src *expt.ExptEvalSetSourceType) bool {
+
+	if p.EvalSetSourceType == src {
+		return true
+	} else if p.EvalSetSourceType == nil || src == nil {
+		return false
+	}
+	if *p.EvalSetSourceType != *src {
+		return false
+	}
+	return true
+}
 func (p *CreateExperimentRequest) Field100DeepEqual(src map[string]string) bool {
 
 	if len(p.Ext) != len(src) {
@@ -2974,12 +3054,15 @@ type SubmitExperimentRequest struct {
 	ThreadID *string `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
 	// 指定执行的评测集条目ID列表
 	ItemIds []int64 `thrift:"item_ids,70,optional" frugal:"70,optional,list<i64>" json:"item_ids" form:"item_ids" `
-	// ★ 非空 = 新路径开关: 写 eval_set_source_type=MultiSetConfig, 兼容字段 2/4/7/20/21/25/40/42 被忽略
+	// ★ 多评测集配置 (item-centric 新路径权威源); 仅当 eval_set_source_type == MultiSetConfig(2) 时生效
 	// 注: 70 号已被 item_ids 占用, 取 75
 	EvalSetConfigs []*expt.EvalSetConfig `thrift:"eval_set_configs,75,optional" frugal:"75,optional,list<expt.EvalSetConfig>" form:"eval_set_configs" json:"eval_set_configs,omitempty"`
-	Ext            map[string]string     `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Session        *common.Session       `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base           *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
+	// 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
+	EvalSetSourceType *expt.ExptEvalSetSourceType `thrift:"eval_set_source_type,76,optional" frugal:"76,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
+	Ext               map[string]string           `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Session           *common.Session             `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base              *base.Base                  `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewSubmitExperimentRequest() *SubmitExperimentRequest {
@@ -3344,6 +3427,18 @@ func (p *SubmitExperimentRequest) GetEvalSetConfigs() (v []*expt.EvalSetConfig) 
 	return p.EvalSetConfigs
 }
 
+var SubmitExperimentRequest_EvalSetSourceType_DEFAULT expt.ExptEvalSetSourceType
+
+func (p *SubmitExperimentRequest) GetEvalSetSourceType() (v expt.ExptEvalSetSourceType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSetSourceType() {
+		return SubmitExperimentRequest_EvalSetSourceType_DEFAULT
+	}
+	return *p.EvalSetSourceType
+}
+
 var SubmitExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
@@ -3469,6 +3564,9 @@ func (p *SubmitExperimentRequest) SetItemIds(val []int64) {
 func (p *SubmitExperimentRequest) SetEvalSetConfigs(val []*expt.EvalSetConfig) {
 	p.EvalSetConfigs = val
 }
+func (p *SubmitExperimentRequest) SetEvalSetSourceType(val *expt.ExptEvalSetSourceType) {
+	p.EvalSetSourceType = val
+}
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -3510,6 +3608,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	60:  "thread_id",
 	70:  "item_ids",
 	75:  "eval_set_configs",
+	76:  "eval_set_source_type",
 	100: "ext",
 	200: "session",
 	255: "Base",
@@ -3629,6 +3728,10 @@ func (p *SubmitExperimentRequest) IsSetItemIds() bool {
 
 func (p *SubmitExperimentRequest) IsSetEvalSetConfigs() bool {
 	return p.EvalSetConfigs != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetEvalSetSourceType() bool {
+	return p.EvalSetSourceType != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
@@ -3898,6 +4001,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 75:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField75(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 76:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField76(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4342,6 +4453,18 @@ func (p *SubmitExperimentRequest) ReadField75(iprot thrift.TProtocol) error {
 	p.EvalSetConfigs = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField76(iprot thrift.TProtocol) error {
+
+	var _field *expt.ExptEvalSetSourceType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := expt.ExptEvalSetSourceType(v)
+		_field = &tmp
+	}
+	p.EvalSetSourceType = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -4512,6 +4635,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField75(oprot); err != nil {
 			fieldId = 75
+			goto WriteFieldError
+		}
+		if err = p.writeField76(oprot); err != nil {
+			fieldId = 76
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -5122,6 +5249,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 75 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField76(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSetSourceType() {
+		if err = oprot.WriteFieldBegin("eval_set_source_type", thrift.I32, 76); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.EvalSetSourceType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 76 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 76 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -5290,6 +5435,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field75DeepEqual(ano.EvalSetConfigs) {
+		return false
+	}
+	if !p.Field76DeepEqual(ano.EvalSetSourceType) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -5641,6 +5789,18 @@ func (p *SubmitExperimentRequest) Field75DeepEqual(src []*expt.EvalSetConfig) bo
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field76DeepEqual(src *expt.ExptEvalSetSourceType) bool {
+
+	if p.EvalSetSourceType == src {
+		return true
+	} else if p.EvalSetSourceType == nil || src == nil {
+		return false
+	}
+	if *p.EvalSetSourceType != *src {
+		return false
 	}
 	return true
 }
