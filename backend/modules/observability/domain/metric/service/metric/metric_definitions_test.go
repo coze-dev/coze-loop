@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	agentmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/agent"
 	consts "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/const"
+	feedbackmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/feedback"
 	generalmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	modelmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
 	servicemetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
@@ -197,6 +198,13 @@ func collectBaseMetricDefinitions() []entity.IMetricDefinition {
 		agentmetrics.NewAgentExecutionStepAvgMetric(),
 		agentmetrics.NewAgentModelExecutionStepAvgMetric(),
 		agentmetrics.NewAgentToolExecutionStepAvgMetric(),
+
+		// Feedback
+		feedbackmetrics.NewFeedbackCountMetric(),
+		feedbackmetrics.NewFeedbackScoreMetric(),
+		feedbackmetrics.NewFeedbackValueDistributionMetric(),
+		feedbackmetrics.NewFeedbackCountByKeyPieMetric(),
+		feedbackmetrics.NewFeedbackCountBySourcePieMetric(),
 	}
 }
 
@@ -415,6 +423,12 @@ var baseExpressionGenerators = map[string]func(entity.MetricGranularity) string{
 	entity.MetricNameToolTotalCountPie:        countExpr,
 	entity.MetricNameToolTotalErrorCount:      countIfErrorExpr,
 	entity.MetricNameToolTotalSuccessCount:    countIfSuccessExpr,
+	// Feedback
+	entity.MetricNameFeedbackCount:             countExpr,
+	entity.MetricNameFeedbackScore:             valueFloatExpr,
+	entity.MetricNameFeedbackValueDistribution: countExpr,
+	entity.MetricNameFeedbackCountByKeyPie:     countExpr,
+	entity.MetricNameFeedbackCountBySourcePie:  countExpr,
 }
 
 func countExpr(entity.MetricGranularity) string {
@@ -501,4 +515,137 @@ func countIfErrorExpr(entity.MetricGranularity) string {
 
 func countIfSuccessExpr(entity.MetricGranularity) string {
 	return fmt.Sprintf("countIf(1, %s = 0)", loop_span.SpanFieldStatusCode)
+}
+
+func valueFloatExpr(entity.MetricGranularity) string {
+	return "value_float"
+}
+
+func TestFeedbackMetricDefinitions(t *testing.T) {
+	tests := []struct {
+		name       string
+		metric     entity.IMetricDefinition
+		wantName   string
+		wantType   entity.MetricType
+		wantSource entity.MetricSource
+		wantExpr   string
+		wantGroup  []string
+	}{
+		{
+			name:       "FeedbackCount",
+			metric:     feedbackmetrics.NewFeedbackCountMetric(),
+			wantName:   entity.MetricNameFeedbackCount,
+			wantType:   entity.MetricTypeSummary,
+			wantSource: entity.MetricSourceAnnotation,
+			wantExpr:   "count()",
+			wantGroup:  nil,
+		},
+		{
+			name:       "FeedbackScore",
+			metric:     feedbackmetrics.NewFeedbackScoreMetric(),
+			wantName:   entity.MetricNameFeedbackScore,
+			wantType:   entity.MetricTypeSummary,
+			wantSource: entity.MetricSourceAnnotation,
+			wantExpr:   "value_float",
+			wantGroup:  nil,
+		},
+		{
+			name:       "FeedbackValueDistribution",
+			metric:     feedbackmetrics.NewFeedbackValueDistributionMetric(),
+			wantName:   entity.MetricNameFeedbackValueDistribution,
+			wantType:   entity.MetricTypePie,
+			wantSource: entity.MetricSourceAnnotation,
+			wantExpr:   "count()",
+			wantGroup:  []string{"value_string"},
+		},
+		{
+			name:       "FeedbackCountByKeyPie",
+			metric:     feedbackmetrics.NewFeedbackCountByKeyPieMetric(),
+			wantName:   entity.MetricNameFeedbackCountByKeyPie,
+			wantType:   entity.MetricTypePie,
+			wantSource: entity.MetricSourceAnnotation,
+			wantExpr:   "count()",
+			wantGroup:  []string{"annotation_key"},
+		},
+		{
+			name:       "FeedbackCountBySourcePie",
+			metric:     feedbackmetrics.NewFeedbackCountBySourcePieMetric(),
+			wantName:   entity.MetricNameFeedbackCountBySourcePie,
+			wantType:   entity.MetricTypePie,
+			wantSource: entity.MetricSourceAnnotation,
+			wantExpr:   "count()",
+			wantGroup:  []string{"feedback_source"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantName, tt.metric.Name())
+			assert.Equal(t, tt.wantType, tt.metric.Type())
+			assert.Equal(t, tt.wantSource, tt.metric.Source())
+			expr := tt.metric.Expression(entity.MetricGranularity1Hour)
+			require.NotNil(t, expr)
+			assert.Equal(t, tt.wantExpr, expr.Expression)
+			groupBy := tt.metric.GroupBy()
+			if tt.wantGroup == nil {
+				assert.Nil(t, groupBy)
+			} else {
+				require.Len(t, groupBy, len(tt.wantGroup))
+				for i, g := range groupBy {
+					assert.Equal(t, tt.wantGroup[i], g.Field.FieldName)
+				}
+			}
+			oExpr := tt.metric.OExpression()
+			require.NotNil(t, oExpr)
+		})
+	}
+}
+
+func TestFeedbackMetricWrappers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// FeedbackCount has SelfWrapper + TimeSeriesWrapper
+	countMetric := feedbackmetrics.NewFeedbackCountMetric()
+	adapter, ok := countMetric.(entity.IMetricAdapter)
+	require.True(t, ok)
+	wrappers := adapter.Wrappers()
+	require.Len(t, wrappers, 2)
+	for _, w := range wrappers {
+		wrapped := w.Wrap(countMetric)
+		require.NotEmpty(t, wrapped.Name())
+		expr := wrapped.Expression(entity.MetricGranularity1Hour)
+		require.NotNil(t, expr)
+		require.NotEmpty(t, expr.Expression)
+	}
+
+	// FeedbackScore has Avg/Min/Max/Pct50/Pct90/Pct99 wrappers
+	scoreMetric := feedbackmetrics.NewFeedbackScoreMetric()
+	adapter, ok = scoreMetric.(entity.IMetricAdapter)
+	require.True(t, ok)
+	wrappers = adapter.Wrappers()
+	require.Len(t, wrappers, 6)
+	expectedSuffixes := []string{"_avg", "_min", "_max", "_pct50", "_pct90", "_pct99"}
+	for i, w := range wrappers {
+		wrapped := w.Wrap(scoreMetric)
+		assert.True(t, strings.HasSuffix(wrapped.Name(), expectedSuffixes[i]),
+			"expected suffix %s for %s", expectedSuffixes[i], wrapped.Name())
+	}
+
+	// FeedbackValueDistribution has SelfWrapper + TimeSeriesWrapper
+	vdMetric := feedbackmetrics.NewFeedbackValueDistributionMetric()
+	adapter, ok = vdMetric.(entity.IMetricAdapter)
+	require.True(t, ok)
+	wrappers = adapter.Wrappers()
+	require.Len(t, wrappers, 2)
+
+	// FeedbackCountByKeyPie has no Wrappers (not IMetricAdapter)
+	keyPieMetric := feedbackmetrics.NewFeedbackCountByKeyPieMetric()
+	_, ok = keyPieMetric.(entity.IMetricAdapter)
+	assert.False(t, ok)
+
+	// FeedbackCountBySourcePie has no Wrappers (not IMetricAdapter)
+	sourcePieMetric := feedbackmetrics.NewFeedbackCountBySourcePieMetric()
+	_, ok = sourcePieMetric.(entity.IMetricAdapter)
+	assert.False(t, ok)
 }

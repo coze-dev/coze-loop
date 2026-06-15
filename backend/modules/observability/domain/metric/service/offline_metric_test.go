@@ -1559,3 +1559,85 @@ func TestMetricsService_TraverseMetrics(t *testing.T) {
 		assert.Equal(t, 0, notExistCount)
 	})
 }
+
+// TestMetricsService_TraverseMetrics_AnnotationSource 覆盖 traverseMetric 中 annotation source 分支
+func TestMetricsService_TraverseMetrics_AnnotationSource(t *testing.T) {
+	t.Parallel()
+
+	t.Run("annotation source 走 queryAnnotationOnlineMetrics 路径", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// 构造依赖的 mock
+		metricRepoMock := repomocks.NewMockIMetricRepo(ctrl)
+		offlineRepoMock := repomocks.NewMockIOfflineMetricRepo(ctrl)
+		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+		builderMock := traceServicemocks.NewMockTraceFilterProcessorBuilder(ctrl)
+		traceCfgMock := configmocks.NewMockITraceConfig(ctrl)
+		annoRepoMock := repomocks.NewMockIMetricRepo(ctrl)
+
+		// 配置 TraceConfig：不走离线查询
+		traceCfgMock.EXPECT().GetMetricQueryConfig(gomock.Any()).Return(&config.MetricQueryConfig{
+			SupportOffline: false,
+		}).AnyTimes()
+
+		// annotation 路径走 queryAnnotationOnlineMetrics，需要 tenant
+		tenantMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant-1"}, nil)
+
+		// annotation 在线查询返回一条 Summary 数据
+		annoRepoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, param *repo.GetMetricsParam) (*repo.GetMetricsResult, error) {
+				assert.Equal(t, []string{"tenant-1"}, param.Tenants)
+				return &repo.GetMetricsResult{Data: []map[string]any{{"annotation_metric": "456"}}}, nil
+			},
+		).Times(1)
+
+		// 期望插入一条事件
+		offlineRepoMock.EXPECT().InsertMetrics(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, events []*entity.MetricEvent) error {
+				assert.Len(t, events, 1)
+				assert.Equal(t, "456", events[0].MetricValue)
+				assert.Equal(t, "loop", events[0].PlatformType)
+				assert.Equal(t, "annotation_metric", events[0].MetricName)
+				assert.Equal(t, "2025-11-17", events[0].StartDate)
+				return nil
+			},
+		).Times(1)
+
+		// 定义一个 annotation source 的 Summary 指标
+		metricDef := &testMetricDefinition{
+			name:       "annotation_metric",
+			metricType: entity.MetricTypeSummary,
+			source:     entity.MetricSourceAnnotation,
+		}
+		pMetrics := &entity.PlatformMetrics{
+			MetricGroups: map[string]*entity.MetricGroup{
+				"group_a": {MetricDefinitions: []entity.IMetricDefinition{metricDef}},
+			},
+			DrillDownObjects: map[string]*loop_span.FilterField{},
+			PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
+				loop_span.PlatformType("loop"): {MetricGroups: []string{"group_a"}},
+			},
+		}
+
+		// 创建服务，注入 annotationMetricRepo
+		svc, err := NewMetricsService(metricRepoMock, offlineRepoMock, tenantMock, builderMock, traceCfgMock, pMetrics, WithAnnotationMetricRepo(annoRepoMock))
+		assert.NoError(t, err)
+
+		// 调用 TraverseMetrics
+		resp, err := svc.TraverseMetrics(context.Background(), &TraverseMetricsReq{
+			PlatformTypes: []loop_span.PlatformType{},
+			MetricsNames:  []string{"annotation_metric"},
+			WorkspaceID:   1,
+			StartDate:     "2025-11-17",
+		})
+
+		assert.NoError(t, err)
+		if assert.NotNil(t, resp) {
+			assert.Equal(t, 1, resp.Statistic.Total)
+			assert.Equal(t, 1, resp.Statistic.Success)
+			assert.Equal(t, 0, resp.Statistic.Failure)
+		}
+	})
+}

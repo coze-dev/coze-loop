@@ -69,7 +69,14 @@ type AnnotationCorrection struct {
 	UpdatedBy string                   `json:"updated_by"`
 }
 
+// AnnotationSpanInfo 存储 annotation 关联 span 的下钻信息
+type AnnotationSpanInfo struct {
+	PSM       string `json:"psm,omitempty"`
+	AgentName string `json:"agent_name,omitempty"`
+}
+
 type AutoEvaluateMetadata struct {
+	AnnotationSpanInfo
 	TaskID             int64 `json:"task_id"`
 	EvaluatorRecordID  int64 `json:"evaluator_record_id"`
 	EvaluatorVersionID int64 `json:"evaluator_version_id"`
@@ -84,7 +91,14 @@ type AnnotationManualFeedback struct {
 	TagValue   string // 显示的标签值
 }
 
-type ManualDatasetMetadata struct{}
+// FeedbackMetadata 用于 openapi_feedback/coze_feedback/manual_feedback 类型的 metadata
+type FeedbackMetadata struct {
+	AnnotationSpanInfo
+}
+
+type ManualDatasetMetadata struct {
+	AnnotationSpanInfo
+}
 
 type AnnotationList []*Annotation
 

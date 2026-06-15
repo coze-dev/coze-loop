@@ -309,6 +309,7 @@ type ListAnnotationsResp struct {
 type ListWorkspaceAnnotationsReq struct {
 	WorkspaceID    int64
 	StartTime      int64
+	EndTime        int64
 	AnnotationType string
 	SpanListType   loop_span.SpanListType
 	PlatformType   loop_span.PlatformType
@@ -1808,12 +1809,16 @@ func (r *TraceServiceImpl) ListWorkspaceAnnotations(ctx context.Context, req *Li
 		defaultLimit           = 300
 		defaultDescByUpdatedAt = true
 	)
+	endAt := req.EndTime
+	if endAt <= 0 {
+		endAt = time.Now().UnixMilli()
+	}
 	annotations, err := r.traceRepo.ListWorkspaceAnnotations(ctx, &repo.ListWorkspaceAnnotationsParam{
 		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:         tenants,
 		AnnotationType:  req.AnnotationType,
 		StartAt:         req.StartTime,
-		EndAt:           time.Now().UnixMilli(),
+		EndAt:           endAt,
 		DescByUpdatedAt: defaultDescByUpdatedAt,
 		Limit:           defaultLimit,
 	})
@@ -2115,6 +2120,12 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	span := spans[0]
 	event.Annotation.StartTime = time.UnixMicro(span.StartTime)
 	event.Annotation.SpanID = span.SpanID
+	// 填充 metadata 中的 span 下钻信息
+	if event.Annotation.Metadata == nil {
+		event.Annotation.Metadata = &loop_span.FeedbackMetadata{
+			AnnotationSpanInfo: span.GetAnnotationSpanInfo(),
+		}
+	}
 	if err := event.Annotation.GenID(); err != nil {
 		logs.CtxWarn(ctx, "failed to generate annotation id for %+v, %v", event.Annotation, err)
 		return nil

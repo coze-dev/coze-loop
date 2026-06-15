@@ -585,6 +585,19 @@ func (s *Span) GetTTL(ctx context.Context) TTL {
 	return ttl
 }
 
+// GetAnnotationSpanInfo 从 Span 中提取用于 annotation metadata 的下钻信息
+func (s *Span) GetAnnotationSpanInfo() AnnotationSpanInfo {
+	info := AnnotationSpanInfo{
+		PSM: s.PSM,
+	}
+	if s.TagsString != nil {
+		if name, ok := s.TagsString[SpanFieldAgentName]; ok && name != "" {
+			info.AgentName = name
+		}
+	}
+	return info
+}
+
 func (s *Span) BuildFeedback(t AnnotationType, key string, value AnnotationValue, reasoning, userID string, deleted bool) (*Annotation, error) {
 	a := &Annotation{
 		SpanID:         s.SpanID,
@@ -595,6 +608,7 @@ func (s *Span) BuildFeedback(t AnnotationType, key string, value AnnotationValue
 		Key:            key,
 		Value:          value,
 		Reasoning:      reasoning,
+		Metadata:       &FeedbackMetadata{AnnotationSpanInfo: s.GetAnnotationSpanInfo()},
 		Status:         AnnotationStatusNormal,
 		CreatedAt:      time.Now(),
 		CreatedBy:      userID,
@@ -628,7 +642,7 @@ func (s *Span) AddManualDatasetAnnotation(datasetID int64, userID string, annota
 	a.AnnotationType = annotationType
 	a.Key = strconv.FormatInt(datasetID, 10)
 	a.Value = NewBoolValue(true)
-	a.Metadata = &ManualDatasetMetadata{}
+	a.Metadata = &ManualDatasetMetadata{AnnotationSpanInfo: s.GetAnnotationSpanInfo()}
 	a.Status = AnnotationStatusNormal
 	a.CreatedAt = time.Now()
 	a.CreatedBy = userID
@@ -653,6 +667,7 @@ func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersion
 	a.Value = NewDoubleValue(score)
 	a.Reasoning = reasoning
 	a.Metadata = &AutoEvaluateMetadata{
+		AnnotationSpanInfo: s.GetAnnotationSpanInfo(),
 		TaskID:             taskID,
 		EvaluatorRecordID:  evaluatorRecordID,
 		EvaluatorVersionID: evaluatorVersionID,

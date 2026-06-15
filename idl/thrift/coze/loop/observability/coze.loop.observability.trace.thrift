@@ -280,6 +280,8 @@ struct ListWorkspaceAnnotationsRequest {
     2: optional common.PlatformType platform_type (api.body="platform_type")
     3: optional annotation.AnnotationType annotation_type(api.body="annotation_type")
     4: optional common.SpanListType span_list_type (api.body="span_list_type")
+    5: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time")
+    6: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time")
 
     255: optional base.Base Base
 }

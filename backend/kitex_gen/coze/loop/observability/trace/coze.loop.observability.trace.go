@@ -13385,6 +13385,8 @@ type ListWorkspaceAnnotationsRequest struct {
 	PlatformType   *common.PlatformType       `thrift:"platform_type,2,optional" frugal:"2,optional,string" form:"platform_type" json:"platform_type,omitempty"`
 	AnnotationType *annotation.AnnotationType `thrift:"annotation_type,3,optional" frugal:"3,optional,string" form:"annotation_type" json:"annotation_type,omitempty"`
 	SpanListType   *common.SpanListType       `thrift:"span_list_type,4,optional" frugal:"4,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
+	StartTime      *int64                     `thrift:"start_time,5,optional" frugal:"5,optional,i64" json:"start_time" form:"start_time" `
+	EndTime        *int64                     `thrift:"end_time,6,optional" frugal:"6,optional,i64" json:"end_time" form:"end_time" `
 	Base           *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -13438,6 +13440,30 @@ func (p *ListWorkspaceAnnotationsRequest) GetSpanListType() (v common.SpanListTy
 	return *p.SpanListType
 }
 
+var ListWorkspaceAnnotationsRequest_StartTime_DEFAULT int64
+
+func (p *ListWorkspaceAnnotationsRequest) GetStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStartTime() {
+		return ListWorkspaceAnnotationsRequest_StartTime_DEFAULT
+	}
+	return *p.StartTime
+}
+
+var ListWorkspaceAnnotationsRequest_EndTime_DEFAULT int64
+
+func (p *ListWorkspaceAnnotationsRequest) GetEndTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEndTime() {
+		return ListWorkspaceAnnotationsRequest_EndTime_DEFAULT
+	}
+	return *p.EndTime
+}
+
 var ListWorkspaceAnnotationsRequest_Base_DEFAULT *base.Base
 
 func (p *ListWorkspaceAnnotationsRequest) GetBase() (v *base.Base) {
@@ -13461,6 +13487,12 @@ func (p *ListWorkspaceAnnotationsRequest) SetAnnotationType(val *annotation.Anno
 func (p *ListWorkspaceAnnotationsRequest) SetSpanListType(val *common.SpanListType) {
 	p.SpanListType = val
 }
+func (p *ListWorkspaceAnnotationsRequest) SetStartTime(val *int64) {
+	p.StartTime = val
+}
+func (p *ListWorkspaceAnnotationsRequest) SetEndTime(val *int64) {
+	p.EndTime = val
+}
 func (p *ListWorkspaceAnnotationsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -13470,6 +13502,8 @@ var fieldIDToName_ListWorkspaceAnnotationsRequest = map[int16]string{
 	2:   "platform_type",
 	3:   "annotation_type",
 	4:   "span_list_type",
+	5:   "start_time",
+	6:   "end_time",
 	255: "Base",
 }
 
@@ -13483,6 +13517,14 @@ func (p *ListWorkspaceAnnotationsRequest) IsSetAnnotationType() bool {
 
 func (p *ListWorkspaceAnnotationsRequest) IsSetSpanListType() bool {
 	return p.SpanListType != nil
+}
+
+func (p *ListWorkspaceAnnotationsRequest) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *ListWorkspaceAnnotationsRequest) IsSetEndTime() bool {
+	return p.EndTime != nil
 }
 
 func (p *ListWorkspaceAnnotationsRequest) IsSetBase() bool {
@@ -13536,6 +13578,22 @@ func (p *ListWorkspaceAnnotationsRequest) Read(iprot thrift.TProtocol) (err erro
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13628,6 +13686,28 @@ func (p *ListWorkspaceAnnotationsRequest) ReadField4(iprot thrift.TProtocol) err
 	p.SpanListType = _field
 	return nil
 }
+func (p *ListWorkspaceAnnotationsRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StartTime = _field
+	return nil
+}
+func (p *ListWorkspaceAnnotationsRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EndTime = _field
+	return nil
+}
 func (p *ListWorkspaceAnnotationsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -13657,6 +13737,14 @@ func (p *ListWorkspaceAnnotationsRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -13751,6 +13839,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ListWorkspaceAnnotationsRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ListWorkspaceAnnotationsRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEndTime() {
+		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *ListWorkspaceAnnotationsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -13794,6 +13918,12 @@ func (p *ListWorkspaceAnnotationsRequest) DeepEqual(ano *ListWorkspaceAnnotation
 		return false
 	}
 	if !p.Field4DeepEqual(ano.SpanListType) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.StartTime) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.EndTime) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -13841,6 +13971,30 @@ func (p *ListWorkspaceAnnotationsRequest) Field4DeepEqual(src *common.SpanListTy
 		return false
 	}
 	if strings.Compare(*p.SpanListType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListWorkspaceAnnotationsRequest) Field5DeepEqual(src *int64) bool {
+
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *ListWorkspaceAnnotationsRequest) Field6DeepEqual(src *int64) bool {
+
+	if p.EndTime == src {
+		return true
+	} else if p.EndTime == nil || src == nil {
+		return false
+	}
+	if *p.EndTime != *src {
 		return false
 	}
 	return true

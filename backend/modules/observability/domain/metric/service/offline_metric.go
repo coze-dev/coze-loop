@@ -171,7 +171,9 @@ func (m *MetricsService) traverseMetric(ctx context.Context, param *metricTraver
 			defer cancel()
 			reqCtx = iCtx
 		}
-		resp, err := m.queryOnlineMetrics(reqCtx, qReq)
+		var resp *QueryMetricsResp
+		var err error
+		resp, err = m.queryOnlineMetrics(reqCtx, qReq)
 		if err != nil {
 			logs.CtxWarn(reqCtx, "queryOnlineMetrics failed for metric %s, err: %v", metricName, err)
 			return err

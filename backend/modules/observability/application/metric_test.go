@@ -681,3 +681,304 @@ func TestMetricApplication_validateGetDrillDownValuesReq(t *testing.T) {
 		})
 	}
 }
+
+func ptr64(v int64) *int64    { return &v }
+func ptrStr(v string) *string { return &v }
+
+func TestMetricApplication_TraverseMetrics(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		ctx context.Context
+		req *metricapi.TraverseMetricsRequest
+	}
+
+	tests := []struct {
+		name      string
+		setupMock func(ctrl *gomock.Controller) *metricservicemock.MockIMetricsService
+		args      args
+		wantErr   bool
+		postCheck func(t *testing.T, got *metricapi.TraverseMetricsResponse)
+	}{
+		{
+			name: "success",
+			setupMock: func(ctrl *gomock.Controller) *metricservicemock.MockIMetricsService {
+				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
+				metricMock.EXPECT().TraverseMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.TraverseMetricsReq) (*service.TraverseMetricsResp, error) {
+					assert.Equal(t, []string{"metric_a", "metric_b"}, req.MetricsNames)
+					assert.Equal(t, []loop_span.PlatformType{"bot", "agent"}, req.PlatformTypes)
+					assert.Equal(t, int64(100), req.WorkspaceID)
+					assert.Equal(t, 60*time.Second, req.QueryTimeout)
+					return &service.TraverseMetricsResp{
+						Statistic: service.TraverseMetricStatistic{
+							Total:   10,
+							Success: 8,
+							Failure: 2,
+						},
+					}, nil
+				}).Times(1)
+				return metricMock
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &metricapi.TraverseMetricsRequest{
+					PlatformTypes: []commondto.PlatformType{"bot", "agent"},
+					WorkspaceID:   ptr64(100),
+					MetricNames:   []string{"metric_a", "metric_b"},
+					StartDate:     ptrStr("2025-01-01"),
+				},
+			},
+			wantErr: false,
+			postCheck: func(t *testing.T, got *metricapi.TraverseMetricsResponse) {
+				assert.NotNil(t, got)
+				assert.NotNil(t, got.Statistic)
+				assert.Equal(t, int32(10), got.Statistic.GetTotal())
+				assert.Equal(t, int32(8), got.Statistic.GetSuccess())
+				assert.Equal(t, int32(2), got.Statistic.GetFailure())
+			},
+		},
+		{
+			name: "default start_date when nil",
+			setupMock: func(ctrl *gomock.Controller) *metricservicemock.MockIMetricsService {
+				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
+				metricMock.EXPECT().TraverseMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.TraverseMetricsReq) (*service.TraverseMetricsResp, error) {
+					// StartDate should be set to yesterday
+					assert.NotEmpty(t, req.StartDate)
+					parsed, err := time.Parse(time.DateOnly, req.StartDate)
+					assert.NoError(t, err)
+					// Should be approximately yesterday
+					expected := time.Now().Add(-24 * time.Hour).Format(time.DateOnly)
+					assert.Equal(t, expected, parsed.Format(time.DateOnly))
+					return &service.TraverseMetricsResp{
+						Statistic: service.TraverseMetricStatistic{
+							Total: 1, Success: 1, Failure: 0,
+						},
+					}, nil
+				}).Times(1)
+				return metricMock
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &metricapi.TraverseMetricsRequest{
+					MetricNames: []string{"metric_a"},
+					StartDate:   nil, // nil to trigger default
+				},
+			},
+			wantErr: false,
+			postCheck: func(t *testing.T, got *metricapi.TraverseMetricsResponse) {
+				assert.NotNil(t, got)
+				assert.Equal(t, int32(1), got.Statistic.GetTotal())
+			},
+		},
+		{
+			name: "with workspace_id",
+			setupMock: func(ctrl *gomock.Controller) *metricservicemock.MockIMetricsService {
+				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
+				metricMock.EXPECT().TraverseMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.TraverseMetricsReq) (*service.TraverseMetricsResp, error) {
+					assert.Equal(t, int64(42), req.WorkspaceID)
+					return &service.TraverseMetricsResp{
+						Statistic: service.TraverseMetricStatistic{
+							Total: 5, Success: 5, Failure: 0,
+						},
+					}, nil
+				}).Times(1)
+				return metricMock
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &metricapi.TraverseMetricsRequest{
+					MetricNames: []string{"metric_a"},
+					WorkspaceID: ptr64(42),
+					StartDate:   ptrStr("2025-06-01"),
+				},
+			},
+			wantErr: false,
+			postCheck: func(t *testing.T, got *metricapi.TraverseMetricsResponse) {
+				assert.NotNil(t, got)
+				assert.Equal(t, int32(5), got.Statistic.GetTotal())
+			},
+		},
+		{
+			name: "service error",
+			setupMock: func(ctrl *gomock.Controller) *metricservicemock.MockIMetricsService {
+				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
+				metricMock.EXPECT().TraverseMetrics(gomock.Any(), gomock.Any()).Return(nil, assert.AnError).Times(1)
+				return metricMock
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &metricapi.TraverseMetricsRequest{
+					MetricNames: []string{"metric_a"},
+					StartDate:   ptrStr("2025-06-01"),
+				},
+			},
+			wantErr:   true,
+			postCheck: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			metricMock := tt.setupMock(ctrl)
+			app := &MetricApplication{
+				metricService: metricMock,
+			}
+			got, err := app.TraverseMetrics(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if tt.wantErr {
+				assert.Nil(t, got)
+			} else if tt.postCheck != nil {
+				tt.postCheck(t, got)
+			}
+		})
+	}
+}
+
+func TestMetricApplication_GetDrillDownValues_FeedbackTypes(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		metricSvc service.IMetricsService
+		auth      rpc.IAuthProvider
+		captured  *safeMetricsRequests
+	}
+
+	type args struct {
+		ctx context.Context
+		req *metricapi.GetDrillDownValuesRequest
+	}
+
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      bool
+		postCheck    func(t *testing.T, f fields, got *metricapi.GetDrillDownValuesResponse)
+	}{
+		{
+			name: "success annotation key",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
+				authMock := rpcmock.NewMockIAuthProvider(ctrl)
+				captured := &safeMetricsRequests{}
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceMetricRead, "7", false).Return(nil)
+				metricMock.EXPECT().QueryMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.QueryMetricsReq) (*service.QueryMetricsResp, error) {
+					captured.add(req)
+					return &service.QueryMetricsResp{
+						Metrics: map[string]*entity.Metric{
+							entity.MetricNameFeedbackCountByKeyPie: {
+								Pie: map[string]string{
+									`{"name":"keyA"}`: "3",
+									`{"name":"keyB"}`: "7",
+								},
+							},
+						},
+					}, nil
+				}).Times(1)
+				metricMock.EXPECT().GetMetricGroupBy(entity.MetricNameFeedbackCountByKeyPie).Return([]string{"name"}, nil).Times(1)
+				return fields{
+					metricSvc: metricMock,
+					auth:      authMock,
+					captured:  captured,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &metricapi.GetDrillDownValuesRequest{
+					WorkspaceID:        7,
+					StartTime:          0,
+					EndTime:            10 * 24 * time.Hour.Milliseconds(),
+					DrillDownValueType: metricpb.DrillDownValueTypeAnnotationKey,
+				},
+			},
+			wantErr: false,
+			postCheck: func(t *testing.T, f fields, got *metricapi.GetDrillDownValuesResponse) {
+				assert.NotNil(t, got)
+				if f.captured != nil {
+					captured := f.captured.snapshot()
+					if assert.Len(t, captured, 1) {
+						assert.Equal(t, []string{entity.MetricNameFeedbackCountByKeyPie}, captured[0].MetricsNames)
+					}
+				}
+				assert.Len(t, got.DrillDownValues, 2)
+				assert.Equal(t, "keyB", got.DrillDownValues[0].Value)
+				assert.Equal(t, "keyA", got.DrillDownValues[1].Value)
+			},
+		},
+		{
+			name: "success feedback source",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
+				authMock := rpcmock.NewMockIAuthProvider(ctrl)
+				captured := &safeMetricsRequests{}
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceMetricRead, "8", false).Return(nil)
+				metricMock.EXPECT().QueryMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.QueryMetricsReq) (*service.QueryMetricsResp, error) {
+					captured.add(req)
+					return &service.QueryMetricsResp{
+						Metrics: map[string]*entity.Metric{
+							entity.MetricNameFeedbackCountBySourcePie: {
+								Pie: map[string]string{
+									`{"name":"sourceA"}`: "5",
+									`{"name":"sourceB"}`: "15",
+								},
+							},
+						},
+					}, nil
+				}).Times(1)
+				metricMock.EXPECT().GetMetricGroupBy(entity.MetricNameFeedbackCountBySourcePie).Return([]string{"name"}, nil).Times(1)
+				return fields{
+					metricSvc: metricMock,
+					auth:      authMock,
+					captured:  captured,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &metricapi.GetDrillDownValuesRequest{
+					WorkspaceID:        8,
+					StartTime:          0,
+					EndTime:            10 * 24 * time.Hour.Milliseconds(),
+					DrillDownValueType: metricpb.DrillDownValueTypeFeedbackSource,
+				},
+			},
+			wantErr: false,
+			postCheck: func(t *testing.T, f fields, got *metricapi.GetDrillDownValuesResponse) {
+				assert.NotNil(t, got)
+				if f.captured != nil {
+					captured := f.captured.snapshot()
+					if assert.Len(t, captured, 1) {
+						assert.Equal(t, []string{entity.MetricNameFeedbackCountBySourcePie}, captured[0].MetricsNames)
+					}
+				}
+				assert.Len(t, got.DrillDownValues, 2)
+				assert.Equal(t, "sourceB", got.DrillDownValues[0].Value)
+				assert.Equal(t, "sourceA", got.DrillDownValues[1].Value)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fieldVals := tt.fieldsGetter(ctrl)
+			app := &MetricApplication{
+				metricService: fieldVals.metricSvc,
+				authSvc:       fieldVals.auth,
+			}
+			got, err := app.GetDrillDownValues(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if tt.wantErr {
+				assert.Nil(t, got)
+			} else if tt.postCheck != nil {
+				ttFields := fieldVals
+				ttPost := tt.postCheck
+				ttPost(t, ttFields, got)
+			}
+		})
+	}
+}

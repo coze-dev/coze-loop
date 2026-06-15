@@ -56,6 +56,21 @@ func (mr *MockIAnnotationDaoMockRecorder) Get(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIAnnotationDao)(nil).Get), arg0, arg1)
 }
 
+// GetMetrics mocks base method.
+func (m *MockIAnnotationDao) GetMetrics(arg0 context.Context, arg1 *dao.GetMetricsParam) ([]map[string]any, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetrics", arg0, arg1)
+	ret0, _ := ret[0].([]map[string]any)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMetrics indicates an expected call of GetMetrics.
+func (mr *MockIAnnotationDaoMockRecorder) GetMetrics(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetrics", reflect.TypeOf((*MockIAnnotationDao)(nil).GetMetrics), arg0, arg1)
+}
+
 // Insert mocks base method.
 func (m *MockIAnnotationDao) Insert(arg0 context.Context, arg1 *dao.InsertAnnotationParam) error {
 	m.ctrl.T.Helper()

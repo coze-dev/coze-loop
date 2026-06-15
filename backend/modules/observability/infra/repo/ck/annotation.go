@@ -106,6 +106,10 @@ func (a *AnnotationCkDaoImpl) List(ctx context.Context, params *dao.ListAnnotati
 	return convertor.AnnotationListCKModels2PO(annotations), nil
 }
 
+func (a *AnnotationCkDaoImpl) GetMetrics(_ context.Context, _ *dao.GetMetricsParam) ([]map[string]any, error) {
+	return nil, fmt.Errorf("annotation GetMetrics not implemented in open source version")
+}
+
 type annoSqlParam struct {
 	Tables          []string
 	WorkspaceID     string

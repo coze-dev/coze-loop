@@ -3225,6 +3225,7 @@ type SimpleAnnotationInfo struct {
 	Key            string          `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
 	AnnotationType *AnnotationType `thrift:"annotation_type,2,optional" frugal:"2,optional,string" form:"annotation_type" json:"annotation_type,omitempty" query:"annotation_type"`
 	OriginalKey    *string         `thrift:"original_key,3,optional" frugal:"3,optional,string" form:"original_key" json:"original_key,omitempty" query:"original_key"`
+	ValueType      *ValueType      `thrift:"value_type,4,optional" frugal:"4,optional,string" form:"value_type" json:"value_type,omitempty" query:"value_type"`
 }
 
 func NewSimpleAnnotationInfo() *SimpleAnnotationInfo {
@@ -3264,6 +3265,18 @@ func (p *SimpleAnnotationInfo) GetOriginalKey() (v string) {
 	}
 	return *p.OriginalKey
 }
+
+var SimpleAnnotationInfo_ValueType_DEFAULT ValueType
+
+func (p *SimpleAnnotationInfo) GetValueType() (v ValueType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetValueType() {
+		return SimpleAnnotationInfo_ValueType_DEFAULT
+	}
+	return *p.ValueType
+}
 func (p *SimpleAnnotationInfo) SetKey(val string) {
 	p.Key = val
 }
@@ -3273,11 +3286,15 @@ func (p *SimpleAnnotationInfo) SetAnnotationType(val *AnnotationType) {
 func (p *SimpleAnnotationInfo) SetOriginalKey(val *string) {
 	p.OriginalKey = val
 }
+func (p *SimpleAnnotationInfo) SetValueType(val *ValueType) {
+	p.ValueType = val
+}
 
 var fieldIDToName_SimpleAnnotationInfo = map[int16]string{
 	1: "key",
 	2: "annotation_type",
 	3: "original_key",
+	4: "value_type",
 }
 
 func (p *SimpleAnnotationInfo) IsSetAnnotationType() bool {
@@ -3286,6 +3303,10 @@ func (p *SimpleAnnotationInfo) IsSetAnnotationType() bool {
 
 func (p *SimpleAnnotationInfo) IsSetOriginalKey() bool {
 	return p.OriginalKey != nil
+}
+
+func (p *SimpleAnnotationInfo) IsSetValueType() bool {
+	return p.ValueType != nil
 }
 
 func (p *SimpleAnnotationInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -3327,6 +3348,14 @@ func (p *SimpleAnnotationInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3400,6 +3429,17 @@ func (p *SimpleAnnotationInfo) ReadField3(iprot thrift.TProtocol) error {
 	p.OriginalKey = _field
 	return nil
 }
+func (p *SimpleAnnotationInfo) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *ValueType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ValueType = _field
+	return nil
+}
 
 func (p *SimpleAnnotationInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3417,6 +3457,10 @@ func (p *SimpleAnnotationInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -3489,6 +3533,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *SimpleAnnotationInfo) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetValueType() {
+		if err = oprot.WriteFieldBegin("value_type", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ValueType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *SimpleAnnotationInfo) String() string {
 	if p == nil {
@@ -3511,6 +3573,9 @@ func (p *SimpleAnnotationInfo) DeepEqual(ano *SimpleAnnotationInfo) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.OriginalKey) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ValueType) {
 		return false
 	}
 	return true
@@ -3543,6 +3608,18 @@ func (p *SimpleAnnotationInfo) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.OriginalKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SimpleAnnotationInfo) Field4DeepEqual(src *ValueType) bool {
+
+	if p.ValueType == src {
+		return true
+	} else if p.ValueType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ValueType, *src) != 0 {
 		return false
 	}
 	return true
