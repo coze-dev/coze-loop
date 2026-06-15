@@ -33,6 +33,7 @@ type EvalTargetVersion struct {
 	WebAgent        *WebAgent
 	A2AAgent        *A2AAgent
 	CustomAgent     *CustomAgent
+	SandboxAgent    *SandboxAgent
 
 	InputSchema      []*ArgsSchema
 	OutputSchema     []*ArgsSchema
@@ -74,6 +75,9 @@ const (
 	EvalTargetTypeVolcengineAgentOnline         EvalTargetType = 14
 	EvalTargetTypeCustomRPCServerOnline         EvalTargetType = 15
 	EvalTargetTypeVolcengineAgentAgentkitOnline EvalTargetType = 16
+
+	// 沙箱 Agent（CLI 模式在沙箱容器中拉起 Agent）
+	EvalTargetTypeSandboxAgent EvalTargetType = 17
 )
 
 // NeedExecuteTarget 是否需要执行评测对象。仅记录型（*Online）不需要执行，仅用于记录对象类型和基本信息
@@ -174,6 +178,8 @@ func (p EvalTargetType) String() string {
 		return "CustomRPCServerOnline"
 	case EvalTargetTypeVolcengineAgentAgentkitOnline:
 		return "VolcengineAgentAgentkitOnline"
+	case EvalTargetTypeSandboxAgent:
+		return "SandboxAgent"
 	}
 	return "<UNSET>"
 }
@@ -181,7 +187,7 @@ func (p EvalTargetType) String() string {
 func (p EvalTargetType) SupptTrajectory() bool {
 	switch p {
 	case EvalTargetTypeVolcengineAgent, EvalTargetTypeCustomRPCServer, EvalTargetTypeLoopPrompt,
-		EvalTargetTypeA2AAgent, EvalTargetTypeCustomAgent:
+		EvalTargetTypeA2AAgent, EvalTargetTypeCustomAgent, EvalTargetTypeSandboxAgent:
 		return true
 	default:
 		return false

@@ -50,6 +50,8 @@ struct EvalTargetContent {
     107: optional A2AAgent a2a_agent
     // EvalTargetType=10 时，传参此字段。 评测对象为 CustomAgent 时, 需要设置 CustomAgent 信息
     108: optional CustomAgent custom_agent
+    // EvalTargetType=17 时，传参此字段。 评测对象为 SandboxAgent 时, 需要设置 SandboxAgent 信息
+    109: optional SandboxAgent sandbox_agent
 }
 
 struct WebAgent {
@@ -91,6 +93,8 @@ enum EvalTargetType {
     VolcengineAgentOnline = 14 // 火山智能体在线(评测过程中不执行对象，仅用于展示对象)
     CustomRPCServerOnline = 15 // 自定义RPC服务在线(评测过程中不执行对象，仅用于展示对象)
     VolcengineAgentAgentkitOnline = 16 // 火山智能体Agentkit在线(评测过程中不执行对象，仅用于展示对象)
+
+    SandboxAgent = 17 // 沙箱Agent（CLI 模式在沙箱容器中拉起 Agent）
 }
 
 // Agent协议类型
@@ -256,6 +260,43 @@ struct CustomAgent {
     23: optional i64 timeout_ms
     24: optional i64 first_token_timeout_ms
     25: optional AgentConnection AgentConnection
+}
+
+// 沙箱 Agent 子类型，内置路由标识，路由到对应的执行流水线
+typedef string SandboxAgentType (ts.enum="true")
+const SandboxAgentType SandboxAgentType_SingleRunCLI = "single_run_cli" // 单次运行 CLI 模式
+
+// 环境变量键值对
+struct SandboxEnvVar {
+    1: optional string key
+    2: optional string value
+}
+
+// 沙箱 Agent：通过 CLI 在沙箱容器中拉起 Agent
+// 执行链路：题目安装 -> Agent 安装 -> Agent 运行（三阶段）
+struct SandboxAgent {
+    // Agent 名称，用于展示与标识
+    1: optional string name
+
+    // Agent 子类型，内置字段，固定为 SandboxAgentType_SingleRunCLI
+    // 用于路由到对应的执行流水线
+    2: optional SandboxAgentType type
+
+    // 模型名称，声明该 Agent 要评测的模型，仅支持单个
+    // 注：与评测平台原设计存在 gap——Fornax 评测目前只支持发起单个评测实验，
+    //     无法支持单次给多个模型发起多实验
+    3: optional string model_name
+
+    // Agent 安装命令，安装 Agent CLI 本体
+    5: optional string agent_setup_cmd
+
+    // Agent 运行命令，注入到 Execution 阶段的 user 槽位
+    // 对应模板变量 CLI_EXECUTION_SCRIPT
+    6: optional string agent_run_cmd
+
+    // Agent 环境变量，容器初始化时静态注入，对所有阶段可见
+    // 可用于承载非必填环境变量（如 Agent 版本、模式、命名空间等）
+    7: optional list<SandboxEnvVar> envs
 }
 
 struct AgentConnection {
