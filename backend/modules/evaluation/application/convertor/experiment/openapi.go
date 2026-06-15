@@ -1415,6 +1415,74 @@ func OpenAPIEvaluatorParamDTO2Domain(dto *openapi.SubmitExperimentEvaluatorParam
 	}
 }
 
+// OpenAPIEvalSetConfigsDTO2Domain 把 OpenAPI 的 item-centric 多评测集配置 (版本字符串风格)
+// 转换为内部 domain expt.EvalSetConfig (version_id 风格)。
+// 版本字符串 → version_id 的解析依赖 service 调用, 由 handler 预先完成并通过两个 map 传入:
+//   - evalSetVersionIDMap: eval_set_id -> eval_set_version_id
+//   - evaluatorVersionIDMap: "{evaluator_id}_{version}" -> evaluator_version_id
+//
+// required 字段 (EvalSetID/EvalSetVersionID, EvaluatorID/EvaluatorVersionID) 必须落上;
+// 其余结构性校验 (set 去重 / (version,alias) 唯一 / target_confs len<=1 / alias 字符集)
+// 由内部 SubmitExperiment 的 ValidateEvalSetConfigs 统一兜底, 此处不重复。
+func OpenAPIEvalSetConfigsDTO2Domain(
+	confs []*openapiExperiment.OpenAPIEvalSetConfig,
+	evalSetVersionIDMap map[int64]int64,
+	evaluatorVersionIDMap map[string]int64,
+) []*domainExpt.EvalSetConfig {
+	if len(confs) == 0 {
+		return nil
+	}
+	dos := make([]*domainExpt.EvalSetConfig, 0, len(confs))
+	for _, conf := range confs {
+		if conf == nil {
+			continue
+		}
+		do := &domainExpt.EvalSetConfig{
+			EvalSetID:        conf.GetEvalSetID(),
+			EvalSetVersionID: evalSetVersionIDMap[conf.GetEvalSetID()],
+		}
+		// evaluator_confs
+		for _, ec := range conf.GetEvaluatorConfs() {
+			if ec == nil {
+				continue
+			}
+			evConf := &domainExpt.ExptEvaluatorConf{
+				EvaluatorID:        ec.GetEvaluatorID(),
+				EvaluatorVersionID: evaluatorVersionIDMap[fmt.Sprintf("%d_%s", ec.GetEvaluatorID(), ec.GetVersion())],
+				RuntimeParam:       OpenAPIRuntimeParamDTO2Domain(ec.RuntimeParam),
+				ScoreWeight:        ec.ScoreWeight,
+			}
+			if ec.Alias != nil {
+				evConf.Alias = ec.Alias
+			}
+			for _, fm := range ec.GetFromEvalSet() {
+				if fm != nil {
+					evConf.FromEvalSet = append(evConf.FromEvalSet, &domainExpt.FieldMapping{FieldName: fm.FieldName, FromFieldName: fm.FromFieldName})
+				}
+			}
+			for _, fm := range ec.GetFromTarget() {
+				if fm != nil {
+					evConf.FromTarget = append(evConf.FromTarget, &domainExpt.FieldMapping{FieldName: fm.FieldName, FromFieldName: fm.FromFieldName})
+				}
+			}
+			do.EvaluatorConfs = append(do.EvaluatorConfs, evConf)
+		}
+		// target_confs (本期 len<=1; target_id/version 继承顶层, 此处只带字段映射与 runtime_param)
+		for _, tc := range conf.GetTargetConfs() {
+			if tc == nil {
+				continue
+			}
+			tConf := &domainExpt.ExptTargetConf{
+				FieldMapping: OpenAPITargetFieldMappingDTO2Domain(tc.FieldMapping),
+				RuntimeParam: OpenAPIRuntimeParamDTO2Domain(tc.RuntimeParam),
+			}
+			do.TargetConfs = append(do.TargetConfs, tConf)
+		}
+		dos = append(dos, do)
+	}
+	return dos
+}
+
 func OpenAPIEvaluatorRunConfigDTO2Domain(dto *openapiEvaluator.EvaluatorRunConfig) *domainEvaluator.EvaluatorRunConfig {
 	if dto == nil {
 		return nil

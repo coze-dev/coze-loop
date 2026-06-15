@@ -2043,6 +2043,138 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 	}
 }
 
+// 新路径: eval_set_configs (item-centric 多评测集) 的 OpenAPI 提交。
+// 验证版本字符串被逐集解析成 version_id, 并正确构建内部 SubmitExperimentRequest.EvalSetConfigs。
+func TestEvalOpenAPIApplication_SubmitExperimentOApi_EvalSetConfigs(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(31001)
+	evalSetID := int64(31002)
+	evalSetVersionID := int64(31003)
+	evaluatorID := int64(31004)
+	evaluatorVersionID := int64(31005)
+
+	buildReq := func() *openapi.SubmitExperimentOApiRequest {
+		return &openapi.SubmitExperimentOApiRequest{
+			WorkspaceID: gptr.Of(workspaceID),
+			Name:        gptr.Of("multi-set-openapi-expt"),
+			EvalSetConfigs: []*openapiExperiment.OpenAPIEvalSetConfig{
+				{
+					EvalSetID:      gptr.Of(evalSetID),
+					EvalSetVersion: gptr.Of("v2"),
+					EvaluatorConfs: []*openapiExperiment.OpenAPIExptEvaluatorConf{
+						{
+							EvaluatorID: gptr.Of(evaluatorID),
+							Version:     gptr.Of("1.0"),
+							Alias:       gptr.Of("judge_A"),
+							FromEvalSet: []*openapiExperiment.FieldMapping{
+								{FieldName: gptr.Of("input"), FromFieldName: gptr.Of("input")},
+							},
+							FromTarget: []*openapiExperiment.FieldMapping{
+								{FieldName: gptr.Of("output"), FromFieldName: gptr.Of("actual_output")},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("success new path", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		auth := rpcmocks.NewMockIAuthProvider(ctrl)
+		manager := servicemocks.NewMockIExptManager(ctrl)
+		versionSvc := servicemocks.NewMockEvaluationSetVersionService(ctrl)
+		evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+		metric := &fakeOpenAPIMetric{}
+		fakeApp := &fakeExperimentApp{}
+
+		app := &EvalOpenAPIApplication{
+			auth:                        auth,
+			manager:                     manager,
+			evaluationSetVersionService: versionSvc,
+			evaluatorService:            evaluatorSvc,
+			experimentApp:               fakeApp,
+			metric:                      metric,
+		}
+
+		req := buildReq()
+		auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+		manager.EXPECT().CheckName(gomock.Any(), req.GetName(), req.GetWorkspaceID(), gomock.AssignableToTypeOf(&entity.Session{})).Return(true, nil)
+		versionSvc.EXPECT().ListEvaluationSetVersions(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetVersionsParam{})).Return([]*entity.EvaluationSetVersion{{ID: evalSetVersionID}}, nil, nil, nil)
+		evaluator := &entity.Evaluator{
+			EvaluatorType: entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+				ID:          evaluatorVersionID,
+				EvaluatorID: evaluatorID,
+				Version:     "1.0",
+			},
+		}
+		evaluatorSvc.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluatorVersionRequest{})).Return([]*entity.Evaluator{evaluator}, int64(1), nil)
+		fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(int64(9999))}}
+
+		resp, err := app.SubmitExperimentOApi(context.Background(), req)
+		assert.NoError(t, err)
+		if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) {
+			assert.Equal(t, int64(9999), resp.Data.Experiment.GetID())
+		}
+		// 断言下游内部 req 走新路径: EvalSetConfigs 非空且解析正确
+		if assert.NotNil(t, fakeApp.lastReq) {
+			require.Len(t, fakeApp.lastReq.EvalSetConfigs, 1)
+			sc := fakeApp.lastReq.EvalSetConfigs[0]
+			assert.Equal(t, evalSetID, sc.EvalSetID)
+			assert.Equal(t, evalSetVersionID, sc.EvalSetVersionID) // 版本字符串 -> version_id
+			require.Len(t, sc.EvaluatorConfs, 1)
+			ec := sc.EvaluatorConfs[0]
+			assert.Equal(t, evaluatorID, ec.EvaluatorID)
+			assert.Equal(t, evaluatorVersionID, ec.EvaluatorVersionID) // 版本字符串 -> version_id
+			assert.Equal(t, "judge_A", ec.GetAlias())
+			require.Len(t, ec.FromEvalSet, 1)
+			assert.Equal(t, "input", ec.FromEvalSet[0].GetFieldName())
+			require.Len(t, ec.FromTarget, 1)
+			assert.Equal(t, "output", ec.FromTarget[0].GetFieldName())
+		}
+	})
+
+	t.Run("eval set version not found new path", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		auth := rpcmocks.NewMockIAuthProvider(ctrl)
+		manager := servicemocks.NewMockIExptManager(ctrl)
+		versionSvc := servicemocks.NewMockEvaluationSetVersionService(ctrl)
+		evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+		metric := &fakeOpenAPIMetric{}
+		fakeApp := &fakeExperimentApp{}
+
+		app := &EvalOpenAPIApplication{
+			auth:                        auth,
+			manager:                     manager,
+			evaluationSetVersionService: versionSvc,
+			evaluatorService:            evaluatorSvc,
+			experimentApp:               fakeApp,
+			metric:                      metric,
+		}
+
+		req := buildReq()
+		auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		manager.EXPECT().CheckName(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+		versionSvc.EXPECT().ListEvaluationSetVersions(gomock.Any(), gomock.Any()).Return(nil, nil, nil, nil)
+		evaluatorSvc.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.Any()).Times(0)
+
+		resp, err := app.SubmitExperimentOApi(context.Background(), req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		assert.Equal(t, int32(errno.ResourceNotFoundCode), statusErr.Code())
+	})
+}
+
 func TestEvalOpenAPIApplication_GetExperimentsOApi(t *testing.T) {
 	t.Parallel()
 

@@ -30,6 +30,30 @@ func (p *TargetFieldMapping) IsValid() error {
 func (p *EvaluatorFieldMapping) IsValid() error {
 	return nil
 }
+func (p *OpenAPIExptEvaluatorConf) IsValid() error {
+	if p.RuntimeParam != nil {
+		if err := p.RuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field RuntimeParam not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *OpenAPIExptTargetConf) IsValid() error {
+	if p.FieldMapping != nil {
+		if err := p.FieldMapping.IsValid(); err != nil {
+			return fmt.Errorf("field FieldMapping not valid, %w", err)
+		}
+	}
+	if p.RuntimeParam != nil {
+		if err := p.RuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field RuntimeParam not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *OpenAPIEvalSetConfig) IsValid() error {
+	return nil
+}
 func (p *TokenUsage) IsValid() error {
 	return nil
 }

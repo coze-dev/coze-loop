@@ -80,6 +80,36 @@ struct EvaluatorFieldMapping {
     4: optional list<FieldMapping> from_target
 }
 
+// ===== item-centric 多评测集配置 (OpenAPI 版本字符串风格) =====
+// 与内部 expt.EvalSetConfig 对应; OpenAPI 用 id + 版本字符串, handler 解析成内部 version_id.
+// 非空 = 走新建模路径 (多评测集 + 每集 evaluator/target 绑定); 缺省则走老的单评测集形态.
+
+// per-set 的一个 evaluator binding (版本字符串风格)
+struct OpenAPIExptEvaluatorConf {
+    1: optional i64 evaluator_id (api.js_conv = "true", go.tag = 'json:"evaluator_id"')
+    2: optional string version                       // 评估器版本字符串, handler 解析成 evaluator_version_id
+    3: optional string alias                         // 多实例区分(judge_A/judge_B); 缺省 '' 默认实例
+    10: optional list<FieldMapping> from_eval_set    // 评测集字段 → evaluator 输入
+    11: optional list<FieldMapping> from_target      // target 输出 → evaluator 输入
+    20: optional common.RuntimeParam runtime_param   // alias 多实例核心动机: 同 version 不同参数
+    30: optional double score_weight                 // enable_weighted_score 开启时参与加权
+}
+
+// per-set target 运行配置 (版本字符串风格); 本期 len<=1
+// target_id/version 继承 request 顶层 eval_target_param, 不在 per-set 重复指定
+struct OpenAPIExptTargetConf {
+    10: optional TargetFieldMapping field_mapping    // 本评测集字段 → target 输入
+    20: optional common.RuntimeParam runtime_param
+}
+
+// 一个评测集 + 该集的完整配置包 (版本字符串风格)
+struct OpenAPIEvalSetConfig {
+    1: optional i64 eval_set_id (api.js_conv = "true", go.tag = 'json:"eval_set_id"')
+    2: optional string eval_set_version              // 版本字符串, handler 解析成 eval_set_version_id (锁定版本)
+    10: optional list<OpenAPIExptEvaluatorConf> evaluator_confs // (evaluator_version_id, alias) 在 set 内唯一
+    20: optional list<OpenAPIExptTargetConf> target_confs      // 本期 len<=1; 不传=继承顶层 target
+}
+
 // Token使用量
 struct TokenUsage {
     1: optional string input_tokens

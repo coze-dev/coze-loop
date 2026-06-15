@@ -989,8 +989,13 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
 	}
 
-	if req.EvalSetParam == nil || !req.EvalSetParam.IsSetVersion() || req.EvalSetParam.GetVersion() == "" {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_param.version is required"))
+	// 新路径开关: eval_set_configs 非空 = item-centric 多评测集建模, 走新路径; 否则老的单评测集形态。
+	isNewPath := len(req.GetEvalSetConfigs()) > 0
+
+	if !isNewPath {
+		if req.EvalSetParam == nil || !req.EvalSetParam.IsSetVersion() || req.EvalSetParam.GetVersion() == "" {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_param.version is required"))
+		}
 	}
 
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
@@ -1010,56 +1015,68 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	if !pass {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
 	}
-	versions, _, _, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
-		SpaceID:         req.GetWorkspaceID(),
-		EvaluationSetID: req.GetEvalSetParam().GetEvalSetID(),
-		PageSize:        gptr.Of(int32(1)),
-		VersionLike:     req.GetEvalSetParam().Version,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(versions) == 0 {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval set not found"))
-	}
-	evaluatorVersionIDs := make([]int64, 0)
-	evaluatorMap := make(map[string]int64)
-	for _, evaluator := range req.GetEvaluatorParams() {
-		version, _, err := e.evaluatorService.ListEvaluatorVersion(ctx, &entity.ListEvaluatorVersionRequest{
-			SpaceID:       req.GetWorkspaceID(),
-			EvaluatorID:   evaluator.GetEvaluatorID(),
-			QueryVersions: []string{evaluator.GetVersion()},
-			PageSize:      int32(1),
-			PageNum:       int32(1),
-		})
-		if err != nil {
-			return nil, err
-		}
-		if len(version) == 0 {
-			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
-		}
-		versionID := version[0].GetEvaluatorVersionID()
-		evaluatorVersionIDs = append(evaluatorVersionIDs, versionID)
-		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
-	}
 
 	createReq := &exptpb.SubmitExperimentRequest{
 		WorkspaceID:             req.GetWorkspaceID(),
-		EvalSetVersionID:        gptr.Of(versions[0].ID),
-		EvalSetID:               req.GetEvalSetParam().EvalSetID,
-		EvaluatorVersionIds:     evaluatorVersionIDs,
 		Name:                    req.Name,
 		Desc:                    req.Description,
 		TargetFieldMapping:      experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
-		EvaluatorFieldMapping:   experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
 		ItemConcurNum:           req.ItemConcurNum,
 		TargetRuntimeParam:      experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
 		CreateEvalTargetParam:   experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
-		EvaluatorIDVersionList:  experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
 		ItemRetryNum:            req.ItemRetryNum,
 		TriggerType:             gptr.Of(domain_expt.OpenAPI),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.GetExt(),
+	}
+
+	if isNewPath {
+		// 新路径: 逐集把版本字符串解析成 version_id, 再构建内部 eval_set_configs。
+		evalSetVersionIDMap, evaluatorVersionIDMap, err := e.resolveEvalSetConfigsVersionIDs(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		createReq.EvalSetConfigs = experiment_convertor.OpenAPIEvalSetConfigsDTO2Domain(req.GetEvalSetConfigs(), evalSetVersionIDMap, evaluatorVersionIDMap)
+	} else {
+		// 老路径: 单评测集, 解析顶层 eval_set_param / evaluator_params 的版本字符串。
+		versions, _, _, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+			SpaceID:         req.GetWorkspaceID(),
+			EvaluationSetID: req.GetEvalSetParam().GetEvalSetID(),
+			PageSize:        gptr.Of(int32(1)),
+			VersionLike:     req.GetEvalSetParam().Version,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(versions) == 0 {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval set not found"))
+		}
+		evaluatorVersionIDs := make([]int64, 0)
+		evaluatorMap := make(map[string]int64)
+		for _, evaluator := range req.GetEvaluatorParams() {
+			version, _, err := e.evaluatorService.ListEvaluatorVersion(ctx, &entity.ListEvaluatorVersionRequest{
+				SpaceID:       req.GetWorkspaceID(),
+				EvaluatorID:   evaluator.GetEvaluatorID(),
+				QueryVersions: []string{evaluator.GetVersion()},
+				PageSize:      int32(1),
+				PageNum:       int32(1),
+			})
+			if err != nil {
+				return nil, err
+			}
+			if len(version) == 0 {
+				return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
+			}
+			versionID := version[0].GetEvaluatorVersionID()
+			evaluatorVersionIDs = append(evaluatorVersionIDs, versionID)
+			evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
+		}
+
+		createReq.EvalSetVersionID = gptr.Of(versions[0].ID)
+		createReq.EvalSetID = req.GetEvalSetParam().EvalSetID
+		createReq.EvaluatorVersionIds = evaluatorVersionIDs
+		createReq.EvaluatorFieldMapping = experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap)
+		createReq.EvaluatorIDVersionList = experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams)
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
@@ -1075,6 +1092,70 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 			Experiment: experiment_convertor.DomainExperimentDTO2OpenAPI(cresp.GetExperiment()),
 		},
 	}, nil
+}
+
+// resolveEvalSetConfigsVersionIDs 把新路径 eval_set_configs 里的"版本字符串"逐集解析成内部 version_id。
+// 复用老路径同样的 service 解析方式 (ListEvaluationSetVersions / ListEvaluatorVersion)。
+// 返回两个 map 供 convertor 回填:
+//   - evalSetVersionIDMap: eval_set_id -> eval_set_version_id
+//   - evaluatorVersionIDMap: "{evaluator_id}_{version}" -> evaluator_version_id
+//
+// 解析失败 (评测集/评估器版本不存在) 返回 ResourceNotFoundCode。
+func (e *EvalOpenAPIApplication) resolveEvalSetConfigsVersionIDs(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (map[int64]int64, map[string]int64, error) {
+	evalSetVersionIDMap := make(map[int64]int64)
+	evaluatorVersionIDMap := make(map[string]int64)
+
+	for _, conf := range req.GetEvalSetConfigs() {
+		if conf == nil {
+			continue
+		}
+		// 评测集版本字符串 -> eval_set_version_id (同集已解析则跳过)
+		if _, ok := evalSetVersionIDMap[conf.GetEvalSetID()]; !ok {
+			if conf.GetEvalSetVersion() == "" {
+				return nil, nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs: eval_set_version is required"))
+			}
+			versions, _, _, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+				SpaceID:         req.GetWorkspaceID(),
+				EvaluationSetID: conf.GetEvalSetID(),
+				PageSize:        gptr.Of(int32(1)),
+				VersionLike:     gptr.Of(conf.GetEvalSetVersion()),
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			if len(versions) == 0 {
+				return nil, nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval set not found"))
+			}
+			evalSetVersionIDMap[conf.GetEvalSetID()] = versions[0].ID
+		}
+
+		// 评估器版本字符串 -> evaluator_version_id (按 evaluator_id+version 去重)
+		for _, ec := range conf.GetEvaluatorConfs() {
+			if ec == nil {
+				continue
+			}
+			key := fmt.Sprintf("%d_%s", ec.GetEvaluatorID(), ec.GetVersion())
+			if _, ok := evaluatorVersionIDMap[key]; ok {
+				continue
+			}
+			version, _, err := e.evaluatorService.ListEvaluatorVersion(ctx, &entity.ListEvaluatorVersionRequest{
+				SpaceID:       req.GetWorkspaceID(),
+				EvaluatorID:   ec.GetEvaluatorID(),
+				QueryVersions: []string{ec.GetVersion()},
+				PageSize:      int32(1),
+				PageNum:       int32(1),
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			if len(version) == 0 {
+				return nil, nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
+			}
+			evaluatorVersionIDMap[key] = version[0].GetEvaluatorVersionID()
+		}
+	}
+
+	return evalSetVersionIDMap, evaluatorVersionIDMap, nil
 }
 
 func (e *EvalOpenAPIApplication) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest) (r *openapi.GetExperimentsOApiResponse, err error) {
