@@ -26,6 +26,8 @@ const (
 
 	EvalTargetTypeCustomAgent = "custom_agent"
 
+	EvalTargetTypeSandboxAgent = "sandbox_agent"
+
 	CozeBotInfoTypeDraftBot = "draft_bot"
 
 	CozeBotInfoTypeProductBot = "product_bot"
@@ -55,6 +57,8 @@ const (
 	HTTPMethodGet = "get"
 
 	HTTPMethodPost = "post"
+
+	SandboxAgentTypeSingleRunCLI = "single_run_cli"
 )
 
 type EvalTargetType = string
@@ -70,6 +74,9 @@ type Region = string
 type AccessProtocol = string
 
 type HTTPMethod = string
+
+// 沙箱 Agent 子类型，内置路由标识，路由到对应的执行流水线
+type SandboxAgentType = string
 
 type CustomEvalTarget struct {
 	// 唯一键，平台不消费，仅做透传
@@ -1644,6 +1651,8 @@ type EvalTargetContent struct {
 	A2aAgent *A2Agent `thrift:"a2a_agent,107,optional" frugal:"107,optional,A2Agent" form:"a2a_agent" json:"a2a_agent,omitempty" query:"a2a_agent"`
 	// EvalTargetType=10 时，传参此字段。 评测对象为 CustomAgent 时, 需要设置 CustomAgent 信息
 	CustomAgent *CustomAgent `thrift:"custom_agent,108,optional" frugal:"108,optional,CustomAgent" form:"custom_agent" json:"custom_agent,omitempty" query:"custom_agent"`
+	// EvalTargetType=17 时，传参此字段。 评测对象为 SandboxAgent 时, 需要设置 SandboxAgent 信息
+	SandboxAgent *SandboxAgent `thrift:"sandbox_agent,109,optional" frugal:"109,optional,SandboxAgent" form:"sandbox_agent" json:"sandbox_agent,omitempty" query:"sandbox_agent"`
 }
 
 func NewEvalTargetContent() *EvalTargetContent {
@@ -1736,6 +1745,18 @@ func (p *EvalTargetContent) GetCustomAgent() (v *CustomAgent) {
 	}
 	return p.CustomAgent
 }
+
+var EvalTargetContent_SandboxAgent_DEFAULT *SandboxAgent
+
+func (p *EvalTargetContent) GetSandboxAgent() (v *SandboxAgent) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSandboxAgent() {
+		return EvalTargetContent_SandboxAgent_DEFAULT
+	}
+	return p.SandboxAgent
+}
 func (p *EvalTargetContent) SetInputSchemas(val []*common.ArgsSchema) {
 	p.InputSchemas = val
 }
@@ -1757,6 +1778,9 @@ func (p *EvalTargetContent) SetA2aAgent(val *A2Agent) {
 func (p *EvalTargetContent) SetCustomAgent(val *CustomAgent) {
 	p.CustomAgent = val
 }
+func (p *EvalTargetContent) SetSandboxAgent(val *SandboxAgent) {
+	p.SandboxAgent = val
+}
 
 var fieldIDToName_EvalTargetContent = map[int16]string{
 	1:   "input_schemas",
@@ -1766,6 +1790,7 @@ var fieldIDToName_EvalTargetContent = map[int16]string{
 	105: "custom_rpc_server",
 	107: "a2a_agent",
 	108: "custom_agent",
+	109: "sandbox_agent",
 }
 
 func (p *EvalTargetContent) IsSetInputSchemas() bool {
@@ -1794,6 +1819,10 @@ func (p *EvalTargetContent) IsSetA2aAgent() bool {
 
 func (p *EvalTargetContent) IsSetCustomAgent() bool {
 	return p.CustomAgent != nil
+}
+
+func (p *EvalTargetContent) IsSetSandboxAgent() bool {
+	return p.SandboxAgent != nil
 }
 
 func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
@@ -1865,6 +1894,14 @@ func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
 		case 108:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField108(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 109:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField109(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1988,6 +2025,14 @@ func (p *EvalTargetContent) ReadField108(iprot thrift.TProtocol) error {
 	p.CustomAgent = _field
 	return nil
 }
+func (p *EvalTargetContent) ReadField109(iprot thrift.TProtocol) error {
+	_field := NewSandboxAgent()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SandboxAgent = _field
+	return nil
+}
 
 func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2021,6 +2066,10 @@ func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField108(oprot); err != nil {
 			fieldId = 108
+			goto WriteFieldError
+		}
+		if err = p.writeField109(oprot); err != nil {
+			fieldId = 109
 			goto WriteFieldError
 		}
 	}
@@ -2183,6 +2232,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 108 end error: ", p), err)
 }
+func (p *EvalTargetContent) writeField109(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSandboxAgent() {
+		if err = oprot.WriteFieldBegin("sandbox_agent", thrift.STRUCT, 109); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SandboxAgent.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 109 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 109 end error: ", p), err)
+}
 
 func (p *EvalTargetContent) String() string {
 	if p == nil {
@@ -2217,6 +2284,9 @@ func (p *EvalTargetContent) DeepEqual(ano *EvalTargetContent) bool {
 		return false
 	}
 	if !p.Field108DeepEqual(ano.CustomAgent) {
+		return false
+	}
+	if !p.Field109DeepEqual(ano.SandboxAgent) {
 		return false
 	}
 	return true
@@ -2284,6 +2354,13 @@ func (p *EvalTargetContent) Field107DeepEqual(src *A2Agent) bool {
 func (p *EvalTargetContent) Field108DeepEqual(src *CustomAgent) bool {
 
 	if !p.CustomAgent.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetContent) Field109DeepEqual(src *SandboxAgent) bool {
+
+	if !p.SandboxAgent.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -7575,6 +7652,862 @@ func (p *CustomAgent) Field25DeepEqual(src *AgentConnection) bool {
 
 	if !p.AgentConnection.DeepEqual(src) {
 		return false
+	}
+	return true
+}
+
+// 环境变量键值对
+type SandboxEnvVar struct {
+	Key   *string `thrift:"key,1,optional" frugal:"1,optional,string" form:"key" json:"key,omitempty" query:"key"`
+	Value *string `thrift:"value,2,optional" frugal:"2,optional,string" form:"value" json:"value,omitempty" query:"value"`
+}
+
+func NewSandboxEnvVar() *SandboxEnvVar {
+	return &SandboxEnvVar{}
+}
+
+func (p *SandboxEnvVar) InitDefault() {
+}
+
+var SandboxEnvVar_Key_DEFAULT string
+
+func (p *SandboxEnvVar) GetKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetKey() {
+		return SandboxEnvVar_Key_DEFAULT
+	}
+	return *p.Key
+}
+
+var SandboxEnvVar_Value_DEFAULT string
+
+func (p *SandboxEnvVar) GetValue() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetValue() {
+		return SandboxEnvVar_Value_DEFAULT
+	}
+	return *p.Value
+}
+func (p *SandboxEnvVar) SetKey(val *string) {
+	p.Key = val
+}
+func (p *SandboxEnvVar) SetValue(val *string) {
+	p.Value = val
+}
+
+var fieldIDToName_SandboxEnvVar = map[int16]string{
+	1: "key",
+	2: "value",
+}
+
+func (p *SandboxEnvVar) IsSetKey() bool {
+	return p.Key != nil
+}
+
+func (p *SandboxEnvVar) IsSetValue() bool {
+	return p.Value != nil
+}
+
+func (p *SandboxEnvVar) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SandboxEnvVar[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SandboxEnvVar) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Key = _field
+	return nil
+}
+func (p *SandboxEnvVar) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Value = _field
+	return nil
+}
+
+func (p *SandboxEnvVar) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SandboxEnvVar"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SandboxEnvVar) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetKey() {
+		if err = oprot.WriteFieldBegin("key", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Key); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SandboxEnvVar) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetValue() {
+		if err = oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Value); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *SandboxEnvVar) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SandboxEnvVar(%+v)", *p)
+
+}
+
+func (p *SandboxEnvVar) DeepEqual(ano *SandboxEnvVar) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Key) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Value) {
+		return false
+	}
+	return true
+}
+
+func (p *SandboxEnvVar) Field1DeepEqual(src *string) bool {
+
+	if p.Key == src {
+		return true
+	} else if p.Key == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Key, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxEnvVar) Field2DeepEqual(src *string) bool {
+
+	if p.Value == src {
+		return true
+	} else if p.Value == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Value, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+// 沙箱 Agent：通过 CLI 在沙箱容器中拉起 Agent
+// 执行链路：题目安装 -> Agent 安装 -> Agent 运行（三阶段）
+type SandboxAgent struct {
+	// Agent 名称，用于展示与标识
+	Name *string `thrift:"name,1,optional" frugal:"1,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// Agent 子类型，内置字段，固定为 SandboxAgentType_SingleRunCLI
+	// 用于路由到对应的执行流水线
+	Type *SandboxAgentType `thrift:"type,2,optional" frugal:"2,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	// 模型名称，声明该 Agent 要评测的模型，仅支持单个
+	ModelName *string `thrift:"model_name,3,optional" frugal:"3,optional,string" form:"model_name" json:"model_name,omitempty" query:"model_name"`
+	// Agent 安装命令，安装 Agent CLI 本体
+	AgentSetupCmd *string `thrift:"agent_setup_cmd,5,optional" frugal:"5,optional,string" form:"agent_setup_cmd" json:"agent_setup_cmd,omitempty" query:"agent_setup_cmd"`
+	// Agent 运行命令，注入到 Execution 阶段的 user 槽位
+	// 对应模板变量 CLI_EXECUTION_SCRIPT
+	AgentRunCmd *string `thrift:"agent_run_cmd,6,optional" frugal:"6,optional,string" form:"agent_run_cmd" json:"agent_run_cmd,omitempty" query:"agent_run_cmd"`
+	// Agent 环境变量，容器初始化时静态注入，对所有阶段可见
+	Envs []*SandboxEnvVar `thrift:"envs,7,optional" frugal:"7,optional,list<SandboxEnvVar>" form:"envs" json:"envs,omitempty" query:"envs"`
+}
+
+func NewSandboxAgent() *SandboxAgent {
+	return &SandboxAgent{}
+}
+
+func (p *SandboxAgent) InitDefault() {
+}
+
+var SandboxAgent_Name_DEFAULT string
+
+func (p *SandboxAgent) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return SandboxAgent_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var SandboxAgent_Type_DEFAULT SandboxAgentType
+
+func (p *SandboxAgent) GetType() (v SandboxAgentType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetType() {
+		return SandboxAgent_Type_DEFAULT
+	}
+	return *p.Type
+}
+
+var SandboxAgent_ModelName_DEFAULT string
+
+func (p *SandboxAgent) GetModelName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelName() {
+		return SandboxAgent_ModelName_DEFAULT
+	}
+	return *p.ModelName
+}
+
+var SandboxAgent_AgentSetupCmd_DEFAULT string
+
+func (p *SandboxAgent) GetAgentSetupCmd() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentSetupCmd() {
+		return SandboxAgent_AgentSetupCmd_DEFAULT
+	}
+	return *p.AgentSetupCmd
+}
+
+var SandboxAgent_AgentRunCmd_DEFAULT string
+
+func (p *SandboxAgent) GetAgentRunCmd() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentRunCmd() {
+		return SandboxAgent_AgentRunCmd_DEFAULT
+	}
+	return *p.AgentRunCmd
+}
+
+var SandboxAgent_Envs_DEFAULT []*SandboxEnvVar
+
+func (p *SandboxAgent) GetEnvs() (v []*SandboxEnvVar) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnvs() {
+		return SandboxAgent_Envs_DEFAULT
+	}
+	return p.Envs
+}
+func (p *SandboxAgent) SetName(val *string) {
+	p.Name = val
+}
+func (p *SandboxAgent) SetType(val *SandboxAgentType) {
+	p.Type = val
+}
+func (p *SandboxAgent) SetModelName(val *string) {
+	p.ModelName = val
+}
+func (p *SandboxAgent) SetAgentSetupCmd(val *string) {
+	p.AgentSetupCmd = val
+}
+func (p *SandboxAgent) SetAgentRunCmd(val *string) {
+	p.AgentRunCmd = val
+}
+func (p *SandboxAgent) SetEnvs(val []*SandboxEnvVar) {
+	p.Envs = val
+}
+
+var fieldIDToName_SandboxAgent = map[int16]string{
+	1: "name",
+	2: "type",
+	3: "model_name",
+	5: "agent_setup_cmd",
+	6: "agent_run_cmd",
+	7: "envs",
+}
+
+func (p *SandboxAgent) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *SandboxAgent) IsSetType() bool {
+	return p.Type != nil
+}
+
+func (p *SandboxAgent) IsSetModelName() bool {
+	return p.ModelName != nil
+}
+
+func (p *SandboxAgent) IsSetAgentSetupCmd() bool {
+	return p.AgentSetupCmd != nil
+}
+
+func (p *SandboxAgent) IsSetAgentRunCmd() bool {
+	return p.AgentRunCmd != nil
+}
+
+func (p *SandboxAgent) IsSetEnvs() bool {
+	return p.Envs != nil
+}
+
+func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SandboxAgent[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SandboxAgent) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *SandboxAgent) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *SandboxAgentType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Type = _field
+	return nil
+}
+func (p *SandboxAgent) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelName = _field
+	return nil
+}
+func (p *SandboxAgent) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AgentSetupCmd = _field
+	return nil
+}
+func (p *SandboxAgent) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AgentRunCmd = _field
+	return nil
+}
+func (p *SandboxAgent) ReadField7(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*SandboxEnvVar, 0, size)
+	values := make([]SandboxEnvVar, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Envs = _field
+	return nil
+}
+
+func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SandboxAgent"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SandboxAgent) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SandboxAgent) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetType() {
+		if err = oprot.WriteFieldBegin("type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Type); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SandboxAgent) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelName() {
+		if err = oprot.WriteFieldBegin("model_name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *SandboxAgent) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentSetupCmd() {
+		if err = oprot.WriteFieldBegin("agent_setup_cmd", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AgentSetupCmd); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *SandboxAgent) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentRunCmd() {
+		if err = oprot.WriteFieldBegin("agent_run_cmd", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AgentRunCmd); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *SandboxAgent) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnvs() {
+		if err = oprot.WriteFieldBegin("envs", thrift.LIST, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Envs)); err != nil {
+			return err
+		}
+		for _, v := range p.Envs {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *SandboxAgent) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SandboxAgent(%+v)", *p)
+
+}
+
+func (p *SandboxAgent) DeepEqual(ano *SandboxAgent) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Type) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.ModelName) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.AgentSetupCmd) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.AgentRunCmd) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.Envs) {
+		return false
+	}
+	return true
+}
+
+func (p *SandboxAgent) Field1DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxAgent) Field2DeepEqual(src *SandboxAgentType) bool {
+
+	if p.Type == src {
+		return true
+	} else if p.Type == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Type, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxAgent) Field3DeepEqual(src *string) bool {
+
+	if p.ModelName == src {
+		return true
+	} else if p.ModelName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModelName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxAgent) Field5DeepEqual(src *string) bool {
+
+	if p.AgentSetupCmd == src {
+		return true
+	} else if p.AgentSetupCmd == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AgentSetupCmd, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxAgent) Field6DeepEqual(src *string) bool {
+
+	if p.AgentRunCmd == src {
+		return true
+	} else if p.AgentRunCmd == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AgentRunCmd, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxAgent) Field7DeepEqual(src []*SandboxEnvVar) bool {
+
+	if len(p.Envs) != len(src) {
+		return false
+	}
+	for i, v := range p.Envs {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

@@ -71,6 +71,11 @@ func (p *EvalTargetContent) IsValid() error {
 			return fmt.Errorf("field CustomAgent not valid, %w", err)
 		}
 	}
+	if p.SandboxAgent != nil {
+		if err := p.SandboxAgent.IsValid(); err != nil {
+			return fmt.Errorf("field SandboxAgent not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *EvalTargetRecord) IsValid() error {
@@ -143,6 +148,12 @@ func (p *CustomAgent) IsValid() error {
 			return fmt.Errorf("field AgentConnection not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *SandboxEnvVar) IsValid() error {
+	return nil
+}
+func (p *SandboxAgent) IsValid() error {
 	return nil
 }
 func (p *AgentConnection) IsValid() error {

@@ -978,6 +978,20 @@ func (p *EvalTargetContent) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 109:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField109(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1156,6 +1170,18 @@ func (p *EvalTargetContent) FastReadField108(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvalTargetContent) FastReadField109(buf []byte) (int, error) {
+	offset := 0
+	_field := NewSandboxAgent()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SandboxAgent = _field
+	return offset, nil
+}
+
 func (p *EvalTargetContent) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1174,6 +1200,7 @@ func (p *EvalTargetContent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 		offset += p.fastWriteField106(buf[offset:], w)
 		offset += p.fastWriteField107(buf[offset:], w)
 		offset += p.fastWriteField108(buf[offset:], w)
+		offset += p.fastWriteField109(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1193,6 +1220,7 @@ func (p *EvalTargetContent) BLength() int {
 		l += p.field106Length()
 		l += p.field107Length()
 		l += p.field108Length()
+		l += p.field109Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1311,6 +1339,15 @@ func (p *EvalTargetContent) fastWriteField108(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
+func (p *EvalTargetContent) fastWriteField109(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSandboxAgent() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 109)
+		offset += p.SandboxAgent.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *EvalTargetContent) field1Length() int {
 	l := 0
 	if p.IsSetInputSchemas() {
@@ -1414,6 +1451,15 @@ func (p *EvalTargetContent) field108Length() int {
 	if p.IsSetCustomAgent() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.CustomAgent.BLength()
+	}
+	return l
+}
+
+func (p *EvalTargetContent) field109Length() int {
+	l := 0
+	if p.IsSetSandboxAgent() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SandboxAgent.BLength()
 	}
 	return l
 }
@@ -1533,6 +1579,15 @@ func (p *EvalTargetContent) DeepCopy(s interface{}) error {
 		}
 	}
 	p.CustomAgent = _customAgent
+
+	var _sandboxAgent *SandboxAgent
+	if src.SandboxAgent != nil {
+		_sandboxAgent = &SandboxAgent{}
+		if err := _sandboxAgent.DeepCopy(src.SandboxAgent); err != nil {
+			return err
+		}
+	}
+	p.SandboxAgent = _sandboxAgent
 
 	return nil
 }
@@ -7176,6 +7231,608 @@ func (p *CustomAgent) DeepCopy(s interface{}) error {
 		}
 	}
 	p.AgentConnection = _agentConnection
+
+	return nil
+}
+
+func (p *SandboxEnvVar) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SandboxEnvVar[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *SandboxEnvVar) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Key = _field
+	return offset, nil
+}
+
+func (p *SandboxEnvVar) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Value = _field
+	return offset, nil
+}
+
+func (p *SandboxEnvVar) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *SandboxEnvVar) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *SandboxEnvVar) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *SandboxEnvVar) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Key)
+	}
+	return offset
+}
+
+func (p *SandboxEnvVar) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetValue() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Value)
+	}
+	return offset
+}
+
+func (p *SandboxEnvVar) field1Length() int {
+	l := 0
+	if p.IsSetKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Key)
+	}
+	return l
+}
+
+func (p *SandboxEnvVar) field2Length() int {
+	l := 0
+	if p.IsSetValue() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Value)
+	}
+	return l
+}
+
+func (p *SandboxEnvVar) DeepCopy(s interface{}) error {
+	src, ok := s.(*SandboxEnvVar)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Key != nil {
+		var tmp string
+		if *src.Key != "" {
+			tmp = kutils.StringDeepCopy(*src.Key)
+		}
+		p.Key = &tmp
+	}
+
+	if src.Value != nil {
+		var tmp string
+		if *src.Value != "" {
+			tmp = kutils.StringDeepCopy(*src.Value)
+		}
+		p.Value = &tmp
+	}
+
+	return nil
+}
+
+func (p *SandboxAgent) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SandboxAgent[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *SandboxAgent) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Name = _field
+	return offset, nil
+}
+
+func (p *SandboxAgent) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *SandboxAgentType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Type = _field
+	return offset, nil
+}
+
+func (p *SandboxAgent) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ModelName = _field
+	return offset, nil
+}
+
+func (p *SandboxAgent) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.AgentSetupCmd = _field
+	return offset, nil
+}
+
+func (p *SandboxAgent) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.AgentRunCmd = _field
+	return offset, nil
+}
+
+func (p *SandboxAgent) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*SandboxEnvVar, 0, size)
+	values := make([]SandboxEnvVar, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.Envs = _field
+	return offset, nil
+}
+
+func (p *SandboxAgent) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *SandboxAgent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *SandboxAgent) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *SandboxAgent) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Name)
+	}
+	return offset
+}
+
+func (p *SandboxAgent) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Type)
+	}
+	return offset
+}
+
+func (p *SandboxAgent) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetModelName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ModelName)
+	}
+	return offset
+}
+
+func (p *SandboxAgent) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAgentSetupCmd() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.AgentSetupCmd)
+	}
+	return offset
+}
+
+func (p *SandboxAgent) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAgentRunCmd() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.AgentRunCmd)
+	}
+	return offset
+}
+
+func (p *SandboxAgent) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnvs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 7)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.Envs {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *SandboxAgent) field1Length() int {
+	l := 0
+	if p.IsSetName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Name)
+	}
+	return l
+}
+
+func (p *SandboxAgent) field2Length() int {
+	l := 0
+	if p.IsSetType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Type)
+	}
+	return l
+}
+
+func (p *SandboxAgent) field3Length() int {
+	l := 0
+	if p.IsSetModelName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ModelName)
+	}
+	return l
+}
+
+func (p *SandboxAgent) field5Length() int {
+	l := 0
+	if p.IsSetAgentSetupCmd() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.AgentSetupCmd)
+	}
+	return l
+}
+
+func (p *SandboxAgent) field6Length() int {
+	l := 0
+	if p.IsSetAgentRunCmd() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.AgentRunCmd)
+	}
+	return l
+}
+
+func (p *SandboxAgent) field7Length() int {
+	l := 0
+	if p.IsSetEnvs() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.Envs {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *SandboxAgent) DeepCopy(s interface{}) error {
+	src, ok := s.(*SandboxAgent)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Name != nil {
+		var tmp string
+		if *src.Name != "" {
+			tmp = kutils.StringDeepCopy(*src.Name)
+		}
+		p.Name = &tmp
+	}
+
+	if src.Type != nil {
+		tmp := *src.Type
+		p.Type = &tmp
+	}
+
+	if src.ModelName != nil {
+		var tmp string
+		if *src.ModelName != "" {
+			tmp = kutils.StringDeepCopy(*src.ModelName)
+		}
+		p.ModelName = &tmp
+	}
+
+	if src.AgentSetupCmd != nil {
+		var tmp string
+		if *src.AgentSetupCmd != "" {
+			tmp = kutils.StringDeepCopy(*src.AgentSetupCmd)
+		}
+		p.AgentSetupCmd = &tmp
+	}
+
+	if src.AgentRunCmd != nil {
+		var tmp string
+		if *src.AgentRunCmd != "" {
+			tmp = kutils.StringDeepCopy(*src.AgentRunCmd)
+		}
+		p.AgentRunCmd = &tmp
+	}
+
+	if src.Envs != nil {
+		p.Envs = make([]*SandboxEnvVar, 0, len(src.Envs))
+		for _, elem := range src.Envs {
+			var _elem *SandboxEnvVar
+			if elem != nil {
+				_elem = &SandboxEnvVar{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.Envs = append(p.Envs, _elem)
+		}
+	}
 
 	return nil
 }
