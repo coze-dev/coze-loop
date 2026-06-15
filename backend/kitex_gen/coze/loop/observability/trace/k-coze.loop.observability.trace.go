@@ -16861,6 +16861,20 @@ func (p *MetadataItemInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -16918,6 +16932,20 @@ func (p *MetadataItemInfo) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *MetadataItemInfo) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.IsSystemTag = _field
+	return offset, nil
+}
+
 func (p *MetadataItemInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -16925,6 +16953,7 @@ func (p *MetadataItemInfo) FastWrite(buf []byte) int {
 func (p *MetadataItemInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 	}
@@ -16937,6 +16966,7 @@ func (p *MetadataItemInfo) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -16956,6 +16986,15 @@ func (p *MetadataItemInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) in
 	return offset
 }
 
+func (p *MetadataItemInfo) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetIsSystemTag() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 3)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsSystemTag)
+	}
+	return offset
+}
+
 func (p *MetadataItemInfo) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -16970,6 +17009,15 @@ func (p *MetadataItemInfo) field2Length() int {
 	return l
 }
 
+func (p *MetadataItemInfo) field3Length() int {
+	l := 0
+	if p.IsSetIsSystemTag() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *MetadataItemInfo) DeepCopy(s interface{}) error {
 	src, ok := s.(*MetadataItemInfo)
 	if !ok {
@@ -16981,6 +17029,11 @@ func (p *MetadataItemInfo) DeepCopy(s interface{}) error {
 	}
 
 	p.ValueType = src.ValueType
+
+	if src.IsSystemTag != nil {
+		tmp := *src.IsSystemTag
+		p.IsSystemTag = &tmp
+	}
 
 	return nil
 }

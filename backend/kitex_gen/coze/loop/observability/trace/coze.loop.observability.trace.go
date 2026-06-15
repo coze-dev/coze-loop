@@ -22632,8 +22632,9 @@ func (p *ListMetadataRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type MetadataItemInfo struct {
-	Key       string                 `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
-	ValueType span.MetadataValueType `thrift:"value_type,2,required" frugal:"2,required,string" form:"value_type,required" json:"value_type,required" query:"value_type,required"`
+	Key         string                 `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
+	ValueType   span.MetadataValueType `thrift:"value_type,2,required" frugal:"2,required,string" form:"value_type,required" json:"value_type,required" query:"value_type,required"`
+	IsSystemTag *bool                  `thrift:"is_system_tag,3,optional" frugal:"3,optional,bool" form:"is_system_tag" json:"is_system_tag,omitempty" query:"is_system_tag"`
 }
 
 func NewMetadataItemInfo() *MetadataItemInfo {
@@ -22656,16 +22657,36 @@ func (p *MetadataItemInfo) GetValueType() (v span.MetadataValueType) {
 	}
 	return
 }
+
+var MetadataItemInfo_IsSystemTag_DEFAULT bool
+
+func (p *MetadataItemInfo) GetIsSystemTag() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsSystemTag() {
+		return MetadataItemInfo_IsSystemTag_DEFAULT
+	}
+	return *p.IsSystemTag
+}
 func (p *MetadataItemInfo) SetKey(val string) {
 	p.Key = val
 }
 func (p *MetadataItemInfo) SetValueType(val span.MetadataValueType) {
 	p.ValueType = val
 }
+func (p *MetadataItemInfo) SetIsSystemTag(val *bool) {
+	p.IsSystemTag = val
+}
 
 var fieldIDToName_MetadataItemInfo = map[int16]string{
 	1: "key",
 	2: "value_type",
+	3: "is_system_tag",
+}
+
+func (p *MetadataItemInfo) IsSetIsSystemTag() bool {
+	return p.IsSystemTag != nil
 }
 
 func (p *MetadataItemInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -22703,6 +22724,14 @@ func (p *MetadataItemInfo) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetValueType = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -22768,6 +22797,17 @@ func (p *MetadataItemInfo) ReadField2(iprot thrift.TProtocol) error {
 	p.ValueType = _field
 	return nil
 }
+func (p *MetadataItemInfo) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsSystemTag = _field
+	return nil
+}
 
 func (p *MetadataItemInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -22781,6 +22821,10 @@ func (p *MetadataItemInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -22833,6 +22877,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *MetadataItemInfo) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsSystemTag() {
+		if err = oprot.WriteFieldBegin("is_system_tag", thrift.BOOL, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsSystemTag); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *MetadataItemInfo) String() string {
 	if p == nil {
@@ -22854,6 +22916,9 @@ func (p *MetadataItemInfo) DeepEqual(ano *MetadataItemInfo) bool {
 	if !p.Field2DeepEqual(ano.ValueType) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.IsSystemTag) {
+		return false
+	}
 	return true
 }
 
@@ -22867,6 +22932,18 @@ func (p *MetadataItemInfo) Field1DeepEqual(src string) bool {
 func (p *MetadataItemInfo) Field2DeepEqual(src span.MetadataValueType) bool {
 
 	if strings.Compare(p.ValueType, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *MetadataItemInfo) Field3DeepEqual(src *bool) bool {
+
+	if p.IsSystemTag == src {
+		return true
+	} else if p.IsSystemTag == nil || src == nil {
+		return false
+	}
+	if *p.IsSystemTag != *src {
 		return false
 	}
 	return true

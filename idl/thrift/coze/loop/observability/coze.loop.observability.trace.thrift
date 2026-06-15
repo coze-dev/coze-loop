@@ -456,6 +456,7 @@ struct ListMetadataRequest {
 struct MetadataItemInfo {
     1: required string key
     2: required span.MetadataValueType value_type
+    3: optional bool is_system_tag
 }
 
 struct ListMetadataResponse {
