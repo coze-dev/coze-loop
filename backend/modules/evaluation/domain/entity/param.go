@@ -242,6 +242,10 @@ type RunEvaluatorRequest struct {
 	Ext                map[string]string   `json:"ext,omitempty"`
 	DisableTracing     bool                `json:"disable_tracing,omitempty"`
 	EvaluatorRunConf   *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
+	// ★ alias 多实例: 同 evaluator_version 不同 alias 区分实例; 空串=默认实例
+	Alias string `json:"alias,omitempty"`
+	// ★ Builtin (含别名) / Inline 来源标记; 0/默认按 Builtin 处理
+	SourceType EvaluatorRecordSourceType `json:"source_type,omitempty"`
 }
 
 type AsyncRunEvaluatorRequest struct {
@@ -255,6 +259,9 @@ type AsyncRunEvaluatorRequest struct {
 	TurnID             int64               `json:"turn_id,omitempty"`
 	Ext                map[string]string   `json:"ext,omitempty"`
 	EvaluatorRunConf   *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
+	// ★ alias 多实例: 同步与 RunEvaluatorRequest
+	Alias      string                    `json:"alias,omitempty"`
+	SourceType EvaluatorRecordSourceType `json:"source_type,omitempty"`
 }
 
 type AsyncRunEvaluatorResponse struct {
