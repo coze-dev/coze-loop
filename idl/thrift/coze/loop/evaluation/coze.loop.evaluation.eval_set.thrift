@@ -5,7 +5,7 @@ include "domain/eval_set.thrift"
 include "domain/common.thrift"
 include "../data/domain/dataset.thrift"
 include "../data/domain/dataset_job.thrift"
-include "../data/domain/filter.thrift"
+include "../data/domain/data_filter.thrift"
 
 struct CreateEvaluationSetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
@@ -300,7 +300,7 @@ struct ListEvaluationSetItemsRequest {
     103: optional list<common.OrderBy> order_bys, // 排列顺序，默认按照 updated_at 顺序排列，目前仅支持按照一个字段排序，该字段必须是 field key 或 item 元信息中的 created_at 或 updated_at
 
     200: optional list<i64> item_id_not_in (api.js_conv="true", go.tag='json:"item_id_not_in"')
-    201: optional filter.Filter filter // item 过滤条件
+    201: optional data_filter.Filter filter // item 过滤条件
 
     255: optional base.Base Base
 }
