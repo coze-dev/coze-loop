@@ -161,6 +161,12 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	if err != nil {
 		return nil, err
 	}
+
+	// Validate notification rules: webhook URL must not be empty
+	if err := entity.ValidateNotificationRules(param.Notifications); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+
 	createExpt, err := e.manager.CreateExpt(ctx, param, session)
 	if err != nil {
 		return nil, err
@@ -193,6 +199,11 @@ func (e *experimentApplication) CreateExperimentTemplate(ctx context.Context, re
 	param, err := experiment.ConvertCreateExptTemplateReq(req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Validate notification rules: webhook URL must not be empty
+	if err := entity.ValidateNotificationRules(param.Notifications); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	// 业务逻辑已下沉到 service 层，在 Create 方法中会自动解析并回填 evaluator_version_id
@@ -282,6 +293,11 @@ func (e *experimentApplication) UpdateExperimentTemplate(ctx context.Context, re
 	param, err := experiment.ConvertUpdateExptTemplateReq(req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Validate notification rules: webhook URL must not be empty
+	if err := entity.ValidateNotificationRules(param.Notifications); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	// 更新模板

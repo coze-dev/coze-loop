@@ -3,6 +3,11 @@
 
 package entity
 
+import (
+	"strings"
+)
+
+
 // NotificationFilterOperatorType operator type for notification filter condition
 type NotificationFilterOperatorType int32
 
@@ -123,4 +128,38 @@ func (c *NotificationConfig) IsLarkEnabled() bool {
 		return false
 	}
 	return *c.Channels.Lark.Enabled
+}
+
+// ValidateNotificationRules validates the notification configuration.
+// Returns an error if webhook channel is configured but any URL is empty or whitespace-only.
+// Returns nil if config is nil (backward compatible — no notifications means no validation needed).
+func ValidateNotificationRules(config *NotificationConfig) error {
+	if config == nil {
+		return nil
+	}
+	if config.Channels == nil {
+		return nil
+	}
+	wh := config.Channels.Webhook
+	if wh == nil {
+		return nil
+	}
+	for _, u := range wh.URLs {
+		if strings.TrimSpace(u) == "" {
+			return ErrWebhookURLEmpty
+		}
+	}
+	return nil
+}
+
+// ErrWebhookURLEmpty is a sentinel error for empty webhook URL validation.
+var ErrWebhookURLEmpty = &WebhookValidationError{Msg: "webhook url cannot be empty"}
+
+// WebhookValidationError represents a webhook validation error.
+type WebhookValidationError struct {
+	Msg string
+}
+
+func (e *WebhookValidationError) Error() string {
+	return e.Msg
 }
