@@ -63,6 +63,8 @@ func (t *ObserveConsumer) ConsumeTraces(ctx context.Context, tds Traces) error {
 			)
 		}
 	}
+	// todo ttp
+	logs.CtxInfo(ctx, "ObserveConsumer[%s] ConsumeTraces, self_duration=%s, err=%v", t.name, selfDuration, err)
 
 	if err != nil {
 		logs.CtxWarn(ctx, "ObserveConsumer[%s] ConsumeTraces failed, self_duration=%s, err=%v", t.name, selfDuration, err)
