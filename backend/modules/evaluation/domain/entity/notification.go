@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-
 // NotificationFilterOperatorType operator type for notification filter condition
 type NotificationFilterOperatorType int32
 
