@@ -34,6 +34,9 @@ import (
 
 const defaultGroupKey = "all"
 
+// MetricGroupFeedback is the metric group name for feedback metrics
+const MetricGroupFeedback = "feedback"
+
 type QueryMetricsReq struct {
 	PlatformType    loop_span.PlatformType
 	WorkspaceID     int64
