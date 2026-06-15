@@ -976,7 +976,7 @@ func (e *experimentApplication) SubmitExptFromTemplate(ctx context.Context, req 
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
 	}
 
-	submitReq := expeinternal / cmd / evaluation / experiment.goriment.OpenAPITemplateToSubmitExperimentRequest(template, name, req.GetWorkspaceID())
+	submitReq := experiment.OpenAPITemplateToSubmitExperimentRequest(template, name, req.GetWorkspaceID())
 	if submitReq == nil {
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("failed to build submit request from template"))
 	}
