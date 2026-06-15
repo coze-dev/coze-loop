@@ -341,11 +341,12 @@ func TestHTTPClient_DoHTTPRequest_DifferentHTTPMethods(t *testing.T) {
 		t.Run(method, func(t *testing.T) {
 			t.Parallel()
 
+			m := method
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				assert.Equal(t, method, r.Method)
+				// Use m (local copy) to avoid race with parallel subtests
 				w.WriteHeader(http.StatusOK)
-				if method != "HEAD" {
-					_, _ = w.Write([]byte(`{"method": "` + method + `"}`))
+				if r.Method != "HEAD" {
+					_, _ = w.Write([]byte(`{"method": "` + r.Method + `"}`))
 				}
 			}))
 			defer server.Close()
@@ -355,20 +356,20 @@ func TestHTTPClient_DoHTTPRequest_DifferentHTTPMethods(t *testing.T) {
 
 			var response map[string]interface{}
 			requestParam := &RequestParam{
-				Method:     method,
+				Method:     m,
 				RequestURI: server.URL,
 			}
 
 			// HEAD请求通常不返回响应体
-			if method != "HEAD" {
+			if m != "HEAD" {
 				requestParam.Response = &response
 			}
 
 			err := client.DoHTTPRequest(ctx, requestParam)
 			assert.NoError(t, err)
 
-			if method != "HEAD" {
-				assert.Equal(t, method, response["method"])
+			if m != "HEAD" {
+				assert.Equal(t, m, response["method"])
 			}
 		})
 	}

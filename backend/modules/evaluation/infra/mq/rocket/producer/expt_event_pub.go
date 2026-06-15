@@ -157,11 +157,28 @@ func (e *exptEventPublisher) PublishExptTurnResultFilterEvent(ctx context.Contex
 	return e.batchSend(ctx, rocket.ExptTurnResultFilterRMQKey, []any{event}, duration)
 }
 
-func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
-	return e.batchSend(ctx, rocket.ExptLifecycleEventRMQKey, []any{event}, duration)
+func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration, idempotentKey string) error {
+	var keys []string
+	if idempotentKey != "" {
+		keys = []string{idempotentKey}
+	}
+	return e.batchSendWithTagAndKeys(ctx, rocket.ExptLifecycleEventRMQKey, "", []any{event}, duration, keys)
+}
+
+func (e *exptEventPublisher) PublishExptWebhookNotifyEvent(ctx context.Context, event *entity.WebhookRetryEvent, duration *time.Duration) error {
+	// 复用 lifecycle topic，通过 tag 区分 webhook 重试消息
+	return e.batchSendWithTag(ctx, rocket.ExptLifecycleEventRMQKey, rocket.TagWebhookRetry, []any{event}, duration)
 }
 
 func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []any, duration *time.Duration) error {
+	return e.batchSendWithTagAndKeys(ctx, pk, "", events, duration, nil)
+}
+
+func (e *exptEventPublisher) batchSendWithTag(ctx context.Context, pk string, tag string, events []any, duration *time.Duration) error {
+	return e.batchSendWithTagAndKeys(ctx, pk, tag, events, duration, nil)
+}
+
+func (e *exptEventPublisher) batchSendWithTagAndKeys(ctx context.Context, pk string, tag string, events []any, duration *time.Duration, keys []string) error {
 	p, ok := e.producers[pk]
 	if !ok {
 		return fmt.Errorf("rmq producer not found %v", pk)
@@ -180,6 +197,12 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 		} else {
 			msg = mq.NewDeferMessage(p.cfg.Topic, gptr.Indirect(duration), bytes)
 		}
+		if tag != "" {
+			msg.WithTag(tag)
+		}
+		if len(keys) > 0 {
+			msg.WithKeys(keys)
+		}
 		msgs = append(msgs, msg)
 	}
 	if env := os.Getenv(XttEnv); env != "" {
@@ -190,6 +213,6 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 		return errorx.Wrapf(err, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
 	}
 
-	logs.CtxInfo(ctx, "expt event batch send success, producer_key: %v, message_id: %v, offset: %v", pk, resp.MessageID, resp.Offset)
+	logs.CtxInfo(ctx, "expt event batch send success, producer_key: %v, tag: %v, message_id: %v, offset: %v", pk, tag, resp.MessageID, resp.Offset)
 	return nil
 }

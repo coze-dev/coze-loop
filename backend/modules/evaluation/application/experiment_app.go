@@ -516,6 +516,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.Ext,
+		NotificationConf:        req.NotificationConf,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -1074,12 +1075,22 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	if err := e.manager.Update(ctx, &entity.Experiment{
+	updateExpt := &entity.Experiment{
 		ID:          req.GetExptID(),
 		SpaceID:     req.WorkspaceID,
 		Name:        req.GetName(),
 		Description: req.GetDesc(),
-	}, session); err != nil {
+	}
+
+	if req.NotificationConf != nil {
+		notifConf, convErr := experiment.NotificationConfDTO2DO(req.NotificationConf)
+		if convErr != nil {
+			return nil, fmt.Errorf("invalid notification_conf: %w", convErr)
+		}
+		updateExpt.NotificationConf = notifConf
+	}
+
+	if err := e.manager.Update(ctx, updateExpt, session); err != nil {
 		return nil, err
 	}
 

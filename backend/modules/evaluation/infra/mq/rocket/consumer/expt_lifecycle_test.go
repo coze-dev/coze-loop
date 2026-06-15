@@ -119,7 +119,8 @@ func TestExptLifecycleConsumer_HandleMessage(t *testing.T) {
 			}
 
 			c := &ExptLifecycleConsumer{
-				handler: f.handler,
+				handler:        f.handler,
+				webhookHandler: nil,
 			}
 			err := c.HandleMessage(tt.args.ctx, tt.args.msg)
 			if !reflect.DeepEqual(err, tt.wantErr) {

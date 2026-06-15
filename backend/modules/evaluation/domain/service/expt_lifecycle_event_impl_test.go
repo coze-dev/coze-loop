@@ -50,7 +50,7 @@ func TestNewExptLifecycleEventHandler(t *testing.T) {
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
 
-	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider)
+	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider, nil)
 	assert.NotNil(t, handler)
 
 	impl, ok := handler.(*ExptLifecycleEventHandlerImpl)
@@ -235,7 +235,7 @@ func TestSendNotifyCard(t *testing.T) {
 	t.Run("event ToStatus does not match expt Status, returns nil", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		handler, _ := newTestLifecycleEventHandler(ctrl)
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
 
 		event := &entity.ExptLifecycleEvent{
 			ToStatus: entity.ExptStatus_Success,
@@ -243,6 +243,7 @@ func TestSendNotifyCard(t *testing.T) {
 		expt := &entity.Experiment{
 			Status: entity.ExptStatus_Failed,
 		}
+		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{""}).Return([]*entity.UserInfo{}, nil)
 
 		err := handler.sendNotifyCard(ctx, event, expt)
 		assert.NoError(t, err)
@@ -413,6 +414,152 @@ func TestSendNotifyCard(t *testing.T) {
 		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@example.com", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.sendNotifyCard(ctx, event, expt)
+		assert.NoError(t, err)
+	})
+}
+
+func TestHandleFeishuNotification_WithNotificationConf_BitsUT(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("feishu enabled and filter matches: notification sent", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		event := &entity.ExptLifecycleEvent{
+			ExptID: 1, SpaceID: 100,
+			ToStatus: entity.ExptStatus_Success,
+		}
+		expt := &entity.Experiment{
+			ID: 1, SpaceID: 100, CreatedBy: "user1",
+			NotificationConf: &entity.ExptNotificationConf{
+				Filter: &entity.NotificationFilter{
+					FilterConditions: []*entity.NotificationFilterCondition{
+						{
+							Field:    &entity.NotificationFilterField{FieldType: entity.NotificationFieldType_ExptStatus},
+							Operator: entity.NotificationOperatorType_In,
+							Value:    `["11"]`,
+						},
+					},
+				},
+				FeishuNotification: &entity.FeishuNotificationConf{Enable: true},
+			},
+		}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user1"}).Return([]*entity.UserInfo{
+			{Email: gptr.Of("user1@test.com")},
+		}, nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@test.com", gomock.Any(), gomock.Any()).Return(nil)
+
+		err := handler.HandleLifecycleEvent(ctx, event)
+		assert.NoError(t, err)
+	})
+}
+
+func TestHandleFeishuNotification_FilterNoMatch_BitsUT(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+	event := &entity.ExptLifecycleEvent{
+		ExptID: 1, SpaceID: 100,
+		ToStatus: entity.ExptStatus_Failed, // 12
+	}
+	expt := &entity.Experiment{
+		ID: 1, SpaceID: 100, CreatedBy: "user1",
+		NotificationConf: &entity.ExptNotificationConf{
+			Filter: &entity.NotificationFilter{
+				FilterConditions: []*entity.NotificationFilterCondition{
+					{
+						Field:    &entity.NotificationFilterField{FieldType: entity.NotificationFieldType_ExptStatus},
+						Operator: entity.NotificationOperatorType_In,
+						Value:    `["11"]`, // only Success
+					},
+				},
+			},
+			FeishuNotification: &entity.FeishuNotificationConf{Enable: true},
+		},
+	}
+	mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+	// No SendMessageCard expected — filter doesn't match
+
+	err := handler.HandleLifecycleEvent(ctx, event)
+	assert.NoError(t, err)
+}
+
+func TestHandleFeishuNotification_Disabled_BitsUT(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+	event := &entity.ExptLifecycleEvent{
+		ExptID: 1, SpaceID: 100,
+		ToStatus: entity.ExptStatus_Success,
+	}
+	expt := &entity.Experiment{
+		ID: 1, SpaceID: 100, CreatedBy: "user1",
+		NotificationConf: &entity.ExptNotificationConf{
+			FeishuNotification: &entity.FeishuNotificationConf{Enable: false},
+		},
+	}
+	mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+	// No SendMessageCard expected — feishu disabled
+
+	err := handler.HandleLifecycleEvent(ctx, event)
+	assert.NoError(t, err)
+}
+
+func TestHandleFeishuNotification_LegacyNoConf_BitsUT(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("terminal status without NotificationConf sends notification (backward compat)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		event := &entity.ExptLifecycleEvent{
+			ExptID: 1, SpaceID: 100,
+			ToStatus: entity.ExptStatus_Success,
+		}
+		expt := &entity.Experiment{
+			ID: 1, SpaceID: 100, CreatedBy: "user1",
+			NotificationConf: nil, // legacy: no config
+		}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user1"}).Return([]*entity.UserInfo{
+			{Email: gptr.Of("user1@test.com")},
+		}, nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@test.com", gomock.Any(), gomock.Any()).Return(nil)
+
+		err := handler.HandleLifecycleEvent(ctx, event)
+		assert.NoError(t, err)
+	})
+
+	t.Run("non-terminal status without NotificationConf skips notification", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		event := &entity.ExptLifecycleEvent{
+			ExptID: 1, SpaceID: 100,
+			ToStatus: entity.ExptStatus_Processing,
+		}
+		expt := &entity.Experiment{
+			ID: 1, SpaceID: 100, CreatedBy: "user1",
+			NotificationConf: nil,
+		}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+		// No SendMessageCard expected — Processing is non-terminal, legacy mode only sends for terminal
+
+		err := handler.HandleLifecycleEvent(ctx, event)
 		assert.NoError(t, err)
 	})
 }

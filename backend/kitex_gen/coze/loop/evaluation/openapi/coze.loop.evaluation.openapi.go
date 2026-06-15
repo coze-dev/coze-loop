@@ -18975,9 +18975,11 @@ type SubmitExperimentOApiRequest struct {
 	TargetRuntimeParam      *common.RuntimeParam `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
 	ItemRetryNum            *int32               `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
 	EnableExtractTrajectory *bool                `thrift:"enable_extract_trajectory,46,optional" frugal:"46,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
-	Ext                     map[string]string    `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Extra                   *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base                    *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 通知配置
+	NotificationConf *experiment.ExptNotificationConf `thrift:"notification_conf,50,optional" frugal:"50,optional,experiment.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
+	Ext              map[string]string                `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Extra            *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base             *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewSubmitExperimentOApiRequest() *SubmitExperimentOApiRequest {
@@ -19131,6 +19133,18 @@ func (p *SubmitExperimentOApiRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var SubmitExperimentOApiRequest_NotificationConf_DEFAULT *experiment.ExptNotificationConf
+
+func (p *SubmitExperimentOApiRequest) GetNotificationConf() (v *experiment.ExptNotificationConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotificationConf() {
+		return SubmitExperimentOApiRequest_NotificationConf_DEFAULT
+	}
+	return p.NotificationConf
+}
+
 var SubmitExperimentOApiRequest_Ext_DEFAULT map[string]string
 
 func (p *SubmitExperimentOApiRequest) GetExt() (v map[string]string) {
@@ -19202,6 +19216,9 @@ func (p *SubmitExperimentOApiRequest) SetItemRetryNum(val *int32) {
 func (p *SubmitExperimentOApiRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *SubmitExperimentOApiRequest) SetNotificationConf(val *experiment.ExptNotificationConf) {
+	p.NotificationConf = val
+}
 func (p *SubmitExperimentOApiRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -19225,6 +19242,7 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	22:  "target_runtime_param",
 	45:  "item_retry_num",
 	46:  "enable_extract_trajectory",
+	50:  "notification_conf",
 	100: "ext",
 	254: "extra",
 	255: "Base",
@@ -19276,6 +19294,10 @@ func (p *SubmitExperimentOApiRequest) IsSetItemRetryNum() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetNotificationConf() bool {
+	return p.NotificationConf != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetExt() bool {
@@ -19399,6 +19421,14 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 46:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField46(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 50:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField50(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -19601,6 +19631,14 @@ func (p *SubmitExperimentOApiRequest) ReadField46(iprot thrift.TProtocol) error 
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *SubmitExperimentOApiRequest) ReadField50(iprot thrift.TProtocol) error {
+	_field := experiment.NewExptNotificationConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.NotificationConf = _field
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -19699,6 +19737,10 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField46(oprot); err != nil {
 			fieldId = 46
+			goto WriteFieldError
+		}
+		if err = p.writeField50(oprot); err != nil {
+			fieldId = 50
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -19963,6 +20005,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 46 end error: ", p), err)
 }
+func (p *SubmitExperimentOApiRequest) writeField50(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotificationConf() {
+		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 50); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.NotificationConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
+}
 func (p *SubmitExperimentOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -20077,6 +20137,9 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 		return false
 	}
 	if !p.Field46DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field50DeepEqual(ano.NotificationConf) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -20213,6 +20276,13 @@ func (p *SubmitExperimentOApiRequest) Field46DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field50DeepEqual(src *experiment.ExptNotificationConf) bool {
+
+	if !p.NotificationConf.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -45843,8 +45913,10 @@ type CreateExptTemplateOApiRequest struct {
 	CreateEvalTargetParam      *SubmitExperimentEvalTargetParam `thrift:"create_eval_target_param,20,optional" frugal:"20,optional,SubmitExperimentEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
 	DefaultEvaluatorsConcurNum *int32                           `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
 	EnableExtractTrajectory    *bool                            `thrift:"enable_extract_trajectory,22,optional" frugal:"22,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
-	Extra                      *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base                       *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 通知配置
+	NotificationConf *experiment.ExptNotificationConf `thrift:"notification_conf,30,optional" frugal:"30,optional,experiment.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
+	Extra            *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base             *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateExptTemplateOApiRequest() *CreateExptTemplateOApiRequest {
@@ -45938,6 +46010,18 @@ func (p *CreateExptTemplateOApiRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var CreateExptTemplateOApiRequest_NotificationConf_DEFAULT *experiment.ExptNotificationConf
+
+func (p *CreateExptTemplateOApiRequest) GetNotificationConf() (v *experiment.ExptNotificationConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotificationConf() {
+		return CreateExptTemplateOApiRequest_NotificationConf_DEFAULT
+	}
+	return p.NotificationConf
+}
+
 var CreateExptTemplateOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *CreateExptTemplateOApiRequest) GetExtra() (v *extra.Extra) {
@@ -45982,6 +46066,9 @@ func (p *CreateExptTemplateOApiRequest) SetDefaultEvaluatorsConcurNum(val *int32
 func (p *CreateExptTemplateOApiRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *CreateExptTemplateOApiRequest) SetNotificationConf(val *experiment.ExptNotificationConf) {
+	p.NotificationConf = val
+}
 func (p *CreateExptTemplateOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -45997,6 +46084,7 @@ var fieldIDToName_CreateExptTemplateOApiRequest = map[int16]string{
 	20:  "create_eval_target_param",
 	21:  "default_evaluators_concur_num",
 	22:  "enable_extract_trajectory",
+	30:  "notification_conf",
 	254: "extra",
 	255: "Base",
 }
@@ -46027,6 +46115,10 @@ func (p *CreateExptTemplateOApiRequest) IsSetDefaultEvaluatorsConcurNum() bool {
 
 func (p *CreateExptTemplateOApiRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *CreateExptTemplateOApiRequest) IsSetNotificationConf() bool {
+	return p.NotificationConf != nil
 }
 
 func (p *CreateExptTemplateOApiRequest) IsSetExtra() bool {
@@ -46106,6 +46198,14 @@ func (p *CreateExptTemplateOApiRequest) Read(iprot thrift.TProtocol) (err error)
 		case 22:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 30:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField30(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -46221,6 +46321,14 @@ func (p *CreateExptTemplateOApiRequest) ReadField22(iprot thrift.TProtocol) erro
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *CreateExptTemplateOApiRequest) ReadField30(iprot thrift.TProtocol) error {
+	_field := experiment.NewExptNotificationConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.NotificationConf = _field
+	return nil
+}
 func (p *CreateExptTemplateOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -46270,6 +46378,10 @@ func (p *CreateExptTemplateOApiRequest) Write(oprot thrift.TProtocol) (err error
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField30(oprot); err != nil {
+			fieldId = 30
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -46424,6 +46536,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *CreateExptTemplateOApiRequest) writeField30(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotificationConf() {
+		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 30); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.NotificationConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
+}
 func (p *CreateExptTemplateOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -46496,6 +46626,9 @@ func (p *CreateExptTemplateOApiRequest) DeepEqual(ano *CreateExptTemplateOApiReq
 	if !p.Field22DeepEqual(ano.EnableExtractTrajectory) {
 		return false
 	}
+	if !p.Field30DeepEqual(ano.NotificationConf) {
+		return false
+	}
 	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
@@ -46565,6 +46698,13 @@ func (p *CreateExptTemplateOApiRequest) Field22DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
+func (p *CreateExptTemplateOApiRequest) Field30DeepEqual(src *experiment.ExptNotificationConf) bool {
+
+	if !p.NotificationConf.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -49208,8 +49348,10 @@ type UpdateExptTemplateOApiRequest struct {
 	CreateEvalTargetParam      *SubmitExperimentEvalTargetParam `thrift:"create_eval_target_param,20,optional" frugal:"20,optional,SubmitExperimentEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
 	DefaultEvaluatorsConcurNum *int32                           `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
 	EnableExtractTrajectory    *bool                            `thrift:"enable_extract_trajectory,22,optional" frugal:"22,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
-	Extra                      *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base                       *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 通知配置
+	NotificationConf *experiment.ExptNotificationConf `thrift:"notification_conf,30,optional" frugal:"30,optional,experiment.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
+	Extra            *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base             *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateExptTemplateOApiRequest() *UpdateExptTemplateOApiRequest {
@@ -49315,6 +49457,18 @@ func (p *UpdateExptTemplateOApiRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var UpdateExptTemplateOApiRequest_NotificationConf_DEFAULT *experiment.ExptNotificationConf
+
+func (p *UpdateExptTemplateOApiRequest) GetNotificationConf() (v *experiment.ExptNotificationConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotificationConf() {
+		return UpdateExptTemplateOApiRequest_NotificationConf_DEFAULT
+	}
+	return p.NotificationConf
+}
+
 var UpdateExptTemplateOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *UpdateExptTemplateOApiRequest) GetExtra() (v *extra.Extra) {
@@ -49362,6 +49516,9 @@ func (p *UpdateExptTemplateOApiRequest) SetDefaultEvaluatorsConcurNum(val *int32
 func (p *UpdateExptTemplateOApiRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *UpdateExptTemplateOApiRequest) SetNotificationConf(val *experiment.ExptNotificationConf) {
+	p.NotificationConf = val
+}
 func (p *UpdateExptTemplateOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -49378,6 +49535,7 @@ var fieldIDToName_UpdateExptTemplateOApiRequest = map[int16]string{
 	20:  "create_eval_target_param",
 	21:  "default_evaluators_concur_num",
 	22:  "enable_extract_trajectory",
+	30:  "notification_conf",
 	254: "extra",
 	255: "Base",
 }
@@ -49412,6 +49570,10 @@ func (p *UpdateExptTemplateOApiRequest) IsSetDefaultEvaluatorsConcurNum() bool {
 
 func (p *UpdateExptTemplateOApiRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *UpdateExptTemplateOApiRequest) IsSetNotificationConf() bool {
+	return p.NotificationConf != nil
 }
 
 func (p *UpdateExptTemplateOApiRequest) IsSetExtra() bool {
@@ -49499,6 +49661,14 @@ func (p *UpdateExptTemplateOApiRequest) Read(iprot thrift.TProtocol) (err error)
 		case 22:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 30:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField30(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -49625,6 +49795,14 @@ func (p *UpdateExptTemplateOApiRequest) ReadField22(iprot thrift.TProtocol) erro
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *UpdateExptTemplateOApiRequest) ReadField30(iprot thrift.TProtocol) error {
+	_field := experiment.NewExptNotificationConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.NotificationConf = _field
+	return nil
+}
 func (p *UpdateExptTemplateOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -49678,6 +49856,10 @@ func (p *UpdateExptTemplateOApiRequest) Write(oprot thrift.TProtocol) (err error
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField30(oprot); err != nil {
+			fieldId = 30
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -49850,6 +50032,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *UpdateExptTemplateOApiRequest) writeField30(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotificationConf() {
+		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 30); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.NotificationConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
+}
 func (p *UpdateExptTemplateOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -49923,6 +50123,9 @@ func (p *UpdateExptTemplateOApiRequest) DeepEqual(ano *UpdateExptTemplateOApiReq
 		return false
 	}
 	if !p.Field22DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field30DeepEqual(ano.NotificationConf) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -50006,6 +50209,13 @@ func (p *UpdateExptTemplateOApiRequest) Field22DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExptTemplateOApiRequest) Field30DeepEqual(src *experiment.ExptNotificationConf) bool {
+
+	if !p.NotificationConf.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -52793,6 +53003,8 @@ type SubmitExptFromTemplateOApiRequest struct {
 	WorkspaceID *int64  `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
 	TemplateID  *int64  `thrift:"template_id,2,optional" frugal:"2,optional,i64" json:"template_id" form:"template_id" `
 	Name        *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty"`
+	// 通知配置（可选覆盖模板配置）
+	NotificationConf *experiment.ExptNotificationConf `thrift:"notification_conf,10,optional" frugal:"10,optional,experiment.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	// 创建实验时，判断不为空则替换模板上的信息
 	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,20,optional" frugal:"20,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
 	Extra              *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
@@ -52842,6 +53054,18 @@ func (p *SubmitExptFromTemplateOApiRequest) GetName() (v string) {
 	return *p.Name
 }
 
+var SubmitExptFromTemplateOApiRequest_NotificationConf_DEFAULT *experiment.ExptNotificationConf
+
+func (p *SubmitExptFromTemplateOApiRequest) GetNotificationConf() (v *experiment.ExptNotificationConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotificationConf() {
+		return SubmitExptFromTemplateOApiRequest_NotificationConf_DEFAULT
+	}
+	return p.NotificationConf
+}
+
 var SubmitExptFromTemplateOApiRequest_TargetRuntimeParam_DEFAULT *common.RuntimeParam
 
 func (p *SubmitExptFromTemplateOApiRequest) GetTargetRuntimeParam() (v *common.RuntimeParam) {
@@ -52886,6 +53110,9 @@ func (p *SubmitExptFromTemplateOApiRequest) SetTemplateID(val *int64) {
 func (p *SubmitExptFromTemplateOApiRequest) SetName(val *string) {
 	p.Name = val
 }
+func (p *SubmitExptFromTemplateOApiRequest) SetNotificationConf(val *experiment.ExptNotificationConf) {
+	p.NotificationConf = val
+}
 func (p *SubmitExptFromTemplateOApiRequest) SetTargetRuntimeParam(val *common.RuntimeParam) {
 	p.TargetRuntimeParam = val
 }
@@ -52900,6 +53127,7 @@ var fieldIDToName_SubmitExptFromTemplateOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "template_id",
 	3:   "name",
+	10:  "notification_conf",
 	20:  "target_runtime_param",
 	254: "extra",
 	255: "Base",
@@ -52915,6 +53143,10 @@ func (p *SubmitExptFromTemplateOApiRequest) IsSetTemplateID() bool {
 
 func (p *SubmitExptFromTemplateOApiRequest) IsSetName() bool {
 	return p.Name != nil
+}
+
+func (p *SubmitExptFromTemplateOApiRequest) IsSetNotificationConf() bool {
+	return p.NotificationConf != nil
 }
 
 func (p *SubmitExptFromTemplateOApiRequest) IsSetTargetRuntimeParam() bool {
@@ -52966,6 +53198,14 @@ func (p *SubmitExptFromTemplateOApiRequest) Read(iprot thrift.TProtocol) (err er
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -53057,6 +53297,14 @@ func (p *SubmitExptFromTemplateOApiRequest) ReadField3(iprot thrift.TProtocol) e
 	p.Name = _field
 	return nil
 }
+func (p *SubmitExptFromTemplateOApiRequest) ReadField10(iprot thrift.TProtocol) error {
+	_field := experiment.NewExptNotificationConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.NotificationConf = _field
+	return nil
+}
 func (p *SubmitExptFromTemplateOApiRequest) ReadField20(iprot thrift.TProtocol) error {
 	_field := common.NewRuntimeParam()
 	if err := _field.Read(iprot); err != nil {
@@ -53098,6 +53346,10 @@ func (p *SubmitExptFromTemplateOApiRequest) Write(oprot thrift.TProtocol) (err e
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -53184,6 +53436,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *SubmitExptFromTemplateOApiRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotificationConf() {
+		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.NotificationConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *SubmitExptFromTemplateOApiRequest) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetRuntimeParam() {
 		if err = oprot.WriteFieldBegin("target_runtime_param", thrift.STRUCT, 20); err != nil {
@@ -53262,6 +53532,9 @@ func (p *SubmitExptFromTemplateOApiRequest) DeepEqual(ano *SubmitExptFromTemplat
 	if !p.Field3DeepEqual(ano.Name) {
 		return false
 	}
+	if !p.Field10DeepEqual(ano.NotificationConf) {
+		return false
+	}
 	if !p.Field20DeepEqual(ano.TargetRuntimeParam) {
 		return false
 	}
@@ -53306,6 +53579,13 @@ func (p *SubmitExptFromTemplateOApiRequest) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExptFromTemplateOApiRequest) Field10DeepEqual(src *experiment.ExptNotificationConf) bool {
+
+	if !p.NotificationConf.DeepEqual(src) {
 		return false
 	}
 	return true

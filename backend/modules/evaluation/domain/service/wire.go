@@ -41,6 +41,11 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,
 	NewExptLifecycleEventHandler,
+	// Webhook
+	NewWebhookDispatcher,
+	wire.Bind(new(IWebhookDispatcher), new(*WebhookDispatcher)),
+	NewNoopWebhookSecretProvider,
+	wire.Bind(new(IWebhookSecretProvider), new(*NoopWebhookSecretProvider)),
 	// Repo Sets
 	experimentrepo.ExperimentRepoSet,
 )

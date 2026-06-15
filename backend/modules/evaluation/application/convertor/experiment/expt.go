@@ -4,6 +4,8 @@
 package experiment
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/bytedance/gg/gcond"
@@ -425,6 +427,8 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	if experiment.EvalSet != nil {
 		res.EvalSet = evaluation_set.EvaluationSetDO2DTO(experiment.EvalSet)
 	}
+
+	res.NotificationConf = notificationConfDO2DTO(experiment.NotificationConf)
 	res.Evaluators = make([]*evaluatordto.Evaluator, 0, len(experiment.Evaluators))
 	for _, evaluatorDO := range experiment.Evaluators {
 		res.Evaluators = append(res.Evaluators, evaluator.ConvertEvaluatorDO2DTO(evaluatorDO))
@@ -557,6 +561,13 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+	if cer.NotificationConf != nil {
+		notifConf, err := NotificationConfDTO2DO(cer.NotificationConf)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification_conf: %w", err)
+		}
+		param.NotificationConf = notifConf
+	}
 	return param, nil
 }
 
@@ -571,4 +582,145 @@ func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {
 	default:
 		return entity.EvaluationModeUnknown
 	}
+}
+
+// NotificationConfDTO2DO 将 thrift ExptNotificationConf 转换为 domain entity ExptNotificationConf
+func NotificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) (*entity.ExptNotificationConf, error) {
+	if conf == nil {
+		return nil, nil
+	}
+	result := &entity.ExptNotificationConf{}
+	if conf.Filter != nil {
+		filter := &entity.NotificationFilter{}
+		if conf.Filter.LogicOp != nil {
+			logicOp := entity.FilterLogicOp(*conf.Filter.LogicOp)
+			filter.LogicOp = &logicOp
+		}
+		if len(conf.Filter.FilterConditions) > 0 {
+			conditions := make([]*entity.NotificationFilterCondition, 0, len(conf.Filter.FilterConditions))
+			for i, fc := range conf.Filter.FilterConditions {
+				if fc == nil {
+					continue
+				}
+				operator := entity.NotificationOperatorType(fc.GetOperator())
+				if err := validateNotificationOperator(operator); err != nil {
+					return nil, fmt.Errorf("notification filter condition[%d]: %w", i, err)
+				}
+				var field *entity.NotificationFilterField
+				if fc.GetField() != nil {
+					fieldType := entity.NotificationFieldType(fc.GetField().GetFieldType())
+					if err := validateNotificationFieldType(fieldType); err != nil {
+						return nil, fmt.Errorf("notification filter condition[%d]: %w", i, err)
+					}
+					field = &entity.NotificationFilterField{
+						FieldType: fieldType,
+						FieldKey:  fc.GetField().FieldKey,
+					}
+				}
+				value := fc.GetValue()
+				if err := validateNotificationFilterValue(operator, value); err != nil {
+					return nil, fmt.Errorf("notification filter condition[%d]: %w", i, err)
+				}
+				conditions = append(conditions, &entity.NotificationFilterCondition{
+					Field:    field,
+					Operator: operator,
+					Value:    value,
+				})
+			}
+			filter.FilterConditions = conditions
+		}
+		result.Filter = filter
+	}
+	if conf.Webhook != nil {
+		result.Webhook = &entity.WebhookNotificationConf{
+			Enable: conf.Webhook.Enable,
+			Urls:   conf.Webhook.Urls,
+		}
+	}
+	if conf.FeishuNotification != nil {
+		result.FeishuNotification = &entity.FeishuNotificationConf{
+			Enable: conf.FeishuNotification.Enable,
+			UserID: conf.FeishuNotification.UserID,
+		}
+	}
+	return result, nil
+}
+
+func validateNotificationOperator(op entity.NotificationOperatorType) error {
+	switch op {
+	case entity.NotificationOperatorType_Equal,
+		entity.NotificationOperatorType_NotEqual,
+		entity.NotificationOperatorType_In,
+		entity.NotificationOperatorType_NotIn:
+		return nil
+	default:
+		return fmt.Errorf("unsupported operator: %d", op)
+	}
+}
+
+func validateNotificationFieldType(ft entity.NotificationFieldType) error {
+	switch ft {
+	case entity.NotificationFieldType_ExptStatus:
+		return nil
+	default:
+		return fmt.Errorf("unsupported field_type: %d", ft)
+	}
+}
+
+func validateNotificationFilterValue(op entity.NotificationOperatorType, value string) error {
+	if value == "" {
+		return fmt.Errorf("value is empty")
+	}
+	var values []string
+	if err := json.Unmarshal([]byte(value), &values); err != nil {
+		return fmt.Errorf("value must be a JSON string array, e.g. [\"11\",\"12\"], got: %s", value)
+	}
+	if len(values) == 0 {
+		return fmt.Errorf("value array is empty")
+	}
+	return nil
+}
+
+// notificationConfDO2DTO converts entity ExptNotificationConf to domain DTO ExptNotificationConf
+func notificationConfDO2DTO(conf *entity.ExptNotificationConf) *domain_expt.ExptNotificationConf {
+	if conf == nil {
+		return nil
+	}
+	result := &domain_expt.ExptNotificationConf{}
+	if conf.Filter != nil {
+		f := &domain_expt.Filters{}
+		if conf.Filter.LogicOp != nil {
+			f.LogicOp = gptr.Of(domain_expt.FilterLogicOp(*conf.Filter.LogicOp))
+		}
+		for _, cond := range conf.Filter.FilterConditions {
+			if cond == nil {
+				continue
+			}
+			fc := &domain_expt.FilterCondition{
+				Operator: domain_expt.FilterOperatorType(cond.Operator),
+				Value:    cond.Value,
+			}
+			if cond.Field != nil {
+				fc.Field = &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType(cond.Field.FieldType),
+					FieldKey:  cond.Field.FieldKey,
+				}
+			}
+			f.FilterConditions = append(f.FilterConditions, fc)
+		}
+		result.Filter = f
+	}
+	if conf.Webhook != nil {
+		result.Webhook = &domain_expt.WebhookNotificationConf{
+			Enable: conf.Webhook.Enable,
+			Urls:   conf.Webhook.Urls,
+		}
+	}
+	if conf.FeishuNotification != nil {
+		result.FeishuNotification = &domain_expt.FeishuNotificationConf{
+			Enable: conf.FeishuNotification.Enable,
+			UserID: conf.FeishuNotification.UserID,
+		}
+	}
+	return result
 }

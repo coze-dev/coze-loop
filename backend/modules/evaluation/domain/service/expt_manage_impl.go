@@ -836,6 +836,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if req.ThreadID != nil {
 		do.ThreadID = req.ThreadID
 	}
+	if req.NotificationConf != nil {
+		do.NotificationConf = req.NotificationConf
+	}
 
 	// 如果提供了模板 ID，设置 ExptTemplateMeta
 	if req.ExptTemplateID > 0 {

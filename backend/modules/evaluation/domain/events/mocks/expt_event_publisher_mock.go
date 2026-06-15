@@ -85,17 +85,31 @@ func (mr *MockExptEventPublisherMockRecorder) PublishExptExportCSVEvent(ctx, eve
 }
 
 // PublishExptLifecycleEvent mocks base method.
-func (m *MockExptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
+func (m *MockExptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration, idempotentKey string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublishExptLifecycleEvent", ctx, event, duration)
+	ret := m.ctrl.Call(m, "PublishExptLifecycleEvent", ctx, event, duration, idempotentKey)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PublishExptLifecycleEvent indicates an expected call of PublishExptLifecycleEvent.
-func (mr *MockExptEventPublisherMockRecorder) PublishExptLifecycleEvent(ctx, event, duration any) *gomock.Call {
+func (mr *MockExptEventPublisherMockRecorder) PublishExptLifecycleEvent(ctx, event, duration, idempotentKey any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptLifecycleEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptLifecycleEvent), ctx, event, duration)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptLifecycleEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptLifecycleEvent), ctx, event, duration, idempotentKey)
+}
+
+// PublishExptWebhookNotifyEvent mocks base method.
+func (m *MockExptEventPublisher) PublishExptWebhookNotifyEvent(ctx context.Context, event *entity.WebhookRetryEvent, duration *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishExptWebhookNotifyEvent", ctx, event, duration)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishExptWebhookNotifyEvent indicates an expected call of PublishExptWebhookNotifyEvent.
+func (mr *MockExptEventPublisherMockRecorder) PublishExptWebhookNotifyEvent(ctx, event, duration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptWebhookNotifyEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptWebhookNotifyEvent), ctx, event, duration)
 }
 
 // PublishExptOnlineEvalResult mocks base method.
