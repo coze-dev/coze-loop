@@ -692,6 +692,7 @@ func (t *TraceApplication) buildListMetadataSvcReq(req *trace.ListMetadataReques
 	default:
 		ret.SpanListType = loop_span.SpanListTypeRootSpan
 	}
+	ret.Scene = req.GetScene()
 	return ret, nil
 }
 

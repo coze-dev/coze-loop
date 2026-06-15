@@ -449,6 +449,7 @@ struct ListMetadataRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
     2: optional common.PlatformType platform_type (api.body="platform_type")
     3: optional common.SpanListType span_list_type (api.body="span_list_type")
+    4: optional common.MetadataScene scene (api.body="scene")
 
     255: optional base.Base Base
 }
@@ -456,7 +457,6 @@ struct ListMetadataRequest {
 struct MetadataItemInfo {
     1: required string key
     2: required span.MetadataValueType value_type
-    3: optional bool is_system_tag
 }
 
 struct ListMetadataResponse {

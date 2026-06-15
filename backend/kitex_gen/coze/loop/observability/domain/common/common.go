@@ -47,6 +47,10 @@ const (
 
 	SpanListTypeLlmSpan = "llm_span"
 
+	MetadataSceneDefault = "default"
+
+	MetadataSceneDataExtract = "data_extract"
+
 	ContentTypeText = "Text"
 
 	ContentTypeImage = "Image"
@@ -61,6 +65,8 @@ const (
 type PlatformType = string
 
 type SpanListType = string
+
+type MetadataScene = string
 
 type ContentType = string
 

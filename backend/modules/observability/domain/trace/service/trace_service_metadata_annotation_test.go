@@ -157,9 +157,16 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 	})
 
 	t.Run("mixed tag types return correct value_type", func(t *testing.T) {
-		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), req.PlatformType).Return(filterMock, nil)
+		reqWithSysTags := &service.ListMetadataReq{
+			WorkspaceID:  123,
+			StartTime:    req.StartTime,
+			EndTime:      req.EndTime,
+			PlatformType: req.PlatformType,
+			Scene:        "data_extract",
+		}
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), reqWithSysTags.PlatformType).Return(filterMock, nil)
 		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
-		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant1"}, nil)
+		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), reqWithSysTags.PlatformType).Return([]string{"tenant1"}, nil)
 
 		spans := loop_span.SpanList{
 			{
@@ -180,7 +187,7 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		metricsMock.EXPECT().EmitListSpans(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 		buildHelperMock.EXPECT().BuildListSpansProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor{}, nil)
 
-		resp, err := svc.ListMetadata(ctx, req)
+		resp, err := svc.ListMetadata(ctx, reqWithSysTags)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 
@@ -229,9 +236,16 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 	})
 
 	t.Run("same key across multiple spans increments count for all tag types", func(t *testing.T) {
-		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), req.PlatformType).Return(filterMock, nil)
+		reqWithSysTags2 := &service.ListMetadataReq{
+			WorkspaceID:  123,
+			StartTime:    req.StartTime,
+			EndTime:      req.EndTime,
+			PlatformType: req.PlatformType,
+			Scene:        "data_extract",
+		}
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), reqWithSysTags2.PlatformType).Return(filterMock, nil)
 		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
-		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant1"}, nil)
+		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), reqWithSysTags2.PlatformType).Return([]string{"tenant1"}, nil)
 
 		spans := loop_span.SpanList{
 			{
@@ -262,7 +276,7 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		metricsMock.EXPECT().EmitListSpans(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 		buildHelperMock.EXPECT().BuildListSpansProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor{}, nil)
 
-		resp, err := svc.ListMetadata(ctx, req)
+		resp, err := svc.ListMetadata(ctx, reqWithSysTags2)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 
