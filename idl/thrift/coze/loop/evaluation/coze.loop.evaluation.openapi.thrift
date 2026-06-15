@@ -423,6 +423,10 @@ struct SubmitExperimentOApiRequest {
     7: optional experiment.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     8: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
 
+    // item-centric 多评测集配置 (新建模路径). 非空时优先于 eval_set_param/evaluator_params/evaluator_field_mapping,
+    // handler 把版本字符串解析成内部 version_id 后构建内部 eval_set_configs.
+    9: optional list<experiment.OpenAPIEvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
+
     // 运行信息
     20: optional i32 item_concur_num (api.body = 'item_concur_num')
     22: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')

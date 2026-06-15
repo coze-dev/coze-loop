@@ -13729,6 +13729,20 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 9:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 20:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField20(buf[offset:])
@@ -13987,6 +14001,31 @@ func (p *SubmitExperimentOApiRequest) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentOApiRequest) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*experiment.OpenAPIEvalSetConfig, 0, size)
+	values := make([]experiment.OpenAPIEvalSetConfig, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.EvalSetConfigs = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentOApiRequest) FastReadField20(buf []byte) (int, error) {
 	offset := 0
 
@@ -14127,6 +14166,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
@@ -14148,6 +14188,7 @@ func (p *SubmitExperimentOApiRequest) BLength() int {
 		l += p.field6Length()
 		l += p.field7Length()
 		l += p.field8Length()
+		l += p.field9Length()
 		l += p.field20Length()
 		l += p.field22Length()
 		l += p.field45Length()
@@ -14239,6 +14280,22 @@ func (p *SubmitExperimentOApiRequest) fastWriteField8(buf []byte, w thrift.Nocop
 		offset += thrift.Binary.ListBeginLength()
 		var length int
 		for _, v := range p.EvaluatorFieldMapping {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetConfigs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 9)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.EvalSetConfigs {
 			length++
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
@@ -14407,6 +14464,19 @@ func (p *SubmitExperimentOApiRequest) field8Length() int {
 	return l
 }
 
+func (p *SubmitExperimentOApiRequest) field9Length() int {
+	l := 0
+	if p.IsSetEvalSetConfigs() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.EvalSetConfigs {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
 func (p *SubmitExperimentOApiRequest) field20Length() int {
 	l := 0
 	if p.IsSetItemConcurNum() {
@@ -14566,6 +14636,21 @@ func (p *SubmitExperimentOApiRequest) DeepCopy(s interface{}) error {
 			}
 
 			p.EvaluatorFieldMapping = append(p.EvaluatorFieldMapping, _elem)
+		}
+	}
+
+	if src.EvalSetConfigs != nil {
+		p.EvalSetConfigs = make([]*experiment.OpenAPIEvalSetConfig, 0, len(src.EvalSetConfigs))
+		for _, elem := range src.EvalSetConfigs {
+			var _elem *experiment.OpenAPIEvalSetConfig
+			if elem != nil {
+				_elem = &experiment.OpenAPIEvalSetConfig{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.EvalSetConfigs = append(p.EvalSetConfigs, _elem)
 		}
 	}
 
