@@ -1768,7 +1768,7 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 	})
 
 	items := make([]*trace.MetadataItemInfo, 0, len(loop_span.SpanStructFieldKeys)+len(keys))
-	if req.Scene == "data_extract" {
+	if req.Scene == common.MetadataSceneDataExtract {
 		structFieldSet := make(map[string]struct{}, len(loop_span.SpanStructFieldKeys))
 		for _, key := range loop_span.SpanStructFieldKeys {
 			items = append(items, &trace.MetadataItemInfo{
