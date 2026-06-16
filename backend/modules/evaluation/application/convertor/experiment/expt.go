@@ -493,6 +493,9 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 		OperationInstruction: param.OperationInstruction,
 		Cluster:              param.Cluster,
 	}
+	if param.AgentConnection != nil {
+		res.AgentConnection = target.AgentConnectionDTO2DO(param.AgentConnection)
+	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))
 	}

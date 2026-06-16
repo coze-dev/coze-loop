@@ -2106,6 +2106,40 @@ func TestCreateEvalTargetParamDTO2DOForTemplate(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Nil(t, result.BotInfoType)
 	})
+
+	t.Run("透传Cluster和AgentConnection", func(t *testing.T) {
+		param := &eval_target.CreateEvalTargetParam{
+			SourceTargetID: gptr.Of("source_id"),
+			Cluster:        gptr.Of("my-cluster"),
+			AgentConnection: &domain_eval_target.AgentConnection{
+				IP:         gptr.Of("10.0.0.1"),
+				Region:     gptr.Of("cn-north"),
+				Idc:        gptr.Of("lf"),
+				SdkVersion: gptr.Of("1.0.0"),
+				Psm:        gptr.Of("agent.psm"),
+			},
+		}
+		result := CreateEvalTargetParamDTO2DOForTemplate(param)
+		assert.NotNil(t, result)
+		assert.Equal(t, "my-cluster", gptr.Indirect(result.Cluster))
+		if assert.NotNil(t, result.AgentConnection) {
+			assert.Equal(t, "10.0.0.1", result.AgentConnection.IP)
+			assert.Equal(t, "cn-north", result.AgentConnection.Region)
+			assert.Equal(t, "lf", result.AgentConnection.IDC)
+			assert.Equal(t, "1.0.0", result.AgentConnection.SDKVersion)
+			assert.Equal(t, "agent.psm", result.AgentConnection.PSM)
+		}
+	})
+
+	t.Run("Cluster和AgentConnection为nil不设置", func(t *testing.T) {
+		param := &eval_target.CreateEvalTargetParam{
+			SourceTargetID: gptr.Of("source_id"),
+		}
+		result := CreateEvalTargetParamDTO2DOForTemplate(param)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.Cluster)
+		assert.Nil(t, result.AgentConnection)
+	})
 }
 
 func TestEvalConfConvert_ConvertToEntity_SetScoreWeight(t *testing.T) {
@@ -2522,6 +2556,31 @@ func TestCreateEvalTargetParamDTO2DO_WithCluster(t *testing.T) {
 		result := CreateEvalTargetParamDTO2DO(param)
 		assert.NotNil(t, result)
 		assert.Nil(t, result.Cluster)
+	})
+
+	t.Run("with agent connection", func(t *testing.T) {
+		param := &eval_target.CreateEvalTargetParam{
+			SourceTargetID: gptr.Of("source-3"),
+			AgentConnection: &domain_eval_target.AgentConnection{
+				IP:  gptr.Of("10.0.0.2"),
+				Psm: gptr.Of("agent.psm"),
+			},
+		}
+		result := CreateEvalTargetParamDTO2DO(param)
+		assert.NotNil(t, result)
+		if assert.NotNil(t, result.AgentConnection) {
+			assert.Equal(t, "10.0.0.2", result.AgentConnection.IP)
+			assert.Equal(t, "agent.psm", result.AgentConnection.PSM)
+		}
+	})
+
+	t.Run("without agent connection", func(t *testing.T) {
+		param := &eval_target.CreateEvalTargetParam{
+			SourceTargetID: gptr.Of("source-4"),
+		}
+		result := CreateEvalTargetParamDTO2DO(param)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.AgentConnection)
 	})
 
 	t.Run("nil param", func(t *testing.T) {
