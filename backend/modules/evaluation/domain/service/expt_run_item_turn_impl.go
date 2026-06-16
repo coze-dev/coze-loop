@@ -515,11 +515,33 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	return collector.records, err
 }
 
+// buildAliasRunConf 由 per-alias DynamicParam 合成运行时配置 (动态参数执行):
+// DynamicParam 仅覆盖 runtime_param (固定 key consts.FieldAdapterBuiltinFieldNameRuntimeParam),
+// Env 继承静态 staticRunConf 的 Env。返回 nil 表示无 per-alias 覆盖, 调用方应回退 staticRunConf。
+func buildAliasRunConf(dynamicParam map[string]string, staticRunConf *entity.EvaluatorRunConfig) *entity.EvaluatorRunConfig {
+	if len(dynamicParam) == 0 {
+		return nil
+	}
+	v, ok := dynamicParam[consts.FieldAdapterBuiltinFieldNameRuntimeParam]
+	if !ok || len(v) == 0 {
+		return nil
+	}
+	var env *string
+	if staticRunConf != nil {
+		env = staticRunConf.Env
+	}
+	val := v
+	return &entity.EvaluatorRunConfig{
+		Env:                   env,
+		EvaluatorRuntimeParam: &entity.RuntimeParam{JSONValue: &val},
+	}
+}
+
 // callEvaluatorsByItemConfig 新实验类型 (MultiSetConfig) 的执行入口:
 // 按 ItemConfig.EvaluatorConfs 遍历, 每个 conf = 一个独立实例 (alias 多实例).
 // - existResult 复用按 (versionID, alias) 双键判定
 // - filter 不命中 → 写 Skipped 占位 record
-// - 命中 → CheckBenefit 后 RunEvaluator (带 alias)
+// - 命中 → CheckBenefit 后 RunEvaluator (带 alias, per-alias 动态 runtime_param)
 //
 // 老路径 (ItemConfig nil / EvaluatorConfs 空) 由 CallEvaluators 入口分流, 不进入此分支。
 func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
@@ -564,11 +586,11 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 
 	// 先扫一遍, 把每个 conf 的处理结果分到三类: reuse / skipped(写占位) / pending(实际跑)
 	type pendingTask struct {
-		versionID  int64
-		alias      string
-		evaluator  *entity.Evaluator
-		conf       *entity.EvaluatorConf
-		inputData  *entity.EvaluatorInputData
+		versionID int64
+		alias     string
+		evaluator *entity.Evaluator
+		runConf   *entity.EvaluatorRunConfig // per-alias effectiveRunConf (动态参数 / 回退静态)
+		inputData *entity.EvaluatorInputData
 	}
 	var pending []pendingTask
 	hasPending := false
@@ -620,13 +642,26 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext)
+		// per-alias 动态参数: 用 icConf.DynamicParam 合成 RunConf 覆盖静态 ec.RunConf;
+		// 无有效动态参数 (aliasRunConf == nil) 时回退静态。浅拷贝 ec 替换 RunConf,
+		// 使 buildEvaluatorInputData 内的 runtime_param 注入 (inputData.Ext) 也走 per-alias 配置。
+		aliasRunConf := buildAliasRunConf(icConf.DynamicParam, ec.RunConf)
+		ecForBuild := ec
+		effectiveRunConf := ec.RunConf
+		if aliasRunConf != nil {
+			shallow := *ec
+			shallow.RunConf = aliasRunConf
+			ecForBuild = &shallow
+			effectiveRunConf = aliasRunConf
+		}
+
+		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ecForBuild, turn, targetFields, ev.GetInputSchemas(), etec.Ext)
 		if err != nil {
 			return nil, err
 		}
 
 		pending = append(pending, pendingTask{
-			versionID: versionID, alias: alias, evaluator: ev, conf: ec, inputData: inputData,
+			versionID: versionID, alias: alias, evaluator: ev, runConf: effectiveRunConf, inputData: inputData,
 		})
 		hasPending = true
 	}
@@ -647,7 +682,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	for idx := range pending {
 		t := pending[idx]
 		evForCapture := t.evaluator
-		ecForCapture := t.conf
+		runConfForCapture := t.runConf // per-alias 动态参数 RunConf (或回退的静态 RunConf)
 		aliasForCapture := t.alias
 		versionIDForCapture := t.versionID
 		// 深拷贝 inputData: 避免多实例并发执行时大字段裁剪互相污染
@@ -678,7 +713,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 
 		if evForCapture.IsAsync() {
 			pool.Add(func() error {
-				return e.asyncCallEvaluatorWithAlias(ctx, evForCapture, ecForCapture, aliasForCapture, etec, inputDataForCapture, &collector)
+				return e.asyncCallEvaluatorWithAlias(ctx, evForCapture, runConfForCapture, aliasForCapture, etec, inputDataForCapture, &collector)
 			})
 			continue
 		}
@@ -696,7 +731,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 				ItemID:             item.ItemID,
 				TurnID:             turn.ID,
 				Ext:                etec.Ext,
-				EvaluatorRunConf:   ecForCapture.RunConf,
+				EvaluatorRunConf:   runConfForCapture,
 				Alias:              aliasForCapture,
 				SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
 			})
@@ -716,10 +751,11 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 
 // asyncCallEvaluatorWithAlias 与 asyncCallEvaluator 对应, 但额外把 alias 透传给 AsyncRunEvaluator.
 // alias 多实例场景下不能复用老 asyncCallEvaluator (它丢 alias)。
+// runConf 为 per-alias 动态参数 RunConf (无动态参数时由调用方回退为静态 ec.RunConf)。
 func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluatorWithAlias(
 	ctx context.Context,
 	ev *entity.Evaluator,
-	ec *entity.EvaluatorConf,
+	runConf *entity.EvaluatorRunConfig,
 	alias string,
 	etec *entity.ExptTurnEvalCtx,
 	inputData *entity.EvaluatorInputData,
@@ -738,7 +774,7 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluatorWithAlias(
 		ItemID:             etec.EvalSetItem.ItemID,
 		TurnID:             etec.Turn.ID,
 		Ext:                etec.Ext,
-		EvaluatorRunConf:   ec.RunConf,
+		EvaluatorRunConf:   runConf,
 		Alias:              alias,
 		SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
 	})

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -4121,4 +4122,185 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 			}
 		})
 	}
+}
+
+// TestBuildAliasRunConf 覆盖 per-alias 动态参数合成的全部边界。
+func TestBuildAliasRunConf(t *testing.T) {
+	staticEnv := gptr.Of("prod")
+	staticRunConf := &entity.EvaluatorRunConfig{Env: staticEnv}
+
+	tests := []struct {
+		name          string
+		dynamicParam  map[string]string
+		staticRunConf *entity.EvaluatorRunConfig
+		wantNil       bool
+		wantJSONValue string
+		wantEnv       *string
+	}{
+		{name: "nil dynamic param → nil", dynamicParam: nil, staticRunConf: staticRunConf, wantNil: true},
+		{name: "empty dynamic param → nil", dynamicParam: map[string]string{}, staticRunConf: staticRunConf, wantNil: true},
+		{name: "missing key → nil", dynamicParam: map[string]string{"other": "x"}, staticRunConf: staticRunConf, wantNil: true},
+		{name: "empty value → nil", dynamicParam: map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: ""}, staticRunConf: staticRunConf, wantNil: true},
+		{
+			name:          "valid value inherits static env",
+			dynamicParam:  map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"model":"A"}`},
+			staticRunConf: staticRunConf,
+			wantNil:       false,
+			wantJSONValue: `{"model":"A"}`,
+			wantEnv:       staticEnv,
+		},
+		{
+			name:          "valid value with nil static run conf → env nil",
+			dynamicParam:  map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"model":"B"}`},
+			staticRunConf: nil,
+			wantNil:       false,
+			wantJSONValue: `{"model":"B"}`,
+			wantEnv:       nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildAliasRunConf(tt.dynamicParam, tt.staticRunConf)
+			if tt.wantNil {
+				assert.Nil(t, got)
+				return
+			}
+			assert.NotNil(t, got)
+			assert.NotNil(t, got.EvaluatorRuntimeParam)
+			assert.NotNil(t, got.EvaluatorRuntimeParam.JSONValue)
+			assert.Equal(t, tt.wantJSONValue, *got.EvaluatorRuntimeParam.JSONValue)
+			assert.Equal(t, tt.wantEnv, got.Env)
+		})
+	}
+}
+
+// TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_DynamicParam 验证新实验类型下:
+// 同 versionID 的多个 alias 各自携带独立 runtime_param (inputData.Ext + EvaluatorRunConf 互不污染);
+// 无 DynamicParam 的 alias 回退静态 ec.RunConf。
+func TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_DynamicParam(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:            mockMetric,
+		evaluatorService:  mockEvaluatorService,
+		benefitService:    mockBenefitService,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	mockContent := &entity.Content{Text: gptr.Of("value1")}
+	target := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{"field1": mockContent},
+		},
+	}
+
+	// 静态 per-version RunConf: alias_C (无动态参数) 应回退到它
+	staticRunConf := &entity.EvaluatorRunConfig{
+		Env:                   gptr.Of("prod"),
+		EvaluatorRuntimeParam: &entity.RuntimeParam{JSONValue: gptr.Of(`{"model":"static"}`)},
+	}
+
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetItem: &entity.EvaluationSetItem{ID: 1, ItemID: 2},
+			Event: &entity.ExptItemEvalEvent{
+				Session: &entity.Session{UserID: "test_user"},
+				ExptID:  1,
+				SpaceID: 2,
+			},
+			Expt: &entity.Experiment{
+				ID:      1,
+				SpaceID: 2,
+				Evaluators: []*entity.Evaluator{
+					{
+						ID:                     1,
+						EvaluatorType:          entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					ItemConcurNum: gptr.Of(1),
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EvaluatorConcurNum: gptr.Of(1),
+							EvaluatorConf: []*entity.EvaluatorConf{
+								{
+									EvaluatorVersionID: 1,
+									RunConf:            staticRunConf,
+									IngressConf: &entity.EvaluatorIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+										},
+										TargetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			// 新实验类型: ItemConfig 驱动 alias 多实例
+			ItemConfig: &entity.ExptItemConfig{
+				EvaluatorConfs: []*entity.ItemEvaluatorConf{
+					{EvaluatorVersionID: 1, Alias: "A", DynamicParam: map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"model":"A"}`}},
+					{EvaluatorVersionID: 1, Alias: "B", DynamicParam: map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"model":"B"}`}},
+					{EvaluatorVersionID: 1, Alias: "C"}, // 无 DynamicParam → 回退静态
+				},
+			},
+		},
+		ExptTurnRunResult: &entity.ExptTurnRunResult{},
+		Turn: &entity.Turn{
+			FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}},
+		},
+	}
+
+	mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+	mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(3)
+	mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any()).Times(3)
+
+	// 按 alias 捕获每次 RunEvaluator 请求, 断言 per-alias runtime_param 与 ext 隔离。
+	var mu sync.Mutex
+	byAlias := make(map[string]*entity.RunEvaluatorRequest)
+	mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			mu.Lock()
+			byAlias[req.Alias] = req
+			mu.Unlock()
+			return &entity.EvaluatorRecord{ID: 1, Alias: req.Alias, Status: entity.EvaluatorRunStatusSuccess}, nil
+		}).Times(3)
+
+	records, err := service.CallEvaluators(context.Background(), etec, target)
+	assert.NoError(t, err)
+	assert.Len(t, records, 3)
+
+	reqA := byAlias["A"]
+	reqB := byAlias["B"]
+	reqC := byAlias["C"]
+	assert.NotNil(t, reqA)
+	assert.NotNil(t, reqB)
+	assert.NotNil(t, reqC)
+
+	// alias_A / alias_B: 各自动态 runtime_param, 互不污染
+	assert.NotNil(t, reqA.EvaluatorRunConf)
+	assert.Equal(t, `{"model":"A"}`, *reqA.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue)
+	assert.Equal(t, `{"model":"A"}`, reqA.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	assert.NotNil(t, reqB.EvaluatorRunConf)
+	assert.Equal(t, `{"model":"B"}`, *reqB.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue)
+	assert.Equal(t, `{"model":"B"}`, reqB.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	// Env 继承静态
+	assert.Equal(t, "prod", *reqA.EvaluatorRunConf.Env)
+
+	// alias_C: 回退静态 RunConf
+	assert.NotNil(t, reqC.EvaluatorRunConf)
+	assert.Equal(t, `{"model":"static"}`, *reqC.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue)
+	assert.Equal(t, `{"model":"static"}`, reqC.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
 }
