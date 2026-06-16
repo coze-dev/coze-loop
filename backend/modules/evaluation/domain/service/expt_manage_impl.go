@@ -63,6 +63,7 @@ func NewExptManager(
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
 	pipelineListAdapter rpc.IPipelineListAdapter,
+	exptItemRefRepo repo.IExptItemRefRepo,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -92,6 +93,7 @@ func NewExptManager(
 		notifyRPCAdapter:            notifyRPCAdapter,
 		userProvider:                userProvider,
 		pipelineListAdapter:         pipelineListAdapter,
+		exptItemRefRepo:             exptItemRefRepo,
 	}
 }
 
@@ -123,6 +125,7 @@ type ExptMangerImpl struct {
 	notifyRPCAdapter            rpc.INotifyRPCAdapter
 	userProvider                rpc.IUserProvider
 	pipelineListAdapter         rpc.IPipelineListAdapter
+	exptItemRefRepo             repo.IExptItemRefRepo
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -217,7 +220,67 @@ func (e *ExptMangerImpl) packExperimentResult(ctx context.Context, expts []*enti
 		return nil, err
 	}
 
+	// ★ MultiSetConfig 实验填 EvalSetDetails (per-set item_count); 老实验跳过
+	if err := e.fillEvalSetDetails(ctx, expts, spaceID); err != nil {
+		logs.CtxWarn(ctx, "fillEvalSetDetails fail, expt_ids: %v, err: %v", exptIDs, err)
+	}
+
 	return expts, nil
+}
+
+// fillEvalSetDetails 给新实验类型 (MultiSetConfig) 填 EvalSetDetails:
+// - is_primary: 与 experiment.EvalSetID 一致的为主集
+// - item_count: 来源 expt_item_ref.CountByEvalSetGrouped, 首跑前为 0
+// - eval_set: 此处不填详情, Get 路径如需详情由 getTupleByExpt 链路独立填充
+//
+// 老实验 (SingleSet) 不需要这个字段, 直接跳过避免无谓 DB 查询。
+// expt_item_ref nil 或 查询失败时, 仅记 warn 不阻断响应 (字段缺失对前端是 0/降级)。
+func (e *ExptMangerImpl) fillEvalSetDetails(ctx context.Context, expts []*entity.Experiment, spaceID int64) error {
+	if e.exptItemRefRepo == nil {
+		return nil
+	}
+	multiSetExptIDs := make([]int64, 0, len(expts))
+	for _, ex := range expts {
+		if ex != nil && ex.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+			multiSetExptIDs = append(multiSetExptIDs, ex.ID)
+		}
+	}
+	if len(multiSetExptIDs) == 0 {
+		return nil
+	}
+
+	counts, err := e.exptItemRefRepo.CountByEvalSetGrouped(ctx, spaceID, multiSetExptIDs)
+	if err != nil {
+		return err
+	}
+
+	for _, ex := range expts {
+		if ex == nil || ex.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+			continue
+		}
+		// 按 EvalConf.EvalSetConfigs 列出每个 set, 拼出 details 骨架; 即使 expt_item_ref 还没写也保证返回每个 set 一行
+		if ex.EvalConf == nil || len(ex.EvalConf.EvalSetConfigs) == 0 {
+			continue
+		}
+		// count map: setID -> ItemCount (本期一个 set 只对应一个 versionID, 取 first)
+		setCount := make(map[int64]int32, 4)
+		for _, c := range counts[ex.ID] {
+			if c != nil {
+				setCount[c.EvalSetID] = int32(c.ItemCount)
+			}
+		}
+		details := make([]*entity.ExptEvalSetDetail, 0, len(ex.EvalConf.EvalSetConfigs))
+		for _, setConf := range ex.EvalConf.EvalSetConfigs {
+			details = append(details, &entity.ExptEvalSetDetail{
+				EvalSetID:        setConf.EvalSetID,
+				EvalSetVersionID: setConf.EvalSetVersionID,
+				IsPrimary:        setConf.EvalSetID == ex.EvalSetID,
+				ItemCount:        setCount[setConf.EvalSetID],
+			})
+		}
+		ex.EvalSetDetails = details
+	}
+	return nil
 }
 
 // fillExperimentExptSourceForQuery 为查询结果构造 ExptSource，并在 SourceType=Workflow 时从 Pipeline 填充 span_filter_fields、scheduler、sampler（与实验模板 enrichExptSourceFromPipeline 一致）
