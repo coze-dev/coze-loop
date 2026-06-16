@@ -260,6 +260,9 @@ struct FieldMapping {
 
 struct ExptFilterOption {
     1: optional string fuzzy_name
+    // 评测集来源模式筛选: 不传 = 默认仅返回 SingleSet(老实验), 排除 MultiSetConfig(新实验);
+    // 显式传 (含 MultiSetConfig) 才返回新实验。与 fuzzy_name 同级, 不走 filters。
+    2: optional list<ExptEvalSetSourceType> eval_set_source_types
     10: optional Filters filters
 }
 

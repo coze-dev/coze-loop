@@ -464,9 +464,13 @@ type ExptEvalSetItemCount struct {
 }
 
 // filter
-type ExptListFilter struct {	FuzzyName string
-	Includes  *ExptFilterFields
-	Excludes  *ExptFilterFields
+type ExptListFilter struct {
+	FuzzyName string
+	// EvalSetSourceTypes 评测集来源模式筛选 (experiment.eval_set_source_type 列): 1=SingleSet / 2=MultiSetConfig。
+	// 与 FuzzyName 同级 (不走 Includes/Excludes)。ListExperiments 默认仅返回 1; 由 Convert 在调用方未指定时注入 [1]。
+	EvalSetSourceTypes []int64
+	Includes           *ExptFilterFields
+	Excludes           *ExptFilterFields
 }
 
 type ExptFilterFields struct {

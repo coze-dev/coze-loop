@@ -38,9 +38,11 @@ func TestExptFilterConvertor_Convert_NilOption(t *testing.T) {
 	mockEvalTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
 	conv := NewExptFilterConvertor(mockEvalTargetSvc)
 
+	// filter_option 为 nil 时仍返回非 nil filter, 且默认排除 MultiSetConfig(2): EvalSetSourceTypes=[1]。
 	got, err := conv.Convert(context.Background(), nil, 100)
 	assert.NoError(t, err)
-	assert.Nil(t, got)
+	assert.NotNil(t, got)
+	assert.Equal(t, []int64{1}, got.EvalSetSourceTypes)
 }
 
 func TestExptFilterConvertor_ConvertFilters_BasicFieldsAndDefaultType(t *testing.T) {

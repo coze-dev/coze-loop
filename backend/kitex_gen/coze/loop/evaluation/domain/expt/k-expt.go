@@ -7576,6 +7576,20 @@ func (p *ExptFilterOption) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 10:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField10(buf[offset:])
@@ -7622,6 +7636,31 @@ func (p *ExptFilterOption) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExptFilterOption) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]ExptEvalSetSourceType, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem ExptEvalSetSourceType
+		if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = ExptEvalSetSourceType(v)
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.EvalSetSourceTypes = _field
+	return offset, nil
+}
+
 func (p *ExptFilterOption) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 	_field := NewFilters()
@@ -7642,6 +7681,7 @@ func (p *ExptFilterOption) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -7652,6 +7692,7 @@ func (p *ExptFilterOption) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field10Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -7663,6 +7704,22 @@ func (p *ExptFilterOption) fastWriteField1(buf []byte, w thrift.NocopyWriter) in
 	if p.IsSetFuzzyName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.FuzzyName)
+	}
+	return offset
+}
+
+func (p *ExptFilterOption) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetSourceTypes() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.EvalSetSourceTypes {
+			length++
+			offset += thrift.Binary.WriteI32(buf[offset:], int32(v))
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I32, length)
 	}
 	return offset
 }
@@ -7681,6 +7738,19 @@ func (p *ExptFilterOption) field1Length() int {
 	if p.IsSetFuzzyName() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.FuzzyName)
+	}
+	return l
+}
+
+func (p *ExptFilterOption) field2Length() int {
+	l := 0
+	if p.IsSetEvalSetSourceTypes() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.EvalSetSourceTypes {
+			_ = v
+			l += thrift.Binary.I32Length()
+		}
 	}
 	return l
 }
@@ -7706,6 +7776,15 @@ func (p *ExptFilterOption) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.FuzzyName)
 		}
 		p.FuzzyName = &tmp
+	}
+
+	if src.EvalSetSourceTypes != nil {
+		p.EvalSetSourceTypes = make([]ExptEvalSetSourceType, 0, len(src.EvalSetSourceTypes))
+		for _, elem := range src.EvalSetSourceTypes {
+			var _elem ExptEvalSetSourceType
+			_elem = elem
+			p.EvalSetSourceTypes = append(p.EvalSetSourceTypes, _elem)
+		}
 	}
 
 	var _filters *Filters
