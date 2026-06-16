@@ -271,6 +271,75 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 
 		assert.Len(t, resp.MetadataItemList, 2)
 	})
+
+	t.Run("data_extract scene includes system tags", func(t *testing.T) {
+		reqWithScene := &service.ListMetadataReq{
+			WorkspaceID:  123,
+			StartTime:    req.StartTime,
+			EndTime:      req.EndTime,
+			PlatformType: req.PlatformType,
+			Scene:        "data_extract",
+		}
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), reqWithScene.PlatformType).Return(filterMock, nil)
+		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
+		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), reqWithScene.PlatformType).Return([]string{"tenant1"}, nil)
+
+		spans := loop_span.SpanList{
+			{
+				SpanID:     "span1",
+				TagsString: map[string]string{"user_tag": "val"},
+			},
+		}
+
+		traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+			Spans: spans,
+		}, nil)
+		metricsMock.EXPECT().EmitListSpans(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+		buildHelperMock.EXPECT().BuildListSpansProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor{}, nil)
+
+		resp, err := svc.ListMetadata(ctx, reqWithScene)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		// Should contain SpanStructFieldKeys + user_tag (deduped)
+		structFieldCount := len(loop_span.SpanStructFieldKeys)
+		assert.True(t, len(resp.MetadataItemList) >= structFieldCount)
+		// First items should be SpanStructFieldKeys
+		for i, key := range loop_span.SpanStructFieldKeys {
+			assert.Equal(t, key, resp.MetadataItemList[i].Key)
+			assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[i].ValueType)
+		}
+		// user_tag should follow after struct field keys
+		assert.Equal(t, "user_tag", resp.MetadataItemList[structFieldCount].Key)
+	})
+
+	t.Run("default scene excludes system tags", func(t *testing.T) {
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), req.PlatformType).Return(filterMock, nil)
+		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
+		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant1"}, nil)
+
+		spans := loop_span.SpanList{
+			{
+				SpanID:           "span1",
+				TagsString:       map[string]string{"user_tag": "val"},
+				SystemTagsString: map[string]string{"sys_str": "v"},
+				SystemTagsLong:   map[string]int64{"sys_long": 1},
+			},
+		}
+
+		traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+			Spans: spans,
+		}, nil)
+		metricsMock.EXPECT().EmitListSpans(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+		buildHelperMock.EXPECT().BuildListSpansProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor{}, nil)
+
+		resp, err := svc.ListMetadata(ctx, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		assert.Len(t, resp.MetadataItemList, 1)
+		assert.Equal(t, "user_tag", resp.MetadataItemList[0].Key)
+	})
 }
 
 func TestTraceServiceImpl_ListWorkspaceAnnotations(t *testing.T) {

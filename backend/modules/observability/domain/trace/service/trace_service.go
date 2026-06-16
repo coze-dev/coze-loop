@@ -147,6 +147,7 @@ type ListMetadataReq struct {
 	EndTime      int64 // ms
 	SpanListType loop_span.SpanListType
 	PlatformType loop_span.PlatformType
+	Scene        string
 }
 
 type ListMetadataResp struct {
@@ -1766,12 +1767,32 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 		return keys[i] < keys[j]
 	})
 
-	items := make([]*trace.MetadataItemInfo, 0, len(keys))
-	for _, key := range keys {
-		items = append(items, &trace.MetadataItemInfo{
-			Key:       key,
-			ValueType: keyInfoMap[key].valueType,
-		})
+	items := make([]*trace.MetadataItemInfo, 0, len(loop_span.SpanStructFieldKeys)+len(keys))
+	if req.Scene == common.MetadataSceneDataExtract {
+		structFieldSet := make(map[string]struct{}, len(loop_span.SpanStructFieldKeys))
+		for _, key := range loop_span.SpanStructFieldKeys {
+			items = append(items, &trace.MetadataItemInfo{
+				Key:       key,
+				ValueType: loop_span.MetadataValueTypeString,
+			})
+			structFieldSet[key] = struct{}{}
+		}
+		for _, key := range keys {
+			if _, ok := structFieldSet[key]; ok {
+				continue
+			}
+			items = append(items, &trace.MetadataItemInfo{
+				Key:       key,
+				ValueType: keyInfoMap[key].valueType,
+			})
+		}
+	} else {
+		for _, key := range keys {
+			items = append(items, &trace.MetadataItemInfo{
+				Key:       key,
+				ValueType: keyInfoMap[key].valueType,
+			})
+		}
 	}
 
 	return &ListMetadataResp{MetadataItemList: items}, nil

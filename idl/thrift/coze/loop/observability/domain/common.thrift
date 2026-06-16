@@ -23,6 +23,10 @@ const SpanListType SpanListType_RootSpan = "root_span"
 const SpanListType SpanListType_AllSpan = "all_span"
 const SpanListType SpanListType_LlmSpan = "llm_span"
 
+typedef string MetadataScene (ts.enum="true")
+const MetadataScene MetadataScene_Default = "default"
+const MetadataScene MetadataScene_DataExtract = "data_extract"
+
 struct OrderBy {
     1: optional string field,
     2: optional bool is_asc,

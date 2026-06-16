@@ -136,6 +136,22 @@ const (
 	MetadataValueTypeBool   = "bool"
 )
 
+var SpanStructFieldKeys = []string{
+	SpanFieldStartTime,
+	SpanFieldSpanId,
+	SpanFieldParentID,
+	SpanFieldTraceId,
+	SpanFieldDuration,
+	SpanFieldCallType,
+	SpanFieldPSM,
+	SpanFieldLogID,
+	SpanFieldSpaceId,
+	SpanFieldSpanName,
+	SpanFieldSpanType,
+	SpanFieldMethod,
+	SpanFieldStatusCode,
+}
+
 type SpanList []*Span
 
 type Span struct {
