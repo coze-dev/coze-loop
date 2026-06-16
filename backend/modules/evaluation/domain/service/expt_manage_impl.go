@@ -956,18 +956,57 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 
 	evaluatorRefs := make([]*entity.ExptEvaluatorVersionRef, 0)
 	exptTurnResultFilterKeyMappings := make([]*entity.ExptTurnResultFilterKeyMapping, 0)
-	for i, es := range tuple.Evaluators {
+	// evaluatorRefs 是"仅供查询"的 ref 表, 保持按 version 粒度 (一 version 一行), 本次不改其去重粒度.
+	for _, es := range tuple.Evaluators {
 		evaluatorRefs = append(evaluatorRefs, &entity.ExptEvaluatorVersionRef{
 			EvaluatorID:        es.ID,
 			EvaluatorVersionID: es.GetEvaluatorVersionID(),
 		})
-		exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
-			SpaceID:   req.WorkspaceID,
-			ExptID:    ids[0],
-			FromField: strconv.FormatInt(es.GetEvaluatorVersionID(), 10),
-			ToKey:     "key" + strconv.Itoa(i+1),
-			FieldType: entity.FieldTypeEvaluator,
-		})
+	}
+
+	// ★ key_mapping 按 (version_id, alias) 实例展开: 每个实例独占一行 + 独立 ToKey, 治理同 version 多 alias 撞 key.
+	// CK 填充期 (expt_result_impl.go) 用 EncodeEvaluatorInstanceKey(versionID, record.Alias) 作 FromField 查本表取 ToKey,
+	// 因此同一 version 配 judge_A / judge_B 两个 alias 时必须各生成一行, 否则另一 alias 的 lookup 落空、分数进不了 CK.
+	if req.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		// 新路径: 遍历每个 set 的每个 (EvaluatorVersionID, Alias) 实例.
+		// 多个 set 可能出现相同 (version, alias) -> 按 (version,alias) 去重, 只生成一行 (避免重复 ToKey).
+		// ToKey 用全局递增编号 ("key1"/"key2"...), 跨所有实例连续递增, 不按 version 复用.
+		seenInstance := make(map[string]struct{})
+		keyIdx := 0
+		for _, setConf := range req.EvalSetConfigs {
+			if setConf == nil {
+				continue
+			}
+			for _, evConf := range setConf.EvaluatorConfs {
+				if evConf == nil {
+					continue
+				}
+				fromField := entity.EncodeEvaluatorInstanceKey(evConf.EvaluatorVersionID, evConf.Alias)
+				if _, ok := seenInstance[fromField]; ok {
+					continue
+				}
+				seenInstance[fromField] = struct{}{}
+				keyIdx++
+				exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
+					SpaceID:   req.WorkspaceID,
+					ExptID:    ids[0],
+					FromField: fromField,
+					ToKey:     "key" + strconv.Itoa(keyIdx),
+					FieldType: entity.FieldTypeEvaluator,
+				})
+			}
+		}
+	} else {
+		// 老 SingleSet 路径: 保持按 version (alias="" 退化裸 versionID, ToKey="key"+(i+1)) 的逻辑完全不变, 旧实验 byte 级一致.
+		for i, es := range tuple.Evaluators {
+			exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
+				SpaceID:   req.WorkspaceID,
+				ExptID:    ids[0],
+				FromField: entity.EncodeEvaluatorInstanceKey(es.GetEvaluatorVersionID(), ""),
+				ToKey:     "key" + strconv.Itoa(i+1),
+				FieldType: entity.FieldTypeEvaluator,
+			})
+		}
 	}
 
 	triggerType := req.TriggerType

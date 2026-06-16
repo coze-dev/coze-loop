@@ -16,18 +16,21 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
-// MultiSetConfig 实验类型在 CreateExptAggrResult 里跳过 evaluator 维度计算 —
-// 不调用 GetTurnEvaluatorResultRefByExptID 也不调用 BatchGetEvaluatorRecord;
-// target 维度照常 (这里 mock 返回空 turn_results, 等价于没数据)。
-func TestCreateExptAggrResult_MultiSetConfig_SkipsEvaluatorGroup(t *testing.T) {
+// T2: MultiSetConfig 实验恢复 evaluator 维度聚合, 并按 (version_id, alias) 分桶。
+// CreateExptAggrResult 不再跳过 evaluator 维度计算 —— 同 version 多 alias 各自独立成桶,
+// field_key 用 EncodeEvaluatorInstanceKey 编码 (verID:alias)。
+func TestCreateExptAggrResult_MultiSetConfig_ComputesEvaluatorGroupByAlias(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 
 	mockExptAggrResultRepo.EXPECT().
 		GetExptAggrResultByExperimentID(gomock.Any(), gomock.Any()).
@@ -38,70 +41,93 @@ func TestCreateExptAggrResult_MultiSetConfig_SkipsEvaluatorGroup(t *testing.T) {
 			ID:                1,
 			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
 		}, nil).AnyTimes()
-	// target 维度: 空 turn_results, 但 buildAggrResult 仍会为 4 个 target 指标构造 aggr_result(score=0)
+
+	// computeEvaluatorAggrGroup: 同 version=100, 两个 alias (judge_A / judge_B) 各一条 record
+	mockExptTurnResultRepo.EXPECT().
+		GetTurnEvaluatorResultRefByExptID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptTurnEvaluatorResultRef{
+			{EvaluatorVersionID: 100, EvaluatorResultID: 11, Alias: "judge_A"},
+			{EvaluatorVersionID: 100, EvaluatorResultID: 12, Alias: "judge_B"},
+		}, nil)
+	mockEvaluatorRecordService.EXPECT().
+		BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.EvaluatorRecord{
+			{
+				ID:                  11,
+				Status:              entity.EvaluatorRunStatusSuccess,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.8)}},
+			},
+			{
+				ID:                  12,
+				Status:              entity.EvaluatorRunStatusSuccess,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.4)}},
+			},
+		}, nil)
+
+	// weighted 维度: 空成功轮次 -> 不写 WeightedScore
 	mockExptTurnResultRepo.EXPECT().
 		ScanTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return([]*entity.ExptTurnResult{}, int64(0), nil).AnyTimes()
 
-	// ★ 关键断言: 写入的 aggr_results 只含 Target 类, 不含 EvaluatorScore 或 WeightedScore
+	// ★ 关键断言: 写入两条 EvaluatorScore 行, field_key 分别为 "100:judge_A" / "100:judge_B"
 	mockExptAggrResultRepo.EXPECT().
 		BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, results []*entity.ExptAggrResult) error {
+			fieldKeys := map[string]bool{}
 			for _, r := range results {
-				assert.NotEqual(t, int32(entity.FieldType_EvaluatorScore), r.FieldType,
-					"MultiSetConfig 实验不应写 EvaluatorScore 行")
-				assert.NotEqual(t, int32(entity.FieldType_WeightedScore), r.FieldType,
-					"MultiSetConfig 实验不应写 WeightedScore 行")
+				if r.FieldType == int32(entity.FieldType_EvaluatorScore) {
+					fieldKeys[r.FieldKey] = true
+				}
 			}
+			assert.True(t, fieldKeys["100:judge_A"], "应写 100:judge_A 桶")
+			assert.True(t, fieldKeys["100:judge_B"], "应写 100:judge_B 桶")
 			return nil
 		}).AnyTimes()
-	// 锁解锁
+
 	mockLocker := lockMocks.NewMockILocker(ctrl)
 	mockLocker.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
 	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
 	mockMetric.EXPECT().EmitCalculateExptAggrResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-	// ★ 不 EXPECT GetTurnEvaluatorResultRefByExptID / BatchGetEvaluatorRecord —
-	// gomock 严格模式下,任一次未预期的调用都会让测试失败
 	svc := &ExptAggrResultServiceImpl{
-		exptAggrResultRepo: mockExptAggrResultRepo,
-		exptTurnResultRepo: mockExptTurnResultRepo,
-		experimentRepo:     mockExperimentRepo,
-		locker:             mockLocker,
-		metric:             mockMetric,
+		exptAggrResultRepo:     mockExptAggrResultRepo,
+		exptTurnResultRepo:     mockExptTurnResultRepo,
+		experimentRepo:         mockExperimentRepo,
+		evaluatorRecordService: mockEvaluatorRecordService,
+		locker:                 mockLocker,
+		metric:                 mockMetric,
 	}
 
 	err := svc.CreateExptAggrResult(context.Background(), int64(100), int64(1))
 	assert.NoError(t, err)
 }
 
-// MultiSetConfig 实验类型 createWeightedScoreAggrResult 直接返回 nil —
-// 不调用 ScanTurnResults
-func TestCreateWeightedScoreAggrResult_MultiSetConfig_ReturnsNil(t *testing.T) {
+// T2: MultiSetConfig 实验 createWeightedScoreAggrResult 不再跳过 ——
+// 行级 weighted_score 已按 (version, alias) 算对, 这里做实验级 avg 汇总。
+func TestCreateWeightedScoreAggrResult_MultiSetConfig_Computes(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-	mockExperimentRepo.EXPECT().
-		GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&entity.Experiment{
-			ID:                1,
-			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
-		}, nil)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExptTurnResultRepo.EXPECT().
+		ScanTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptTurnResult{
+			{WeightedScore: gptr.Of(0.6)},
+		}, int64(0), nil)
 
-	// ★ 不 EXPECT exptTurnResultRepo —— 任一次调用 (ScanTurnResults) 会让测试失败
 	svc := &ExptAggrResultServiceImpl{
-		experimentRepo: mockExperimentRepo,
+		exptTurnResultRepo: mockExptTurnResultRepo,
 	}
 
 	result, err := svc.createWeightedScoreAggrResult(context.Background(), int64(100), int64(1))
 	assert.NoError(t, err)
-	assert.Nil(t, result)
+	assert.NotNil(t, result)
+	assert.Equal(t, int32(entity.FieldType_WeightedScore), result.FieldType)
 }
 
-// MultiSetConfig 实验类型 UpdateExptAggrResult 入口直接返回 nil —
-// 不调用 GetExptAggrResult / UpdateAndGetLatestVersion 等任何后续逻辑
-func TestUpdateExptAggrResult_MultiSetConfig_ReturnsNil(t *testing.T) {
+// T2: MultiSetConfig 实验 UpdateExptAggrResult 入口不再防御性早返回 ——
+// 继续走 GetExptAggrResult 等后续逻辑 (此处实验未完成 + NotFound -> 静默返回 nil)。
+func TestUpdateExptAggrResult_MultiSetConfig_Proceeds(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -111,15 +137,22 @@ func TestUpdateExptAggrResult_MultiSetConfig_ReturnsNil(t *testing.T) {
 		Return(&entity.Experiment{
 			ID:                1,
 			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			Status:            entity.ExptStatus_Processing,
 		}, nil)
+
+	mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
+	// ★ 不再早返回: 后续逻辑会查 GetExptAggrResult; 返回 NotFound + 实验未完成 -> 静默返回 nil (无 MQ 重试)
+	mockExptAggrResultRepo.EXPECT().
+		GetExptAggrResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
 
 	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
 	mockMetric.EXPECT().EmitCalculateExptAggrResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
-	// ★ 不 EXPECT exptAggrResultRepo —— 任一次调用会让测试失败
 	svc := &ExptAggrResultServiceImpl{
-		experimentRepo: mockExperimentRepo,
-		metric:         mockMetric,
+		experimentRepo:     mockExperimentRepo,
+		exptAggrResultRepo: mockExptAggrResultRepo,
+		metric:             mockMetric,
 	}
 
 	err := svc.UpdateExptAggrResult(context.Background(), &entity.UpdateExptAggrResultParam{
@@ -132,7 +165,8 @@ func TestUpdateExptAggrResult_MultiSetConfig_ReturnsNil(t *testing.T) {
 }
 
 // computeEvaluatorAggrGroup 过滤 Status=Skipped 的占位 record —
-// filter 不命中产生的 Skipped record 不参与聚合分数计算
+// filter 不命中产生的 Skipped record 不参与聚合分数计算。
+// alias 为空时 instanceKey 退化为裸 versionID 字符串 "100"。
 func TestComputeEvaluatorAggrGroup_FiltersSkippedRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -140,7 +174,7 @@ func TestComputeEvaluatorAggrGroup_FiltersSkippedRecord(t *testing.T) {
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 
-	// 同一 evaluator (versionID=100) 有两条 record: 1 条 Success 0.8 分, 1 条 Skipped
+	// 同一 evaluator (versionID=100, alias 空) 有两条 record: 1 条 Success 0.8 分, 1 条 Skipped
 	mockExptTurnResultRepo.EXPECT().
 		GetTurnEvaluatorResultRefByExptID(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return([]*entity.ExptTurnEvaluatorResultRef{
@@ -174,10 +208,10 @@ func TestComputeEvaluatorAggrGroup_FiltersSkippedRecord(t *testing.T) {
 
 	group, err := svc.computeEvaluatorAggrGroup(context.Background(), int64(100), int64(1))
 	assert.NoError(t, err)
-	assert.Contains(t, group, int64(100))
+	assert.Contains(t, group, "100")
 
 	// 验证只 Success 的 0.8 被纳入聚合, Skipped 的 0.2 被丢弃
-	aggrResult := group[100].Result()
+	aggrResult := group["100"].Result()
 	var average float64
 	for _, r := range aggrResult.AggregatorResults {
 		if r.AggregatorType == entity.Average {
@@ -186,4 +220,57 @@ func TestComputeEvaluatorAggrGroup_FiltersSkippedRecord(t *testing.T) {
 		}
 	}
 	assert.InDelta(t, 0.8, average, 1e-9)
+}
+
+// computeEvaluatorAggrGroup 按 (version_id, alias) 分桶 —
+// 同 version 多 alias 不再撞 key, 各自独立成桶。
+func TestComputeEvaluatorAggrGroup_BucketsByAlias(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+
+	mockExptTurnResultRepo.EXPECT().
+		GetTurnEvaluatorResultRefByExptID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptTurnEvaluatorResultRef{
+			{EvaluatorVersionID: 100, EvaluatorResultID: 11, Alias: "judge_A"},
+			{EvaluatorVersionID: 100, EvaluatorResultID: 12, Alias: "judge_B"},
+		}, nil)
+
+	mockEvaluatorRecordService.EXPECT().
+		BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.EvaluatorRecord{
+			{
+				ID:                  11,
+				Status:              entity.EvaluatorRunStatusSuccess,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.8)}},
+			},
+			{
+				ID:                  12,
+				Status:              entity.EvaluatorRunStatusSuccess,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.4)}},
+			},
+		}, nil)
+
+	svc := &ExptAggrResultServiceImpl{
+		exptTurnResultRepo:     mockExptTurnResultRepo,
+		evaluatorRecordService: mockEvaluatorRecordService,
+	}
+
+	group, err := svc.computeEvaluatorAggrGroup(context.Background(), int64(100), int64(1))
+	assert.NoError(t, err)
+	assert.Contains(t, group, "100:judge_A")
+	assert.Contains(t, group, "100:judge_B")
+
+	avgOf := func(g *AggregatorGroup) float64 {
+		for _, r := range g.Result().AggregatorResults {
+			if r.AggregatorType == entity.Average {
+				return r.GetScore()
+			}
+		}
+		return 0
+	}
+	assert.InDelta(t, 0.8, avgOf(group["100:judge_A"]), 1e-9)
+	assert.InDelta(t, 0.4, avgOf(group["100:judge_B"]), 1e-9)
 }

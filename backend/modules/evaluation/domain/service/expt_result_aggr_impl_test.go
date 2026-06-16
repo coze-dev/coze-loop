@@ -1256,21 +1256,21 @@ func TestGetTopNOptions(t *testing.T) {
 
 func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 	tests := []struct {
-		name                               string
-		spaceID                            int64
-		exptID                             int64
-		evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup
-		tmag                               *targetMtrAggrGroup
-		existedAggrResults                 []*entity.ExptAggrResult
-		setup                              func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo)
-		wantErr                            bool
+		name                                string
+		spaceID                             int64
+		exptID                              int64
+		evaluatorInstanceKey2AggregatorGroup map[string]*AggregatorGroup
+		tmag                                *targetMtrAggrGroup
+		existedAggrResults                  []*entity.ExptAggrResult
+		setup                               func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo)
+		wantErr                             bool
 	}{
 		{
 			name:    "Create new aggregation results",
 			spaceID: 100,
 			exptID:  1,
-			evaluatorVersionID2AggregatorGroup: map[int64]*AggregatorGroup{
-				1: func() *AggregatorGroup {
+			evaluatorInstanceKey2AggregatorGroup: map[string]*AggregatorGroup{
+				"1": func() *AggregatorGroup {
 					ag := NewAggregatorGroup()
 					ag.Append(0.8)
 					return ag
@@ -1301,8 +1301,8 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 			name:    "Update existing aggregation results",
 			spaceID: 100,
 			exptID:  1,
-			evaluatorVersionID2AggregatorGroup: map[int64]*AggregatorGroup{
-				1: func() *AggregatorGroup {
+			evaluatorInstanceKey2AggregatorGroup: map[string]*AggregatorGroup{
+				"1": func() *AggregatorGroup {
 					ag := NewAggregatorGroup()
 					ag.Append(0.9)
 					return ag
@@ -1343,8 +1343,8 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 			name:    "Skip update when aggregation results are identical",
 			spaceID: 100,
 			exptID:  1,
-			evaluatorVersionID2AggregatorGroup: map[int64]*AggregatorGroup{
-				1: func() *AggregatorGroup {
+			evaluatorInstanceKey2AggregatorGroup: map[string]*AggregatorGroup{
+				"1": func() *AggregatorGroup {
 					ag := NewAggregatorGroup()
 					ag.Append(0.8)
 					return ag
@@ -1405,7 +1405,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 
 			tt.setup(mockExptAggrResultRepo)
 
-			err := svc.CreateOrUpdateExptAggrResult(context.Background(), tt.spaceID, tt.exptID, tt.evaluatorVersionID2AggregatorGroup, tt.tmag, tt.existedAggrResults)
+			err := svc.CreateOrUpdateExptAggrResult(context.Background(), tt.spaceID, tt.exptID, tt.evaluatorInstanceKey2AggregatorGroup, tt.tmag, tt.existedAggrResults)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -2775,8 +2775,8 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 	experimentID := int64(1)
 
 	t.Run("实验启用加权得分，创建加权得分聚合结果", func(t *testing.T) {
-		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
-			1: func() *AggregatorGroup {
+		evaluatorInstanceKey2AggregatorGroup := map[string]*AggregatorGroup{
+			"1": func() *AggregatorGroup {
 				ag := NewAggregatorGroup()
 				ag.Append(0.8)
 				return ag
@@ -2824,13 +2824,13 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 				return nil
 			})
 
-		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorInstanceKey2AggregatorGroup, tmag, existedAggrResults)
 		assert.NoError(t, err)
 	})
 
 	t.Run("实验未启用配置权重仍创建行级汇总分聚合", func(t *testing.T) {
-		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
-			1: func() *AggregatorGroup {
+		evaluatorInstanceKey2AggregatorGroup := map[string]*AggregatorGroup{
+			"1": func() *AggregatorGroup {
 				ag := NewAggregatorGroup()
 				ag.Append(0.8)
 				return ag
@@ -2870,13 +2870,13 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 				return nil
 			})
 
-		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorInstanceKey2AggregatorGroup, tmag, existedAggrResults)
 		assert.NoError(t, err)
 	})
 
 	t.Run("createWeightedScoreAggrResult返回错误，返回错误", func(t *testing.T) {
-		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
-			1: func() *AggregatorGroup {
+		evaluatorInstanceKey2AggregatorGroup := map[string]*AggregatorGroup{
+			"1": func() *AggregatorGroup {
 				ag := NewAggregatorGroup()
 				ag.Append(0.8)
 				return ag
@@ -2902,7 +2902,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 			).
 			Return(nil, int64(0), errors.New("scan error"))
 
-		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorInstanceKey2AggregatorGroup, tmag, existedAggrResults)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "scan error")
 	})

@@ -15,6 +15,7 @@ type ExptTurnResultFilter struct {
 	SpaceID                 string             `gorm:"column:space_id;type:String;not null" json:"space_id"`
 	ExptID                  string             `gorm:"column:expt_id;type:String;not null" json:"expt_id"`
 	ItemID                  string             `gorm:"column:item_id;type:String;not null" json:"item_id"`
+	ItemVersionID           string             `gorm:"column:item_version_id;type:String;not null" json:"item_version_id"`
 	ItemIdx                 int32              `gorm:"column:item_idx;type:Int32;not null" json:"item_idx"`
 	TurnID                  string             `gorm:"column:turn_id;type:String;not null" json:"turn_id"`
 	Status                  int32              `gorm:"column:status;type:Int32;not null" json:"status"`

@@ -194,29 +194,19 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 	if err != nil {
 		return err
 	}
-	version2Record := make(map[int64]*entity.EvaluatorRecord, len(records))
+	version2Record := make(map[string]*entity.EvaluatorRecord, len(records))
 	for _, r := range records {
 		if r != nil {
-			version2Record[r.EvaluatorVersionID] = r
+			version2Record[entity.EncodeEvaluatorInstanceKey(r.EvaluatorVersionID, r.Alias)] = r
 		}
 	}
 	// 用当前已校正的 record 覆盖，避免主从延迟或读从库时 BatchGet 拿到旧数据，导致重算加权分仍用旧分
-	version2Record[rec.EvaluatorVersionID] = rec
+	version2Record[entity.EncodeEvaluatorInstanceKey(rec.EvaluatorVersionID, rec.Alias)] = rec
 
-	// 6. 构建权重映射：仅当 EnableScoreWeight 为 true 时使用配置权重，否则等权
-	var scoreWeights map[int64]float64
-	if expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
-		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight &&
-		expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
-		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 && ec.EvaluatorVersionID > 0 {
-				if scoreWeights == nil {
-					scoreWeights = make(map[int64]float64)
-				}
-				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
-			}
-		}
-	}
+	// 6. 构建权重映射：按实验类型分流（MultiSetConfig 从带 alias 的 per-set 配置取，
+	// 老 SingleSet 从 EvaluatorsConf.EvaluatorConf 取裸 versionID）。EnableScoreWeight 为 false
+	// 时 scoreWeights 为空，calculateWeightedScore 按等权计算。详见 buildScoreWeights。
+	scoreWeights := buildScoreWeights(expt)
 
 	// 7. 计算新的 weighted_score（共用注入的行维度得分计算器）
 	ws := s.scoreCalculator.CalculateWeightedScore(ctx, expt, version2Record, scoreWeights)
