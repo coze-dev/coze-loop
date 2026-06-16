@@ -853,6 +853,7 @@ type ExptTurnResultFilterEntity struct {
 	SpaceID                 int64              `json:"space_id"`
 	ExptID                  int64              `json:"expt_id"`
 	ItemID                  int64              `json:"item_id"`
+	ItemVersionID           int64              `json:"item_version_id"` // ★ 0=旧数据/无版本; 真值源 expt_item_ref, 按 item 版本筛选用
 	ItemIdx                 int32              `json:"item_idx"`
 	TurnID                  int64              `json:"turn_id"`
 	Status                  ItemRunState       `json:"status"`

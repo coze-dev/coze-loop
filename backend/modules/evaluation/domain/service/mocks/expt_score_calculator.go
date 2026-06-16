@@ -42,7 +42,7 @@ func (m *MockIEvaluatorScoreCalculator) EXPECT() *MockIEvaluatorScoreCalculatorM
 }
 
 // CalculateWeightedScore mocks base method.
-func (m *MockIEvaluatorScoreCalculator) CalculateWeightedScore(ctx context.Context, expt *entity.Experiment, version2Record map[int64]*entity.EvaluatorRecord, scoreWeights map[int64]float64) *float64 {
+func (m *MockIEvaluatorScoreCalculator) CalculateWeightedScore(ctx context.Context, expt *entity.Experiment, version2Record map[string]*entity.EvaluatorRecord, scoreWeights map[string]float64) *float64 {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CalculateWeightedScore", ctx, expt, version2Record, scoreWeights)
 	ret0, _ := ret[0].(*float64)

@@ -103,22 +103,13 @@ func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, sp
 		return err
 	}
 
-	// 新实验类型 (MultiSetConfig): 不算 evaluator 维度的平均分聚合 —
-	// 多评测集 + alias 多实例场景下"单一 evaluator 平均分"语义不成立, 前端按 per-set 分组展示。
+	// evaluator 维度聚合按 (evaluator_version_id, alias) 实例分桶, 对两种实验类型统一计算:
+	//   - 老实验 (SingleSet, alias 全空): instanceKey 退化为裸 versionID, 结果与改造前 byte 级一致。
+	//   - 新实验 (MultiSetConfig): 同 version 多 alias 各自独立成桶, 不再撞 key 合并。
 	// Target 性能指标 (latency/tokens) 和 Annotation 聚合不受影响,继续算。
-	expt, err := e.experimentRepo.GetByID(ctx, experimentID, spaceID)
+	evaluatorInstanceKey2AggregatorGroup, err := e.computeEvaluatorAggrGroup(ctx, spaceID, experimentID)
 	if err != nil {
 		return err
-	}
-
-	var evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup
-	if expt == nil || expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
-		evaluatorVersionID2AggregatorGroup, err = e.computeEvaluatorAggrGroup(ctx, spaceID, experimentID)
-		if err != nil {
-			return err
-		}
-	} else {
-		evaluatorVersionID2AggregatorGroup = map[int64]*AggregatorGroup{}
 	}
 
 	tmag, err := e.buildExptTargetMtrAggregatorGroup(ctx, spaceID, experimentID)
@@ -126,30 +117,33 @@ func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, sp
 		return err
 	}
 
-	return e.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existed)
+	return e.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorInstanceKey2AggregatorGroup, tmag, existed)
 }
 
-// computeEvaluatorAggrGroup 从 expt_turn_evaluator_result_ref 拉评估结果, 按 evaluator_version_id 分组聚合分数。
-// 老实验类型的 evaluator 维度聚合走这条路径。Status=Skipped 的占位 record (filter 不命中) 不计入聚合。
-func (e *ExptAggrResultServiceImpl) computeEvaluatorAggrGroup(ctx context.Context, spaceID, experimentID int64) (map[int64]*AggregatorGroup, error) {
-	evaluatorVersionID2AggregatorGroup := make(map[int64]*AggregatorGroup)
+// computeEvaluatorAggrGroup 从 expt_turn_evaluator_result_ref 拉评估结果, 按 (evaluator_version_id, alias)
+// 实例分桶聚合分数 (instanceKey = EncodeEvaluatorInstanceKey)。alias 为空 (老实验/老数据) 时
+// instanceKey 退化为裸 versionID, 分桶与 field_key byte 级与改造前一致。
+// Status=Skipped 的占位 record (filter 不命中) 不计入聚合。
+func (e *ExptAggrResultServiceImpl) computeEvaluatorAggrGroup(ctx context.Context, spaceID, experimentID int64) (map[string]*AggregatorGroup, error) {
+	evaluatorInstanceKey2AggregatorGroup := make(map[string]*AggregatorGroup)
 
 	turnEvaluatorResultRefs, err := e.exptTurnResultRepo.GetTurnEvaluatorResultRefByExptID(ctx, spaceID, experimentID)
 	if err != nil {
 		return nil, err
 	}
 	if len(turnEvaluatorResultRefs) == 0 {
-		return evaluatorVersionID2AggregatorGroup, nil
+		return evaluatorInstanceKey2AggregatorGroup, nil
 	}
 
 	evaluatorResultIDs := make([]int64, 0)
-	evaluatorVersionID2ResultIDs := make(map[int64][]int64)
+	evaluatorInstanceKey2ResultIDs := make(map[string][]int64)
 	for _, turnEvaluatorResultRef := range turnEvaluatorResultRefs {
+		instanceKey := entity.EncodeEvaluatorInstanceKey(turnEvaluatorResultRef.EvaluatorVersionID, turnEvaluatorResultRef.Alias)
 		evaluatorResultIDs = append(evaluatorResultIDs, turnEvaluatorResultRef.EvaluatorResultID)
-		if _, ok := evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID]; !ok {
-			evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = make([]int64, 0)
+		if _, ok := evaluatorInstanceKey2ResultIDs[instanceKey]; !ok {
+			evaluatorInstanceKey2ResultIDs[instanceKey] = make([]int64, 0)
 		}
-		evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = append(evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID], turnEvaluatorResultRef.EvaluatorResultID)
+		evaluatorInstanceKey2ResultIDs[instanceKey] = append(evaluatorInstanceKey2ResultIDs[instanceKey], turnEvaluatorResultRef.EvaluatorResultID)
 	}
 
 	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
@@ -165,9 +159,9 @@ func (e *ExptAggrResultServiceImpl) computeEvaluatorAggrGroup(ctx context.Contex
 		recordMap[record.ID] = record
 	}
 
-	for evaluatorVersionID, resultIDs := range evaluatorVersionID2ResultIDs {
+	for instanceKey, resultIDs := range evaluatorInstanceKey2ResultIDs {
 		aggregatorGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
-		evaluatorVersionID2AggregatorGroup[evaluatorVersionID] = aggregatorGroup
+		evaluatorInstanceKey2AggregatorGroup[instanceKey] = aggregatorGroup
 		for _, resultID := range resultIDs {
 			evalResult, ok := recordMap[resultID]
 			if !ok || evalResult == nil {
@@ -183,7 +177,7 @@ func (e *ExptAggrResultServiceImpl) computeEvaluatorAggrGroup(ctx context.Contex
 			aggregatorGroup.Append(score)
 		}
 	}
-	return evaluatorVersionID2AggregatorGroup, nil
+	return evaluatorInstanceKey2AggregatorGroup, nil
 }
 
 func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx context.Context, spaceID, exptID int64) (*targetMtrAggrGroup, error) {
@@ -233,7 +227,7 @@ func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx contex
 }
 
 func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Context, spaceID, experimentID int64,
-	evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup, tmag *targetMtrAggrGroup, existedAggrResults []*entity.ExptAggrResult,
+	evaluatorInstanceKey2AggregatorGroup map[string]*AggregatorGroup, tmag *targetMtrAggrGroup, existedAggrResults []*entity.ExptAggrResult,
 ) error {
 	aggrResKeyFn := func(fieldType int32, fieldKey string) string { return fmt.Sprintf("%d:%s", fieldType, fieldKey) }
 	existedAggrResultsMap := gslice.ToMap(existedAggrResults, func(val *entity.ExptAggrResult) (string, *entity.ExptAggrResult) {
@@ -241,7 +235,7 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 	})
 
 	aggrResults := make([]*entity.ExptAggrResult, 0)
-	for evaluatorVersionID, aggregatorGroup := range evaluatorVersionID2AggregatorGroup {
+	for instanceKey, aggregatorGroup := range evaluatorInstanceKey2AggregatorGroup {
 		aggrResult := aggregatorGroup.Result()
 		var averageScore float64
 		for _, aggregatorResult := range aggrResult.AggregatorResults {
@@ -258,10 +252,11 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 			SpaceID:      spaceID,
 			ExperimentID: experimentID,
 			FieldType:    int32(entity.FieldType_EvaluatorScore),
-			FieldKey:     strconv.FormatInt(evaluatorVersionID, 10),
-			Score:        utils.RoundScoreToTwoDecimals(averageScore),
-			AggrResult:   aggrResultBytes,
-			Version:      0,
+			// instanceKey 即 (versionID, alias) 编码; alias 为空时退化为裸 versionID, 与改造前一致。
+			FieldKey:   instanceKey,
+			Score:      utils.RoundScoreToTwoDecimals(averageScore),
+			AggrResult: aggrResultBytes,
+			Version:    0,
 		})
 	}
 
@@ -318,16 +313,8 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 
 // createWeightedScoreAggrResult 基于行级 WeightedScore 计算聚合指标
 // 只统计成功的轮次（TurnRunState_Success）
-// 新实验类型（MultiSetConfig）跳过——多评测集+alias 多实例场景下"实验级一个加权分"语义不成立
+// 行级 weighted_score 已在写入侧按 (version, alias) 算对, 这里只做实验级 avg 汇总, 两种实验类型统一计算。
 func (e *ExptAggrResultServiceImpl) createWeightedScoreAggrResult(ctx context.Context, spaceID, experimentID int64) (*entity.ExptAggrResult, error) {
-	expt, err := e.experimentRepo.GetByID(ctx, experimentID, spaceID)
-	if err != nil {
-		return nil, err
-	}
-	if expt != nil && expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
-		return nil, nil
-	}
-
 	const (
 		limit  = int64(500)
 		maxTry = 10000
@@ -408,15 +395,6 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid field type"))
 	}
 
-	// 新实验类型 (MultiSetConfig) 不写 evaluator 维度聚合, 直接返回 —
-	// 增量 update event 理论上对新实验不会触发(创建侧也跳过), 这里是兜底防御。
-	exptForCheck, err := e.experimentRepo.GetByID(ctx, param.ExperimentID, param.SpaceID)
-	if err != nil {
-		return err
-	}
-	if exptForCheck != nil && exptForCheck.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
-		return nil
-	}
 	// If initial calculation not finished, return error for MQ retry
 	_, err = e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_EvaluatorScore), param.FieldKey)
 	if err != nil {
@@ -499,10 +477,12 @@ func (e *ExptAggrResultServiceImpl) updateExptAggrResult(ctx context.Context, pa
 		SpaceID:      param.SpaceID,
 		ExperimentID: param.ExperimentID,
 		FieldType:    int32(entity.FieldType_EvaluatorScore),
-		FieldKey:     strconv.FormatInt(evaluatorVersionID, 10),
-		Score:        utils.RoundScoreToTwoDecimals(averageScore),
-		AggrResult:   aggrResultBytes,
-		Version:      version,
+		// 回写原 field_key (instanceKey), 保证与 GetExptAggrResult/UpdateAndGetLatestVersion 查询用的 key 一致;
+		// 老实验 alias 为空时即裸 versionID, 与改造前 byte 级一致。
+		FieldKey:   param.FieldKey,
+		Score:      utils.RoundScoreToTwoDecimals(averageScore),
+		AggrResult: aggrResultBytes,
+		Version:    version,
 	}
 
 	err = e.exptAggrResultRepo.UpdateExptAggrResultByVersion(ctx, exptAggrResults, version)

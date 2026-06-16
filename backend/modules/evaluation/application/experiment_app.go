@@ -1890,6 +1890,12 @@ func (e *experimentApplication) ExportExptResult_(ctx context.Context, req *expt
 		return nil, err
 	}
 
+	// MultiSetConfig 实验关联多个评测集、列不一致，导出单个 CSV 会混乱，产品决定不支持。
+	// 在入口处按类型直接拒绝，不再发起导出 MQ 事件。
+	if got.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("该类型实验暂不支持导出（多评测集列不一致）"))
+	}
+
 	if !e.configer.GetExptExportWhiteList(ctx).IsUserIDInWhiteList(session.UserID) {
 		err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
 			ObjectID:        strconv.FormatInt(req.GetExptID(), 10),

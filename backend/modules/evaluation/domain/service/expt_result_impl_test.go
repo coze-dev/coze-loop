@@ -5717,7 +5717,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 		result := calculateWeightedScore(nil, nil)
 		assert.Nil(t, result)
 
-		result = calculateWeightedScore(map[int64]*entity.EvaluatorRecord{}, nil)
+		result = calculateWeightedScore(map[string]*entity.EvaluatorRecord{}, nil)
 		assert.Nil(t, result)
 	})
 
@@ -5725,8 +5725,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 		score1 := 0.8
 		score2 := 0.9
 		score3 := 0.7
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5734,7 +5734,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			102: {
+			"102": {
 				EvaluatorVersionID: 102,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5742,7 +5742,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			103: {
+			"103": {
 				EvaluatorVersionID: 103,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5761,8 +5761,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	t.Run("有权重配置，计算加权平均", func(t *testing.T) {
 		score1 := 0.8
 		score2 := 0.9
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5770,7 +5770,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			102: {
+			"102": {
 				EvaluatorVersionID: 102,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5780,9 +5780,9 @@ func TestCalculateWeightedScore(t *testing.T) {
 			},
 		}
 
-		weights := map[int64]float64{
-			101: 0.6,
-			102: 0.4,
+		weights := map[string]float64{
+			"101": 0.6,
+			"102": 0.4,
 		}
 
 		result := calculateWeightedScore(records, weights)
@@ -5794,8 +5794,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	t.Run("优先使用修正分数", func(t *testing.T) {
 		originalScore := 0.8
 		correctionScore := 0.9
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5815,8 +5815,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 
 	t.Run("包含 nil 记录，跳过", func(t *testing.T) {
 		score1 := 0.8
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5824,7 +5824,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			102: nil, // nil 记录应该被跳过
+			"102": nil, // nil 记录应该被跳过
 		}
 
 		result := calculateWeightedScore(records, nil)
@@ -5833,8 +5833,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	})
 
 	t.Run("记录无分数，返回 nil", func(t *testing.T) {
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5851,8 +5851,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	t.Run("权重为0或负数，跳过", func(t *testing.T) {
 		score1 := 0.8
 		score2 := 0.9
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5860,7 +5860,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			102: {
+			"102": {
 				EvaluatorVersionID: 102,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5870,9 +5870,9 @@ func TestCalculateWeightedScore(t *testing.T) {
 			},
 		}
 
-		weights := map[int64]float64{
-			101: 0.6,
-			102: 0.0, // 权重为0，应该被跳过
+		weights := map[string]float64{
+			"101": 0.6,
+			"102": 0.0, // 权重为0，应该被跳过
 		}
 
 		result := calculateWeightedScore(records, weights)
@@ -5882,8 +5882,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	})
 
 	t.Run("所有记录都被跳过，返回 nil", func(t *testing.T) {
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5893,8 +5893,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 			},
 		}
 
-		weights := map[int64]float64{
-			101: 0.0, // 权重为0
+		weights := map[string]float64{
+			"101": 0.0, // 权重为0
 		}
 
 		result := calculateWeightedScore(records, weights)
@@ -6488,26 +6488,26 @@ func TestResolveLoadEvalTargetFullContent(t *testing.T) {
 func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 	tests := []struct {
 		name    string
-		records map[int64]*entity.EvaluatorRecord
-		weights map[int64]float64
+		records map[string]*entity.EvaluatorRecord
+		weights map[string]float64
 		want    *float64
 	}{
 		{
 			name:    "empty records",
-			records: map[int64]*entity.EvaluatorRecord{},
-			weights: map[int64]float64{1: 0.5},
+			records: map[string]*entity.EvaluatorRecord{},
+			weights: map[string]float64{"1": 0.5},
 			want:    nil,
 		},
 		{
 			name:    "nil records",
 			records: nil,
-			weights: map[int64]float64{1: 0.5},
+			weights: map[string]float64{"1": 0.5},
 			want:    nil,
 		},
 		{
 			name: "no weights - simple average",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6516,7 +6516,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6531,8 +6531,8 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 		},
 		{
 			name: "with weights",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6541,7 +6541,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6551,13 +6551,13 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 					},
 				},
 			},
-			weights: map[int64]float64{1: 0.6, 2: 0.4},
+			weights: map[string]float64{"1": 0.6, "2": 0.4},
 			want:    gptr.Of(utils.RoundScoreToTwoDecimals((0.8*0.6 + 0.6*0.4) / (0.6 + 0.4))),
 		},
 		{
 			name: "with correction scores",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6575,8 +6575,8 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 		},
 		{
 			name: "all nil scores",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6585,7 +6585,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                  2,
 					EvaluatorVersionID:  2,
 					EvaluatorOutputData: nil,
@@ -6596,8 +6596,8 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 		},
 		{
 			name: "mixed nil and valid scores - no weights",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6606,7 +6606,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6621,8 +6621,8 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 		},
 		{
 			name: "weight <= 0 skipped",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6631,7 +6631,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6641,14 +6641,14 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 					},
 				},
 			},
-			weights: map[int64]float64{1: 1.0, 2: -0.5},
+			weights: map[string]float64{"1": 1.0, "2": -0.5},
 			want:    gptr.Of(0.8),
 		},
 		{
 			name: "nil record in map skipped",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: nil,
-				2: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": nil,
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{

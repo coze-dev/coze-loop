@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS expt_turn_result_filter
     `space_id` String,
     `expt_id` String,
     `item_id` String,
+    `item_version_id` String,
     `item_idx` Int32,
     `turn_id` String,
     `status` Int32,
@@ -41,3 +42,6 @@ AFTER `eval_target_metrics`;
 ALTER TABLE expt_turn_result_filter
 ADD COLUMN IF NOT EXISTS `eval_set_id` String
 AFTER `evaluator_score_corrected`;
+ALTER TABLE expt_turn_result_filter
+ADD COLUMN IF NOT EXISTS `item_version_id` String DEFAULT '0'
+AFTER `item_id`;
