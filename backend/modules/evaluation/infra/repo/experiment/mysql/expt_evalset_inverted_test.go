@@ -67,3 +67,17 @@ func TestExptDAO_toConditions_EvalSetVersionID_InvertedExclude(t *testing.T) {
 	assert.Contains(t, sql, "FROM `expt_item_ref`")
 	assert.Contains(t, sql, "AND id NOT IN", "exclude 应是列不匹配 AND 倒排不匹配, got: %s", sql)
 }
+
+// TestExptDAO_toConditions_EvalSetSourceType 验证顶层 EvalSetSourceTypes (与 FuzzyName 同级) → eval_set_source_type IN。
+func TestExptDAO_toConditions_EvalSetSourceType(t *testing.T) {
+	dao := &exptDAOImpl{}
+
+	conds, ok := dao.toConditions(&entity.ExptListFilter{
+		EvalSetSourceTypes: []int64{1},
+		Includes:           &entity.ExptFilterFields{},
+		Excludes:           &entity.ExptFilterFields{},
+	}, nil, 100)
+	assert.True(t, ok)
+	sql := renderExptConds(t, conds)
+	assert.Contains(t, sql, "eval_set_source_type IN")
+}
