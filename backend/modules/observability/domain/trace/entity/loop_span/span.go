@@ -150,7 +150,6 @@ var SpanStructFieldKeys = []string{
 	SpanFieldSpanType,
 	SpanFieldMethod,
 	SpanFieldStatusCode,
-	SpanFieldObjectStorage,
 }
 
 type SpanList []*Span
