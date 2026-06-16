@@ -290,6 +290,16 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 				return nil, err
 			}
 			ff.EvalSetIDs = intersectIgnoreNull(ff.EvalSetIDs, ids)
+		case domain_expt.FieldType_EvalSetVersionID:
+			// 之前落 default 被静默丢弃 → 新实验无法按版本筛选; 本次补实现, 落地同走列匹配 ∪ expt_item_ref 倒排
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			ids, err := parseIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.EvalSetVersionIDs = intersectIgnoreNull(ff.EvalSetVersionIDs, ids)
 		case domain_expt.FieldType_TargetID:
 			if len(cond.GetValue()) == 0 {
 				continue
