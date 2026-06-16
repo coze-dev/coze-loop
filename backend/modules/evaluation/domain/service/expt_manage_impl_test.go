@@ -1517,6 +1517,7 @@ func TestNewExptManager(t *testing.T) {
 	mockExptRunLogRepo := repoMocks.NewMockIExptRunLogRepo(ctrl)
 	mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
 	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	mockExptItemRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
 	mockQuotaRepo := repoMocks.NewMockQuotaRepo(ctrl)
@@ -1543,6 +1544,7 @@ func TestNewExptManager(t *testing.T) {
 		mockExptRunLogRepo,
 		mockExptStatsRepo,
 		mockExptItemResultRepo,
+		mockExptItemRefRepo,
 		mockExptTurnResultRepo,
 		mockConfiger,
 		mockQuotaRepo,
@@ -1563,7 +1565,6 @@ func TestNewExptManager(t *testing.T) {
 		mockTemplateManager,
 		mockNotify,
 		mockUser,
-		nil,
 		nil,
 	)
 

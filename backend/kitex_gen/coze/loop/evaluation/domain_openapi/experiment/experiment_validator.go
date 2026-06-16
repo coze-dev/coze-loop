@@ -54,6 +54,14 @@ func (p *OpenAPIExptTargetConf) IsValid() error {
 func (p *OpenAPIEvalSetConfig) IsValid() error {
 	return nil
 }
+func (p *ExptEvalSetDetail) IsValid() error {
+	if p.EvalSet != nil {
+		if err := p.EvalSet.IsValid(); err != nil {
+			return fmt.Errorf("field EvalSet not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *TokenUsage) IsValid() error {
 	return nil
 }

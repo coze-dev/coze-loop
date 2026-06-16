@@ -140,9 +140,11 @@ type Experiment struct {
 	// ★ 新增: 评测集来源模式 (1=SingleSet老路径 / 2=MultiSetConfig新路径)
 	EvalSetSourceType ExptEvalSetSourceType
 
-	// ★ 新增: per-set 运行期增量信息 (纯读模型, 仅 MultiSetConfig 实验填充)
-	// 由 ExptMangerImpl.packExperimentResult 调用 IExptItemRefRepo.CountByEvalSetGrouped 填入
+	// ★ 新增 (MultiSetConfig 读视图, 仅查询时填充):
+	// EvalSetDetails per-set 运行期增量信息 (item 数 + 评测集详情); Get/MGetDetail 全填, List 只填 id/count
 	EvalSetDetails []*ExptEvalSetDetail
+	// TotalItemCount 实验绑定 item 总数 (来源 expt_item_ref); 首跑前为 0
+	TotalItemCount int64
 
 	Target     *EvalTarget
 	EvalSet    *EvaluationSet
