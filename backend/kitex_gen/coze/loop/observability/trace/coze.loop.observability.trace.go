@@ -22390,10 +22390,11 @@ func (p *ListTrajectoryResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ListMetadataRequest struct {
-	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	PlatformType *common.PlatformType `thrift:"platform_type,2,optional" frugal:"2,optional,string" form:"platform_type" json:"platform_type,omitempty"`
-	SpanListType *common.SpanListType `thrift:"span_list_type,3,optional" frugal:"3,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
-	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID  int64                 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	PlatformType *common.PlatformType  `thrift:"platform_type,2,optional" frugal:"2,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	SpanListType *common.SpanListType  `thrift:"span_list_type,3,optional" frugal:"3,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
+	Scene        *common.MetadataScene `thrift:"scene,4,optional" frugal:"4,optional,string" form:"scene" json:"scene,omitempty"`
+	Base         *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListMetadataRequest() *ListMetadataRequest {
@@ -22434,6 +22435,18 @@ func (p *ListMetadataRequest) GetSpanListType() (v common.SpanListType) {
 	return *p.SpanListType
 }
 
+var ListMetadataRequest_Scene_DEFAULT common.MetadataScene
+
+func (p *ListMetadataRequest) GetScene() (v common.MetadataScene) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScene() {
+		return ListMetadataRequest_Scene_DEFAULT
+	}
+	return *p.Scene
+}
+
 var ListMetadataRequest_Base_DEFAULT *base.Base
 
 func (p *ListMetadataRequest) GetBase() (v *base.Base) {
@@ -22454,6 +22467,9 @@ func (p *ListMetadataRequest) SetPlatformType(val *common.PlatformType) {
 func (p *ListMetadataRequest) SetSpanListType(val *common.SpanListType) {
 	p.SpanListType = val
 }
+func (p *ListMetadataRequest) SetScene(val *common.MetadataScene) {
+	p.Scene = val
+}
 func (p *ListMetadataRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -22462,6 +22478,7 @@ var fieldIDToName_ListMetadataRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "platform_type",
 	3:   "span_list_type",
+	4:   "scene",
 	255: "Base",
 }
 
@@ -22471,6 +22488,10 @@ func (p *ListMetadataRequest) IsSetPlatformType() bool {
 
 func (p *ListMetadataRequest) IsSetSpanListType() bool {
 	return p.SpanListType != nil
+}
+
+func (p *ListMetadataRequest) IsSetScene() bool {
+	return p.Scene != nil
 }
 
 func (p *ListMetadataRequest) IsSetBase() bool {
@@ -22516,6 +22537,14 @@ func (p *ListMetadataRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -22597,6 +22626,17 @@ func (p *ListMetadataRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.SpanListType = _field
 	return nil
 }
+func (p *ListMetadataRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *common.MetadataScene
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Scene = _field
+	return nil
+}
 func (p *ListMetadataRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -22622,6 +22662,10 @@ func (p *ListMetadataRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -22698,6 +22742,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ListMetadataRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScene() {
+		if err = oprot.WriteFieldBegin("scene", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Scene); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 func (p *ListMetadataRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -22740,6 +22802,9 @@ func (p *ListMetadataRequest) DeepEqual(ano *ListMetadataRequest) bool {
 	if !p.Field3DeepEqual(ano.SpanListType) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.Scene) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -22773,6 +22838,18 @@ func (p *ListMetadataRequest) Field3DeepEqual(src *common.SpanListType) bool {
 		return false
 	}
 	if strings.Compare(*p.SpanListType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListMetadataRequest) Field4DeepEqual(src *common.MetadataScene) bool {
+
+	if p.Scene == src {
+		return true
+	} else if p.Scene == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Scene, *src) != 0 {
 		return false
 	}
 	return true

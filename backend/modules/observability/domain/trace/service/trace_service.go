@@ -147,6 +147,7 @@ type ListMetadataReq struct {
 	EndTime      int64 // ms
 	SpanListType loop_span.SpanListType
 	PlatformType loop_span.PlatformType
+	Scene        string
 }
 
 type ListMetadataResp struct {
@@ -1721,6 +1722,29 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 	}
 	keyInfoMap := make(map[string]*keyInfo)
 	for _, span := range listSpansResp.Spans {
+		if req.Scene == "data_extract" {
+			for key := range span.SystemTagsString {
+				if info, ok := keyInfoMap[key]; ok {
+					info.count++
+				} else {
+					keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeString}
+				}
+			}
+			for key := range span.SystemTagsLong {
+				if info, ok := keyInfoMap[key]; ok {
+					info.count++
+				} else {
+					keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeLong}
+				}
+			}
+			for key := range span.SystemTagsDouble {
+				if info, ok := keyInfoMap[key]; ok {
+					info.count++
+				} else {
+					keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeDouble}
+				}
+			}
+		}
 		for key := range span.TagsString {
 			if info, ok := keyInfoMap[key]; ok {
 				info.count++

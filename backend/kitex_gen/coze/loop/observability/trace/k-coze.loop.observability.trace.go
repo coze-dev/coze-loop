@@ -16700,6 +16700,20 @@ func (p *ListMetadataRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -16780,6 +16794,20 @@ func (p *ListMetadataRequest) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListMetadataRequest) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *common.MetadataScene
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Scene = _field
+	return offset, nil
+}
+
 func (p *ListMetadataRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -16802,6 +16830,7 @@ func (p *ListMetadataRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -16814,6 +16843,7 @@ func (p *ListMetadataRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -16841,6 +16871,15 @@ func (p *ListMetadataRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter)
 	if p.IsSetSpanListType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SpanListType)
+	}
+	return offset
+}
+
+func (p *ListMetadataRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetScene() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Scene)
 	}
 	return offset
 }
@@ -16879,6 +16918,15 @@ func (p *ListMetadataRequest) field3Length() int {
 	return l
 }
 
+func (p *ListMetadataRequest) field4Length() int {
+	l := 0
+	if p.IsSetScene() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Scene)
+	}
+	return l
+}
+
 func (p *ListMetadataRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -16904,6 +16952,11 @@ func (p *ListMetadataRequest) DeepCopy(s interface{}) error {
 	if src.SpanListType != nil {
 		tmp := *src.SpanListType
 		p.SpanListType = &tmp
+	}
+
+	if src.Scene != nil {
+		tmp := *src.Scene
+		p.Scene = &tmp
 	}
 
 	var _base *base.Base
