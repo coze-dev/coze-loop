@@ -140,6 +140,10 @@ type Experiment struct {
 	// ★ 新增: 评测集来源模式 (1=SingleSet老路径 / 2=MultiSetConfig新路径)
 	EvalSetSourceType ExptEvalSetSourceType
 
+	// ★ 新增: per-set 运行期增量信息 (纯读模型, 仅 MultiSetConfig 实验填充)
+	// 由 ExptMangerImpl.packExperimentResult 调用 IExptItemRefRepo.CountByEvalSetGrouped 填入
+	EvalSetDetails []*ExptEvalSetDetail
+
 	Target     *EvalTarget
 	EvalSet    *EvaluationSet
 	Evaluators []*Evaluator
@@ -493,6 +497,17 @@ const (
 	ExptEvalSetSourceType_SingleSet      ExptEvalSetSourceType = 1 // 老实验: 单评测集, 配置在平铺老字段
 	ExptEvalSetSourceType_MultiSetConfig ExptEvalSetSourceType = 2 // 新实验: 多评测集+配置, 权威源 eval_conf.EvalSetConfigs
 )
+
+// ExptEvalSetDetail per-set 运行期增量信息 (纯读模型, 不进 Create 入参)
+// 对应 IDL domain/expt.thrift:ExptEvalSetDetail (字段编号一致便于 DTO 转换)
+// 仅 MultiSetConfig 实验填充; Get 路径填详情, List 路径只填计数。
+type ExptEvalSetDetail struct {
+	EvalSetID        int64 // 1
+	EvalSetVersionID int64 // 2
+	IsPrimary        bool  // 3 主集 (封面), 与 experiment.eval_set_id 列一致
+	ItemCount        int32 // 4 该 set 选入实验的 item 数; 来源 expt_item_ref, 首跑前为 0
+	EvalSet          *EvaluationSet // 5 Get 填详情; List 不填
+}
 
 // ExptItemRef 实验绑定 item 的扁平集合 (首次调度 ExptStart 写入, 单行执行唯一配置源)
 type ExptItemRef struct {

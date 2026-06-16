@@ -453,6 +453,22 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		// eval_set_configs 回显: 直接从 eval_conf 反序列化结果转 DTO (与 Create 入参同构)
 		res.EvalSetConfigs = convertEvalSetConfigsDOToDTO(experiment.EvalConf.EvalSetConfigs)
 	}
+	// eval_set_details 回显: per-set item_count / is_primary (由 ExptMangerImpl.fillEvalSetDetails 填充)
+	if len(experiment.EvalSetDetails) > 0 {
+		details := make([]*domain_expt.ExptEvalSetDetail, 0, len(experiment.EvalSetDetails))
+		for _, d := range experiment.EvalSetDetails {
+			if d == nil {
+				continue
+			}
+			details = append(details, &domain_expt.ExptEvalSetDetail{
+				EvalSetID:        gptr.Of(d.EvalSetID),
+				EvalSetVersionID: gptr.Of(d.EvalSetVersionID),
+				IsPrimary:        gptr.Of(d.IsPrimary),
+				ItemCount:        gptr.Of(d.ItemCount),
+			})
+		}
+		res.EvalSetDetails = details
+	}
 	// evaluators_concur_num 回显: 从 EvaluatorsConf 取
 	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
