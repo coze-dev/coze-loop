@@ -1277,6 +1277,9 @@ func CreateEvalTargetParamDTO2DOForTemplate(param *eval_target.CreateEvalTargetP
 		OperationInstruction: param.OperationInstruction,
 		Cluster:              param.Cluster,
 	}
+	if param.AgentConnection != nil { // ← 补
+		res.AgentConnection = target.AgentConnectionDTO2DO(param.AgentConnection)
+	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))
 	}
