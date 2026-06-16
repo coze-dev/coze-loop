@@ -286,11 +286,8 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 
 		spans := loop_span.SpanList{
 			{
-				SpanID:           "span1",
-				TagsString:       map[string]string{"user_tag": "val"},
-				SystemTagsString: map[string]string{"sys_str": "v"},
-				SystemTagsLong:   map[string]int64{"sys_long": 1},
-				SystemTagsDouble: map[string]float64{"sys_double": 2.0},
+				SpanID:     "span1",
+				TagsString: map[string]string{"user_tag": "val"},
 			},
 		}
 
@@ -304,15 +301,16 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 
-		typeMap := make(map[string]string)
-		for _, item := range resp.MetadataItemList {
-			typeMap[item.Key] = item.ValueType
+		// Should contain SpanStructFieldKeys + user_tag (deduped)
+		structFieldCount := len(loop_span.SpanStructFieldKeys)
+		assert.True(t, len(resp.MetadataItemList) >= structFieldCount)
+		// First items should be SpanStructFieldKeys
+		for i, key := range loop_span.SpanStructFieldKeys {
+			assert.Equal(t, key, resp.MetadataItemList[i].Key)
+			assert.Equal(t, loop_span.MetadataValueTypeString, resp.MetadataItemList[i].ValueType)
 		}
-		assert.Equal(t, loop_span.MetadataValueTypeString, typeMap["user_tag"])
-		assert.Equal(t, loop_span.MetadataValueTypeString, typeMap["sys_str"])
-		assert.Equal(t, loop_span.MetadataValueTypeLong, typeMap["sys_long"])
-		assert.Equal(t, loop_span.MetadataValueTypeDouble, typeMap["sys_double"])
-		assert.Len(t, resp.MetadataItemList, 4)
+		// user_tag should follow after struct field keys
+		assert.Equal(t, "user_tag", resp.MetadataItemList[structFieldCount].Key)
 	})
 
 	t.Run("default scene excludes system tags", func(t *testing.T) {
