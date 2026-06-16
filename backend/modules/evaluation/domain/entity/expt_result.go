@@ -470,17 +470,21 @@ type ExptListFilter struct {	FuzzyName string
 }
 
 type ExptFilterFields struct {
-	CreatedBy       []string
-	UpdatedBy       []string
-	Status          []int64
-	EvalSetIDs      []int64
-	TargetIDs       []int64
-	EvaluatorIDs    []int64
-	TargetType      []int64
-	ExptType        []int64
-	SourceType      []int64
-	SourceID        []string
-	ExptTemplateIDs []int64
+	CreatedBy []string
+	UpdatedBy []string
+	Status    []int64
+	// EvalSetIDs 按评测集筛选。语义升级为「实验包含该 set」：老实验 = experiment.eval_set_id 列匹配，
+	// 新实验(MultiSetConfig) = 通过 expt_item_ref 倒排（首跑前以主集列覆盖，非主集 set 在首跑前筛不到，为已知限制）。
+	EvalSetIDs []int64
+	// EvalSetVersionIDs 按评测集版本筛选，落地语义同 EvalSetIDs（列匹配 ∪ expt_item_ref 倒排）。
+	EvalSetVersionIDs []int64
+	TargetIDs         []int64
+	EvaluatorIDs      []int64
+	TargetType        []int64
+	ExptType          []int64
+	SourceType        []int64
+	SourceID          []string
+	ExptTemplateIDs   []int64
 	// TriggerType 对应表字段 trigger_type，多值 IN 筛选（如 manual,openapi）
 	TriggerType []string
 }
@@ -489,7 +493,7 @@ func (e *ExptFilterFields) IsValid() bool {
 	if e == nil {
 		return true
 	}
-	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptTemplateIDs} {
+	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.EvalSetVersionIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptTemplateIDs} {
 		for _, item := range slice {
 			if item < 0 {
 				return false

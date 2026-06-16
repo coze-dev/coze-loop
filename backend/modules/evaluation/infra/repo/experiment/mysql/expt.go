@@ -116,7 +116,7 @@ func (d *exptDAOImpl) List(ctx context.Context, page, size int32, filter *entity
 		db = db.Where("visibility <> ?", int32(entity.Visibility_Hidden))
 	}
 
-	conds, ok := d.toConditions(filter, orders)
+	conds, ok := d.toConditions(filter, orders, spaceID)
 	if !ok {
 		return experiments, 0, nil
 	}
@@ -153,7 +153,7 @@ func (d *exptDAOImpl) filterNeedJoin(f *entity.ExptListFilter) bool {
 	return false
 }
 
-func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.OrderBy) ([]func(tx *gorm.DB) *gorm.DB, bool) {
+func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.OrderBy, spaceID int64) ([]func(tx *gorm.DB) *gorm.DB, bool) {
 	if f == nil && len(orders) == 0 {
 		return nil, true
 	}
@@ -194,9 +194,38 @@ func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.Or
 				return db.Where(fmt.Sprintf("%starget_id %s (?)", exptPrefix, scopeComparator), ffields.TargetIDs)
 			})
 		}
+		// EvalSetID / EvalSetVersionID 语义升级为「实验包含该 set/version」:
+		// 老实验 = experiment 列匹配; 新实验(MultiSetConfig) = expt_item_ref 倒排 (id IN 子查询)。
+		// Include(IN): 列命中 OR 倒排命中; Exclude(NOT IN): 列不命中 AND 倒排不命中。
+		// 用子查询而非 JOIN: expt_item_ref 一实验数千行, JOIN+GROUP BY fan-out 不可控; 子查询走
+		// idx_space_eval_set_version_expt 前缀, 也避免把倒排集合物化成超大 IN-list。
+		isInclude := scopeComparator == "IN"
 		if ffields != nil && len(ffields.EvalSetIDs) > 0 {
+			ids := ffields.EvalSetIDs
 			conds = append(conds, func(db *gorm.DB) *gorm.DB {
-				return db.Where(fmt.Sprintf("%seval_set_id %s (?)", exptPrefix, scopeComparator), ffields.EvalSetIDs)
+				sub := db.Session(&gorm.Session{NewDB: true}).Table(model.TableNameExptItemRef).
+					Select("expt_id").
+					Where("space_id = ? AND eval_set_id IN (?) AND deleted_at IS NULL", spaceID, ids)
+				if isInclude {
+					return db.Where(
+						fmt.Sprintf("(%[1]seval_set_id IN (?) OR %[1]sid IN (?))", exptPrefix),
+						ids, sub)
+				}
+				return db.Where(fmt.Sprintf("%[1]seval_set_id NOT IN (?) AND %[1]sid NOT IN (?)", exptPrefix), ids, sub)
+			})
+		}
+		if ffields != nil && len(ffields.EvalSetVersionIDs) > 0 {
+			verIDs := ffields.EvalSetVersionIDs
+			conds = append(conds, func(db *gorm.DB) *gorm.DB {
+				sub := db.Session(&gorm.Session{NewDB: true}).Table(model.TableNameExptItemRef).
+					Select("expt_id").
+					Where("space_id = ? AND eval_set_version_id IN (?) AND deleted_at IS NULL", spaceID, verIDs)
+				if isInclude {
+					return db.Where(
+						fmt.Sprintf("(%[1]seval_set_version_id IN (?) OR %[1]sid IN (?))", exptPrefix),
+						verIDs, sub)
+				}
+				return db.Where(fmt.Sprintf("%[1]seval_set_version_id NOT IN (?) AND %[1]sid NOT IN (?)", exptPrefix), verIDs, sub)
 			})
 		}
 		if ffields != nil && len(ffields.Status) > 0 {
