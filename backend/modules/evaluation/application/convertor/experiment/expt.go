@@ -453,29 +453,183 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		// eval_set_configs 回显: 直接从 eval_conf 反序列化结果转 DTO (与 Create 入参同构)
 		res.EvalSetConfigs = convertEvalSetConfigsDOToDTO(experiment.EvalConf.EvalSetConfigs)
 	}
-	// eval_set_details 回显: per-set item_count / is_primary (由 ExptMangerImpl.fillEvalSetDetails 填充)
-	if len(experiment.EvalSetDetails) > 0 {
-		details := make([]*domain_expt.ExptEvalSetDetail, 0, len(experiment.EvalSetDetails))
-		for _, d := range experiment.EvalSetDetails {
-			if d == nil {
-				continue
-			}
-			details = append(details, &domain_expt.ExptEvalSetDetail{
-				EvalSetID:        gptr.Of(d.EvalSetID),
-				EvalSetVersionID: gptr.Of(d.EvalSetVersionID),
-				IsPrimary:        gptr.Of(d.IsPrimary),
-				ItemCount:        gptr.Of(d.ItemCount),
-			})
-		}
-		res.EvalSetDetails = details
-	}
 	// evaluators_concur_num 回显: 从 EvaluatorsConf 取
 	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
 		res.EvaluatorsConcurNum = gptr.Of(int32(*experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum))
 	}
+	// eval_set_details 回显 (enrichment): per-set item 数 + 详情 (Get 全填, List 只 id/count)
+	if len(experiment.EvalSetDetails) > 0 {
+		res.EvalSetDetails = convertEvalSetDetailsDOToDTO(experiment.EvalSetDetails)
+	}
+	// total_item_count 回显: 实验绑定 item 总数 (首跑前为 0, 仍回显)
+	if experiment.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		res.TotalItemCount = gptr.Of(experiment.TotalItemCount)
+	}
+
+	// ★ §2 老字段降级投影 (新实验 MultiSetConfig): 老字段 = 主集封面/去重投影, 仅当 flat 来源为空才兜底
+	projectLegacyFieldsFromPrimarySet(experiment, res)
 
 	return res
+}
+
+// convertEvalSetDetailsDOToDTO 将 domain ExptEvalSetDetail 列表回显为 IDL DTO。
+func convertEvalSetDetailsDOToDTO(dos []*entity.ExptEvalSetDetail) []*domain_expt.ExptEvalSetDetail {
+	if len(dos) == 0 {
+		return nil
+	}
+	dtos := make([]*domain_expt.ExptEvalSetDetail, 0, len(dos))
+	for _, do := range dos {
+		if do == nil {
+			continue
+		}
+		dto := &domain_expt.ExptEvalSetDetail{
+			EvalSetID:        gptr.Of(do.EvalSetID),
+			EvalSetVersionID: gptr.Of(do.EvalSetVersionID),
+			IsPrimary:        gptr.Of(do.IsPrimary),
+			ItemCount:        gptr.Of(do.ItemCount),
+		}
+		if do.EvalSet != nil {
+			dto.EvalSet = evaluation_set.EvaluationSetDO2DTO(do.EvalSet)
+		}
+		dtos = append(dtos, dto)
+	}
+	return dtos
+}
+
+// projectLegacyFieldsFromPrimarySet 对新实验 (MultiSetConfig) 做老字段降级投影:
+// 老字段 = 新模型的「主集封面 / 去重投影」, 新字段才是权威源 (§2 兼容矩阵)。
+//
+// 数据源是 experiment.EvalConf.EvalSetConfigs (创建期即有), 不依赖 expt_item_ref。
+// 仅当现有 flat 来源为空才兜底覆盖, 避免破坏老实验与已写入平铺列的新实验。
+func projectLegacyFieldsFromPrimarySet(experiment *entity.Experiment, res *domain_expt.Experiment) {
+	if experiment.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+		return
+	}
+	if experiment.EvalConf == nil || len(experiment.EvalConf.EvalSetConfigs) == 0 {
+		return
+	}
+	// 主集: 与 experiment.eval_set_id 列一致; 创建期未指定主集则取第一个 (对齐 enrichEvalSetDetails)
+	var primary *entity.EvalSetConfig
+	for _, sc := range experiment.EvalConf.EvalSetConfigs {
+		if sc == nil {
+			continue
+		}
+		if sc.EvalSetID == experiment.EvalSetID {
+			primary = sc
+			break
+		}
+	}
+	if primary == nil {
+		primary = experiment.EvalConf.EvalSetConfigs[0]
+	}
+	if primary == nil {
+		return
+	}
+
+	// eval_set_id / eval_set_version_id (27/21) ← 主集
+	if res.GetEvalSetID() == 0 && primary.EvalSetID != 0 {
+		res.EvalSetID = gptr.Of(primary.EvalSetID)
+	}
+	if res.GetEvalSetVersionID() == 0 && primary.EvalSetVersionID != 0 {
+		res.EvalSetVersionID = gptr.Of(primary.EvalSetVersionID)
+	}
+
+	// evaluator_field_mapping (32) ← 主集中各 version 的默认实例 (alias=='', 无默认取第一个), 按 version 去重
+	if len(res.EvaluatorFieldMapping) == 0 {
+		if ems := projectEvaluatorFieldMappingFromSet(primary); len(ems) > 0 {
+			res.EvaluatorFieldMapping = ems
+		}
+	}
+
+	// target_field_mapping (31) / target_runtime_param (33) ← 主集 target_confs[0]
+	// 注: ConvertEntityToDTO 对非空 EvalConf 会返回空壳 TargetFieldMapping{}/RuntimeParam{},
+	// 故按「内容为空」而非「指针为 nil」判定是否需要兜底投影。
+	if len(primary.TargetConfs) > 0 && primary.TargetConfs[0] != nil {
+		tc := primary.TargetConfs[0]
+		if (res.TargetFieldMapping == nil || len(res.TargetFieldMapping.FromEvalSet) == 0) && len(tc.FieldMapping) > 0 {
+			res.TargetFieldMapping = &domain_expt.TargetFieldMapping{
+				FromEvalSet: fieldConfsToFieldMappingDTO(tc.FieldMapping),
+			}
+		}
+		if res.TargetRuntimeParam == nil || res.TargetRuntimeParam.JSONValue == nil {
+			if rp := runtimeParamMapToDTO(tc.RuntimeParam); rp != nil {
+				res.TargetRuntimeParam = rp
+			}
+		}
+	}
+
+	// score_weight_config (61) ← 主集 evaluator_confs[].score_weight (同 version 撞 key 取默认实例)
+	if res.ScoreWeightConfig == nil {
+		if weights := projectScoreWeightsFromSet(primary); len(weights) > 0 {
+			res.EnableWeightedScore = gptr.Of(true)
+			res.ScoreWeightConfig = &domain_expt.ExptScoreWeight{
+				EnableWeightedScore:   gptr.Of(true),
+				EvaluatorScoreWeights: weights,
+			}
+		}
+	}
+}
+
+// projectEvaluatorFieldMappingFromSet 从单个评测集投影 evaluator_field_mapping:
+// 同一 evaluator_version_id 取默认实例 (alias==''); 无默认取首个实例 (接受信息损失)。
+func projectEvaluatorFieldMappingFromSet(sc *entity.EvalSetConfig) []*domain_expt.EvaluatorFieldMapping {
+	if sc == nil || len(sc.EvaluatorConfs) == 0 {
+		return nil
+	}
+	picked := make(map[int64]*entity.ExptEvaluatorConf)
+	order := make([]int64, 0)
+	for _, ec := range sc.EvaluatorConfs {
+		if ec == nil {
+			continue
+		}
+		cur, ok := picked[ec.EvaluatorVersionID]
+		if !ok {
+			picked[ec.EvaluatorVersionID] = ec
+			order = append(order, ec.EvaluatorVersionID)
+			continue
+		}
+		// 已有: 仅当当前是默认实例 (alias=='') 且已存的不是默认时, 用默认替换
+		if ec.Alias == "" && cur.Alias != "" {
+			picked[ec.EvaluatorVersionID] = ec
+		}
+	}
+	out := make([]*domain_expt.EvaluatorFieldMapping, 0, len(order))
+	for _, verID := range order {
+		ec := picked[verID]
+		out = append(out, &domain_expt.EvaluatorFieldMapping{
+			EvaluatorVersionID: ec.EvaluatorVersionID,
+			FromEvalSet:        fieldConfsToFieldMappingDTO(ec.FromEvalSet),
+			FromTarget:         fieldConfsToFieldMappingDTO(ec.FromTarget),
+		})
+	}
+	return out
+}
+
+// projectScoreWeightsFromSet 从单个评测集投影 evaluator_version_id → score_weight:
+// 同 version 撞 key 取默认实例 (alias=='') 权重 (权威在 evaluator_confs[].score_weight)。
+func projectScoreWeightsFromSet(sc *entity.EvalSetConfig) map[int64]float64 {
+	if sc == nil || len(sc.EvaluatorConfs) == 0 {
+		return nil
+	}
+	weights := make(map[int64]float64)
+	picked := make(map[int64]*entity.ExptEvaluatorConf)
+	for _, ec := range sc.EvaluatorConfs {
+		if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
+			continue
+		}
+		cur, ok := picked[ec.EvaluatorVersionID]
+		if !ok || (ec.Alias == "" && cur.Alias != "") {
+			picked[ec.EvaluatorVersionID] = ec
+		}
+	}
+	for verID, ec := range picked {
+		weights[verID] = *ec.ScoreWeight
+	}
+	if len(weights) == 0 {
+		return nil
+	}
+	return weights
 }
 
 // convertEvalSetConfigsDOToDTO 将 domain EvalSetConfig 转回 IDL DTO (回显用)

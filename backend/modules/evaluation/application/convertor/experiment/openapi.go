@@ -286,7 +286,50 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EvaluatorIDVersionList = DomainEvaluatorIDVersionListDTO2OpenAPI(dto.EvaluatorIDVersionList)
 	result.ExptTemplateMeta = DomainExptTemplateMetaDTO2OpenAPI(dto.ExptTemplateMeta)
 	result.OfflineExptAnalysisStatus = mapOfflineExptAnalysisStatusDTO2OpenAPI(dto.OfflineExptAnalysisStatus)
+
+	// ★ 多评测集读视图 (与 domain 110~114 对应)。
+	// 注: eval_set_details[].EvalSet 详情与 version-string 风格的 eval_set_configs 全量回显本期不在 OpenAPI 侧映射
+	// (OpenAPI 存量消费方均为老字段读取方, 见技术方案 §5); 这里只透出无歧义的来源模式/计数/per-set id 视图。
+	result.EvalSetSourceType = mapEvalSetSourceTypeDTO2OpenAPI(dto.EvalSetSourceType)
+	result.EvaluatorsConcurNum = dto.EvaluatorsConcurNum
+	result.TotalItemCount = dto.TotalItemCount
+	result.EvalSetDetails = DomainEvalSetDetailsDTO2OpenAPI(dto.EvalSetDetails)
 	return result
+}
+
+// mapEvalSetSourceTypeDTO2OpenAPI 将 domain ExptEvalSetSourceType 映射为 openapi 字符串枚举。
+func mapEvalSetSourceTypeDTO2OpenAPI(s *domainExpt.ExptEvalSetSourceType) *openapiExperiment.ExptEvalSetSourceType {
+	if s == nil {
+		return nil
+	}
+	var v openapiExperiment.ExptEvalSetSourceType
+	switch *s {
+	case domainExpt.ExptEvalSetSourceType_MultiSetConfig:
+		v = openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig
+	default:
+		v = openapiExperiment.ExptEvalSetSourceTypeSingleSet
+	}
+	return &v
+}
+
+// DomainEvalSetDetailsDTO2OpenAPI 将 domain ExptEvalSetDetail 列表映射为 openapi 版本 (不含 EvalSet 详情)。
+func DomainEvalSetDetailsDTO2OpenAPI(dtos []*domainExpt.ExptEvalSetDetail) []*openapiExperiment.ExptEvalSetDetail {
+	if len(dtos) == 0 {
+		return nil
+	}
+	out := make([]*openapiExperiment.ExptEvalSetDetail, 0, len(dtos))
+	for _, d := range dtos {
+		if d == nil {
+			continue
+		}
+		out = append(out, &openapiExperiment.ExptEvalSetDetail{
+			EvalSetID:        d.EvalSetID,
+			EvalSetVersionID: d.EvalSetVersionID,
+			IsPrimary:        d.IsPrimary,
+			ItemCount:        d.ItemCount,
+		})
+	}
+	return out
 }
 
 // DomainEvaluatorIDVersionListDTO2OpenAPI 将 domain.evaluator.EvaluatorIDVersionItem 列表映射为 openapi 版本。

@@ -229,6 +229,42 @@ func TestDomainExperimentDTO2OpenAPI(t *testing.T) {
 	assert.Nil(t, DomainExperimentDTO2OpenAPI(nil))
 }
 
+// TestDomainExperimentDTO2OpenAPI_MultiSetReadView 验证多评测集读视图 (110~114) 映射到 OpenAPI。
+func TestDomainExperimentDTO2OpenAPI_MultiSetReadView(t *testing.T) {
+	t.Parallel()
+
+	srcType := domainExpt.ExptEvalSetSourceType_MultiSetConfig
+	domainExperiment := &domainExpt.Experiment{
+		ID:                  gptr.Of(int64(1)),
+		EvalSetSourceType:   &srcType,
+		EvaluatorsConcurNum: gptr.Of(int32(4)),
+		TotalItemCount:      gptr.Of(int64(42)),
+		EvalSetDetails: []*domainExpt.ExptEvalSetDetail{
+			{EvalSetID: gptr.Of(int64(10)), EvalSetVersionID: gptr.Of(int64(110)), IsPrimary: gptr.Of(false), ItemCount: gptr.Of(int32(12))},
+			{EvalSetID: gptr.Of(int64(20)), EvalSetVersionID: gptr.Of(int64(220)), IsPrimary: gptr.Of(true), ItemCount: gptr.Of(int32(30))},
+		},
+	}
+
+	converted := DomainExperimentDTO2OpenAPI(domainExperiment)
+	if assert.NotNil(t, converted) {
+		assert.Equal(t, openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig, converted.GetEvalSetSourceType())
+		assert.Equal(t, int32(4), converted.GetEvaluatorsConcurNum())
+		assert.Equal(t, int64(42), converted.GetTotalItemCount())
+		if assert.Len(t, converted.EvalSetDetails, 2) {
+			assert.Equal(t, int64(10), converted.EvalSetDetails[0].GetEvalSetID())
+			assert.Equal(t, int32(12), converted.EvalSetDetails[0].GetItemCount())
+			assert.False(t, converted.EvalSetDetails[0].GetIsPrimary())
+			assert.True(t, converted.EvalSetDetails[1].GetIsPrimary())
+		}
+	}
+
+	// SingleSet: source_type 映射为 single_set, 新字段缺省
+	single := domainExpt.ExptEvalSetSourceType_SingleSet
+	out := DomainExperimentDTO2OpenAPI(&domainExpt.Experiment{ID: gptr.Of(int64(2)), EvalSetSourceType: &single})
+	assert.Equal(t, openapiExperiment.ExptEvalSetSourceTypeSingleSet, out.GetEvalSetSourceType())
+	assert.Empty(t, out.EvalSetDetails)
+}
+
 func TestOpenAPIAggregatorResultsDO2DTOs(t *testing.T) {
 	t.Parallel()
 

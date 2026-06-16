@@ -110,6 +110,21 @@ struct OpenAPIEvalSetConfig {
     20: optional list<OpenAPIExptTargetConf> target_confs      // 本期 len<=1; 不传=继承顶层 target
 }
 
+// 实验评测集来源模式 (OpenAPI 字符串枚举, 与 domain ExptEvalSetSourceType 对应)
+// 读接口分流: single_set=老实验(单评测集) / multi_set_config=新实验(多评测集)
+typedef string ExptEvalSetSourceType (ts.enum = "true")
+const ExptEvalSetSourceType ExptEvalSetSourceType_SingleSet = "single_set"
+const ExptEvalSetSourceType ExptEvalSetSourceType_MultiSetConfig = "multi_set_config"
+
+// per-set 运行期增量信息 (纯读模型; Get 全填含详情, List 只填 id/count)
+struct ExptEvalSetDetail {
+    1: optional i64 eval_set_id (api.js_conv = "true", go.tag = 'json:"eval_set_id"')
+    2: optional i64 eval_set_version_id (api.js_conv = "true", go.tag = 'json:"eval_set_version_id"')
+    3: optional bool is_primary                      // 主集(封面), 与 experiment.eval_set_id 一致
+    4: optional i32 item_count                       // 该 set 选入实验的 item 数; 首跑前为 0
+    5: optional eval_set.EvaluationSet eval_set      // Get 填充详情; List 不填
+}
+
 // Token使用量
 struct TokenUsage {
     1: optional string input_tokens
@@ -199,6 +214,13 @@ struct Experiment {
 
     // 离线实验分析状态
     61: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+
+    // ★ 多评测集读视图 (与 domain Experiment 110~114 同义)
+    110: optional ExptEvalSetSourceType eval_set_source_type // single_set(老) / multi_set_config(新); 读接口分流开关
+    111: optional list<OpenAPIEvalSetConfig> eval_set_configs // 权威配置回显, 与 Create OApi 入参同构
+    112: optional list<ExptEvalSetDetail> eval_set_details    // per-set 评测集详情 + item 数 (Get 全填; List 只 id/count)
+    113: optional i32 evaluators_concur_num                   // 评估器并发数回显
+    114: optional i64 total_item_count (api.js_conv = 'true', go.tag = 'json:"total_item_count"') // 实验绑定 item 总数; 首跑前为 0
 
     100: optional common.BaseInfo base_info
 }

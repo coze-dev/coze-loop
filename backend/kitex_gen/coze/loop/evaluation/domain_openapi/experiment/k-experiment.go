@@ -1725,6 +1725,337 @@ func (p *OpenAPIEvalSetConfig) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *ExptEvalSetDetail) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptEvalSetDetail[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *ExptEvalSetDetail) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EvalSetID = _field
+	return offset, nil
+}
+
+func (p *ExptEvalSetDetail) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EvalSetVersionID = _field
+	return offset, nil
+}
+
+func (p *ExptEvalSetDetail) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.IsPrimary = _field
+	return offset, nil
+}
+
+func (p *ExptEvalSetDetail) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ItemCount = _field
+	return offset, nil
+}
+
+func (p *ExptEvalSetDetail) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_set.NewEvaluationSet()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.EvalSet = _field
+	return offset, nil
+}
+
+func (p *ExptEvalSetDetail) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *ExptEvalSetDetail) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *ExptEvalSetDetail) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *ExptEvalSetDetail) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EvalSetID)
+	}
+	return offset
+}
+
+func (p *ExptEvalSetDetail) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetVersionID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EvalSetVersionID)
+	}
+	return offset
+}
+
+func (p *ExptEvalSetDetail) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetIsPrimary() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 3)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsPrimary)
+	}
+	return offset
+}
+
+func (p *ExptEvalSetDetail) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetItemCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 4)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.ItemCount)
+	}
+	return offset
+}
+
+func (p *ExptEvalSetDetail) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSet() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
+		offset += p.EvalSet.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ExptEvalSetDetail) field1Length() int {
+	l := 0
+	if p.IsSetEvalSetID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ExptEvalSetDetail) field2Length() int {
+	l := 0
+	if p.IsSetEvalSetVersionID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ExptEvalSetDetail) field3Length() int {
+	l := 0
+	if p.IsSetIsPrimary() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *ExptEvalSetDetail) field4Length() int {
+	l := 0
+	if p.IsSetItemCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *ExptEvalSetDetail) field5Length() int {
+	l := 0
+	if p.IsSetEvalSet() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.EvalSet.BLength()
+	}
+	return l
+}
+
+func (p *ExptEvalSetDetail) DeepCopy(s interface{}) error {
+	src, ok := s.(*ExptEvalSetDetail)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.EvalSetID != nil {
+		tmp := *src.EvalSetID
+		p.EvalSetID = &tmp
+	}
+
+	if src.EvalSetVersionID != nil {
+		tmp := *src.EvalSetVersionID
+		p.EvalSetVersionID = &tmp
+	}
+
+	if src.IsPrimary != nil {
+		tmp := *src.IsPrimary
+		p.IsPrimary = &tmp
+	}
+
+	if src.ItemCount != nil {
+		tmp := *src.ItemCount
+		p.ItemCount = &tmp
+	}
+
+	var _evalSet *eval_set.EvaluationSet
+	if src.EvalSet != nil {
+		_evalSet = &eval_set.EvaluationSet{}
+		if err := _evalSet.DeepCopy(src.EvalSet); err != nil {
+			return err
+		}
+	}
+	p.EvalSet = _evalSet
+
+	return nil
+}
+
 func (p *TokenUsage) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -4148,6 +4479,76 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 110:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField110(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 111:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField111(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 112:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField112(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 113:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField113(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 114:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField114(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
@@ -4442,6 +4843,98 @@ func (p *Experiment) FastReadField61(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField110(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *ExptEvalSetSourceType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EvalSetSourceType = _field
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField111(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*OpenAPIEvalSetConfig, 0, size)
+	values := make([]OpenAPIEvalSetConfig, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.EvalSetConfigs = _field
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField112(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*ExptEvalSetDetail, 0, size)
+	values := make([]ExptEvalSetDetail, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.EvalSetDetails = _field
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField113(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EvaluatorsConcurNum = _field
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField114(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TotalItemCount = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -4467,6 +4960,8 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField15(buf[offset:], w)
 		offset += p.fastWriteField60(buf[offset:], w)
+		offset += p.fastWriteField113(buf[offset:], w)
+		offset += p.fastWriteField114(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
@@ -4479,6 +4974,9 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField62(buf[offset:], w)
 		offset += p.fastWriteField61(buf[offset:], w)
+		offset += p.fastWriteField110(buf[offset:], w)
+		offset += p.fastWriteField111(buf[offset:], w)
+		offset += p.fastWriteField112(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -4506,6 +5004,11 @@ func (p *Experiment) BLength() int {
 		l += p.field60Length()
 		l += p.field62Length()
 		l += p.field61Length()
+		l += p.field110Length()
+		l += p.field111Length()
+		l += p.field112Length()
+		l += p.field113Length()
+		l += p.field114Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -4684,6 +5187,65 @@ func (p *Experiment) fastWriteField61(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetOfflineExptAnalysisStatus() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 61)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.OfflineExptAnalysisStatus)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField110(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetSourceType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 110)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.EvalSetSourceType)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField111(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetConfigs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 111)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.EvalSetConfigs {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField112(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetDetails() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 112)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.EvalSetDetails {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField113(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvaluatorsConcurNum() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 113)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.EvaluatorsConcurNum)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField114(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTotalItemCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 114)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.TotalItemCount)
 	}
 	return offset
 }
@@ -4867,6 +5429,59 @@ func (p *Experiment) field61Length() int {
 	return l
 }
 
+func (p *Experiment) field110Length() int {
+	l := 0
+	if p.IsSetEvalSetSourceType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.EvalSetSourceType)
+	}
+	return l
+}
+
+func (p *Experiment) field111Length() int {
+	l := 0
+	if p.IsSetEvalSetConfigs() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.EvalSetConfigs {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *Experiment) field112Length() int {
+	l := 0
+	if p.IsSetEvalSetDetails() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.EvalSetDetails {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *Experiment) field113Length() int {
+	l := 0
+	if p.IsSetEvaluatorsConcurNum() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *Experiment) field114Length() int {
+	l := 0
+	if p.IsSetTotalItemCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *Experiment) field100Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
@@ -5020,6 +5635,51 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 	if src.OfflineExptAnalysisStatus != nil {
 		tmp := *src.OfflineExptAnalysisStatus
 		p.OfflineExptAnalysisStatus = &tmp
+	}
+
+	if src.EvalSetSourceType != nil {
+		tmp := *src.EvalSetSourceType
+		p.EvalSetSourceType = &tmp
+	}
+
+	if src.EvalSetConfigs != nil {
+		p.EvalSetConfigs = make([]*OpenAPIEvalSetConfig, 0, len(src.EvalSetConfigs))
+		for _, elem := range src.EvalSetConfigs {
+			var _elem *OpenAPIEvalSetConfig
+			if elem != nil {
+				_elem = &OpenAPIEvalSetConfig{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.EvalSetConfigs = append(p.EvalSetConfigs, _elem)
+		}
+	}
+
+	if src.EvalSetDetails != nil {
+		p.EvalSetDetails = make([]*ExptEvalSetDetail, 0, len(src.EvalSetDetails))
+		for _, elem := range src.EvalSetDetails {
+			var _elem *ExptEvalSetDetail
+			if elem != nil {
+				_elem = &ExptEvalSetDetail{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.EvalSetDetails = append(p.EvalSetDetails, _elem)
+		}
+	}
+
+	if src.EvaluatorsConcurNum != nil {
+		tmp := *src.EvaluatorsConcurNum
+		p.EvaluatorsConcurNum = &tmp
+	}
+
+	if src.TotalItemCount != nil {
+		tmp := *src.TotalItemCount
+		p.TotalItemCount = &tmp
 	}
 
 	var _baseInfo *common.BaseInfo
