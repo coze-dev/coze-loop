@@ -557,7 +557,12 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiments0.POST("/list", append(_listexperimentsoapiMw(handler), apis.ListExperimentsOApi)...)
 				{
 					_eval_target_records0 := _evaluation0.Group("/eval_target_records", _eval_target_records0Mw(handler)...)
+					_eval_target_records0.GET("/:eval_target_record_id", append(_getevaltargetrecordoapiMw(handler), apis.GetEvalTargetRecordOApi)...)
 					_eval_target_records0.POST("/output_fields", append(_getevaltargetoutputfieldcontentoapiMw(handler), apis.GetEvalTargetOutputFieldContentOApi)...)
+				}
+				{
+					_eval_targets1 := _evaluation0.Group("/eval_targets", _eval_targets1Mw(handler)...)
+					_eval_targets1.POST("/async_debug", append(_asyncdebugevaltargetoapiMw(handler), apis.AsyncDebugEvalTargetOApi)...)
 				}
 				{
 					_evaluator_records0 := _evaluation0.Group("/evaluator_records", _evaluator_records0Mw(handler)...)

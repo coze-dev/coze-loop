@@ -1253,6 +1253,10 @@ func openAPIEvaluatorRecordDO2DTO(record *entity.EvaluatorRecord) *openapiEvalua
 	return res
 }
 
+func OpenAPITargetRecordDO2DTO(record *entity.EvalTargetRecord) *openapiEvalTarget.EvalTargetRecord {
+	return openAPITargetRecordDO2DTO(record)
+}
+
 func openAPITargetRecordDO2DTO(record *entity.EvalTargetRecord) *openapiEvalTarget.EvalTargetRecord {
 	if record == nil {
 		return nil
@@ -1844,6 +1848,56 @@ func OpenAPICustomEvalTargetDO2DTO(do *entity.CustomEvalTarget) *openapiEvalTarg
 		Name:      do.Name,
 		AvatarURL: do.AvatarURL,
 		Ext:       do.Ext,
+	}
+}
+
+func OpenAPICustomRPCServerDTO2DO(dto *openapiEvalTarget.CustomRPCServer) *entity.CustomRPCServer {
+	if dto == nil {
+		return nil
+	}
+	regions := make([]entity.Region, 0, len(dto.Regions))
+	regions = append(regions, dto.Regions...)
+	return &entity.CustomRPCServer{
+		ID:                  gptr.Indirect(dto.ID),
+		Name:                gptr.Indirect(dto.Name),
+		Description:         gptr.Indirect(dto.Description),
+		ServerName:          gptr.Indirect(dto.ServerName),
+		AccessProtocol:      gptr.Indirect(dto.AccessProtocol),
+		Regions:             regions,
+		Cluster:             gptr.Indirect(dto.Cluster),
+		InvokeHTTPInfo:      openAPIHTTPInfoDTO2DO(dto.InvokeHTTPInfo),
+		AsyncInvokeHTTPInfo: openAPIHTTPInfoDTO2DO(dto.AsyncInvokeHTTPInfo),
+		NeedSearchTarget:    dto.NeedSearchTarget,
+		SearchHTTPInfo:      openAPIHTTPInfoDTO2DO(dto.SearchHTTPInfo),
+		CustomEvalTarget:    openAPICustomEvalTargetDTO2DO(dto.CustomEvalTarget),
+		IsAsync:             dto.IsAsync,
+		ExecRegion:          gptr.Indirect(dto.ExecRegion),
+		ExecEnv:             dto.ExecEnv,
+		Timeout:             dto.Timeout,
+		AsyncTimeout:        dto.AsyncTimeout,
+		Ext:                 dto.Ext,
+	}
+}
+
+func openAPIHTTPInfoDTO2DO(dto *openapiEvalTarget.HTTPInfo) *entity.HTTPInfo {
+	if dto == nil {
+		return nil
+	}
+	return &entity.HTTPInfo{
+		Method: gptr.Indirect(dto.Method),
+		Path:   gptr.Indirect(dto.Path),
+	}
+}
+
+func openAPICustomEvalTargetDTO2DO(dto *openapiEvalTarget.CustomEvalTarget) *entity.CustomEvalTarget {
+	if dto == nil {
+		return nil
+	}
+	return &entity.CustomEvalTarget{
+		ID:        dto.ID,
+		Name:      dto.Name,
+		AvatarURL: dto.AvatarURL,
+		Ext:       dto.Ext,
 	}
 }
 
