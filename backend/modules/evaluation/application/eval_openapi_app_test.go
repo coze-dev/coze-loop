@@ -2086,7 +2086,7 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi_EvalSetConfigs(t *testing.T
 		return &openapi.SubmitExperimentOApiRequest{
 			WorkspaceID:       gptr.Of(workspaceID),
 			Name:              gptr.Of("multi-set-openapi-expt"),
-			EvalSetSourceType: gptr.Of(int32(2)), // ★ 唯一分流开关: 走新路径
+			EvalSetSourceType: gptr.Of(openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig), // ★ 唯一分流开关: 走新路径
 			EvalSetConfigs: []*openapiExperiment.OpenAPIEvalSetConfig{
 				{
 					EvalSetID:      gptr.Of(evalSetID),
@@ -2212,7 +2212,7 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi_EvalSetConfigs(t *testing.T
 		req := &openapi.SubmitExperimentOApiRequest{
 			WorkspaceID:       gptr.Of(workspaceID),
 			Name:              gptr.Of("bad-no-configs"),
-			EvalSetSourceType: gptr.Of(int32(2)),
+			EvalSetSourceType: gptr.Of(openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig),
 		}
 		resp, err := app.SubmitExperimentOApi(context.Background(), req)
 		assert.Error(t, err)

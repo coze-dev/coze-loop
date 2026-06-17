@@ -423,13 +423,13 @@ struct SubmitExperimentOApiRequest {
     7: optional experiment.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     8: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
 
-    // item-centric 多评测集配置 (新建模路径). 仅当 eval_set_source_type == 2 时生效,
+    // item-centric 多评测集配置 (新建模路径). 仅当 eval_set_source_type == multi_set_config 时生效,
     // handler 把版本字符串解析成内部 version_id 后构建内部 eval_set_configs.
     9: optional list<experiment.OpenAPIEvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
-    // ★ 新路径分流依据 (唯一开关): 仅 == 2 (MultiSetConfig) 走 item-centric 多评测集路径; 缺省(0)/1 走老单评测集路径。
-    // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则 handler 硬校验报错。
-    // 用 i32 (而非 domain enum): openapi.thrift 不 include domain/expt.thrift, 避免 BAM/thriftgo 符号冲突。
-    10: optional i32 eval_set_source_type (api.body = 'eval_set_source_type')
+    // ★ 新路径分流依据 (唯一开关): 仅 == multi_set_config 走 item-centric 多评测集路径; 缺省/single_set 走老单评测集路径。
+    // 与 eval_set_configs 须一致: == multi_set_config 要求 configs 非空; != 要求 configs 为空, 否则 handler 硬校验报错。
+    // 用字符串枚举 experiment.ExptEvalSetSourceType (与读/List 接口统一); 该枚举定义在已 include 的 domain_openapi/experiment.thrift, 不引入 domain/expt.thrift 故无符号冲突。
+    10: optional experiment.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
 
     // 运行信息
     20: optional i32 item_concur_num (api.body = 'item_concur_num')
