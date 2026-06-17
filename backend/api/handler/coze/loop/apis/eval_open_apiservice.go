@@ -302,3 +302,15 @@ func ExportExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
 func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentResultExportRecordOApi)
 }
+
+// AsyncDebugEvalTargetOApi .
+// @router /v1/loop/evaluation/eval_targets/async_debug [POST]
+func AsyncDebugEvalTargetOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.AsyncDebugEvalTargetOApi)
+}
+
+// GetEvalTargetRecordOApi .
+// @router /v1/loop/evaluation/eval_target_records/:eval_target_record_id [GET]
+func GetEvalTargetRecordOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvalTargetRecordOApi)
+}
