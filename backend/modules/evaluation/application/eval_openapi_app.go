@@ -16,8 +16,10 @@ import (
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
+	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	evaluator_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
@@ -30,8 +32,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
 
+	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
@@ -2504,4 +2508,119 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
+func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, req *openapi.AsyncDebugEvalTargetOApiRequest) (r *openapi.AsyncDebugEvalTargetOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	asyncStart := time.Now()
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	inputFields := make(map[string]*spi.Content)
+	if err := json.Unmarshal([]byte(req.GetParam()), &inputFields); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
+	}
+
+	switch req.GetEvalTargetType() {
+	case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
+		record, callee, err := e.targetSvc.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
+			SpaceID: req.GetWorkspaceID(),
+			PatchyTarget: &entity.EvalTarget{
+				SpaceID:        req.GetWorkspaceID(),
+				EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SpaceID:         req.GetWorkspaceID(),
+					EvalTargetType:  entity.EvalTargetTypeCustomRPCServer,
+					CustomRPCServer: experiment_convertor.OpenAPICustomRPCServerDTO2DO(req.GetCustomRPCServer()),
+				},
+			},
+			InputData: &entity.EvalTargetInputData{
+				InputFields: gmap.Map(inputFields, func(k string, v *spi.Content) (string, *entity.Content) {
+					return k, target.ToSPIContentDO(v)
+				}),
+				Ext: map[string]string{
+					consts.FieldAdapterBuiltinFieldNameRuntimeParam: req.GetTargetRuntimeParam().GetJSONValue(),
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if err := e.asyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{
+			RecordID:    record.ID,
+			AsyncUnixMS: asyncStart.UnixMilli(),
+			Session:     &entity.Session{UserID: userID},
+			Callee:      callee,
+		}); err != nil {
+			return nil, err
+		}
+
+		return &openapi.AsyncDebugEvalTargetOApiResponse{
+			Data: &openapi.AsyncDebugEvalTargetOpenAPIData{
+				InvokeID: gptr.Of(record.ID),
+				Callee:   gptr.Of(callee),
+			},
+		}, nil
+	default:
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("unsupported eval target type: %s", req.GetEvalTargetType())))
+	}
+}
+
+func (e *EvalOpenAPIApplication) GetEvalTargetRecordOApi(ctx context.Context, req *openapi.GetEvalTargetRecordOApiRequest) (r *openapi.GetEvalTargetRecordOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	if req.GetEvalTargetRecordID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_target_record_id is required"))
+	}
+
+	record, err := e.targetSvc.GetRecordByID(ctx, req.GetWorkspaceID(), req.GetEvalTargetRecordID())
+	if err != nil {
+		return nil, err
+	}
+	if record == nil {
+		return &openapi.GetEvalTargetRecordOApiResponse{
+			Data: &openapi.GetEvalTargetRecordOpenAPIData{},
+		}, nil
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(record.TargetID, 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.GetEvalTargetRecordOApiResponse{
+		Data: &openapi.GetEvalTargetRecordOpenAPIData{
+			EvalTargetRecord: experiment_convertor.OpenAPITargetRecordDO2DTO(record),
+		},
+	}, nil
 }
