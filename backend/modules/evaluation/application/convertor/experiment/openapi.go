@@ -2567,6 +2567,15 @@ func openAPIEvalSetSourceTypesDTO2Domain(in []openapiExperiment.ExptEvalSetSourc
 	return out
 }
 
+// OpenAPIEvalSetSourceTypeDTO2Domain 将创建接口的 OpenAPI 字符串枚举 (单值) 转为内部 int 枚举。
+// multi_set_config→2 (新路径); single_set/空/未知→1 (老单评测集路径), 与创建接口「缺省/single_set 走老路径」语义一致。
+func OpenAPIEvalSetSourceTypeDTO2Domain(s *openapiExperiment.ExptEvalSetSourceType) domainExpt.ExptEvalSetSourceType {
+	if s != nil && *s == openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig {
+		return domainExpt.ExptEvalSetSourceType_MultiSetConfig
+	}
+	return domainExpt.ExptEvalSetSourceType_SingleSet
+}
+
 // OpenAPIKeywordSearchDTO2Domain 将 OpenAPI 的 KeywordSearch 转为 domain/expt.KeywordSearch，供实验结果模糊搜索。
 // 返回 nil 表示入参无效或空（keyword 为空或没有任何合法的 filter_field）。
 func OpenAPIKeywordSearchDTO2Domain(ks *openapiExperiment.KeywordSearch) (*domainExpt.KeywordSearch, error) {

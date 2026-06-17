@@ -989,15 +989,16 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
 	}
 
-	// 新路径开关 (唯一依据): eval_set_source_type == 2 = item-centric 多评测集建模, 走新路径; 否则老的单评测集形态。
-	isNewPath := req.GetEvalSetSourceType() == int32(domain_expt.ExptEvalSetSourceType_MultiSetConfig)
+	// 新路径开关 (唯一依据): eval_set_source_type == multi_set_config = item-centric 多评测集建模, 走新路径; 否则老的单评测集形态。
+	srcType := experiment_convertor.OpenAPIEvalSetSourceTypeDTO2Domain(req.EvalSetSourceType)
+	isNewPath := srcType == domain_expt.ExptEvalSetSourceType_MultiSetConfig
 
 	// ★ 公网面早失败硬校验: source_type 与 eval_set_configs 必须一致。
 	if isNewPath && len(req.GetEvalSetConfigs()) == 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_source_type=2 requires non-empty eval_set_configs"))
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_source_type=multi_set_config requires non-empty eval_set_configs"))
 	}
 	if !isNewPath && len(req.GetEvalSetConfigs()) > 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs is only allowed when eval_set_source_type=2"))
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs is only allowed when eval_set_source_type=multi_set_config"))
 	}
 
 	if !isNewPath {
@@ -1036,8 +1037,8 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		TriggerType:             gptr.Of(domain_expt.OpenAPI),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.GetExt(),
-		// ★ 透传分流依据: OpenAPI i32 → kitex enum, 供下游平台层统一以 source_type 分流。
-		EvalSetSourceType: gptr.Of(domain_expt.ExptEvalSetSourceType(req.GetEvalSetSourceType())),
+		// ★ 透传分流依据: OpenAPI 字符串枚举 → kitex enum, 供下游平台层统一以 source_type 分流。
+		EvalSetSourceType: gptr.Of(srcType),
 	}
 
 	if isNewPath {

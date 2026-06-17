@@ -18970,13 +18970,13 @@ type SubmitExperimentOApiRequest struct {
 	EvalTargetParam       *SubmitExperimentEvalTargetParam    `thrift:"eval_target_param,6,optional" frugal:"6,optional,SubmitExperimentEvalTargetParam" form:"eval_target_param" json:"eval_target_param,omitempty"`
 	TargetFieldMapping    *experiment.TargetFieldMapping      `thrift:"target_field_mapping,7,optional" frugal:"7,optional,experiment.TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty"`
 	EvaluatorFieldMapping []*experiment.EvaluatorFieldMapping `thrift:"evaluator_field_mapping,8,optional" frugal:"8,optional,list<experiment.EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty"`
-	// item-centric 多评测集配置 (新建模路径). 仅当 eval_set_source_type == 2 时生效,
+	// item-centric 多评测集配置 (新建模路径). 仅当 eval_set_source_type == multi_set_config 时生效,
 	// handler 把版本字符串解析成内部 version_id 后构建内部 eval_set_configs.
 	EvalSetConfigs []*experiment.OpenAPIEvalSetConfig `thrift:"eval_set_configs,9,optional" frugal:"9,optional,list<experiment.OpenAPIEvalSetConfig>" form:"eval_set_configs" json:"eval_set_configs,omitempty"`
-	// ★ 新路径分流依据 (唯一开关): 仅 == 2 (MultiSetConfig) 走 item-centric 多评测集路径; 缺省(0)/1 走老单评测集路径。
-	// 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则 handler 硬校验报错。
-	// 用 i32 (而非 domain enum): openapi.thrift 不 include domain/expt.thrift, 避免 BAM/thriftgo 符号冲突。
-	EvalSetSourceType *int32 `thrift:"eval_set_source_type,10,optional" frugal:"10,optional,i32" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
+	// ★ 新路径分流依据 (唯一开关): 仅 == multi_set_config 走 item-centric 多评测集路径; 缺省/single_set 走老单评测集路径。
+	// 与 eval_set_configs 须一致: == multi_set_config 要求 configs 非空; != 要求 configs 为空, 否则 handler 硬校验报错。
+	// 用字符串枚举 experiment.ExptEvalSetSourceType (与读/List 接口统一); 该枚举定义在已 include 的 domain_openapi/experiment.thrift, 不引入 domain/expt.thrift 故无符号冲突。
+	EvalSetSourceType *experiment.ExptEvalSetSourceType `thrift:"eval_set_source_type,10,optional" frugal:"10,optional,string" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
 	// 运行信息
 	ItemConcurNum           *int32               `thrift:"item_concur_num,20,optional" frugal:"20,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
 	TargetRuntimeParam      *common.RuntimeParam `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
@@ -19102,9 +19102,9 @@ func (p *SubmitExperimentOApiRequest) GetEvalSetConfigs() (v []*experiment.OpenA
 	return p.EvalSetConfigs
 }
 
-var SubmitExperimentOApiRequest_EvalSetSourceType_DEFAULT int32
+var SubmitExperimentOApiRequest_EvalSetSourceType_DEFAULT experiment.ExptEvalSetSourceType
 
-func (p *SubmitExperimentOApiRequest) GetEvalSetSourceType() (v int32) {
+func (p *SubmitExperimentOApiRequest) GetEvalSetSourceType() (v experiment.ExptEvalSetSourceType) {
 	if p == nil {
 		return
 	}
@@ -19224,7 +19224,7 @@ func (p *SubmitExperimentOApiRequest) SetEvaluatorFieldMapping(val []*experiment
 func (p *SubmitExperimentOApiRequest) SetEvalSetConfigs(val []*experiment.OpenAPIEvalSetConfig) {
 	p.EvalSetConfigs = val
 }
-func (p *SubmitExperimentOApiRequest) SetEvalSetSourceType(val *int32) {
+func (p *SubmitExperimentOApiRequest) SetEvalSetSourceType(val *experiment.ExptEvalSetSourceType) {
 	p.EvalSetSourceType = val
 }
 func (p *SubmitExperimentOApiRequest) SetItemConcurNum(val *int32) {
@@ -19428,7 +19428,7 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 10:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -19648,8 +19648,8 @@ func (p *SubmitExperimentOApiRequest) ReadField9(iprot thrift.TProtocol) error {
 }
 func (p *SubmitExperimentOApiRequest) ReadField10(iprot thrift.TProtocol) error {
 
-	var _field *int32
-	if v, err := iprot.ReadI32(); err != nil {
+	var _field *experiment.ExptEvalSetSourceType
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
 		_field = &v
@@ -20024,10 +20024,10 @@ WriteFieldEndError:
 }
 func (p *SubmitExperimentOApiRequest) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvalSetSourceType() {
-		if err = oprot.WriteFieldBegin("eval_set_source_type", thrift.I32, 10); err != nil {
+		if err = oprot.WriteFieldBegin("eval_set_source_type", thrift.STRING, 10); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(*p.EvalSetSourceType); err != nil {
+		if err := oprot.WriteString(*p.EvalSetSourceType); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -20342,14 +20342,14 @@ func (p *SubmitExperimentOApiRequest) Field9DeepEqual(src []*experiment.OpenAPIE
 	}
 	return true
 }
-func (p *SubmitExperimentOApiRequest) Field10DeepEqual(src *int32) bool {
+func (p *SubmitExperimentOApiRequest) Field10DeepEqual(src *experiment.ExptEvalSetSourceType) bool {
 
 	if p.EvalSetSourceType == src {
 		return true
 	} else if p.EvalSetSourceType == nil || src == nil {
 		return false
 	}
-	if *p.EvalSetSourceType != *src {
+	if strings.Compare(*p.EvalSetSourceType, *src) != 0 {
 		return false
 	}
 	return true

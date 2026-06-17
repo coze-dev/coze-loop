@@ -13744,7 +13744,7 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 10:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField10(buf[offset:])
 				offset += l
 				if err != nil {
@@ -14029,8 +14029,8 @@ func (p *SubmitExperimentOApiRequest) FastReadField9(buf []byte) (int, error) {
 func (p *SubmitExperimentOApiRequest) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int32
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	var _field *experiment.ExptEvalSetSourceType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -14158,7 +14158,6 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
-		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField45(buf[offset:], w)
 		offset += p.fastWriteField46(buf[offset:], w)
@@ -14170,6 +14169,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField9(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
@@ -14309,8 +14309,8 @@ func (p *SubmitExperimentOApiRequest) fastWriteField9(buf []byte, w thrift.Nocop
 func (p *SubmitExperimentOApiRequest) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEvalSetSourceType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 10)
-		offset += thrift.Binary.WriteI32(buf[offset:], *p.EvalSetSourceType)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 10)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.EvalSetSourceType)
 	}
 	return offset
 }
@@ -14483,7 +14483,7 @@ func (p *SubmitExperimentOApiRequest) field10Length() int {
 	l := 0
 	if p.IsSetEvalSetSourceType() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.StringLengthNocopy(*p.EvalSetSourceType)
 	}
 	return l
 }
