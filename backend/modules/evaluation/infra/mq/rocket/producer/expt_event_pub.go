@@ -14,6 +14,7 @@ import (
 	"github.com/mohae/deepcopy"
 	"github.com/samber/lo"
 
+	infrabackoff "github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -208,9 +209,15 @@ func (e *exptEventPublisher) batchSendWithTagAndKeys(ctx context.Context, pk str
 	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck
 	}
-	resp, err := p.p.SendBatch(ctx, msgs)
-	if err != nil {
-		return errorx.Wrapf(err, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
+
+	var resp mq.SendResponse
+	sendErr := infrabackoff.RetryThreeSeconds(ctx, func() error {
+		var err error
+		resp, err = p.p.SendBatch(ctx, msgs)
+		return err
+	})
+	if sendErr != nil {
+		return errorx.Wrapf(sendErr, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
 	}
 
 	logs.CtxInfo(ctx, "expt event batch send success, producer_key: %v, tag: %v, message_id: %v, offset: %v", pk, tag, resp.MessageID, resp.Offset)

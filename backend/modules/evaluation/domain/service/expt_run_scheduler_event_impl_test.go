@@ -120,7 +120,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				f.configer.EXPECT().GetSchedulerAbortCtrl(gomock.Any()).Return(&entity.SchedulerAbortCtrl{}).AnyTimes()
 				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).Times(1)
 				f.manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session).Return(&entity.ExptRunLog{}, nil).Times(1)
-				f.mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
+				f.mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{
 					ZombieIntervalSecond: math.MaxInt,
@@ -170,7 +170,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				f.configer.EXPECT().GetSchedulerAbortCtrl(gomock.Any()).Return(&entity.SchedulerAbortCtrl{}).AnyTimes()
 				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).Times(1)
 				f.manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session).Return(&entity.ExptRunLog{}, nil).Times(1)
-				f.mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
+				f.mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{
 					ZombieIntervalSecond: math.MaxInt,
@@ -586,7 +586,7 @@ func TestExptSchedulerImpl_HandleEventLock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			unlockCalled := false
-			mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.args.locked, context.Background(), func() { unlockCalled = true }, tt.args.lockErr)
+			mutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.args.locked, context.Background(), func() { unlockCalled = true }, tt.args.lockErr)
 			if tt.args.locked && tt.args.lockErr == nil {
 				mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 			}
@@ -1511,4 +1511,185 @@ func TestExptSchedulerImpl_terminateZombieEvaluatorRecords(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIsSchedulerInfraError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "context.Canceled",
+			err:  context.Canceled,
+			want: true,
+		},
+		{
+			name: "context.DeadlineExceeded",
+			err:  context.DeadlineExceeded,
+			want: true,
+		},
+		{
+			name: "wrapped context.Canceled",
+			err:  errors.Join(errors.New("outer"), context.Canceled),
+			want: true,
+		},
+		{
+			name: "send batch message fail",
+			err:  errors.New("send batch message fail, producer_key: expt_scheduler_event_rmq"),
+			want: true,
+		},
+		{
+			name: "rpc context canceled string",
+			err:  errors.New("rpc error: code = Canceled desc = context canceled"),
+			want: true,
+		},
+		{
+			name: "rpc context deadline exceeded string",
+			err:  errors.New("rpc error: code = DeadlineExceeded desc = context deadline exceeded"),
+			want: true,
+		},
+		{
+			name: "business error",
+			err:  errors.New("expt exec found timeout event"),
+			want: false,
+		},
+		{
+			name: "other error",
+			err:  errors.New("some unknown error"),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isSchedulerInfraError(tt.err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExptSchedulerImpl_HandleEventErr(t *testing.T) {
+	tests := []struct {
+		name        string
+		event       *entity.ExptScheduleEvent
+		nextErr     error
+		prepareMock func(f *handleEventErrFields)
+		wantErr     bool
+		assertEvent func(t *testing.T, event *entity.ExptScheduleEvent)
+	}{
+		{
+			name: "next returns nil - success path",
+			event: &entity.ExptScheduleEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3,
+				Session: &entity.Session{UserID: "user1"},
+			},
+			nextErr:     nil,
+			prepareMock: func(f *handleEventErrFields) {},
+			wantErr:     false,
+		},
+		{
+			name: "infra error - reschedule success",
+			event: &entity.ExptScheduleEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3,
+				InfraErrorRetryTimes: 0,
+				Session:              &entity.Session{UserID: "user1"},
+			},
+			nextErr: context.Canceled,
+			prepareMock: func(f *handleEventErrFields) {
+				f.publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			wantErr: false,
+			assertEvent: func(t *testing.T, event *entity.ExptScheduleEvent) {
+				assert.Equal(t, 1, event.InfraErrorRetryTimes)
+			},
+		},
+		{
+			name: "infra error - reschedule publish fails, return error for MQ retry",
+			event: &entity.ExptScheduleEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3,
+				InfraErrorRetryTimes: 2,
+				Session:              &entity.Session{UserID: "user1"},
+			},
+			nextErr: errors.New("send batch message fail, producer_key: expt_scheduler_event_rmq"),
+			prepareMock: func(f *handleEventErrFields) {
+				f.publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mq down")).Times(1)
+			},
+			wantErr: true,
+			assertEvent: func(t *testing.T, event *entity.ExptScheduleEvent) {
+				assert.Equal(t, 3, event.InfraErrorRetryTimes)
+			},
+		},
+		{
+			name: "infra error - retry exhausted, terminate experiment",
+			event: &entity.ExptScheduleEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3,
+				InfraErrorRetryTimes: 10,
+				Session:              &entity.Session{UserID: "user1"},
+			},
+			nextErr: context.Canceled,
+			prepareMock: func(f *handleEventErrFields) {
+				f.manager.EXPECT().CompleteRun(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name: "business error - terminate experiment",
+			event: &entity.ExptScheduleEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3,
+				Session: &entity.Session{UserID: "user1"},
+			},
+			nextErr: errors.New("expt exec found timeout event"),
+			prepareMock: func(f *handleEventErrFields) {
+				f.manager.EXPECT().CompleteRun(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			f := &handleEventErrFields{
+				manager:   svcmocks.NewMockIExptManager(ctrl),
+				publisher: eventmocks.NewMockExptEventPublisher(ctrl),
+			}
+			tt.prepareMock(f)
+
+			svc := &ExptSchedulerImpl{
+				Manager:   f.manager,
+				Publisher: f.publisher,
+			}
+
+			next := func(ctx context.Context, event *entity.ExptScheduleEvent) error {
+				return tt.nextErr
+			}
+
+			handler := svc.HandleEventErr(next)
+			err := handler(context.Background(), tt.event)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			if tt.assertEvent != nil {
+				tt.assertEvent(t, tt.event)
+			}
+		})
+	}
+}
+
+type handleEventErrFields struct {
+	manager   *svcmocks.MockIExptManager
+	publisher *eventmocks.MockExptEventPublisher
 }
