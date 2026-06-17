@@ -1164,7 +1164,7 @@ func (o *OpenAPIApplication) ListTrajectoryOApi(ctx context.Context, req *openap
 			SpaceID:      req.GetWorkspaceID(),
 		})
 		if err == nil && benefitRes != nil {
-			finalStartTime = time.Now().UnixMilli() - int64(benefitRes.StorageDuration)*24*60*60*1000
+			finalStartTime = time.Now().UnixMilli() - benefitRes.StorageDuration*24*60*60*1000
 		}
 		startTime = &finalStartTime
 	}
