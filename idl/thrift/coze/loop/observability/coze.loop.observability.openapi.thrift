@@ -8,6 +8,7 @@ include "./domain/common.thrift"
 include "./domain/filter.thrift"
 include "coze.loop.observability.trace.thrift"
 include "../extra.thrift"
+include "../trajectory.thrift"
 
 struct IngestTracesRequest {
     1: optional list<span.InputSpan> spans (api.body='spans')
@@ -201,6 +202,27 @@ struct ListTracesData {
     1: required list<trace.Trace> traces
 }
 
+struct ListTrajectoryOApiRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id" vt.gt="0")
+    2: required list<string> trace_ids (api.body="trace_ids", vt.min_size="1")
+    3: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ListTrajectoryOApiResponse {
+    1: optional i32 code (api.body = "code")
+    2: optional string msg  (api.body = "msg")
+    3: optional ListTrajectoryOApiData data (api.body = "data")
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct ListTrajectoryOApiData {
+    1: required list<trajectory.Trajectory> trajectories
+}
+
 service OpenAPIService {
     IngestTracesResponse IngestTraces(1: IngestTracesRequest req) (api.post = '/v1/loop/traces/ingest')
     OtelIngestTracesResponse OtelIngestTraces(1: OtelIngestTracesRequest req) (api.post = '/v1/loop/opentelemetry/v1/traces')
@@ -209,6 +231,7 @@ service OpenAPIService {
     ListSpansOApiResponse ListSpansOApi(1: ListSpansOApiRequest req) (api.post = '/v1/loop/spans/search', api.tag="openapi")
     ListPreSpanOApiResponse ListPreSpanOApi(1: ListPreSpanOApiRequest req) (api.post = '/v1/loop/pre_span/search', api.tag="openapi")
     ListTracesOApiResponse ListTracesOApi(1: ListTracesOApiRequest req) (api.post = '/v1/loop/traces/list')
+    ListTrajectoryOApiResponse ListTrajectoryOApi(1: ListTrajectoryOApiRequest req) (api.post = '/v1/loop/traces/trajectory')
     CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req) (api.post = '/v1/loop/annotations', api.tag="openapi")
     DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req) (api.delete = '/v1/loop/annotations', api.tag="openapi")
 }

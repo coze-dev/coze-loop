@@ -1138,3 +1138,70 @@ func (p *OpenAPIApplication) AllowByKey(ctx context.Context, key string) bool {
 	}
 	return false
 }
+
+func (o *OpenAPIApplication) ListTrajectoryOApi(ctx context.Context, req *openapi.ListTrajectoryOApiRequest) (*openapi.ListTrajectoryOApiResponse, error) {
+	if err := o.validateListTrajectoryOApiReq(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), ""); err != nil {
+		return nil, err
+	}
+
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowByKey(ctx, limitKey) {
+		return nil, errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+	}
+
+	startTime := req.StartTime
+	if startTime == nil {
+		userID := session.UserIDInCtxOrEmpty(ctx)
+		if userID == "" {
+			return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+		}
+		finalStartTime := o.traceConfig.GetTraceDataMaxDurationDay(ctx, nil)
+		benefitRes, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+			ConnectorUID: userID,
+			SpaceID:      req.GetWorkspaceID(),
+		})
+		if err == nil && benefitRes != nil {
+			finalStartTime = time.Now().UnixMilli() - int64(benefitRes.StorageDuration)*24*60*60*1000
+		}
+		startTime = &finalStartTime
+	}
+
+	resp, err := o.traceService.ListTrajectory(ctx, &service.ListTrajectoryRequest{
+		WorkspaceID: req.GetWorkspaceID(),
+		TraceIds:    req.GetTraceIds(),
+		StartTime:   startTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return &openapi.ListTrajectoryOApiResponse{
+			Data: &openapi.ListTrajectoryOApiData{},
+		}, nil
+	}
+
+	return &openapi.ListTrajectoryOApiResponse{
+		Data: &openapi.ListTrajectoryOApiData{
+			Trajectories: tconv.TrajectoriesDO2DTO(resp.Trajectories),
+		},
+	}, nil
+}
+
+func (o *OpenAPIApplication) validateListTrajectoryOApiReq(ctx context.Context, req *openapi.ListTrajectoryOApiRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if len(req.GetTraceIds()) < 1 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("trace_ids is required"))
+	}
+	for _, id := range req.GetTraceIds() {
+		if id == "" {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+		}
+	}
+	return nil
+}
