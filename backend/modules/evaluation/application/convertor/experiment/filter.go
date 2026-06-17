@@ -38,11 +38,9 @@ func (e *ExptFilterConvertor) Convert(ctx context.Context, efo *domain_expt.Expt
 	filters.FuzzyName = efo.GetFuzzyName()
 
 	// eval_set_source_types 与 fuzzy_name 同级 (不走 filters)。
-	// 调用方未指定 → 默认仅 SingleSet(1), 排除 MultiSetConfig(2); 显式传则按调用方意图。
+	// 调用方未指定 → 留空透传, 由 DAO 层默认排除 MultiSetConfig(2) (含旧数据 NULL); 显式传则按调用方意图走白名单 IN。
 	srcTypes := efo.GetEvalSetSourceTypes()
-	if len(srcTypes) == 0 {
-		filters.EvalSetSourceTypes = []int64{int64(entity.ExptEvalSetSourceType_SingleSet)}
-	} else {
+	if len(srcTypes) > 0 {
 		out := make([]int64, 0, len(srcTypes))
 		for _, st := range srcTypes {
 			out = append(out, int64(st))

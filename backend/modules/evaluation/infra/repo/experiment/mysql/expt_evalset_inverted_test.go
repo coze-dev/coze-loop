@@ -68,16 +68,41 @@ func TestExptDAO_toConditions_EvalSetVersionID_InvertedExclude(t *testing.T) {
 	assert.Contains(t, sql, "AND id NOT IN", "exclude 应是列不匹配 AND 倒排不匹配, got: %s", sql)
 }
 
-// TestExptDAO_toConditions_EvalSetSourceType 验证顶层 EvalSetSourceTypes (与 FuzzyName 同级) → eval_set_source_type IN。
+// TestExptDAO_toConditions_EvalSetSourceType 验证顶层 EvalSetSourceTypes (与 FuzzyName 同级):
+// 未传 → 默认排除 MultiSet(2) 且保留旧数据 NULL; 显式传 → 严格白名单 IN。
 func TestExptDAO_toConditions_EvalSetSourceType(t *testing.T) {
 	dao := &exptDAOImpl{}
 
+	// 默认场景: 未传 → eval_set_source_type <> 2 OR IS NULL, 命中 SingleSet 与旧数据 NULL
 	conds, ok := dao.toConditions(&entity.ExptListFilter{
+		Includes: &entity.ExptFilterFields{},
+		Excludes: &entity.ExptFilterFields{},
+	}, nil, 100)
+	assert.True(t, ok)
+	sql := renderExptConds(t, conds)
+	assert.Contains(t, sql, "eval_set_source_type <> ?", "未传应默认排除 MultiSet, got: %s", sql)
+	assert.Contains(t, sql, "eval_set_source_type IS NULL", "未传应保留旧数据 NULL, got: %s", sql)
+
+	// 显式白名单: [1] → 纯 IN, 不放行 NULL
+	conds2, ok := dao.toConditions(&entity.ExptListFilter{
 		EvalSetSourceTypes: []int64{1},
 		Includes:           &entity.ExptFilterFields{},
 		Excludes:           &entity.ExptFilterFields{},
 	}, nil, 100)
 	assert.True(t, ok)
-	sql := renderExptConds(t, conds)
-	assert.Contains(t, sql, "eval_set_source_type IN")
+	sql2 := renderExptConds(t, conds2)
+	assert.Contains(t, sql2, "eval_set_source_type IN")
+	assert.NotContains(t, sql2, "eval_set_source_type IS NULL", "显式白名单不应放行旧数据, got: %s", sql2)
+	assert.NotContains(t, sql2, "eval_set_source_type <> ?", "显式白名单应走纯 IN, got: %s", sql2)
+
+	// 显式仅 MultiSet: [2] → 纯 IN
+	conds3, ok := dao.toConditions(&entity.ExptListFilter{
+		EvalSetSourceTypes: []int64{2},
+		Includes:           &entity.ExptFilterFields{},
+		Excludes:           &entity.ExptFilterFields{},
+	}, nil, 100)
+	assert.True(t, ok)
+	sql3 := renderExptConds(t, conds3)
+	assert.Contains(t, sql3, "eval_set_source_type IN")
+	assert.NotContains(t, sql3, "eval_set_source_type IS NULL", "仅 MultiSet 不应放行旧数据, got: %s", sql3)
 }
