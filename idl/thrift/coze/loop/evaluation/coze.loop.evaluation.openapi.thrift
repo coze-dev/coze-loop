@@ -20,6 +20,7 @@ struct CreateEvaluationSetOApiRequest {
     2: optional string name (api.body = "name", vt.min_size = "1", vt.max_size = "255")
     3: optional string description (api.body = "description", vt.max_size = "2048")
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema (api.body = "evaluation_set_schema")
+    5: optional eval_set.EvaluationSetType type (api.body = "type", vt.max_size = "128")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -189,6 +190,9 @@ struct BatchCreateEvaluationSetItemsOApiRequest {
     4: optional bool is_skip_invalid_items (api.body = "is_skip_invalid_items")// items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
     5: optional bool is_allow_partial_add (api.body = "is_allow_partial_add")// 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
     6: optional list<eval_set.FieldWriteOption> field_write_options
+    20: optional string item_version_description (api.body = "item_version_description", vt.max_size = "2048")
+    21: optional string item_version_status (api.body = "item_version_status", vt.max_size = "64")
+    22: optional string item_status (api.body = "item_status", vt.max_size = "64")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -214,6 +218,9 @@ struct BatchUpdateEvaluationSetItemsOApiRequest {
     2: optional i64 evaluation_set_id (api.path = 'evaluation_set_id', api.js_conv = "true", go.tag = 'json:"evaluation_set_id"')
     3: optional list<eval_set.EvaluationSetItem> items (api.body = "items", vt.min_size = '1', vt.max_size = '100')
     4: optional bool is_skip_invalid_items (api.body = "is_skip_invalid_items")
+    20: optional string item_version_description (api.body = "item_version_description", vt.max_size = "2048")
+    21: optional string item_version_status (api.body = "item_version_status", vt.max_size = "64")
+    22: optional string item_status (api.body = "item_status", vt.max_size = "64")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -230,6 +237,54 @@ struct BatchUpdateEvaluationSetItemsOApiResponse {
 struct BatchUpdateEvaluationSetItemsOpenAPIData {
     1: optional list<eval_set.DatasetItemOutput> itemOutputs
     2: optional list<eval_set.ItemErrorGroup> errors
+}
+
+struct ListEvaluationSetItemVersionsOApiRequest {
+    1: optional i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 evaluation_set_id (api.path = 'evaluation_set_id', api.js_conv = "true", go.tag = 'json:"evaluation_set_id"')
+    3: optional i64 item_id (api.path = 'item_id', api.js_conv = "true", go.tag = 'json:"item_id"')
+    100: optional i32 page_number (api.query = "page_number")
+    101: optional i32 page_size (api.query = "page_size")
+    102: optional string page_token (api.query = "page_token")
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ListEvaluationSetItemVersionsOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional ListEvaluationSetItemVersionsOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListEvaluationSetItemVersionsOpenAPIData {
+    1: optional list<eval_set.EvaluationItemVersion> versions
+    100: optional i64 total (api.js_conv = "true", go.tag = 'json:"total"')
+    101: optional string next_page_token
+}
+
+struct GetEvaluationSetItemVersionOApiRequest {
+    1: optional i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 evaluation_set_id (api.path = 'evaluation_set_id', api.js_conv = "true", go.tag = 'json:"evaluation_set_id"')
+    3: optional i64 item_id (api.path = 'item_id', api.js_conv = "true", go.tag = 'json:"item_id"')
+    4: optional i64 item_version_id (api.path = 'item_version_id', api.js_conv = "true", go.tag = 'json:"item_version_id"')
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct GetEvaluationSetItemVersionOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional GetEvaluationSetItemVersionOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct GetEvaluationSetItemVersionOpenAPIData {
+    1: optional eval_set.EvaluationItemVersion version
 }
 
 // 1.7 批量删除评测集数据
@@ -1180,6 +1235,10 @@ service EvaluationOpenAPIService {
     BatchDeleteEvaluationSetItemsOApiResponse BatchDeleteEvaluationSetItemsOApi(1: BatchDeleteEvaluationSetItemsOApiRequest req) (api.category = "openapi", api.delete = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
     // 查询评测集特定版本数据
     ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
+    // 查询评测集 Item 内容版本列表
+    ListEvaluationSetItemVersionsOApiResponse ListEvaluationSetItemVersionsOApi(1: ListEvaluationSetItemVersionsOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/versions")
+    // 查询评测集 Item 指定内容版本
+    GetEvaluationSetItemVersionOApiResponse GetEvaluationSetItemVersionOApi(1: GetEvaluationSetItemVersionOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/versions/:item_version_id")
     // 查询评测集某个filed值，用于获取超长文本的内容
     GetEvaluationItemFieldOApiResponse GetEvaluationItemFieldOApi(1: GetEvaluationItemFieldOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/field")
     // 导入评测集
