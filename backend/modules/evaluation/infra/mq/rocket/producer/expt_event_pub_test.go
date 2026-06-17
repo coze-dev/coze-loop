@@ -20,11 +20,11 @@ import (
 
 func TestBatchSendWithRetry(t *testing.T) {
 	tests := []struct {
-		name          string
-		failCount     int // SendBatch连续失败次数，之后返回成功; -1表示一直失败
-		ctxCancel     bool
-		wantErr       bool
-		wantMinCalls  int
+		name         string
+		failCount    int
+		ctxCancel    bool
+		wantErr      bool
+		wantMinCalls int
 	}{
 		{
 			name:         "success on first attempt",
