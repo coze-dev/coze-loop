@@ -6,6 +6,7 @@ package producer
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,69 +20,36 @@ import (
 
 func TestBatchSendWithRetry(t *testing.T) {
 	tests := []struct {
-		name         string
-		sendResults  []struct {
-			resp mq.SendResponse
-			err  error
-		}
-		ctxCancel bool
-		wantErr   bool
+		name          string
+		failCount     int // SendBatch连续失败次数，之后返回成功; -1表示一直失败
+		ctxCancel     bool
+		wantErr       bool
+		wantMinCalls  int
 	}{
 		{
-			name: "success on first attempt",
-			sendResults: []struct {
-				resp mq.SendResponse
-				err  error
-			}{
-				{resp: mq.SendResponse{MessageID: "msg1", Offset: 1}, err: nil},
-			},
-			wantErr: false,
+			name:         "success on first attempt",
+			failCount:    0,
+			wantErr:      false,
+			wantMinCalls: 1,
 		},
 		{
-			name: "success on second attempt after transient failure",
-			sendResults: []struct {
-				resp mq.SendResponse
-				err  error
-			}{
-				{resp: mq.SendResponse{}, err: errors.New("connection reset")},
-				{resp: mq.SendResponse{MessageID: "msg1", Offset: 1}, err: nil},
-			},
-			wantErr: false,
+			name:         "success after transient failures",
+			failCount:    2,
+			wantErr:      false,
+			wantMinCalls: 3,
 		},
 		{
-			name: "success on third attempt",
-			sendResults: []struct {
-				resp mq.SendResponse
-				err  error
-			}{
-				{resp: mq.SendResponse{}, err: errors.New("timeout")},
-				{resp: mq.SendResponse{}, err: errors.New("timeout")},
-				{resp: mq.SendResponse{MessageID: "msg1", Offset: 1}, err: nil},
-			},
-			wantErr: false,
+			name:         "all attempts fail within timeout",
+			failCount:    -1,
+			wantErr:      true,
+			wantMinCalls: 2,
 		},
 		{
-			name: "all 3 attempts fail",
-			sendResults: []struct {
-				resp mq.SendResponse
-				err  error
-			}{
-				{resp: mq.SendResponse{}, err: errors.New("timeout")},
-				{resp: mq.SendResponse{}, err: errors.New("timeout")},
-				{resp: mq.SendResponse{}, err: errors.New("timeout")},
-			},
-			wantErr: true,
-		},
-		{
-			name: "context canceled - no retry",
-			sendResults: []struct {
-				resp mq.SendResponse
-				err  error
-			}{
-				{resp: mq.SendResponse{}, err: errors.New("context canceled")},
-			},
-			ctxCancel: true,
-			wantErr:   true,
+			name:         "context canceled - stops retry",
+			failCount:    -1,
+			ctxCancel:    true,
+			wantErr:      true,
+			wantMinCalls: 1,
 		},
 	}
 
@@ -91,17 +59,16 @@ func TestBatchSendWithRetry(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockProducer := mqmocks.NewMockIProducer(ctrl)
-			callIdx := 0
+			var callCount atomic.Int32
 			mockProducer.EXPECT().SendBatch(gomock.Any(), gomock.Any()).DoAndReturn(
 				func(ctx context.Context, msgs []*mq.Message) (mq.SendResponse, error) {
-					if callIdx >= len(tt.sendResults) {
-						t.Fatal("unexpected extra SendBatch call")
+					idx := int(callCount.Add(1))
+					if tt.failCount == -1 || idx <= tt.failCount {
+						return mq.SendResponse{}, errors.New("connection reset")
 					}
-					result := tt.sendResults[callIdx]
-					callIdx++
-					return result.resp, result.err
+					return mq.SendResponse{MessageID: "msg1", Offset: 1}, nil
 				},
-			).Times(len(tt.sendResults))
+			).AnyTimes()
 
 			pub := &exptEventPublisher{
 				producers: map[string]*producer{
@@ -128,7 +95,7 @@ func TestBatchSendWithRetry(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			assert.Equal(t, len(tt.sendResults), callIdx)
+			assert.GreaterOrEqual(t, int(callCount.Load()), tt.wantMinCalls)
 		})
 	}
 }

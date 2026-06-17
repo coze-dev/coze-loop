@@ -14,6 +14,7 @@ import (
 	"github.com/mohae/deepcopy"
 	"github.com/samber/lo"
 
+	infrabackoff "github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -209,25 +210,12 @@ func (e *exptEventPublisher) batchSendWithTagAndKeys(ctx context.Context, pk str
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck
 	}
 
-	// 带退避重试发送，容忍短暂的MQ/网络抖动
 	var resp mq.SendResponse
-	var sendErr error
-	maxRetries := 3
-	retryInterval := 200 * time.Millisecond
-	for i := 0; i < maxRetries; i++ {
-		resp, sendErr = p.p.SendBatch(ctx, msgs)
-		if sendErr == nil {
-			break
-		}
-		// context已取消则不再重试
-		if ctx.Err() != nil {
-			break
-		}
-		if i < maxRetries-1 {
-			time.Sleep(retryInterval)
-			retryInterval *= 2
-		}
-	}
+	sendErr := infrabackoff.RetryThreeSeconds(ctx, func() error {
+		var err error
+		resp, err = p.p.SendBatch(ctx, msgs)
+		return err
+	})
 	if sendErr != nil {
 		return errorx.Wrapf(sendErr, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
 	}
