@@ -84,3 +84,9 @@ func DeleteAnnotation(ctx context.Context, c *app.RequestContext) {
 func ListPreSpanOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListPreSpanOApi)
 }
+
+// ListTrajectoryOApi .
+// @router /v1/loop/traces/trajectory [POST]
+func ListTrajectoryOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListTrajectoryOApi)
+}
