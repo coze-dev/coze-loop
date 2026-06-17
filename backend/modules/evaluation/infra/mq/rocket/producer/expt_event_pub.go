@@ -208,9 +208,28 @@ func (e *exptEventPublisher) batchSendWithTagAndKeys(ctx context.Context, pk str
 	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck
 	}
-	resp, err := p.p.SendBatch(ctx, msgs)
-	if err != nil {
-		return errorx.Wrapf(err, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
+
+	// 带退避重试发送，容忍短暂的MQ/网络抖动
+	var resp mq.SendResponse
+	var sendErr error
+	maxRetries := 3
+	retryInterval := 200 * time.Millisecond
+	for i := 0; i < maxRetries; i++ {
+		resp, sendErr = p.p.SendBatch(ctx, msgs)
+		if sendErr == nil {
+			break
+		}
+		// context已取消则不再重试
+		if ctx.Err() != nil {
+			break
+		}
+		if i < maxRetries-1 {
+			time.Sleep(retryInterval)
+			retryInterval *= 2
+		}
+	}
+	if sendErr != nil {
+		return errorx.Wrapf(sendErr, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
 	}
 
 	logs.CtxInfo(ctx, "expt event batch send success, producer_key: %v, tag: %v, message_id: %v, offset: %v", pk, tag, resp.MessageID, resp.Offset)

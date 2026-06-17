@@ -5,7 +5,9 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -167,7 +169,7 @@ func (e *ExptSchedulerImpl) makeExptRunExecLockKey(exptID, exptRunID int64) stri
 func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
 		key := e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID)
-		locked, ctx, cancel, err := e.Mutex.LockWithRenew(ctx, key, time.Second*5, time.Second*60*5)
+		locked, ctx, cancel, err := e.Mutex.LockBackoffWithRenew(ctx, key, time.Second*5, time.Second*60*5)
 		if err != nil {
 			return err
 		}
@@ -215,6 +217,35 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 
 		logs.CtxError(ctx, "[ExptEval] HandleEventErr found error: %v, event: %v", nextErr, json.Jsonify(event))
 
+		// 基础设施类错误（Redis抖动、MQ发送失败、context cancel等）：尝试用新ctx重新调度，不直接终止实验
+		if isSchedulerInfraError(nextErr) {
+			maxInfraRetry := 10
+			if event.InfraErrorRetryTimes >= maxInfraRetry {
+				logs.CtxError(ctx, "[ExptEval] infra error reschedule exhausted, expt_id: %v, expt_run_id: %v, retries: %d, err: %v",
+					event.ExptID, event.ExptRunID, event.InfraErrorRetryTimes, nextErr)
+				// 超过最大重试次数，走原有逻辑终止实验
+			} else {
+				logs.CtxWarn(ctx, "[ExptEval] infra error detected, attempting reschedule (%d/%d), expt_id: %v, expt_run_id: %v, err: %v",
+					event.InfraErrorRetryTimes+1, maxInfraRetry, event.ExptID, event.ExptRunID, nextErr)
+
+				// 复制context保留存储内容，仅断开cancel传播
+				freshCtx := context.WithoutCancel(ctx)
+				event.InfraErrorRetryTimes++
+
+				if pubErr := e.Publisher.PublishExptScheduleEvent(freshCtx, event, gptr.Of(time.Second*5)); pubErr != nil {
+					// 重新调度也失败，返回error让MQ框架重投递
+					logs.CtxError(freshCtx, "[ExptEval] reschedule publish failed, rely on MQ retry, expt_id: %v, expt_run_id: %v, pub_err: %v",
+						event.ExptID, event.ExptRunID, pubErr)
+					return nextErr
+				}
+
+				logs.CtxInfo(freshCtx, "[ExptEval] reschedule success after infra error, expt_id: %v, expt_run_id: %v",
+					event.ExptID, event.ExptRunID)
+				return nil
+			}
+		}
+
+		// 业务逻辑错误：终止实验
 		completeCID := fmt.Sprintf("exptexec:onerr:%d", event.ExptRunID)
 
 		if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
@@ -228,6 +259,27 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 
 		return nil
 	}
+}
+
+// isSchedulerInfraError 判断是否为基础设施类可重试错误
+func isSchedulerInfraError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// context cancel / deadline exceeded 通常由Redis锁续期失败触发
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	errMsg := err.Error()
+	// MQ发送失败
+	if strings.Contains(errMsg, "send batch message fail") {
+		return true
+	}
+	// RPC层错误
+	if strings.Contains(errMsg, "context canceled") || strings.Contains(errMsg, "context deadline exceeded") {
+		return true
+	}
+	return false
 }
 
 func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptScheduleEvent) error {
@@ -316,6 +368,7 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+	event.InfraErrorRetryTimes = 0
 	return mode.NextTick(ctx, event, nextTick)
 }
 

@@ -20,8 +20,9 @@ type ExptScheduleEvent struct {
 	Ext       map[string]string
 	Session   *Session
 
-	ItemRetryTimes     int
-	ExecEvalSetItemIDs []int64
+	ItemRetryTimes       int
+	ExecEvalSetItemIDs   []int64
+	InfraErrorRetryTimes int
 }
 
 type ctxTargetCalledCacheKey struct{}
