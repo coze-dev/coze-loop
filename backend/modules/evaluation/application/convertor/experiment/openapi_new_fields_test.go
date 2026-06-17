@@ -422,6 +422,59 @@ func TestOpenAPIExptDO2DTO_NoNewFields_WhenEntityEmpty(t *testing.T) {
 	}
 }
 
+// TestOpenAPIExptDO2DTO_ItemCentricFields 验证 entity 路径 (GetExperimentsOApi 单实验 Get 用) 回填
+// item-centric 多评测集字段: eval_set_source_type(110) / eval_set_details(112) / evaluators_concur_num(113) / total_item_count(114)。
+func TestOpenAPIExptDO2DTO_ItemCentricFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("MultiSet 全填", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ID:                1,
+			Status:            entity.ExptStatus_Success,
+			ExptType:          entity.ExptType_Offline,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			TotalItemCount:    42,
+			EvalSetDetails: []*entity.ExptEvalSetDetail{
+				{EvalSetID: 100, EvalSetVersionID: 1000, IsPrimary: true, ItemCount: 30},
+				{EvalSetID: 200, EvalSetVersionID: 2000, IsPrimary: false, ItemCount: 12},
+			},
+			EvalConf: &entity.EvaluationConfiguration{
+				ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{EvaluatorConcurNum: gptr.Of(5)},
+				},
+			},
+		}
+		converted := OpenAPIExptDO2DTO(experiment)
+		if assert.NotNil(t, converted) {
+			assert.Equal(t, openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig, converted.GetEvalSetSourceType())
+			assert.Equal(t, int64(42), converted.GetTotalItemCount())
+			assert.Equal(t, int32(5), converted.GetEvaluatorsConcurNum())
+			if assert.Len(t, converted.EvalSetDetails, 2) {
+				assert.Equal(t, int64(100), converted.EvalSetDetails[0].GetEvalSetID())
+				assert.Equal(t, int64(1000), converted.EvalSetDetails[0].GetEvalSetVersionID())
+				assert.True(t, converted.EvalSetDetails[0].GetIsPrimary())
+				assert.Equal(t, int32(30), converted.EvalSetDetails[0].GetItemCount())
+				assert.Equal(t, int32(12), converted.EvalSetDetails[1].GetItemCount())
+			}
+		}
+	})
+
+	t.Run("SingleSet 旧实验 → 仅 single_set, 无 details/total_item_count", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ID:                2,
+			Status:            entity.ExptStatus_Success,
+			ExptType:          entity.ExptType_Offline,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_SingleSet,
+		}
+		converted := OpenAPIExptDO2DTO(experiment)
+		if assert.NotNil(t, converted) {
+			assert.Equal(t, openapiExperiment.ExptEvalSetSourceTypeSingleSet, converted.GetEvalSetSourceType())
+			assert.Nil(t, converted.EvalSetDetails, "SingleSet 不应填 eval_set_details")
+			assert.Nil(t, converted.TotalItemCount, "SingleSet 不应回显 total_item_count")
+		}
+	})
+}
+
 // TestOpenAPIExptDO2DTO_OnlineExperimentHidesEvalSet — 校验线上实验不返回 eval_set（保留原有契约）
 func TestOpenAPIExptDO2DTO_OnlineExperimentHidesEvalSet(t *testing.T) {
 	t.Parallel()

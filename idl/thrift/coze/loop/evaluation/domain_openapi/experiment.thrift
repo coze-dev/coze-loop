@@ -465,6 +465,7 @@ struct ExperimentTemplateFilter {
 // 实验列表筛选（对应 domain/expt ExptFilterOption）
 struct ExperimentFilterOption {
     1: optional string fuzzy_name
+    2: optional list<ExptEvalSetSourceType> eval_set_source_types // 评测集来源模式筛选 (与 fuzzy_name 同级, 不走 filters); 未传默认排除 multi_set_config
     10: optional Filters filters
 }
 

@@ -2550,6 +2550,45 @@ func TestOpenAPIExperimentFilterOptionDTO2Domain(t *testing.T) {
 		require.NotNil(t, got.GetFilters())
 	})
 
+	t.Run("eval_set_source_types only — 不被判空返回 nil, 透传内部枚举", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			EvalSetSourceTypes: []openapiExperiment.ExptEvalSetSourceType{
+				openapiExperiment.ExptEvalSetSourceTypeSingleSet,
+				openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig,
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got, "仅传 eval_set_source_types 时不应判空返回 nil")
+		assert.Equal(t, []domainExpt.ExptEvalSetSourceType{
+			domainExpt.ExptEvalSetSourceType_SingleSet,
+			domainExpt.ExptEvalSetSourceType_MultiSetConfig,
+		}, got.GetEvalSetSourceTypes())
+	})
+
+	t.Run("eval_set_source_types 与 fuzzy 组合", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			FuzzyName: gptr.Of("abc"),
+			EvalSetSourceTypes: []openapiExperiment.ExptEvalSetSourceType{
+				openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig,
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "abc", got.GetFuzzyName())
+		assert.Equal(t, []domainExpt.ExptEvalSetSourceType{domainExpt.ExptEvalSetSourceType_MultiSetConfig}, got.GetEvalSetSourceTypes())
+	})
+
+	t.Run("未知 source_type 跳过", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			EvalSetSourceTypes: []openapiExperiment.ExptEvalSetSourceType{
+				openapiExperiment.ExptEvalSetSourceType("bogus"),
+			},
+		})
+		assert.NoError(t, err)
+		// 全部跳过后无有效 source_types, 且无 fuzzy/filters → 整体判空返回 nil
+		assert.Nil(t, got)
+	})
+
 	t.Run("invalid filter returns error", func(t *testing.T) {
 		logicAnd := openapiExperiment.FilterLogicOpAnd
 		badType := openapiExperiment.FilterFieldType("unknown_bad")

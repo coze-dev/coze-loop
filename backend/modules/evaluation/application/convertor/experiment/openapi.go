@@ -644,7 +644,54 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		}
 	}
 
+	// item-centric 多评测集字段回填 (110/112/113/114): 与 DomainExperimentDTO2OpenAPI / ToExptDTO 等价, 但走 entity 直转,
+	// 供 GetExperimentsOApi 单实验 Get 使用 (其上游 manager.GetDetail 已 enrichEvalSetDetails 填好 EvalSetDetails/TotalItemCount)。
+	// 111 eval_set_configs (version-string) 与 DTO 路径一致, OpenAPI 侧不回显。
+	result.EvalSetSourceType = mapEvalSetSourceTypeDO2OpenAPI(experiment.EvalSetSourceType)
+	result.EvalSetDetails = entityEvalSetDetailsDO2OpenAPI(experiment.EvalSetDetails)
+	// total_item_count 仅 MultiSetConfig 回显 (对齐 ToExptDTO; SingleSet 旧实验不塞 0)
+	if experiment.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		result.TotalItemCount = gptr.Of(experiment.TotalItemCount)
+	}
+	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
+		result.EvaluatorsConcurNum = gptr.Of(int32(*experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum))
+	}
+
 	return result
+}
+
+// mapEvalSetSourceTypeDO2OpenAPI 将 entity ExptEvalSetSourceType (值) 映射为 openapi 字符串枚举。
+// 与 mapEvalSetSourceTypeDTO2OpenAPI 行为一致 (非 MultiSetConfig 一律视为 single_set)。
+func mapEvalSetSourceTypeDO2OpenAPI(s entity.ExptEvalSetSourceType) *openapiExperiment.ExptEvalSetSourceType {
+	var v openapiExperiment.ExptEvalSetSourceType
+	switch s {
+	case entity.ExptEvalSetSourceType_MultiSetConfig:
+		v = openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig
+	default:
+		v = openapiExperiment.ExptEvalSetSourceTypeSingleSet
+	}
+	return &v
+}
+
+// entityEvalSetDetailsDO2OpenAPI 将 entity ExptEvalSetDetail 列表映射为 openapi 版本 (不含 EvalSet 详情, 与 List 路径一致)。
+func entityEvalSetDetailsDO2OpenAPI(details []*entity.ExptEvalSetDetail) []*openapiExperiment.ExptEvalSetDetail {
+	if len(details) == 0 {
+		return nil
+	}
+	out := make([]*openapiExperiment.ExptEvalSetDetail, 0, len(details))
+	for _, d := range details {
+		if d == nil {
+			continue
+		}
+		out = append(out, &openapiExperiment.ExptEvalSetDetail{
+			EvalSetID:        gptr.Of(d.EvalSetID),
+			EvalSetVersionID: gptr.Of(d.EvalSetVersionID),
+			IsPrimary:        gptr.Of(d.IsPrimary),
+			ItemCount:        gptr.Of(d.ItemCount),
+		})
+	}
+	return out
 }
 
 // buildOpenAPIEvaluatorIDVersionListFromExperiment 基于 entity.Experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf
@@ -2483,7 +2530,9 @@ func OpenAPIExperimentFilterOptionDTO2Domain(opt *openapiExperiment.ExperimentFi
 	}
 	hasFuzzy := opt.IsSetFuzzyName() && strings.TrimSpace(opt.GetFuzzyName()) != ""
 	hasFilters := domainFilters != nil && len(domainFilters.FilterConditions) > 0
-	if !hasFuzzy && !hasFilters {
+	srcTypes := openAPIEvalSetSourceTypesDTO2Domain(opt.GetEvalSetSourceTypes())
+	hasSrcTypes := len(srcTypes) > 0
+	if !hasFuzzy && !hasFilters && !hasSrcTypes {
 		return nil, nil
 	}
 	out := domainExpt.NewExptFilterOption()
@@ -2493,7 +2542,29 @@ func OpenAPIExperimentFilterOptionDTO2Domain(opt *openapiExperiment.ExperimentFi
 	if hasFilters {
 		out.SetFilters(domainFilters)
 	}
+	if hasSrcTypes {
+		// eval_set_source_types 与 fuzzy_name 同级 (不走 filters): 透传调用方意图; 未传则内部默认排除 multi_set_config。
+		out.SetEvalSetSourceTypes(srcTypes)
+	}
 	return out, nil
+}
+
+// openAPIEvalSetSourceTypesDTO2Domain 将 OpenAPI 字符串枚举数组转为内部 int 枚举数组。
+// 未知/空字符串跳过 (容错); single_set→1, multi_set_config→2。
+func openAPIEvalSetSourceTypesDTO2Domain(in []openapiExperiment.ExptEvalSetSourceType) []domainExpt.ExptEvalSetSourceType {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]domainExpt.ExptEvalSetSourceType, 0, len(in))
+	for _, s := range in {
+		switch s {
+		case openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig:
+			out = append(out, domainExpt.ExptEvalSetSourceType_MultiSetConfig)
+		case openapiExperiment.ExptEvalSetSourceTypeSingleSet:
+			out = append(out, domainExpt.ExptEvalSetSourceType_SingleSet)
+		}
+	}
+	return out
 }
 
 // OpenAPIKeywordSearchDTO2Domain 将 OpenAPI 的 KeywordSearch 转为 domain/expt.KeywordSearch，供实验结果模糊搜索。

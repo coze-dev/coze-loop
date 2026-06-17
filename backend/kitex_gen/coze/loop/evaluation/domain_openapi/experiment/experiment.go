@@ -16115,8 +16115,10 @@ func (p *ExperimentTemplateFilter) Field2DeepEqual(src *KeywordSearch) bool {
 
 // 实验列表筛选（对应 domain/expt ExptFilterOption）
 type ExperimentFilterOption struct {
-	FuzzyName *string  `thrift:"fuzzy_name,1,optional" frugal:"1,optional,string" form:"fuzzy_name" json:"fuzzy_name,omitempty" query:"fuzzy_name"`
-	Filters   *Filters `thrift:"filters,10,optional" frugal:"10,optional,Filters" form:"filters" json:"filters,omitempty" query:"filters"`
+	FuzzyName *string `thrift:"fuzzy_name,1,optional" frugal:"1,optional,string" form:"fuzzy_name" json:"fuzzy_name,omitempty" query:"fuzzy_name"`
+	// 评测集来源模式筛选 (与 fuzzy_name 同级, 不走 filters); 未传默认排除 multi_set_config
+	EvalSetSourceTypes []ExptEvalSetSourceType `thrift:"eval_set_source_types,2,optional" frugal:"2,optional,list<string>" form:"eval_set_source_types" json:"eval_set_source_types,omitempty" query:"eval_set_source_types"`
+	Filters            *Filters                `thrift:"filters,10,optional" frugal:"10,optional,Filters" form:"filters" json:"filters,omitempty" query:"filters"`
 }
 
 func NewExperimentFilterOption() *ExperimentFilterOption {
@@ -16138,6 +16140,18 @@ func (p *ExperimentFilterOption) GetFuzzyName() (v string) {
 	return *p.FuzzyName
 }
 
+var ExperimentFilterOption_EvalSetSourceTypes_DEFAULT []ExptEvalSetSourceType
+
+func (p *ExperimentFilterOption) GetEvalSetSourceTypes() (v []ExptEvalSetSourceType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSetSourceTypes() {
+		return ExperimentFilterOption_EvalSetSourceTypes_DEFAULT
+	}
+	return p.EvalSetSourceTypes
+}
+
 var ExperimentFilterOption_Filters_DEFAULT *Filters
 
 func (p *ExperimentFilterOption) GetFilters() (v *Filters) {
@@ -16152,17 +16166,25 @@ func (p *ExperimentFilterOption) GetFilters() (v *Filters) {
 func (p *ExperimentFilterOption) SetFuzzyName(val *string) {
 	p.FuzzyName = val
 }
+func (p *ExperimentFilterOption) SetEvalSetSourceTypes(val []ExptEvalSetSourceType) {
+	p.EvalSetSourceTypes = val
+}
 func (p *ExperimentFilterOption) SetFilters(val *Filters) {
 	p.Filters = val
 }
 
 var fieldIDToName_ExperimentFilterOption = map[int16]string{
 	1:  "fuzzy_name",
+	2:  "eval_set_source_types",
 	10: "filters",
 }
 
 func (p *ExperimentFilterOption) IsSetFuzzyName() bool {
 	return p.FuzzyName != nil
+}
+
+func (p *ExperimentFilterOption) IsSetEvalSetSourceTypes() bool {
+	return p.EvalSetSourceTypes != nil
 }
 
 func (p *ExperimentFilterOption) IsSetFilters() bool {
@@ -16190,6 +16212,14 @@ func (p *ExperimentFilterOption) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16243,6 +16273,29 @@ func (p *ExperimentFilterOption) ReadField1(iprot thrift.TProtocol) error {
 	p.FuzzyName = _field
 	return nil
 }
+func (p *ExperimentFilterOption) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]ExptEvalSetSourceType, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem ExptEvalSetSourceType
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvalSetSourceTypes = _field
+	return nil
+}
 func (p *ExperimentFilterOption) ReadField10(iprot thrift.TProtocol) error {
 	_field := NewFilters()
 	if err := _field.Read(iprot); err != nil {
@@ -16260,6 +16313,10 @@ func (p *ExperimentFilterOption) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField10(oprot); err != nil {
@@ -16302,6 +16359,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *ExperimentFilterOption) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSetSourceTypes() {
+		if err = oprot.WriteFieldBegin("eval_set_source_types", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.EvalSetSourceTypes)); err != nil {
+			return err
+		}
+		for _, v := range p.EvalSetSourceTypes {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *ExperimentFilterOption) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFilters() {
 		if err = oprot.WriteFieldBegin("filters", thrift.STRUCT, 10); err != nil {
@@ -16338,6 +16421,9 @@ func (p *ExperimentFilterOption) DeepEqual(ano *ExperimentFilterOption) bool {
 	if !p.Field1DeepEqual(ano.FuzzyName) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.EvalSetSourceTypes) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.Filters) {
 		return false
 	}
@@ -16353,6 +16439,19 @@ func (p *ExperimentFilterOption) Field1DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.FuzzyName, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *ExperimentFilterOption) Field2DeepEqual(src []ExptEvalSetSourceType) bool {
+
+	if len(p.EvalSetSourceTypes) != len(src) {
+		return false
+	}
+	for i, v := range p.EvalSetSourceTypes {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }
