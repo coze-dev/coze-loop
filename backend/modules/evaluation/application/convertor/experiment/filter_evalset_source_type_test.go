@@ -15,25 +15,25 @@ import (
 )
 
 // TestConvert_EvalSetSourceTypes 验证 eval_set_source_types 与 fuzzy_name 同级 (走 ExptFilterOption 顶层, 不进 filters):
-// 默认排除 MultiSetConfig(2)，显式指定才放开。
+// 未指定 → 留空透传 (由 DAO 层默认排除 MultiSetConfig(2) 含旧数据 NULL)，显式指定才按白名单。
 func TestConvert_EvalSetSourceTypes(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conv := NewExptFilterConvertor(svcmocks.NewMockIEvalTargetService(ctrl))
 	ctx := context.Background()
 
-	t.Run("不传 filter_option → 默认仅 SingleSet", func(t *testing.T) {
+	t.Run("不传 filter_option → 留空, 交由 DAO 默认排除 MultiSet", func(t *testing.T) {
 		got, err := conv.Convert(ctx, nil, 100)
 		assert.NoError(t, err)
-		assert.Equal(t, []int64{1}, got.EvalSetSourceTypes)
+		assert.Empty(t, got.EvalSetSourceTypes)
 	})
 
-	t.Run("传 filter_option 但不传 source_types → 默认仅 SingleSet", func(t *testing.T) {
+	t.Run("传 filter_option 但不传 source_types → 留空, 交由 DAO 默认排除 MultiSet", func(t *testing.T) {
 		efo := &domain_expt.ExptFilterOption{FuzzyName: ptrStr("abc")}
 		got, err := conv.Convert(ctx, efo, 100)
 		assert.NoError(t, err)
 		assert.Equal(t, "abc", got.FuzzyName)
-		assert.Equal(t, []int64{1}, got.EvalSetSourceTypes)
+		assert.Empty(t, got.EvalSetSourceTypes)
 	})
 
 	t.Run("显式 [SingleSet, MultiSetConfig] → 返回两者", func(t *testing.T) {

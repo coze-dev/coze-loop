@@ -279,11 +279,20 @@ func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.Or
 	}
 
 	// eval_set_source_type 顶层筛选 (与 FuzzyName 同级, 非 Includes/Excludes):
-	// 默认 [1] 排除 MultiSetConfig(2); 调用方显式指定才放开。
-	if f != nil && len(f.EvalSetSourceTypes) > 0 {
-		conditions = append(conditions, func(db *gorm.DB) *gorm.DB {
-			return db.Where(exptPrefix+"eval_set_source_type IN (?)", f.EvalSetSourceTypes)
-		})
+	// 调用方未传 EvalSetSourceTypes → 默认排除 MultiSetConfig(2), 旧数据 NULL (item-centric 改造前) 一并保留;
+	// 显式传则严格按白名单 IN。
+	if f != nil {
+		if len(f.EvalSetSourceTypes) > 0 {
+			srcTypes := f.EvalSetSourceTypes
+			conditions = append(conditions, func(db *gorm.DB) *gorm.DB {
+				return db.Where(exptPrefix+"eval_set_source_type IN (?)", srcTypes)
+			})
+		} else {
+			conditions = append(conditions, func(db *gorm.DB) *gorm.DB {
+				col := exptPrefix + "eval_set_source_type"
+				return db.Where(col+" <> ? OR "+col+" IS NULL", int64(entity.ExptEvalSetSourceType_MultiSetConfig))
+			})
+		}
 	}
 
 	if f != nil {
