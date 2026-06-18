@@ -56,6 +56,8 @@ const (
 	SchemaKey_SingleChoice SchemaKey = 6
 	// 轨迹
 	SchemaKey_Trajectory SchemaKey = 7
+	// 多轮对话
+	SchemaKey_MessageList SchemaKey = 8
 )
 
 func (p SchemaKey) String() string {
@@ -74,6 +76,8 @@ func (p SchemaKey) String() string {
 		return "SingleChoice"
 	case SchemaKey_Trajectory:
 		return "Trajectory"
+	case SchemaKey_MessageList:
+		return "MessageList"
 	}
 	return "<UNSET>"
 }

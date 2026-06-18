@@ -76,6 +76,7 @@ enum SchemaKey {
     Message = 5
     SingleChoice = 6 // 单选
     Trajectory = 7  // 轨迹
+    MessageList = 8 // 多轮对话
 }
 
 struct DatasetFeatures {
@@ -312,6 +313,7 @@ struct FieldWriteOption {
     1: optional string field_name, // 写入时设置 field name 即可，自动根据草稿态的 schema 填充下方的 field key
     2: optional string field_key,
     4: optional MultiModalStoreOption multi_modal_store_opt,
+    5: optional MultiModalStoreStrategy message_list_store_strategy, // MessageList 多模态资源存储策略
 }
 
 struct MultiModalStoreOption {

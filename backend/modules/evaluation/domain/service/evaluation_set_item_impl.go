@@ -36,11 +36,12 @@ func (d *EvaluationSetItemServiceImpl) BatchCreateEvaluationSetItems(ctx context
 		return nil, nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 	return d.datasetRPCAdapter.BatchCreateDatasetItems(ctx, &rpc.BatchCreateDatasetItemsParam{
-		SpaceID:          param.SpaceID,
-		EvaluationSetID:  param.EvaluationSetID,
-		Items:            param.Items,
-		SkipInvalidItems: param.SkipInvalidItems,
-		AllowPartialAdd:  param.AllowPartialAdd,
+		SpaceID:           param.SpaceID,
+		EvaluationSetID:   param.EvaluationSetID,
+		Items:             param.Items,
+		SkipInvalidItems:  param.SkipInvalidItems,
+		AllowPartialAdd:   param.AllowPartialAdd,
+		FieldWriteOptions: param.FieldWriteOptions,
 	})
 }
 
@@ -49,10 +50,11 @@ func (d *EvaluationSetItemServiceImpl) BatchUpdateEvaluationSetItems(ctx context
 		return nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 	return d.datasetRPCAdapter.BatchUpdateDatasetItems(ctx, &rpc.BatchUpdateDatasetItemsParam{
-		SpaceID:          param.SpaceID,
-		EvaluationSetID:  param.EvaluationSetID,
-		Items:            param.Items,
-		SkipInvalidItems: param.SkipInvalidItems,
+		SpaceID:           param.SpaceID,
+		EvaluationSetID:   param.EvaluationSetID,
+		Items:             param.Items,
+		SkipInvalidItems:  param.SkipInvalidItems,
+		FieldWriteOptions: param.FieldWriteOptions,
 	})
 }
 
