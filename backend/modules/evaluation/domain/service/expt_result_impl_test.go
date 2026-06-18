@@ -7789,3 +7789,196 @@ func TestNewTurnEvaluatorResultRefs_NewFormat(t *testing.T) {
 		assert.Equal(t, int64(0), inlineRef.EvaluatorVersionID)
 	})
 }
+
+func TestCollectEvalSetVersionPairs(t *testing.T) {
+	t.Run("SingleSet/老实验: 仅主集", func(t *testing.T) {
+		expt := &entity.Experiment{
+			EvalSetID:         100,
+			EvalSetVersionID:  101,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_SingleSet,
+		}
+		pairs := collectEvalSetVersionPairs(expt)
+		assert.Equal(t, []evalSetVersionPair{{EvalSetID: 100, EvalSetVersionID: 101}}, pairs)
+	})
+
+	t.Run("MultiSetConfig: 主集在前, 含全部集且去重", func(t *testing.T) {
+		expt := &entity.Experiment{
+			EvalSetID:         100,
+			EvalSetVersionID:  101,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			EvalConf: &entity.EvaluationConfiguration{
+				EvalSetConfigs: []*entity.EvalSetConfig{
+					{EvalSetID: 100, EvalSetVersionID: 101}, // 与主集重复, 去重
+					{EvalSetID: 200, EvalSetVersionID: 201},
+					nil,
+					{EvalSetID: 300, EvalSetVersionID: 301},
+				},
+			},
+		}
+		pairs := collectEvalSetVersionPairs(expt)
+		assert.Equal(t, []evalSetVersionPair{
+			{EvalSetID: 100, EvalSetVersionID: 101},
+			{EvalSetID: 200, EvalSetVersionID: 201},
+			{EvalSetID: 300, EvalSetVersionID: 301},
+		}, pairs)
+	})
+
+	t.Run("MultiSetConfig 主集为空: 只取 configs", func(t *testing.T) {
+		expt := &entity.Experiment{
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			EvalConf: &entity.EvaluationConfiguration{
+				EvalSetConfigs: []*entity.EvalSetConfig{
+					{EvalSetID: 200, EvalSetVersionID: 201},
+				},
+			},
+		}
+		pairs := collectEvalSetVersionPairs(expt)
+		assert.Equal(t, []evalSetVersionPair{{EvalSetID: 200, EvalSetVersionID: 201}}, pairs)
+	})
+}
+
+func TestGetColumnEvalSetFieldsMultiSet(t *testing.T) {
+	t.Run("SingleSet: 只取主集, 行为同原 getColumnEvalSetFields", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetVerSvc := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+		svc := ExptResultServiceImpl{evaluationSetVersionService: mockEvalSetVerSvc}
+
+		expt := &entity.Experiment{
+			EvalSetID:         100,
+			EvalSetVersionID:  101, // != setID -> 走 version 分支
+			EvalSetSourceType: entity.ExptEvalSetSourceType_SingleSet,
+		}
+		// 仅应调用一次, 且用主集 version
+		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(101), gomock.Any()).
+			Return(&entity.EvaluationSetVersion{
+				EvaluationSetSchema: &entity.EvaluationSetSchema{
+					FieldSchemas: []*entity.FieldSchema{{Key: "input"}, {Key: "output"}},
+				},
+			}, nil, nil).Times(1)
+
+		cols, err := svc.getColumnEvalSetFieldsMultiSet(context.Background(), 7, expt)
+		assert.NoError(t, err)
+		assert.Len(t, cols, 2)
+		assert.Equal(t, "input", gptr.Indirect(cols[0].Key))
+		assert.Equal(t, "output", gptr.Indirect(cols[1].Key))
+	})
+
+	t.Run("MultiSetConfig: 跨集并集 + 按 Key 去重", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetVerSvc := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+		svc := ExptResultServiceImpl{evaluationSetVersionService: mockEvalSetVerSvc}
+
+		expt := &entity.Experiment{
+			EvalSetID:         100,
+			EvalSetVersionID:  101,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			EvalConf: &entity.EvaluationConfiguration{
+				EvalSetConfigs: []*entity.EvalSetConfig{
+					{EvalSetID: 100, EvalSetVersionID: 101}, // 主集(去重)
+					{EvalSetID: 200, EvalSetVersionID: 201},
+				},
+			},
+		}
+		// 主集 set1 ver101: input/output
+		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(101), gomock.Any()).
+			Return(&entity.EvaluationSetVersion{
+				EvaluationSetSchema: &entity.EvaluationSetSchema{
+					FieldSchemas: []*entity.FieldSchema{{Key: "input"}, {Key: "output"}},
+				},
+			}, nil, nil).Times(1)
+		// set2 ver201: input(重复, 去重) + extra(新增)
+		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(201), gomock.Any()).
+			Return(&entity.EvaluationSetVersion{
+				EvaluationSetSchema: &entity.EvaluationSetSchema{
+					FieldSchemas: []*entity.FieldSchema{{Key: "input"}, {Key: "extra"}},
+				},
+			}, nil, nil).Times(1)
+
+		cols, err := svc.getColumnEvalSetFieldsMultiSet(context.Background(), 7, expt)
+		assert.NoError(t, err)
+		// 并集去重: input, output (主集) + extra (set2)
+		keys := make([]string, 0, len(cols))
+		for _, c := range cols {
+			keys = append(keys, gptr.Indirect(c.Key))
+		}
+		assert.Equal(t, []string{"input", "output", "extra"}, keys)
+	})
+}
+
+func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
+	t.Run("SingleSet: 仅一次拉取, 用主集 id/version", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockItemSvc := svcMocks.NewMockEvaluationSetItemService(ctrl)
+
+		builder := &ExptResultBuilder{
+			SpaceID:                  7,
+			ItemIDs:                  []int64{11, 12},
+			evaluationSetItemService: mockItemSvc,
+			exptDO: &entity.Experiment{
+				EvalSetID:         100,
+				EvalSetVersionID:  101,
+				EvalSetSourceType: entity.ExptEvalSetSourceType_SingleSet,
+			},
+		}
+
+		mockItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+				assert.Equal(t, int64(100), p.EvaluationSetID)
+				assert.NotNil(t, p.VersionID)
+				assert.Equal(t, int64(101), *p.VersionID)
+				assert.Equal(t, []int64{11, 12}, p.ItemIDs)
+				return []*entity.EvaluationSetItem{
+					{ItemID: 11, Turns: []*entity.Turn{{ID: 1}}},
+				}, nil
+			}).Times(1)
+
+		err := builder.buildEvalSet(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, int64(100), builder.itemIDTurnID2Turn[11][1].EvalSetID)
+	})
+
+	t.Run("MultiSetConfig: 按集分别拉取再合并, 各 item 带自身集 tag", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockItemSvc := svcMocks.NewMockEvaluationSetItemService(ctrl)
+
+		builder := &ExptResultBuilder{
+			SpaceID:                  7,
+			ItemIDs:                  []int64{11, 22},
+			evaluationSetItemService: mockItemSvc,
+			exptDO: &entity.Experiment{
+				EvalSetID:         100,
+				EvalSetVersionID:  101,
+				EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+				EvalConf: &entity.EvaluationConfiguration{
+					EvalSetConfigs: []*entity.EvalSetConfig{
+						{EvalSetID: 100, EvalSetVersionID: 101},
+						{EvalSetID: 200, EvalSetVersionID: 201},
+					},
+				},
+			},
+		}
+
+		// set1: 返回 item 11 (整份 ItemIDs 传入, set2 的 22 不属于本集 -> 不返回)
+		mockItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+				assert.Equal(t, []int64{11, 22}, p.ItemIDs)
+				switch p.EvaluationSetID {
+				case 100:
+					return []*entity.EvaluationSetItem{{ItemID: 11, Turns: []*entity.Turn{{ID: 1}}}}, nil
+				case 200:
+					return []*entity.EvaluationSetItem{{ItemID: 22, Turns: []*entity.Turn{{ID: 1}}}}, nil
+				}
+				return nil, nil
+			}).Times(2)
+
+		err := builder.buildEvalSet(context.Background())
+		assert.NoError(t, err)
+		// item 11 归属 set1, item 22 归属 set2 —— 两者都进了 map 且 tag 正确
+		assert.Equal(t, int64(100), builder.itemIDTurnID2Turn[11][1].EvalSetID)
+		assert.Equal(t, int64(200), builder.itemIDTurnID2Turn[22][1].EvalSetID)
+	})
+}
