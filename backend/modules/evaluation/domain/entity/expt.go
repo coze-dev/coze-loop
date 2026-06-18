@@ -252,6 +252,9 @@ func (e *Experiment) AsyncCallTarget() bool {
 	if e.Target.EvalTargetVersion.WebAgent != nil {
 		return true
 	}
+	if e.Target.EvalTargetVersion.EvalTargetType == EvalTargetTypeSandboxAgent || e.Target.EvalTargetVersion.SandboxAgent != nil {
+		return true
+	}
 	return false
 }
 
