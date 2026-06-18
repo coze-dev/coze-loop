@@ -6,6 +6,7 @@ package service
 import (
 	"github.com/google/wire"
 
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
@@ -112,8 +113,9 @@ func NewEvaluatorSourceServices(
 }
 
 // NewSourceTargetOperators 创建源目标操作器映射
-func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
+func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter, idgen idgen.IIDGenerator) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
 	return map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-		entity.EvalTargetTypeLoopPrompt: NewPromptSourceEvalTargetServiceImpl(adapter),
+		entity.EvalTargetTypeLoopPrompt:   NewPromptSourceEvalTargetServiceImpl(adapter),
+		entity.EvalTargetTypeSandboxAgent: NewSandboxAgentSourceEvalTargetServiceImpl(idgen),
 	}
 }
