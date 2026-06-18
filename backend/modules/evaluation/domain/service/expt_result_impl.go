@@ -405,7 +405,8 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	columnEvalSetFields, err := e.getColumnEvalSetFields(ctx, spaceID, baseExpt.EvalSetID, baseExpt.EvalSetVersionID)
+	// ★ MultiSetConfig: 列定义取所有评测集字段 schema 的并集 (各集列名去重); SingleSet/老实验仍只取主集。
+	columnEvalSetFields, err := e.getColumnEvalSetFieldsMultiSet(ctx, spaceID, baseExpt)
 	if err != nil {
 		return nil, err
 	}
@@ -1005,6 +1006,75 @@ func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, space
 	}
 
 	return columnEvalSetFields, nil
+}
+
+// evalSetVersionPair 是 (eval_set_id, eval_set_version_id) 的去重键。
+type evalSetVersionPair struct {
+	EvalSetID        int64
+	EvalSetVersionID int64
+}
+
+// collectEvalSetVersionPairs 返回实验涉及的所有 (eval_set_id, eval_set_version_id):
+//   - MultiSetConfig 新实验: 取 eval_conf.EvalSetConfigs 全部集 (各 item 归属不同集, 读路径需覆盖所有集);
+//   - 其余 (SingleSet/老实验): 仅实验级主集。
+//
+// 返回值已去重, 且保证首元素为主集 (供降级/单集场景复用)。
+func collectEvalSetVersionPairs(expt *entity.Experiment) []evalSetVersionPair {
+	pairs := make([]evalSetVersionPair, 0, 1)
+	seen := make(map[evalSetVersionPair]struct{})
+	add := func(setID, verID int64) {
+		if setID == 0 && verID == 0 {
+			return
+		}
+		p := evalSetVersionPair{EvalSetID: setID, EvalSetVersionID: verID}
+		if _, ok := seen[p]; ok {
+			return
+		}
+		seen[p] = struct{}{}
+		pairs = append(pairs, p)
+	}
+	// 主集优先 (作为封面 / 降级首选)
+	add(expt.EvalSetID, expt.EvalSetVersionID)
+	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && expt.EvalConf != nil {
+		for _, sc := range expt.EvalConf.EvalSetConfigs {
+			if sc == nil {
+				continue
+			}
+			add(sc.EvalSetID, sc.EvalSetVersionID)
+		}
+	}
+	return pairs
+}
+
+// getColumnEvalSetFieldsMultiSet 取实验所有评测集的字段 schema 并集 (按列 Key 去重, 主集列在前)。
+// SingleSet/老实验退化为只取主集, 行为与原 getColumnEvalSetFields 一致 (含 evalSetID/version 为 0 的边界)。
+func (e ExptResultServiceImpl) getColumnEvalSetFieldsMultiSet(ctx context.Context, spaceID int64, expt *entity.Experiment) ([]*entity.ColumnEvalSetField, error) {
+	// 非 MultiSetConfig: 完全沿用原有单集调用 (含主集 id/version 透传, 不改变任何边界语义)。
+	if expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+		return e.getColumnEvalSetFields(ctx, spaceID, expt.EvalSetID, expt.EvalSetVersionID)
+	}
+
+	pairs := collectEvalSetVersionPairs(expt)
+	merged := make([]*entity.ColumnEvalSetField, 0)
+	seenKey := make(map[string]struct{})
+	for _, p := range pairs {
+		fields, err := e.getColumnEvalSetFields(ctx, spaceID, p.EvalSetID, p.EvalSetVersionID)
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range fields {
+			if f == nil {
+				continue
+			}
+			key := gptr.Indirect(f.Key)
+			if _, ok := seenKey[key]; ok {
+				continue
+			}
+			seenKey[key] = struct{}{}
+			merged = append(merged, f)
+		}
+	}
+	return merged, nil
 }
 
 func (e ExptResultServiceImpl) getColumnAnnotations(ctx context.Context, spaceID int64, exptIDs []int64) ([]*entity.ExptColumnAnnotation, error) {
@@ -1920,35 +1990,46 @@ func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 	if e.exptDO == nil {
 		return fmt.Errorf("exptPO is nil")
 	}
-	evalSetID := e.exptDO.EvalSetID
-	evalSetVersionID := e.exptDO.EvalSetVersionID
 
-	param := &entity.BatchGetEvaluationSetItemsParam{
-		SpaceID:         e.SpaceID,
-		EvaluationSetID: evalSetID,
-		ItemIDs:         e.ItemIDs,
-	}
-	if evalSetVersionID != evalSetID {
-		param.VersionID = gptr.Of(evalSetVersionID)
-	}
-
-	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, param)
-	if err != nil {
-		return err
+	// ★ MultiSetConfig 实验各 item 归属不同评测集, 必须按集分别拉取再合并;
+	// 用单一主集 (eval_set_id, version) 去捞全部 item 会让非主集 item 返回空, 详情页缺数据。
+	// item_id 全局唯一 (idgen), 用整份 ItemIDs 对每个集查询, 不属于该集的 item 自然返回空, 合并即得全量。
+	// 非 MultiSetConfig (SingleSet/老实验): 走原单集分支, 边界语义 (含 set id 为 0) 与改动前完全一致。
+	var pairs []evalSetVersionPair
+	if e.exptDO.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		pairs = collectEvalSetVersionPairs(e.exptDO)
+	} else {
+		pairs = []evalSetVersionPair{{EvalSetID: e.exptDO.EvalSetID, EvalSetVersionID: e.exptDO.EvalSetVersionID}}
 	}
 
 	itemIDTurnID2Turn := make(map[int64]map[int64]*entity.TurnEvalSet) // item_id -> turn_id -> turn
-	for _, item := range items {
-		for _, turn := range item.Turns {
-			if itemIDTurnID2Turn[item.ItemID] == nil {
-				itemIDTurnID2Turn[item.ItemID] = make(map[int64]*entity.TurnEvalSet)
+	for _, p := range pairs {
+		param := &entity.BatchGetEvaluationSetItemsParam{
+			SpaceID:         e.SpaceID,
+			EvaluationSetID: p.EvalSetID,
+			ItemIDs:         e.ItemIDs,
+		}
+		if p.EvalSetVersionID != p.EvalSetID {
+			param.VersionID = gptr.Of(p.EvalSetVersionID)
+		}
+
+		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, param)
+		if err != nil {
+			return err
+		}
+
+		for _, item := range items {
+			for _, turn := range item.Turns {
+				if itemIDTurnID2Turn[item.ItemID] == nil {
+					itemIDTurnID2Turn[item.ItemID] = make(map[int64]*entity.TurnEvalSet)
+				}
+				turnEvalSet := &entity.TurnEvalSet{
+					Turn:      turn,
+					ItemID:    item.ItemID,
+					EvalSetID: p.EvalSetID, // 该 item 真正归属的集
+				}
+				itemIDTurnID2Turn[item.ItemID][turn.ID] = turnEvalSet
 			}
-			turnEvalSet := &entity.TurnEvalSet{
-				Turn:      turn,
-				ItemID:    item.ItemID,
-				EvalSetID: evalSetID,
-			}
-			itemIDTurnID2Turn[item.ItemID][turn.ID] = turnEvalSet
 		}
 	}
 

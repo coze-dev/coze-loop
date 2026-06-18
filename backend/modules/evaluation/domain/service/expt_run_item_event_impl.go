@@ -297,8 +297,33 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 		return nil, err
 	}
 
+	// 默认用实验级主集 (老实验 / SingleSet); MultiSetConfig 下面按 item 归属集覆盖。
 	evalSetID := exptDetail.EvalSet.EvaluationSetVersion.EvaluationSetID
 	evalSetVerID := exptDetail.EvalSet.EvaluationSetVersion.ID
+
+	// ★ 新实验类型 (MultiSetConfig): 先读 expt_item_ref。
+	// 一行 ref 同时承载两件事:
+	//   ① 单行执行的唯一配置源 item_config;
+	//   ② 该 item 真正归属的 (eval_set_id, eval_set_version_id) —— 多评测集下各 item 归属不同集,
+	//      绝不能用实验级主集去捞 item, 否则非主集 item 捞不到 (len=0) 直接报错卡死, 永远停在 incomplete。
+	// 老实验类型: ItemConfig 留 nil, 执行侧 fallback 到 expt 级 EvaluatorsConf 老路径; 集 id/version 用主集。
+	// 即使是新实验类型, 读不到 ref 也不阻塞 (例如 Append/Online 边界场景), 降级用主集。
+	var itemConfig *entity.ExptItemConfig
+	if exptDetail.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && e.exptItemRefRepo != nil {
+		ref, refErr := e.exptItemRefRepo.GetByExptIDAndItemID(ctx, event.SpaceID, event.ExptID, event.EvalSetItemID)
+		if refErr != nil {
+			logs.CtxWarn(ctx, "BuildExptRecordEvalCtx GetByExptIDAndItemID fail, expt_id: %v, item_id: %v, err: %v, fallback to legacy path",
+				event.ExptID, event.EvalSetItemID, refErr)
+		} else if ref != nil {
+			itemConfig = ref.ItemConfig
+			if ref.EvalSetID > 0 {
+				evalSetID = ref.EvalSetID
+			}
+			if ref.EvalSetVersionID > 0 {
+				evalSetVerID = ref.EvalSetVersionID
+			}
+		}
+	}
 
 	batchGetEvaluationSetItemsParam := &entity.BatchGetEvaluationSetItemsParam{
 		SpaceID:         event.SpaceID,
@@ -321,20 +346,6 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 	existResult, err := e.GetExistExptRecordEvalResult(ctx, event)
 	if err != nil {
 		return nil, err
-	}
-
-	// ★ 新实验类型 (MultiSetConfig): 读 expt_item_ref 拿 item_config (单行执行的唯一配置源)。
-	// 老实验类型: ItemConfig 留 nil, 执行侧 fallback 到 expt 级 EvaluatorsConf 老路径。
-	// 即使是新实验类型, 读不到 ref 也不阻塞 (例如 Append/Online 边界场景), 降级为 nil。
-	var itemConfig *entity.ExptItemConfig
-	if exptDetail.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && e.exptItemRefRepo != nil {
-		ref, refErr := e.exptItemRefRepo.GetByExptIDAndItemID(ctx, event.SpaceID, event.ExptID, event.EvalSetItemID)
-		if refErr != nil {
-			logs.CtxWarn(ctx, "BuildExptRecordEvalCtx GetByExptIDAndItemID fail, expt_id: %v, item_id: %v, err: %v, fallback to legacy path",
-				event.ExptID, event.EvalSetItemID, refErr)
-		} else if ref != nil {
-			itemConfig = ref.ItemConfig
-		}
 	}
 
 	return &entity.ExptItemEvalCtx{

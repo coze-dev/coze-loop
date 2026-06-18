@@ -547,6 +547,79 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx(t *testing.T) {
 	}
 }
 
+// TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet 覆盖 item-centric 多评测集场景:
+// 非主集 item 必须用 expt_item_ref 里 per-item 的 (eval_set_id, eval_set_version_id) 去拉 item,
+// 而不是实验级主集 —— 否则非主集 item 用主集去捞返回 0 条, 报错卡死永远 incomplete。
+func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := svcmocks.NewMockIExptManager(ctrl)
+	mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	mockExptItemRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+
+	service := &ExptItemEventEvalServiceImpl{
+		manager:                  mockManager,
+		evaluationSetItemService: mockEvalSetItemSvc,
+		exptTurnResultRepo:       mockExptTurnResultRepo,
+		exptItemResultRepo:       mockExptItemResultRepo,
+		exptItemRefRepo:          mockExptItemRefRepo,
+	}
+
+	const (
+		primarySetID = int64(100)
+		primaryVerID = int64(101)
+		secondSetID  = int64(200)
+		secondVerID  = int64(201)
+		secondItemID = int64(2002)
+	)
+
+	// 实验主集是 set1; 待执行的是 set2 的 item
+	mockExpt := &entity.Experiment{
+		ID:                1,
+		EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+		EvalSet: &entity.EvaluationSet{
+			EvaluationSetVersion: &entity.EvaluationSetVersion{
+				ID:              primaryVerID,
+				EvaluationSetID: primarySetID,
+			},
+		},
+	}
+	itemConfig := &entity.ExptItemConfig{}
+	secondRef := &entity.ExptItemRef{
+		ItemID:           secondItemID,
+		EvalSetID:        secondSetID,
+		EvalSetVersionID: secondVerID,
+		ItemConfig:       itemConfig,
+	}
+
+	mockManager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(mockExpt, nil)
+	mockExptItemRefRepo.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(3), int64(1), secondItemID).Return(secondRef, nil)
+	// ★ 关键断言: 拉 item 用的是 ref 里 set2 的 id/version, 不是主集 set1
+	mockEvalSetItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, param *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+			assert.Equal(t, secondSetID, param.EvaluationSetID)
+			assert.NotNil(t, param.VersionID)
+			assert.Equal(t, secondVerID, *param.VersionID)
+			assert.Equal(t, []int64{secondItemID}, param.ItemIDs)
+			return []*entity.EvaluationSetItem{{ID: secondItemID, ItemID: secondItemID}}, nil
+		})
+	mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
+	mockExptItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptItemResultRunLog{}, nil)
+
+	got, err := service.BuildExptRecordEvalCtx(context.Background(), &entity.ExptItemEvalEvent{
+		ExptID:        1,
+		SpaceID:       3,
+		EvalSetItemID: secondItemID,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Equal(t, secondItemID, got.EvalSetItem.ItemID)
+	assert.Equal(t, itemConfig, got.ItemConfig)
+}
+
 func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
