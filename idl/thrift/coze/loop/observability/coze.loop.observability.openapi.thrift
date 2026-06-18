@@ -206,6 +206,7 @@ struct ListTrajectoryOApiRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id" vt.gt="0")
     2: required list<string> trace_ids (api.body="trace_ids", vt.min_size="1")
     3: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
+    4: optional common.PlatformType platform_type (api.body="platform_type")
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
