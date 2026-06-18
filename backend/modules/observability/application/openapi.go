@@ -1143,7 +1143,7 @@ func (o *OpenAPIApplication) ListTrajectoryOApi(ctx context.Context, req *openap
 	if err := o.validateListTrajectoryOApiReq(ctx, req); err != nil {
 		return nil, err
 	}
-	if err := o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), ""); err != nil {
+	if err := o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
 		return nil, err
 	}
 

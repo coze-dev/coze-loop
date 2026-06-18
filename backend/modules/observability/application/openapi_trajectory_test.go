@@ -24,7 +24,42 @@ import (
 )
 
 func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
-	t.Run("success with start_time provided", func(t *testing.T) {
+	t.Run("success with start_time and platform_type provided", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "open_api").Return(nil)
+		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(10, nil)
+		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+		traceServiceMock.EXPECT().ListTrajectory(gomock.Any(), gomock.Any()).Return(&service.ListTrajectoryResponse{Trajectories: nil}, nil)
+
+		app := &OpenAPIApplication{
+			traceService: traceServiceMock,
+			auth:         authMock,
+			rateLimiter:  rateLimiterMock,
+			traceConfig:  traceConfigMock,
+		}
+
+		start := time.Now().Add(-time.Hour).UnixMilli()
+		req := &openapi.ListTrajectoryOApiRequest{
+			WorkspaceID:  123,
+			TraceIds:     []string{"trace-1", "trace-2"},
+			StartTime:    ptr.Of(start),
+			PlatformType: ptr.Of("open_api"),
+		}
+
+		resp, err := app.ListTrajectoryOApi(context.Background(), req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.NotNil(t, resp.Data)
+	})
+
+	t.Run("success with platform_type not set", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -48,7 +83,7 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		start := time.Now().Add(-time.Hour).UnixMilli()
 		req := &openapi.ListTrajectoryOApiRequest{
 			WorkspaceID: 123,
-			TraceIds:    []string{"trace-1", "trace-2"},
+			TraceIds:    []string{"trace-1"},
 			StartTime:   ptr.Of(start),
 		}
 
@@ -68,7 +103,7 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 
-		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "").Return(nil)
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "open_api").Return(nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(10, nil)
 		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 		traceConfigMock.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Nil()).Return(int64(3))
@@ -85,8 +120,9 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		}
 
 		req := &openapi.ListTrajectoryOApiRequest{
-			WorkspaceID: 123,
-			TraceIds:    []string{"trace-1"},
+			WorkspaceID:  123,
+			TraceIds:     []string{"trace-1"},
+			PlatformType: ptr.Of("open_api"),
 		}
 
 		resp, err := app.ListTrajectoryOApi(ctx, req)
@@ -104,7 +140,7 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 
-		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "").Return(nil)
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "open_api").Return(nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(10, nil)
 		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 		traceServiceMock.EXPECT().ListTrajectory(gomock.Any(), gomock.Any()).Return(nil, nil)
@@ -118,9 +154,10 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 
 		start := time.Now().Add(-time.Hour).UnixMilli()
 		req := &openapi.ListTrajectoryOApiRequest{
-			WorkspaceID: 123,
-			TraceIds:    []string{"trace-1"},
-			StartTime:   ptr.Of(start),
+			WorkspaceID:  123,
+			TraceIds:     []string{"trace-1"},
+			StartTime:    ptr.Of(start),
+			PlatformType: ptr.Of("open_api"),
 		}
 
 		resp, err := app.ListTrajectoryOApi(context.Background(), req)
@@ -171,15 +208,16 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		defer ctrl.Finish()
 
 		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "").Return(assert.AnError)
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "open_api").Return(assert.AnError)
 
 		app := &OpenAPIApplication{auth: authMock}
 
 		start := time.Now().Add(-time.Hour).UnixMilli()
 		req := &openapi.ListTrajectoryOApiRequest{
-			WorkspaceID: 123,
-			TraceIds:    []string{"trace-1"},
-			StartTime:   ptr.Of(start),
+			WorkspaceID:  123,
+			TraceIds:     []string{"trace-1"},
+			StartTime:    ptr.Of(start),
+			PlatformType: ptr.Of("open_api"),
 		}
 
 		resp, err := app.ListTrajectoryOApi(context.Background(), req)
@@ -195,7 +233,7 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 
-		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "").Return(nil)
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "open_api").Return(nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(10, nil)
 		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
 
@@ -207,9 +245,10 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 
 		start := time.Now().Add(-time.Hour).UnixMilli()
 		req := &openapi.ListTrajectoryOApiRequest{
-			WorkspaceID: 123,
-			TraceIds:    []string{"trace-1"},
-			StartTime:   ptr.Of(start),
+			WorkspaceID:  123,
+			TraceIds:     []string{"trace-1"},
+			StartTime:    ptr.Of(start),
+			PlatformType: ptr.Of("open_api"),
 		}
 
 		resp, err := app.ListTrajectoryOApi(context.Background(), req)
@@ -225,7 +264,7 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 
-		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "").Return(nil)
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "open_api").Return(nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(10, nil)
 		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 
@@ -236,8 +275,9 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		}
 
 		req := &openapi.ListTrajectoryOApiRequest{
-			WorkspaceID: 123,
-			TraceIds:    []string{"trace-1"},
+			WorkspaceID:  123,
+			TraceIds:     []string{"trace-1"},
+			PlatformType: ptr.Of("open_api"),
 		}
 
 		resp, err := app.ListTrajectoryOApi(context.Background(), req)
@@ -254,7 +294,7 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
 		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 
-		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "").Return(nil)
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "open_api").Return(nil)
 		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), "123").Return(10, nil)
 		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
 		traceServiceMock.EXPECT().ListTrajectory(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
@@ -268,9 +308,10 @@ func TestOpenAPIApplication_ListTrajectoryOApi(t *testing.T) {
 
 		start := time.Now().Add(-time.Hour).UnixMilli()
 		req := &openapi.ListTrajectoryOApiRequest{
-			WorkspaceID: 123,
-			TraceIds:    []string{"trace-1"},
-			StartTime:   ptr.Of(start),
+			WorkspaceID:  123,
+			TraceIds:     []string{"trace-1"},
+			StartTime:    ptr.Of(start),
+			PlatformType: ptr.Of("open_api"),
 		}
 
 		resp, err := app.ListTrajectoryOApi(context.Background(), req)

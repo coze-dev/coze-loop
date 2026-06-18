@@ -10290,9 +10290,10 @@ type ListTrajectoryOApiRequest struct {
 	WorkspaceID int64    `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	TraceIds    []string `thrift:"trace_ids,2,required" frugal:"2,required,list<string>" form:"trace_ids,required" json:"trace_ids,required"`
 	// ms
-	StartTime *int64       `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time" form:"start_time" `
-	Extra     *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base      *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	StartTime    *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time" form:"start_time" `
+	PlatformType *common.PlatformType `thrift:"platform_type,4,optional" frugal:"4,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	Extra        *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListTrajectoryOApiRequest() *ListTrajectoryOApiRequest {
@@ -10328,6 +10329,18 @@ func (p *ListTrajectoryOApiRequest) GetStartTime() (v int64) {
 	return *p.StartTime
 }
 
+var ListTrajectoryOApiRequest_PlatformType_DEFAULT common.PlatformType
+
+func (p *ListTrajectoryOApiRequest) GetPlatformType() (v common.PlatformType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPlatformType() {
+		return ListTrajectoryOApiRequest_PlatformType_DEFAULT
+	}
+	return *p.PlatformType
+}
+
 var ListTrajectoryOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *ListTrajectoryOApiRequest) GetExtra() (v *extra.Extra) {
@@ -10360,6 +10373,9 @@ func (p *ListTrajectoryOApiRequest) SetTraceIds(val []string) {
 func (p *ListTrajectoryOApiRequest) SetStartTime(val *int64) {
 	p.StartTime = val
 }
+func (p *ListTrajectoryOApiRequest) SetPlatformType(val *common.PlatformType) {
+	p.PlatformType = val
+}
 func (p *ListTrajectoryOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -10371,12 +10387,17 @@ var fieldIDToName_ListTrajectoryOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "trace_ids",
 	3:   "start_time",
+	4:   "platform_type",
 	254: "extra",
 	255: "Base",
 }
 
 func (p *ListTrajectoryOApiRequest) IsSetStartTime() bool {
 	return p.StartTime != nil
+}
+
+func (p *ListTrajectoryOApiRequest) IsSetPlatformType() bool {
+	return p.PlatformType != nil
 }
 
 func (p *ListTrajectoryOApiRequest) IsSetExtra() bool {
@@ -10428,6 +10449,14 @@ func (p *ListTrajectoryOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10534,6 +10563,17 @@ func (p *ListTrajectoryOApiRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.StartTime = _field
 	return nil
 }
+func (p *ListTrajectoryOApiRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *common.PlatformType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PlatformType = _field
+	return nil
+}
 func (p *ListTrajectoryOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -10567,6 +10607,10 @@ func (p *ListTrajectoryOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -10653,6 +10697,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ListTrajectoryOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPlatformType() {
+		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PlatformType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 func (p *ListTrajectoryOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -10713,6 +10775,9 @@ func (p *ListTrajectoryOApiRequest) DeepEqual(ano *ListTrajectoryOApiRequest) bo
 	if !p.Field3DeepEqual(ano.StartTime) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.PlatformType) {
+		return false
+	}
 	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
@@ -10750,6 +10815,18 @@ func (p *ListTrajectoryOApiRequest) Field3DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.StartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *ListTrajectoryOApiRequest) Field4DeepEqual(src *common.PlatformType) bool {
+
+	if p.PlatformType == src {
+		return true
+	} else if p.PlatformType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PlatformType, *src) != 0 {
 		return false
 	}
 	return true

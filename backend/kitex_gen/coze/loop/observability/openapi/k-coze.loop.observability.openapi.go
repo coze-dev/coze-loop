@@ -7685,6 +7685,20 @@ func (p *ListTrajectoryOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -7794,6 +7808,20 @@ func (p *ListTrajectoryOApiRequest) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListTrajectoryOApiRequest) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *common.PlatformType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PlatformType = _field
+	return offset, nil
+}
+
 func (p *ListTrajectoryOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -7828,6 +7856,7 @@ func (p *ListTrajectoryOApiRequest) FastWriteNocopy(buf []byte, w thrift.NocopyW
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -7841,6 +7870,7 @@ func (p *ListTrajectoryOApiRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -7874,6 +7904,15 @@ func (p *ListTrajectoryOApiRequest) fastWriteField3(buf []byte, w thrift.NocopyW
 	if p.IsSetStartTime() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.StartTime)
+	}
+	return offset
+}
+
+func (p *ListTrajectoryOApiRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPlatformType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PlatformType)
 	}
 	return offset
 }
@@ -7923,6 +7962,15 @@ func (p *ListTrajectoryOApiRequest) field3Length() int {
 	return l
 }
 
+func (p *ListTrajectoryOApiRequest) field4Length() int {
+	l := 0
+	if p.IsSetPlatformType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.PlatformType)
+	}
+	return l
+}
+
 func (p *ListTrajectoryOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -7963,6 +8011,11 @@ func (p *ListTrajectoryOApiRequest) DeepCopy(s interface{}) error {
 	if src.StartTime != nil {
 		tmp := *src.StartTime
 		p.StartTime = &tmp
+	}
+
+	if src.PlatformType != nil {
+		tmp := *src.PlatformType
+		p.PlatformType = &tmp
 	}
 
 	var _extra *extra.Extra
