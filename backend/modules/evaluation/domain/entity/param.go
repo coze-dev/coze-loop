@@ -98,7 +98,8 @@ type BatchUpdateEvaluationSetItemsParam struct {
 	EvaluationSetID int64
 	Items           []*EvaluationSetItem
 	// items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
-	SkipInvalidItems *bool
+	SkipInvalidItems  *bool
+	FieldWriteOptions []*FieldWriteOption
 }
 
 type CreateEvaluationSetVersionParam struct {

@@ -20,6 +20,7 @@ const SchemaKey SchemaKey_Integer = "integer"
 const SchemaKey SchemaKey_Float = "float"
 const SchemaKey SchemaKey_Bool = "bool"
 const SchemaKey SchemaKey_Trajectory = "trajectory"
+const SchemaKey SchemaKey_MessageList = "message_list"
 
 // 字段Schema
 struct FieldSchema {
@@ -127,4 +128,5 @@ struct FieldWriteOption {
     2: optional string fieldKey
     3: optional common.ContentType modality_type // 手动标记的当前列，仅 image/video/audio 等多模态类型有效
     4: optional MultiModalStoreOption multi_modal_store_opt
+    5: optional MultiModalStoreStrategy message_list_store_strategy  // MessageList 多模态资源存储策略
 }

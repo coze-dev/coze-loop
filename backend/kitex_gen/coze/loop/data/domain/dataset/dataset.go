@@ -490,6 +490,8 @@ const (
 	SchemaKey_SingleChoice SchemaKey = 6
 	// 轨迹
 	SchemaKey_Trajectory SchemaKey = 7
+	// 多轮对话
+	SchemaKey_MessageList SchemaKey = 8
 )
 
 func (p SchemaKey) String() string {
@@ -508,6 +510,8 @@ func (p SchemaKey) String() string {
 		return "SingleChoice"
 	case SchemaKey_Trajectory:
 		return "Trajectory"
+	case SchemaKey_MessageList:
+		return "MessageList"
 	}
 	return "<UNSET>"
 }
@@ -528,6 +532,8 @@ func SchemaKeyFromString(s string) (SchemaKey, error) {
 		return SchemaKey_SingleChoice, nil
 	case "Trajectory":
 		return SchemaKey_Trajectory, nil
+	case "MessageList":
+		return SchemaKey_MessageList, nil
 	}
 	return SchemaKey(0), fmt.Errorf("not a valid SchemaKey string")
 }
@@ -12389,6 +12395,8 @@ type FieldWriteOption struct {
 	FieldName          *string                `thrift:"field_name,1,optional" frugal:"1,optional,string" form:"field_name" json:"field_name,omitempty" query:"field_name"`
 	FieldKey           *string                `thrift:"field_key,2,optional" frugal:"2,optional,string" form:"field_key" json:"field_key,omitempty" query:"field_key"`
 	MultiModalStoreOpt *MultiModalStoreOption `thrift:"multi_modal_store_opt,4,optional" frugal:"4,optional,MultiModalStoreOption" form:"multi_modal_store_opt" json:"multi_modal_store_opt,omitempty" query:"multi_modal_store_opt"`
+	// MessageList 多模态资源存储策略
+	MessageListStoreStrategy *MultiModalStoreStrategy `thrift:"message_list_store_strategy,5,optional" frugal:"5,optional,string" form:"message_list_store_strategy" json:"message_list_store_strategy,omitempty" query:"message_list_store_strategy"`
 }
 
 func NewFieldWriteOption() *FieldWriteOption {
@@ -12433,6 +12441,18 @@ func (p *FieldWriteOption) GetMultiModalStoreOpt() (v *MultiModalStoreOption) {
 	}
 	return p.MultiModalStoreOpt
 }
+
+var FieldWriteOption_MessageListStoreStrategy_DEFAULT MultiModalStoreStrategy
+
+func (p *FieldWriteOption) GetMessageListStoreStrategy() (v MultiModalStoreStrategy) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMessageListStoreStrategy() {
+		return FieldWriteOption_MessageListStoreStrategy_DEFAULT
+	}
+	return *p.MessageListStoreStrategy
+}
 func (p *FieldWriteOption) SetFieldName(val *string) {
 	p.FieldName = val
 }
@@ -12442,11 +12462,15 @@ func (p *FieldWriteOption) SetFieldKey(val *string) {
 func (p *FieldWriteOption) SetMultiModalStoreOpt(val *MultiModalStoreOption) {
 	p.MultiModalStoreOpt = val
 }
+func (p *FieldWriteOption) SetMessageListStoreStrategy(val *MultiModalStoreStrategy) {
+	p.MessageListStoreStrategy = val
+}
 
 var fieldIDToName_FieldWriteOption = map[int16]string{
 	1: "field_name",
 	2: "field_key",
 	4: "multi_modal_store_opt",
+	5: "message_list_store_strategy",
 }
 
 func (p *FieldWriteOption) IsSetFieldName() bool {
@@ -12459,6 +12483,10 @@ func (p *FieldWriteOption) IsSetFieldKey() bool {
 
 func (p *FieldWriteOption) IsSetMultiModalStoreOpt() bool {
 	return p.MultiModalStoreOpt != nil
+}
+
+func (p *FieldWriteOption) IsSetMessageListStoreStrategy() bool {
+	return p.MessageListStoreStrategy != nil
 }
 
 func (p *FieldWriteOption) Read(iprot thrift.TProtocol) (err error) {
@@ -12498,6 +12526,14 @@ func (p *FieldWriteOption) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -12562,6 +12598,17 @@ func (p *FieldWriteOption) ReadField4(iprot thrift.TProtocol) error {
 	p.MultiModalStoreOpt = _field
 	return nil
 }
+func (p *FieldWriteOption) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *MultiModalStoreStrategy
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MessageListStoreStrategy = _field
+	return nil
+}
 
 func (p *FieldWriteOption) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -12579,6 +12626,10 @@ func (p *FieldWriteOption) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -12653,6 +12704,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *FieldWriteOption) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMessageListStoreStrategy() {
+		if err = oprot.WriteFieldBegin("message_list_store_strategy", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.MessageListStoreStrategy); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *FieldWriteOption) String() string {
 	if p == nil {
@@ -12675,6 +12744,9 @@ func (p *FieldWriteOption) DeepEqual(ano *FieldWriteOption) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.MultiModalStoreOpt) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.MessageListStoreStrategy) {
 		return false
 	}
 	return true
@@ -12707,6 +12779,18 @@ func (p *FieldWriteOption) Field2DeepEqual(src *string) bool {
 func (p *FieldWriteOption) Field4DeepEqual(src *MultiModalStoreOption) bool {
 
 	if !p.MultiModalStoreOpt.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *FieldWriteOption) Field5DeepEqual(src *MultiModalStoreStrategy) bool {
+
+	if p.MessageListStoreStrategy == src {
+		return true
+	} else if p.MessageListStoreStrategy == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.MessageListStoreStrategy, *src) != 0 {
 		return false
 	}
 	return true

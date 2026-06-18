@@ -214,6 +214,7 @@ struct BatchUpdateEvaluationSetItemsOApiRequest {
     2: optional i64 evaluation_set_id (api.path = 'evaluation_set_id', api.js_conv = "true", go.tag = 'json:"evaluation_set_id"')
     3: optional list<eval_set.EvaluationSetItem> items (api.body = "items", vt.min_size = '1', vt.max_size = '100')
     4: optional bool is_skip_invalid_items (api.body = "is_skip_invalid_items")
+    5: optional list<eval_set.FieldWriteOption> field_write_options (api.body = "field_write_options")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base

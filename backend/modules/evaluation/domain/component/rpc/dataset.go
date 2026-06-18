@@ -134,7 +134,8 @@ type BatchUpdateDatasetItemsParam struct {
 	EvaluationSetID int64
 	Items           []*entity.EvaluationSetItem
 	// items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
-	SkipInvalidItems *bool
+	SkipInvalidItems  *bool
+	FieldWriteOptions []*entity.FieldWriteOption
 }
 
 type BatchGetVersionedDatasetsResult struct {

@@ -90,6 +90,9 @@ func convertDOSchemaKeyToOpenAPI(key *entity.SchemaKey) *openapi_eval_set.Schema
 	case entity.SchemaKey_Trajectory:
 		ct := openapi_eval_set.SchemaKeyTrajectory
 		return &ct
+	case entity.SchemaKey_MessageList:
+		ct := openapi_eval_set.SchemaKeyMessageList
+		return &ct
 	}
 	return nil
 }
@@ -132,6 +135,8 @@ func convertOpenAPISchemaKeyToDO(format *openapi_eval_set.SchemaKey) *entity.Sch
 		return gptr.Of(entity.SchemaKey_String)
 	case openapi_eval_set.SchemaKeyTrajectory:
 		return gptr.Of(entity.SchemaKey_Trajectory)
+	case openapi_eval_set.SchemaKeyMessageList:
+		return gptr.Of(entity.SchemaKey_MessageList)
 	default:
 		return gptr.Of(entity.SchemaKey_String)
 	}
@@ -878,7 +883,8 @@ func OpenAPIDatasetIOJobOptionDTO2DO(opt *dataset_job.DatasetIOJobOption) *entit
 		return nil
 	}
 	return &entity.DatasetIOJobOption{
-		OverwriteDataset: opt.OverwriteDataset,
+		OverwriteDataset:  opt.OverwriteDataset,
+		FieldWriteOptions: FieldWriteOptionDTO2DOs(opt.FieldWriteOptions),
 	}
 }
 
@@ -914,9 +920,15 @@ func OpenAPIFieldWriteOptionDTO2DO(dto *openapi_eval_set.FieldWriteOption) *enti
 			ContentType:             contentType,
 		}
 	}
+	var messageListStrategy *entity.MultiModalStoreStrategy
+	if dto.MessageListStoreStrategy != nil {
+		s := entity.MultiModalStoreStrategy(*dto.MessageListStoreStrategy)
+		messageListStrategy = &s
+	}
 	return &entity.FieldWriteOption{
-		FieldName:          dto.FieldName,
-		FieldKey:           dto.FieldKey,
-		MultiModalStoreOpt: opt,
+		FieldName:                dto.FieldName,
+		FieldKey:                 dto.FieldKey,
+		MultiModalStoreOpt:       opt,
+		MessageListStoreStrategy: messageListStrategy,
 	}
 }

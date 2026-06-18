@@ -221,7 +221,8 @@ type UploadAttachmentDetail struct {
 }
 
 type FieldWriteOption struct {
-	FieldName          *string
-	FieldKey           *string
-	MultiModalStoreOpt *MultiModalStoreOption
+	FieldName                *string
+	FieldKey                 *string
+	MultiModalStoreOpt       *MultiModalStoreOption
+	MessageListStoreStrategy *MultiModalStoreStrategy
 }

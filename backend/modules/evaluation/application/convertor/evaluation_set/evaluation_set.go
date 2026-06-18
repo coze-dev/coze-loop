@@ -80,10 +80,16 @@ func FieldWriteOptionDTO2DO(dto *dataset.FieldWriteOption) *entity.FieldWriteOpt
 	if dto == nil {
 		return nil
 	}
+	var messageListStrategy *entity.MultiModalStoreStrategy
+	if dto.MessageListStoreStrategy != nil {
+		s := entity.MultiModalStoreStrategy(*dto.MessageListStoreStrategy)
+		messageListStrategy = &s
+	}
 	return &entity.FieldWriteOption{
-		FieldName:          dto.FieldName,
-		FieldKey:           dto.FieldKey,
-		MultiModalStoreOpt: MultiModalStoreOptionDTO2DO(dto.MultiModalStoreOpt),
+		FieldName:                dto.FieldName,
+		FieldKey:                 dto.FieldKey,
+		MultiModalStoreOpt:       MultiModalStoreOptionDTO2DO(dto.MultiModalStoreOpt),
+		MessageListStoreStrategy: messageListStrategy,
 	}
 }
 
