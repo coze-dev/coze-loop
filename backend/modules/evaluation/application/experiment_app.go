@@ -1282,11 +1282,62 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 		ExptID:    req.GetExptID(),
 		CreatedBy: session.UserID,
 		Status:    entity.InsightAnalysisStatus_Running,
+		Scope:     entity.InsightAnalysisScope_Experiment,
 	}, session)
 	if err != nil {
 		return nil, err
 	}
 	return &expt.InsightAnalysisExperimentResponse{
+		InsightAnalysisRecordID: recordID,
+		BaseResp:                base.NewBaseResp(),
+	}, nil
+}
+
+// InsightAnalysisExperimentRow 行级智能解读：异步创建一条 Row scope 的 record，
+// 返回 record_id；前端通过 GetExptInsightAnalysisRecord 轮询状态（D6 异步契约）。
+func (e *experimentApplication) InsightAnalysisExperimentRow(ctx context.Context, req *expt.InsightAnalysisExperimentRowRequest) (r *expt.InsightAnalysisExperimentRowResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 防权限绕过：expt_id 必须属于请求的 workspace_id
+	if got.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("experiment %d does not belong to workspace %d", req.GetExptID(), req.GetWorkspaceID())))
+	}
+
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	itemID := req.GetItemID()
+	turnID := req.GetTurnID()
+	recordID, err := e.CreateAnalysisRecord(ctx, &entity.ExptInsightAnalysisRecord{
+		SpaceID:   req.GetWorkspaceID(),
+		ExptID:    req.GetExptID(),
+		CreatedBy: session.UserID,
+		Status:    entity.InsightAnalysisStatus_Running,
+		Scope:     entity.InsightAnalysisScope_Row,
+		ItemID:    &itemID,
+		TurnID:    &turnID,
+	}, session)
+	if err != nil {
+		return nil, err
+	}
+	return &expt.InsightAnalysisExperimentRowResponse{
 		InsightAnalysisRecordID: recordID,
 		BaseResp:                base.NewBaseResp(),
 	}, nil

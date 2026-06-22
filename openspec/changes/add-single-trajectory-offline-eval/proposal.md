@@ -23,9 +23,9 @@
 
 1. **评测集 — Trajectory 数据类型**
    - 新增 `Trajectory` 字段类型 + JSON Schema 预定义结构（steps[] 含 role/type/content/tool_calls/timestamp 等），评测集创建后默认带 `trajectory` 列
-   - 导入方式：(a) 按 trace_id 解析导入（依赖 observability 模块）(b) 文件导入（JSON/CSV，schema 校验）
-   - 容量提升：单字段 100KB → 1MB；单行 1MB → 5MB（**依赖数据模块改动 — must_ask**）
-   - 单列导入到已有行：支持仅更新某列、不覆盖其他列（**依赖数据模块基础能力 — must_ask**）
+   - 导入方式：(a) 按 trace_id 解析导入（消费 observability 现有 `ListTrajectory` RPC 契约，as-is）(b) 文件导入（JSON/CSV，schema 校验）
+   - 单列导入到已有行：通过 evaluation 自身的 `BatchUpsertEvaluationSetItemColumns` RPC 实现（不依赖新增 data RPC）
+   - **OUT-OF-SCOPE**：单字段 100KB → 1MB、单行 1MB → 5MB 容量提升需 data 服务侧改动，本 change 不交付，须由 data 服务 owner 独立协调（详见 design.md / tasks.md）
 2. **评估器 — 内置轨迹评估器**
    - Phase 1 优先级：`tool`（工具调用正确性）> `planning`（规划合理性）> `context_memory`（上下文记忆）
    - 复用现有 `Evaluator.builtin = true` + `EvaluatorBoxType.Black` 模型；新增 `ContentType.Trajectory` 入参标识
@@ -42,7 +42,7 @@
 
 ## Capabilities
 
-### New Capabilities
+### New Capabilities (evaluation only)
 
 - `evaluation/dataset-trajectory-type`: 评测集新增 Trajectory 字段类型与 JSON Schema 校验；默认 `trajectory` 列；ContentType 扩展或 schema_key 复用
 - `evaluation/dataset-trajectory-import`: 按 trace_id 解析导入 / 文件导入（JSON/CSV）+ Trajectory schema 校验
@@ -50,6 +50,8 @@
 - `evaluation/builtin-trajectory-evaluator`: 三个内置黑盒轨迹评估器（tool / planning / context_memory）
 - `evaluation/experiment-trajectory-mapping`: 实验配置字段映射对 Trajectory 类型的存在性 + 一致性校验
 - `evaluation/experiment-trajectory-report`: 报告中 Trajectory 时间轴可视化 + Row 级智能解读 RPC
+
+> **2026-06-22 范围收窄**：原计划的 data / observability 模块 capability（`dataset-capacity-upgrade` / `dataset-single-column-import`（data 侧） / `trace-to-trajectory-parser`）从本 change 移除。共享 IDL 类型 `SourceType` + `DatasetIOTrace` 保留（evaluation 依赖），但 data / observability 服务不做实现改动。
 
 ### Modified Capabilities
 
@@ -59,14 +61,15 @@
 
 ### Code / IDL
 
+> **范围**：本 change 仅修改 evaluation 模块 IDL 与服务实现。共享 IDL 类型 `SourceType`（来自 data 域）与 `DatasetIOTrace`（来自 data 域）保持现状，evaluation 引用消费；data / observability 服务实现不在本 change 内改动。
+
 - `coze-loop/idl/thrift/coze/loop/evaluation/domain/common.thrift`
   - 新增 `ContentType.Trajectory` 枚举值（与现有 `ArgSchemaTextType.Trajectory` / `ArgSchemaKey_Trajectory` 协同）
 - `coze-loop/idl/thrift/coze/loop/evaluation/domain/eval_set.thrift`
   - `FieldSchema` 借助 `content_type=Trajectory` + `schema_key="trajectory"` + `text_schema`（存 JSON Schema）承载轨迹列
-  - **数据集容量字段（依赖 `data/domain/dataset.thrift` `DatasetSpec`）— must_ask**
 - `coze-loop/idl/thrift/coze/loop/evaluation/coze.loop.evaluation.eval_set.thrift`
-  - 扩展 `ParseImportSourceFile` 支持 trace_id 来源
-  - 新增 `BatchUpsertEvaluationSetItemColumns` RPC，支持单列部分更新（须协同数据模块）
+  - 扩展 `ParseImportSourceFile` 支持 trace_id 来源（消费 observability 现有 `ListTrajectory` 契约）
+  - 新增 `BatchUpsertEvaluationSetItemColumns` RPC，由 evaluation 自身实现单列部分更新（不依赖新增 data RPC）
 - `coze-loop/idl/thrift/coze/loop/evaluation/domain/evaluator.thrift`
   - `EvaluatorInputData` 增加对 `Trajectory` ContentType 的承载（复用现有 multi-part 模型）
   - 新增三个内置评估器 seed 数据（builtin=true, box_type=Black, tag=Trajectory）
@@ -80,15 +83,19 @@
 
 - **前端 (`repos/coze-loop-frontend`)**: 数据集列编辑器（Trajectory 列预览）/ 实验配置字段映射 UI / 实验报告 Trajectory 时间轴组件 / 智能解读面板
 - **商业版 (`repos/cozeloop-commercial`)**: 内场上线，沿用 commercial DI；初期 builtin 评估器实现挂在 commercial 域以利快速迭代
-- **观测模块（observability）**: 提供 `trace_id → trajectory` 的解析接口（must_ask 跨域）
+- **观测模块（observability）**: evaluation 消费**现有** `ListTrajectory` RPC（as-is，无契约改动）；observability 服务实现不在本 change 范围
 
 ### Migration
 
 - 老评测集自动迁移：通过列扩展默认携带 `trajectory` 列（lazy 初始化，对老数据无影响）
 - 旧实验报告不受影响，不展示 Trajectory tab
 
+### Out-of-Scope (deferred)
+
+- **数据集容量上调（1MB 字段 / 5MB 行）**：原 PRD 提到的容量提升落在 data 服务，本 change 不交付，须由 data 服务 owner 独立协调与排期。
+- **trace_id 解析后端能力**：observability 现有 `ListTrajectory` RPC 已够用，本 change 不要求 observability 侧新增 RPC / 改动 warning 通道 / 改动鉴权语义。
+
 ### Risks
 
-- 数据模块容量上调（1MB / 5MB）涉及存储成本评估
-- trace_id 解析路径跨 observability 域，需要协调接口契约
+- 数据容量未上调时，Trajectory 字段较大可能触达现有 size 上限 → 用户层裁剪 / oversize 旁路降级
 - Phase 1 不实现 Phase 2 的输出形态扩充，需保持 `EvaluatorResult.score` 兼容

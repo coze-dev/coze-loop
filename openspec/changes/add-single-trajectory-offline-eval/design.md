@@ -13,9 +13,13 @@ CozeLoop 评测平台采用 DDD 分层（L0-L8）与 Thrift IDL 单源（`coze-l
 PRD 显式声明的两项能力涉及评测域之外：
 
 1. 单字段容量 100KB → 1MB、单行 1MB → 5MB —— 落在 `data/domain/dataset.thrift` `DatasetSpec`
-2. 单列导入到已有行（不覆盖其他列）—— 依赖数据模块的部分列更新原子能力（负责人：骆弘珊）
+2. 单列导入到已有行（不覆盖其他列）—— 原 PRD 描述依赖数据模块的部分列更新原子能力
 
-故本 design 在评测域内做"扩展 + 校验 + 透传"，跨域能力通过 `impact-analysis.md` 的 must_ask 显式上抛。
+**2026-06-22 范围收窄**：经用户澄清，data + observability 服务实现不在本 change 范围。具体处置：
+- 容量上调（1)：**OUT-OF-SCOPE**，须由 data 服务 owner 独立排期；evaluation 侧在容量未上调前用户层裁剪 / oversize 旁路降级。
+- 单列导入（2)：evaluation 自实现 `BatchUpsertEvaluationSetItemColumns`，不依赖新增 data RPC。
+- trace_id 解析（MA-3）：**消费 observability 现有 `ListTrajectory` RPC 契约 as-is**，不要求 observability 侧新增 warning 通道或改动语义。
+- 共享 IDL 类型 `SourceType` + `DatasetIOTrace` 保留（evaluation 依赖），data IDL 文件结构不动。
 
 ## Goals / Non-Goals
 
@@ -29,9 +33,11 @@ PRD 显式声明的两项能力涉及评测域之外：
 **Non-Goals:**
 
 - Phase 2 能力（第三方 RPC/ByteFaas 评估器；连续值/类别/自由文本输出；报告→评测集导入）—— 仅在 proposal What Changes 中声明，不写 spec
-- 不修改 trace 平台、不直接读 trace 存储 —— 通过 observability 模块的接口拉解析
+- 不修改 trace 平台、不直接读 trace 存储 —— 通过 observability 模块**现有** `ListTrajectory` RPC 拉解析（as-is）
 - 不动 `EvaluatorResult.score: double` —— 保持兼容；Phase 2 再扩展输出形态
-- 不引入新的数据集存储引擎；容量上调由数据团队评估
+- **不在本 change 中交付 data 服务容量上调（1MB / 5MB）**：由 data 服务 owner 独立协调
+- **不在本 change 中改动 observability 服务实现**：仅消费现有 `ListTrajectory` 契约
+- 共享 IDL 类型 `SourceType`（data 域）+ `DatasetIOTrace`（data 域）保留并被 evaluation 引用，但 data IDL / 服务实现不在本 change 改动
 
 ## Decisions
 
@@ -61,11 +67,11 @@ PRD 显式声明的两项能力涉及评测域之外：
 
 **理由**：保持 API surface 稳定，减少前端改动。
 
-### D5：单列导入引入新 RPC `BatchUpsertEvaluationSetItemColumns`
+### D5：单列导入引入新 RPC `BatchUpsertEvaluationSetItemColumns`（evaluation 自实现）
 
-**决策**：新增 RPC，参数 `[{item_id | match_key, field_data[]}]`；语义上是"部分列 upsert"。
+**决策**：在 evaluation 服务中新增 RPC，参数 `[{item_id | match_key, field_data[]}]`；语义上是"部分列 upsert"。**evaluation 自身实现部分列更新逻辑，不调用 data 新增 RPC**（原计划的 `data.BatchPatchDatasetItems` 不在本 change 范围）。
 
-**理由**：现有 `BatchUpdateEvaluationSetItems` 是整行替换，硬塞会破坏老调用者。`BatchUpsert` 后缀语义清晰，且与 import_mode 审计字段呼应。
+**理由**：现有 `BatchUpdateEvaluationSetItems` 是整行替换，硬塞会破坏老调用者。`BatchUpsert` 后缀语义清晰，且与 import_mode 审计字段呼应。由于 data 服务不参与本 change，evaluation 内部用"先 Get 整行 → 合并 patch 列 → Put 整行"路径实现（已知风险：并发写覆盖，在 evaluation 层加乐观锁缓解）。
 
 ### D6：Row 级智能解读新增 RPC，复用 InsightAnalysisRecord 数据结构
 
@@ -73,11 +79,15 @@ PRD 显式声明的两项能力涉及评测域之外：
 
 **理由**：列表 / 详情 / Feedback / Comment 等附属 RPC 全部沿用，无需再引入一套并行结构。`scope` 字段是低破坏性扩展。
 
-### D7：1MB / 5MB 容量上调，跨域协调
+### D7：1MB / 5MB 容量上调 — **OUT-OF-SCOPE，延后到 data 服务独立排期**
 
-**决策**：本 spec 仅声明上限目标值，实际生效依赖数据模块基础能力 + 存储侧扩容评估。`impact-analysis.md` 列为 must_ask 必须问。
+**决策（2026-06-22 修订）**：本 change **不交付** 1MB / 5MB 容量上调。data 服务实现不在本 change 范围；evaluation 在容量未上调前依赖 data 现有上限（100KB 字段 / 1MB 行）。
 
-**理由**：避免评测域单方面写死数字而存储侧未跟进，造成线上故障。
+**降级方案**：
+- 大 Trajectory 字段触达上限时，evaluation 层返回 `FIELD_SIZE_EXCEEDED` 引导用户裁剪
+- MQ 投递大 Trajectory 走 oversize-payload 旁路（外存指针，见 `wiki/dev-guides/middleware/cozeloop-mq-guide.md`）
+
+**后续**：由 data 服务 owner 独立排期容量上调；完成后 evaluation 透传新上限值即可（IDL 默认值在 data 域调整，evaluation 无需改动）。
 
 ## Risks / Trade-offs
 
@@ -86,68 +96,47 @@ PRD 显式声明的两项能力涉及评测域之外：
 | Trajectory schema 长期演进与版本兼容 | 老评测集字段值在新 schema 下校验失败 | schema 校验按字段 `text_schema` 版本号路由，老数据沿用旧 validator；lazy 迁移 |
 | 单字段 1MB 致接口序列化压力 | 报告侧 P99 延迟上升 | 报告默认返回 summary + lazy field 拉取（`GetEvaluationSetItemField`） |
 | 内置评估器质量难以横向公平 | 用户产生"内置 < 自写"印象 | EvaluatorInfo 中明示 benchmark 与适用场景；UI 提示 debug 入口 |
-| 跨域依赖（数据模块容量 / observability trace 解析）阻塞 GA | 季度交付风险 | 立项时 must_ask 上抛；本 change 先交付评测域内能力，跨域字段降级（capacity 临时维持现状 + 缺少 trace 入口的兼容） |
+| data 容量未上调致大 Trajectory 触达 1MB 行上限 | 用户层导入失败 | 用户层裁剪 + MQ oversize 旁路；提示用户等待 data 服务上调（OUT-OF-SCOPE） |
 | Phase 2 输出形态扩充对 EvaluatorResult 的破坏 | 现有报告依赖 score:double | 提前在 design 中冻结 D7 决策：Phase 1 不动 score；Phase 2 通过新增字段 + 兼容层处理 |
 | 老前端不识别 ContentType.Trajectory | 字段渲染异常 | 前端版本灰度 + ContentType unknown 时降级为 raw JSON 文本 |
 
 ---
 
-## Cross-Module Scope Update（2026-06-22）
+## Scope Narrowing（2026-06-22）
 
-### 背景
+经用户澄清，本 change 范围收窄为 **evaluation 单模块**。data + observability 服务实现不在本 change 内交付。
 
-上一轮 must_ask 答复后，本 change 后端范围由 **evaluation 单模块** 扩展为 **evaluation + data + observability 三模块**：
+### 范围处置
 
-- **MA-1 / MA-2 落地 data 模块**：单字段 100KB→1MB、单行 1MB→5MB 容量上调；单列导入到已有行（部分列更新原子能力）。
-- **MA-3 落地 observability 模块**：trace_id → Trajectory 解析对外契约。
+| 原跨模块项 | 当前处置 |
+|------------|----------|
+| MA-1 容量上调（1MB 字段 / 5MB 行） | **OUT-OF-SCOPE**：由 data 服务 owner 独立排期；evaluation 在容量未上调前用户层裁剪 / oversize 旁路 |
+| MA-2 单列导入 | evaluation 内自实现 `BatchUpsertEvaluationSetItemColumns`（先 Get 整行→合并→Put 整行 + 乐观锁），不依赖新增 data RPC |
+| MA-3 trace_id 解析 | 消费 observability **现有** `ListTrajectory` RPC（as-is），不要求 observability 侧新增 warning 通道 / 改动鉴权 / 改动限流语义 |
+| 共享 IDL `SourceType` + `DatasetIOTrace` | 保留，被 evaluation 引用（无 IDL 改动） |
 
-为保留每个模块的边界清晰、并支持各自独立 archive，按模块拆分 capability spec。
-
-### 三模块职责分工
-
-| 模块 | 角色 | 本 change 增量 |
-|------|------|----------------|
-| **evaluation** | 业务编排：评测集 / 评估器 / 实验三元组 + Trajectory 业务语义 | Trajectory ContentType、JSON Schema validator、`BatchUpsertEvaluationSetItemColumns`（业务接口）、内置评估器、`InsightAnalysisExperimentRow`、字段映射校验 |
-| **data** | Dataset 底座：存储、容量、schema、原子 IO | 单字段 / 单行容量上调 + 部分列更新原子能力 + IDL 暴露 `BatchPatchDatasetItems` |
-| **observability** | Trace 平台：span 摄取、检索、解析 | 把已有 `ListTrajectory(trace_ids → Trajectory)` 固化为跨域契约，补 warning / 鉴权 / 限流语义；保留 `UpsertTrajectoryConfig` 用作过滤规则配置 |
-
-### 跨模块调用链
+### 跨服务调用链（仅消费方视角）
 
 ```
 [evaluation.eval_set]
    └─ 按 trace_id 导入 (ParseImportSourceFile 扩展 source_type=Trace)
-        └─ port: TraceTrajectoryParserPort
-             └─ infra adapter → RPC: observability.ListTrajectory(trace_ids)
+        └─ RPC: observability.ListTrajectory(trace_ids)   ← 消费现有契约，as-is
 
 [evaluation.eval_set]
-   └─ 业务接口 BatchUpsertEvaluationSetItemColumns
-        └─ port: DatasetItemColumnPatchPort
-             └─ infra adapter → RPC: data.BatchPatchDatasetItems
+   └─ 业务接口 BatchUpsertEvaluationSetItemColumns        ← evaluation 自实现
+        └─ 内部走 data 现有 `UpdateDatasetItem` 整行替换 + 乐观锁
 
 [evaluation.evaluator / experiment]
    └─ Trajectory 字段透传到 EvaluatorInputData / 报告
-        └─（不跨模块；evaluation 内部完成）
 ```
-
-> Port/Adapter：所有跨模块调用 SHALL 经过 evaluation Domain 的 port，由 infra 层选择 in-process（同进程不同模块）或 RPC（跨服务）。这保留了后续物理拆分的灵活性。
 
 ### 关键事实校正（基于 IDL 扫描）
 
-- **`coze-loop/idl/thrift/coze/loop/trajectory.thrift` 已存在**，定义 `Trajectory / RootStep / AgentStep / Step / ModelInfo / BasicInfo / MetricsInfo / Error`，已被 observability 引用。这是 MA-4 Trajectory JSON Schema 的事实基础，**无需在评测域另起一套结构**。
-- **`coze.loop.observability.trace.thrift::TraceService::ListTrajectory`** 已存在，签名 `(workspace_id, trace_ids[1..10], platform_type, start_time)` → `list<trajectory.Trajectory>`。MA-3 不需要新增 RPC，转为"契约固化 + 补缺失语义"。
-- **`UpsertTrajectoryConfig / GetTrajectoryConfig`** 已存在，用于配置 trace → trajectory 解析的 filter 规则（按 FilterFields），可被 evaluation 端复用。
+- **`coze-loop/idl/thrift/coze/loop/trajectory.thrift` 已存在**，定义 `Trajectory / RootStep / AgentStep / Step / ModelInfo / BasicInfo / MetricsInfo / Error`，已被 observability 引用。这是 Trajectory JSON Schema 的事实基础，evaluation 复用此结构而不另起。
+- **`coze.loop.observability.trace.thrift::TraceService::ListTrajectory`** 已存在，签名 `(workspace_id, trace_ids[1..10], platform_type, start_time)` → `list<trajectory.Trajectory>`。evaluation **消费此现有契约 as-is**。
+- **`UpsertTrajectoryConfig / GetTrajectoryConfig`** 已存在；如评测端需配置 trace → trajectory 解析的 filter，可复用现有接口。
 
-### IDL 归属决策
-
-| 接口 | 归属 IDL 文件 | 理由 |
-|------|--------------|------|
-| 单字段 / 单行容量上调 | `coze/loop/data/domain/dataset.thrift` (`DatasetSpec` 默认值) | 容量是 Dataset 底座属性，evaluation 通过 spec 透传 |
-| `BatchPatchDatasetItems` (底座原子) | `coze/loop/data/coze.loop.data.dataset.thrift` | 数据集底座 RPC |
-| `BatchUpsertEvaluationSetItemColumns` (业务) | `coze/loop/evaluation/coze.loop.evaluation.eval_set.thrift` | 业务侧封装，调用 data 底座 |
-| `ListTrajectory` (现存) | `coze/loop/observability/coze.loop.observability.trace.thrift` | 已存在，不动 IDL |
-| `Trajectory` 数据结构 | `coze/loop/trajectory.thrift` (共享) | 已存在；evaluation `EvaluatorInputData` 在使用时通过 ContentType + text_schema 引用 |
-
-### Trajectory JSON Schema 最小可工作定义（MA-4）
+### Trajectory JSON Schema 最小可工作定义（evaluation validator 用）
 
 基于 `coze/loop/trajectory.thrift` 中的 Trajectory 结构以及 PRD 标注的 TBD 字段集，Phase 1 冻结以下骨架：
 
@@ -221,32 +210,6 @@ PRD 显式声明的两项能力涉及评测域之外：
 
 > **演进策略**：text_schema 内嵌 `version` 字段；evaluation 侧 validator 按 schema version 路由。PRD 冻结后增量。
 
-### Decisions 追加
-
-#### D8：跨模块边界采用 Port/Adapter
-
-evaluation Domain 引入 `TraceTrajectoryParserPort`、`DatasetItemColumnPatchPort` 两个 port；adapter 由 infra 层在编译期选择 in-process 调用 vs RPC 调用。保留物理拆分弹性，避免 evaluation 直接 import data/observability 内部包。
-
-#### D9：容量上调与 MQ / HTTP 网关耦合
-
-容量上调的"目标值生效"以下游中间件能够承载为前置条件。Phase 1 内 evaluation 侧使用过限走 oversize-payload 旁路（外存 + 引用）而非阻断业务请求。MQ 端见 `wiki/dev-guides/middleware/cozeloop-mq-guide.md`。
-
-#### D10：observability `ListTrajectory` 不动 IDL，做契约固化
-
-`ListTrajectory` 已存在；为本 change 增量定义"跨域契约"语义：
-- 单 trace_id 失败不影响整体（warning 通道）
-- workspace 鉴权强制
-- 按 workspace 限流
-- 字段稳定性承诺（不删 / 增字段 optional）
-
-这些语义通过 spec + observability 仓 release-notes 落地，不改 IDL 结构。
-
-#### D11：单列导入接口分层
-
-- data 模块新增 `BatchPatchDatasetItems`（底座 RPC，按 item_id 部分列原子更新）
-- evaluation 模块沿用 `BatchUpsertEvaluationSetItemColumns`（业务接口，包含评测集语义校验 + import audit）
-- 评测域接口转发到底座，**不**直接走 `UpdateDatasetItem`（避免整行替换语义）
-
 ## Open Questions（待 PM / 平台方确认，不阻塞实施）
 
 | # | 议题 | 默认假设 | 影响 | 触发动作 |
@@ -254,6 +217,7 @@ evaluation Domain 引入 `TraceTrajectoryParserPort`、`DatasetItemColumnPatchPo
 | OQ-1 (来自 MA-5) | 三个内置评估器（tool / planning / context_memory）是否复用现有 evaluator-judge 的 LLM 通道与计费？是否需要新 channel / 预算？ | **复用现有 evaluator-judge LLM 通道与计费，不另开预算** | 中：影响成本预估与上线灰度策略 | 待 PM 确认；若不通过，需在 commercial 内接入新 LLM channel 并补预算 |
 | OQ-2 (来自 MA-6) | 行级 Insight SLA 形态：行级走异步（提交→轮询/事件通知），全报告 Insight 同步限时返回？ | **是**。`InsightAnalysisExperimentRow` 返回 `record_id` + `Pending` 状态，前端轮询 `GetExptInsightAnalysisRecord`；全报告 `InsightAnalysisExperiment` 维持现有同步语义 | 中：影响实验报告 Trajectory tab 的 UX 与限流策略 | 待 PM 确认；若需同步限时，需评估行级解读 P95 在 LLM 侧是否可压到 < 10s |
 | OQ-3 (Trajectory JSON Schema) | PRD 中 Trajectory 数据结构标注 TBD。Phase 1 已基于 `coze/loop/trajectory.thrift` 冻结最小可工作定义；后续 PRD 冻结后字段是否需要回填？ | 通过 `text_schema.version` 路由的方式演进，不阻塞 Phase 1 | 低 | PRD 冻结后增量改 validator，老数据沿用旧 schema 版本 |
-| OQ-4 (data 底座接口名) | `BatchPatchDatasetItems` 命名 / 是否在 `UpdateDatasetItem` 上加 `partial` 旗标 | 新增 RPC，命名 `BatchPatchDatasetItems`（详见 D11） | 低 | 与 data 模块 owner 对齐，最终以 IDL PR 评审为准 |
-| OQ-5 (容量 5MB 对 MQ 影响) | 评测运行触发 MQ 投递 Trajectory 时是否会触达 Broker 限额 | 用 oversize-payload 旁路 | 中 | 与 MQ owner 对齐；评估 RocketMQ Broker 配置 |
+| OQ-5 (容量 5MB 对 MQ 影响) | 评测运行触发 MQ 投递 Trajectory 时是否会触达 Broker 限额 | 用 oversize-payload 旁路；容量上调本身 OUT-OF-SCOPE，跟踪到 data 服务排期 | 中 | 与 MQ owner 对齐；评估 RocketMQ Broker 配置 |
+
+> OQ-4（原 data RPC 命名议题）已删除：data 服务不在本 change 范围。
 

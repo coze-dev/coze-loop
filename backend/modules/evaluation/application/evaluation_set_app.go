@@ -405,6 +405,230 @@ func (e *EvaluationSetApplicationImpl) BatchCreateEvaluationSetItems(ctx context
 	}, nil
 }
 
+// BatchUpsertEvaluationSetItemColumns 单列/部分列 upsert（D5 决策：evaluation 自实现）。
+// 行为：对每条 patch
+//   - 若提供 item_id 命中老行：BatchGet 整行 → 合并 patch 列（按 Turn ID + FieldData.Key 覆盖）→ UpdateEvaluationSetItem 整行（含乐观锁由底层负责）；patched_count 累加该 patch 涉及的列数。
+//   - 若未提供 item_id：转入 BatchCreate 路径新增；created_count 累加。
+//
+// 失败语义：单条失败收集到 errors，整体不中断；SkipInvalidItems / AllowPartialAdd 与 BatchCreate 一致。
+func (e *EvaluationSetApplicationImpl) BatchUpsertEvaluationSetItemColumns(ctx context.Context, req *eval_set.BatchUpsertEvaluationSetItemColumnsRequest) (resp *eval_set.BatchUpsertEvaluationSetItemColumnsResponse, err error) {
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if len(req.Patches) == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("patches is empty"))
+	}
+	// 鉴权
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.WorkspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 预收集需要 BatchGet 的 item_id
+	existingItemIDs := make([]int64, 0, len(req.Patches))
+	for _, patch := range req.Patches {
+		if patch != nil && patch.ItemID != nil && *patch.ItemID > 0 {
+			existingItemIDs = append(existingItemIDs, *patch.ItemID)
+		}
+	}
+	existingItemsByID := make(map[int64]*entity.EvaluationSetItem, len(existingItemIDs))
+	if len(existingItemIDs) > 0 {
+		items, getErr := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
+			SpaceID:         req.WorkspaceID,
+			EvaluationSetID: req.EvaluationSetID,
+			ItemIDs:         existingItemIDs,
+		})
+		if getErr != nil {
+			return nil, getErr
+		}
+		for _, it := range items {
+			if it != nil {
+				existingItemsByID[it.ItemID] = it
+			}
+		}
+	}
+
+	upsertedItems := make(map[int64]int64)
+	errGroups := make([]*entity.ItemErrorGroup, 0)
+	var patchedCount int32
+	var createdCount int32
+
+	// 收集需要 BatchCreate 的新增 patch
+	type pendingCreate struct {
+		index int64
+		item  *entity.EvaluationSetItem
+	}
+	pendingCreates := make([]pendingCreate, 0)
+
+	for idx, patch := range req.Patches {
+		if patch == nil {
+			continue
+		}
+		// 命中老行：Get→merge→Update
+		if patch.ItemID != nil && *patch.ItemID > 0 {
+			existing, ok := existingItemsByID[*patch.ItemID]
+			if !ok || existing == nil {
+				notFound := entity.ItemErrorType_InternalError
+				summary := "evaluation set item not found"
+				errCount := int32(1)
+				errGroups = append(errGroups, &entity.ItemErrorGroup{
+					Type:       &notFound,
+					Summary:    &summary,
+					ErrorCount: &errCount,
+				})
+				continue
+			}
+
+			mergedTurns := mergeTurnsForPatch(existing.Turns, patch.Turns, existing.EvaluationSetID, existing.ItemID)
+			updErr := e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, existing.ItemID, mergedTurns)
+			if updErr != nil {
+				internal := entity.ItemErrorType_InternalError
+				summary := updErr.Error()
+				errCount := int32(1)
+				errGroups = append(errGroups, &entity.ItemErrorGroup{
+					Type:       &internal,
+					Summary:    &summary,
+					ErrorCount: &errCount,
+				})
+				continue
+			}
+			upsertedItems[int64(idx)] = existing.ItemID
+			patchedCount += countPatchColumns(patch.Turns)
+			continue
+		}
+
+		// 新增行：转入 BatchCreate 路径
+		newItem := &entity.EvaluationSetItem{
+			SpaceID:         req.WorkspaceID,
+			EvaluationSetID: req.EvaluationSetID,
+			ItemKey:         gptr.Indirect(patch.ItemKey),
+			Turns:           evaluation_set.TurnDTO2DOs(req.EvaluationSetID, 0, patch.Turns),
+		}
+		pendingCreates = append(pendingCreates, pendingCreate{index: int64(idx), item: newItem})
+	}
+
+	// 批量新增（保持顺序）
+	if len(pendingCreates) > 0 {
+		toCreate := make([]*entity.EvaluationSetItem, 0, len(pendingCreates))
+		for _, pc := range pendingCreates {
+			toCreate = append(toCreate, pc.item)
+		}
+		idMap, createErrs, _, createErr := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
+			SpaceID:          req.WorkspaceID,
+			EvaluationSetID:  req.EvaluationSetID,
+			Items:            toCreate,
+			SkipInvalidItems: req.SkipInvalidItems,
+			AllowPartialAdd:  req.AllowPartialAdd,
+		})
+		if createErr != nil {
+			return nil, createErr
+		}
+		// idMap key 是 BatchCreate 输入下标，需要映射回 patches 的全局下标
+		for localIdx, pc := range pendingCreates {
+			if itemID, ok := idMap[int64(localIdx)]; ok {
+				upsertedItems[pc.index] = itemID
+				createdCount++
+			}
+		}
+		errGroups = append(errGroups, createErrs...)
+	}
+
+	resp = &eval_set.BatchUpsertEvaluationSetItemColumnsResponse{
+		UpsertedItems: upsertedItems,
+		Errors:        evaluation_set.ItemErrorGroupDO2DTOs(errGroups),
+		PatchedCount:  gptr.Of(patchedCount),
+		CreatedCount:  gptr.Of(createdCount),
+	}
+	return resp, nil
+}
+
+// mergeTurnsForPatch 将 patch turns 合并到 existing turns 上：
+//   - Turn 通过 ID 匹配；未命中视为新增 Turn 追加。
+//   - 每个 Turn 内按 FieldData.Key 覆盖；未命中的 key 视为新增列。
+func mergeTurnsForPatch(existing []*entity.Turn, patchDTOs []*domain_eval_set.Turn, evalSetID, itemID int64) []*entity.Turn {
+	merged := make([]*entity.Turn, 0, len(existing))
+	turnByID := make(map[int64]*entity.Turn, len(existing))
+	for _, t := range existing {
+		if t == nil {
+			continue
+		}
+		clone := &entity.Turn{
+			ID:            t.ID,
+			ItemID:        t.ItemID,
+			EvalSetID:     t.EvalSetID,
+			FieldDataList: append([]*entity.FieldData{}, t.FieldDataList...),
+		}
+		turnByID[t.ID] = clone
+		merged = append(merged, clone)
+	}
+
+	for _, pt := range patchDTOs {
+		if pt == nil {
+			continue
+		}
+		patchTurnID := gptr.Indirect(pt.ID)
+		patchFields := evaluation_set.FieldDataDTO2DOs(pt.FieldDataList)
+		if existingTurn, ok := turnByID[patchTurnID]; ok && patchTurnID > 0 {
+			// 按 key 覆盖
+			fieldIdxByKey := make(map[string]int, len(existingTurn.FieldDataList))
+			for i, f := range existingTurn.FieldDataList {
+				if f != nil {
+					fieldIdxByKey[f.Key] = i
+				}
+			}
+			for _, pf := range patchFields {
+				if pf == nil {
+					continue
+				}
+				if i, ok := fieldIdxByKey[pf.Key]; ok {
+					existingTurn.FieldDataList[i] = pf
+				} else {
+					existingTurn.FieldDataList = append(existingTurn.FieldDataList, pf)
+				}
+			}
+		} else {
+			// 新增 Turn
+			merged = append(merged, &entity.Turn{
+				ID:            patchTurnID,
+				ItemID:        itemID,
+				EvalSetID:     evalSetID,
+				FieldDataList: patchFields,
+			})
+		}
+	}
+	return merged
+}
+
+// countPatchColumns 统计 patch 涉及的列数（每个 Turn 内的 FieldData 单元累加）。
+func countPatchColumns(patchTurns []*domain_eval_set.Turn) int32 {
+	var n int32
+	for _, t := range patchTurns {
+		if t == nil {
+			continue
+		}
+		n += int32(len(t.FieldDataList))
+	}
+	return n
+}
+
 // UpsertEvaluationSetItem implements the EvaluationSetServiceImpl interface.
 func (e *EvaluationSetApplicationImpl) UpdateEvaluationSetItem(ctx context.Context, req *eval_set.UpdateEvaluationSetItemRequest) (resp *eval_set.UpdateEvaluationSetItemResponse, err error) {
 	// 参数校验

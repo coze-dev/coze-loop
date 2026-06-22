@@ -18,6 +18,14 @@ const (
 	InsightAnalysisRunningTimeout = 2 * time.Hour
 )
 
+// InsightAnalysisScope 智能解读范围（Experiment=全实验报告 / Row=单行）
+type InsightAnalysisScope string
+
+const (
+	InsightAnalysisScope_Experiment InsightAnalysisScope = "Experiment"
+	InsightAnalysisScope_Row        InsightAnalysisScope = "Row"
+)
+
 type ExptInsightAnalysisRecord struct {
 	ID                    int64
 	SpaceID               int64
@@ -30,6 +38,12 @@ type ExptInsightAnalysisRecord struct {
 	CreatedBy             string
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
+
+	// Scope 标识该 record 的范围（Experiment / Row）。
+	// 老数据为空时按 Experiment 处理（前端兼容降级）。
+	Scope  InsightAnalysisScope
+	ItemID *int64 // Scope=Row 时填，标识评测集 item
+	TurnID *int64 // Scope=Row 时填，标识 item 内 turn
 
 	ExptInsightAnalysisFeedback ExptInsightAnalysisFeedback
 }

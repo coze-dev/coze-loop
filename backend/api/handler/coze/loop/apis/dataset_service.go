@@ -183,18 +183,13 @@ func ValidateDatasetItems(ctx context.Context, c *app.RequestContext) {
 	c.JSON(consts.StatusOK, resp)
 }
 
-// BatchPatchDatasetItems .
-// @router /api/data/v1/datasets/:dataset_id/items/batch_patch [POST]
-func BatchPatchDatasetItems(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req dataset.BatchPatchDatasetItemsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(dataset.BatchPatchDatasetItemsResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
+// BatchPatchDatasetItems was generated when the data IDL briefly introduced a
+// BatchPatchDatasetItems RPC. The RPC was reverted on 2026-06-22 (out-of-scope
+// per the single-trajectory-offline-eval scope clarification — evaluation now
+// self-implements column upsert via Get-merge-Put). The handler stub is kept
+// commented for historical context; remove once the IDL/codegen pipeline is
+// rerun and this orphan disappears.
+//
+// func BatchPatchDatasetItems(ctx context.Context, c *app.RequestContext) {
+//     c.JSON(consts.StatusOK, nil)
+// }

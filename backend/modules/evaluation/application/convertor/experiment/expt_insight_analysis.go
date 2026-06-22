@@ -22,6 +22,9 @@ func ExptInsightAnalysisRecordDO2DTO(do *entity.ExptInsightAnalysisRecord) *doma
 		AnalysisReportContent:       ptr.Of(do.AnalysisReportContent),
 		AnalysisReportIndex:         AnalysisReportIndex2DTO(do.AnalysisReportIndex),
 		ExptInsightAnalysisFeedback: ExptInsightAnalysisFeedbackDO2DTO(do.ExptInsightAnalysisFeedback),
+		Scope:                       InsightAnalysisScope2DTO(do.Scope),
+		ItemID:                      do.ItemID,
+		TurnID:                      do.TurnID,
 		BaseInfo: &domain_common.BaseInfo{
 			CreatedBy: &domain_common.UserInfo{
 				UserID: ptr.Of(do.CreatedBy),
@@ -31,6 +34,15 @@ func ExptInsightAnalysisRecordDO2DTO(do *entity.ExptInsightAnalysisRecord) *doma
 		},
 	}
 	return dto
+}
+
+// InsightAnalysisScope2DTO 将 domain scope 转为 IDL scope（string typedef）；空 scope 不写。
+func InsightAnalysisScope2DTO(scope entity.InsightAnalysisScope) *domain_expt.InsightAnalysisScope {
+	if scope == "" {
+		return nil
+	}
+	v := domain_expt.InsightAnalysisScope(string(scope))
+	return &v
 }
 
 func AnalysisReportIndex2DTO(index []*entity.InsightAnalysisReportIndex) []*domain_expt.ExptInsightAnalysisIndex {
