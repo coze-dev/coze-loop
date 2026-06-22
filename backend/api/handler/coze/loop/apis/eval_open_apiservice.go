@@ -302,3 +302,35 @@ func ExportExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
 func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentResultExportRecordOApi)
 }
+
+// ListEvaluationSetItemVersionsOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/versions [GET]
+func ListEvaluationSetItemVersionsOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.ListEvaluationSetItemVersionsOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.ListEvaluationSetItemVersionsOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetEvaluationSetItemVersionOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/versions/:item_version_id [GET]
+func GetEvaluationSetItemVersionOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.GetEvaluationSetItemVersionOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.GetEvaluationSetItemVersionOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

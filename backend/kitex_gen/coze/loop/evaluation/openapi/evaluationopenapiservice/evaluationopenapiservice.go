@@ -90,6 +90,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListEvaluationSetItemVersionsOApi": kitex.NewMethodInfo(
+		listEvaluationSetItemVersionsOApiHandler,
+		newEvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiArgs,
+		newEvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetEvaluationSetItemVersionOApi": kitex.NewMethodInfo(
+		getEvaluationSetItemVersionOApiHandler,
+		newEvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiArgs,
+		newEvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"GetEvaluationItemFieldOApi": kitex.NewMethodInfo(
 		getEvaluationItemFieldOApiHandler,
 		newEvaluationOpenAPIServiceGetEvaluationItemFieldOApiArgs,
@@ -575,6 +589,44 @@ func newEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiArgs() interfac
 
 func newEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult()
+}
+
+func listEvaluationSetItemVersionsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ListEvaluationSetItemVersionsOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiResult()
+}
+
+func getEvaluationSetItemVersionOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetEvaluationSetItemVersionOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiResult()
 }
 
 func getEvaluationItemFieldOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1359,6 +1411,26 @@ func (p *kClient) ListEvaluationSetVersionItemsOApi(ctx context.Context, req *op
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult
 	if err = p.c.Call(ctx, "ListEvaluationSetVersionItemsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluationSetItemVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetItemVersionsOApiRequest) (r *openapi.ListEvaluationSetItemVersionsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceListEvaluationSetItemVersionsOApiResult
+	if err = p.c.Call(ctx, "ListEvaluationSetItemVersionsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvaluationSetItemVersionOApi(ctx context.Context, req *openapi.GetEvaluationSetItemVersionOApiRequest) (r *openapi.GetEvaluationSetItemVersionOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceGetEvaluationSetItemVersionOApiResult
+	if err = p.c.Call(ctx, "GetEvaluationSetItemVersionOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -41,6 +41,14 @@ type IDatasetRPCAdapter interface {
 	ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	QueryItemSnapshotMappings(ctx context.Context, req *QueryItemSnapshotMappingRequest) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error)
 	GetDatasetItemField(ctx context.Context, param *GetDatasetItemFieldParam) (fieldData *entity.FieldData, err error)
+
+	UpdateDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemKey, status *string) error
+	GetDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error)
+	ListDatasetItemDefs(ctx context.Context, param *ListDatasetItemDefsParam) ([]*entity.EvaluationSetItemDef, *int64, *string, error)
+	ListDatasetItemVersions(ctx context.Context, param *ListDatasetItemVersionsParam) ([]*entity.EvaluationSetItemVersion, *int64, *string, error)
+	GetDatasetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, itemVersion *string) (*entity.EvaluationSetItemVersion, error)
+	UpdateDatasetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, status, description, itemVersion *string) error
+	BatchAddExistDatasetItems(ctx context.Context, param *BatchAddExistDatasetItemsParam) (*entity.BatchAddExistEvaluationSetItemsResult, error)
 }
 
 type GetDatasetItemFieldParam struct {
@@ -152,4 +160,30 @@ type QueryItemSnapshotMappingRequest struct {
 	IsDraftVersion bool
 	// 版本号
 	VersionID *int64
+}
+
+type ListDatasetItemDefsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*entity.OrderBy
+}
+
+type ListDatasetItemVersionsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	ItemID          int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*entity.OrderBy
+}
+
+type BatchAddExistDatasetItemsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	Items           []*entity.EvaluationItemVersionRef
+	AllowPartialAdd *bool
 }

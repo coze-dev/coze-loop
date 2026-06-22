@@ -2289,3 +2289,63 @@ func _upsertcolumnextractconfigMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _item_defsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getevaluationsetitemdefMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updateevaluationsetitemdefMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listevaluationsetitemdefsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _batchaddexistevaluationsetitemsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getevaluationsetitemversionMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updateevaluationsetitemversionMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listevaluationsetitemversionsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _versions4Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listevaluationsetitemversionsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getevaluationsetitemversionoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _versions5Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -19,4 +19,12 @@ type EvaluationSetItemService interface {
 	BatchGetEvaluationSetItems(ctx context.Context, param *entity.BatchGetEvaluationSetItemsParam) (items []*entity.EvaluationSetItem, err error)
 	ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetEvaluationSetItemField(ctx context.Context, param *entity.GetEvaluationSetItemFieldParam) (fieldData *entity.FieldData, err error)
+
+	UpdateEvaluationSetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemKey, status *string) error
+	GetEvaluationSetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error)
+	ListEvaluationSetItemDefs(ctx context.Context, param *entity.ListEvaluationSetItemDefsParam) ([]*entity.EvaluationSetItemDef, *int64, *string, error)
+	ListEvaluationSetItemVersions(ctx context.Context, param *entity.ListEvaluationSetItemVersionsParam) ([]*entity.EvaluationSetItemVersion, *int64, *string, error)
+	GetEvaluationSetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, itemVersion *string) (*entity.EvaluationSetItemVersion, error)
+	UpdateEvaluationSetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, status, description, itemVersion *string) error
+	BatchAddExistEvaluationSetItems(ctx context.Context, param *entity.BatchAddExistEvaluationSetItemsParam) (*entity.BatchAddExistEvaluationSetItemsResult, error)
 }

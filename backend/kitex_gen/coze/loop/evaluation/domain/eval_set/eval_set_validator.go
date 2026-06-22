@@ -74,6 +74,35 @@ func (p *FieldSchema) IsValid() error {
 	return nil
 }
 func (p *EvaluationSetItem) IsValid() error {
+	if p.ItemVersionBrief != nil {
+		if err := p.ItemVersionBrief.IsValid(); err != nil {
+			return fmt.Errorf("field ItemVersionBrief not valid, %w", err)
+		}
+	}
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ItemVersionBrief) IsValid() error {
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluationItemDef) IsValid() error {
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluationItemVersion) IsValid() error {
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)

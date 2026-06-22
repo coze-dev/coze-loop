@@ -547,3 +547,35 @@ type ListEvaluatorTemplateResponse struct {
 	PageNum    int32                `json:"page_num"`    // 页码
 	TotalPages int32                `json:"total_pages"` // 总页数
 }
+
+type ListEvaluationSetItemDefsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*OrderBy
+}
+
+type ListEvaluationSetItemVersionsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	ItemID          int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*OrderBy
+}
+
+type BatchAddExistEvaluationSetItemsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	Items           []*EvaluationItemVersionRef
+	AllowPartialAdd *bool
+}
+
+type BatchAddExistEvaluationSetItemsResult struct {
+	SuccessCount *int32
+	FailedCount  *int32
+	FailedItems  []*EvaluationItemVersionRef
+}

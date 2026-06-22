@@ -431,6 +431,7 @@ struct ListEvaluationSetItemVersionsRequest {
     100: optional i32 page_number,
     101: optional i32 page_size,
     102: optional string page_token,
+    103: optional list<common.OrderBy> order_bys,
 
     255: optional base.Base Base
 }
@@ -447,7 +448,8 @@ struct GetEvaluationSetItemVersionRequest {
     1: required i64 workspace_id (api.query='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: required i64 item_id (api.path='item_id', api.js_conv='true', go.tag='json:"item_id"'),
-    4: required i64 item_version_id (api.path='item_version_id', api.js_conv='true', go.tag='json:"item_version_id"'),
+    4: optional i64 item_version_id (api.path='item_version_id', api.js_conv='true', go.tag='json:"item_version_id"'), // item_version_id 与 item_version 二选一
+    5: optional string item_version (vt.max_size = "64"), // 版本号字符串，与 item_version_id 二选一
 
     255: optional base.Base Base
 }
@@ -462,9 +464,10 @@ struct UpdateEvaluationSetItemVersionRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: required i64 item_id (api.path='item_id', api.js_conv='true', go.tag='json:"item_id"'),
-    4: required i64 item_version_id (api.path='item_version_id', api.js_conv='true', go.tag='json:"item_version_id"'),
+    4: optional i64 item_version_id (api.path='item_version_id', api.js_conv='true', go.tag='json:"item_version_id"'), // item_version_id 与 item_version 二选一
     5: optional string status (vt.max_size = "64"),
     6: optional string description (vt.max_size = "2048"),
+    7: optional string item_version (vt.max_size = "64"), // 版本号字符串，与 item_version_id 二选一
 
     255: optional base.Base Base
 }

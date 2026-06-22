@@ -133,6 +133,55 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"BatchAddExistEvaluationSetItems": kitex.NewMethodInfo(
+		batchAddExistEvaluationSetItemsHandler,
+		newEvaluationSetServiceBatchAddExistEvaluationSetItemsArgs,
+		newEvaluationSetServiceBatchAddExistEvaluationSetItemsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateEvaluationSetItemDef": kitex.NewMethodInfo(
+		updateEvaluationSetItemDefHandler,
+		newEvaluationSetServiceUpdateEvaluationSetItemDefArgs,
+		newEvaluationSetServiceUpdateEvaluationSetItemDefResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetEvaluationSetItemDef": kitex.NewMethodInfo(
+		getEvaluationSetItemDefHandler,
+		newEvaluationSetServiceGetEvaluationSetItemDefArgs,
+		newEvaluationSetServiceGetEvaluationSetItemDefResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListEvaluationSetItemDefs": kitex.NewMethodInfo(
+		listEvaluationSetItemDefsHandler,
+		newEvaluationSetServiceListEvaluationSetItemDefsArgs,
+		newEvaluationSetServiceListEvaluationSetItemDefsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListEvaluationSetItemVersions": kitex.NewMethodInfo(
+		listEvaluationSetItemVersionsHandler,
+		newEvaluationSetServiceListEvaluationSetItemVersionsArgs,
+		newEvaluationSetServiceListEvaluationSetItemVersionsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetEvaluationSetItemVersion": kitex.NewMethodInfo(
+		getEvaluationSetItemVersionHandler,
+		newEvaluationSetServiceGetEvaluationSetItemVersionArgs,
+		newEvaluationSetServiceGetEvaluationSetItemVersionResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateEvaluationSetItemVersion": kitex.NewMethodInfo(
+		updateEvaluationSetItemVersionHandler,
+		newEvaluationSetServiceUpdateEvaluationSetItemVersionArgs,
+		newEvaluationSetServiceUpdateEvaluationSetItemVersionResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ClearEvaluationSetDraftItem": kitex.NewMethodInfo(
 		clearEvaluationSetDraftItemHandler,
 		newEvaluationSetServiceClearEvaluationSetDraftItemArgs,
@@ -510,6 +559,139 @@ func newEvaluationSetServiceBatchGetEvaluationSetItemsResult() interface{} {
 	return eval_set.NewEvaluationSetServiceBatchGetEvaluationSetItemsResult()
 }
 
+func batchAddExistEvaluationSetItemsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceBatchAddExistEvaluationSetItemsArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceBatchAddExistEvaluationSetItemsResult)
+	success, err := handler.(eval_set.EvaluationSetService).BatchAddExistEvaluationSetItems(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceBatchAddExistEvaluationSetItemsArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceBatchAddExistEvaluationSetItemsArgs()
+}
+
+func newEvaluationSetServiceBatchAddExistEvaluationSetItemsResult() interface{} {
+	return eval_set.NewEvaluationSetServiceBatchAddExistEvaluationSetItemsResult()
+}
+
+func updateEvaluationSetItemDefHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefResult)
+	success, err := handler.(eval_set.EvaluationSetService).UpdateEvaluationSetItemDef(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceUpdateEvaluationSetItemDefArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceUpdateEvaluationSetItemDefArgs()
+}
+
+func newEvaluationSetServiceUpdateEvaluationSetItemDefResult() interface{} {
+	return eval_set.NewEvaluationSetServiceUpdateEvaluationSetItemDefResult()
+}
+
+func getEvaluationSetItemDefHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceGetEvaluationSetItemDefArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceGetEvaluationSetItemDefResult)
+	success, err := handler.(eval_set.EvaluationSetService).GetEvaluationSetItemDef(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceGetEvaluationSetItemDefArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemDefArgs()
+}
+
+func newEvaluationSetServiceGetEvaluationSetItemDefResult() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemDefResult()
+}
+
+func listEvaluationSetItemDefsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceListEvaluationSetItemDefsArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceListEvaluationSetItemDefsResult)
+	success, err := handler.(eval_set.EvaluationSetService).ListEvaluationSetItemDefs(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceListEvaluationSetItemDefsArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceListEvaluationSetItemDefsArgs()
+}
+
+func newEvaluationSetServiceListEvaluationSetItemDefsResult() interface{} {
+	return eval_set.NewEvaluationSetServiceListEvaluationSetItemDefsResult()
+}
+
+func listEvaluationSetItemVersionsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceListEvaluationSetItemVersionsArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceListEvaluationSetItemVersionsResult)
+	success, err := handler.(eval_set.EvaluationSetService).ListEvaluationSetItemVersions(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceListEvaluationSetItemVersionsArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceListEvaluationSetItemVersionsArgs()
+}
+
+func newEvaluationSetServiceListEvaluationSetItemVersionsResult() interface{} {
+	return eval_set.NewEvaluationSetServiceListEvaluationSetItemVersionsResult()
+}
+
+func getEvaluationSetItemVersionHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceGetEvaluationSetItemVersionArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceGetEvaluationSetItemVersionResult)
+	success, err := handler.(eval_set.EvaluationSetService).GetEvaluationSetItemVersion(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceGetEvaluationSetItemVersionArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemVersionArgs()
+}
+
+func newEvaluationSetServiceGetEvaluationSetItemVersionResult() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemVersionResult()
+}
+
+func updateEvaluationSetItemVersionHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemVersionArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemVersionResult)
+	success, err := handler.(eval_set.EvaluationSetService).UpdateEvaluationSetItemVersion(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceUpdateEvaluationSetItemVersionArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceUpdateEvaluationSetItemVersionArgs()
+}
+
+func newEvaluationSetServiceUpdateEvaluationSetItemVersionResult() interface{} {
+	return eval_set.NewEvaluationSetServiceUpdateEvaluationSetItemVersionResult()
+}
+
 func clearEvaluationSetDraftItemHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*eval_set.EvaluationSetServiceClearEvaluationSetDraftItemArgs)
 	realResult := result.(*eval_set.EvaluationSetServiceClearEvaluationSetDraftItemResult)
@@ -744,6 +926,76 @@ func (p *kClient) BatchGetEvaluationSetItems(ctx context.Context, req *eval_set.
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceBatchGetEvaluationSetItemsResult
 	if err = p.c.Call(ctx, "BatchGetEvaluationSetItems", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchAddExistEvaluationSetItems(ctx context.Context, req *eval_set.BatchAddExistEvaluationSetItemsRequest) (r *eval_set.BatchAddExistEvaluationSetItemsResponse, err error) {
+	var _args eval_set.EvaluationSetServiceBatchAddExistEvaluationSetItemsArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceBatchAddExistEvaluationSetItemsResult
+	if err = p.c.Call(ctx, "BatchAddExistEvaluationSetItems", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateEvaluationSetItemDef(ctx context.Context, req *eval_set.UpdateEvaluationSetItemDefRequest) (r *eval_set.UpdateEvaluationSetItemDefResponse, err error) {
+	var _args eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefResult
+	if err = p.c.Call(ctx, "UpdateEvaluationSetItemDef", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvaluationSetItemDef(ctx context.Context, req *eval_set.GetEvaluationSetItemDefRequest) (r *eval_set.GetEvaluationSetItemDefResponse, err error) {
+	var _args eval_set.EvaluationSetServiceGetEvaluationSetItemDefArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceGetEvaluationSetItemDefResult
+	if err = p.c.Call(ctx, "GetEvaluationSetItemDef", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluationSetItemDefs(ctx context.Context, req *eval_set.ListEvaluationSetItemDefsRequest) (r *eval_set.ListEvaluationSetItemDefsResponse, err error) {
+	var _args eval_set.EvaluationSetServiceListEvaluationSetItemDefsArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceListEvaluationSetItemDefsResult
+	if err = p.c.Call(ctx, "ListEvaluationSetItemDefs", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluationSetItemVersions(ctx context.Context, req *eval_set.ListEvaluationSetItemVersionsRequest) (r *eval_set.ListEvaluationSetItemVersionsResponse, err error) {
+	var _args eval_set.EvaluationSetServiceListEvaluationSetItemVersionsArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceListEvaluationSetItemVersionsResult
+	if err = p.c.Call(ctx, "ListEvaluationSetItemVersions", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvaluationSetItemVersion(ctx context.Context, req *eval_set.GetEvaluationSetItemVersionRequest) (r *eval_set.GetEvaluationSetItemVersionResponse, err error) {
+	var _args eval_set.EvaluationSetServiceGetEvaluationSetItemVersionArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceGetEvaluationSetItemVersionResult
+	if err = p.c.Call(ctx, "GetEvaluationSetItemVersion", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateEvaluationSetItemVersion(ctx context.Context, req *eval_set.UpdateEvaluationSetItemVersionRequest) (r *eval_set.UpdateEvaluationSetItemVersionResponse, err error) {
+	var _args eval_set.EvaluationSetServiceUpdateEvaluationSetItemVersionArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceUpdateEvaluationSetItemVersionResult
+	if err = p.c.Call(ctx, "UpdateEvaluationSetItemVersion", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

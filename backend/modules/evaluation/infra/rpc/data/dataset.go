@@ -501,3 +501,31 @@ func (a *DatasetRPCAdapter) QueryItemSnapshotMappings(ctx context.Context, req *
 func (a *DatasetRPCAdapter) GetDatasetItemField(ctx context.Context, param *rpc.GetDatasetItemFieldParam) (fieldData *entity.FieldData, err error) {
 	return nil, nil
 }
+
+func (a *DatasetRPCAdapter) UpdateDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemKey, status *string) error {
+	return nil
+}
+
+func (a *DatasetRPCAdapter) GetDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error) {
+	return nil, nil
+}
+
+func (a *DatasetRPCAdapter) ListDatasetItemDefs(ctx context.Context, param *rpc.ListDatasetItemDefsParam) ([]*entity.EvaluationSetItemDef, *int64, *string, error) {
+	return nil, nil, nil, nil
+}
+
+func (a *DatasetRPCAdapter) ListDatasetItemVersions(ctx context.Context, param *rpc.ListDatasetItemVersionsParam) ([]*entity.EvaluationSetItemVersion, *int64, *string, error) {
+	return nil, nil, nil, nil
+}
+
+func (a *DatasetRPCAdapter) GetDatasetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, itemVersion *string) (*entity.EvaluationSetItemVersion, error) {
+	return nil, nil
+}
+
+func (a *DatasetRPCAdapter) UpdateDatasetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, status, description, itemVersion *string) error {
+	return nil
+}
+
+func (a *DatasetRPCAdapter) BatchAddExistDatasetItems(ctx context.Context, param *rpc.BatchAddExistDatasetItemsParam) (*entity.BatchAddExistEvaluationSetItemsResult, error) {
+	return nil, nil
+}

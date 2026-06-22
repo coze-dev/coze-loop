@@ -387,6 +387,153 @@ func (l *LocalEvaluationSetService) BatchGetEvaluationSetItems(ctx context.Conte
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationSetService) BatchAddExistEvaluationSetItems(ctx context.Context, req *eval_set.BatchAddExistEvaluationSetItemsRequest, callOptions ...callopt.Option) (*eval_set.BatchAddExistEvaluationSetItemsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceBatchAddExistEvaluationSetItemsArgs)
+		result := out.(*eval_set.EvaluationSetServiceBatchAddExistEvaluationSetItemsResult)
+		resp, err := l.impl.BatchAddExistEvaluationSetItems(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceBatchAddExistEvaluationSetItemsArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceBatchAddExistEvaluationSetItemsResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchAddExistEvaluationSetItems")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationSetService) UpdateEvaluationSetItemDef(ctx context.Context, req *eval_set.UpdateEvaluationSetItemDefRequest, callOptions ...callopt.Option) (*eval_set.UpdateEvaluationSetItemDefResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefArgs)
+		result := out.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefResult)
+		resp, err := l.impl.UpdateEvaluationSetItemDef(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateEvaluationSetItemDef")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationSetService) GetEvaluationSetItemDef(ctx context.Context, req *eval_set.GetEvaluationSetItemDefRequest, callOptions ...callopt.Option) (*eval_set.GetEvaluationSetItemDefResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceGetEvaluationSetItemDefArgs)
+		result := out.(*eval_set.EvaluationSetServiceGetEvaluationSetItemDefResult)
+		resp, err := l.impl.GetEvaluationSetItemDef(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceGetEvaluationSetItemDefArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceGetEvaluationSetItemDefResult{}
+	ctx = l.injectRPCInfo(ctx, "GetEvaluationSetItemDef")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationSetService) ListEvaluationSetItemDefs(ctx context.Context, req *eval_set.ListEvaluationSetItemDefsRequest, callOptions ...callopt.Option) (*eval_set.ListEvaluationSetItemDefsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceListEvaluationSetItemDefsArgs)
+		result := out.(*eval_set.EvaluationSetServiceListEvaluationSetItemDefsResult)
+		resp, err := l.impl.ListEvaluationSetItemDefs(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceListEvaluationSetItemDefsArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceListEvaluationSetItemDefsResult{}
+	ctx = l.injectRPCInfo(ctx, "ListEvaluationSetItemDefs")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationSetService) ListEvaluationSetItemVersions(ctx context.Context, req *eval_set.ListEvaluationSetItemVersionsRequest, callOptions ...callopt.Option) (*eval_set.ListEvaluationSetItemVersionsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceListEvaluationSetItemVersionsArgs)
+		result := out.(*eval_set.EvaluationSetServiceListEvaluationSetItemVersionsResult)
+		resp, err := l.impl.ListEvaluationSetItemVersions(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceListEvaluationSetItemVersionsArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceListEvaluationSetItemVersionsResult{}
+	ctx = l.injectRPCInfo(ctx, "ListEvaluationSetItemVersions")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationSetService) GetEvaluationSetItemVersion(ctx context.Context, req *eval_set.GetEvaluationSetItemVersionRequest, callOptions ...callopt.Option) (*eval_set.GetEvaluationSetItemVersionResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceGetEvaluationSetItemVersionArgs)
+		result := out.(*eval_set.EvaluationSetServiceGetEvaluationSetItemVersionResult)
+		resp, err := l.impl.GetEvaluationSetItemVersion(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceGetEvaluationSetItemVersionArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceGetEvaluationSetItemVersionResult{}
+	ctx = l.injectRPCInfo(ctx, "GetEvaluationSetItemVersion")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationSetService) UpdateEvaluationSetItemVersion(ctx context.Context, req *eval_set.UpdateEvaluationSetItemVersionRequest, callOptions ...callopt.Option) (*eval_set.UpdateEvaluationSetItemVersionResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemVersionArgs)
+		result := out.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemVersionResult)
+		resp, err := l.impl.UpdateEvaluationSetItemVersion(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceUpdateEvaluationSetItemVersionArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceUpdateEvaluationSetItemVersionResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateEvaluationSetItemVersion")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationSetService) ClearEvaluationSetDraftItem(ctx context.Context, req *eval_set.ClearEvaluationSetDraftItemRequest, callOptions ...callopt.Option) (*eval_set.ClearEvaluationSetDraftItemResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*eval_set.EvaluationSetServiceClearEvaluationSetDraftItemArgs)

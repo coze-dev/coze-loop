@@ -8,6 +8,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
+	eval_set_svc "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -224,5 +225,102 @@ func ItemErrorDetailDO2DTO(do *entity.ItemErrorDetail) *dataset.ItemErrorDetail 
 		Index:      do.Index,
 		StartIndex: do.StartIndex,
 		EndIndex:   do.EndIndex,
+	}
+}
+
+func ItemDefDO2DTOs(dos []*entity.EvaluationSetItemDef) []*eval_set.EvaluationItemDef {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*eval_set.EvaluationItemDef, 0, len(dos))
+	for _, do := range dos {
+		result = append(result, ItemDefDO2DTO(do))
+	}
+	return result
+}
+
+func ItemDefDO2DTO(do *entity.EvaluationSetItemDef) *eval_set.EvaluationItemDef {
+	if do == nil {
+		return nil
+	}
+	return &eval_set.EvaluationItemDef{
+		ItemID:          gptr.Of(do.ItemID),
+		WorkspaceID:     gptr.Of(do.SpaceID),
+		EvaluationSetID: gptr.Of(do.EvaluationSetID),
+		ItemKey:         gptr.Of(do.ItemKey),
+		Status:          gptr.Of(do.Status),
+		LatestVersion:   gptr.Of(do.LatestVersion),
+		BaseInfo:        common.ConvertBaseInfoDO2DTO(do.BaseInfo),
+	}
+}
+
+func ItemVersionDO2DTOs(dos []*entity.EvaluationSetItemVersion) []*eval_set.EvaluationItemVersion {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*eval_set.EvaluationItemVersion, 0, len(dos))
+	for _, do := range dos {
+		result = append(result, ItemVersionDO2DTO(do))
+	}
+	return result
+}
+
+func ItemVersionDO2DTO(do *entity.EvaluationSetItemVersion) *eval_set.EvaluationItemVersion {
+	if do == nil {
+		return nil
+	}
+	return &eval_set.EvaluationItemVersion{
+		ItemVersionID: gptr.Of(do.ItemVersionID),
+		ItemID:        gptr.Of(do.ItemID),
+		Version:       gptr.Of(do.Version),
+		VersionNum:    gptr.Of(do.VersionNum),
+		Description:   gptr.Of(do.Description),
+		Turns:         TurnDO2DTOs(do.Turns),
+		Status:        gptr.Of(do.Status),
+		BaseInfo:      common.ConvertBaseInfoDO2DTO(do.BaseInfo),
+	}
+}
+
+func ItemVersionRefDTO2DOs(dtos []*eval_set_svc.EvaluationItemVersionRef) []*entity.EvaluationItemVersionRef {
+	if dtos == nil {
+		return nil
+	}
+	result := make([]*entity.EvaluationItemVersionRef, 0, len(dtos))
+	for _, dto := range dtos {
+		result = append(result, ItemVersionRefDTO2DO(dto))
+	}
+	return result
+}
+
+func ItemVersionRefDTO2DO(dto *eval_set_svc.EvaluationItemVersionRef) *entity.EvaluationItemVersionRef {
+	if dto == nil {
+		return nil
+	}
+	return &entity.EvaluationItemVersionRef{
+		ItemID:        dto.ItemID,
+		ItemVersionID: dto.ItemVersionID,
+		ItemVersion:   dto.ItemVersion,
+	}
+}
+
+func ItemVersionRefDO2DTOs(dos []*entity.EvaluationItemVersionRef) []*eval_set_svc.EvaluationItemVersionRef {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*eval_set_svc.EvaluationItemVersionRef, 0, len(dos))
+	for _, do := range dos {
+		result = append(result, ItemVersionRefDO2DTO(do))
+	}
+	return result
+}
+
+func ItemVersionRefDO2DTO(do *entity.EvaluationItemVersionRef) *eval_set_svc.EvaluationItemVersionRef {
+	if do == nil {
+		return nil
+	}
+	return &eval_set_svc.EvaluationItemVersionRef{
+		ItemID:        do.ItemID,
+		ItemVersionID: do.ItemVersionID,
+		ItemVersion:   do.ItemVersion,
 	}
 }

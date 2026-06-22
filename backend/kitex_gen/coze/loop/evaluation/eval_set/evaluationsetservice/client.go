@@ -28,6 +28,13 @@ type Client interface {
 	BatchDeleteEvaluationSetItems(ctx context.Context, req *eval_set.BatchDeleteEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchDeleteEvaluationSetItemsResponse, err error)
 	ListEvaluationSetItems(ctx context.Context, req *eval_set.ListEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemsResponse, err error)
 	BatchGetEvaluationSetItems(ctx context.Context, req *eval_set.BatchGetEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchGetEvaluationSetItemsResponse, err error)
+	BatchAddExistEvaluationSetItems(ctx context.Context, req *eval_set.BatchAddExistEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchAddExistEvaluationSetItemsResponse, err error)
+	UpdateEvaluationSetItemDef(ctx context.Context, req *eval_set.UpdateEvaluationSetItemDefRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetItemDefResponse, err error)
+	GetEvaluationSetItemDef(ctx context.Context, req *eval_set.GetEvaluationSetItemDefRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetItemDefResponse, err error)
+	ListEvaluationSetItemDefs(ctx context.Context, req *eval_set.ListEvaluationSetItemDefsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemDefsResponse, err error)
+	ListEvaluationSetItemVersions(ctx context.Context, req *eval_set.ListEvaluationSetItemVersionsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemVersionsResponse, err error)
+	GetEvaluationSetItemVersion(ctx context.Context, req *eval_set.GetEvaluationSetItemVersionRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetItemVersionResponse, err error)
+	UpdateEvaluationSetItemVersion(ctx context.Context, req *eval_set.UpdateEvaluationSetItemVersionRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetItemVersionResponse, err error)
 	ClearEvaluationSetDraftItem(ctx context.Context, req *eval_set.ClearEvaluationSetDraftItemRequest, callOptions ...callopt.Option) (r *eval_set.ClearEvaluationSetDraftItemResponse, err error)
 	GetEvaluationSetItemField(ctx context.Context, req *eval_set.GetEvaluationSetItemFieldRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetItemFieldResponse, err error)
 	ValidateEvaluationSetMultiPartData(ctx context.Context, req *eval_set.ValidateEvaluationSetMultiPartDataRequest, callOptions ...callopt.Option) (r *eval_set.ValidateEvaluationSetMultiPartDataResponse, err error)
@@ -145,6 +152,41 @@ func (p *kEvaluationSetServiceClient) ListEvaluationSetItems(ctx context.Context
 func (p *kEvaluationSetServiceClient) BatchGetEvaluationSetItems(ctx context.Context, req *eval_set.BatchGetEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchGetEvaluationSetItemsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetEvaluationSetItems(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) BatchAddExistEvaluationSetItems(ctx context.Context, req *eval_set.BatchAddExistEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchAddExistEvaluationSetItemsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchAddExistEvaluationSetItems(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) UpdateEvaluationSetItemDef(ctx context.Context, req *eval_set.UpdateEvaluationSetItemDefRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetItemDefResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateEvaluationSetItemDef(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) GetEvaluationSetItemDef(ctx context.Context, req *eval_set.GetEvaluationSetItemDefRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetItemDefResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetEvaluationSetItemDef(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) ListEvaluationSetItemDefs(ctx context.Context, req *eval_set.ListEvaluationSetItemDefsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemDefsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListEvaluationSetItemDefs(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) ListEvaluationSetItemVersions(ctx context.Context, req *eval_set.ListEvaluationSetItemVersionsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemVersionsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListEvaluationSetItemVersions(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) GetEvaluationSetItemVersion(ctx context.Context, req *eval_set.GetEvaluationSetItemVersionRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetItemVersionResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetEvaluationSetItemVersion(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) UpdateEvaluationSetItemVersion(ctx context.Context, req *eval_set.UpdateEvaluationSetItemVersionRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetItemVersionResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateEvaluationSetItemVersion(ctx, req)
 }
 
 func (p *kEvaluationSetServiceClient) ClearEvaluationSetDraftItem(ctx context.Context, req *eval_set.ClearEvaluationSetDraftItemRequest, callOptions ...callopt.Option) (r *eval_set.ClearEvaluationSetDraftItemResponse, err error) {

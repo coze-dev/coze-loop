@@ -176,3 +176,40 @@ type DatasetItemOutput struct {
 	// 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
 	IsNewItem *bool
 }
+
+type EvaluationSetItemDef struct {
+	ItemID          int64
+	SpaceID         int64
+	EvaluationSetID int64
+	ItemKey         string
+	Status          string
+	LatestVersion   string
+	BaseInfo        *BaseInfo
+}
+
+type EvaluationSetItemVersion struct {
+	ItemVersionID int64
+	ItemID        int64
+	Version       string
+	VersionNum    int64
+	Description   string
+	Turns         []*Turn
+	Status        string
+	BaseInfo      *BaseInfo
+}
+
+type EvaluationItemVersionRef struct {
+	ItemID        int64
+	ItemVersionID *int64
+	ItemVersion   *string
+}
+
+type ItemVersionBrief struct {
+	ItemVersionID int64
+	Version       string
+	Description   string
+	VersionNum    int64
+	Status        string
+	IsLatest      bool
+	BaseInfo      *BaseInfo
+}

@@ -920,3 +920,30 @@ func OpenAPIFieldWriteOptionDTO2DO(dto *openapi_eval_set.FieldWriteOption) *enti
 		MultiModalStoreOpt: opt,
 	}
 }
+
+func OpenAPIItemVersionDO2DTOs(dos []*entity.EvaluationSetItemVersion) []*openapi_eval_set.EvaluationItemVersion {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.EvaluationItemVersion, 0, len(dos))
+	for _, do := range dos {
+		result = append(result, OpenAPIItemVersionDO2DTO(do))
+	}
+	return result
+}
+
+func OpenAPIItemVersionDO2DTO(do *entity.EvaluationSetItemVersion) *openapi_eval_set.EvaluationItemVersion {
+	if do == nil {
+		return nil
+	}
+	return &openapi_eval_set.EvaluationItemVersion{
+		ItemVersionID: gptr.Of(do.ItemVersionID),
+		ItemID:        gptr.Of(do.ItemID),
+		Version:       gptr.Of(do.Version),
+		VersionNum:    gptr.Of(do.VersionNum),
+		Description:   gptr.Of(do.Description),
+		Turns:         OpenAPITurnDO2DTOs(do.Turns),
+		Status:        gptr.Of(do.Status),
+		BaseInfo:      ConvertBaseInfoDO2DTO(do.BaseInfo),
+	}
+}

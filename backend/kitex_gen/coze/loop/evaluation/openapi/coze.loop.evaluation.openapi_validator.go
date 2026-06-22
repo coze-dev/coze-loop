@@ -40,6 +40,11 @@ func (p *CreateEvaluationSetOApiRequest) IsValid() error {
 			return fmt.Errorf("field EvaluationSetSchema not valid, %w", err)
 		}
 	}
+	if p.Type != nil {
+		if len(*p.Type) > int(128) {
+			return fmt.Errorf("field Type max_len rule failed, current value: %d", len(*p.Type))
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -296,6 +301,21 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) IsValid() error {
 	if len(p.Items) > int(100) {
 		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
 	}
+	if p.ItemVersionDescription != nil {
+		if len(*p.ItemVersionDescription) > int(2048) {
+			return fmt.Errorf("field ItemVersionDescription max_len rule failed, current value: %d", len(*p.ItemVersionDescription))
+		}
+	}
+	if p.ItemVersionStatus != nil {
+		if len(*p.ItemVersionStatus) > int(64) {
+			return fmt.Errorf("field ItemVersionStatus max_len rule failed, current value: %d", len(*p.ItemVersionStatus))
+		}
+	}
+	if p.ItemStatus != nil {
+		if len(*p.ItemStatus) > int(64) {
+			return fmt.Errorf("field ItemStatus max_len rule failed, current value: %d", len(*p.ItemStatus))
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -331,6 +351,21 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsValid() error {
 	if len(p.Items) > int(100) {
 		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
 	}
+	if p.ItemVersionDescription != nil {
+		if len(*p.ItemVersionDescription) > int(2048) {
+			return fmt.Errorf("field ItemVersionDescription max_len rule failed, current value: %d", len(*p.ItemVersionDescription))
+		}
+	}
+	if p.ItemVersionStatus != nil {
+		if len(*p.ItemVersionStatus) > int(64) {
+			return fmt.Errorf("field ItemVersionStatus max_len rule failed, current value: %d", len(*p.ItemVersionStatus))
+		}
+	}
+	if p.ItemStatus != nil {
+		if len(*p.ItemStatus) > int(64) {
+			return fmt.Errorf("field ItemStatus max_len rule failed, current value: %d", len(*p.ItemStatus))
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -357,6 +392,69 @@ func (p *BatchUpdateEvaluationSetItemsOApiResponse) IsValid() error {
 	return nil
 }
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *ListEvaluationSetItemVersionsOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetItemVersionsOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetItemVersionsOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *GetEvaluationSetItemVersionOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemVersionOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemVersionOpenAPIData) IsValid() error {
+	if p.Version != nil {
+		if err := p.Version.IsValid(); err != nil {
+			return fmt.Errorf("field Version not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *BatchDeleteEvaluationSetItemsOApiRequest) IsValid() error {
