@@ -373,6 +373,7 @@ struct AsyncDebugEvalTargetOApiRequest {
     12: optional string env (api.body = "env")    // 环境
 
     50: optional eval_target.CustomRPCServer custom_rpc_server (api.body = "custom_rpc_server")    // 如果 eval_target_type=custom_rpc_server，需要传入自定义服务相关信息
+    51: optional eval_target.SandboxAgent sandbox_agent (api.body = "sandbox_agent")    // 如果 eval_target_type=sandbox_agent，需要传入 SandboxAgent 相关信息
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
