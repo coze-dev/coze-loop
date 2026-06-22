@@ -1964,6 +1964,30 @@ func OpenAPISandboxAgentDO2DTO(do *entity.SandboxAgent) *openapiEvalTarget.Sandb
 	}
 }
 
+func OpenAPISandboxAgentDTO2DO(dto *openapiEvalTarget.SandboxAgent) *entity.SandboxAgent {
+	if dto == nil {
+		return nil
+	}
+	envs := make([]*entity.SandboxEnvVar, 0, len(dto.Envs))
+	for _, e := range dto.Envs {
+		if e == nil {
+			continue
+		}
+		envs = append(envs, &entity.SandboxEnvVar{
+			Key:   e.GetKey(),
+			Value: e.GetValue(),
+		})
+	}
+	return &entity.SandboxAgent{
+		Name:          dto.GetName(),
+		Type:          entity.SandboxAgentType(dto.GetType()),
+		ModelName:     dto.GetModelName(),
+		AgentSetupCmd: dto.GetAgentSetupCmd(),
+		AgentRunCmd:   dto.GetAgentRunCmd(),
+		Envs:          envs,
+	}
+}
+
 func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment.ExptTemplate {
 	if template == nil {
 		return nil

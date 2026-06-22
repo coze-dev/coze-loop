@@ -535,6 +535,11 @@ func (p *AsyncDebugEvalTargetOApiRequest) IsValid() error {
 			return fmt.Errorf("field CustomRPCServer not valid, %w", err)
 		}
 	}
+	if p.SandboxAgent != nil {
+		if err := p.SandboxAgent.IsValid(); err != nil {
+			return fmt.Errorf("field SandboxAgent not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)

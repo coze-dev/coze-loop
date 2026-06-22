@@ -12368,6 +12368,20 @@ func (p *AsyncDebugEvalTargetOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 51:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField51(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -12494,6 +12508,18 @@ func (p *AsyncDebugEvalTargetOApiRequest) FastReadField50(buf []byte) (int, erro
 	return offset, nil
 }
 
+func (p *AsyncDebugEvalTargetOApiRequest) FastReadField51(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_target.NewSandboxAgent()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SandboxAgent = _field
+	return offset, nil
+}
+
 func (p *AsyncDebugEvalTargetOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -12531,6 +12557,7 @@ func (p *AsyncDebugEvalTargetOApiRequest) FastWriteNocopy(buf []byte, w thrift.N
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
+		offset += p.fastWriteField51(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -12547,6 +12574,7 @@ func (p *AsyncDebugEvalTargetOApiRequest) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field50Length()
+		l += p.field51Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -12604,6 +12632,15 @@ func (p *AsyncDebugEvalTargetOApiRequest) fastWriteField50(buf []byte, w thrift.
 	if p.IsSetCustomRPCServer() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 50)
 		offset += p.CustomRPCServer.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *AsyncDebugEvalTargetOApiRequest) fastWriteField51(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSandboxAgent() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 51)
+		offset += p.SandboxAgent.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -12680,6 +12717,15 @@ func (p *AsyncDebugEvalTargetOApiRequest) field50Length() int {
 	return l
 }
 
+func (p *AsyncDebugEvalTargetOApiRequest) field51Length() int {
+	l := 0
+	if p.IsSetSandboxAgent() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SandboxAgent.BLength()
+	}
+	return l
+}
+
 func (p *AsyncDebugEvalTargetOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -12747,6 +12793,15 @@ func (p *AsyncDebugEvalTargetOApiRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.CustomRPCServer = _customRPCServer
+
+	var _sandboxAgent *eval_target.SandboxAgent
+	if src.SandboxAgent != nil {
+		_sandboxAgent = &eval_target.SandboxAgent{}
+		if err := _sandboxAgent.DeepCopy(src.SandboxAgent); err != nil {
+			return err
+		}
+	}
+	p.SandboxAgent = _sandboxAgent
 
 	var _extra *extra.Extra
 	if src.Extra != nil {

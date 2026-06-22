@@ -17140,8 +17140,10 @@ type AsyncDebugEvalTargetOApiRequest struct {
 	Env *string `thrift:"env,12,optional" frugal:"12,optional,string" form:"env" json:"env,omitempty"`
 	// 如果 eval_target_type=custom_rpc_server，需要传入自定义服务相关信息
 	CustomRPCServer *eval_target.CustomRPCServer `thrift:"custom_rpc_server,50,optional" frugal:"50,optional,eval_target.CustomRPCServer" form:"custom_rpc_server" json:"custom_rpc_server,omitempty"`
-	Extra           *extra.Extra                 `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base            *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 如果 eval_target_type=sandbox_agent，需要传入 SandboxAgent 相关信息
+	SandboxAgent *eval_target.SandboxAgent `thrift:"sandbox_agent,51,optional" frugal:"51,optional,eval_target.SandboxAgent" form:"sandbox_agent" json:"sandbox_agent,omitempty"`
+	Extra        *extra.Extra              `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base                `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewAsyncDebugEvalTargetOApiRequest() *AsyncDebugEvalTargetOApiRequest {
@@ -17223,6 +17225,18 @@ func (p *AsyncDebugEvalTargetOApiRequest) GetCustomRPCServer() (v *eval_target.C
 	return p.CustomRPCServer
 }
 
+var AsyncDebugEvalTargetOApiRequest_SandboxAgent_DEFAULT *eval_target.SandboxAgent
+
+func (p *AsyncDebugEvalTargetOApiRequest) GetSandboxAgent() (v *eval_target.SandboxAgent) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSandboxAgent() {
+		return AsyncDebugEvalTargetOApiRequest_SandboxAgent_DEFAULT
+	}
+	return p.SandboxAgent
+}
+
 var AsyncDebugEvalTargetOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *AsyncDebugEvalTargetOApiRequest) GetExtra() (v *extra.Extra) {
@@ -17264,6 +17278,9 @@ func (p *AsyncDebugEvalTargetOApiRequest) SetEnv(val *string) {
 func (p *AsyncDebugEvalTargetOApiRequest) SetCustomRPCServer(val *eval_target.CustomRPCServer) {
 	p.CustomRPCServer = val
 }
+func (p *AsyncDebugEvalTargetOApiRequest) SetSandboxAgent(val *eval_target.SandboxAgent) {
+	p.SandboxAgent = val
+}
 func (p *AsyncDebugEvalTargetOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -17278,6 +17295,7 @@ var fieldIDToName_AsyncDebugEvalTargetOApiRequest = map[int16]string{
 	11:  "target_runtime_param",
 	12:  "env",
 	50:  "custom_rpc_server",
+	51:  "sandbox_agent",
 	254: "extra",
 	255: "Base",
 }
@@ -17304,6 +17322,10 @@ func (p *AsyncDebugEvalTargetOApiRequest) IsSetEnv() bool {
 
 func (p *AsyncDebugEvalTargetOApiRequest) IsSetCustomRPCServer() bool {
 	return p.CustomRPCServer != nil
+}
+
+func (p *AsyncDebugEvalTargetOApiRequest) IsSetSandboxAgent() bool {
+	return p.SandboxAgent != nil
 }
 
 func (p *AsyncDebugEvalTargetOApiRequest) IsSetExtra() bool {
@@ -17375,6 +17397,14 @@ func (p *AsyncDebugEvalTargetOApiRequest) Read(iprot thrift.TProtocol) (err erro
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField50(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 51:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField51(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17485,6 +17515,14 @@ func (p *AsyncDebugEvalTargetOApiRequest) ReadField50(iprot thrift.TProtocol) er
 	p.CustomRPCServer = _field
 	return nil
 }
+func (p *AsyncDebugEvalTargetOApiRequest) ReadField51(iprot thrift.TProtocol) error {
+	_field := eval_target.NewSandboxAgent()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SandboxAgent = _field
+	return nil
+}
 func (p *AsyncDebugEvalTargetOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -17530,6 +17568,10 @@ func (p *AsyncDebugEvalTargetOApiRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField50(oprot); err != nil {
 			fieldId = 50
+			goto WriteFieldError
+		}
+		if err = p.writeField51(oprot); err != nil {
+			fieldId = 51
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -17666,6 +17708,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
 }
+func (p *AsyncDebugEvalTargetOApiRequest) writeField51(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSandboxAgent() {
+		if err = oprot.WriteFieldBegin("sandbox_agent", thrift.STRUCT, 51); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SandboxAgent.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
+}
 func (p *AsyncDebugEvalTargetOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -17735,6 +17795,9 @@ func (p *AsyncDebugEvalTargetOApiRequest) DeepEqual(ano *AsyncDebugEvalTargetOAp
 	if !p.Field50DeepEqual(ano.CustomRPCServer) {
 		return false
 	}
+	if !p.Field51DeepEqual(ano.SandboxAgent) {
+		return false
+	}
 	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
@@ -17802,6 +17865,13 @@ func (p *AsyncDebugEvalTargetOApiRequest) Field12DeepEqual(src *string) bool {
 func (p *AsyncDebugEvalTargetOApiRequest) Field50DeepEqual(src *eval_target.CustomRPCServer) bool {
 
 	if !p.CustomRPCServer.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *AsyncDebugEvalTargetOApiRequest) Field51DeepEqual(src *eval_target.SandboxAgent) bool {
+
+	if !p.SandboxAgent.DeepEqual(src) {
 		return false
 	}
 	return true
