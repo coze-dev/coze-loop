@@ -1804,3 +1804,33 @@ func _calculateexperimentaggrresultMw(handler *apis.APIHandler) []app.HandlerFun
 	// your code...
 	return nil
 }
+
+func _batchpatchdatasetitemsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _batchupsertevaluationsetitemcolumnsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _turnsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _turn_idMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _insightanalysisexperimentrowMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _items3Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

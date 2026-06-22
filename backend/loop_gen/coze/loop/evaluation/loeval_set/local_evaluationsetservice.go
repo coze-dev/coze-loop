@@ -303,6 +303,29 @@ func (l *LocalEvaluationSetService) BatchCreateEvaluationSetItems(ctx context.Co
 	return result.GetSuccess(), nil
 }
 
+// BatchUpsertEvaluationSetItemColumns
+// SDD: add-single-trajectory-offline-eval — 单列/部分列 upsert，底座对接 data.BatchPatchDatasetItems
+func (l *LocalEvaluationSetService) BatchUpsertEvaluationSetItemColumns(ctx context.Context, req *eval_set.BatchUpsertEvaluationSetItemColumnsRequest, callOptions ...callopt.Option) (*eval_set.BatchUpsertEvaluationSetItemColumnsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs)
+		result := out.(*eval_set.EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult)
+		resp, err := l.impl.BatchUpsertEvaluationSetItemColumns(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchUpsertEvaluationSetItemColumns")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationSetService) UpdateEvaluationSetItem(ctx context.Context, req *eval_set.UpdateEvaluationSetItemRequest, callOptions ...callopt.Option) (*eval_set.UpdateEvaluationSetItemResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemArgs)

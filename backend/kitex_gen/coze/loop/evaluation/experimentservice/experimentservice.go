@@ -203,6 +203,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"InsightAnalysisExperimentRow": kitex.NewMethodInfo(
+		insightAnalysisExperimentRowHandler,
+		newExperimentServiceInsightAnalysisExperimentRowArgs,
+		newExperimentServiceInsightAnalysisExperimentRowResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListExptInsightAnalysisRecord": kitex.NewMethodInfo(
 		listExptInsightAnalysisRecordHandler,
 		newExperimentServiceListExptInsightAnalysisRecordArgs,
@@ -791,6 +798,25 @@ func newExperimentServiceInsightAnalysisExperimentResult() interface{} {
 	return expt.NewExperimentServiceInsightAnalysisExperimentResult()
 }
 
+func insightAnalysisExperimentRowHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceInsightAnalysisExperimentRowArgs)
+	realResult := result.(*expt.ExperimentServiceInsightAnalysisExperimentRowResult)
+	success, err := handler.(expt.ExperimentService).InsightAnalysisExperimentRow(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceInsightAnalysisExperimentRowArgs() interface{} {
+	return expt.NewExperimentServiceInsightAnalysisExperimentRowArgs()
+}
+
+func newExperimentServiceInsightAnalysisExperimentRowResult() interface{} {
+	return expt.NewExperimentServiceInsightAnalysisExperimentRowResult()
+}
+
 func listExptInsightAnalysisRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*expt.ExperimentServiceListExptInsightAnalysisRecordArgs)
 	realResult := result.(*expt.ExperimentServiceListExptInsightAnalysisRecordResult)
@@ -1182,6 +1208,16 @@ func (p *kClient) InsightAnalysisExperiment(ctx context.Context, req *expt.Insig
 	_args.Req = req
 	var _result expt.ExperimentServiceInsightAnalysisExperimentResult
 	if err = p.c.Call(ctx, "InsightAnalysisExperiment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) InsightAnalysisExperimentRow(ctx context.Context, req *expt.InsightAnalysisExperimentRowRequest) (r *expt.InsightAnalysisExperimentRowResponse, err error) {
+	var _args expt.ExperimentServiceInsightAnalysisExperimentRowArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceInsightAnalysisExperimentRowResult
+	if err = p.c.Call(ctx, "InsightAnalysisExperimentRow", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

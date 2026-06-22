@@ -61,6 +61,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_items0.POST("/batch_create", append(_batchcreatedatasetitemsMw(handler), apis.BatchCreateDatasetItems)...)
 					_items0.POST("/batch_delete", append(_batchdeletedatasetitemsMw(handler), apis.BatchDeleteDatasetItems)...)
 					_items0.POST("/batch_get", append(_batchgetdatasetitemsMw(handler), apis.BatchGetDatasetItems)...)
+					_items0.POST("/batch_patch", append(_batchpatchdatasetitemsMw(handler), apis.BatchPatchDatasetItems)...)
 					_items0.POST("/clear", append(_cleardatasetitemMw(handler), apis.ClearDatasetItem)...)
 					_items0.DELETE("/:item_id", append(_deletedatasetitemMw(handler), apis.DeleteDatasetItem)...)
 					_items0.GET("/:item_id", append(_getdatasetitemMw(handler), apis.GetDatasetItem)...)
@@ -134,6 +135,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_items1.POST("/batch_create", append(_batchcreateevaluationsetitemsMw(handler), apis.BatchCreateEvaluationSetItems)...)
 					_items1.POST("/batch_delete", append(_batchdeleteevaluationsetitemsMw(handler), apis.BatchDeleteEvaluationSetItems)...)
 					_items1.POST("/batch_get", append(_batchgetevaluationsetitemsMw(handler), apis.BatchGetEvaluationSetItems)...)
+					_items1.POST("/batch_upsert_columns", append(_batchupsertevaluationsetitemcolumnsMw(handler), apis.BatchUpsertEvaluationSetItemColumns)...)
 					_items1.POST("/clear", append(_clearevaluationsetdraftitemMw(handler), apis.ClearEvaluationSetDraftItem)...)
 					_items1.PUT("/:item_id", append(_updateevaluationsetitemMw(handler), apis.UpdateEvaluationSetItem)...)
 					_items1.POST("/list", append(_listevaluationsetitemsMw(handler), apis.ListEvaluationSetItems)...)
@@ -242,6 +244,19 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						}
 						_insight_analysis_records.POST("/:insight_analysis_record_id", append(_getexptinsightanalysisrecordMw(handler), apis.GetExptInsightAnalysisRecord)...)
 						_insight_analysis_records.POST("/list", append(_listexptinsightanalysisrecordMw(handler), apis.ListExptInsightAnalysisRecord)...)
+					}
+					{
+						_items2 := _expt_id.Group("/items", _items2Mw(handler)...)
+						{
+							_item_id := _items2.Group("/:item_id", _item_idMw(handler)...)
+							{
+								_turns := _item_id.Group("/turns", _turnsMw(handler)...)
+								{
+									_turn_id := _turns.Group("/:turn_id", _turn_idMw(handler)...)
+									_turn_id.POST("/insight_analysis", append(_insightanalysisexperimentrowMw(handler), apis.InsightAnalysisExperimentRow)...)
+								}
+							}
+						}
 					}
 					{
 						_results := _expt_id.Group("/results", _resultsMw(handler)...)
@@ -422,11 +437,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets0 := _evaluation0.Group("/evaluation_sets", _evaluation_sets0Mw(handler)...)
 				{
 					_evaluation_set_id0 := _evaluation_sets0.Group("/:evaluation_set_id", _evaluation_set_id0Mw(handler)...)
-					_evaluation_set_id0.DELETE("/items", append(_items2Mw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
-					_items2 := _evaluation_set_id0.Group("/items", _items2Mw(handler)...)
+					_evaluation_set_id0.DELETE("/items", append(_items3Mw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
+					_items3 := _evaluation_set_id0.Group("/items", _items3Mw(handler)...)
 					{
-						_item_id := _items2.Group("/:item_id", _item_idMw(handler)...)
-						_item_id.GET("/field", append(_getevaluationitemfieldoapiMw(handler), apis.GetEvaluationItemFieldOApi)...)
+						_item_id0 := _items3.Group("/:item_id", _item_id0Mw(handler)...)
+						_item_id0.GET("/field", append(_getevaluationitemfieldoapiMw(handler), apis.GetEvaluationItemFieldOApi)...)
 					}
 					_evaluation_set_id0.GET("/items", append(_listevaluationsetversionitemsoapiMw(handler), apis.ListEvaluationSetVersionItemsOApi)...)
 					_evaluation_set_id0.POST("/items", append(_batchcreateevaluationsetitemsoapiMw(handler), apis.BatchCreateEvaluationSetItemsOApi)...)

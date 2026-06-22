@@ -198,6 +198,8 @@ type SourceType int64
 const (
 	SourceType_File    SourceType = 1
 	SourceType_Dataset SourceType = 2
+	// SDD: add-single-trajectory-offline-eval — Trace 来源（按 trace_id 列表导入轨迹列），由 observability 模块解析
+	SourceType_Trace SourceType = 3
 )
 
 func (p SourceType) String() string {
@@ -206,6 +208,8 @@ func (p SourceType) String() string {
 		return "File"
 	case SourceType_Dataset:
 		return "Dataset"
+	case SourceType_Trace:
+		return "Trace"
 	}
 	return "<UNSET>"
 }
@@ -216,6 +220,8 @@ func SourceTypeFromString(s string) (SourceType, error) {
 		return SourceType_File, nil
 	case "Dataset":
 		return SourceType_Dataset, nil
+	case "Trace":
+		return SourceType_Trace, nil
 	}
 	return SourceType(0), fmt.Errorf("not a valid SourceType string")
 }
@@ -1924,9 +1930,601 @@ func (p *DatasetIODataset) Field3DeepEqual(src *int64) bool {
 	return true
 }
 
+// SDD: add-single-trajectory-offline-eval — Trace 来源载体；评测域 ParseImportSourceFile / 创建带导入的评测集会通过此结构传入 trace_id 列表
+type DatasetIOTrace struct {
+	// 单次最多 10 个 trace（observability 现有上限）
+	TraceIds    []string `thrift:"trace_ids,1,required" frugal:"1,required,list<string>" form:"trace_ids,required" json:"trace_ids,required" query:"trace_ids,required"`
+	WorkspaceID *int64   `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	// trace 解析查询窗口起点，毫秒
+	StartTime *int64 `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time" form:"start_time" query:"start_time"`
+	// trace 解析查询窗口终点，毫秒
+	EndTime *int64 `thrift:"end_time,4,optional" frugal:"4,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
+	// observability 侧 PlatformType 透传（如 cozeloop / openagent）
+	PlatformType *string `thrift:"platform_type,5,optional" frugal:"5,optional,string" form:"platform_type" json:"platform_type,omitempty" query:"platform_type"`
+	// 进阶过滤；保留扩展位
+	FilterJSON *string `thrift:"filter_json,10,optional" frugal:"10,optional,string" form:"filter_json" json:"filter_json,omitempty" query:"filter_json"`
+}
+
+func NewDatasetIOTrace() *DatasetIOTrace {
+	return &DatasetIOTrace{}
+}
+
+func (p *DatasetIOTrace) InitDefault() {
+}
+
+func (p *DatasetIOTrace) GetTraceIds() (v []string) {
+	if p != nil {
+		return p.TraceIds
+	}
+	return
+}
+
+var DatasetIOTrace_WorkspaceID_DEFAULT int64
+
+func (p *DatasetIOTrace) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return DatasetIOTrace_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var DatasetIOTrace_StartTime_DEFAULT int64
+
+func (p *DatasetIOTrace) GetStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStartTime() {
+		return DatasetIOTrace_StartTime_DEFAULT
+	}
+	return *p.StartTime
+}
+
+var DatasetIOTrace_EndTime_DEFAULT int64
+
+func (p *DatasetIOTrace) GetEndTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEndTime() {
+		return DatasetIOTrace_EndTime_DEFAULT
+	}
+	return *p.EndTime
+}
+
+var DatasetIOTrace_PlatformType_DEFAULT string
+
+func (p *DatasetIOTrace) GetPlatformType() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPlatformType() {
+		return DatasetIOTrace_PlatformType_DEFAULT
+	}
+	return *p.PlatformType
+}
+
+var DatasetIOTrace_FilterJSON_DEFAULT string
+
+func (p *DatasetIOTrace) GetFilterJSON() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilterJSON() {
+		return DatasetIOTrace_FilterJSON_DEFAULT
+	}
+	return *p.FilterJSON
+}
+func (p *DatasetIOTrace) SetTraceIds(val []string) {
+	p.TraceIds = val
+}
+func (p *DatasetIOTrace) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *DatasetIOTrace) SetStartTime(val *int64) {
+	p.StartTime = val
+}
+func (p *DatasetIOTrace) SetEndTime(val *int64) {
+	p.EndTime = val
+}
+func (p *DatasetIOTrace) SetPlatformType(val *string) {
+	p.PlatformType = val
+}
+func (p *DatasetIOTrace) SetFilterJSON(val *string) {
+	p.FilterJSON = val
+}
+
+var fieldIDToName_DatasetIOTrace = map[int16]string{
+	1:  "trace_ids",
+	2:  "workspace_id",
+	3:  "start_time",
+	4:  "end_time",
+	5:  "platform_type",
+	10: "filter_json",
+}
+
+func (p *DatasetIOTrace) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *DatasetIOTrace) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *DatasetIOTrace) IsSetEndTime() bool {
+	return p.EndTime != nil
+}
+
+func (p *DatasetIOTrace) IsSetPlatformType() bool {
+	return p.PlatformType != nil
+}
+
+func (p *DatasetIOTrace) IsSetFilterJSON() bool {
+	return p.FilterJSON != nil
+}
+
+func (p *DatasetIOTrace) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetTraceIds bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetTraceIds = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetTraceIds {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DatasetIOTrace[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_DatasetIOTrace[fieldId]))
+}
+
+func (p *DatasetIOTrace) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TraceIds = _field
+	return nil
+}
+func (p *DatasetIOTrace) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *DatasetIOTrace) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StartTime = _field
+	return nil
+}
+func (p *DatasetIOTrace) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EndTime = _field
+	return nil
+}
+func (p *DatasetIOTrace) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PlatformType = _field
+	return nil
+}
+func (p *DatasetIOTrace) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FilterJSON = _field
+	return nil
+}
+
+func (p *DatasetIOTrace) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("DatasetIOTrace"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *DatasetIOTrace) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("trace_ids", thrift.LIST, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.TraceIds)); err != nil {
+		return err
+	}
+	for _, v := range p.TraceIds {
+		if err := oprot.WriteString(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *DatasetIOTrace) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *DatasetIOTrace) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *DatasetIOTrace) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEndTime() {
+		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *DatasetIOTrace) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPlatformType() {
+		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PlatformType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *DatasetIOTrace) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilterJSON() {
+		if err = oprot.WriteFieldBegin("filter_json", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FilterJSON); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
+func (p *DatasetIOTrace) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DatasetIOTrace(%+v)", *p)
+
+}
+
+func (p *DatasetIOTrace) DeepEqual(ano *DatasetIOTrace) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TraceIds) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.StartTime) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EndTime) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.PlatformType) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.FilterJSON) {
+		return false
+	}
+	return true
+}
+
+func (p *DatasetIOTrace) Field1DeepEqual(src []string) bool {
+
+	if len(p.TraceIds) != len(src) {
+		return false
+	}
+	for i, v := range p.TraceIds {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *DatasetIOTrace) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *DatasetIOTrace) Field3DeepEqual(src *int64) bool {
+
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *DatasetIOTrace) Field4DeepEqual(src *int64) bool {
+
+	if p.EndTime == src {
+		return true
+	} else if p.EndTime == nil || src == nil {
+		return false
+	}
+	if *p.EndTime != *src {
+		return false
+	}
+	return true
+}
+func (p *DatasetIOTrace) Field5DeepEqual(src *string) bool {
+
+	if p.PlatformType == src {
+		return true
+	} else if p.PlatformType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PlatformType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *DatasetIOTrace) Field10DeepEqual(src *string) bool {
+
+	if p.FilterJSON == src {
+		return true
+	} else if p.FilterJSON == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FilterJSON, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type DatasetIOEndpoint struct {
 	File    *DatasetIOFile    `thrift:"file,1,optional" frugal:"1,optional,DatasetIOFile" form:"file" json:"file,omitempty" query:"file"`
 	Dataset *DatasetIODataset `thrift:"dataset,2,optional" frugal:"2,optional,DatasetIODataset" form:"dataset" json:"dataset,omitempty" query:"dataset"`
+	// SDD: add-single-trajectory-offline-eval — Trace 来源端点；source_type=Trace 时填充
+	Trace *DatasetIOTrace `thrift:"trace,3,optional" frugal:"3,optional,DatasetIOTrace" form:"trace" json:"trace,omitempty" query:"trace"`
 }
 
 func NewDatasetIOEndpoint() *DatasetIOEndpoint {
@@ -1959,16 +2557,32 @@ func (p *DatasetIOEndpoint) GetDataset() (v *DatasetIODataset) {
 	}
 	return p.Dataset
 }
+
+var DatasetIOEndpoint_Trace_DEFAULT *DatasetIOTrace
+
+func (p *DatasetIOEndpoint) GetTrace() (v *DatasetIOTrace) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTrace() {
+		return DatasetIOEndpoint_Trace_DEFAULT
+	}
+	return p.Trace
+}
 func (p *DatasetIOEndpoint) SetFile(val *DatasetIOFile) {
 	p.File = val
 }
 func (p *DatasetIOEndpoint) SetDataset(val *DatasetIODataset) {
 	p.Dataset = val
 }
+func (p *DatasetIOEndpoint) SetTrace(val *DatasetIOTrace) {
+	p.Trace = val
+}
 
 var fieldIDToName_DatasetIOEndpoint = map[int16]string{
 	1: "file",
 	2: "dataset",
+	3: "trace",
 }
 
 func (p *DatasetIOEndpoint) IsSetFile() bool {
@@ -1977,6 +2591,10 @@ func (p *DatasetIOEndpoint) IsSetFile() bool {
 
 func (p *DatasetIOEndpoint) IsSetDataset() bool {
 	return p.Dataset != nil
+}
+
+func (p *DatasetIOEndpoint) IsSetTrace() bool {
+	return p.Trace != nil
 }
 
 func (p *DatasetIOEndpoint) Read(iprot thrift.TProtocol) (err error) {
@@ -2008,6 +2626,14 @@ func (p *DatasetIOEndpoint) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2058,6 +2684,14 @@ func (p *DatasetIOEndpoint) ReadField2(iprot thrift.TProtocol) error {
 	p.Dataset = _field
 	return nil
 }
+func (p *DatasetIOEndpoint) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewDatasetIOTrace()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Trace = _field
+	return nil
+}
 
 func (p *DatasetIOEndpoint) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2071,6 +2705,10 @@ func (p *DatasetIOEndpoint) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -2127,6 +2765,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *DatasetIOEndpoint) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTrace() {
+		if err = oprot.WriteFieldBegin("trace", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Trace.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *DatasetIOEndpoint) String() string {
 	if p == nil {
@@ -2148,6 +2804,9 @@ func (p *DatasetIOEndpoint) DeepEqual(ano *DatasetIOEndpoint) bool {
 	if !p.Field2DeepEqual(ano.Dataset) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.Trace) {
+		return false
+	}
 	return true
 }
 
@@ -2161,6 +2820,13 @@ func (p *DatasetIOEndpoint) Field1DeepEqual(src *DatasetIOFile) bool {
 func (p *DatasetIOEndpoint) Field2DeepEqual(src *DatasetIODataset) bool {
 
 	if !p.Dataset.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *DatasetIOEndpoint) Field3DeepEqual(src *DatasetIOTrace) bool {
+
+	if !p.Trace.DeepEqual(src) {
 		return false
 	}
 	return true

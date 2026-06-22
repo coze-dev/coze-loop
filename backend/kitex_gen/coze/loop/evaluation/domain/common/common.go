@@ -21,6 +21,8 @@ const (
 	ContentTypeMultiPart = "MultiPart"
 
 	ContentTypeMultiPartVariable = "multi_part_variable"
+	// SDD: add-single-trajectory-offline-eval — 单轨迹离线评测 Trajectory 列承载（配合 ArgSchemaKey_Trajectory + text_schema 使用）
+	ContentTypeTrajectory = "Trajectory"
 
 	ArgSchemaKeyActualOutput = "actual_output"
 

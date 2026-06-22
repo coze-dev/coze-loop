@@ -44,6 +44,15 @@ func (p *ProviderAuth) IsValid() error {
 func (p *DatasetIODataset) IsValid() error {
 	return nil
 }
+func (p *DatasetIOTrace) IsValid() error {
+	if len(p.TraceIds) < int(1) {
+		return fmt.Errorf("field TraceIds MinLen rule failed, current value: %v", p.TraceIds)
+	}
+	if len(p.TraceIds) > int(10) {
+		return fmt.Errorf("field TraceIds MaxLen rule failed, current value: %v", p.TraceIds)
+	}
+	return nil
+}
 func (p *DatasetIOEndpoint) IsValid() error {
 	if p.File != nil {
 		if err := p.File.IsValid(); err != nil {
@@ -53,6 +62,11 @@ func (p *DatasetIOEndpoint) IsValid() error {
 	if p.Dataset != nil {
 		if err := p.Dataset.IsValid(); err != nil {
 			return fmt.Errorf("field Dataset not valid, %w", err)
+		}
+	}
+	if p.Trace != nil {
+		if err := p.Trace.IsValid(); err != nil {
+			return fmt.Errorf("field Trace not valid, %w", err)
 		}
 	}
 	return nil

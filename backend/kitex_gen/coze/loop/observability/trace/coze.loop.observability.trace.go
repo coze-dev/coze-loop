@@ -20623,9 +20623,348 @@ func (p *ListTrajectoryRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
+// SDD: add-single-trajectory-offline-eval — Trajectory 解析 warning（单 trace 失败时不阻断整体，附 warning 返回；evaluation 侧据此映射 ItemErrorType.GetTraceFailed）
+type TraceParseWarning struct {
+	TraceID *string `thrift:"trace_id,1,optional" frugal:"1,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
+	// 如 TRACE_NOT_FOUND / SPAN_BROKEN / RATE_LIMITED 等
+	Code    *string `thrift:"code,2,optional" frugal:"2,optional,string" form:"code" json:"code,omitempty" query:"code"`
+	Message *string `thrift:"message,3,optional" frugal:"3,optional,string" form:"message" json:"message,omitempty" query:"message"`
+}
+
+func NewTraceParseWarning() *TraceParseWarning {
+	return &TraceParseWarning{}
+}
+
+func (p *TraceParseWarning) InitDefault() {
+}
+
+var TraceParseWarning_TraceID_DEFAULT string
+
+func (p *TraceParseWarning) GetTraceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceID() {
+		return TraceParseWarning_TraceID_DEFAULT
+	}
+	return *p.TraceID
+}
+
+var TraceParseWarning_Code_DEFAULT string
+
+func (p *TraceParseWarning) GetCode() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCode() {
+		return TraceParseWarning_Code_DEFAULT
+	}
+	return *p.Code
+}
+
+var TraceParseWarning_Message_DEFAULT string
+
+func (p *TraceParseWarning) GetMessage() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMessage() {
+		return TraceParseWarning_Message_DEFAULT
+	}
+	return *p.Message
+}
+func (p *TraceParseWarning) SetTraceID(val *string) {
+	p.TraceID = val
+}
+func (p *TraceParseWarning) SetCode(val *string) {
+	p.Code = val
+}
+func (p *TraceParseWarning) SetMessage(val *string) {
+	p.Message = val
+}
+
+var fieldIDToName_TraceParseWarning = map[int16]string{
+	1: "trace_id",
+	2: "code",
+	3: "message",
+}
+
+func (p *TraceParseWarning) IsSetTraceID() bool {
+	return p.TraceID != nil
+}
+
+func (p *TraceParseWarning) IsSetCode() bool {
+	return p.Code != nil
+}
+
+func (p *TraceParseWarning) IsSetMessage() bool {
+	return p.Message != nil
+}
+
+func (p *TraceParseWarning) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceParseWarning[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TraceParseWarning) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceID = _field
+	return nil
+}
+func (p *TraceParseWarning) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Code = _field
+	return nil
+}
+func (p *TraceParseWarning) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Message = _field
+	return nil
+}
+
+func (p *TraceParseWarning) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TraceParseWarning"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TraceParseWarning) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceID() {
+		if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TraceParseWarning) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCode() {
+		if err = oprot.WriteFieldBegin("code", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Code); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *TraceParseWarning) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMessage() {
+		if err = oprot.WriteFieldBegin("message", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Message); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TraceParseWarning) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TraceParseWarning(%+v)", *p)
+
+}
+
+func (p *TraceParseWarning) DeepEqual(ano *TraceParseWarning) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TraceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Code) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Message) {
+		return false
+	}
+	return true
+}
+
+func (p *TraceParseWarning) Field1DeepEqual(src *string) bool {
+
+	if p.TraceID == src {
+		return true
+	} else if p.TraceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TraceParseWarning) Field2DeepEqual(src *string) bool {
+
+	if p.Code == src {
+		return true
+	} else if p.Code == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Code, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TraceParseWarning) Field3DeepEqual(src *string) bool {
+
+	if p.Message == src {
+		return true
+	} else if p.Message == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Message, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type ListTrajectoryResponse struct {
 	Trajectories []*trajectory.Trajectory `thrift:"trajectories,1,optional" frugal:"1,optional,list<trajectory.Trajectory>" form:"trajectories" json:"trajectories,omitempty" query:"trajectories"`
-	BaseResp     *base.BaseResp           `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	// SDD: add-single-trajectory-offline-eval — 单 trace 解析失败/部分失败时填充 warnings；整体仍返回 BaseResp.code=0
+	Warnings []*TraceParseWarning `thrift:"warnings,2,optional" frugal:"2,optional,list<TraceParseWarning>" form:"warnings" json:"warnings,omitempty" query:"warnings"`
+	BaseResp *base.BaseResp       `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewListTrajectoryResponse() *ListTrajectoryResponse {
@@ -20647,6 +20986,18 @@ func (p *ListTrajectoryResponse) GetTrajectories() (v []*trajectory.Trajectory) 
 	return p.Trajectories
 }
 
+var ListTrajectoryResponse_Warnings_DEFAULT []*TraceParseWarning
+
+func (p *ListTrajectoryResponse) GetWarnings() (v []*TraceParseWarning) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWarnings() {
+		return ListTrajectoryResponse_Warnings_DEFAULT
+	}
+	return p.Warnings
+}
+
 var ListTrajectoryResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *ListTrajectoryResponse) GetBaseResp() (v *base.BaseResp) {
@@ -20661,17 +21012,25 @@ func (p *ListTrajectoryResponse) GetBaseResp() (v *base.BaseResp) {
 func (p *ListTrajectoryResponse) SetTrajectories(val []*trajectory.Trajectory) {
 	p.Trajectories = val
 }
+func (p *ListTrajectoryResponse) SetWarnings(val []*TraceParseWarning) {
+	p.Warnings = val
+}
 func (p *ListTrajectoryResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_ListTrajectoryResponse = map[int16]string{
 	1:   "trajectories",
+	2:   "warnings",
 	255: "BaseResp",
 }
 
 func (p *ListTrajectoryResponse) IsSetTrajectories() bool {
 	return p.Trajectories != nil
+}
+
+func (p *ListTrajectoryResponse) IsSetWarnings() bool {
+	return p.Warnings != nil
 }
 
 func (p *ListTrajectoryResponse) IsSetBaseResp() bool {
@@ -20699,6 +21058,14 @@ func (p *ListTrajectoryResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -20764,6 +21131,29 @@ func (p *ListTrajectoryResponse) ReadField1(iprot thrift.TProtocol) error {
 	p.Trajectories = _field
 	return nil
 }
+func (p *ListTrajectoryResponse) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*TraceParseWarning, 0, size)
+	values := make([]TraceParseWarning, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Warnings = _field
+	return nil
+}
 func (p *ListTrajectoryResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -20781,6 +21171,10 @@ func (p *ListTrajectoryResponse) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -20831,6 +21225,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *ListTrajectoryResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWarnings() {
+		if err = oprot.WriteFieldBegin("warnings", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Warnings)); err != nil {
+			return err
+		}
+		for _, v := range p.Warnings {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *ListTrajectoryResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
@@ -20867,6 +21287,9 @@ func (p *ListTrajectoryResponse) DeepEqual(ano *ListTrajectoryResponse) bool {
 	if !p.Field1DeepEqual(ano.Trajectories) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.Warnings) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -20879,6 +21302,19 @@ func (p *ListTrajectoryResponse) Field1DeepEqual(src []*trajectory.Trajectory) b
 		return false
 	}
 	for i, v := range p.Trajectories {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListTrajectoryResponse) Field2DeepEqual(src []*TraceParseWarning) bool {
+
+	if len(p.Warnings) != len(src) {
+		return false
+	}
+	for i, v := range p.Warnings {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

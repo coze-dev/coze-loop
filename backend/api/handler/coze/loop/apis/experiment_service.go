@@ -222,3 +222,19 @@ func GetAnalysisRecordFeedbackVote(ctx context.Context, c *app.RequestContext) {
 func CalculateExperimentAggrResult(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localExptSvc.CalculateExperimentAggrResult_)
 }
+
+// InsightAnalysisExperimentRow .
+// @router /api/evaluation/v1/experiments/:expt_id/items/:item_id/turns/:turn_id/insight_analysis [POST]
+func InsightAnalysisExperimentRow(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.InsightAnalysisExperimentRowRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.InsightAnalysisExperimentRowResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

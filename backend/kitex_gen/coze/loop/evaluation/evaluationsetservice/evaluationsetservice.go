@@ -105,6 +105,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"BatchUpsertEvaluationSetItemColumns": kitex.NewMethodInfo(
+		batchUpsertEvaluationSetItemColumnsHandler,
+		newEvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs,
+		newEvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"UpdateEvaluationSetItem": kitex.NewMethodInfo(
 		updateEvaluationSetItemHandler,
 		newEvaluationSetServiceUpdateEvaluationSetItemArgs,
@@ -427,6 +434,25 @@ func newEvaluationSetServiceBatchCreateEvaluationSetItemsResult() interface{} {
 	return eval_set.NewEvaluationSetServiceBatchCreateEvaluationSetItemsResult()
 }
 
+func batchUpsertEvaluationSetItemColumnsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult)
+	success, err := handler.(eval_set.EvaluationSetService).BatchUpsertEvaluationSetItemColumns(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs()
+}
+
+func newEvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult() interface{} {
+	return eval_set.NewEvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult()
+}
+
 func updateEvaluationSetItemHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemArgs)
 	realResult := result.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemResult)
@@ -678,6 +704,16 @@ func (p *kClient) BatchCreateEvaluationSetItems(ctx context.Context, req *eval_s
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceBatchCreateEvaluationSetItemsResult
 	if err = p.c.Call(ctx, "BatchCreateEvaluationSetItems", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchUpsertEvaluationSetItemColumns(ctx context.Context, req *eval_set.BatchUpsertEvaluationSetItemColumnsRequest) (r *eval_set.BatchUpsertEvaluationSetItemColumnsResponse, err error) {
+	var _args eval_set.EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult
+	if err = p.c.Call(ctx, "BatchUpsertEvaluationSetItemColumns", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

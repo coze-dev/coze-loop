@@ -2065,7 +2065,11 @@ type ParseImportSourceFileRequest struct {
 	WorkspaceID int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	// 如果 path 为文件夹，此处只默认解析当前路径级别下所有指定类型的文件，不嵌套解析
 	File *dataset_job.DatasetIOFile `thrift:"file,2,optional" frugal:"2,optional,dataset_job.DatasetIOFile" form:"file" json:"file,omitempty" query:"file"`
-	Base *base.Base                 `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
+	// SDD: add-single-trajectory-offline-eval — 解析来源 source_type；当为 Trace 时使用 trace 字段，File 时使用 file 字段；缺省按 File 兼容老调用
+	SourceType *dataset_job.SourceType `thrift:"source_type,10,optional" frugal:"10,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
+	// source_type=Trace 时承载 trace_id 列表与时间窗口
+	Trace *dataset_job.DatasetIOTrace `thrift:"trace,11,optional" frugal:"11,optional,dataset_job.DatasetIOTrace" form:"trace" json:"trace,omitempty" query:"trace"`
+	Base  *base.Base                  `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
 }
 
 func NewParseImportSourceFileRequest() *ParseImportSourceFileRequest {
@@ -2094,6 +2098,30 @@ func (p *ParseImportSourceFileRequest) GetFile() (v *dataset_job.DatasetIOFile) 
 	return p.File
 }
 
+var ParseImportSourceFileRequest_SourceType_DEFAULT dataset_job.SourceType
+
+func (p *ParseImportSourceFileRequest) GetSourceType() (v dataset_job.SourceType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceType() {
+		return ParseImportSourceFileRequest_SourceType_DEFAULT
+	}
+	return *p.SourceType
+}
+
+var ParseImportSourceFileRequest_Trace_DEFAULT *dataset_job.DatasetIOTrace
+
+func (p *ParseImportSourceFileRequest) GetTrace() (v *dataset_job.DatasetIOTrace) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTrace() {
+		return ParseImportSourceFileRequest_Trace_DEFAULT
+	}
+	return p.Trace
+}
+
 var ParseImportSourceFileRequest_Base_DEFAULT *base.Base
 
 func (p *ParseImportSourceFileRequest) GetBase() (v *base.Base) {
@@ -2111,6 +2139,12 @@ func (p *ParseImportSourceFileRequest) SetWorkspaceID(val int64) {
 func (p *ParseImportSourceFileRequest) SetFile(val *dataset_job.DatasetIOFile) {
 	p.File = val
 }
+func (p *ParseImportSourceFileRequest) SetSourceType(val *dataset_job.SourceType) {
+	p.SourceType = val
+}
+func (p *ParseImportSourceFileRequest) SetTrace(val *dataset_job.DatasetIOTrace) {
+	p.Trace = val
+}
 func (p *ParseImportSourceFileRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -2118,11 +2152,21 @@ func (p *ParseImportSourceFileRequest) SetBase(val *base.Base) {
 var fieldIDToName_ParseImportSourceFileRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "file",
+	10:  "source_type",
+	11:  "trace",
 	255: "base",
 }
 
 func (p *ParseImportSourceFileRequest) IsSetFile() bool {
 	return p.File != nil
+}
+
+func (p *ParseImportSourceFileRequest) IsSetSourceType() bool {
+	return p.SourceType != nil
+}
+
+func (p *ParseImportSourceFileRequest) IsSetTrace() bool {
+	return p.Trace != nil
 }
 
 func (p *ParseImportSourceFileRequest) IsSetBase() bool {
@@ -2160,6 +2204,22 @@ func (p *ParseImportSourceFileRequest) Read(iprot thrift.TProtocol) (err error) 
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2227,6 +2287,26 @@ func (p *ParseImportSourceFileRequest) ReadField2(iprot thrift.TProtocol) error 
 	p.File = _field
 	return nil
 }
+func (p *ParseImportSourceFileRequest) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *dataset_job.SourceType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset_job.SourceType(v)
+		_field = &tmp
+	}
+	p.SourceType = _field
+	return nil
+}
+func (p *ParseImportSourceFileRequest) ReadField11(iprot thrift.TProtocol) error {
+	_field := dataset_job.NewDatasetIOTrace()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Trace = _field
+	return nil
+}
 func (p *ParseImportSourceFileRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -2248,6 +2328,14 @@ func (p *ParseImportSourceFileRequest) Write(oprot thrift.TProtocol) (err error)
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -2306,6 +2394,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *ParseImportSourceFileRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceType() {
+		if err = oprot.WriteFieldBegin("source_type", thrift.I32, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SourceType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *ParseImportSourceFileRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTrace() {
+		if err = oprot.WriteFieldBegin("trace", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Trace.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *ParseImportSourceFileRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("base", thrift.STRUCT, 255); err != nil {
@@ -2345,6 +2469,12 @@ func (p *ParseImportSourceFileRequest) DeepEqual(ano *ParseImportSourceFileReque
 	if !p.Field2DeepEqual(ano.File) {
 		return false
 	}
+	if !p.Field10DeepEqual(ano.SourceType) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.Trace) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -2361,6 +2491,25 @@ func (p *ParseImportSourceFileRequest) Field1DeepEqual(src int64) bool {
 func (p *ParseImportSourceFileRequest) Field2DeepEqual(src *dataset_job.DatasetIOFile) bool {
 
 	if !p.File.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ParseImportSourceFileRequest) Field10DeepEqual(src *dataset_job.SourceType) bool {
+
+	if p.SourceType == src {
+		return true
+	} else if p.SourceType == nil || src == nil {
+		return false
+	}
+	if *p.SourceType != *src {
+		return false
+	}
+	return true
+}
+func (p *ParseImportSourceFileRequest) Field11DeepEqual(src *dataset_job.DatasetIOTrace) bool {
+
+	if !p.Trace.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -16935,6 +17084,1459 @@ func (p *GetEvaluationSetItemFieldResponse) Field255DeepEqual(src *base.BaseResp
 	return true
 }
 
+// SDD: add-single-trajectory-offline-eval — 单列/部分列 upsert 到已有行的请求；item_id 匹配命中的行做 patch（不覆盖其他列），未命中则按 schema 校验后新增空行 + 写入指定列
+type EvaluationSetItemColumnsPatch struct {
+	// 命中已有行时必填；新增行时留空，由服务端分配
+	ItemID *int64 `thrift:"item_id,1,optional" frugal:"1,optional,i64" json:"item_id" form:"item_id" query:"item_id"`
+	// 业务幂等 key，与 item_id 二选一；命中老行可走 item_key 路径
+	ItemKey *string `thrift:"item_key,2,optional" frugal:"2,optional,string" form:"item_key" json:"item_key,omitempty" query:"item_key"`
+	// 仅写入希望更新的列子集（每个 Turn 内 field_data 仅含 patch 列）
+	Turns []*eval_set.Turn `thrift:"turns,3,optional" frugal:"3,optional,list<eval_set.Turn>" form:"turns" json:"turns,omitempty" query:"turns"`
+}
+
+func NewEvaluationSetItemColumnsPatch() *EvaluationSetItemColumnsPatch {
+	return &EvaluationSetItemColumnsPatch{}
+}
+
+func (p *EvaluationSetItemColumnsPatch) InitDefault() {
+}
+
+var EvaluationSetItemColumnsPatch_ItemID_DEFAULT int64
+
+func (p *EvaluationSetItemColumnsPatch) GetItemID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemID() {
+		return EvaluationSetItemColumnsPatch_ItemID_DEFAULT
+	}
+	return *p.ItemID
+}
+
+var EvaluationSetItemColumnsPatch_ItemKey_DEFAULT string
+
+func (p *EvaluationSetItemColumnsPatch) GetItemKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemKey() {
+		return EvaluationSetItemColumnsPatch_ItemKey_DEFAULT
+	}
+	return *p.ItemKey
+}
+
+var EvaluationSetItemColumnsPatch_Turns_DEFAULT []*eval_set.Turn
+
+func (p *EvaluationSetItemColumnsPatch) GetTurns() (v []*eval_set.Turn) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTurns() {
+		return EvaluationSetItemColumnsPatch_Turns_DEFAULT
+	}
+	return p.Turns
+}
+func (p *EvaluationSetItemColumnsPatch) SetItemID(val *int64) {
+	p.ItemID = val
+}
+func (p *EvaluationSetItemColumnsPatch) SetItemKey(val *string) {
+	p.ItemKey = val
+}
+func (p *EvaluationSetItemColumnsPatch) SetTurns(val []*eval_set.Turn) {
+	p.Turns = val
+}
+
+var fieldIDToName_EvaluationSetItemColumnsPatch = map[int16]string{
+	1: "item_id",
+	2: "item_key",
+	3: "turns",
+}
+
+func (p *EvaluationSetItemColumnsPatch) IsSetItemID() bool {
+	return p.ItemID != nil
+}
+
+func (p *EvaluationSetItemColumnsPatch) IsSetItemKey() bool {
+	return p.ItemKey != nil
+}
+
+func (p *EvaluationSetItemColumnsPatch) IsSetTurns() bool {
+	return p.Turns != nil
+}
+
+func (p *EvaluationSetItemColumnsPatch) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetItemColumnsPatch[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationSetItemColumnsPatch) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemID = _field
+	return nil
+}
+func (p *EvaluationSetItemColumnsPatch) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemKey = _field
+	return nil
+}
+func (p *EvaluationSetItemColumnsPatch) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*eval_set.Turn, 0, size)
+	values := make([]eval_set.Turn, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Turns = _field
+	return nil
+}
+
+func (p *EvaluationSetItemColumnsPatch) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvaluationSetItemColumnsPatch"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationSetItemColumnsPatch) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemID() {
+		if err = oprot.WriteFieldBegin("item_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ItemID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvaluationSetItemColumnsPatch) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemKey() {
+		if err = oprot.WriteFieldBegin("item_key", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ItemKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvaluationSetItemColumnsPatch) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTurns() {
+		if err = oprot.WriteFieldBegin("turns", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Turns)); err != nil {
+			return err
+		}
+		for _, v := range p.Turns {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *EvaluationSetItemColumnsPatch) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationSetItemColumnsPatch(%+v)", *p)
+
+}
+
+func (p *EvaluationSetItemColumnsPatch) DeepEqual(ano *EvaluationSetItemColumnsPatch) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ItemID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ItemKey) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Turns) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationSetItemColumnsPatch) Field1DeepEqual(src *int64) bool {
+
+	if p.ItemID == src {
+		return true
+	} else if p.ItemID == nil || src == nil {
+		return false
+	}
+	if *p.ItemID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSetItemColumnsPatch) Field2DeepEqual(src *string) bool {
+
+	if p.ItemKey == src {
+		return true
+	} else if p.ItemKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ItemKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSetItemColumnsPatch) Field3DeepEqual(src []*eval_set.Turn) bool {
+
+	if len(p.Turns) != len(src) {
+		return false
+	}
+	for i, v := range p.Turns {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
+type BatchUpsertEvaluationSetItemColumnsRequest struct {
+	WorkspaceID     int64                            `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
+	EvaluationSetID int64                            `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
+	Patches         []*EvaluationSetItemColumnsPatch `thrift:"patches,3,required" frugal:"3,required,list<EvaluationSetItemColumnsPatch>" form:"patches,required" json:"patches,required" query:"patches,required"`
+	// 列子集校验失败时是否跳过单条；与 BatchCreate 语义保持一致
+	SkipInvalidItems *bool `thrift:"skip_invalid_items,10,optional" frugal:"10,optional,bool" form:"skip_invalid_items" json:"skip_invalid_items,omitempty" query:"skip_invalid_items"`
+	// 部分新增的行如果触发容量限制，是否允许部分写入
+	AllowPartialAdd *bool      `thrift:"allow_partial_add,11,optional" frugal:"11,optional,bool" form:"allow_partial_add" json:"allow_partial_add,omitempty" query:"allow_partial_add"`
+	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewBatchUpsertEvaluationSetItemColumnsRequest() *BatchUpsertEvaluationSetItemColumnsRequest {
+	return &BatchUpsertEvaluationSetItemColumnsRequest{}
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) InitDefault() {
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) GetEvaluationSetID() (v int64) {
+	if p != nil {
+		return p.EvaluationSetID
+	}
+	return
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) GetPatches() (v []*EvaluationSetItemColumnsPatch) {
+	if p != nil {
+		return p.Patches
+	}
+	return
+}
+
+var BatchUpsertEvaluationSetItemColumnsRequest_SkipInvalidItems_DEFAULT bool
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) GetSkipInvalidItems() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkipInvalidItems() {
+		return BatchUpsertEvaluationSetItemColumnsRequest_SkipInvalidItems_DEFAULT
+	}
+	return *p.SkipInvalidItems
+}
+
+var BatchUpsertEvaluationSetItemColumnsRequest_AllowPartialAdd_DEFAULT bool
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) GetAllowPartialAdd() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAllowPartialAdd() {
+		return BatchUpsertEvaluationSetItemColumnsRequest_AllowPartialAdd_DEFAULT
+	}
+	return *p.AllowPartialAdd
+}
+
+var BatchUpsertEvaluationSetItemColumnsRequest_Base_DEFAULT *base.Base
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return BatchUpsertEvaluationSetItemColumnsRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) SetEvaluationSetID(val int64) {
+	p.EvaluationSetID = val
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) SetPatches(val []*EvaluationSetItemColumnsPatch) {
+	p.Patches = val
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) SetSkipInvalidItems(val *bool) {
+	p.SkipInvalidItems = val
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) SetAllowPartialAdd(val *bool) {
+	p.AllowPartialAdd = val
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_BatchUpsertEvaluationSetItemColumnsRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "evaluation_set_id",
+	3:   "patches",
+	10:  "skip_invalid_items",
+	11:  "allow_partial_add",
+	255: "Base",
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) IsSetSkipInvalidItems() bool {
+	return p.SkipInvalidItems != nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) IsSetAllowPartialAdd() bool {
+	return p.AllowPartialAdd != nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetEvaluationSetID bool = false
+	var issetPatches bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetEvaluationSetID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetPatches = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetEvaluationSetID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetPatches {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchUpsertEvaluationSetItemColumnsRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_BatchUpsertEvaluationSetItemColumnsRequest[fieldId]))
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EvaluationSetID = _field
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*EvaluationSetItemColumnsPatch, 0, size)
+	values := make([]EvaluationSetItemColumnsPatch, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Patches = _field
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SkipInvalidItems = _field
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AllowPartialAdd = _field
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchUpsertEvaluationSetItemColumnsRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("evaluation_set_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.EvaluationSetID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("patches", thrift.LIST, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Patches)); err != nil {
+		return err
+	}
+	for _, v := range p.Patches {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkipInvalidItems() {
+		if err = oprot.WriteFieldBegin("skip_invalid_items", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.SkipInvalidItems); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAllowPartialAdd() {
+		if err = oprot.WriteFieldBegin("allow_partial_add", thrift.BOOL, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AllowPartialAdd); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchUpsertEvaluationSetItemColumnsRequest(%+v)", *p)
+
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) DeepEqual(ano *BatchUpsertEvaluationSetItemColumnsRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvaluationSetID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Patches) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.SkipInvalidItems) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.AllowPartialAdd) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) Field2DeepEqual(src int64) bool {
+
+	if p.EvaluationSetID != src {
+		return false
+	}
+	return true
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) Field3DeepEqual(src []*EvaluationSetItemColumnsPatch) bool {
+
+	if len(p.Patches) != len(src) {
+		return false
+	}
+	for i, v := range p.Patches {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) Field10DeepEqual(src *bool) bool {
+
+	if p.SkipInvalidItems == src {
+		return true
+	} else if p.SkipInvalidItems == nil || src == nil {
+		return false
+	}
+	if *p.SkipInvalidItems != *src {
+		return false
+	}
+	return true
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) Field11DeepEqual(src *bool) bool {
+
+	if p.AllowPartialAdd == src {
+		return true
+	} else if p.AllowPartialAdd == nil || src == nil {
+		return false
+	}
+	if *p.AllowPartialAdd != *src {
+		return false
+	}
+	return true
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type BatchUpsertEvaluationSetItemColumnsResponse struct {
+	// key: patches 索引；value: item_id
+	UpsertedItems map[int64]int64           `thrift:"upserted_items,1,optional" frugal:"1,optional,map<i64:i64>" json:"upserted_items" form:"upserted_items" query:"upserted_items"`
+	Errors        []*dataset.ItemErrorGroup `thrift:"errors,2,optional" frugal:"2,optional,list<dataset.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
+	// 成功更新的列总条数（按 patch 单元计）
+	PatchedCount *int32 `thrift:"patched_count,3,optional" frugal:"3,optional,i32" form:"patched_count" json:"patched_count,omitempty" query:"patched_count"`
+	// 新增行计数
+	CreatedCount *int32         `thrift:"created_count,4,optional" frugal:"4,optional,i32" form:"created_count" json:"created_count,omitempty" query:"created_count"`
+	BaseResp     *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewBatchUpsertEvaluationSetItemColumnsResponse() *BatchUpsertEvaluationSetItemColumnsResponse {
+	return &BatchUpsertEvaluationSetItemColumnsResponse{}
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) InitDefault() {
+}
+
+var BatchUpsertEvaluationSetItemColumnsResponse_UpsertedItems_DEFAULT map[int64]int64
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) GetUpsertedItems() (v map[int64]int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetUpsertedItems() {
+		return BatchUpsertEvaluationSetItemColumnsResponse_UpsertedItems_DEFAULT
+	}
+	return p.UpsertedItems
+}
+
+var BatchUpsertEvaluationSetItemColumnsResponse_Errors_DEFAULT []*dataset.ItemErrorGroup
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) GetErrors() (v []*dataset.ItemErrorGroup) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetErrors() {
+		return BatchUpsertEvaluationSetItemColumnsResponse_Errors_DEFAULT
+	}
+	return p.Errors
+}
+
+var BatchUpsertEvaluationSetItemColumnsResponse_PatchedCount_DEFAULT int32
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) GetPatchedCount() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPatchedCount() {
+		return BatchUpsertEvaluationSetItemColumnsResponse_PatchedCount_DEFAULT
+	}
+	return *p.PatchedCount
+}
+
+var BatchUpsertEvaluationSetItemColumnsResponse_CreatedCount_DEFAULT int32
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) GetCreatedCount() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCreatedCount() {
+		return BatchUpsertEvaluationSetItemColumnsResponse_CreatedCount_DEFAULT
+	}
+	return *p.CreatedCount
+}
+
+var BatchUpsertEvaluationSetItemColumnsResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return BatchUpsertEvaluationSetItemColumnsResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) SetUpsertedItems(val map[int64]int64) {
+	p.UpsertedItems = val
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) SetErrors(val []*dataset.ItemErrorGroup) {
+	p.Errors = val
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) SetPatchedCount(val *int32) {
+	p.PatchedCount = val
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) SetCreatedCount(val *int32) {
+	p.CreatedCount = val
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_BatchUpsertEvaluationSetItemColumnsResponse = map[int16]string{
+	1:   "upserted_items",
+	2:   "errors",
+	3:   "patched_count",
+	4:   "created_count",
+	255: "BaseResp",
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) IsSetUpsertedItems() bool {
+	return p.UpsertedItems != nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) IsSetErrors() bool {
+	return p.Errors != nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) IsSetPatchedCount() bool {
+	return p.PatchedCount != nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) IsSetCreatedCount() bool {
+	return p.CreatedCount != nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchUpsertEvaluationSetItemColumnsResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[int64]int64, size)
+	for i := 0; i < size; i++ {
+		var _key int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.UpsertedItems = _field
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.ItemErrorGroup, 0, size)
+	values := make([]dataset.ItemErrorGroup, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Errors = _field
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PatchedCount = _field
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CreatedCount = _field
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchUpsertEvaluationSetItemColumnsResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUpsertedItems() {
+		if err = oprot.WriteFieldBegin("upserted_items", thrift.MAP, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.I64, thrift.I64, len(p.UpsertedItems)); err != nil {
+			return err
+		}
+		for k, v := range p.UpsertedItems {
+			if err := oprot.WriteI64(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErrors() {
+		if err = oprot.WriteFieldBegin("errors", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Errors)); err != nil {
+			return err
+		}
+		for _, v := range p.Errors {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPatchedCount() {
+		if err = oprot.WriteFieldBegin("patched_count", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PatchedCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCreatedCount() {
+		if err = oprot.WriteFieldBegin("created_count", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.CreatedCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchUpsertEvaluationSetItemColumnsResponse(%+v)", *p)
+
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) DeepEqual(ano *BatchUpsertEvaluationSetItemColumnsResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.UpsertedItems) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Errors) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.PatchedCount) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.CreatedCount) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) Field1DeepEqual(src map[int64]int64) bool {
+
+	if len(p.UpsertedItems) != len(src) {
+		return false
+	}
+	for k, v := range p.UpsertedItems {
+		_src := src[k]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) Field2DeepEqual(src []*dataset.ItemErrorGroup) bool {
+
+	if len(p.Errors) != len(src) {
+		return false
+	}
+	for i, v := range p.Errors {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) Field3DeepEqual(src *int32) bool {
+
+	if p.PatchedCount == src {
+		return true
+	} else if p.PatchedCount == nil || src == nil {
+		return false
+	}
+	if *p.PatchedCount != *src {
+		return false
+	}
+	return true
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) Field4DeepEqual(src *int32) bool {
+
+	if p.CreatedCount == src {
+		return true
+	} else if p.CreatedCount == nil || src == nil {
+		return false
+	}
+	if *p.CreatedCount != *src {
+		return false
+	}
+	return true
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type EvaluationSetService interface {
 	// 基本信息管理
 	CreateEvaluationSet(ctx context.Context, req *CreateEvaluationSetRequest) (r *CreateEvaluationSetResponse, err error)
@@ -16962,6 +18564,8 @@ type EvaluationSetService interface {
 	UpdateEvaluationSetSchema(ctx context.Context, req *UpdateEvaluationSetSchemaRequest) (r *UpdateEvaluationSetSchemaResponse, err error)
 	// 数据管理
 	BatchCreateEvaluationSetItems(ctx context.Context, req *BatchCreateEvaluationSetItemsRequest) (r *BatchCreateEvaluationSetItemsResponse, err error)
+	// SDD: add-single-trajectory-offline-eval — 单列/部分列 upsert，底座对接 data.BatchPatchDatasetItems
+	BatchUpsertEvaluationSetItemColumns(ctx context.Context, req *BatchUpsertEvaluationSetItemColumnsRequest) (r *BatchUpsertEvaluationSetItemColumnsResponse, err error)
 
 	UpdateEvaluationSetItem(ctx context.Context, req *UpdateEvaluationSetItemRequest) (r *UpdateEvaluationSetItemResponse, err error)
 
@@ -17119,6 +18723,15 @@ func (p *EvaluationSetServiceClient) BatchCreateEvaluationSetItems(ctx context.C
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvaluationSetServiceClient) BatchUpsertEvaluationSetItemColumns(ctx context.Context, req *BatchUpsertEvaluationSetItemColumnsRequest) (r *BatchUpsertEvaluationSetItemColumnsResponse, err error) {
+	var _args EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs
+	_args.Req = req
+	var _result EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult
+	if err = p.Client_().Call(ctx, "BatchUpsertEvaluationSetItemColumns", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *EvaluationSetServiceClient) UpdateEvaluationSetItem(ctx context.Context, req *UpdateEvaluationSetItemRequest) (r *UpdateEvaluationSetItemResponse, err error) {
 	var _args EvaluationSetServiceUpdateEvaluationSetItemArgs
 	_args.Req = req
@@ -17207,6 +18820,7 @@ func NewEvaluationSetServiceProcessor(handler EvaluationSetService) *EvaluationS
 	self.AddToProcessorMap("BatchGetEvaluationSetVersions", &evaluationSetServiceProcessorBatchGetEvaluationSetVersions{handler: handler})
 	self.AddToProcessorMap("UpdateEvaluationSetSchema", &evaluationSetServiceProcessorUpdateEvaluationSetSchema{handler: handler})
 	self.AddToProcessorMap("BatchCreateEvaluationSetItems", &evaluationSetServiceProcessorBatchCreateEvaluationSetItems{handler: handler})
+	self.AddToProcessorMap("BatchUpsertEvaluationSetItemColumns", &evaluationSetServiceProcessorBatchUpsertEvaluationSetItemColumns{handler: handler})
 	self.AddToProcessorMap("UpdateEvaluationSetItem", &evaluationSetServiceProcessorUpdateEvaluationSetItem{handler: handler})
 	self.AddToProcessorMap("BatchDeleteEvaluationSetItems", &evaluationSetServiceProcessorBatchDeleteEvaluationSetItems{handler: handler})
 	self.AddToProcessorMap("ListEvaluationSetItems", &evaluationSetServiceProcessorListEvaluationSetItems{handler: handler})
@@ -17840,6 +19454,54 @@ func (p *evaluationSetServiceProcessorBatchCreateEvaluationSetItems) Process(ctx
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("BatchCreateEvaluationSetItems", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluationSetServiceProcessorBatchUpsertEvaluationSetItemColumns struct {
+	handler EvaluationSetService
+}
+
+func (p *evaluationSetServiceProcessorBatchUpsertEvaluationSetItemColumns) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("BatchUpsertEvaluationSetItemColumns", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult{}
+	var retval *BatchUpsertEvaluationSetItemColumnsResponse
+	if retval, err2 = p.handler.BatchUpsertEvaluationSetItemColumns(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchUpsertEvaluationSetItemColumns: "+err2.Error())
+		oprot.WriteMessageBegin("BatchUpsertEvaluationSetItemColumns", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("BatchUpsertEvaluationSetItemColumns", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -22610,6 +24272,350 @@ func (p *EvaluationSetServiceBatchCreateEvaluationSetItemsResult) DeepEqual(ano 
 }
 
 func (p *EvaluationSetServiceBatchCreateEvaluationSetItemsResult) Field0DeepEqual(src *BatchCreateEvaluationSetItemsResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs struct {
+	Req *BatchUpsertEvaluationSetItemColumnsRequest `thrift:"req,1" frugal:"1,default,BatchUpsertEvaluationSetItemColumnsRequest"`
+}
+
+func NewEvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs() *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs {
+	return &EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs{}
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) InitDefault() {
+}
+
+var EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs_Req_DEFAULT *BatchUpsertEvaluationSetItemColumnsRequest
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) GetReq() (v *BatchUpsertEvaluationSetItemColumnsRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) SetReq(val *BatchUpsertEvaluationSetItemColumnsRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewBatchUpsertEvaluationSetItemColumnsRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchUpsertEvaluationSetItemColumns_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) DeepEqual(ano *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsArgs) Field1DeepEqual(src *BatchUpsertEvaluationSetItemColumnsRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult struct {
+	Success *BatchUpsertEvaluationSetItemColumnsResponse `thrift:"success,0,optional" frugal:"0,optional,BatchUpsertEvaluationSetItemColumnsResponse"`
+}
+
+func NewEvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult() *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult {
+	return &EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult{}
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) InitDefault() {
+}
+
+var EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult_Success_DEFAULT *BatchUpsertEvaluationSetItemColumnsResponse
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) GetSuccess() (v *BatchUpsertEvaluationSetItemColumnsResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*BatchUpsertEvaluationSetItemColumnsResponse)
+}
+
+var fieldIDToName_EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewBatchUpsertEvaluationSetItemColumnsResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchUpsertEvaluationSetItemColumns_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult(%+v)", *p)
+
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) DeepEqual(ano *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationSetServiceBatchUpsertEvaluationSetItemColumnsResult) Field0DeepEqual(src *BatchUpsertEvaluationSetItemColumnsResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

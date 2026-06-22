@@ -625,6 +625,27 @@ func (p *InsightAnalysisExperimentResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *InsightAnalysisExperimentRowRequest) IsValid() error {
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *InsightAnalysisExperimentRowResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ListExptInsightAnalysisRecordRequest) IsValid() error {
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {

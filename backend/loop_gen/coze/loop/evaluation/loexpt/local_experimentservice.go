@@ -607,6 +607,29 @@ func (l *LocalExperimentService) InsightAnalysisExperiment(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+// InsightAnalysisExperimentRow
+// SDD: add-single-trajectory-offline-eval — 行级智能解读
+func (l *LocalExperimentService) InsightAnalysisExperimentRow(ctx context.Context, req *expt.InsightAnalysisExperimentRowRequest, callOptions ...callopt.Option) (*expt.InsightAnalysisExperimentRowResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceInsightAnalysisExperimentRowArgs)
+		result := out.(*expt.ExperimentServiceInsightAnalysisExperimentRowResult)
+		resp, err := l.impl.InsightAnalysisExperimentRow(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceInsightAnalysisExperimentRowArgs{Req: req}
+	result := &expt.ExperimentServiceInsightAnalysisExperimentRowResult{}
+	ctx = l.injectRPCInfo(ctx, "InsightAnalysisExperimentRow")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) ListExptInsightAnalysisRecord(ctx context.Context, req *expt.ListExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.ListExptInsightAnalysisRecordResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*expt.ExperimentServiceListExptInsightAnalysisRecordArgs)

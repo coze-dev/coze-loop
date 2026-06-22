@@ -131,11 +131,20 @@ func (p *CreateEvaluationSetWithImportResponse) IsValid() error {
 	return nil
 }
 func (p *ParseImportSourceFileRequest) IsValid() error {
-	if p.File == nil {
-		return fmt.Errorf("field File not_nil rule failed")
+	if p.File != nil {
+		if err := p.File.IsValid(); err != nil {
+			return fmt.Errorf("field File not valid, %w", err)
+		}
 	}
-	if err := p.File.IsValid(); err != nil {
-		return fmt.Errorf("field File not valid, %w", err)
+	if p.SourceType != nil {
+		if p.SourceType.String() == "<UNSET>" {
+			return fmt.Errorf("field SourceType defined_only rule failed")
+		}
+	}
+	if p.Trace != nil {
+		if err := p.Trace.IsValid(); err != nil {
+			return fmt.Errorf("field Trace not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
@@ -540,6 +549,31 @@ func (p *GetEvaluationSetItemFieldResponse) IsValid() error {
 			return fmt.Errorf("field FieldData not valid, %w", err)
 		}
 	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluationSetItemColumnsPatch) IsValid() error {
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsRequest) IsValid() error {
+	if len(p.Patches) < int(1) {
+		return fmt.Errorf("field Patches MinLen rule failed, current value: %v", p.Patches)
+	}
+	if len(p.Patches) > int(100) {
+		return fmt.Errorf("field Patches MaxLen rule failed, current value: %v", p.Patches)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchUpsertEvaluationSetItemColumnsResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

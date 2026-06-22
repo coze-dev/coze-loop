@@ -712,6 +712,64 @@ func (p *UpdateDatasetItemResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *DatasetItemColumnPatch) IsValid() error {
+	for i := 0; i < len(p.Data); i++ {
+		_elem := p.Data[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
+	for i := 0; i < len(p.RepeatedData); i++ {
+		_elem1 := p.RepeatedData[i]
+		if _elem1 != nil {
+			if err := _elem1.IsValid(); err != nil {
+				return fmt.Errorf("field _elem1 not valid, %w", err)
+			}
+		}
+	}
+	return nil
+}
+func (p *BatchPatchDatasetItemsRequest) IsValid() error {
+	if p.WorkspaceID == nil {
+		return fmt.Errorf("field WorkspaceID not_nil rule failed")
+	}
+	if *p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", *p.WorkspaceID)
+	}
+	if p.DatasetID <= int64(0) {
+		return fmt.Errorf("field DatasetID gt rule failed, current value: %v", p.DatasetID)
+	}
+	if len(p.Items) < int(1) {
+		return fmt.Errorf("field Items MinLen rule failed, current value: %v", p.Items)
+	}
+	if len(p.Items) > int(100) {
+		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
+	}
+	for i := 0; i < len(p.Items); i++ {
+		_elem := p.Items[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchPatchDatasetItemsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *DeleteDatasetItemRequest) IsValid() error {
 	if p.WorkspaceID == nil {
 		return fmt.Errorf("field WorkspaceID not_nil rule failed")

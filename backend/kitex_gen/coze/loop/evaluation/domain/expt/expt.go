@@ -48,6 +48,10 @@ const (
 	InsightAnalysisStatusSuccess = "Success"
 
 	InsightAnalysisStatusFailed = "Failed"
+
+	InsightAnalysisScopeExperiment = "Experiment"
+
+	InsightAnalysisScopeRow = "Row"
 	// 未投票
 	InsightAnalysisReportVoteTypeNone = "None"
 	// 点赞
@@ -939,6 +943,9 @@ type CSVExportStatus = string
 
 // 分析任务状态
 type InsightAnalysisStatus = string
+
+// SDD: add-single-trajectory-offline-eval — 洞察分析作用域（Experiment 维度 / Row 维度），Row 用于单轨迹评测的行级智能解读
+type InsightAnalysisScope = string
 
 // 投票类型
 type InsightAnalysisReportVoteType = string
@@ -19501,7 +19508,11 @@ type ExptInsightAnalysisRecord struct {
 	AnalysisReportContent       *string                      `thrift:"analysis_report_content,6,optional" frugal:"6,optional,string" form:"analysis_report_content" json:"analysis_report_content,omitempty" query:"analysis_report_content"`
 	ExptInsightAnalysisFeedback *ExptInsightAnalysisFeedback `thrift:"expt_insight_analysis_feedback,7,optional" frugal:"7,optional,ExptInsightAnalysisFeedback" form:"expt_insight_analysis_feedback" json:"expt_insight_analysis_feedback,omitempty" query:"expt_insight_analysis_feedback"`
 	BaseInfo                    *common.BaseInfo             `thrift:"base_info,8,optional" frugal:"8,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
-	AnalysisReportIndex         []*ExptInsightAnalysisIndex  `thrift:"analysis_report_index,21,optional" frugal:"21,optional,list<ExptInsightAnalysisIndex>" form:"analysis_report_index" json:"analysis_report_index,omitempty" query:"analysis_report_index"`
+	// SDD: add-single-trajectory-offline-eval — 分析作用域（缺省视作 Experiment，老数据兼容）；行级解读时 item_id/turn_id 一并落在 analysis_report 内
+	Scope               *InsightAnalysisScope       `thrift:"scope,9,optional" frugal:"9,optional,string" form:"scope" json:"scope,omitempty" query:"scope"`
+	ItemID              *int64                      `thrift:"item_id,10,optional" frugal:"10,optional,i64" json:"item_id" form:"item_id" query:"item_id"`
+	TurnID              *int64                      `thrift:"turn_id,11,optional" frugal:"11,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
+	AnalysisReportIndex []*ExptInsightAnalysisIndex `thrift:"analysis_report_index,21,optional" frugal:"21,optional,list<ExptInsightAnalysisIndex>" form:"analysis_report_index" json:"analysis_report_index,omitempty" query:"analysis_report_index"`
 }
 
 func NewExptInsightAnalysisRecord() *ExptInsightAnalysisRecord {
@@ -19587,6 +19598,42 @@ func (p *ExptInsightAnalysisRecord) GetBaseInfo() (v *common.BaseInfo) {
 	return p.BaseInfo
 }
 
+var ExptInsightAnalysisRecord_Scope_DEFAULT InsightAnalysisScope
+
+func (p *ExptInsightAnalysisRecord) GetScope() (v InsightAnalysisScope) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScope() {
+		return ExptInsightAnalysisRecord_Scope_DEFAULT
+	}
+	return *p.Scope
+}
+
+var ExptInsightAnalysisRecord_ItemID_DEFAULT int64
+
+func (p *ExptInsightAnalysisRecord) GetItemID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemID() {
+		return ExptInsightAnalysisRecord_ItemID_DEFAULT
+	}
+	return *p.ItemID
+}
+
+var ExptInsightAnalysisRecord_TurnID_DEFAULT int64
+
+func (p *ExptInsightAnalysisRecord) GetTurnID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTurnID() {
+		return ExptInsightAnalysisRecord_TurnID_DEFAULT
+	}
+	return *p.TurnID
+}
+
 var ExptInsightAnalysisRecord_AnalysisReportIndex_DEFAULT []*ExptInsightAnalysisIndex
 
 func (p *ExptInsightAnalysisRecord) GetAnalysisReportIndex() (v []*ExptInsightAnalysisIndex) {
@@ -19622,6 +19669,15 @@ func (p *ExptInsightAnalysisRecord) SetExptInsightAnalysisFeedback(val *ExptInsi
 func (p *ExptInsightAnalysisRecord) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
+func (p *ExptInsightAnalysisRecord) SetScope(val *InsightAnalysisScope) {
+	p.Scope = val
+}
+func (p *ExptInsightAnalysisRecord) SetItemID(val *int64) {
+	p.ItemID = val
+}
+func (p *ExptInsightAnalysisRecord) SetTurnID(val *int64) {
+	p.TurnID = val
+}
 func (p *ExptInsightAnalysisRecord) SetAnalysisReportIndex(val []*ExptInsightAnalysisIndex) {
 	p.AnalysisReportIndex = val
 }
@@ -19635,6 +19691,9 @@ var fieldIDToName_ExptInsightAnalysisRecord = map[int16]string{
 	6:  "analysis_report_content",
 	7:  "expt_insight_analysis_feedback",
 	8:  "base_info",
+	9:  "scope",
+	10: "item_id",
+	11: "turn_id",
 	21: "analysis_report_index",
 }
 
@@ -19652,6 +19711,18 @@ func (p *ExptInsightAnalysisRecord) IsSetExptInsightAnalysisFeedback() bool {
 
 func (p *ExptInsightAnalysisRecord) IsSetBaseInfo() bool {
 	return p.BaseInfo != nil
+}
+
+func (p *ExptInsightAnalysisRecord) IsSetScope() bool {
+	return p.Scope != nil
+}
+
+func (p *ExptInsightAnalysisRecord) IsSetItemID() bool {
+	return p.ItemID != nil
+}
+
+func (p *ExptInsightAnalysisRecord) IsSetTurnID() bool {
+	return p.TurnID != nil
 }
 
 func (p *ExptInsightAnalysisRecord) IsSetAnalysisReportIndex() bool {
@@ -19743,6 +19814,30 @@ func (p *ExptInsightAnalysisRecord) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -19888,6 +19983,39 @@ func (p *ExptInsightAnalysisRecord) ReadField8(iprot thrift.TProtocol) error {
 	p.BaseInfo = _field
 	return nil
 }
+func (p *ExptInsightAnalysisRecord) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *InsightAnalysisScope
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Scope = _field
+	return nil
+}
+func (p *ExptInsightAnalysisRecord) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemID = _field
+	return nil
+}
+func (p *ExptInsightAnalysisRecord) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TurnID = _field
+	return nil
+}
 func (p *ExptInsightAnalysisRecord) ReadField21(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -19948,6 +20076,18 @@ func (p *ExptInsightAnalysisRecord) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 		if err = p.writeField21(oprot); err != nil {
@@ -20108,6 +20248,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *ExptInsightAnalysisRecord) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScope() {
+		if err = oprot.WriteFieldBegin("scope", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Scope); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+func (p *ExptInsightAnalysisRecord) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemID() {
+		if err = oprot.WriteFieldBegin("item_id", thrift.I64, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ItemID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *ExptInsightAnalysisRecord) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTurnID() {
+		if err = oprot.WriteFieldBegin("turn_id", thrift.I64, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TurnID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *ExptInsightAnalysisRecord) writeField21(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAnalysisReportIndex() {
 		if err = oprot.WriteFieldBegin("analysis_report_index", thrift.LIST, 21); err != nil {
@@ -20171,6 +20365,15 @@ func (p *ExptInsightAnalysisRecord) DeepEqual(ano *ExptInsightAnalysisRecord) bo
 		return false
 	}
 	if !p.Field8DeepEqual(ano.BaseInfo) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.Scope) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.ItemID) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.TurnID) {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.AnalysisReportIndex) {
@@ -20241,6 +20444,42 @@ func (p *ExptInsightAnalysisRecord) Field7DeepEqual(src *ExptInsightAnalysisFeed
 func (p *ExptInsightAnalysisRecord) Field8DeepEqual(src *common.BaseInfo) bool {
 
 	if !p.BaseInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptInsightAnalysisRecord) Field9DeepEqual(src *InsightAnalysisScope) bool {
+
+	if p.Scope == src {
+		return true
+	} else if p.Scope == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Scope, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ExptInsightAnalysisRecord) Field10DeepEqual(src *int64) bool {
+
+	if p.ItemID == src {
+		return true
+	} else if p.ItemID == nil || src == nil {
+		return false
+	}
+	if *p.ItemID != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptInsightAnalysisRecord) Field11DeepEqual(src *int64) bool {
+
+	if p.TurnID == src {
+		return true
+	} else if p.TurnID == nil || src == nil {
+		return false
+	}
+	if *p.TurnID != *src {
 		return false
 	}
 	return true

@@ -182,3 +182,19 @@ func ValidateDatasetItems(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// BatchPatchDatasetItems .
+// @router /api/data/v1/datasets/:dataset_id/items/batch_patch [POST]
+func BatchPatchDatasetItems(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req dataset.BatchPatchDatasetItemsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(dataset.BatchPatchDatasetItemsResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

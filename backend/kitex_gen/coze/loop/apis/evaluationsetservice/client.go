@@ -24,6 +24,7 @@ type Client interface {
 	BatchGetEvaluationSetVersions(ctx context.Context, req *eval_set.BatchGetEvaluationSetVersionsRequest, callOptions ...callopt.Option) (r *eval_set.BatchGetEvaluationSetVersionsResponse, err error)
 	UpdateEvaluationSetSchema(ctx context.Context, req *eval_set.UpdateEvaluationSetSchemaRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetSchemaResponse, err error)
 	BatchCreateEvaluationSetItems(ctx context.Context, req *eval_set.BatchCreateEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchCreateEvaluationSetItemsResponse, err error)
+	BatchUpsertEvaluationSetItemColumns(ctx context.Context, req *eval_set.BatchUpsertEvaluationSetItemColumnsRequest, callOptions ...callopt.Option) (r *eval_set.BatchUpsertEvaluationSetItemColumnsResponse, err error)
 	UpdateEvaluationSetItem(ctx context.Context, req *eval_set.UpdateEvaluationSetItemRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetItemResponse, err error)
 	BatchDeleteEvaluationSetItems(ctx context.Context, req *eval_set.BatchDeleteEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchDeleteEvaluationSetItemsResponse, err error)
 	ListEvaluationSetItems(ctx context.Context, req *eval_set.ListEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemsResponse, err error)
@@ -124,6 +125,11 @@ func (p *kEvaluationSetServiceClient) UpdateEvaluationSetSchema(ctx context.Cont
 func (p *kEvaluationSetServiceClient) BatchCreateEvaluationSetItems(ctx context.Context, req *eval_set.BatchCreateEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchCreateEvaluationSetItemsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchCreateEvaluationSetItems(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) BatchUpsertEvaluationSetItemColumns(ctx context.Context, req *eval_set.BatchUpsertEvaluationSetItemColumnsRequest, callOptions ...callopt.Option) (r *eval_set.BatchUpsertEvaluationSetItemColumnsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchUpsertEvaluationSetItemColumns(ctx, req)
 }
 
 func (p *kEvaluationSetServiceClient) UpdateEvaluationSetItem(ctx context.Context, req *eval_set.UpdateEvaluationSetItemRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetItemResponse, err error) {
