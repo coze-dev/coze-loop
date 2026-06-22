@@ -834,7 +834,6 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 			},
 		},
 	}
-	recordDO.Ext = mergeEvalExt(recordDO.Ext, e.cConfiger.BuildEvalExt(ctx, request.SpaceID, nil))
 	if recordDO.EvaluatorOutputData != nil &&
 		recordDO.EvaluatorOutputData.EvaluatorRunError != nil &&
 		recordDO.EvaluatorOutputData.EvaluatorRunError.Code != int32(errno.CustomRPCEvaluatorRunFailedCode) &&
@@ -917,7 +916,6 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 		},
 	}
-	recordDO.Ext = mergeEvalExt(recordDO.Ext, e.cConfiger.BuildEvalExt(ctx, request.SpaceID, nil))
 	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
 		logs.CtxError(ctx, "[AsyncRunEvaluator] CreateEvaluatorRecord fail, invokeID: %d, err: %v", invokeID, err)
 		return nil, err
@@ -1140,18 +1138,4 @@ func (e *EvaluatorServiceImpl) ListBuiltinEvaluator(ctx context.Context, request
 		}
 	}
 	return result.Evaluators, result.TotalCount, nil
-}
-
-// mergeEvalExt 将 BuildEvalExt 产出的扩展字段合并进既有 ext，extra 中的键覆盖 base 中的同名键。
-func mergeEvalExt(base, extra map[string]string) map[string]string {
-	if len(extra) == 0 {
-		return base
-	}
-	if base == nil {
-		base = make(map[string]string, len(extra))
-	}
-	for k, v := range extra {
-		base[k] = v
-	}
-	return base
 }

@@ -49,6 +49,14 @@ type EvalTargetInputData struct {
 	Ext         map[string]string
 }
 
+// GetExt 返回输入数据携带的 ext，nil 安全。
+func (e *EvalTargetInputData) GetExt() map[string]string {
+	if e == nil {
+		return nil
+	}
+	return e.Ext
+}
+
 // ValidateInputSchema  common valiate input schema
 func (e *EvalTargetInputData) ValidateInputSchema(inputSchema []*ArgsSchema) error {
 	for fieldKey, content := range e.InputFields {

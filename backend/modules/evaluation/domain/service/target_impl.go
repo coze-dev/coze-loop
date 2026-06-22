@@ -379,7 +379,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			EvalTargetInputData:  inputData,
 			EvalTargetOutputData: outputData,
 			Status:               &runStatus,
-			Ext:                  e.configer.BuildEvalExt(recordCtx, spaceID, nil),
+			Ext:                  inputData.GetExt(),
 			BaseInfo: &entity.BaseInfo{
 				CreatedBy: &entity.UserInfo{
 					UserID: gptr.Of(userIDInContext),
@@ -534,7 +534,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		EvalTargetInputData:  inputData,
 		EvalTargetOutputData: outputData,
 		Status:               gptr.Of(status),
-		Ext:                  e.configer.BuildEvalExt(ctx, spaceID, nil),
+		Ext:                  inputData.GetExt(),
 		BaseInfo: &entity.BaseInfo{
 			CreatedBy: &entity.UserInfo{
 				UserID: gptr.Of(userID),
