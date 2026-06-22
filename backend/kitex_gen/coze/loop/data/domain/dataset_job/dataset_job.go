@@ -2523,8 +2523,6 @@ func (p *DatasetIOTrace) Field10DeepEqual(src *string) bool {
 type DatasetIOEndpoint struct {
 	File    *DatasetIOFile    `thrift:"file,1,optional" frugal:"1,optional,DatasetIOFile" form:"file" json:"file,omitempty" query:"file"`
 	Dataset *DatasetIODataset `thrift:"dataset,2,optional" frugal:"2,optional,DatasetIODataset" form:"dataset" json:"dataset,omitempty" query:"dataset"`
-	// SDD: add-single-trajectory-offline-eval — Trace 来源端点；source_type=Trace 时填充
-	Trace *DatasetIOTrace `thrift:"trace,3,optional" frugal:"3,optional,DatasetIOTrace" form:"trace" json:"trace,omitempty" query:"trace"`
 }
 
 func NewDatasetIOEndpoint() *DatasetIOEndpoint {
@@ -2557,32 +2555,16 @@ func (p *DatasetIOEndpoint) GetDataset() (v *DatasetIODataset) {
 	}
 	return p.Dataset
 }
-
-var DatasetIOEndpoint_Trace_DEFAULT *DatasetIOTrace
-
-func (p *DatasetIOEndpoint) GetTrace() (v *DatasetIOTrace) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTrace() {
-		return DatasetIOEndpoint_Trace_DEFAULT
-	}
-	return p.Trace
-}
 func (p *DatasetIOEndpoint) SetFile(val *DatasetIOFile) {
 	p.File = val
 }
 func (p *DatasetIOEndpoint) SetDataset(val *DatasetIODataset) {
 	p.Dataset = val
 }
-func (p *DatasetIOEndpoint) SetTrace(val *DatasetIOTrace) {
-	p.Trace = val
-}
 
 var fieldIDToName_DatasetIOEndpoint = map[int16]string{
 	1: "file",
 	2: "dataset",
-	3: "trace",
 }
 
 func (p *DatasetIOEndpoint) IsSetFile() bool {
@@ -2591,10 +2573,6 @@ func (p *DatasetIOEndpoint) IsSetFile() bool {
 
 func (p *DatasetIOEndpoint) IsSetDataset() bool {
 	return p.Dataset != nil
-}
-
-func (p *DatasetIOEndpoint) IsSetTrace() bool {
-	return p.Trace != nil
 }
 
 func (p *DatasetIOEndpoint) Read(iprot thrift.TProtocol) (err error) {
@@ -2626,14 +2604,6 @@ func (p *DatasetIOEndpoint) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2684,14 +2654,6 @@ func (p *DatasetIOEndpoint) ReadField2(iprot thrift.TProtocol) error {
 	p.Dataset = _field
 	return nil
 }
-func (p *DatasetIOEndpoint) ReadField3(iprot thrift.TProtocol) error {
-	_field := NewDatasetIOTrace()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Trace = _field
-	return nil
-}
 
 func (p *DatasetIOEndpoint) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2705,10 +2667,6 @@ func (p *DatasetIOEndpoint) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -2765,24 +2723,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *DatasetIOEndpoint) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTrace() {
-		if err = oprot.WriteFieldBegin("trace", thrift.STRUCT, 3); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.Trace.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
 
 func (p *DatasetIOEndpoint) String() string {
 	if p == nil {
@@ -2804,9 +2744,6 @@ func (p *DatasetIOEndpoint) DeepEqual(ano *DatasetIOEndpoint) bool {
 	if !p.Field2DeepEqual(ano.Dataset) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.Trace) {
-		return false
-	}
 	return true
 }
 
@@ -2820,13 +2757,6 @@ func (p *DatasetIOEndpoint) Field1DeepEqual(src *DatasetIOFile) bool {
 func (p *DatasetIOEndpoint) Field2DeepEqual(src *DatasetIODataset) bool {
 
 	if !p.Dataset.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *DatasetIOEndpoint) Field3DeepEqual(src *DatasetIOTrace) bool {
-
-	if !p.Trace.DeepEqual(src) {
 		return false
 	}
 	return true

@@ -1700,20 +1700,6 @@ func (p *DatasetIOEndpoint) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 3:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField3(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1756,18 +1742,6 @@ func (p *DatasetIOEndpoint) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *DatasetIOEndpoint) FastReadField3(buf []byte) (int, error) {
-	offset := 0
-	_field := NewDatasetIOTrace()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Trace = _field
-	return offset, nil
-}
-
 func (p *DatasetIOEndpoint) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1777,7 +1751,6 @@ func (p *DatasetIOEndpoint) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
-		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1788,7 +1761,6 @@ func (p *DatasetIOEndpoint) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
-		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1812,15 +1784,6 @@ func (p *DatasetIOEndpoint) fastWriteField2(buf []byte, w thrift.NocopyWriter) i
 	return offset
 }
 
-func (p *DatasetIOEndpoint) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetTrace() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
-		offset += p.Trace.FastWriteNocopy(buf[offset:], w)
-	}
-	return offset
-}
-
 func (p *DatasetIOEndpoint) field1Length() int {
 	l := 0
 	if p.IsSetFile() {
@@ -1835,15 +1798,6 @@ func (p *DatasetIOEndpoint) field2Length() int {
 	if p.IsSetDataset() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.Dataset.BLength()
-	}
-	return l
-}
-
-func (p *DatasetIOEndpoint) field3Length() int {
-	l := 0
-	if p.IsSetTrace() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.Trace.BLength()
 	}
 	return l
 }
@@ -1871,15 +1825,6 @@ func (p *DatasetIOEndpoint) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Dataset = _dataset
-
-	var _trace *DatasetIOTrace
-	if src.Trace != nil {
-		_trace = &DatasetIOTrace{}
-		if err := _trace.DeepCopy(src.Trace); err != nil {
-			return err
-		}
-	}
-	p.Trace = _trace
 
 	return nil
 }

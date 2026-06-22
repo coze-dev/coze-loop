@@ -417,29 +417,6 @@ func (l *LocalDatasetService) BatchCreateDatasetItems(ctx context.Context, req *
 	return result.GetSuccess(), nil
 }
 
-// BatchPatchDatasetItems
-// SDD: add-single-trajectory-offline-eval — 部分列原子 patch（不覆盖未指定列），是评测域 BatchUpsertEvaluationSetItemColumns 的底座
-func (l *LocalDatasetService) BatchPatchDatasetItems(ctx context.Context, req *dataset.BatchPatchDatasetItemsRequest, callOptions ...callopt.Option) (*dataset.BatchPatchDatasetItemsResponse, error) {
-	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*dataset.DatasetServiceBatchPatchDatasetItemsArgs)
-		result := out.(*dataset.DatasetServiceBatchPatchDatasetItemsResult)
-		resp, err := l.impl.BatchPatchDatasetItems(ctx, arg.Req)
-		if err != nil {
-			return err
-		}
-		result.SetSuccess(resp)
-		return nil
-	})
-
-	arg := &dataset.DatasetServiceBatchPatchDatasetItemsArgs{Req: req}
-	result := &dataset.DatasetServiceBatchPatchDatasetItemsResult{}
-	ctx = l.injectRPCInfo(ctx, "BatchPatchDatasetItems")
-	if err := chain(ctx, arg, result); err != nil {
-		return nil, err
-	}
-	return result.GetSuccess(), nil
-}
-
 // UpdateDatasetItem
 // 更新数据
 func (l *LocalDatasetService) UpdateDatasetItem(ctx context.Context, req *dataset.UpdateDatasetItemRequest, callOptions ...callopt.Option) (*dataset.UpdateDatasetItemResponse, error) {

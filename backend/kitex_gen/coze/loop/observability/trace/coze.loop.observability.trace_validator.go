@@ -584,9 +584,6 @@ func (p *ListTrajectoryRequest) IsValid() error {
 	}
 	return nil
 }
-func (p *TraceParseWarning) IsValid() error {
-	return nil
-}
 func (p *ListTrajectoryResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {

@@ -61,7 +61,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_items0.POST("/batch_create", append(_batchcreatedatasetitemsMw(handler), apis.BatchCreateDatasetItems)...)
 					_items0.POST("/batch_delete", append(_batchdeletedatasetitemsMw(handler), apis.BatchDeleteDatasetItems)...)
 					_items0.POST("/batch_get", append(_batchgetdatasetitemsMw(handler), apis.BatchGetDatasetItems)...)
-					_items0.POST("/batch_patch", append(_batchpatchdatasetitemsMw(handler), apis.BatchPatchDatasetItems)...)
 					_items0.POST("/clear", append(_cleardatasetitemMw(handler), apis.ClearDatasetItem)...)
 					_items0.DELETE("/:item_id", append(_deletedatasetitemMw(handler), apis.DeleteDatasetItem)...)
 					_items0.GET("/:item_id", append(_getdatasetitemMw(handler), apis.GetDatasetItem)...)

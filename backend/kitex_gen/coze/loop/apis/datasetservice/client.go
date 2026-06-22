@@ -28,7 +28,6 @@ type Client interface {
 	UpdateDatasetSchema(ctx context.Context, req *dataset.UpdateDatasetSchemaRequest, callOptions ...callopt.Option) (r *dataset.UpdateDatasetSchemaResponse, err error)
 	ValidateDatasetItems(ctx context.Context, req *dataset.ValidateDatasetItemsReq, callOptions ...callopt.Option) (r *dataset.ValidateDatasetItemsResp, err error)
 	BatchCreateDatasetItems(ctx context.Context, req *dataset.BatchCreateDatasetItemsRequest, callOptions ...callopt.Option) (r *dataset.BatchCreateDatasetItemsResponse, err error)
-	BatchPatchDatasetItems(ctx context.Context, req *dataset.BatchPatchDatasetItemsRequest, callOptions ...callopt.Option) (r *dataset.BatchPatchDatasetItemsResponse, err error)
 	UpdateDatasetItem(ctx context.Context, req *dataset.UpdateDatasetItemRequest, callOptions ...callopt.Option) (r *dataset.UpdateDatasetItemResponse, err error)
 	DeleteDatasetItem(ctx context.Context, req *dataset.DeleteDatasetItemRequest, callOptions ...callopt.Option) (r *dataset.DeleteDatasetItemResponse, err error)
 	BatchDeleteDatasetItems(ctx context.Context, req *dataset.BatchDeleteDatasetItemsRequest, callOptions ...callopt.Option) (r *dataset.BatchDeleteDatasetItemsResponse, err error)
@@ -152,11 +151,6 @@ func (p *kDatasetServiceClient) ValidateDatasetItems(ctx context.Context, req *d
 func (p *kDatasetServiceClient) BatchCreateDatasetItems(ctx context.Context, req *dataset.BatchCreateDatasetItemsRequest, callOptions ...callopt.Option) (r *dataset.BatchCreateDatasetItemsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchCreateDatasetItems(ctx, req)
-}
-
-func (p *kDatasetServiceClient) BatchPatchDatasetItems(ctx context.Context, req *dataset.BatchPatchDatasetItemsRequest, callOptions ...callopt.Option) (r *dataset.BatchPatchDatasetItemsResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.BatchPatchDatasetItems(ctx, req)
 }
 
 func (p *kDatasetServiceClient) UpdateDatasetItem(ctx context.Context, req *dataset.UpdateDatasetItemRequest, callOptions ...callopt.Option) (r *dataset.UpdateDatasetItemResponse, err error) {

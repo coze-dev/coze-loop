@@ -132,13 +132,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"BatchPatchDatasetItems": kitex.NewMethodInfo(
-		batchPatchDatasetItemsHandler,
-		newDatasetServiceBatchPatchDatasetItemsArgs,
-		newDatasetServiceBatchPatchDatasetItemsResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"UpdateDatasetItem": kitex.NewMethodInfo(
 		updateDatasetItemHandler,
 		newDatasetServiceUpdateDatasetItemArgs,
@@ -558,25 +551,6 @@ func newDatasetServiceBatchCreateDatasetItemsResult() interface{} {
 	return dataset.NewDatasetServiceBatchCreateDatasetItemsResult()
 }
 
-func batchPatchDatasetItemsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*dataset.DatasetServiceBatchPatchDatasetItemsArgs)
-	realResult := result.(*dataset.DatasetServiceBatchPatchDatasetItemsResult)
-	success, err := handler.(dataset.DatasetService).BatchPatchDatasetItems(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newDatasetServiceBatchPatchDatasetItemsArgs() interface{} {
-	return dataset.NewDatasetServiceBatchPatchDatasetItemsArgs()
-}
-
-func newDatasetServiceBatchPatchDatasetItemsResult() interface{} {
-	return dataset.NewDatasetServiceBatchPatchDatasetItemsResult()
-}
-
 func updateDatasetItemHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*dataset.DatasetServiceUpdateDatasetItemArgs)
 	realResult := result.(*dataset.DatasetServiceUpdateDatasetItemResult)
@@ -925,16 +899,6 @@ func (p *kClient) BatchCreateDatasetItems(ctx context.Context, req *dataset.Batc
 	_args.Req = req
 	var _result dataset.DatasetServiceBatchCreateDatasetItemsResult
 	if err = p.c.Call(ctx, "BatchCreateDatasetItems", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) BatchPatchDatasetItems(ctx context.Context, req *dataset.BatchPatchDatasetItemsRequest) (r *dataset.BatchPatchDatasetItemsResponse, err error) {
-	var _args dataset.DatasetServiceBatchPatchDatasetItemsArgs
-	_args.Req = req
-	var _result dataset.DatasetServiceBatchPatchDatasetItemsResult
-	if err = p.c.Call(ctx, "BatchPatchDatasetItems", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

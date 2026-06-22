@@ -64,11 +64,6 @@ func (p *DatasetIOEndpoint) IsValid() error {
 			return fmt.Errorf("field Dataset not valid, %w", err)
 		}
 	}
-	if p.Trace != nil {
-		if err := p.Trace.IsValid(); err != nil {
-			return fmt.Errorf("field Trace not valid, %w", err)
-		}
-	}
 	return nil
 }
 func (p *DatasetIOJob) IsValid() error {

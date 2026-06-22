@@ -83,8 +83,6 @@ struct DatasetIOTrace {
 struct DatasetIOEndpoint {
     1: optional DatasetIOFile file
     2: optional DatasetIODataset dataset
-    // SDD: add-single-trajectory-offline-eval — Trace 来源端点；source_type=Trace 时填充
-    3: optional DatasetIOTrace trace
 }
 
 // DatasetIOJob 数据集导入导出任务
