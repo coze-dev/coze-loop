@@ -37,6 +37,8 @@ type EvalTargetRecord struct {
 	EvalTargetOutputData *EvalTargetOutputData
 	Status               *EvalTargetRunStatus
 	BaseInfo             *BaseInfo
+	// 扩展信息
+	Ext map[string]string
 }
 
 type EvalTargetInputData struct {

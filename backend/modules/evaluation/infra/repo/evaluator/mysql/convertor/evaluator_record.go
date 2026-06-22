@@ -71,6 +71,7 @@ func ConvertEvaluatorRecordDO2PO(do *entity.EvaluatorRecord) *model.EvaluatorRec
 		}
 	}
 
+	// 序列化 Ext 进 ext 列
 	if len(do.Ext) > 0 {
 		extBytes, err := json.Marshal(do.Ext)
 		if err != nil {
@@ -133,12 +134,12 @@ func ConvertEvaluatorRecordPO2DO(po *model.EvaluatorRecord) (*entity.EvaluatorRe
 		do.BaseInfo.DeletedAt = gptr.Of(po.DeletedAt.Time.UnixMilli())
 	}
 
-	if po.Ext != nil {
-		do.Ext = make(map[string]string)
-		err := json.Unmarshal(gptr.Indirect(po.Ext), &do.Ext)
-		if err != nil {
+	if po.Ext != nil && len(gptr.Indirect(po.Ext)) > 0 {
+		ext := make(map[string]string)
+		if err := json.Unmarshal(gptr.Indirect(po.Ext), &ext); err != nil {
 			return nil, err
 		}
+		do.Ext = ext
 	}
 
 	return do, nil

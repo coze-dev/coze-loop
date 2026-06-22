@@ -2104,6 +2104,8 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
 	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
 	mockPlainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+	mockCConfiger := componentMocks.NewMockIConfiger(ctrl)
+	mockCConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	s := &EvaluatorServiceImpl{
 		evaluatorRepo:       mockEvaluatorRepo,
 		limiter:             mockLimiter,
@@ -2114,6 +2116,7 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 			entity.EvaluatorTypePrompt: mockEvaluatorSourceService, // 使用生成的 mock
 		},
 		plainRateLimiter: mockPlainLimiter,
+		cConfiger:        mockCConfiger,
 	}
 
 	ctx := context.Background()
@@ -2477,6 +2480,7 @@ func TestEvaluatorServiceImpl_RunEvaluator_RoundAndConvertErrMsg(t *testing.T) {
 			}
 
 			mockErrConfiger := componentMocks.NewMockIConfiger(ctrl)
+			mockErrConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			if tt.wantMsg == "converted-msg" {
 				mockErrConfiger.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{
 					ResultErrConverts: []*entity.ResultErrConvert{
@@ -2682,6 +2686,9 @@ func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
 	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
 	mockPlainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
 
+	mockCConfiger := componentMocks.NewMockIConfiger(ctrl)
+	mockCConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
 	s := &EvaluatorServiceImpl{
 		evaluatorRepo:       mockEvaluatorRepo,
 		limiter:             mockLimiter,
@@ -2691,6 +2698,7 @@ func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
 			entity.EvaluatorTypePrompt: mockEvaluatorSourceService,
 		},
 		plainRateLimiter: mockPlainLimiter,
+		cConfiger:        mockCConfiger,
 	}
 
 	ctx := context.Background()
@@ -3255,6 +3263,9 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
 	mockPlainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
 
+	mockCConfiger := componentMocks.NewMockIConfiger(ctrl)
+	mockCConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
 	s := &EvaluatorServiceImpl{
 		evaluatorRepo:       mockEvaluatorRepo,
 		limiter:             mockLimiter,
@@ -3264,6 +3275,7 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 			entity.EvaluatorTypeAgent: mockEvaluatorSourceService,
 		},
 		plainRateLimiter: mockPlainLimiter,
+		cConfiger:        mockCConfiger,
 	}
 
 	req := &entity.AsyncRunEvaluatorRequest{

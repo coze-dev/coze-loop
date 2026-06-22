@@ -398,6 +398,7 @@ type ExptTurnResultRunLog struct {
 	EvaluatorResultIds *EvaluatorResults
 	ErrMsg             string
 	UpdatedAt          time.Time
+	Ext                map[string]string
 }
 
 type ExptTurnEvaluatorResultRef struct {

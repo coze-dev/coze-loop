@@ -147,6 +147,8 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		return errorx.Wrapf(err, "ExptTurnResultRunLog copy fail")
 	}
 
+	clone.Ext = e.Configer.BuildEvalExt(ctx, etec.Event.SpaceID, etec.Turn)
+
 	var evalErr error
 
 	clone.ExptRunID = etec.Event.ExptRunID
