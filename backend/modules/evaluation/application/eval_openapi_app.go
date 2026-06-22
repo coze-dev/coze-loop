@@ -2635,6 +2635,46 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 				Callee:   gptr.Of(callee),
 			},
 		}, nil
+	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
+		record, callee, err := e.targetSvc.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
+			SpaceID: req.GetWorkspaceID(),
+			PatchyTarget: &entity.EvalTarget{
+				SpaceID:        req.GetWorkspaceID(),
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SpaceID:        req.GetWorkspaceID(),
+					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+					SandboxAgent:   experiment_convertor.OpenAPISandboxAgentDTO2DO(req.GetSandboxAgent()),
+				},
+			},
+			InputData: &entity.EvalTargetInputData{
+				InputFields: gmap.Map(inputFields, func(k string, v *spi.Content) (string, *entity.Content) {
+					return k, target.ToSPIContentDO(v)
+				}),
+				Ext: map[string]string{
+					consts.FieldAdapterBuiltinFieldNameRuntimeParam: req.GetTargetRuntimeParam().GetJSONValue(),
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if err := e.asyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{
+			RecordID:    record.ID,
+			AsyncUnixMS: asyncStart.UnixMilli(),
+			Session:     &entity.Session{UserID: userID},
+			Callee:      callee,
+		}); err != nil {
+			return nil, err
+		}
+
+		return &openapi.AsyncDebugEvalTargetOApiResponse{
+			Data: &openapi.AsyncDebugEvalTargetOpenAPIData{
+				InvokeID: gptr.Of(record.ID),
+				Callee:   gptr.Of(callee),
+			},
+		}, nil
 	default:
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("unsupported eval target type: %s", req.GetEvalTargetType())))
 	}
