@@ -304,7 +304,7 @@ func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestCont
 }
 
 // AsyncDebugEvalTargetOApi .
-// @router /v1/loop/evaluation/eval_targets/async_debug [POST]
+// @router /v1/loop/eval_targets/async_debug [POST]
 func AsyncDebugEvalTargetOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.AsyncDebugEvalTargetOApi)
 }
