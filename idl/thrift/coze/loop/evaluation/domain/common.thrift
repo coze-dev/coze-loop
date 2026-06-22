@@ -9,6 +9,8 @@ const ContentType ContentType_Image = "Image"
 const ContentType ContentType_Audio = "Audio"
 const ContentType ContentType_MultiPart = "MultiPart"
 const ContentType ContentType_MultiPartVariable = "multi_part_variable"
+// SDD: add-single-trajectory-offline-eval — 单轨迹离线评测 Trajectory 列承载（配合 ArgSchemaKey_Trajectory + text_schema 使用）
+const ContentType ContentType_Trajectory = "Trajectory"
 
 struct Content {
     1: optional ContentType content_type (go.tag='mapstructure:"content_type"'),

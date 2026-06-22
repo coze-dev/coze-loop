@@ -307,6 +307,32 @@ struct UpdateDatasetItemResponse {
     255: base.BaseResp BaseResp
 }
 
+// SDD: add-single-trajectory-offline-eval — 数据集底座的「部分列原子 patch」单元
+struct DatasetItemColumnPatch {
+    1: optional i64 item_id (api.js_conv="true", go.tag='json:"item_id"')   // 命中已有行；与 item_key 二选一
+    2: optional string item_key                                              // 业务幂等 key，命中已有行时也可作为定位
+    3: optional list<dataset.FieldData> data (vt.elem.skip = "false")        // 仅写入希望更新的列（其他列保留）
+    4: optional list<dataset.ItemData> repeated_data (vt.elem.skip = "false") // 多轮 dataset patch
+}
+
+struct BatchPatchDatasetItemsRequest {
+    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', vt.not_nil = "true", vt.gt = "0")
+    2: required i64 dataset_id (api.js_conv="true", go.tag='json:"dataset_id"', api.path = "dataset_id", vt.gt = "0")
+    3: required list<DatasetItemColumnPatch> items (vt.min_size = "1", vt.max_size = "100", vt.elem.skip = "false")
+    10: optional bool skip_invalid_items
+    11: optional bool allow_partial_add
+
+    255: optional base.Base Base
+}
+
+struct BatchPatchDatasetItemsResponse {
+    1: optional i32 patched_count                                                                     // 成功 patch 的行数
+    2: optional list<dataset.ItemErrorGroup> errors
+
+    /* base */
+    255: base.BaseResp BaseResp
+}
+
 struct DeleteDatasetItemRequest {
     1: optional i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag='json:"workspace_id"', vt.not_nil = "true", vt.gt = "0")
     2: required i64 dataset_id (api.js_conv="true", go.tag='json:"dataset_id"', api.path = "dataset_id", vt.gt = "0")
@@ -476,6 +502,8 @@ service DatasetService {
     ValidateDatasetItemsResp ValidateDatasetItems(1: ValidateDatasetItemsReq req) (api.post = "/api/data/v1/dataset_items/validate")
     // 批量新增数据
     BatchCreateDatasetItemsResponse BatchCreateDatasetItems(1: BatchCreateDatasetItemsRequest req) (api.post = "/api/data/v1/datasets/:dataset_id/items/batch_create")
+    // SDD: add-single-trajectory-offline-eval — 部分列原子 patch（不覆盖未指定列），是评测域 BatchUpsertEvaluationSetItemColumns 的底座
+    BatchPatchDatasetItemsResponse BatchPatchDatasetItems(1: BatchPatchDatasetItemsRequest req) (api.post = "/api/data/v1/datasets/:dataset_id/items/batch_patch")
     // 更新数据
     UpdateDatasetItemResponse UpdateDatasetItem(1: UpdateDatasetItemRequest req) (api.put = "/api/data/v1/datasets/:dataset_id/items/:item_id")
     // 删除数据

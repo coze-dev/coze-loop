@@ -507,6 +507,12 @@ const InsightAnalysisStatus InsightAnalysisStatus_Running = "Running"
 const InsightAnalysisStatus InsightAnalysisStatus_Success = "Success"
 const InsightAnalysisStatus InsightAnalysisStatus_Failed = "Failed"
 
+// SDD: add-single-trajectory-offline-eval — 洞察分析作用域（Experiment 维度 / Row 维度），Row 用于单轨迹评测的行级智能解读
+typedef string InsightAnalysisScope(ts.enum="true")
+
+const InsightAnalysisScope InsightAnalysisScope_Experiment = "Experiment"
+const InsightAnalysisScope InsightAnalysisScope_Row = "Row"
+
 // 投票类型
 typedef string InsightAnalysisReportVoteType(ts.enum="true")
 
@@ -527,6 +533,10 @@ struct ExptInsightAnalysisRecord {
     6: optional string analysis_report_content
     7: optional ExptInsightAnalysisFeedback expt_insight_analysis_feedback
     8: optional common.BaseInfo base_info
+    // SDD: add-single-trajectory-offline-eval — 分析作用域（缺省视作 Experiment，老数据兼容）；行级解读时 item_id/turn_id 一并落在 analysis_report 内
+    9: optional InsightAnalysisScope scope
+    10: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"')
+    11: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"')
 
     21: optional list<ExptInsightAnalysisIndex> analysis_report_index
 }

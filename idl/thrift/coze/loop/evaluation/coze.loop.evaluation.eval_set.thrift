@@ -49,7 +49,11 @@ struct CreateEvaluationSetWithImportResponse {
 
 struct ParseImportSourceFileRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
-    2: optional dataset_job.DatasetIOFile file (vt.not_nil = "true")                // 如果 path 为文件夹，此处只默认解析当前路径级别下所有指定类型的文件，不嵌套解析
+    2: optional dataset_job.DatasetIOFile file                // 如果 path 为文件夹，此处只默认解析当前路径级别下所有指定类型的文件，不嵌套解析
+
+    // SDD: add-single-trajectory-offline-eval — 解析来源 source_type；当为 Trace 时使用 trace 字段，File 时使用 file 字段；缺省按 File 兼容老调用
+    10: optional dataset_job.SourceType source_type (vt.defined_only = "true")
+    11: optional dataset_job.DatasetIOTrace trace            // source_type=Trace 时承载 trace_id 列表与时间窗口
 
     255: optional base.Base base
 }
@@ -363,6 +367,33 @@ struct GetEvaluationSetItemFieldResponse {
     255: optional base.BaseResp BaseResp
 }
 
+// SDD: add-single-trajectory-offline-eval — 单列/部分列 upsert 到已有行的请求；item_id 匹配命中的行做 patch（不覆盖其他列），未命中则按 schema 校验后新增空行 + 写入指定列
+struct EvaluationSetItemColumnsPatch {
+    1: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"')   // 命中已有行时必填；新增行时留空，由服务端分配
+    2: optional string item_key                                              // 业务幂等 key，与 item_id 二选一；命中老行可走 item_key 路径
+    3: optional list<eval_set.Turn> turns                                    // 仅写入希望更新的列子集（每个 Turn 内 field_data 仅含 patch 列）
+}
+
+struct BatchUpsertEvaluationSetItemColumnsRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
+    2: required i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv='true', go.tag='json:"evaluation_set_id"'),
+    3: required list<EvaluationSetItemColumnsPatch> patches (vt.min_size='1', vt.max_size='100')
+
+    10: optional bool skip_invalid_items   // 列子集校验失败时是否跳过单条；与 BatchCreate 语义保持一致
+    11: optional bool allow_partial_add    // 部分新增的行如果触发容量限制，是否允许部分写入
+
+    255: optional base.Base Base
+}
+
+struct BatchUpsertEvaluationSetItemColumnsResponse {
+    1: optional map<i64, i64> upserted_items (api.js_conv='true', go.tag='json:"upserted_items"')   // key: patches 索引；value: item_id
+    2: optional list<dataset.ItemErrorGroup> errors
+    3: optional i32 patched_count          // 成功更新的列总条数（按 patch 单元计）
+    4: optional i32 created_count          // 新增行计数
+
+    255: base.BaseResp BaseResp
+}
+
 service EvaluationSetService {
     // 基本信息管理
     CreateEvaluationSetResponse CreateEvaluationSet(1: CreateEvaluationSetRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets")
@@ -384,6 +415,8 @@ service EvaluationSetService {
 
     // 数据管理
     BatchCreateEvaluationSetItemsResponse BatchCreateEvaluationSetItems(1: BatchCreateEvaluationSetItemsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_create")
+    // SDD: add-single-trajectory-offline-eval — 单列/部分列 upsert，底座对接 data.BatchPatchDatasetItems
+    BatchUpsertEvaluationSetItemColumnsResponse BatchUpsertEvaluationSetItemColumns(1: BatchUpsertEvaluationSetItemColumnsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_upsert_columns")
     UpdateEvaluationSetItemResponse UpdateEvaluationSetItem(1: UpdateEvaluationSetItemRequest req) (api.category="evaluation_set", api.put = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id")
     BatchDeleteEvaluationSetItemsResponse BatchDeleteEvaluationSetItems(1: BatchDeleteEvaluationSetItemsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_delete")
     ListEvaluationSetItemsResponse ListEvaluationSetItems(1: ListEvaluationSetItemsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/list")

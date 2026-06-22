@@ -415,8 +415,17 @@ struct ListTrajectoryRequest {
     255: optional base.Base Base
 }
 
+// SDD: add-single-trajectory-offline-eval — Trajectory 解析 warning（单 trace 失败时不阻断整体，附 warning 返回；evaluation 侧据此映射 ItemErrorType.GetTraceFailed）
+struct TraceParseWarning {
+    1: optional string trace_id
+    2: optional string code              // 如 TRACE_NOT_FOUND / SPAN_BROKEN / RATE_LIMITED 等
+    3: optional string message
+}
+
 struct ListTrajectoryResponse {
     1: optional list<trajectory.Trajectory> trajectories
+    // SDD: add-single-trajectory-offline-eval — 单 trace 解析失败/部分失败时填充 warnings；整体仍返回 BaseResp.code=0
+    2: optional list<TraceParseWarning> warnings
 
     255: optional base.BaseResp BaseResp
 }

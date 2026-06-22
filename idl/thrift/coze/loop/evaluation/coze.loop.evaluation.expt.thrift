@@ -499,6 +499,23 @@ struct InsightAnalysisExperimentResponse {
     255: base.BaseResp BaseResp
 }
 
+// SDD: add-single-trajectory-offline-eval — 行级洞察分析；针对单个 item_id + turn_id 触发智能解读；返回的 record 上 scope=Row、item_id/turn_id 透传
+struct InsightAnalysisExperimentRowRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: required i64 item_id (api.path = 'item_id', api.js_conv = 'true', go.tag = 'json:"item_id"')
+    4: required i64 turn_id (api.path = 'turn_id', api.js_conv = 'true', go.tag = 'json:"turn_id"')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct InsightAnalysisExperimentRowResponse {
+    1: required i64 insight_analysis_record_id (api.body = "insight_analysis_record_id", api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
+
+    255: base.BaseResp BaseResp
+}
+
 struct ListExptInsightAnalysisRecordRequest {
     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
@@ -637,6 +654,8 @@ service ExperimentService {
 
     // 报告分析
     InsightAnalysisExperimentResponse InsightAnalysisExperiment(1: InsightAnalysisExperimentRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis")
+    // SDD: add-single-trajectory-offline-eval — 行级智能解读
+    InsightAnalysisExperimentRowResponse InsightAnalysisExperimentRow(1: InsightAnalysisExperimentRowRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/items/:item_id/turns/:turn_id/insight_analysis")
     ListExptInsightAnalysisRecordResponse ListExptInsightAnalysisRecord(1: ListExptInsightAnalysisRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/list")
     DeleteExptInsightAnalysisRecordResponse DeleteExptInsightAnalysisRecord(1: DeleteExptInsightAnalysisRecordRequest req) (api.delete="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id")
     GetExptInsightAnalysisRecordResponse GetExptInsightAnalysisRecord(1: GetExptInsightAnalysisRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id")

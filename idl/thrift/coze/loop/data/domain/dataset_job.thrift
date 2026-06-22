@@ -44,6 +44,8 @@ enum FileFormat {
 enum SourceType {
     File = 1
     Dataset = 2
+    // SDD: add-single-trajectory-offline-eval — Trace 来源（按 trace_id 列表导入轨迹列），由 observability 模块解析
+    Trace = 3
 }
 
 struct DatasetIOFile {
@@ -68,9 +70,21 @@ struct DatasetIODataset {
     3: optional i64 version_id (api.js_conv='true', go.tag='json:"version_id"')
 }
 
+// SDD: add-single-trajectory-offline-eval — Trace 来源载体；评测域 ParseImportSourceFile / 创建带导入的评测集会通过此结构传入 trace_id 列表
+struct DatasetIOTrace {
+    1: required list<string> trace_ids (vt.min_size='1', vt.max_size='10')   // 单次最多 10 个 trace（observability 现有上限）
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"')   // trace 解析查询窗口起点，毫秒
+    4: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"')       // trace 解析查询窗口终点，毫秒
+    5: optional string platform_type                                              // observability 侧 PlatformType 透传（如 cozeloop / openagent）
+    10: optional string filter_json                                               // 进阶过滤；保留扩展位
+}
+
 struct DatasetIOEndpoint {
     1: optional DatasetIOFile file
     2: optional DatasetIODataset dataset
+    // SDD: add-single-trajectory-offline-eval — Trace 来源端点；source_type=Trace 时填充
+    3: optional DatasetIOTrace trace
 }
 
 // DatasetIOJob 数据集导入导出任务
