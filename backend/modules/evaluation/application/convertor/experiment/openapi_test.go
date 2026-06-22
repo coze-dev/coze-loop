@@ -133,7 +133,8 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain(t *testing.T) {
 		},
 	}
 
-	converted := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	converted, err := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	assert.NoError(t, err)
 	if assert.NotNil(t, converted) {
 		assert.Equal(t, "123", gptr.Indirect(converted.SourceTargetID))
 		assert.Equal(t, "456", gptr.Indirect(converted.BotPublishVersion))
@@ -151,10 +152,20 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain(t *testing.T) {
 		}
 	}
 
-	invalidType := openapiEvalTarget.EvalTargetType("invalid")
-	assert.Nil(t, OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{EvalTargetType: &invalidType}))
+	// An unsupported eval target type (e.g. faas_http is an AccessProtocol, not
+	// an EvalTargetType) must now return an error listing the supported types,
+	// not be silently dropped to nil (Meego 7328626066).
+	invalidType := openapiEvalTarget.EvalTargetType("faas_http")
+	gotInvalid, errInvalid := OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{EvalTargetType: &invalidType})
+	assert.Nil(t, gotInvalid)
+	if assert.Error(t, errInvalid) {
+		assert.Contains(t, errInvalid.Error(), "unsupported eval target type")
+		assert.Contains(t, errInvalid.Error(), "custom_rpc_server")
+	}
 	invalidRegion := openapiEvalTarget.Region("invalid")
-	assert.Nil(t, OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{Region: &invalidRegion}))
+	gotRegion, errRegion := OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{Region: &invalidRegion})
+	assert.Nil(t, gotRegion)
+	assert.Error(t, errRegion)
 }
 
 func TestParseOpenAPIEvaluatorVersions(t *testing.T) {
@@ -1593,11 +1604,14 @@ func TestOpenAPICreateEvalTargetParamDTO2DomainV2(t *testing.T) {
 	paramDraft := &openapi.SubmitExperimentEvalTargetParam{
 		BotInfoType: &botDraft,
 	}
-	gotDraft := OpenAPICreateEvalTargetParamDTO2Domain(paramDraft)
+	gotDraft, errDraft := OpenAPICreateEvalTargetParamDTO2Domain(paramDraft)
+	assert.NoError(t, errDraft)
 	assert.Equal(t, domaindoEvalTarget.CozeBotInfoType_DraftBot, *gotDraft.BotInfoType)
 
 	invalidBot := openapiEvalTarget.CozeBotInfoType("invalid")
-	assert.Nil(t, OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{BotInfoType: &invalidBot}))
+	gotInvalidBot, errInvalidBot := OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{BotInfoType: &invalidBot})
+	assert.Nil(t, gotInvalidBot)
+	assert.Error(t, errInvalidBot)
 }
 
 func TestDomainRuntimeParamDTO2OpenAPI(t *testing.T) {
@@ -2923,7 +2937,8 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain_WithClusterAndAgentConnection(t 
 		},
 	}
 
-	converted := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	converted, err := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	assert.NoError(t, err)
 	if assert.NotNil(t, converted) {
 		assert.Equal(t, "agent-1", gptr.Indirect(converted.SourceTargetID))
 		assert.Equal(t, gptr.Of("cluster-abc"), converted.Cluster)
@@ -2952,7 +2967,8 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain_WithClusterAndAgentConnection(t 
 	paramNoConn := &openapi.SubmitExperimentEvalTargetParam{
 		SourceTargetID: gptr.Of("agent-2"),
 	}
-	converted2 := OpenAPICreateEvalTargetParamDTO2Domain(paramNoConn)
+	converted2, err2 := OpenAPICreateEvalTargetParamDTO2Domain(paramNoConn)
+	assert.NoError(t, err2)
 	if assert.NotNil(t, converted2) {
 		assert.Nil(t, converted2.Cluster)
 		assert.Nil(t, converted2.AgentConnection)
