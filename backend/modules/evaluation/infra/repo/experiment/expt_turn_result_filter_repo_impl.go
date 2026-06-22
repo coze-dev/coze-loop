@@ -77,6 +77,42 @@ func fieldFiltersEntityToCK(src []*entity.FieldFilter) []*ck.FieldFilter {
 	return res
 }
 
+func tagArrayFiltersEntityToCK(src []*entity.TagArrayFilter) []*ck.TagArrayFilter {
+	if len(src) == 0 {
+		return nil
+	}
+	res := make([]*ck.TagArrayFilter, 0, len(src))
+	for _, f := range src {
+		if f == nil {
+			continue
+		}
+		res = append(res, &ck.TagArrayFilter{
+			TagKeyID: f.TagKeyID,
+			Values:   f.Values,
+			Op:       f.Op,
+		})
+	}
+	return res
+}
+
+func evalSetTagFilterEntityToCK(src *entity.EvalSetTagFilter) *ck.EvalSetTagFilter {
+	if src == nil {
+		return nil
+	}
+	filters := make([]*ck.EvalSetTagFieldFilter, 0, len(src.Filters))
+	for _, f := range src.Filters {
+		if f == nil {
+			continue
+		}
+		filters = append(filters, &ck.EvalSetTagFieldFilter{
+			TagKeyID: f.TagKeyID,
+			Values:   f.Values,
+			Op:       f.Op,
+		})
+	}
+	return &ck.EvalSetTagFilter{Filters: filters}
+}
+
 // QueryItemIDStates 实现 IExptTurnResultFilterRepo 接口的 QueryItemIDStates 方法
 func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator) (map[int64]entity.ItemRunState, int64, error) {
 	cond := &ck.ExptTurnResultFilterQueryCond{}
@@ -121,7 +157,11 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 			FloatMapFilters:  fieldFiltersEntityToCK(filter.ItemSnapshotCond.FloatMapFilters),
 			IntMapFilters:    fieldFiltersEntityToCK(filter.ItemSnapshotCond.IntMapFilters),
 			StringMapFilters: fieldFiltersEntityToCK(filter.ItemSnapshotCond.StringMapFilters),
+			TagArrayFilters:  tagArrayFiltersEntityToCK(filter.ItemSnapshotCond.TagArrayFilters),
 		}
+	}
+	if filter.EvalSetTagCond != nil {
+		cond.EvalSetTagCond = evalSetTagFilterEntityToCK(filter.EvalSetTagCond)
 	}
 	if filter.KeywordSearch != nil {
 		cond.KeywordSearch = &ck.KeywordMapCond{
@@ -130,6 +170,7 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 				FloatMapFilters:  fieldFiltersEntityToCK(filter.KeywordSearch.ItemSnapshotFilter.FloatMapFilters),
 				IntMapFilters:    fieldFiltersEntityToCK(filter.KeywordSearch.ItemSnapshotFilter.IntMapFilters),
 				StringMapFilters: fieldFiltersEntityToCK(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters),
+				TagArrayFilters:  tagArrayFiltersEntityToCK(filter.KeywordSearch.ItemSnapshotFilter.TagArrayFilters),
 			},
 			EvalTargetDataFilters: fieldFiltersEntityToCK(filter.KeywordSearch.EvalTargetDataFilters),
 			Keyword:               filter.KeywordSearch.Keyword,

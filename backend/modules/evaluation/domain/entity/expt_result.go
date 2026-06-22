@@ -600,6 +600,13 @@ type ItemSnapshotFilter struct {
 	FloatMapFilters  []*FieldFilter
 	IntMapFilters    []*FieldFilter
 	StringMapFilters []*FieldFilter
+	TagArrayFilters  []*TagArrayFilter
+}
+
+type TagArrayFilter struct {
+	TagKeyID string
+	Values   []string
+	Op       string // "has" | "hasAny" | "hasAll"
 }
 
 type KeywordFilter struct {
@@ -630,12 +637,24 @@ type ExptTurnResultFilterAccelerator struct {
 	// map类查询条件
 	MapCond          *ExptTurnResultFilterMapCond `json:"map_cond,omitempty"`
 	ItemSnapshotCond *ItemSnapshotFilter          `json:"item_snapshot_cond,omitempty"`
+	// 评测集维度标签过滤
+	EvalSetTagCond *EvalSetTagFilter `json:"eval_set_tag_cond,omitempty"`
 	// keyword search
 	KeywordSearch     *KeywordFilter `json:"keyword_search"`
 	Page              Page           `json:"page"`
 	EvalSetSyncCkDate string
 	// IsOnlineExpt 是否在线实验，用于 QueryItemIDStates 拼接 SQL 时选择 join 的表名和条件
 	IsOnlineExpt bool `json:"is_online_expt"`
+}
+
+type EvalSetTagFilter struct {
+	Filters []*EvalSetTagFieldFilter
+}
+
+type EvalSetTagFieldFilter struct {
+	TagKeyID string
+	Values   []string
+	Op       string // "=" | "in" | "not_in"
 }
 
 func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
@@ -653,11 +672,14 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 	hasFilters = hasFilters || (e.ItemSnapshotCond != nil && (len(e.ItemSnapshotCond.BoolMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.FloatMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.IntMapFilters) > 0 ||
-		len(e.ItemSnapshotCond.StringMapFilters) > 0))
+		len(e.ItemSnapshotCond.StringMapFilters) > 0 ||
+		len(e.ItemSnapshotCond.TagArrayFilters) > 0))
+	hasFilters = hasFilters || (e.EvalSetTagCond != nil && len(e.EvalSetTagCond.Filters) > 0)
 	hasFilters = hasFilters || (e.KeywordSearch != nil && ((e.KeywordSearch.ItemSnapshotFilter != nil && (len(e.KeywordSearch.ItemSnapshotFilter.BoolMapFilters) > 0 ||
 		len(e.KeywordSearch.ItemSnapshotFilter.FloatMapFilters) > 0 ||
 		len(e.KeywordSearch.ItemSnapshotFilter.IntMapFilters) > 0 ||
-		len(e.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0)) ||
+		len(e.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0 ||
+		len(e.KeywordSearch.ItemSnapshotFilter.TagArrayFilters) > 0)) ||
 		len(e.KeywordSearch.EvalTargetDataFilters) > 0))
 
 	return hasFilters
@@ -814,6 +836,7 @@ type ExptTurnResultFilterEntity struct {
 	EvaluatorScoreCorrected bool               `json:"evaluator_score_corrected"`
 	EvalSetID               int64              `json:"eval_set_id"`
 	EvalSetVersionID        int64              `json:"eval_set_version_id"`
+	EvalSetTags             map[string]string  `json:"eval_set_tags"`
 	CreatedAt               time.Time          `json:"created_at"`
 	UpdatedAt               time.Time          `json:"updated_at"`
 }

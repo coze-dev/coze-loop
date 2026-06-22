@@ -41,3 +41,6 @@ AFTER `eval_target_metrics`;
 ALTER TABLE expt_turn_result_filter
 ADD COLUMN IF NOT EXISTS `eval_set_id` String
 AFTER `evaluator_score_corrected`;
+ALTER TABLE expt_turn_result_filter
+ADD COLUMN IF NOT EXISTS `eval_set_tags` Map(String, String) DEFAULT map()
+AFTER `eval_set_version_id`;

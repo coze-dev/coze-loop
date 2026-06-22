@@ -27,6 +27,11 @@ func ExptTurnResultFilterEntity2PO(filterEntity *entity.ExptTurnResultFilterEnti
 		}
 	}
 
+	evalSetTags := filterEntity.EvalSetTags
+	if evalSetTags == nil {
+		evalSetTags = map[string]string{}
+	}
+
 	exptTurnResultFilter := &model.ExptTurnResultFilter{
 		SpaceID:                strconv.FormatInt(filterEntity.SpaceID, 10),
 		ExptID:                 strconv.FormatInt(filterEntity.ExptID, 10),
@@ -44,6 +49,7 @@ func ExptTurnResultFilterEntity2PO(filterEntity *entity.ExptTurnResultFilterEnti
 		CreatedDate:            filterEntity.CreatedDate,
 		EvalSetID:              strconv.FormatInt(filterEntity.EvalSetID, 10),
 		EvalSetVersionID:       strconv.FormatInt(filterEntity.EvalSetVersionID, 10),
+		EvalSetTags:            evalSetTags,
 		UpdatedAt:              filterEntity.UpdatedAt,
 	}
 	if filterEntity.EvaluatorScoreCorrected {
@@ -81,6 +87,7 @@ func ExptTurnResultFilterPO2Entity(filterPO *model.ExptTurnResultFilter) *entity
 		CreatedDate:            filterPO.CreatedDate,
 		EvalSetID:              ParseStringToInt64(filterPO.EvalSetID),
 		EvalSetVersionID:       ParseStringToInt64(filterPO.EvalSetVersionID),
+		EvalSetTags:            filterPO.EvalSetTags,
 	}
 	if filterPO.EvaluatorScoreCorrected > 0 {
 		exptTurnResultFilterEntity.EvaluatorScoreCorrected = true

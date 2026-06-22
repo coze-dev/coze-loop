@@ -41,6 +41,23 @@ type ItemSnapshotFilter struct {
 	FloatMapFilters  []*FieldFilter
 	IntMapFilters    []*FieldFilter
 	StringMapFilters []*FieldFilter
+	TagArrayFilters  []*TagArrayFilter
+}
+
+type TagArrayFilter struct {
+	TagKeyID string
+	Values   []string
+	Op       string // "has" | "hasAny" | "hasAll"
+}
+
+type EvalSetTagFilter struct {
+	Filters []*EvalSetTagFieldFilter
+}
+
+type EvalSetTagFieldFilter struct {
+	TagKeyID string
+	Values   []string
+	Op       string // "=" | "in" | "not_in"
 }
 
 type ExptTurnResultFilterMapCond struct {
@@ -73,6 +90,9 @@ type ExptTurnResultFilterQueryCond struct {
 
 	// 主表map字段
 	MapCond *ExptTurnResultFilterMapCond
+
+	// 评测集维度标签过滤（主表 eval_set_tags 列）
+	EvalSetTagCond *EvalSetTagFilter
 
 	// 联表
 	ItemSnapshotCond  *ItemSnapshotFilter
@@ -153,6 +173,7 @@ func (d *exptTurnResultFilterDAOImpl) buildQueryConditions(ctx context.Context, 
 	d.buildMainTableConditions(cond, &whereSQL, &args)
 	d.buildMapFieldConditions(cond, &whereSQL, &args)
 	d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+	d.buildEvalSetTagConditions(cond, &whereSQL, &args)
 	d.buildKeywordSearchConditions(ctx, cond, &keywordCond, &args)
 
 	return whereSQL, keywordCond, args
@@ -468,6 +489,9 @@ func (d *exptTurnResultFilterDAOImpl) buildItemSnapshotConditions(cond *ExptTurn
 	for _, ff := range f.BoolMapFilters {
 		d.appendItemSnapshotMapCond(whereSQL, args, "bool_map", ff)
 	}
+	for _, tf := range f.TagArrayFilters {
+		d.appendTagArrayCond(whereSQL, args, tf)
+	}
 }
 
 func (d *exptTurnResultFilterDAOImpl) appendItemSnapshotMapCond(whereSQL *string, args *[]interface{}, mapKey string, f *FieldFilter) {
@@ -589,13 +613,81 @@ func (d *exptTurnResultFilterDAOImpl) buildKeywordSearchConditions(ctx context.C
 	*keywordCond += ")"
 }
 
+func (d *exptTurnResultFilterDAOImpl) appendTagArrayCond(whereSQL *string, args *[]interface{}, f *TagArrayFilter) {
+	if f == nil || len(f.Values) == 0 {
+		return
+	}
+	tagValues := make([]string, 0, len(f.Values))
+	for _, v := range f.Values {
+		tagValues = append(tagValues, f.TagKeyID+"_"+v)
+	}
+	switch f.Op {
+	case "has":
+		*whereSQL += " AND has(dis.tag_array, ?)"
+		*args = append(*args, tagValues[0])
+	case "hasAny":
+		placeholders := make([]string, len(tagValues))
+		for i := range placeholders {
+			placeholders[i] = "?"
+		}
+		*whereSQL += " AND hasAny(dis.tag_array, array(" + strings.Join(placeholders, ",") + "))"
+		for _, tv := range tagValues {
+			*args = append(*args, tv)
+		}
+	case "hasAll":
+		placeholders := make([]string, len(tagValues))
+		for i := range placeholders {
+			placeholders[i] = "?"
+		}
+		*whereSQL += " AND hasAll(dis.tag_array, array(" + strings.Join(placeholders, ",") + "))"
+		for _, tv := range tagValues {
+			*args = append(*args, tv)
+		}
+	default:
+		*whereSQL += " AND has(dis.tag_array, ?)"
+		*args = append(*args, tagValues[0])
+	}
+}
+
+func (d *exptTurnResultFilterDAOImpl) buildEvalSetTagConditions(cond *ExptTurnResultFilterQueryCond, whereSQL *string, args *[]interface{}) {
+	if cond.EvalSetTagCond == nil || len(cond.EvalSetTagCond.Filters) == 0 {
+		return
+	}
+	for _, f := range cond.EvalSetTagCond.Filters {
+		if len(f.Values) == 0 {
+			continue
+		}
+		tagKeyID := db.EscapeSQLData(f.TagKeyID)
+		switch f.Op {
+		case "=":
+			*whereSQL += fmt.Sprintf(" AND etrf.eval_set_tags['%s'] = ?", tagKeyID)
+			*args = append(*args, f.Values[0])
+		case "in", "IN":
+			*whereSQL += fmt.Sprintf(" AND etrf.eval_set_tags['%s'] IN ?", tagKeyID)
+			vals := make([]any, len(f.Values))
+			for i, v := range f.Values {
+				vals[i] = v
+			}
+			*args = append(*args, vals)
+		case "not_in", "NOT IN":
+			*whereSQL += fmt.Sprintf(" AND (NOT mapContains(etrf.eval_set_tags, '%s') OR etrf.eval_set_tags['%s'] NOT IN ?)", tagKeyID, tagKeyID)
+			vals := make([]any, len(f.Values))
+			for i, v := range f.Values {
+				vals[i] = v
+			}
+			*args = append(*args, vals)
+		}
+	}
+}
+
 // hasItemSnapshotFilters 判断 ItemSnapshotFilter 是否有有效筛选条件
 func (d *exptTurnResultFilterDAOImpl) hasItemSnapshotFilters(f *ItemSnapshotFilter) bool {
 	if f == nil {
 		return false
 	}
 	return len(f.BoolMapFilters) > 0 || len(f.FloatMapFilters) > 0 ||
-		len(f.IntMapFilters) > 0 || len(f.StringMapFilters) > 0
+		len(f.IntMapFilters) > 0 || len(f.StringMapFilters) > 0 ||
+		len(f.TagArrayFilters) > 0
 }
 
 // buildBaseSQL 构建基础SQL语句

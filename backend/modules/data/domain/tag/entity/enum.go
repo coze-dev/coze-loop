@@ -87,6 +87,8 @@ const (
 	TagTargetTypeUndefined   TagTargetType = ""
 	TagTargetTypeResource    TagTargetType = "resource"
 	TagTargetTypeDatasetItem TagTargetType = "dataset_item"
+	TagTargetTypeDataset     TagTargetType = "dataset"
+	TagTargetTypeSample      TagTargetType = "sample"
 	TagTargetTypeObserve     TagTargetType = "observe"
 	TagTargetTypeEvaluation  TagTargetType = "evaluation"
 )

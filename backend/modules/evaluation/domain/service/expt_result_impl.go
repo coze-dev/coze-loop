@@ -1060,6 +1060,9 @@ type PayloadBuilder struct {
 	LoadEvalTargetFullContent bool
 	// LoadEvalTargetOutputFieldKeys 非空时仅按需加载指定 output 字段的完整内容
 	LoadEvalTargetOutputFieldKeys []string
+
+	// EvalSetTags 评测集维度标签，由调用方设置，写入 CK expt_turn_result_filter.eval_set_tags 列
+	EvalSetTags map[string]string
 }
 
 func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultParam, baselineExptID int64, baselineTurnResults []*entity.ExptTurnResult,
@@ -1395,6 +1398,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 	for _, itemResult := range b.BaseExptItemResultDO {
 		itemID2ItemIdx[itemResult.ItemID] = itemResult
 	}
+	evalSetTags := b.buildEvalSetTags(ctx, evalSetID)
 	updatedAt := time.Now()
 	for _, exptTurnResult := range b.BaseExptTurnResultDO {
 		exptTurnResultFilter := &entity.ExptTurnResultFilterEntity{
@@ -1408,6 +1412,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 			AnnotationBool:    make(map[string]bool),
 			AnnotationString:  make(map[string]string),
 			EvalTargetMetrics: make(map[string]int64),
+			EvalSetTags:       evalSetTags,
 			CreatedDate:       ptr.From(createdDate),
 			EvalSetID:         evalSetID,
 			EvalSetVersionID:  evalSetVersionID,
@@ -1509,6 +1514,13 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 	}
 
 	return nil
+}
+
+func (b *PayloadBuilder) buildEvalSetTags(ctx context.Context, evalSetID int64) map[string]string {
+	if b.EvalSetTags != nil {
+		return b.EvalSetTags
+	}
+	return make(map[string]string)
 }
 
 func (b *PayloadBuilder) fillItemResults(ctx context.Context) error {
@@ -2412,7 +2424,9 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 
 // 提取过滤器映射逻辑
 func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator, baseExpt *entity.Experiment, baseExptEvalSetVersionID int64) error {
-	if (filter.ItemSnapshotCond == nil || len(filter.ItemSnapshotCond.StringMapFilters) == 0) && (filter.KeywordSearch == nil || filter.KeywordSearch.ItemSnapshotFilter == nil || len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) == 0) {
+	hasItemSnapshotCond := filter.ItemSnapshotCond != nil && (len(filter.ItemSnapshotCond.StringMapFilters) > 0 || len(filter.ItemSnapshotCond.TagArrayFilters) > 0)
+	hasKeywordSnapshotCond := filter.KeywordSearch != nil && filter.KeywordSearch.ItemSnapshotFilter != nil && (len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0 || len(filter.KeywordSearch.ItemSnapshotFilter.TagArrayFilters) > 0)
+	if !hasItemSnapshotCond && !hasKeywordSnapshotCond {
 		return nil
 	}
 	req := &rpc.QueryItemSnapshotMappingRequest{
@@ -2435,6 +2449,7 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		FloatMapFilters:  make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.FloatMapFilters)),
 		IntMapFilters:    make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.IntMapFilters)),
 		StringMapFilters: make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.StringMapFilters)),
+		TagArrayFilters:  make([]*entity.TagArrayFilter, 0),
 	}
 	for _, item := range filter.ItemSnapshotCond.StringMapFilters {
 		if itemSnapshotMappingsMap[item.Key] == nil {
@@ -2479,6 +2494,18 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
 				})
 			}
+		case "tag_array":
+			values := make([]string, 0, len(item.Values))
+			for _, v := range item.Values {
+				if s, ok := v.(string); ok {
+					values = append(values, s)
+				}
+			}
+			itemSnapshotFilter.TagArrayFilters = append(itemSnapshotFilter.TagArrayFilters, &entity.TagArrayFilter{
+				TagKeyID: item.Key,
+				Values:   values,
+				Op:       item.Op,
+			})
 		}
 	}
 	filter.ItemSnapshotCond = itemSnapshotFilter
@@ -2489,6 +2516,7 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		FloatMapFilters:  make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.FloatMapFilters)),
 		IntMapFilters:    make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.IntMapFilters)),
 		StringMapFilters: make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters)),
+		TagArrayFilters:  make([]*entity.TagArrayFilter, 0),
 	}
 	for _, item := range filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters {
 		if itemSnapshotMappingsMap[item.Key] == nil {
@@ -2533,6 +2561,18 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
 				})
 			}
+		case "tag_array":
+			values := make([]string, 0, len(item.Values))
+			for _, v := range item.Values {
+				if s, ok := v.(string); ok {
+					values = append(values, s)
+				}
+			}
+			keywordItemSnapshotFilter.TagArrayFilters = append(keywordItemSnapshotFilter.TagArrayFilters, &entity.TagArrayFilter{
+				TagKeyID: item.Key,
+				Values:   values,
+				Op:       "hasAny",
+			})
 		}
 	}
 	filter.KeywordSearch.ItemSnapshotFilter = keywordItemSnapshotFilter

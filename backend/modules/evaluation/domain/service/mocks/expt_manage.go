@@ -465,3 +465,17 @@ func (mr *MockIExptManagerMockRecorder) Update(ctx, expt, session any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptManager)(nil).Update), ctx, expt, session)
 }
+
+// SyncTest mocks base method.
+func (m *MockIExptManager) SyncTest(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncTest", ctx, exptID, spaceID, session)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SyncTest indicates an expected call of SyncTest.
+func (mr *MockIExptManagerMockRecorder) SyncTest(ctx, exptID, spaceID, session any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncTest", reflect.TypeOf((*MockIExptManager)(nil).SyncTest), ctx, exptID, spaceID, session)
+}
