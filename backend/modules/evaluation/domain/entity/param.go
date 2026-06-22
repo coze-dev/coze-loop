@@ -45,6 +45,8 @@ type ListEvaluationSetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*OrderBy
+	TagFilter        *EvaluationSetTagFilter
+	WithTags         bool
 }
 
 type ListEvaluationSetItemsParam struct {

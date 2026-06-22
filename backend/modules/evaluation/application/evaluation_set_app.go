@@ -369,6 +369,8 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 		PageSize:         req.PageSize,
 		PageToken:        req.PageToken,
 		OrderBys:         common.ConvertOrderByDTO2DOs(req.OrderBys),
+		TagFilter:        evaluation_set.EvaluationSetTagFilterDTO2DO(req.TagFilter),
+		WithTags:         req.GetWithTags(),
 	})
 	if err != nil {
 		return nil, err

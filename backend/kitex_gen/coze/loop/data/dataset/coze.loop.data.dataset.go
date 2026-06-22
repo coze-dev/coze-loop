@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"strings"
 )
 
@@ -16994,6 +16995,7 @@ type ListDatasetItemsRequest struct {
 	// 与 page 同时提供时，优先使用 cursor
 	PageToken *string            `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
 	OrderBys  []*dataset.OrderBy `thrift:"order_bys,103,optional" frugal:"103,optional,list<dataset.OrderBy>" form:"order_bys" json:"order_bys,omitempty" query:"order_bys"`
+	Filter    *filter.Filter     `thrift:"filter,104,optional" frugal:"104,optional,filter.Filter" form:"filter" json:"filter,omitempty" query:"filter"`
 	Base      *base.Base         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -18147,6 +18149,7 @@ type ListDatasetItemsByVersionRequest struct {
 	// 与 page 同时提供时，优先使用 cursor
 	PageToken *string            `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
 	OrderBys  []*dataset.OrderBy `thrift:"order_bys,103,optional" frugal:"103,optional,list<dataset.OrderBy>" form:"order_bys" json:"order_bys,omitempty" query:"order_bys"`
+	Filter    *filter.Filter     `thrift:"filter,104,optional" frugal:"104,optional,filter.Filter" form:"filter" json:"filter,omitempty" query:"filter"`
 	Base      *base.Base         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 

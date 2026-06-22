@@ -104,6 +104,8 @@ type ListDatasetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*entity.OrderBy
+	TagFilter        *entity.EvaluationSetTagFilter
+	WithTags         bool
 }
 
 type ListDatasetItemsParam struct {

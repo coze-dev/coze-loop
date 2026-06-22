@@ -21,6 +21,7 @@ import {
   type FieldData,
   type OrderBy,
 } from '@cozeloop/api-schema/evaluation';
+import { type Filter } from '@cozeloop/api-schema/data';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
 import { Tooltip, Typography, type ColumnProps } from '@coze-arch/coze-design';
@@ -44,10 +45,12 @@ export const useDatasetItemList = ({
   spaceID,
   versionID,
   refreshDatasetDetail,
+  filter,
 }: {
   datasetDetail?: EvaluationSet;
   spaceID: string;
   versionID?: string;
+  filter?: Filter;
   refreshDatasetDetail: () => void; // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }): any => {
   const { getSearchParams } = useSearchParam();
@@ -108,26 +111,35 @@ export const useDatasetItemList = ({
         version_id:
           currentVersion?.id === DRAFT_VERSION ? undefined : currentVersion?.id,
         order_bys: orderBy ? [orderBy] : undefined,
+        filter,
       });
       const tableData = convertEvaluationSetItemListToTableData(
         res.items ?? [],
         schemaData ?? [],
       );
       return {
-        total: isNaN(Number(res.total)) ? 0 : Number(res.total),
+        total: isNaN(Number(res.filter_total ?? res.total))
+          ? 0
+          : Number(res.filter_total ?? res.total),
         list: tableData,
         latestFieldSchemas: schemaData,
       };
     },
     {
       defaultPageSize: DEFAULT_PAGE_SIZE,
-      refreshDeps: [draftFieldSchemas, currentVersion?.id, orderBy],
+      refreshDeps: [draftFieldSchemas, currentVersion?.id, orderBy, filter],
       ready: Boolean(datasetDetail?.id),
     },
   );
   // useEffect(() => {
   //   service.refresh();
   // }, [draftFieldSchemas,]);
+
+  useUpdateEffect(() => {
+    if (service.pagination.current !== 1) {
+      service.changeCurrent(1);
+    }
+  }, [filter]);
 
   const isEmptyDataset = service.data?.total === 0;
 

@@ -223,6 +223,14 @@ func TestEvaluationSetDO2DTO_WithSpecAndFeatures(t *testing.T) {
 			MultiModal:   true,
 		},
 		EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 4},
+		Tags: []*entity.EvaluationSetTag{
+			{
+				TagID:       gptr.Of(int64(11)),
+				Name:        gptr.Of("quality"),
+				ParentTagID: gptr.Of(int64(10)),
+				ParentName:  gptr.Of("category"),
+			},
+		},
 	}
 
 	got := EvaluationSetDO2DTO(do)
@@ -235,6 +243,31 @@ func TestEvaluationSetDO2DTO_WithSpecAndFeatures(t *testing.T) {
 		assert.True(t, got.Features.GetRepeatedData())
 		assert.True(t, got.Features.GetMultiModal())
 		assert.NotNil(t, got.EvaluationSetVersion)
+		assert.Equal(t, []*eval_set.EvaluationSetTag{
+			{
+				TagID:       gptr.Of(int64(11)),
+				Name:        gptr.Of("quality"),
+				ParentTagID: gptr.Of(int64(10)),
+				ParentName:  gptr.Of("category"),
+			},
+		}, got.Tags)
+	}
+}
+
+func TestEvaluationSetTagFilterDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, EvaluationSetTagFilterDTO2DO(nil))
+	assert.Nil(t, EvaluationSetTagFilterDTO2DO(&eval_set.EvaluationSetTagFilter{}))
+
+	relation := eval_set.EvaluationSetTagRelationOr
+	got := EvaluationSetTagFilterDTO2DO(&eval_set.EvaluationSetTagFilter{
+		TagIds:   []int64{11, 12},
+		Relation: &relation,
+	})
+	if assert.NotNil(t, got) {
+		assert.Equal(t, []int64{11, 12}, got.TagIDs)
+		assert.Equal(t, entity.EvaluationSetTagRelationOr, *got.Relation)
 	}
 }
 

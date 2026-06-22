@@ -62,6 +62,45 @@ func EvaluationSetDO2DTO(do *entity.EvaluationSet) *eval_set.EvaluationSet {
 		LatestVersion:        gptr.Of(do.LatestVersion),
 		NextVersionNum:       gptr.Of(do.NextVersionNum),
 		BaseInfo:             common.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		Tags:                 EvaluationSetTagDO2DTOs(do.Tags),
+	}
+}
+
+func EvaluationSetTagDO2DTOs(dos []*entity.EvaluationSetTag) []*eval_set.EvaluationSetTag {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*eval_set.EvaluationSetTag, 0, len(dos))
+	for _, do := range dos {
+		result = append(result, EvaluationSetTagDO2DTO(do))
+	}
+	return result
+}
+
+func EvaluationSetTagDO2DTO(do *entity.EvaluationSetTag) *eval_set.EvaluationSetTag {
+	if do == nil {
+		return nil
+	}
+	return &eval_set.EvaluationSetTag{
+		TagID:       do.TagID,
+		Name:        do.Name,
+		ParentTagID: do.ParentTagID,
+		ParentName:  do.ParentName,
+	}
+}
+
+func EvaluationSetTagFilterDTO2DO(dto *eval_set.EvaluationSetTagFilter) *entity.EvaluationSetTagFilter {
+	if dto == nil || len(dto.TagIds) == 0 {
+		return nil
+	}
+	var relation *entity.EvaluationSetTagRelation
+	if dto.Relation != nil {
+		r := entity.EvaluationSetTagRelation(dto.GetRelation())
+		relation = &r
+	}
+	return &entity.EvaluationSetTagFilter{
+		TagIDs:   dto.TagIds,
+		Relation: relation,
 	}
 }
 

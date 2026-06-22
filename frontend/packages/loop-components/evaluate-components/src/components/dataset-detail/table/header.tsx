@@ -1,8 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type ReactNode, useEffect, useState } from 'react';
 
+import { useDebounceFn } from 'ahooks';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { EvaluationAddDataDropdownMenus } from '@cozeloop/evaluate-adapter/add-data-dropdown';
@@ -15,9 +16,16 @@ import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
 import {
   IconCozArrowDown,
   IconCozImport,
+  IconCozMagnifier,
   IconCozPlus,
 } from '@coze-arch/coze-design/icons';
-import { Dropdown, Button, Typography, Divider } from '@coze-arch/coze-design';
+import {
+  Dropdown,
+  Button,
+  Typography,
+  Divider,
+  Search,
+} from '@coze-arch/coze-design';
 
 import { SubmitVersion } from '../submit-version';
 import { useDatasetColumnEdit } from '../dataset-column-edit';
@@ -25,6 +33,9 @@ import { useImportItemsModal } from '../../dataset-import-items-modal/use-import
 import { useAddItemsPanel } from '../../dataset-add-items-panel/use-add-items-panel';
 import { useAddExperiment } from '../../add-experiment/use-add-experiment';
 import ReportWrapper from './ReportWrapper';
+
+const DATASET_TAGS_SEARCH_MAX_LENGTH = 100;
+const DATASET_TAGS_SEARCH_DEBOUNCE_TIME = 500;
 
 interface TableHeaderProps {
   datasetDetail?: EvaluationSet;
@@ -41,7 +52,53 @@ interface TableHeaderProps {
   isDraftVersion: boolean;
   currentVersion: Version;
   totalItemCount?: number;
+  tagsSearchValue?: string;
+  onTagsSearchValueChange?: (value: string) => void;
 }
+
+interface DatasetTagsSearchProps {
+  value?: string;
+  onChange?: (value: string) => void;
+}
+
+const DatasetTagsSearch = ({ value, onChange }: DatasetTagsSearchProps) => {
+  const [innerValue, setInnerValue] = useState(value ?? '');
+  const { run: runSearch } = useDebounceFn(
+    (nextValue: string) => {
+      onChange?.(nextValue.trim());
+    },
+    {
+      wait: DATASET_TAGS_SEARCH_DEBOUNCE_TIME,
+    },
+  );
+
+  useEffect(() => {
+    setInnerValue(value ?? '');
+  }, [value]);
+
+  const handleChange = (nextValue?: string) => {
+    const normalizedValue = (nextValue ?? '').slice(
+      0,
+      DATASET_TAGS_SEARCH_MAX_LENGTH,
+    );
+    setInnerValue(normalizedValue);
+    runSearch(normalizedValue);
+  };
+
+  return (
+    <div className="w-60 shrink-0">
+      <Search
+        className="!w-full"
+        placeholder="搜索 tags"
+        value={innerValue}
+        onChange={handleChange}
+        prefix={<IconCozMagnifier />}
+        showClear
+        autoComplete="off"
+      />
+    </div>
+  );
+};
 
 export const TableHeader = ({
   datasetDetail,
@@ -55,6 +112,8 @@ export const TableHeader = ({
   refreshDatasetDetail,
   datasetItemExpandNode,
   totalItemCount,
+  tagsSearchValue,
+  onTagsSearchValueChange,
 }: TableHeaderProps) => {
   //添加行数据
   const { setVisible: setAddItemsVisible, panelNode: addItemsPanelNode } =
@@ -192,10 +251,16 @@ export const TableHeader = ({
   ];
 
   return (
-    <div className="flex items-center justify-between">
-      <Typography.Text className="!text-fg-plus !text-[16px] !font-medium ">
-        {I18n.t('data_item')}
-      </Typography.Text>
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <Typography.Text className="shrink-0 !text-fg-plus !text-[16px] !font-medium ">
+          {I18n.t('data_item')}
+        </Typography.Text>
+        <DatasetTagsSearch
+          value={tagsSearchValue}
+          onChange={onTagsSearchValueChange}
+        />
+      </div>
       <div className="flex items-center justify-end gap-2">
         {headerActionList.map(action =>
           action?.hidden ? null : (

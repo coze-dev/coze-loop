@@ -4,6 +4,21 @@ import * as common from './common';
 export { common };
 import * as data_dataset from './../../data/domain/dataset';
 export { data_dataset };
+export enum EvaluationSetTagRelation {
+  And = "and",
+  Or = "or",
+}
+export interface EvaluationSetTag {
+  tag_id?: string,
+  name?: string,
+  parent_tag_id?: string,
+  parent_name?: string,
+}
+export interface EvaluationSetTagFilter {
+  tag_ids: string[],
+  /** 默认 or */
+  relation?: EvaluationSetTagRelation,
+}
 export interface EvaluationSet {
   /** 主键&外键 */
   id?: string,
@@ -32,6 +47,8 @@ export interface EvaluationSet {
   latest_version?: string,
   /** 下一个的版本号 */
   next_version_num?: string,
+  /** 评测集实体标签 */
+  tags?: EvaluationSetTag[],
   /** 系统信息 */
   base_info?: common.BaseInfo,
 }

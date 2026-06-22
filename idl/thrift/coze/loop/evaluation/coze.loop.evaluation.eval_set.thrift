@@ -123,6 +123,8 @@ struct ListEvaluationSetsRequest {
     3: optional list<string> creators,
     4: optional list<i64> evaluation_set_ids (api.js_conv="true", go.tag='json:"evaluation_set_ids"'),
     5: optional eval_set.EvaluationSetType type (vt.max_size = "128"), // 按评测集类型过滤
+    6: optional eval_set.EvaluationSetTagFilter tag_filter, // 按评测集实体标签过滤
+    7: optional bool with_tags, // 是否返回评测集实体标签
 
     100: optional i32 page_number (vt.gt = "0"),
     101: optional i32 page_size (vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20

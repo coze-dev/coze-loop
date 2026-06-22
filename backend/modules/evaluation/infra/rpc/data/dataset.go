@@ -412,6 +412,7 @@ func (a *DatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.Lis
 		PageSize:    param.PageSize,
 		PageToken:   param.PageToken,
 		OrderBys:    convert2DatasetOrderBys(ctx, param.OrderBys),
+		Filter:      convert2DatasetFilters(param.Filter),
 		// todo
 		// ItemIDsNotIn: param.ItemIDsNotIn,
 	})
@@ -436,6 +437,7 @@ func (a *DatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param
 		PageSize:    param.PageSize,
 		PageToken:   param.PageToken,
 		OrderBys:    convert2DatasetOrderBys(ctx, param.OrderBys),
+		Filter:      convert2DatasetFilters(param.Filter),
 	})
 	if err != nil {
 		return nil, nil, nil, nil, err

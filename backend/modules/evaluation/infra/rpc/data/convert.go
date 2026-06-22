@@ -962,3 +962,10 @@ func convert2DatasetContentType(contentType *entity.ContentType) *dataset.Conten
 	}
 	return &t
 }
+
+func convert2DatasetFilters(f *entity.Filter) *entity.Filter {
+	if f == nil {
+		return nil
+	}
+	return f
+}

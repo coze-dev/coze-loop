@@ -3,6 +3,22 @@ namespace go coze.loop.evaluation.domain.eval_set
 include "../../data/domain/dataset.thrift"
 include "common.thrift"
 
+typedef string EvaluationSetTagRelation (ts.enum="true")
+const EvaluationSetTagRelation EvaluationSetTagRelation_And = "and"
+const EvaluationSetTagRelation EvaluationSetTagRelation_Or = "or"
+
+struct EvaluationSetTag {
+    1: optional i64 tag_id (api.js_conv="true", go.tag = 'json:"tag_id"'),
+    2: optional string name,
+    3: optional i64 parent_tag_id (api.js_conv="true", go.tag = 'json:"parent_tag_id"'),
+    4: optional string parent_name,
+}
+
+struct EvaluationSetTagFilter {
+    1: required list<i64> tag_ids (api.js_conv="true", go.tag = 'json:"tag_ids"'),
+    2: optional EvaluationSetTagRelation relation, // 默认 or
+}
+
 struct EvaluationSet {
     // 主键&外键
     1: optional i64 id (api.js_conv="true", go.tag = 'json:"id"'),
@@ -24,6 +40,7 @@ struct EvaluationSet {
     30: optional EvaluationSetVersion evaluation_set_version,  // 版本详情信息
     31: optional string latest_version ,                      // 最新的版本号
     32: optional i64 next_version_num (api.js_conv="true", go.tag = 'json:"next_version_num"'),                   // 下一个的版本号
+    40: optional list<EvaluationSetTag> tags,                 // 评测集实体标签
 
     // 系统信息
     100: optional common.BaseInfo base_info

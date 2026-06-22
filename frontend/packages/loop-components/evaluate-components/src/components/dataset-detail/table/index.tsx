@@ -3,7 +3,7 @@
 /* eslint-disable complexity */
 /* eslint-disable @coze-arch/max-line-per-function */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import cs from 'classnames';
 import { formatTimestampToString } from '@cozeloop/toolkit';
@@ -20,6 +20,12 @@ import {
   type EvaluationSetItem,
   type EvaluationSet,
 } from '@cozeloop/api-schema/evaluation';
+import {
+  FieldType,
+  QueryRelation,
+  QueryType,
+  type Filter,
+} from '@cozeloop/api-schema/data';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozIllusAdd } from '@coze-arch/coze-design/illustrations';
 import {
@@ -42,6 +48,8 @@ import { useBatchSelect } from './use-batch-select';
 import { TableHeader } from './header';
 
 import styles from './index.module.less';
+const DATASET_ITEM_TAGS_FIELD_NAME = 'tags';
+
 interface DatasetItemListProps {
   datasetDetail?: EvaluationSet;
   spaceID: string;
@@ -54,6 +62,24 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
   refreshDatasetDetail,
   setCurrentVersion: setCurrentVersionProps,
 }) => {
+  const [tagsSearchValue, setTagsSearchValue] = useState('');
+  const datasetItemFilter = useMemo<Filter | undefined>(() => {
+    const keyword = tagsSearchValue.trim();
+    if (!keyword) {
+      return undefined;
+    }
+    return {
+      query_and_or: QueryRelation.And,
+      filter_fields: [
+        {
+          field_name: DATASET_ITEM_TAGS_FIELD_NAME,
+          field_type: FieldType.String,
+          query_type: QueryType.Match,
+          values: [keyword],
+        },
+      ],
+    };
+  }, [tagsSearchValue]);
   const {
     service,
     columns,
@@ -71,6 +97,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
     datasetDetail,
     spaceID,
     refreshDatasetDetail,
+    filter: datasetItemFilter,
   });
   const {
     EnterBatchSelectButton,
@@ -290,6 +317,8 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
                 datasetItemExpandNode={ExpandNode}
                 setColumns={setColumns}
                 totalItemCount={service?.data?.total}
+                tagsSearchValue={tagsSearchValue}
+                onTagsSearchValueChange={setTagsSearchValue}
               />
             )
           }

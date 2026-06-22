@@ -112,6 +112,8 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 		PageSize:         param.PageSize,
 		PageToken:        param.PageToken,
 		OrderBys:         param.OrderBys,
+		TagFilter:        param.TagFilter,
+		WithTags:         param.WithTags,
 	})
 }
 

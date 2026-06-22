@@ -25,6 +25,26 @@ type EvaluationSet struct {
 	NextVersionNum       int64                 `json:"next_version_num,omitempty"`
 	BaseInfo             *BaseInfo             `json:"base_info,omitempty"`
 	BizCategory          BizCategory           `json:"biz_category,omitempty"`
+	Tags                 []*EvaluationSetTag   `json:"tags,omitempty"`
+}
+
+type EvaluationSetTagRelation string
+
+const (
+	EvaluationSetTagRelationAnd EvaluationSetTagRelation = "and"
+	EvaluationSetTagRelationOr  EvaluationSetTagRelation = "or"
+)
+
+type EvaluationSetTag struct {
+	TagID       *int64  `json:"tag_id,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	ParentTagID *int64  `json:"parent_tag_id,omitempty"`
+	ParentName  *string `json:"parent_name,omitempty"`
+}
+
+type EvaluationSetTagFilter struct {
+	TagIDs   []int64                   `json:"tag_ids,omitempty"`
+	Relation *EvaluationSetTagRelation `json:"relation,omitempty"`
 }
 
 type DatasetSpec struct {

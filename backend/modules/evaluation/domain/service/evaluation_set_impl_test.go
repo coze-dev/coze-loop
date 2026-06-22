@@ -514,6 +514,11 @@ func TestEvaluationSetServiceImpl_ListEvaluationSets(t *testing.T) {
 				PageNumber: gptr.Of[int32](1),
 				PageSize:   gptr.Of[int32](10),
 				Name:       gptr.Of("test"),
+				TagFilter: &entity.EvaluationSetTagFilter{
+					TagIDs:   []int64{11, 12},
+					Relation: gptr.Of(entity.EvaluationSetTagRelationOr),
+				},
+				WithTags: true,
 			},
 			mockSetup: func() {
 				mockDatasetRPCAdapter.EXPECT().
@@ -522,6 +527,11 @@ func TestEvaluationSetServiceImpl_ListEvaluationSets(t *testing.T) {
 						PageNumber: gptr.Of[int32](1),
 						PageSize:   gptr.Of[int32](10),
 						Name:       gptr.Of("test"),
+						TagFilter: &entity.EvaluationSetTagFilter{
+							TagIDs:   []int64{11, 12},
+							Relation: gptr.Of(entity.EvaluationSetTagRelationOr),
+						},
+						WithTags: true,
 					}).
 					Return([]*entity.EvaluationSet{
 						{

@@ -5,17 +5,20 @@ import { TextEllipsis } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { type ColumnItem, UserProfile } from '@cozeloop/components';
 import {
+  type EvaluationSetTag,
   type UserInfo,
   type EvaluationSet,
 } from '@cozeloop/api-schema/evaluation';
-import { Tag, type ColumnProps } from '@coze-arch/coze-design';
+import { Tag, Typography, type ColumnProps } from '@coze-arch/coze-design';
 
+import { AutoOverflowList } from '../common/auto-overflow-list';
 import LoopTableSortIcon from './sort-icon';
 import { ColumnNameListTag } from './column-name-list-tag';
 
 export type EvaluationSetKey =
   | 'name'
   | 'columns'
+  | 'tags'
   | 'item_count'
   | 'latest_version'
   | 'update_at'
@@ -23,6 +26,42 @@ export type EvaluationSetKey =
   | 'description'
   | 'created_by'
   | 'updated_by';
+
+const EvaluationSetTags = ({ tags }: { tags?: EvaluationSetTag[] }) => {
+  const visibleTags = (tags ?? [])
+    .filter(item => item.name || item.tag_id)
+    .map((item, index) => ({
+      ...item,
+      key: item.tag_id || item.name || String(index),
+    }));
+
+  if (!visibleTags.length) {
+    return '-';
+  }
+
+  return (
+    <AutoOverflowList
+      items={visibleTags}
+      itemKey="key"
+      minVisibleItems={1}
+      itemRender={({ item }) => (
+        <Tag
+          color="primary"
+          className="max-w-[120px] flex-shrink-0"
+          onClick={event => event.stopPropagation()}
+        >
+          <Typography.Text
+            style={{ color: 'inherit', fontSize: 'inherit' }}
+            ellipsis={{ showTooltip: true }}
+            className="!max-w-full"
+          >
+            {item.name || item.tag_id}
+          </Typography.Text>
+        </Tag>
+      )}
+    />
+  );
+};
 
 export const DatasetColumnConfig: Record<
   EvaluationSetKey,
@@ -64,6 +103,14 @@ export const DatasetColumnConfig: Record<
     key: 'columns',
     width: 300,
     render: record => <ColumnNameListTag set={record} />,
+  },
+  tags: {
+    title: 'tags',
+    displayName: 'tags',
+    key: 'tags',
+    dataIndex: 'tags',
+    width: 180,
+    render: tags => <EvaluationSetTags tags={tags} />,
   },
   item_count: {
     title: <div className="text-right">{I18n.t('data_item')}</div>,
@@ -150,6 +197,7 @@ export const DatasetColumnConfig: Record<
 const DefaultColumnConfig: EvaluationSetKey[] = [
   'name',
   'columns',
+  'tags',
   'item_count',
   'latest_version',
   'description',

@@ -4089,6 +4089,34 @@ func (p *ListEvaluationSetsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField100(buf[offset:])
@@ -4273,6 +4301,32 @@ func (p *ListEvaluationSetsRequest) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListEvaluationSetsRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_set.NewEvaluationSetTagFilter()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.TagFilter = _field
+	return offset, nil
+}
+
+func (p *ListEvaluationSetsRequest) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WithTags = _field
+	return offset, nil
+}
+
 func (p *ListEvaluationSetsRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -4360,12 +4414,14 @@ func (p *ListEvaluationSetsRequest) FastWriteNocopy(buf []byte, w thrift.NocopyW
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -4382,6 +4438,8 @@ func (p *ListEvaluationSetsRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
 		l += p.field100Length()
 		l += p.field101Length()
 		l += p.field102Length()
@@ -4445,6 +4503,24 @@ func (p *ListEvaluationSetsRequest) fastWriteField5(buf []byte, w thrift.NocopyW
 	if p.IsSetType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Type)
+	}
+	return offset
+}
+
+func (p *ListEvaluationSetsRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTagFilter() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 6)
+		offset += p.TagFilter.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ListEvaluationSetsRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWithTags() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 7)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithTags)
 	}
 	return offset
 }
@@ -4550,6 +4626,24 @@ func (p *ListEvaluationSetsRequest) field5Length() int {
 	return l
 }
 
+func (p *ListEvaluationSetsRequest) field6Length() int {
+	l := 0
+	if p.IsSetTagFilter() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.TagFilter.BLength()
+	}
+	return l
+}
+
+func (p *ListEvaluationSetsRequest) field7Length() int {
+	l := 0
+	if p.IsSetWithTags() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ListEvaluationSetsRequest) field100Length() int {
 	l := 0
 	if p.IsSetPageNumber() {
@@ -4638,6 +4732,20 @@ func (p *ListEvaluationSetsRequest) DeepCopy(s interface{}) error {
 	if src.Type != nil {
 		tmp := *src.Type
 		p.Type = &tmp
+	}
+
+	var _tagFilter *eval_set.EvaluationSetTagFilter
+	if src.TagFilter != nil {
+		_tagFilter = &eval_set.EvaluationSetTagFilter{}
+		if err := _tagFilter.DeepCopy(src.TagFilter); err != nil {
+			return err
+		}
+	}
+	p.TagFilter = _tagFilter
+
+	if src.WithTags != nil {
+		tmp := *src.WithTags
+		p.WithTags = &tmp
 	}
 
 	if src.PageNumber != nil {

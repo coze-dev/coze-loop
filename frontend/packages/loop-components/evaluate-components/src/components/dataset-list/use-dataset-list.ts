@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
-import { usePagination } from 'ahooks';
+import { usePagination, useUpdateEffect } from 'ahooks';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   type EvaluationSet,
@@ -44,6 +44,7 @@ export const useDatasetList = () => {
       const res = await StoneEvaluationApi.ListEvaluationSets({
         ...filter,
         workspace_id: spaceID ?? 0,
+        with_tags: true,
         page_size: pageSize ?? DEFAULT_PAGE_SIZE,
         page_number: current,
       });
@@ -63,9 +64,15 @@ export const useDatasetList = () => {
     setPage(service.pagination.current);
   }, [service.pagination.current]);
 
+  useUpdateEffect(() => {
+    if (service.pagination.current !== 1) {
+      service.changeCurrent(1);
+    }
+  }, [filter]);
+
   const onFilterChange = (values: Partial<ListEvaluationSetsReq>) => {
     setFilter(values);
-    setFilterStore({ name: values?.name });
+    setFilterStore(values);
   };
 
   return {

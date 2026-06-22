@@ -97,6 +97,10 @@ export interface ListEvaluationSetsRequest {
   name?: string,
   creators?: string[],
   evaluation_set_ids?: string[],
+  /** 按评测集实体标签过滤 */
+  tag_filter?: eval_set.EvaluationSetTagFilter,
+  /** 是否返回评测集实体标签 */
+  with_tags?: boolean,
   page_number?: number,
   /** 分页大小 (0, 200]，默认为 20 */
   page_size?: number,

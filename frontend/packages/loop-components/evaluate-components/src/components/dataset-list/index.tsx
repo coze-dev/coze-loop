@@ -42,7 +42,10 @@ export const DatasetList = () => {
     navigate(`evaluation/datasets/${row.id}`);
   };
   const [selectedDataset, setSelectedDataset] = useState<EvaluationSet>();
-  const isSearch = filter?.name || !isEmpty(filter?.creators);
+  const isSearch =
+    filter?.name ||
+    !isEmpty(filter?.creators) ||
+    !isEmpty(filter?.tag_filter?.tag_ids);
   const handleDelete = (row: EvaluationSet) => {
     Modal.error({
       size: 'large',

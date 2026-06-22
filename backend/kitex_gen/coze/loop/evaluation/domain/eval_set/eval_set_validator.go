@@ -21,6 +21,12 @@ var (
 	_ = time.Nanosecond
 )
 
+func (p *EvaluationSetTag) IsValid() error {
+	return nil
+}
+func (p *EvaluationSetTagFilter) IsValid() error {
+	return nil
+}
 func (p *EvaluationSet) IsValid() error {
 	if p.Spec != nil {
 		if err := p.Spec.IsValid(); err != nil {
