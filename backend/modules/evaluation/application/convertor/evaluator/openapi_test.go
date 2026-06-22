@@ -209,6 +209,34 @@ func TestOpenAPIEvaluatorOutputDataDO2DTO(t *testing.T) {
 		assert.Equal(t, "output", *dto.Stdout)
 		assert.Equal(t, float64(5), *dto.EvaluatorResult_.Score)
 	})
+
+	t.Run("with extra_output", func(t *testing.T) {
+		outputType := entity.EvaluatorExtraOutputTypeHTML
+		url := "https://tos.example.com/signed-url"
+		do := &entity.EvaluatorOutputData{
+			TimeConsumingMS: 200,
+			ExtraOutput: &entity.EvaluatorExtraOutputContent{
+				OutputType: &outputType,
+				URI:        gptr.Of("tos-cn-i-xxx/space/123/extra_output/index.html"),
+				URL:        &url,
+			},
+		}
+		dto := OpenAPIEvaluatorOutputDataDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.NotNil(t, dto.ExtraOutput)
+		assert.Equal(t, "html", *dto.ExtraOutput.OutputType)
+		assert.Equal(t, "https://tos.example.com/signed-url", *dto.ExtraOutput.URL)
+	})
+
+	t.Run("with nil extra_output", func(t *testing.T) {
+		do := &entity.EvaluatorOutputData{
+			TimeConsumingMS: 100,
+			ExtraOutput:     nil,
+		}
+		dto := OpenAPIEvaluatorOutputDataDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Nil(t, dto.ExtraOutput)
+	})
 }
 
 func TestOpenAPIEvaluatorResultDO2DTO(t *testing.T) {

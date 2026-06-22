@@ -309,7 +309,20 @@ func OpenAPIEvaluatorOutputDataDO2DTO(do *entity.EvaluatorOutputData) *openapiEv
 		EvaluatorRunError: OpenAPIEvaluatorRunErrorDO2DTO(do.EvaluatorRunError),
 		TimeConsumingMs:   gptr.Of(do.TimeConsumingMS),
 		Stdout:            gptr.Of(do.Stdout),
+		ExtraOutput:       OpenAPIEvaluatorExtraOutputContentDO2DTO(do.ExtraOutput),
 	}
+	return dto
+}
+
+func OpenAPIEvaluatorExtraOutputContentDO2DTO(do *entity.EvaluatorExtraOutputContent) *openapiEvaluator.EvaluatorExtraOutputContent {
+	if do == nil {
+		return nil
+	}
+	dto := &openapiEvaluator.EvaluatorExtraOutputContent{}
+	if do.OutputType != nil {
+		dto.OutputType = gptr.Of(string(*do.OutputType))
+	}
+	dto.URL = do.URL
 	return dto
 }
 
