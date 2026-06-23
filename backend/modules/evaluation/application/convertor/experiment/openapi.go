@@ -644,14 +644,14 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		}
 	}
 
-	// item-centric 多评测集字段回填 (110/112/113/114): 与 DomainExperimentDTO2OpenAPI / ToExptDTO 等价, 但走 entity 直转,
+	// item-centric 多评测集字段回填 (110/111/112/113/114): 与 DomainExperimentDTO2OpenAPI / ToExptDTO 等价, 但走 entity 直转,
 	// 供 GetExperimentsOApi 单实验 Get 使用 (其上游 manager.GetDetail 已 enrichEvalSetDetails 填好 EvalSetDetails/TotalItemCount)。
-	// 111 eval_set_configs (version-string) 与 DTO 路径一致, OpenAPI 侧不回显。
 	result.EvalSetSourceType = mapEvalSetSourceTypeDO2OpenAPI(experiment.EvalSetSourceType)
 	result.EvalSetDetails = entityEvalSetDetailsDO2OpenAPI(experiment.EvalSetDetails)
-	// total_item_count 仅 MultiSetConfig 回显 (对齐 ToExptDTO; SingleSet 旧实验不塞 0)
+	// total_item_count + eval_set_configs(111, 含 item_filter) 仅 MultiSetConfig 回显 (对齐 ToExptDTO/batch_get; SingleSet 旧实验不回显)
 	if experiment.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
 		result.TotalItemCount = gptr.Of(experiment.TotalItemCount)
+		result.EvalSetConfigs = convertEvalSetConfigsDO2OpenAPI(experiment)
 	}
 	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
@@ -659,6 +659,104 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	}
 
 	return result
+}
+
+// convertEvalSetConfigsDO2OpenAPI 将内部 entity.EvalSetConfig 回显为 OpenAPI 版 (version-string 风格)，
+// 供 GetExperimentsOApi 等 OpenAPI 读路径用，仅 MultiSetConfig 实验调用。
+// version_id → version 字符串从读对象上已加载的数据反查 (零额外 RPC)：
+//   - evaluator: experiment.Evaluators (GetEvaluatorVersionID/GetVersion)
+//   - eval_set:  experiment.EvalSetDetails[].EvalSet.EvaluationSetVersion.Version
+//
+// item_filter 与内部同型 (data_filter.Filter)，直接复用 convertExptFilterDOToDTO 透传。
+// runtime_param (map[string]string) 本期不回显：OApi 用 JSONValue，map→JSON 转换有损且非典型场景，需要时再补。
+func convertEvalSetConfigsDO2OpenAPI(experiment *entity.Experiment) []*openapiExperiment.OpenAPIEvalSetConfig {
+	if experiment == nil || experiment.EvalConf == nil || len(experiment.EvalConf.EvalSetConfigs) == 0 {
+		return nil
+	}
+
+	// version_id → version 字符串反查表 (从已加载数据构建)
+	evVerIDToStr := make(map[int64]string, len(experiment.Evaluators))
+	for _, ev := range experiment.Evaluators {
+		if ev == nil {
+			continue
+		}
+		if vid := ev.GetEvaluatorVersionID(); vid != 0 {
+			evVerIDToStr[vid] = ev.GetVersion()
+		}
+	}
+	setVerIDToStr := make(map[int64]string, len(experiment.EvalSetDetails))
+	for _, d := range experiment.EvalSetDetails {
+		if d == nil || d.EvalSet == nil || d.EvalSet.EvaluationSetVersion == nil {
+			continue
+		}
+		setVerIDToStr[d.EvalSetVersionID] = d.EvalSet.EvaluationSetVersion.Version
+	}
+
+	out := make([]*openapiExperiment.OpenAPIEvalSetConfig, 0, len(experiment.EvalConf.EvalSetConfigs))
+	for _, sc := range experiment.EvalConf.EvalSetConfigs {
+		if sc == nil {
+			continue
+		}
+		oc := &openapiExperiment.OpenAPIEvalSetConfig{
+			EvalSetID: gptr.Of(sc.EvalSetID),
+		}
+		if v := setVerIDToStr[sc.EvalSetVersionID]; v != "" {
+			oc.EvalSetVersion = gptr.Of(v)
+		}
+		if sc.ItemFilter != nil {
+			oc.ItemFilter = convertExptFilterDOToDTO(sc.ItemFilter)
+		}
+		for _, ec := range sc.EvaluatorConfs {
+			if ec == nil {
+				continue
+			}
+			oec := &openapiExperiment.OpenAPIExptEvaluatorConf{
+				EvaluatorID: gptr.Of(ec.EvaluatorID),
+				ScoreWeight: ec.ScoreWeight,
+				FromEvalSet: fieldConfsToOpenAPIFieldMapping(ec.FromEvalSet),
+				FromTarget:  fieldConfsToOpenAPIFieldMapping(ec.FromTarget),
+			}
+			if v := evVerIDToStr[ec.EvaluatorVersionID]; v != "" {
+				oec.Version = gptr.Of(v)
+			}
+			if ec.Alias != "" {
+				oec.Alias = gptr.Of(ec.Alias)
+			}
+			oc.EvaluatorConfs = append(oc.EvaluatorConfs, oec)
+		}
+		for _, tc := range sc.TargetConfs {
+			if tc == nil {
+				continue
+			}
+			otc := &openapiExperiment.OpenAPIExptTargetConf{}
+			if len(tc.FieldMapping) > 0 {
+				otc.FieldMapping = &openapiExperiment.TargetFieldMapping{
+					FromEvalSet: fieldConfsToOpenAPIFieldMapping(tc.FieldMapping),
+				}
+			}
+			oc.TargetConfs = append(oc.TargetConfs, otc)
+		}
+		out = append(out, oc)
+	}
+	return out
+}
+
+// fieldConfsToOpenAPIFieldMapping 将 domain entity.FieldConf 列表回显为 OpenAPI FieldMapping。
+func fieldConfsToOpenAPIFieldMapping(fcs []*entity.FieldConf) []*openapiExperiment.FieldMapping {
+	if len(fcs) == 0 {
+		return nil
+	}
+	out := make([]*openapiExperiment.FieldMapping, 0, len(fcs))
+	for _, fc := range fcs {
+		if fc == nil {
+			continue
+		}
+		out = append(out, &openapiExperiment.FieldMapping{
+			FieldName:     gptr.Of(fc.FieldName),
+			FromFieldName: gptr.Of(fc.FromField),
+		})
+	}
+	return out
 }
 
 // mapEvalSetSourceTypeDO2OpenAPI 将 entity ExptEvalSetSourceType (值) 映射为 openapi 字符串枚举。
