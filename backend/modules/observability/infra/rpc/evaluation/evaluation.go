@@ -7,17 +7,15 @@ import (
 	"context"
 
 	"github.com/bytedance/gg/gptr"
-
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
-
 	evDomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
-
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -77,7 +75,7 @@ func (e *EvaluationProvider) InvokeExperiment(ctx context.Context, param *rpc.In
 	if param.EvaluationSetID == 0 {
 		return 0, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("evaluation set ID is nil"))
 	}
-	logs.CtxInfo(ctx, "InvokeExperiment, param: %+v", param)
+	logs.CtxInfo(ctx, "InvokeExperiment, param: %s", json.MarshalStringIgnoreErr(param))
 	resp, err := e.client.InvokeExperiment(ctx, &expt.InvokeExperimentRequest{
 		WorkspaceID:      param.WorkspaceID,
 		EvaluationSetID:  param.EvaluationSetID,
