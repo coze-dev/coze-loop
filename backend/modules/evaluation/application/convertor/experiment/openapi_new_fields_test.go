@@ -476,6 +476,113 @@ func TestOpenAPIExptDO2DTO_ItemCentricFields(t *testing.T) {
 	})
 }
 
+// TestOpenAPIExptDO2DTO_EvalSetConfigsEcho 验证 MultiSetConfig 实验经 OpenAPI 读路径 (GetExperimentsOApi)
+// 回显 eval_set_configs(111): 含 item_filter + version_id→version 字符串反查 + evaluator_confs 字段映射;
+// SingleSet 旧实验不回显。
+func TestOpenAPIExptDO2DTO_EvalSetConfigsEcho(t *testing.T) {
+	t.Parallel()
+
+	t.Run("MultiSetConfig 回显 item_filter + version 字符串", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ID:                1,
+			Status:            entity.ExptStatus_Success,
+			ExptType:          entity.ExptType_Offline,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			TotalItemCount:    7,
+			// evaluator version_id → version 字符串反查源
+			Evaluators: []*entity.Evaluator{
+				{EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 5001, Version: "0.0.1"}},
+			},
+			// eval_set version_id → version 字符串反查源
+			EvalSetDetails: []*entity.ExptEvalSetDetail{
+				{EvalSetID: 100, EvalSetVersionID: 1000, IsPrimary: true, ItemCount: 4,
+					EvalSet: &entity.EvaluationSet{ID: 100, EvaluationSetVersion: &entity.EvaluationSetVersion{Version: "0.0.1"}}},
+				{EvalSetID: 200, EvalSetVersionID: 2000, IsPrimary: false, ItemCount: 3,
+					EvalSet: &entity.EvaluationSet{ID: 200, EvaluationSetVersion: &entity.EvaluationSetVersion{Version: "0.0.2"}}},
+			},
+			EvalConf: &entity.EvaluationConfiguration{
+				EvalSetConfigs: []*entity.EvalSetConfig{
+					{
+						EvalSetID: 100, EvalSetVersionID: 1000,
+						ItemFilter: &entity.ExptItemFilter{
+							QueryAndOr: "and",
+							FilterFields: []*entity.ExptItemFilterField{
+								{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"1", "2", "3"}},
+							},
+						},
+						EvaluatorConfs: []*entity.ExptEvaluatorConf{
+							{
+								EvaluatorID: 50, EvaluatorVersionID: 5001, Alias: "evaluator_1", ScoreWeight: gptr.Of(0.6),
+								FromEvalSet: []*entity.FieldConf{{FieldName: "input", FromField: "input"}},
+								FromTarget:  []*entity.FieldConf{{FieldName: "output", FromField: "actual_output"}},
+							},
+						},
+					},
+					{
+						EvalSetID: 200, EvalSetVersionID: 2000,
+						ItemFilter: &entity.ExptItemFilter{
+							QueryAndOr: "and",
+							FilterFields: []*entity.ExptItemFilterField{
+								{FieldName: "category", FieldType: "tag", QueryType: "eq", Values: []string{"baike"}},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		converted := OpenAPIExptDO2DTO(experiment)
+		if assert.NotNil(t, converted) && assert.Len(t, converted.EvalSetConfigs, 2) {
+			c0 := converted.EvalSetConfigs[0]
+			assert.Equal(t, int64(100), c0.GetEvalSetID())
+			assert.Equal(t, "0.0.1", c0.GetEvalSetVersion()) // set version_id 1000 反查
+			if assert.NotNil(t, c0.ItemFilter) && assert.Len(t, c0.ItemFilter.FilterFields, 1) {
+				assert.Equal(t, "item_id", c0.ItemFilter.FilterFields[0].FieldName)
+				assert.Equal(t, "long", string(c0.ItemFilter.FilterFields[0].FieldType))
+				assert.Equal(t, "in", string(c0.ItemFilter.FilterFields[0].GetQueryType()))
+				assert.Equal(t, []string{"1", "2", "3"}, c0.ItemFilter.FilterFields[0].Values)
+			}
+			if assert.Len(t, c0.EvaluatorConfs, 1) {
+				ec := c0.EvaluatorConfs[0]
+				assert.Equal(t, int64(50), ec.GetEvaluatorID())
+				assert.Equal(t, "0.0.1", ec.GetVersion()) // evaluator version_id 5001 反查
+				assert.Equal(t, "evaluator_1", ec.GetAlias())
+				assert.InDelta(t, 0.6, ec.GetScoreWeight(), 1e-9)
+				if assert.Len(t, ec.FromEvalSet, 1) {
+					assert.Equal(t, "input", ec.FromEvalSet[0].GetFieldName())
+					assert.Equal(t, "input", ec.FromEvalSet[0].GetFromFieldName())
+				}
+				if assert.Len(t, ec.FromTarget, 1) {
+					assert.Equal(t, "output", ec.FromTarget[0].GetFieldName())
+					assert.Equal(t, "actual_output", ec.FromTarget[0].GetFromFieldName())
+				}
+			}
+			// 第二集: tag 条件圈选
+			c1 := converted.EvalSetConfigs[1]
+			assert.Equal(t, "0.0.2", c1.GetEvalSetVersion())
+			if assert.NotNil(t, c1.ItemFilter) && assert.Len(t, c1.ItemFilter.FilterFields, 1) {
+				assert.Equal(t, "category", c1.ItemFilter.FilterFields[0].FieldName)
+				assert.Equal(t, "tag", string(c1.ItemFilter.FilterFields[0].FieldType))
+				assert.Equal(t, "eq", string(c1.ItemFilter.FilterFields[0].GetQueryType()))
+			}
+		}
+	})
+
+	t.Run("SingleSet 旧实验不回显 eval_set_configs", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ID: 2, Status: entity.ExptStatus_Success, ExptType: entity.ExptType_Offline,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_SingleSet,
+			EvalConf: &entity.EvaluationConfiguration{
+				EvalSetConfigs: []*entity.EvalSetConfig{{EvalSetID: 100, EvalSetVersionID: 1000}},
+			},
+		}
+		converted := OpenAPIExptDO2DTO(experiment)
+		if assert.NotNil(t, converted) {
+			assert.Nil(t, converted.EvalSetConfigs, "SingleSet 不应回显 eval_set_configs")
+		}
+	})
+}
+
 // TestOpenAPIExptDO2DTO_OnlineExperimentHidesEvalSet — 校验线上实验不返回 eval_set（保留原有契约）
 func TestOpenAPIExptDO2DTO_OnlineExperimentHidesEvalSet(t *testing.T) {
 	t.Parallel()
