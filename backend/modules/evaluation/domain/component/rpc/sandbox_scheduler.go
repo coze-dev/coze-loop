@@ -44,9 +44,8 @@ const (
 type SandboxDestroyType int32
 
 const (
-	SandboxDestroyTypeCancel    SandboxDestroyType = 0
-	SandboxDestroyTypeCompleted SandboxDestroyType = 1
-	SandboxDestroyTypeFailed    SandboxDestroyType = 2
+	SandboxDestroyTypeTask    SandboxDestroyType = 0
+	SandboxDestroyTypeExecute SandboxDestroyType = 1
 )
 
 // ---------- Domain ----------
@@ -102,6 +101,7 @@ type SandboxRunRequest struct {
 	TaskID      string
 	Param       map[string]string
 	WorkspaceID int64
+	Image       *string
 }
 
 // SandboxRunResponse 提交一次执行响应。
