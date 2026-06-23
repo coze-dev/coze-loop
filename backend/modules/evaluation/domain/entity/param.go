@@ -134,6 +134,7 @@ type Opt struct {
 	OperationInstruction *string
 	Cluster              *string
 	AgentConnection      *AgentConnection
+	SandboxAgent         *SandboxAgent
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -181,6 +182,12 @@ func WithCluster(cluster *string) Option {
 func WithAgentConnection(agentConnection *AgentConnection) Option {
 	return func(option *Opt) {
 		option.AgentConnection = agentConnection
+	}
+}
+
+func WithSandboxAgent(sandboxAgent *SandboxAgent) Option {
+	return func(option *Opt) {
+		option.SandboxAgent = sandboxAgent
 	}
 }
 

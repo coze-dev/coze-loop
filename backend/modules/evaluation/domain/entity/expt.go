@@ -409,6 +409,7 @@ type CreateEvalTargetParam struct {
 	OperationInstruction *string
 	Cluster              *string
 	AgentConnection      *AgentConnection
+	SandboxAgent         *SandboxAgent
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {

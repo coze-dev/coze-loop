@@ -740,6 +740,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		if req.CreateEvalTargetParam.AgentConnection != nil {
 			opts = append(opts, entity.WithAgentConnection(req.CreateEvalTargetParam.AgentConnection))
 		}
+		if req.CreateEvalTargetParam.SandboxAgent != nil {
+			opts = append(opts, entity.WithSandboxAgent(req.CreateEvalTargetParam.SandboxAgent))
+		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, req.WorkspaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
 			opts...)
 		if err != nil {
