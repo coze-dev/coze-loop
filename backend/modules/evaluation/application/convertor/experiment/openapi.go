@@ -1512,7 +1512,8 @@ func OpenAPIEvaluatorParamDTO2Domain(dto *openapi.SubmitExperimentEvaluatorParam
 //   - evaluatorVersionIDMap: "{evaluator_id}_{version}" -> evaluator_version_id
 //
 // required 字段 (EvalSetID/EvalSetVersionID, EvaluatorID/EvaluatorVersionID) 必须落上;
-// 其余结构性校验 (set 去重 / (version,alias) 唯一 / target_confs len<=1 / alias 字符集)
+// item_filter 与内部同型 (data_filter.Filter) 直接透传;
+// 其余结构性校验 (set 去重 / (version,alias) 唯一 / target_confs len<=1 / alias 字符集 / item_filter 白名单)
 // 由内部 SubmitExperiment 的 ValidateEvalSetConfigs 统一兜底, 此处不重复。
 func OpenAPIEvalSetConfigsDTO2Domain(
 	confs []*openapiExperiment.OpenAPIEvalSetConfig,
@@ -1530,6 +1531,9 @@ func OpenAPIEvalSetConfigsDTO2Domain(
 		do := &domainExpt.EvalSetConfig{
 			EvalSetID:        conf.GetEvalSetID(),
 			EvalSetVersionID: evalSetVersionIDMap[conf.GetEvalSetID()],
+			// item_filter 与内部 EvalSetConfig.item_filter 同型 (data_filter.Filter), 直接透传;
+			// 白名单/存在性等结构校验由内部 SubmitExperiment 的 ValidateEvalSetConfigs 统一兜底。
+			ItemFilter: conf.GetItemFilter(),
 		}
 		// evaluator_confs
 		for _, ec := range conf.GetEvaluatorConfs() {

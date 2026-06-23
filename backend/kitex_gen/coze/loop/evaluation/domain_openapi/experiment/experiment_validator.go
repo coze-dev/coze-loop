@@ -52,6 +52,11 @@ func (p *OpenAPIExptTargetConf) IsValid() error {
 	return nil
 }
 func (p *OpenAPIEvalSetConfig) IsValid() error {
+	if p.ItemFilter != nil {
+		if err := p.ItemFilter.IsValid(); err != nil {
+			return fmt.Errorf("field ItemFilter not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptEvalSetDetail) IsValid() error {
