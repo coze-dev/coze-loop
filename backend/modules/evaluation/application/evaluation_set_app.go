@@ -24,6 +24,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 var (
@@ -65,7 +67,10 @@ type EvaluationSetApplicationImpl struct {
 }
 
 func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, req *eval_set.CreateEvaluationSetRequest) (resp *eval_set.CreateEvaluationSetResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "CreateEvaluationSet req: %v", json.Jsonify(req))
 	defer func() {
+		logs.CtxInfo(ctx, "CreateEvaluationSet resp: %v, err: %v", json.Jsonify(resp), err)
 		e.metric.EmitCreate(req.GetWorkspaceID(), err)
 	}()
 	// 参数校验
@@ -978,6 +983,11 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItemDefs(ctx context.Con
 }
 
 func (e *EvaluationSetApplicationImpl) ListEvaluationSetItemVersions(ctx context.Context, req *eval_set.ListEvaluationSetItemVersionsRequest) (resp *eval_set.ListEvaluationSetItemVersionsResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "ListEvaluationSetItemVersions req: %v", json.Jsonify(req))
+	defer func() {
+		logs.CtxInfo(ctx, "ListEvaluationSetItemVersions resp: %v, err: %v", json.Jsonify(resp), err)
+	}()
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
@@ -1022,6 +1032,11 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItemVersions(ctx context
 }
 
 func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemVersion(ctx context.Context, req *eval_set.GetEvaluationSetItemVersionRequest) (resp *eval_set.GetEvaluationSetItemVersionResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "GetEvaluationSetItemVersion req: %v", json.Jsonify(req))
+	defer func() {
+		logs.CtxInfo(ctx, "GetEvaluationSetItemVersion resp: %v, err: %v", json.Jsonify(resp), err)
+	}()
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
@@ -1056,6 +1071,11 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemVersion(ctx context.C
 }
 
 func (e *EvaluationSetApplicationImpl) UpdateEvaluationSetItemVersion(ctx context.Context, req *eval_set.UpdateEvaluationSetItemVersionRequest) (resp *eval_set.UpdateEvaluationSetItemVersionResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "UpdateEvaluationSetItemVersion req: %v", json.Jsonify(req))
+	defer func() {
+		logs.CtxInfo(ctx, "UpdateEvaluationSetItemVersion resp: %v, err: %v", json.Jsonify(resp), err)
+	}()
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}

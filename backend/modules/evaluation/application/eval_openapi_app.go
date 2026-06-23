@@ -107,9 +107,12 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 }
 
 func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest) (r *openapi.CreateEvaluationSetOApiResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "CreateEvaluationSetOApi req: %v", json.Jsonify(req))
 	var evaluationSetID int64
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
+		logs.CtxInfo(ctx, "CreateEvaluationSetOApi resp: %v, err: %v", json.Jsonify(r), err)
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluationSetID, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 	// 参数校验
@@ -2490,8 +2493,11 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 }
 
 func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetItemVersionsOApiRequest) (r *openapi.ListEvaluationSetItemVersionsOApiResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "ListEvaluationSetItemVersionsOApi req: %v", json.Jsonify(req))
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
+		logs.CtxInfo(ctx, "ListEvaluationSetItemVersionsOApi resp: %v, err: %v", json.Jsonify(r), err)
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 
@@ -2543,8 +2549,11 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.C
 }
 
 func (e *EvalOpenAPIApplication) GetEvaluationSetItemVersionOApi(ctx context.Context, req *openapi.GetEvaluationSetItemVersionOApiRequest) (r *openapi.GetEvaluationSetItemVersionOApiResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "GetEvaluationSetItemVersionOApi req: %v", json.Jsonify(req))
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
+		logs.CtxInfo(ctx, "GetEvaluationSetItemVersionOApi resp: %v, err: %v", json.Jsonify(r), err)
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 
