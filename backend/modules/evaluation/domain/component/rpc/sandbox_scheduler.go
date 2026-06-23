@@ -101,7 +101,6 @@ type SandboxRunRequest struct {
 	TaskID      string
 	Param       map[string]string
 	WorkspaceID int64
-	Image       *string
 }
 
 // SandboxRunResponse 提交一次执行响应。
