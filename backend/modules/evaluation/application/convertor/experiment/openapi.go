@@ -229,11 +229,8 @@ var supportedOpenAPIEvalTargetTypes = []openapiEvalTarget.EvalTargetType{
 }
 
 func supportedOpenAPIEvalTargetTypesString() string {
-	parts := make([]string, 0, len(supportedOpenAPIEvalTargetTypes))
-	for _, t := range supportedOpenAPIEvalTargetTypes {
-		parts = append(parts, t)
-	}
-	return strings.Join(parts, ", ")
+	// EvalTargetType is a string alias, so the slice is directly joinable.
+	return strings.Join(supportedOpenAPIEvalTargetTypes, ", ")
 }
 
 // SupportedOpenAPIEvalTargetTypesString returns the comma-separated list of
