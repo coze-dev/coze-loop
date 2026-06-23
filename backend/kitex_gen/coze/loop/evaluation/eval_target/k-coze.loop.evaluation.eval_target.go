@@ -432,6 +432,20 @@ func (p *CreateEvalTargetParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -604,6 +618,18 @@ func (p *CreateEvalTargetParam) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateEvalTargetParam) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_target.NewSandboxAgent()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SandboxAgent = _field
+	return offset, nil
+}
+
 func (p *CreateEvalTargetParam) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -622,6 +648,7 @@ func (p *CreateEvalTargetParam) FastWriteNocopy(buf []byte, w thrift.NocopyWrite
 		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
+		offset += p.fastWriteField12(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -641,6 +668,7 @@ func (p *CreateEvalTargetParam) BLength() int {
 		l += p.field9Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field12Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -745,6 +773,15 @@ func (p *CreateEvalTargetParam) fastWriteField11(buf []byte, w thrift.NocopyWrit
 	return offset
 }
 
+func (p *CreateEvalTargetParam) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSandboxAgent() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 12)
+		offset += p.SandboxAgent.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *CreateEvalTargetParam) field1Length() int {
 	l := 0
 	if p.IsSetSourceTargetID() {
@@ -844,6 +881,15 @@ func (p *CreateEvalTargetParam) field11Length() int {
 	return l
 }
 
+func (p *CreateEvalTargetParam) field12Length() int {
+	l := 0
+	if p.IsSetSandboxAgent() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SandboxAgent.BLength()
+	}
+	return l
+}
+
 func (p *CreateEvalTargetParam) DeepCopy(s interface{}) error {
 	src, ok := s.(*CreateEvalTargetParam)
 	if !ok {
@@ -930,6 +976,15 @@ func (p *CreateEvalTargetParam) DeepCopy(s interface{}) error {
 		}
 	}
 	p.AgentConnection = _agentConnection
+
+	var _sandboxAgent *eval_target.SandboxAgent
+	if src.SandboxAgent != nil {
+		_sandboxAgent = &eval_target.SandboxAgent{}
+		if err := _sandboxAgent.DeepCopy(src.SandboxAgent); err != nil {
+			return err
+		}
+	}
+	p.SandboxAgent = _sandboxAgent
 
 	return nil
 }
