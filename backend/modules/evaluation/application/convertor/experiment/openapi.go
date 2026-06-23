@@ -231,7 +231,7 @@ var supportedOpenAPIEvalTargetTypes = []openapiEvalTarget.EvalTargetType{
 func supportedOpenAPIEvalTargetTypesString() string {
 	parts := make([]string, 0, len(supportedOpenAPIEvalTargetTypes))
 	for _, t := range supportedOpenAPIEvalTargetTypes {
-		parts = append(parts, string(t))
+		parts = append(parts, t)
 	}
 	return strings.Join(parts, ", ")
 }
