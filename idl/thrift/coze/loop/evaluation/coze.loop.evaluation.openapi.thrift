@@ -516,6 +516,7 @@ struct SubmitExperimentEvalTargetParam {
     8: optional string env  // 有环境限制需要填充这个字段
     9: optional string cluster // type=10时需填写，自定义智能体所属集群
     10: optional eval_target.AgentConnection agent_connection // type=10时需填写，自定义智能体连接信息
+    11: optional eval_target.SandboxAgent sandbox_agent // type=17(sandbox_agent)时需填写，SandboxAgent 评测对象配置
 }
 
 

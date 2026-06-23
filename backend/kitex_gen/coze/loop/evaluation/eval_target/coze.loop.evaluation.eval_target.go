@@ -348,6 +348,8 @@ type CreateEvalTargetParam struct {
 	Cluster *string `thrift:"cluster,10,optional" frugal:"10,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
 	// type=10时需填写，自定义智能体连接信息
 	AgentConnection *eval_target.AgentConnection `thrift:"agent_connection,11,optional" frugal:"11,optional,eval_target.AgentConnection" form:"agent_connection" json:"agent_connection,omitempty" query:"agent_connection"`
+	// type=17(SandboxAgent)时需填写，SandboxAgent 评测对象配置
+	SandboxAgent *eval_target.SandboxAgent `thrift:"sandbox_agent,12,optional" frugal:"12,optional,eval_target.SandboxAgent" form:"sandbox_agent" json:"sandbox_agent,omitempty" query:"sandbox_agent"`
 }
 
 func NewCreateEvalTargetParam() *CreateEvalTargetParam {
@@ -488,6 +490,18 @@ func (p *CreateEvalTargetParam) GetAgentConnection() (v *eval_target.AgentConnec
 	}
 	return p.AgentConnection
 }
+
+var CreateEvalTargetParam_SandboxAgent_DEFAULT *eval_target.SandboxAgent
+
+func (p *CreateEvalTargetParam) GetSandboxAgent() (v *eval_target.SandboxAgent) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSandboxAgent() {
+		return CreateEvalTargetParam_SandboxAgent_DEFAULT
+	}
+	return p.SandboxAgent
+}
 func (p *CreateEvalTargetParam) SetSourceTargetID(val *string) {
 	p.SourceTargetID = val
 }
@@ -521,6 +535,9 @@ func (p *CreateEvalTargetParam) SetCluster(val *string) {
 func (p *CreateEvalTargetParam) SetAgentConnection(val *eval_target.AgentConnection) {
 	p.AgentConnection = val
 }
+func (p *CreateEvalTargetParam) SetSandboxAgent(val *eval_target.SandboxAgent) {
+	p.SandboxAgent = val
+}
 
 var fieldIDToName_CreateEvalTargetParam = map[int16]string{
 	1:  "source_target_id",
@@ -534,6 +551,7 @@ var fieldIDToName_CreateEvalTargetParam = map[int16]string{
 	9:  "operation_instruction",
 	10: "cluster",
 	11: "agent_connection",
+	12: "sandbox_agent",
 }
 
 func (p *CreateEvalTargetParam) IsSetSourceTargetID() bool {
@@ -578,6 +596,10 @@ func (p *CreateEvalTargetParam) IsSetCluster() bool {
 
 func (p *CreateEvalTargetParam) IsSetAgentConnection() bool {
 	return p.AgentConnection != nil
+}
+
+func (p *CreateEvalTargetParam) IsSetSandboxAgent() bool {
+	return p.SandboxAgent != nil
 }
 
 func (p *CreateEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
@@ -681,6 +703,14 @@ func (p *CreateEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -832,6 +862,14 @@ func (p *CreateEvalTargetParam) ReadField11(iprot thrift.TProtocol) error {
 	p.AgentConnection = _field
 	return nil
 }
+func (p *CreateEvalTargetParam) ReadField12(iprot thrift.TProtocol) error {
+	_field := eval_target.NewSandboxAgent()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SandboxAgent = _field
+	return nil
+}
 
 func (p *CreateEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -881,6 +919,10 @@ func (p *CreateEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -1099,6 +1141,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *CreateEvalTargetParam) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSandboxAgent() {
+		if err = oprot.WriteFieldBegin("sandbox_agent", thrift.STRUCT, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SandboxAgent.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 
 func (p *CreateEvalTargetParam) String() string {
 	if p == nil {
@@ -1145,6 +1205,9 @@ func (p *CreateEvalTargetParam) DeepEqual(ano *CreateEvalTargetParam) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.AgentConnection) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.SandboxAgent) {
 		return false
 	}
 	return true
@@ -1268,6 +1331,13 @@ func (p *CreateEvalTargetParam) Field10DeepEqual(src *string) bool {
 func (p *CreateEvalTargetParam) Field11DeepEqual(src *eval_target.AgentConnection) bool {
 
 	if !p.AgentConnection.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateEvalTargetParam) Field12DeepEqual(src *eval_target.SandboxAgent) bool {
+
+	if !p.SandboxAgent.DeepEqual(src) {
 		return false
 	}
 	return true

@@ -1264,6 +1264,9 @@ func CreateEvalTargetParamDTO2DOForTemplate(param *eval_target.CreateEvalTargetP
 		Env:                  param.Env,
 		OperationInstruction: param.OperationInstruction,
 	}
+	if param.SandboxAgent != nil {
+		res.SandboxAgent = target.SandboxAgentDTO2DO(param.SandboxAgent)
+	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))
 	}

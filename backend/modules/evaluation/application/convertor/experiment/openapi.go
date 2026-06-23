@@ -152,6 +152,10 @@ func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalT
 		result.AgentConnection = openapiAgentConnectionDTO2Domain(param.AgentConnection)
 	}
 
+	if param.SandboxAgent != nil {
+		result.SandboxAgent = openapiSandboxAgentDTO2Domain(param.SandboxAgent)
+	}
+
 	return result
 }
 
@@ -192,6 +196,34 @@ func openapiAgentImplDTO2Domain(dtoObj *openapiEvalTarget.AgentImpl) *domaindoEv
 		Framework: dtoObj.Framework,
 		Kind:      dtoObj.Kind,
 	}
+}
+
+func openapiSandboxAgentDTO2Domain(dtoObj *openapiEvalTarget.SandboxAgent) *domaindoEvalTarget.SandboxAgent {
+	if dtoObj == nil {
+		return nil
+	}
+	envs := make([]*domaindoEvalTarget.SandboxEnvVar, 0, len(dtoObj.Envs))
+	for _, e := range dtoObj.Envs {
+		if e == nil {
+			continue
+		}
+		envs = append(envs, &domaindoEvalTarget.SandboxEnvVar{
+			Key:   e.Key,
+			Value: e.Value,
+		})
+	}
+	res := &domaindoEvalTarget.SandboxAgent{
+		Name:          dtoObj.Name,
+		ModelName:     dtoObj.ModelName,
+		AgentSetupCmd: dtoObj.AgentSetupCmd,
+		AgentRunCmd:   dtoObj.AgentRunCmd,
+		Envs:          envs,
+	}
+	if dtoObj.Type != nil {
+		t := domaindoEvalTarget.SandboxAgentType(*dtoObj.Type)
+		res.Type = &t
+	}
+	return res
 }
 
 func ParseOpenAPIEvaluatorVersions(versions []string) ([]int64, error) {
@@ -3036,6 +3068,10 @@ func OpenAPICreateEvalTargetParamDTO2DomainV2(param *openapi.SubmitExperimentEva
 
 	if param.AgentConnection != nil {
 		res.AgentConnection = openapiAgentConnectionDTO2DO(param.AgentConnection)
+	}
+
+	if param.SandboxAgent != nil {
+		res.SandboxAgent = OpenAPISandboxAgentDTO2DO(param.SandboxAgent)
 	}
 
 	return res

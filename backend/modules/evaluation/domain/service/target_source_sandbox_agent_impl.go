@@ -6,7 +6,10 @@ package service
 import (
 	"context"
 
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -54,7 +57,34 @@ func (t *SandboxAgentSourceEvalTargetServiceImpl) AsyncExecute(ctx context.Conte
 }
 
 func (t *SandboxAgentSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, opts ...entity.Option) (*entity.EvalTarget, error) {
-	return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("SandboxAgent target does not support BuildBySource"))
+	o := &entity.Opt{}
+	for _, opt := range opts {
+		opt(o)
+	}
+	if o.SandboxAgent == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("SandboxAgent config is required"))
+	}
+	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+	userInfo := &entity.UserInfo{UserID: gptr.Of(userIDInContext)}
+	return &entity.EvalTarget{
+		SpaceID:        spaceID,
+		SourceTargetID: sourceTargetID,
+		EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			SpaceID:             spaceID,
+			SourceTargetVersion: sourceTargetVersion,
+			EvalTargetType:      entity.EvalTargetTypeSandboxAgent,
+			SandboxAgent:        o.SandboxAgent,
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: userInfo,
+				UpdatedBy: userInfo,
+			},
+		},
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: userInfo,
+			UpdatedBy: userInfo,
+		},
+	}, nil
 }
 
 func (t *SandboxAgentSourceEvalTargetServiceImpl) ListSource(ctx context.Context, param *entity.ListSourceParam) ([]*entity.EvalTarget, string, bool, error) {
