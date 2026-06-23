@@ -52,6 +52,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target"
 	mysql3 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent_studio"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
@@ -131,7 +132,8 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iEvalTargetRepo := target.NewEvalTargetRepo(idgen2, db2, evalTargetDAO, evalTargetVersionDAO, evalTargetRecordDAO, recordDataStorage, iLatestWriteTracker)
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(pms, pes)
-	v2 := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2)
+	sandboxSchedulerAdapter := agent_studio.NewSandboxSchedulerAdapter()
+	v2 := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter)
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v2, trajectoryAdapter, componentIConfiger)
 	iLocker := NewLock(cmdable)
 	exptAggrResultService := service.NewExptAggrResultService(iExptTurnResultRepo, iExptAggrResultRepo, iExperimentRepo, exptMetric, serviceEvaluatorService, evaluatorRecordService, iTagRPCAdapter, iExptAnnotateRepo, iEvalTargetService, exptEventPublisher, iLocker)
@@ -254,7 +256,8 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	iEvalTargetRepo := target.NewEvalTargetRepo(idgen2, db2, evalTargetDAO, evalTargetVersionDAO, evalTargetRecordDAO, recordDataStorage, iLatestWriteTracker)
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(promptClient, pec)
-	v2 := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2)
+	sandboxSchedulerAdapter := agent_studio.NewSandboxSchedulerAdapter()
+	v2 := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter)
 	iTrajectoryAdapter := trajectory.NewAdapter(tracerFactory)
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v2, iTrajectoryAdapter, componentIConfiger)
 	iDatasetRPCAdapter := data.NewDatasetRPCAdapter(dataClient)
@@ -298,7 +301,8 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iEvalTargetRepo := target.NewEvalTargetRepo(idgen2, db2, evalTargetDAO, evalTargetVersionDAO, evalTargetRecordDAO, recordDataStorage, iLatestWriteTracker)
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(client, executeClient)
-	v := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2)
+	sandboxSchedulerAdapter := agent_studio.NewSandboxSchedulerAdapter()
+	v := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter)
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v, trajectoryAdapter, iConfiger)
 	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
 	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
@@ -306,7 +310,7 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService, nil
 }
 
-func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClient taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (evaluation.EvalOpenAPIService, error) {
+func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClient taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (IEvalOpenAPIApplication, error) {
 	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
 	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
@@ -325,7 +329,8 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iEvalTargetRepo := target.NewEvalTargetRepo(idgen2, db2, evalTargetDAO, evalTargetVersionDAO, evalTargetRecordDAO, recordDataStorage, iLatestWriteTracker)
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(client, executeClient)
-	v := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2)
+	sandboxSchedulerAdapter := agent_studio.NewSandboxSchedulerAdapter()
+	v := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter)
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v, trajectoryAdapter, iConfiger)
 	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
 	iDatasetRPCAdapter := data.NewDatasetRPCAdapter(dataClient)
@@ -420,8 +425,8 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iExptInsightAnalysisService := service.NewInsightAnalysisService(iExptInsightAnalysisRecordRepo, exptEventPublisher, objectStorage, iAgentAdapter, iExptResultExportService, iNotifyRPCAdapter, iUserProvider, iExperimentRepo, iEvalTargetRepo)
 	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider)
 	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler)
-	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger)
-	return evalOpenAPIService, nil
+	v3 := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger)
+	return v3, nil
 }
 
 // wire.go:

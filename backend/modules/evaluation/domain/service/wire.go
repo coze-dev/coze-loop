@@ -16,6 +16,7 @@ import (
 	evaluatorrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	targetrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent_studio"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/pipeline"
@@ -80,6 +81,8 @@ var TargetDomainServiceSet = wire.NewSet(
 	NewSourceTargetOperators,
 	// Infrastructure Sets
 	prompt.PromptRPCSet,
+	agent_studio.AgentStudioRPCSet,
+	wire.Bind(new(rpc.ISandboxSchedulerAdapter), new(*agent_studio.SandboxSchedulerAdapter)),
 	// Repo Sets
 	targetrepo.TargetRepoSet,
 )
@@ -108,9 +111,9 @@ func NewEvaluatorSourceServices(
 }
 
 // NewSourceTargetOperators 创建源目标操作器映射
-func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter, idgen idgen.IIDGenerator) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
+func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter, idgen idgen.IIDGenerator, sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
 	return map[entity.EvalTargetType]ISourceEvalTargetOperateService{
 		entity.EvalTargetTypeLoopPrompt:   NewPromptSourceEvalTargetServiceImpl(adapter),
-		entity.EvalTargetTypeSandboxAgent: NewSandboxAgentSourceEvalTargetServiceImpl(idgen),
+		entity.EvalTargetTypeSandboxAgent: NewSandboxAgentSourceEvalTargetServiceImpl(idgen, sandboxSchedulerAdapter),
 	}
 }
