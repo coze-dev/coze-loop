@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `expt_turn_evaluator_result_ref`
     `deleted_at`           timestamp       NULL     DEFAULT NULL COMMENT '删除时间',
     `expt_id`              bigint unsigned NOT NULL DEFAULT '0' COMMENT '实验 id',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uniq_expt_turn_evaluator_result` (`expt_id`, `evaluator_version_id`, `expt_turn_result_id`, `inline_key`, `alias`),
+    UNIQUE KEY `uniq_expt_turn_evaluator_result_inline_alias` (`expt_id`, `evaluator_version_id`, `expt_turn_result_id`, `inline_key`, `alias`),
     KEY `idx_turn_evaluator_result` (`space_id`, `expt_turn_result_id`, `evaluator_result_id`),
     KEY `idx_turn_evaluator_version` (`space_id`, `expt_turn_result_id`, `evaluator_version_id`),
     KEY `idx_expt_evaluator_result` (`space_id`, `expt_id`, `evaluator_result_id`)
