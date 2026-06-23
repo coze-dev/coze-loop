@@ -87,6 +87,21 @@ func (mr *MockEvaluationSetItemServiceMockRecorder) BatchGetEvaluationSetItems(c
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluationSetItems", reflect.TypeOf((*MockEvaluationSetItemService)(nil).BatchGetEvaluationSetItems), ctx, param)
 }
 
+// BatchAddExistEvaluationSetItems mocks base method.
+func (m *MockEvaluationSetItemService) BatchAddExistEvaluationSetItems(ctx context.Context, param *entity.BatchAddExistEvaluationSetItemsParam) (*entity.BatchAddExistEvaluationSetItemsResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchAddExistEvaluationSetItems", ctx, param)
+	ret0, _ := ret[0].(*entity.BatchAddExistEvaluationSetItemsResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchAddExistEvaluationSetItems indicates an expected call of BatchAddExistEvaluationSetItems.
+func (mr *MockEvaluationSetItemServiceMockRecorder) BatchAddExistEvaluationSetItems(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchAddExistEvaluationSetItems", reflect.TypeOf((*MockEvaluationSetItemService)(nil).BatchAddExistEvaluationSetItems), ctx, param)
+}
+
 // BatchUpdateEvaluationSetItems mocks base method.
 func (m *MockEvaluationSetItemService) BatchUpdateEvaluationSetItems(ctx context.Context, param *entity.BatchUpdateEvaluationSetItemsParam) ([]*entity.ItemErrorGroup, []*entity.DatasetItemOutput, error) {
 	m.ctrl.T.Helper()
@@ -132,6 +147,70 @@ func (mr *MockEvaluationSetItemServiceMockRecorder) GetEvaluationSetItemField(ct
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationSetItemField", reflect.TypeOf((*MockEvaluationSetItemService)(nil).GetEvaluationSetItemField), ctx, param)
 }
 
+// GetEvaluationSetItemDef mocks base method.
+func (m *MockEvaluationSetItemService) GetEvaluationSetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvaluationSetItemDef", ctx, spaceID, evaluationSetID, itemID)
+	ret0, _ := ret[0].(*entity.EvaluationSetItemDef)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvaluationSetItemDef indicates an expected call of GetEvaluationSetItemDef.
+func (mr *MockEvaluationSetItemServiceMockRecorder) GetEvaluationSetItemDef(ctx, spaceID, evaluationSetID, itemID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationSetItemDef", reflect.TypeOf((*MockEvaluationSetItemService)(nil).GetEvaluationSetItemDef), ctx, spaceID, evaluationSetID, itemID)
+}
+
+// GetEvaluationSetItemVersion mocks base method.
+func (m *MockEvaluationSetItemService) GetEvaluationSetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, itemVersion *string) (*entity.EvaluationSetItemVersion, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvaluationSetItemVersion", ctx, spaceID, evaluationSetID, itemID, itemVersionID, itemVersion)
+	ret0, _ := ret[0].(*entity.EvaluationSetItemVersion)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvaluationSetItemVersion indicates an expected call of GetEvaluationSetItemVersion.
+func (mr *MockEvaluationSetItemServiceMockRecorder) GetEvaluationSetItemVersion(ctx, spaceID, evaluationSetID, itemID, itemVersionID, itemVersion any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationSetItemVersion", reflect.TypeOf((*MockEvaluationSetItemService)(nil).GetEvaluationSetItemVersion), ctx, spaceID, evaluationSetID, itemID, itemVersionID, itemVersion)
+}
+
+// ListEvaluationSetItemDefs mocks base method.
+func (m *MockEvaluationSetItemService) ListEvaluationSetItemDefs(ctx context.Context, param *entity.ListEvaluationSetItemDefsParam) ([]*entity.EvaluationSetItemDef, *int64, *string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEvaluationSetItemDefs", ctx, param)
+	ret0, _ := ret[0].([]*entity.EvaluationSetItemDef)
+	ret1, _ := ret[1].(*int64)
+	ret2, _ := ret[2].(*string)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// ListEvaluationSetItemDefs indicates an expected call of ListEvaluationSetItemDefs.
+func (mr *MockEvaluationSetItemServiceMockRecorder) ListEvaluationSetItemDefs(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluationSetItemDefs", reflect.TypeOf((*MockEvaluationSetItemService)(nil).ListEvaluationSetItemDefs), ctx, param)
+}
+
+// ListEvaluationSetItemVersions mocks base method.
+func (m *MockEvaluationSetItemService) ListEvaluationSetItemVersions(ctx context.Context, param *entity.ListEvaluationSetItemVersionsParam) ([]*entity.EvaluationSetItemVersion, *int64, *string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEvaluationSetItemVersions", ctx, param)
+	ret0, _ := ret[0].([]*entity.EvaluationSetItemVersion)
+	ret1, _ := ret[1].(*int64)
+	ret2, _ := ret[2].(*string)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// ListEvaluationSetItemVersions indicates an expected call of ListEvaluationSetItemVersions.
+func (mr *MockEvaluationSetItemServiceMockRecorder) ListEvaluationSetItemVersions(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluationSetItemVersions", reflect.TypeOf((*MockEvaluationSetItemService)(nil).ListEvaluationSetItemVersions), ctx, param)
+}
+
 // ListEvaluationSetItems mocks base method.
 func (m *MockEvaluationSetItemService) ListEvaluationSetItems(ctx context.Context, param *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
 	m.ctrl.T.Helper()
@@ -151,15 +230,43 @@ func (mr *MockEvaluationSetItemServiceMockRecorder) ListEvaluationSetItems(ctx, 
 }
 
 // UpdateEvaluationSetItem mocks base method.
-func (m *MockEvaluationSetItemService) UpdateEvaluationSetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption) error {
+func (m *MockEvaluationSetItemService) UpdateEvaluationSetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption, tags []*entity.ResourceTagRef) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEvaluationSetItem", ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions)
+	ret := m.ctrl.Call(m, "UpdateEvaluationSetItem", ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions, tags)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateEvaluationSetItem indicates an expected call of UpdateEvaluationSetItem.
-func (mr *MockEvaluationSetItemServiceMockRecorder) UpdateEvaluationSetItem(ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions any) *gomock.Call {
+func (mr *MockEvaluationSetItemServiceMockRecorder) UpdateEvaluationSetItem(ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions, tags any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluationSetItem", reflect.TypeOf((*MockEvaluationSetItemService)(nil).UpdateEvaluationSetItem), ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluationSetItem", reflect.TypeOf((*MockEvaluationSetItemService)(nil).UpdateEvaluationSetItem), ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions, tags)
+}
+
+// UpdateEvaluationSetItemDef mocks base method.
+func (m *MockEvaluationSetItemService) UpdateEvaluationSetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemKey, status *string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEvaluationSetItemDef", ctx, spaceID, evaluationSetID, itemID, itemKey, status)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEvaluationSetItemDef indicates an expected call of UpdateEvaluationSetItemDef.
+func (mr *MockEvaluationSetItemServiceMockRecorder) UpdateEvaluationSetItemDef(ctx, spaceID, evaluationSetID, itemID, itemKey, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluationSetItemDef", reflect.TypeOf((*MockEvaluationSetItemService)(nil).UpdateEvaluationSetItemDef), ctx, spaceID, evaluationSetID, itemID, itemKey, status)
+}
+
+// UpdateEvaluationSetItemVersion mocks base method.
+func (m *MockEvaluationSetItemService) UpdateEvaluationSetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, status, description, itemVersion *string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEvaluationSetItemVersion", ctx, spaceID, evaluationSetID, itemID, itemVersionID, status, description, itemVersion)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEvaluationSetItemVersion indicates an expected call of UpdateEvaluationSetItemVersion.
+func (mr *MockEvaluationSetItemServiceMockRecorder) UpdateEvaluationSetItemVersion(ctx, spaceID, evaluationSetID, itemID, itemVersionID, status, description, itemVersion any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluationSetItemVersion", reflect.TypeOf((*MockEvaluationSetItemService)(nil).UpdateEvaluationSetItemVersion), ctx, spaceID, evaluationSetID, itemID, itemVersionID, status, description, itemVersion)
 }

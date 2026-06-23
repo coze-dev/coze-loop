@@ -15,6 +15,7 @@ type CreateEvaluationSetParam struct {
 	BizCategory         *BizCategory
 	Session             *Session
 	DatasetType         *string
+	Tags                []*ResourceTagRef
 }
 
 type CreateEvaluationSetWithImportParam struct {
@@ -35,6 +36,7 @@ type UpdateEvaluationSetParam struct {
 	EvaluationSetID int64
 	Name            *string
 	Description     *string
+	Tags            []*ResourceTagRef
 }
 
 type ListEvaluationSetsParam struct {
@@ -46,6 +48,7 @@ type ListEvaluationSetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*OrderBy
+	TagFilter        *TagFilter
 }
 
 type ListEvaluationSetItemsParam struct {
@@ -58,6 +61,7 @@ type ListEvaluationSetItemsParam struct {
 	OrderBys        []*OrderBy
 	ItemIDsNotIn    []int64
 	Filter          *Filter
+	TagFilter       *TagFilter
 }
 type BatchGetEvaluationSetItemsParam struct {
 	SpaceID         int64

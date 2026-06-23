@@ -1,7 +1,28 @@
 namespace go coze.loop.evaluation.domain.eval_set
 
 include "../../data/domain/dataset.thrift"
+include "../../data/domain/tag.thrift"
 include "common.thrift"
+
+typedef string TagFilterRelation(ts.enum="true")
+const TagFilterRelation TagFilterRelation_And = "and"
+const TagFilterRelation TagFilterRelation_Or = "or"
+
+struct ResourceTagRef {
+    1: required string tag_name (vt.min_size = "1", vt.max_size = "128")
+}
+
+struct ResourceTag {
+    1: required string tag_name
+    2: optional i64 tag_key_id (api.js_conv="true", go.tag='json:"tag_key_id"')
+    3: optional tag.TagContentType content_type
+    4: optional tag.TagStatus status
+}
+
+struct TagFilter {
+    1: required list<string> tag_names (vt.min_size = "1", vt.max_size = "50", vt.elem.min_size = "1", vt.elem.max_size = "128")
+    2: optional TagFilterRelation relation
+}
 
 struct EvaluationSet {
     // 主键&外键
@@ -19,6 +40,7 @@ struct EvaluationSet {
     16: optional bool change_uncommitted           // 是否有未提交的修改
     17: optional BizCategory biz_category               // 业务分类
     20: optional EvaluationSetType type                 // 评测集类型
+    21: optional list<ResourceTag> tags                 // 系统资源标签
 
     // 版本信息
     30: optional EvaluationSetVersion evaluation_set_version,  // 版本详情信息
@@ -97,6 +119,7 @@ struct EvaluationSetItem {
     21: optional string item_version,
     22: optional ItemVersionBrief item_version_brief,
     23: optional string item_status,
+    24: optional list<ResourceTag> tags,                // 系统资源标签
 
     // 系统信息
     100: optional common.BaseInfo base_info

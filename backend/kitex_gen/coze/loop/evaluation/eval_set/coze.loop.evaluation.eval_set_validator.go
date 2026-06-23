@@ -45,6 +45,14 @@ func (p *CreateEvaluationSetRequest) IsValid() error {
 			return fmt.Errorf("field BizCategory max_len rule failed, current value: %d", len(*p.BizCategory))
 		}
 	}
+	for i := 0; i < len(p.Tags); i++ {
+		_elem := p.Tags[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
 	if p.Type != nil {
 		if len(*p.Type) > int(128) {
 			return fmt.Errorf("field Type max_len rule failed, current value: %d", len(*p.Type))
@@ -184,6 +192,14 @@ func (p *UpdateEvaluationSetRequest) IsValid() error {
 			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
 		}
 	}
+	for i := 0; i < len(p.Tags); i++ {
+		_elem := p.Tags[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -245,6 +261,11 @@ func (p *ListEvaluationSetsRequest) IsValid() error {
 	if p.Type != nil {
 		if len(*p.Type) > int(128) {
 			return fmt.Errorf("field Type max_len rule failed, current value: %d", len(*p.Type))
+		}
+	}
+	if p.TagFilter != nil {
+		if err := p.TagFilter.IsValid(); err != nil {
+			return fmt.Errorf("field TagFilter not valid, %w", err)
 		}
 	}
 	if p.PageNumber != nil {
@@ -438,11 +459,19 @@ func (p *BatchCreateEvaluationSetItemsResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateEvaluationSetItemRequest) IsValid() error {
-	for i := 0; i < len(p.FieldWriteOptions); i++ {
-		_elem := p.FieldWriteOptions[i]
+	for i := 0; i < len(p.Tags); i++ {
+		_elem := p.Tags[i]
 		if _elem != nil {
 			if err := _elem.IsValid(); err != nil {
 				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
+	for i := 0; i < len(p.FieldWriteOptions); i++ {
+		_elem1 := p.FieldWriteOptions[i]
+		if _elem1 != nil {
+			if err := _elem1.IsValid(); err != nil {
+				return fmt.Errorf("field _elem1 not valid, %w", err)
 			}
 		}
 	}
@@ -517,6 +546,11 @@ func (p *ListEvaluationSetItemsRequest) IsValid() error {
 	if p.Filter != nil {
 		if err := p.Filter.IsValid(); err != nil {
 			return fmt.Errorf("field Filter not valid, %w", err)
+		}
+	}
+	if p.TagFilter != nil {
+		if err := p.TagFilter.IsValid(); err != nil {
+			return fmt.Errorf("field TagFilter not valid, %w", err)
 		}
 	}
 	if p.Base != nil {

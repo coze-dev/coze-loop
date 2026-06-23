@@ -8,16 +8,17 @@ import (
 )
 
 type EvaluationSetItem struct {
-	ID              int64     `json:"id,omitempty"`
-	AppID           int32     `json:"app_id,omitempty"`
-	SpaceID         int64     `json:"space_id,omitempty"`
-	EvaluationSetID int64     `json:"evaluation_set_id,omitempty"`
-	SchemaID        int64     `json:"schema_id,omitempty"`
-	ItemID          int64     `json:"item_id,omitempty"`
-	ItemKey         string    `json:"item_key,omitempty"`
-	ItemVersion     *string   `json:"item_version,omitempty"`
-	Turns           []*Turn   `json:"turns,omitempty"`
-	BaseInfo        *BaseInfo `json:"base_info,omitempty"`
+	ID              int64          `json:"id,omitempty"`
+	AppID           int32          `json:"app_id,omitempty"`
+	SpaceID         int64          `json:"space_id,omitempty"`
+	EvaluationSetID int64          `json:"evaluation_set_id,omitempty"`
+	SchemaID        int64          `json:"schema_id,omitempty"`
+	ItemID          int64          `json:"item_id,omitempty"`
+	ItemKey         string         `json:"item_key,omitempty"`
+	ItemVersion     *string        `json:"item_version,omitempty"`
+	Turns           []*Turn        `json:"turns,omitempty"`
+	BaseInfo        *BaseInfo      `json:"base_info,omitempty"`
+	Tags            []*ResourceTag `json:"tags,omitempty"`
 }
 
 type Turn struct {

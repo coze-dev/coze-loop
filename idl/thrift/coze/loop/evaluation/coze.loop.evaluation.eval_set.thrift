@@ -14,6 +14,7 @@ struct CreateEvaluationSetRequest {
     3: optional string description (vt.max_size = "2048"),
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema,
     5: optional eval_set.BizCategory biz_category (vt.max_size = "128") // 业务分类
+    6: optional list<eval_set.ResourceTagRef> tags (vt.elem.skip = "false"),
     10: optional eval_set.EvaluationSetType type (vt.max_size = "128") // 评测集类型，默认 default
 
     200: optional common.Session session (api.none = 'true')
@@ -81,6 +82,7 @@ struct UpdateEvaluationSetRequest {
 
     3: optional string name (vt.min_size = "1", vt.max_size = "255"),
     4: optional string description (vt.max_size = "2048"),
+    5: optional list<eval_set.ResourceTagRef> tags (vt.elem.skip = "false"),
 
     255: optional base.Base Base
 }
@@ -123,6 +125,7 @@ struct ListEvaluationSetsRequest {
     3: optional list<string> creators,
     4: optional list<i64> evaluation_set_ids (api.js_conv="true", go.tag='json:"evaluation_set_ids"'),
     5: optional eval_set.EvaluationSetType type (vt.max_size = "128"), // 按评测集类型过滤
+    7: optional eval_set.TagFilter tag_filter,          // 系统资源标签过滤
 
     100: optional i32 page_number (vt.gt = "0"),
     101: optional i32 page_size (vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20
@@ -257,6 +260,7 @@ struct UpdateEvaluationSetItemRequest {
     2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: required i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
     5: optional list<eval_set.Turn> turns,   // 每轮对话
+    6: optional list<eval_set.ResourceTagRef> tags (vt.elem.skip = "false"),
 
     10: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
     20: optional string item_version (vt.max_size = "64") // versioned_item 下使用；为空表示更新 draft
@@ -309,6 +313,7 @@ struct ListEvaluationSetItemsRequest {
     200: optional list<i64> item_id_not_in (api.js_conv="true", go.tag='json:"item_id_not_in"')
     201: optional filter.Filter filter // item 过滤条件
     210: optional bool include_item_version_info // 是否返回 item_version_brief，默认 false
+    212: optional eval_set.TagFilter tag_filter // 系统资源标签过滤
 
     255: optional base.Base Base
 }

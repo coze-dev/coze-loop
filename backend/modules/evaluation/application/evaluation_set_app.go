@@ -105,9 +105,10 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 		Name:                gptr.Indirect(req.Name),
 		Description:         req.Description,
 		EvaluationSetSchema: evaluation_set.SchemaDTO2DO(req.EvaluationSetSchema),
-		BizCategory:        req.BizCategory,
+		BizCategory:         req.BizCategory,
 		Session:             session,
 		DatasetType:         req.Type,
+		Tags:                evaluation_set.ResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -272,6 +273,7 @@ func (e *EvaluationSetApplicationImpl) UpdateEvaluationSet(ctx context.Context, 
 		EvaluationSetID: req.EvaluationSetID,
 		Name:            req.Name,
 		Description:     req.Description,
+		Tags:            evaluation_set.ResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -365,6 +367,10 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
+	tagFilter, err := evaluation_set.TagFilterDTO2DO(req.TagFilter)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	// domain调用
 	sets, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSets(ctx, &entity.ListEvaluationSetsParam{
 		SpaceID:          req.WorkspaceID,
@@ -375,6 +381,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 		PageSize:         req.PageSize,
 		PageToken:        req.PageToken,
 		OrderBys:         common.ConvertOrderByDTO2DOs(req.OrderBys),
+		TagFilter:        tagFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -468,7 +475,7 @@ func (e *EvaluationSetApplicationImpl) UpdateEvaluationSetItem(ctx context.Conte
 		return nil, err
 	}
 	// domain调用
-	err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID, evaluation_set.TurnDTO2DOs(req.GetEvaluationSetID(), req.GetItemID(), req.Turns), evaluation_set.FieldWriteOptionDTO2DOs(req.FieldWriteOptions))
+	err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID, evaluation_set.TurnDTO2DOs(req.GetEvaluationSetID(), req.GetItemID(), req.Turns), evaluation_set.FieldWriteOptionDTO2DOs(req.FieldWriteOptions), evaluation_set.ResourceTagRefDTO2DOs(req.Tags))
 	if err != nil {
 		return nil, err
 	}
@@ -541,6 +548,10 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItems(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
+	tagFilter, err := evaluation_set.TagFilterDTO2DO(req.TagFilter)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	// domain调用
 	items, total, filterTotal, nextCursor, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 		SpaceID:         req.WorkspaceID,
@@ -550,6 +561,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItems(ctx context.Contex
 		PageSize:        req.PageSize,
 		OrderBys:        common.ConvertOrderByDTO2DOs(req.OrderBys),
 		Filter:          req.Filter,
+		TagFilter:       tagFilter,
 	})
 	if err != nil {
 		return nil, err
