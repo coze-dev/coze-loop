@@ -42,8 +42,7 @@ func newTargetRecord(db *gorm.DB, opts ...gen.DOOption) targetRecord {
 	_targetRecord.CreatedAt = field.NewTime(tableName, "created_at")
 	_targetRecord.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_targetRecord.DeletedAt = field.NewField(tableName, "deleted_at")
-
-	_targetRecord.Ext = field.NewBytes(tableName, "ext")
+	_targetRecord.Ext = field.NewField(tableName, "ext")
 
 	_targetRecord.fillFieldMap()
 
@@ -70,7 +69,7 @@ type targetRecord struct {
 	CreatedAt       field.Time   // 创建时间
 	UpdatedAt       field.Time   // 更新时间
 	DeletedAt       field.Field  // 删除时间
-	Ext             field.Bytes  // ext
+	Ext             field.Field  // ext
 
 	fieldMap map[string]field.Expr
 }
@@ -102,7 +101,7 @@ func (t *targetRecord) updateTableName(table string) *targetRecord {
 	t.CreatedAt = field.NewTime(table, "created_at")
 	t.UpdatedAt = field.NewTime(table, "updated_at")
 	t.DeletedAt = field.NewField(table, "deleted_at")
-	t.Ext = field.NewBytes(table, "ext")
+	t.Ext = field.NewField(table, "ext")
 
 	t.fillFieldMap()
 

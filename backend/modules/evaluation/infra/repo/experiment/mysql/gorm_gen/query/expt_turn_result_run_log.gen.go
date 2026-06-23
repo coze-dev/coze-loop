@@ -42,7 +42,7 @@ func newExptTurnResultRunLog(db *gorm.DB, opts ...gen.DOOption) exptTurnResultRu
 	_exptTurnResultRunLog.CreatedAt = field.NewTime(tableName, "created_at")
 	_exptTurnResultRunLog.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_exptTurnResultRunLog.DeletedAt = field.NewField(tableName, "deleted_at")
-	_exptTurnResultRunLog.Ext = field.NewBytes(tableName, "ext")
+	_exptTurnResultRunLog.Ext = field.NewField(tableName, "ext")
 
 	_exptTurnResultRunLog.fillFieldMap()
 
@@ -69,7 +69,7 @@ type exptTurnResultRunLog struct {
 	CreatedAt          field.Time   // 创建时间
 	UpdatedAt          field.Time   // 更新时间
 	DeletedAt          field.Field  // 删除时间
-	Ext                field.Bytes  // ext
+	Ext                field.Field  // ext
 
 	fieldMap map[string]field.Expr
 }
@@ -101,7 +101,7 @@ func (e *exptTurnResultRunLog) updateTableName(table string) *exptTurnResultRunL
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
-	e.Ext = field.NewBytes(table, "ext")
+	e.Ext = field.NewField(table, "ext")
 
 	e.fillFieldMap()
 

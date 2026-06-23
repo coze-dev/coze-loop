@@ -175,7 +175,9 @@ func generateForEvaluationTarget(db *gorm.DB) {
 
 	evaluatorModel := g.GenerateModelAs("eval_target", "Target")
 	evaluatorVersionModel := g.GenerateModelAs("eval_target_version", "TargetVersion")
-	evaluatorRecordModel := g.GenerateModelAs("eval_target_record", "TargetRecord")
+	evaluatorRecordModel := g.GenerateModelAs("eval_target_record", "TargetRecord",
+		gen.FieldType("ext", "datatypes.JSON"),
+	)
 
 	g.ApplyBasic(evaluatorModel, evaluatorVersionModel, evaluatorRecordModel)
 	g.Execute()
@@ -217,7 +219,11 @@ func generateForEvaluationExpt(db *gorm.DB) {
 			}
 		}
 		name := strings.Join(parts, "")
-		models = append(models, g.GenerateModelAs(tn, name))
+		var opts []gen.ModelOpt
+		if tn == "expt_turn_result_run_log" {
+			opts = append(opts, gen.FieldType("ext", "datatypes.JSON"))
+		}
+		models = append(models, g.GenerateModelAs(tn, name, opts...))
 	}
 
 	models = append(models, g.GenerateModelAs("annotate_record", "AnnotateRecord",

@@ -43,7 +43,7 @@ func (ExptTurnResultRunLogConvertor) DO2PO(log *entity.ExptTurnResultRunLog) (*m
 		if err != nil {
 			return nil, errorx.Wrapf(err, "ExptTurnResultRunLog Ext json marshal fail")
 		}
-		po.Ext = gptr.Of(extBytes)
+		po.Ext = extBytes
 	}
 	return po, nil
 }
@@ -60,9 +60,9 @@ func (ExptTurnResultRunLogConvertor) PO2DO(log *model.ExptTurnResultRunLog) (*en
 	}
 
 	var ext map[string]string
-	if log.Ext != nil && len(*log.Ext) > 0 {
+	if len(log.Ext) > 0 {
 		ext = make(map[string]string)
-		if err := json.Unmarshal(*log.Ext, &ext); err != nil {
+		if err := json.Unmarshal(log.Ext, &ext); err != nil {
 			return nil, errorx.Wrapf(err, "ExptTurnResultRunLog Ext json unmarshal fail, expt_id: %v, expt_run_id: %v", log.ExptID, log.ExptRunID)
 		}
 	}

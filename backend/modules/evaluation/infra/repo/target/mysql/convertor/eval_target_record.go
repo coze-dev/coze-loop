@@ -71,7 +71,7 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		if err != nil {
 			return nil, fmt.Errorf("marshal EvalTargetRecord Ext failed: %w", err)
 		}
-		tr.Ext = &extBytes
+		tr.Ext = extBytes
 	}
 	return tr, nil
 }
@@ -126,9 +126,9 @@ func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, err
 		},
 	}
 
-	if m.Ext != nil && len(*m.Ext) > 0 {
+	if len(m.Ext) > 0 {
 		ext := make(map[string]string)
-		if err := json.Unmarshal(*m.Ext, &ext); err != nil {
+		if err := json.Unmarshal(m.Ext, &ext); err != nil {
 			return nil, fmt.Errorf("unmarshal EvalTargetRecord Ext failed: %w", err)
 		}
 		record.Ext = ext
