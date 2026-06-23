@@ -216,12 +216,14 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 		return nil
 	}
 
-	if taskRunConfig.RunEndAt.UnixMilli() < time.Now().UnixMilli() || taskRunConfig.RunStartAt.UnixMilli() > time.Now().UnixMilli() {
-		return nil
-	}
-	if span.StartTime < taskRunConfig.RunStartAt.UnixMilli() {
-		logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
-		return nil
+	if s.runType == entity.TaskRunTypeNewData {
+		if taskRunConfig.RunEndAt.UnixMilli() < time.Now().UnixMilli() || taskRunConfig.RunStartAt.UnixMilli() > time.Now().UnixMilli() {
+			return nil
+		}
+		if span.StartTime < taskRunConfig.RunStartAt.UnixMilli() {
+			logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
+			return nil
+		}
 	}
 	trigger := &taskexe.Trigger{Task: s.t, Span: span, TaskRun: taskRunConfig}
 	logs.CtxDebug(ctx, "invoke processor, trigger: %v", trigger)
@@ -279,9 +281,10 @@ func (s *spanSubscriber) BatchAddSpan(ctx context.Context, spans []*loop_span.Sp
 	// 过滤有效 span
 	validSpans := make([]*loop_span.Span, 0, len(spans))
 	for _, span := range spans {
-		if span.StartTime >= s.tr.RunStartAt.UnixMilli() {
-			validSpans = append(validSpans, span)
+		if s.runType == entity.TaskRunTypeNewData && span.StartTime < s.tr.RunStartAt.UnixMilli() {
+			continue
 		}
+		validSpans = append(validSpans, span)
 	}
 	if len(validSpans) == 0 {
 		return nil
