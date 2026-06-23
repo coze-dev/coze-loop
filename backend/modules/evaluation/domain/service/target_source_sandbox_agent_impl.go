@@ -7,19 +7,22 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
-func NewSandboxAgentSourceEvalTargetServiceImpl(idgen idgen.IIDGenerator) ISourceEvalTargetOperateService {
+func NewSandboxAgentSourceEvalTargetServiceImpl(idgen idgen.IIDGenerator, sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter) ISourceEvalTargetOperateService {
 	return &SandboxAgentSourceEvalTargetServiceImpl{
-		idgen: idgen,
+		idgen:                   idgen,
+		sandboxSchedulerAdapter: sandboxSchedulerAdapter,
 	}
 }
 
 type SandboxAgentSourceEvalTargetServiceImpl struct {
-	idgen idgen.IIDGenerator
+	idgen                   idgen.IIDGenerator
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 }
 
 func (t *SandboxAgentSourceEvalTargetServiceImpl) EvalType() entity.EvalTargetType {
