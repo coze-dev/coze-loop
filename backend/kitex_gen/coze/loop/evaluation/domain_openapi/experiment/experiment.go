@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"strings"
 )
 
@@ -2118,6 +2119,9 @@ type OpenAPIEvalSetConfig struct {
 	EvaluatorConfs []*OpenAPIExptEvaluatorConf `thrift:"evaluator_confs,10,optional" frugal:"10,optional,list<OpenAPIExptEvaluatorConf>" form:"evaluator_confs" json:"evaluator_confs,omitempty" query:"evaluator_confs"`
 	// 本期 len<=1; 不传=继承顶层 target
 	TargetConfs []*OpenAPIExptTargetConf `thrift:"target_confs,20,optional" frugal:"20,optional,list<OpenAPIExptTargetConf>" form:"target_confs" json:"target_confs,omitempty" query:"target_confs"`
+	// 题目圈选: 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter, 与内部 EvalSetConfig.item_filter 同型透传)
+	// 校验白名单(应用层, 与内部一致): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
+	ItemFilter *filter.Filter `thrift:"item_filter,30,optional" frugal:"30,optional,filter.Filter" form:"item_filter" json:"item_filter,omitempty" query:"item_filter"`
 }
 
 func NewOpenAPIEvalSetConfig() *OpenAPIEvalSetConfig {
@@ -2174,6 +2178,18 @@ func (p *OpenAPIEvalSetConfig) GetTargetConfs() (v []*OpenAPIExptTargetConf) {
 	}
 	return p.TargetConfs
 }
+
+var OpenAPIEvalSetConfig_ItemFilter_DEFAULT *filter.Filter
+
+func (p *OpenAPIEvalSetConfig) GetItemFilter() (v *filter.Filter) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemFilter() {
+		return OpenAPIEvalSetConfig_ItemFilter_DEFAULT
+	}
+	return p.ItemFilter
+}
 func (p *OpenAPIEvalSetConfig) SetEvalSetID(val *int64) {
 	p.EvalSetID = val
 }
@@ -2186,12 +2202,16 @@ func (p *OpenAPIEvalSetConfig) SetEvaluatorConfs(val []*OpenAPIExptEvaluatorConf
 func (p *OpenAPIEvalSetConfig) SetTargetConfs(val []*OpenAPIExptTargetConf) {
 	p.TargetConfs = val
 }
+func (p *OpenAPIEvalSetConfig) SetItemFilter(val *filter.Filter) {
+	p.ItemFilter = val
+}
 
 var fieldIDToName_OpenAPIEvalSetConfig = map[int16]string{
 	1:  "eval_set_id",
 	2:  "eval_set_version",
 	10: "evaluator_confs",
 	20: "target_confs",
+	30: "item_filter",
 }
 
 func (p *OpenAPIEvalSetConfig) IsSetEvalSetID() bool {
@@ -2208,6 +2228,10 @@ func (p *OpenAPIEvalSetConfig) IsSetEvaluatorConfs() bool {
 
 func (p *OpenAPIEvalSetConfig) IsSetTargetConfs() bool {
 	return p.TargetConfs != nil
+}
+
+func (p *OpenAPIEvalSetConfig) IsSetItemFilter() bool {
+	return p.ItemFilter != nil
 }
 
 func (p *OpenAPIEvalSetConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2255,6 +2279,14 @@ func (p *OpenAPIEvalSetConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 20:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 30:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField30(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2357,6 +2389,14 @@ func (p *OpenAPIEvalSetConfig) ReadField20(iprot thrift.TProtocol) error {
 	p.TargetConfs = _field
 	return nil
 }
+func (p *OpenAPIEvalSetConfig) ReadField30(iprot thrift.TProtocol) error {
+	_field := filter.NewFilter()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ItemFilter = _field
+	return nil
+}
 
 func (p *OpenAPIEvalSetConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2378,6 +2418,10 @@ func (p *OpenAPIEvalSetConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField30(oprot); err != nil {
+			fieldId = 30
 			goto WriteFieldError
 		}
 	}
@@ -2486,6 +2530,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
 }
+func (p *OpenAPIEvalSetConfig) writeField30(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemFilter() {
+		if err = oprot.WriteFieldBegin("item_filter", thrift.STRUCT, 30); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ItemFilter.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
+}
 
 func (p *OpenAPIEvalSetConfig) String() string {
 	if p == nil {
@@ -2511,6 +2573,9 @@ func (p *OpenAPIEvalSetConfig) DeepEqual(ano *OpenAPIEvalSetConfig) bool {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.TargetConfs) {
+		return false
+	}
+	if !p.Field30DeepEqual(ano.ItemFilter) {
 		return false
 	}
 	return true
@@ -2563,6 +2628,13 @@ func (p *OpenAPIEvalSetConfig) Field20DeepEqual(src []*OpenAPIExptTargetConf) bo
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *OpenAPIEvalSetConfig) Field30DeepEqual(src *filter.Filter) bool {
+
+	if !p.ItemFilter.DeepEqual(src) {
+		return false
 	}
 	return true
 }

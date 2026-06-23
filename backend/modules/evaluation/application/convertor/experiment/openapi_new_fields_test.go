@@ -14,6 +14,7 @@ import (
 	domainEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domainExpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	openapiExperiment "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
+	domain_filter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -489,4 +490,50 @@ func TestOpenAPIExptDO2DTO_OnlineExperimentHidesEvalSet(t *testing.T) {
 	if assert.NotNil(t, converted) {
 		assert.Nil(t, converted.EvalSet)
 	}
+}
+
+// TestOpenAPIEvalSetConfigsDTO2Domain_ItemFilter 验证 OpenAPI item-centric 多评测集配置里的
+// item_filter (题目圈选) 被原样透传到内部 domain EvalSetConfig (与内部 EvalSetConfig.item_filter 同型)。
+func TestOpenAPIEvalSetConfigsDTO2Domain_ItemFilter(t *testing.T) {
+	t.Parallel()
+
+	itemFilter := &domain_filter.Filter{
+		QueryAndOr: gptr.Of(domain_filter.QueryRelation("and")),
+		FilterFields: []*domain_filter.FilterField{
+			{
+				FieldName: "item_id",
+				FieldType: domain_filter.FieldType("long"),
+				QueryType: gptr.Of(domain_filter.QueryType("in")),
+				Values:    []string{"1", "2"},
+			},
+		},
+	}
+	confs := []*openapiExperiment.OpenAPIEvalSetConfig{
+		{
+			EvalSetID:      gptr.Of(int64(100)),
+			EvalSetVersion: gptr.Of("v1.0.0"),
+			ItemFilter:     itemFilter,
+		},
+		{
+			// 不传 item_filter = 全集, 转换后应为 nil。
+			EvalSetID:      gptr.Of(int64(200)),
+			EvalSetVersion: gptr.Of("v2.0.0"),
+		},
+	}
+	evalSetVersionIDMap := map[int64]int64{100: 1001, 200: 2002}
+
+	dos := OpenAPIEvalSetConfigsDTO2Domain(confs, evalSetVersionIDMap, map[string]int64{})
+	assert.Len(t, dos, 2)
+
+	// 第一集: item_filter 原指针透传, 字段保真。
+	assert.Same(t, itemFilter, dos[0].ItemFilter)
+	assert.Equal(t, int64(1001), dos[0].GetEvalSetVersionID())
+	assert.Len(t, dos[0].ItemFilter.FilterFields, 1)
+	assert.Equal(t, "item_id", dos[0].ItemFilter.FilterFields[0].FieldName)
+	assert.Equal(t, "long", string(dos[0].ItemFilter.FilterFields[0].FieldType))
+	assert.Equal(t, "in", string(dos[0].ItemFilter.FilterFields[0].GetQueryType()))
+	assert.Equal(t, []string{"1", "2"}, dos[0].ItemFilter.FilterFields[0].Values)
+
+	// 第二集: 不传 item_filter → nil (全集语义)。
+	assert.Nil(t, dos[1].ItemFilter)
 }

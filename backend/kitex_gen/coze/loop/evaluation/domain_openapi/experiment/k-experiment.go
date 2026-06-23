@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 )
 
 var (
@@ -22,6 +23,7 @@ var (
 	_ = eval_set.KitexUnusedProtection
 	_ = eval_target.KitexUnusedProtection
 	_ = evaluator.KitexUnusedProtection
+	_ = filter.KitexUnusedProtection
 )
 
 // unused protection
@@ -1455,6 +1457,20 @@ func (p *OpenAPIEvalSetConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 30:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField30(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1551,6 +1567,18 @@ func (p *OpenAPIEvalSetConfig) FastReadField20(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *OpenAPIEvalSetConfig) FastReadField30(buf []byte) (int, error) {
+	offset := 0
+	_field := filter.NewFilter()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ItemFilter = _field
+	return offset, nil
+}
+
 func (p *OpenAPIEvalSetConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1562,6 +1590,7 @@ func (p *OpenAPIEvalSetConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
+		offset += p.fastWriteField30(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1574,6 +1603,7 @@ func (p *OpenAPIEvalSetConfig) BLength() int {
 		l += p.field2Length()
 		l += p.field10Length()
 		l += p.field20Length()
+		l += p.field30Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1629,6 +1659,15 @@ func (p *OpenAPIEvalSetConfig) fastWriteField20(buf []byte, w thrift.NocopyWrite
 	return offset
 }
 
+func (p *OpenAPIEvalSetConfig) fastWriteField30(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetItemFilter() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 30)
+		offset += p.ItemFilter.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *OpenAPIEvalSetConfig) field1Length() int {
 	l := 0
 	if p.IsSetEvalSetID() {
@@ -1669,6 +1708,15 @@ func (p *OpenAPIEvalSetConfig) field20Length() int {
 			_ = v
 			l += v.BLength()
 		}
+	}
+	return l
+}
+
+func (p *OpenAPIEvalSetConfig) field30Length() int {
+	l := 0
+	if p.IsSetItemFilter() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ItemFilter.BLength()
 	}
 	return l
 }
@@ -1721,6 +1769,15 @@ func (p *OpenAPIEvalSetConfig) DeepCopy(s interface{}) error {
 			p.TargetConfs = append(p.TargetConfs, _elem)
 		}
 	}
+
+	var _itemFilter *filter.Filter
+	if src.ItemFilter != nil {
+		_itemFilter = &filter.Filter{}
+		if err := _itemFilter.DeepCopy(src.ItemFilter); err != nil {
+			return err
+		}
+	}
+	p.ItemFilter = _itemFilter
 
 	return nil
 }

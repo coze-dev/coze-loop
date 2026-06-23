@@ -4,6 +4,9 @@ include "common.thrift"
 include "eval_set.thrift"
 include "evaluator.thrift"
 include "eval_target.thrift"
+// data 侧 filter (别名 data_filter, 与 observability filter 区分以便 BAM/thriftgo 无歧义解析);
+// item 圈选复用同一 Filter/FilterField, 与内部 domain expt.EvalSetConfig.item_filter 同型透传。
+include "../../data/domain/data_filter.thrift"
 
 // 实验状态
 typedef string ExperimentStatus (ts.enum = "true")
@@ -108,6 +111,9 @@ struct OpenAPIEvalSetConfig {
     2: optional string eval_set_version              // 版本字符串, handler 解析成 eval_set_version_id (锁定版本)
     10: optional list<OpenAPIExptEvaluatorConf> evaluator_confs // (evaluator_version_id, alias) 在 set 内唯一
     20: optional list<OpenAPIExptTargetConf> target_confs      // 本期 len<=1; 不传=继承顶层 target
+    // 题目圈选: 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter, 与内部 EvalSetConfig.item_filter 同型透传)
+    // 校验白名单(应用层, 与内部一致): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
+    30: optional data_filter.Filter item_filter
 }
 
 // 实验评测集来源模式 (OpenAPI 字符串枚举, 与 domain ExptEvalSetSourceType 对应)
