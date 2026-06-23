@@ -1055,9 +1055,9 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	// clear param error and lists the supported types for the caller.
 	if req.EvalTargetParam != nil && req.EvalTargetParam.EvalTargetType != nil {
 		if !experiment_convertor.IsSupportedOpenAPIEvalTargetType(*req.EvalTargetParam.EvalTargetType) {
-			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(
-				fmt.Sprintf("unsupported eval target type: %s. supported: [%s]",
-					*req.EvalTargetParam.EvalTargetType, experiment_convertor.SupportedOpenAPIEvalTargetTypesString())))
+			msg := fmt.Sprintf("unsupported eval target type: %s. supported: [%s]",
+				*req.EvalTargetParam.EvalTargetType, experiment_convertor.SupportedOpenAPIEvalTargetTypesString())
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(msg))
 		}
 	}
 
