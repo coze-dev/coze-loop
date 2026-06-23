@@ -14,6 +14,7 @@ type CreateEvaluationSetParam struct {
 	EvaluationSetSchema *EvaluationSetSchema
 	BizCategory         *BizCategory
 	Session             *Session
+	DatasetType         *string
 }
 
 type CreateEvaluationSetWithImportParam struct {

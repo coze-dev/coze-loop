@@ -71,6 +71,7 @@ type CreateDatasetParam struct {
 	EvaluationSetItems *entity.EvaluationSetSchema
 	BizCategory        *entity.BizCategory
 	Session            *entity.Session
+	DatasetType        *string
 }
 
 type CreateDatasetWithImportParam struct {

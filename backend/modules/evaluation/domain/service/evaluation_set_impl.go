@@ -43,6 +43,7 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, para
 		EvaluationSetItems: param.EvaluationSetSchema,
 		BizCategory:        param.BizCategory,
 		Session:            param.Session,
+		DatasetType:        param.DatasetType,
 	})
 }
 

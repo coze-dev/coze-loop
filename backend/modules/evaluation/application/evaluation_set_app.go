@@ -100,8 +100,9 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 		Name:                gptr.Indirect(req.Name),
 		Description:         req.Description,
 		EvaluationSetSchema: evaluation_set.SchemaDTO2DO(req.EvaluationSetSchema),
-		BizCategory:         req.BizCategory,
+		BizCategory:        req.BizCategory,
 		Session:             session,
+		DatasetType:         req.Type,
 	})
 	if err != nil {
 		return nil, err
@@ -1008,6 +1009,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItemVersions(ctx context
 		PageNumber:      req.PageNumber,
 		PageSize:        req.PageSize,
 		PageToken:       req.PageToken,
+		OrderBys:        common.ConvertOrderByDTO2DOs(req.OrderBys),
 	})
 	if err != nil {
 		return nil, err
