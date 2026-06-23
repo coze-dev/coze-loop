@@ -2809,6 +2809,7 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil, // templateManager
 				nil, // fileProvider
 				nil, // lifecycleEventHandler
+				nil, // sandboxSchedulerAdapter
 			)
 
 			// 执行测试
@@ -3058,6 +3059,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // templateManager
 				nil, // fileProvider
 				nil, // lifecycleEventHandler
+				nil, // sandboxSchedulerAdapter
 			)
 
 			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
@@ -3161,6 +3163,7 @@ func TestExperimentApplication_CreateExperimentTemplate(t *testing.T) {
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
+		nil,                 // sandboxSchedulerAdapter
 	)
 
 	resp, err := app.CreateExperimentTemplate(context.Background(), req)
@@ -3263,6 +3266,7 @@ func TestExperimentApplication_BatchGetExperimentTemplate(t *testing.T) {
 				mockTemplateManager, // templateManager
 				nil,                 // fileProvider
 				nil,                 // lifecycleEventHandler
+				nil,                 // sandboxSchedulerAdapter
 			)
 			resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
 			if tt.wantErr {
@@ -3307,6 +3311,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
 		assert.Error(t, err)
@@ -3377,6 +3382,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		resp, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.NoError(t, err)
@@ -3415,6 +3421,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
 		assert.Error(t, err)
@@ -3482,6 +3489,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
 		assert.NoError(t, err)
@@ -3532,6 +3540,7 @@ func TestExperimentApplication_DeleteExperimentTemplate(t *testing.T) {
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
+		nil,                 // sandboxSchedulerAdapter
 	)
 	resp, err := app.DeleteExperimentTemplate(context.Background(), req)
 	assert.NoError(t, err)
@@ -3604,6 +3613,7 @@ func TestExperimentApplication_ListExperimentTemplates(t *testing.T) {
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
+		nil,                 // sandboxSchedulerAdapter
 	)
 	resp, err := app.ListExperimentTemplates(context.Background(), req)
 	assert.NoError(t, err)
@@ -3647,6 +3657,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3675,6 +3686,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3706,6 +3718,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3739,6 +3752,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		// 这个测试主要验证 FilterOption 不为 nil 时会调用 Convert
 		// 具体的转换逻辑在 filter convertor 的测试中覆盖
@@ -6890,6 +6904,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	app := NewExperimentApplication(
 		nil, nil, mockManager, nil, nil, mockIDGen, nil, mockAuth,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil,
 	)
 
 	t.Run("auth fails", func(t *testing.T) {
@@ -7021,6 +7036,7 @@ func TestExperimentApplication_ListExperimentTemplates_MoreBranches(t *testing.T
 	app := NewExperimentApplication(
 		nil, nil, nil, nil, nil, nil, nil,
 		mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+		nil,
 		nil,
 	)
 

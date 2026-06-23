@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
+	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
@@ -76,6 +77,9 @@ type experimentApplication struct {
 
 	// 实验模板管理服务
 	templateManager service.IExptTemplateManager
+
+	// 沙箱调度 RPC 适配器，用于 SandboxAgent 评测对象提交实验时初始化沙箱任务
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 }
 
 func NewExperimentApplication(
@@ -98,6 +102,7 @@ func NewExperimentApplication(
 	templateManager service.IExptTemplateManager,
 	fileProvider rpc.IFileProvider,
 	lifecycleEventHandler service.ExptLifecycleEventHandler,
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -119,6 +124,7 @@ func NewExperimentApplication(
 		evaluatorService:            evaluatorService,
 		templateManager:             templateManager,
 		fileProvider:                fileProvider,
+		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
 	}
 }
 
@@ -539,6 +545,20 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err
+	}
+
+	// SandboxAgent 评测对象：在 RunExperiment 前初始化沙箱任务，Concurrency 沿用实验并发度（ItemConcurNum）
+	if e.sandboxSchedulerAdapter != nil &&
+		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
+		exptID := cresp.GetExperiment().GetID()
+		concurrency := req.GetItemConcurNum()
+		if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
+			TaskID:      strconv.FormatInt(exptID, 10),
+			Concurrency: concurrency,
+			WorkspaceID: req.GetWorkspaceID(),
+		}); initErr != nil {
+			return nil, errorx.Wrapf(initErr, "init sandbox task fail, expt_id=%d", exptID)
+		}
 	}
 
 	// 将 item_ids 编码到 ext 中，通过 MQ 事件传递给调度器
