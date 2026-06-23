@@ -60,7 +60,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/modern-go/reflect2 v1.0.2
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
-	github.com/nikolalohinski/gonja/v2 v2.3.1
+	github.com/nikolalohinski/gonja/v2 v2.5.2-0.20260622182148-8175f82bbeb1
 	github.com/ohler55/ojg v1.26.9
 	github.com/ollama/ollama v0.10.1
 	github.com/panjf2000/ants/v2 v2.11.3
@@ -172,7 +172,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5 // indirect
+	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
