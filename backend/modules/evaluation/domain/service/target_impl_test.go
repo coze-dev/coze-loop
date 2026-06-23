@@ -2254,6 +2254,8 @@ func TestEvalTargetServiceImpl_BatchGetRecordByIDs_LoadRecordOutputFields_LoadRe
 		map[entity.EvalTargetType]ISourceEvalTargetOperateService{},
 		trajectorymocks.NewMockITrajectoryAdapter(ctrl),
 		componentmocks.NewMockIConfiger(ctrl),
+		nil, // sandboxSchedulerAdapter
+		nil, // exptRunLogRepo
 	)
 
 	t.Run("BatchGetRecordByIDs_spaceID_zero", func(t *testing.T) {
