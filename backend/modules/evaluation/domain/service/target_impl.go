@@ -41,6 +41,10 @@ type EvalTargetServiceImpl struct {
 	typedOperators    map[entity.EvalTargetType]ISourceEvalTargetOperateService
 	trajectoryAdapter rpc.ITrajectoryAdapter
 	configer          component.IConfiger
+
+	// SandboxAgent 评测对象单行执行完成后用于销毁沙箱执行
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
+	exptRunLogRepo          repo.IExptRunLogRepo
 }
 
 const evalTargetRecordPersistTimeout = 5 * time.Second
@@ -51,14 +55,18 @@ func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
 	configer component.IConfiger,
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
+	exptRunLogRepo repo.IExptRunLogRepo,
 ) IEvalTargetService {
 	singletonEvalTargetService := &EvalTargetServiceImpl{
-		evalTargetRepo:    evalTargetRepo,
-		idgen:             idgen,
-		metric:            metric,
-		typedOperators:    typedOperators,
-		trajectoryAdapter: trajectoryAdapter,
-		configer:          configer,
+		evalTargetRepo:          evalTargetRepo,
+		idgen:                   idgen,
+		metric:                  metric,
+		typedOperators:          typedOperators,
+		trajectoryAdapter:       trajectoryAdapter,
+		configer:                configer,
+		sandboxSchedulerAdapter: sandboxSchedulerAdapter,
+		exptRunLogRepo:          exptRunLogRepo,
 	}
 	return singletonEvalTargetService
 }
@@ -684,6 +692,47 @@ func (e *EvalTargetServiceImpl) LoadRecordFullData(ctx context.Context, record *
 	return e.evalTargetRepo.LoadEvalTargetRecordFullData(ctx, record)
 }
 
+// destroySandboxExecuteIfNeeded 在 SandboxAgent 评测对象单行执行完成后销毁该次沙箱执行。
+// 仅做 best-effort：任何步骤失败仅记录日志，不阻断上层调用。
+func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Context, record *entity.EvalTargetRecord) {
+	if e.sandboxSchedulerAdapter == nil || record == nil {
+		return
+	}
+	// 仅 SandboxAgent 评测对象需要销毁沙箱执行
+	targetVersion, err := e.evalTargetRepo.GetEvalTargetVersion(ctx, record.SpaceID, record.TargetVersionID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] get eval target version fail, space_id=%d, version_id=%d, err=%v",
+			record.SpaceID, record.TargetVersionID, err)
+		return
+	}
+	if targetVersion == nil || targetVersion.EvalTargetType != entity.EvalTargetTypeSandboxAgent {
+		return
+	}
+
+	// 反查实验 ID 作为 TaskID（与 Submit 时 Init 用的 TaskID 一致）
+	var taskID string
+	if e.exptRunLogRepo != nil && record.ExperimentRunID > 0 {
+		runLog, err := e.exptRunLogRepo.Get(ctx, 0, record.ExperimentRunID)
+		if err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] get expt_run_log fail, expt_run_id=%d, err=%v", record.ExperimentRunID, err)
+		} else if runLog != nil && runLog.ExptID > 0 {
+			taskID = strconv.FormatInt(runLog.ExptID, 10)
+		}
+	}
+
+	goroutine.Go(ctx, func() {
+		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
+			TaskID:      taskID,
+			DestroyType: rpc.SandboxDestroyTypeExecute,
+			ExecuteIDs:  []string{strconv.FormatInt(record.ID, 10)},
+			WorkspaceID: record.SpaceID,
+		}); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_id=%d, err=%v",
+				taskID, record.ID, err)
+		}
+	})
+}
+
 func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *entity.ReportTargetRecordParam) error {
 	record, err := e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID)
 	if err != nil {
@@ -716,6 +765,9 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, record, nil); err != nil {
 		return err
 	}
+
+	// SandboxAgent 评测对象单行执行完成后，best-effort 销毁沙箱执行（仅告警不阻断）
+	e.destroySandboxExecuteIfNeeded(ctx, record)
 
 	// traceID, err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session)
 	// if err != nil {
