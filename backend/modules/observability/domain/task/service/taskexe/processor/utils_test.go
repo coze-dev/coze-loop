@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	taskentity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -216,43 +215,26 @@ func TestBuildItem(t *testing.T) {
 		TraceFieldJsonpath: "",
 		EvalSetName:        gptr.Of("field_1"),
 	}
-	evalSchema := []*entity.FieldSchema{
-		{
-			Key:         gptr.Of("field_1"),
-			Name:        "field_1",
-			ContentType: common.ContentTypeText,
-		},
-	}
-	evalSchemaBytes, err := json.Marshal(evalSchema)
-	assert.NoError(t, err)
 
 	span := &loop_span.Span{TraceID: "1234567890abcdef1234567890abcdef", SpanID: "feedbeeffeedbeef", Input: "hello"}
-	data := buildItem(ctx, span, []*taskentity.EvaluateFieldMapping{mapping}, string(evalSchemaBytes), "run-1")
+	data := buildItem(ctx, span, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
 	assert.Len(t, data, 4)
 	assert.Equal(t, "trace_id", data[0].GetKey())
 	assert.Equal(t, "span_id", data[1].GetKey())
 	assert.Equal(t, "run_id", data[2].GetKey())
-	assert.Equal(t, "field_1", data[3].GetKey())
+	assert.Equal(t, "field_1", data[3].GetName())
 	assert.Equal(t, "hello", data[3].GetContent().GetText())
 
 	// content error path should return nil
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
 	badSpan := &loop_span.Span{TraceID: span.TraceID, SpanID: span.SpanID, Input: "invalid json"}
-	badSchema := []*entity.FieldSchema{
-		{
-			Key:         gptr.Of("field_1"),
-			Name:        "field_1",
-			ContentType: common.ContentTypeMultiPart,
-		},
-	}
-	badBytes, err := json.Marshal(badSchema)
-	assert.NoError(t, err)
-	assert.Nil(t, buildItem(ctx, badSpan, []*taskentity.EvaluateFieldMapping{mapping}, string(badBytes), "run-1"))
+	assert.Nil(t, buildItem(ctx, badSpan, []*taskentity.EvaluateFieldMapping{mapping}, "run-1"))
 
-	// schema empty path keeps only default fields
+	// EvalSetName nil case should skip the field
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeText)
-	empty := buildItem(ctx, span, []*taskentity.EvaluateFieldMapping{mapping}, "", "run-1")
-	assert.Len(t, empty, 3)
+	mapping.EvalSetName = nil
+	noName := buildItem(ctx, span, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
+	assert.Len(t, noName, 3)
 }
 
 // Note: key-nil case cannot be safely tested because buildItem dereferences key
@@ -271,35 +253,16 @@ func TestBuildItems(t *testing.T) {
 		TraceFieldJsonpath: "",
 		EvalSetName:        gptr.Of("field_1"),
 	}
-	evalSchema := []*eval_set.FieldSchema{
-		{
-			Key:         gptr.Of("field_1"),
-			Name:        gptr.Of("field_1"),
-			ContentType: gptr.Of(common.ContentTypeText),
-		},
-	}
-	schemaBytes, err := json.Marshal(evalSchema)
-	assert.NoError(t, err)
 
 	goodSpan := &loop_span.Span{TraceID: "1234567890abcdef1234567890abcdef", SpanID: "deadc0debeefcafe", Input: "hello"}
 	badSpan := &loop_span.Span{TraceID: goodSpan.TraceID, SpanID: "badbadbadbadbad", Input: "invalid"}
-	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
-	multipartSchema := []*entity.FieldSchema{
-		{
-			Key:         gptr.Of("field_1"),
-			Name:        "field_1",
-			ContentType: common.ContentTypeMultiPart,
-		},
-	}
-	multipartBytes, err := json.Marshal(multipartSchema)
-	assert.NoError(t, err)
 
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
-	turns := buildItems(ctx, []*loop_span.Span{goodSpan, badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, string(multipartBytes), "run-1")
+	turns := buildItems(ctx, []*loop_span.Span{goodSpan, badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
 	assert.Empty(t, turns)
 
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeText)
-	turns = buildItems(ctx, []*loop_span.Span{goodSpan, badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, string(schemaBytes), "run-1")
+	turns = buildItems(ctx, []*loop_span.Span{goodSpan, badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
 	assert.Len(t, turns, 2)
 	for _, turn := range turns {
 		assert.Equal(t, "run_id", turn.FieldDataList[2].GetKey())
@@ -307,7 +270,7 @@ func TestBuildItems(t *testing.T) {
 
 	// ensure spans returning nil items are skipped
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
-	turns = buildItems(ctx, []*loop_span.Span{badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, string(multipartBytes), "run-1")
+	turns = buildItems(ctx, []*loop_span.Span{badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
 	assert.Empty(t, turns)
 }
 
