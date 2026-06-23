@@ -1048,6 +1048,24 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		return nil, err
 	}
 
+	// Validate eval target type before building the request: an unsupported
+	// target type (e.g. faas_http, which is an AccessProtocol — not an
+	// EvalTargetType) must be rejected here instead of being silently dropped.
+	// The convertor below also returns this error; validating up front yields a
+	// clear param error and lists the supported types for the caller.
+	if req.EvalTargetParam != nil && req.EvalTargetParam.EvalTargetType != nil {
+		if !experiment_convertor.IsSupportedOpenAPIEvalTargetType(*req.EvalTargetParam.EvalTargetType) {
+			msg := fmt.Sprintf("unsupported eval target type: %s. supported: [%s]",
+				*req.EvalTargetParam.EvalTargetType, experiment_convertor.SupportedOpenAPIEvalTargetTypesString())
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(msg))
+		}
+	}
+
+	createEvalTargetParam, err := experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+
 	createReq := &exptpb.SubmitExperimentRequest{
 		WorkspaceID:             req.GetWorkspaceID(),
 		EvalSetVersionID:        gptr.Of(versions[0].ID),
@@ -1059,7 +1077,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		EvaluatorFieldMapping:   experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
 		ItemConcurNum:           req.ItemConcurNum,
 		TargetRuntimeParam:      experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
-		CreateEvalTargetParam:   experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
+		CreateEvalTargetParam:   createEvalTargetParam,
 		EvaluatorIDVersionList:  experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
 		ItemRetryNum:            req.ItemRetryNum,
 		TriggerType:             gptr.Of(domain_expt.OpenAPI),

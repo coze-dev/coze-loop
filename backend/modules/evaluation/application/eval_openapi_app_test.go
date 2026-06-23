@@ -20,6 +20,7 @@ import (
 	domainexpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
+	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	openapiExperiment "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
@@ -1852,6 +1853,33 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 				evaluatorSvc.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluatorVersionRequest{})).Return(nil, int64(0), nil)
 			},
 			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "unsupported eval target type",
+			buildReq: func() *openapi.SubmitExperimentOApiRequest {
+				req := buildBaseReq()
+				// faas_http is an AccessProtocol, not an EvalTargetType.
+				req.EvalTargetParam = &openapi.SubmitExperimentEvalTargetParam{
+					SourceTargetID: gptr.Of("1"),
+					EvalTargetType: gptr.Of(openapiEvalTarget.EvalTargetType("faas_http")),
+				}
+				return req
+			},
+			setup: func(req *openapi.SubmitExperimentOApiRequest, auth *rpcmocks.MockIAuthProvider, manager *servicemocks.MockIExptManager, versionSvc *servicemocks.MockEvaluationSetVersionService, evaluatorSvc *servicemocks.MockEvaluatorService, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				manager.EXPECT().CheckName(gomock.Any(), req.GetName(), req.GetWorkspaceID(), gomock.AssignableToTypeOf(&entity.Session{})).Return(true, nil)
+				versionSvc.EXPECT().ListEvaluationSetVersions(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetVersionsParam{})).Return([]*entity.EvaluationSetVersion{{ID: evaluatorVersionID}}, nil, nil, nil)
+				evaluator := &entity.Evaluator{
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+						ID:          evaluatorVersionID,
+						EvaluatorID: evaluatorID,
+						Version:     "1.0",
+					},
+				}
+				evaluatorSvc.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluatorVersionRequest{})).Return([]*entity.Evaluator{evaluator}, int64(1), nil)
+			},
+			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
 			name:     "success",
