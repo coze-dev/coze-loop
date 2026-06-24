@@ -153,6 +153,10 @@ func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalT
 		result.AgentConnection = openapiAgentConnectionDTO2Domain(param.AgentConnection)
 	}
 
+	if param.SandboxAgent != nil {
+		result.SandboxAgent = openapiSandboxAgentDTO2Domain(param.SandboxAgent)
+	}
+
 	return result, nil
 }
 
@@ -193,6 +197,34 @@ func openapiAgentImplDTO2Domain(dtoObj *openapiEvalTarget.AgentImpl) *domaindoEv
 		Framework: dtoObj.Framework,
 		Kind:      dtoObj.Kind,
 	}
+}
+
+func openapiSandboxAgentDTO2Domain(dtoObj *openapiEvalTarget.SandboxAgent) *domaindoEvalTarget.SandboxAgent {
+	if dtoObj == nil {
+		return nil
+	}
+	envs := make([]*domaindoEvalTarget.SandboxEnvVar, 0, len(dtoObj.Envs))
+	for _, e := range dtoObj.Envs {
+		if e == nil {
+			continue
+		}
+		envs = append(envs, &domaindoEvalTarget.SandboxEnvVar{
+			Key:   e.Key,
+			Value: e.Value,
+		})
+	}
+	res := &domaindoEvalTarget.SandboxAgent{
+		Name:          dtoObj.Name,
+		ModelName:     dtoObj.ModelName,
+		AgentSetupCmd: dtoObj.AgentSetupCmd,
+		AgentRunCmd:   dtoObj.AgentRunCmd,
+		Envs:          envs,
+	}
+	if dtoObj.Type != nil {
+		t := domaindoEvalTarget.SandboxAgentType(*dtoObj.Type)
+		res.Type = &t
+	}
+	return res
 }
 
 func ParseOpenAPIEvaluatorVersions(versions []string) ([]int64, error) {
@@ -266,6 +298,8 @@ func mapOpenAPIEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (dom
 		return domaindoEvalTarget.EvalTargetType_A2AAgent, nil
 	case openapiEvalTarget.EvalTargetTypeCustomAgent:
 		return domaindoEvalTarget.EvalTargetType_CustomAgent, nil
+	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
+		return domaindoEvalTarget.EvalTargetType_SandboxAgent, nil
 	default:
 		return 0, fmt.Errorf("unsupported eval target type: %s. supported: [%s]", openapiType, supportedOpenAPIEvalTargetTypesString())
 	}
@@ -1102,6 +1136,10 @@ func openAPIEvaluatorRecordDO2DTO(record *entity.EvaluatorRecord) *openapiEvalua
 	return res
 }
 
+func OpenAPITargetRecordDO2DTO(record *entity.EvalTargetRecord) *openapiEvalTarget.EvalTargetRecord {
+	return openAPITargetRecordDO2DTO(record)
+}
+
 func openAPITargetRecordDO2DTO(record *entity.EvalTargetRecord) *openapiEvalTarget.EvalTargetRecord {
 	if record == nil {
 		return nil
@@ -1528,6 +1566,10 @@ func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion, typ ent
 		if versionDO.CustomRPCServer != nil {
 			contentDTO.CustomRPCServer = OpenAPICustomRPCServerDO2DTO(versionDO.CustomRPCServer)
 		}
+	case entity.EvalTargetTypeSandboxAgent:
+		if versionDO.SandboxAgent != nil {
+			contentDTO.SandboxAgent = OpenAPISandboxAgentDO2DTO(versionDO.SandboxAgent)
+		}
 	}
 
 	versionDTO.EvalTargetContent = contentDTO
@@ -1564,6 +1606,8 @@ func convertEntityEvalTargetTypeToOpenAPI(typ entity.EvalTargetType) openapiEval
 		return openapiEvalTarget.EvalTargetTypeVolcengineAgent
 	case entity.EvalTargetTypeCustomRPCServer:
 		return openapiEvalTarget.EvalTargetTypeCustomRPCServer
+	case entity.EvalTargetTypeSandboxAgent:
+		return openapiEvalTarget.EvalTargetTypeSandboxAgent
 	default:
 		return ""
 	}
@@ -1615,6 +1659,104 @@ func OpenAPICustomEvalTargetDO2DTO(do *entity.CustomEvalTarget) *openapiEvalTarg
 		Name:      do.Name,
 		AvatarURL: do.AvatarURL,
 		Ext:       do.Ext,
+	}
+}
+
+func OpenAPICustomRPCServerDTO2DO(dto *openapiEvalTarget.CustomRPCServer) *entity.CustomRPCServer {
+	if dto == nil {
+		return nil
+	}
+	regions := make([]entity.Region, 0, len(dto.Regions))
+	regions = append(regions, dto.Regions...)
+	return &entity.CustomRPCServer{
+		ID:                  gptr.Indirect(dto.ID),
+		Name:                gptr.Indirect(dto.Name),
+		Description:         gptr.Indirect(dto.Description),
+		ServerName:          gptr.Indirect(dto.ServerName),
+		AccessProtocol:      gptr.Indirect(dto.AccessProtocol),
+		Regions:             regions,
+		Cluster:             gptr.Indirect(dto.Cluster),
+		InvokeHTTPInfo:      openAPIHTTPInfoDTO2DO(dto.InvokeHTTPInfo),
+		AsyncInvokeHTTPInfo: openAPIHTTPInfoDTO2DO(dto.AsyncInvokeHTTPInfo),
+		NeedSearchTarget:    dto.NeedSearchTarget,
+		SearchHTTPInfo:      openAPIHTTPInfoDTO2DO(dto.SearchHTTPInfo),
+		CustomEvalTarget:    openAPICustomEvalTargetDTO2DO(dto.CustomEvalTarget),
+		IsAsync:             dto.IsAsync,
+		ExecRegion:          gptr.Indirect(dto.ExecRegion),
+		ExecEnv:             dto.ExecEnv,
+		Timeout:             dto.Timeout,
+		AsyncTimeout:        dto.AsyncTimeout,
+		Ext:                 dto.Ext,
+	}
+}
+
+func openAPIHTTPInfoDTO2DO(dto *openapiEvalTarget.HTTPInfo) *entity.HTTPInfo {
+	if dto == nil {
+		return nil
+	}
+	return &entity.HTTPInfo{
+		Method: gptr.Indirect(dto.Method),
+		Path:   gptr.Indirect(dto.Path),
+	}
+}
+
+func openAPICustomEvalTargetDTO2DO(dto *openapiEvalTarget.CustomEvalTarget) *entity.CustomEvalTarget {
+	if dto == nil {
+		return nil
+	}
+	return &entity.CustomEvalTarget{
+		ID:        dto.ID,
+		Name:      dto.Name,
+		AvatarURL: dto.AvatarURL,
+		Ext:       dto.Ext,
+	}
+}
+
+func OpenAPISandboxAgentDO2DTO(do *entity.SandboxAgent) *openapiEvalTarget.SandboxAgent {
+	if do == nil {
+		return nil
+	}
+	envs := make([]*openapiEvalTarget.SandboxEnvVar, 0, len(do.Envs))
+	for _, e := range do.Envs {
+		if e == nil {
+			continue
+		}
+		envs = append(envs, &openapiEvalTarget.SandboxEnvVar{
+			Key:   gptr.Of(e.Key),
+			Value: gptr.Of(e.Value),
+		})
+	}
+	return &openapiEvalTarget.SandboxAgent{
+		Name:          gptr.Of(do.Name),
+		Type:          gptr.Of(openapiEvalTarget.SandboxAgentType(do.Type)),
+		ModelName:     gptr.Of(do.ModelName),
+		AgentSetupCmd: gptr.Of(do.AgentSetupCmd),
+		AgentRunCmd:   gptr.Of(do.AgentRunCmd),
+		Envs:          envs,
+	}
+}
+
+func OpenAPISandboxAgentDTO2DO(dto *openapiEvalTarget.SandboxAgent) *entity.SandboxAgent {
+	if dto == nil {
+		return nil
+	}
+	envs := make([]*entity.SandboxEnvVar, 0, len(dto.Envs))
+	for _, e := range dto.Envs {
+		if e == nil {
+			continue
+		}
+		envs = append(envs, &entity.SandboxEnvVar{
+			Key:   e.GetKey(),
+			Value: e.GetValue(),
+		})
+	}
+	return &entity.SandboxAgent{
+		Name:          dto.GetName(),
+		Type:          entity.SandboxAgentType(dto.GetType()),
+		ModelName:     dto.GetModelName(),
+		AgentSetupCmd: dto.GetAgentSetupCmd(),
+		AgentRunCmd:   dto.GetAgentRunCmd(),
+		Envs:          envs,
 	}
 }
 
@@ -2698,6 +2840,10 @@ func OpenAPICreateEvalTargetParamDTO2DomainV2(param *openapi.SubmitExperimentEva
 
 	if param.AgentConnection != nil {
 		res.AgentConnection = openapiAgentConnectionDTO2DO(param.AgentConnection)
+	}
+
+	if param.SandboxAgent != nil {
+		res.SandboxAgent = OpenAPISandboxAgentDTO2DO(param.SandboxAgent)
 	}
 
 	return res

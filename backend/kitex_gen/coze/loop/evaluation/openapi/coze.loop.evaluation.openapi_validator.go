@@ -524,6 +524,84 @@ func (p *GetEvalTargetOutputFieldContentOApiResponse) IsValid() error {
 func (p *GetEvalTargetOutputFieldContentOpenAPIData) IsValid() error {
 	return nil
 }
+func (p *AsyncDebugEvalTargetOApiRequest) IsValid() error {
+	if p.TargetRuntimeParam != nil {
+		if err := p.TargetRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
+	if p.CustomRPCServer != nil {
+		if err := p.CustomRPCServer.IsValid(); err != nil {
+			return fmt.Errorf("field CustomRPCServer not valid, %w", err)
+		}
+	}
+	if p.SandboxAgent != nil {
+		if err := p.SandboxAgent.IsValid(); err != nil {
+			return fmt.Errorf("field SandboxAgent not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AsyncDebugEvalTargetOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AsyncDebugEvalTargetOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *GetEvalTargetRecordOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvalTargetRecordOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvalTargetRecordOpenAPIData) IsValid() error {
+	if p.EvalTargetRecord != nil {
+		if err := p.EvalTargetRecord.IsValid(); err != nil {
+			return fmt.Errorf("field EvalTargetRecord not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ImportEvaluationSetOpenAPIData) IsValid() error {
 	return nil
 }
@@ -666,6 +744,11 @@ func (p *SubmitExperimentEvalTargetParam) IsValid() error {
 	if p.AgentConnection != nil {
 		if err := p.AgentConnection.IsValid(); err != nil {
 			return fmt.Errorf("field AgentConnection not valid, %w", err)
+		}
+	}
+	if p.SandboxAgent != nil {
+		if err := p.SandboxAgent.IsValid(); err != nil {
+			return fmt.Errorf("field SandboxAgent not valid, %w", err)
 		}
 	}
 	return nil
