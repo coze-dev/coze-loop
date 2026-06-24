@@ -287,6 +287,96 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "export traces to dataset uses key from dataset schema",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				datasetProviderMock := rpcmocks.NewMockIDatasetProvider(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
+				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				adaptor := NewDatasetServiceAdaptor()
+				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant1"}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: []*loop_span.Span{
+						{
+							TraceID:     "trace-key",
+							SpanID:      "span-key",
+							WorkspaceID: "123",
+							Input:       "hello",
+							Output:      "world",
+						},
+					},
+				}, nil)
+				datasetProviderMock.EXPECT().CreateDataset(gomock.Any(), gomock.Any()).Return(int64(200), nil)
+				datasetProviderMock.EXPECT().GetDataset(gomock.Any(), int64(123), int64(200), entity.DatasetCategory_General).Return(&entity.Dataset{
+					ID:              200,
+					Name:            "key-test-dataset",
+					DatasetCategory: entity.DatasetCategory_General,
+					DatasetVersion: entity.DatasetVersion{
+						DatasetSchema: entity.DatasetSchema{
+							FieldSchemas: []entity.FieldSchema{
+								{Name: "输入", Key: ptr.Of("input_key_abc")},
+								{Name: "输出", Key: ptr.Of("output_key_xyz")},
+							},
+						},
+					},
+				}, nil)
+				datasetProviderMock.EXPECT().AddDatasetItems(gomock.Any(), int64(200), entity.DatasetCategory_General, gomock.Any()).DoAndReturn(
+					func(ctx context.Context, datasetID int64, category entity.DatasetCategory, items []*entity.DatasetItem) ([]*entity.DatasetItem, []entity.ItemErrorGroup, error) {
+						assert.Len(t, items, 1)
+						item := items[0]
+						assert.Len(t, item.FieldData, 2)
+						assert.Equal(t, "input_key_abc", item.FieldData[0].Key)
+						assert.Equal(t, "输入", item.FieldData[0].Name)
+						assert.Equal(t, "output_key_xyz", item.FieldData[1].Key)
+						assert.Equal(t, "输出", item.FieldData[1].Name)
+						return items, []entity.ItemErrorGroup{}, nil
+					})
+
+				return fields{
+					traceRepo:             repoMock,
+					traceConfig:           confMock,
+					traceProducer:         traceProducerMock,
+					annotationProducer:    annotationProducerMock,
+					metrics:               metricsMock,
+					tenantProvider:        tenantMock,
+					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
+					traceService:          &stubTraceService{},
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ExportTracesToDatasetRequest{
+					WorkspaceID:  123,
+					SpanIds:      []SpanID{{TraceID: "trace-key", SpanID: "span-key"}},
+					Category:     entity.DatasetCategory_General,
+					Config:       DatasetConfig{IsNewDataset: true, DatasetName: ptr.Of("key-test-dataset"), DatasetSchema: entity.DatasetSchema{FieldSchemas: []entity.FieldSchema{{Name: "输入"}, {Name: "输出"}}}},
+					StartTime:    time.Now().Unix() - 3600,
+					EndTime:      time.Now().Unix(),
+					PlatformType: loop_span.PlatformCozeLoop,
+					ExportType:   ExportType_Append,
+					FieldMappings: []entity.FieldMapping{
+						{TraceFieldKey: "input", FieldSchema: entity.FieldSchema{Name: "输入"}},
+						{TraceFieldKey: "output", FieldSchema: entity.FieldSchema{Name: "输出"}},
+					},
+				},
+			},
+			want: &ExportTracesToDatasetResponse{
+				SuccessCount: 1,
+				DatasetID:    200,
+				DatasetName:  "key-test-dataset",
+				Errors:       []entity.ItemErrorGroup{},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -604,8 +694,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   0,
 					FieldData: []*entity.FieldData{
-						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}
 
@@ -661,8 +751,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   0,
 					FieldData: []*entity.FieldData{
-						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}},
 				Errors: []entity.ItemErrorGroup{},
@@ -699,8 +789,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   100,
 					FieldData: []*entity.FieldData{
-						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}
 
@@ -758,8 +848,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   100,
 					FieldData: []*entity.FieldData{
-						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}},
 				Errors: []entity.ItemErrorGroup{},
@@ -796,8 +886,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   100,
 					FieldData: []*entity.FieldData{
-						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}
 
@@ -855,8 +945,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   100,
 					FieldData: []*entity.FieldData{
-						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}},
 				Errors: []entity.ItemErrorGroup{},
@@ -2148,8 +2238,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 					WorkspaceID: 123,
 					DatasetID:   0,
 					FieldData: []*entity.FieldData{
-						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}
 
@@ -2205,8 +2295,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 					WorkspaceID: 123,
 					DatasetID:   0,
 					FieldData: []*entity.FieldData{
-						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}},
 				Errors: []entity.ItemErrorGroup{},

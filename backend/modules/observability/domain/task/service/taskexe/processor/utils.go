@@ -194,9 +194,34 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 			return nil
 		}
 		fieldDatas = append(fieldDatas, &eval_set.FieldData{
+			Key:     mapping.DatasetKey,
 			Name:    mapping.EvalSetName,
 			Content: evaluationset.ConvertContentDO2DTO(content),
 		})
 	}
 	return fieldDatas
+}
+
+func fillDatasetKeysFromSchema(ctx context.Context, mappings []*task_entity.EvaluateFieldMapping, schemaJSON string) {
+	if schemaJSON == "" {
+		return
+	}
+	var fieldSchemas []entity.FieldSchema
+	if err := sonic.UnmarshalString(schemaJSON, &fieldSchemas); err != nil {
+		logs.CtxWarn(ctx, "[auto_task] unmarshal schema failed, err:%v", err)
+		return
+	}
+	nameToKey := make(map[string]string, len(fieldSchemas))
+	for _, fs := range fieldSchemas {
+		if fs.Key != nil && *fs.Key != "" {
+			nameToKey[fs.Name] = *fs.Key
+		}
+	}
+	for _, m := range mappings {
+		if m.EvalSetName != nil {
+			if key, ok := nameToKey[*m.EvalSetName]; ok {
+				m.DatasetKey = &key
+			}
+		}
+	}
 }

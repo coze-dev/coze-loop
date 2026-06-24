@@ -584,7 +584,8 @@ func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.
 			continue
 		}
 
-		item.AddFieldData("", mapping.FieldSchema.Name, content)
+		key := dataset.GetFieldSchemaKeyByName(mapping.FieldSchema.Name)
+		item.AddFieldData(key, mapping.FieldSchema.Name, content)
 	}
 	return item
 }
