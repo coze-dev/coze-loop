@@ -512,14 +512,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	}
 
 	err = pool.ExecAll(ctx)
-	records := make(map[int64]*entity.EvaluatorRecord, len(expt.Evaluators))
-	recordMap.Range(func(key, value interface{}) bool {
-		record, _ := value.(*entity.EvaluatorRecord)
-		records[key.(int64)] = record
-		return true
-	})
-
-	return records, err
+	return collector.records, err
 }
 
 // buildAliasRunConf 由 per-alias DynamicParam 合成运行时配置 (动态参数执行):

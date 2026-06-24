@@ -1032,7 +1032,6 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		TargetFieldMapping:      experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
 		ItemConcurNum:           req.ItemConcurNum,
 		TargetRuntimeParam:      experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
-		CreateEvalTargetParam:   experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
 		ItemRetryNum:            req.ItemRetryNum,
 		TriggerType:             gptr.Of(domain_expt.OpenAPI),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
@@ -1083,6 +1082,14 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 			evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
 		}
 
+		// 老路径专属字段回填到共享 createReq。
+		createReq.EvalSetVersionID = gptr.Of(versions[0].ID)
+		createReq.EvalSetID = req.GetEvalSetParam().EvalSetID
+		createReq.EvaluatorVersionIds = evaluatorVersionIDs
+		createReq.EvaluatorFieldMapping = experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap)
+		createReq.EvaluatorIDVersionList = experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams)
+	}
+
 	notificationConf, err := experiment_convertor.OpenAPINotificationConfDTO2Domain(req.NotificationConf)
 	if err != nil {
 		return nil, err
@@ -1105,26 +1112,8 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	if err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
-
-	createReq := &exptpb.SubmitExperimentRequest{
-		WorkspaceID:             req.GetWorkspaceID(),
-		EvalSetVersionID:        gptr.Of(versions[0].ID),
-		EvalSetID:               req.GetEvalSetParam().EvalSetID,
-		EvaluatorVersionIds:     evaluatorVersionIDs,
-		Name:                    req.Name,
-		Desc:                    req.Description,
-		TargetFieldMapping:      experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
-		EvaluatorFieldMapping:   experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
-		ItemConcurNum:           req.ItemConcurNum,
-		TargetRuntimeParam:      experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
-		CreateEvalTargetParam:   createEvalTargetParam,
-		EvaluatorIDVersionList:  experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
-		ItemRetryNum:            req.ItemRetryNum,
-		TriggerType:             gptr.Of(domain_expt.OpenAPI),
-		EnableExtractTrajectory: req.EnableExtractTrajectory,
-		NotificationConf:        notificationConf,
-		Ext:                     req.GetExt(),
-	}
+	createReq.CreateEvalTargetParam = createEvalTargetParam
+	createReq.NotificationConf = notificationConf
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
 	if err != nil {
