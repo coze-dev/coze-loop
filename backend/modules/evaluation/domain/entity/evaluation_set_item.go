@@ -15,6 +15,7 @@ type EvaluationSetItem struct {
 	SchemaID        int64     `json:"schema_id,omitempty"`
 	ItemID          int64     `json:"item_id,omitempty"`
 	ItemKey         string    `json:"item_key,omitempty"`
+	ItemVersion     *string   `json:"item_version,omitempty"`
 	Turns           []*Turn   `json:"turns,omitempty"`
 	BaseInfo        *BaseInfo `json:"base_info,omitempty"`
 }

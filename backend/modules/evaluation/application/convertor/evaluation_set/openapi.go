@@ -264,6 +264,7 @@ func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.Eval
 		ItemCount:           gptr.Of(do.ItemCount),
 		LatestVersion:       gptr.Of(do.LatestVersion),
 		IsChangeUncommitted: gptr.Of(do.ChangeUncommitted),
+		Type:                do.DatasetType,
 		CurrentVersion:      OpenAPIEvaluationSetVersionDO2DTO(do.EvaluationSetVersion),
 		BaseInfo:            ConvertBaseInfoDO2DTO(do.BaseInfo),
 	}
@@ -399,9 +400,10 @@ func OpenAPIItemDTO2DO(evalSetID int64, dto *openapi_eval_set.EvaluationSetItem)
 		return nil
 	}
 	return &entity.EvaluationSetItem{
-		ItemID:  gptr.Indirect(dto.ID),
-		ItemKey: gptr.Indirect(dto.ItemKey),
-		Turns:   OpenAPITurnDTO2DOs(evalSetID, dto.GetID(), dto.Turns),
+		ItemID:      gptr.Indirect(dto.ID),
+		ItemKey:     gptr.Indirect(dto.ItemKey),
+		ItemVersion: dto.ItemVersion,
+		Turns:       OpenAPITurnDTO2DOs(evalSetID, dto.GetID(), dto.Turns),
 	}
 }
 
