@@ -127,6 +127,9 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 
 	mapping := p.buildFieldMappings(trigger.Task)
 
+	schemaJSON := taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema()
+	fillDatasetKeysFromSchema(ctx, mapping, schemaJSON)
+
 	turns := buildItems(ctx, []*loop_span.Span{trigger.Span}, mapping, strconv.FormatInt(taskRun.ID, 10))
 	if len(turns) == 0 {
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluateProcessor Invoke, turns is empty")
@@ -210,6 +213,9 @@ func (p *AutoEvaluateProcessor) BatchInvoke(ctx context.Context, trigger *taskex
 
 	// 构建 field mapping
 	mapping := p.buildFieldMappings(trigger.Task)
+
+	schemaJSON := taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema()
+	fillDatasetKeysFromSchema(ctx, mapping, schemaJSON)
 
 	// 为每条 span 构建评测项
 	taskRunIDStr := strconv.FormatInt(taskRun.ID, 10)
