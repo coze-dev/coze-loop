@@ -243,7 +243,6 @@ type customError struct {
 
 func (e *customError) Error() string { return e.msg }
 
-
 func Test_pool_execute(t *testing.T) {
 	t.Run("execute tasks with pool size equal to task count", func(t *testing.T) {
 		ctx := context.Background()
