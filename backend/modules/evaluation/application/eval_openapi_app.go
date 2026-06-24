@@ -64,10 +64,11 @@ type EvalOpenAPIApplication struct {
 	manager                     service.IExptManager
 	resultSvc                   service.ExptResultService
 	service.ExptAggrResultService
-	evaluatorService       service.EvaluatorService
-	evaluatorRecordService service.EvaluatorRecordService
-	exptTemplateManager    service.IExptTemplateManager
-	configer               component.IConfiger
+	evaluatorService        service.EvaluatorService
+	evaluatorRecordService  service.EvaluatorRecordService
+	exptTemplateManager     service.IExptTemplateManager
+	configer                component.IConfiger
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -87,6 +88,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluatorRecordService service.EvaluatorRecordService,
 	exptTemplateManager service.IExptTemplateManager,
 	configer component.IConfiger,
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -107,6 +109,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		evaluatorRecordService:      evaluatorRecordService,
 		exptTemplateManager:         exptTemplateManager,
 		configer:                    configer,
+		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
 	}
 }
 
@@ -878,7 +881,25 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
 	}
 
-	logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID())
+	// 调试场景（actx.Event == nil）：无论成功失败都 best-effort 销毁沙箱执行
+	if actx.Event == nil {
+		defer func() {
+			if e.sandboxSchedulerAdapter == nil {
+				return
+			}
+			if _, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
+				TaskID:      "sandbox_debug",
+				DestroyType: rpc.SandboxDestroyTypeExecute,
+				ExecuteIDs:  []string{strconv.FormatInt(req.GetInvokeID(), 10)},
+				WorkspaceID: req.GetWorkspaceID(),
+			}); derr != nil {
+				logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox debug execute fail, invoke_id=%d, err=%v", req.GetInvokeID(), derr)
+			}
+		}()
+		logs.CtxInfo(ctx, "report target record (debug), record_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
+	} else {
+		logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.ExptID, actx.Event.ExptRunID, actx.Event.EvalSetItemID)
+	}
 	outputData := target.ToInvokeOutputDataDO(req)
 	outputData.TimeConsumingMS = gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS)
 	if err := e.targetSvc.ReportInvokeRecords(ctx, &entity.ReportTargetRecordParam{
@@ -2636,6 +2657,15 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 			},
 		}, nil
 	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
+		if e.sandboxSchedulerAdapter != nil {
+			if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
+				TaskID:      "sandbox_debug",
+				Concurrency: 10,
+				WorkspaceID: req.GetWorkspaceID(),
+			}); initErr != nil {
+				return nil, errorx.Wrapf(initErr, "init sandbox debug task fail")
+			}
+		}
 		record, callee, err := e.targetSvc.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
 			SpaceID: req.GetWorkspaceID(),
 			PatchyTarget: &entity.EvalTarget{
