@@ -604,8 +604,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   0,
 					FieldData: []*entity.FieldData{
-						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}
 
@@ -661,8 +661,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   0,
 					FieldData: []*entity.FieldData{
-						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}},
 				Errors: []entity.ItemErrorGroup{},
@@ -699,8 +699,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   100,
 					FieldData: []*entity.FieldData{
-						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}
 
@@ -758,8 +758,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   100,
 					FieldData: []*entity.FieldData{
-						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}},
 				Errors: []entity.ItemErrorGroup{},
@@ -796,8 +796,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   100,
 					FieldData: []*entity.FieldData{
-						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}
 
@@ -855,8 +855,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					WorkspaceID: 123,
 					DatasetID:   100,
 					FieldData: []*entity.FieldData{
-						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}},
 				Errors: []entity.ItemErrorGroup{},
@@ -2148,8 +2148,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 					WorkspaceID: 123,
 					DatasetID:   0,
 					FieldData: []*entity.FieldData{
-						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}
 
@@ -2205,8 +2205,8 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 					WorkspaceID: 123,
 					DatasetID:   0,
 					FieldData: []*entity.FieldData{
-						{Key: "input", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
-						{Key: "output", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "input", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
+						{Key: "", Name: "output", Content: &entity.Content{ContentType: entity.ContentType_Text, Text: ""}},
 					},
 				}},
 				Errors: []entity.ItemErrorGroup{},

@@ -867,7 +867,7 @@ func TestRenderJinja2Template(t *testing.T) {
 			valMap: map[string]*VariableVal{
 				"price": {Key: "price", Value: ptr.Of("3.14159")},
 			},
-			expected: "Price: $3.15",
+			expected: "Price: $3.14",
 		},
 		{
 			name:        "array of objects",

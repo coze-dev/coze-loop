@@ -101,9 +101,9 @@ func OpenAPIRuntimeParamDTO2Domain(param *openapiCommon.RuntimeParam) *domainCom
 	return &domainCommon.RuntimeParam{JSONValue: param.JSONValue}
 }
 
-func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalTargetParam) *domainEvalTarget.CreateEvalTargetParam {
+func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalTargetParam) (*domainEvalTarget.CreateEvalTargetParam, error) {
 	if param == nil {
-		return nil
+		return nil, nil
 	}
 
 	result := &domainEvalTarget.CreateEvalTargetParam{
@@ -116,7 +116,7 @@ func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalT
 	if param.EvalTargetType != nil {
 		evalType, err := mapOpenAPIEvalTargetType(*param.EvalTargetType)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		result.EvalTargetType = &evalType
 	}
@@ -124,14 +124,14 @@ func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalT
 	if param.BotInfoType != nil {
 		botInfoType, err := mapOpenAPICozeBotInfoType(*param.BotInfoType)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		result.BotInfoType = &botInfoType
 	}
 	if param.Region != nil {
 		region, err := mapOpenAPIRegion(*param.Region)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		result.Region = &region
 	}
@@ -153,7 +153,7 @@ func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalT
 		result.AgentConnection = openapiAgentConnectionDTO2Domain(param.AgentConnection)
 	}
 
-	return result
+	return result, nil
 }
 
 func openapiAgentConnectionDTO2Domain(dtoObj *openapiEvalTarget.AgentConnection) *domaindoEvalTarget.AgentConnection {
@@ -217,6 +217,35 @@ func parseStringToInt64(value string) (int64, error) {
 	return strconv.ParseInt(value, 10, 64)
 }
 
+// supportedOpenAPIEvalTargetTypes is the set of eval target types accepted by
+// the OpenAPI experiment-create path, in a stable order for error messages.
+var supportedOpenAPIEvalTargetTypes = []openapiEvalTarget.EvalTargetType{
+	openapiEvalTarget.EvalTargetTypeCozeBot,
+	openapiEvalTarget.EvalTargetTypeCozeLoopPrompt,
+	openapiEvalTarget.EvalTargetTypeTrace,
+	openapiEvalTarget.EvalTargetTypeCozeWorkflow,
+	openapiEvalTarget.EvalTargetTypeVolcengineAgent,
+	openapiEvalTarget.EvalTargetTypeCustomRPCServer,
+}
+
+func supportedOpenAPIEvalTargetTypesString() string {
+	// EvalTargetType is a string alias, so the slice is directly joinable.
+	return strings.Join(supportedOpenAPIEvalTargetTypes, ", ")
+}
+
+// SupportedOpenAPIEvalTargetTypesString returns the comma-separated list of
+// eval target types accepted by the OpenAPI experiment-create path.
+func SupportedOpenAPIEvalTargetTypesString() string {
+	return supportedOpenAPIEvalTargetTypesString()
+}
+
+// IsSupportedOpenAPIEvalTargetType reports whether t is an eval target type
+// accepted by the OpenAPI experiment-create path.
+func IsSupportedOpenAPIEvalTargetType(t openapiEvalTarget.EvalTargetType) bool {
+	_, err := mapOpenAPIEvalTargetType(t)
+	return err == nil
+}
+
 func mapOpenAPIEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (domaindoEvalTarget.EvalTargetType, error) {
 	switch openapiType {
 	case openapiEvalTarget.EvalTargetTypeCozeBot:
@@ -232,7 +261,7 @@ func mapOpenAPIEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (dom
 	case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
 		return domaindoEvalTarget.EvalTargetType_CustomRPCServer, nil
 	default:
-		return 0, fmt.Errorf("unsupported eval target type: %s", openapiType)
+		return 0, fmt.Errorf("unsupported eval target type: %s. supported: [%s]", openapiType, supportedOpenAPIEvalTargetTypesString())
 	}
 }
 

@@ -154,13 +154,15 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context, tasks []*entity.O
 				if time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
 					lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskDO.ID)
 					locked, _, cancel, lockErr := t.locker.LockWithRenew(ctx, lockKey, syncTaskRunCountLockTTL, backfillLockMaxHold)
-					if lockErr != nil || !locked {
+					if locked {
+						cancel()
+					}
+					if lockErr != nil || locked {
 						_ = t.taskService.SendBackfillMessage(ctx, &entity.BackFillEvent{
 							TaskID:  taskDO.ID,
 							SpaceID: taskDO.WorkspaceID,
 						})
 					}
-					defer cancel()
 				} else {
 					err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 						Task:     taskDO,
@@ -190,13 +192,15 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context, tasks []*entity.O
 				if time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
 					lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskDO.ID)
 					locked, _, cancel, lockErr := t.locker.LockWithRenew(ctx, lockKey, syncTaskRunCountLockTTL, backfillLockMaxHold)
-					if lockErr != nil || !locked {
+					if locked {
+						cancel()
+					}
+					if lockErr != nil || locked {
 						_ = t.taskService.SendBackfillMessage(ctx, &entity.BackFillEvent{
 							TaskID:  taskDO.ID,
 							SpaceID: taskDO.WorkspaceID,
 						})
 					}
-					defer cancel()
 				} else {
 					err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 						Task:     taskDO,
