@@ -3213,9 +3213,10 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 	}
 }
 
-// TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll 覆盖 callEvaluators 从 pool.Exec
-// 改为 pool.ExecAll 的语义：多个同步 evaluator 并发执行时，即便其中一个失败，其余 evaluator
-// 也应全部执行完（而非快速失败提前跳过），最终聚合返回 error，同时成功的结果仍被收集。
+// TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll covers the change in callEvaluators
+// from pool.Exec to pool.ExecAll: when multiple sync evaluators run concurrently, even if one
+// of them fails, the rest should still run to completion (instead of failing fast and skipping
+// the others), aggregating the errors on return while still collecting the successful results.
 func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 	t.Parallel()
 
@@ -3240,7 +3241,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 		}
 	}
 
-	// 两个同步 evaluator：version 1 失败，version 2 成功。
+	// Two sync evaluators: version 1 fails, version 2 succeeds.
 	newEtec := func() *entity.ExptTurnEvalCtx {
 		return &entity.ExptTurnEvalCtx{
 			ExptItemEvalCtx: &entity.ExptItemEvalCtx{
@@ -3256,7 +3257,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 						ItemConcurNum: gptr.Of(1),
 						ConnectorConf: entity.Connector{
 							EvaluatorsConf: &entity.EvaluatorsConf{
-								// 并发数 2，保证两个 evaluator 可并发提交
+								// concurrency 2 so both evaluators can be submitted concurrently
 								EvaluatorConcurNum: gptr.Of(2),
 								EvaluatorConf:      []*entity.EvaluatorConf{newEvaluatorConf(1), newEvaluatorConf(2)},
 							},
@@ -3280,7 +3281,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 		mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any()).AnyTimes()
 		mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).AnyTimes()
 
-		// version 1 失败，version 2 成功。
+		// version 1 fails, version 2 succeeds.
 		mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 				if req.EvaluatorVersionID == 1 {
@@ -3291,17 +3292,18 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 
 		records, err := service.callEvaluators(context.Background(), []int64{1, 2}, newEtec(), mockTargetResult, []*entity.Message{})
 
-		// 第一个 evaluator 的失败应被返回。
+		// The failure of the first evaluator should be returned.
 		assert.Error(t, err)
-		// 第二个 evaluator 仍成功执行，其结果应被收集到 recordMap。
+		// The second evaluator still runs successfully; its result should be collected into recordMap.
 		assert.NotNil(t, records[2])
 		assert.Equal(t, int64(2), records[2].ID)
 	})
 
 	t.Run("multiple evaluators fail and all errors are aggregated", func(t *testing.T) {
-		// ExecAll 的确定性差异：当多个同步 evaluator 同时失败时，pool.ExecAll 会用
-		// errors.Join 聚合所有错误并原样透传；而 pool.Exec 只会返回其中一个。
-		// 此处断言返回的 error 同时包含两个 evaluator 的错误信息，从而锁定 ExecAll 语义。
+		// Deterministic difference of ExecAll: when multiple sync evaluators fail at the same
+		// time, pool.ExecAll uses errors.Join to aggregate all errors and passes them through
+		// as-is, whereas pool.Exec returns only one of them. Here we assert that the returned
+		// error contains both evaluators' error messages, pinning down the ExecAll semantics.
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -3325,7 +3327,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 		_, err := service.callEvaluators(context.Background(), []int64{1, 2}, newEtec(), mockTargetResult, []*entity.Message{})
 
 		assert.Error(t, err)
-		// errors.Join 聚合后两个错误信息都应出现；Exec 模式只会返回其中一个。
+		// Both error messages should appear after errors.Join aggregation; Exec would return only one.
 		assert.Contains(t, err.Error(), err1Msg)
 		assert.Contains(t, err.Error(), err2Msg)
 	})

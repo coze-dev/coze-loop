@@ -106,7 +106,7 @@ func TestPool_Exec(t *testing.T) {
 	})
 
 	t.Run("fail fast returns a single error not aggregated", func(t *testing.T) {
-		// Exec 模式快速失败，只应返回单个 error，而非 errors.Join 聚合的多 error。
+		// Exec fails fast and should return a single error, not errors.Join of multiple errors.
 		ctx := context.Background()
 		sentinel := errors.New("sentinel")
 
@@ -118,7 +118,7 @@ func TestPool_Exec(t *testing.T) {
 
 		err = pool.Exec(ctx)
 		assert.Error(t, err)
-		// 返回的就是那个 error 本身，未被 Join 包裹（Join 会改变 Error() 文案为多行）
+		// The returned value is the error itself, not wrapped by Join (Join would make Error() multi-line).
 		assert.Equal(t, sentinel, err)
 	})
 }
@@ -172,7 +172,7 @@ func TestPool_ExecAll(t *testing.T) {
 
 		err = pool.ExecAll(ctx)
 		assert.Error(t, err)
-		// errors.Join 聚合后，每个 error 都应能被 errors.Is 匹配到
+		// errors.Join aggregates; each error should still match via errors.Is
 		assert.True(t, errors.Is(err, err1))
 		assert.True(t, errors.Is(err, err2))
 		assert.True(t, errors.Is(err, err3))
@@ -209,8 +209,9 @@ func TestPool_ExecAll(t *testing.T) {
 	})
 
 	t.Run("concurrent errors of different concrete types do not panic", func(t *testing.T) {
-		// 回归测试：早期实现用 atomic.Value 存 error，不同具体类型的 error 并发
-		// Store 会 panic。此处用多种具体类型的 error 并发返回，验证不再 panic。
+		// Regression: an earlier implementation stored errors in an atomic.Value, where
+		// concurrently storing errors of different concrete types would panic. Here we
+		// concurrently return errors of multiple concrete types to verify it no longer panics.
 		ctx := context.Background()
 
 		pool, err := NewPool(8)
