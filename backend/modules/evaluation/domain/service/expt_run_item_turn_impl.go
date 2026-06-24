@@ -491,7 +491,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		}
 	}
 
-	err = pool.Exec(ctx)
+	err = pool.ExecAll(ctx)
 	records := make(map[int64]*entity.EvaluatorRecord, len(expt.Evaluators))
 	recordMap.Range(func(key, value interface{}) bool {
 		record, _ := value.(*entity.EvaluatorRecord)

@@ -6,6 +6,7 @@ package goroutine
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
@@ -103,6 +104,23 @@ func TestPool_Exec(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, context.Canceled, err)
 	})
+
+	t.Run("fail fast returns a single error not aggregated", func(t *testing.T) {
+		// Exec fails fast and should return a single error, not errors.Join of multiple errors.
+		ctx := context.Background()
+		sentinel := errors.New("sentinel")
+
+		pool, err := NewPool(1)
+		assert.NoError(t, err)
+
+		pool.Add(func() error { return sentinel })
+		pool.Add(func() error { return errors.New("should not run or be aggregated") })
+
+		err = pool.Exec(ctx)
+		assert.Error(t, err)
+		// The returned value is the error itself, not wrapped by Join (Join would make Error() multi-line).
+		assert.Equal(t, sentinel, err)
+	})
 }
 
 func TestPool_ExecAll(t *testing.T) {
@@ -137,7 +155,94 @@ func TestPool_ExecAll(t *testing.T) {
 			gslice.ToMap(results, func(v int) (int, bool) { return v, true }),
 		)
 	})
+
+	t.Run("aggregate multiple errors", func(t *testing.T) {
+		ctx := context.Background()
+		err1 := errors.New("err1")
+		err2 := errors.New("err2")
+		err3 := errors.New("err3")
+
+		pool, err := NewPool(3)
+		assert.NoError(t, err)
+
+		pool.Add(func() error { return err1 })
+		pool.Add(func() error { return nil })
+		pool.Add(func() error { return err2 })
+		pool.Add(func() error { return err3 })
+
+		err = pool.ExecAll(ctx)
+		assert.Error(t, err)
+		// errors.Join aggregates; each error should still match via errors.Is
+		assert.True(t, errors.Is(err, err1))
+		assert.True(t, errors.Is(err, err2))
+		assert.True(t, errors.Is(err, err3))
+	})
+
+	t.Run("aggregated error supports errors.As", func(t *testing.T) {
+		ctx := context.Background()
+
+		pool, err := NewPool(2)
+		assert.NoError(t, err)
+
+		pool.Add(func() error { return errors.New("plain error") })
+		pool.Add(func() error { return &customError{msg: "custom"} })
+
+		err = pool.ExecAll(ctx)
+		assert.Error(t, err)
+		var ce *customError
+		assert.True(t, errors.As(err, &ce))
+		assert.Equal(t, "custom", ce.msg)
+	})
+
+	t.Run("no error returns nil", func(t *testing.T) {
+		ctx := context.Background()
+
+		pool, err := NewPool(3)
+		assert.NoError(t, err)
+
+		for i := 0; i < 5; i++ {
+			pool.Add(func() error { return nil })
+		}
+
+		err = pool.ExecAll(ctx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("concurrent errors of different concrete types do not panic", func(t *testing.T) {
+		// Regression: an earlier implementation stored errors in an atomic.Value, where
+		// concurrently storing errors of different concrete types would panic. Here we
+		// concurrently return errors of multiple concrete types to verify it no longer panics.
+		ctx := context.Background()
+
+		pool, err := NewPool(8)
+		assert.NoError(t, err)
+
+		for i := 0; i < 50; i++ {
+			idx := i
+			pool.Add(func() error {
+				switch idx % 3 {
+				case 0:
+					return errors.New("plain")
+				case 1:
+					return &customError{msg: "custom"}
+				default:
+					return fmt.Errorf("wrapped %d: %w", idx, errors.New("inner"))
+				}
+			})
+		}
+
+		assert.NotPanics(t, func() {
+			err = pool.ExecAll(ctx)
+		})
+		assert.Error(t, err)
+	})
 }
+
+type customError struct {
+	msg string
+}
+
+func (e *customError) Error() string { return e.msg }
 
 func Test_pool_execute(t *testing.T) {
 	t.Run("execute tasks with pool size equal to task count", func(t *testing.T) {

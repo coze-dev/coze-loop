@@ -3213,6 +3213,126 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 	}
 }
 
+// TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll covers the change in callEvaluators
+// from pool.Exec to pool.ExecAll: when multiple sync evaluators run concurrently, even if one
+// of them fails, the rest should still run to completion (instead of failing fast and skipping
+// the others), aggregating the errors on return while still collecting the successful results.
+func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
+	t.Parallel()
+
+	mockContent := &entity.Content{Text: gptr.Of("value1")}
+	mockTargetResult := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{"field1": mockContent},
+		},
+	}
+
+	newEvaluatorConf := func(verID int64) *entity.EvaluatorConf {
+		return &entity.EvaluatorConf{
+			EvaluatorVersionID: verID,
+			IngressConf: &entity.EvaluatorIngressConf{
+				EvalSetAdapter: &entity.FieldAdapter{
+					FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+				},
+				TargetAdapter: &entity.FieldAdapter{
+					FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+				},
+			},
+		}
+	}
+
+	// Two sync evaluators: version 1 fails, version 2 succeeds.
+	newEtec := func() *entity.ExptTurnEvalCtx {
+		return &entity.ExptTurnEvalCtx{
+			ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+				EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+				Event:       &entity.ExptItemEvalEvent{ExptID: 1, SpaceID: 2},
+				Expt: &entity.Experiment{
+					SpaceID: 2,
+					Evaluators: []*entity.Evaluator{
+						{ID: 1, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1}},
+						{ID: 2, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 2}},
+					},
+					EvalConf: &entity.EvaluationConfiguration{
+						ItemConcurNum: gptr.Of(1),
+						ConnectorConf: entity.Connector{
+							EvaluatorsConf: &entity.EvaluatorsConf{
+								// concurrency 2 so both evaluators can be submitted concurrently
+								EvaluatorConcurNum: gptr.Of(2),
+								EvaluatorConf:      []*entity.EvaluatorConf{newEvaluatorConf(1), newEvaluatorConf(2)},
+							},
+						},
+					},
+				},
+			},
+			ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			Turn:              &entity.Turn{FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}}},
+		}
+	}
+
+	t.Run("one evaluator fails, the other still runs and result is collected", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+		mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
+		service := &DefaultExptTurnEvaluationImpl{metric: mockMetric, evaluatorService: mockEvaluatorService}
+
+		mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any()).AnyTimes()
+		mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).AnyTimes()
+
+		// version 1 fails, version 2 succeeds.
+		mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+				if req.EvaluatorVersionID == 1 {
+					return nil, errors.New("run evaluator 1 failed")
+				}
+				return &entity.EvaluatorRecord{ID: 2, Status: entity.EvaluatorRunStatusSuccess}, nil
+			}).AnyTimes()
+
+		records, err := service.callEvaluators(context.Background(), []int64{1, 2}, newEtec(), mockTargetResult, []*entity.Message{})
+
+		// The failure of the first evaluator should be returned.
+		assert.Error(t, err)
+		// The second evaluator still runs successfully; its result should be collected into recordMap.
+		assert.NotNil(t, records[2])
+		assert.Equal(t, int64(2), records[2].ID)
+	})
+
+	t.Run("multiple evaluators fail and all errors are aggregated", func(t *testing.T) {
+		// Deterministic difference of ExecAll: when multiple sync evaluators fail at the same
+		// time, pool.ExecAll uses errors.Join to aggregate all errors and passes them through
+		// as-is, whereas pool.Exec returns only one of them. Here we assert that the returned
+		// error contains both evaluators' error messages, pinning down the ExecAll semantics.
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+		mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
+		service := &DefaultExptTurnEvaluationImpl{metric: mockMetric, evaluatorService: mockEvaluatorService}
+
+		err1Msg := "run evaluator 1 failed"
+		err2Msg := "run evaluator 2 failed"
+
+		mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any()).AnyTimes()
+		mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).AnyTimes()
+		mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+				if req.EvaluatorVersionID == 1 {
+					return nil, errors.New(err1Msg)
+				}
+				return nil, errors.New(err2Msg)
+			}).AnyTimes()
+
+		_, err := service.callEvaluators(context.Background(), []int64{1, 2}, newEtec(), mockTargetResult, []*entity.Message{})
+
+		assert.Error(t, err)
+		// Both error messages should appear after errors.Join aggregation; Exec would return only one.
+		assert.Contains(t, err.Error(), err1Msg)
+		assert.Contains(t, err.Error(), err2Msg)
+	})
+}
+
 func Test_deepCopyEvaluatorInputData(t *testing.T) {
 	t.Parallel()
 
