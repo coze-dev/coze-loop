@@ -25,7 +25,7 @@ func (ExptTurnResultRunLogConvertor) DO2PO(log *entity.ExptTurnResultRunLog) (*m
 	if err != nil {
 		return nil, errorx.Wrapf(err, "ExptTurnEvaluatorResultIDs json marshal fail")
 	}
-	return &model.ExptTurnResultRunLog{
+	po := &model.ExptTurnResultRunLog{
 		ID:                 log.ID,
 		SpaceID:            log.SpaceID,
 		ExptID:             log.ExptID,
@@ -37,7 +37,15 @@ func (ExptTurnResultRunLogConvertor) DO2PO(log *entity.ExptTurnResultRunLog) (*m
 		TargetResultID:     log.TargetResultID,
 		EvaluatorResultIds: gptr.Of(evalResIDs),
 		ErrMsg:             gptr.Of(conv.UnsafeStringToBytes(log.ErrMsg)),
-	}, nil
+	}
+	if len(log.Ext) > 0 {
+		extBytes, err := json.Marshal(log.Ext)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "ExptTurnResultRunLog Ext json marshal fail")
+		}
+		po.Ext = extBytes
+	}
+	return po, nil
 }
 
 func (ExptTurnResultRunLogConvertor) PO2DO(log *model.ExptTurnResultRunLog) (*entity.ExptTurnResultRunLog, error) {
@@ -49,6 +57,14 @@ func (ExptTurnResultRunLogConvertor) PO2DO(log *model.ExptTurnResultRunLog) (*en
 		func() error { return json.Unmarshal(gptr.Indirect(log.EvaluatorResultIds), evalResIDs) },
 	); err != nil {
 		return nil, errorx.Wrapf(err, "EvaluatorResults json unmarshal fail, expt_id: %v, expt_run_id: %v", log.ExptID, log.ExptRunID)
+	}
+
+	var ext map[string]string
+	if len(log.Ext) > 0 {
+		ext = make(map[string]string)
+		if err := json.Unmarshal(log.Ext, &ext); err != nil {
+			return nil, errorx.Wrapf(err, "ExptTurnResultRunLog Ext json unmarshal fail, expt_id: %v, expt_run_id: %v", log.ExptID, log.ExptRunID)
+		}
 	}
 
 	return &entity.ExptTurnResultRunLog{
@@ -64,6 +80,7 @@ func (ExptTurnResultRunLogConvertor) PO2DO(log *model.ExptTurnResultRunLog) (*en
 		EvaluatorResultIds: evalResIDs,
 		ErrMsg:             conv.UnsafeBytesToString(gptr.Indirect(log.ErrMsg)),
 		UpdatedAt:          log.UpdatedAt,
+		Ext:                ext,
 	}, nil
 }
 

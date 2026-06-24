@@ -42,6 +42,20 @@ func (m *MockIConfiger) EXPECT() *MockIConfigerMockRecorder {
 	return m.recorder
 }
 
+// BuildEvalExt mocks base method.
+func (m *MockIConfiger) BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildEvalExt", ctx, spaceID, turn)
+	ret0, _ := ret[0].(map[string]string)
+	return ret0
+}
+
+// BuildEvalExt indicates an expected call of BuildEvalExt.
+func (mr *MockIConfigerMockRecorder) BuildEvalExt(ctx, spaceID, turn any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildEvalExt", reflect.TypeOf((*MockIConfiger)(nil).BuildEvalExt), ctx, spaceID, turn)
+}
+
 // GetCKDBName mocks base method.
 func (m *MockIConfiger) GetCKDBName(ctx context.Context) *entity.CKDBConfig {
 	m.ctrl.T.Helper()

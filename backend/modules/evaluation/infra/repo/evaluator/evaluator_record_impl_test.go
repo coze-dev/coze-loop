@@ -94,6 +94,10 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetTargetTrajectoryConf(ctx context
 	return nil
 }
 
+func (f *fakeEvaluatorRecordStorageConfiger) BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string {
+	return nil
+}
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	return nil
 }

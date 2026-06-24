@@ -7,6 +7,7 @@ package model
 import (
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -29,6 +30,7 @@ type ExptTurnResultRunLog struct {
 	CreatedAt          time.Time      `gorm:"column:created_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                               // 创建时间
 	UpdatedAt          time.Time      `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                               // 更新时间
 	DeletedAt          gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                                                                                  // 删除时间
+	Ext                datatypes.JSON `gorm:"column:ext;type:json;comment:ext" json:"ext"`                                                                                                                      // ext
 }
 
 // TableName ExptTurnResultRunLog's table name

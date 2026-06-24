@@ -57,6 +57,10 @@ func (f *fakeConfiger) GetTargetTrajectoryConf(ctx context.Context) *entity.Targ
 	return nil
 }
 
+func (f *fakeConfiger) BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string {
+	return nil
+}
+
 func (f *fakeConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	return nil
 }

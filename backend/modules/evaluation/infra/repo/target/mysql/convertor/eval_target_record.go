@@ -65,6 +65,14 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		tr.CreatedAt = time.UnixMilli(gptr.Indirect(e.BaseInfo.CreatedAt))
 		tr.UpdatedAt = time.UnixMilli(gptr.Indirect(e.BaseInfo.UpdatedAt))
 	}
+
+	if len(e.Ext) > 0 {
+		extBytes, err := json.Marshal(e.Ext)
+		if err != nil {
+			return nil, fmt.Errorf("marshal EvalTargetRecord Ext failed: %w", err)
+		}
+		tr.Ext = extBytes
+	}
 	return tr, nil
 }
 
@@ -99,7 +107,7 @@ func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, err
 	// 状态类型转换
 	status := entity.EvalTargetRunStatus(m.Status)
 
-	return &entity.EvalTargetRecord{
+	record := &entity.EvalTargetRecord{
 		ID:                   m.ID,
 		SpaceID:              m.SpaceID,
 		TargetID:             m.TargetID,
@@ -116,5 +124,15 @@ func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, err
 			CreatedAt: gptr.Of(m.CreatedAt.UnixMilli()),
 			UpdatedAt: gptr.Of(m.UpdatedAt.UnixMilli()),
 		},
-	}, nil
+	}
+
+	if len(m.Ext) > 0 {
+		ext := make(map[string]string)
+		if err := json.Unmarshal(m.Ext, &ext); err != nil {
+			return nil, fmt.Errorf("unmarshal EvalTargetRecord Ext failed: %w", err)
+		}
+		record.Ext = ext
+	}
+
+	return record, nil
 }

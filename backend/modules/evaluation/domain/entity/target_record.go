@@ -37,6 +37,8 @@ type EvalTargetRecord struct {
 	EvalTargetOutputData *EvalTargetOutputData
 	Status               *EvalTargetRunStatus
 	BaseInfo             *BaseInfo
+	// 扩展信息
+	Ext map[string]string
 }
 
 type EvalTargetInputData struct {
@@ -45,6 +47,14 @@ type EvalTargetInputData struct {
 	// 变量
 	InputFields map[string]*Content
 	Ext         map[string]string
+}
+
+// GetExt 返回输入数据携带的 ext，nil 安全。
+func (e *EvalTargetInputData) GetExt() map[string]string {
+	if e == nil {
+		return nil
+	}
+	return e.Ext
 }
 
 // ValidateInputSchema  common valiate input schema

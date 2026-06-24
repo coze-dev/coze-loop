@@ -2033,6 +2033,10 @@ func (f *fakeRecordStorageConfiger) GetTargetTrajectoryConf(ctx context.Context)
 	return nil
 }
 
+func (f *fakeRecordStorageConfiger) BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string {
+	return nil
+}
+
 func (f *fakeRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	return nil
 }

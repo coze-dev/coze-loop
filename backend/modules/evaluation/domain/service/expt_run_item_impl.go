@@ -147,6 +147,8 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		return errorx.Wrapf(err, "ExptTurnResultRunLog copy fail")
 	}
 
+	clone.Ext = etec.Ext
+
 	var evalErr error
 
 	clone.ExptRunID = etec.Event.ExptRunID
@@ -249,6 +251,14 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	etec.Ext["task_id"] = eiec.Expt.SourceID
 	etec.Ext["workspace_id"] = strconv.FormatInt(eiec.Expt.SpaceID, 10)
 	etec.Ext["start_time"] = strconv.FormatInt(gptr.Indirect(eiec.EvalSetItem.BaseInfo.CreatedAt)*1000, 10) // 存储是毫秒，需要存入微妙
+
+	// 统一在实验执行流程中构造 ext，合并进 etec.Ext，后续随 EvalTargetRecord/EvaluatorRecord/ExptTurnResultRunLog DO 落库
+	evalExt := e.Configer.BuildEvalExt(ctx, spaceID, turn)
+	for k, v := range evalExt {
+		etec.Ext[k] = v
+	}
+	logs.CtxInfo(ctx, "[BuildEvalExt] buildExptTurnEvalCtx merged ext, expt_id: %v, item_id: %v, turn_id: %v, space_id: %v, build_eval_ext: %v, merged_etec_ext: %v",
+		eiec.Event.ExptID, eiec.Event.EvalSetItemID, turn.ID, spaceID, json.Jsonify(evalExt), json.Jsonify(etec.Ext))
 
 	if existTurnRunResult == nil {
 		return etec, nil
