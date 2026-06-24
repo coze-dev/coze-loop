@@ -3293,9 +3293,9 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 
 		// The failure of the first evaluator should be returned.
 		assert.Error(t, err)
-		// The second evaluator still runs successfully; its result should be collected into recordMap.
-		assert.NotNil(t, records[2])
-		assert.Equal(t, int64(2), records[2].ID)
+		// The second evaluator still runs successfully; its result should be collected into the slice.
+		assert.Len(t, records, 1)
+		assert.Equal(t, int64(2), records[0].ID)
 	})
 
 	t.Run("multiple evaluators fail and all errors are aggregated", func(t *testing.T) {
