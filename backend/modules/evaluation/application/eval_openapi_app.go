@@ -2604,7 +2604,7 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 		if e.sandboxSchedulerAdapter != nil {
 			if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
 				TaskID:      "sandbox_debug",
-				Concurrency: 10,
+				Concurrency: 50,
 				WorkspaceID: req.GetWorkspaceID(),
 			}); initErr != nil {
 				return nil, errorx.Wrapf(initErr, "init sandbox debug task fail")
