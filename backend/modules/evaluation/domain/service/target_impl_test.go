@@ -194,7 +194,7 @@ func TestEvalTargetServiceImpl_CreateEvalTarget_RecordOnlyWithoutSource(t *testi
 		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 		configer: componentmocks.NewMockIConfiger(ctrl),
 	}
-			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+	deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 	deps.metric.EXPECT().EmitCreate(int64(7), gomock.Any()).Times(1)
 	deps.repo.EXPECT().CreateEvalTarget(ctx, gomock.AssignableToTypeOf(&entity.EvalTarget{})).DoAndReturn(
@@ -238,7 +238,7 @@ func TestEvalTargetServiceImpl_CreateEvalTarget_RecordOnlyWithInjectedDefaultVer
 		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 		configer: componentmocks.NewMockIConfiger(ctrl),
 	}
-			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+	deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 	deps.metric.EXPECT().EmitCreate(int64(7), gomock.Any()).Times(1)
 	deps.repo.EXPECT().CreateEvalTarget(ctx, gomock.AssignableToTypeOf(&entity.EvalTarget{})).DoAndReturn(
@@ -675,7 +675,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget_PersistsFailRecordAfterContextCance
 		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 		configer: componentmocks.NewMockIConfiger(ctrl),
 	}
-			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+	deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 	evalTarget := &entity.EvalTarget{
 		ID:             200,
@@ -707,7 +707,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget_PersistsFailRecordAfterContextCance
 	deps.repo.EXPECT().GetEvalTargetVersion(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.ID).Return(evalTarget, nil)
 	deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 	deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
-			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+	deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 	deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().DoAndReturn(func(ctx context.Context) *entity.ExptErrCtrl {
 		require.NoError(t, ctx.Err())
 		return entity.DefaultExptErrCtrl()
@@ -959,7 +959,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
-			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+				deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 
 				param.Session = &entity.Session{UserID: "user"}
@@ -996,7 +996,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
-			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+				deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 
 				param.OutputData = &entity.EvalTargetOutputData{
@@ -1017,7 +1017,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
-			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+				deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 
 				param.OutputData = nil

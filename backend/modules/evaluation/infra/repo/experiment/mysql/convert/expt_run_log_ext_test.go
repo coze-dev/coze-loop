@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 )
 
 func TestExptTurnResultRunLogConvertor_Ext(t *testing.T) {
@@ -43,5 +44,14 @@ func TestExptTurnResultRunLogConvertor_Ext(t *testing.T) {
 		got, err := c.PO2DO(po)
 		assert.NoError(t, err)
 		assert.Nil(t, got.Ext)
+	})
+
+	t.Run("PO2DO_ext_unmarshal_error", func(t *testing.T) {
+		po := &model.ExptTurnResultRunLog{
+			ID:  1,
+			Ext: []byte(`{invalid}`),
+		}
+		_, err := c.PO2DO(po)
+		assert.Error(t, err)
 	})
 }

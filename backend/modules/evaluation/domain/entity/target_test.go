@@ -126,6 +126,37 @@ func TestEvalTargetInputData_ValidateInputSchema(t *testing.T) {
 	}))
 }
 
+func TestEvalTargetInputData_GetExt(t *testing.T) {
+	tests := []struct {
+		name  string
+		input *EvalTargetInputData
+		want  map[string]string
+	}{
+		{
+			name:  "nil receiver returns nil",
+			input: nil,
+			want:  nil,
+		},
+		{
+			name:  "nil ext returns nil",
+			input: &EvalTargetInputData{},
+			want:  nil,
+		},
+		{
+			name:  "non-empty ext returns same map",
+			input: &EvalTargetInputData{Ext: map[string]string{"k": "v"}},
+			want:  map[string]string{"k": "v"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.input.GetExt()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestCozeBotInfoTypeConsts(t *testing.T) {
 	assert.Equal(t, int64(1), int64(CozeBotInfoTypeDraftBot))
 	assert.Equal(t, int64(2), int64(CozeBotInfoTypeProductBot))

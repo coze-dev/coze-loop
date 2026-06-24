@@ -6,9 +6,11 @@ package convertor
 import (
 	"testing"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
 )
 
 func TestConvertEvaluatorRecord_Ext(t *testing.T) {
@@ -37,5 +39,14 @@ func TestConvertEvaluatorRecord_Ext(t *testing.T) {
 		got, err := ConvertEvaluatorRecordPO2DO(po)
 		assert.NoError(t, err)
 		assert.Nil(t, got.Ext)
+	})
+
+	t.Run("po2do_ext_unmarshal_error", func(t *testing.T) {
+		po := &model.EvaluatorRecord{
+			ID:  1,
+			Ext: gptr.Of([]byte(`{invalid}`)),
+		}
+		_, err := ConvertEvaluatorRecordPO2DO(po)
+		assert.Error(t, err)
 	})
 }

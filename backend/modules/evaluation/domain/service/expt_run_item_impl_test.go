@@ -702,3 +702,69 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 func Test_buildHistoryMessage(t *testing.T) {
 	assert.Nil(t, buildHistoryMessage(context.Background(), nil))
 }
+
+func Test_buildExptTurnEvalCtx_BuildEvalExtMerge(t *testing.T) {
+	tests := []struct {
+		name      string
+		buildExt  map[string]string
+		wantKey   string
+		wantValue string
+	}{
+		{
+			name:      "build eval ext merged into etec ext",
+			buildExt:  map[string]string{"build_key": "build_value"},
+			wantKey:   "build_key",
+			wantValue: "build_value",
+		},
+		{
+			name:      "build eval ext overrides existing key",
+			buildExt:  map[string]string{"task_id": "override_task_id"},
+			wantKey:   "task_id",
+			wantValue: "override_task_id",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTurnResultRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+			mockItemResultRepo := repomocks.NewMockIExptItemResultRepo(ctrl)
+			mockConfiger := configermocks.NewMockIConfiger(ctrl)
+			mockConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(tt.buildExt)
+			mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+			mockEvalTargetService := servicemocks.NewMockIEvalTargetService(ctrl)
+			mockEvaluatorRecordService := servicemocks.NewMockEvaluatorRecordService(ctrl)
+			mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+			mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+
+			executor := &ExptItemEvalCtxExecutor{
+				TurnResultRepo:         mockTurnResultRepo,
+				ItemResultRepo:         mockItemResultRepo,
+				Configer:               mockConfiger,
+				Metric:                 mockMetric,
+				evalTargetService:      mockEvalTargetService,
+				evaluatorRecordService: mockEvaluatorRecordService,
+				evaluatorService:       mockEvaluatorService,
+				benefitService:         mockBenefitService,
+			}
+
+			turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
+			execCtx := &entity.ExptItemEvalCtx{
+				Event:       &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 1, EvalSetItemID: 1},
+				EvalSetItem: &entity.EvaluationSetItem{Turns: []*entity.Turn{turn}, BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))}},
+				ExistItemEvalResult: &entity.ExptItemEvalResult{
+					TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{},
+				},
+				Expt: &entity.Experiment{SourceID: "taskid", SpaceID: 1},
+			}
+			mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{}, nil)
+
+			etec, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
+			assert.NoError(t, err)
+			assert.NotNil(t, etec)
+			assert.Equal(t, tt.wantValue, etec.Ext[tt.wantKey])
+		})
+	}
+}
