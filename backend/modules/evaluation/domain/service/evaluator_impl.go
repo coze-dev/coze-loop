@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -921,7 +922,8 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		return nil, err
 	}
 
-	logs.CtxInfo(ctx, "[AsyncRunEvaluator] invokeID: %d, evaluatorVersionID: %d, spaceID: %d", invokeID, request.EvaluatorVersionID, request.SpaceID)
+	logs.CtxInfo(ctx, "[AsyncRunEvaluator] invokeID: %d, evaluatorVersionID: %d, spaceID: %d, record_ext: %v",
+		invokeID, request.EvaluatorVersionID, request.SpaceID, json.Jsonify(recordDO.Ext))
 	return recordDO, nil
 }
 
