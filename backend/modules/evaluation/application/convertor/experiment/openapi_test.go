@@ -278,6 +278,8 @@ func TestMapOpenAPIEvalTargetType(t *testing.T) {
 		{"workflow", openapiEvalTarget.EvalTargetTypeCozeWorkflow, domaindoEvalTarget.EvalTargetType_CozeWorkflow, false},
 		{"volcengine", openapiEvalTarget.EvalTargetTypeVolcengineAgent, domaindoEvalTarget.EvalTargetType_VolcengineAgent, false},
 		{"rpc", openapiEvalTarget.EvalTargetTypeCustomRPCServer, domaindoEvalTarget.EvalTargetType_CustomRPCServer, false},
+		{"a2a_agent", openapiEvalTarget.EvalTargetTypeA2Agent, domaindoEvalTarget.EvalTargetType_A2AAgent, false},
+		{"custom_agent", openapiEvalTarget.EvalTargetTypeCustomAgent, domaindoEvalTarget.EvalTargetType_CustomAgent, false},
 		{"invalid", openapiEvalTarget.EvalTargetType("invalid"), 0, true},
 	}
 
@@ -2973,6 +2975,55 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain_WithClusterAndAgentConnection(t 
 		assert.Nil(t, converted2.Cluster)
 		assert.Nil(t, converted2.AgentConnection)
 	}
+}
+
+// TestOpenAPICreateEvalTargetParamDTO2Domain_AgentTypes verifies the OpenAPI
+// experiment-create path accepts the two agent eval target types that the web
+// link already supports: a2a_agent (type=9) and custom_agent (type=10, the
+// in-house long-connection agent). The convertor must translate the string
+// type to the int domain enum and carry the agent connection info.
+func TestOpenAPICreateEvalTargetParamDTO2Domain_AgentTypes(t *testing.T) {
+	t.Parallel()
+
+	// custom_agent (长链接 Agent): submitted with cluster + agent_connection.
+	customAgentType := openapiEvalTarget.EvalTargetTypeCustomAgent
+	customAgentParam := &openapi.SubmitExperimentEvalTargetParam{
+		SourceTargetID: gptr.Of("custom-agent-1"),
+		EvalTargetType: &customAgentType,
+		Cluster:        gptr.Of("cluster-loong"),
+		AgentConnection: &openapiEvalTarget.AgentConnection{
+			Psm: gptr.Of("agent.psm"),
+			FrontierInfo: &openapiEvalTarget.FrontierInfo{
+				AppID: gptr.Of(int64(100)),
+			},
+		},
+	}
+	convertedCustom, errCustom := OpenAPICreateEvalTargetParamDTO2Domain(customAgentParam)
+	assert.NoError(t, errCustom)
+	if assert.NotNil(t, convertedCustom) {
+		assert.Equal(t, domaindoEvalTarget.EvalTargetType_CustomAgent, gptr.Indirect(convertedCustom.EvalTargetType))
+		assert.Equal(t, gptr.Of("cluster-loong"), convertedCustom.Cluster)
+		if assert.NotNil(t, convertedCustom.AgentConnection) {
+			assert.Equal(t, gptr.Of("agent.psm"), convertedCustom.AgentConnection.Psm)
+		}
+	}
+
+	// a2a_agent: referenced by source_target_id (pre-registered Application).
+	a2aType := openapiEvalTarget.EvalTargetTypeA2Agent
+	a2aParam := &openapi.SubmitExperimentEvalTargetParam{
+		SourceTargetID: gptr.Of("a2a-agent-1"),
+		EvalTargetType: &a2aType,
+	}
+	convertedA2A, errA2A := OpenAPICreateEvalTargetParamDTO2Domain(a2aParam)
+	assert.NoError(t, errA2A)
+	if assert.NotNil(t, convertedA2A) {
+		assert.Equal(t, domaindoEvalTarget.EvalTargetType_A2AAgent, gptr.Indirect(convertedA2A.EvalTargetType))
+		assert.Equal(t, "a2a-agent-1", gptr.Indirect(convertedA2A.SourceTargetID))
+	}
+
+	// Both agent types must pass the up-front validation gate.
+	assert.True(t, IsSupportedOpenAPIEvalTargetType(openapiEvalTarget.EvalTargetTypeA2Agent))
+	assert.True(t, IsSupportedOpenAPIEvalTargetType(openapiEvalTarget.EvalTargetTypeCustomAgent))
 }
 
 func TestOpenapiAgentConnectionDTO2Domain_Nil(t *testing.T) {

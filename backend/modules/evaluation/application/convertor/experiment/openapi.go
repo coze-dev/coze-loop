@@ -226,6 +226,8 @@ var supportedOpenAPIEvalTargetTypes = []openapiEvalTarget.EvalTargetType{
 	openapiEvalTarget.EvalTargetTypeCozeWorkflow,
 	openapiEvalTarget.EvalTargetTypeVolcengineAgent,
 	openapiEvalTarget.EvalTargetTypeCustomRPCServer,
+	openapiEvalTarget.EvalTargetTypeA2Agent,
+	openapiEvalTarget.EvalTargetTypeCustomAgent,
 }
 
 func supportedOpenAPIEvalTargetTypesString() string {
@@ -260,6 +262,10 @@ func mapOpenAPIEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (dom
 		return domaindoEvalTarget.EvalTargetType_VolcengineAgent, nil
 	case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
 		return domaindoEvalTarget.EvalTargetType_CustomRPCServer, nil
+	case openapiEvalTarget.EvalTargetTypeA2Agent:
+		return domaindoEvalTarget.EvalTargetType_A2AAgent, nil
+	case openapiEvalTarget.EvalTargetTypeCustomAgent:
+		return domaindoEvalTarget.EvalTargetType_CustomAgent, nil
 	default:
 		return 0, fmt.Errorf("unsupported eval target type: %s. supported: [%s]", openapiType, supportedOpenAPIEvalTargetTypesString())
 	}
