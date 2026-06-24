@@ -5,9 +5,9 @@ package goroutine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"github.com/panjf2000/ants/v2"
 )
@@ -55,13 +55,26 @@ func (p *pool) exec(ctx context.Context, ignoreErr bool) error {
 	defer p.p.Release()
 
 	var (
-		gerr atomic.Value
+		mu   sync.Mutex
+		errs []error
 		wg   sync.WaitGroup
 	)
 
+	appendErr := func(err error) {
+		mu.Lock()
+		errs = append(errs, err)
+		mu.Unlock()
+	}
+
+	hasErr := func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(errs) > 0
+	}
+
 	for idx := range p.tasks {
-		if !ignoreErr && gerr.Load() != nil {
-			return gerr.Load().(error)
+		if !ignoreErr && hasErr() {
+			break
 		}
 
 		t := p.tasks[idx]
@@ -73,15 +86,15 @@ func (p *pool) exec(ctx context.Context, ignoreErr bool) error {
 
 			select {
 			case <-ctx.Done():
-				gerr.Store(ctx.Err())
+				appendErr(ctx.Err())
 				return
 
 			default:
-				if !ignoreErr && gerr.Load() != nil {
+				if !ignoreErr && hasErr() {
 					return
 				}
 				if err := t(); err != nil {
-					gerr.Store(err)
+					appendErr(err)
 				}
 				return
 			}
@@ -91,9 +104,12 @@ func (p *pool) exec(ctx context.Context, ignoreErr bool) error {
 	}
 
 	wg.Wait()
-	if gerr.Load() != nil {
-		return gerr.Load().(error)
-	}
 
-	return nil
+	if len(errs) == 0 {
+		return nil
+	}
+	if ignoreErr {
+		return errors.Join(errs...)
+	}
+	return errs[0]
 }
