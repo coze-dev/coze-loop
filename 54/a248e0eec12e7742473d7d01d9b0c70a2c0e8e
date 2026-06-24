@@ -1,0 +1,25 @@
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl.go
+  421010375f1b327a 15,235-236,238-239,241-244,246-252,406-407,409-410,412-415,417-419,1261-1262,1264-1265,1267-1270,1272-1274,1279,1335
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "54a248e0eec12e7742473d7d01d9b0c70a2c0e8e",
+  "prompts": {
+    "421010375f1b327a": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a042afac36d2699286c5681",
+        "model": "c_o_new"
+      },
+      "human_author": "xueyizheng <xueyizheng@bytedance.com>",
+      "messages": [],
+      "total_additions": 35,
+      "total_deletions": 32,
+      "accepted_lines": 35,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
