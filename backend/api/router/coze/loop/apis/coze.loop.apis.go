@@ -143,7 +143,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_items1.POST("/batch_delete", append(_batchdeleteevaluationsetitemsMw(handler), apis.BatchDeleteEvaluationSetItems)...)
 					_items1.POST("/batch_get", append(_batchgetevaluationsetitemsMw(handler), apis.BatchGetEvaluationSetItems)...)
 					_items1.POST("/clear", append(_clearevaluationsetdraftitemMw(handler), apis.ClearEvaluationSetDraftItem)...)
-					_items1.PUT("/:item_id", append(_item_idMw(handler), apis.UpdateEvaluationSetItem)...)
+					_items1.GET("/:item_id", append(_item_idMw(handler), apis.GetEvaluationSetItem)...)
 					_item_id := _items1.Group("/:item_id", _item_idMw(handler)...)
 					{
 						_versions2 := _item_id.Group("/versions", _versions2Mw(handler)...)
@@ -151,6 +151,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						_versions2.PATCH("/:item_version_id", append(_updateevaluationsetitemversionMw(handler), apis.UpdateEvaluationSetItemVersion)...)
 						_versions2.POST("/list", append(_listevaluationsetitemversionsMw(handler), apis.ListEvaluationSetItemVersions)...)
 					}
+					_items1.PUT("/:item_id", append(_updateevaluationsetitemMw(handler), apis.UpdateEvaluationSetItem)...)
 					_items1.POST("/list", append(_listevaluationsetitemsMw(handler), apis.ListEvaluationSetItems)...)
 					{
 						_item_pk := _items1.Group("/:item_pk", _item_pkMw(handler)...)

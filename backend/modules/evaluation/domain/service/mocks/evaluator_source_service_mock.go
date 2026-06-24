@@ -21,7 +21,6 @@ import (
 type MockEvaluatorSourceService struct {
 	ctrl     *gomock.Controller
 	recorder *MockEvaluatorSourceServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockEvaluatorSourceServiceMockRecorder is the mock recorder for MockEvaluatorSourceService.
@@ -42,9 +41,9 @@ func (m *MockEvaluatorSourceService) EXPECT() *MockEvaluatorSourceServiceMockRec
 }
 
 // AsyncDebug mocks base method.
-func (m *MockEvaluatorSourceService) AsyncDebug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID, invokeID int64) (map[string]string, string, error) {
+func (m *MockEvaluatorSourceService) AsyncDebug(arg0 context.Context, arg1 *entity.Evaluator, arg2 *entity.EvaluatorInputData, arg3 *entity.EvaluatorRunConfig, arg4, arg5 int64) (map[string]string, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AsyncDebug", ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
+	ret := m.ctrl.Call(m, "AsyncDebug", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
@@ -52,15 +51,15 @@ func (m *MockEvaluatorSourceService) AsyncDebug(ctx context.Context, evaluator *
 }
 
 // AsyncDebug indicates an expected call of AsyncDebug.
-func (mr *MockEvaluatorSourceServiceMockRecorder) AsyncDebug(ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID any) *gomock.Call {
+func (mr *MockEvaluatorSourceServiceMockRecorder) AsyncDebug(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncDebug", reflect.TypeOf((*MockEvaluatorSourceService)(nil).AsyncDebug), ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncDebug", reflect.TypeOf((*MockEvaluatorSourceService)(nil).AsyncDebug), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // AsyncRun mocks base method.
-func (m *MockEvaluatorSourceService) AsyncRun(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID, invokeID int64) (map[string]string, string, error) {
+func (m *MockEvaluatorSourceService) AsyncRun(arg0 context.Context, arg1 *entity.Evaluator, arg2 *entity.EvaluatorInputData, arg3 *entity.EvaluatorRunConfig, arg4, arg5 int64) (map[string]string, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AsyncRun", ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
+	ret := m.ctrl.Call(m, "AsyncRun", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
@@ -68,24 +67,24 @@ func (m *MockEvaluatorSourceService) AsyncRun(ctx context.Context, evaluator *en
 }
 
 // AsyncRun indicates an expected call of AsyncRun.
-func (mr *MockEvaluatorSourceServiceMockRecorder) AsyncRun(ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID any) *gomock.Call {
+func (mr *MockEvaluatorSourceServiceMockRecorder) AsyncRun(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncRun", reflect.TypeOf((*MockEvaluatorSourceService)(nil).AsyncRun), ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncRun", reflect.TypeOf((*MockEvaluatorSourceService)(nil).AsyncRun), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // Debug mocks base method.
-func (m *MockEvaluatorSourceService) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
+func (m *MockEvaluatorSourceService) Debug(arg0 context.Context, arg1 *entity.Evaluator, arg2 *entity.EvaluatorInputData, arg3 *entity.EvaluatorRunConfig, arg4 int64) (*entity.EvaluatorOutputData, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Debug", ctx, evaluator, input, evaluatorRunConf, exptSpaceID)
+	ret := m.ctrl.Call(m, "Debug", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(*entity.EvaluatorOutputData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Debug indicates an expected call of Debug.
-func (mr *MockEvaluatorSourceServiceMockRecorder) Debug(ctx, evaluator, input, evaluatorRunConf, exptSpaceID any) *gomock.Call {
+func (mr *MockEvaluatorSourceServiceMockRecorder) Debug(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debug", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Debug), ctx, evaluator, input, evaluatorRunConf, exptSpaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debug", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Debug), arg0, arg1, arg2, arg3, arg4)
 }
 
 // EvaluatorType mocks base method.
@@ -103,23 +102,23 @@ func (mr *MockEvaluatorSourceServiceMockRecorder) EvaluatorType() *gomock.Call {
 }
 
 // PreHandle mocks base method.
-func (m *MockEvaluatorSourceService) PreHandle(ctx context.Context, evaluator *entity.Evaluator) error {
+func (m *MockEvaluatorSourceService) PreHandle(arg0 context.Context, arg1 *entity.Evaluator) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreHandle", ctx, evaluator)
+	ret := m.ctrl.Call(m, "PreHandle", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PreHandle indicates an expected call of PreHandle.
-func (mr *MockEvaluatorSourceServiceMockRecorder) PreHandle(ctx, evaluator any) *gomock.Call {
+func (mr *MockEvaluatorSourceServiceMockRecorder) PreHandle(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreHandle", reflect.TypeOf((*MockEvaluatorSourceService)(nil).PreHandle), ctx, evaluator)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreHandle", reflect.TypeOf((*MockEvaluatorSourceService)(nil).PreHandle), arg0, arg1)
 }
 
 // Run mocks base method.
-func (m *MockEvaluatorSourceService) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, disableTracing bool) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, string) {
+func (m *MockEvaluatorSourceService) Run(arg0 context.Context, arg1 *entity.Evaluator, arg2 *entity.EvaluatorInputData, arg3 *entity.EvaluatorRunConfig, arg4 int64, arg5 bool) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, string) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, evaluator, input, evaluatorRunConf, exptSpaceID, disableTracing)
+	ret := m.ctrl.Call(m, "Run", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(*entity.EvaluatorOutputData)
 	ret1, _ := ret[1].(entity.EvaluatorRunStatus)
 	ret2, _ := ret[2].(string)
@@ -127,15 +126,15 @@ func (m *MockEvaluatorSourceService) Run(ctx context.Context, evaluator *entity.
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockEvaluatorSourceServiceMockRecorder) Run(ctx, evaluator, input, evaluatorRunConf, exptSpaceID, disableTracing any) *gomock.Call {
+func (mr *MockEvaluatorSourceServiceMockRecorder) Run(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Run), ctx, evaluator, input, evaluatorRunConf, exptSpaceID, disableTracing)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Run), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // ShouldIntercept mocks base method.
-func (m *MockEvaluatorSourceService) ShouldIntercept(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, bool) {
+func (m *MockEvaluatorSourceService) ShouldIntercept(arg0 context.Context, arg1 *entity.Evaluator, arg2 *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, bool) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ShouldIntercept", ctx, evaluator, input)
+	ret := m.ctrl.Call(m, "ShouldIntercept", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*entity.EvaluatorOutputData)
 	ret1, _ := ret[1].(entity.EvaluatorRunStatus)
 	ret2, _ := ret[2].(bool)
@@ -143,21 +142,21 @@ func (m *MockEvaluatorSourceService) ShouldIntercept(ctx context.Context, evalua
 }
 
 // ShouldIntercept indicates an expected call of ShouldIntercept.
-func (mr *MockEvaluatorSourceServiceMockRecorder) ShouldIntercept(ctx, evaluator, input any) *gomock.Call {
+func (mr *MockEvaluatorSourceServiceMockRecorder) ShouldIntercept(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldIntercept", reflect.TypeOf((*MockEvaluatorSourceService)(nil).ShouldIntercept), ctx, evaluator, input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldIntercept", reflect.TypeOf((*MockEvaluatorSourceService)(nil).ShouldIntercept), arg0, arg1, arg2)
 }
 
 // Validate mocks base method.
-func (m *MockEvaluatorSourceService) Validate(ctx context.Context, evaluator *entity.Evaluator) error {
+func (m *MockEvaluatorSourceService) Validate(arg0 context.Context, arg1 *entity.Evaluator) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Validate", ctx, evaluator)
+	ret := m.ctrl.Call(m, "Validate", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Validate indicates an expected call of Validate.
-func (mr *MockEvaluatorSourceServiceMockRecorder) Validate(ctx, evaluator any) *gomock.Call {
+func (mr *MockEvaluatorSourceServiceMockRecorder) Validate(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Validate), ctx, evaluator)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Validate), arg0, arg1)
 }

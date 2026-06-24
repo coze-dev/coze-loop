@@ -21,7 +21,6 @@ import (
 type MockITrajectoryAdapter struct {
 	ctrl     *gomock.Controller
 	recorder *MockITrajectoryAdapterMockRecorder
-	isgomock struct{}
 }
 
 // MockITrajectoryAdapterMockRecorder is the mock recorder for MockITrajectoryAdapter.
@@ -42,16 +41,16 @@ func (m *MockITrajectoryAdapter) EXPECT() *MockITrajectoryAdapterMockRecorder {
 }
 
 // ListTrajectory mocks base method.
-func (m *MockITrajectoryAdapter) ListTrajectory(ctx context.Context, spaceID int64, traceID []string, startTimeMS *int64) ([]*entity.Trajectory, error) {
+func (m *MockITrajectoryAdapter) ListTrajectory(arg0 context.Context, arg1 int64, arg2 []string, arg3 *int64) ([]*entity.Trajectory, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListTrajectory", ctx, spaceID, traceID, startTimeMS)
+	ret := m.ctrl.Call(m, "ListTrajectory", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*entity.Trajectory)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListTrajectory indicates an expected call of ListTrajectory.
-func (mr *MockITrajectoryAdapterMockRecorder) ListTrajectory(ctx, spaceID, traceID, startTimeMS any) *gomock.Call {
+func (mr *MockITrajectoryAdapterMockRecorder) ListTrajectory(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTrajectory", reflect.TypeOf((*MockITrajectoryAdapter)(nil).ListTrajectory), ctx, spaceID, traceID, startTimeMS)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTrajectory", reflect.TypeOf((*MockITrajectoryAdapter)(nil).ListTrajectory), arg0, arg1, arg2, arg3)
 }

@@ -22,7 +22,6 @@ import (
 type MockITaskRPCAdapter struct {
 	ctrl     *gomock.Controller
 	recorder *MockITaskRPCAdapterMockRecorder
-	isgomock struct{}
 }
 
 // MockITaskRPCAdapterMockRecorder is the mock recorder for MockITaskRPCAdapter.
@@ -43,9 +42,9 @@ func (m *MockITaskRPCAdapter) EXPECT() *MockITaskRPCAdapterMockRecorder {
 }
 
 // ListTasks mocks base method.
-func (m *MockITaskRPCAdapter) ListTasks(ctx context.Context, param *rpc.ListTasksParam) ([]*task.Task, *int64, error) {
+func (m *MockITaskRPCAdapter) ListTasks(arg0 context.Context, arg1 *rpc.ListTasksParam) ([]*task.Task, *int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListTasks", ctx, param)
+	ret := m.ctrl.Call(m, "ListTasks", arg0, arg1)
 	ret0, _ := ret[0].([]*task.Task)
 	ret1, _ := ret[1].(*int64)
 	ret2, _ := ret[2].(error)
@@ -53,7 +52,7 @@ func (m *MockITaskRPCAdapter) ListTasks(ctx context.Context, param *rpc.ListTask
 }
 
 // ListTasks indicates an expected call of ListTasks.
-func (mr *MockITaskRPCAdapterMockRecorder) ListTasks(ctx, param any) *gomock.Call {
+func (mr *MockITaskRPCAdapterMockRecorder) ListTasks(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTasks", reflect.TypeOf((*MockITaskRPCAdapter)(nil).ListTasks), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTasks", reflect.TypeOf((*MockITaskRPCAdapter)(nil).ListTasks), arg0, arg1)
 }

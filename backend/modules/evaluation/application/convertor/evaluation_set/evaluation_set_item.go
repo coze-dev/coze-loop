@@ -38,6 +38,7 @@ func ItemDTO2DO(dto *eval_set.EvaluationSetItem) *entity.EvaluationSetItem {
 		ItemKey:         gptr.Indirect(dto.ItemKey),
 		Turns:           TurnDTO2DOs(gptr.Indirect(dto.EvaluationSetID), gptr.Indirect(dto.ItemID), dto.Turns),
 		BaseInfo:        common.ConvertBaseInfoDTO2DO(dto.BaseInfo),
+		Tags:            ResourceTagDTO2DOs(dto.Tags),
 	}
 }
 
@@ -112,6 +113,7 @@ func ItemDO2DTO(do *entity.EvaluationSetItem) *eval_set.EvaluationSetItem {
 		ItemKey:         gptr.Of(do.ItemKey),
 		Turns:           TurnDO2DTOs(do.Turns),
 		BaseInfo:        common.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		Tags:            ResourceTagDO2DTOs(do.Tags),
 	}
 }
 

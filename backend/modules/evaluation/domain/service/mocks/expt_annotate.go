@@ -21,7 +21,6 @@ import (
 type MockIExptAnnotateService struct {
 	ctrl     *gomock.Controller
 	recorder *MockIExptAnnotateServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockIExptAnnotateServiceMockRecorder is the mock recorder for MockIExptAnnotateService.
@@ -42,87 +41,87 @@ func (m *MockIExptAnnotateService) EXPECT() *MockIExptAnnotateServiceMockRecorde
 }
 
 // CreateExptTurnResultTagRefs mocks base method.
-func (m *MockIExptAnnotateService) CreateExptTurnResultTagRefs(ctx context.Context, refs []*entity.ExptTurnResultTagRef) error {
+func (m *MockIExptAnnotateService) CreateExptTurnResultTagRefs(arg0 context.Context, arg1 []*entity.ExptTurnResultTagRef) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateExptTurnResultTagRefs", ctx, refs)
+	ret := m.ctrl.Call(m, "CreateExptTurnResultTagRefs", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateExptTurnResultTagRefs indicates an expected call of CreateExptTurnResultTagRefs.
-func (mr *MockIExptAnnotateServiceMockRecorder) CreateExptTurnResultTagRefs(ctx, refs any) *gomock.Call {
+func (mr *MockIExptAnnotateServiceMockRecorder) CreateExptTurnResultTagRefs(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExptTurnResultTagRefs", reflect.TypeOf((*MockIExptAnnotateService)(nil).CreateExptTurnResultTagRefs), ctx, refs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExptTurnResultTagRefs", reflect.TypeOf((*MockIExptAnnotateService)(nil).CreateExptTurnResultTagRefs), arg0, arg1)
 }
 
 // DeleteExptTurnResultTagRef mocks base method.
-func (m *MockIExptAnnotateService) DeleteExptTurnResultTagRef(ctx context.Context, exptID, spaceID, tagKeyID int64) error {
+func (m *MockIExptAnnotateService) DeleteExptTurnResultTagRef(arg0 context.Context, arg1, arg2, arg3 int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteExptTurnResultTagRef", ctx, exptID, spaceID, tagKeyID)
+	ret := m.ctrl.Call(m, "DeleteExptTurnResultTagRef", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteExptTurnResultTagRef indicates an expected call of DeleteExptTurnResultTagRef.
-func (mr *MockIExptAnnotateServiceMockRecorder) DeleteExptTurnResultTagRef(ctx, exptID, spaceID, tagKeyID any) *gomock.Call {
+func (mr *MockIExptAnnotateServiceMockRecorder) DeleteExptTurnResultTagRef(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteExptTurnResultTagRef", reflect.TypeOf((*MockIExptAnnotateService)(nil).DeleteExptTurnResultTagRef), ctx, exptID, spaceID, tagKeyID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteExptTurnResultTagRef", reflect.TypeOf((*MockIExptAnnotateService)(nil).DeleteExptTurnResultTagRef), arg0, arg1, arg2, arg3)
 }
 
 // GetAnnotateRecordsByIDs mocks base method.
-func (m *MockIExptAnnotateService) GetAnnotateRecordsByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.AnnotateRecord, error) {
+func (m *MockIExptAnnotateService) GetAnnotateRecordsByIDs(arg0 context.Context, arg1 int64, arg2 []int64) ([]*entity.AnnotateRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAnnotateRecordsByIDs", ctx, spaceID, recordIDs)
+	ret := m.ctrl.Call(m, "GetAnnotateRecordsByIDs", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]*entity.AnnotateRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAnnotateRecordsByIDs indicates an expected call of GetAnnotateRecordsByIDs.
-func (mr *MockIExptAnnotateServiceMockRecorder) GetAnnotateRecordsByIDs(ctx, spaceID, recordIDs any) *gomock.Call {
+func (mr *MockIExptAnnotateServiceMockRecorder) GetAnnotateRecordsByIDs(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotateRecordsByIDs", reflect.TypeOf((*MockIExptAnnotateService)(nil).GetAnnotateRecordsByIDs), ctx, spaceID, recordIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotateRecordsByIDs", reflect.TypeOf((*MockIExptAnnotateService)(nil).GetAnnotateRecordsByIDs), arg0, arg1, arg2)
 }
 
 // GetExptTurnResultTagRefs mocks base method.
-func (m *MockIExptAnnotateService) GetExptTurnResultTagRefs(ctx context.Context, exptID, spaceID int64) ([]*entity.ExptTurnResultTagRef, error) {
+func (m *MockIExptAnnotateService) GetExptTurnResultTagRefs(arg0 context.Context, arg1, arg2 int64) ([]*entity.ExptTurnResultTagRef, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptTurnResultTagRefs", ctx, exptID, spaceID)
+	ret := m.ctrl.Call(m, "GetExptTurnResultTagRefs", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]*entity.ExptTurnResultTagRef)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetExptTurnResultTagRefs indicates an expected call of GetExptTurnResultTagRefs.
-func (mr *MockIExptAnnotateServiceMockRecorder) GetExptTurnResultTagRefs(ctx, exptID, spaceID any) *gomock.Call {
+func (mr *MockIExptAnnotateServiceMockRecorder) GetExptTurnResultTagRefs(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnResultTagRefs", reflect.TypeOf((*MockIExptAnnotateService)(nil).GetExptTurnResultTagRefs), ctx, exptID, spaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnResultTagRefs", reflect.TypeOf((*MockIExptAnnotateService)(nil).GetExptTurnResultTagRefs), arg0, arg1, arg2)
 }
 
 // SaveAnnotateRecord mocks base method.
-func (m *MockIExptAnnotateService) SaveAnnotateRecord(ctx context.Context, exptID, itemID, turnID int64, record *entity.AnnotateRecord) error {
+func (m *MockIExptAnnotateService) SaveAnnotateRecord(arg0 context.Context, arg1, arg2, arg3 int64, arg4 *entity.AnnotateRecord) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveAnnotateRecord", ctx, exptID, itemID, turnID, record)
+	ret := m.ctrl.Call(m, "SaveAnnotateRecord", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SaveAnnotateRecord indicates an expected call of SaveAnnotateRecord.
-func (mr *MockIExptAnnotateServiceMockRecorder) SaveAnnotateRecord(ctx, exptID, itemID, turnID, record any) *gomock.Call {
+func (mr *MockIExptAnnotateServiceMockRecorder) SaveAnnotateRecord(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveAnnotateRecord", reflect.TypeOf((*MockIExptAnnotateService)(nil).SaveAnnotateRecord), ctx, exptID, itemID, turnID, record)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveAnnotateRecord", reflect.TypeOf((*MockIExptAnnotateService)(nil).SaveAnnotateRecord), arg0, arg1, arg2, arg3, arg4)
 }
 
 // UpdateAnnotateRecord mocks base method.
-func (m *MockIExptAnnotateService) UpdateAnnotateRecord(ctx context.Context, itemID, turnID int64, record *entity.AnnotateRecord) error {
+func (m *MockIExptAnnotateService) UpdateAnnotateRecord(arg0 context.Context, arg1, arg2 int64, arg3 *entity.AnnotateRecord) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAnnotateRecord", ctx, itemID, turnID, record)
+	ret := m.ctrl.Call(m, "UpdateAnnotateRecord", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateAnnotateRecord indicates an expected call of UpdateAnnotateRecord.
-func (mr *MockIExptAnnotateServiceMockRecorder) UpdateAnnotateRecord(ctx, itemID, turnID, record any) *gomock.Call {
+func (mr *MockIExptAnnotateServiceMockRecorder) UpdateAnnotateRecord(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAnnotateRecord", reflect.TypeOf((*MockIExptAnnotateService)(nil).UpdateAnnotateRecord), ctx, itemID, turnID, record)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAnnotateRecord", reflect.TypeOf((*MockIExptAnnotateService)(nil).UpdateAnnotateRecord), arg0, arg1, arg2, arg3)
 }

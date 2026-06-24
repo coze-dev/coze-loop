@@ -21,7 +21,6 @@ import (
 type MockIEvaluationAnalysisService struct {
 	ctrl     *gomock.Controller
 	recorder *MockIEvaluationAnalysisServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockIEvaluationAnalysisServiceMockRecorder is the mock recorder for MockIEvaluationAnalysisService.
@@ -42,46 +41,46 @@ func (m *MockIEvaluationAnalysisService) EXPECT() *MockIEvaluationAnalysisServic
 }
 
 // BatchGetAnalysisRecordByUniqueKeys mocks base method.
-func (m *MockIEvaluationAnalysisService) BatchGetAnalysisRecordByUniqueKeys(ctx context.Context, uniqueKey []string) (map[string]*entity.AnalysisRecord, error) {
+func (m *MockIEvaluationAnalysisService) BatchGetAnalysisRecordByUniqueKeys(arg0 context.Context, arg1 []string) (map[string]*entity.AnalysisRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetAnalysisRecordByUniqueKeys", ctx, uniqueKey)
+	ret := m.ctrl.Call(m, "BatchGetAnalysisRecordByUniqueKeys", arg0, arg1)
 	ret0, _ := ret[0].(map[string]*entity.AnalysisRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetAnalysisRecordByUniqueKeys indicates an expected call of BatchGetAnalysisRecordByUniqueKeys.
-func (mr *MockIEvaluationAnalysisServiceMockRecorder) BatchGetAnalysisRecordByUniqueKeys(ctx, uniqueKey any) *gomock.Call {
+func (mr *MockIEvaluationAnalysisServiceMockRecorder) BatchGetAnalysisRecordByUniqueKeys(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetAnalysisRecordByUniqueKeys", reflect.TypeOf((*MockIEvaluationAnalysisService)(nil).BatchGetAnalysisRecordByUniqueKeys), ctx, uniqueKey)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetAnalysisRecordByUniqueKeys", reflect.TypeOf((*MockIEvaluationAnalysisService)(nil).BatchGetAnalysisRecordByUniqueKeys), arg0, arg1)
 }
 
 // GetAnalysisRecord mocks base method.
-func (m *MockIEvaluationAnalysisService) GetAnalysisRecord(ctx context.Context, id, spaceID int64) (*entity.AnalysisRecord, error) {
+func (m *MockIEvaluationAnalysisService) GetAnalysisRecord(arg0 context.Context, arg1, arg2 int64) (*entity.AnalysisRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAnalysisRecord", ctx, id, spaceID)
+	ret := m.ctrl.Call(m, "GetAnalysisRecord", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*entity.AnalysisRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAnalysisRecord indicates an expected call of GetAnalysisRecord.
-func (mr *MockIEvaluationAnalysisServiceMockRecorder) GetAnalysisRecord(ctx, id, spaceID any) *gomock.Call {
+func (mr *MockIEvaluationAnalysisServiceMockRecorder) GetAnalysisRecord(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnalysisRecord", reflect.TypeOf((*MockIEvaluationAnalysisService)(nil).GetAnalysisRecord), ctx, id, spaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnalysisRecord", reflect.TypeOf((*MockIEvaluationAnalysisService)(nil).GetAnalysisRecord), arg0, arg1, arg2)
 }
 
 // TrajectoryAnalysis mocks base method.
-func (m *MockIEvaluationAnalysisService) TrajectoryAnalysis(ctx context.Context, param entity.TrajectoryAnalysisParam) (int64, error) {
+func (m *MockIEvaluationAnalysisService) TrajectoryAnalysis(arg0 context.Context, arg1 entity.TrajectoryAnalysisParam) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TrajectoryAnalysis", ctx, param)
+	ret := m.ctrl.Call(m, "TrajectoryAnalysis", arg0, arg1)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // TrajectoryAnalysis indicates an expected call of TrajectoryAnalysis.
-func (mr *MockIEvaluationAnalysisServiceMockRecorder) TrajectoryAnalysis(ctx, param any) *gomock.Call {
+func (mr *MockIEvaluationAnalysisServiceMockRecorder) TrajectoryAnalysis(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrajectoryAnalysis", reflect.TypeOf((*MockIEvaluationAnalysisService)(nil).TrajectoryAnalysis), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrajectoryAnalysis", reflect.TypeOf((*MockIEvaluationAnalysisService)(nil).TrajectoryAnalysis), arg0, arg1)
 }

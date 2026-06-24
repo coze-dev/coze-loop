@@ -17,9 +17,9 @@ type IDatasetRPCAdapter interface {
 	GetDatasetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error)
 	ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error)
 	ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error)
-	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error)
+	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string, tags ...[]*entity.ResourceTagRef) (err error)
 	DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) (err error)
-	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
+	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool, opt ...GetDatasetOpt) (set *entity.EvaluationSet, err error)
 	BatchGetDatasets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (sets []*entity.EvaluationSet, err error)
 	ListDatasets(ctx context.Context, param *ListDatasetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error)
 
@@ -32,7 +32,7 @@ type IDatasetRPCAdapter interface {
 
 	BatchCreateDatasetItems(ctx context.Context, param *BatchCreateDatasetItemsParam) (idMap map[int64]int64, errorGroup []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
 	BatchUpdateDatasetItems(ctx context.Context, param *BatchUpdateDatasetItemsParam) (errorGroup []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
-	UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption) (err error)
+	UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption, tags ...[]*entity.ResourceTagRef) (err error)
 	BatchDeleteDatasetItems(ctx context.Context, spaceID, evaluationSetID int64, itemIDs []int64) (err error)
 	ListDatasetItems(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total, filterTotal *int64, nextPageToken *string, err error)
 	ListDatasetItemsByVersion(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total, filterTotal *int64, nextPageToken *string, err error)
@@ -62,6 +62,28 @@ type GetDatasetItemFieldParam struct {
 	FieldKey *string
 	// 当 item 为多轮时，必须提供
 	TurnID *int64
+}
+
+type GetDatasetOption struct {
+	WithTags bool
+}
+
+type GetDatasetOpt func(*GetDatasetOption)
+
+func WithDatasetTags(withTags bool) GetDatasetOpt {
+	return func(opt *GetDatasetOption) {
+		opt.WithTags = withTags
+	}
+}
+
+func NewGetDatasetOption(opts ...GetDatasetOpt) *GetDatasetOption {
+	opt := &GetDatasetOption{}
+	for _, fn := range opts {
+		if fn != nil {
+			fn(opt)
+		}
+	}
+	return opt
 }
 
 type CreateDatasetParam struct {
@@ -104,6 +126,8 @@ type ListDatasetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*entity.OrderBy
+	WithTags         bool
+	TagFilter        *entity.TagFilter
 }
 
 type ListDatasetItemsParam struct {
@@ -116,6 +140,8 @@ type ListDatasetItemsParam struct {
 	OrderBys        []*entity.OrderBy
 	ItemIDsNotIn    []int64
 	Filter          *entity.Filter
+	WithTags        bool
+	TagFilter       *entity.TagFilter
 }
 
 type BatchGetDatasetItemsParam struct {
@@ -123,6 +149,7 @@ type BatchGetDatasetItemsParam struct {
 	EvaluationSetID int64
 	ItemIDs         []int64
 	VersionID       *int64
+	WithTags        bool
 }
 
 type BatchCreateDatasetItemsParam struct {

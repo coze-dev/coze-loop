@@ -21,7 +21,6 @@ import (
 type MockITagRPCAdapter struct {
 	ctrl     *gomock.Controller
 	recorder *MockITagRPCAdapterMockRecorder
-	isgomock struct{}
 }
 
 // MockITagRPCAdapterMockRecorder is the mock recorder for MockITagRPCAdapter.

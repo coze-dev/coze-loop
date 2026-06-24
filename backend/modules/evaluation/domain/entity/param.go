@@ -34,6 +34,7 @@ type UpdateEvaluationSetParam struct {
 	EvaluationSetID int64
 	Name            *string
 	Description     *string
+	Tags            []*ResourceTagRef
 }
 
 type ListEvaluationSetsParam struct {
@@ -45,6 +46,8 @@ type ListEvaluationSetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*OrderBy
+	WithTags         bool
+	TagFilter        *TagFilter
 }
 
 type ListEvaluationSetItemsParam struct {
@@ -57,6 +60,8 @@ type ListEvaluationSetItemsParam struct {
 	OrderBys        []*OrderBy
 	ItemIDsNotIn    []int64
 	Filter          *Filter
+	WithTags        bool
+	TagFilter       *TagFilter
 }
 type BatchGetEvaluationSetItemsParam struct {
 	SpaceID         int64
@@ -67,6 +72,7 @@ type BatchGetEvaluationSetItemsParam struct {
 	PageSize        *int32
 	PageToken       *string
 	OrderBys        []*OrderBy
+	WithTags        bool
 }
 
 type GetEvaluationSetItemFieldParam struct {

@@ -18,7 +18,7 @@ type IEvaluationSetService interface {
 	ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error)
 	UpdateEvaluationSet(ctx context.Context, param *entity.UpdateEvaluationSetParam) (err error)
 	DeleteEvaluationSet(ctx context.Context, spaceID, evaluationSetID int64) (err error)
-	GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
+	GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool, opt ...rpc.GetDatasetOpt) (set *entity.EvaluationSet, err error)
 	BatchGetEvaluationSets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (set []*entity.EvaluationSet, err error)
 	ListEvaluationSets(ctx context.Context, param *entity.ListEvaluationSetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error)
 	ImportEvaluationSet(ctx context.Context, param *entity.ImportEvaluationSetParam) (jobID int64, err error)

@@ -21,7 +21,6 @@ import (
 type MockEvaluationSetSchemaService struct {
 	ctrl     *gomock.Controller
 	recorder *MockEvaluationSetSchemaServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockEvaluationSetSchemaServiceMockRecorder is the mock recorder for MockEvaluationSetSchemaService.
@@ -42,15 +41,15 @@ func (m *MockEvaluationSetSchemaService) EXPECT() *MockEvaluationSetSchemaServic
 }
 
 // UpdateEvaluationSetSchema mocks base method.
-func (m *MockEvaluationSetSchemaService) UpdateEvaluationSetSchema(ctx context.Context, spaceID, evaluationSetID int64, fieldSchema []*entity.FieldSchema) error {
+func (m *MockEvaluationSetSchemaService) UpdateEvaluationSetSchema(arg0 context.Context, arg1, arg2 int64, arg3 []*entity.FieldSchema) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEvaluationSetSchema", ctx, spaceID, evaluationSetID, fieldSchema)
+	ret := m.ctrl.Call(m, "UpdateEvaluationSetSchema", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateEvaluationSetSchema indicates an expected call of UpdateEvaluationSetSchema.
-func (mr *MockEvaluationSetSchemaServiceMockRecorder) UpdateEvaluationSetSchema(ctx, spaceID, evaluationSetID, fieldSchema any) *gomock.Call {
+func (mr *MockEvaluationSetSchemaServiceMockRecorder) UpdateEvaluationSetSchema(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluationSetSchema", reflect.TypeOf((*MockEvaluationSetSchemaService)(nil).UpdateEvaluationSetSchema), ctx, spaceID, evaluationSetID, fieldSchema)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluationSetSchema", reflect.TypeOf((*MockEvaluationSetSchemaService)(nil).UpdateEvaluationSetSchema), arg0, arg1, arg2, arg3)
 }

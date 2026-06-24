@@ -21,7 +21,6 @@ import (
 type MockILLMProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockILLMProviderMockRecorder
-	isgomock struct{}
 }
 
 // MockILLMProviderMockRecorder is the mock recorder for MockILLMProvider.
@@ -42,16 +41,16 @@ func (m *MockILLMProvider) EXPECT() *MockILLMProviderMockRecorder {
 }
 
 // Call mocks base method.
-func (m *MockILLMProvider) Call(ctx context.Context, param *entity.LLMCallParam) (*entity.ReplyItem, error) {
+func (m *MockILLMProvider) Call(arg0 context.Context, arg1 *entity.LLMCallParam) (*entity.ReplyItem, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Call", ctx, param)
+	ret := m.ctrl.Call(m, "Call", arg0, arg1)
 	ret0, _ := ret[0].(*entity.ReplyItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Call indicates an expected call of Call.
-func (mr *MockILLMProviderMockRecorder) Call(ctx, param any) *gomock.Call {
+func (mr *MockILLMProviderMockRecorder) Call(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockILLMProvider)(nil).Call), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockILLMProvider)(nil).Call), arg0, arg1)
 }

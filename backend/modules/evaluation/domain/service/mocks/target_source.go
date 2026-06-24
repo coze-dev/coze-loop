@@ -21,7 +21,6 @@ import (
 type MockISourceEvalTargetOperateService struct {
 	ctrl     *gomock.Controller
 	recorder *MockISourceEvalTargetOperateServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockISourceEvalTargetOperateServiceMockRecorder is the mock recorder for MockISourceEvalTargetOperateService.
@@ -42,9 +41,9 @@ func (m *MockISourceEvalTargetOperateService) EXPECT() *MockISourceEvalTargetOpe
 }
 
 // AsyncExecute mocks base method.
-func (m *MockISourceEvalTargetOperateService) AsyncExecute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (int64, string, map[string]string, error) {
+func (m *MockISourceEvalTargetOperateService) AsyncExecute(arg0 context.Context, arg1 int64, arg2 *entity.ExecuteEvalTargetParam) (int64, string, map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AsyncExecute", ctx, spaceID, param)
+	ret := m.ctrl.Call(m, "AsyncExecute", arg0, arg1, arg2)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(map[string]string)
@@ -53,31 +52,31 @@ func (m *MockISourceEvalTargetOperateService) AsyncExecute(ctx context.Context, 
 }
 
 // AsyncExecute indicates an expected call of AsyncExecute.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) AsyncExecute(ctx, spaceID, param any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) AsyncExecute(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncExecute", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).AsyncExecute), ctx, spaceID, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncExecute", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).AsyncExecute), arg0, arg1, arg2)
 }
 
 // BatchGetSource mocks base method.
-func (m *MockISourceEvalTargetOperateService) BatchGetSource(ctx context.Context, spaceID int64, ids []string) ([]*entity.EvalTarget, error) {
+func (m *MockISourceEvalTargetOperateService) BatchGetSource(arg0 context.Context, arg1 int64, arg2 []string) ([]*entity.EvalTarget, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetSource", ctx, spaceID, ids)
+	ret := m.ctrl.Call(m, "BatchGetSource", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]*entity.EvalTarget)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetSource indicates an expected call of BatchGetSource.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) BatchGetSource(ctx, spaceID, ids any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) BatchGetSource(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetSource", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).BatchGetSource), ctx, spaceID, ids)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetSource", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).BatchGetSource), arg0, arg1, arg2)
 }
 
 // BuildBySource mocks base method.
-func (m *MockISourceEvalTargetOperateService) BuildBySource(ctx context.Context, spaceID int64, sourceTargetID, sourceTargetVersion string, opts ...entity.Option) (*entity.EvalTarget, error) {
+func (m *MockISourceEvalTargetOperateService) BuildBySource(arg0 context.Context, arg1 int64, arg2, arg3 string, arg4 ...entity.Option) (*entity.EvalTarget, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, spaceID, sourceTargetID, sourceTargetVersion}
-	for _, a := range opts {
+	varargs := []any{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BuildBySource", varargs...)
@@ -87,9 +86,9 @@ func (m *MockISourceEvalTargetOperateService) BuildBySource(ctx context.Context,
 }
 
 // BuildBySource indicates an expected call of BuildBySource.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) BuildBySource(ctx, spaceID, sourceTargetID, sourceTargetVersion any, opts ...any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) BuildBySource(arg0, arg1, arg2, arg3 any, arg4 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, spaceID, sourceTargetID, sourceTargetVersion}, opts...)
+	varargs := append([]any{arg0, arg1, arg2, arg3}, arg4...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildBySource", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).BuildBySource), varargs...)
 }
 
@@ -108,9 +107,9 @@ func (mr *MockISourceEvalTargetOperateServiceMockRecorder) EvalType() *gomock.Ca
 }
 
 // Execute mocks base method.
-func (m *MockISourceEvalTargetOperateService) Execute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (*entity.EvalTargetOutputData, entity.EvalTargetRunStatus, error) {
+func (m *MockISourceEvalTargetOperateService) Execute(arg0 context.Context, arg1 int64, arg2 *entity.ExecuteEvalTargetParam) (*entity.EvalTargetOutputData, entity.EvalTargetRunStatus, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute", ctx, spaceID, param)
+	ret := m.ctrl.Call(m, "Execute", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*entity.EvalTargetOutputData)
 	ret1, _ := ret[1].(entity.EvalTargetRunStatus)
 	ret2, _ := ret[2].(error)
@@ -118,15 +117,15 @@ func (m *MockISourceEvalTargetOperateService) Execute(ctx context.Context, space
 }
 
 // Execute indicates an expected call of Execute.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) Execute(ctx, spaceID, param any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) Execute(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).Execute), ctx, spaceID, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).Execute), arg0, arg1, arg2)
 }
 
 // ListSource mocks base method.
-func (m *MockISourceEvalTargetOperateService) ListSource(ctx context.Context, param *entity.ListSourceParam) ([]*entity.EvalTarget, string, bool, error) {
+func (m *MockISourceEvalTargetOperateService) ListSource(arg0 context.Context, arg1 *entity.ListSourceParam) ([]*entity.EvalTarget, string, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListSource", ctx, param)
+	ret := m.ctrl.Call(m, "ListSource", arg0, arg1)
 	ret0, _ := ret[0].([]*entity.EvalTarget)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(bool)
@@ -135,15 +134,15 @@ func (m *MockISourceEvalTargetOperateService) ListSource(ctx context.Context, pa
 }
 
 // ListSource indicates an expected call of ListSource.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) ListSource(ctx, param any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) ListSource(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSource", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).ListSource), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSource", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).ListSource), arg0, arg1)
 }
 
 // ListSourceVersion mocks base method.
-func (m *MockISourceEvalTargetOperateService) ListSourceVersion(ctx context.Context, param *entity.ListSourceVersionParam) ([]*entity.EvalTargetVersion, string, bool, error) {
+func (m *MockISourceEvalTargetOperateService) ListSourceVersion(arg0 context.Context, arg1 *entity.ListSourceVersionParam) ([]*entity.EvalTargetVersion, string, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListSourceVersion", ctx, param)
+	ret := m.ctrl.Call(m, "ListSourceVersion", arg0, arg1)
 	ret0, _ := ret[0].([]*entity.EvalTargetVersion)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(bool)
@@ -152,37 +151,37 @@ func (m *MockISourceEvalTargetOperateService) ListSourceVersion(ctx context.Cont
 }
 
 // ListSourceVersion indicates an expected call of ListSourceVersion.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) ListSourceVersion(ctx, param any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) ListSourceVersion(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSourceVersion", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).ListSourceVersion), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSourceVersion", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).ListSourceVersion), arg0, arg1)
 }
 
 // PackSourceInfo mocks base method.
-func (m *MockISourceEvalTargetOperateService) PackSourceInfo(ctx context.Context, spaceID int64, dos []*entity.EvalTarget) error {
+func (m *MockISourceEvalTargetOperateService) PackSourceInfo(arg0 context.Context, arg1 int64, arg2 []*entity.EvalTarget) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PackSourceInfo", ctx, spaceID, dos)
+	ret := m.ctrl.Call(m, "PackSourceInfo", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PackSourceInfo indicates an expected call of PackSourceInfo.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) PackSourceInfo(ctx, spaceID, dos any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) PackSourceInfo(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PackSourceInfo", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).PackSourceInfo), ctx, spaceID, dos)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PackSourceInfo", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).PackSourceInfo), arg0, arg1, arg2)
 }
 
 // PackSourceVersionInfo mocks base method.
-func (m *MockISourceEvalTargetOperateService) PackSourceVersionInfo(ctx context.Context, spaceID int64, dos []*entity.EvalTarget) error {
+func (m *MockISourceEvalTargetOperateService) PackSourceVersionInfo(arg0 context.Context, arg1 int64, arg2 []*entity.EvalTarget) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PackSourceVersionInfo", ctx, spaceID, dos)
+	ret := m.ctrl.Call(m, "PackSourceVersionInfo", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PackSourceVersionInfo indicates an expected call of PackSourceVersionInfo.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) PackSourceVersionInfo(ctx, spaceID, dos any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) PackSourceVersionInfo(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PackSourceVersionInfo", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).PackSourceVersionInfo), ctx, spaceID, dos)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PackSourceVersionInfo", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).PackSourceVersionInfo), arg0, arg1, arg2)
 }
 
 // RuntimeParam mocks base method.
@@ -200,9 +199,9 @@ func (mr *MockISourceEvalTargetOperateServiceMockRecorder) RuntimeParam() *gomoc
 }
 
 // SearchCustomEvalTarget mocks base method.
-func (m *MockISourceEvalTargetOperateService) SearchCustomEvalTarget(ctx context.Context, param *entity.SearchCustomEvalTargetParam) ([]*entity.CustomEvalTarget, string, bool, error) {
+func (m *MockISourceEvalTargetOperateService) SearchCustomEvalTarget(arg0 context.Context, arg1 *entity.SearchCustomEvalTargetParam) ([]*entity.CustomEvalTarget, string, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SearchCustomEvalTarget", ctx, param)
+	ret := m.ctrl.Call(m, "SearchCustomEvalTarget", arg0, arg1)
 	ret0, _ := ret[0].([]*entity.CustomEvalTarget)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(bool)
@@ -211,21 +210,21 @@ func (m *MockISourceEvalTargetOperateService) SearchCustomEvalTarget(ctx context
 }
 
 // SearchCustomEvalTarget indicates an expected call of SearchCustomEvalTarget.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) SearchCustomEvalTarget(ctx, param any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) SearchCustomEvalTarget(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchCustomEvalTarget", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).SearchCustomEvalTarget), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchCustomEvalTarget", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).SearchCustomEvalTarget), arg0, arg1)
 }
 
 // ValidateInput mocks base method.
-func (m *MockISourceEvalTargetOperateService) ValidateInput(ctx context.Context, spaceID int64, inputSchema []*entity.ArgsSchema, input *entity.EvalTargetInputData) error {
+func (m *MockISourceEvalTargetOperateService) ValidateInput(arg0 context.Context, arg1 int64, arg2 []*entity.ArgsSchema, arg3 *entity.EvalTargetInputData) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateInput", ctx, spaceID, inputSchema, input)
+	ret := m.ctrl.Call(m, "ValidateInput", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateInput indicates an expected call of ValidateInput.
-func (mr *MockISourceEvalTargetOperateServiceMockRecorder) ValidateInput(ctx, spaceID, inputSchema, input any) *gomock.Call {
+func (mr *MockISourceEvalTargetOperateServiceMockRecorder) ValidateInput(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateInput", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).ValidateInput), ctx, spaceID, inputSchema, input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateInput", reflect.TypeOf((*MockISourceEvalTargetOperateService)(nil).ValidateInput), arg0, arg1, arg2, arg3)
 }

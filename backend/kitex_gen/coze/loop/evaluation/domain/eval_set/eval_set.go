@@ -6,11 +6,16 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"strings"
 )
 
 const (
+	TagFilterRelationAND = "and"
+
+	TagFilterRelationOR = "or"
+
 	BizCategoryFromOnlineTrace = "from_online_trace"
 
 	EvaluationSetTypeDefault = "default"
@@ -18,9 +23,1199 @@ const (
 	EvaluationSetTypeVersionedItem = "versioned_item"
 )
 
+type TagFilterRelation = string
+
 type BizCategory = string
 
 type EvaluationSetType = string
+
+// ResourceTagRef is the write/filter shape for resource tags.
+// tag_value_id can be omitted to bind or filter by tag key only.
+type ResourceTagRef struct {
+	TagKeyID   int64  `thrift:"tag_key_id,1,required" frugal:"1,required,i64" json:"tag_key_id" form:"tag_key_id,required" query:"tag_key_id,required"`
+	TagValueID *int64 `thrift:"tag_value_id,2,optional" frugal:"2,optional,i64" json:"tag_value_id" form:"tag_value_id" query:"tag_value_id"`
+}
+
+func NewResourceTagRef() *ResourceTagRef {
+	return &ResourceTagRef{}
+}
+
+func (p *ResourceTagRef) InitDefault() {
+}
+
+func (p *ResourceTagRef) GetTagKeyID() (v int64) {
+	if p != nil {
+		return p.TagKeyID
+	}
+	return
+}
+
+var ResourceTagRef_TagValueID_DEFAULT int64
+
+func (p *ResourceTagRef) GetTagValueID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagValueID() {
+		return ResourceTagRef_TagValueID_DEFAULT
+	}
+	return *p.TagValueID
+}
+func (p *ResourceTagRef) SetTagKeyID(val int64) {
+	p.TagKeyID = val
+}
+func (p *ResourceTagRef) SetTagValueID(val *int64) {
+	p.TagValueID = val
+}
+
+var fieldIDToName_ResourceTagRef = map[int16]string{
+	1: "tag_key_id",
+	2: "tag_value_id",
+}
+
+func (p *ResourceTagRef) IsSetTagValueID() bool {
+	return p.TagValueID != nil
+}
+
+func (p *ResourceTagRef) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetTagKeyID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetTagKeyID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetTagKeyID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ResourceTagRef[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ResourceTagRef[fieldId]))
+}
+
+func (p *ResourceTagRef) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.TagKeyID = _field
+	return nil
+}
+func (p *ResourceTagRef) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TagValueID = _field
+	return nil
+}
+
+func (p *ResourceTagRef) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ResourceTagRef"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ResourceTagRef) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("tag_key_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.TagKeyID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ResourceTagRef) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagValueID() {
+		if err = oprot.WriteFieldBegin("tag_value_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TagValueID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ResourceTagRef) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ResourceTagRef(%+v)", *p)
+
+}
+
+func (p *ResourceTagRef) DeepEqual(ano *ResourceTagRef) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TagKeyID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TagValueID) {
+		return false
+	}
+	return true
+}
+
+func (p *ResourceTagRef) Field1DeepEqual(src int64) bool {
+
+	if p.TagKeyID != src {
+		return false
+	}
+	return true
+}
+func (p *ResourceTagRef) Field2DeepEqual(src *int64) bool {
+
+	if p.TagValueID == src {
+		return true
+	} else if p.TagValueID == nil || src == nil {
+		return false
+	}
+	if *p.TagValueID != *src {
+		return false
+	}
+	return true
+}
+
+// ResourceTag is the read shape for resource tags, enriched from tag service.
+type ResourceTag struct {
+	TagKeyID     int64               `thrift:"tag_key_id,1,required" frugal:"1,required,i64" json:"tag_key_id" form:"tag_key_id,required" query:"tag_key_id,required"`
+	TagKeyName   *string             `thrift:"tag_key_name,2,optional" frugal:"2,optional,string" form:"tag_key_name" json:"tag_key_name,omitempty" query:"tag_key_name"`
+	TagValueID   *int64              `thrift:"tag_value_id,3,optional" frugal:"3,optional,i64" json:"tag_value_id" form:"tag_value_id" query:"tag_value_id"`
+	TagValueName *string             `thrift:"tag_value_name,4,optional" frugal:"4,optional,string" form:"tag_value_name" json:"tag_value_name,omitempty" query:"tag_value_name"`
+	ContentType  *tag.TagContentType `thrift:"content_type,5,optional" frugal:"5,optional,string" form:"content_type" json:"content_type,omitempty" query:"content_type"`
+	Status       *tag.TagStatus      `thrift:"status,6,optional" frugal:"6,optional,string" form:"status" json:"status,omitempty" query:"status"`
+}
+
+func NewResourceTag() *ResourceTag {
+	return &ResourceTag{}
+}
+
+func (p *ResourceTag) InitDefault() {
+}
+
+func (p *ResourceTag) GetTagKeyID() (v int64) {
+	if p != nil {
+		return p.TagKeyID
+	}
+	return
+}
+
+var ResourceTag_TagKeyName_DEFAULT string
+
+func (p *ResourceTag) GetTagKeyName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagKeyName() {
+		return ResourceTag_TagKeyName_DEFAULT
+	}
+	return *p.TagKeyName
+}
+
+var ResourceTag_TagValueID_DEFAULT int64
+
+func (p *ResourceTag) GetTagValueID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagValueID() {
+		return ResourceTag_TagValueID_DEFAULT
+	}
+	return *p.TagValueID
+}
+
+var ResourceTag_TagValueName_DEFAULT string
+
+func (p *ResourceTag) GetTagValueName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagValueName() {
+		return ResourceTag_TagValueName_DEFAULT
+	}
+	return *p.TagValueName
+}
+
+var ResourceTag_ContentType_DEFAULT tag.TagContentType
+
+func (p *ResourceTag) GetContentType() (v tag.TagContentType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetContentType() {
+		return ResourceTag_ContentType_DEFAULT
+	}
+	return *p.ContentType
+}
+
+var ResourceTag_Status_DEFAULT tag.TagStatus
+
+func (p *ResourceTag) GetStatus() (v tag.TagStatus) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatus() {
+		return ResourceTag_Status_DEFAULT
+	}
+	return *p.Status
+}
+func (p *ResourceTag) SetTagKeyID(val int64) {
+	p.TagKeyID = val
+}
+func (p *ResourceTag) SetTagKeyName(val *string) {
+	p.TagKeyName = val
+}
+func (p *ResourceTag) SetTagValueID(val *int64) {
+	p.TagValueID = val
+}
+func (p *ResourceTag) SetTagValueName(val *string) {
+	p.TagValueName = val
+}
+func (p *ResourceTag) SetContentType(val *tag.TagContentType) {
+	p.ContentType = val
+}
+func (p *ResourceTag) SetStatus(val *tag.TagStatus) {
+	p.Status = val
+}
+
+var fieldIDToName_ResourceTag = map[int16]string{
+	1: "tag_key_id",
+	2: "tag_key_name",
+	3: "tag_value_id",
+	4: "tag_value_name",
+	5: "content_type",
+	6: "status",
+}
+
+func (p *ResourceTag) IsSetTagKeyName() bool {
+	return p.TagKeyName != nil
+}
+
+func (p *ResourceTag) IsSetTagValueID() bool {
+	return p.TagValueID != nil
+}
+
+func (p *ResourceTag) IsSetTagValueName() bool {
+	return p.TagValueName != nil
+}
+
+func (p *ResourceTag) IsSetContentType() bool {
+	return p.ContentType != nil
+}
+
+func (p *ResourceTag) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *ResourceTag) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetTagKeyID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetTagKeyID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetTagKeyID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ResourceTag[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ResourceTag[fieldId]))
+}
+
+func (p *ResourceTag) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.TagKeyID = _field
+	return nil
+}
+func (p *ResourceTag) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TagKeyName = _field
+	return nil
+}
+func (p *ResourceTag) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TagValueID = _field
+	return nil
+}
+func (p *ResourceTag) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TagValueName = _field
+	return nil
+}
+func (p *ResourceTag) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *tag.TagContentType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ContentType = _field
+	return nil
+}
+func (p *ResourceTag) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *tag.TagStatus
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Status = _field
+	return nil
+}
+
+func (p *ResourceTag) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ResourceTag"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ResourceTag) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("tag_key_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.TagKeyID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ResourceTag) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagKeyName() {
+		if err = oprot.WriteFieldBegin("tag_key_name", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TagKeyName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ResourceTag) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagValueID() {
+		if err = oprot.WriteFieldBegin("tag_value_id", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TagValueID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ResourceTag) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagValueName() {
+		if err = oprot.WriteFieldBegin("tag_value_name", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TagValueName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ResourceTag) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetContentType() {
+		if err = oprot.WriteFieldBegin("content_type", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ContentType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ResourceTag) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Status); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *ResourceTag) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ResourceTag(%+v)", *p)
+
+}
+
+func (p *ResourceTag) DeepEqual(ano *ResourceTag) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TagKeyID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TagKeyName) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.TagValueID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.TagValueName) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ContentType) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Status) {
+		return false
+	}
+	return true
+}
+
+func (p *ResourceTag) Field1DeepEqual(src int64) bool {
+
+	if p.TagKeyID != src {
+		return false
+	}
+	return true
+}
+func (p *ResourceTag) Field2DeepEqual(src *string) bool {
+
+	if p.TagKeyName == src {
+		return true
+	} else if p.TagKeyName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TagKeyName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ResourceTag) Field3DeepEqual(src *int64) bool {
+
+	if p.TagValueID == src {
+		return true
+	} else if p.TagValueID == nil || src == nil {
+		return false
+	}
+	if *p.TagValueID != *src {
+		return false
+	}
+	return true
+}
+func (p *ResourceTag) Field4DeepEqual(src *string) bool {
+
+	if p.TagValueName == src {
+		return true
+	} else if p.TagValueName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TagValueName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ResourceTag) Field5DeepEqual(src *tag.TagContentType) bool {
+
+	if p.ContentType == src {
+		return true
+	} else if p.ContentType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ContentType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ResourceTag) Field6DeepEqual(src *tag.TagStatus) bool {
+
+	if p.Status == src {
+		return true
+	} else if p.Status == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Status, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type TagFilter struct {
+	TagKeyIds []int64            `thrift:"tag_key_ids,1,optional" frugal:"1,optional,list<i64>" json:"tag_key_ids" form:"tag_key_ids" query:"tag_key_ids"`
+	Tags      []*ResourceTagRef  `thrift:"tags,2,optional" frugal:"2,optional,list<ResourceTagRef>" form:"tags" json:"tags,omitempty" query:"tags"`
+	Relation  *TagFilterRelation `thrift:"relation,3,optional" frugal:"3,optional,string" form:"relation" json:"relation,omitempty" query:"relation"`
+}
+
+func NewTagFilter() *TagFilter {
+	return &TagFilter{}
+}
+
+func (p *TagFilter) InitDefault() {
+}
+
+var TagFilter_TagKeyIds_DEFAULT []int64
+
+func (p *TagFilter) GetTagKeyIds() (v []int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagKeyIds() {
+		return TagFilter_TagKeyIds_DEFAULT
+	}
+	return p.TagKeyIds
+}
+
+var TagFilter_Tags_DEFAULT []*ResourceTagRef
+
+func (p *TagFilter) GetTags() (v []*ResourceTagRef) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTags() {
+		return TagFilter_Tags_DEFAULT
+	}
+	return p.Tags
+}
+
+var TagFilter_Relation_DEFAULT TagFilterRelation
+
+func (p *TagFilter) GetRelation() (v TagFilterRelation) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRelation() {
+		return TagFilter_Relation_DEFAULT
+	}
+	return *p.Relation
+}
+func (p *TagFilter) SetTagKeyIds(val []int64) {
+	p.TagKeyIds = val
+}
+func (p *TagFilter) SetTags(val []*ResourceTagRef) {
+	p.Tags = val
+}
+func (p *TagFilter) SetRelation(val *TagFilterRelation) {
+	p.Relation = val
+}
+
+var fieldIDToName_TagFilter = map[int16]string{
+	1: "tag_key_ids",
+	2: "tags",
+	3: "relation",
+}
+
+func (p *TagFilter) IsSetTagKeyIds() bool {
+	return p.TagKeyIds != nil
+}
+
+func (p *TagFilter) IsSetTags() bool {
+	return p.Tags != nil
+}
+
+func (p *TagFilter) IsSetRelation() bool {
+	return p.Relation != nil
+}
+
+func (p *TagFilter) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TagFilter[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TagFilter) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TagKeyIds = _field
+	return nil
+}
+func (p *TagFilter) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ResourceTagRef, 0, size)
+	values := make([]ResourceTagRef, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Tags = _field
+	return nil
+}
+func (p *TagFilter) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *TagFilterRelation
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Relation = _field
+	return nil
+}
+
+func (p *TagFilter) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TagFilter"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TagFilter) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagKeyIds() {
+		if err = oprot.WriteFieldBegin("tag_key_ids", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.TagKeyIds)); err != nil {
+			return err
+		}
+		for _, v := range p.TagKeyIds {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TagFilter) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTags() {
+		if err = oprot.WriteFieldBegin("tags", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Tags)); err != nil {
+			return err
+		}
+		for _, v := range p.Tags {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *TagFilter) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRelation() {
+		if err = oprot.WriteFieldBegin("relation", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Relation); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TagFilter) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TagFilter(%+v)", *p)
+
+}
+
+func (p *TagFilter) DeepEqual(ano *TagFilter) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TagKeyIds) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Tags) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Relation) {
+		return false
+	}
+	return true
+}
+
+func (p *TagFilter) Field1DeepEqual(src []int64) bool {
+
+	if len(p.TagKeyIds) != len(src) {
+		return false
+	}
+	for i, v := range p.TagKeyIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *TagFilter) Field2DeepEqual(src []*ResourceTagRef) bool {
+
+	if len(p.Tags) != len(src) {
+		return false
+	}
+	for i, v := range p.Tags {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *TagFilter) Field3DeepEqual(src *TagFilterRelation) bool {
+
+	if p.Relation == src {
+		return true
+	} else if p.Relation == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Relation, *src) != 0 {
+		return false
+	}
+	return true
+}
 
 type EvaluationSet struct {
 	// 主键&外键
@@ -43,6 +1238,8 @@ type EvaluationSet struct {
 	BizCategory *BizCategory `thrift:"biz_category,17,optional" frugal:"17,optional,string" form:"biz_category" json:"biz_category,omitempty" query:"biz_category"`
 	// 评测集类型
 	Type *EvaluationSetType `thrift:"type,20,optional" frugal:"20,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	// 资源标签，仅 with_tags=true 时返回
+	Tags []*ResourceTag `thrift:"tags,21,optional" frugal:"21,optional,list<ResourceTag>" form:"tags" json:"tags,omitempty" query:"tags"`
 	// 版本信息
 	EvaluationSetVersion *EvaluationSetVersion `thrift:"evaluation_set_version,30,optional" frugal:"30,optional,EvaluationSetVersion" form:"evaluation_set_version" json:"evaluation_set_version,omitempty" query:"evaluation_set_version"`
 	// 最新的版本号
@@ -204,6 +1401,18 @@ func (p *EvaluationSet) GetType() (v EvaluationSetType) {
 	return *p.Type
 }
 
+var EvaluationSet_Tags_DEFAULT []*ResourceTag
+
+func (p *EvaluationSet) GetTags() (v []*ResourceTag) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTags() {
+		return EvaluationSet_Tags_DEFAULT
+	}
+	return p.Tags
+}
+
 var EvaluationSet_EvaluationSetVersion_DEFAULT *EvaluationSetVersion
 
 func (p *EvaluationSet) GetEvaluationSetVersion() (v *EvaluationSetVersion) {
@@ -287,6 +1496,9 @@ func (p *EvaluationSet) SetBizCategory(val *BizCategory) {
 func (p *EvaluationSet) SetType(val *EvaluationSetType) {
 	p.Type = val
 }
+func (p *EvaluationSet) SetTags(val []*ResourceTag) {
+	p.Tags = val
+}
 func (p *EvaluationSet) SetEvaluationSetVersion(val *EvaluationSetVersion) {
 	p.EvaluationSetVersion = val
 }
@@ -313,6 +1525,7 @@ var fieldIDToName_EvaluationSet = map[int16]string{
 	16:  "change_uncommitted",
 	17:  "biz_category",
 	20:  "type",
+	21:  "tags",
 	30:  "evaluation_set_version",
 	31:  "latest_version",
 	32:  "next_version_num",
@@ -365,6 +1578,10 @@ func (p *EvaluationSet) IsSetBizCategory() bool {
 
 func (p *EvaluationSet) IsSetType() bool {
 	return p.Type != nil
+}
+
+func (p *EvaluationSet) IsSetTags() bool {
+	return p.Tags != nil
 }
 
 func (p *EvaluationSet) IsSetEvaluationSetVersion() bool {
@@ -492,6 +1709,14 @@ func (p *EvaluationSet) Read(iprot thrift.TProtocol) (err error) {
 		case 20:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField21(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -685,6 +1910,29 @@ func (p *EvaluationSet) ReadField20(iprot thrift.TProtocol) error {
 	p.Type = _field
 	return nil
 }
+func (p *EvaluationSet) ReadField21(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ResourceTag, 0, size)
+	values := make([]ResourceTag, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Tags = _field
+	return nil
+}
 func (p *EvaluationSet) ReadField30(iprot thrift.TProtocol) error {
 	_field := NewEvaluationSetVersion()
 	if err := _field.Read(iprot); err != nil {
@@ -776,6 +2024,10 @@ func (p *EvaluationSet) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
 			goto WriteFieldError
 		}
 		if err = p.writeField30(oprot); err != nil {
@@ -1028,6 +2280,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
 }
+func (p *EvaluationSet) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTags() {
+		if err = oprot.WriteFieldBegin("tags", thrift.LIST, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Tags)); err != nil {
+			return err
+		}
+		for _, v := range p.Tags {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
 func (p *EvaluationSet) writeField30(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluationSetVersion() {
 		if err = oprot.WriteFieldBegin("evaluation_set_version", thrift.STRUCT, 30); err != nil {
@@ -1149,6 +2427,9 @@ func (p *EvaluationSet) DeepEqual(ano *EvaluationSet) bool {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.Type) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.Tags) {
 		return false
 	}
 	if !p.Field30DeepEqual(ano.EvaluationSetVersion) {
@@ -1297,6 +2578,19 @@ func (p *EvaluationSet) Field20DeepEqual(src *EvaluationSetType) bool {
 	}
 	if strings.Compare(*p.Type, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *EvaluationSet) Field21DeepEqual(src []*ResourceTag) bool {
+
+	if len(p.Tags) != len(src) {
+		return false
+	}
+	for i, v := range p.Tags {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }
@@ -3861,6 +5155,8 @@ type EvaluationSetItem struct {
 	ItemVersion      *string           `thrift:"item_version,21,optional" frugal:"21,optional,string" form:"item_version" json:"item_version,omitempty" query:"item_version"`
 	ItemVersionBrief *ItemVersionBrief `thrift:"item_version_brief,22,optional" frugal:"22,optional,ItemVersionBrief" form:"item_version_brief" json:"item_version_brief,omitempty" query:"item_version_brief"`
 	ItemStatus       *string           `thrift:"item_status,23,optional" frugal:"23,optional,string" form:"item_status" json:"item_status,omitempty" query:"item_status"`
+	// 资源标签，仅 with_tags=true 时返回
+	Tags []*ResourceTag `thrift:"tags,40,optional" frugal:"40,optional,list<ResourceTag>" form:"tags" json:"tags,omitempty" query:"tags"`
 	// 系统信息
 	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
@@ -4016,6 +5312,18 @@ func (p *EvaluationSetItem) GetItemStatus() (v string) {
 	return *p.ItemStatus
 }
 
+var EvaluationSetItem_Tags_DEFAULT []*ResourceTag
+
+func (p *EvaluationSetItem) GetTags() (v []*ResourceTag) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTags() {
+		return EvaluationSetItem_Tags_DEFAULT
+	}
+	return p.Tags
+}
+
 var EvaluationSetItem_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *EvaluationSetItem) GetBaseInfo() (v *common.BaseInfo) {
@@ -4063,6 +5371,9 @@ func (p *EvaluationSetItem) SetItemVersionBrief(val *ItemVersionBrief) {
 func (p *EvaluationSetItem) SetItemStatus(val *string) {
 	p.ItemStatus = val
 }
+func (p *EvaluationSetItem) SetTags(val []*ResourceTag) {
+	p.Tags = val
+}
 func (p *EvaluationSetItem) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -4080,6 +5391,7 @@ var fieldIDToName_EvaluationSetItem = map[int16]string{
 	21:  "item_version",
 	22:  "item_version_brief",
 	23:  "item_status",
+	40:  "tags",
 	100: "base_info",
 }
 
@@ -4129,6 +5441,10 @@ func (p *EvaluationSetItem) IsSetItemVersionBrief() bool {
 
 func (p *EvaluationSetItem) IsSetItemStatus() bool {
 	return p.ItemStatus != nil
+}
+
+func (p *EvaluationSetItem) IsSetTags() bool {
+	return p.Tags != nil
 }
 
 func (p *EvaluationSetItem) IsSetBaseInfo() bool {
@@ -4244,6 +5560,14 @@ func (p *EvaluationSetItem) Read(iprot thrift.TProtocol) (err error) {
 		case 23:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 40:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField40(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4427,6 +5751,29 @@ func (p *EvaluationSetItem) ReadField23(iprot thrift.TProtocol) error {
 	p.ItemStatus = _field
 	return nil
 }
+func (p *EvaluationSetItem) ReadField40(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ResourceTag, 0, size)
+	values := make([]ResourceTag, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Tags = _field
+	return nil
+}
 func (p *EvaluationSetItem) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -4488,6 +5835,10 @@ func (p *EvaluationSetItem) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField40(oprot); err != nil {
+			fieldId = 40
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -4736,6 +6087,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
 }
+func (p *EvaluationSetItem) writeField40(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTags() {
+		if err = oprot.WriteFieldBegin("tags", thrift.LIST, 40); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Tags)); err != nil {
+			return err
+		}
+		for _, v := range p.Tags {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
+}
 func (p *EvaluationSetItem) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -4803,6 +6180,9 @@ func (p *EvaluationSetItem) DeepEqual(ano *EvaluationSetItem) bool {
 		return false
 	}
 	if !p.Field23DeepEqual(ano.ItemStatus) {
+		return false
+	}
+	if !p.Field40DeepEqual(ano.Tags) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -4948,6 +6328,19 @@ func (p *EvaluationSetItem) Field23DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.ItemStatus, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *EvaluationSetItem) Field40DeepEqual(src []*ResourceTag) bool {
+
+	if len(p.Tags) != len(src) {
+		return false
+	}
+	for i, v := range p.Tags {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

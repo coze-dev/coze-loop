@@ -21,7 +21,6 @@ import (
 type MockExptSchedulerEvent struct {
 	ctrl     *gomock.Controller
 	recorder *MockExptSchedulerEventMockRecorder
-	isgomock struct{}
 }
 
 // MockExptSchedulerEventMockRecorder is the mock recorder for MockExptSchedulerEvent.
@@ -42,24 +41,23 @@ func (m *MockExptSchedulerEvent) EXPECT() *MockExptSchedulerEventMockRecorder {
 }
 
 // Schedule mocks base method.
-func (m *MockExptSchedulerEvent) Schedule(ctx context.Context, event *entity.ExptScheduleEvent) error {
+func (m *MockExptSchedulerEvent) Schedule(arg0 context.Context, arg1 *entity.ExptScheduleEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Schedule", ctx, event)
+	ret := m.ctrl.Call(m, "Schedule", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Schedule indicates an expected call of Schedule.
-func (mr *MockExptSchedulerEventMockRecorder) Schedule(ctx, event any) *gomock.Call {
+func (mr *MockExptSchedulerEventMockRecorder) Schedule(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockExptSchedulerEvent)(nil).Schedule), ctx, event)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockExptSchedulerEvent)(nil).Schedule), arg0, arg1)
 }
 
 // MockExptItemEvalEvent is a mock of ExptItemEvalEvent interface.
 type MockExptItemEvalEvent struct {
 	ctrl     *gomock.Controller
 	recorder *MockExptItemEvalEventMockRecorder
-	isgomock struct{}
 }
 
 // MockExptItemEvalEventMockRecorder is the mock recorder for MockExptItemEvalEvent.
@@ -80,24 +78,23 @@ func (m *MockExptItemEvalEvent) EXPECT() *MockExptItemEvalEventMockRecorder {
 }
 
 // Eval mocks base method.
-func (m *MockExptItemEvalEvent) Eval(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+func (m *MockExptItemEvalEvent) Eval(arg0 context.Context, arg1 *entity.ExptItemEvalEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Eval", ctx, event)
+	ret := m.ctrl.Call(m, "Eval", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Eval indicates an expected call of Eval.
-func (mr *MockExptItemEvalEventMockRecorder) Eval(ctx, event any) *gomock.Call {
+func (mr *MockExptItemEvalEventMockRecorder) Eval(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eval", reflect.TypeOf((*MockExptItemEvalEvent)(nil).Eval), ctx, event)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eval", reflect.TypeOf((*MockExptItemEvalEvent)(nil).Eval), arg0, arg1)
 }
 
 // MockQuotaService is a mock of QuotaService interface.
 type MockQuotaService struct {
 	ctrl     *gomock.Controller
 	recorder *MockQuotaServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockQuotaServiceMockRecorder is the mock recorder for MockQuotaService.
@@ -118,29 +115,29 @@ func (m *MockQuotaService) EXPECT() *MockQuotaServiceMockRecorder {
 }
 
 // AllowExptRun mocks base method.
-func (m *MockQuotaService) AllowExptRun(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
+func (m *MockQuotaService) AllowExptRun(arg0 context.Context, arg1, arg2 int64, arg3 *entity.Session) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AllowExptRun", ctx, exptID, spaceID, session)
+	ret := m.ctrl.Call(m, "AllowExptRun", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AllowExptRun indicates an expected call of AllowExptRun.
-func (mr *MockQuotaServiceMockRecorder) AllowExptRun(ctx, exptID, spaceID, session any) *gomock.Call {
+func (mr *MockQuotaServiceMockRecorder) AllowExptRun(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowExptRun", reflect.TypeOf((*MockQuotaService)(nil).AllowExptRun), ctx, exptID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowExptRun", reflect.TypeOf((*MockQuotaService)(nil).AllowExptRun), arg0, arg1, arg2, arg3)
 }
 
 // ReleaseExptRun mocks base method.
-func (m *MockQuotaService) ReleaseExptRun(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
+func (m *MockQuotaService) ReleaseExptRun(arg0 context.Context, arg1, arg2 int64, arg3 *entity.Session) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReleaseExptRun", ctx, exptID, spaceID, session)
+	ret := m.ctrl.Call(m, "ReleaseExptRun", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReleaseExptRun indicates an expected call of ReleaseExptRun.
-func (mr *MockQuotaServiceMockRecorder) ReleaseExptRun(ctx, exptID, spaceID, session any) *gomock.Call {
+func (mr *MockQuotaServiceMockRecorder) ReleaseExptRun(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseExptRun", reflect.TypeOf((*MockQuotaService)(nil).ReleaseExptRun), ctx, exptID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseExptRun", reflect.TypeOf((*MockQuotaService)(nil).ReleaseExptRun), arg0, arg1, arg2, arg3)
 }

@@ -21,7 +21,6 @@ import (
 type MockIExptResultExportService struct {
 	ctrl     *gomock.Controller
 	recorder *MockIExptResultExportServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockIExptResultExportServiceMockRecorder is the mock recorder for MockIExptResultExportService.
@@ -42,67 +41,67 @@ func (m *MockIExptResultExportService) EXPECT() *MockIExptResultExportServiceMoc
 }
 
 // DoExportCSV mocks base method.
-func (m *MockIExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptID int64, fileName string, withLogID bool, exportColumnSpec *entity.ExptResultExportColumnSpec) error {
+func (m *MockIExptResultExportService) DoExportCSV(arg0 context.Context, arg1, arg2 int64, arg3 string, arg4 bool, arg5 *entity.ExptResultExportColumnSpec) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DoExportCSV", ctx, spaceID, exptID, fileName, withLogID, exportColumnSpec)
+	ret := m.ctrl.Call(m, "DoExportCSV", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DoExportCSV indicates an expected call of DoExportCSV.
-func (mr *MockIExptResultExportServiceMockRecorder) DoExportCSV(ctx, spaceID, exptID, fileName, withLogID, exportColumnSpec any) *gomock.Call {
+func (mr *MockIExptResultExportServiceMockRecorder) DoExportCSV(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoExportCSV", reflect.TypeOf((*MockIExptResultExportService)(nil).DoExportCSV), ctx, spaceID, exptID, fileName, withLogID, exportColumnSpec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoExportCSV", reflect.TypeOf((*MockIExptResultExportService)(nil).DoExportCSV), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // ExportCSV mocks base method.
-func (m *MockIExptResultExportService) ExportCSV(ctx context.Context, spaceID, exptID int64, session *entity.Session, exportColumnSpec *entity.ExptResultExportColumnSpec) (int64, error) {
+func (m *MockIExptResultExportService) ExportCSV(arg0 context.Context, arg1, arg2 int64, arg3 *entity.Session, arg4 *entity.ExptResultExportColumnSpec) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExportCSV", ctx, spaceID, exptID, session, exportColumnSpec)
+	ret := m.ctrl.Call(m, "ExportCSV", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ExportCSV indicates an expected call of ExportCSV.
-func (mr *MockIExptResultExportServiceMockRecorder) ExportCSV(ctx, spaceID, exptID, session, exportColumnSpec any) *gomock.Call {
+func (mr *MockIExptResultExportServiceMockRecorder) ExportCSV(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportCSV", reflect.TypeOf((*MockIExptResultExportService)(nil).ExportCSV), ctx, spaceID, exptID, session, exportColumnSpec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportCSV", reflect.TypeOf((*MockIExptResultExportService)(nil).ExportCSV), arg0, arg1, arg2, arg3, arg4)
 }
 
 // GetExptExportRecord mocks base method.
-func (m *MockIExptResultExportService) GetExptExportRecord(ctx context.Context, spaceID, exportID int64) (*entity.ExptResultExportRecord, error) {
+func (m *MockIExptResultExportService) GetExptExportRecord(arg0 context.Context, arg1, arg2 int64) (*entity.ExptResultExportRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptExportRecord", ctx, spaceID, exportID)
+	ret := m.ctrl.Call(m, "GetExptExportRecord", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*entity.ExptResultExportRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetExptExportRecord indicates an expected call of GetExptExportRecord.
-func (mr *MockIExptResultExportServiceMockRecorder) GetExptExportRecord(ctx, spaceID, exportID any) *gomock.Call {
+func (mr *MockIExptResultExportServiceMockRecorder) GetExptExportRecord(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExportRecord", reflect.TypeOf((*MockIExptResultExportService)(nil).GetExptExportRecord), ctx, spaceID, exportID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExportRecord", reflect.TypeOf((*MockIExptResultExportService)(nil).GetExptExportRecord), arg0, arg1, arg2)
 }
 
 // HandleExportEvent mocks base method.
-func (m *MockIExptResultExportService) HandleExportEvent(ctx context.Context, event *entity.ExportCSVEvent) error {
+func (m *MockIExptResultExportService) HandleExportEvent(arg0 context.Context, arg1 *entity.ExportCSVEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleExportEvent", ctx, event)
+	ret := m.ctrl.Call(m, "HandleExportEvent", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleExportEvent indicates an expected call of HandleExportEvent.
-func (mr *MockIExptResultExportServiceMockRecorder) HandleExportEvent(ctx, event any) *gomock.Call {
+func (mr *MockIExptResultExportServiceMockRecorder) HandleExportEvent(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleExportEvent", reflect.TypeOf((*MockIExptResultExportService)(nil).HandleExportEvent), ctx, event)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleExportEvent", reflect.TypeOf((*MockIExptResultExportService)(nil).HandleExportEvent), arg0, arg1)
 }
 
 // ListExportRecord mocks base method.
-func (m *MockIExptResultExportService) ListExportRecord(ctx context.Context, spaceID, exptID int64, page entity.Page) ([]*entity.ExptResultExportRecord, int64, error) {
+func (m *MockIExptResultExportService) ListExportRecord(arg0 context.Context, arg1, arg2 int64, arg3 entity.Page) ([]*entity.ExptResultExportRecord, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListExportRecord", ctx, spaceID, exptID, page)
+	ret := m.ctrl.Call(m, "ListExportRecord", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*entity.ExptResultExportRecord)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -110,21 +109,21 @@ func (m *MockIExptResultExportService) ListExportRecord(ctx context.Context, spa
 }
 
 // ListExportRecord indicates an expected call of ListExportRecord.
-func (mr *MockIExptResultExportServiceMockRecorder) ListExportRecord(ctx, spaceID, exptID, page any) *gomock.Call {
+func (mr *MockIExptResultExportServiceMockRecorder) ListExportRecord(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExportRecord", reflect.TypeOf((*MockIExptResultExportService)(nil).ListExportRecord), ctx, spaceID, exptID, page)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExportRecord", reflect.TypeOf((*MockIExptResultExportService)(nil).ListExportRecord), arg0, arg1, arg2, arg3)
 }
 
 // UpdateExportRecord mocks base method.
-func (m *MockIExptResultExportService) UpdateExportRecord(ctx context.Context, exportRecord *entity.ExptResultExportRecord) error {
+func (m *MockIExptResultExportService) UpdateExportRecord(arg0 context.Context, arg1 *entity.ExptResultExportRecord) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateExportRecord", ctx, exportRecord)
+	ret := m.ctrl.Call(m, "UpdateExportRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateExportRecord indicates an expected call of UpdateExportRecord.
-func (mr *MockIExptResultExportServiceMockRecorder) UpdateExportRecord(ctx, exportRecord any) *gomock.Call {
+func (mr *MockIExptResultExportServiceMockRecorder) UpdateExportRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExportRecord", reflect.TypeOf((*MockIExptResultExportService)(nil).UpdateExportRecord), ctx, exportRecord)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExportRecord", reflect.TypeOf((*MockIExptResultExportService)(nil).UpdateExportRecord), arg0, arg1)
 }

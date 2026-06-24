@@ -366,6 +366,27 @@ func (l *LocalEvaluationSetService) ListEvaluationSetItems(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationSetService) GetEvaluationSetItem(ctx context.Context, req *eval_set.GetEvaluationSetItemRequest, callOptions ...callopt.Option) (*eval_set.GetEvaluationSetItemResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceGetEvaluationSetItemArgs)
+		result := out.(*eval_set.EvaluationSetServiceGetEvaluationSetItemResult)
+		resp, err := l.impl.GetEvaluationSetItem(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceGetEvaluationSetItemArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceGetEvaluationSetItemResult{}
+	ctx = l.injectRPCInfo(ctx, "GetEvaluationSetItem")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationSetService) BatchGetEvaluationSetItems(ctx context.Context, req *eval_set.BatchGetEvaluationSetItemsRequest, callOptions ...callopt.Option) (*eval_set.BatchGetEvaluationSetItemsResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*eval_set.EvaluationSetServiceBatchGetEvaluationSetItemsArgs)

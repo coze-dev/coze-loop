@@ -21,7 +21,6 @@ import (
 type MockIExptScheduleAdapter struct {
 	ctrl     *gomock.Controller
 	recorder *MockIExptScheduleAdapterMockRecorder
-	isgomock struct{}
 }
 
 // MockIExptScheduleAdapterMockRecorder is the mock recorder for MockIExptScheduleAdapter.
@@ -42,44 +41,44 @@ func (m *MockIExptScheduleAdapter) EXPECT() *MockIExptScheduleAdapterMockRecorde
 }
 
 // CloseJob mocks base method.
-func (m *MockIExptScheduleAdapter) CloseJob(ctx context.Context, bizKey string) error {
+func (m *MockIExptScheduleAdapter) CloseJob(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CloseJob", ctx, bizKey)
+	ret := m.ctrl.Call(m, "CloseJob", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CloseJob indicates an expected call of CloseJob.
-func (mr *MockIExptScheduleAdapterMockRecorder) CloseJob(ctx, bizKey any) *gomock.Call {
+func (mr *MockIExptScheduleAdapterMockRecorder) CloseJob(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseJob", reflect.TypeOf((*MockIExptScheduleAdapter)(nil).CloseJob), ctx, bizKey)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseJob", reflect.TypeOf((*MockIExptScheduleAdapter)(nil).CloseJob), arg0, arg1)
 }
 
 // CreatePeriodicJob mocks base method.
-func (m *MockIExptScheduleAdapter) CreatePeriodicJob(ctx context.Context, param *rpc.CreatePeriodicJobParam) error {
+func (m *MockIExptScheduleAdapter) CreatePeriodicJob(arg0 context.Context, arg1 *rpc.CreatePeriodicJobParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePeriodicJob", ctx, param)
+	ret := m.ctrl.Call(m, "CreatePeriodicJob", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreatePeriodicJob indicates an expected call of CreatePeriodicJob.
-func (mr *MockIExptScheduleAdapterMockRecorder) CreatePeriodicJob(ctx, param any) *gomock.Call {
+func (mr *MockIExptScheduleAdapterMockRecorder) CreatePeriodicJob(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePeriodicJob", reflect.TypeOf((*MockIExptScheduleAdapter)(nil).CreatePeriodicJob), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePeriodicJob", reflect.TypeOf((*MockIExptScheduleAdapter)(nil).CreatePeriodicJob), arg0, arg1)
 }
 
 // GetJob mocks base method.
-func (m *MockIExptScheduleAdapter) GetJob(ctx context.Context, bizKey string) (*rpc.ScheduleJobDetail, error) {
+func (m *MockIExptScheduleAdapter) GetJob(arg0 context.Context, arg1 string) (*rpc.ScheduleJobDetail, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetJob", ctx, bizKey)
+	ret := m.ctrl.Call(m, "GetJob", arg0, arg1)
 	ret0, _ := ret[0].(*rpc.ScheduleJobDetail)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetJob indicates an expected call of GetJob.
-func (mr *MockIExptScheduleAdapterMockRecorder) GetJob(ctx, bizKey any) *gomock.Call {
+func (mr *MockIExptScheduleAdapterMockRecorder) GetJob(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJob", reflect.TypeOf((*MockIExptScheduleAdapter)(nil).GetJob), ctx, bizKey)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJob", reflect.TypeOf((*MockIExptScheduleAdapter)(nil).GetJob), arg0, arg1)
 }

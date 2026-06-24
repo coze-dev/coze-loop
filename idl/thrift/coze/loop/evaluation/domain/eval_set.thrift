@@ -1,7 +1,35 @@
 namespace go coze.loop.evaluation.domain.eval_set
 
 include "../../data/domain/dataset.thrift"
+include "../../data/domain/tag.thrift"
 include "common.thrift"
+
+typedef string TagFilterRelation(ts.enum="true")
+const TagFilterRelation TagFilterRelation_AND = "and"
+const TagFilterRelation TagFilterRelation_OR = "or"
+
+// ResourceTagRef is the write/filter shape for resource tags.
+// tag_value_id can be omitted to bind or filter by tag key only.
+struct ResourceTagRef {
+    1: required i64 tag_key_id (api.js_conv='true', go.tag='json:"tag_key_id"'),
+    2: optional i64 tag_value_id (api.js_conv='true', go.tag='json:"tag_value_id"')
+}
+
+// ResourceTag is the read shape for resource tags, enriched from tag service.
+struct ResourceTag {
+    1: required i64 tag_key_id (api.js_conv='true', go.tag='json:"tag_key_id"'),
+    2: optional string tag_key_name,
+    3: optional i64 tag_value_id (api.js_conv='true', go.tag='json:"tag_value_id"'),
+    4: optional string tag_value_name,
+    5: optional tag.TagContentType content_type,
+    6: optional tag.TagStatus status
+}
+
+struct TagFilter {
+    1: optional list<i64> tag_key_ids (api.js_conv='true', go.tag='json:"tag_key_ids"'),
+    2: optional list<ResourceTagRef> tags,
+    3: optional TagFilterRelation relation
+}
 
 struct EvaluationSet {
     // 主键&外键
@@ -19,6 +47,7 @@ struct EvaluationSet {
     16: optional bool change_uncommitted           // 是否有未提交的修改
     17: optional BizCategory biz_category               // 业务分类
     20: optional EvaluationSetType type                 // 评测集类型
+    21: optional list<ResourceTag> tags                  // 资源标签，仅 with_tags=true 时返回
 
     // 版本信息
     30: optional EvaluationSetVersion evaluation_set_version,  // 版本详情信息
@@ -97,6 +126,7 @@ struct EvaluationSetItem {
     21: optional string item_version,
     22: optional ItemVersionBrief item_version_brief,
     23: optional string item_status,
+    40: optional list<ResourceTag> tags,                 // 资源标签，仅 with_tags=true 时返回
 
     // 系统信息
     100: optional common.BaseInfo base_info

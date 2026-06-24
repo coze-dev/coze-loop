@@ -21,7 +21,6 @@ import (
 type MockIAuthProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockIAuthProviderMockRecorder
-	isgomock struct{}
 }
 
 // MockIAuthProviderMockRecorder is the mock recorder for MockIAuthProvider.
@@ -42,43 +41,43 @@ func (m *MockIAuthProvider) EXPECT() *MockIAuthProviderMockRecorder {
 }
 
 // Authorization mocks base method.
-func (m *MockIAuthProvider) Authorization(ctx context.Context, param *rpc.AuthorizationParam) error {
+func (m *MockIAuthProvider) Authorization(arg0 context.Context, arg1 *rpc.AuthorizationParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Authorization", ctx, param)
+	ret := m.ctrl.Call(m, "Authorization", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Authorization indicates an expected call of Authorization.
-func (mr *MockIAuthProviderMockRecorder) Authorization(ctx, param any) *gomock.Call {
+func (mr *MockIAuthProviderMockRecorder) Authorization(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Authorization", reflect.TypeOf((*MockIAuthProvider)(nil).Authorization), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Authorization", reflect.TypeOf((*MockIAuthProvider)(nil).Authorization), arg0, arg1)
 }
 
 // AuthorizationWithoutSPI mocks base method.
-func (m *MockIAuthProvider) AuthorizationWithoutSPI(ctx context.Context, param *rpc.AuthorizationWithoutSPIParam) error {
+func (m *MockIAuthProvider) AuthorizationWithoutSPI(arg0 context.Context, arg1 *rpc.AuthorizationWithoutSPIParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AuthorizationWithoutSPI", ctx, param)
+	ret := m.ctrl.Call(m, "AuthorizationWithoutSPI", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AuthorizationWithoutSPI indicates an expected call of AuthorizationWithoutSPI.
-func (mr *MockIAuthProviderMockRecorder) AuthorizationWithoutSPI(ctx, param any) *gomock.Call {
+func (mr *MockIAuthProviderMockRecorder) AuthorizationWithoutSPI(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationWithoutSPI", reflect.TypeOf((*MockIAuthProvider)(nil).AuthorizationWithoutSPI), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthorizationWithoutSPI", reflect.TypeOf((*MockIAuthProvider)(nil).AuthorizationWithoutSPI), arg0, arg1)
 }
 
 // MAuthorizeWithoutSPI mocks base method.
-func (m *MockIAuthProvider) MAuthorizeWithoutSPI(ctx context.Context, spaceID int64, params []*rpc.AuthorizationWithoutSPIParam) error {
+func (m *MockIAuthProvider) MAuthorizeWithoutSPI(arg0 context.Context, arg1 int64, arg2 []*rpc.AuthorizationWithoutSPIParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MAuthorizeWithoutSPI", ctx, spaceID, params)
+	ret := m.ctrl.Call(m, "MAuthorizeWithoutSPI", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MAuthorizeWithoutSPI indicates an expected call of MAuthorizeWithoutSPI.
-func (mr *MockIAuthProviderMockRecorder) MAuthorizeWithoutSPI(ctx, spaceID, params any) *gomock.Call {
+func (mr *MockIAuthProviderMockRecorder) MAuthorizeWithoutSPI(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MAuthorizeWithoutSPI", reflect.TypeOf((*MockIAuthProvider)(nil).MAuthorizeWithoutSPI), ctx, spaceID, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MAuthorizeWithoutSPI", reflect.TypeOf((*MockIAuthProvider)(nil).MAuthorizeWithoutSPI), arg0, arg1, arg2)
 }

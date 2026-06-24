@@ -21,7 +21,6 @@ import (
 type MockIEvaluatorScoreCalculator struct {
 	ctrl     *gomock.Controller
 	recorder *MockIEvaluatorScoreCalculatorMockRecorder
-	isgomock struct{}
 }
 
 // MockIEvaluatorScoreCalculatorMockRecorder is the mock recorder for MockIEvaluatorScoreCalculator.
@@ -42,15 +41,15 @@ func (m *MockIEvaluatorScoreCalculator) EXPECT() *MockIEvaluatorScoreCalculatorM
 }
 
 // CalculateWeightedScore mocks base method.
-func (m *MockIEvaluatorScoreCalculator) CalculateWeightedScore(ctx context.Context, expt *entity.Experiment, version2Record map[int64]*entity.EvaluatorRecord, scoreWeights map[int64]float64) *float64 {
+func (m *MockIEvaluatorScoreCalculator) CalculateWeightedScore(arg0 context.Context, arg1 *entity.Experiment, arg2 map[int64]*entity.EvaluatorRecord, arg3 map[int64]float64) *float64 {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CalculateWeightedScore", ctx, expt, version2Record, scoreWeights)
+	ret := m.ctrl.Call(m, "CalculateWeightedScore", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*float64)
 	return ret0
 }
 
 // CalculateWeightedScore indicates an expected call of CalculateWeightedScore.
-func (mr *MockIEvaluatorScoreCalculatorMockRecorder) CalculateWeightedScore(ctx, expt, version2Record, scoreWeights any) *gomock.Call {
+func (mr *MockIEvaluatorScoreCalculatorMockRecorder) CalculateWeightedScore(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateWeightedScore", reflect.TypeOf((*MockIEvaluatorScoreCalculator)(nil).CalculateWeightedScore), ctx, expt, version2Record, scoreWeights)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateWeightedScore", reflect.TypeOf((*MockIEvaluatorScoreCalculator)(nil).CalculateWeightedScore), arg0, arg1, arg2, arg3)
 }

@@ -81,6 +81,7 @@ struct UpdateEvaluationSetRequest {
 
     3: optional string name (vt.min_size = "1", vt.max_size = "255"),
     4: optional string description (vt.max_size = "2048"),
+    20: optional list<eval_set.ResourceTagRef> tags,
 
     255: optional base.Base Base
 }
@@ -106,6 +107,7 @@ struct GetEvaluationSetRequest {
     1: required i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
     3: optional bool deleted_at (api.query='deleted_at'),
+    4: optional bool with_tags (api.query='with_tags'),
 
     255: optional base.Base Base
 }
@@ -123,6 +125,8 @@ struct ListEvaluationSetsRequest {
     3: optional list<string> creators,
     4: optional list<i64> evaluation_set_ids (api.js_conv="true", go.tag='json:"evaluation_set_ids"'),
     5: optional eval_set.EvaluationSetType type (vt.max_size = "128"), // 按评测集类型过滤
+    20: optional bool with_tags,
+    21: optional eval_set.TagFilter tag_filter,
 
     100: optional i32 page_number (vt.gt = "0"),
     101: optional i32 page_size (vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20
@@ -263,6 +267,7 @@ struct UpdateEvaluationSetItemRequest {
     21: optional string item_version_description (vt.max_size = "2048")
     22: optional string item_version_status (vt.max_size = "64")
     23: optional string item_status (vt.max_size = "64")
+    30: optional list<eval_set.ResourceTagRef> tags
 
     255: optional base.Base Base
 }
@@ -309,6 +314,8 @@ struct ListEvaluationSetItemsRequest {
     200: optional list<i64> item_id_not_in (api.js_conv="true", go.tag='json:"item_id_not_in"')
     201: optional filter.Filter filter // item 过滤条件
     210: optional bool include_item_version_info // 是否返回 item_version_brief，默认 false
+    211: optional bool with_tags
+    212: optional eval_set.TagFilter tag_filter
 
     255: optional base.Base Base
 }
@@ -327,6 +334,7 @@ struct GetEvaluationSetItemRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
     3: required i64 item_id (api.path = "item_id", api.js_conv="true", go.tag='json:"item_id"'),
+    10: optional bool with_tags (api.query='with_tags')
 
     255: optional base.Base Base
 }
@@ -344,6 +352,7 @@ struct BatchGetEvaluationSetItemsRequest {
     3: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"'),
     4: optional list<i64> item_ids (api.js_conv = 'true', go.tag='json:"item_ids"'),
     20: optional list<EvaluationItemVersionRef> item_version_queries (vt.max_size = "100", vt.elem.skip = "false")
+    30: optional bool with_tags
 
     255: optional base.Base Base
 }
@@ -588,6 +597,9 @@ service EvaluationSetService {
     )
     ListEvaluationSetItemsResponse ListEvaluationSetItems(1: ListEvaluationSetItemsRequest req) (
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/list", api.op_type = 'list', api.tag = 'volc-agentkit,open'
+    )
+    GetEvaluationSetItemResponse GetEvaluationSetItem(1: GetEvaluationSetItemRequest req) (
+        api.category="evaluation_set", api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id", api.op_type = 'query', api.tag = 'volc-agentkit'
     )
     BatchGetEvaluationSetItemsResponse BatchGetEvaluationSetItems(1: BatchGetEvaluationSetItemsRequest req) (
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit'

@@ -21,6 +21,15 @@ var (
 	_ = time.Nanosecond
 )
 
+func (p *ResourceTagRef) IsValid() error {
+	return nil
+}
+func (p *ResourceTag) IsValid() error {
+	return nil
+}
+func (p *TagFilter) IsValid() error {
+	return nil
+}
 func (p *EvaluationSet) IsValid() error {
 	if p.Spec != nil {
 		if err := p.Spec.IsValid(); err != nil {

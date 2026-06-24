@@ -21,7 +21,6 @@ import (
 type MockEvaluatorTemplateService struct {
 	ctrl     *gomock.Controller
 	recorder *MockEvaluatorTemplateServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockEvaluatorTemplateServiceMockRecorder is the mock recorder for MockEvaluatorTemplateService.
@@ -42,76 +41,76 @@ func (m *MockEvaluatorTemplateService) EXPECT() *MockEvaluatorTemplateServiceMoc
 }
 
 // CreateEvaluatorTemplate mocks base method.
-func (m *MockEvaluatorTemplateService) CreateEvaluatorTemplate(ctx context.Context, req *entity.CreateEvaluatorTemplateRequest) (*entity.CreateEvaluatorTemplateResponse, error) {
+func (m *MockEvaluatorTemplateService) CreateEvaluatorTemplate(arg0 context.Context, arg1 *entity.CreateEvaluatorTemplateRequest) (*entity.CreateEvaluatorTemplateResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateEvaluatorTemplate", ctx, req)
+	ret := m.ctrl.Call(m, "CreateEvaluatorTemplate", arg0, arg1)
 	ret0, _ := ret[0].(*entity.CreateEvaluatorTemplateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateEvaluatorTemplate indicates an expected call of CreateEvaluatorTemplate.
-func (mr *MockEvaluatorTemplateServiceMockRecorder) CreateEvaluatorTemplate(ctx, req any) *gomock.Call {
+func (mr *MockEvaluatorTemplateServiceMockRecorder) CreateEvaluatorTemplate(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).CreateEvaluatorTemplate), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).CreateEvaluatorTemplate), arg0, arg1)
 }
 
 // DeleteEvaluatorTemplate mocks base method.
-func (m *MockEvaluatorTemplateService) DeleteEvaluatorTemplate(ctx context.Context, req *entity.DeleteEvaluatorTemplateRequest) (*entity.DeleteEvaluatorTemplateResponse, error) {
+func (m *MockEvaluatorTemplateService) DeleteEvaluatorTemplate(arg0 context.Context, arg1 *entity.DeleteEvaluatorTemplateRequest) (*entity.DeleteEvaluatorTemplateResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteEvaluatorTemplate", ctx, req)
+	ret := m.ctrl.Call(m, "DeleteEvaluatorTemplate", arg0, arg1)
 	ret0, _ := ret[0].(*entity.DeleteEvaluatorTemplateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DeleteEvaluatorTemplate indicates an expected call of DeleteEvaluatorTemplate.
-func (mr *MockEvaluatorTemplateServiceMockRecorder) DeleteEvaluatorTemplate(ctx, req any) *gomock.Call {
+func (mr *MockEvaluatorTemplateServiceMockRecorder) DeleteEvaluatorTemplate(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).DeleteEvaluatorTemplate), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).DeleteEvaluatorTemplate), arg0, arg1)
 }
 
 // GetEvaluatorTemplate mocks base method.
-func (m *MockEvaluatorTemplateService) GetEvaluatorTemplate(ctx context.Context, req *entity.GetEvaluatorTemplateRequest) (*entity.GetEvaluatorTemplateResponse, error) {
+func (m *MockEvaluatorTemplateService) GetEvaluatorTemplate(arg0 context.Context, arg1 *entity.GetEvaluatorTemplateRequest) (*entity.GetEvaluatorTemplateResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvaluatorTemplate", ctx, req)
+	ret := m.ctrl.Call(m, "GetEvaluatorTemplate", arg0, arg1)
 	ret0, _ := ret[0].(*entity.GetEvaluatorTemplateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetEvaluatorTemplate indicates an expected call of GetEvaluatorTemplate.
-func (mr *MockEvaluatorTemplateServiceMockRecorder) GetEvaluatorTemplate(ctx, req any) *gomock.Call {
+func (mr *MockEvaluatorTemplateServiceMockRecorder) GetEvaluatorTemplate(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).GetEvaluatorTemplate), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).GetEvaluatorTemplate), arg0, arg1)
 }
 
 // ListEvaluatorTemplate mocks base method.
-func (m *MockEvaluatorTemplateService) ListEvaluatorTemplate(ctx context.Context, req *entity.ListEvaluatorTemplateRequest) (*entity.ListEvaluatorTemplateResponse, error) {
+func (m *MockEvaluatorTemplateService) ListEvaluatorTemplate(arg0 context.Context, arg1 *entity.ListEvaluatorTemplateRequest) (*entity.ListEvaluatorTemplateResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEvaluatorTemplate", ctx, req)
+	ret := m.ctrl.Call(m, "ListEvaluatorTemplate", arg0, arg1)
 	ret0, _ := ret[0].(*entity.ListEvaluatorTemplateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListEvaluatorTemplate indicates an expected call of ListEvaluatorTemplate.
-func (mr *MockEvaluatorTemplateServiceMockRecorder) ListEvaluatorTemplate(ctx, req any) *gomock.Call {
+func (mr *MockEvaluatorTemplateServiceMockRecorder) ListEvaluatorTemplate(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).ListEvaluatorTemplate), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).ListEvaluatorTemplate), arg0, arg1)
 }
 
 // UpdateEvaluatorTemplate mocks base method.
-func (m *MockEvaluatorTemplateService) UpdateEvaluatorTemplate(ctx context.Context, req *entity.UpdateEvaluatorTemplateRequest) (*entity.UpdateEvaluatorTemplateResponse, error) {
+func (m *MockEvaluatorTemplateService) UpdateEvaluatorTemplate(arg0 context.Context, arg1 *entity.UpdateEvaluatorTemplateRequest) (*entity.UpdateEvaluatorTemplateResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEvaluatorTemplate", ctx, req)
+	ret := m.ctrl.Call(m, "UpdateEvaluatorTemplate", arg0, arg1)
 	ret0, _ := ret[0].(*entity.UpdateEvaluatorTemplateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateEvaluatorTemplate indicates an expected call of UpdateEvaluatorTemplate.
-func (mr *MockEvaluatorTemplateServiceMockRecorder) UpdateEvaluatorTemplate(ctx, req any) *gomock.Call {
+func (mr *MockEvaluatorTemplateServiceMockRecorder) UpdateEvaluatorTemplate(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).UpdateEvaluatorTemplate), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateService)(nil).UpdateEvaluatorTemplate), arg0, arg1)
 }

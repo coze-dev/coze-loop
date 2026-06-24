@@ -21,7 +21,6 @@ import (
 type MockIPipelineListAdapter struct {
 	ctrl     *gomock.Controller
 	recorder *MockIPipelineListAdapterMockRecorder
-	isgomock struct{}
 }
 
 // MockIPipelineListAdapterMockRecorder is the mock recorder for MockIPipelineListAdapter.
@@ -42,30 +41,30 @@ func (m *MockIPipelineListAdapter) EXPECT() *MockIPipelineListAdapterMockRecorde
 }
 
 // ListPipelineFlow mocks base method.
-func (m *MockIPipelineListAdapter) ListPipelineFlow(ctx context.Context, req *rpc.ListPipelineFlowRequest) (*rpc.ListPipelineFlowResponse, error) {
+func (m *MockIPipelineListAdapter) ListPipelineFlow(arg0 context.Context, arg1 *rpc.ListPipelineFlowRequest) (*rpc.ListPipelineFlowResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPipelineFlow", ctx, req)
+	ret := m.ctrl.Call(m, "ListPipelineFlow", arg0, arg1)
 	ret0, _ := ret[0].(*rpc.ListPipelineFlowResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListPipelineFlow indicates an expected call of ListPipelineFlow.
-func (mr *MockIPipelineListAdapterMockRecorder) ListPipelineFlow(ctx, req any) *gomock.Call {
+func (mr *MockIPipelineListAdapterMockRecorder) ListPipelineFlow(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineFlow", reflect.TypeOf((*MockIPipelineListAdapter)(nil).ListPipelineFlow), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineFlow", reflect.TypeOf((*MockIPipelineListAdapter)(nil).ListPipelineFlow), arg0, arg1)
 }
 
 // PipelineNodeFinishCallback mocks base method.
-func (m *MockIPipelineListAdapter) PipelineNodeFinishCallback(ctx context.Context, experimentID, spaceID int64) error {
+func (m *MockIPipelineListAdapter) PipelineNodeFinishCallback(arg0 context.Context, arg1, arg2 int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PipelineNodeFinishCallback", ctx, experimentID, spaceID)
+	ret := m.ctrl.Call(m, "PipelineNodeFinishCallback", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PipelineNodeFinishCallback indicates an expected call of PipelineNodeFinishCallback.
-func (mr *MockIPipelineListAdapterMockRecorder) PipelineNodeFinishCallback(ctx, experimentID, spaceID any) *gomock.Call {
+func (mr *MockIPipelineListAdapterMockRecorder) PipelineNodeFinishCallback(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineNodeFinishCallback", reflect.TypeOf((*MockIPipelineListAdapter)(nil).PipelineNodeFinishCallback), ctx, experimentID, spaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineNodeFinishCallback", reflect.TypeOf((*MockIPipelineListAdapter)(nil).PipelineNodeFinishCallback), arg0, arg1, arg2)
 }

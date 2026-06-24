@@ -126,6 +126,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetEvaluationSetItem": kitex.NewMethodInfo(
+		getEvaluationSetItemHandler,
+		newEvaluationSetServiceGetEvaluationSetItemArgs,
+		newEvaluationSetServiceGetEvaluationSetItemResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"BatchGetEvaluationSetItems": kitex.NewMethodInfo(
 		batchGetEvaluationSetItemsHandler,
 		newEvaluationSetServiceBatchGetEvaluationSetItemsArgs,
@@ -540,6 +547,25 @@ func newEvaluationSetServiceListEvaluationSetItemsResult() interface{} {
 	return eval_set.NewEvaluationSetServiceListEvaluationSetItemsResult()
 }
 
+func getEvaluationSetItemHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceGetEvaluationSetItemArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceGetEvaluationSetItemResult)
+	success, err := handler.(eval_set.EvaluationSetService).GetEvaluationSetItem(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceGetEvaluationSetItemArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemArgs()
+}
+
+func newEvaluationSetServiceGetEvaluationSetItemResult() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemResult()
+}
+
 func batchGetEvaluationSetItemsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*eval_set.EvaluationSetServiceBatchGetEvaluationSetItemsArgs)
 	realResult := result.(*eval_set.EvaluationSetServiceBatchGetEvaluationSetItemsResult)
@@ -916,6 +942,16 @@ func (p *kClient) ListEvaluationSetItems(ctx context.Context, req *eval_set.List
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceListEvaluationSetItemsResult
 	if err = p.c.Call(ctx, "ListEvaluationSetItems", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvaluationSetItem(ctx context.Context, req *eval_set.GetEvaluationSetItemRequest) (r *eval_set.GetEvaluationSetItemResponse, err error) {
+	var _args eval_set.EvaluationSetServiceGetEvaluationSetItemArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceGetEvaluationSetItemResult
+	if err = p.c.Call(ctx, "GetEvaluationSetItem", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

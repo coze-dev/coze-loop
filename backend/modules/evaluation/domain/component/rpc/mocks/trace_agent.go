@@ -22,7 +22,6 @@ import (
 type MockIAgentAdapter struct {
 	ctrl     *gomock.Controller
 	recorder *MockIAgentAdapterMockRecorder
-	isgomock struct{}
 }
 
 // MockIAgentAdapterMockRecorder is the mock recorder for MockIAgentAdapter.
@@ -43,24 +42,24 @@ func (m *MockIAgentAdapter) EXPECT() *MockIAgentAdapterMockRecorder {
 }
 
 // CallTraceAgent mocks base method.
-func (m *MockIAgentAdapter) CallTraceAgent(ctx context.Context, param *rpc.CallTraceAgentParam) (int64, error) {
+func (m *MockIAgentAdapter) CallTraceAgent(arg0 context.Context, arg1 *rpc.CallTraceAgentParam) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CallTraceAgent", ctx, param)
+	ret := m.ctrl.Call(m, "CallTraceAgent", arg0, arg1)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CallTraceAgent indicates an expected call of CallTraceAgent.
-func (mr *MockIAgentAdapterMockRecorder) CallTraceAgent(ctx, param any) *gomock.Call {
+func (mr *MockIAgentAdapterMockRecorder) CallTraceAgent(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallTraceAgent", reflect.TypeOf((*MockIAgentAdapter)(nil).CallTraceAgent), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallTraceAgent", reflect.TypeOf((*MockIAgentAdapter)(nil).CallTraceAgent), arg0, arg1)
 }
 
 // GetReport mocks base method.
-func (m *MockIAgentAdapter) GetReport(ctx context.Context, spaceID, reportID int64) (string, []*entity.InsightAnalysisReportIndex, entity.ReportStatus, error) {
+func (m *MockIAgentAdapter) GetReport(arg0 context.Context, arg1, arg2 int64) (string, []*entity.InsightAnalysisReportIndex, entity.ReportStatus, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetReport", ctx, spaceID, reportID)
+	ret := m.ctrl.Call(m, "GetReport", arg0, arg1, arg2)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].([]*entity.InsightAnalysisReportIndex)
 	ret2, _ := ret[2].(entity.ReportStatus)
@@ -69,7 +68,7 @@ func (m *MockIAgentAdapter) GetReport(ctx context.Context, spaceID, reportID int
 }
 
 // GetReport indicates an expected call of GetReport.
-func (mr *MockIAgentAdapterMockRecorder) GetReport(ctx, spaceID, reportID any) *gomock.Call {
+func (mr *MockIAgentAdapterMockRecorder) GetReport(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReport", reflect.TypeOf((*MockIAgentAdapter)(nil).GetReport), ctx, spaceID, reportID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReport", reflect.TypeOf((*MockIAgentAdapter)(nil).GetReport), arg0, arg1, arg2)
 }

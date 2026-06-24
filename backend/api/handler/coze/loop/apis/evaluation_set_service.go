@@ -253,3 +253,19 @@ func UpdateEvaluationSetItemVersion(ctx context.Context, c *app.RequestContext) 
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// GetEvaluationSetItem .
+// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id [GET]
+func GetEvaluationSetItem(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req eval_set.GetEvaluationSetItemRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(eval_set.GetEvaluationSetItemResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

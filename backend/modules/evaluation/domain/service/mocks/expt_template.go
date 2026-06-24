@@ -21,7 +21,6 @@ import (
 type MockIExptTemplateManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockIExptTemplateManagerMockRecorder
-	isgomock struct{}
 }
 
 // MockIExptTemplateManagerMockRecorder is the mock recorder for MockIExptTemplateManager.
@@ -42,68 +41,68 @@ func (m *MockIExptTemplateManager) EXPECT() *MockIExptTemplateManagerMockRecorde
 }
 
 // CheckName mocks base method.
-func (m *MockIExptTemplateManager) CheckName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType, session *entity.Session) (bool, error) {
+func (m *MockIExptTemplateManager) CheckName(arg0 context.Context, arg1 string, arg2 int64, arg3 entity.ExptType, arg4 *entity.Session) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckName", ctx, name, spaceID, exptType, session)
+	ret := m.ctrl.Call(m, "CheckName", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CheckName indicates an expected call of CheckName.
-func (mr *MockIExptTemplateManagerMockRecorder) CheckName(ctx, name, spaceID, exptType, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) CheckName(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckName", reflect.TypeOf((*MockIExptTemplateManager)(nil).CheckName), ctx, name, spaceID, exptType, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckName", reflect.TypeOf((*MockIExptTemplateManager)(nil).CheckName), arg0, arg1, arg2, arg3, arg4)
 }
 
 // Create mocks base method.
-func (m *MockIExptTemplateManager) Create(ctx context.Context, param *entity.CreateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
+func (m *MockIExptTemplateManager) Create(arg0 context.Context, arg1 *entity.CreateExptTemplateParam, arg2 *entity.Session) (*entity.ExptTemplate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, param, session)
+	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*entity.ExptTemplate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockIExptTemplateManagerMockRecorder) Create(ctx, param, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) Create(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockIExptTemplateManager)(nil).Create), ctx, param, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockIExptTemplateManager)(nil).Create), arg0, arg1, arg2)
 }
 
 // Delete mocks base method.
-func (m *MockIExptTemplateManager) Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error {
+func (m *MockIExptTemplateManager) Delete(arg0 context.Context, arg1, arg2 int64, arg3 *entity.Session) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, templateID, spaceID, session)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockIExptTemplateManagerMockRecorder) Delete(ctx, templateID, spaceID, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) Delete(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockIExptTemplateManager)(nil).Delete), ctx, templateID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockIExptTemplateManager)(nil).Delete), arg0, arg1, arg2, arg3)
 }
 
 // Get mocks base method.
-func (m *MockIExptTemplateManager) Get(ctx context.Context, templateID, spaceID int64, session *entity.Session) (*entity.ExptTemplate, error) {
+func (m *MockIExptTemplateManager) Get(arg0 context.Context, arg1, arg2 int64, arg3 *entity.Session) (*entity.ExptTemplate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, templateID, spaceID, session)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*entity.ExptTemplate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockIExptTemplateManagerMockRecorder) Get(ctx, templateID, spaceID, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIExptTemplateManager)(nil).Get), ctx, templateID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIExptTemplateManager)(nil).Get), arg0, arg1, arg2, arg3)
 }
 
 // List mocks base method.
-func (m *MockIExptTemplateManager) List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
+func (m *MockIExptTemplateManager) List(arg0 context.Context, arg1, arg2 int32, arg3 int64, arg4 *entity.ExptTemplateListFilter, arg5 []*entity.OrderBy, arg6 *entity.Session) ([]*entity.ExptTemplate, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, page, pageSize, spaceID, filter, orderBys, session)
+	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].([]*entity.ExptTemplate)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -111,15 +110,15 @@ func (m *MockIExptTemplateManager) List(ctx context.Context, page, pageSize int3
 }
 
 // List indicates an expected call of List.
-func (mr *MockIExptTemplateManagerMockRecorder) List(ctx, page, pageSize, spaceID, filter, orderBys, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) List(arg0, arg1, arg2, arg3, arg4, arg5, arg6 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptTemplateManager)(nil).List), ctx, page, pageSize, spaceID, filter, orderBys, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptTemplateManager)(nil).List), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
 // ListOnline mocks base method.
-func (m *MockIExptTemplateManager) ListOnline(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
+func (m *MockIExptTemplateManager) ListOnline(arg0 context.Context, arg1, arg2 int32, arg3 int64, arg4 *entity.ExptTemplateListFilter, arg5 []*entity.OrderBy, arg6 *entity.Session) ([]*entity.ExptTemplate, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListOnline", ctx, page, pageSize, spaceID, filter, orderBys, session)
+	ret := m.ctrl.Call(m, "ListOnline", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].([]*entity.ExptTemplate)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -127,66 +126,66 @@ func (m *MockIExptTemplateManager) ListOnline(ctx context.Context, page, pageSiz
 }
 
 // ListOnline indicates an expected call of ListOnline.
-func (mr *MockIExptTemplateManagerMockRecorder) ListOnline(ctx, page, pageSize, spaceID, filter, orderBys, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) ListOnline(arg0, arg1, arg2, arg3, arg4, arg5, arg6 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOnline", reflect.TypeOf((*MockIExptTemplateManager)(nil).ListOnline), ctx, page, pageSize, spaceID, filter, orderBys, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOnline", reflect.TypeOf((*MockIExptTemplateManager)(nil).ListOnline), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
 // MGet mocks base method.
-func (m *MockIExptTemplateManager) MGet(ctx context.Context, templateIDs []int64, spaceID int64, session *entity.Session) ([]*entity.ExptTemplate, error) {
+func (m *MockIExptTemplateManager) MGet(arg0 context.Context, arg1 []int64, arg2 int64, arg3 *entity.Session) ([]*entity.ExptTemplate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MGet", ctx, templateIDs, spaceID, session)
+	ret := m.ctrl.Call(m, "MGet", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*entity.ExptTemplate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MGet indicates an expected call of MGet.
-func (mr *MockIExptTemplateManagerMockRecorder) MGet(ctx, templateIDs, spaceID, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) MGet(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGet", reflect.TypeOf((*MockIExptTemplateManager)(nil).MGet), ctx, templateIDs, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGet", reflect.TypeOf((*MockIExptTemplateManager)(nil).MGet), arg0, arg1, arg2, arg3)
 }
 
 // Update mocks base method.
-func (m *MockIExptTemplateManager) Update(ctx context.Context, param *entity.UpdateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
+func (m *MockIExptTemplateManager) Update(arg0 context.Context, arg1 *entity.UpdateExptTemplateParam, arg2 *entity.Session) (*entity.ExptTemplate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, param, session)
+	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*entity.ExptTemplate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockIExptTemplateManagerMockRecorder) Update(ctx, param, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) Update(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptTemplateManager)(nil).Update), ctx, param, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptTemplateManager)(nil).Update), arg0, arg1, arg2)
 }
 
 // UpdateExptInfo mocks base method.
-func (m *MockIExptTemplateManager) UpdateExptInfo(ctx context.Context, templateID, spaceID, exptID int64, exptStatus entity.ExptStatus, adjustCount int64, latestExptStartTime *int64) error {
+func (m *MockIExptTemplateManager) UpdateExptInfo(arg0 context.Context, arg1, arg2, arg3 int64, arg4 entity.ExptStatus, arg5 int64, arg6 *int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateExptInfo", ctx, templateID, spaceID, exptID, exptStatus, adjustCount, latestExptStartTime)
+	ret := m.ctrl.Call(m, "UpdateExptInfo", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateExptInfo indicates an expected call of UpdateExptInfo.
-func (mr *MockIExptTemplateManagerMockRecorder) UpdateExptInfo(ctx, templateID, spaceID, exptID, exptStatus, adjustCount, latestExptStartTime any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) UpdateExptInfo(arg0, arg1, arg2, arg3, arg4, arg5, arg6 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptInfo", reflect.TypeOf((*MockIExptTemplateManager)(nil).UpdateExptInfo), ctx, templateID, spaceID, exptID, exptStatus, adjustCount, latestExptStartTime)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptInfo", reflect.TypeOf((*MockIExptTemplateManager)(nil).UpdateExptInfo), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
 // UpdateMeta mocks base method.
-func (m *MockIExptTemplateManager) UpdateMeta(ctx context.Context, param *entity.UpdateExptTemplateMetaParam, session *entity.Session) (*entity.ExptTemplate, error) {
+func (m *MockIExptTemplateManager) UpdateMeta(arg0 context.Context, arg1 *entity.UpdateExptTemplateMetaParam, arg2 *entity.Session) (*entity.ExptTemplate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateMeta", ctx, param, session)
+	ret := m.ctrl.Call(m, "UpdateMeta", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*entity.ExptTemplate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateMeta indicates an expected call of UpdateMeta.
-func (mr *MockIExptTemplateManagerMockRecorder) UpdateMeta(ctx, param, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) UpdateMeta(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMeta", reflect.TypeOf((*MockIExptTemplateManager)(nil).UpdateMeta), ctx, param, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMeta", reflect.TypeOf((*MockIExptTemplateManager)(nil).UpdateMeta), arg0, arg1, arg2)
 }

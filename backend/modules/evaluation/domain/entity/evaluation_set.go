@@ -25,6 +25,7 @@ type EvaluationSet struct {
 	NextVersionNum       int64                 `json:"next_version_num,omitempty"`
 	BaseInfo             *BaseInfo             `json:"base_info,omitempty"`
 	BizCategory          BizCategory           `json:"biz_category,omitempty"`
+	Tags                 []*ResourceTag        `json:"tags,omitempty"`
 }
 
 type DatasetSpec struct {

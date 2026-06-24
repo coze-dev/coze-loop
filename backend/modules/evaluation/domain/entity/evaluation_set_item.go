@@ -17,6 +17,7 @@ type EvaluationSetItem struct {
 	ItemKey         string    `json:"item_key,omitempty"`
 	Turns           []*Turn   `json:"turns,omitempty"`
 	BaseInfo        *BaseInfo `json:"base_info,omitempty"`
+	Tags            []*ResourceTag
 }
 
 type Turn struct {

@@ -80,6 +80,9 @@ func (d *EvaluationSetServiceImpl) UpdateEvaluationSet(ctx context.Context, para
 		return errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 	// 依赖数据集服务
+	if param.Tags != nil {
+		return d.datasetRPCAdapter.UpdateDataset(ctx, param.SpaceID, param.EvaluationSetID, param.Name, param.Description, param.Tags)
+	}
 	return d.datasetRPCAdapter.UpdateDataset(ctx, param.SpaceID, param.EvaluationSetID, param.Name, param.Description)
 }
 
@@ -88,9 +91,9 @@ func (d *EvaluationSetServiceImpl) DeleteEvaluationSet(ctx context.Context, spac
 	return d.datasetRPCAdapter.DeleteDataset(ctx, spaceID, evaluationSetID)
 }
 
-func (d *EvaluationSetServiceImpl) GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error) {
+func (d *EvaluationSetServiceImpl) GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool, opt ...rpc.GetDatasetOpt) (set *entity.EvaluationSet, err error) {
 	// 依赖数据集服务
-	return d.datasetRPCAdapter.GetDataset(ctx, spaceID, evaluationSetID, deletedAt)
+	return d.datasetRPCAdapter.GetDataset(ctx, spaceID, evaluationSetID, deletedAt, opt...)
 }
 
 func (d *EvaluationSetServiceImpl) BatchGetEvaluationSets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (set []*entity.EvaluationSet, err error) {
@@ -112,6 +115,8 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 		PageSize:         param.PageSize,
 		PageToken:        param.PageToken,
 		OrderBys:         param.OrderBys,
+		WithTags:         param.WithTags,
+		TagFilter:        param.TagFilter,
 	})
 }
 

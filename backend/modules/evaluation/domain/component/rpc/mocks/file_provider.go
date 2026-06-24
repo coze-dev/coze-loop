@@ -20,7 +20,6 @@ import (
 type MockIFileProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockIFileProviderMockRecorder
-	isgomock struct{}
 }
 
 // MockIFileProviderMockRecorder is the mock recorder for MockIFileProvider.
@@ -41,16 +40,16 @@ func (m *MockIFileProvider) EXPECT() *MockIFileProviderMockRecorder {
 }
 
 // MGetFileURL mocks base method.
-func (m *MockIFileProvider) MGetFileURL(ctx context.Context, keys []string) (map[string]string, error) {
+func (m *MockIFileProvider) MGetFileURL(arg0 context.Context, arg1 []string) (map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MGetFileURL", ctx, keys)
+	ret := m.ctrl.Call(m, "MGetFileURL", arg0, arg1)
 	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MGetFileURL indicates an expected call of MGetFileURL.
-func (mr *MockIFileProviderMockRecorder) MGetFileURL(ctx, keys any) *gomock.Call {
+func (mr *MockIFileProviderMockRecorder) MGetFileURL(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetFileURL", reflect.TypeOf((*MockIFileProvider)(nil).MGetFileURL), ctx, keys)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetFileURL", reflect.TypeOf((*MockIFileProvider)(nil).MGetFileURL), arg0, arg1)
 }
