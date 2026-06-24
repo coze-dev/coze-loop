@@ -884,3 +884,141 @@ func TestOpenAPIEvaluatorDTO2DO_AgentWithVersion(t *testing.T) {
 	assert.Equal(t, entity.AgentType_Vibe, do.AgentEvaluatorVersion.AgentConfig.AgentType)
 	assert.Equal(t, "v1", do.GetVersion())
 }
+
+func TestOpenAPIEvaluatorExtraOutputContentDO2DTO(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPIEvaluatorExtraOutputContentDO2DTO(nil))
+	})
+
+	t.Run("with output type and url", func(t *testing.T) {
+		outputType := entity.EvaluatorExtraOutputTypeHTML
+		url := "https://example.com/signed"
+		do := &entity.EvaluatorExtraOutputContent{
+			OutputType: &outputType,
+			URL:        &url,
+			URI:        gptr.Of("tos-bucket/path"),
+		}
+		dto := OpenAPIEvaluatorExtraOutputContentDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Equal(t, "html", *dto.OutputType)
+		assert.Equal(t, "https://example.com/signed", *dto.URL)
+	})
+
+	t.Run("without output type", func(t *testing.T) {
+		url := "https://example.com/signed"
+		do := &entity.EvaluatorExtraOutputContent{
+			URL: &url,
+		}
+		dto := OpenAPIEvaluatorExtraOutputContentDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Nil(t, dto.OutputType)
+		assert.Equal(t, "https://example.com/signed", *dto.URL)
+	})
+}
+
+func TestOpenapiAccessProtocolFromEntity(t *testing.T) {
+	t.Run("rpc_old maps to rpc", func(t *testing.T) {
+		result := openapiAccessProtocolFromEntity(entity.EvaluatorAccessProtocolRPCOld)
+		assert.NotNil(t, result)
+		assert.Equal(t, openapiEvaluator.EvaluatorAccessProtocolRPC, *result)
+	})
+
+	t.Run("faas_http_old maps to faas_http", func(t *testing.T) {
+		result := openapiAccessProtocolFromEntity(entity.EvaluatorAccessProtocolFaasHTTPOld)
+		assert.NotNil(t, result)
+		assert.Equal(t, openapiEvaluator.EvaluatorAccessProtocolFaasHTTP, *result)
+	})
+
+	t.Run("rpc stays rpc", func(t *testing.T) {
+		result := openapiAccessProtocolFromEntity(entity.EvaluatorAccessProtocolRPC)
+		assert.NotNil(t, result)
+		assert.Equal(t, openapiEvaluator.EvaluatorAccessProtocolRPC, *result)
+	})
+
+	t.Run("faas_http stays faas_http", func(t *testing.T) {
+		result := openapiAccessProtocolFromEntity(entity.EvaluatorAccessProtocolFaasHTTP)
+		assert.NotNil(t, result)
+		assert.Equal(t, openapiEvaluator.EvaluatorAccessProtocolFaasHTTP, *result)
+	})
+
+	t.Run("empty returns nil", func(t *testing.T) {
+		result := openapiAccessProtocolFromEntity("")
+		assert.Nil(t, result)
+	})
+
+	t.Run("unknown protocol returned as-is", func(t *testing.T) {
+		result := openapiAccessProtocolFromEntity("custom_proto")
+		assert.NotNil(t, result)
+		assert.Equal(t, openapiEvaluator.EvaluatorAccessProtocol("custom_proto"), *result)
+	})
+}
+
+func TestOpenAPIEvaluatorHTTPInfoDO2DTO(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPIEvaluatorHTTPInfoDO2DTO(nil))
+	})
+
+	t.Run("with method", func(t *testing.T) {
+		method := entity.EvaluatorHTTPMethodPost
+		do := &entity.EvaluatorHTTPInfo{
+			Method: &method,
+			Path:   gptr.Of("/api/v1/eval"),
+		}
+		dto := OpenAPIEvaluatorHTTPInfoDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Equal(t, openapiEvaluator.EvaluatorHTTPMethod("post"), *dto.Method)
+		assert.Equal(t, "/api/v1/eval", *dto.Path)
+	})
+
+	t.Run("without method", func(t *testing.T) {
+		do := &entity.EvaluatorHTTPInfo{
+			Path: gptr.Of("/api/v1/eval"),
+		}
+		dto := OpenAPIEvaluatorHTTPInfoDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Nil(t, dto.Method)
+	})
+}
+
+func TestOpenAPIEvaluatorHTTPInfoDTO2DO(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPIEvaluatorHTTPInfoDTO2DO(nil))
+	})
+
+	t.Run("with method", func(t *testing.T) {
+		method := openapiEvaluator.EvaluatorHTTPMethod("post")
+		dto := &openapiEvaluator.EvaluatorHTTPInfo{
+			Method: &method,
+			Path:   gptr.Of("/api/v1/eval"),
+		}
+		do := OpenAPIEvaluatorHTTPInfoDTO2DO(dto)
+		assert.NotNil(t, do)
+		assert.Equal(t, entity.EvaluatorHTTPMethodPost, *do.Method)
+		assert.Equal(t, "/api/v1/eval", *do.Path)
+	})
+
+	t.Run("without method", func(t *testing.T) {
+		dto := &openapiEvaluator.EvaluatorHTTPInfo{
+			Path: gptr.Of("/api/v1/eval"),
+		}
+		do := OpenAPIEvaluatorHTTPInfoDTO2DO(dto)
+		assert.NotNil(t, do)
+		assert.Nil(t, do.Method)
+	})
+}
+
+func TestOpenAPIEvaluatorRunConfigDO2DTO(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPIEvaluatorRunConfigDO2DTO(nil))
+	})
+
+	t.Run("with env", func(t *testing.T) {
+		env := "production"
+		do := &entity.EvaluatorRunConfig{
+			Env: &env,
+		}
+		dto := OpenAPIEvaluatorRunConfigDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Equal(t, "production", *dto.Env)
+	})
+}
