@@ -1,0 +1,26 @@
+backend/modules/evaluation/application/evaluation_set_app.go
+  s_9a5beb431a3376::t_10664e99b12da4 27-28
+  s_9a5beb431a3376::t_06a59a17bab817 70-71,73
+  s_9a5beb431a3376::t_f2ad6b83262a16 108
+  s_9a5beb431a3376::t_954239e85c0eb1 998-1002
+  s_9a5beb431a3376::t_bbf3bf475456de 1047-1051
+  s_9a5beb431a3376::t_d69f1a54678fa0 1086-1090
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e704b1d0a5bc31fa5caebee2059f353dc0a55ee4",
+  "prompts": {},
+  "sessions": {
+    "s_9a5beb431a3376": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a37c15d19257bb0cba74ba5",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wanglizhi <lzwang1993@gmail.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
