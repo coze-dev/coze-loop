@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 // mock DenyReason implementation
@@ -405,7 +406,8 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent(t *testing.T) {
 		},
 	)
 
-	err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &recordMap)
+	baseRunReq := &entity.RunEvaluatorRequest{SpaceID: 1, EvaluatorVersionID: 101, InputData: inputData, ExperimentID: 2, ExperimentRunID: 3, ItemID: 4, TurnID: 5, Ext: etec.Ext, EvaluatorRunConf: ec.RunConf}
+	err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, baseRunReq, &recordMap)
 	assert.NoError(t, err)
 
 	// verify recordMap
@@ -469,7 +471,13 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 			name: "AsyncRunEvaluator error",
 			mockSetup: func() {
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), true)
-				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("async run error"))
+				runErr := errors.New("async run error")
+				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(nil, runErr)
+				mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), runErr).Return(&entity.EvaluatorRecord{
+					ID:                 303,
+					EvaluatorVersionID: 101,
+					Status:             entity.EvaluatorRunStatusFail,
+				}, nil)
 			},
 			wantErr: true,
 		},
@@ -489,7 +497,8 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
-			err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &recordMap)
+			baseRunReq := &entity.RunEvaluatorRequest{SpaceID: 1, EvaluatorVersionID: 101, InputData: inputData, ExperimentID: 2, ExperimentRunID: 3, ItemID: 4, TurnID: 5, Ext: etec.Ext, EvaluatorRunConf: ec.RunConf}
+			err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, baseRunReq, &recordMap)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -1468,7 +1477,17 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
 				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
-				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("run evaluator failed"))
+				runErr := errors.New("run evaluator failed")
+				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(nil, runErr)
+				mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), runErr).Return(&entity.EvaluatorRecord{
+					ID:                 999,
+					EvaluatorVersionID: 1,
+					Status:             entity.EvaluatorRunStatusFail,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorRunError: &entity.EvaluatorRunError{
+						Code:    int32(errno.CommonInternalErrorCode),
+						Message: "run evaluator failed",
+					}},
+				}, nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
 			etec: &entity.ExptTurnEvalCtx{
@@ -3289,6 +3308,15 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 				}
 				return &entity.EvaluatorRecord{ID: 2, Status: entity.EvaluatorRunStatusSuccess}, nil
 			}).AnyTimes()
+		mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest, runErr error) (*entity.EvaluatorRecord, error) {
+				return &entity.EvaluatorRecord{
+					ID:                  100 + req.EvaluatorVersionID,
+					EvaluatorVersionID:  req.EvaluatorVersionID,
+					Status:              entity.EvaluatorRunStatusFail,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorRunError: &entity.EvaluatorRunError{Code: int32(errno.CommonInternalErrorCode), Message: runErr.Error()}},
+				}, nil
+			}).AnyTimes()
 
 		records, err := service.callEvaluators(context.Background(), []int64{1, 2}, newEtec(), mockTargetResult, []*entity.Message{})
 
@@ -3322,6 +3350,15 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 					return nil, errors.New(err1Msg)
 				}
 				return nil, errors.New(err2Msg)
+			}).AnyTimes()
+		mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest, runErr error) (*entity.EvaluatorRecord, error) {
+				return &entity.EvaluatorRecord{
+					ID:                  100 + req.EvaluatorVersionID,
+					EvaluatorVersionID:  req.EvaluatorVersionID,
+					Status:              entity.EvaluatorRunStatusFail,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorRunError: &entity.EvaluatorRunError{Code: int32(errno.CommonInternalErrorCode), Message: runErr.Error()}},
+				}, nil
 			}).AnyTimes()
 
 		_, err := service.callEvaluators(context.Background(), []int64{1, 2}, newEtec(), mockTargetResult, []*entity.Message{})

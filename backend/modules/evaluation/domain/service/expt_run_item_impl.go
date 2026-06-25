@@ -7,9 +7,9 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 	"github.com/jinzhu/copier"
 
@@ -163,7 +163,11 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	clone.EvaluatorResultIds = &entity.EvaluatorResults{
 		EvalVerIDToResID: make(map[int64]int64, len(result.EvaluatorResults)),
 	}
-	for _, er := range result.EvaluatorResults {
+	for evID, er := range result.EvaluatorResults {
+		if er == nil {
+			logs.CtxWarn(ctx, "[ExptTurnEval] nil evaluator record, evaluator_version_id: %v", evID)
+			continue
+		}
 		clone.EvaluatorResultIds.EvalVerIDToResID[er.EvaluatorVersionID] = er.ID
 		if er.EvaluatorOutputData != nil && er.EvaluatorOutputData.EvaluatorRunError != nil && er.EvaluatorOutputData.EvaluatorRunError.Code > 0 {
 			evalErr = errno.NewEvaluatorResultErr(er.EvaluatorOutputData.EvaluatorRunError.Message)
@@ -172,6 +176,8 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	if result.EvalErr != nil {
 		evalErr = result.EvalErr
+	} else if evalErr == nil {
+		evalErr = e.validateEvaluatorResultsComplete(etec, result)
 	}
 
 	if evalErr != nil {
@@ -196,7 +202,10 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		clone.Status = entity.TurnRunState_Fail
 		clone.ErrMsg = errno.SerializeErr(evalErr)
 	} else {
-		clone.Status = gcond.If(result.AsyncAbort, clone.Status, entity.TurnRunState_Success)
+		if !result.AsyncAbort {
+			clone.Status = entity.TurnRunState_Success
+			clone.ErrMsg = ""
+		}
 	}
 
 	result.SetEvalErr(evalErr)
@@ -209,6 +218,35 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		etec.Expt.ID, etec.Event.ExptRunID, etec.EvalSetItem.ItemID, turn.ID, json.Jsonify(clone), result.EvalErr)
 
 	return nil
+}
+
+func (e *ExptItemEvalCtxExecutor) validateEvaluatorResultsComplete(etec *entity.ExptTurnEvalCtx, result *entity.ExptTurnRunResult) error {
+	if etec == nil || etec.Expt == nil || result == nil || result.AsyncAbort {
+		return nil
+	}
+	if etec.Expt.EvalConf == nil || etec.Expt.EvalConf.ConnectorConf.EvaluatorsConf == nil || len(etec.Expt.Evaluators) == 0 {
+		return nil
+	}
+
+	missing := make([]string, 0)
+	for _, evaluator := range etec.Expt.Evaluators {
+		if evaluator == nil {
+			continue
+		}
+		evaluatorVersionID := evaluator.GetEvaluatorVersionID()
+		if evaluatorVersionID == 0 {
+			continue
+		}
+		record := result.GetEvaluatorRecord(evaluatorVersionID)
+		if record == nil || record.ID == 0 {
+			missing = append(missing, strconv.FormatInt(evaluatorVersionID, 10))
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+
+	return errno.NewEvaluatorResultErr(fmt.Sprintf("evaluator result missing, evaluator_version_ids: %s", strings.Join(missing, ",")))
 }
 
 func (e *ExptItemEvalCtxExecutor) SetItemRunProcessing(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, session *entity.Session) error {

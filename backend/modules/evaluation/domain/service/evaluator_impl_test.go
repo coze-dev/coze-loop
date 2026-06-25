@@ -4325,3 +4325,52 @@ func TestEvaluatorServiceImpl_ShouldInterceptEvaluator(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluatorServiceImpl_CreateEvaluatorRunFailRecord(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+
+	s := &EvaluatorServiceImpl{
+		idgen:               mockIDGen,
+		evaluatorRecordRepo: mockEvaluatorRecordRepo,
+		cConfiger:           mockConfiger,
+	}
+
+	runErr := errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
+	req := &entity.RunEvaluatorRequest{
+		SpaceID:            1,
+		EvaluatorVersionID: 2,
+		InputData:          &entity.EvaluatorInputData{},
+		ExperimentID:       3,
+		ExperimentRunID:    4,
+		ItemID:             5,
+		TurnID:             6,
+		Ext:                map[string]string{"k": "v"},
+	}
+
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(100), nil)
+	mockConfiger.EXPECT().GetErrCtrl(gomock.Any()).Return(entity.DefaultExptErrCtrl())
+	mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, record *entity.EvaluatorRecord) error {
+			require.NotNil(t, record)
+			assert.Equal(t, int64(100), record.ID)
+			assert.Equal(t, req.SpaceID, record.SpaceID)
+			assert.Equal(t, req.EvaluatorVersionID, record.EvaluatorVersionID)
+			assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+			require.NotNil(t, record.EvaluatorOutputData)
+			require.NotNil(t, record.EvaluatorOutputData.EvaluatorRunError)
+			assert.Equal(t, int32(errno.EvaluatorQPSLimitCode), record.EvaluatorOutputData.EvaluatorRunError.Code)
+			assert.Contains(t, record.EvaluatorOutputData.EvaluatorRunError.Message, "evaluator throttled")
+			return nil
+		},
+	)
+
+	record, err := s.CreateEvaluatorRunFailRecord(context.Background(), req, runErr)
+	require.NoError(t, err)
+	require.NotNil(t, record)
+	assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+}

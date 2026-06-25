@@ -461,27 +461,30 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			continue
 		}
 
+		baseRunReq := &entity.RunEvaluatorRequest{
+			SpaceID:            spaceID,
+			Name:               "",
+			EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
+			InputData:          inputDataForCapture,
+			ExperimentID:       etec.Event.ExptID,
+			ExperimentRunID:    etec.Event.ExptRunID,
+			ItemID:             item.ItemID,
+			TurnID:             turn.ID,
+			Ext:                etec.Ext,
+			EvaluatorRunConf:   ecForCapture.RunConf,
+		}
+
 		if evForCapture.IsAsync() {
 			pool.Add(func() error {
-				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, &recordMap)
+				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, baseRunReq, &recordMap)
 			})
 		} else {
 			pool.Add(func() error {
 				var err error
 				defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
-				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
-					SpaceID:            spaceID,
-					Name:               "",
-					EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
-					InputData:          inputDataForCapture,
-					ExperimentID:       etec.Event.ExptID,
-					ExperimentRunID:    etec.Event.ExptRunID,
-					ItemID:             item.ItemID,
-					TurnID:             turn.ID,
-					Ext:                etec.Ext,
-					EvaluatorRunConf:   ecForCapture.RunConf,
-				})
+				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, baseRunReq)
 				if err != nil {
+					e.createAndStoreFailedEvaluatorRecord(ctx, baseRunReq, err, &recordMap)
 					return err
 				}
 
@@ -502,12 +505,29 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	return records, err
 }
 
+func (e *DefaultExptTurnEvaluationImpl) createAndStoreFailedEvaluatorRecord(ctx context.Context, req *entity.RunEvaluatorRequest, runErr error, recordMap *sync.Map) {
+	if e == nil || e.evaluatorService == nil || req == nil || recordMap == nil {
+		return
+	}
+	failedRecord, createErr := e.evaluatorService.CreateEvaluatorRunFailRecord(ctx, req, runErr)
+	if createErr != nil {
+		logs.CtxError(ctx, "[CallEvaluators] create failed evaluator record fail, evaluator_version_id: %v, origin_err: %v, create_err: %v", req.EvaluatorVersionID, runErr, createErr)
+		return
+	}
+	if failedRecord == nil {
+		logs.CtxWarn(ctx, "[CallEvaluators] create failed evaluator record got nil, evaluator_version_id: %v, origin_err: %v", req.EvaluatorVersionID, runErr)
+		return
+	}
+	recordMap.Store(req.EvaluatorVersionID, failedRecord)
+}
+
 func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 	ctx context.Context,
 	ev *entity.Evaluator,
 	ec *entity.EvaluatorConf,
 	etec *entity.ExptTurnEvalCtx,
 	inputData *entity.EvaluatorInputData,
+	baseRunReq *entity.RunEvaluatorRequest,
 	recordMap *sync.Map,
 ) error {
 	var err error
@@ -527,6 +547,7 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 		EvaluatorRunConf:   ec.RunConf,
 	})
 	if err != nil {
+		e.createAndStoreFailedEvaluatorRecord(ctx, baseRunReq, err, recordMap)
 		return err
 	}
 
