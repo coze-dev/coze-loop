@@ -490,11 +490,6 @@ func (p *UpdateEvaluationSetItemRequest) IsValid() error {
 			return fmt.Errorf("field ItemVersionStatus max_len rule failed, current value: %d", len(*p.ItemVersionStatus))
 		}
 	}
-	if p.ItemStatus != nil {
-		if len(*p.ItemStatus) > int(64) {
-			return fmt.Errorf("field ItemStatus max_len rule failed, current value: %d", len(*p.ItemStatus))
-		}
-	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -657,32 +652,6 @@ func (p *EvaluationItemVersionRef) IsValid() error {
 	return nil
 }
 func (p *BatchAddExistEvaluationSetItemsResponse) IsValid() error {
-	if p.BaseResp != nil {
-		if err := p.BaseResp.IsValid(); err != nil {
-			return fmt.Errorf("field BaseResp not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *UpdateEvaluationSetItemDefRequest) IsValid() error {
-	if p.ItemKey != nil {
-		if len(*p.ItemKey) > int(255) {
-			return fmt.Errorf("field ItemKey max_len rule failed, current value: %d", len(*p.ItemKey))
-		}
-	}
-	if p.Status != nil {
-		if len(*p.Status) > int(64) {
-			return fmt.Errorf("field Status max_len rule failed, current value: %d", len(*p.Status))
-		}
-	}
-	if p.Base != nil {
-		if err := p.Base.IsValid(); err != nil {
-			return fmt.Errorf("field Base not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *UpdateEvaluationSetItemDefResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

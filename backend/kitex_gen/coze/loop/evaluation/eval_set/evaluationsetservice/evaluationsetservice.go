@@ -139,13 +139,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"UpdateEvaluationSetItemDef": kitex.NewMethodInfo(
-		updateEvaluationSetItemDefHandler,
-		newEvaluationSetServiceUpdateEvaluationSetItemDefArgs,
-		newEvaluationSetServiceUpdateEvaluationSetItemDefResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"GetEvaluationSetItemDef": kitex.NewMethodInfo(
 		getEvaluationSetItemDefHandler,
 		newEvaluationSetServiceGetEvaluationSetItemDefArgs,
@@ -577,25 +570,6 @@ func newEvaluationSetServiceBatchAddExistEvaluationSetItemsResult() interface{} 
 	return eval_set.NewEvaluationSetServiceBatchAddExistEvaluationSetItemsResult()
 }
 
-func updateEvaluationSetItemDefHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefArgs)
-	realResult := result.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefResult)
-	success, err := handler.(eval_set.EvaluationSetService).UpdateEvaluationSetItemDef(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluationSetServiceUpdateEvaluationSetItemDefArgs() interface{} {
-	return eval_set.NewEvaluationSetServiceUpdateEvaluationSetItemDefArgs()
-}
-
-func newEvaluationSetServiceUpdateEvaluationSetItemDefResult() interface{} {
-	return eval_set.NewEvaluationSetServiceUpdateEvaluationSetItemDefResult()
-}
-
 func getEvaluationSetItemDefHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*eval_set.EvaluationSetServiceGetEvaluationSetItemDefArgs)
 	realResult := result.(*eval_set.EvaluationSetServiceGetEvaluationSetItemDefResult)
@@ -935,16 +909,6 @@ func (p *kClient) BatchAddExistEvaluationSetItems(ctx context.Context, req *eval
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceBatchAddExistEvaluationSetItemsResult
 	if err = p.c.Call(ctx, "BatchAddExistEvaluationSetItems", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) UpdateEvaluationSetItemDef(ctx context.Context, req *eval_set.UpdateEvaluationSetItemDefRequest) (r *eval_set.UpdateEvaluationSetItemDefResponse, err error) {
-	var _args eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefArgs
-	_args.Req = req
-	var _result eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefResult
-	if err = p.c.Call(ctx, "UpdateEvaluationSetItemDef", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -29,7 +29,6 @@ type Client interface {
 	ListEvaluationSetItems(ctx context.Context, req *eval_set.ListEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemsResponse, err error)
 	BatchGetEvaluationSetItems(ctx context.Context, req *eval_set.BatchGetEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchGetEvaluationSetItemsResponse, err error)
 	BatchAddExistEvaluationSetItems(ctx context.Context, req *eval_set.BatchAddExistEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchAddExistEvaluationSetItemsResponse, err error)
-	UpdateEvaluationSetItemDef(ctx context.Context, req *eval_set.UpdateEvaluationSetItemDefRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetItemDefResponse, err error)
 	GetEvaluationSetItemDef(ctx context.Context, req *eval_set.GetEvaluationSetItemDefRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetItemDefResponse, err error)
 	ListEvaluationSetItemDefs(ctx context.Context, req *eval_set.ListEvaluationSetItemDefsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemDefsResponse, err error)
 	ListEvaluationSetItemVersions(ctx context.Context, req *eval_set.ListEvaluationSetItemVersionsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemVersionsResponse, err error)
@@ -157,11 +156,6 @@ func (p *kEvaluationSetServiceClient) BatchGetEvaluationSetItems(ctx context.Con
 func (p *kEvaluationSetServiceClient) BatchAddExistEvaluationSetItems(ctx context.Context, req *eval_set.BatchAddExistEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchAddExistEvaluationSetItemsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchAddExistEvaluationSetItems(ctx, req)
-}
-
-func (p *kEvaluationSetServiceClient) UpdateEvaluationSetItemDef(ctx context.Context, req *eval_set.UpdateEvaluationSetItemDefRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetItemDefResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.UpdateEvaluationSetItemDef(ctx, req)
 }
 
 func (p *kEvaluationSetServiceClient) GetEvaluationSetItemDef(ctx context.Context, req *eval_set.GetEvaluationSetItemDefRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetItemDefResponse, err error) {

@@ -8186,13 +8186,10 @@ type BatchCreateEvaluationSetItemsOApiRequest struct {
 	// items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
 	IsSkipInvalidItems *bool `thrift:"is_skip_invalid_items,4,optional" frugal:"4,optional,bool" form:"is_skip_invalid_items" json:"is_skip_invalid_items,omitempty"`
 	// 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
-	IsAllowPartialAdd      *bool                        `thrift:"is_allow_partial_add,5,optional" frugal:"5,optional,bool" form:"is_allow_partial_add" json:"is_allow_partial_add,omitempty"`
-	FieldWriteOptions      []*eval_set.FieldWriteOption `thrift:"field_write_options,6,optional" frugal:"6,optional,list<eval_set.FieldWriteOption>" form:"field_write_options" json:"field_write_options,omitempty" query:"field_write_options"`
-	ItemVersionDescription *string                      `thrift:"item_version_description,20,optional" frugal:"20,optional,string" form:"item_version_description" json:"item_version_description,omitempty"`
-	ItemVersionStatus      *string                      `thrift:"item_version_status,21,optional" frugal:"21,optional,string" form:"item_version_status" json:"item_version_status,omitempty"`
-	ItemStatus             *string                      `thrift:"item_status,22,optional" frugal:"22,optional,string" form:"item_status" json:"item_status,omitempty"`
-	Extra                  *extra.Extra                 `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base                   *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	IsAllowPartialAdd *bool                        `thrift:"is_allow_partial_add,5,optional" frugal:"5,optional,bool" form:"is_allow_partial_add" json:"is_allow_partial_add,omitempty"`
+	FieldWriteOptions []*eval_set.FieldWriteOption `thrift:"field_write_options,6,optional" frugal:"6,optional,list<eval_set.FieldWriteOption>" form:"field_write_options" json:"field_write_options,omitempty" query:"field_write_options"`
+	Extra             *extra.Extra                 `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base              *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchCreateEvaluationSetItemsOApiRequest() *BatchCreateEvaluationSetItemsOApiRequest {
@@ -8274,42 +8271,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) GetFieldWriteOptions() (v []*
 	return p.FieldWriteOptions
 }
 
-var BatchCreateEvaluationSetItemsOApiRequest_ItemVersionDescription_DEFAULT string
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) GetItemVersionDescription() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetItemVersionDescription() {
-		return BatchCreateEvaluationSetItemsOApiRequest_ItemVersionDescription_DEFAULT
-	}
-	return *p.ItemVersionDescription
-}
-
-var BatchCreateEvaluationSetItemsOApiRequest_ItemVersionStatus_DEFAULT string
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) GetItemVersionStatus() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetItemVersionStatus() {
-		return BatchCreateEvaluationSetItemsOApiRequest_ItemVersionStatus_DEFAULT
-	}
-	return *p.ItemVersionStatus
-}
-
-var BatchCreateEvaluationSetItemsOApiRequest_ItemStatus_DEFAULT string
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) GetItemStatus() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetItemStatus() {
-		return BatchCreateEvaluationSetItemsOApiRequest_ItemStatus_DEFAULT
-	}
-	return *p.ItemStatus
-}
-
 var BatchCreateEvaluationSetItemsOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) GetExtra() (v *extra.Extra) {
@@ -8351,15 +8312,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) SetIsAllowPartialAdd(val *boo
 func (p *BatchCreateEvaluationSetItemsOApiRequest) SetFieldWriteOptions(val []*eval_set.FieldWriteOption) {
 	p.FieldWriteOptions = val
 }
-func (p *BatchCreateEvaluationSetItemsOApiRequest) SetItemVersionDescription(val *string) {
-	p.ItemVersionDescription = val
-}
-func (p *BatchCreateEvaluationSetItemsOApiRequest) SetItemVersionStatus(val *string) {
-	p.ItemVersionStatus = val
-}
-func (p *BatchCreateEvaluationSetItemsOApiRequest) SetItemStatus(val *string) {
-	p.ItemStatus = val
-}
 func (p *BatchCreateEvaluationSetItemsOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -8374,9 +8326,6 @@ var fieldIDToName_BatchCreateEvaluationSetItemsOApiRequest = map[int16]string{
 	4:   "is_skip_invalid_items",
 	5:   "is_allow_partial_add",
 	6:   "field_write_options",
-	20:  "item_version_description",
-	21:  "item_version_status",
-	22:  "item_status",
 	254: "extra",
 	255: "Base",
 }
@@ -8403,18 +8352,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetIsAllowPartialAdd() bool
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetFieldWriteOptions() bool {
 	return p.FieldWriteOptions != nil
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetItemVersionDescription() bool {
-	return p.ItemVersionDescription != nil
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetItemVersionStatus() bool {
-	return p.ItemVersionStatus != nil
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetItemStatus() bool {
-	return p.ItemStatus != nil
 }
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetExtra() bool {
@@ -8486,30 +8423,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) Read(iprot thrift.TProtocol) 
 		case 6:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField6(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 20:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField20(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 21:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField21(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 22:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField22(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8650,39 +8563,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField6(iprot thrift.TProt
 	p.FieldWriteOptions = _field
 	return nil
 }
-func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField20(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ItemVersionDescription = _field
-	return nil
-}
-func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField21(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ItemVersionStatus = _field
-	return nil
-}
-func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField22(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ItemStatus = _field
-	return nil
-}
 func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -8728,18 +8608,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) Write(oprot thrift.TProtocol)
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
-			goto WriteFieldError
-		}
-		if err = p.writeField20(oprot); err != nil {
-			fieldId = 20
-			goto WriteFieldError
-		}
-		if err = p.writeField21(oprot); err != nil {
-			fieldId = 21
-			goto WriteFieldError
-		}
-		if err = p.writeField22(oprot); err != nil {
-			fieldId = 22
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -8892,60 +8760,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
-func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField20(oprot thrift.TProtocol) (err error) {
-	if p.IsSetItemVersionDescription() {
-		if err = oprot.WriteFieldBegin("item_version_description", thrift.STRING, 20); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ItemVersionDescription); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
-}
-func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField21(oprot thrift.TProtocol) (err error) {
-	if p.IsSetItemVersionStatus() {
-		if err = oprot.WriteFieldBegin("item_version_status", thrift.STRING, 21); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ItemVersionStatus); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
-}
-func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField22(oprot thrift.TProtocol) (err error) {
-	if p.IsSetItemStatus() {
-		if err = oprot.WriteFieldBegin("item_status", thrift.STRING, 22); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ItemStatus); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
-}
 func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -9013,15 +8827,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) DeepEqual(ano *BatchCreateEva
 		return false
 	}
 	if !p.Field6DeepEqual(ano.FieldWriteOptions) {
-		return false
-	}
-	if !p.Field20DeepEqual(ano.ItemVersionDescription) {
-		return false
-	}
-	if !p.Field21DeepEqual(ano.ItemVersionStatus) {
-		return false
-	}
-	if !p.Field22DeepEqual(ano.ItemStatus) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -9104,42 +8909,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) Field6DeepEqual(src []*eval_s
 		if !v.DeepEqual(_src) {
 			return false
 		}
-	}
-	return true
-}
-func (p *BatchCreateEvaluationSetItemsOApiRequest) Field20DeepEqual(src *string) bool {
-
-	if p.ItemVersionDescription == src {
-		return true
-	} else if p.ItemVersionDescription == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ItemVersionDescription, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *BatchCreateEvaluationSetItemsOApiRequest) Field21DeepEqual(src *string) bool {
-
-	if p.ItemVersionStatus == src {
-		return true
-	} else if p.ItemVersionStatus == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ItemVersionStatus, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *BatchCreateEvaluationSetItemsOApiRequest) Field22DeepEqual(src *string) bool {
-
-	if p.ItemStatus == src {
-		return true
-	} else if p.ItemStatus == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ItemStatus, *src) != 0 {
-		return false
 	}
 	return true
 }
@@ -9854,16 +9623,13 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) Field2DeepEqual(src []*eval_s
 
 // 1.6 批量更新评测集数据
 type BatchUpdateEvaluationSetItemsOApiRequest struct {
-	WorkspaceID            *int64                        `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	EvaluationSetID        *int64                        `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
-	Items                  []*eval_set.EvaluationSetItem `thrift:"items,3,optional" frugal:"3,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty"`
-	IsSkipInvalidItems     *bool                         `thrift:"is_skip_invalid_items,4,optional" frugal:"4,optional,bool" form:"is_skip_invalid_items" json:"is_skip_invalid_items,omitempty"`
-	FieldWriteOptions      []*eval_set.FieldWriteOption  `thrift:"field_write_options,5,optional" frugal:"5,optional,list<eval_set.FieldWriteOption>" form:"field_write_options" json:"field_write_options,omitempty"`
-	ItemVersionDescription *string                       `thrift:"item_version_description,20,optional" frugal:"20,optional,string" form:"item_version_description" json:"item_version_description,omitempty"`
-	ItemVersionStatus      *string                       `thrift:"item_version_status,21,optional" frugal:"21,optional,string" form:"item_version_status" json:"item_version_status,omitempty"`
-	ItemStatus             *string                       `thrift:"item_status,22,optional" frugal:"22,optional,string" form:"item_status" json:"item_status,omitempty"`
-	Extra                  *extra.Extra                  `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base                   *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID        *int64                        `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	EvaluationSetID    *int64                        `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
+	Items              []*eval_set.EvaluationSetItem `thrift:"items,3,optional" frugal:"3,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty"`
+	IsSkipInvalidItems *bool                         `thrift:"is_skip_invalid_items,4,optional" frugal:"4,optional,bool" form:"is_skip_invalid_items" json:"is_skip_invalid_items,omitempty"`
+	FieldWriteOptions  []*eval_set.FieldWriteOption  `thrift:"field_write_options,5,optional" frugal:"5,optional,list<eval_set.FieldWriteOption>" form:"field_write_options" json:"field_write_options,omitempty"`
+	Extra              *extra.Extra                  `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base               *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchUpdateEvaluationSetItemsOApiRequest() *BatchUpdateEvaluationSetItemsOApiRequest {
@@ -9933,42 +9699,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetFieldWriteOptions() (v []*
 	return p.FieldWriteOptions
 }
 
-var BatchUpdateEvaluationSetItemsOApiRequest_ItemVersionDescription_DEFAULT string
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetItemVersionDescription() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetItemVersionDescription() {
-		return BatchUpdateEvaluationSetItemsOApiRequest_ItemVersionDescription_DEFAULT
-	}
-	return *p.ItemVersionDescription
-}
-
-var BatchUpdateEvaluationSetItemsOApiRequest_ItemVersionStatus_DEFAULT string
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetItemVersionStatus() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetItemVersionStatus() {
-		return BatchUpdateEvaluationSetItemsOApiRequest_ItemVersionStatus_DEFAULT
-	}
-	return *p.ItemVersionStatus
-}
-
-var BatchUpdateEvaluationSetItemsOApiRequest_ItemStatus_DEFAULT string
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetItemStatus() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetItemStatus() {
-		return BatchUpdateEvaluationSetItemsOApiRequest_ItemStatus_DEFAULT
-	}
-	return *p.ItemStatus
-}
-
 var BatchUpdateEvaluationSetItemsOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) GetExtra() (v *extra.Extra) {
@@ -10007,15 +9737,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetIsSkipInvalidItems(val *bo
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetFieldWriteOptions(val []*eval_set.FieldWriteOption) {
 	p.FieldWriteOptions = val
 }
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetItemVersionDescription(val *string) {
-	p.ItemVersionDescription = val
-}
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetItemVersionStatus(val *string) {
-	p.ItemVersionStatus = val
-}
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetItemStatus(val *string) {
-	p.ItemStatus = val
-}
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -10029,9 +9750,6 @@ var fieldIDToName_BatchUpdateEvaluationSetItemsOApiRequest = map[int16]string{
 	3:   "items",
 	4:   "is_skip_invalid_items",
 	5:   "field_write_options",
-	20:  "item_version_description",
-	21:  "item_version_status",
-	22:  "item_status",
 	254: "extra",
 	255: "Base",
 }
@@ -10054,18 +9772,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetIsSkipInvalidItems() boo
 
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetFieldWriteOptions() bool {
 	return p.FieldWriteOptions != nil
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetItemVersionDescription() bool {
-	return p.ItemVersionDescription != nil
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetItemVersionStatus() bool {
-	return p.ItemVersionStatus != nil
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetItemStatus() bool {
-	return p.ItemStatus != nil
 }
 
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsSetExtra() bool {
@@ -10129,30 +9835,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) Read(iprot thrift.TProtocol) 
 		case 5:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 20:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField20(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 21:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField21(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 22:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField22(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10282,39 +9964,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField5(iprot thrift.TProt
 	p.FieldWriteOptions = _field
 	return nil
 }
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField20(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ItemVersionDescription = _field
-	return nil
-}
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField21(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ItemVersionStatus = _field
-	return nil
-}
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField22(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ItemStatus = _field
-	return nil
-}
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -10356,18 +10005,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) Write(oprot thrift.TProtocol)
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
-			goto WriteFieldError
-		}
-		if err = p.writeField20(oprot); err != nil {
-			fieldId = 20
-			goto WriteFieldError
-		}
-		if err = p.writeField21(oprot); err != nil {
-			fieldId = 21
-			goto WriteFieldError
-		}
-		if err = p.writeField22(oprot); err != nil {
-			fieldId = 22
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -10502,60 +10139,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField20(oprot thrift.TProtocol) (err error) {
-	if p.IsSetItemVersionDescription() {
-		if err = oprot.WriteFieldBegin("item_version_description", thrift.STRING, 20); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ItemVersionDescription); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
-}
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField21(oprot thrift.TProtocol) (err error) {
-	if p.IsSetItemVersionStatus() {
-		if err = oprot.WriteFieldBegin("item_version_status", thrift.STRING, 21); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ItemVersionStatus); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
-}
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField22(oprot thrift.TProtocol) (err error) {
-	if p.IsSetItemStatus() {
-		if err = oprot.WriteFieldBegin("item_status", thrift.STRING, 22); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ItemStatus); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
-}
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -10620,15 +10203,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) DeepEqual(ano *BatchUpdateEva
 		return false
 	}
 	if !p.Field5DeepEqual(ano.FieldWriteOptions) {
-		return false
-	}
-	if !p.Field20DeepEqual(ano.ItemVersionDescription) {
-		return false
-	}
-	if !p.Field21DeepEqual(ano.ItemVersionStatus) {
-		return false
-	}
-	if !p.Field22DeepEqual(ano.ItemStatus) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -10699,42 +10273,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field5DeepEqual(src []*eval_s
 		if !v.DeepEqual(_src) {
 			return false
 		}
-	}
-	return true
-}
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field20DeepEqual(src *string) bool {
-
-	if p.ItemVersionDescription == src {
-		return true
-	} else if p.ItemVersionDescription == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ItemVersionDescription, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field21DeepEqual(src *string) bool {
-
-	if p.ItemVersionStatus == src {
-		return true
-	} else if p.ItemVersionStatus == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ItemVersionStatus, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) Field22DeepEqual(src *string) bool {
-
-	if p.ItemStatus == src {
-		return true
-	} else if p.ItemStatus == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ItemStatus, *src) != 0 {
-		return false
 	}
 	return true
 }

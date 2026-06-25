@@ -133,7 +133,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_item_defs := _evaluation_set_id.Group("/item_defs", _item_defsMw(handler)...)
 					_item_defs.GET("/:item_id", append(_getevaluationsetitemdefMw(handler), apis.GetEvaluationSetItemDef)...)
-					_item_defs.PATCH("/:item_id", append(_updateevaluationsetitemdefMw(handler), apis.UpdateEvaluationSetItemDef)...)
 					_item_defs.POST("/list", append(_listevaluationsetitemdefsMw(handler), apis.ListEvaluationSetItemDefs)...)
 				}
 				{

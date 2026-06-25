@@ -301,21 +301,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) IsValid() error {
 	if len(p.Items) > int(100) {
 		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
 	}
-	if p.ItemVersionDescription != nil {
-		if len(*p.ItemVersionDescription) > int(2048) {
-			return fmt.Errorf("field ItemVersionDescription max_len rule failed, current value: %d", len(*p.ItemVersionDescription))
-		}
-	}
-	if p.ItemVersionStatus != nil {
-		if len(*p.ItemVersionStatus) > int(64) {
-			return fmt.Errorf("field ItemVersionStatus max_len rule failed, current value: %d", len(*p.ItemVersionStatus))
-		}
-	}
-	if p.ItemStatus != nil {
-		if len(*p.ItemStatus) > int(64) {
-			return fmt.Errorf("field ItemStatus max_len rule failed, current value: %d", len(*p.ItemStatus))
-		}
-	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -350,21 +335,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsValid() error {
 	}
 	if len(p.Items) > int(100) {
 		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
-	}
-	if p.ItemVersionDescription != nil {
-		if len(*p.ItemVersionDescription) > int(2048) {
-			return fmt.Errorf("field ItemVersionDescription max_len rule failed, current value: %d", len(*p.ItemVersionDescription))
-		}
-	}
-	if p.ItemVersionStatus != nil {
-		if len(*p.ItemVersionStatus) > int(64) {
-			return fmt.Errorf("field ItemVersionStatus max_len rule failed, current value: %d", len(*p.ItemVersionStatus))
-		}
-	}
-	if p.ItemStatus != nil {
-		if len(*p.ItemStatus) > int(64) {
-			return fmt.Errorf("field ItemStatus max_len rule failed, current value: %d", len(*p.ItemStatus))
-		}
 	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {

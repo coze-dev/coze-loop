@@ -65,19 +65,11 @@ func (p *Turn) IsValid() error {
 	return nil
 }
 func (p *EvaluationSetItem) IsValid() error {
-	if p.ItemVersionBrief != nil {
-		if err := p.ItemVersionBrief.IsValid(); err != nil {
-			return fmt.Errorf("field ItemVersionBrief not valid, %w", err)
-		}
-	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
 		}
 	}
-	return nil
-}
-func (p *OpenAPIItemVersionBrief) IsValid() error {
 	return nil
 }
 func (p *EvaluationItemVersion) IsValid() error {
@@ -98,11 +90,6 @@ func (p *ItemErrorDetail) IsValid() error {
 	return nil
 }
 func (p *DatasetItemOutput) IsValid() error {
-	if p.ItemVersionBrief != nil {
-		if err := p.ItemVersionBrief.IsValid(); err != nil {
-			return fmt.Errorf("field ItemVersionBrief not valid, %w", err)
-		}
-	}
 	return nil
 }
 func (p *MultiModalStoreOption) IsValid() error {

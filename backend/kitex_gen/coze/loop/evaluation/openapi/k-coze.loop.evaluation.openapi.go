@@ -5913,48 +5913,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) FastRead(buf []byte) (int, er
 					goto SkipFieldError
 				}
 			}
-		case 20:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField20(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 21:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField21(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 22:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField22(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -6107,48 +6065,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField6(buf []byte) (i
 	return offset, nil
 }
 
-func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField20(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.ItemVersionDescription = _field
-	return offset, nil
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField21(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.ItemVersionStatus = _field
-	return offset, nil
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField22(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.ItemStatus = _field
-	return offset, nil
-}
-
 func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -6186,9 +6102,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) FastWriteNocopy(buf []byte, w
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
-		offset += p.fastWriteField20(buf[offset:], w)
-		offset += p.fastWriteField21(buf[offset:], w)
-		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -6205,9 +6118,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
-		l += p.field20Length()
-		l += p.field21Length()
-		l += p.field22Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -6279,33 +6189,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) fastWriteField6(buf []byte, w
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
-	}
-	return offset
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetItemVersionDescription() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 20)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ItemVersionDescription)
-	}
-	return offset
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetItemVersionStatus() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 21)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ItemVersionStatus)
-	}
-	return offset
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetItemStatus() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 22)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ItemStatus)
 	}
 	return offset
 }
@@ -6390,33 +6273,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) field6Length() int {
 	return l
 }
 
-func (p *BatchCreateEvaluationSetItemsOApiRequest) field20Length() int {
-	l := 0
-	if p.IsSetItemVersionDescription() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.ItemVersionDescription)
-	}
-	return l
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) field21Length() int {
-	l := 0
-	if p.IsSetItemVersionStatus() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.ItemVersionStatus)
-	}
-	return l
-}
-
-func (p *BatchCreateEvaluationSetItemsOApiRequest) field22Length() int {
-	l := 0
-	if p.IsSetItemStatus() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.ItemStatus)
-	}
-	return l
-}
-
 func (p *BatchCreateEvaluationSetItemsOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -6489,30 +6345,6 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) DeepCopy(s interface{}) error
 
 			p.FieldWriteOptions = append(p.FieldWriteOptions, _elem)
 		}
-	}
-
-	if src.ItemVersionDescription != nil {
-		var tmp string
-		if *src.ItemVersionDescription != "" {
-			tmp = kutils.StringDeepCopy(*src.ItemVersionDescription)
-		}
-		p.ItemVersionDescription = &tmp
-	}
-
-	if src.ItemVersionStatus != nil {
-		var tmp string
-		if *src.ItemVersionStatus != "" {
-			tmp = kutils.StringDeepCopy(*src.ItemVersionStatus)
-		}
-		p.ItemVersionStatus = &tmp
-	}
-
-	if src.ItemStatus != nil {
-		var tmp string
-		if *src.ItemStatus != "" {
-			tmp = kutils.StringDeepCopy(*src.ItemStatus)
-		}
-		p.ItemStatus = &tmp
 	}
 
 	var _extra *extra.Extra
@@ -7136,48 +6968,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) FastRead(buf []byte) (int, er
 					goto SkipFieldError
 				}
 			}
-		case 20:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField20(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 21:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField21(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 22:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField22(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -7316,48 +7106,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) FastReadField5(buf []byte) (i
 	return offset, nil
 }
 
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) FastReadField20(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.ItemVersionDescription = _field
-	return offset, nil
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) FastReadField21(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.ItemVersionStatus = _field
-	return offset, nil
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) FastReadField22(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.ItemStatus = _field
-	return offset, nil
-}
-
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -7394,9 +7142,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) FastWriteNocopy(buf []byte, w
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
-		offset += p.fastWriteField20(buf[offset:], w)
-		offset += p.fastWriteField21(buf[offset:], w)
-		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -7412,9 +7157,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
-		l += p.field20Length()
-		l += p.field21Length()
-		l += p.field22Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -7477,33 +7219,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) fastWriteField5(buf []byte, w
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
-	}
-	return offset
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetItemVersionDescription() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 20)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ItemVersionDescription)
-	}
-	return offset
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetItemVersionStatus() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 21)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ItemVersionStatus)
-	}
-	return offset
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetItemStatus() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 22)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ItemStatus)
 	}
 	return offset
 }
@@ -7579,33 +7294,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) field5Length() int {
 	return l
 }
 
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) field20Length() int {
-	l := 0
-	if p.IsSetItemVersionDescription() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.ItemVersionDescription)
-	}
-	return l
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) field21Length() int {
-	l := 0
-	if p.IsSetItemVersionStatus() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.ItemVersionStatus)
-	}
-	return l
-}
-
-func (p *BatchUpdateEvaluationSetItemsOApiRequest) field22Length() int {
-	l := 0
-	if p.IsSetItemStatus() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.ItemStatus)
-	}
-	return l
-}
-
 func (p *BatchUpdateEvaluationSetItemsOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -7673,30 +7361,6 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) DeepCopy(s interface{}) error
 
 			p.FieldWriteOptions = append(p.FieldWriteOptions, _elem)
 		}
-	}
-
-	if src.ItemVersionDescription != nil {
-		var tmp string
-		if *src.ItemVersionDescription != "" {
-			tmp = kutils.StringDeepCopy(*src.ItemVersionDescription)
-		}
-		p.ItemVersionDescription = &tmp
-	}
-
-	if src.ItemVersionStatus != nil {
-		var tmp string
-		if *src.ItemVersionStatus != "" {
-			tmp = kutils.StringDeepCopy(*src.ItemVersionStatus)
-		}
-		p.ItemVersionStatus = &tmp
-	}
-
-	if src.ItemStatus != nil {
-		var tmp string
-		if *src.ItemStatus != "" {
-			tmp = kutils.StringDeepCopy(*src.ItemStatus)
-		}
-		p.ItemStatus = &tmp
 	}
 
 	var _extra *extra.Extra

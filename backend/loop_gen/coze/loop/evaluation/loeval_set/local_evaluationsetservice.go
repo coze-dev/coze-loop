@@ -408,27 +408,6 @@ func (l *LocalEvaluationSetService) BatchAddExistEvaluationSetItems(ctx context.
 	return result.GetSuccess(), nil
 }
 
-func (l *LocalEvaluationSetService) UpdateEvaluationSetItemDef(ctx context.Context, req *eval_set.UpdateEvaluationSetItemDefRequest, callOptions ...callopt.Option) (*eval_set.UpdateEvaluationSetItemDefResponse, error) {
-	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefArgs)
-		result := out.(*eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefResult)
-		resp, err := l.impl.UpdateEvaluationSetItemDef(ctx, arg.Req)
-		if err != nil {
-			return err
-		}
-		result.SetSuccess(resp)
-		return nil
-	})
-
-	arg := &eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefArgs{Req: req}
-	result := &eval_set.EvaluationSetServiceUpdateEvaluationSetItemDefResult{}
-	ctx = l.injectRPCInfo(ctx, "UpdateEvaluationSetItemDef")
-	if err := chain(ctx, arg, result); err != nil {
-		return nil, err
-	}
-	return result.GetSuccess(), nil
-}
-
 func (l *LocalEvaluationSetService) GetEvaluationSetItemDef(ctx context.Context, req *eval_set.GetEvaluationSetItemDefRequest, callOptions ...callopt.Option) (*eval_set.GetEvaluationSetItemDefResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*eval_set.EvaluationSetServiceGetEvaluationSetItemDefArgs)
