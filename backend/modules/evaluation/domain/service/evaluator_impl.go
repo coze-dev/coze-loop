@@ -864,14 +864,13 @@ func (e *EvaluatorServiceImpl) CreateEvaluatorRunFailRecord(ctx context.Context,
 		return nil, err
 	}
 
-	code, _, ok := errno.ParseStatusError(runErr)
-	if !ok || code == 0 {
-		code = errno.CommonInternalErrorCode
+	code := int32(errno.CommonInternalErrorCode)
+	statusErr, isStatusErr := errorx.FromStatusError(runErr)
+	if isStatusErr && statusErr.Code() > 0 {
+		code = statusErr.Code()
 	}
-	errMsg := runErr.Error()
-	if se, ok := errorx.FromStatusError(runErr); ok && se.Code() == errno.CustomRPCEvaluatorRunFailedCode {
-		errMsg = errorx.ErrorWithoutStack(runErr)
-	} else if e.cConfiger != nil {
+	errMsg := errorx.ErrorWithoutStack(runErr)
+	if e.cConfiger != nil && (!isStatusErr || statusErr.Code() != errno.CustomRPCEvaluatorRunFailedCode) {
 		if converted := e.cConfiger.GetErrCtrl(ctx).ConvertErrMsg(errMsg); converted != "" {
 			errMsg = converted
 		}
