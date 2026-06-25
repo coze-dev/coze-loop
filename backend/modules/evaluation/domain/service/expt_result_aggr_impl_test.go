@@ -447,7 +447,8 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 					map[int64]*entity.TagInfo{1: {
 						TagKeyId:   1,
 						TagKeyName: "123",
-					}}, nil)
+					}}, nil,
+				)
 
 				// Mock annotate refs
 				mockAnnotateRepo.EXPECT().BatchGetExptTurnAnnotateRecordRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return(
@@ -458,7 +459,8 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 							ExptID:           1,
 							AnnotateRecordID: 1,
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 			want: []*entity.ExptAggregateResult{
 				{

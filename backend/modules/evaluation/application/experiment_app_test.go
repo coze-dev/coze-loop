@@ -207,7 +207,8 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 						// 10001 (initial) + 10101 (resolved) + 20200 (resolved)
 						assert.ElementsMatch(t, []int64{10001, 10101, 20200}, param.EvaluatorVersionIds)
 						return validExpt, nil
-					})
+					},
+				)
 			},
 			postCheck: func(t *testing.T, req *exptpb.CreateExperimentRequest) {
 				assert.Equal(t, []int64{10001, 10101, 20200}, req.EvaluatorVersionIds)
@@ -2989,7 +2990,8 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 
 				// 异步终止运行失败：允许后台调用
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(
-					errorx.NewByCode(errno.CommonInternalErrorCode)).AnyTimes()
+					errorx.NewByCode(errno.CommonInternalErrorCode),
+				).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{BaseResp: base.NewBaseResp()},
 			wantErr:  false,
@@ -3021,7 +3023,8 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				// 异步终止
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, gomock.Any(), validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
-					errorx.NewByCode(errno.CommonInternalErrorCode)).AnyTimes()
+					errorx.NewByCode(errno.CommonInternalErrorCode),
+				).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{BaseResp: base.NewBaseResp()},
 			wantErr:  false,
@@ -4150,7 +4153,8 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 								},
 							},
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 
 			wantResp: &exptpb.BatchGetExperimentAggrResultResponse{
@@ -7692,7 +7696,8 @@ func TestExperimentApplication_UpdateExperiment_MoreBranches(t *testing.T) {
 					func(_ context.Context, updated *entity.Experiment, _ *entity.Session) error {
 						assert.NotNil(t, updated.NotificationConf)
 						return nil
-					})
+					},
+				)
 				mgr.EXPECT().GetDetail(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
 				ui.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).AnyTimes()
 			},

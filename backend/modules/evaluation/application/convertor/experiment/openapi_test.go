@@ -3670,8 +3670,10 @@ func TestOpenAPIEvaluatorRecordsMapDO2DTO(t *testing.T) {
 
 	t.Run("normal map", func(t *testing.T) {
 		records := map[int64]*entity.EvaluatorRecord{
-			1: {ID: 1, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess,
-				EvaluatorOutputData: &entity.EvaluatorOutputData{TimeConsumingMS: 50}},
+			1: {
+				ID: 1, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{TimeConsumingMS: 50},
+			},
 			2: nil,
 		}
 		dtos := openAPIEvaluatorRecordsMapDO2DTO(records)

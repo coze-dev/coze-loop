@@ -5703,7 +5703,8 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 						}
 						assert.True(t, ev.AsyncEvaluatorReportTrigger)
 						return nil
-					})
+					},
+				)
 			},
 		},
 	}
