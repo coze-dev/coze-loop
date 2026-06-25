@@ -93,13 +93,13 @@ func (d *EvaluationSetItemServiceImpl) BatchGetEvaluationSetItems(ctx context.Co
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 
-	// 下游批量获取接口有单次 ItemIDs 数量限制，这里按 100 条进行分页循环查询
 	const batchSize = 100
 	totalIDs := len(param.ItemIDs)
 	if totalIDs == 0 {
 		return nil, nil
 	}
 
+	// 下游批量获取接口有单次 ItemIDs 数量限制，这里按 100 条进行分页循环查询
 	for start := 0; start < totalIDs; start += batchSize {
 		end := start + batchSize
 		if end > totalIDs {
@@ -111,6 +111,8 @@ func (d *EvaluationSetItemServiceImpl) BatchGetEvaluationSetItems(ctx context.Co
 			EvaluationSetID: param.EvaluationSetID,
 			ItemIDs:         param.ItemIDs[start:end],
 			VersionID:       param.VersionID,
+			Filter:          param.Filter,
+			TagFilter:       param.TagFilter,
 		}
 
 		var batchItems []*entity.EvaluationSetItem

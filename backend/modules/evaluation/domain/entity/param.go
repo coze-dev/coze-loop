@@ -72,6 +72,8 @@ type BatchGetEvaluationSetItemsParam struct {
 	PageSize        *int32
 	PageToken       *string
 	OrderBys        []*OrderBy
+	Filter          *Filter
+	TagFilter       *TagFilter
 }
 
 type GetEvaluationSetItemFieldParam struct {

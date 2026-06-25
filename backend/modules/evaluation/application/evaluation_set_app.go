@@ -603,11 +603,17 @@ func (e *EvaluationSetApplicationImpl) BatchGetEvaluationSetItems(ctx context.Co
 		return nil, err
 	}
 	// domain调用
+	tagFilter, err := evaluation_set.TagFilterDTO2DO(req.TagFilter)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
 		SpaceID:         req.WorkspaceID,
 		EvaluationSetID: req.EvaluationSetID,
 		VersionID:       req.VersionID,
 		ItemIDs:         req.ItemIds,
+		Filter:          req.Filter,
+		TagFilter:       tagFilter,
 	})
 	if err != nil {
 		return nil, err

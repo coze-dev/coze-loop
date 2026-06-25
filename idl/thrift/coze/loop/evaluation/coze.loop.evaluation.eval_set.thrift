@@ -349,6 +349,8 @@ struct BatchGetEvaluationSetItemsRequest {
     3: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"'),
     4: optional list<i64> item_ids (api.js_conv = 'true', go.tag='json:"item_ids"'),
     20: optional list<EvaluationItemVersionRef> item_version_queries (vt.max_size = "100", vt.elem.skip = "false")
+    201: optional filter.Filter filter // item 过滤条件
+    212: optional eval_set.TagFilter tag_filter // 系统资源标签过滤
 
     255: optional base.Base Base
 }

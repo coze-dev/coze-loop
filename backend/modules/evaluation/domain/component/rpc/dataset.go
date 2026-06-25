@@ -127,6 +127,8 @@ type BatchGetDatasetItemsParam struct {
 	EvaluationSetID int64
 	ItemIDs         []int64
 	VersionID       *int64
+	Filter          *entity.Filter
+	TagFilter       *entity.TagFilter
 }
 
 type BatchCreateDatasetItemsParam struct {

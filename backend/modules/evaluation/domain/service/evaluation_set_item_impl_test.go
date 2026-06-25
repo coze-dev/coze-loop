@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -298,6 +299,11 @@ func TestEvaluationSetItemServiceImpl_BatchGetEvaluationSetItems(t *testing.T) {
 	evaluationSetItemServiceOnce = sync.Once{}
 	mockDatasetRPCAdapter := mocks.NewMockIDatasetRPCAdapter(ctrl)
 	service := NewEvaluationSetItemServiceImpl(mockDatasetRPCAdapter)
+	tagFilter := &entity.TagFilter{
+		TagNames: []string{"tag-api-verify-a"},
+		Relation: entity.TagFilterRelationOr,
+	}
+	filter := &entity.Filter{}
 
 	tests := []struct {
 		name      string
@@ -341,6 +347,66 @@ func TestEvaluationSetItemServiceImpl_BatchGetEvaluationSetItems(t *testing.T) {
 					Return([]*entity.EvaluationSetItem{
 						{ID: 1, ItemKey: "item1"},
 					}, nil)
+			},
+			wantItems: []*entity.EvaluationSetItem{
+				{ID: 1, ItemKey: "item1"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "成功批量获取 - 带过滤条件",
+			param: &entity.BatchGetEvaluationSetItemsParam{
+				SpaceID:         1,
+				EvaluationSetID: 100,
+				ItemIDs:         []int64{2, 1, 3},
+				Filter:          filter,
+				TagFilter:       tagFilter,
+			},
+			mockSetup: func() {
+				mockDatasetRPCAdapter.EXPECT().
+					BatchGetDatasetItems(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, got *rpc.BatchGetDatasetItemsParam) ([]*entity.EvaluationSetItem, error) {
+						assert.Equal(t, int64(1), got.SpaceID)
+						assert.Equal(t, int64(100), got.EvaluationSetID)
+						assert.Equal(t, []int64{2, 1, 3}, got.ItemIDs)
+						assert.Same(t, filter, got.Filter)
+						assert.Same(t, tagFilter, got.TagFilter)
+						return []*entity.EvaluationSetItem{
+							{ID: 1, ItemKey: "item1"},
+							{ID: 3, ItemKey: "item3"},
+						}, nil
+					})
+			},
+			wantItems: []*entity.EvaluationSetItem{
+				{ID: 1, ItemKey: "item1"},
+				{ID: 3, ItemKey: "item3"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "成功批量获取 - 带版本和过滤条件",
+			param: &entity.BatchGetEvaluationSetItemsParam{
+				SpaceID:         1,
+				EvaluationSetID: 100,
+				VersionID:       gptr.Of[int64](1),
+				ItemIDs:         []int64{1},
+				Filter:          filter,
+				TagFilter:       tagFilter,
+			},
+			mockSetup: func() {
+				mockDatasetRPCAdapter.EXPECT().
+					BatchGetDatasetItemsByVersion(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, got *rpc.BatchGetDatasetItemsParam) ([]*entity.EvaluationSetItem, error) {
+						assert.Equal(t, int64(1), got.SpaceID)
+						assert.Equal(t, int64(100), got.EvaluationSetID)
+						assert.Equal(t, gptr.Of[int64](1), got.VersionID)
+						assert.Equal(t, []int64{1}, got.ItemIDs)
+						assert.Same(t, filter, got.Filter)
+						assert.Same(t, tagFilter, got.TagFilter)
+						return []*entity.EvaluationSetItem{
+							{ID: 1, ItemKey: "item1"},
+						}, nil
+					})
 			},
 			wantItems: []*entity.EvaluationSetItem{
 				{ID: 1, ItemKey: "item1"},

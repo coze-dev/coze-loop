@@ -601,6 +601,16 @@ func (p *BatchGetEvaluationSetItemsRequest) IsValid() error {
 			}
 		}
 	}
+	if p.Filter != nil {
+		if err := p.Filter.IsValid(); err != nil {
+			return fmt.Errorf("field Filter not valid, %w", err)
+		}
+	}
+	if p.TagFilter != nil {
+		if err := p.TagFilter.IsValid(); err != nil {
+			return fmt.Errorf("field TagFilter not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
