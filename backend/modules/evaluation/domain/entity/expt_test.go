@@ -4,10 +4,13 @@ package entity
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -456,6 +459,61 @@ func TestContainsEvalTarget(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, tt.expt.ContainsEvalTarget())
+		})
+	}
+}
+
+func TestValidateExperimentName(t *testing.T) {
+	maxLenValid := strings.Repeat("a", MaxExperimentNameLength)
+	overLen := strings.Repeat("a", MaxExperimentNameLength+1)
+
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		// 合法
+		{"single letter", "a", false},
+		{"letters and digits", "exp1", false},
+		{"chinese", "实验", false},
+		{"chinese mixed digits", "实验1", false},
+		{"underscore", "exp_1", false},
+		{"dash inside", "exp-1", false},
+		{"dot inside", "exp.1", false},
+		{"max length 50", maxLenValid, false},
+		{"all allowed punctuation inside", "Aa1_-.b", false},
+
+		// 长度不合法
+		{"empty", "", true},
+		{"length 51", overLen, true},
+
+		// 首字符不合法
+		{"leading underscore", "_exp", true},
+		{"leading dash", "-exp", true},
+		{"leading dot", ".exp", true},
+
+		// 字符集不合法（典型 oncall case）
+		{"bracket pair", "exp[]", true},
+		{"slash", "exp/sub", true},
+		{"space", "exp name", true},
+		{"colon", "exp:1", true},
+		{"comma", "exp,1", true},
+		{"asterisk", "exp*1", true},
+		{"emoji", "exp🚀", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateExperimentName(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateExperimentName(%q) err=%v, wantErr=%v", tt.input, err, tt.wantErr)
+			}
+			if err == nil {
+				return
+			}
+			serr, ok := errorx.FromStatusError(err)
+			assert.True(t, ok, "expect status error, got %v", err)
+			assert.Equal(t, int32(errno.ExperimentNameInvalidFormatCode), serr.Code())
 		})
 	}
 }

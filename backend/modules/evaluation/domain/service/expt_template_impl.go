@@ -80,6 +80,11 @@ type ExptTemplateManagerImpl struct {
 }
 
 func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType, session *entity.Session) (bool, error) {
+	// 模板名会在调度创建实验时拼接为实验名（template_name + "-" + timestamp），
+	// 因此沿用实验名的字符集约束，避免拼出的实验名进入 TOS 时触发转义问题。
+	if err := entity.ValidateExperimentName(name); err != nil {
+		return false, err
+	}
 	_, exists, err := e.templateRepo.GetByName(ctx, name, spaceID, exptType)
 	if err != nil {
 		return false, err
@@ -90,11 +95,11 @@ func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, sp
 func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.CreateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
 	// 验证名称：按 expt_type 隔离，避免在线/离线模板互相判重
 	pass, err := e.CheckName(ctx, param.Name, param.SpaceID, param.ExptType, session)
-	if !pass {
-		return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
-	}
 	if err != nil {
 		return nil, err
+	}
+	if !pass {
+		return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
 	}
 
 	// 解析并回填评估器版本ID（如果缺失）
@@ -290,11 +295,11 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）；按现有模板的 expt_type 隔离判重
 	if param.Name != "" && param.Name != existingTemplate.GetName() {
 		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, existingTemplate.Meta.ExptType, session)
-		if !pass {
-			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
-		}
 		if err != nil {
 			return nil, err
+		}
+		if !pass {
+			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
 		}
 	}
 
@@ -561,11 +566,11 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）；按现有模板的 expt_type 隔离判重
 	if param.Name != "" && param.Name != existingTemplate.GetName() {
 		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, existingTemplate.Meta.ExptType, session)
-		if !pass {
-			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
-		}
 		if err != nil {
 			return nil, err
+		}
+		if !pass {
+			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
 		}
 	}
 
