@@ -33,7 +33,7 @@ func (t *SandboxAgentSourceEvalTargetServiceImpl) EvalType() entity.EvalTargetTy
 }
 
 func (t *SandboxAgentSourceEvalTargetServiceImpl) RuntimeParam() entity.IRuntimeParam {
-	return entity.NewDummyRuntimeParam()
+	return entity.NewGenericJSONRuntimeParam()
 }
 
 func (t *SandboxAgentSourceEvalTargetServiceImpl) ValidateInput(ctx context.Context, spaceID int64, inputSchema []*entity.ArgsSchema, input *entity.EvalTargetInputData) error {
@@ -75,6 +75,7 @@ func (t *SandboxAgentSourceEvalTargetServiceImpl) BuildBySource(ctx context.Cont
 			SourceTargetVersion: sourceTargetVersion,
 			EvalTargetType:      entity.EvalTargetTypeSandboxAgent,
 			SandboxAgent:        o.SandboxAgent,
+			RuntimeParamDemo:    gptr.Of(entity.NewGenericJSONRuntimeParam().GetJSONDemo()),
 			BaseInfo: &entity.BaseInfo{
 				CreatedBy: userInfo,
 				UpdatedBy: userInfo,
