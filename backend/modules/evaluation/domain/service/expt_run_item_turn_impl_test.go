@@ -515,13 +515,14 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 			} else {
 				assert.NoError(t, err)
 			}
-			if tt.name == "AsyncRunEvaluator error" {
+			switch tt.name {
+			case "AsyncRunEvaluator error":
 				val, ok := recordMap.Load(int64(101))
 				require.True(t, ok)
 				record, ok := val.(*entity.EvaluatorRecord)
 				require.True(t, ok)
 				assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
-			} else if tt.name == "AsyncRunEvaluator error and failed record creation error" {
+			case "AsyncRunEvaluator error and failed record creation error":
 				_, ok := recordMap.Load(int64(101))
 				assert.False(t, ok)
 			}
