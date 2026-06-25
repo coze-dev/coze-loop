@@ -463,8 +463,9 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			want: []*entity.ExptAggregateResult{
 				{
 					ExperimentID: 1,
-					EvaluatorResults: map[int64]*entity.EvaluatorAggregateResult{
-						1: {
+					// 旧数据: field_key 为纯数字 "1", alias 解析为空串, instanceKey 退化为裸 versionID "1"。
+					EvaluatorResults: map[string]*entity.EvaluatorAggregateResult{
+						"1": {
 							EvaluatorVersionID: 1,
 							EvaluatorID:        1,
 							AggregatorResults: []*entity.AggregatorResult{
@@ -551,7 +552,7 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			want: []*entity.ExptAggregateResult{
 				{
 					ExperimentID:      2,
-					EvaluatorResults:  map[int64]*entity.EvaluatorAggregateResult{},
+					EvaluatorResults:  map[string]*entity.EvaluatorAggregateResult{},
 					AnnotationResults: map[int64]*entity.AnnotationAggregateResult{},
 					TargetResults: &entity.EvalTargetMtrAggrResult{
 						TargetID:        10,
@@ -569,6 +570,78 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 							{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.8)}},
 						},
 					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			// 同 versionID 多 alias: field_key "1" (default, 退化裸 versionID) 与 "1:judge_b" 应各成一条, 不撞 key。
+			name:    "Same version multi alias not collide",
+			spaceID: 100,
+			exptIDs: []int64{3},
+			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockEvaluatorService *svcMocks.MockEvaluatorService,
+				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
+			) {
+				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{3}).Return([]*entity.Experiment{{ID: 3, TargetID: 10, TargetVersionID: 20}}, nil)
+
+				aggrResult := &entity.AggregateResult{
+					AggregatorResults: []*entity.AggregatorResult{
+						{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.8)}},
+					},
+				}
+				aggrResultBytes, _ := json.Marshal(aggrResult)
+				mockExptAggrResultRepo.EXPECT().
+					BatchGetExptAggrResultByExperimentIDs(gomock.Any(), []int64{3}).
+					Return([]*entity.ExptAggrResult{
+						{ExperimentID: 3, FieldType: int32(entity.FieldType_EvaluatorScore), FieldKey: "1", AggrResult: aggrResultBytes, UpdateAt: gptr.Of(time.Unix(1000, 0))},
+						{ExperimentID: 3, FieldType: int32(entity.FieldType_EvaluatorScore), FieldKey: "1:judge_b", AggrResult: aggrResultBytes, UpdateAt: gptr.Of(time.Unix(1000, 0))},
+					}, nil)
+
+				mockExperimentRepo.EXPECT().
+					GetEvaluatorRefByExptIDs(gomock.Any(), []int64{3}, int64(100)).
+					Return([]*entity.ExptEvaluatorRef{{EvaluatorVersionID: 1, EvaluatorID: 1}}, nil)
+
+				evaluator := &entity.Evaluator{
+					ID:            1,
+					Name:          "test evaluator",
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1, Version: "1.0"},
+				}
+				mockEvaluatorService.EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), []int64{1}, true).
+					Return([]*entity.Evaluator{evaluator}, nil)
+
+				mockTagRPCAdapter.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[int64]*entity.TagInfo{}, nil)
+				mockAnnotateRepo.EXPECT().BatchGetExptTurnAnnotateRecordRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil)
+			},
+			want: []*entity.ExptAggregateResult{
+				{
+					ExperimentID: 3,
+					// 两个实例 key: "1" (default, alias="") + "1:judge_b" (alias="judge_b"), 不再撞 key。
+					EvaluatorResults: map[string]*entity.EvaluatorAggregateResult{
+						"1": {
+							EvaluatorVersionID: 1,
+							EvaluatorID:        1,
+							AggregatorResults:  []*entity.AggregatorResult{{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.8)}}},
+							Name:               gptr.Of("test evaluator"),
+							Version:            gptr.Of("1.0"),
+							Alias:              "",
+						},
+						"1:judge_b": {
+							EvaluatorVersionID: 1,
+							EvaluatorID:        1,
+							AggregatorResults:  []*entity.AggregatorResult{{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.8)}}},
+							Name:               gptr.Of("test evaluator"),
+							Version:            gptr.Of("1.0"),
+							Alias:              "judge_b",
+						},
+					},
+					AnnotationResults: map[int64]*entity.AnnotationAggregateResult{},
+					TargetResults: &entity.EvalTargetMtrAggrResult{
+						TargetID:        10,
+						TargetVersionID: 20,
+					},
+					UpdateTime: gptr.Of(time.Unix(1000, 0)),
 				},
 			},
 			wantErr: false,

@@ -2498,7 +2498,7 @@ func TestEvalOpenAPIApplication_GetExperimentAggrResultOApi(t *testing.T) {
 				}
 				aggResult := &entity.ExptAggregateResult{
 					ExperimentID:     experimentID,
-					EvaluatorResults: map[int64]*entity.EvaluatorAggregateResult{evaluatorID: evaluatorResult},
+					EvaluatorResults: map[string]*entity.EvaluatorAggregateResult{entity.EncodeEvaluatorInstanceKey(evaluatorID, ""): evaluatorResult},
 				}
 				aggSvc.EXPECT().BatchGetExptAggrResultByExperimentIDs(gomock.Any(), workspaceID, []int64{experimentID}).Return([]*entity.ExptAggregateResult{aggResult}, nil)
 			},

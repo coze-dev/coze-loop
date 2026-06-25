@@ -1419,6 +1419,7 @@ func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context
 			Name:               v.Name,
 			Version:            v.Version,
 			AggregatorResults:  experiment_convertor.OpenAPIAggregatorResultsDO2DTOs(v.AggregatorResults),
+			Alias:              gptr.Of(v.Alias),
 		})
 	}
 	return &openapi.GetExperimentAggrResultOApiResponse{

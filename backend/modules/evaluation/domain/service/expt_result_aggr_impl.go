@@ -590,7 +590,8 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 
 	results := make([]*entity.ExptAggregateResult, 0, len(expt2AggrResults))
 	for exptID, exptResult := range expt2AggrResults {
-		evaluatorResults := make(map[int64]*entity.EvaluatorAggregateResult)
+		// key 为评估器实例 key (EncodeEvaluatorInstanceKey(versionID, alias)), 支持同 versionID 多 alias 不撞 key。
+		evaluatorResults := make(map[string]*entity.EvaluatorAggregateResult)
 		annotationResults := make(map[int64]*entity.AnnotationAggregateResult)
 		targetResults := &entity.EvalTargetMtrAggrResult{
 			TargetID:        versionedTargetIDMap[exptID].TargetID,
@@ -627,7 +628,9 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 				}
 				annotationResults[tagKeyID] = annotationResult
 			case int32(entity.FieldType_EvaluatorScore):
-				evaluatorVersionID, _, err := entity.ParseEvaluatorScoreFieldKey(fieldResult.FieldKey)
+				// 保留 alias: 同 versionID 多实例 (alias) 在 field_key 里编码为 "<versionID>:<alias>";
+				// 老数据 field_key 为纯数字, alias 解析为空串, instanceKey 退化为裸 versionID。
+				evaluatorVersionID, alias, err := entity.ParseEvaluatorScoreFieldKey(fieldResult.FieldKey)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse evaluator version id from field key %s, err: %v", fieldResult.FieldKey, err)
 				}
@@ -647,8 +650,10 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 					AggregatorResults:  aggregateResultDO.AggregatorResults,
 					Name:               gptr.Of(evaluator.Name),
 					Version:            gptr.Of(evaluator.GetVersion()),
+					Alias:              alias,
 				}
-				evaluatorResults[evaluatorVersionID] = &evaluatorAggrResult
+				// 用实例 key 做 map key, 同 versionID 多 alias 不再撞 key 覆盖。
+				evaluatorResults[entity.EncodeEvaluatorInstanceKey(evaluatorVersionID, alias)] = &evaluatorAggrResult
 			case int32(entity.FieldType_WeightedScore):
 				aggregateResultDO := entity.AggregateResult{}
 				if err := json.Unmarshal(fieldResult.AggrResult, &aggregateResultDO); err != nil {

@@ -181,8 +181,11 @@ func (e *ExptAggrResult) AggrResEqual(other *ExptAggrResult) bool {
 }
 
 type ExptAggregateResult struct {
-	ExperimentID      int64
-	EvaluatorResults  map[int64]*EvaluatorAggregateResult
+	ExperimentID int64
+	// EvaluatorResults 的 key 为评估器实例 key (entity.EncodeEvaluatorInstanceKey(versionID, alias)):
+	// alias 为空 (老实验/老数据) 时退化为裸 versionID; alias 非空时为 "<versionID>:<alias>"。
+	// 改用实例 key 是为支持同 versionID 多 alias 实例不撞 key (WS5 alias 多实例)。
+	EvaluatorResults  map[string]*EvaluatorAggregateResult
 	Status            int64
 	AnnotationResults map[int64]*AnnotationAggregateResult
 	TargetResults     *EvalTargetMtrAggrResult
@@ -197,6 +200,8 @@ type EvaluatorAggregateResult struct {
 	AggregatorResults  []*AggregatorResult
 	Name               *string
 	Version            *string
+	// Alias 评估器多实例别名; 同 versionID 多实例时区分 (default/judge_b 等), 老数据为空串。
+	Alias string
 }
 
 // 人工标注项粒度聚合结果

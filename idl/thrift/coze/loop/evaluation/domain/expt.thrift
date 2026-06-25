@@ -601,6 +601,9 @@ struct EvaluatorAggregateResult {
     2: optional list<AggregatorResult> aggregator_results
     3: optional string name
     4: optional string version
+    // alias 多实例别名 (default/judge_b 等); 同 version 多实例时区分, 老数据为空串。
+    // 注意: evaluator_results 为 map<i64> 时同 version 多 alias 会撞 key 只保留一个, 要拿全部 alias 走 list 出口。
+    5: optional string alias
 }
 
 // 人工标注项粒度聚合结果

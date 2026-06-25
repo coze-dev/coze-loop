@@ -3390,6 +3390,8 @@ type EvaluatorAggregateResult_ struct {
 	Name               *string              `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Version            *string              `thrift:"version,4,optional" frugal:"4,optional,string" form:"version" json:"version,omitempty" query:"version"`
 	AggregatorResults  []*AggregatorResult_ `thrift:"aggregator_results,20,optional" frugal:"20,optional,list<AggregatorResult_>" form:"aggregator_results" json:"aggregator_results,omitempty" query:"aggregator_results"`
+	// alias 多实例别名 (default/judge_b 等); 同 version 多实例时区分, 老数据为空串。
+	Alias *string `thrift:"alias,21,optional" frugal:"21,optional,string" form:"alias" json:"alias,omitempty" query:"alias"`
 }
 
 func NewEvaluatorAggregateResult_() *EvaluatorAggregateResult_ {
@@ -3458,6 +3460,18 @@ func (p *EvaluatorAggregateResult_) GetAggregatorResults() (v []*AggregatorResul
 	}
 	return p.AggregatorResults
 }
+
+var EvaluatorAggregateResult__Alias_DEFAULT string
+
+func (p *EvaluatorAggregateResult_) GetAlias() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAlias() {
+		return EvaluatorAggregateResult__Alias_DEFAULT
+	}
+	return *p.Alias
+}
 func (p *EvaluatorAggregateResult_) SetEvaluatorID(val *int64) {
 	p.EvaluatorID = val
 }
@@ -3473,6 +3487,9 @@ func (p *EvaluatorAggregateResult_) SetVersion(val *string) {
 func (p *EvaluatorAggregateResult_) SetAggregatorResults(val []*AggregatorResult_) {
 	p.AggregatorResults = val
 }
+func (p *EvaluatorAggregateResult_) SetAlias(val *string) {
+	p.Alias = val
+}
 
 var fieldIDToName_EvaluatorAggregateResult_ = map[int16]string{
 	1:  "evaluator_id",
@@ -3480,6 +3497,7 @@ var fieldIDToName_EvaluatorAggregateResult_ = map[int16]string{
 	3:  "name",
 	4:  "version",
 	20: "aggregator_results",
+	21: "alias",
 }
 
 func (p *EvaluatorAggregateResult_) IsSetEvaluatorID() bool {
@@ -3500,6 +3518,10 @@ func (p *EvaluatorAggregateResult_) IsSetVersion() bool {
 
 func (p *EvaluatorAggregateResult_) IsSetAggregatorResults() bool {
 	return p.AggregatorResults != nil
+}
+
+func (p *EvaluatorAggregateResult_) IsSetAlias() bool {
+	return p.Alias != nil
 }
 
 func (p *EvaluatorAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -3555,6 +3577,14 @@ func (p *EvaluatorAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 20:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField21(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3656,6 +3686,17 @@ func (p *EvaluatorAggregateResult_) ReadField20(iprot thrift.TProtocol) error {
 	p.AggregatorResults = _field
 	return nil
 }
+func (p *EvaluatorAggregateResult_) ReadField21(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Alias = _field
+	return nil
+}
 
 func (p *EvaluatorAggregateResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3681,6 +3722,10 @@ func (p *EvaluatorAggregateResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
 			goto WriteFieldError
 		}
 	}
@@ -3799,6 +3844,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
 }
+func (p *EvaluatorAggregateResult_) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAlias() {
+		if err = oprot.WriteFieldBegin("alias", thrift.STRING, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Alias); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
 
 func (p *EvaluatorAggregateResult_) String() string {
 	if p == nil {
@@ -3827,6 +3890,9 @@ func (p *EvaluatorAggregateResult_) DeepEqual(ano *EvaluatorAggregateResult_) bo
 		return false
 	}
 	if !p.Field20DeepEqual(ano.AggregatorResults) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.Alias) {
 		return false
 	}
 	return true
@@ -3890,6 +3956,18 @@ func (p *EvaluatorAggregateResult_) Field20DeepEqual(src []*AggregatorResult_) b
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *EvaluatorAggregateResult_) Field21DeepEqual(src *string) bool {
+
+	if p.Alias == src {
+		return true
+	} else if p.Alias == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Alias, *src) != 0 {
+		return false
 	}
 	return true
 }

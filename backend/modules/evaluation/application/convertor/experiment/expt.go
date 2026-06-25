@@ -769,9 +769,10 @@ func ToExptStatsDTO(stats *entity.ExptStats, aggrResult *entity.ExptAggregateRes
 	}
 
 	if aggrResult != nil {
-		aggrResultDTO := ExptAggregateResultDOToDTO(aggrResult)
-		exptStatistics.EvaluatorAggregateResults = append(exptStatistics.EvaluatorAggregateResults, maps.ToSlice(aggrResultDTO.GetEvaluatorResults(), func(k int64, v *domain_expt.EvaluatorAggregateResult_) *domain_expt.EvaluatorAggregateResult_ {
-			return v
+		// 直接从 DO 的 EvaluatorResults (key 为 instanceKey, 不撞) 摊成 list, 不经 thrift map<i64> 中转,
+		// 否则同 versionID 多 alias 会在 map 出口撞 key 只剩一个。list 出口可容纳全部 alias 实例。
+		exptStatistics.EvaluatorAggregateResults = append(exptStatistics.EvaluatorAggregateResults, maps.ToSlice(aggrResult.EvaluatorResults, func(k string, v *entity.EvaluatorAggregateResult) *domain_expt.EvaluatorAggregateResult_ {
+			return EvaluatorResultsDOToDTO(v)
 		})...)
 	}
 

@@ -145,6 +145,8 @@ struct EvaluatorAggregateResult {
     4: optional string version
 
     20: optional list<AggregatorResult> aggregator_results
+    // alias 多实例别名 (default/judge_b 等); 同 version 多实例时区分, 老数据为空串。
+    21: optional string alias
 }
 
 struct EvalTargetAggregateResult {

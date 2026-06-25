@@ -17,9 +17,12 @@ func ExptAggregateResultDOToDTO(data *entity.ExptAggregateResult) *domain_expt.E
 		return nil
 	}
 
+	// 注意: thrift 出口 evaluator_results 为 map<i64>, key 只能是 versionID。
+	// 同 versionID 多 alias 实例在此 map 出口会撞 key 只保留一个 (DO 层用 instanceKey 不撞)。
+	// 要拿全部 alias 实例请走 list 出口 (ExptStatistics.evaluator_aggregate_results / OpenAPI GetExperimentAggrResult)。
 	evaluatorResults := make(map[int64]*domain_expt.EvaluatorAggregateResult_, len(data.EvaluatorResults))
-	for evaluatorVersionID, evaluatorResult := range data.EvaluatorResults {
-		evaluatorResults[evaluatorVersionID] = EvaluatorResultsDOToDTO(evaluatorResult)
+	for _, evaluatorResult := range data.EvaluatorResults {
+		evaluatorResults[evaluatorResult.EvaluatorVersionID] = EvaluatorResultsDOToDTO(evaluatorResult)
 	}
 	annotationResults := make(map[int64]*domain_expt.AnnotationAggregateResult_, len(data.AnnotationResults))
 	for tagKeyID, annotationResult := range data.AnnotationResults {
@@ -55,6 +58,7 @@ func EvaluatorResultsDOToDTO(result *entity.EvaluatorAggregateResult) *domain_ex
 		AggregatorResults:  AggregatorResultDOsToDTOs(result.AggregatorResults),
 		Name:               result.Name,
 		Version:            result.Version,
+		Alias:              gptr.Of(result.Alias),
 	}
 }
 

@@ -15908,6 +15908,20 @@ func (p *EvaluatorAggregateResult_) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -15999,6 +16013,20 @@ func (p *EvaluatorAggregateResult_) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluatorAggregateResult_) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Alias = _field
+	return offset, nil
+}
+
 func (p *EvaluatorAggregateResult_) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -16010,6 +16038,7 @@ func (p *EvaluatorAggregateResult_) FastWriteNocopy(buf []byte, w thrift.NocopyW
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -16022,6 +16051,7 @@ func (p *EvaluatorAggregateResult_) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -16068,6 +16098,15 @@ func (p *EvaluatorAggregateResult_) fastWriteField4(buf []byte, w thrift.NocopyW
 	return offset
 }
 
+func (p *EvaluatorAggregateResult_) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAlias() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Alias)
+	}
+	return offset
+}
+
 func (p *EvaluatorAggregateResult_) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -16102,6 +16141,15 @@ func (p *EvaluatorAggregateResult_) field4Length() int {
 	if p.IsSetVersion() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.Version)
+	}
+	return l
+}
+
+func (p *EvaluatorAggregateResult_) field5Length() int {
+	l := 0
+	if p.IsSetAlias() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Alias)
 	}
 	return l
 }
@@ -16143,6 +16191,14 @@ func (p *EvaluatorAggregateResult_) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Version)
 		}
 		p.Version = &tmp
+	}
+
+	if src.Alias != nil {
+		var tmp string
+		if *src.Alias != "" {
+			tmp = kutils.StringDeepCopy(*src.Alias)
+		}
+		p.Alias = &tmp
 	}
 
 	return nil

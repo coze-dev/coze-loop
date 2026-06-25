@@ -4136,8 +4136,8 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 					[]*entity.ExptAggregateResult{
 						{
 							ExperimentID: validExptID,
-							EvaluatorResults: map[int64]*entity.EvaluatorAggregateResult{
-								validEvaluatorVersionID: {
+							EvaluatorResults: map[string]*entity.EvaluatorAggregateResult{
+								entity.EncodeEvaluatorInstanceKey(validEvaluatorVersionID, ""): {
 									EvaluatorVersionID: validEvaluatorVersionID,
 									AggregatorResults: []*entity.AggregatorResult{
 										{
