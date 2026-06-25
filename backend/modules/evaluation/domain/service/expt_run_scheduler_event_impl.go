@@ -51,6 +51,7 @@ type ExptSchedulerImpl struct {
 	IDGen                    idgen.IIDGenerator
 	evaluationSetItemService EvaluationSetItemService
 	schedulerModeFactory     SchedulerModeFactory
+	evalTargetService        IEvalTargetService
 }
 
 func NewExptSchedulerSvc(
@@ -72,6 +73,7 @@ func NewExptSchedulerSvc(
 	idGen idgen.IIDGenerator,
 	evaluationSetItemService EvaluationSetItemService,
 	schedulerModeFactory SchedulerModeFactory,
+	evalTargetService IEvalTargetService,
 ) ExptSchedulerEvent {
 	i := &ExptSchedulerImpl{
 		Manager:                  manager,
@@ -92,6 +94,7 @@ func NewExptSchedulerSvc(
 		IDGen:                    idGen,
 		evaluationSetItemService: evaluationSetItemService,
 		schedulerModeFactory:     schedulerModeFactory,
+		evalTargetService:        evalTargetService,
 	}
 
 	i.Endpoints = SchedulerChain(
@@ -446,6 +449,10 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		logs.CtxError(ctx, "[ExptEval] terminate async evaluator records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
 	}
 
+	if err := e.terminateZombieEvalTargetRecords(ctx, event, zombieItemIDs); err != nil {
+		logs.CtxError(ctx, "[ExptEval] terminate async eval target records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
+	}
+
 	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)}, event.SpaceID); err != nil {
 		return nil, nil, err
 	}
@@ -534,4 +541,42 @@ func (e *ExptSchedulerImpl) terminateZombieEvaluatorRecords(ctx context.Context,
 		}
 	}
 	return firstErr
+}
+
+// terminateZombieEvalTargetRecords 将僵尸 item 关联的 EvalTargetRecord（仅 SandboxAgent 类型且仍 AsyncInvoking）置为 Fail，
+// 并 best-effort 销毁对应的沙箱 execute。
+func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context, event *entity.ExptScheduleEvent, zombieItemIDs []int64) error {
+	if len(zombieItemIDs) == 0 || e.evalTargetService == nil {
+		return nil
+	}
+
+	turnRunLogs, err := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, event.SpaceID)
+	if err != nil {
+		return err
+	}
+
+	recordIDSet := make(map[int64]struct{})
+	for _, rl := range turnRunLogs {
+		if rl == nil || rl.TargetResultID <= 0 {
+			continue
+		}
+		recordIDSet[rl.TargetResultID] = struct{}{}
+	}
+	if len(recordIDSet) == 0 {
+		return nil
+	}
+
+	recordIDs := make([]int64, 0, len(recordIDSet))
+	for id := range recordIDSet {
+		recordIDs = append(recordIDs, id)
+	}
+
+	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
+		ctx,
+		event.SpaceID,
+		recordIDs,
+		int32(errno.AsyncEvalTargetZombieTimeoutCode),
+		"async eval target terminated: experiment item exceeded zombie timeout",
+	)
+	return nil
 }

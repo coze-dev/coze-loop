@@ -707,28 +707,119 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 		return
 	}
 
-	// 反查实验 ID 作为 TaskID（与 Submit 时 Init 用的 TaskID 一致）
-	var taskID string
-	if e.exptRunLogRepo != nil && record.ExperimentRunID > 0 {
-		runLog, err := e.exptRunLogRepo.Get(ctx, 0, record.ExperimentRunID)
-		if err != nil {
-			logs.CtxWarn(ctx, "[SandboxDestroy] get expt_run_log fail, expt_run_id=%d, err=%v", record.ExperimentRunID, err)
-		} else if runLog != nil && runLog.ExptID > 0 {
-			taskID = strconv.FormatInt(runLog.ExptID, 10)
-		}
-	}
+	taskID := e.resolveSandboxTaskIDByRunID(ctx, record.ExperimentRunID)
+	e.destroySandboxExecute(ctx, taskID, record.SpaceID, record.ID)
+}
 
+// resolveSandboxTaskIDByRunID 通过 ExperimentRunID 反查 ExptID 作为 sandbox TaskID。
+func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context, experimentRunID int64) string {
+	if e.exptRunLogRepo == nil || experimentRunID <= 0 {
+		return ""
+	}
+	runLog, err := e.exptRunLogRepo.Get(ctx, 0, experimentRunID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] get expt_run_log fail, expt_run_id=%d, err=%v", experimentRunID, err)
+		return ""
+	}
+	if runLog == nil || runLog.ExptID <= 0 {
+		return ""
+	}
+	return strconv.FormatInt(runLog.ExptID, 10)
+}
+
+// destroySandboxExecute 异步 best-effort 销毁单个 sandbox execute。
+func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID, executeID int64) {
+	if e.sandboxSchedulerAdapter == nil {
+		return
+	}
 	goroutine.Go(ctx, func() {
 		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
 			TaskID:      taskID,
 			DestroyType: rpc.SandboxDestroyTypeExecute,
-			ExecuteIDs:  []string{strconv.FormatInt(record.ID, 10)},
-			WorkspaceID: record.SpaceID,
+			ExecuteIDs:  []string{strconv.FormatInt(executeID, 10)},
+			WorkspaceID: spaceID,
 		}); err != nil {
 			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_id=%d, err=%v",
-				taskID, record.ID, err)
+				taskID, executeID, err)
 		}
 	})
+}
+
+// TerminateAsyncRecordsAndDestroySandbox 把仍处于 AsyncInvoking 状态的 SandboxAgent EvalTargetRecord 置为 Fail，
+// 并以 best-effort 方式触发沙箱 Execute 销毁。非 SandboxAgent / 非 AsyncInvoking 的 record 会被忽略。
+func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string) {
+	if len(recordIDs) == 0 {
+		return
+	}
+	records, err := e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] batch get eval target records fail, space_id=%d, err=%v", spaceID, err)
+		return
+	}
+
+	versionIDSet := make(map[int64]struct{})
+	for _, r := range records {
+		if r == nil || r.TargetVersionID <= 0 {
+			continue
+		}
+		versionIDSet[r.TargetVersionID] = struct{}{}
+	}
+	if len(versionIDSet) == 0 {
+		return
+	}
+	versionIDs := make([]int64, 0, len(versionIDSet))
+	for id := range versionIDSet {
+		versionIDs = append(versionIDs, id)
+	}
+	versions, err := e.evalTargetRepo.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] batch get eval target versions fail, space_id=%d, err=%v", spaceID, err)
+		return
+	}
+	sandboxVersionIDs := make(map[int64]struct{})
+	for _, v := range versions {
+		if v == nil || v.EvalTargetVersion == nil {
+			continue
+		}
+		if v.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+			sandboxVersionIDs[v.EvalTargetVersion.ID] = struct{}{}
+		}
+	}
+	if len(sandboxVersionIDs) == 0 {
+		return
+	}
+
+	failOutput := &entity.EvalTargetOutputData{
+		EvalTargetRunError: &entity.EvalTargetRunError{
+			Code:    errCode,
+			Message: errMessage,
+		},
+	}
+
+	taskIDCache := make(map[int64]string)
+	for _, r := range records {
+		if r == nil {
+			continue
+		}
+		if _, ok := sandboxVersionIDs[r.TargetVersionID]; !ok {
+			continue
+		}
+		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+			continue
+		}
+		r.Status = gptr.Of(entity.EvalTargetRunStatusFail)
+		r.EvalTargetOutputData = failOutput
+		if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, r, nil); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] save terminated target record fail, record_id=%d, err=%v", r.ID, err)
+		}
+
+		taskID, ok := taskIDCache[r.ExperimentRunID]
+		if !ok {
+			taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
+			taskIDCache[r.ExperimentRunID] = taskID
+		}
+		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID)
+	}
 }
 
 func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *entity.ReportTargetRecordParam) error {
