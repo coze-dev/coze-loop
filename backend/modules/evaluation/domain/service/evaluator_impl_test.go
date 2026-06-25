@@ -4325,3 +4325,70 @@ func TestEvaluatorServiceImpl_ShouldInterceptEvaluator(t *testing.T) {
 		})
 	}
 }
+
+// TestEvaluatorServiceImpl_CreateSkippedEvaluatorRecord 验证占位 record:
+// 落库一条 Status=Skipped 的骨架 record(无 input/output), 透传 alias/sourceType, GenID 失败/落库失败时返回错误。
+func TestEvaluatorServiceImpl_CreateSkippedEvaluatorRecord(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	req := &entity.RunEvaluatorRequest{
+		SpaceID:            2,
+		ExperimentID:       1,
+		ExperimentRunID:    3,
+		ItemID:             4,
+		TurnID:             5,
+		EvaluatorVersionID: 6,
+		Alias:              "judge_b",
+		SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
+	}
+
+	t.Run("成功落库 Skipped 占位 record", func(t *testing.T) {
+		mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+		mockRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		s := &EvaluatorServiceImpl{idgen: mockIdgen, evaluatorRecordRepo: mockRecordRepo}
+
+		mockIdgen.EXPECT().GenID(gomock.Any()).Return(int64(777), nil)
+		var saved *entity.EvaluatorRecord
+		mockRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, r *entity.EvaluatorRecord) error {
+				saved = r
+				return nil
+			})
+
+		got, err := s.CreateSkippedEvaluatorRecord(ctx, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, got)
+		assert.Equal(t, int64(777), got.ID)
+		assert.Equal(t, entity.EvaluatorRunStatusSkipped, got.Status)
+		assert.Equal(t, "judge_b", got.Alias)
+		assert.Equal(t, int64(6), got.EvaluatorVersionID)
+		assert.Equal(t, entity.EvaluatorRecordSourceTypeBuiltin, got.SourceType)
+		// 骨架: 不带 input/output
+		assert.Nil(t, got.EvaluatorInputData)
+		assert.Nil(t, got.EvaluatorOutputData)
+		// 落库对象与返回一致
+		assert.Equal(t, got, saved)
+	})
+
+	t.Run("GenID 失败返回错误", func(t *testing.T) {
+		mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+		s := &EvaluatorServiceImpl{idgen: mockIdgen}
+		mockIdgen.EXPECT().GenID(gomock.Any()).Return(int64(0), errors.New("gen id error"))
+		got, err := s.CreateSkippedEvaluatorRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("落库失败返回错误", func(t *testing.T) {
+		mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+		mockRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		s := &EvaluatorServiceImpl{idgen: mockIdgen, evaluatorRecordRepo: mockRecordRepo}
+		mockIdgen.EXPECT().GenID(gomock.Any()).Return(int64(1), nil)
+		mockRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(errors.New("db error"))
+		got, err := s.CreateSkippedEvaluatorRecord(ctx, req)
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+}

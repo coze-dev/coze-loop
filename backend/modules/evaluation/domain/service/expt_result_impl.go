@@ -3033,7 +3033,11 @@ func (e ExptResultServiceImpl) compareEvaluatorScoreCorrected(exptTurnResultFilt
 	rdsEvaluatorScoreCorrected := false
 
 	for _, record := range turnResult.ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords {
-		if record.EvaluatorOutputData.EvaluatorResult != nil && record.EvaluatorOutputData.EvaluatorResult.Correction != nil {
+		// Skipped 占位 record 的 EvaluatorOutputData 为 nil, 这里需判空 (对齐 compareEvaluatorScore:3069)
+		if record.EvaluatorOutputData == nil || record.EvaluatorOutputData.EvaluatorResult == nil {
+			continue
+		}
+		if record.EvaluatorOutputData.EvaluatorResult.Correction != nil {
 			rdsEvaluatorScoreCorrected = true
 			break
 		}

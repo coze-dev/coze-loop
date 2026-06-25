@@ -4424,3 +4424,133 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_DynamicParam(t
 	assert.Equal(t, `{"model":"static"}`, *reqC.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue)
 	assert.Equal(t, `{"model":"static"}`, reqC.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
 }
+
+// TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_FilterSkipped 验证:
+// filter 不命中的 alias 实例 → 不调 RunEvaluator, 而是调 CreateSkippedEvaluatorRecord 落占位 record;
+// 命中的 alias 实例正常 RunEvaluator。返回的 records 同时含 Success 与 Skipped 两条。
+func TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_FilterSkipped(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:            mockMetric,
+		evaluatorService:  mockEvaluatorService,
+		benefitService:    mockBenefitService,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	mockContent := &entity.Content{Text: gptr.Of("value1")}
+	target := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{"field1": mockContent},
+		},
+	}
+
+	staticRunConf := &entity.EvaluatorRunConfig{Env: gptr.Of("prod")}
+
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetItem: &entity.EvaluationSetItem{ID: 1, ItemID: 2},
+			Event: &entity.ExptItemEvalEvent{
+				Session: &entity.Session{UserID: "test_user"},
+				ExptID:  1,
+				SpaceID: 2,
+			},
+			Expt: &entity.Experiment{
+				ID:      1,
+				SpaceID: 2,
+				Evaluators: []*entity.Evaluator{
+					{
+						ID:                     1,
+						EvaluatorType:          entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					ItemConcurNum: gptr.Of(1),
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EvaluatorConcurNum: gptr.Of(1),
+							EvaluatorConf: []*entity.EvaluatorConf{
+								{
+									EvaluatorVersionID: 1,
+									RunConf:            staticRunConf,
+									IngressConf: &entity.EvaluatorIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+										},
+										TargetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			// default: 无 filter → 跑; judge_b: Include filter 命中不到 → Skipped
+			ItemConfig: &entity.ExptItemConfig{
+				EvaluatorConfs: []*entity.ItemEvaluatorConf{
+					{EvaluatorVersionID: 1, Alias: "default"},
+					{
+						EvaluatorVersionID: 1,
+						Alias:              "judge_b",
+						FilterMode:         1, // Include
+						Filter: &entity.ExptItemFilter{
+							QueryAndOr: "and",
+							FilterFields: []*entity.ExptItemFilterField{
+								{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"999999"}},
+							},
+						},
+					},
+				},
+			},
+		},
+		ExptTurnRunResult: &entity.ExptTurnRunResult{},
+		Turn: &entity.Turn{
+			FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}},
+		},
+	}
+
+	// default 命中 → 走真实链路
+	mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+	mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(1)
+	mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any()).Times(1)
+	mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			return &entity.EvaluatorRecord{ID: 100, Alias: req.Alias, Status: entity.EvaluatorRunStatusSuccess}, nil
+		}).Times(1)
+
+	// judge_b filter 不命中 → 只调 CreateSkippedEvaluatorRecord, 不调 RunEvaluator
+	var skippedReq *entity.RunEvaluatorRequest
+	mockEvaluatorService.EXPECT().CreateSkippedEvaluatorRecord(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			skippedReq = req
+			return &entity.EvaluatorRecord{ID: 200, Alias: req.Alias, Status: entity.EvaluatorRunStatusSkipped}, nil
+		}).Times(1)
+
+	records, err := service.CallEvaluators(context.Background(), etec, target)
+	assert.NoError(t, err)
+	assert.Len(t, records, 2)
+
+	// 占位 record 落库参数正确
+	assert.NotNil(t, skippedReq)
+	assert.Equal(t, "judge_b", skippedReq.Alias)
+	assert.Equal(t, int64(1), skippedReq.EvaluatorVersionID)
+	assert.Equal(t, entity.EvaluatorRecordSourceTypeBuiltin, skippedReq.SourceType)
+
+	// 返回 records 含 Success(default) + Skipped(judge_b)
+	byAlias := make(map[string]*entity.EvaluatorRecord, 2)
+	for _, r := range records {
+		byAlias[r.Alias] = r
+	}
+	assert.Equal(t, entity.EvaluatorRunStatusSuccess, byAlias["default"].Status)
+	assert.Equal(t, entity.EvaluatorRunStatusSkipped, byAlias["judge_b"].Status)
+	assert.Equal(t, int64(200), byAlias["judge_b"].ID)
+}

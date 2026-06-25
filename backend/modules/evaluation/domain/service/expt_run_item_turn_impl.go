@@ -609,7 +609,9 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 		}
 		if !run {
 			logs.CtxInfo(ctx, "[CallEvaluators] skip evaluator by filter, version_id: %d, alias: %s, filter_mode: %d", versionID, alias, icConf.FilterMode)
-			collector.store(&entity.EvaluatorRecord{
+			// 落一条 Status=Skipped 的占位 record (带真实 ID), 供 GUI/数仓展示"已跳过";
+			// ref 表行由 storeTurnRunResult -> NewTurnEvaluatorResultRefs 从 Registered 数组自动跟上。
+			skippedRecord, serr := e.evaluatorService.CreateSkippedEvaluatorRecord(ctx, &entity.RunEvaluatorRequest{
 				SpaceID:            spaceID,
 				ExperimentID:       etec.Event.ExptID,
 				ExperimentRunID:    etec.Event.ExptRunID,
@@ -618,8 +620,11 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 				EvaluatorVersionID: versionID,
 				Alias:              alias,
 				SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
-				Status:             entity.EvaluatorRunStatusSkipped,
 			})
+			if serr != nil {
+				return nil, serr
+			}
+			collector.store(skippedRecord)
 			continue
 		}
 

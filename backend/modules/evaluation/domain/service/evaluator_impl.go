@@ -779,6 +779,41 @@ func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, req
 	return recordDO, true, nil
 }
 
+// CreateSkippedEvaluatorRecord 行级 filter 不命中时落一条 Status=Skipped 的占位 record。
+// 不调底层 evaluator, 不带 input/output (只留状态骨架); ref 表行由上层 storeTurnRunResult 自动跟上。
+func (e *EvaluatorServiceImpl) CreateSkippedEvaluatorRecord(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+	recordID, err := e.idgen.GenID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+	logID := logs.GetLogID(ctx)
+
+	recordDO := &entity.EvaluatorRecord{
+		ID:                 recordID,
+		SpaceID:            request.SpaceID,
+		ExperimentID:       request.ExperimentID,
+		ExperimentRunID:    request.ExperimentRunID,
+		ItemID:             request.ItemID,
+		TurnID:             request.TurnID,
+		EvaluatorVersionID: request.EvaluatorVersionID,
+		Alias:              request.Alias,
+		SourceType:         normalizeEvaluatorRecordSourceType(request.SourceType),
+		LogID:              logID,
+		Status:             entity.EvaluatorRunStatusSkipped,
+		Ext:                request.Ext,
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userIDInContext),
+			},
+		},
+	}
+	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
+		return nil, err
+	}
+	return recordDO, nil
+}
+
 // RunEvaluator evaluator_version 运行
 func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 	logs.CtxInfo(ctx, "[RunEvaluator] RunEvaluator request: %v", request)
