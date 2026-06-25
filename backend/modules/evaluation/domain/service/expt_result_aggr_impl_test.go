@@ -377,7 +377,7 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
 			) {
 				// Mock experiments
-				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{1}).Return([]*entity.Experiment{{ID: 1, TargetID: 10, TargetVersionID: 20}}, nil)
+				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{1}).Return([]*entity.Experiment{{ID: 1, SpaceID: 100, TargetID: 10, TargetVersionID: 20}}, nil)
 
 				// Mock aggregation results
 				aggrResult := &entity.AggregateResult{
@@ -447,7 +447,8 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 					map[int64]*entity.TagInfo{1: {
 						TagKeyId:   1,
 						TagKeyName: "123",
-					}}, nil)
+					}}, nil,
+				)
 
 				// Mock annotate refs
 				mockAnnotateRepo.EXPECT().BatchGetExptTurnAnnotateRecordRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return(
@@ -458,7 +459,8 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 							ExptID:           1,
 							AnnotateRecordID: 1,
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 			want: []*entity.ExptAggregateResult{
 				{
@@ -514,13 +516,88 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			wantErr: false,
 		},
 		{
+			// 水平越权过滤专项用例：同一批 exptIDs 中混入一条跨 space 的实验（SpaceID != 入参 spaceID），
+			// 断言所有下游查询（BatchGetExptAggrResultByExperimentIDs / GetEvaluatorRefByExptIDs /
+			// batchGetTagInfoByExperimentIDs->BatchGetExptTurnAnnotateRecordRefs）只对 valid 的 exptID 发起，
+			// 越权的 exptID 被 expt.SpaceID == spaceID 过滤掉，最终结果不包含越权实验。
+			name:    "Filter out cross-space experiments to prevent horizontal privilege escalation",
+			spaceID: 100,
+			exptIDs: []int64{1, 2},
+			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockEvaluatorService *svcMocks.MockEvaluatorService,
+				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
+			) {
+				// expt 1 属于入参 space(100) -> valid；expt 2 属于其他 space(200) -> 越权，应被过滤
+				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{1, 2}).Return([]*entity.Experiment{
+					{ID: 1, SpaceID: 100, TargetID: 10, TargetVersionID: 20},
+					{ID: 2, SpaceID: 200, TargetID: 11, TargetVersionID: 21},
+				}, nil)
+
+				aggrResult := &entity.AggregateResult{
+					AggregatorResults: []*entity.AggregatorResult{
+						{
+							AggregatorType: entity.Average,
+							Data: &entity.AggregateData{
+								DataType: entity.Double,
+								Value:    gptr.Of(0.8),
+							},
+						},
+					},
+				}
+				aggrResultBytes, _ := json.Marshal(aggrResult)
+				// 关键断言：聚合结果查询只对 valid exptID(1) 发起，不含越权 exptID(2)
+				mockExptAggrResultRepo.EXPECT().
+					BatchGetExptAggrResultByExperimentIDs(gomock.Any(), []int64{1}).
+					Return([]*entity.ExptAggrResult{
+						{
+							ExperimentID: 1,
+							FieldType:    int32(entity.FieldType_TargetLatency),
+							FieldKey:     entity.AggrResultFieldKey_TargetLatency,
+							AggrResult:   aggrResultBytes,
+							UpdateAt:     gptr.Of(time.Unix(1000, 0)),
+						},
+					}, nil)
+
+				// 关键断言：评估器引用查询只对 valid exptID(1) 发起
+				mockExperimentRepo.EXPECT().
+					GetEvaluatorRefByExptIDs(gomock.Any(), []int64{1}, int64(100)).
+					Return([]*entity.ExptEvaluatorRef{}, nil)
+				mockEvaluatorService.EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), gomock.Nil(), []int64{}, true).
+					Return([]*entity.Evaluator{}, nil)
+
+				// 关键断言：标签信息查询的 annotate refs 只对 valid exptID(1) 发起
+				mockAnnotateRepo.EXPECT().
+					BatchGetExptTurnAnnotateRecordRefs(gomock.Any(), []int64{1}, int64(100)).
+					Return([]*entity.ExptTurnAnnotateRecordRef{}, nil)
+				mockTagRPCAdapter.EXPECT().
+					BatchGetTagInfo(gomock.Any(), int64(100), []int64{}).
+					Return(map[int64]*entity.TagInfo{}, nil)
+			},
+			want: []*entity.ExptAggregateResult{
+				{
+					ExperimentID:      1,
+					EvaluatorResults:  map[int64]*entity.EvaluatorAggregateResult{},
+					AnnotationResults: map[int64]*entity.AnnotationAggregateResult{},
+					TargetResults: &entity.EvalTargetMtrAggrResult{
+						TargetID:        10,
+						TargetVersionID: 20,
+						LatencyAggrResults: []*entity.AggregatorResult{
+							{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.8)}},
+						},
+					},
+					UpdateTime: gptr.Of(time.Unix(1000, 0)),
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name:    "Batch get aggregation results successfully with all target metrics",
 			spaceID: 100,
 			exptIDs: []int64{2},
 			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockEvaluatorService *svcMocks.MockEvaluatorService,
 				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
 			) {
-				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{2}).Return([]*entity.Experiment{{ID: 2, TargetID: 10, TargetVersionID: 20}}, nil)
+				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{2}).Return([]*entity.Experiment{{ID: 2, SpaceID: 100, TargetID: 10, TargetVersionID: 20}}, nil)
 
 				aggrResult := &entity.AggregateResult{
 					AggregatorResults: []*entity.AggregatorResult{
@@ -580,7 +657,7 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockEvaluatorService *svcMocks.MockEvaluatorService,
 				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
 			) {
-				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{1}).Return([]*entity.Experiment{{ID: 1}}, nil)
+				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{1}).Return([]*entity.Experiment{{ID: 1, SpaceID: 100}}, nil)
 				mockExptAggrResultRepo.EXPECT().
 					BatchGetExptAggrResultByExperimentIDs(gomock.Any(), []int64{1}).
 					Return(nil, errorx.NewByCode(500, errorx.WithExtraMsg("db error")))

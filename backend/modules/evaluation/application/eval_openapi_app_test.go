@@ -5731,7 +5731,8 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 						}
 						assert.True(t, ev.AsyncEvaluatorReportTrigger)
 						return nil
-					})
+					},
+				)
 			},
 		},
 	}
@@ -6892,5 +6893,244 @@ func TestMapOpenAPIExptRetryMode(t *testing.T) {
 				assert.Equal(t, tc.want, got)
 			}
 		})
+	}
+}
+
+func TestEvalOpenAPIApplication_fillExtraOutputURLs(t *testing.T) {
+	t.Parallel()
+
+	// helper to build an itemResults slice carrying a single record with the given uri.
+	buildItemResults := func(uri *string) []*entity.ItemResult {
+		return []*entity.ItemResult{
+			{
+				ItemID: 1,
+				TurnResults: []*entity.TurnResult{
+					{
+						TurnID: 1,
+						ExperimentResults: []*entity.ExperimentResult{
+							{
+								ExperimentID: 1,
+								Payload: &entity.ExperimentTurnPayload{
+									EvaluatorOutput: &entity.TurnEvaluatorOutput{
+										EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+											10: {
+												ID: 10,
+												EvaluatorOutputData: &entity.EvaluatorOutputData{
+													ExtraOutput: &entity.EvaluatorExtraOutputContent{
+														URI: uri,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name        string
+		fileNil     bool
+		itemResults []*entity.ItemResult
+		setup       func(fp *rpcmocks.MockIFileProvider)
+		wantErr     bool
+		// assert mutates expectations on the itemResults after the call
+		assert func(t *testing.T, itemResults []*entity.ItemResult)
+	}{
+		{
+			name:        "fileProvider nil - returns nil without mutation",
+			fileNil:     true,
+			itemResults: buildItemResults(gptr.Of("u/1")),
+			setup:       func(_ *rpcmocks.MockIFileProvider) {},
+			wantErr:     false,
+			assert: func(t *testing.T, itemResults []*entity.ItemResult) {
+				rec := itemResults[0].TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[10]
+				assert.Nil(t, rec.EvaluatorOutputData.ExtraOutput.URL)
+			},
+		},
+		{
+			name:    "no uris collected - returns nil, MGetFileURL not called",
+			fileNil: false,
+			// empty uri + a payload with nil EvaluatorOutput + nil record branches
+			itemResults: []*entity.ItemResult{
+				{
+					TurnResults: []*entity.TurnResult{
+						{
+							ExperimentResults: []*entity.ExperimentResult{
+								{Payload: nil},
+								{Payload: &entity.ExperimentTurnPayload{EvaluatorOutput: nil}},
+								{
+									Payload: &entity.ExperimentTurnPayload{
+										EvaluatorOutput: &entity.TurnEvaluatorOutput{
+											EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+												1: nil,
+												2: {EvaluatorOutputData: nil},
+												3: {EvaluatorOutputData: &entity.EvaluatorOutputData{ExtraOutput: nil}},
+												4: {EvaluatorOutputData: &entity.EvaluatorOutputData{ExtraOutput: &entity.EvaluatorExtraOutputContent{URI: nil}}},
+												5: {EvaluatorOutputData: &entity.EvaluatorOutputData{ExtraOutput: &entity.EvaluatorExtraOutputContent{URI: gptr.Of("")}}},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			setup:   func(_ *rpcmocks.MockIFileProvider) {},
+			wantErr: false,
+			assert:  func(_ *testing.T, _ []*entity.ItemResult) {},
+		},
+		{
+			name:        "MGetFileURL returns error - error propagated",
+			fileNil:     false,
+			itemResults: buildItemResults(gptr.Of("u/err")),
+			setup: func(fp *rpcmocks.MockIFileProvider) {
+				fp.EXPECT().MGetFileURL(gomock.Any(), []string{"u/err"}).Return(nil, errors.New("mget failed"))
+			},
+			wantErr: true,
+			assert: func(t *testing.T, itemResults []*entity.ItemResult) {
+				rec := itemResults[0].TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[10]
+				assert.Nil(t, rec.EvaluatorOutputData.ExtraOutput.URL)
+			},
+		},
+		{
+			name:        "success - signed URL written back",
+			fileNil:     false,
+			itemResults: buildItemResults(gptr.Of("u/ok")),
+			setup: func(fp *rpcmocks.MockIFileProvider) {
+				fp.EXPECT().MGetFileURL(gomock.Any(), []string{"u/ok"}).Return(map[string]string{"u/ok": "https://signed/u/ok"}, nil)
+			},
+			wantErr: false,
+			assert: func(t *testing.T, itemResults []*entity.ItemResult) {
+				rec := itemResults[0].TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[10]
+				if assert.NotNil(t, rec.EvaluatorOutputData.ExtraOutput.URL) {
+					assert.Equal(t, "https://signed/u/ok", *rec.EvaluatorOutputData.ExtraOutput.URL)
+				}
+			},
+		},
+		{
+			name:        "success - uri missing in urlMap leaves URL nil",
+			fileNil:     false,
+			itemResults: buildItemResults(gptr.Of("u/miss")),
+			setup: func(fp *rpcmocks.MockIFileProvider) {
+				fp.EXPECT().MGetFileURL(gomock.Any(), []string{"u/miss"}).Return(map[string]string{"u/other": "https://signed/other"}, nil)
+			},
+			wantErr: false,
+			assert: func(t *testing.T, itemResults []*entity.ItemResult) {
+				rec := itemResults[0].TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[10]
+				assert.Nil(t, rec.EvaluatorOutputData.ExtraOutput.URL)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			app := &EvalOpenAPIApplication{}
+			if !tc.fileNil {
+				fp := rpcmocks.NewMockIFileProvider(ctrl)
+				tc.setup(fp)
+				app.fileProvider = fp
+			}
+
+			err := app.fillExtraOutputURLs(context.Background(), tc.itemResults)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			tc.assert(t, tc.itemResults)
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_ListExperimentResultOApi_PopulatedResult(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	resultSvc := servicemocks.NewMockExptResultService(ctrl)
+	fp := rpcmocks.NewMockIFileProvider(ctrl)
+	metric := &fakeOpenAPIMetric{}
+
+	app := &EvalOpenAPIApplication{
+		auth:         auth,
+		resultSvc:    resultSvc,
+		fileProvider: fp,
+		metric:       metric,
+	}
+
+	// itemResults carrying records that exercise the logging loop (nil outputData branch +
+	// extra-output branch) and feed fillExtraOutputURLs with a real provider.
+	itemResults := []*entity.ItemResult{
+		{
+			ItemID: 7,
+			TurnResults: []*entity.TurnResult{
+				{
+					TurnID: 1,
+					ExperimentResults: []*entity.ExperimentResult{
+						{Payload: nil},
+						{Payload: &entity.ExperimentTurnPayload{EvaluatorOutput: nil}},
+						{
+							Payload: &entity.ExperimentTurnPayload{
+								EvaluatorOutput: &entity.TurnEvaluatorOutput{
+									EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+										1: nil,
+										2: {EvaluatorOutputData: nil},
+										3: {
+											EvaluatorVersionID: 99,
+											EvaluatorOutputData: &entity.EvaluatorOutputData{
+												ExtraOutput: &entity.EvaluatorExtraOutputContent{URI: gptr.Of("k1")},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(&entity.MGetExperimentReportResult{
+		Total:       1,
+		ItemResults: itemResults,
+		ExptColumnsEvalTarget: []*entity.ExptColumnEvalTarget{
+			{ExptID: 100, Columns: []*entity.ColumnEvalTarget{{Name: "out"}}},
+		},
+	}, nil)
+	fp.EXPECT().MGetFileURL(gomock.Any(), []string{"k1"}).Return(map[string]string{"k1": "https://signed/k1"}, nil)
+
+	resp, err := app.ListExperimentResultOApi(context.Background(), &openapi.ListExperimentResultOApiRequest{
+		WorkspaceID:  gptr.Of(int64(1)),
+		ExperimentID: gptr.Of(int64(100)),
+		PageNum:      gptr.Of(int32(1)),
+		PageSize:     gptr.Of(int32(20)),
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	assert.Equal(t, int64(1), *resp.Data.Total)
+	assert.NotNil(t, resp.Data.ColumnEvalTargets)
+	// URL signed back into the record
+	url := itemResults[0].TurnResults[0].ExperimentResults[2].Payload.EvaluatorOutput.EvaluatorRecords[3].EvaluatorOutputData.ExtraOutput.URL
+	if assert.NotNil(t, url) {
+		assert.Equal(t, "https://signed/k1", *url)
 	}
 }

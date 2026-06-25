@@ -1230,6 +1230,12 @@ func openAPIEvaluatorOutputDataDO2DTO(data *entity.EvaluatorOutputData) *openapi
 	if data.TimeConsumingMS > 0 {
 		res.TimeConsumingMs = gptr.Of(data.TimeConsumingMS)
 	}
+	if data.Stdout != "" {
+		res.Stdout = gptr.Of(data.Stdout)
+	}
+	if data.ExtraOutput != nil {
+		res.ExtraOutput = evaluator_convertor.OpenAPIEvaluatorExtraOutputContentDO2DTO(data.ExtraOutput)
+	}
 	if res.EvaluatorResult_ == nil && res.EvaluatorUsage == nil && res.EvaluatorRunError == nil && res.TimeConsumingMs == nil {
 		return nil
 	}

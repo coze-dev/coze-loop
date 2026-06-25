@@ -3439,3 +3439,394 @@ func TestOpenAPINotificationConfDTO2Domain_EnglishValueInput(t *testing.T) {
 		assert.Nil(t, got)
 	})
 }
+
+func TestOpenAPIEvaluatorOutputDataDO2DTO_ExtraFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, openAPIEvaluatorOutputDataDO2DTO(nil))
+	})
+
+	t.Run("all nil fields returns nil", func(t *testing.T) {
+		data := &entity.EvaluatorOutputData{}
+		assert.Nil(t, openAPIEvaluatorOutputDataDO2DTO(data))
+	})
+
+	t.Run("with stdout", func(t *testing.T) {
+		data := &entity.EvaluatorOutputData{
+			TimeConsumingMS: 100,
+			Stdout:          "hello output",
+		}
+		dto := openAPIEvaluatorOutputDataDO2DTO(data)
+		assert.NotNil(t, dto)
+		assert.Equal(t, "hello output", *dto.Stdout)
+		assert.Equal(t, int64(100), *dto.TimeConsumingMs)
+	})
+
+	t.Run("with extra_output", func(t *testing.T) {
+		outputType := entity.EvaluatorExtraOutputTypeHTML
+		url := "https://tos.example.com/signed"
+		data := &entity.EvaluatorOutputData{
+			TimeConsumingMS: 50,
+			ExtraOutput: &entity.EvaluatorExtraOutputContent{
+				OutputType: &outputType,
+				URL:        &url,
+			},
+		}
+		dto := openAPIEvaluatorOutputDataDO2DTO(data)
+		assert.NotNil(t, dto)
+		assert.NotNil(t, dto.ExtraOutput)
+		assert.Equal(t, "html", *dto.ExtraOutput.OutputType)
+		assert.Equal(t, "https://tos.example.com/signed", *dto.ExtraOutput.URL)
+	})
+
+	t.Run("stdout and extra_output only (no result/usage/error/time)", func(t *testing.T) {
+		outputType := entity.EvaluatorExtraOutputTypeHTML
+		url := "https://tos.example.com/signed"
+		data := &entity.EvaluatorOutputData{
+			Stdout: "output",
+			ExtraOutput: &entity.EvaluatorExtraOutputContent{
+				OutputType: &outputType,
+				URL:        &url,
+			},
+		}
+		// TimeConsumingMS=0, no result/usage/error → returns nil due to the guard condition
+		dto := openAPIEvaluatorOutputDataDO2DTO(data)
+		assert.Nil(t, dto)
+	})
+}
+
+func TestOpenAPIEvaluatorResultDO2DTO_Branches(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, openAPIEvaluatorResultDO2DTO(nil))
+	})
+
+	t.Run("score and reasoning without correction", func(t *testing.T) {
+		result := &entity.EvaluatorResult{
+			Score:     gptr.Of(4.5),
+			Reasoning: "good quality",
+		}
+		dto := openAPIEvaluatorResultDO2DTO(result)
+		assert.NotNil(t, dto)
+		assert.Equal(t, 4.5, *dto.Score)
+		assert.Equal(t, "good quality", *dto.Reasoning)
+	})
+
+	t.Run("with correction score overrides", func(t *testing.T) {
+		result := &entity.EvaluatorResult{
+			Score:     gptr.Of(3.0),
+			Reasoning: "original",
+			Correction: &entity.Correction{
+				Score:   gptr.Of(4.0),
+				Explain: "corrected",
+			},
+		}
+		dto := openAPIEvaluatorResultDO2DTO(result)
+		assert.NotNil(t, dto)
+		assert.Equal(t, 4.0, *dto.Score)
+		assert.Equal(t, "corrected", *dto.Reasoning)
+	})
+
+	t.Run("correction without score falls back to original", func(t *testing.T) {
+		result := &entity.EvaluatorResult{
+			Score:     gptr.Of(3.0),
+			Reasoning: "original",
+			Correction: &entity.Correction{
+				Explain: "corrected reason",
+			},
+		}
+		dto := openAPIEvaluatorResultDO2DTO(result)
+		assert.NotNil(t, dto)
+		assert.Equal(t, 3.0, *dto.Score)
+		assert.Equal(t, "corrected reason", *dto.Reasoning)
+	})
+
+	t.Run("correction without explain falls back to original reasoning", func(t *testing.T) {
+		result := &entity.EvaluatorResult{
+			Score:     gptr.Of(3.0),
+			Reasoning: "original reason",
+			Correction: &entity.Correction{
+				Score: gptr.Of(5.0),
+			},
+		}
+		dto := openAPIEvaluatorResultDO2DTO(result)
+		assert.NotNil(t, dto)
+		assert.Equal(t, 5.0, *dto.Score)
+		assert.Equal(t, "original reason", *dto.Reasoning)
+	})
+
+	t.Run("all nil returns nil", func(t *testing.T) {
+		result := &entity.EvaluatorResult{}
+		assert.Nil(t, openAPIEvaluatorResultDO2DTO(result))
+	})
+}
+
+func TestConvertEntityEvaluatorStatusToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		status := convertEntityEvaluatorStatusToOpenAPI(entity.EvaluatorRunStatusSuccess)
+		assert.NotNil(t, status)
+		assert.Equal(t, openapiEvaluator.EvaluatorRunStatusSuccess, *status)
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		status := convertEntityEvaluatorStatusToOpenAPI(entity.EvaluatorRunStatusFail)
+		assert.NotNil(t, status)
+		assert.Equal(t, openapiEvaluator.EvaluatorRunStatusFailed, *status)
+	})
+
+	t.Run("unknown returns nil", func(t *testing.T) {
+		status := convertEntityEvaluatorStatusToOpenAPI(entity.EvaluatorRunStatusUnknown)
+		assert.Nil(t, status)
+	})
+
+	t.Run("default returns processing", func(t *testing.T) {
+		status := convertEntityEvaluatorStatusToOpenAPI(entity.EvaluatorRunStatus(999))
+		assert.NotNil(t, status)
+		assert.Equal(t, openapiEvaluator.EvaluatorRunStatusProcessing, *status)
+	})
+}
+
+func TestConvertEntityTargetRunStatusToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, convertEntityTargetRunStatusToOpenAPI(nil))
+	})
+
+	t.Run("success", func(t *testing.T) {
+		s := entity.EvalTargetRunStatusSuccess
+		status := convertEntityTargetRunStatusToOpenAPI(&s)
+		assert.NotNil(t, status)
+		assert.Equal(t, openapiEvalTarget.EvalTargetRunStatusSuccess, *status)
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		s := entity.EvalTargetRunStatusFail
+		status := convertEntityTargetRunStatusToOpenAPI(&s)
+		assert.NotNil(t, status)
+		assert.Equal(t, openapiEvalTarget.EvalTargetRunStatusFail, *status)
+	})
+
+	t.Run("unknown returns nil", func(t *testing.T) {
+		s := entity.EvalTargetRunStatus(999)
+		status := convertEntityTargetRunStatusToOpenAPI(&s)
+		assert.Nil(t, status)
+	})
+}
+
+func TestOpenAPIEvaluatorUsageDO2DTO_Experiment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, openAPIEvaluatorUsageDO2DTO(nil))
+	})
+
+	t.Run("both zero returns nil", func(t *testing.T) {
+		usage := &entity.EvaluatorUsage{}
+		assert.Nil(t, openAPIEvaluatorUsageDO2DTO(usage))
+	})
+
+	t.Run("only input tokens", func(t *testing.T) {
+		usage := &entity.EvaluatorUsage{InputTokens: 10}
+		dto := openAPIEvaluatorUsageDO2DTO(usage)
+		assert.NotNil(t, dto)
+		assert.Equal(t, int64(10), *dto.InputTokens)
+		assert.Nil(t, dto.OutputTokens)
+	})
+
+	t.Run("only output tokens", func(t *testing.T) {
+		usage := &entity.EvaluatorUsage{OutputTokens: 20}
+		dto := openAPIEvaluatorUsageDO2DTO(usage)
+		assert.NotNil(t, dto)
+		assert.Nil(t, dto.InputTokens)
+		assert.Equal(t, int64(20), *dto.OutputTokens)
+	})
+}
+
+func TestOpenAPIEvaluatorRunErrorDO2DTO_Experiment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, openAPIEvaluatorRunErrorDO2DTO(nil))
+	})
+
+	t.Run("both zero returns nil", func(t *testing.T) {
+		err := &entity.EvaluatorRunError{}
+		assert.Nil(t, openAPIEvaluatorRunErrorDO2DTO(err))
+	})
+
+	t.Run("only code", func(t *testing.T) {
+		err := &entity.EvaluatorRunError{Code: 500}
+		dto := openAPIEvaluatorRunErrorDO2DTO(err)
+		assert.NotNil(t, dto)
+		assert.Equal(t, int32(500), *dto.Code)
+		assert.Nil(t, dto.Message)
+	})
+
+	t.Run("only message", func(t *testing.T) {
+		err := &entity.EvaluatorRunError{Message: "timeout"}
+		dto := openAPIEvaluatorRunErrorDO2DTO(err)
+		assert.NotNil(t, dto)
+		assert.Nil(t, dto.Code)
+		assert.Equal(t, "timeout", *dto.Message)
+	})
+}
+
+func TestOpenAPITargetUsageDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, openAPITargetUsageDO2DTO(nil))
+	})
+
+	t.Run("normal input", func(t *testing.T) {
+		usage := &entity.EvalTargetUsage{
+			InputTokens:  100,
+			OutputTokens: 200,
+		}
+		dto := openAPITargetUsageDO2DTO(usage)
+		assert.NotNil(t, dto)
+		assert.Equal(t, int64(100), dto.InputTokens)
+		assert.Equal(t, int64(200), dto.OutputTokens)
+	})
+}
+
+func TestOpenAPITargetRunErrorDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, openAPITargetRunErrorDO2DTO(nil))
+	})
+
+	t.Run("both zero returns nil", func(t *testing.T) {
+		err := &entity.EvalTargetRunError{}
+		assert.Nil(t, openAPITargetRunErrorDO2DTO(err))
+	})
+
+	t.Run("with code and message", func(t *testing.T) {
+		err := &entity.EvalTargetRunError{Code: 500, Message: "internal error"}
+		dto := openAPITargetRunErrorDO2DTO(err)
+		assert.NotNil(t, dto)
+		assert.Equal(t, int32(500), *dto.Code)
+		assert.Equal(t, "internal error", *dto.Message)
+	})
+}
+
+func TestOpenAPIEvaluatorRecordsMapDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, openAPIEvaluatorRecordsMapDO2DTO(nil))
+	})
+
+	t.Run("empty map", func(t *testing.T) {
+		assert.Nil(t, openAPIEvaluatorRecordsMapDO2DTO(map[int64]*entity.EvaluatorRecord{}))
+	})
+
+	t.Run("map with nil values only", func(t *testing.T) {
+		records := map[int64]*entity.EvaluatorRecord{
+			1: nil,
+			2: nil,
+		}
+		assert.Nil(t, openAPIEvaluatorRecordsMapDO2DTO(records))
+	})
+
+	t.Run("normal map", func(t *testing.T) {
+		records := map[int64]*entity.EvaluatorRecord{
+			1: {
+				ID: 1, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{TimeConsumingMS: 50},
+			},
+			2: nil,
+		}
+		dtos := openAPIEvaluatorRecordsMapDO2DTO(records)
+		assert.Len(t, dtos, 1)
+		assert.Equal(t, int64(1), *dtos[0].ID)
+	})
+}
+
+func TestDomainFieldTypeToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		input domainExpt.FieldType
+		want  string
+	}{
+		{domainExpt.FieldType_EvaluatorScore, "evaluator_score"},
+		{domainExpt.FieldType_CreatorBy, "creator_by"},
+		{domainExpt.FieldType_UpdatedBy, "updated_by"},
+		{domainExpt.FieldType_ExptStatus, "expt_status"},
+		{domainExpt.FieldType_TurnRunState, "turn_run_state"},
+		{domainExpt.FieldType_TargetID, "target_id"},
+		{domainExpt.FieldType_EvalSetID, "eval_set_id"},
+		{domainExpt.FieldType_EvaluatorID, "evaluator_id"},
+		{domainExpt.FieldType_TargetType, "target_type"},
+		{domainExpt.FieldType_SourceTarget, "source_target"},
+		{domainExpt.FieldType_EvaluatorVersionID, "evaluator_version_id"},
+		{domainExpt.FieldType_TargetVersionID, "target_version_id"},
+		{domainExpt.FieldType_EvalSetVersionID, "eval_set_version_id"},
+		{domainExpt.FieldType_ExptType, "expt_type"},
+		{domainExpt.FieldType_SourceType, "source_type"},
+		{domainExpt.FieldType_SourceID, "source_id"},
+		{domainExpt.FieldType_KeywordSearch, "keyword_search"},
+		{domainExpt.FieldType_EvalSetColumn, "eval_set_column"},
+		{domainExpt.FieldType_Annotation, "annotation"},
+		{domainExpt.FieldType_ActualOutput, "actual_output"},
+		{domainExpt.FieldType_EvaluatorScoreCorrected, "evaluator_score_corrected"},
+		{domainExpt.FieldType_Evaluator, "evaluator"},
+		{domainExpt.FieldType_ItemID, "item_id"},
+		{domainExpt.FieldType_ItemRunState, "item_run_state"},
+		{domainExpt.FieldType_AnnotationScore, "annotation_score"},
+		{domainExpt.FieldType_AnnotationText, "annotation_text"},
+		{domainExpt.FieldType_AnnotationCategorical, "annotation_categorical"},
+		{domainExpt.FieldType_TotalLatency, "total_latency"},
+		{domainExpt.FieldType_InputTokens, "input_tokens"},
+		{domainExpt.FieldType_OutputTokens, "output_tokens"},
+		{domainExpt.FieldType_TotalTokens, "total_tokens"},
+		{domainExpt.FieldType_ExperimentTemplateID, "experiment_template_id"},
+		{domainExpt.FieldType_EvaluatorWeightedScore, "evaluator_weighted_score"},
+	}
+	for _, tt := range cases {
+		assert.Equal(t, tt.want, domainFieldTypeToOpenAPI(tt.input))
+	}
+	// unknown falls back to numeric
+	assert.Equal(t, "9999", domainFieldTypeToOpenAPI(domainExpt.FieldType(9999)))
+}
+
+func TestDomainFilterOperatorToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		input domainExpt.FilterOperatorType
+		want  string
+	}{
+		{domainExpt.FilterOperatorType_Equal, "equal"},
+		{domainExpt.FilterOperatorType_NotEqual, "not_equal"},
+		{domainExpt.FilterOperatorType_Greater, "greater"},
+		{domainExpt.FilterOperatorType_GreaterOrEqual, "greater_or_equal"},
+		{domainExpt.FilterOperatorType_Less, "less"},
+		{domainExpt.FilterOperatorType_LessOrEqual, "less_or_equal"},
+		{domainExpt.FilterOperatorType_In, "in"},
+		{domainExpt.FilterOperatorType_NotIn, "not_in"},
+		{domainExpt.FilterOperatorType_Like, "like"},
+		{domainExpt.FilterOperatorType_NotLike, "not_like"},
+		{domainExpt.FilterOperatorType_IsNull, "is_null"},
+		{domainExpt.FilterOperatorType_IsNotNull, "is_not_null"},
+	}
+	for _, tt := range cases {
+		assert.Equal(t, tt.want, domainFilterOperatorToOpenAPI(tt.input))
+	}
+	assert.Equal(t, "9999", domainFilterOperatorToOpenAPI(domainExpt.FilterOperatorType(9999)))
+}
+
+func TestDomainFilterLogicOpToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "and", domainFilterLogicOpToOpenAPI(domainExpt.FilterLogicOp_And))
+	assert.Equal(t, "or", domainFilterLogicOpToOpenAPI(domainExpt.FilterLogicOp_Or))
+	assert.Equal(t, "999", domainFilterLogicOpToOpenAPI(domainExpt.FilterLogicOp(999)))
+}

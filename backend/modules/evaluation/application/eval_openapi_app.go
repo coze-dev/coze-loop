@@ -64,6 +64,7 @@ type EvalOpenAPIApplication struct {
 	evaluatorRecordService service.EvaluatorRecordService
 	exptTemplateManager    service.IExptTemplateManager
 	configer               component.IConfiger
+	fileProvider           rpc.IFileProvider
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -83,6 +84,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluatorRecordService service.EvaluatorRecordService,
 	exptTemplateManager service.IExptTemplateManager,
 	configer component.IConfiger,
+	fileProvider rpc.IFileProvider,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -103,6 +105,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		evaluatorRecordService:      evaluatorRecordService,
 		exptTemplateManager:         exptTemplateManager,
 		configer:                    configer,
+		fileProvider:                fileProvider,
 	}
 }
 
@@ -1256,6 +1259,28 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, item := range result.ItemResults {
+		for _, turn := range item.TurnResults {
+			for _, exptResult := range turn.ExperimentResults {
+				if exptResult.Payload == nil || exptResult.Payload.EvaluatorOutput == nil {
+					continue
+				}
+				for _, record := range exptResult.Payload.EvaluatorOutput.EvaluatorRecords {
+					if record == nil || record.EvaluatorOutputData == nil {
+						logs.CtxInfo(ctx, "[ListExperimentResultOApi] record or outputData is nil, itemID=%v", item.ItemID)
+						continue
+					}
+					logs.CtxInfo(ctx, "[ListExperimentResultOApi] before fillExtraOutputURLs: itemID=%v, evaluatorVersionID=%v, hasStdout=%v, hasExtraOutput=%v, extraOutput=%v",
+						item.ItemID, record.EvaluatorVersionID, record.EvaluatorOutputData.Stdout != "", record.EvaluatorOutputData.ExtraOutput != nil, json.Jsonify(record.EvaluatorOutputData.ExtraOutput))
+				}
+			}
+		}
+	}
+
+	if err := e.fillExtraOutputURLs(ctx, result.ItemResults); err != nil {
+		logs.CtxError(ctx, "[ListExperimentResultOApi] fillExtraOutputURLs fail, err: %v", err)
 	}
 
 	res := &openapi.ListExperimentResultOApiResponse{
@@ -2504,4 +2529,52 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
+func (e *EvalOpenAPIApplication) fillExtraOutputURLs(ctx context.Context, itemResults []*entity.ItemResult) error {
+	if e.fileProvider == nil {
+		logs.CtxWarn(ctx, "[fillExtraOutputURLs] fileProvider is nil, skip")
+		return nil
+	}
+	uris := make([]string, 0)
+	for _, item := range itemResults {
+		for _, turn := range item.TurnResults {
+			for _, exptResult := range turn.ExperimentResults {
+				if exptResult.Payload == nil || exptResult.Payload.EvaluatorOutput == nil {
+					continue
+				}
+				for _, record := range exptResult.Payload.EvaluatorOutput.EvaluatorRecords {
+					if record != nil && record.EvaluatorOutputData != nil && record.EvaluatorOutputData.ExtraOutput != nil && record.EvaluatorOutputData.ExtraOutput.URI != nil && *record.EvaluatorOutputData.ExtraOutput.URI != "" {
+						uris = append(uris, *record.EvaluatorOutputData.ExtraOutput.URI)
+					}
+				}
+			}
+		}
+	}
+	logs.CtxInfo(ctx, "[fillExtraOutputURLs] collected %d uris: %v", len(uris), uris)
+	if len(uris) == 0 {
+		return nil
+	}
+	urlMap, err := e.fileProvider.MGetFileURL(ctx, uris)
+	if err != nil {
+		return err
+	}
+	for _, item := range itemResults {
+		for _, turn := range item.TurnResults {
+			for _, exptResult := range turn.ExperimentResults {
+				if exptResult.Payload == nil || exptResult.Payload.EvaluatorOutput == nil {
+					continue
+				}
+				for _, record := range exptResult.Payload.EvaluatorOutput.EvaluatorRecords {
+					if record != nil && record.EvaluatorOutputData != nil && record.EvaluatorOutputData.ExtraOutput != nil && record.EvaluatorOutputData.ExtraOutput.URI != nil {
+						uri := *record.EvaluatorOutputData.ExtraOutput.URI
+						if url, ok := urlMap[uri]; ok {
+							record.EvaluatorOutputData.ExtraOutput.URL = &url
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
 }

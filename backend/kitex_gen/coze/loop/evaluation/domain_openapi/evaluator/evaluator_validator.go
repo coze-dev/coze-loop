@@ -174,6 +174,14 @@ func (p *EvaluatorOutputData) IsValid() error {
 			return fmt.Errorf("field EvaluatorRunError not valid, %w", err)
 		}
 	}
+	if p.ExtraOutput != nil {
+		if err := p.ExtraOutput.IsValid(); err != nil {
+			return fmt.Errorf("field ExtraOutput not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluatorExtraOutputContent) IsValid() error {
 	return nil
 }
 func (p *EvaluatorInputData) IsValid() error {
