@@ -360,6 +360,18 @@ func (mr *MockIEvalTargetServiceMockRecorder) ReportInvokeRecords(ctx, recordID2
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportInvokeRecords", reflect.TypeOf((*MockIEvalTargetService)(nil).ReportInvokeRecords), ctx, recordID2Params)
 }
 
+// TerminateAsyncRecordsAndDestroySandbox mocks base method.
+func (m *MockIEvalTargetService) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "TerminateAsyncRecordsAndDestroySandbox", ctx, spaceID, recordIDs, errCode, errMessage)
+}
+
+// TerminateAsyncRecordsAndDestroySandbox indicates an expected call of TerminateAsyncRecordsAndDestroySandbox.
+func (mr *MockIEvalTargetServiceMockRecorder) TerminateAsyncRecordsAndDestroySandbox(ctx, spaceID, recordIDs, errCode, errMessage any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateAsyncRecordsAndDestroySandbox", reflect.TypeOf((*MockIEvalTargetService)(nil).TerminateAsyncRecordsAndDestroySandbox), ctx, spaceID, recordIDs, errCode, errMessage)
+}
+
 // ValidateRuntimeParam mocks base method.
 func (m *MockIEvalTargetService) ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error {
 	m.ctrl.T.Helper()
