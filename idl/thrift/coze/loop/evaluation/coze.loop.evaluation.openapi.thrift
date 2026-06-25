@@ -190,9 +190,6 @@ struct BatchCreateEvaluationSetItemsOApiRequest {
     4: optional bool is_skip_invalid_items (api.body = "is_skip_invalid_items")// items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
     5: optional bool is_allow_partial_add (api.body = "is_allow_partial_add")// 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
     6: optional list<eval_set.FieldWriteOption> field_write_options
-    20: optional string item_version_description (api.body = "item_version_description", vt.max_size = "2048")
-    21: optional string item_version_status (api.body = "item_version_status", vt.max_size = "64")
-    22: optional string item_status (api.body = "item_status", vt.max_size = "64")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -219,9 +216,6 @@ struct BatchUpdateEvaluationSetItemsOApiRequest {
     3: optional list<eval_set.EvaluationSetItem> items (api.body = "items", vt.min_size = '1', vt.max_size = '100')
     4: optional bool is_skip_invalid_items (api.body = "is_skip_invalid_items")
     5: optional list<eval_set.FieldWriteOption> field_write_options (api.body = "field_write_options")
-    20: optional string item_version_description (api.body = "item_version_description", vt.max_size = "2048")
-    21: optional string item_version_status (api.body = "item_version_status", vt.max_size = "64")
-    22: optional string item_status (api.body = "item_status", vt.max_size = "64")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base

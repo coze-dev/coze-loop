@@ -29,6 +29,7 @@ type CreateEvaluationSetWithImportParam struct {
 	FieldMappings       []*FieldMapping
 	Session             *Session
 	Option              *DatasetIOJobOption
+	DatasetType         *string
 }
 
 type UpdateEvaluationSetParam struct {
@@ -64,16 +65,17 @@ type ListEvaluationSetItemsParam struct {
 	TagFilter       *TagFilter
 }
 type BatchGetEvaluationSetItemsParam struct {
-	SpaceID         int64
-	EvaluationSetID int64
-	ItemIDs         []int64
-	VersionID       *int64
-	PageNumber      *int32
-	PageSize        *int32
-	PageToken       *string
-	OrderBys        []*OrderBy
-	Filter          *Filter
-	TagFilter       *TagFilter
+	SpaceID            int64
+	EvaluationSetID    int64
+	ItemIDs            []int64
+	ItemVersionQueries []*EvaluationItemVersionRef
+	VersionID          *int64
+	PageNumber         *int32
+	PageSize           *int32
+	PageToken          *string
+	OrderBys           []*OrderBy
+	Filter             *Filter
+	TagFilter          *TagFilter
 }
 
 type GetEvaluationSetItemFieldParam struct {

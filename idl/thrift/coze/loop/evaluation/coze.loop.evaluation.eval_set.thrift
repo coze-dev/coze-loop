@@ -266,7 +266,6 @@ struct UpdateEvaluationSetItemRequest {
     20: optional string item_version (vt.max_size = "64") // versioned_item 下使用；为空表示更新 draft
     21: optional string item_version_description (vt.max_size = "2048")
     22: optional string item_version_status (vt.max_size = "64")
-    23: optional string item_status (vt.max_size = "64")
 
     255: optional base.Base Base
 }
@@ -312,7 +311,6 @@ struct ListEvaluationSetItemsRequest {
 
     200: optional list<i64> item_id_not_in (api.js_conv="true", go.tag='json:"item_id_not_in"')
     201: optional filter.Filter filter // item 过滤条件
-    210: optional bool include_item_version_info // 是否返回 item_version_brief，默认 false
     212: optional eval_set.TagFilter tag_filter // 系统资源标签过滤
 
     255: optional base.Base Base
@@ -381,20 +379,6 @@ struct BatchAddExistEvaluationSetItemsResponse {
     2: optional i32 failed_count,
     3: optional list<EvaluationItemVersionRef> failed_items,
 
-    255: base.BaseResp BaseResp
-}
-
-struct UpdateEvaluationSetItemDefRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
-    2: required i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv='true', go.tag='json:"evaluation_set_id"'),
-    3: required i64 item_id (api.path='item_id', api.js_conv='true', go.tag='json:"item_id"'),
-    4: optional string item_key (vt.max_size = "255"),
-    6: optional string status (vt.max_size = "64"),
-
-    255: optional base.Base Base
-}
-
-struct UpdateEvaluationSetItemDefResponse {
     255: base.BaseResp BaseResp
 }
 
@@ -601,9 +585,6 @@ service EvaluationSetService {
     )
     BatchAddExistEvaluationSetItemsResponse BatchAddExistEvaluationSetItems(1: BatchAddExistEvaluationSetItemsRequest req) (
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_add_exist", api.op_type = 'create', api.tag = 'volc-agentkit'
-    )
-    UpdateEvaluationSetItemDefResponse UpdateEvaluationSetItemDef(1: UpdateEvaluationSetItemDefRequest req) (
-        api.category="evaluation_set", api.patch = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/item_defs/:item_id", api.op_type = 'update', api.tag = 'volc-agentkit'
     )
     GetEvaluationSetItemDefResponse GetEvaluationSetItemDef(1: GetEvaluationSetItemDefRequest req) (
         api.category="evaluation_set", api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/item_defs/:item_id", api.op_type = 'query', api.tag = 'volc-agentkit'

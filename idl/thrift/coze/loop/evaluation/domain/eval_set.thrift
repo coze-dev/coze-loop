@@ -117,23 +117,12 @@ struct EvaluationSetItem {
     // Item 独立内容版本信息，仅 versioned_item 类型评测集使用
     20: optional i64 item_version_id (api.js_conv='true', go.tag='json:"item_version_id"'),
     21: optional string item_version,
-    22: optional ItemVersionBrief item_version_brief,
-    23: optional string item_status,
     24: optional list<ResourceTag> tags,                // 系统资源标签
 
     // 系统信息
     100: optional common.BaseInfo base_info
 }
 
-struct ItemVersionBrief {
-    1: optional i64 item_version_id (api.js_conv='true', go.tag='json:"item_version_id"'),
-    2: optional string version,
-    3: optional string description,
-    4: optional i64 version_num (api.js_conv='true', go.tag='json:"version_num"'),
-    5: optional string status,
-    6: optional bool is_latest,
-    7: optional common.BaseInfo base_info,
-}
 
 struct EvaluationItemDef {
     1: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"'),

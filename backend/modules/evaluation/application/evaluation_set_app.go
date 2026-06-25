@@ -164,6 +164,7 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSetWithImport(ctx context
 		FieldMappings:       evaluation_set.FieldMappingsDTO2DOs(req.FieldMappings),
 		Session:             session,
 		Option:              evaluation_set.DatasetIOJobOptionDTO2DO(req.Option),
+		DatasetType:         req.Type,
 	})
 	if err != nil {
 		return nil, err
@@ -608,12 +609,13 @@ func (e *EvaluationSetApplicationImpl) BatchGetEvaluationSetItems(ctx context.Co
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
 	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
-		SpaceID:         req.WorkspaceID,
-		EvaluationSetID: req.EvaluationSetID,
-		VersionID:       req.VersionID,
-		ItemIDs:         req.ItemIds,
-		Filter:          req.Filter,
-		TagFilter:       tagFilter,
+		SpaceID:            req.WorkspaceID,
+		EvaluationSetID:    req.EvaluationSetID,
+		VersionID:          req.VersionID,
+		ItemIDs:            req.ItemIds,
+		ItemVersionQueries: evaluation_set.ItemVersionRefDTO2DOs(req.ItemVersionQueries),
+		Filter:             req.Filter,
+		TagFilter:          tagFilter,
 	})
 	if err != nil {
 		return nil, err

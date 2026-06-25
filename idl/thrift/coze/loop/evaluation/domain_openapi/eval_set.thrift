@@ -86,18 +86,9 @@ struct EvaluationSetItem {
     3: optional list<Turn> turns
     20: optional i64 item_version_id (api.js_conv="true", go.tag = 'json:"item_version_id"')
     21: optional string item_version
-    22: optional OpenAPIItemVersionBrief item_version_brief
-    23: optional string item_status
     100: optional common.BaseInfo base_info
 }
 
-struct OpenAPIItemVersionBrief {
-    1: optional i64 item_version_id (api.js_conv="true", go.tag = 'json:"item_version_id"')
-    2: optional string version
-    3: optional string description
-    4: optional bool is_latest
-    5: optional string status
-}
 
 struct EvaluationItemVersion {
     1: optional i64 item_version_id (api.js_conv="true", go.tag = 'json:"item_version_id"')
@@ -139,7 +130,6 @@ struct DatasetItemOutput {
     4: optional bool is_new_item                   // 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
     20: optional i64 item_version_id (api.js_conv="true", go.tag = 'json:"item_version_id"')
     21: optional string item_version
-    22: optional OpenAPIItemVersionBrief item_version_brief
 }
 
 typedef string MultiModalStoreStrategy(ts.enum="true")

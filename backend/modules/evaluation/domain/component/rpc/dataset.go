@@ -87,6 +87,7 @@ type CreateDatasetWithImportParam struct {
 	FieldMappings []*entity.FieldMapping
 	Session       *entity.Session
 	Option        *entity.DatasetIOJobOption
+	DatasetType   *string
 }
 
 type ImportDatasetParam struct {
@@ -123,12 +124,13 @@ type ListDatasetItemsParam struct {
 }
 
 type BatchGetDatasetItemsParam struct {
-	SpaceID         int64
-	EvaluationSetID int64
-	ItemIDs         []int64
-	VersionID       *int64
-	Filter          *entity.Filter
-	TagFilter       *entity.TagFilter
+	SpaceID            int64
+	EvaluationSetID    int64
+	ItemIDs            []int64
+	ItemVersionQueries []*entity.EvaluationItemVersionRef
+	VersionID          *int64
+	Filter             *entity.Filter
+	TagFilter          *entity.TagFilter
 }
 
 type BatchCreateDatasetItemsParam struct {
