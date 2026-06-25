@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -460,8 +461,6 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 	inputData := &entity.EvaluatorInputData{
 		InputFields: map[string]*entity.Content{},
 	}
-	var recordMap sync.Map
-
 	tests := []struct {
 		name      string
 		mockSetup func()
@@ -482,11 +481,22 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 			wantErr: true,
 		},
 		{
+			name: "AsyncRunEvaluator error and failed record creation error",
+			mockSetup: func() {
+				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), true)
+				runErr := errors.New("async run error")
+				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(nil, runErr)
+				mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), runErr).Return(nil, errors.New("create failed record error"))
+			},
+			wantErr: true,
+		},
+		{
 			name: "SetEvalAsyncCtx error",
 			mockSetup: func() {
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), true)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{
-					ID: 202,
+					ID:                 202,
+					EvaluatorVersionID: 101,
 				}, nil)
 				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("set ctx error"))
 			},
@@ -496,6 +506,7 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var recordMap sync.Map
 			tt.mockSetup()
 			baseRunReq := &entity.RunEvaluatorRequest{SpaceID: 1, EvaluatorVersionID: 101, InputData: inputData, ExperimentID: 2, ExperimentRunID: 3, ItemID: 4, TurnID: 5, Ext: etec.Ext, EvaluatorRunConf: ec.RunConf}
 			err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, baseRunReq, &recordMap)
@@ -503,6 +514,16 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+			}
+			if tt.name == "AsyncRunEvaluator error" {
+				val, ok := recordMap.Load(int64(101))
+				require.True(t, ok)
+				record, ok := val.(*entity.EvaluatorRecord)
+				require.True(t, ok)
+				assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+			} else if tt.name == "AsyncRunEvaluator error and failed record creation error" {
+				_, ok := recordMap.Load(int64(101))
+				assert.False(t, ok)
 			}
 		})
 	}
@@ -3073,7 +3094,6 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_EdgeCases(t *testing.T) {
 }
 
 func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
-	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -3131,7 +3151,9 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
 					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					Event:       &entity.ExptItemEvalEvent{ExptID: 10, ExptRunID: 20, SpaceID: 2},
 					Expt: &entity.Experiment{
+						SpaceID: 2,
 						Evaluators: []*entity.Evaluator{
 							{ID: 1, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 999}}, // Non-existent evaluator
 						},
@@ -3163,7 +3185,9 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
 					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					Event:       &entity.ExptItemEvalEvent{ExptID: 10, ExptRunID: 20, SpaceID: 2},
 					Expt: &entity.Experiment{
+						SpaceID: 2,
 						Evaluators: []*entity.Evaluator{
 							{ID: 1, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1}},
 						},
@@ -3174,6 +3198,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 									EvaluatorConf: []*entity.EvaluatorConf{
 										{
 											EvaluatorVersionID: 1,
+											RunConf:            &entity.EvaluatorRunConfig{},
 											IngressConf: &entity.EvaluatorIngressConf{
 												EvalSetAdapter: &entity.FieldAdapter{
 													FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "[invalid_json_path"}},
@@ -3203,7 +3228,6 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			tt.prepare()
 			// Check if targetResult is nil to avoid panic
 			if tt.target != nil && tt.target.EvalTargetOutputData == nil {

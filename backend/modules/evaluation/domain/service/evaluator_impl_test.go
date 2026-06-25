@@ -4417,3 +4417,67 @@ func TestEvaluatorServiceImpl_CreateEvaluatorRunFailRecord(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluatorServiceImpl_CreateEvaluatorRunFailRecord_Errors(t *testing.T) {
+	t.Run("nil request returns error", func(t *testing.T) {
+		s := &EvaluatorServiceImpl{}
+		record, err := s.CreateEvaluatorRunFailRecord(context.Background(), nil, errors.New("run failed"))
+		assert.Error(t, err)
+		assert.Nil(t, record)
+	})
+
+	t.Run("id generation error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+		s := &EvaluatorServiceImpl{idgen: mockIDGen}
+
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(0), errors.New("idgen failed"))
+
+		record, err := s.CreateEvaluatorRunFailRecord(context.Background(), &entity.RunEvaluatorRequest{EvaluatorVersionID: 1}, errors.New("run failed"))
+		assert.Error(t, err)
+		assert.Nil(t, record)
+	})
+
+	t.Run("nil run error uses default failure", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+		mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		s := &EvaluatorServiceImpl{idgen: mockIDGen, evaluatorRecordRepo: mockEvaluatorRecordRepo}
+
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(100), nil)
+		mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, record *entity.EvaluatorRecord) error {
+				require.NotNil(t, record)
+				require.NotNil(t, record.EvaluatorOutputData)
+				require.NotNil(t, record.EvaluatorOutputData.EvaluatorRunError)
+				assert.Equal(t, int32(errno.CommonInternalErrorCode), record.EvaluatorOutputData.EvaluatorRunError.Code)
+				assert.Contains(t, record.EvaluatorOutputData.EvaluatorRunError.Message, "evaluator run failed")
+				return nil
+			},
+		)
+
+		record, err := s.CreateEvaluatorRunFailRecord(context.Background(), &entity.RunEvaluatorRequest{EvaluatorVersionID: 1}, nil)
+		require.NoError(t, err)
+		require.NotNil(t, record)
+	})
+
+	t.Run("create record error bubbles up", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+		mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		s := &EvaluatorServiceImpl{idgen: mockIDGen, evaluatorRecordRepo: mockEvaluatorRecordRepo}
+
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(100), nil)
+		mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(errors.New("create record failed"))
+
+		record, err := s.CreateEvaluatorRunFailRecord(context.Background(), &entity.RunEvaluatorRequest{EvaluatorVersionID: 1}, errors.New("run failed"))
+		assert.Error(t, err)
+		assert.Nil(t, record)
+	})
+}
