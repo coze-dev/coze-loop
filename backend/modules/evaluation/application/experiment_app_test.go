@@ -1918,6 +1918,30 @@ func TestExperimentApplication_UpdateExperiment(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "workspace mismatch with experiment space",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      validExptID,
+				WorkspaceID: validWorkspaceID,
+				Name:        gptr.Of("updated_experiment"),
+				Desc:        gptr.Of("updated description"),
+			},
+			mockSetup: func() {
+				mismatchedExpt := &entity.Experiment{
+					ID:        validExptID,
+					SpaceID:   validWorkspaceID + 1,
+					Name:      "test_experiment_other_space",
+					Status:    entity.ExptStatus_Pending,
+					CreatedBy: validUserID,
+				}
+				// 返回归属于其他 workspace 的实验，应在写库前被越权校验拦截
+				mockManager.EXPECT().
+					Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).
+					Return(mismatchedExpt, nil)
+				// 不应再调用 Update：mockManager.Update 未设置 EXPECT，被调用即失败
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
