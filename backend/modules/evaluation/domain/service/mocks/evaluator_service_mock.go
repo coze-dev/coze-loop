@@ -161,6 +161,21 @@ func (mr *MockEvaluatorServiceMockRecorder) CreateEvaluator(ctx, evaluator, cid 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).CreateEvaluator), ctx, evaluator, cid)
 }
 
+// CreateEvaluatorRunFailRecord mocks base method.
+func (m *MockEvaluatorService) CreateEvaluatorRunFailRecord(ctx context.Context, request *entity.RunEvaluatorRequest, runErr error) (*entity.EvaluatorRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateEvaluatorRunFailRecord", ctx, request, runErr)
+	ret0, _ := ret[0].(*entity.EvaluatorRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateEvaluatorRunFailRecord indicates an expected call of CreateEvaluatorRunFailRecord.
+func (mr *MockEvaluatorServiceMockRecorder) CreateEvaluatorRunFailRecord(ctx, request, runErr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluatorRunFailRecord", reflect.TypeOf((*MockEvaluatorService)(nil).CreateEvaluatorRunFailRecord), ctx, request, runErr)
+}
+
 // DebugEvaluator mocks base method.
 func (m *MockEvaluatorService) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 	m.ctrl.T.Helper()
