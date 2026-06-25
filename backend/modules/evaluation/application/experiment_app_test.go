@@ -7571,3 +7571,160 @@ func TestExperimentApplication_SubmitExptFromTemplate(t *testing.T) {
 		})
 	}
 }
+
+func TestExperimentApplication_UpdateExperiment_MoreBranches(t *testing.T) {
+	workspaceID := int64(123)
+	exptID := int64(456)
+	userID := "789"
+
+	baseExpt := func() *entity.Experiment {
+		return &entity.Experiment{
+			ID:        exptID,
+			SpaceID:   workspaceID,
+			Name:      "orig_name",
+			Status:    entity.ExptStatus_Pending,
+			CreatedBy: userID,
+		}
+	}
+
+	tests := []struct {
+		name      string
+		req       *exptpb.UpdateExperimentRequest
+		mockSetup func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, ui *userinfomocks.MockUserInfoService)
+		wantErr   bool
+	}{
+		{
+			name: "manager.Get error",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("n"),
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, _ *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(nil, errors.New("get failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "CheckName error",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("new_name"),
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, _ *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				mgr.EXPECT().CheckName(gomock.Any(), "new_name", workspaceID, gomock.Any()).Return(false, errors.New("check failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid notification_conf",
+			req: func() *exptpb.UpdateExperimentRequest {
+				return &exptpb.UpdateExperimentRequest{
+					ExptID:      exptID,
+					WorkspaceID: workspaceID,
+					Name:        gptr.Of("orig_name"), // same name -> skip CheckName
+					NotificationConf: &expt.ExptNotificationConf{
+						Filter: &expt.Filters{
+							FilterConditions: []*expt.FilterCondition{
+								{
+									Operator: expt.FilterOperatorType(999), // invalid -> conversion error
+									Value:    "v",
+								},
+							},
+						},
+					},
+				}
+			}(),
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "manager.Update error",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("orig_name"),
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("update failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "GetDetail error",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("orig_name"),
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(nil, errors.New("detail failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "success with notification_conf",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("orig_name"),
+				NotificationConf: &expt.ExptNotificationConf{
+					Webhook: &expt.WebhookNotificationConf{
+						Enable: true,
+						Urls:   gptr.Of("https://hook"),
+					},
+				},
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, ui *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, updated *entity.Experiment, _ *entity.Session) error {
+						assert.NotNil(t, updated.NotificationConf)
+						return nil
+					})
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				ui.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mgr := servicemocks.NewMockIExptManager(ctrl)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			ui := userinfomocks.NewMockUserInfoService(ctrl)
+
+			app := &experimentApplication{
+				manager:         mgr,
+				auth:            auth,
+				userInfoService: ui,
+			}
+
+			tc.mockSetup(mgr, auth, ui)
+
+			resp, err := app.UpdateExperiment(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
