@@ -1053,6 +1053,11 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	// 水平越权校验：仅当实验确实归属当前 workspace 时才允许更新，避免被改写 space_id 搬到其他 workspace
+	if got.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("expt %d not found in space %d", req.GetExptID(), req.GetWorkspaceID())))
+	}
+
 	if got.Name != req.GetName() {
 		pass, err := e.manager.CheckName(ctx, req.GetName(), req.GetWorkspaceID(), session)
 		if err != nil {
