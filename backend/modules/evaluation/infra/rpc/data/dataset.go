@@ -502,10 +502,6 @@ func (a *DatasetRPCAdapter) GetDatasetItemField(ctx context.Context, param *rpc.
 	return nil, nil
 }
 
-func (a *DatasetRPCAdapter) UpdateDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemKey, status *string) error {
-	return nil
-}
-
 func (a *DatasetRPCAdapter) GetDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error) {
 	return nil, nil
 }

@@ -893,38 +893,6 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemField(ctx context.Con
 	}, nil
 }
 
-func (e *EvaluationSetApplicationImpl) UpdateEvaluationSetItemDef(ctx context.Context, req *eval_set.UpdateEvaluationSetItemDefRequest) (resp *eval_set.UpdateEvaluationSetItemDefResponse, err error) {
-	if req == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
-	}
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, nil)
-	if err != nil {
-		return nil, err
-	}
-	if set == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
-	}
-	var ownerID *string
-	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
-		ownerID = set.BaseInfo.CreatedBy.UserID
-	}
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(set.ID, 10),
-		SpaceID:         req.WorkspaceID,
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
-		OwnerID:         ownerID,
-		ResourceSpaceID: set.SpaceID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	err = e.evaluationSetItemService.UpdateEvaluationSetItemDef(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID, req.ItemKey, req.Status)
-	if err != nil {
-		return nil, err
-	}
-	return &eval_set.UpdateEvaluationSetItemDefResponse{}, nil
-}
-
 func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemDef(ctx context.Context, req *eval_set.GetEvaluationSetItemDefRequest) (resp *eval_set.GetEvaluationSetItemDefResponse, err error) {
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))

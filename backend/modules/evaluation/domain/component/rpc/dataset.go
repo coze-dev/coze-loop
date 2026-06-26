@@ -42,7 +42,6 @@ type IDatasetRPCAdapter interface {
 	QueryItemSnapshotMappings(ctx context.Context, req *QueryItemSnapshotMappingRequest) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error)
 	GetDatasetItemField(ctx context.Context, param *GetDatasetItemFieldParam) (fieldData *entity.FieldData, err error)
 
-	UpdateDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemKey, status *string) error
 	GetDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error)
 	ListDatasetItemDefs(ctx context.Context, param *ListDatasetItemDefsParam) ([]*entity.EvaluationSetItemDef, *int64, *string, error)
 	ListDatasetItemVersions(ctx context.Context, param *ListDatasetItemVersionsParam) ([]*entity.EvaluationSetItemVersion, *int64, *string, error)

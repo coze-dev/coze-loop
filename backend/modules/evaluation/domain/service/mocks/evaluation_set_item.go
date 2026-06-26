@@ -243,20 +243,6 @@ func (mr *MockEvaluationSetItemServiceMockRecorder) UpdateEvaluationSetItem(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluationSetItem", reflect.TypeOf((*MockEvaluationSetItemService)(nil).UpdateEvaluationSetItem), ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions, tags)
 }
 
-// UpdateEvaluationSetItemDef mocks base method.
-func (m *MockEvaluationSetItemService) UpdateEvaluationSetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemKey, status *string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEvaluationSetItemDef", ctx, spaceID, evaluationSetID, itemID, itemKey, status)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateEvaluationSetItemDef indicates an expected call of UpdateEvaluationSetItemDef.
-func (mr *MockEvaluationSetItemServiceMockRecorder) UpdateEvaluationSetItemDef(ctx, spaceID, evaluationSetID, itemID, itemKey, status any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluationSetItemDef", reflect.TypeOf((*MockEvaluationSetItemService)(nil).UpdateEvaluationSetItemDef), ctx, spaceID, evaluationSetID, itemID, itemKey, status)
-}
-
 // UpdateEvaluationSetItemVersion mocks base method.
 func (m *MockEvaluationSetItemService) UpdateEvaluationSetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, status, description, itemVersion *string) error {
 	m.ctrl.T.Helper()

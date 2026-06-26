@@ -185,10 +185,6 @@ func (d *EvaluationSetItemServiceImpl) GetEvaluationSetItemField(ctx context.Con
 	})
 }
 
-func (d *EvaluationSetItemServiceImpl) UpdateEvaluationSetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemKey, status *string) error {
-	return d.datasetRPCAdapter.UpdateDatasetItemDef(ctx, spaceID, evaluationSetID, itemID, itemKey, status)
-}
-
 func (d *EvaluationSetItemServiceImpl) GetEvaluationSetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error) {
 	return d.datasetRPCAdapter.GetDatasetItemDef(ctx, spaceID, evaluationSetID, itemID)
 }

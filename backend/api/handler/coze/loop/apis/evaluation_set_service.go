@@ -158,22 +158,6 @@ func BatchAddExistEvaluationSetItems(ctx context.Context, c *app.RequestContext)
 	c.JSON(consts.StatusOK, resp)
 }
 
-// UpdateEvaluationSetItemDef .
-// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/item_defs/:item_id [PATCH]
-func UpdateEvaluationSetItemDef(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_set.UpdateEvaluationSetItemDefRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_set.UpdateEvaluationSetItemDefResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
 // GetEvaluationSetItemDef .
 // @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/item_defs/:item_id [GET]
 func GetEvaluationSetItemDef(ctx context.Context, c *app.RequestContext) {

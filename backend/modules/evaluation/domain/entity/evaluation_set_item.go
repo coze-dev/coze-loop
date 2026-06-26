@@ -206,12 +206,4 @@ type EvaluationItemVersionRef struct {
 	ItemVersion   *string
 }
 
-type ItemVersionBrief struct {
-	ItemVersionID int64
-	Version       string
-	Description   string
-	VersionNum    int64
-	Status        string
-	IsLatest      bool
-	BaseInfo      *BaseInfo
-}
+
