@@ -114,9 +114,12 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 }
 
 func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest) (r *openapi.CreateEvaluationSetOApiResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "CreateEvaluationSetOApi req: %v", json.Jsonify(req))
 	var evaluationSetID int64
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
+		logs.CtxInfo(ctx, "CreateEvaluationSetOApi resp: %v, err: %v", json.Jsonify(r), err)
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluationSetID, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 	// 参数校验
@@ -639,10 +642,11 @@ func (e *EvalOpenAPIApplication) BatchUpdateEvaluationSetItemsOApi(ctx context.C
 
 	// 调用domain服务
 	errors, itemOutputs, err := e.evaluationSetItemService.BatchUpdateEvaluationSetItems(ctx, &entity.BatchUpdateEvaluationSetItemsParam{
-		SpaceID:          req.GetWorkspaceID(),
-		EvaluationSetID:  req.GetEvaluationSetID(),
-		Items:            evaluation_set.OpenAPIItemDTO2DOs(req.GetEvaluationSetID(), req.Items),
-		SkipInvalidItems: req.IsSkipInvalidItems,
+		SpaceID:           req.GetWorkspaceID(),
+		EvaluationSetID:   req.GetEvaluationSetID(),
+		Items:             evaluation_set.OpenAPIItemDTO2DOs(req.GetEvaluationSetID(), req.Items),
+		SkipInvalidItems:  req.IsSkipInvalidItems,
+		FieldWriteOptions: evaluation_set.OpenAPIFieldWriteOptionDTO2DOs(req.FieldWriteOptions),
 	})
 	if err != nil {
 		return nil, err
@@ -2809,10 +2813,19 @@ func (e *EvalOpenAPIApplication) GetEvalTargetRecordOApi(ctx context.Context, re
 }
 
 func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetItemVersionsOApiRequest) (r *openapi.ListEvaluationSetItemVersionsOApiResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "ListEvaluationSetItemVersionsOApi req: %v", json.Jsonify(req))
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		logs.CtxInfo(ctx, "ListEvaluationSetItemVersionsOApi resp: %v, err: %v", json.Jsonify(r), err)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
 	if err != nil {
 		return nil, err
 	}
@@ -2826,23 +2839,26 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.C
 	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
 		ObjectID:        strconv.FormatInt(set.ID, 10),
 		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
 		OwnerID:         ownerID,
 		ResourceSpaceID: set.SpaceID,
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	versions, total, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItemVersions(ctx, &entity.ListEvaluationSetItemVersionsParam{
 		SpaceID:         req.GetWorkspaceID(),
 		EvaluationSetID: req.GetEvaluationSetID(),
 		ItemID:          req.GetItemID(),
+		PageNumber:      req.PageNumber,
 		PageSize:        req.PageSize,
 		PageToken:       req.PageToken,
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	return &openapi.ListEvaluationSetItemVersionsOApiResponse{
 		Data: &openapi.ListEvaluationSetItemVersionsOpenAPIData{
 			Versions:      evaluation_set.OpenAPIItemVersionDO2DTOs(versions),
@@ -2853,10 +2869,19 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.C
 }
 
 func (e *EvalOpenAPIApplication) GetEvaluationSetItemVersionOApi(ctx context.Context, req *openapi.GetEvaluationSetItemVersionOApiRequest) (r *openapi.GetEvaluationSetItemVersionOApiResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "GetEvaluationSetItemVersionOApi req: %v", json.Jsonify(req))
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		logs.CtxInfo(ctx, "GetEvaluationSetItemVersionOApi resp: %v, err: %v", json.Jsonify(r), err)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
 	if err != nil {
 		return nil, err
 	}
@@ -2870,17 +2895,22 @@ func (e *EvalOpenAPIApplication) GetEvaluationSetItemVersionOApi(ctx context.Con
 	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
 		ObjectID:        strconv.FormatInt(set.ID, 10),
 		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
 		OwnerID:         ownerID,
 		ResourceSpaceID: set.SpaceID,
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	version, err := e.evaluationSetItemService.GetEvaluationSetItemVersion(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), req.GetItemID(), req.ItemVersionID, nil)
 	if err != nil {
 		return nil, err
 	}
+	if version == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("item version not found"))
+	}
+
 	return &openapi.GetEvaluationSetItemVersionOApiResponse{
 		Data: &openapi.GetEvaluationSetItemVersionOpenAPIData{
 			Version: evaluation_set.OpenAPIItemVersionDO2DTO(version),
