@@ -1,0 +1,618 @@
+backend/modules/evaluation/infra/mq/rocket/consumer/webhook_retry_test.go
+  1391048bf0361faf 69 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":69}]}]}
+backend/modules/evaluation/domain/service/webhook_dispatcher.go
+  1391048bf0361faf 187-188 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[187,188]}]}]}
+backend/modules/evaluation/domain/entity/event.go
+  1391048bf0361faf 199-206 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[199,206]}]}]}
+backend/infra/mq/message.go
+  1391048bf0361faf 14,40-44 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":14},{"Range":[40,44]}]}]}
+backend/modules/evaluation/domain/service/expt_manage_execution_impl.go
+  1391048bf0361faf 695-701,703 gitai:{"mixed_line_ranges":[{"Single":700}],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[695,701]},{"Single":703}]}]}
+backend/modules/evaluation/domain/service/expt_manage_execution_impl_test.go
+  1391048bf0361faf 514,1586,1703,1780,1856,1937,2054,3646,3659,3673 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":514},{"Single":1586},{"Single":1703},{"Single":1780},{"Single":1856},{"Single":1937},{"Single":2054},{"Single":3646},{"Single":3659},{"Single":3673}]}]}
+backend/modules/evaluation/infra/mq/rocket/producer/expt_event_pub.go
+  1391048bf0361faf 160-165,174,178-181,203-204 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[160,165]},{"Single":174},{"Range":[178,181]},{"Range":[203,204]}]}]}
+backend/modules/evaluation/domain/service/expt_run_scheduler_event_impl_test.go
+  1391048bf0361faf 137-138,185-186 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[137,138]},{"Range":[185,186]}]}]}
+backend/modules/evaluation/domain/events/mocks/expt_event_publisher_mock.go
+  1391048bf0361faf 88,90,96,98 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":88},{"Single":90},{"Single":96},{"Single":98}]}]}
+backend/modules/evaluation/domain/service/expt_run_scheduler_event_impl.go
+  1391048bf0361faf 258,270-272 gitai:{"mixed_line_ranges":[{"Single":270}],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":258},{"Range":[270,272]}]}]}
+backend/infra/mq/rocketmq/producer.go
+  1391048bf0361faf 73-75 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[73,75]}]}]}
+backend/modules/evaluation/domain/events/publisher.go
+  1391048bf0361faf 22 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":22}]}]}
+backend/infra/mq/rocketmq/consumer.go
+  1391048bf0361faf 10,38-41,47 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":10},{"Range":[38,41]},{"Single":47}]}]}
+backend/modules/evaluation/domain/service/webhook_dispatcher_test.go
+  1391048bf0361faf 101,105,125,128,264,321 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ffbeaaf0c95c626cf9150","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":101},{"Single":105},{"Single":125},{"Single":128},{"Single":264},{"Single":321}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "3bf80781f64e7cded5235c34390f358ccf04f927",
+  "prompts": {
+    "1391048bf0361faf": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a1fc3fbaf0c95c626cf8a25",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 136,
+      "total_deletions": 76,
+      "accepted_lines": 85,
+      "overriden_lines": 2
+    }
+  },
+  "attestation_metadata": {
+    "backend/infra/mq/message.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Single": 14
+          },
+          {
+            "Range": [
+              40,
+              44
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 14
+              },
+              {
+                "Range": [
+                  40,
+                  44
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/infra/mq/rocketmq/consumer.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Single": 10
+          },
+          {
+            "Range": [
+              38,
+              41
+            ]
+          },
+          {
+            "Single": 47
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 10
+              },
+              {
+                "Range": [
+                  38,
+                  41
+                ]
+              },
+              {
+                "Single": 47
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/infra/mq/rocketmq/producer.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Range": [
+              73,
+              75
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  73,
+                  75
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/entity/event.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Range": [
+              199,
+              206
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  199,
+                  206
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/events/mocks/expt_event_publisher_mock.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Single": 88
+          },
+          {
+            "Single": 90
+          },
+          {
+            "Single": 96
+          },
+          {
+            "Single": 98
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 88
+              },
+              {
+                "Single": 90
+              },
+              {
+                "Single": 96
+              },
+              {
+                "Single": 98
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/events/publisher.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Single": 22
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 22
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_manage_execution_impl.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Range": [
+              695,
+              701
+            ]
+          },
+          {
+            "Single": 703
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 700
+          }
+        ],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  695,
+                  701
+                ]
+              },
+              {
+                "Single": 703
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_manage_execution_impl_test.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Single": 514
+          },
+          {
+            "Single": 1586
+          },
+          {
+            "Single": 1703
+          },
+          {
+            "Single": 1780
+          },
+          {
+            "Single": 1856
+          },
+          {
+            "Single": 1937
+          },
+          {
+            "Single": 2054
+          },
+          {
+            "Single": 3646
+          },
+          {
+            "Single": 3659
+          },
+          {
+            "Single": 3673
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 514
+              },
+              {
+                "Single": 1586
+              },
+              {
+                "Single": 1703
+              },
+              {
+                "Single": 1780
+              },
+              {
+                "Single": 1856
+              },
+              {
+                "Single": 1937
+              },
+              {
+                "Single": 2054
+              },
+              {
+                "Single": 3646
+              },
+              {
+                "Single": 3659
+              },
+              {
+                "Single": 3673
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_run_scheduler_event_impl.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Single": 258
+          },
+          {
+            "Range": [
+              270,
+              272
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 270
+          }
+        ],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 258
+              },
+              {
+                "Range": [
+                  270,
+                  272
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_run_scheduler_event_impl_test.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Range": [
+              137,
+              138
+            ]
+          },
+          {
+            "Range": [
+              185,
+              186
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  137,
+                  138
+                ]
+              },
+              {
+                "Range": [
+                  185,
+                  186
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/webhook_dispatcher.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Range": [
+              187,
+              188
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  187,
+                  188
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/webhook_dispatcher_test.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Single": 101
+          },
+          {
+            "Single": 105
+          },
+          {
+            "Single": 125
+          },
+          {
+            "Single": 128
+          },
+          {
+            "Single": 264
+          },
+          {
+            "Single": 321
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 101
+              },
+              {
+                "Single": 105
+              },
+              {
+                "Single": 125
+              },
+              {
+                "Single": 128
+              },
+              {
+                "Single": 264
+              },
+              {
+                "Single": 321
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/infra/mq/rocket/consumer/webhook_retry_test.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Single": 69
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 69
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/infra/mq/rocket/producer/expt_event_pub.go": [
+      {
+        "hash": "1391048bf0361faf",
+        "line_ranges": [
+          {
+            "Range": [
+              160,
+              165
+            ]
+          },
+          {
+            "Single": 174
+          },
+          {
+            "Range": [
+              178,
+              181
+            ]
+          },
+          {
+            "Range": [
+              203,
+              204
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ffbeaaf0c95c626cf9150",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  160,
+                  165
+                ]
+              },
+              {
+                "Single": 174
+              },
+              {
+                "Range": [
+                  178,
+                  181
+                ]
+              },
+              {
+                "Range": [
+                  203,
+                  204
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "1391048bf0361faf": {
+      "tool": "trae",
+      "conversation_id": "6a1fc3fbaf0c95c626cf8a25",
+      "session_id": "6a1fc3fbaf0c95c626cf8a25",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

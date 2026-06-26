@@ -1,0 +1,165 @@
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl.go
+  a59d95e73abfd738 233,404,1259 gitai:{"mixed_line_ranges":[{"Single":233}],"operations":[{"operation_id":"6a05b3c8c36d2699286c63b9","tool_type":"builtin","tool_id":"icube:applyChatSnapshotPatch","line_ranges":[{"Single":233},{"Single":404},{"Single":1259}]}]}
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl_test.go
+  a59d95e73abfd738 2219,2541,3254 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a05b3c8c36d2699286c63b9","tool_type":"builtin","tool_id":"icube:applyChatSnapshotPatch","line_ranges":[{"Single":2219},{"Single":2541},{"Single":3254}]}]}
+backend/modules/evaluation/application/eval_openapi_app.go
+  3d1c7e29e5196c4d 2079-2081 gitai:{"mixed_line_ranges":[{"Single":2079}],"operations":[{"operation_id":"6a068f7fc36d2699286c673b","tool_type":"builtin","tool_id":"icube:applyChatSnapshotPatch","line_ranges":[{"Range":[2079,2081]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "c6f903c170411f7b9dbd8b0d6726f9499d8644f3",
+  "prompts": {
+    "3d1c7e29e5196c4d": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a068f2bc36d2699286c6676",
+        "model": "c_o_new_thinking"
+      },
+      "human_author": "xueyizheng <xueyizheng@bytedance.com>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 1
+    },
+    "a59d95e73abfd738": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a059bdbc36d2699286c6208",
+        "model": "c_o_new_thinking"
+      },
+      "human_author": "xueyizheng <xueyizheng@bytedance.com>",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 9,
+      "accepted_lines": 8,
+      "overriden_lines": 1
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/application/eval_openapi_app.go": [
+      {
+        "hash": "3d1c7e29e5196c4d",
+        "line_ranges": [
+          {
+            "Range": [
+              2079,
+              2081
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 2079
+          }
+        ],
+        "operations": [
+          {
+            "operation_id": "6a068f7fc36d2699286c673b",
+            "tool_type": "builtin",
+            "tool_id": "icube:applyChatSnapshotPatch",
+            "line_ranges": [
+              {
+                "Range": [
+                  2079,
+                  2081
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl.go": [
+      {
+        "hash": "a59d95e73abfd738",
+        "line_ranges": [
+          {
+            "Single": 233
+          },
+          {
+            "Single": 404
+          },
+          {
+            "Single": 1259
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 233
+          }
+        ],
+        "operations": [
+          {
+            "operation_id": "6a05b3c8c36d2699286c63b9",
+            "tool_type": "builtin",
+            "tool_id": "icube:applyChatSnapshotPatch",
+            "line_ranges": [
+              {
+                "Single": 233
+              },
+              {
+                "Single": 404
+              },
+              {
+                "Single": 1259
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl_test.go": [
+      {
+        "hash": "a59d95e73abfd738",
+        "line_ranges": [
+          {
+            "Single": 2219
+          },
+          {
+            "Single": 2541
+          },
+          {
+            "Single": 3254
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a05b3c8c36d2699286c63b9",
+            "tool_type": "builtin",
+            "tool_id": "icube:applyChatSnapshotPatch",
+            "line_ranges": [
+              {
+                "Single": 2219
+              },
+              {
+                "Single": 2541
+              },
+              {
+                "Single": 3254
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "3d1c7e29e5196c4d": {
+      "tool": "trae",
+      "conversation_id": "6a068f2bc36d2699286c6676",
+      "session_id": "6a068f2bc36d2699286c6676",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "a59d95e73abfd738": {
+      "tool": "trae",
+      "conversation_id": "6a059bdbc36d2699286c6208",
+      "session_id": "6a059bdbc36d2699286c6208",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
