@@ -9,8 +9,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 )
 
@@ -145,95 +143,35 @@ func ValidateEvaluationSetMultiPartData(ctx context.Context, c *app.RequestConte
 // BatchAddExistEvaluationSetItems .
 // @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_add_exist [POST]
 func BatchAddExistEvaluationSetItems(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_set.BatchAddExistEvaluationSetItemsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_set.BatchAddExistEvaluationSetItemsResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalSetSvc.BatchAddExistEvaluationSetItems)
 }
 
 // GetEvaluationSetItemDef .
 // @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/item_defs/:item_id [GET]
 func GetEvaluationSetItemDef(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_set.GetEvaluationSetItemDefRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_set.GetEvaluationSetItemDefResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalSetSvc.GetEvaluationSetItemDef)
 }
 
 // ListEvaluationSetItemDefs .
 // @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/item_defs/list [POST]
 func ListEvaluationSetItemDefs(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_set.ListEvaluationSetItemDefsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_set.ListEvaluationSetItemDefsResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalSetSvc.ListEvaluationSetItemDefs)
 }
 
 // ListEvaluationSetItemVersions .
 // @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/versions/list [POST]
 func ListEvaluationSetItemVersions(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_set.ListEvaluationSetItemVersionsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_set.ListEvaluationSetItemVersionsResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalSetSvc.ListEvaluationSetItemVersions)
 }
 
 // GetEvaluationSetItemVersion .
 // @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/versions/:item_version_id [GET]
 func GetEvaluationSetItemVersion(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_set.GetEvaluationSetItemVersionRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_set.GetEvaluationSetItemVersionResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalSetSvc.GetEvaluationSetItemVersion)
 }
 
 // UpdateEvaluationSetItemVersion .
 // @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/versions/:item_version_id [PATCH]
 func UpdateEvaluationSetItemVersion(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_set.UpdateEvaluationSetItemVersionRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_set.UpdateEvaluationSetItemVersionResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalSetSvc.UpdateEvaluationSetItemVersion)
 }
