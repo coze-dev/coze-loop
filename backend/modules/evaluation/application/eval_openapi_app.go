@@ -142,6 +142,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 		Name:                req.GetName(),
 		Description:         req.Description,
 		EvaluationSetSchema: evaluation_set.OpenAPIEvaluationSetSchemaDTO2DO(req.EvaluationSetSchema),
+		DatasetType:         req.Type,
 		Tags:                evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {

@@ -675,11 +675,13 @@ func OpenAPIItemDO2DTO(do *entity.EvaluationSetItem) *openapi_eval_set.Evaluatio
 		return nil
 	}
 	return &openapi_eval_set.EvaluationSetItem{
-		ID:       gptr.Of(do.ID),
-		ItemKey:  gptr.Of(do.ItemKey),
-		Turns:    OpenAPITurnDO2DTOs(do.Turns),
-		BaseInfo: ConvertBaseInfoDO2DTO(do.BaseInfo),
-		Tags:     OpenAPIResourceTagDO2DTOs(do.Tags),
+		ID:            gptr.Of(do.ID),
+		ItemKey:       gptr.Of(do.ItemKey),
+		ItemVersionID: do.ItemVersionID,
+		ItemVersion:   do.ItemVersion,
+		Turns:         OpenAPITurnDO2DTOs(do.Turns),
+		BaseInfo:      ConvertBaseInfoDO2DTO(do.BaseInfo),
+		Tags:          OpenAPIResourceTagDO2DTOs(do.Tags),
 	}
 }
 
