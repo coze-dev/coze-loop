@@ -318,3 +318,159 @@ func TestExptSubmitExec_exptStartMultiSet_MultipleSets(t *testing.T) {
 		assert.Equal(t, int32(i), captured[i].OrderIdx)
 	}
 }
+
+// item_id 点选 item_filter: 走 BatchGetEvaluationSetItems (不走 List), 只落命中的 item。
+func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exec, setItemSvc, itemRefRepo := newExptStartMultiSetTestExec(ctrl)
+
+	var captured []*entity.ExptItemRef
+	itemRefRepo.EXPECT().BatchCreate(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, refs []*entity.ExptItemRef) error {
+			captured = append(captured, refs...)
+			return nil
+		}).AnyTimes()
+
+	// 点选只选 item_id=2,7 → 必须走 BatchGet 且 query 只带这两个 id; List 不应被调用
+	var batchQueried []int64
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+			assert.Empty(t, p.ItemIDs)
+			for _, q := range p.ItemVersionQueries {
+				batchQueried = append(batchQueried, q.ItemID)
+			}
+			return []*entity.EvaluationSetItem{
+				{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
+				{ItemID: 7, Turns: []*entity.Turn{{ID: 77}}},
+			}, nil
+		}).Times(1)
+	// List 绝不应被调用 (点选路径)
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
+
+	expt := &entity.Experiment{
+		ID:      1,
+		SpaceID: 3,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				{
+					EvalSetID:        10,
+					EvalSetVersionID: 100,
+					ItemFilter: &entity.ExptItemFilter{
+						FilterFields: []*entity.ExptItemFilterField{
+							{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"2", "7"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: "u1"})
+	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
+	assert.NoError(t, err)
+
+	assert.ElementsMatch(t, []int64{2, 7}, batchQueried)
+	assert.Len(t, captured, 2)
+	assert.ElementsMatch(t, []int64{2, 7}, []int64{captured[0].ItemID, captured[1].ItemID})
+}
+
+// item_id not_in (排除): List 全集拉回后内存过滤掉 exclude。
+func TestExptSubmitExec_exptStartMultiSet_ItemIDExclude(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exec, setItemSvc, itemRefRepo := newExptStartMultiSetTestExec(ctrl)
+
+	var captured []*entity.ExptItemRef
+	itemRefRepo.EXPECT().BatchCreate(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, refs []*entity.ExptItemRef) error {
+			captured = append(captured, refs...)
+			return nil
+		}).AnyTimes()
+
+	// 排除 item_id=2 → List 拉回 1,2,3, 落库应只剩 1,3
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return(
+		[]*entity.EvaluationSetItem{
+			{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
+			{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
+			{ItemID: 3, Turns: []*entity.Turn{{ID: 33}}},
+		}, ptr.Of(int64(3)), nil, nil, nil).Times(1)
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
+
+	expt := &entity.Experiment{
+		ID:      1,
+		SpaceID: 3,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				{
+					EvalSetID:        10,
+					EvalSetVersionID: 100,
+					ItemFilter: &entity.ExptItemFilter{
+						FilterFields: []*entity.ExptItemFilterField{
+							{FieldName: "item_id", FieldType: "long", QueryType: "not_in", Values: []string{"2"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: "u1"})
+	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
+	assert.NoError(t, err)
+
+	assert.Len(t, captured, 2)
+	assert.ElementsMatch(t, []int64{1, 3}, []int64{captured[0].ItemID, captured[1].ItemID})
+}
+
+func TestExtractItemIDFilter(t *testing.T) {
+	t.Run("nil filter", func(t *testing.T) {
+		inc, exc, hasTag, err := extractItemIDFilter(nil)
+		assert.NoError(t, err)
+		assert.Empty(t, inc)
+		assert.Empty(t, exc)
+		assert.False(t, hasTag)
+	})
+
+	t.Run("item_id in/eq -> include", func(t *testing.T) {
+		f := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
+			{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"1", "2"}},
+			{FieldName: "item_id", FieldType: "long", QueryType: "eq", Values: []string{"3"}},
+		}}
+		inc, exc, hasTag, err := extractItemIDFilter(f)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{1, 2, 3}, inc)
+		assert.Empty(t, exc)
+		assert.False(t, hasTag)
+	})
+
+	t.Run("item_id not_in/not_eq -> exclude", func(t *testing.T) {
+		f := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
+			{FieldName: "item_id", FieldType: "long", QueryType: "not_in", Values: []string{"5"}},
+			{FieldName: "item_id", FieldType: "long", QueryType: "not_eq", Values: []string{"6"}},
+		}}
+		inc, exc, _, err := extractItemIDFilter(f)
+		assert.NoError(t, err)
+		assert.Empty(t, inc)
+		assert.ElementsMatch(t, []int64{5, 6}, exc)
+	})
+
+	t.Run("tag field -> hasTagFilter, item_id 不受影响", func(t *testing.T) {
+		f := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
+			{FieldName: "env", FieldType: "tag", QueryType: "in", Values: []string{"prod"}},
+			{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"9"}},
+		}}
+		inc, _, hasTag, err := extractItemIDFilter(f)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{9}, inc)
+		assert.True(t, hasTag)
+	})
+
+	t.Run("非法 item_id 值 -> err", func(t *testing.T) {
+		f := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
+			{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"abc"}},
+		}}
+		_, _, _, err := extractItemIDFilter(f)
+		assert.Error(t, err)
+	})
+}

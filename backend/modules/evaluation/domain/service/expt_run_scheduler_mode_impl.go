@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -1879,29 +1880,11 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 		// 构建该 set 下每 item 共享的 item_config (per-set 级配置下沉到行)
 		baseItemConfig := buildItemConfigFromSetConf(setConf)
 
-		var pageToken *string
-		for loop := 0; loop < 10000; loop++ {
-			logs.CtxInfo(ctx, "exptStartMultiSet scan item, expt_id=%d, set_id=%d, set_ver_id=%d, page_token=%v",
-				event.ExptID, setConf.EvalSetID, setConf.EvalSetVersionID, gptr.Indirect(pageToken))
-
-			var items []*entity.EvaluationSetItem
-			var total *int64
-			var nextPageToken *string
-			if err := backoff.RetryThreeSeconds(ctx, func() error {
-				var retryErr error
-				items, total, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-					SpaceID:         event.SpaceID,
-					EvaluationSetID: setConf.EvalSetID,
-					VersionID:       &setConf.EvalSetVersionID,
-					PageSize:        &pageSizePtr,
-					PageToken:       pageToken,
-				})
-				return retryErr
-			}); err != nil {
-				return err
+		// 每批 item → 建 expt_item_ref / item_result / turn_result 并落库 (List 分页 / BatchGet 点选共用)
+		persistBatch := func(items []*entity.EvaluationSetItem) error {
+			if len(items) == 0 {
+				return nil
 			}
-
-			// 构建 expt_item_ref 行
 			itemRefs := make([]*entity.ExptItemRef, 0, len(items))
 			eirs := make([]*entity.ExptItemResult, 0, len(items))
 			var allTurns []*entity.ExptTurnResult
@@ -1972,15 +1955,102 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			if err := e.exptItemRefRepo.BatchCreate(ctx, itemRefs); err != nil {
 				return errorx.Wrapf(err, "exptStartMultiSet BatchCreate expt_item_ref fail, expt_id=%d", event.ExptID)
 			}
-
 			// 批量写入 expt_item_result + expt_turn_result
 			if err := e.createItemTurnResults(ctx, eirs, allTurns, event.Session); err != nil {
 				return err
 			}
-
 			totalItemCnt += len(items)
+			return nil
+		}
+
+		// 解析 set 级 item_filter: item_id 点选裁剪 (tag 圈选执行侧裁剪未接, 见 tech debt)
+		includeIDs, excludeIDs, hasTagFilter, ferr := extractItemIDFilter(setConf.ItemFilter)
+		if ferr != nil {
+			return ferr
+		}
+		if hasTagFilter {
+			logs.CtxWarn(ctx, "exptStartMultiSet: set 级 tag 圈选 item_filter 执行侧裁剪未接, 该 set 全量进实验, expt_id=%d, set_id=%d",
+				event.ExptID, setConf.EvalSetID)
+		}
+		excludeSet := make(map[int64]struct{}, len(excludeIDs))
+		for _, id := range excludeIDs {
+			excludeSet[id] = struct{}{}
+		}
+
+		if len(includeIDs) > 0 {
+			// item_id 点选 (in/eq): 直接按这批 item_id BatchGet, 分 100 一批; 顺带过滤掉 exclude
+			for _, chunk := range gslice.Chunk(includeIDs, int(pageSize)) {
+				queries := make([]*entity.EvaluationItemVersionRef, 0, len(chunk))
+				for _, id := range chunk {
+					if _, ex := excludeSet[id]; ex {
+						continue
+					}
+					queries = append(queries, &entity.EvaluationItemVersionRef{ItemID: id})
+				}
+				if len(queries) == 0 {
+					continue
+				}
+				var items []*entity.EvaluationSetItem
+				if err := backoff.RetryThreeSeconds(ctx, func() error {
+					var retryErr error
+					items, retryErr = e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
+						SpaceID:            event.SpaceID,
+						EvaluationSetID:    setConf.EvalSetID,
+						VersionID:          &setConf.EvalSetVersionID,
+						ItemVersionQueries: queries,
+					})
+					return retryErr
+				}); err != nil {
+					return err
+				}
+				if err := persistBatch(items); err != nil {
+					return err
+				}
+			}
+			continue
+		}
+
+		// 无 item_id 点选 (无 filter / 纯 tag): List 分页拉全集 (tag 暂不下传), exclude 在内存过滤
+		var pageToken *string
+		pageTotalCnt := 0
+		for loop := 0; loop < 10000; loop++ {
+			logs.CtxInfo(ctx, "exptStartMultiSet scan item, expt_id=%d, set_id=%d, set_ver_id=%d, page_token=%v",
+				event.ExptID, setConf.EvalSetID, setConf.EvalSetVersionID, gptr.Indirect(pageToken))
+
+			var items []*entity.EvaluationSetItem
+			var total *int64
+			var nextPageToken *string
+			if err := backoff.RetryThreeSeconds(ctx, func() error {
+				var retryErr error
+				items, total, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+					SpaceID:         event.SpaceID,
+					EvaluationSetID: setConf.EvalSetID,
+					VersionID:       &setConf.EvalSetVersionID,
+					PageSize:        &pageSizePtr,
+					PageToken:       pageToken,
+				})
+				return retryErr
+			}); err != nil {
+				return err
+			}
+
+			pageTotalCnt += len(items)
+			if len(excludeSet) > 0 {
+				kept := items[:0]
+				for _, it := range items {
+					if _, ex := excludeSet[it.ItemID]; ex {
+						continue
+					}
+					kept = append(kept, it)
+				}
+				items = kept
+			}
+			if err := persistBatch(items); err != nil {
+				return err
+			}
+
 			pageToken = nextPageToken
-			if int64(totalItemCnt) >= gptr.Indirect(total) || len(items) == 0 || pageToken == nil || *pageToken == "" {
+			if int64(pageTotalCnt) >= gptr.Indirect(total) || len(items) == 0 || pageToken == nil || *pageToken == "" {
 				break
 			}
 		}
@@ -2023,3 +2093,41 @@ func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig) *entity.ExptItemC
 
 	return cfg
 }
+
+// extractItemIDFilter 从 set 级 ItemFilter 解析 item_id 点选条件。
+// 仅处理 field_name=item_id, field_type=long: in/eq → include; not_in/not_eq → exclude。
+// tag 圈选 (field_type=tag) 本期不在此消费 (执行侧裁剪未接, 见 tech debt), 返回 hasTagFilter=true 供上层 warn。
+// 校验白名单已在 ValidateEvalSetConfigs 保证 field_type/query_type 合法, 这里只解析。
+func extractItemIDFilter(f *entity.ExptItemFilter) (includeIDs, excludeIDs []int64, hasTagFilter bool, err error) {
+	if f == nil || len(f.FilterFields) == 0 {
+		return nil, nil, false, nil
+	}
+	for _, ff := range f.FilterFields {
+		if ff == nil {
+			continue
+		}
+		if ff.FieldType == "tag" {
+			hasTagFilter = true
+			continue
+		}
+		if ff.FieldName != "item_id" {
+			continue
+		}
+		ids := make([]int64, 0, len(ff.Values))
+		for _, v := range ff.Values {
+			id, perr := strconv.ParseInt(v, 10, 64)
+			if perr != nil {
+				return nil, nil, hasTagFilter, errorx.New("extractItemIDFilter: invalid item_id %q, err=%v", v, perr)
+			}
+			ids = append(ids, id)
+		}
+		switch ff.QueryType {
+		case "in", "eq":
+			includeIDs = append(includeIDs, ids...)
+		case "not_in", "not_eq":
+			excludeIDs = append(excludeIDs, ids...)
+		}
+	}
+	return includeIDs, excludeIDs, hasTagFilter, nil
+}
+
