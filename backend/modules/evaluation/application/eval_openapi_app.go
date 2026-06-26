@@ -107,9 +107,12 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 }
 
 func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest) (r *openapi.CreateEvaluationSetOApiResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "CreateEvaluationSetOApi req: %v", json.Jsonify(req))
 	var evaluationSetID int64
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
+		logs.CtxInfo(ctx, "CreateEvaluationSetOApi resp: %v, err: %v", json.Jsonify(r), err)
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluationSetID, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 	// 参数校验
@@ -135,6 +138,8 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 		Name:                req.GetName(),
 		Description:         req.Description,
 		EvaluationSetSchema: evaluation_set.OpenAPIEvaluationSetSchemaDTO2DO(req.EvaluationSetSchema),
+		DatasetType:         req.Type,
+		Tags:                evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -326,6 +331,7 @@ func (e *EvalOpenAPIApplication) UpdateEvaluationSetOApi(ctx context.Context, re
 		EvaluationSetID: req.GetEvaluationSetID(),
 		Name:            req.Name,
 		Description:     req.Description,
+		Tags:            evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -399,6 +405,10 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 	if err != nil {
 		return nil, err
 	}
+	tagFilter, err := evaluation_set.OpenAPITagFilterQueryDTO2DO(req.TagNames, req.TagFilterRelation)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	// 调用domain服务
 	sets, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSets(ctx, &entity.ListEvaluationSetsParam{
 		SpaceID:          req.GetWorkspaceID(),
@@ -407,6 +417,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 		Creators:         req.Creators,
 		PageSize:         req.PageSize,
 		PageToken:        req.PageToken,
+		TagFilter:        tagFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -624,10 +635,11 @@ func (e *EvalOpenAPIApplication) BatchUpdateEvaluationSetItemsOApi(ctx context.C
 
 	// 调用domain服务
 	errors, itemOutputs, err := e.evaluationSetItemService.BatchUpdateEvaluationSetItems(ctx, &entity.BatchUpdateEvaluationSetItemsParam{
-		SpaceID:          req.GetWorkspaceID(),
-		EvaluationSetID:  req.GetEvaluationSetID(),
-		Items:            evaluation_set.OpenAPIItemDTO2DOs(req.GetEvaluationSetID(), req.Items),
-		SkipInvalidItems: req.IsSkipInvalidItems,
+		SpaceID:           req.GetWorkspaceID(),
+		EvaluationSetID:   req.GetEvaluationSetID(),
+		Items:             evaluation_set.OpenAPIItemDTO2DOs(req.GetEvaluationSetID(), req.Items),
+		SkipInvalidItems:  req.IsSkipInvalidItems,
+		FieldWriteOptions: evaluation_set.OpenAPIFieldWriteOptionDTO2DOs(req.FieldWriteOptions),
 	})
 	if err != nil {
 		return nil, err
@@ -726,6 +738,14 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 	if err != nil {
 		return nil, err
 	}
+	tagFilter, err := evaluation_set.OpenAPITagFilterQueryDTO2DO(req.TagNames, req.TagFilterRelation)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+	itemFilter, err := evaluation_set.OpenAPIFilterQueryDTO2DO(req.Filter)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 
 	// 调用domain服务
 	items, total, _, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
@@ -734,6 +754,8 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 		VersionID:       req.VersionID,
 		PageSize:        req.PageSize,
 		PageToken:       req.PageToken,
+		Filter:          itemFilter,
+		TagFilter:       tagFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -2486,4 +2508,110 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
+func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetItemVersionsOApiRequest) (r *openapi.ListEvaluationSetItemVersionsOApiResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "ListEvaluationSetItemVersionsOApi req: %v", json.Jsonify(req))
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		logs.CtxInfo(ctx, "ListEvaluationSetItemVersionsOApi resp: %v, err: %v", json.Jsonify(r), err)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	versions, total, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItemVersions(ctx, &entity.ListEvaluationSetItemVersionsParam{
+		SpaceID:         req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvaluationSetID(),
+		ItemID:          req.GetItemID(),
+		PageNumber:      req.PageNumber,
+		PageSize:        req.PageSize,
+		PageToken:       req.PageToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.ListEvaluationSetItemVersionsOApiResponse{
+		Data: &openapi.ListEvaluationSetItemVersionsOpenAPIData{
+			Versions:      evaluation_set.OpenAPIItemVersionDO2DTOs(versions),
+			Total:         total,
+			NextPageToken: nextPageToken,
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) GetEvaluationSetItemVersionOApi(ctx context.Context, req *openapi.GetEvaluationSetItemVersionOApiRequest) (r *openapi.GetEvaluationSetItemVersionOApiResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "GetEvaluationSetItemVersionOApi req: %v", json.Jsonify(req))
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		logs.CtxInfo(ctx, "GetEvaluationSetItemVersionOApi resp: %v, err: %v", json.Jsonify(r), err)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	version, err := e.evaluationSetItemService.GetEvaluationSetItemVersion(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), req.GetItemID(), req.ItemVersionID, nil)
+	if err != nil {
+		return nil, err
+	}
+	if version == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("item version not found"))
+	}
+
+	return &openapi.GetEvaluationSetItemVersionOApiResponse{
+		Data: &openapi.GetEvaluationSetItemVersionOpenAPIData{
+			Version: evaluation_set.OpenAPIItemVersionDO2DTO(version),
+		},
+	}, nil
 }
