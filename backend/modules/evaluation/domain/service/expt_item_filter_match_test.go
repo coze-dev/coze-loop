@@ -171,3 +171,58 @@ func TestShouldRunByFilter_ErrPassThroughDefaultRun(t *testing.T) {
 	// 当前实现 MatchExptItemFilter 不返回 err, 但接口允许 — 兜底语义验证: 即使返回 err 也应放行
 	_ = errors.New("placeholder")
 }
+
+// TestMatchFilterField_ItemID 验证 item_id filter 走 item.ItemID (不依赖 turn 字段)。
+func TestMatchFilterField_ItemID(t *testing.T) {
+	item := &entity.EvaluationSetItem{ItemID: 42}
+	turn := &entity.Turn{} // 故意空 turn: item_id 分支不应读 turn
+
+	cases := []struct {
+		name      string
+		queryType string
+		values    []string
+		want      bool
+	}{
+		{"in 命中", "in", []string{"7", "42", "99"}, true},
+		{"in 不命中", "in", []string{"7", "99"}, false},
+		{"eq 命中", "eq", []string{"42"}, true},
+		{"eq 不命中", "eq", []string{"43"}, false},
+		{"not_in 命中(不在列表→执行)", "not_in", []string{"7", "99"}, true},
+		{"not_in 不命中(在列表→不执行)", "not_in", []string{"42"}, false},
+		{"not_eq 命中", "not_eq", []string{"43"}, true},
+		{"not_eq 不命中", "not_eq", []string{"42"}, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ff := &entity.ExptItemFilterField{FieldName: "item_id", FieldType: "long", QueryType: c.queryType, Values: c.values}
+			got := matchFilterField(ff, item, turn)
+			assert.Equal(t, c.want, got)
+		})
+	}
+}
+
+// TestShouldRunByFilter_ItemID 端到端: Include + item_id 命中→跑; 不命中→不跑(落 Skipped)。
+func TestShouldRunByFilter_ItemID(t *testing.T) {
+	item := &entity.EvaluationSetItem{ItemID: 100}
+	turn := &entity.Turn{}
+
+	hit := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
+		{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"100"}},
+	}}
+	miss := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
+		{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"999"}},
+	}}
+
+	run, err := ShouldRunByFilter(hit, filterModeInclude, item, turn)
+	assert.NoError(t, err)
+	assert.True(t, run, "Include + item_id 命中 → 跑")
+
+	run, err = ShouldRunByFilter(miss, filterModeInclude, item, turn)
+	assert.NoError(t, err)
+	assert.False(t, run, "Include + item_id 不命中 → 不跑(Skipped)")
+
+	// Exclude 反向
+	run, err = ShouldRunByFilter(hit, filterModeExclude, item, turn)
+	assert.NoError(t, err)
+	assert.False(t, run, "Exclude + item_id 命中 → 不跑")
+}

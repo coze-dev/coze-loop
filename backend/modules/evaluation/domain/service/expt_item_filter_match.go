@@ -4,6 +4,7 @@
 package service
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -73,18 +74,35 @@ func MatchExptItemFilter(filter *entity.ExptItemFilter, item *entity.EvaluationS
 	return true, nil // AND: 全部命中 (或全部为空已 continue)
 }
 
-// matchFilterField 单字段匹配。从 turn.FieldDataList 按 name/key 取字段文本值, 按 QueryType 比较。
+// matchFilterField 单字段匹配。
+//   - field_name=item_id: 用 item.ItemID 比较 (item 级, 不依赖 turn)
+//   - 其余: 从 turn.FieldDataList 按 name/key 取字段文本值
+//
+// 注: tag (field_type=tag) 暂未支持 — matcher 尚无 tag 分支, 配 tag 会走文本路径匹配不上,
+// 见 tech debt; 普通 turn 字段创建侧白名单当前未放行 (仅 item_id / tag)。
 func matchFilterField(ff *entity.ExptItemFilterField, item *entity.EvaluationSetItem, turn *entity.Turn) bool {
+	// item_id: 直接读 item 级 ItemID, 不走 turn 文本路径
+	if ff.FieldName == "item_id" {
+		if item == nil {
+			return matchMissingField(ff.QueryType)
+		}
+		return matchByQueryType(ff.QueryType, strconv.FormatInt(item.ItemID, 10), ff.Values)
+	}
+
 	actual, ok := getFieldTextValue(ff.FieldName, item, turn)
 	if !ok {
-		// 字段不存在: equal/in 返回 false, not_equal 返回 true (取反语义)
-		switch strings.ToLower(ff.QueryType) {
-		case "not_equal", "ne", "not_in":
-			return true
-		}
-		return false
+		return matchMissingField(ff.QueryType)
 	}
 	return matchByQueryType(ff.QueryType, actual, ff.Values)
+}
+
+// matchMissingField 字段不存在时的语义: equal/in 不命中 (false); not_equal/not_in 取反命中 (true)。
+func matchMissingField(queryType string) bool {
+	switch strings.ToLower(queryType) {
+	case "not_equal", "ne", "not_in", "not_eq":
+		return true
+	}
+	return false
 }
 
 // getFieldTextValue 从 turn.FieldDataList 取 fieldName 对应的文本值 (匹配 Name 或 Key)。
@@ -118,7 +136,7 @@ func matchByQueryType(queryType, actual string, values []string) bool {
 			}
 		}
 		return false
-	case "not_equal", "ne", "not_in":
+	case "not_equal", "ne", "not_in", "not_eq":
 		for _, v := range values {
 			if v == actual {
 				return false
