@@ -309,6 +309,7 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 	// 老实验类型: ItemConfig 留 nil, 执行侧 fallback 到 expt 级 EvaluatorsConf 老路径; 集 id/version 用主集。
 	// 即使是新实验类型, 读不到 ref 也不阻塞 (例如 Append/Online 边界场景), 降级用主集。
 	var itemConfig *entity.ExptItemConfig
+	var itemVersionID *int64 // 新数据集 item 级版本; nil=老数据集(无 item 版本)
 	if exptDetail.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && e.exptItemRefRepo != nil {
 		ref, refErr := e.exptItemRefRepo.GetByExptIDAndItemID(ctx, event.SpaceID, event.ExptID, event.EvalSetItemID)
 		if refErr != nil {
@@ -322,14 +323,21 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 			if ref.EvalSetVersionID > 0 {
 				evalSetVerID = ref.EvalSetVersionID
 			}
+			if ref.ItemVersionID > 0 {
+				itemVersionID = gptr.Of(ref.ItemVersionID)
+			}
 		}
 	}
 
+	// 统一走 ItemVersionQueries: 每个 query 必带 ItemID; 新数据集额外带 ItemVersionID, 老数据集 versionID 留空。
+	// 集级 VersionID 仍透传, 供老数据集(versionID 留空)按集版本定位。
 	batchGetEvaluationSetItemsParam := &entity.BatchGetEvaluationSetItemsParam{
 		SpaceID:         event.SpaceID,
 		EvaluationSetID: evalSetID,
 		VersionID:       gptr.Of(evalSetVerID),
-		ItemIDs:         []int64{event.EvalSetItemID},
+		ItemVersionQueries: []*entity.EvaluationItemVersionRef{
+			{ItemID: event.EvalSetItemID, ItemVersionID: itemVersionID},
+		},
 	}
 	if evalSetID == evalSetVerID {
 		batchGetEvaluationSetItemsParam.VersionID = nil

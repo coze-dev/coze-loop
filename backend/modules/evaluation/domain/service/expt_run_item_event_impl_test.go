@@ -597,13 +597,16 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet(t *testing
 
 	mockManager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(mockExpt, nil)
 	mockExptItemRefRepo.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(3), int64(1), secondItemID).Return(secondRef, nil)
-	// ★ 关键断言: 拉 item 用的是 ref 里 set2 的 id/version, 不是主集 set1
+	// ★ 关键断言: 统一走 ItemVersionQueries; 老数据集(ref 无 item 版本) query 只带 ItemID, 集 id/version 用 ref 里 set2 的
 	mockEvalSetItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, param *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
 			assert.Equal(t, secondSetID, param.EvaluationSetID)
 			assert.NotNil(t, param.VersionID)
 			assert.Equal(t, secondVerID, *param.VersionID)
-			assert.Equal(t, []int64{secondItemID}, param.ItemIDs)
+			assert.Empty(t, param.ItemIDs)
+			assert.Len(t, param.ItemVersionQueries, 1)
+			assert.Equal(t, secondItemID, param.ItemVersionQueries[0].ItemID)
+			assert.Nil(t, param.ItemVersionQueries[0].ItemVersionID) // 老数据集: versionID 留空
 			return []*entity.EvaluationSetItem{{ID: secondItemID, ItemID: secondItemID}}, nil
 		})
 	mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
@@ -618,6 +621,76 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet(t *testing
 	assert.NotNil(t, got)
 	assert.Equal(t, secondItemID, got.EvalSetItem.ItemID)
 	assert.Equal(t, itemConfig, got.ItemConfig)
+}
+
+// 新数据集: ref 带 ItemVersionID → 单行取数走 ItemVersionQueries (item_id + item_version_id), 不走 ItemIDs。
+func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet_ItemVersion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := svcmocks.NewMockIExptManager(ctrl)
+	mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	mockExptItemRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+
+	service := &ExptItemEventEvalServiceImpl{
+		manager:                  mockManager,
+		evaluationSetItemService: mockEvalSetItemSvc,
+		exptTurnResultRepo:       mockExptTurnResultRepo,
+		exptItemResultRepo:       mockExptItemResultRepo,
+		exptItemRefRepo:          mockExptItemRefRepo,
+	}
+
+	const (
+		setID      = int64(300)
+		setVerID   = int64(301)
+		itemID     = int64(3003)
+		itemVerID  = int64(999)
+	)
+
+	mockExpt := &entity.Experiment{
+		ID:                1,
+		EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+		EvalSet: &entity.EvaluationSet{
+			EvaluationSetVersion: &entity.EvaluationSetVersion{ID: setVerID, EvaluationSetID: setID},
+		},
+	}
+	itemConfig := &entity.ExptItemConfig{}
+	ref := &entity.ExptItemRef{
+		ItemID:           itemID,
+		ItemVersionID:    itemVerID, // ★ 带 item 级版本
+		EvalSetID:        setID,
+		EvalSetVersionID: setVerID,
+		ItemConfig:       itemConfig,
+	}
+
+	mockManager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(mockExpt, nil)
+	mockExptItemRefRepo.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(3), int64(1), itemID).Return(ref, nil)
+	// ★ 关键断言: query 带 item_version_id (新数据集); 集 VersionID 仍透传 (setID != verID)
+	mockEvalSetItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, param *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+			assert.Equal(t, setID, param.EvaluationSetID)
+			assert.NotNil(t, param.VersionID)
+			assert.Empty(t, param.ItemIDs)
+			assert.Len(t, param.ItemVersionQueries, 1)
+			assert.Equal(t, itemID, param.ItemVersionQueries[0].ItemID)
+			assert.NotNil(t, param.ItemVersionQueries[0].ItemVersionID)
+			assert.Equal(t, itemVerID, *param.ItemVersionQueries[0].ItemVersionID)
+			retVerID := itemVerID
+			return []*entity.EvaluationSetItem{{ID: itemID, ItemID: itemID, ItemVersionID: &retVerID}}, nil
+		})
+	mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
+	mockExptItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptItemResultRunLog{}, nil)
+
+	got, err := service.BuildExptRecordEvalCtx(context.Background(), &entity.ExptItemEvalEvent{
+		ExptID:        1,
+		SpaceID:       3,
+		EvalSetItemID: itemID,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Equal(t, itemID, got.EvalSetItem.ItemID)
 }
 
 func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult(t *testing.T) {

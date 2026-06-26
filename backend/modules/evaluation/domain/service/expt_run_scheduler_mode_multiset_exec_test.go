@@ -76,10 +76,11 @@ func TestExptSubmitExec_exptStartMultiSet(t *testing.T) {
 			}).AnyTimes()
 
 		// 单评测集, 单页 2 item, 各 1 turn; total=2 → 一页后终止
+		// item1 无版本 (老数据集语义, ItemVersionID nil → 写 0); item2 带版本 (新数据集, 写真值 555)
 		setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return(
 			[]*entity.EvaluationSetItem{
 				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
-				{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
+				{ItemID: 2, ItemVersionID: ptr.Of(int64(555)), Turns: []*entity.Turn{{ID: 22}}},
 			}, ptr.Of(int64(2)), ptr.Of(int64(2)), nil, nil).Times(1)
 
 		var captured []*entity.ExptItemRef
@@ -141,13 +142,16 @@ func TestExptSubmitExec_exptStartMultiSet(t *testing.T) {
 		// item1
 		assert.Equal(t, int64(1), captured[0].ItemID)
 		assert.Equal(t, int32(0), captured[0].OrderIdx)
-		assert.Equal(t, int64(0), captured[0].ItemVersionID) // adapter 层暂填 0
+		assert.Equal(t, int64(0), captured[0].ItemVersionID) // item1 无版本 → 0 (老数据集)
 		assert.Equal(t, int64(10), captured[0].EvalSetID)
 		assert.Equal(t, int64(100), captured[0].EvalSetVersionID)
 		assert.NotNil(t, captured[0].ItemConfig)
 		assert.Len(t, captured[0].ItemConfig.EvaluatorConfs, 1)
 		assert.Equal(t, "j", captured[0].ItemConfig.EvaluatorConfs[0].Alias)
 		assert.Equal(t, int64(700), captured[0].ItemConfig.EvaluatorConfs[0].EvaluatorVersionID)
+		// item2 带版本 → 写真值 555 (新数据集)
+		assert.Equal(t, int64(2), captured[1].ItemID)
+		assert.Equal(t, int64(555), captured[1].ItemVersionID)
 		assert.NotNil(t, captured[0].ItemConfig.EvalTargetConf)
 		assert.Equal(t, int64(999), captured[0].ItemConfig.EvalTargetConf.TargetVersionID)
 		// item2: OrderIdx 连续递增

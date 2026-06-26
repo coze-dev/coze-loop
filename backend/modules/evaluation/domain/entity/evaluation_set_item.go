@@ -15,6 +15,7 @@ type EvaluationSetItem struct {
 	SchemaID        int64          `json:"schema_id,omitempty"`
 	ItemID          int64          `json:"item_id,omitempty"`
 	ItemKey         string         `json:"item_key,omitempty"`
+	ItemVersionID   *int64         `json:"item_version_id,omitempty"` // 新数据集 item 级版本 ID; nil=无版本(老数据集)。用于 ExptStart 构造 ItemVersionQueries
 	ItemVersion     *string        `json:"item_version,omitempty"`
 	Turns           []*Turn        `json:"turns,omitempty"`
 	BaseInfo        *BaseInfo      `json:"base_info,omitempty"`

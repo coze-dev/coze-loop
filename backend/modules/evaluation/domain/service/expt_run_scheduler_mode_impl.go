@@ -1918,13 +1918,15 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			idIdx := 0
 
 			for _, item := range items {
+				// item 级版本: 新数据集 item.ItemVersionID 非 nil → 写真值; 老数据集 nil → 0 (无版本)
+				itemVerID := gptr.Indirect(item.ItemVersionID)
 				// ExptItemRef
 				ref := &entity.ExptItemRef{
 					ID:               ids[idIdx],
 					SpaceID:          event.SpaceID,
 					ExptID:           event.ExptID,
 					ItemID:           item.ItemID,
-					ItemVersionID:    0, // DataSet 暂无版本, adapter 层填 0
+					ItemVersionID:    itemVerID,
 					EvalSetID:        setConf.EvalSetID,
 					EvalSetVersionID: setConf.EvalSetVersionID,
 					ItemConfig:       baseItemConfig,
@@ -1940,7 +1942,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 					ExptID:        event.ExptID,
 					ExptRunID:     event.ExptRunID,
 					ItemID:        item.ItemID,
-					ItemVersionID: 0,
+					ItemVersionID: itemVerID,
 					ItemIdx:       itemIdx,
 					Status:        entity.ItemRunState_Queueing,
 				}
@@ -1956,7 +1958,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 						ExptID:        event.ExptID,
 						ExptRunID:     event.ExptRunID,
 						ItemID:        item.ItemID,
-						ItemVersionID: 0,
+						ItemVersionID: itemVerID,
 						TurnID:        turn.ID,
 						TurnIdx:       int32(turnIdx),
 						Status:        int32(entity.TurnRunState_Queueing),
