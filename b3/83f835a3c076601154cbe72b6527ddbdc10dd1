@@ -1,0 +1,318 @@
+modules/agent_studio/application/debug_fornax.go
+  7732cbe936568c49 438,461 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0d388b3d6c101f40cba5b1","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":438},{"Single":461}]}]}
+modules/agent_studio/application/eval_fornax_test.go
+  7732cbe936568c49 74,87,129-138,151 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0d388b3d6c101f40cba5b1","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":74},{"Single":87},{"Range":[129,138]},{"Single":151}]}]}
+modules/agent_studio/infra/a2a/fornax/a2a_test.go
+  7732cbe936568c49 84,212-213,269 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0d388b3d6c101f40cba5b1","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":84},{"Range":[212,213]},{"Single":269}]}]}
+modules/agent_studio/infra/a2a/fornax/custom_a2a.go
+  b984b16df7ecab3c 137 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0d3aba3d6c101f40cba5ff","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":137}]}]}
+modules/agent_studio/application/eval_fornax.go
+  7732cbe936568c49 49-51,273 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0d388b3d6c101f40cba5b1","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[49,51]},{"Single":273}]}]}
+modules/agent_studio/infra/a2a/fornax/convertor/a2a_test.go
+  b984b16df7ecab3c 268,296 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0d3aba3d6c101f40cba5ff","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":268},{"Single":296}]}]}
+modules/agent_studio/infra/a2a/fornax/aipaas_a2a.go
+  b984b16df7ecab3c 117 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0d3aba3d6c101f40cba5ff","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":117}]}]}
+modules/agent_studio/infra/a2a/fornax/convertor/a2a.go
+  b984b16df7ecab3c 226 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0d3aba3d6c101f40cba5ff","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":226}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "b383f835a3c076601154cbe72b6527ddbdc10dd1",
+  "prompts": {
+    "7732cbe936568c49": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a01c9dece8b0ed3ecadc012",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "tangzhijie.kitauji <tangzhijie.kitauji@bytedance.com>",
+      "messages": [],
+      "total_additions": 26,
+      "total_deletions": 11,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    },
+    "b984b16df7ecab3c": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a0c69ae3d6c101f40cba386",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "tangzhijie.kitauji <tangzhijie.kitauji@bytedance.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 5,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "modules/agent_studio/application/debug_fornax.go": [
+      {
+        "hash": "7732cbe936568c49",
+        "line_ranges": [
+          {
+            "Single": 438
+          },
+          {
+            "Single": 461
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0d388b3d6c101f40cba5b1",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 438
+              },
+              {
+                "Single": 461
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/agent_studio/application/eval_fornax.go": [
+      {
+        "hash": "7732cbe936568c49",
+        "line_ranges": [
+          {
+            "Range": [
+              49,
+              51
+            ]
+          },
+          {
+            "Single": 273
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0d388b3d6c101f40cba5b1",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  49,
+                  51
+                ]
+              },
+              {
+                "Single": 273
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/agent_studio/application/eval_fornax_test.go": [
+      {
+        "hash": "7732cbe936568c49",
+        "line_ranges": [
+          {
+            "Single": 74
+          },
+          {
+            "Single": 87
+          },
+          {
+            "Range": [
+              129,
+              138
+            ]
+          },
+          {
+            "Single": 151
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0d388b3d6c101f40cba5b1",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 74
+              },
+              {
+                "Single": 87
+              },
+              {
+                "Range": [
+                  129,
+                  138
+                ]
+              },
+              {
+                "Single": 151
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/agent_studio/infra/a2a/fornax/a2a_test.go": [
+      {
+        "hash": "7732cbe936568c49",
+        "line_ranges": [
+          {
+            "Single": 84
+          },
+          {
+            "Range": [
+              212,
+              213
+            ]
+          },
+          {
+            "Single": 269
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0d388b3d6c101f40cba5b1",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 84
+              },
+              {
+                "Range": [
+                  212,
+                  213
+                ]
+              },
+              {
+                "Single": 269
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/agent_studio/infra/a2a/fornax/aipaas_a2a.go": [
+      {
+        "hash": "b984b16df7ecab3c",
+        "line_ranges": [
+          {
+            "Single": 117
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0d3aba3d6c101f40cba5ff",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 117
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/agent_studio/infra/a2a/fornax/convertor/a2a.go": [
+      {
+        "hash": "b984b16df7ecab3c",
+        "line_ranges": [
+          {
+            "Single": 226
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0d3aba3d6c101f40cba5ff",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 226
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/agent_studio/infra/a2a/fornax/convertor/a2a_test.go": [
+      {
+        "hash": "b984b16df7ecab3c",
+        "line_ranges": [
+          {
+            "Single": 268
+          },
+          {
+            "Single": 296
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0d3aba3d6c101f40cba5ff",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 268
+              },
+              {
+                "Single": 296
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/agent_studio/infra/a2a/fornax/custom_a2a.go": [
+      {
+        "hash": "b984b16df7ecab3c",
+        "line_ranges": [
+          {
+            "Single": 137
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0d3aba3d6c101f40cba5ff",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 137
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "7732cbe936568c49": {
+      "tool": "trae",
+      "conversation_id": "6a01c9dece8b0ed3ecadc012",
+      "session_id": "6a01c9dece8b0ed3ecadc012",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "b984b16df7ecab3c": {
+      "tool": "trae",
+      "conversation_id": "6a0c69ae3d6c101f40cba386",
+      "session_id": "6a0c69ae3d6c101f40cba386",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
