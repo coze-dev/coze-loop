@@ -105,6 +105,9 @@ struct Experiment {
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+
+    // 通知配置
+    110: optional list<NotificationConfig> notifications
 }
 
 // 实验模板基础信息
@@ -152,6 +155,9 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+
+    // 通知配置
+    10: optional list<NotificationConfig> notifications
 
     255: optional common.BaseInfo base_info
 }
@@ -728,4 +734,76 @@ const FeedbackActionType FeedbackActionType_Cancel_Downvote = "Cancel_Downvote"
 const FeedbackActionType FeedbackActionType_Create_Comment = "Create_Comment"
 const FeedbackActionType FeedbackActionType_Update_Comment = "Update_Comment"
 const FeedbackActionType FeedbackActionType_Delete_Comment = "Delete_Comment"
+
+// ===============================
+// 通知配置相关结构定义
+// ===============================
+
+// 通知动作类型
+typedef string NotificationActionType (ts.enum="true")
+const NotificationActionType NotificationActionType_Webhook = "webhook"
+const NotificationActionType NotificationActionType_Feishu = "feishu"
+
+// Webhook 回调配置
+struct WebhookAction {
+    1: optional string url                  // Webhook 回调 URL（HTTPS）
+    2: optional string secret               // 可选的自定义签名密钥，为空时使用 Space SK
+}
+
+// 飞书群机器人通知配置
+struct FeishuAction {
+    1: optional string webhook_url          // 飞书机器人 Webhook URL
+    2: optional string message_template     // 可选的消息模板，为空时使用系统默认模板
+}
+
+// 通知触发条件（字段-操作符-值三元组）
+struct NotificationTrigger {
+    1: optional string field                // 触发字段名，当前仅支持 "status"
+    2: optional string operator             // 操作符，当前仅支持 "in"
+    3: optional list<string> values         // 触发值列表（如 ["success", "failed"]）
+}
+
+// 通知动作（type + 具体配置二选一）
+struct NotificationAction {
+    1: optional NotificationActionType type // 动作类型
+    2: optional WebhookAction webhook       // type=webhook 时的配置
+    3: optional FeishuAction feishu         // type=feishu 时的配置
+}
+
+// 通知配置（触发条件 + 动作列表）
+struct NotificationConfig {
+    1: optional NotificationTrigger trigger  // 触发条件
+    2: optional list<NotificationAction> actions // 触发后执行的动作列表
+}
+
+// ===============================
+// Webhook 投递相关结构定义
+// ===============================
+
+// Webhook 投递状态
+enum WebhookDeliveryStatus {
+    Pending = 0       // 待投递
+    Delivering = 1    // 投递中
+    Success = 2       // 投递成功
+    Failed = 3        // 投递失败（已达最大重试次数）
+    Retrying = 4      // 重试中
+}
+
+// Webhook 投递事件（MQ 消息体）
+struct WebhookDeliveryEvent {
+    1: optional string delivery_id          // 投递唯一标识，重试时保持不变
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional i64 experiment_id (api.js_conv='true', go.tag='json:"experiment_id"')
+    4: optional string experiment_name      // 实验名称（用于通知消息展示）
+    5: optional string from_status          // 变更前状态
+    6: optional string to_status            // 变更后状态（触发状态）
+    7: optional string webhook_url          // 目标 Webhook URL
+    8: optional string secret               // 签名密钥
+    9: optional i32 retry_count             // 当前重试次数（初始为 0）
+    10: optional i32 max_retries            // 最大重试次数（默认 3）
+    11: optional i64 created_at (api.js_conv='true', go.tag='json:"created_at"') // 事件创建时间戳（毫秒）
+    12: optional string action_type         // 动作类型（webhook / feishu）
+    13: optional string feishu_webhook_url  // 飞书 Webhook URL（action_type=feishu 时使用）
+    14: optional string message_template    // 飞书消息模板（可选）
+}
 

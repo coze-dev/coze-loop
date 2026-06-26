@@ -484,3 +484,36 @@ func (p *ExptInsightAnalysisFeedbackComment) IsValid() error {
 func (p *ExptInsightAnalysisFeedbackVote) IsValid() error {
 	return nil
 }
+func (p *WebhookAction) IsValid() error {
+	return nil
+}
+func (p *FeishuAction) IsValid() error {
+	return nil
+}
+func (p *NotificationTrigger) IsValid() error {
+	return nil
+}
+func (p *NotificationAction) IsValid() error {
+	if p.Webhook != nil {
+		if err := p.Webhook.IsValid(); err != nil {
+			return fmt.Errorf("field Webhook not valid, %w", err)
+		}
+	}
+	if p.Feishu != nil {
+		if err := p.Feishu.IsValid(); err != nil {
+			return fmt.Errorf("field Feishu not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationConfig) IsValid() error {
+	if p.Trigger != nil {
+		if err := p.Trigger.IsValid(); err != nil {
+			return fmt.Errorf("field Trigger not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *WebhookDeliveryEvent) IsValid() error {
+	return nil
+}

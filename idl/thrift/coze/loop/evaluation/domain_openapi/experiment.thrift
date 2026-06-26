@@ -170,6 +170,9 @@ struct Experiment {
     // 离线实验分析状态
     61: optional OfflineExptAnalysisStatus offline_expt_analysis_status
 
+    // 通知配置
+    70: optional list<NotificationConfig> notifications
+
     100: optional common.BaseInfo base_info
 }
 
@@ -300,7 +303,51 @@ struct ExptTemplate {
     4: optional ExptScoreWeight score_weight_config (go.tag = 'json:"score_weight_config"')
     5: optional bool enable_extract_trajectory
 
+    // 通知配置
+    10: optional list<NotificationConfig> notifications
+
     100: optional common.BaseInfo base_info
+}
+
+// ===============================
+// 通知配置相关结构（OpenAPI 风格）
+// ===============================
+
+// 通知动作类型
+typedef string NotificationActionType(ts.enum="true")
+const NotificationActionType NotificationActionType_Webhook = "webhook"
+const NotificationActionType NotificationActionType_Feishu = "feishu"
+
+// Webhook 回调配置
+struct WebhookAction {
+    1: optional string url
+    2: optional string secret
+}
+
+// 飞书群通知配置
+struct FeishuAction {
+    1: optional string webhook_url
+    2: optional string message_template
+}
+
+// 通知触发条件
+struct NotificationTrigger {
+    1: optional string field
+    2: optional string operator
+    3: optional list<string> values
+}
+
+// 通知动作
+struct NotificationAction {
+    1: optional NotificationActionType type
+    2: optional WebhookAction webhook
+    3: optional FeishuAction feishu
+}
+
+// 通知配置
+struct NotificationConfig {
+    1: optional NotificationTrigger trigger
+    2: optional list<NotificationAction> actions
 }
 
 // ===============================
