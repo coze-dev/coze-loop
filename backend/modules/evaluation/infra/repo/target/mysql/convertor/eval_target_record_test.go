@@ -74,4 +74,44 @@ func TestEvalTargetRecordConvert(t *testing.T) {
 		_, err := EvalTargetRecordPO2DO(po)
 		assert.Error(t, err)
 	})
+
+	t.Run("Ext_roundtrip", func(t *testing.T) {
+		do := &entity.EvalTargetRecord{
+			ID:       1,
+			Status:   gptr.Of(entity.EvalTargetRunStatusSuccess),
+			BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))},
+			Ext:      map[string]string{"k": "v", "n": "2"},
+		}
+		po, err := EvalTargetRecordDO2PO(do)
+		assert.NoError(t, err)
+		assert.NotNil(t, po.Ext)
+
+		got, err := EvalTargetRecordPO2DO(po)
+		assert.NoError(t, err)
+		assert.Equal(t, "v", got.Ext["k"])
+		assert.Equal(t, "2", got.Ext["n"])
+	})
+
+	t.Run("DO2PO_nil_ext", func(t *testing.T) {
+		do := &entity.EvalTargetRecord{
+			ID:       1,
+			Status:   gptr.Of(entity.EvalTargetRunStatusSuccess),
+			BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))},
+		}
+		po, err := EvalTargetRecordDO2PO(do)
+		assert.NoError(t, err)
+		assert.Nil(t, po.Ext)
+	})
+
+	t.Run("PO2DO_ext_unmarshal_error", func(t *testing.T) {
+		po := &model.TargetRecord{
+			ID:        1,
+			Status:    int32(entity.EvalTargetRunStatusSuccess),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Ext:       []byte(`{invalid}`),
+		}
+		_, err := EvalTargetRecordPO2DO(po)
+		assert.Error(t, err)
+	})
 }

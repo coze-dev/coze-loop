@@ -32,6 +32,7 @@ func newExptTurnResultRunLog(db *gorm.DB, opts ...gen.DOOption) exptTurnResultRu
 	_exptTurnResultRunLog.ExptID = field.NewInt64(tableName, "expt_id")
 	_exptTurnResultRunLog.ExptRunID = field.NewInt64(tableName, "expt_run_id")
 	_exptTurnResultRunLog.ItemID = field.NewInt64(tableName, "item_id")
+	_exptTurnResultRunLog.ItemVersionID = field.NewInt64(tableName, "item_version_id")
 	_exptTurnResultRunLog.TurnID = field.NewInt64(tableName, "turn_id")
 	_exptTurnResultRunLog.Status = field.NewInt32(tableName, "status")
 	_exptTurnResultRunLog.TraceID = field.NewInt64(tableName, "trace_id")
@@ -42,6 +43,7 @@ func newExptTurnResultRunLog(db *gorm.DB, opts ...gen.DOOption) exptTurnResultRu
 	_exptTurnResultRunLog.CreatedAt = field.NewTime(tableName, "created_at")
 	_exptTurnResultRunLog.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_exptTurnResultRunLog.DeletedAt = field.NewField(tableName, "deleted_at")
+	_exptTurnResultRunLog.Ext = field.NewField(tableName, "ext")
 
 	_exptTurnResultRunLog.fillFieldMap()
 
@@ -58,6 +60,7 @@ type exptTurnResultRunLog struct {
 	ExptID             field.Int64  // 实验 id
 	ExptRunID          field.Int64  // 实验运行 id
 	ItemID             field.Int64  // item_id
+	ItemVersionID      field.Int64  // item 自身版本号; 0=旧数据/无版本概念; 真值源 expt_item_ref
 	TurnID             field.Int64  // turn_id
 	Status             field.Int32  // 状态
 	TraceID            field.Int64  // trace_id
@@ -68,6 +71,7 @@ type exptTurnResultRunLog struct {
 	CreatedAt          field.Time   // 创建时间
 	UpdatedAt          field.Time   // 更新时间
 	DeletedAt          field.Field  // 删除时间
+	Ext                field.Field  // ext
 
 	fieldMap map[string]field.Expr
 }
@@ -89,6 +93,7 @@ func (e *exptTurnResultRunLog) updateTableName(table string) *exptTurnResultRunL
 	e.ExptID = field.NewInt64(table, "expt_id")
 	e.ExptRunID = field.NewInt64(table, "expt_run_id")
 	e.ItemID = field.NewInt64(table, "item_id")
+	e.ItemVersionID = field.NewInt64(table, "item_version_id")
 	e.TurnID = field.NewInt64(table, "turn_id")
 	e.Status = field.NewInt32(table, "status")
 	e.TraceID = field.NewInt64(table, "trace_id")
@@ -99,6 +104,7 @@ func (e *exptTurnResultRunLog) updateTableName(table string) *exptTurnResultRunL
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
+	e.Ext = field.NewField(table, "ext")
 
 	e.fillFieldMap()
 
@@ -127,12 +133,13 @@ func (e *exptTurnResultRunLog) GetFieldByName(fieldName string) (field.OrderExpr
 }
 
 func (e *exptTurnResultRunLog) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 15)
+	e.fieldMap = make(map[string]field.Expr, 16)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_id"] = e.ExptID
 	e.fieldMap["expt_run_id"] = e.ExptRunID
 	e.fieldMap["item_id"] = e.ItemID
+	e.fieldMap["item_version_id"] = e.ItemVersionID
 	e.fieldMap["turn_id"] = e.TurnID
 	e.fieldMap["status"] = e.Status
 	e.fieldMap["trace_id"] = e.TraceID
@@ -143,6 +150,7 @@ func (e *exptTurnResultRunLog) fillFieldMap() {
 	e.fieldMap["created_at"] = e.CreatedAt
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt
+	e.fieldMap["ext"] = e.Ext
 }
 
 func (e exptTurnResultRunLog) clone(db *gorm.DB) exptTurnResultRunLog {

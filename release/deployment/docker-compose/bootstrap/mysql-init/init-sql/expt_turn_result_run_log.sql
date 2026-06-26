@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS `expt_turn_result_run_log`
     `expt_id`              bigint unsigned NOT NULL COMMENT '实验 id',
     `expt_run_id`          bigint unsigned NOT NULL COMMENT '实验运行 id',
     `item_id`              bigint unsigned NOT NULL COMMENT 'item_id',
+    `item_version_id`      bigint unsigned NOT NULL DEFAULT '0' COMMENT 'item 自身版本号; 0=旧数据/无版本概念; 真值源 expt_item_ref',
     `turn_id`              bigint unsigned NOT NULL DEFAULT '0' COMMENT 'turn_id',
     `status`               int unsigned    NOT NULL DEFAULT '0' COMMENT '状态',
     `trace_id`             bigint unsigned NOT NULL DEFAULT '0' COMMENT 'trace_id',
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS `expt_turn_result_run_log`
     `created_at`           timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`           timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`           timestamp       NULL     DEFAULT NULL COMMENT '删除时间',
+    `ext`                  json                     DEFAULT NULL COMMENT 'ext',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_run_item_turn` (`space_id`, `expt_id`, `expt_run_id`, `item_id`, `turn_id`),
     KEY `idx_expt_item_turn` (`space_id`, `expt_id`, `item_id`, `turn_id`)

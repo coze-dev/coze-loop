@@ -18,6 +18,7 @@ type Client interface {
 	ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (r *openapi.ListSpansOApiResponse, err error)
 	ListPreSpanOApi(ctx context.Context, req *openapi.ListPreSpanOApiRequest, callOptions ...callopt.Option) (r *openapi.ListPreSpanOApiResponse, err error)
 	ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTracesOApiResponse, err error)
+	ListTrajectoryOApi(ctx context.Context, req *openapi.ListTrajectoryOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTrajectoryOApiResponse, err error)
 	CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (r *openapi.CreateAnnotationResponse, err error)
 	DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest, callOptions ...callopt.Option) (r *openapi.DeleteAnnotationResponse, err error)
 }
@@ -84,6 +85,11 @@ func (p *kOpenAPIServiceClient) ListPreSpanOApi(ctx context.Context, req *openap
 func (p *kOpenAPIServiceClient) ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTracesOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListTracesOApi(ctx, req)
+}
+
+func (p *kOpenAPIServiceClient) ListTrajectoryOApi(ctx context.Context, req *openapi.ListTrajectoryOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTrajectoryOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListTrajectoryOApi(ctx, req)
 }
 
 func (p *kOpenAPIServiceClient) CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (r *openapi.CreateAnnotationResponse, err error) {

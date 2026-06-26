@@ -25,6 +25,8 @@ type EvalTargetRecord struct {
 	ExperimentRunID int64
 	// 评测集数据项ID
 	ItemID int64
+	// ★ item 自身版本号; 0=旧数据/无版本; 从 expt_item_ref 同步
+	ItemVersionID int64
 	// 评测集数据项轮次ID
 	TurnID int64
 	// 链路ID
@@ -37,6 +39,8 @@ type EvalTargetRecord struct {
 	EvalTargetOutputData *EvalTargetOutputData
 	Status               *EvalTargetRunStatus
 	BaseInfo             *BaseInfo
+	// 扩展信息
+	Ext map[string]string
 }
 
 type EvalTargetInputData struct {
@@ -45,6 +49,14 @@ type EvalTargetInputData struct {
 	// 变量
 	InputFields map[string]*Content
 	Ext         map[string]string
+}
+
+// GetExt 返回输入数据携带的 ext，nil 安全。
+func (e *EvalTargetInputData) GetExt() map[string]string {
+	if e == nil {
+		return nil
+	}
+	return e.Ext
 }
 
 // ValidateInputSchema  common valiate input schema

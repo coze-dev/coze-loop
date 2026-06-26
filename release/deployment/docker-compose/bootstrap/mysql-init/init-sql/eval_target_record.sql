@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `eval_target_record`
     `target_version_id` bigint unsigned NOT NULL COMMENT '版本ID',
     `experiment_run_id` bigint unsigned NOT NULL COMMENT '实验执行id',
     `item_id`           bigint unsigned NOT NULL COMMENT '评测集行id',
+    `item_version_id`   bigint unsigned NOT NULL DEFAULT '0' COMMENT 'item 自身版本号; 0=旧数据/无版本概念; 从 expt_item_ref 同步',
     `turn_id`           bigint unsigned NOT NULL COMMENT '评测集行轮次id',
     `log_id`            varchar(255)    NOT NULL COMMENT 'log id',
     `trace_id`          varchar(255)    NOT NULL COMMENT 'trace id',
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS `eval_target_record`
     `created_at`        timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`        timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`        timestamp       NULL     DEFAULT NULL COMMENT '删除时间',
+    `ext`               json                     DEFAULT NULL COMMENT 'ext',
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4

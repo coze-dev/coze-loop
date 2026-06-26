@@ -2290,17 +2290,32 @@ func _upsertcolumnextractconfigMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _listtrajectoryoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getevaltargetrecordoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _eval_targets1Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _asyncdebugevaltargetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _item_defsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
 func _getevaluationsetitemdefMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _updateevaluationsetitemdefMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

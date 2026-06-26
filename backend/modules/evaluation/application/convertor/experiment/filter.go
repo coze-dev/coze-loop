@@ -30,16 +30,23 @@ type ExptFilterConvertor struct {
 }
 
 func (e *ExptFilterConvertor) Convert(ctx context.Context, efo *domain_expt.ExptFilterOption, spaceID int64) (*entity.ExptListFilter, error) {
-	if efo == nil {
-		return nil, nil
-	}
-
 	filters, err := e.ConvertFilters(ctx, efo.GetFilters(), spaceID)
 	if err != nil {
 		return nil, err
 	}
 
 	filters.FuzzyName = efo.GetFuzzyName()
+
+	// eval_set_source_types 与 fuzzy_name 同级 (不走 filters)。
+	// 调用方未指定 → 留空透传, 由 DAO 层默认排除 MultiSetConfig(2) (含旧数据 NULL); 显式传则按调用方意图走白名单 IN。
+	srcTypes := efo.GetEvalSetSourceTypes()
+	if len(srcTypes) > 0 {
+		out := make([]int64, 0, len(srcTypes))
+		for _, st := range srcTypes {
+			out = append(out, int64(st))
+		}
+		filters.EvalSetSourceTypes = out
+	}
 
 	return filters, nil
 }
@@ -290,6 +297,16 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 				return nil, err
 			}
 			ff.EvalSetIDs = intersectIgnoreNull(ff.EvalSetIDs, ids)
+		case domain_expt.FieldType_EvalSetVersionID:
+			// 之前落 default 被静默丢弃 → 新实验无法按版本筛选; 本次补实现, 落地同走列匹配 ∪ expt_item_ref 倒排
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			ids, err := parseIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.EvalSetVersionIDs = intersectIgnoreNull(ff.EvalSetVersionIDs, ids)
 		case domain_expt.FieldType_TargetID:
 			if len(cond.GetValue()) == 0 {
 				continue
@@ -536,7 +553,7 @@ func ConvertExptTurnResultFilter(filters *domain_expt.Filters) (*entity.ExptTurn
 				if err != nil {
 					return nil, err
 				}
-				evaluatorVersionID, err := strconv.ParseInt(filterCondition.GetField().GetFieldKey(), 10, 64)
+				evaluatorVersionID, _, err := entity.ParseEvaluatorScoreFieldKey(filterCondition.GetField().GetFieldKey())
 				if err != nil {
 					return nil, err
 				}

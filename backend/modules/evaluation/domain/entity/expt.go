@@ -137,6 +137,15 @@ type Experiment struct {
 	EvaluatorVersionRef []*ExptEvaluatorVersionRef
 	EvalConf            *EvaluationConfiguration
 
+	// ★ 新增: 评测集来源模式 (1=SingleSet老路径 / 2=MultiSetConfig新路径)
+	EvalSetSourceType ExptEvalSetSourceType
+
+	// ★ 新增 (MultiSetConfig 读视图, 仅查询时填充):
+	// EvalSetDetails per-set 运行期增量信息 (item 数 + 评测集详情); Get/MGetDetail 全填, List 只填 id/count
+	EvalSetDetails []*ExptEvalSetDetail
+	// TotalItemCount 实验绑定 item 总数 (来源 expt_item_ref); 首跑前为 0
+	TotalItemCount int64
+
 	Target     *EvalTarget
 	EvalSet    *EvaluationSet
 	Evaluators []*Evaluator
@@ -176,6 +185,47 @@ func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
 	if e == nil {
 		return nil
 	}
+	// ★ 新路径 (MultiSetConfig): 从 EvalConf.EvalSetConfigs 构建带 alias/filter/binding_config 的 ref 行
+	if e.EvalSetSourceType == ExptEvalSetSourceType_MultiSetConfig && e.EvalConf != nil && len(e.EvalConf.EvalSetConfigs) > 0 {
+		refs := make([]*ExptEvaluatorRef, 0)
+		for _, setConf := range e.EvalConf.EvalSetConfigs {
+			for _, evConf := range setConf.EvaluatorConfs {
+				ref := &ExptEvaluatorRef{
+					SpaceID:            e.SpaceID,
+					ExptID:             e.ID,
+					EvalSetID:          setConf.EvalSetID,
+					EvaluatorID:        evConf.EvaluatorID,
+					EvaluatorVersionID: evConf.EvaluatorVersionID,
+					Alias:              evConf.Alias,
+				}
+				// 序列化 filter + binding_config 快照（仅供查询）
+				if evConf.Filter != nil {
+					if b, err := json.Marshal(evConf.Filter); err == nil {
+						ref.Filter = b
+					}
+				}
+				// binding_config = {IngressConf, RunConf, ScoreWeight}
+				bindingSnap := struct {
+					FromEvalSet  []*FieldConf      `json:"from_eval_set,omitempty"`
+					FromTarget   []*FieldConf      `json:"from_target,omitempty"`
+					RuntimeParam map[string]string `json:"runtime_param,omitempty"`
+					ScoreWeight  *float64          `json:"score_weight,omitempty"`
+				}{
+					FromEvalSet:  evConf.FromEvalSet,
+					FromTarget:   evConf.FromTarget,
+					RuntimeParam: evConf.RuntimeParam,
+					ScoreWeight:  evConf.ScoreWeight,
+				}
+				if b, err := json.Marshal(bindingSnap); err == nil {
+					ref.BindingConfig = b
+				}
+				refs = append(refs, ref)
+			}
+		}
+		return refs
+	}
+
+	// 老路径 (SingleSet): 从 EvaluatorVersionRef 构建
 	cnt := len(e.EvaluatorVersionRef)
 	refs := make([]*ExptEvaluatorRef, 0, cnt)
 	for _, evr := range e.EvaluatorVersionRef {
@@ -201,6 +251,9 @@ func (e *Experiment) AsyncCallTarget() bool {
 		return true
 	}
 	if e.Target.EvalTargetVersion.WebAgent != nil {
+		return true
+	}
+	if e.Target.EvalTargetVersion.EvalTargetType == EvalTargetTypeSandboxAgent || e.Target.EvalTargetVersion.SandboxAgent != nil {
 		return true
 	}
 	return false
@@ -235,9 +288,13 @@ type EvaluationConfiguration struct {
 	ConnectorConf           Connector
 	ItemConcurNum           *int
 	ItemRetryNum            *int
-	TimeRange               *TaskTimeRangeDO `json:"time_range,omitempty"`
+	TimeRange               *TaskTimeRangeDO  `json:"time_range,omitempty"`
 	EnableExtractTrajectory *bool
 	Ext                     map[string]string
+
+	// ★ 新增: 多评测集配置 (MultiSetConfig 路径权威源)
+	// 创建期序列化进 experiment.eval_conf; 调度期反序列化读取
+	EvalSetConfigs []*EvalSetConfig `json:"eval_set_configs,omitempty"`
 }
 
 type Connector struct {
@@ -406,6 +463,7 @@ type CreateEvalTargetParam struct {
 	OperationInstruction *string
 	Cluster              *string
 	AgentConnection      *AgentConnection
+	SandboxAgent         *SandboxAgent
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {
@@ -434,3 +492,118 @@ type ExptRunLogItems struct {
 	ItemIDs  []int64
 	CreateAt *int64
 }
+
+// =====================================================================================
+// ★ item-centric 实验改版新增类型 (2026-06)
+// =====================================================================================
+
+// ExptEvalSetSourceType 实验评测集来源模式: 读接口和执行链路分流依据
+type ExptEvalSetSourceType int32
+
+const (
+	ExptEvalSetSourceType_SingleSet      ExptEvalSetSourceType = 1 // 老实验: 单评测集, 配置在平铺老字段
+	ExptEvalSetSourceType_MultiSetConfig ExptEvalSetSourceType = 2 // 新实验: 多评测集+配置, 权威源 eval_conf.EvalSetConfigs
+)
+
+// ExptEvalSetDetail per-set 运行期增量信息 (纯读模型, 不进 Create 入参)
+// 对应 IDL domain/expt.thrift:ExptEvalSetDetail (字段编号一致便于 DTO 转换)
+// 仅 MultiSetConfig 实验填充; Get 路径填详情, List 路径只填计数。
+type ExptEvalSetDetail struct {
+	EvalSetID        int64 // 1
+	EvalSetVersionID int64 // 2
+	IsPrimary        bool  // 3 主集 (封面), 与 experiment.eval_set_id 列一致
+	ItemCount        int32 // 4 该 set 选入实验的 item 数; 来源 expt_item_ref, 首跑前为 0
+	EvalSet          *EvaluationSet // 5 Get 填详情; List 不填
+}
+
+// ExptItemRef 实验绑定 item 的扁平集合 (首次调度 ExptStart 写入, 单行执行唯一配置源)
+type ExptItemRef struct {
+	ID               int64
+	SpaceID          int64
+	ExptID           int64
+	ItemID           int64
+	ItemVersionID    int64 // 0=无版本概念(DataSet暂不支持); 全链路真值源
+	EvalSetID        int64 // 归属评测集标签 (前端分组/CK分桶/反查; 调度不读)
+	EvalSetVersionID int64 // 调度键: 配合 item_id 定位 dataset_item_snapshot
+	ItemConfig       *ExptItemConfig
+	OrderIdx         int32
+}
+
+// ExptItemConfig per-item 行级配置 JSON (expt_item_ref.item_config)
+// 单行执行的唯一配置源; 执行链路只读此结构, 不回读 eval_conf 或 expt_evaluator_ref
+type ExptItemConfig struct {
+	EvalTargetConf *ItemTargetConf      `json:"eval_target_conf,omitempty"`
+	EvaluatorConfs []*ItemEvaluatorConf `json:"evaluator_conf,omitempty"`
+	TurnIndexes    []int32              `json:"turn_indexes,omitempty"`
+	Ext            map[string]string    `json:"ext,omitempty"`
+}
+
+// ItemTargetConf per-item target 运行配置
+type ItemTargetConf struct {
+	TargetVersionID int64             `json:"version_id"`
+	FieldMapping    []*FieldConf      `json:"field_mapping,omitempty"`
+	DynamicConf     map[string]string `json:"dynamic_conf,omitempty"`
+	ScoreWeight     *float64          `json:"score_weight,omitempty"`
+}
+
+// ItemEvaluatorConf per-item 单个 evaluator binding 配置
+// 消歧维度: (EvaluatorVersionID, Alias); Alias 为空 = 默认实例
+type ItemEvaluatorConf struct {
+	EvaluatorVersionID int64             `json:"version_id"`
+	Alias              string            `json:"alias,omitempty"`
+	FromEvalSet        []*FieldConf      `json:"from_eval_set,omitempty"`
+	FromTarget         []*FieldConf      `json:"from_target,omitempty"`
+	DynamicParam       map[string]string `json:"dynamic_param,omitempty"`
+	Filter             *ExptItemFilter   `json:"filter,omitempty"`
+	FilterMode         int32             `json:"filter_mode,omitempty"` // 0 None / 1 Include / 2 Exclude
+	ScoreWeight        *float64          `json:"score_weight,omitempty"`
+}
+
+// ExptItemFilter item 圈选 / evaluator 行级过滤 (与 data/domain/filter.thrift Filter 同构)
+type ExptItemFilter struct {
+	QueryAndOr   string                `json:"query_and_or,omitempty"`
+	FilterFields []*ExptItemFilterField `json:"filter_fields"`
+}
+
+// ExptItemFilterField 单个过滤字段
+type ExptItemFilterField struct {
+	FieldName  string   `json:"field_name"`
+	FieldType  string   `json:"field_type"`
+	Values     []string `json:"values,omitempty"`
+	QueryType  string   `json:"query_type,omitempty"`
+}
+
+// EvalSetConfig 一个评测集 + 该集的完整配置包 (对应 IDL ExptDomain.EvalSetConfig)
+type EvalSetConfig struct {
+	EvalSetID        int64                `json:"eval_set_id"`
+	EvalSetVersionID int64                `json:"eval_set_version_id"`
+	ItemFilter       *ExptItemFilter      `json:"item_filter,omitempty"`
+	TargetConfs      []*ExptTargetConf    `json:"target_confs,omitempty"`
+	EvaluatorConfs   []*ExptEvaluatorConf `json:"evaluator_confs,omitempty"`
+	Ext              map[string]string    `json:"ext,omitempty"`
+}
+
+// ExptTargetConf per-set target 运行配置 (本期 len<=1, alias 恒空)
+type ExptTargetConf struct {
+	TargetID        int64             `json:"target_id,omitempty"`
+	TargetVersionID int64             `json:"target_version_id,omitempty"`
+	FieldMapping    []*FieldConf      `json:"field_mapping,omitempty"`
+	RuntimeParam    map[string]string `json:"runtime_param,omitempty"`
+	Alias           string            `json:"alias,omitempty"` // 本期恒空串
+	Ext             map[string]string `json:"ext,omitempty"`
+}
+
+// ExptEvaluatorConf per-set 一个 evaluator binding 配置 (对应 IDL ExptDomain.ExptEvaluatorConf)
+type ExptEvaluatorConf struct {
+	EvaluatorID        int64             `json:"evaluator_id"`
+	EvaluatorVersionID int64             `json:"evaluator_version_id"`
+	Alias              string            `json:"alias,omitempty"`
+	FromEvalSet        []*FieldConf      `json:"from_eval_set,omitempty"`
+	FromTarget         []*FieldConf      `json:"from_target,omitempty"`
+	Filter             *ExptItemFilter   `json:"filter,omitempty"`
+	FilterMode         int32             `json:"filter_mode,omitempty"`
+	RuntimeParam       map[string]string `json:"runtime_param,omitempty"`
+	ScoreWeight        *float64          `json:"score_weight,omitempty"`
+	Ext                map[string]string `json:"ext,omitempty"`
+}
+

@@ -4,13 +4,19 @@
 package entity
 
 type EvaluatorRecord struct {
-	ID                  int64                `json:"id"`
-	SpaceID             int64                `json:"space_id"`
-	ExperimentID        int64                `json:"experiment_id"`
-	ExperimentRunID     int64                `json:"experiment_run_id"`
-	ItemID              int64                `json:"item_id"`
-	TurnID              int64                `json:"turn_id"`
-	EvaluatorVersionID  int64                `json:"evaluator_version_id"`
+	ID                 int64                `json:"id"`
+	SpaceID            int64                `json:"space_id"`
+	ExperimentID       int64                `json:"experiment_id"`
+	ExperimentRunID    int64                `json:"experiment_run_id"`
+	ItemID             int64                `json:"item_id"`
+	ItemVersionID      int64                `json:"item_version_id"` // ★ 0=旧数据/无版本; 从 expt_item_ref 同步
+	TurnID             int64                `json:"turn_id"`
+	EvaluatorVersionID int64                `json:"evaluator_version_id"` // Inline 行写 0 哨兵
+	// ★ 新增字段: 统一承载 Builtin / Builtin别名 / Inline 三种来源
+	SourceType     EvaluatorRecordSourceType `json:"source_type"`     // 0=旧数据 / 1=Builtin / 2=Inline
+	InlineKey      string                    `json:"inline_key"`      // 仅 Inline: __inline_evaluators__ 的 key
+	Alias          string                    `json:"alias"`           // 仅 Builtin 别名实例
+	TargetRecordID int64                     `json:"target_record_id"` // Inline 回指来源 eval_target_record.id; Builtin 为 0
 	TraceID             string               `json:"trace_id"`
 	LogID               string               `json:"log_id"`
 	EvaluatorInputData  *EvaluatorInputData  `json:"evaluator_input_data"`
@@ -19,6 +25,15 @@ type EvaluatorRecord struct {
 	BaseInfo            *BaseInfo            `json:"base_info"`
 	Ext                 map[string]string    `json:"ext,omitempty"`
 }
+
+// EvaluatorRecordSourceType evaluator record 来源类型
+type EvaluatorRecordSourceType int32
+
+const (
+	EvaluatorRecordSourceTypeUnknown EvaluatorRecordSourceType = 0 // 旧数据, 语义同 Builtin
+	EvaluatorRecordSourceTypeBuiltin EvaluatorRecordSourceType = 1 // 注册评估器 (含别名实例)
+	EvaluatorRecordSourceTypeInline  EvaluatorRecordSourceType = 2 // target output 内嵌评分
+)
 
 type EvaluatorInputData struct {
 	HistoryMessages            []*Message          `json:"history_messages,omitempty"`
@@ -80,6 +95,8 @@ const (
 	EvaluatorRunStatusSuccess       EvaluatorRunStatus = 1
 	EvaluatorRunStatusFail          EvaluatorRunStatus = 2
 	EvaluatorRunStatusAsyncInvoking EvaluatorRunStatus = 3
+	// ★ Skipped: filter 不命中, 不实际调用; 占位 record 供 GUI 展示, 聚合/数仓按 status 过滤
+	EvaluatorRunStatusSkipped EvaluatorRunStatus = 4
 )
 
 func (e *EvaluatorRecord) GetBaseInfo() *BaseInfo {

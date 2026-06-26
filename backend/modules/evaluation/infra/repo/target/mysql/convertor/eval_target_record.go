@@ -54,6 +54,7 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		TargetVersionID: e.TargetVersionID,
 		ExperimentRunID: e.ExperimentRunID,
 		ItemID:          e.ItemID,
+		ItemVersionID:   e.ItemVersionID, // ★
 		TurnID:          e.TurnID,
 		LogID:           e.LogID,
 		TraceID:         e.TraceID,
@@ -64,6 +65,14 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 	if e.BaseInfo != nil {
 		tr.CreatedAt = time.UnixMilli(gptr.Indirect(e.BaseInfo.CreatedAt))
 		tr.UpdatedAt = time.UnixMilli(gptr.Indirect(e.BaseInfo.UpdatedAt))
+	}
+
+	if len(e.Ext) > 0 {
+		extBytes, err := json.Marshal(e.Ext)
+		if err != nil {
+			return nil, fmt.Errorf("marshal EvalTargetRecord Ext failed: %w", err)
+		}
+		tr.Ext = extBytes
 	}
 	return tr, nil
 }
@@ -99,13 +108,14 @@ func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, err
 	// 状态类型转换
 	status := entity.EvalTargetRunStatus(m.Status)
 
-	return &entity.EvalTargetRecord{
+	record := &entity.EvalTargetRecord{
 		ID:                   m.ID,
 		SpaceID:              m.SpaceID,
 		TargetID:             m.TargetID,
 		TargetVersionID:      m.TargetVersionID,
 		ExperimentRunID:      m.ExperimentRunID,
 		ItemID:               m.ItemID,
+		ItemVersionID:        m.ItemVersionID, // ★
 		TurnID:               m.TurnID,
 		LogID:                m.LogID,
 		TraceID:              m.TraceID,
@@ -116,5 +126,15 @@ func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, err
 			CreatedAt: gptr.Of(m.CreatedAt.UnixMilli()),
 			UpdatedAt: gptr.Of(m.UpdatedAt.UnixMilli()),
 		},
-	}, nil
+	}
+
+	if len(m.Ext) > 0 {
+		ext := make(map[string]string)
+		if err := json.Unmarshal(m.Ext, &ext); err != nil {
+			return nil, fmt.Errorf("unmarshal EvalTargetRecord Ext failed: %w", err)
+		}
+		record.Ext = ext
+	}
+
+	return record, nil
 }

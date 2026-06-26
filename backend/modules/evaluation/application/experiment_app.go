@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
+	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
@@ -76,6 +77,9 @@ type experimentApplication struct {
 
 	// 实验模板管理服务
 	templateManager service.IExptTemplateManager
+
+	// 沙箱调度 RPC 适配器，用于 SandboxAgent 评测对象提交实验时初始化沙箱任务
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 }
 
 func NewExperimentApplication(
@@ -98,6 +102,7 @@ func NewExperimentApplication(
 	templateManager service.IExptTemplateManager,
 	fileProvider rpc.IFileProvider,
 	lifecycleEventHandler service.ExptLifecycleEventHandler,
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -119,6 +124,7 @@ func NewExperimentApplication(
 		evaluatorService:            evaluatorService,
 		templateManager:             templateManager,
 		fileProvider:                fileProvider,
+		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
 	}
 }
 
@@ -130,6 +136,16 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 		}
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
+
+	// ★ 唯一分流硬校验: eval_set_source_type 与 eval_set_configs 必须一致 (所有入口最终汇入此处)。
+	isMulti := req.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig
+	hasConfigs := len(req.GetEvalSetConfigs()) > 0
+	if isMulti && !hasConfigs {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_source_type=MultiSetConfig requires non-empty eval_set_configs"))
+	}
+	if !isMulti && hasConfigs {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs is only allowed when eval_set_source_type=MultiSetConfig"))
+	}
 
 	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）、runconfig 和 score weight
 	evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, err := e.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
@@ -516,6 +532,10 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.Ext,
+		// ★ 新路径透传: Submit 的 eval_set_configs (75 号) 与 Create 同构，
+		// 分流唯一以 eval_set_source_type 为准 (== MultiSetConfig 走新路径), configs 仅作权威源数据。
+		EvalSetConfigs: req.EvalSetConfigs,
+		EvalSetSourceType: req.EvalSetSourceType,
 		NotificationConf:        req.NotificationConf,
 	}
 	if req.IsSetExptTemplateID() {
@@ -525,6 +545,20 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err
+	}
+
+	// SandboxAgent 评测对象：在 RunExperiment 前初始化沙箱任务，Concurrency 沿用实验并发度（ItemConcurNum）
+	if e.sandboxSchedulerAdapter != nil &&
+		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
+		exptID := cresp.GetExperiment().GetID()
+		concurrency := req.GetItemConcurNum()
+		if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
+			TaskID:      strconv.FormatInt(exptID, 10),
+			Concurrency: concurrency,
+			WorkspaceID: req.GetWorkspaceID(),
+		}); initErr != nil {
+			return nil, errorx.Wrapf(initErr, "init sandbox task fail, expt_id=%d", exptID)
+		}
 	}
 
 	// 将 item_ids 编码到 ext 中，通过 MQ 事件传递给调度器
@@ -636,6 +670,13 @@ func (e *experimentApplication) validateEvaluatorVersionsBelongToWorkspace(ctx c
 
 func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
 	workspaceID := req.GetWorkspaceID()
+
+	// ★ 新路径 (MultiSetConfig): evaluator 身份/运行时/权重均收敛进 eval_set_configs[].evaluator_confs，
+	// 这里只需把所有 (evaluator_version_id) 抽出去重，供下游 getExptTupleByID 拉详情做空间归属校验。
+	// runConfig / score_weight 不再从老平铺字段映射（新路径权威源是 EvaluatorConf 自身的 RuntimeParam/ScoreWeight）。
+	if req.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig {
+		return e.resolveEvaluatorVersionIDsFromEvalSetConfigs(ctx, req)
+	}
 
 	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
 	// 对于直接传入的 evaluator_version_id，需要校验是否属于当前空间（预置评估器除外）
@@ -788,6 +829,44 @@ func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx cont
 	}
 
 	return evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, nil
+}
+
+// resolveEvaluatorVersionIDsFromEvalSetConfigs 新路径 (MultiSetConfig) 的 evaluator 版本解析。
+// 遍历 eval_set_configs[].evaluator_confs 收集去重后的 evaluator_version_id，并做空间归属校验。
+// runConfig / score_weight 在新路径下随 EvaluatorConf 落入 eval_conf，无需在此映射，返回空 map 占位。
+func (e *experimentApplication) resolveEvaluatorVersionIDsFromEvalSetConfigs(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
+	workspaceID := req.GetWorkspaceID()
+
+	seen := make(map[int64]struct{})
+	evalVersionIDs := make([]int64, 0)
+	for _, sc := range req.GetEvalSetConfigs() {
+		if sc == nil {
+			continue
+		}
+		for _, ec := range sc.GetEvaluatorConfs() {
+			if ec == nil {
+				continue
+			}
+			verID := ec.GetEvaluatorVersionID()
+			if verID == 0 {
+				continue
+			}
+			if _, ok := seen[verID]; ok {
+				continue
+			}
+			seen[verID] = struct{}{}
+			evalVersionIDs = append(evalVersionIDs, verID)
+		}
+	}
+
+	// 空间归属校验（预置评估器除外，复用老路径同款规则）
+	if len(evalVersionIDs) > 0 && workspaceID > 0 {
+		if err := e.validateEvaluatorVersionsBelongToWorkspace(ctx, evalVersionIDs, workspaceID); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	return evalVersionIDs, make(map[int64]*evaluatordto.EvaluatorRunConfig), make(map[int64]float64), nil
 }
 
 func (e *experimentApplication) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest) (r *expt.CheckExperimentNameResponse, err error) {
@@ -1840,6 +1919,12 @@ func (e *experimentApplication) ExportExptResult_(ctx context.Context, req *expt
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
+	}
+
+	// MultiSetConfig 实验关联多个评测集、列不一致，导出单个 CSV 会混乱，产品决定不支持。
+	// 在入口处按类型直接拒绝，不再发起导出 MQ 事件。
+	if got.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("该类型实验暂不支持导出（多评测集列不一致）"))
 	}
 
 	if !e.configer.GetExptExportWhiteList(ctx).IsUserIDInWhiteList(session.UserID) {

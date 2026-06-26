@@ -62,6 +62,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListTrajectoryOApi": kitex.NewMethodInfo(
+		listTrajectoryOApiHandler,
+		newOpenAPIServiceListTrajectoryOApiArgs,
+		newOpenAPIServiceListTrajectoryOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateAnnotation": kitex.NewMethodInfo(
 		createAnnotationHandler,
 		newOpenAPIServiceCreateAnnotationArgs,
@@ -242,6 +249,25 @@ func newOpenAPIServiceListTracesOApiResult() interface{} {
 	return openapi.NewOpenAPIServiceListTracesOApiResult()
 }
 
+func listTrajectoryOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceListTrajectoryOApiArgs)
+	realResult := result.(*openapi.OpenAPIServiceListTrajectoryOApiResult)
+	success, err := handler.(openapi.OpenAPIService).ListTrajectoryOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceListTrajectoryOApiArgs() interface{} {
+	return openapi.NewOpenAPIServiceListTrajectoryOApiArgs()
+}
+
+func newOpenAPIServiceListTrajectoryOApiResult() interface{} {
+	return openapi.NewOpenAPIServiceListTrajectoryOApiResult()
+}
+
 func createAnnotationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.OpenAPIServiceCreateAnnotationArgs)
 	realResult := result.(*openapi.OpenAPIServiceCreateAnnotationResult)
@@ -357,6 +383,16 @@ func (p *kClient) ListTracesOApi(ctx context.Context, req *openapi.ListTracesOAp
 	_args.Req = req
 	var _result openapi.OpenAPIServiceListTracesOApiResult
 	if err = p.c.Call(ctx, "ListTracesOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListTrajectoryOApi(ctx context.Context, req *openapi.ListTrajectoryOApiRequest) (r *openapi.ListTrajectoryOApiResponse, err error) {
+	var _args openapi.OpenAPIServiceListTrajectoryOApiArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceListTrajectoryOApiResult
+	if err = p.c.Call(ctx, "ListTrajectoryOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

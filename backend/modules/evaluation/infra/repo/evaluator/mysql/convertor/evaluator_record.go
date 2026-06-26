@@ -24,7 +24,12 @@ func ConvertEvaluatorRecordDO2PO(do *entity.EvaluatorRecord) *model.EvaluatorRec
 		ExperimentID:       gptr.Of(do.ExperimentID),
 		ExperimentRunID:    do.ExperimentRunID,
 		ItemID:             do.ItemID,
+		ItemVersionID:      do.ItemVersionID,      // ★
 		EvaluatorVersionID: do.EvaluatorVersionID,
+		SourceType:         int32(do.SourceType),  // ★
+		InlineKey:          do.InlineKey,          // ★
+		Alias_:             do.Alias,              // ★ gorm_gen 将 alias 生成为 Alias_
+		TargetRecordID:     do.TargetRecordID,     // ★
 		TurnID:             do.TurnID,
 		LogID:              gptr.Of(do.LogID),
 		TraceID:            do.TraceID,
@@ -71,6 +76,7 @@ func ConvertEvaluatorRecordDO2PO(do *entity.EvaluatorRecord) *model.EvaluatorRec
 		}
 	}
 
+	// 序列化 Ext 进 ext 列
 	if len(do.Ext) > 0 {
 		extBytes, err := json.Marshal(do.Ext)
 		if err != nil {
@@ -97,7 +103,12 @@ func ConvertEvaluatorRecordPO2DO(po *model.EvaluatorRecord) (*entity.EvaluatorRe
 	}
 	do.ExperimentRunID = po.ExperimentRunID
 	do.ItemID = po.ItemID
+	do.ItemVersionID = po.ItemVersionID           // ★
 	do.EvaluatorVersionID = po.EvaluatorVersionID
+	do.SourceType = entity.EvaluatorRecordSourceType(po.SourceType) // ★
+	do.InlineKey = po.InlineKey                   // ★
+	do.Alias = po.Alias_                          // ★
+	do.TargetRecordID = po.TargetRecordID         // ★
 	do.TraceID = po.TraceID
 	if po.LogID != nil {
 		do.LogID = *po.LogID
@@ -133,12 +144,12 @@ func ConvertEvaluatorRecordPO2DO(po *model.EvaluatorRecord) (*entity.EvaluatorRe
 		do.BaseInfo.DeletedAt = gptr.Of(po.DeletedAt.Time.UnixMilli())
 	}
 
-	if po.Ext != nil {
-		do.Ext = make(map[string]string)
-		err := json.Unmarshal(gptr.Indirect(po.Ext), &do.Ext)
-		if err != nil {
+	if po.Ext != nil && len(gptr.Indirect(po.Ext)) > 0 {
+		ext := make(map[string]string)
+		if err := json.Unmarshal(gptr.Indirect(po.Ext), &ext); err != nil {
 			return nil, err
 		}
+		do.Ext = ext
 	}
 
 	return do, nil

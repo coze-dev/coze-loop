@@ -5717,7 +5717,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 		result := calculateWeightedScore(nil, nil)
 		assert.Nil(t, result)
 
-		result = calculateWeightedScore(map[int64]*entity.EvaluatorRecord{}, nil)
+		result = calculateWeightedScore(map[string]*entity.EvaluatorRecord{}, nil)
 		assert.Nil(t, result)
 	})
 
@@ -5725,8 +5725,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 		score1 := 0.8
 		score2 := 0.9
 		score3 := 0.7
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5734,7 +5734,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			102: {
+			"102": {
 				EvaluatorVersionID: 102,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5742,7 +5742,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			103: {
+			"103": {
 				EvaluatorVersionID: 103,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5761,8 +5761,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	t.Run("有权重配置，计算加权平均", func(t *testing.T) {
 		score1 := 0.8
 		score2 := 0.9
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5770,7 +5770,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			102: {
+			"102": {
 				EvaluatorVersionID: 102,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5780,9 +5780,9 @@ func TestCalculateWeightedScore(t *testing.T) {
 			},
 		}
 
-		weights := map[int64]float64{
-			101: 0.6,
-			102: 0.4,
+		weights := map[string]float64{
+			"101": 0.6,
+			"102": 0.4,
 		}
 
 		result := calculateWeightedScore(records, weights)
@@ -5794,8 +5794,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	t.Run("优先使用修正分数", func(t *testing.T) {
 		originalScore := 0.8
 		correctionScore := 0.9
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5815,8 +5815,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 
 	t.Run("包含 nil 记录，跳过", func(t *testing.T) {
 		score1 := 0.8
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5824,7 +5824,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			102: nil, // nil 记录应该被跳过
+			"102": nil, // nil 记录应该被跳过
 		}
 
 		result := calculateWeightedScore(records, nil)
@@ -5833,8 +5833,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	})
 
 	t.Run("记录无分数，返回 nil", func(t *testing.T) {
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5851,8 +5851,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	t.Run("权重为0或负数，跳过", func(t *testing.T) {
 		score1 := 0.8
 		score2 := 0.9
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5860,7 +5860,7 @@ func TestCalculateWeightedScore(t *testing.T) {
 					},
 				},
 			},
-			102: {
+			"102": {
 				EvaluatorVersionID: 102,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5870,9 +5870,9 @@ func TestCalculateWeightedScore(t *testing.T) {
 			},
 		}
 
-		weights := map[int64]float64{
-			101: 0.6,
-			102: 0.0, // 权重为0，应该被跳过
+		weights := map[string]float64{
+			"101": 0.6,
+			"102": 0.0, // 权重为0，应该被跳过
 		}
 
 		result := calculateWeightedScore(records, weights)
@@ -5882,8 +5882,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 	})
 
 	t.Run("所有记录都被跳过，返回 nil", func(t *testing.T) {
-		records := map[int64]*entity.EvaluatorRecord{
-			101: {
+		records := map[string]*entity.EvaluatorRecord{
+			"101": {
 				EvaluatorVersionID: 101,
 				EvaluatorOutputData: &entity.EvaluatorOutputData{
 					EvaluatorResult: &entity.EvaluatorResult{
@@ -5893,8 +5893,8 @@ func TestCalculateWeightedScore(t *testing.T) {
 			},
 		}
 
-		weights := map[int64]float64{
-			101: 0.0, // 权重为0
+		weights := map[string]float64{
+			"101": 0.0, // 权重为0
 		}
 
 		result := calculateWeightedScore(records, weights)
@@ -6488,26 +6488,26 @@ func TestResolveLoadEvalTargetFullContent(t *testing.T) {
 func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 	tests := []struct {
 		name    string
-		records map[int64]*entity.EvaluatorRecord
-		weights map[int64]float64
+		records map[string]*entity.EvaluatorRecord
+		weights map[string]float64
 		want    *float64
 	}{
 		{
 			name:    "empty records",
-			records: map[int64]*entity.EvaluatorRecord{},
-			weights: map[int64]float64{1: 0.5},
+			records: map[string]*entity.EvaluatorRecord{},
+			weights: map[string]float64{"1": 0.5},
 			want:    nil,
 		},
 		{
 			name:    "nil records",
 			records: nil,
-			weights: map[int64]float64{1: 0.5},
+			weights: map[string]float64{"1": 0.5},
 			want:    nil,
 		},
 		{
 			name: "no weights - simple average",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6516,7 +6516,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6531,8 +6531,8 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 		},
 		{
 			name: "with weights",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6541,7 +6541,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6551,13 +6551,13 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 					},
 				},
 			},
-			weights: map[int64]float64{1: 0.6, 2: 0.4},
+			weights: map[string]float64{"1": 0.6, "2": 0.4},
 			want:    gptr.Of(utils.RoundScoreToTwoDecimals((0.8*0.6 + 0.6*0.4) / (0.6 + 0.4))),
 		},
 		{
 			name: "with correction scores",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6575,8 +6575,8 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 		},
 		{
 			name: "all nil scores",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6585,7 +6585,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                  2,
 					EvaluatorVersionID:  2,
 					EvaluatorOutputData: nil,
@@ -6596,8 +6596,8 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 		},
 		{
 			name: "mixed nil and valid scores - no weights",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6606,7 +6606,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6621,8 +6621,8 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 		},
 		{
 			name: "weight <= 0 skipped",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": {
 					ID:                 1,
 					EvaluatorVersionID: 1,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6631,7 +6631,7 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 						},
 					},
 				},
-				2: {
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -6641,14 +6641,14 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 					},
 				},
 			},
-			weights: map[int64]float64{1: 1.0, 2: -0.5},
+			weights: map[string]float64{"1": 1.0, "2": -0.5},
 			want:    gptr.Of(0.8),
 		},
 		{
 			name: "nil record in map skipped",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: nil,
-				2: {
+			records: map[string]*entity.EvaluatorRecord{
+				"1": nil,
+				"2": {
 					ID:                 2,
 					EvaluatorVersionID: 2,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
@@ -7699,5 +7699,286 @@ func TestExptResultServiceImpl_exportListTurnResultByCursor(t *testing.T) {
 
 		_, _, _, _, err := svc.exportListTurnResultByCursor(ctx, param, &entity.Experiment{ExptType: entity.ExptType_Online})
 		assert.Error(t, err)
+	})
+}
+
+func TestNewTurnEvaluatorResultRefs_NewFormat(t *testing.T) {
+	const (
+		id           int64 = 1
+		exptID       int64 = 2
+		turnResultID int64 = 3
+		spaceID      int64 = 4
+	)
+
+	t.Run("nil evaluatorResults returns nil", func(t *testing.T) {
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, nil)
+		assert.Nil(t, refs)
+	})
+
+	t.Run("old format EvalVerIDToResID → SourceType=0, InlineKey='', Alias=''", func(t *testing.T) {
+		er := &entity.EvaluatorResults{
+			EvalVerIDToResID: map[int64]int64{100: 200},
+		}
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, er)
+		require.Len(t, refs, 1)
+		ref := refs[0]
+		assert.Equal(t, id, ref.ID)
+		assert.Equal(t, exptID, ref.ExptID)
+		assert.Equal(t, spaceID, ref.SpaceID)
+		assert.Equal(t, turnResultID, ref.ExptTurnResultID)
+		assert.Equal(t, int64(100), ref.EvaluatorVersionID)
+		assert.Equal(t, int64(200), ref.EvaluatorResultID)
+		assert.Equal(t, int32(0), ref.SourceType)
+		assert.Equal(t, "", ref.InlineKey)
+		assert.Equal(t, "", ref.Alias)
+	})
+
+	t.Run("new format Registered → SourceType=EvaluatorRecordSourceTypeBuiltin(1), correct Alias", func(t *testing.T) {
+		er := &entity.EvaluatorResults{
+			Registered: []*entity.RegisteredEvalResult{
+				{VersionID: 10, Alias: "myAlias", RecordID: 99},
+			},
+		}
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, er)
+		require.Len(t, refs, 1)
+		ref := refs[0]
+		assert.Equal(t, int32(entity.EvaluatorRecordSourceTypeBuiltin), ref.SourceType)
+		assert.Equal(t, int64(10), ref.EvaluatorVersionID)
+		assert.Equal(t, int64(99), ref.EvaluatorResultID)
+		assert.Equal(t, "myAlias", ref.Alias)
+		assert.Equal(t, "", ref.InlineKey)
+	})
+
+	t.Run("new format Inline → SourceType=EvaluatorRecordSourceTypeInline(2), correct InlineKey, EvaluatorVersionID=0", func(t *testing.T) {
+		er := &entity.EvaluatorResults{
+			Inline: []*entity.InlineEvalResult{
+				{InlineKey: "k1", RecordID: 77},
+			},
+		}
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, er)
+		require.Len(t, refs, 1)
+		ref := refs[0]
+		assert.Equal(t, int32(entity.EvaluatorRecordSourceTypeInline), ref.SourceType)
+		assert.Equal(t, int64(0), ref.EvaluatorVersionID)
+		assert.Equal(t, int64(77), ref.EvaluatorResultID)
+		assert.Equal(t, "k1", ref.InlineKey)
+		assert.Equal(t, "", ref.Alias)
+	})
+
+	t.Run("mixed Registered+Inline → both parts present", func(t *testing.T) {
+		er := &entity.EvaluatorResults{
+			Registered: []*entity.RegisteredEvalResult{
+				{VersionID: 10, Alias: "a1", RecordID: 11},
+				{VersionID: 20, Alias: "", RecordID: 22},
+			},
+			Inline: []*entity.InlineEvalResult{
+				{InlineKey: "ik1", RecordID: 33},
+			},
+		}
+		refs := NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID, er)
+		require.Len(t, refs, 3)
+
+		// first two should be Registered/Builtin
+		for _, ref := range refs[:2] {
+			assert.Equal(t, int32(entity.EvaluatorRecordSourceTypeBuiltin), ref.SourceType)
+		}
+		// last should be Inline
+		inlineRef := refs[2]
+		assert.Equal(t, int32(entity.EvaluatorRecordSourceTypeInline), inlineRef.SourceType)
+		assert.Equal(t, "ik1", inlineRef.InlineKey)
+		assert.Equal(t, int64(0), inlineRef.EvaluatorVersionID)
+	})
+}
+
+func TestCollectEvalSetVersionPairs(t *testing.T) {
+	t.Run("SingleSet/老实验: 仅主集", func(t *testing.T) {
+		expt := &entity.Experiment{
+			EvalSetID:         100,
+			EvalSetVersionID:  101,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_SingleSet,
+		}
+		pairs := collectEvalSetVersionPairs(expt)
+		assert.Equal(t, []evalSetVersionPair{{EvalSetID: 100, EvalSetVersionID: 101}}, pairs)
+	})
+
+	t.Run("MultiSetConfig: 主集在前, 含全部集且去重", func(t *testing.T) {
+		expt := &entity.Experiment{
+			EvalSetID:         100,
+			EvalSetVersionID:  101,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			EvalConf: &entity.EvaluationConfiguration{
+				EvalSetConfigs: []*entity.EvalSetConfig{
+					{EvalSetID: 100, EvalSetVersionID: 101}, // 与主集重复, 去重
+					{EvalSetID: 200, EvalSetVersionID: 201},
+					nil,
+					{EvalSetID: 300, EvalSetVersionID: 301},
+				},
+			},
+		}
+		pairs := collectEvalSetVersionPairs(expt)
+		assert.Equal(t, []evalSetVersionPair{
+			{EvalSetID: 100, EvalSetVersionID: 101},
+			{EvalSetID: 200, EvalSetVersionID: 201},
+			{EvalSetID: 300, EvalSetVersionID: 301},
+		}, pairs)
+	})
+
+	t.Run("MultiSetConfig 主集为空: 只取 configs", func(t *testing.T) {
+		expt := &entity.Experiment{
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			EvalConf: &entity.EvaluationConfiguration{
+				EvalSetConfigs: []*entity.EvalSetConfig{
+					{EvalSetID: 200, EvalSetVersionID: 201},
+				},
+			},
+		}
+		pairs := collectEvalSetVersionPairs(expt)
+		assert.Equal(t, []evalSetVersionPair{{EvalSetID: 200, EvalSetVersionID: 201}}, pairs)
+	})
+}
+
+func TestGetColumnEvalSetFieldsMultiSet(t *testing.T) {
+	t.Run("SingleSet: 只取主集, 行为同原 getColumnEvalSetFields", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetVerSvc := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+		svc := ExptResultServiceImpl{evaluationSetVersionService: mockEvalSetVerSvc}
+
+		expt := &entity.Experiment{
+			EvalSetID:         100,
+			EvalSetVersionID:  101, // != setID -> 走 version 分支
+			EvalSetSourceType: entity.ExptEvalSetSourceType_SingleSet,
+		}
+		// 仅应调用一次, 且用主集 version
+		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(101), gomock.Any()).
+			Return(&entity.EvaluationSetVersion{
+				EvaluationSetSchema: &entity.EvaluationSetSchema{
+					FieldSchemas: []*entity.FieldSchema{{Key: "input"}, {Key: "output"}},
+				},
+			}, nil, nil).Times(1)
+
+		cols, err := svc.getColumnEvalSetFieldsMultiSet(context.Background(), 7, expt)
+		assert.NoError(t, err)
+		assert.Len(t, cols, 2)
+		assert.Equal(t, "input", gptr.Indirect(cols[0].Key))
+		assert.Equal(t, "output", gptr.Indirect(cols[1].Key))
+	})
+
+	t.Run("MultiSetConfig: 跨集并集 + 按 Key 去重", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetVerSvc := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+		svc := ExptResultServiceImpl{evaluationSetVersionService: mockEvalSetVerSvc}
+
+		expt := &entity.Experiment{
+			EvalSetID:         100,
+			EvalSetVersionID:  101,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			EvalConf: &entity.EvaluationConfiguration{
+				EvalSetConfigs: []*entity.EvalSetConfig{
+					{EvalSetID: 100, EvalSetVersionID: 101}, // 主集(去重)
+					{EvalSetID: 200, EvalSetVersionID: 201},
+				},
+			},
+		}
+		// 主集 set1 ver101: input/output
+		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(101), gomock.Any()).
+			Return(&entity.EvaluationSetVersion{
+				EvaluationSetSchema: &entity.EvaluationSetSchema{
+					FieldSchemas: []*entity.FieldSchema{{Key: "input"}, {Key: "output"}},
+				},
+			}, nil, nil).Times(1)
+		// set2 ver201: input(重复, 去重) + extra(新增)
+		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(201), gomock.Any()).
+			Return(&entity.EvaluationSetVersion{
+				EvaluationSetSchema: &entity.EvaluationSetSchema{
+					FieldSchemas: []*entity.FieldSchema{{Key: "input"}, {Key: "extra"}},
+				},
+			}, nil, nil).Times(1)
+
+		cols, err := svc.getColumnEvalSetFieldsMultiSet(context.Background(), 7, expt)
+		assert.NoError(t, err)
+		// 并集去重: input, output (主集) + extra (set2)
+		keys := make([]string, 0, len(cols))
+		for _, c := range cols {
+			keys = append(keys, gptr.Indirect(c.Key))
+		}
+		assert.Equal(t, []string{"input", "output", "extra"}, keys)
+	})
+}
+
+func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
+	t.Run("SingleSet: 仅一次拉取, 用主集 id/version", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockItemSvc := svcMocks.NewMockEvaluationSetItemService(ctrl)
+
+		builder := &ExptResultBuilder{
+			SpaceID:                  7,
+			ItemIDs:                  []int64{11, 12},
+			evaluationSetItemService: mockItemSvc,
+			exptDO: &entity.Experiment{
+				EvalSetID:         100,
+				EvalSetVersionID:  101,
+				EvalSetSourceType: entity.ExptEvalSetSourceType_SingleSet,
+			},
+		}
+
+		mockItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+				assert.Equal(t, int64(100), p.EvaluationSetID)
+				assert.NotNil(t, p.VersionID)
+				assert.Equal(t, int64(101), *p.VersionID)
+				assert.Equal(t, []int64{11, 12}, p.ItemIDs)
+				return []*entity.EvaluationSetItem{
+					{ItemID: 11, Turns: []*entity.Turn{{ID: 1}}},
+				}, nil
+			}).Times(1)
+
+		err := builder.buildEvalSet(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, int64(100), builder.itemIDTurnID2Turn[11][1].EvalSetID)
+	})
+
+	t.Run("MultiSetConfig: 按集分别拉取再合并, 各 item 带自身集 tag", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockItemSvc := svcMocks.NewMockEvaluationSetItemService(ctrl)
+
+		builder := &ExptResultBuilder{
+			SpaceID:                  7,
+			ItemIDs:                  []int64{11, 22},
+			evaluationSetItemService: mockItemSvc,
+			exptDO: &entity.Experiment{
+				EvalSetID:         100,
+				EvalSetVersionID:  101,
+				EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+				EvalConf: &entity.EvaluationConfiguration{
+					EvalSetConfigs: []*entity.EvalSetConfig{
+						{EvalSetID: 100, EvalSetVersionID: 101},
+						{EvalSetID: 200, EvalSetVersionID: 201},
+					},
+				},
+			},
+		}
+
+		// set1: 返回 item 11 (整份 ItemIDs 传入, set2 的 22 不属于本集 -> 不返回)
+		mockItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+				assert.Equal(t, []int64{11, 22}, p.ItemIDs)
+				switch p.EvaluationSetID {
+				case 100:
+					return []*entity.EvaluationSetItem{{ItemID: 11, Turns: []*entity.Turn{{ID: 1}}}}, nil
+				case 200:
+					return []*entity.EvaluationSetItem{{ItemID: 22, Turns: []*entity.Turn{{ID: 1}}}}, nil
+				}
+				return nil, nil
+			}).Times(2)
+
+		err := builder.buildEvalSet(context.Background())
+		assert.NoError(t, err)
+		// item 11 归属 set1, item 22 归属 set2 —— 两者都进了 map 且 tag 正确
+		assert.Equal(t, int64(100), builder.itemIDTurnID2Turn[11][1].EvalSetID)
+		assert.Equal(t, int64(200), builder.itemIDTurnID2Turn[22][1].EvalSetID)
 	})
 }

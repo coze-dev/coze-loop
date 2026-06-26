@@ -145,6 +145,7 @@ func TestEvalTargetServiceImpl_CreateEvalTarget(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			typedOps := map[entity.EvalTargetType]ISourceEvalTargetOperateService{}
 			if tt.prepare != nil {
@@ -193,6 +194,7 @@ func TestEvalTargetServiceImpl_CreateEvalTarget_RecordOnlyWithoutSource(t *testi
 		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 		configer: componentmocks.NewMockIConfiger(ctrl),
 	}
+	deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 	deps.metric.EXPECT().EmitCreate(int64(7), gomock.Any()).Times(1)
 	deps.repo.EXPECT().CreateEvalTarget(ctx, gomock.AssignableToTypeOf(&entity.EvalTarget{})).DoAndReturn(
@@ -236,6 +238,7 @@ func TestEvalTargetServiceImpl_CreateEvalTarget_RecordOnlyWithInjectedDefaultVer
 		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 		configer: componentmocks.NewMockIConfiger(ctrl),
 	}
+	deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 	deps.metric.EXPECT().EmitCreate(int64(7), gomock.Any()).Times(1)
 	deps.repo.EXPECT().CreateEvalTarget(ctx, gomock.AssignableToTypeOf(&entity.EvalTarget{})).DoAndReturn(
@@ -319,6 +322,7 @@ func TestEvalTargetServiceImpl_GetEvalTargetVersion(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			expectDo := &entity.EvalTarget{
 				ID:             3,
@@ -420,6 +424,7 @@ func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			target := &entity.EvalTarget{
 				ID:             1,
@@ -445,6 +450,7 @@ func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
 				idgen:          deps.idgen,
 				metric:         deps.metric,
 				typedOperators: typedOps,
+				configer:       deps.configer,
 			}
 
 			if tt.prepare != nil {
@@ -571,6 +577,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			evalTarget := &entity.EvalTarget{
 				ID:             200,
@@ -605,6 +612,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 			deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			// default trajectory conf, not used in these cases (target type does not support trajectory)
 			deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 			// convEvalTargetRunErr (in ExecuteTarget defer) may call GetErrCtrl when record has EvalTargetRunError
 			deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 			deps.idgen.EXPECT().GenID(gomock.Any()).DoAndReturn(func(ctx context.Context) (int64, error) {
@@ -667,6 +675,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget_PersistsFailRecordAfterContextCance
 		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 		configer: componentmocks.NewMockIConfiger(ctrl),
 	}
+	deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 	evalTarget := &entity.EvalTarget{
 		ID:             200,
@@ -698,6 +707,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget_PersistsFailRecordAfterContextCance
 	deps.repo.EXPECT().GetEvalTargetVersion(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.ID).Return(evalTarget, nil)
 	deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 	deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+	deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 	deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().DoAndReturn(func(ctx context.Context) *entity.ExptErrCtrl {
 		require.NoError(t, ctx.Err())
 		return entity.DefaultExptErrCtrl()
@@ -796,6 +806,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) 
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			trajectoryAdapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
 
@@ -948,6 +959,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+				deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 
 				param.Session = &entity.Session{UserID: "user"}
@@ -984,6 +996,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+				deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 
 				param.OutputData = &entity.EvalTargetOutputData{
@@ -1004,6 +1017,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+				deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 
 				param.OutputData = nil
@@ -1027,6 +1041,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			svc := &EvalTargetServiceImpl{
 				evalTargetRepo: deps.repo,
@@ -1112,6 +1127,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			trajectoryAdapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
 
@@ -1653,6 +1669,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			param := &entity.DebugTargetParam{
 				SpaceID: 100,
@@ -1826,6 +1843,7 @@ func TestEvalTargetServiceImpl_AsyncDebugTarget(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			param := &entity.DebugTargetParam{
 				SpaceID: 100,
@@ -1947,6 +1965,7 @@ func TestEvalTargetServiceImpl_CreateRecord(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			if tt.prepare != nil {
 				tt.prepare(deps, tt.record)
@@ -2155,6 +2174,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
 				configer: componentmocks.NewMockIConfiger(ctrl),
 			}
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 
 			spaceID := int64(100)
 			targetID := int64(200)
@@ -2202,6 +2222,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 				idgen:          deps.idgen,
 				metric:         deps.metric,
 				typedOperators: typedOps,
+				configer:       deps.configer,
 			}
 
 			record, callee, err := svc.AsyncExecuteTarget(ctx, spaceID, targetID, targetVersionID, testParam, testInputData)
@@ -2254,6 +2275,8 @@ func TestEvalTargetServiceImpl_BatchGetRecordByIDs_LoadRecordOutputFields_LoadRe
 		map[entity.EvalTargetType]ISourceEvalTargetOperateService{},
 		trajectorymocks.NewMockITrajectoryAdapter(ctrl),
 		componentmocks.NewMockIConfiger(ctrl),
+		nil, // sandboxSchedulerAdapter
+		nil, // exptRunLogRepo
 	)
 
 	t.Run("BatchGetRecordByIDs_spaceID_zero", func(t *testing.T) {

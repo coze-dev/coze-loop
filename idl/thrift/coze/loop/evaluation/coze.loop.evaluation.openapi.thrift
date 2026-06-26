@@ -420,6 +420,56 @@ struct GetEvalTargetOutputFieldContentOpenAPIData {
     1: optional map<string, common.Content> field_contents (go.tag = 'json:"field_contents"')
 }
 
+// 异步调试评测对象
+struct AsyncDebugEvalTargetOApiRequest {
+    1: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional eval_target.EvalTargetType eval_target_type (api.body = "eval_target_type")    // 评测对象类型
+
+    10: optional string param (api.body = "param")    // 执行参数：如果 eval_target_type=custom_rpc_server，则传 spi request json 序列化结果
+    11: optional common.RuntimeParam target_runtime_param (api.body = "target_runtime_param")    // 动态参数
+    12: optional string env (api.body = "env")    // 环境
+
+    50: optional eval_target.CustomRPCServer custom_rpc_server (api.body = "custom_rpc_server")    // 如果 eval_target_type=custom_rpc_server，需要传入自定义服务相关信息
+    51: optional eval_target.SandboxAgent sandbox_agent (api.body = "sandbox_agent")    // 如果 eval_target_type=sandbox_agent，需要传入 SandboxAgent 相关信息
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct AsyncDebugEvalTargetOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional AsyncDebugEvalTargetOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct AsyncDebugEvalTargetOpenAPIData {
+    1: optional i64 invoke_id (api.js_conv = "true", go.tag = 'json:"invoke_id"')
+    2: optional string callee (go.tag = 'json:"callee"')
+}
+
+// 获取评测对象记录
+struct GetEvalTargetRecordOApiRequest {
+    1: required i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: required i64 eval_target_record_id (api.path = "eval_target_record_id", api.js_conv = "true", go.tag = 'json:"eval_target_record_id"')
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct GetEvalTargetRecordOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional GetEvalTargetRecordOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct GetEvalTargetRecordOpenAPIData {
+    1: optional eval_target.EvalTargetRecord eval_target_record (go.tag = 'json:"eval_target_record"')
+}
+
 struct ImportEvaluationSetOpenAPIData {
     1: optional i64 job_id (api.js_conv = "true", go.tag = 'json:"job_id"')
 }
@@ -480,6 +530,14 @@ struct SubmitExperimentOApiRequest {
     7: optional experiment.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     8: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
 
+    // item-centric 多评测集配置 (新建模路径). 仅当 eval_set_source_type == multi_set_config 时生效,
+    // handler 把版本字符串解析成内部 version_id 后构建内部 eval_set_configs.
+    9: optional list<experiment.OpenAPIEvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
+    // ★ 新路径分流依据 (唯一开关): 仅 == multi_set_config 走 item-centric 多评测集路径; 缺省/single_set 走老单评测集路径。
+    // 与 eval_set_configs 须一致: == multi_set_config 要求 configs 非空; != 要求 configs 为空, 否则 handler 硬校验报错。
+    // 用字符串枚举 experiment.ExptEvalSetSourceType (与读/List 接口统一); 该枚举定义在已 include 的 domain_openapi/experiment.thrift, 不引入 domain/expt.thrift 故无符号冲突。
+    10: optional experiment.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
+
     // 运行信息
     20: optional i32 item_concur_num (api.body = 'item_concur_num')
     22: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
@@ -518,6 +576,7 @@ struct SubmitExperimentEvalTargetParam {
     8: optional string env  // 有环境限制需要填充这个字段
     9: optional string cluster // type=10时需填写，自定义智能体所属集群
     10: optional eval_target.AgentConnection agent_connection // type=10时需填写，自定义智能体连接信息
+    11: optional eval_target.SandboxAgent sandbox_agent // type=17(sandbox_agent)时需填写，SandboxAgent 评测对象配置
 }
 
 
@@ -1254,6 +1313,10 @@ service EvaluationOpenAPIService {
     ReportEvalTargetInvokeResultResponse ReportEvalTargetInvokeResult(1: ReportEvalTargetInvokeResultRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/result")
     // 按需查询评测对象输出中大对象的完整内容
     GetEvalTargetOutputFieldContentOApiResponse GetEvalTargetOutputFieldContentOApi(1: GetEvalTargetOutputFieldContentOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/eval_target_records/output_fields")
+    // 异步调试评测对象
+    AsyncDebugEvalTargetOApiResponse AsyncDebugEvalTargetOApi(1: AsyncDebugEvalTargetOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/async_debug")
+    // 获取评测对象记录
+    GetEvalTargetRecordOApiResponse GetEvalTargetRecordOApi(1: GetEvalTargetRecordOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/eval_target_records/:eval_target_record_id")
 
     // 评测实验接口
     // 创建评测实验

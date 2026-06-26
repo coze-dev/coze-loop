@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	taskentity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -202,6 +201,76 @@ func TestConvertContentTypeDTO2DO(t *testing.T) {
 	}
 }
 
+func TestFillDatasetKeysFromSchema(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("empty schema JSON is no-op", func(t *testing.T) {
+		t.Parallel()
+		mappings := []*taskentity.EvaluateFieldMapping{
+			{EvalSetName: gptr.Of("field_a")},
+		}
+		fillDatasetKeysFromSchema(ctx, mappings, "")
+		assert.Nil(t, mappings[0].DatasetKey)
+	})
+
+	t.Run("invalid JSON is no-op", func(t *testing.T) {
+		t.Parallel()
+		mappings := []*taskentity.EvaluateFieldMapping{
+			{EvalSetName: gptr.Of("field_a")},
+		}
+		fillDatasetKeysFromSchema(ctx, mappings, "not valid json")
+		assert.Nil(t, mappings[0].DatasetKey)
+	})
+
+	t.Run("populates key from schema by name match", func(t *testing.T) {
+		t.Parallel()
+		schemaJSON := `[{"Key":"key_input","Name":"输入","ContentType":"text"},{"Key":"key_output","Name":"输出","ContentType":"text"}]`
+		mappings := []*taskentity.EvaluateFieldMapping{
+			{EvalSetName: gptr.Of("输入")},
+			{EvalSetName: gptr.Of("输出")},
+			{EvalSetName: gptr.Of("不存在的字段")},
+		}
+		fillDatasetKeysFromSchema(ctx, mappings, schemaJSON)
+		assert.Equal(t, "key_input", *mappings[0].DatasetKey)
+		assert.Equal(t, "key_output", *mappings[1].DatasetKey)
+		assert.Nil(t, mappings[2].DatasetKey)
+	})
+
+	t.Run("overwrites existing DatasetKey", func(t *testing.T) {
+		t.Parallel()
+		schemaJSON := `[{"Key":"real_key","Name":"field_a","ContentType":"text"}]`
+		oldKey := "stale_key"
+		mappings := []*taskentity.EvaluateFieldMapping{
+			{EvalSetName: gptr.Of("field_a"), DatasetKey: &oldKey},
+		}
+		fillDatasetKeysFromSchema(ctx, mappings, schemaJSON)
+		assert.Equal(t, "real_key", *mappings[0].DatasetKey)
+	})
+
+	t.Run("skips schema entries with nil or empty key", func(t *testing.T) {
+		t.Parallel()
+		schemaJSON := `[{"Key":"","Name":"field_a","ContentType":"text"},{"Name":"field_b","ContentType":"text"}]`
+		mappings := []*taskentity.EvaluateFieldMapping{
+			{EvalSetName: gptr.Of("field_a")},
+			{EvalSetName: gptr.Of("field_b")},
+		}
+		fillDatasetKeysFromSchema(ctx, mappings, schemaJSON)
+		assert.Nil(t, mappings[0].DatasetKey)
+		assert.Nil(t, mappings[1].DatasetKey)
+	})
+
+	t.Run("nil EvalSetName mapping is skipped", func(t *testing.T) {
+		t.Parallel()
+		schemaJSON := `[{"Key":"key_a","Name":"field_a","ContentType":"text"}]`
+		mappings := []*taskentity.EvaluateFieldMapping{
+			{EvalSetName: nil},
+		}
+		fillDatasetKeysFromSchema(ctx, mappings, schemaJSON)
+		assert.Nil(t, mappings[0].DatasetKey)
+	})
+}
+
 func TestBuildItem(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -215,44 +284,29 @@ func TestBuildItem(t *testing.T) {
 		TraceFieldKey:      "Input",
 		TraceFieldJsonpath: "",
 		EvalSetName:        gptr.Of("field_1"),
+		DatasetKey:         gptr.Of("my_key"),
 	}
-	evalSchema := []*entity.FieldSchema{
-		{
-			Key:         gptr.Of("field_1"),
-			Name:        "field_1",
-			ContentType: common.ContentTypeText,
-		},
-	}
-	evalSchemaBytes, err := json.Marshal(evalSchema)
-	assert.NoError(t, err)
 
 	span := &loop_span.Span{TraceID: "1234567890abcdef1234567890abcdef", SpanID: "feedbeeffeedbeef", Input: "hello"}
-	data := buildItem(ctx, span, []*taskentity.EvaluateFieldMapping{mapping}, string(evalSchemaBytes), "run-1")
+	data := buildItem(ctx, span, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
 	assert.Len(t, data, 4)
 	assert.Equal(t, "trace_id", data[0].GetKey())
 	assert.Equal(t, "span_id", data[1].GetKey())
 	assert.Equal(t, "run_id", data[2].GetKey())
-	assert.Equal(t, "field_1", data[3].GetKey())
+	assert.Equal(t, "my_key", data[3].GetKey())
+	assert.Equal(t, "field_1", data[3].GetName())
 	assert.Equal(t, "hello", data[3].GetContent().GetText())
 
 	// content error path should return nil
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
 	badSpan := &loop_span.Span{TraceID: span.TraceID, SpanID: span.SpanID, Input: "invalid json"}
-	badSchema := []*entity.FieldSchema{
-		{
-			Key:         gptr.Of("field_1"),
-			Name:        "field_1",
-			ContentType: common.ContentTypeMultiPart,
-		},
-	}
-	badBytes, err := json.Marshal(badSchema)
-	assert.NoError(t, err)
-	assert.Nil(t, buildItem(ctx, badSpan, []*taskentity.EvaluateFieldMapping{mapping}, string(badBytes), "run-1"))
+	assert.Nil(t, buildItem(ctx, badSpan, []*taskentity.EvaluateFieldMapping{mapping}, "run-1"))
 
-	// schema empty path keeps only default fields
+	// EvalSetName nil case should skip the field
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeText)
-	empty := buildItem(ctx, span, []*taskentity.EvaluateFieldMapping{mapping}, "", "run-1")
-	assert.Len(t, empty, 3)
+	mapping.EvalSetName = nil
+	noName := buildItem(ctx, span, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
+	assert.Len(t, noName, 3)
 }
 
 // Note: key-nil case cannot be safely tested because buildItem dereferences key
@@ -271,35 +325,16 @@ func TestBuildItems(t *testing.T) {
 		TraceFieldJsonpath: "",
 		EvalSetName:        gptr.Of("field_1"),
 	}
-	evalSchema := []*eval_set.FieldSchema{
-		{
-			Key:         gptr.Of("field_1"),
-			Name:        gptr.Of("field_1"),
-			ContentType: gptr.Of(common.ContentTypeText),
-		},
-	}
-	schemaBytes, err := json.Marshal(evalSchema)
-	assert.NoError(t, err)
 
 	goodSpan := &loop_span.Span{TraceID: "1234567890abcdef1234567890abcdef", SpanID: "deadc0debeefcafe", Input: "hello"}
 	badSpan := &loop_span.Span{TraceID: goodSpan.TraceID, SpanID: "badbadbadbadbad", Input: "invalid"}
-	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
-	multipartSchema := []*entity.FieldSchema{
-		{
-			Key:         gptr.Of("field_1"),
-			Name:        "field_1",
-			ContentType: common.ContentTypeMultiPart,
-		},
-	}
-	multipartBytes, err := json.Marshal(multipartSchema)
-	assert.NoError(t, err)
 
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
-	turns := buildItems(ctx, []*loop_span.Span{goodSpan, badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, string(multipartBytes), "run-1")
+	turns := buildItems(ctx, []*loop_span.Span{goodSpan, badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
 	assert.Empty(t, turns)
 
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeText)
-	turns = buildItems(ctx, []*loop_span.Span{goodSpan, badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, string(schemaBytes), "run-1")
+	turns = buildItems(ctx, []*loop_span.Span{goodSpan, badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
 	assert.Len(t, turns, 2)
 	for _, turn := range turns {
 		assert.Equal(t, "run_id", turn.FieldDataList[2].GetKey())
@@ -307,7 +342,7 @@ func TestBuildItems(t *testing.T) {
 
 	// ensure spans returning nil items are skipped
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
-	turns = buildItems(ctx, []*loop_span.Span{badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, string(multipartBytes), "run-1")
+	turns = buildItems(ctx, []*loop_span.Span{badSpan}, []*taskentity.EvaluateFieldMapping{mapping}, "run-1")
 	assert.Empty(t, turns)
 }
 

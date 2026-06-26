@@ -51,6 +51,11 @@ func (c *configer) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTr
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, cfg) == nil, cfg, nil)
 }
 
+// BuildEvalExt 构造评测记录落库时的 ext 扩展字段，默认空实现返回 nil。
+func (c *configer) BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string {
+	return nil
+}
+
 func (c *configer) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
 	return c.GetConsumerConf(ctx).GetSchedulerAbortCtrl()
 }

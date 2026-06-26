@@ -84,6 +84,11 @@ func EvalTargetVersionDO2PO(do *entity.EvalTargetVersion) (po *model.TargetVersi
 		if err != nil {
 			return nil, err
 		}
+	case entity.EvalTargetTypeSandboxAgent:
+		meta, err = json.Marshal(do.SandboxAgent)
+		if err != nil {
+			return nil, err
+		}
 	default:
 	}
 	if do.InputSchema != nil {
@@ -242,6 +247,11 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 			meta := &entity.CustomAgent{}
 			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
 				targetVersionDO.CustomAgent = meta
+			}
+		case entity.EvalTargetTypeSandboxAgent:
+			meta := &entity.SandboxAgent{}
+			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
+				targetVersionDO.SandboxAgent = meta
 			}
 		default:
 			// todo

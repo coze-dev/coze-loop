@@ -132,22 +132,22 @@ func TestBuildEvaluatorVersionRefs(t *testing.T) {
 	tests := []struct {
 		name           string
 		expt           *entity.Experiment
-		version2Record map[int64]*entity.EvaluatorRecord
+		version2Record map[string]*entity.EvaluatorRecord
 		wantLen        int
 		wantEvaluator  map[int64]int64 // versionID -> evaluatorID
 	}{
 		{
 			name:           "empty records returns nil",
 			expt:           &entity.Experiment{},
-			version2Record: map[int64]*entity.EvaluatorRecord{},
+			version2Record: map[string]*entity.EvaluatorRecord{},
 			wantLen:        0,
 			wantEvaluator:  map[int64]int64{},
 		},
 		{
 			name: "nil expt only fills version id",
 			expt: nil,
-			version2Record: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithScore(float64Ptr(1)),
+			version2Record: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithScore(float64Ptr(1)),
 			},
 			wantLen:       1,
 			wantEvaluator: map[int64]int64{100: 0},
@@ -160,9 +160,9 @@ func TestBuildEvaluatorVersionRefs(t *testing.T) {
 					nil,
 				},
 			},
-			version2Record: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithScore(float64Ptr(1)),
-				200: newRecordWithScore(float64Ptr(1)),
+			version2Record: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithScore(float64Ptr(1)),
+				"200": newRecordWithScore(float64Ptr(1)),
 			},
 			wantLen:       2,
 			wantEvaluator: map[int64]int64{100: 11, 200: 0},
@@ -189,7 +189,7 @@ func TestBuildCaseScoreRequest(t *testing.T) {
 	tests := []struct {
 		name           string
 		expt           *entity.Experiment
-		version2Record map[int64]*entity.EvaluatorRecord
+		version2Record map[string]*entity.EvaluatorRecord
 		wantNil        bool
 		wantExptID     int64
 		wantItemLen    int
@@ -198,14 +198,14 @@ func TestBuildCaseScoreRequest(t *testing.T) {
 		{
 			name:           "empty records returns nil",
 			expt:           &entity.Experiment{ID: 5},
-			version2Record: map[int64]*entity.EvaluatorRecord{},
+			version2Record: map[string]*entity.EvaluatorRecord{},
 			wantNil:        true,
 		},
 		{
 			name: "nil expt still builds items without names",
 			expt: nil,
-			version2Record: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithScore(float64Ptr(0.6)),
+			version2Record: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithScore(float64Ptr(0.6)),
 			},
 			wantExptID:  0,
 			wantItemLen: 1,
@@ -220,9 +220,9 @@ func TestBuildCaseScoreRequest(t *testing.T) {
 					newPromptEvaluator("unscored", 12, 200),
 				},
 			},
-			version2Record: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithScore(float64Ptr(0.6)),
-				200: newRecordWithScore(nil),
+			version2Record: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithScore(float64Ptr(0.6)),
+				"200": newRecordWithScore(nil),
 			},
 			wantExptID:  7,
 			wantItemLen: 1,
@@ -255,97 +255,97 @@ func TestCalculateWeightedScore_Local(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		evaluatorRecords map[int64]*entity.EvaluatorRecord
-		weights          map[int64]float64
+		evaluatorRecords map[string]*entity.EvaluatorRecord
+		weights          map[string]float64
 		wantNil          bool
 		want             float64
 	}{
 		{
 			name:             "empty records returns nil",
-			evaluatorRecords: map[int64]*entity.EvaluatorRecord{},
+			evaluatorRecords: map[string]*entity.EvaluatorRecord{},
 			weights:          nil,
 			wantNil:          true,
 		},
 		{
 			name: "no weights computes simple average",
-			evaluatorRecords: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithScore(float64Ptr(0.6)),
-				200: newRecordWithScore(float64Ptr(0.8)),
+			evaluatorRecords: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithScore(float64Ptr(0.6)),
+				"200": newRecordWithScore(float64Ptr(0.8)),
 			},
-			weights: map[int64]float64{},
+			weights: map[string]float64{},
 			want:    0.7,
 		},
 		{
 			name: "no weights prefers correction score",
-			evaluatorRecords: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithCorrection(float64Ptr(0.6), float64Ptr(1.0)),
+			evaluatorRecords: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithCorrection(float64Ptr(0.6), float64Ptr(1.0)),
 			},
-			weights: map[int64]float64{},
+			weights: map[string]float64{},
 			want:    1.0,
 		},
 		{
 			name: "no weights skips nil records and nil scores",
-			evaluatorRecords: map[int64]*entity.EvaluatorRecord{
-				100: nil,
-				200: newRecordWithScore(nil),
-				300: newRecordWithScore(float64Ptr(0.4)),
+			evaluatorRecords: map[string]*entity.EvaluatorRecord{
+				"100": nil,
+				"200": newRecordWithScore(nil),
+				"300": newRecordWithScore(float64Ptr(0.4)),
 			},
-			weights: map[int64]float64{},
+			weights: map[string]float64{},
 			want:    0.4,
 		},
 		{
 			name: "no weights all invalid returns nil",
-			evaluatorRecords: map[int64]*entity.EvaluatorRecord{
-				100: nil,
-				200: newRecordWithScore(nil),
+			evaluatorRecords: map[string]*entity.EvaluatorRecord{
+				"100": nil,
+				"200": newRecordWithScore(nil),
 			},
-			weights: map[int64]float64{},
+			weights: map[string]float64{},
 			wantNil: true,
 		},
 		{
 			name: "weighted average",
-			evaluatorRecords: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithScore(float64Ptr(1.0)),
-				200: newRecordWithScore(float64Ptr(0.0)),
+			evaluatorRecords: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithScore(float64Ptr(1.0)),
+				"200": newRecordWithScore(float64Ptr(0.0)),
 			},
-			weights: map[int64]float64{
-				100: 3,
-				200: 1,
+			weights: map[string]float64{
+				"100": 3,
+				"200": 1,
 			},
 			want: 0.75,
 		},
 		{
 			name: "weighted skips records with non positive or missing weight",
-			evaluatorRecords: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithScore(float64Ptr(1.0)),
-				200: newRecordWithScore(float64Ptr(0.2)), // weight 0, skipped
-				300: newRecordWithScore(float64Ptr(0.5)), // no weight, skipped
+			evaluatorRecords: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithScore(float64Ptr(1.0)),
+				"200": newRecordWithScore(float64Ptr(0.2)), // weight 0, skipped
+				"300": newRecordWithScore(float64Ptr(0.5)), // no weight, skipped
 			},
-			weights: map[int64]float64{
-				100: 2,
-				200: 0,
+			weights: map[string]float64{
+				"100": 2,
+				"200": 0,
 			},
 			want: 1.0,
 		},
 		{
 			name: "weighted skips nil records and nil scores",
-			evaluatorRecords: map[int64]*entity.EvaluatorRecord{
-				100: nil,
-				200: newRecordWithScore(nil),
-				300: newRecordWithScore(float64Ptr(0.9)),
+			evaluatorRecords: map[string]*entity.EvaluatorRecord{
+				"100": nil,
+				"200": newRecordWithScore(nil),
+				"300": newRecordWithScore(float64Ptr(0.9)),
 			},
-			weights: map[int64]float64{
-				300: 2,
+			weights: map[string]float64{
+				"300": 2,
 			},
 			want: 0.9,
 		},
 		{
 			name: "weighted total weight zero returns nil",
-			evaluatorRecords: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithScore(float64Ptr(1.0)),
+			evaluatorRecords: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithScore(float64Ptr(1.0)),
 			},
-			weights: map[int64]float64{
-				100: 0,
+			weights: map[string]float64{
+				"100": 0,
 			},
 			wantNil: true,
 		},
@@ -373,15 +373,15 @@ func TestEvaluatorScoreCalculator_CalculateWeightedScore(t *testing.T) {
 			newPromptEvaluator("e1", 11, 100),
 		},
 	}
-	records := map[int64]*entity.EvaluatorRecord{
-		100: newRecordWithScore(float64Ptr(0.6)),
+	records := map[string]*entity.EvaluatorRecord{
+		"100": newRecordWithScore(float64Ptr(0.6)),
 	}
 
 	tests := []struct {
 		name           string
 		expt           *entity.Experiment
-		version2Record map[int64]*entity.EvaluatorRecord
-		scoreWeights   map[int64]float64
+		version2Record map[string]*entity.EvaluatorRecord
+		scoreWeights   map[string]float64
 		setup          func(configer *componentmocks.MockIConfiger, client *httpmocks.MockIClient)
 		wantNil        bool
 		want           float64
@@ -390,7 +390,7 @@ func TestEvaluatorScoreCalculator_CalculateWeightedScore(t *testing.T) {
 			name:           "hook miss falls back to local calculation",
 			expt:           expt,
 			version2Record: records,
-			scoreWeights:   map[int64]float64{},
+			scoreWeights:   map[string]float64{},
 			setup: func(configer *componentmocks.MockIConfiger, client *httpmocks.MockIClient) {
 				configer.EXPECT().
 					GetExptTurnScoreHookConf(gomock.Any(), int64(3), int64(7), gomock.Any()).
@@ -402,7 +402,7 @@ func TestEvaluatorScoreCalculator_CalculateWeightedScore(t *testing.T) {
 			name:           "nil expt with hook miss falls back to local",
 			expt:           nil,
 			version2Record: records,
-			scoreWeights:   map[int64]float64{},
+			scoreWeights:   map[string]float64{},
 			setup: func(configer *componentmocks.MockIConfiger, client *httpmocks.MockIClient) {
 				configer.EXPECT().
 					GetExptTurnScoreHookConf(gomock.Any(), int64(0), int64(0), gomock.Any()).
@@ -413,10 +413,10 @@ func TestEvaluatorScoreCalculator_CalculateWeightedScore(t *testing.T) {
 		{
 			name: "hook hit but request has no scores returns nil",
 			expt: expt,
-			version2Record: map[int64]*entity.EvaluatorRecord{
-				100: newRecordWithScore(nil),
+			version2Record: map[string]*entity.EvaluatorRecord{
+				"100": newRecordWithScore(nil),
 			},
-			scoreWeights: map[int64]float64{},
+			scoreWeights: map[string]float64{},
 			setup: func(configer *componentmocks.MockIConfiger, client *httpmocks.MockIClient) {
 				configer.EXPECT().
 					GetExptTurnScoreHookConf(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -428,7 +428,7 @@ func TestEvaluatorScoreCalculator_CalculateWeightedScore(t *testing.T) {
 			name:           "hook hit and http error returns nil",
 			expt:           expt,
 			version2Record: records,
-			scoreWeights:   map[int64]float64{},
+			scoreWeights:   map[string]float64{},
 			setup: func(configer *componentmocks.MockIConfiger, client *httpmocks.MockIClient) {
 				configer.EXPECT().
 					GetExptTurnScoreHookConf(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -443,7 +443,7 @@ func TestEvaluatorScoreCalculator_CalculateWeightedScore(t *testing.T) {
 			name:           "hook hit and response carries error returns nil",
 			expt:           expt,
 			version2Record: records,
-			scoreWeights:   map[int64]float64{},
+			scoreWeights:   map[string]float64{},
 			setup: func(configer *componentmocks.MockIConfiger, client *httpmocks.MockIClient) {
 				configer.EXPECT().
 					GetExptTurnScoreHookConf(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -462,7 +462,7 @@ func TestEvaluatorScoreCalculator_CalculateWeightedScore(t *testing.T) {
 			name:           "hook hit success returns rounded score",
 			expt:           expt,
 			version2Record: records,
-			scoreWeights:   map[int64]float64{},
+			scoreWeights:   map[string]float64{},
 			setup: func(configer *componentmocks.MockIConfiger, client *httpmocks.MockIClient) {
 				configer.EXPECT().
 					GetExptTurnScoreHookConf(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -481,7 +481,7 @@ func TestEvaluatorScoreCalculator_CalculateWeightedScore(t *testing.T) {
 			name:           "hook hit with empty method defaults to post",
 			expt:           expt,
 			version2Record: records,
-			scoreWeights:   map[int64]float64{},
+			scoreWeights:   map[string]float64{},
 			setup: func(configer *componentmocks.MockIConfiger, client *httpmocks.MockIClient) {
 				configer.EXPECT().
 					GetExptTurnScoreHookConf(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -530,10 +530,10 @@ func TestEvaluatorScoreCalculator_CalculateWeightedScore_NilConfiger(t *testing.
 	client := httpmocks.NewMockIClient(ctrl)
 	calc := &evaluatorScoreCalculator{configer: nil, httpClient: client}
 
-	records := map[int64]*entity.EvaluatorRecord{
-		100: newRecordWithScore(float64Ptr(0.6)),
+	records := map[string]*entity.EvaluatorRecord{
+		"100": newRecordWithScore(float64Ptr(0.6)),
 	}
-	got := calc.CalculateWeightedScore(context.Background(), &entity.Experiment{}, records, map[int64]float64{})
+	got := calc.CalculateWeightedScore(context.Background(), &entity.Experiment{}, records, map[string]float64{})
 	assert.NotNil(t, got)
 	assert.InDelta(t, 0.6, *got, 1e-9)
 }

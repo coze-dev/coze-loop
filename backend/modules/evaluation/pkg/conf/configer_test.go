@@ -166,3 +166,41 @@ func TestConfiger_GetExptTemplateUpdateEvalSetWhiteList(t *testing.T) {
 		assert.True(t, result.IsSpaceAllowed(999))
 	})
 }
+
+func TestConfiger_BuildEvalExt(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockLoader := mock_conf.NewMockIConfigLoader(ctrl)
+	c := &configer{loader: mockLoader}
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		spaceID int64
+		turn    *entity.Turn
+	}{
+		{
+			name:    "nil turn returns nil",
+			spaceID: 100,
+			turn:    nil,
+		},
+		{
+			name:    "non-nil turn returns nil",
+			spaceID: 200,
+			turn:    &entity.Turn{ID: 1},
+		},
+		{
+			name:    "zero space id returns nil",
+			spaceID: 0,
+			turn:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := c.BuildEvalExt(ctx, tt.spaceID, tt.turn)
+			assert.Nil(t, got)
+		})
+	}
+}

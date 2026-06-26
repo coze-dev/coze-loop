@@ -16,8 +16,10 @@ import (
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
+	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	evaluator_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
@@ -30,8 +32,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
 
+	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
@@ -60,10 +64,11 @@ type EvalOpenAPIApplication struct {
 	manager                     service.IExptManager
 	resultSvc                   service.ExptResultService
 	service.ExptAggrResultService
-	evaluatorService       service.EvaluatorService
-	evaluatorRecordService service.EvaluatorRecordService
-	exptTemplateManager    service.IExptTemplateManager
-	configer               component.IConfiger
+	evaluatorService        service.EvaluatorService
+	evaluatorRecordService  service.EvaluatorRecordService
+	exptTemplateManager     service.IExptTemplateManager
+	configer                component.IConfiger
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -83,6 +88,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluatorRecordService service.EvaluatorRecordService,
 	exptTemplateManager service.IExptTemplateManager,
 	configer component.IConfiger,
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -103,16 +109,14 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		evaluatorRecordService:      evaluatorRecordService,
 		exptTemplateManager:         exptTemplateManager,
 		configer:                    configer,
+		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
 	}
 }
 
 func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest) (r *openapi.CreateEvaluationSetOApiResponse, err error) {
-	// TODO: remove debug logging after versioned_item feature is stable
-	logs.CtxInfo(ctx, "CreateEvaluationSetOApi req: %v", json.Jsonify(req))
 	var evaluationSetID int64
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
-		logs.CtxInfo(ctx, "CreateEvaluationSetOApi resp: %v, err: %v", json.Jsonify(r), err)
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluationSetID, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 	// 参数校验
@@ -138,8 +142,6 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 		Name:                req.GetName(),
 		Description:         req.Description,
 		EvaluationSetSchema: evaluation_set.OpenAPIEvaluationSetSchemaDTO2DO(req.EvaluationSetSchema),
-		DatasetType:         req.Type,
-		Tags:                evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -331,7 +333,6 @@ func (e *EvalOpenAPIApplication) UpdateEvaluationSetOApi(ctx context.Context, re
 		EvaluationSetID: req.GetEvaluationSetID(),
 		Name:            req.Name,
 		Description:     req.Description,
-		Tags:            evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -405,10 +406,6 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 	if err != nil {
 		return nil, err
 	}
-	tagFilter, err := evaluation_set.OpenAPITagFilterQueryDTO2DO(req.TagNames, req.TagFilterRelation)
-	if err != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
-	}
 	// 调用domain服务
 	sets, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSets(ctx, &entity.ListEvaluationSetsParam{
 		SpaceID:          req.GetWorkspaceID(),
@@ -417,7 +414,6 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 		Creators:         req.Creators,
 		PageSize:         req.PageSize,
 		PageToken:        req.PageToken,
-		TagFilter:        tagFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -635,11 +631,10 @@ func (e *EvalOpenAPIApplication) BatchUpdateEvaluationSetItemsOApi(ctx context.C
 
 	// 调用domain服务
 	errors, itemOutputs, err := e.evaluationSetItemService.BatchUpdateEvaluationSetItems(ctx, &entity.BatchUpdateEvaluationSetItemsParam{
-		SpaceID:           req.GetWorkspaceID(),
-		EvaluationSetID:   req.GetEvaluationSetID(),
-		Items:             evaluation_set.OpenAPIItemDTO2DOs(req.GetEvaluationSetID(), req.Items),
-		SkipInvalidItems:  req.IsSkipInvalidItems,
-		FieldWriteOptions: evaluation_set.OpenAPIFieldWriteOptionDTO2DOs(req.FieldWriteOptions),
+		SpaceID:          req.GetWorkspaceID(),
+		EvaluationSetID:  req.GetEvaluationSetID(),
+		Items:            evaluation_set.OpenAPIItemDTO2DOs(req.GetEvaluationSetID(), req.Items),
+		SkipInvalidItems: req.IsSkipInvalidItems,
 	})
 	if err != nil {
 		return nil, err
@@ -738,14 +733,6 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	tagFilter, err := evaluation_set.OpenAPITagFilterQueryDTO2DO(req.TagNames, req.TagFilterRelation)
-	if err != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
-	}
-	itemFilter, err := evaluation_set.OpenAPIFilterQueryDTO2DO(req.Filter)
-	if err != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
-	}
 
 	// 调用domain服务
 	items, total, _, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
@@ -754,8 +741,6 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 		VersionID:       req.VersionID,
 		PageSize:        req.PageSize,
 		PageToken:       req.PageToken,
-		Filter:          itemFilter,
-		TagFilter:       tagFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -896,7 +881,25 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
 	}
 
-	logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID())
+	// 调试场景（actx.Event == nil）：无论成功失败都 best-effort 销毁沙箱执行
+	if actx.Event == nil {
+		defer func() {
+			if e.sandboxSchedulerAdapter == nil {
+				return
+			}
+			if _, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
+				TaskID:      "sandbox_debug",
+				DestroyType: rpc.SandboxDestroyTypeExecute,
+				ExecuteIDs:  []string{strconv.FormatInt(req.GetInvokeID(), 10)},
+				WorkspaceID: req.GetWorkspaceID(),
+			}); derr != nil {
+				logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox debug execute fail, invoke_id=%d, err=%v", req.GetInvokeID(), derr)
+			}
+		}()
+		logs.CtxInfo(ctx, "report target record (debug), record_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
+	} else {
+		logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.ExptID, actx.Event.ExptRunID, actx.Event.EvalSetItemID)
+	}
 	outputData := target.ToInvokeOutputDataDO(req)
 	outputData.TimeConsumingMS = gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS)
 	if err := e.targetSvc.ReportInvokeRecords(ctx, &entity.ReportTargetRecordParam{
@@ -1011,8 +1014,22 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
 	}
 
-	if req.EvalSetParam == nil || !req.EvalSetParam.IsSetVersion() || req.EvalSetParam.GetVersion() == "" {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_param.version is required"))
+	// 新路径开关 (唯一依据): eval_set_source_type == multi_set_config = item-centric 多评测集建模, 走新路径; 否则老的单评测集形态。
+	srcType := experiment_convertor.OpenAPIEvalSetSourceTypeDTO2Domain(req.EvalSetSourceType)
+	isNewPath := srcType == domain_expt.ExptEvalSetSourceType_MultiSetConfig
+
+	// ★ 公网面早失败硬校验: source_type 与 eval_set_configs 必须一致。
+	if isNewPath && len(req.GetEvalSetConfigs()) == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_source_type=multi_set_config requires non-empty eval_set_configs"))
+	}
+	if !isNewPath && len(req.GetEvalSetConfigs()) > 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs is only allowed when eval_set_source_type=multi_set_config"))
+	}
+
+	if !isNewPath {
+		if req.EvalSetParam == nil || !req.EvalSetParam.IsSetVersion() || req.EvalSetParam.GetVersion() == "" {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_param.version is required"))
+		}
 	}
 
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
@@ -1032,37 +1049,70 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	if !pass {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
 	}
-	versions, _, _, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
-		SpaceID:         req.GetWorkspaceID(),
-		EvaluationSetID: req.GetEvalSetParam().GetEvalSetID(),
-		PageSize:        gptr.Of(int32(1)),
-		VersionLike:     req.GetEvalSetParam().Version,
-	})
-	if err != nil {
-		return nil, err
+
+	createReq := &exptpb.SubmitExperimentRequest{
+		WorkspaceID:             req.GetWorkspaceID(),
+		Name:                    req.Name,
+		Desc:                    req.Description,
+		TargetFieldMapping:      experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
+		ItemConcurNum:           req.ItemConcurNum,
+		TargetRuntimeParam:      experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
+		ItemRetryNum:            req.ItemRetryNum,
+		TriggerType:             gptr.Of(domain_expt.OpenAPI),
+		EnableExtractTrajectory: req.EnableExtractTrajectory,
+		Ext:                     req.GetExt(),
+		// ★ 透传分流依据: OpenAPI 字符串枚举 → kitex enum, 供下游平台层统一以 source_type 分流。
+		EvalSetSourceType: gptr.Of(srcType),
 	}
-	if len(versions) == 0 {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval set not found"))
-	}
-	evaluatorVersionIDs := make([]int64, 0)
-	evaluatorMap := make(map[string]int64)
-	for _, evaluator := range req.GetEvaluatorParams() {
-		version, _, err := e.evaluatorService.ListEvaluatorVersion(ctx, &entity.ListEvaluatorVersionRequest{
-			SpaceID:       req.GetWorkspaceID(),
-			EvaluatorID:   evaluator.GetEvaluatorID(),
-			QueryVersions: []string{evaluator.GetVersion()},
-			PageSize:      int32(1),
-			PageNum:       int32(1),
+
+	if isNewPath {
+		// 新路径: 逐集把版本字符串解析成 version_id, 再构建内部 eval_set_configs。
+		evalSetVersionIDMap, evaluatorVersionIDMap, err := e.resolveEvalSetConfigsVersionIDs(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		createReq.EvalSetConfigs = experiment_convertor.OpenAPIEvalSetConfigsDTO2Domain(req.GetEvalSetConfigs(), evalSetVersionIDMap, evaluatorVersionIDMap)
+	} else {
+		// 老路径: 单评测集, 解析顶层 eval_set_param / evaluator_params 的版本字符串。
+		versions, _, _, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+			SpaceID:         req.GetWorkspaceID(),
+			EvaluationSetID: req.GetEvalSetParam().GetEvalSetID(),
+			PageSize:        gptr.Of(int32(1)),
+			VersionLike:     req.GetEvalSetParam().Version,
 		})
 		if err != nil {
 			return nil, err
 		}
-		if len(version) == 0 {
-			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
+		if len(versions) == 0 {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval set not found"))
 		}
-		versionID := version[0].GetEvaluatorVersionID()
-		evaluatorVersionIDs = append(evaluatorVersionIDs, versionID)
-		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
+		evaluatorVersionIDs := make([]int64, 0)
+		evaluatorMap := make(map[string]int64)
+		for _, evaluator := range req.GetEvaluatorParams() {
+			version, _, err := e.evaluatorService.ListEvaluatorVersion(ctx, &entity.ListEvaluatorVersionRequest{
+				SpaceID:       req.GetWorkspaceID(),
+				EvaluatorID:   evaluator.GetEvaluatorID(),
+				QueryVersions: []string{evaluator.GetVersion()},
+				PageSize:      int32(1),
+				PageNum:       int32(1),
+			})
+			if err != nil {
+				return nil, err
+			}
+			if len(version) == 0 {
+				return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
+			}
+			versionID := version[0].GetEvaluatorVersionID()
+			evaluatorVersionIDs = append(evaluatorVersionIDs, versionID)
+			evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
+		}
+
+		// 老路径专属字段回填到共享 createReq。
+		createReq.EvalSetVersionID = gptr.Of(versions[0].ID)
+		createReq.EvalSetID = req.GetEvalSetParam().EvalSetID
+		createReq.EvaluatorVersionIds = evaluatorVersionIDs
+		createReq.EvaluatorFieldMapping = experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap)
+		createReq.EvaluatorIDVersionList = experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams)
 	}
 
 	notificationConf, err := experiment_convertor.OpenAPINotificationConfDTO2Domain(req.NotificationConf)
@@ -1070,25 +1120,25 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		return nil, err
 	}
 
-	createReq := &exptpb.SubmitExperimentRequest{
-		WorkspaceID:             req.GetWorkspaceID(),
-		EvalSetVersionID:        gptr.Of(versions[0].ID),
-		EvalSetID:               req.GetEvalSetParam().EvalSetID,
-		EvaluatorVersionIds:     evaluatorVersionIDs,
-		Name:                    req.Name,
-		Desc:                    req.Description,
-		TargetFieldMapping:      experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
-		EvaluatorFieldMapping:   experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
-		ItemConcurNum:           req.ItemConcurNum,
-		TargetRuntimeParam:      experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
-		CreateEvalTargetParam:   experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
-		EvaluatorIDVersionList:  experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
-		ItemRetryNum:            req.ItemRetryNum,
-		TriggerType:             gptr.Of(domain_expt.OpenAPI),
-		EnableExtractTrajectory: req.EnableExtractTrajectory,
-		NotificationConf:        notificationConf,
-		Ext:                     req.GetExt(),
+	// Validate eval target type before building the request: an unsupported
+	// target type (e.g. faas_http, which is an AccessProtocol — not an
+	// EvalTargetType) must be rejected here instead of being silently dropped.
+	// The convertor below also returns this error; validating up front yields a
+	// clear param error and lists the supported types for the caller.
+	if req.EvalTargetParam != nil && req.EvalTargetParam.EvalTargetType != nil {
+		if !experiment_convertor.IsSupportedOpenAPIEvalTargetType(*req.EvalTargetParam.EvalTargetType) {
+			msg := fmt.Sprintf("unsupported eval target type: %s. supported: [%s]",
+				*req.EvalTargetParam.EvalTargetType, experiment_convertor.SupportedOpenAPIEvalTargetTypesString())
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(msg))
+		}
 	}
+
+	createEvalTargetParam, err := experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+	createReq.CreateEvalTargetParam = createEvalTargetParam
+	createReq.NotificationConf = notificationConf
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
 	if err != nil {
@@ -1103,6 +1153,70 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 			Experiment: experiment_convertor.DomainExperimentDTO2OpenAPI(cresp.GetExperiment()),
 		},
 	}, nil
+}
+
+// resolveEvalSetConfigsVersionIDs 把新路径 eval_set_configs 里的"版本字符串"逐集解析成内部 version_id。
+// 复用老路径同样的 service 解析方式 (ListEvaluationSetVersions / ListEvaluatorVersion)。
+// 返回两个 map 供 convertor 回填:
+//   - evalSetVersionIDMap: eval_set_id -> eval_set_version_id
+//   - evaluatorVersionIDMap: "{evaluator_id}_{version}" -> evaluator_version_id
+//
+// 解析失败 (评测集/评估器版本不存在) 返回 ResourceNotFoundCode。
+func (e *EvalOpenAPIApplication) resolveEvalSetConfigsVersionIDs(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (map[int64]int64, map[string]int64, error) {
+	evalSetVersionIDMap := make(map[int64]int64)
+	evaluatorVersionIDMap := make(map[string]int64)
+
+	for _, conf := range req.GetEvalSetConfigs() {
+		if conf == nil {
+			continue
+		}
+		// 评测集版本字符串 -> eval_set_version_id (同集已解析则跳过)
+		if _, ok := evalSetVersionIDMap[conf.GetEvalSetID()]; !ok {
+			if conf.GetEvalSetVersion() == "" {
+				return nil, nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs: eval_set_version is required"))
+			}
+			versions, _, _, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+				SpaceID:         req.GetWorkspaceID(),
+				EvaluationSetID: conf.GetEvalSetID(),
+				PageSize:        gptr.Of(int32(1)),
+				VersionLike:     gptr.Of(conf.GetEvalSetVersion()),
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			if len(versions) == 0 {
+				return nil, nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval set not found"))
+			}
+			evalSetVersionIDMap[conf.GetEvalSetID()] = versions[0].ID
+		}
+
+		// 评估器版本字符串 -> evaluator_version_id (按 evaluator_id+version 去重)
+		for _, ec := range conf.GetEvaluatorConfs() {
+			if ec == nil {
+				continue
+			}
+			key := fmt.Sprintf("%d_%s", ec.GetEvaluatorID(), ec.GetVersion())
+			if _, ok := evaluatorVersionIDMap[key]; ok {
+				continue
+			}
+			version, _, err := e.evaluatorService.ListEvaluatorVersion(ctx, &entity.ListEvaluatorVersionRequest{
+				SpaceID:       req.GetWorkspaceID(),
+				EvaluatorID:   ec.GetEvaluatorID(),
+				QueryVersions: []string{ec.GetVersion()},
+				PageSize:      int32(1),
+				PageNum:       int32(1),
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			if len(version) == 0 {
+				return nil, nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
+			}
+			evaluatorVersionIDMap[key] = version[0].GetEvaluatorVersionID()
+		}
+	}
+
+	return evalSetVersionIDMap, evaluatorVersionIDMap, nil
 }
 
 func (e *EvalOpenAPIApplication) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest) (r *openapi.GetExperimentsOApiResponse, err error) {
@@ -1305,6 +1419,7 @@ func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context
 			Name:               v.Name,
 			Version:            v.Version,
 			AggregatorResults:  experiment_convertor.OpenAPIAggregatorResultsDO2DTOs(v.AggregatorResults),
+			Alias:              gptr.Of(v.Alias),
 		})
 	}
 	return &openapi.GetExperimentAggrResultOApiResponse{
@@ -2510,108 +2625,166 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 }
 
-func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetItemVersionsOApiRequest) (r *openapi.ListEvaluationSetItemVersionsOApiResponse, err error) {
-	// TODO: remove debug logging after versioned_item feature is stable
-	logs.CtxInfo(ctx, "ListEvaluationSetItemVersionsOApi req: %v", json.Jsonify(req))
+func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, req *openapi.AsyncDebugEvalTargetOApiRequest) (r *openapi.AsyncDebugEvalTargetOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
-		logs.CtxInfo(ctx, "ListEvaluationSetItemVersionsOApi resp: %v, err: %v", json.Jsonify(r), err)
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
-
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
+	if req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
 
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
-	if err != nil {
-		return nil, err
-	}
-	if set == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
-	}
-	var ownerID *string
-	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
-		ownerID = set.BaseInfo.CreatedBy.UserID
-	}
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(set.ID, 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
-		OwnerID:         ownerID,
-		ResourceSpaceID: set.SpaceID,
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	versions, total, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItemVersions(ctx, &entity.ListEvaluationSetItemVersionsParam{
-		SpaceID:         req.GetWorkspaceID(),
-		EvaluationSetID: req.GetEvaluationSetID(),
-		ItemID:          req.GetItemID(),
-		PageNumber:      req.PageNumber,
-		PageSize:        req.PageSize,
-		PageToken:       req.PageToken,
-	})
-	if err != nil {
-		return nil, err
+	asyncStart := time.Now()
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	inputFields := make(map[string]*spi.Content)
+	if err := json.Unmarshal([]byte(req.GetParam()), &inputFields); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
 	}
 
-	return &openapi.ListEvaluationSetItemVersionsOApiResponse{
-		Data: &openapi.ListEvaluationSetItemVersionsOpenAPIData{
-			Versions:      evaluation_set.OpenAPIItemVersionDO2DTOs(versions),
-			Total:         total,
-			NextPageToken: nextPageToken,
-		},
-	}, nil
+	switch req.GetEvalTargetType() {
+	case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
+		record, callee, err := e.targetSvc.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
+			SpaceID: req.GetWorkspaceID(),
+			PatchyTarget: &entity.EvalTarget{
+				SpaceID:        req.GetWorkspaceID(),
+				EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SpaceID:         req.GetWorkspaceID(),
+					EvalTargetType:  entity.EvalTargetTypeCustomRPCServer,
+					CustomRPCServer: experiment_convertor.OpenAPICustomRPCServerDTO2DO(req.GetCustomRPCServer()),
+				},
+			},
+			InputData: &entity.EvalTargetInputData{
+				InputFields: gmap.Map(inputFields, func(k string, v *spi.Content) (string, *entity.Content) {
+					return k, target.ToSPIContentDO(v)
+				}),
+				Ext: map[string]string{
+					consts.FieldAdapterBuiltinFieldNameRuntimeParam: req.GetTargetRuntimeParam().GetJSONValue(),
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if err := e.asyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{
+			RecordID:    record.ID,
+			AsyncUnixMS: asyncStart.UnixMilli(),
+			Session:     &entity.Session{UserID: userID},
+			Callee:      callee,
+		}); err != nil {
+			return nil, err
+		}
+
+		return &openapi.AsyncDebugEvalTargetOApiResponse{
+			Data: &openapi.AsyncDebugEvalTargetOpenAPIData{
+				InvokeID: gptr.Of(record.ID),
+				Callee:   gptr.Of(callee),
+			},
+		}, nil
+	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
+		if e.sandboxSchedulerAdapter != nil {
+			if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
+				TaskID:      "sandbox_debug",
+				Concurrency: 50,
+				WorkspaceID: req.GetWorkspaceID(),
+			}); initErr != nil {
+				return nil, errorx.Wrapf(initErr, "init sandbox debug task fail")
+			}
+		}
+		record, callee, err := e.targetSvc.AsyncDebugTarget(ctx, &entity.DebugTargetParam{
+			SpaceID: req.GetWorkspaceID(),
+			PatchyTarget: &entity.EvalTarget{
+				SpaceID:        req.GetWorkspaceID(),
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SpaceID:        req.GetWorkspaceID(),
+					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+					SandboxAgent:   experiment_convertor.OpenAPISandboxAgentDTO2DO(req.GetSandboxAgent()),
+				},
+			},
+			InputData: &entity.EvalTargetInputData{
+				InputFields: gmap.Map(inputFields, func(k string, v *spi.Content) (string, *entity.Content) {
+					return k, target.ToSPIContentDO(v)
+				}),
+				Ext: map[string]string{
+					consts.FieldAdapterBuiltinFieldNameRuntimeParam: req.GetTargetRuntimeParam().GetJSONValue(),
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if err := e.asyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(record.ID, 10), &entity.EvalAsyncCtx{
+			RecordID:    record.ID,
+			AsyncUnixMS: asyncStart.UnixMilli(),
+			Session:     &entity.Session{UserID: userID},
+			Callee:      callee,
+		}); err != nil {
+			return nil, err
+		}
+
+		return &openapi.AsyncDebugEvalTargetOApiResponse{
+			Data: &openapi.AsyncDebugEvalTargetOpenAPIData{
+				InvokeID: gptr.Of(record.ID),
+				Callee:   gptr.Of(callee),
+			},
+		}, nil
+	default:
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("unsupported eval target type: %s", req.GetEvalTargetType())))
+	}
 }
 
-func (e *EvalOpenAPIApplication) GetEvaluationSetItemVersionOApi(ctx context.Context, req *openapi.GetEvaluationSetItemVersionOApiRequest) (r *openapi.GetEvaluationSetItemVersionOApiResponse, err error) {
-	// TODO: remove debug logging after versioned_item feature is stable
-	logs.CtxInfo(ctx, "GetEvaluationSetItemVersionOApi req: %v", json.Jsonify(req))
+func (e *EvalOpenAPIApplication) GetEvalTargetRecordOApi(ctx context.Context, req *openapi.GetEvalTargetRecordOApiRequest) (r *openapi.GetEvalTargetRecordOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
-		logs.CtxInfo(ctx, "GetEvaluationSetItemVersionOApi resp: %v, err: %v", json.Jsonify(r), err)
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
-
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
+	if req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	if req.GetEvalTargetRecordID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_target_record_id is required"))
+	}
 
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	record, err := e.targetSvc.GetRecordByID(ctx, req.GetWorkspaceID(), req.GetEvalTargetRecordID())
 	if err != nil {
 		return nil, err
 	}
-	if set == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	if record == nil {
+		return &openapi.GetEvalTargetRecordOApiResponse{
+			Data: &openapi.GetEvalTargetRecordOpenAPIData{},
+		}, nil
 	}
-	var ownerID *string
-	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
-		ownerID = set.BaseInfo.CreatedBy.UserID
-	}
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(set.ID, 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
-		OwnerID:         ownerID,
-		ResourceSpaceID: set.SpaceID,
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(record.TargetID, 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	version, err := e.evaluationSetItemService.GetEvaluationSetItemVersion(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), req.GetItemID(), req.ItemVersionID, nil)
-	if err != nil {
-		return nil, err
-	}
-	if version == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("item version not found"))
-	}
-
-	return &openapi.GetEvaluationSetItemVersionOApiResponse{
-		Data: &openapi.GetEvaluationSetItemVersionOpenAPIData{
-			Version: evaluation_set.OpenAPIItemVersionDO2DTO(version),
+	return &openapi.GetEvalTargetRecordOApiResponse{
+		Data: &openapi.GetEvalTargetRecordOpenAPIData{
+			EvalTargetRecord: experiment_convertor.OpenAPITargetRecordDO2DTO(record),
 		},
 	}, nil
 }

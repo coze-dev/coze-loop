@@ -4,6 +4,9 @@ include "common.thrift"
 include "eval_set.thrift"
 include "evaluator.thrift"
 include "eval_target.thrift"
+// data 侧 filter (别名 data_filter, 与 observability filter 区分以便 BAM/thriftgo 无歧义解析);
+// item 圈选复用同一 Filter/FilterField, 与内部 domain expt.EvalSetConfig.item_filter 同型透传。
+include "../../data/domain/data_filter.thrift"
 
 // 实验状态
 typedef string ExperimentStatus (ts.enum = "true")
@@ -80,6 +83,54 @@ struct EvaluatorFieldMapping {
     4: optional list<FieldMapping> from_target
 }
 
+// ===== item-centric 多评测集配置 (OpenAPI 版本字符串风格) =====
+// 与内部 expt.EvalSetConfig 对应; OpenAPI 用 id + 版本字符串, handler 解析成内部 version_id.
+// 非空 = 走新建模路径 (多评测集 + 每集 evaluator/target 绑定); 缺省则走老的单评测集形态.
+
+// per-set 的一个 evaluator binding (版本字符串风格)
+struct OpenAPIExptEvaluatorConf {
+    1: optional i64 evaluator_id (api.js_conv = "true", go.tag = 'json:"evaluator_id"')
+    2: optional string version                       // 评估器版本字符串, handler 解析成 evaluator_version_id
+    3: optional string alias                         // 多实例区分(judge_A/judge_B); 缺省 '' 默认实例
+    10: optional list<FieldMapping> from_eval_set    // 评测集字段 → evaluator 输入
+    11: optional list<FieldMapping> from_target      // target 输出 → evaluator 输入
+    20: optional common.RuntimeParam runtime_param   // alias 多实例核心动机: 同 version 不同参数
+    30: optional double score_weight                 // enable_weighted_score 开启时参与加权
+}
+
+// per-set target 运行配置 (版本字符串风格); 本期 len<=1
+// target_id/version 继承 request 顶层 eval_target_param, 不在 per-set 重复指定
+struct OpenAPIExptTargetConf {
+    10: optional TargetFieldMapping field_mapping    // 本评测集字段 → target 输入
+    20: optional common.RuntimeParam runtime_param
+}
+
+// 一个评测集 + 该集的完整配置包 (版本字符串风格)
+struct OpenAPIEvalSetConfig {
+    1: optional i64 eval_set_id (api.js_conv = "true", go.tag = 'json:"eval_set_id"')
+    2: optional string eval_set_version              // 版本字符串, handler 解析成 eval_set_version_id (锁定版本)
+    10: optional list<OpenAPIExptEvaluatorConf> evaluator_confs // (evaluator_version_id, alias) 在 set 内唯一
+    20: optional list<OpenAPIExptTargetConf> target_confs      // 本期 len<=1; 不传=继承顶层 target
+    // 题目圈选: 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter, 与内部 EvalSetConfig.item_filter 同型透传)
+    // 校验白名单(应用层, 与内部一致): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
+    30: optional data_filter.Filter item_filter
+}
+
+// 实验评测集来源模式 (OpenAPI 字符串枚举, 与 domain ExptEvalSetSourceType 对应)
+// 读接口分流: single_set=老实验(单评测集) / multi_set_config=新实验(多评测集)
+typedef string ExptEvalSetSourceType (ts.enum = "true")
+const ExptEvalSetSourceType ExptEvalSetSourceType_SingleSet = "single_set"
+const ExptEvalSetSourceType ExptEvalSetSourceType_MultiSetConfig = "multi_set_config"
+
+// per-set 运行期增量信息 (纯读模型; Get 全填含详情, List 只填 id/count)
+struct ExptEvalSetDetail {
+    1: optional i64 eval_set_id (api.js_conv = "true", go.tag = 'json:"eval_set_id"')
+    2: optional i64 eval_set_version_id (api.js_conv = "true", go.tag = 'json:"eval_set_version_id"')
+    3: optional bool is_primary                      // 主集(封面), 与 experiment.eval_set_id 一致
+    4: optional i32 item_count                       // 该 set 选入实验的 item 数; 首跑前为 0
+    5: optional eval_set.EvaluationSet eval_set      // Get 填充详情; List 不填
+}
+
 // Token使用量
 struct TokenUsage {
     1: optional string input_tokens
@@ -94,6 +145,8 @@ struct EvaluatorAggregateResult {
     4: optional string version
 
     20: optional list<AggregatorResult> aggregator_results
+    // alias 多实例别名 (default/judge_b 等); 同 version 多实例时区分, 老数据为空串。
+    21: optional string alias
 }
 
 struct EvalTargetAggregateResult {
@@ -172,6 +225,13 @@ struct Experiment {
 
     // 通知配置
     70: optional ExptNotificationConf notification_conf
+    // ★ 多评测集读视图 (与 domain Experiment 110~114 同义)
+    110: optional ExptEvalSetSourceType eval_set_source_type // single_set(老) / multi_set_config(新); 读接口分流开关
+    111: optional list<OpenAPIEvalSetConfig> eval_set_configs // 权威配置回显, 与 Create OApi 入参同构
+    112: optional list<ExptEvalSetDetail> eval_set_details    // per-set 评测集详情 + item 数 (Get 全填; List 只 id/count)
+    113: optional i32 evaluators_concur_num                   // 评估器并发数回显
+    114: optional i64 total_item_count (api.js_conv = 'true', go.tag = 'json:"total_item_count"') // 实验绑定 item 总数; 首跑前为 0
+
 
     100: optional common.BaseInfo base_info
 }
@@ -419,6 +479,7 @@ struct ExperimentTemplateFilter {
 // 实验列表筛选（对应 domain/expt ExptFilterOption）
 struct ExperimentFilterOption {
     1: optional string fuzzy_name
+    2: optional list<ExptEvalSetSourceType> eval_set_source_types // 评测集来源模式筛选 (与 fuzzy_name 同级, 不走 filters); 未传默认排除 multi_set_config
     10: optional Filters filters
 }
 

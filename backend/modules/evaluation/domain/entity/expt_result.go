@@ -181,8 +181,11 @@ func (e *ExptAggrResult) AggrResEqual(other *ExptAggrResult) bool {
 }
 
 type ExptAggregateResult struct {
-	ExperimentID      int64
-	EvaluatorResults  map[int64]*EvaluatorAggregateResult
+	ExperimentID int64
+	// EvaluatorResults 的 key 为评估器实例 key (entity.EncodeEvaluatorInstanceKey(versionID, alias)):
+	// alias 为空 (老实验/老数据) 时退化为裸 versionID; alias 非空时为 "<versionID>:<alias>"。
+	// 改用实例 key 是为支持同 versionID 多 alias 实例不撞 key (WS5 alias 多实例)。
+	EvaluatorResults  map[string]*EvaluatorAggregateResult
 	Status            int64
 	AnnotationResults map[int64]*AnnotationAggregateResult
 	TargetResults     *EvalTargetMtrAggrResult
@@ -197,6 +200,8 @@ type EvaluatorAggregateResult struct {
 	AggregatorResults  []*AggregatorResult
 	Name               *string
 	Version            *string
+	// Alias 评估器多实例别名; 同 versionID 多实例时区分 (default/judge_b 等), 老数据为空串。
+	Alias string
 }
 
 // 人工标注项粒度聚合结果
@@ -217,29 +222,31 @@ type EvalTargetMtrAggrResult struct {
 
 // item result
 type ExptItemResult struct {
-	ID        int64
-	SpaceID   int64
-	ExptID    int64
-	ExptRunID int64
-	ItemID    int64
-	Status    ItemRunState
-	ErrMsg    string
-	ItemIdx   int32
-	LogID     string
-	Ext       map[string]string
+	ID            int64
+	SpaceID       int64
+	ExptID        int64
+	ExptRunID     int64
+	ItemID        int64
+	ItemVersionID int64 // ★ 0=旧数据/无版本; 真值源 expt_item_ref
+	Status        ItemRunState
+	ErrMsg        string
+	ItemIdx       int32
+	LogID         string
+	Ext           map[string]string
 }
 
 type ExptItemResultRunLog struct {
-	ID          int64
-	SpaceID     int64
-	ExptID      int64
-	ExptRunID   int64
-	ItemID      int64
-	Status      int32
-	ErrMsg      []byte
-	LogID       string
-	ResultState int32
-	UpdatedAt   *time.Time
+	ID            int64
+	SpaceID       int64
+	ExptID        int64
+	ExptRunID     int64
+	ItemID        int64
+	ItemVersionID int64 // ★ 0=旧数据/无版本; 从 expt_item_result 平移
+	Status        int32
+	ErrMsg        []byte
+	LogID         string
+	ResultState   int32
+	UpdatedAt     *time.Time
 }
 
 type ExptItemEvalResult struct {
@@ -295,6 +302,7 @@ type ExptTurnResult struct {
 	ExptID           int64
 	ExptRunID        int64
 	ItemID           int64
+	ItemVersionID    int64 // ★ 0=旧数据/无版本; turn 级筛选用; 真值源 expt_item_ref
 	TurnID           int64
 	Status           int32
 	TraceID          int64
@@ -327,8 +335,34 @@ func (tr *ExptTurnResult) ToRunLogDO() *ExptTurnResultRunLog {
 	}
 }
 
+// EvaluatorResults 存储在 expt_turn_result_run_log.evaluator_result_ids 的 JSON 结构
+// 向后兼容: 老数据用 EvalVerIDToResID (map[versionID]recordID); 新数据用 Registered + Inline 双数组
+// 序列化: 新代码只写 Registered/Inline; 反序列化: 两种格式均可识别
 type EvaluatorResults struct {
-	EvalVerIDToResID map[int64]int64
+	// 旧格式 (老实验 eval_set_source_type=1); 反序列化兜底用
+	EvalVerIDToResID map[int64]int64 `json:"EvalVerIDToResID,omitempty"`
+	// ★ 新格式: Builtin + Builtin别名 (消歧维度: version_id + alias)
+	Registered []*RegisteredEvalResult `json:"registered,omitempty"`
+	// ★ 新格式: Inline (从 target output.__inline_evaluators__ 派生)
+	Inline []*InlineEvalResult `json:"inline,omitempty"`
+}
+
+// RegisteredEvalResult Builtin/Alias evaluator 的执行记录引用
+type RegisteredEvalResult struct {
+	VersionID int64  `json:"version_id"`
+	Alias     string `json:"alias"` // '' = 默认实例
+	RecordID  int64  `json:"record_id"`
+}
+
+// InlineEvalResult Inline evaluator 的执行记录引用
+type InlineEvalResult struct {
+	InlineKey string `json:"inline_key"`
+	RecordID  int64  `json:"record_id"`
+}
+
+// IsNewFormat 判断是否为新格式 (Registered/Inline 双数组)
+func (e *EvaluatorResults) IsNewFormat() bool {
+	return e != nil && (e.Registered != nil || e.Inline != nil)
 }
 
 func (e *EvaluatorResults) Serialize() ([]byte, error) {
@@ -390,6 +424,7 @@ type ExptTurnResultRunLog struct {
 	ExptID             int64
 	ExptRunID          int64
 	ItemID             int64
+	ItemVersionID      int64 // ★ 0=旧数据/无版本; 从 expt_turn_result 平移
 	TurnID             int64
 	Status             TurnRunState
 	TraceID            int64
@@ -398,6 +433,7 @@ type ExptTurnResultRunLog struct {
 	EvaluatorResultIds *EvaluatorResults
 	ErrMsg             string
 	UpdatedAt          time.Time
+	Ext                map[string]string
 }
 
 type ExptTurnEvaluatorResultRef struct {
@@ -407,35 +443,58 @@ type ExptTurnEvaluatorResultRef struct {
 	EvaluatorVersionID int64
 	EvaluatorResultID  int64
 	ExptID             int64
+	// ★ 新增: 4 元组消歧 (source_type, evaluator_version_id, inline_key, alias)
+	SourceType int32  // 0=旧数据(语义同Builtin) / 1=Builtin / 2=Inline
+	InlineKey  string // 仅 Inline: target output __inline_evaluators__ 的 key
+	Alias      string // 仅 Builtin 别名实例; 与 InlineKey 至多一个非空
 }
 
 type ExptEvaluatorRef struct {
 	ID                 int64
 	SpaceID            int64
 	ExptID             int64
+	EvalSetID          int64 // ★ 该 binding 归属的评测集 id; 0=老数据
 	EvaluatorID        int64
 	EvaluatorVersionID int64
+	Alias              string // ★ 别名; '' = 默认实例
+	Filter             []byte // ★ 行级过滤配置快照 JSON; 仅供查询
+	BindingConfig      []byte // ★ binding 配置快照 JSON; 仅供查询
+}
+
+// ExptEvalSetItemCount per eval_set item 计数 (IExptItemRefRepo.CountByEvalSetGrouped 结果)
+type ExptEvalSetItemCount struct {
+	ExptID           int64
+	EvalSetID        int64
+	EvalSetVersionID int64
+	ItemCount        int64
 }
 
 // filter
 type ExptListFilter struct {
 	FuzzyName string
-	Includes  *ExptFilterFields
-	Excludes  *ExptFilterFields
+	// EvalSetSourceTypes 评测集来源模式筛选 (experiment.eval_set_source_type 列): 1=SingleSet / 2=MultiSetConfig。
+	// 与 FuzzyName 同级 (不走 Includes/Excludes)。ListExperiments 默认仅返回 1; 由 Convert 在调用方未指定时注入 [1]。
+	EvalSetSourceTypes []int64
+	Includes           *ExptFilterFields
+	Excludes           *ExptFilterFields
 }
 
 type ExptFilterFields struct {
-	CreatedBy       []string
-	UpdatedBy       []string
-	Status          []int64
-	EvalSetIDs      []int64
-	TargetIDs       []int64
-	EvaluatorIDs    []int64
-	TargetType      []int64
-	ExptType        []int64
-	SourceType      []int64
-	SourceID        []string
-	ExptTemplateIDs []int64
+	CreatedBy []string
+	UpdatedBy []string
+	Status    []int64
+	// EvalSetIDs 按评测集筛选。语义升级为「实验包含该 set」：老实验 = experiment.eval_set_id 列匹配，
+	// 新实验(MultiSetConfig) = 通过 expt_item_ref 倒排（首跑前以主集列覆盖，非主集 set 在首跑前筛不到，为已知限制）。
+	EvalSetIDs []int64
+	// EvalSetVersionIDs 按评测集版本筛选，落地语义同 EvalSetIDs（列匹配 ∪ expt_item_ref 倒排）。
+	EvalSetVersionIDs []int64
+	TargetIDs         []int64
+	EvaluatorIDs      []int64
+	TargetType        []int64
+	ExptType          []int64
+	SourceType        []int64
+	SourceID          []string
+	ExptTemplateIDs   []int64
 	// TriggerType 对应表字段 trigger_type，多值 IN 筛选（如 manual,openapi）
 	TriggerType []string
 }
@@ -444,7 +503,7 @@ func (e *ExptFilterFields) IsValid() bool {
 	if e == nil {
 		return true
 	}
-	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptTemplateIDs} {
+	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.EvalSetVersionIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptTemplateIDs} {
 		for _, item := range slice {
 			if item < 0 {
 				return false
@@ -800,6 +859,7 @@ type ExptTurnResultFilterEntity struct {
 	SpaceID                 int64              `json:"space_id"`
 	ExptID                  int64              `json:"expt_id"`
 	ItemID                  int64              `json:"item_id"`
+	ItemVersionID           int64              `json:"item_version_id"` // ★ 0=旧数据/无版本; 真值源 expt_item_ref, 按 item 版本筛选用
 	ItemIdx                 int32              `json:"item_idx"`
 	TurnID                  int64              `json:"turn_id"`
 	Status                  ItemRunState       `json:"status"`

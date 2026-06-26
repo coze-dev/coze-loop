@@ -375,6 +375,14 @@ const (
 	AsyncEvaluatorZombieTimeoutCode              = 601205069 // the async evaluator was terminated because the experiment item exceeded the zombie timeout before the result was reported
 	asyncEvaluatorZombieTimeoutMessage           = "async evaluator terminated: experiment item exceeded zombie timeout"
 	asyncEvaluatorZombieTimeoutNoAffectStability = true
+
+	AsyncEvalTargetZombieTimeoutCode              = 601205070 // the async eval target was terminated because the experiment item exceeded the zombie timeout before the result was reported
+	asyncEvalTargetZombieTimeoutMessage           = "async eval target terminated: experiment item exceeded zombie timeout"
+	asyncEvalTargetZombieTimeoutNoAffectStability = true
+
+	AsyncEvalTargetTerminatedCode              = 601205071 // the async eval target was terminated because the experiment was manually cancelled
+	asyncEvalTargetTerminatedMessage           = "async eval target terminated: experiment cancelled"
+	asyncEvalTargetTerminatedNoAffectStability = true
 )
 
 func init() {
@@ -929,6 +937,18 @@ func init() {
 		AsyncEvaluatorZombieTimeoutCode,
 		asyncEvaluatorZombieTimeoutMessage,
 		code.WithAffectStability(!asyncEvaluatorZombieTimeoutNoAffectStability),
+	)
+
+	code.Register(
+		AsyncEvalTargetZombieTimeoutCode,
+		asyncEvalTargetZombieTimeoutMessage,
+		code.WithAffectStability(!asyncEvalTargetZombieTimeoutNoAffectStability),
+	)
+
+	code.Register(
+		AsyncEvalTargetTerminatedCode,
+		asyncEvalTargetTerminatedMessage,
+		code.WithAffectStability(!asyncEvalTargetTerminatedNoAffectStability),
 	)
 
 }

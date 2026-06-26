@@ -133,7 +133,8 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain(t *testing.T) {
 		},
 	}
 
-	converted := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	converted, err := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	assert.NoError(t, err)
 	if assert.NotNil(t, converted) {
 		assert.Equal(t, "123", gptr.Indirect(converted.SourceTargetID))
 		assert.Equal(t, "456", gptr.Indirect(converted.BotPublishVersion))
@@ -151,10 +152,20 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain(t *testing.T) {
 		}
 	}
 
-	invalidType := openapiEvalTarget.EvalTargetType("invalid")
-	assert.Nil(t, OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{EvalTargetType: &invalidType}))
+	// An unsupported eval target type (e.g. faas_http is an AccessProtocol, not
+	// an EvalTargetType) must now return an error listing the supported types,
+	// not be silently dropped to nil (Meego 7328626066).
+	invalidType := openapiEvalTarget.EvalTargetType("faas_http")
+	gotInvalid, errInvalid := OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{EvalTargetType: &invalidType})
+	assert.Nil(t, gotInvalid)
+	if assert.Error(t, errInvalid) {
+		assert.Contains(t, errInvalid.Error(), "unsupported eval target type")
+		assert.Contains(t, errInvalid.Error(), "custom_rpc_server")
+	}
 	invalidRegion := openapiEvalTarget.Region("invalid")
-	assert.Nil(t, OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{Region: &invalidRegion}))
+	gotRegion, errRegion := OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{Region: &invalidRegion})
+	assert.Nil(t, gotRegion)
+	assert.Error(t, errRegion)
 }
 
 func TestParseOpenAPIEvaluatorVersions(t *testing.T) {
@@ -229,6 +240,42 @@ func TestDomainExperimentDTO2OpenAPI(t *testing.T) {
 	assert.Nil(t, DomainExperimentDTO2OpenAPI(nil))
 }
 
+// TestDomainExperimentDTO2OpenAPI_MultiSetReadView 验证多评测集读视图 (110~114) 映射到 OpenAPI。
+func TestDomainExperimentDTO2OpenAPI_MultiSetReadView(t *testing.T) {
+	t.Parallel()
+
+	srcType := domainExpt.ExptEvalSetSourceType_MultiSetConfig
+	domainExperiment := &domainExpt.Experiment{
+		ID:                  gptr.Of(int64(1)),
+		EvalSetSourceType:   &srcType,
+		EvaluatorsConcurNum: gptr.Of(int32(4)),
+		TotalItemCount:      gptr.Of(int64(42)),
+		EvalSetDetails: []*domainExpt.ExptEvalSetDetail{
+			{EvalSetID: gptr.Of(int64(10)), EvalSetVersionID: gptr.Of(int64(110)), IsPrimary: gptr.Of(false), ItemCount: gptr.Of(int32(12))},
+			{EvalSetID: gptr.Of(int64(20)), EvalSetVersionID: gptr.Of(int64(220)), IsPrimary: gptr.Of(true), ItemCount: gptr.Of(int32(30))},
+		},
+	}
+
+	converted := DomainExperimentDTO2OpenAPI(domainExperiment)
+	if assert.NotNil(t, converted) {
+		assert.Equal(t, openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig, converted.GetEvalSetSourceType())
+		assert.Equal(t, int32(4), converted.GetEvaluatorsConcurNum())
+		assert.Equal(t, int64(42), converted.GetTotalItemCount())
+		if assert.Len(t, converted.EvalSetDetails, 2) {
+			assert.Equal(t, int64(10), converted.EvalSetDetails[0].GetEvalSetID())
+			assert.Equal(t, int32(12), converted.EvalSetDetails[0].GetItemCount())
+			assert.False(t, converted.EvalSetDetails[0].GetIsPrimary())
+			assert.True(t, converted.EvalSetDetails[1].GetIsPrimary())
+		}
+	}
+
+	// SingleSet: source_type 映射为 single_set, 新字段缺省
+	single := domainExpt.ExptEvalSetSourceType_SingleSet
+	out := DomainExperimentDTO2OpenAPI(&domainExpt.Experiment{ID: gptr.Of(int64(2)), EvalSetSourceType: &single})
+	assert.Equal(t, openapiExperiment.ExptEvalSetSourceTypeSingleSet, out.GetEvalSetSourceType())
+	assert.Empty(t, out.EvalSetDetails)
+}
+
 func TestOpenAPIAggregatorResultsDO2DTOs(t *testing.T) {
 	t.Parallel()
 
@@ -267,6 +314,8 @@ func TestMapOpenAPIEvalTargetType(t *testing.T) {
 		{"workflow", openapiEvalTarget.EvalTargetTypeCozeWorkflow, domaindoEvalTarget.EvalTargetType_CozeWorkflow, false},
 		{"volcengine", openapiEvalTarget.EvalTargetTypeVolcengineAgent, domaindoEvalTarget.EvalTargetType_VolcengineAgent, false},
 		{"rpc", openapiEvalTarget.EvalTargetTypeCustomRPCServer, domaindoEvalTarget.EvalTargetType_CustomRPCServer, false},
+		{"a2a_agent", openapiEvalTarget.EvalTargetTypeA2Agent, domaindoEvalTarget.EvalTargetType_A2AAgent, false},
+		{"custom_agent", openapiEvalTarget.EvalTargetTypeCustomAgent, domaindoEvalTarget.EvalTargetType_CustomAgent, false},
 		{"invalid", openapiEvalTarget.EvalTargetType("invalid"), 0, true},
 	}
 
@@ -1593,11 +1642,14 @@ func TestOpenAPICreateEvalTargetParamDTO2DomainV2(t *testing.T) {
 	paramDraft := &openapi.SubmitExperimentEvalTargetParam{
 		BotInfoType: &botDraft,
 	}
-	gotDraft := OpenAPICreateEvalTargetParamDTO2Domain(paramDraft)
+	gotDraft, errDraft := OpenAPICreateEvalTargetParamDTO2Domain(paramDraft)
+	assert.NoError(t, errDraft)
 	assert.Equal(t, domaindoEvalTarget.CozeBotInfoType_DraftBot, *gotDraft.BotInfoType)
 
 	invalidBot := openapiEvalTarget.CozeBotInfoType("invalid")
-	assert.Nil(t, OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{BotInfoType: &invalidBot}))
+	gotInvalidBot, errInvalidBot := OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{BotInfoType: &invalidBot})
+	assert.Nil(t, gotInvalidBot)
+	assert.Error(t, errInvalidBot)
 }
 
 func TestDomainRuntimeParamDTO2OpenAPI(t *testing.T) {
@@ -2568,6 +2620,45 @@ func TestOpenAPIExperimentFilterOptionDTO2Domain(t *testing.T) {
 		require.NotNil(t, got.GetFilters())
 	})
 
+	t.Run("eval_set_source_types only — 不被判空返回 nil, 透传内部枚举", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			EvalSetSourceTypes: []openapiExperiment.ExptEvalSetSourceType{
+				openapiExperiment.ExptEvalSetSourceTypeSingleSet,
+				openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig,
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got, "仅传 eval_set_source_types 时不应判空返回 nil")
+		assert.Equal(t, []domainExpt.ExptEvalSetSourceType{
+			domainExpt.ExptEvalSetSourceType_SingleSet,
+			domainExpt.ExptEvalSetSourceType_MultiSetConfig,
+		}, got.GetEvalSetSourceTypes())
+	})
+
+	t.Run("eval_set_source_types 与 fuzzy 组合", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			FuzzyName: gptr.Of("abc"),
+			EvalSetSourceTypes: []openapiExperiment.ExptEvalSetSourceType{
+				openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig,
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "abc", got.GetFuzzyName())
+		assert.Equal(t, []domainExpt.ExptEvalSetSourceType{domainExpt.ExptEvalSetSourceType_MultiSetConfig}, got.GetEvalSetSourceTypes())
+	})
+
+	t.Run("未知 source_type 跳过", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			EvalSetSourceTypes: []openapiExperiment.ExptEvalSetSourceType{
+				openapiExperiment.ExptEvalSetSourceType("bogus"),
+			},
+		})
+		assert.NoError(t, err)
+		// 全部跳过后无有效 source_types, 且无 fuzzy/filters → 整体判空返回 nil
+		assert.Nil(t, got)
+	})
+
 	t.Run("invalid filter returns error", func(t *testing.T) {
 		logicAnd := openapiExperiment.FilterLogicOpAnd
 		badType := openapiExperiment.FilterFieldType("unknown_bad")
@@ -2923,7 +3014,8 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain_WithClusterAndAgentConnection(t 
 		},
 	}
 
-	converted := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	converted, err := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	assert.NoError(t, err)
 	if assert.NotNil(t, converted) {
 		assert.Equal(t, "agent-1", gptr.Indirect(converted.SourceTargetID))
 		assert.Equal(t, gptr.Of("cluster-abc"), converted.Cluster)
@@ -2952,11 +3044,61 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain_WithClusterAndAgentConnection(t 
 	paramNoConn := &openapi.SubmitExperimentEvalTargetParam{
 		SourceTargetID: gptr.Of("agent-2"),
 	}
-	converted2 := OpenAPICreateEvalTargetParamDTO2Domain(paramNoConn)
+	converted2, err2 := OpenAPICreateEvalTargetParamDTO2Domain(paramNoConn)
+	assert.NoError(t, err2)
 	if assert.NotNil(t, converted2) {
 		assert.Nil(t, converted2.Cluster)
 		assert.Nil(t, converted2.AgentConnection)
 	}
+}
+
+// TestOpenAPICreateEvalTargetParamDTO2Domain_AgentTypes verifies the OpenAPI
+// experiment-create path accepts the two agent eval target types that the web
+// link already supports: a2a_agent (type=9) and custom_agent (type=10, the
+// in-house long-connection agent). The convertor must translate the string
+// type to the int domain enum and carry the agent connection info.
+func TestOpenAPICreateEvalTargetParamDTO2Domain_AgentTypes(t *testing.T) {
+	t.Parallel()
+
+	// custom_agent (长链接 Agent): submitted with cluster + agent_connection.
+	customAgentType := openapiEvalTarget.EvalTargetTypeCustomAgent
+	customAgentParam := &openapi.SubmitExperimentEvalTargetParam{
+		SourceTargetID: gptr.Of("custom-agent-1"),
+		EvalTargetType: &customAgentType,
+		Cluster:        gptr.Of("cluster-loong"),
+		AgentConnection: &openapiEvalTarget.AgentConnection{
+			Psm: gptr.Of("agent.psm"),
+			FrontierInfo: &openapiEvalTarget.FrontierInfo{
+				AppID: gptr.Of(int64(100)),
+			},
+		},
+	}
+	convertedCustom, errCustom := OpenAPICreateEvalTargetParamDTO2Domain(customAgentParam)
+	assert.NoError(t, errCustom)
+	if assert.NotNil(t, convertedCustom) {
+		assert.Equal(t, domaindoEvalTarget.EvalTargetType_CustomAgent, gptr.Indirect(convertedCustom.EvalTargetType))
+		assert.Equal(t, gptr.Of("cluster-loong"), convertedCustom.Cluster)
+		if assert.NotNil(t, convertedCustom.AgentConnection) {
+			assert.Equal(t, gptr.Of("agent.psm"), convertedCustom.AgentConnection.Psm)
+		}
+	}
+
+	// a2a_agent: referenced by source_target_id (pre-registered Application).
+	a2aType := openapiEvalTarget.EvalTargetTypeA2Agent
+	a2aParam := &openapi.SubmitExperimentEvalTargetParam{
+		SourceTargetID: gptr.Of("a2a-agent-1"),
+		EvalTargetType: &a2aType,
+	}
+	convertedA2A, errA2A := OpenAPICreateEvalTargetParamDTO2Domain(a2aParam)
+	assert.NoError(t, errA2A)
+	if assert.NotNil(t, convertedA2A) {
+		assert.Equal(t, domaindoEvalTarget.EvalTargetType_A2AAgent, gptr.Indirect(convertedA2A.EvalTargetType))
+		assert.Equal(t, "a2a-agent-1", gptr.Indirect(convertedA2A.SourceTargetID))
+	}
+
+	// Both agent types must pass the up-front validation gate.
+	assert.True(t, IsSupportedOpenAPIEvalTargetType(openapiEvalTarget.EvalTargetTypeA2Agent))
+	assert.True(t, IsSupportedOpenAPIEvalTargetType(openapiEvalTarget.EvalTargetTypeCustomAgent))
 }
 
 func TestOpenapiAgentConnectionDTO2Domain_Nil(t *testing.T) {

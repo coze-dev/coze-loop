@@ -498,6 +498,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 			_prompts0.GET("/:prompt_id", append(_getpromptoapiMw(handler), apis.GetPromptOApi)...)
 			{
 				_eval_targets0 := _loop.Group("/eval_targets", _eval_targets0Mw(handler)...)
+				_eval_targets0.POST("/async_debug", append(_asyncdebugevaltargetoapiMw(handler), apis.AsyncDebugEvalTargetOApi)...)
 				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
 			}
 			{
@@ -573,6 +574,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiments0.POST("/list", append(_listexperimentsoapiMw(handler), apis.ListExperimentsOApi)...)
 				{
 					_eval_target_records0 := _evaluation0.Group("/eval_target_records", _eval_target_records0Mw(handler)...)
+					_eval_target_records0.GET("/:eval_target_record_id", append(_getevaltargetrecordoapiMw(handler), apis.GetEvalTargetRecordOApi)...)
 					_eval_target_records0.POST("/output_fields", append(_getevaltargetoutputfieldcontentoapiMw(handler), apis.GetEvalTargetOutputFieldContentOApi)...)
 				}
 				{
@@ -626,6 +628,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_traces0.POST("/list", append(_listtracesoapiMw(handler), apis.ListTracesOApi)...)
 				_traces0.POST("/search", append(_searchtraceoapiMw(handler), apis.SearchTraceOApi)...)
 				_traces0.POST("/search_tree", append(_searchtracetreeoapiMw(handler), apis.SearchTraceTreeOApi)...)
+				_traces0.POST("/trajectory", append(_listtrajectoryoapiMw(handler), apis.ListTrajectoryOApi)...)
 			}
 		}
 	}

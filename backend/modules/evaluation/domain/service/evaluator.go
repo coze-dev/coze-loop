@@ -33,6 +33,9 @@ type EvaluatorService interface {
 	RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// ShouldInterceptEvaluator 判断评估器是否应劫持本次评估，劫持时创建记录并返回
 	ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (record *entity.EvaluatorRecord, intercepted bool, err error)
+	// CreateSkippedEvaluatorRecord 行级 filter 不命中时, 不实际跑评估, 落一条 Status=Skipped 的占位 record
+	// (供 GUI / 数仓展示"已跳过")。仅写状态骨架, 不带 input/output 数据。
+	CreateSkippedEvaluatorRecord(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// AsyncRunEvaluator Agent evaluator_version 异步运行
 	AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// DebugEvaluator 调试 evaluator_version；新增 exptSpaceID 作为实验空间ID

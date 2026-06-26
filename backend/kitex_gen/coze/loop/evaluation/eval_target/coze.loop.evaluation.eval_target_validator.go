@@ -45,6 +45,11 @@ func (p *CreateEvalTargetParam) IsValid() error {
 			return fmt.Errorf("field AgentConnection not valid, %w", err)
 		}
 	}
+	if p.SandboxAgent != nil {
+		if err := p.SandboxAgent.IsValid(); err != nil {
+			return fmt.Errorf("field SandboxAgent not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *CreateEvalTargetResponse) IsValid() error {

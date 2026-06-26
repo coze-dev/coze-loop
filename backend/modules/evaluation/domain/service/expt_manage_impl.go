@@ -42,6 +42,7 @@ func NewExptManager(
 	exptRunLogRepo repo.IExptRunLogRepo,
 	exptStatsRepo repo.IExptStatsRepo,
 	exptItemResultRepo repo.IExptItemResultRepo,
+	exptItemRefRepo repo.IExptItemRefRepo,
 	exptTurnResultRepo repo.IExptTurnResultRepo,
 	configer component.IConfiger,
 	quotaRepo repo.QuotaRepo,
@@ -71,6 +72,7 @@ func NewExptManager(
 		runLogRepo:                  exptRunLogRepo,
 		statsRepo:                   exptStatsRepo,
 		itemResultRepo:              exptItemResultRepo,
+		itemRefRepo:                 exptItemRefRepo,
 		turnResultRepo:              exptTurnResultRepo,
 		configer:                    configer,
 		quotaRepo:                   quotaRepo,
@@ -103,6 +105,7 @@ type ExptMangerImpl struct {
 	runLogRepo                  repo.IExptRunLogRepo
 	statsRepo                   repo.IExptStatsRepo
 	itemResultRepo              repo.IExptItemResultRepo
+	itemRefRepo                 repo.IExptItemRefRepo
 	turnResultRepo              repo.IExptTurnResultRepo
 	quotaRepo                   repo.QuotaRepo
 	mutex                       lock.ILocker
@@ -147,6 +150,11 @@ func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceI
 		exptDetails[idx].Evaluators = exptTuples[idx].Evaluators
 	}
 
+	// ★ MultiSetConfig 读视图: 填充 eval_set_details (含详情) + total_item_count
+	if err := e.enrichEvalSetDetails(ctx, exptDetails, spaceID, true, session); err != nil {
+		return nil, err
+	}
+
 	return exptDetails, nil
 }
 
@@ -171,6 +179,11 @@ func (e *ExptMangerImpl) GetDetail(ctx context.Context, exptID, spaceID int64, s
 
 	expts, err := e.packExperimentResult(ctx, []*entity.Experiment{expt}, spaceID, session)
 	if err != nil {
+		return nil, err
+	}
+
+	// ★ MultiSetConfig 读视图: 单查同样全填 (含详情)
+	if err := e.enrichEvalSetDetails(ctx, expts, spaceID, true, session); err != nil {
 		return nil, err
 	}
 
@@ -216,6 +229,9 @@ func (e *ExptMangerImpl) packExperimentResult(ctx context.Context, expts []*enti
 	if err := e.fillExperimentExptSourceForQuery(ctx, expts, spaceID); err != nil {
 		return nil, err
 	}
+
+	// 注: MultiSetConfig 读视图 (EvalSetDetails + TotalItemCount) 由各读路径 (MGetDetail/GetDetail/List)
+	// 在 packExperimentResult 之后调用 enrichEvalSetDetails 填充, 此处不重复处理。
 
 	return expts, nil
 }
@@ -667,6 +683,157 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 	return res, nil
 }
 
+// enrichEvalSetDetails 为新实验 (MultiSetConfig) 填充多评测集读视图: EvalSetDetails (per-set item 数 + 详情) 与 TotalItemCount。
+//
+// 分流硬约束 (§3 要点): 必须以 experiment.eval_set_source_type 列判定, 不能用「有无 expt_item_ref 行」——
+// 已创建未提交的新实验无 ref 行, 用行探测会被误判为老实验。老实验 (SingleSet) 直接跳过, 老字段照旧。
+//
+// withSetDetail=true (Get/MGetDetail): 额外按 set 列表批拉 EvaluationSet 详情回填 detail.EvalSet;
+// withSetDetail=false (List): 只填 EvalSetID/EvalSetVersionID/IsPrimary/ItemCount, 省去 set 详情拉取。
+//
+// item_count/total_item_count 来源 expt_item_ref.CountByEvalSetGrouped; 首跑前查不到行 → 计数缺省 (0), total 仅累加已查到的行。
+func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*entity.Experiment, spaceID int64, withSetDetail bool, session *entity.Session) error {
+	// 1. 过滤出新实验 (MultiSetConfig 且有 EvalSetConfigs)
+	newExpts := make([]*entity.Experiment, 0, len(expts))
+	for _, expt := range expts {
+		if expt == nil {
+			continue
+		}
+		if expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+			continue
+		}
+		if expt.EvalConf == nil || len(expt.EvalConf.EvalSetConfigs) == 0 {
+			continue
+		}
+		newExpts = append(newExpts, expt)
+	}
+	if len(newExpts) == 0 {
+		return nil
+	}
+
+	// 2. 批量统计 per-set item 数 (首跑前无行, 缺省 0)
+	exptIDs := make([]int64, 0, len(newExpts))
+	for _, expt := range newExpts {
+		exptIDs = append(exptIDs, expt.ID)
+	}
+	countMap := make(map[int64][]*entity.ExptEvalSetItemCount)
+	if e.itemRefRepo != nil {
+		got, err := e.itemRefRepo.CountByEvalSetGrouped(ctx, spaceID, exptIDs)
+		if err != nil {
+			// 计数失败不阻断主读路径, 降级为未填充 (前端按未开始处理)
+			logs.CtxWarn(ctx, "enrichEvalSetDetails CountByEvalSetGrouped fail, expt_ids: %v, err: %v", exptIDs, err)
+		} else {
+			countMap = got
+		}
+	}
+
+	// 3. 逐实验构造 EvalSetDetails + TotalItemCount, 同时收集待批拉的 set 版本/草稿 id
+	type setKey struct {
+		evalSetID        int64
+		evalSetVersionID int64
+	}
+	versionIDSet := make(map[int64]struct{})
+	draftIDSet := make(map[int64]struct{})
+	for _, expt := range newExpts {
+		// (eval_set_id, eval_set_version_id) -> count
+		cnt := make(map[setKey]int64)
+		var total int64
+		for _, c := range countMap[expt.ID] {
+			if c == nil {
+				continue
+			}
+			cnt[setKey{c.EvalSetID, c.EvalSetVersionID}] = c.ItemCount
+			total += c.ItemCount
+		}
+		expt.TotalItemCount = total
+
+		details := make([]*entity.ExptEvalSetDetail, 0, len(expt.EvalConf.EvalSetConfigs))
+		for _, sc := range expt.EvalConf.EvalSetConfigs {
+			if sc == nil {
+				continue
+			}
+			detail := &entity.ExptEvalSetDetail{
+				EvalSetID:        sc.EvalSetID,
+				EvalSetVersionID: sc.EvalSetVersionID,
+				IsPrimary:        sc.EvalSetID == expt.EvalSetID, // 主集(封面)与 experiment.eval_set_id 列一致
+				ItemCount:        int32(cnt[setKey{sc.EvalSetID, sc.EvalSetVersionID}]),
+			}
+			details = append(details, detail)
+			if withSetDetail {
+				// 草稿 (version_id==0 或等于 set_id) 与版本化分流, 对齐 mgetExptTupleByID 写法
+				if sc.EvalSetVersionID == 0 || sc.EvalSetVersionID == sc.EvalSetID {
+					if sc.EvalSetID > 0 {
+						draftIDSet[sc.EvalSetID] = struct{}{}
+					}
+				} else {
+					versionIDSet[sc.EvalSetVersionID] = struct{}{}
+				}
+			}
+		}
+		expt.EvalSetDetails = details
+	}
+
+	if !withSetDetail || (len(versionIDSet) == 0 && len(draftIDSet) == 0) {
+		return nil
+	}
+
+	// 4. Get 路径: 按 set 列表批拉 EvaluationSet 详情
+	versionedByVersionID := make(map[int64]*entity.EvaluationSet)
+	draftBySetID := make(map[int64]*entity.EvaluationSet)
+	pool, err := goroutine.NewPool(2)
+	if err != nil {
+		return err
+	}
+	if len(versionIDSet) > 0 {
+		verIDs := maps.ToSlice(versionIDSet, func(k int64, _ struct{}) int64 { return k })
+		pool.Add(func() error {
+			got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(true))
+			if poolErr != nil {
+				return poolErr
+			}
+			for _, elem := range got {
+				if elem == nil || elem.EvaluationSet == nil || elem.Version == nil {
+					continue
+				}
+				elem.EvaluationSet.EvaluationSetVersion = elem.Version
+				versionedByVersionID[elem.Version.ID] = elem.EvaluationSet
+			}
+			return nil
+		})
+	}
+	if len(draftIDSet) > 0 {
+		setIDs := maps.ToSlice(draftIDSet, func(k int64, _ struct{}) int64 { return k })
+		pool.Add(func() error {
+			got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(spaceID), setIDs, gptr.Of(false))
+			if poolErr != nil {
+				return poolErr
+			}
+			for _, elem := range got {
+				if elem == nil {
+					continue
+				}
+				draftBySetID[elem.ID] = elem
+			}
+			return nil
+		})
+	}
+	if err := pool.Exec(ctx); err != nil { // ignore_security_alert_wait_for_fix SQL_INJECTION
+		return err
+	}
+
+	for _, expt := range newExpts {
+		for _, detail := range expt.EvalSetDetails {
+			if detail.EvalSetVersionID == 0 || detail.EvalSetVersionID == detail.EvalSetID {
+				detail.EvalSet = draftBySetID[detail.EvalSetID]
+			} else {
+				detail.EvalSet = versionedByVersionID[detail.EvalSetVersionID]
+			}
+		}
+	}
+
+	return nil
+}
+
 func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experiment) *entity.ExptTupleID {
 	// evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
 	// for _, ref := range expt.EvaluatorVersionRef {
@@ -740,6 +907,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		if req.CreateEvalTargetParam.AgentConnection != nil {
 			opts = append(opts, entity.WithAgentConnection(req.CreateEvalTargetParam.AgentConnection))
 		}
+		if req.CreateEvalTargetParam.SandboxAgent != nil {
+			opts = append(opts, entity.WithSandboxAgent(req.CreateEvalTargetParam.SandboxAgent))
+		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, req.WorkspaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
 			opts...)
 		if err != nil {
@@ -789,18 +959,57 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 
 	evaluatorRefs := make([]*entity.ExptEvaluatorVersionRef, 0)
 	exptTurnResultFilterKeyMappings := make([]*entity.ExptTurnResultFilterKeyMapping, 0)
-	for i, es := range tuple.Evaluators {
+	// evaluatorRefs 是"仅供查询"的 ref 表, 保持按 version 粒度 (一 version 一行), 本次不改其去重粒度.
+	for _, es := range tuple.Evaluators {
 		evaluatorRefs = append(evaluatorRefs, &entity.ExptEvaluatorVersionRef{
 			EvaluatorID:        es.ID,
 			EvaluatorVersionID: es.GetEvaluatorVersionID(),
 		})
-		exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
-			SpaceID:   req.WorkspaceID,
-			ExptID:    ids[0],
-			FromField: strconv.FormatInt(es.GetEvaluatorVersionID(), 10),
-			ToKey:     "key" + strconv.Itoa(i+1),
-			FieldType: entity.FieldTypeEvaluator,
-		})
+	}
+
+	// ★ key_mapping 按 (version_id, alias) 实例展开: 每个实例独占一行 + 独立 ToKey, 治理同 version 多 alias 撞 key.
+	// CK 填充期 (expt_result_impl.go) 用 EncodeEvaluatorInstanceKey(versionID, record.Alias) 作 FromField 查本表取 ToKey,
+	// 因此同一 version 配 judge_A / judge_B 两个 alias 时必须各生成一行, 否则另一 alias 的 lookup 落空、分数进不了 CK.
+	if req.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		// 新路径: 遍历每个 set 的每个 (EvaluatorVersionID, Alias) 实例.
+		// 多个 set 可能出现相同 (version, alias) -> 按 (version,alias) 去重, 只生成一行 (避免重复 ToKey).
+		// ToKey 用全局递增编号 ("key1"/"key2"...), 跨所有实例连续递增, 不按 version 复用.
+		seenInstance := make(map[string]struct{})
+		keyIdx := 0
+		for _, setConf := range req.EvalSetConfigs {
+			if setConf == nil {
+				continue
+			}
+			for _, evConf := range setConf.EvaluatorConfs {
+				if evConf == nil {
+					continue
+				}
+				fromField := entity.EncodeEvaluatorInstanceKey(evConf.EvaluatorVersionID, evConf.Alias)
+				if _, ok := seenInstance[fromField]; ok {
+					continue
+				}
+				seenInstance[fromField] = struct{}{}
+				keyIdx++
+				exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
+					SpaceID:   req.WorkspaceID,
+					ExptID:    ids[0],
+					FromField: fromField,
+					ToKey:     "key" + strconv.Itoa(keyIdx),
+					FieldType: entity.FieldTypeEvaluator,
+				})
+			}
+		}
+	} else {
+		// 老 SingleSet 路径: 保持按 version (alias="" 退化裸 versionID, ToKey="key"+(i+1)) 的逻辑完全不变, 旧实验 byte 级一致.
+		for i, es := range tuple.Evaluators {
+			exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
+				SpaceID:   req.WorkspaceID,
+				ExptID:    ids[0],
+				FromField: entity.EncodeEvaluatorInstanceKey(es.GetEvaluatorVersionID(), ""),
+				ToKey:     "key" + strconv.Itoa(i+1),
+				FieldType: entity.FieldTypeEvaluator,
+			})
+		}
 	}
 
 	triggerType := req.TriggerType
@@ -829,6 +1038,28 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
+	}
+
+	// ★ 设置实验模式分流列 (读接口和执行链路的唯一分流依据)
+	// 信任入参透传的 EvalSetSourceType (== MultiSetConfig 走新路径), 不再从 len(EvalSetConfigs) 派生。
+	if req.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		// 新路径入参校验: set 去重 / (version,alias) 唯一 / filter 白名单 / alias 合法 / target_confs len<=1
+		if err := entity.ValidateEvalSetConfigs(req.EvalSetConfigs); err != nil {
+			return nil, err
+		}
+		do.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
+		// 将完整的多评测集配置序列化进 eval_conf，供调度期读取
+		if do.EvalConf == nil {
+			do.EvalConf = &entity.EvaluationConfiguration{}
+		}
+		do.EvalConf.EvalSetConfigs = req.EvalSetConfigs
+		// 新实验主集标签: 前端可传，无则用第一个 set 兜底
+		if do.EvalSetID == 0 && len(req.EvalSetConfigs) > 0 {
+			do.EvalSetID = req.EvalSetConfigs[0].EvalSetID
+			do.EvalSetVersionID = req.EvalSetConfigs[0].EvalSetVersionID
+		}
+	} else {
+		do.EvalSetSourceType = entity.ExptEvalSetSourceType_SingleSet
 	}
 	if req.Visibility != nil {
 		do.Visibility = *req.Visibility
@@ -990,6 +1221,11 @@ func (e *ExptMangerImpl) List(ctx context.Context, page, pageSize int32, spaceID
 
 	expts, err = e.packExperimentResult(ctx, expts, spaceID, session)
 	if err != nil {
+		return nil, 0, err
+	}
+
+	// ★ MultiSetConfig 读视图: List 轻量填充 (只 id/count, 不拉 EvaluationSet 详情)
+	if err := e.enrichEvalSetDetails(ctx, expts, spaceID, false, session); err != nil {
 		return nil, 0, err
 	}
 

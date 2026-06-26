@@ -25,6 +25,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		ExptInsightAnalysisFeedbackComment: newExptInsightAnalysisFeedbackComment(db, opts...),
 		ExptInsightAnalysisFeedbackVote:    newExptInsightAnalysisFeedbackVote(db, opts...),
 		ExptInsightAnalysisRecord:          newExptInsightAnalysisRecord(db, opts...),
+		ExptItemRef:                        newExptItemRef(db, opts...),
 		ExptItemResult:                     newExptItemResult(db, opts...),
 		ExptItemResultRunLog:               newExptItemResultRunLog(db, opts...),
 		ExptResultExportRecord:             newExptResultExportRecord(db, opts...),
@@ -51,6 +52,7 @@ type Query struct {
 	ExptInsightAnalysisFeedbackComment exptInsightAnalysisFeedbackComment
 	ExptInsightAnalysisFeedbackVote    exptInsightAnalysisFeedbackVote
 	ExptInsightAnalysisRecord          exptInsightAnalysisRecord
+	ExptItemRef                        exptItemRef
 	ExptItemResult                     exptItemResult
 	ExptItemResultRunLog               exptItemResultRunLog
 	ExptResultExportRecord             exptResultExportRecord
@@ -78,6 +80,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		ExptInsightAnalysisFeedbackComment: q.ExptInsightAnalysisFeedbackComment.clone(db),
 		ExptInsightAnalysisFeedbackVote:    q.ExptInsightAnalysisFeedbackVote.clone(db),
 		ExptInsightAnalysisRecord:          q.ExptInsightAnalysisRecord.clone(db),
+		ExptItemRef:                        q.ExptItemRef.clone(db),
 		ExptItemResult:                     q.ExptItemResult.clone(db),
 		ExptItemResultRunLog:               q.ExptItemResultRunLog.clone(db),
 		ExptResultExportRecord:             q.ExptResultExportRecord.clone(db),
@@ -112,6 +115,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		ExptInsightAnalysisFeedbackComment: q.ExptInsightAnalysisFeedbackComment.replaceDB(db),
 		ExptInsightAnalysisFeedbackVote:    q.ExptInsightAnalysisFeedbackVote.replaceDB(db),
 		ExptInsightAnalysisRecord:          q.ExptInsightAnalysisRecord.replaceDB(db),
+		ExptItemRef:                        q.ExptItemRef.replaceDB(db),
 		ExptItemResult:                     q.ExptItemResult.replaceDB(db),
 		ExptItemResultRunLog:               q.ExptItemResultRunLog.replaceDB(db),
 		ExptResultExportRecord:             q.ExptResultExportRecord.replaceDB(db),
@@ -136,6 +140,7 @@ type queryCtx struct {
 	ExptInsightAnalysisFeedbackComment *exptInsightAnalysisFeedbackCommentDo
 	ExptInsightAnalysisFeedbackVote    *exptInsightAnalysisFeedbackVoteDo
 	ExptInsightAnalysisRecord          *exptInsightAnalysisRecordDo
+	ExptItemRef                        *exptItemRefDo
 	ExptItemResult                     *exptItemResultDo
 	ExptItemResultRunLog               *exptItemResultRunLogDo
 	ExptResultExportRecord             *exptResultExportRecordDo
@@ -160,6 +165,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		ExptInsightAnalysisFeedbackComment: q.ExptInsightAnalysisFeedbackComment.WithContext(ctx),
 		ExptInsightAnalysisFeedbackVote:    q.ExptInsightAnalysisFeedbackVote.WithContext(ctx),
 		ExptInsightAnalysisRecord:          q.ExptInsightAnalysisRecord.WithContext(ctx),
+		ExptItemRef:                        q.ExptItemRef.WithContext(ctx),
 		ExptItemResult:                     q.ExptItemResult.WithContext(ctx),
 		ExptItemResultRunLog:               q.ExptItemResultRunLog.WithContext(ctx),
 		ExptResultExportRecord:             q.ExptResultExportRecord.WithContext(ctx),

@@ -1616,3 +1616,270 @@ func (f *fakeEvaluationAdapter) InvokeExperiment(ctx context.Context, param *rpc
 func (f *fakeEvaluationAdapter) FinishExperiment(ctx context.Context, param *rpc.FinishExperimentReq) error {
 	return f.finishResp.err
 }
+
+func TestAutoEvaluateProcessor_BatchInvoke(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success with multiple spans", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		taskObj := buildTestTask(t)
+		taskObj.Sampler.SampleSize = 100
+
+		schemaStr := makeSchemaJSON(t, "field_1", common.ContentTypeText)
+		taskRun := &taskentity.TaskRun{
+			ID:            2001,
+			TaskID:        taskObj.ID,
+			WorkspaceID:   taskObj.WorkspaceID,
+			TaskType:      taskentity.TaskRunTypeNewData,
+			RunStatus:     taskentity.TaskRunStatusRunning,
+			TaskRunConfig: buildTaskRunConfig(schemaStr),
+		}
+
+		spans := []*loop_span.Span{
+			{TraceID: "trace1", SpanID: "span1", Input: "hello", StartTime: time.Now().UnixMilli()},
+			{TraceID: "trace2", SpanID: "span2", Input: "world", StartTime: time.Now().UnixMilli()},
+		}
+
+		trigger := &taskexe.BatchTrigger{
+			Task:    taskObj,
+			Spans:   spans,
+			TaskRun: taskRun,
+		}
+
+		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+		repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil).AnyTimes()
+		repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, taskRun.ID, gomock.Any()).Return(nil).AnyTimes()
+		repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(2), nil)
+		repoMock.EXPECT().GetTaskRunCount(gomock.Any(), taskObj.ID, taskRun.ID).Return(int64(2), nil)
+
+		evalMock := &fakeEvaluationAdapter{}
+		evalMock.invokeResp.addedItems = 2
+
+		proc := &AutoEvaluateProcessor{
+			evaluationSvc: evalMock,
+			taskRepo:      repoAdapter,
+		}
+		err := proc.BatchInvoke(context.Background(), trigger)
+		assert.NoError(t, err)
+		require.NotNil(t, evalMock.lastInvoke)
+		assert.True(t, len(evalMock.lastInvoke.Items) > 0)
+	})
+
+	t.Run("nil auto evaluate run config returns nil", func(t *testing.T) {
+		t.Parallel()
+
+		taskObj := buildTestTask(t)
+		taskRun := &taskentity.TaskRun{
+			ID:            2002,
+			TaskID:        taskObj.ID,
+			WorkspaceID:   taskObj.WorkspaceID,
+			TaskType:      taskentity.TaskRunTypeNewData,
+			RunStatus:     taskentity.TaskRunStatusRunning,
+			TaskRunConfig: &taskentity.TaskRunConfig{},
+		}
+
+		trigger := &taskexe.BatchTrigger{
+			Task:    taskObj,
+			Spans:   []*loop_span.Span{{TraceID: "t1", SpanID: "s1", Input: "hi"}},
+			TaskRun: taskRun,
+		}
+
+		proc := &AutoEvaluateProcessor{}
+		err := proc.BatchInvoke(context.Background(), trigger)
+		assert.NoError(t, err)
+	})
+
+	t.Run("span with invalid field mapping still produces items", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		taskObj := buildTestTask(t)
+		taskObj.Sampler.SampleSize = 100
+		taskObj.TaskConfig.AutoEvaluateConfigs[0].FieldMappings[0].TraceFieldKey = "NonExistentField"
+
+		schemaStr := makeSchemaJSON(t, "field_1", common.ContentTypeText)
+		taskRun := &taskentity.TaskRun{
+			ID:            2003,
+			TaskID:        taskObj.ID,
+			WorkspaceID:   taskObj.WorkspaceID,
+			TaskType:      taskentity.TaskRunTypeNewData,
+			RunStatus:     taskentity.TaskRunStatusRunning,
+			TaskRunConfig: buildTaskRunConfig(schemaStr),
+		}
+
+		trigger := &taskexe.BatchTrigger{
+			Task:    taskObj,
+			Spans:   []*loop_span.Span{{TraceID: "t1", SpanID: "s1", Input: "hi"}},
+			TaskRun: taskRun,
+		}
+
+		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+		repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil).AnyTimes()
+		repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, taskRun.ID, gomock.Any()).Return(nil).AnyTimes()
+		repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(1), nil)
+		repoMock.EXPECT().GetTaskRunCount(gomock.Any(), taskObj.ID, taskRun.ID).Return(int64(1), nil)
+
+		evalMock := &fakeEvaluationAdapter{}
+		evalMock.invokeResp.addedItems = 1
+		proc := &AutoEvaluateProcessor{
+			evaluationSvc: evalMock,
+			taskRepo:      repoAdapter,
+		}
+		err := proc.BatchInvoke(context.Background(), trigger)
+		assert.NoError(t, err)
+		require.NotNil(t, evalMock.lastInvoke)
+	})
+
+	t.Run("exceed sample size rolls back counts", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		taskObj := buildTestTask(t)
+		taskObj.Sampler.SampleSize = 1
+
+		schemaStr := makeSchemaJSON(t, "field_1", common.ContentTypeText)
+		taskRun := &taskentity.TaskRun{
+			ID:            2004,
+			TaskID:        taskObj.ID,
+			WorkspaceID:   taskObj.WorkspaceID,
+			TaskType:      taskentity.TaskRunTypeNewData,
+			RunStatus:     taskentity.TaskRunStatusRunning,
+			TaskRunConfig: buildTaskRunConfig(schemaStr),
+		}
+
+		spans := []*loop_span.Span{
+			{TraceID: "trace1", SpanID: "span1", Input: "hello", StartTime: time.Now().UnixMilli()},
+			{TraceID: "trace2", SpanID: "span2", Input: "world", StartTime: time.Now().UnixMilli()},
+		}
+
+		trigger := &taskexe.BatchTrigger{
+			Task:    taskObj,
+			Spans:   spans,
+			TaskRun: taskRun,
+		}
+
+		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+		repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil).Times(2)
+		repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, taskRun.ID, gomock.Any()).Return(nil).Times(2)
+		repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(3), nil)
+		repoMock.EXPECT().GetTaskRunCount(gomock.Any(), taskObj.ID, taskRun.ID).Return(int64(3), nil)
+		repoMock.EXPECT().DecrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil).Times(2)
+		repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), taskObj.ID, taskRun.ID, gomock.Any()).Return(nil).Times(2)
+
+		evalMock := &fakeEvaluationAdapter{}
+		proc := &AutoEvaluateProcessor{
+			evaluationSvc: evalMock,
+			taskRepo:      repoAdapter,
+		}
+		err := proc.BatchInvoke(context.Background(), trigger)
+		assert.NoError(t, err)
+		assert.Nil(t, evalMock.lastInvoke)
+	})
+}
+
+func TestAutoEvaluateProcessor_Invoke_KeyFromSchema(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	taskObj := buildTestTask(t)
+	taskObj.Sampler.SampleSize = 100
+
+	schemaJSON := `[{"Key":"schema_key_1","Name":"field_1","ContentType":"text","TextSchema":"{}"}]`
+
+	trigger := &taskexe.Trigger{
+		Task: taskObj,
+		Span: buildSpan("hello world"),
+		TaskRun: &taskentity.TaskRun{
+			ID:            3001,
+			TaskID:        taskObj.ID,
+			WorkspaceID:   taskObj.WorkspaceID,
+			TaskType:      taskentity.TaskRunTypeNewData,
+			RunStatus:     taskentity.TaskRunStatusRunning,
+			TaskRunConfig: buildTaskRunConfig(schemaJSON),
+		},
+	}
+
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+	repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil)
+	repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.Any()).Return(nil)
+	repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(1), nil)
+	repoMock.EXPECT().GetTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID).Return(int64(1), nil)
+
+	evalMock := &fakeEvaluationAdapter{}
+	evalMock.invokeResp.addedItems = 1
+
+	proc := &AutoEvaluateProcessor{evaluationSvc: evalMock, taskRepo: repoAdapter}
+	err := proc.Invoke(context.Background(), trigger)
+	assert.NoError(t, err)
+
+	require.NotNil(t, evalMock.lastInvoke)
+	require.NotEmpty(t, evalMock.lastInvoke.Items)
+	item := evalMock.lastInvoke.Items[0]
+	require.NotEmpty(t, item.Turns)
+	turn := item.Turns[0]
+	// FieldDataList: [trace_id, span_id, run_id, field_1]
+	require.Len(t, turn.FieldDataList, 4)
+	assert.Equal(t, "schema_key_1", turn.FieldDataList[3].GetKey())
+	assert.Equal(t, "field_1", turn.FieldDataList[3].GetName())
+}
+
+func TestAutoEvaluateProcessor_BatchInvoke_KeyFromSchema(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	taskObj := buildTestTask(t)
+	taskObj.Sampler.SampleSize = 100
+
+	schemaJSON := `[{"Key":"batch_key","Name":"field_1","ContentType":"text","TextSchema":"{}"}]`
+
+	spans := []*loop_span.Span{
+		{TraceID: "trace1", SpanID: "span1", Input: "data1", StartTime: time.Now().UnixMilli()},
+	}
+
+	trigger := &taskexe.BatchTrigger{
+		Task:  taskObj,
+		Spans: spans,
+		TaskRun: &taskentity.TaskRun{
+			ID:            3002,
+			TaskID:        taskObj.ID,
+			WorkspaceID:   taskObj.WorkspaceID,
+			TaskType:      taskentity.TaskRunTypeNewData,
+			RunStatus:     taskentity.TaskRunStatusRunning,
+			TaskRunConfig: buildTaskRunConfig(schemaJSON),
+		},
+	}
+
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+	repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil).AnyTimes()
+	repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.Any()).Return(nil).AnyTimes()
+	repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(1), nil)
+	repoMock.EXPECT().GetTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID).Return(int64(1), nil)
+
+	evalMock := &fakeEvaluationAdapter{}
+	evalMock.invokeResp.addedItems = 1
+
+	proc := &AutoEvaluateProcessor{evaluationSvc: evalMock, taskRepo: repoAdapter}
+	err := proc.BatchInvoke(context.Background(), trigger)
+	assert.NoError(t, err)
+
+	require.NotNil(t, evalMock.lastInvoke)
+	require.Len(t, evalMock.lastInvoke.Items, 1)
+	item := evalMock.lastInvoke.Items[0]
+	require.NotEmpty(t, item.Turns)
+	turn := item.Turns[0]
+	require.Len(t, turn.FieldDataList, 4)
+	assert.Equal(t, "batch_key", turn.FieldDataList[3].GetKey())
+	assert.Equal(t, "field_1", turn.FieldDataList[3].GetName())
+}

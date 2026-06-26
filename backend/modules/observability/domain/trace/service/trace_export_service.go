@@ -584,13 +584,7 @@ func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.
 			continue
 		}
 
-		// 前端传入的是Name，评测集需要的是key，需要做一下mapping
 		key := dataset.GetFieldSchemaKeyByName(mapping.FieldSchema.Name)
-		if key == "" {
-			logs.CtxInfo(ctx, "Dataset field key is empty, name:%v", mapping.FieldSchema.Name)
-			item.AddError("Dataset field key is empty", entity.DatasetErrorType_InternalError, nil)
-			continue
-		}
 		item.AddFieldData(key, mapping.FieldSchema.Name, content)
 	}
 	return item

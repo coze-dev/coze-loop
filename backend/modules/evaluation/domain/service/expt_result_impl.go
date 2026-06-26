@@ -182,20 +182,10 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 	logs.CtxInfo(ctx, "[ExptEval] expt item result with recording run_log, expt_id=%v, expt_run_id=%v, item_id=%v, cnt_op: %v", exptID, exptRunID, itemID, json.Jsonify(statsCntOp))
 
-	// 加载实验配置：仅在 EnableScoreWeight 为 true 时从 EvaluatorConf 构建权重；否则 scoreWeights 为空，calculateWeightedScore 按等权计算。
-	var scoreWeights map[int64]float64
-	if expt != nil && expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
-		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
-				continue
-			}
-			if scoreWeights == nil {
-				scoreWeights = make(map[int64]float64)
-			}
-			scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
-		}
-	}
+	// 加载实验配置构建行维度加权 scoreWeights：按实验类型分流（新链路 MultiSetConfig 从带 alias 的
+	// EvalSetConfigs[].EvaluatorConfs 聚合，key 含 alias；老链路从 EvaluatorConf 取，key 退化裸 versionID）。
+	// EnableScoreWeight 为 false 时返回 nil，calculateWeightedScore 按等权计算。详见 buildScoreWeights。
+	scoreWeights := buildScoreWeights(expt)
 
 	var (
 		turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef
@@ -216,30 +206,40 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 		turnEvaluatorRefs = append(turnEvaluatorRefs, NewTurnEvaluatorResultRefs(0, result.ExptID, result.ID, spaceID, rl.EvaluatorResultIds)...)
 
-		// 计算并回写当前轮次的汇总得分（EnableScoreWeight 为 false 或未配置正权重时为等权平均）
-		if rl.EvaluatorResultIds != nil && len(rl.EvaluatorResultIds.EvalVerIDToResID) > 0 {
-			evaluatorResultIDs := make([]int64, 0, len(rl.EvaluatorResultIds.EvalVerIDToResID))
-			for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
-				evaluatorResultIDs = append(evaluatorResultIDs, resID)
+		// 计算并回写当前轮次的汇总得分
+		// ★ 支持新旧两种 EvaluatorResults 格式提取 record IDs
+		var evaluatorResultIDs []int64
+		if rl.EvaluatorResultIds != nil {
+			if rl.EvaluatorResultIds.IsNewFormat() {
+				for _, r := range rl.EvaluatorResultIds.Registered {
+					if r != nil && r.RecordID > 0 {
+						evaluatorResultIDs = append(evaluatorResultIDs, r.RecordID)
+					}
+				}
+				// Inline 记录不参与加权评分计算
+			} else {
+				for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
+					evaluatorResultIDs = append(evaluatorResultIDs, resID)
+				}
 			}
+		}
 
-			if len(evaluatorResultIDs) > 0 {
-				records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
-				if err != nil {
-					logs.CtxError(ctx, "[ExptEval] RecordItemRunLogs BatchGetEvaluatorRecord failed, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, err=%v",
-						exptID, exptRunID, itemID, tid, err)
-				} else {
-					version2Record := make(map[int64]*entity.EvaluatorRecord, len(records))
-					for _, r := range records {
-						if r == nil {
-							continue
-						}
-						version2Record[r.EvaluatorVersionID] = r
+		if len(evaluatorResultIDs) > 0 {
+			records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
+			if err != nil {
+				logs.CtxError(ctx, "[ExptEval] RecordItemRunLogs BatchGetEvaluatorRecord failed, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, err=%v",
+					exptID, exptRunID, itemID, tid, err)
+			} else {
+				version2Record := make(map[string]*entity.EvaluatorRecord, len(records))
+				for _, r := range records {
+					if r == nil {
+						continue
 					}
+					version2Record[entity.EncodeEvaluatorInstanceKey(r.EvaluatorVersionID, r.Alias)] = r
+				}
 
-					if ws := e.scoreCalculator.CalculateWeightedScore(ctx, expt, version2Record, scoreWeights); ws != nil {
-						result.WeightedScore = ws
-					}
+				if ws := e.scoreCalculator.CalculateWeightedScore(ctx, expt, version2Record, scoreWeights); ws != nil {
+					result.WeightedScore = ws
 				}
 			}
 		}
@@ -290,6 +290,43 @@ func NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID int64, evaluat
 		return nil
 	}
 
+	// ★ 新格式: Registered + Inline 双数组
+	if evaluatorResults.IsNewFormat() {
+		refs := make([]*entity.ExptTurnEvaluatorResultRef, 0)
+		for _, r := range evaluatorResults.Registered {
+			if r == nil {
+				continue
+			}
+			refs = append(refs, &entity.ExptTurnEvaluatorResultRef{
+				ID:                 id,
+				ExptID:             exptID,
+				SpaceID:            spaceID,
+				ExptTurnResultID:   turnResultID,
+				EvaluatorVersionID: r.VersionID,
+				EvaluatorResultID:  r.RecordID,
+				SourceType:         int32(entity.EvaluatorRecordSourceTypeBuiltin),
+				Alias:              r.Alias,
+			})
+		}
+		for _, r := range evaluatorResults.Inline {
+			if r == nil {
+				continue
+			}
+			refs = append(refs, &entity.ExptTurnEvaluatorResultRef{
+				ID:                 id,
+				ExptID:             exptID,
+				SpaceID:            spaceID,
+				ExptTurnResultID:   turnResultID,
+				EvaluatorVersionID: 0, // Inline 写 0 哨兵
+				EvaluatorResultID:  r.RecordID,
+				SourceType:         int32(entity.EvaluatorRecordSourceTypeInline),
+				InlineKey:          r.InlineKey,
+			})
+		}
+		return refs
+	}
+
+	// 老格式: EvalVerIDToResID map
 	refs := make([]*entity.ExptTurnEvaluatorResultRef, 0, len(evaluatorResults.EvalVerIDToResID))
 	for evalVerID, evalResID := range evaluatorResults.EvalVerIDToResID {
 		refs = append(refs, &entity.ExptTurnEvaluatorResultRef{
@@ -368,7 +405,8 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	columnEvalSetFields, err := e.getColumnEvalSetFields(ctx, spaceID, baseExpt.EvalSetID, baseExpt.EvalSetVersionID)
+	// ★ MultiSetConfig: 列定义取所有评测集字段 schema 的并集 (各集列名去重); SingleSet/老实验仍只取主集。
+	columnEvalSetFields, err := e.getColumnEvalSetFieldsMultiSet(ctx, spaceID, baseExpt)
 	if err != nil {
 		return nil, err
 	}
@@ -970,6 +1008,75 @@ func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, space
 	return columnEvalSetFields, nil
 }
 
+// evalSetVersionPair 是 (eval_set_id, eval_set_version_id) 的去重键。
+type evalSetVersionPair struct {
+	EvalSetID        int64
+	EvalSetVersionID int64
+}
+
+// collectEvalSetVersionPairs 返回实验涉及的所有 (eval_set_id, eval_set_version_id):
+//   - MultiSetConfig 新实验: 取 eval_conf.EvalSetConfigs 全部集 (各 item 归属不同集, 读路径需覆盖所有集);
+//   - 其余 (SingleSet/老实验): 仅实验级主集。
+//
+// 返回值已去重, 且保证首元素为主集 (供降级/单集场景复用)。
+func collectEvalSetVersionPairs(expt *entity.Experiment) []evalSetVersionPair {
+	pairs := make([]evalSetVersionPair, 0, 1)
+	seen := make(map[evalSetVersionPair]struct{})
+	add := func(setID, verID int64) {
+		if setID == 0 && verID == 0 {
+			return
+		}
+		p := evalSetVersionPair{EvalSetID: setID, EvalSetVersionID: verID}
+		if _, ok := seen[p]; ok {
+			return
+		}
+		seen[p] = struct{}{}
+		pairs = append(pairs, p)
+	}
+	// 主集优先 (作为封面 / 降级首选)
+	add(expt.EvalSetID, expt.EvalSetVersionID)
+	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && expt.EvalConf != nil {
+		for _, sc := range expt.EvalConf.EvalSetConfigs {
+			if sc == nil {
+				continue
+			}
+			add(sc.EvalSetID, sc.EvalSetVersionID)
+		}
+	}
+	return pairs
+}
+
+// getColumnEvalSetFieldsMultiSet 取实验所有评测集的字段 schema 并集 (按列 Key 去重, 主集列在前)。
+// SingleSet/老实验退化为只取主集, 行为与原 getColumnEvalSetFields 一致 (含 evalSetID/version 为 0 的边界)。
+func (e ExptResultServiceImpl) getColumnEvalSetFieldsMultiSet(ctx context.Context, spaceID int64, expt *entity.Experiment) ([]*entity.ColumnEvalSetField, error) {
+	// 非 MultiSetConfig: 完全沿用原有单集调用 (含主集 id/version 透传, 不改变任何边界语义)。
+	if expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+		return e.getColumnEvalSetFields(ctx, spaceID, expt.EvalSetID, expt.EvalSetVersionID)
+	}
+
+	pairs := collectEvalSetVersionPairs(expt)
+	merged := make([]*entity.ColumnEvalSetField, 0)
+	seenKey := make(map[string]struct{})
+	for _, p := range pairs {
+		fields, err := e.getColumnEvalSetFields(ctx, spaceID, p.EvalSetID, p.EvalSetVersionID)
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range fields {
+			if f == nil {
+				continue
+			}
+			key := gptr.Indirect(f.Key)
+			if _, ok := seenKey[key]; ok {
+				continue
+			}
+			seenKey[key] = struct{}{}
+			merged = append(merged, f)
+		}
+	}
+	return merged, nil
+}
+
 func (e ExptResultServiceImpl) getColumnAnnotations(ctx context.Context, spaceID int64, exptIDs []int64) ([]*entity.ExptColumnAnnotation, error) {
 	exptColumnAnnotations := make([]*entity.ExptColumnAnnotation, 0, len(exptIDs))
 	for _, exptID := range exptIDs {
@@ -1401,6 +1508,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 			SpaceID:           b.SpaceID,
 			ExptID:            b.BaselineExptID,
 			ItemID:            exptTurnResult.ItemID,
+			ItemVersionID:     exptTurnResult.ItemVersionID, // ★ 0=旧数据/无版本; 真值源 expt_turn_result(平移自 expt_item_ref)
 			TurnID:            exptTurnResult.TurnID,
 			EvalTargetData:    make(map[string]string),
 			EvaluatorScore:    make(map[string]float64),
@@ -1422,7 +1530,9 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 		if ok {
 			for evaluatorVersionID, result := range evaluatorVersionID2Result {
 				if result.GetScore() != nil {
-					if keyMapping, ok := b.ExptTurnResultFilterKeyMappingEvaluatorMap[fmt.Sprintf("%d", evaluatorVersionID)]; ok {
+					// ★ lookup key 与 key_mapping FromField 编码对齐: (version_id, alias);
+					// alias 取自 evaluator_record.Alias, 旧数据为空 -> 退化裸 versionID.
+					if keyMapping, ok := b.ExptTurnResultFilterKeyMappingEvaluatorMap[entity.EncodeEvaluatorInstanceKey(evaluatorVersionID, result.Alias)]; ok {
 						exptTurnResultFilter.EvaluatorScore[keyMapping.ToKey] = ptr.From(result.GetScore())
 					}
 				}
@@ -1476,27 +1586,16 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 		if ok {
 			exptTurnResultFilter.EvaluatorScoreCorrected = evaluatorScoreCorrected
 		}
-		// 填充加权得分（行级未落库时按配置重算；EnableScoreWeight 为 false 时 scoreWeights 为空，走等权）
+		// 填充加权得分（行级未落库时按配置重算）。按实验类型分流构建 scoreWeights，
+		// EnableScoreWeight 为 false 时 scoreWeights 为空，走等权。详见 buildScoreWeights。
 		weightedScore := exptTurnResult.WeightedScore
 		if weightedScore == nil && len(evaluatorVersionID2Result) > 0 {
-			var scoreWeights map[int64]float64
 			exptDO := exptResultBuilder.exptDO
-			if exptDO != nil && exptDO.EvalConf != nil && exptDO.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
-				exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-				for _, ec := range exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-					if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
-						continue
-					}
-					if scoreWeights == nil {
-						scoreWeights = make(map[int64]float64)
-					}
-					scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
-				}
-			}
-			evaluatorRecords := make(map[int64]*entity.EvaluatorRecord)
-			for evaluatorVersionID, record := range evaluatorVersionID2Result {
+			scoreWeights := buildScoreWeights(exptDO)
+			evaluatorRecords := make(map[string]*entity.EvaluatorRecord)
+			for _, record := range evaluatorVersionID2Result {
 				if record != nil {
-					evaluatorRecords[evaluatorVersionID] = record
+					evaluatorRecords[entity.EncodeEvaluatorInstanceKey(record.EvaluatorVersionID, record.Alias)] = record
 				}
 			}
 			if len(evaluatorRecords) > 0 {
@@ -1891,35 +1990,46 @@ func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 	if e.exptDO == nil {
 		return fmt.Errorf("exptPO is nil")
 	}
-	evalSetID := e.exptDO.EvalSetID
-	evalSetVersionID := e.exptDO.EvalSetVersionID
 
-	param := &entity.BatchGetEvaluationSetItemsParam{
-		SpaceID:         e.SpaceID,
-		EvaluationSetID: evalSetID,
-		ItemIDs:         e.ItemIDs,
-	}
-	if evalSetVersionID != evalSetID {
-		param.VersionID = gptr.Of(evalSetVersionID)
-	}
-
-	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, param)
-	if err != nil {
-		return err
+	// ★ MultiSetConfig 实验各 item 归属不同评测集, 必须按集分别拉取再合并;
+	// 用单一主集 (eval_set_id, version) 去捞全部 item 会让非主集 item 返回空, 详情页缺数据。
+	// item_id 全局唯一 (idgen), 用整份 ItemIDs 对每个集查询, 不属于该集的 item 自然返回空, 合并即得全量。
+	// 非 MultiSetConfig (SingleSet/老实验): 走原单集分支, 边界语义 (含 set id 为 0) 与改动前完全一致。
+	var pairs []evalSetVersionPair
+	if e.exptDO.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		pairs = collectEvalSetVersionPairs(e.exptDO)
+	} else {
+		pairs = []evalSetVersionPair{{EvalSetID: e.exptDO.EvalSetID, EvalSetVersionID: e.exptDO.EvalSetVersionID}}
 	}
 
 	itemIDTurnID2Turn := make(map[int64]map[int64]*entity.TurnEvalSet) // item_id -> turn_id -> turn
-	for _, item := range items {
-		for _, turn := range item.Turns {
-			if itemIDTurnID2Turn[item.ItemID] == nil {
-				itemIDTurnID2Turn[item.ItemID] = make(map[int64]*entity.TurnEvalSet)
+	for _, p := range pairs {
+		param := &entity.BatchGetEvaluationSetItemsParam{
+			SpaceID:         e.SpaceID,
+			EvaluationSetID: p.EvalSetID,
+			ItemIDs:         e.ItemIDs,
+		}
+		if p.EvalSetVersionID != p.EvalSetID {
+			param.VersionID = gptr.Of(p.EvalSetVersionID)
+		}
+
+		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, param)
+		if err != nil {
+			return err
+		}
+
+		for _, item := range items {
+			for _, turn := range item.Turns {
+				if itemIDTurnID2Turn[item.ItemID] == nil {
+					itemIDTurnID2Turn[item.ItemID] = make(map[int64]*entity.TurnEvalSet)
+				}
+				turnEvalSet := &entity.TurnEvalSet{
+					Turn:      turn,
+					ItemID:    item.ItemID,
+					EvalSetID: p.EvalSetID, // 该 item 真正归属的集
+				}
+				itemIDTurnID2Turn[item.ItemID][turn.ID] = turnEvalSet
 			}
-			turnEvalSet := &entity.TurnEvalSet{
-				Turn:      turn,
-				ItemID:    item.ItemID,
-				EvalSetID: evalSetID,
-			}
-			itemIDTurnID2Turn[item.ItemID][turn.ID] = turnEvalSet
 		}
 	}
 
@@ -2294,14 +2404,50 @@ func (e ExptResultServiceImpl) ManualUpsertExptTurnResultFilter(ctx context.Cont
 	expt := expts[0]
 
 	exptTurnResultFilterKeyMappings := make([]*entity.ExptTurnResultFilterKeyMapping, 0)
-	for i, ref := range expt.EvaluatorVersionRef {
-		exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
-			SpaceID:   spaceID,
-			ExptID:    exptID,
-			FromField: strconv.FormatInt(ref.EvaluatorVersionID, 10),
-			ToKey:     "key" + strconv.Itoa(i+1),
-			FieldType: entity.FieldTypeEvaluator,
-		})
+	// ★ key_mapping 按 (version_id, alias) 实例展开, 与 CreateExpt 构建侧逻辑一致:
+	// CK 填充期用 EncodeEvaluatorInstanceKey(versionID, record.Alias) 作 FromField 查本表取 ToKey,
+	// 同一 version 配 judge_A / judge_B 两个 alias 时必须各生成一行, 否则另一 alias 的 lookup 落空.
+	// 实例真值源: MultiSetConfig 路径的 EvalConf.EvalSetConfigs[].EvaluatorConfs[] (含 per-instance alias).
+	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && expt.EvalConf != nil {
+		// 新路径: 遍历每个 set 的每个 (EvaluatorVersionID, Alias) 实例, 每个实例独占一行 + 独立 ToKey.
+		// 多个 set 可能出现相同 (version, alias) -> 按 (version,alias) 去重, 只生成一行 (避免重复 ToKey).
+		// ToKey 用全局递增编号 ("key1"/"key2"...), 跨所有实例连续递增, 不按 version 复用.
+		seenInstance := make(map[string]struct{})
+		keyIdx := 0
+		for _, setConf := range expt.EvalConf.EvalSetConfigs {
+			if setConf == nil {
+				continue
+			}
+			for _, evConf := range setConf.EvaluatorConfs {
+				if evConf == nil {
+					continue
+				}
+				fromField := entity.EncodeEvaluatorInstanceKey(evConf.EvaluatorVersionID, evConf.Alias)
+				if _, ok := seenInstance[fromField]; ok {
+					continue
+				}
+				seenInstance[fromField] = struct{}{}
+				keyIdx++
+				exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
+					SpaceID:   spaceID,
+					ExptID:    exptID,
+					FromField: fromField,
+					ToKey:     "key" + strconv.Itoa(keyIdx),
+					FieldType: entity.FieldTypeEvaluator,
+				})
+			}
+		}
+	} else {
+		// 老 SingleSet 路径: 按 version (alias="" 退化裸 versionID, ToKey="key"+(i+1)), 旧实验 byte 级不变.
+		for i, ref := range expt.EvaluatorVersionRef {
+			exptTurnResultFilterKeyMappings = append(exptTurnResultFilterKeyMappings, &entity.ExptTurnResultFilterKeyMapping{
+				SpaceID:   spaceID,
+				ExptID:    exptID,
+				FromField: entity.EncodeEvaluatorInstanceKey(ref.EvaluatorVersionID, ""),
+				ToKey:     "key" + strconv.Itoa(i+1),
+				FieldType: entity.FieldTypeEvaluator,
+			})
+		}
 	}
 	exptTurnResultTagRefs, err := e.ExptAnnotateRepo.GetExptTurnResultTagRefs(ctx, exptID, spaceID)
 	if err != nil {
@@ -2887,7 +3033,11 @@ func (e ExptResultServiceImpl) compareEvaluatorScoreCorrected(exptTurnResultFilt
 	rdsEvaluatorScoreCorrected := false
 
 	for _, record := range turnResult.ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords {
-		if record.EvaluatorOutputData.EvaluatorResult != nil && record.EvaluatorOutputData.EvaluatorResult.Correction != nil {
+		// Skipped 占位 record 的 EvaluatorOutputData 为 nil, 这里需判空 (对齐 compareEvaluatorScore:3069)
+		if record.EvaluatorOutputData == nil || record.EvaluatorOutputData.EvaluatorResult == nil {
+			continue
+		}
+		if record.EvaluatorOutputData.EvaluatorResult.Correction != nil {
 			rdsEvaluatorScoreCorrected = true
 			break
 		}
@@ -2913,8 +3063,8 @@ func (e ExptResultServiceImpl) compareEvaluatorScore(exptTurnResultFilter *entit
 	// 第一步：构建RDS评估器分数映射
 	rdsEvaluatorScores := make(map[string]float64)
 	for _, record := range turnResult.ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords {
-		// 获取评估器对应的键名
-		key, exists := evaluatorVersionID2Key[strconv.FormatInt(record.EvaluatorVersionID, 10)]
+		// 获取评估器对应的键名; lookup key 与 key_mapping FromField 编码对齐: (version_id, alias)
+		key, exists := evaluatorVersionID2Key[entity.EncodeEvaluatorInstanceKey(record.EvaluatorVersionID, record.Alias)]
 		if !exists {
 			continue
 		}
@@ -3064,28 +3214,18 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 		return err
 	}
 
-	// 构建评估器版本ID到评估器记录的映射
-	version2Record := make(map[int64]*entity.EvaluatorRecord, len(evaluatorRecords))
+	// 构建评估器实例 key 到评估器记录的映射
+	version2Record := make(map[string]*entity.EvaluatorRecord, len(evaluatorRecords))
 	for _, record := range evaluatorRecords {
 		if record != nil {
-			version2Record[record.EvaluatorVersionID] = record
+			version2Record[entity.EncodeEvaluatorInstanceKey(record.EvaluatorVersionID, record.Alias)] = record
 		}
 	}
 
-	// 构建权重映射：仅当 EnableScoreWeight 为 true 时使用配置权重，否则等权
-	var scoreWeights map[int64]float64
-	if expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
-		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight &&
-		expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
-		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 && ec.EvaluatorVersionID > 0 {
-				if scoreWeights == nil {
-					scoreWeights = make(map[int64]float64)
-				}
-				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
-			}
-		}
-	}
+	// 构建权重映射：按实验类型分流（MultiSetConfig 从带 alias 的 per-set 配置取，
+	// 老 SingleSet 从 EvaluatorsConf.EvaluatorConf 取裸 versionID）。EnableScoreWeight 为 false
+	// 时 scoreWeights 为空，calculateWeightedScore 按等权计算。详见 buildScoreWeights。
+	scoreWeights := buildScoreWeights(expt)
 
 	weightedScore := e.scoreCalculator.CalculateWeightedScore(ctx, expt, version2Record, scoreWeights)
 

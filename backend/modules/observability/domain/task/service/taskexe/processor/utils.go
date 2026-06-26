@@ -22,7 +22,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -126,11 +125,11 @@ func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSc
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*task_entity.EvaluateFieldMapping,
-	evaluationSetSchema string, taskRunID string,
+	taskRunID string,
 ) (turns []*eval_set.Turn) {
 	turns = make([]*eval_set.Turn, 0, len(spans))
 	for _, span := range spans {
-		fieldData := buildItem(ctx, span, fieldMappings, evaluationSetSchema, taskRunID)
+		fieldData := buildItem(ctx, span, fieldMappings, taskRunID)
 		if len(fieldData) == 0 {
 			continue
 		}
@@ -141,9 +140,8 @@ func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*t
 	return turns
 }
 
-// todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_entity.EvaluateFieldMapping,
-	evaluationSetSchema string, taskRunID string,
+	taskRunID string,
 ) []*eval_set.FieldData {
 	var fieldDatas []*eval_set.FieldData
 	fieldDatas = append(fieldDatas, &eval_set.FieldData{
@@ -171,51 +169,59 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 		},
 	})
 	for _, mapping := range fieldMappings {
-		// 前端传入的是Name，评测集需要的是key，需要做一下mapping
 		if mapping.EvalSetName == nil {
 			logs.CtxInfo(ctx, "Evaluator field name is nil")
 			continue
 		}
-		var evaluationSetSchemas []*entity.FieldSchema
-		if evaluationSetSchema == "" {
-			logs.CtxInfo(ctx, "Evaluation set schema is nil")
-			continue
+		var value string
+		var err error
+		contentType := entity.ContentType_Text
+		if mapping.FieldSchema != nil {
+			contentType = evaluationset.ConvertContentTypeDTO2DO(mapping.FieldSchema.GetContentType())
 		}
-		err := json.Unmarshal([]byte(evaluationSetSchema), &evaluationSetSchemas)
+		if contentType == entity.ContentType_MultiPart {
+			value, err = span.ExtractByJsonpathRaw(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+		} else {
+			value, err = span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+		}
 		if err != nil {
-			logs.CtxInfo(ctx, "Unmarshal evaluation set schema failed, err:%v", err)
+			logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
 			continue
 		}
-		for _, fieldSchema := range evaluationSetSchemas {
-			if *fieldSchema.Key == *mapping.EvalSetName {
-				key := fieldSchema.Key
-				if key == nil {
-					logs.CtxInfo(ctx, "Evaluator field key is empty, name:%v", fieldSchema.Name)
-					continue
-				}
-				var value string
-				var err error
-				if fieldSchema.ContentType == entity.ContentType_MultiPart {
-					value, err = span.ExtractByJsonpathRaw(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
-				} else {
-					value, err = span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
-				}
-				if err != nil {
-					logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
-					continue
-				}
-				content, errCode := entity.GetContentInfo(ctx, fieldSchema.ContentType, value)
-				if errCode == entity.DatasetErrorType_MismatchSchema {
-					logs.CtxInfo(ctx, "GetContentInfo failed")
-					return nil
-				}
-				fieldDatas = append(fieldDatas, &eval_set.FieldData{
-					Key:     key,
-					Name:    gptr.Of(fieldSchema.Name),
-					Content: evaluationset.ConvertContentDO2DTO(content),
-				})
+		content, errCode := entity.GetContentInfo(ctx, contentType, value)
+		if errCode == entity.DatasetErrorType_MismatchSchema {
+			logs.CtxInfo(ctx, "GetContentInfo failed")
+			return nil
+		}
+		fieldDatas = append(fieldDatas, &eval_set.FieldData{
+			Key:     mapping.DatasetKey,
+			Name:    mapping.EvalSetName,
+			Content: evaluationset.ConvertContentDO2DTO(content),
+		})
+	}
+	return fieldDatas
+}
+
+func fillDatasetKeysFromSchema(ctx context.Context, mappings []*task_entity.EvaluateFieldMapping, schemaJSON string) {
+	if schemaJSON == "" {
+		return
+	}
+	var fieldSchemas []entity.FieldSchema
+	if err := sonic.UnmarshalString(schemaJSON, &fieldSchemas); err != nil {
+		logs.CtxWarn(ctx, "[auto_task] unmarshal schema failed, err:%v", err)
+		return
+	}
+	nameToKey := make(map[string]string, len(fieldSchemas))
+	for _, fs := range fieldSchemas {
+		if fs.Key != nil && *fs.Key != "" {
+			nameToKey[fs.Name] = *fs.Key
+		}
+	}
+	for _, m := range mappings {
+		if m.EvalSetName != nil {
+			if key, ok := nameToKey[*m.EvalSetName]; ok {
+				m.DatasetKey = &key
 			}
 		}
 	}
-	return fieldDatas
 }
