@@ -40,6 +40,19 @@ func (p *CreateEvaluationSetOApiRequest) IsValid() error {
 			return fmt.Errorf("field EvaluationSetSchema not valid, %w", err)
 		}
 	}
+	if p.Type != nil {
+		if len(*p.Type) > int(128) {
+			return fmt.Errorf("field Type max_len rule failed, current value: %d", len(*p.Type))
+		}
+	}
+	for i := 0; i < len(p.Tags); i++ {
+		_elem := p.Tags[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -116,6 +129,14 @@ func (p *UpdateEvaluationSetOApiRequest) IsValid() error {
 			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
 		}
 	}
+	for i := 0; i < len(p.Tags); i++ {
+		_elem := p.Tags[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -174,6 +195,18 @@ func (p *DeleteEvaluationSetOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *ListEvaluationSetsOApiRequest) IsValid() error {
+	if len(p.TagNames) > int(50) {
+		return fmt.Errorf("field TagNames MaxLen rule failed, current value: %v", p.TagNames)
+	}
+	for i := 0; i < len(p.TagNames); i++ {
+		_elem := p.TagNames[i]
+		if len(_elem) < int(1) {
+			return fmt.Errorf("field _elem min_len rule failed, current value: %d", len(_elem))
+		}
+		if len(_elem) > int(128) {
+			return fmt.Errorf("field _elem max_len rule failed, current value: %d", len(_elem))
+		}
+	}
 	if p.PageSize != nil {
 		if *p.PageSize <= int32(0) {
 			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
@@ -359,6 +392,69 @@ func (p *BatchUpdateEvaluationSetItemsOApiResponse) IsValid() error {
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) IsValid() error {
 	return nil
 }
+func (p *ListEvaluationSetItemVersionsOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetItemVersionsOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetItemVersionsOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *GetEvaluationSetItemVersionOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemVersionOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemVersionOpenAPIData) IsValid() error {
+	if p.Version != nil {
+		if err := p.Version.IsValid(); err != nil {
+			return fmt.Errorf("field Version not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *BatchDeleteEvaluationSetItemsOApiRequest) IsValid() error {
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
@@ -381,6 +477,18 @@ func (p *BatchDeleteEvaluationSetItemsOApiResponse) IsValid() error {
 	return nil
 }
 func (p *ListEvaluationSetVersionItemsOApiRequest) IsValid() error {
+	if len(p.TagNames) > int(50) {
+		return fmt.Errorf("field TagNames MaxLen rule failed, current value: %v", p.TagNames)
+	}
+	for i := 0; i < len(p.TagNames); i++ {
+		_elem := p.TagNames[i]
+		if len(_elem) < int(1) {
+			return fmt.Errorf("field _elem min_len rule failed, current value: %d", len(_elem))
+		}
+		if len(_elem) > int(128) {
+			return fmt.Errorf("field _elem max_len rule failed, current value: %d", len(_elem))
+		}
+	}
 	if p.PageSize != nil {
 		if *p.PageSize <= int32(0) {
 			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)

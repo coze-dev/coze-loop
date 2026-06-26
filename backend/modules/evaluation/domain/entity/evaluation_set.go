@@ -25,6 +25,8 @@ type EvaluationSet struct {
 	NextVersionNum       int64                 `json:"next_version_num,omitempty"`
 	BaseInfo             *BaseInfo             `json:"base_info,omitempty"`
 	BizCategory          BizCategory           `json:"biz_category,omitempty"`
+	DatasetType          *string               `json:"dataset_type,omitempty"`
+	Tags                 []*ResourceTag        `json:"tags,omitempty"`
 }
 
 type DatasetSpec struct {
@@ -221,7 +223,8 @@ type UploadAttachmentDetail struct {
 }
 
 type FieldWriteOption struct {
-	FieldName          *string
-	FieldKey           *string
-	MultiModalStoreOpt *MultiModalStoreOption
+	FieldName                *string
+	FieldKey                 *string
+	MultiModalStoreOpt       *MultiModalStoreOption
+	MessageListStoreStrategy *MultiModalStoreStrategy
 }

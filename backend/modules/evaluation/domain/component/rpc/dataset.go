@@ -17,7 +17,7 @@ type IDatasetRPCAdapter interface {
 	GetDatasetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error)
 	ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error)
 	ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error)
-	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error)
+	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string, tags []*entity.ResourceTagRef) (err error)
 	DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
 	BatchGetDatasets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (sets []*entity.EvaluationSet, err error)
@@ -32,7 +32,7 @@ type IDatasetRPCAdapter interface {
 
 	BatchCreateDatasetItems(ctx context.Context, param *BatchCreateDatasetItemsParam) (idMap map[int64]int64, errorGroup []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
 	BatchUpdateDatasetItems(ctx context.Context, param *BatchUpdateDatasetItemsParam) (errorGroup []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
-	UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption) (err error)
+	UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption, tags []*entity.ResourceTagRef) (err error)
 	BatchDeleteDatasetItems(ctx context.Context, spaceID, evaluationSetID int64, itemIDs []int64) (err error)
 	ListDatasetItems(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total, filterTotal *int64, nextPageToken *string, err error)
 	ListDatasetItemsByVersion(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total, filterTotal *int64, nextPageToken *string, err error)
@@ -41,6 +41,13 @@ type IDatasetRPCAdapter interface {
 	ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	QueryItemSnapshotMappings(ctx context.Context, req *QueryItemSnapshotMappingRequest) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error)
 	GetDatasetItemField(ctx context.Context, param *GetDatasetItemFieldParam) (fieldData *entity.FieldData, err error)
+
+	GetDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error)
+	ListDatasetItemDefs(ctx context.Context, param *ListDatasetItemDefsParam) ([]*entity.EvaluationSetItemDef, *int64, *string, error)
+	ListDatasetItemVersions(ctx context.Context, param *ListDatasetItemVersionsParam) ([]*entity.EvaluationSetItemVersion, *int64, *string, error)
+	GetDatasetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, itemVersion *string) (*entity.EvaluationSetItemVersion, error)
+	UpdateDatasetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, status, description, itemVersion *string) error
+	BatchAddExistDatasetItems(ctx context.Context, param *BatchAddExistDatasetItemsParam) (*entity.BatchAddExistEvaluationSetItemsResult, error)
 }
 
 type GetDatasetItemFieldParam struct {
@@ -63,6 +70,8 @@ type CreateDatasetParam struct {
 	EvaluationSetItems *entity.EvaluationSetSchema
 	BizCategory        *entity.BizCategory
 	Session            *entity.Session
+	DatasetType        *string
+	Tags               []*entity.ResourceTagRef
 }
 
 type CreateDatasetWithImportParam struct {
@@ -77,6 +86,7 @@ type CreateDatasetWithImportParam struct {
 	FieldMappings []*entity.FieldMapping
 	Session       *entity.Session
 	Option        *entity.DatasetIOJobOption
+	DatasetType   *string
 }
 
 type ImportDatasetParam struct {
@@ -96,6 +106,7 @@ type ListDatasetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*entity.OrderBy
+	TagFilter        *entity.TagFilter
 }
 
 type ListDatasetItemsParam struct {
@@ -108,13 +119,17 @@ type ListDatasetItemsParam struct {
 	OrderBys        []*entity.OrderBy
 	ItemIDsNotIn    []int64
 	Filter          *entity.Filter
+	TagFilter       *entity.TagFilter
 }
 
 type BatchGetDatasetItemsParam struct {
-	SpaceID         int64
-	EvaluationSetID int64
-	ItemIDs         []int64
-	VersionID       *int64
+	SpaceID            int64
+	EvaluationSetID    int64
+	ItemIDs            []int64
+	ItemVersionQueries []*entity.EvaluationItemVersionRef
+	VersionID          *int64
+	Filter             *entity.Filter
+	TagFilter          *entity.TagFilter
 }
 
 type BatchCreateDatasetItemsParam struct {
@@ -134,7 +149,8 @@ type BatchUpdateDatasetItemsParam struct {
 	EvaluationSetID int64
 	Items           []*entity.EvaluationSetItem
 	// items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
-	SkipInvalidItems *bool
+	SkipInvalidItems  *bool
+	FieldWriteOptions []*entity.FieldWriteOption
 }
 
 type BatchGetVersionedDatasetsResult struct {
@@ -152,4 +168,30 @@ type QueryItemSnapshotMappingRequest struct {
 	IsDraftVersion bool
 	// 版本号
 	VersionID *int64
+}
+
+type ListDatasetItemDefsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*entity.OrderBy
+}
+
+type ListDatasetItemVersionsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	ItemID          int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*entity.OrderBy
+}
+
+type BatchAddExistDatasetItemsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	Items           []*entity.EvaluationItemVersionRef
+	AllowPartialAdd *bool
 }

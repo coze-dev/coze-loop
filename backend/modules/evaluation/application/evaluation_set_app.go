@@ -24,6 +24,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 var (
@@ -65,7 +67,10 @@ type EvaluationSetApplicationImpl struct {
 }
 
 func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, req *eval_set.CreateEvaluationSetRequest) (resp *eval_set.CreateEvaluationSetResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "CreateEvaluationSet req: %v", json.Jsonify(req))
 	defer func() {
+		logs.CtxInfo(ctx, "CreateEvaluationSet resp: %v, err: %v", json.Jsonify(resp), err)
 		e.metric.EmitCreate(req.GetWorkspaceID(), err)
 	}()
 	// 参数校验
@@ -102,6 +107,8 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 		EvaluationSetSchema: evaluation_set.SchemaDTO2DO(req.EvaluationSetSchema),
 		BizCategory:         req.BizCategory,
 		Session:             session,
+		DatasetType:         req.Type,
+		Tags:                evaluation_set.ResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -157,6 +164,7 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSetWithImport(ctx context
 		FieldMappings:       evaluation_set.FieldMappingsDTO2DOs(req.FieldMappings),
 		Session:             session,
 		Option:              evaluation_set.DatasetIOJobOptionDTO2DO(req.Option),
+		DatasetType:         req.Type,
 	})
 	if err != nil {
 		return nil, err
@@ -266,6 +274,7 @@ func (e *EvaluationSetApplicationImpl) UpdateEvaluationSet(ctx context.Context, 
 		EvaluationSetID: req.EvaluationSetID,
 		Name:            req.Name,
 		Description:     req.Description,
+		Tags:            evaluation_set.ResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -359,6 +368,10 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
+	tagFilter, err := evaluation_set.TagFilterDTO2DO(req.TagFilter)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	// domain调用
 	sets, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSets(ctx, &entity.ListEvaluationSetsParam{
 		SpaceID:          req.WorkspaceID,
@@ -369,6 +382,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 		PageSize:         req.PageSize,
 		PageToken:        req.PageToken,
 		OrderBys:         common.ConvertOrderByDTO2DOs(req.OrderBys),
+		TagFilter:        tagFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -462,7 +476,7 @@ func (e *EvaluationSetApplicationImpl) UpdateEvaluationSetItem(ctx context.Conte
 		return nil, err
 	}
 	// domain调用
-	err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID, evaluation_set.TurnDTO2DOs(req.GetEvaluationSetID(), req.GetItemID(), req.Turns), evaluation_set.FieldWriteOptionDTO2DOs(req.FieldWriteOptions))
+	err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID, evaluation_set.TurnDTO2DOs(req.GetEvaluationSetID(), req.GetItemID(), req.Turns), evaluation_set.FieldWriteOptionDTO2DOs(req.FieldWriteOptions), evaluation_set.ResourceTagRefDTO2DOs(req.Tags))
 	if err != nil {
 		return nil, err
 	}
@@ -535,6 +549,10 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItems(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
+	tagFilter, err := evaluation_set.TagFilterDTO2DO(req.TagFilter)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	// domain调用
 	items, total, filterTotal, nextCursor, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 		SpaceID:         req.WorkspaceID,
@@ -544,6 +562,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItems(ctx context.Contex
 		PageSize:        req.PageSize,
 		OrderBys:        common.ConvertOrderByDTO2DOs(req.OrderBys),
 		Filter:          req.Filter,
+		TagFilter:       tagFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -585,11 +604,18 @@ func (e *EvaluationSetApplicationImpl) BatchGetEvaluationSetItems(ctx context.Co
 		return nil, err
 	}
 	// domain调用
+	tagFilter, err := evaluation_set.TagFilterDTO2DO(req.TagFilter)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
-		SpaceID:         req.WorkspaceID,
-		EvaluationSetID: req.EvaluationSetID,
-		VersionID:       req.VersionID,
-		ItemIDs:         req.ItemIds,
+		SpaceID:            req.WorkspaceID,
+		EvaluationSetID:    req.EvaluationSetID,
+		VersionID:          req.VersionID,
+		ItemIDs:            req.ItemIds,
+		ItemVersionQueries: evaluation_set.ItemVersionRefDTO2DOs(req.ItemVersionQueries),
+		Filter:             req.Filter,
+		TagFilter:          tagFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -865,4 +891,252 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemField(ctx context.Con
 	return &eval_set.GetEvaluationSetItemFieldResponse{
 		FieldData: evaluation_set.FieldDataDO2DTO(fieldData),
 	}, nil
+}
+
+func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemDef(ctx context.Context, req *eval_set.GetEvaluationSetItemDefRequest) (resp *eval_set.GetEvaluationSetItemDefResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, gptr.Of(true))
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.WorkspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	itemDef, err := e.evaluationSetItemService.GetEvaluationSetItemDef(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID)
+	if err != nil {
+		return nil, err
+	}
+	return &eval_set.GetEvaluationSetItemDefResponse{
+		ItemDef: evaluation_set.ItemDefDO2DTO(itemDef),
+	}, nil
+}
+
+func (e *EvaluationSetApplicationImpl) ListEvaluationSetItemDefs(ctx context.Context, req *eval_set.ListEvaluationSetItemDefsRequest) (resp *eval_set.ListEvaluationSetItemDefsResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, gptr.Of(true))
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.WorkspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	itemDefs, total, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItemDefs(ctx, &entity.ListEvaluationSetItemDefsParam{
+		SpaceID:         req.WorkspaceID,
+		EvaluationSetID: req.EvaluationSetID,
+		PageNumber:      req.PageNumber,
+		PageSize:        req.PageSize,
+		PageToken:       req.PageToken,
+		OrderBys:        common.ConvertOrderByDTO2DOs(req.OrderBys),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &eval_set.ListEvaluationSetItemDefsResponse{
+		ItemDefs:      evaluation_set.ItemDefDO2DTOs(itemDefs),
+		Total:         total,
+		NextPageToken: nextPageToken,
+	}, nil
+}
+
+func (e *EvaluationSetApplicationImpl) ListEvaluationSetItemVersions(ctx context.Context, req *eval_set.ListEvaluationSetItemVersionsRequest) (resp *eval_set.ListEvaluationSetItemVersionsResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "ListEvaluationSetItemVersions req: %v", json.Jsonify(req))
+	defer func() {
+		logs.CtxInfo(ctx, "ListEvaluationSetItemVersions resp: %v, err: %v", json.Jsonify(resp), err)
+	}()
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, gptr.Of(true))
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.WorkspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	versions, total, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItemVersions(ctx, &entity.ListEvaluationSetItemVersionsParam{
+		SpaceID:         req.WorkspaceID,
+		EvaluationSetID: req.EvaluationSetID,
+		ItemID:          req.ItemID,
+		PageNumber:      req.PageNumber,
+		PageSize:        req.PageSize,
+		PageToken:       req.PageToken,
+		OrderBys:        common.ConvertOrderByDTO2DOs(req.OrderBys),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &eval_set.ListEvaluationSetItemVersionsResponse{
+		Versions:      evaluation_set.ItemVersionDO2DTOs(versions),
+		Total:         total,
+		NextPageToken: nextPageToken,
+	}, nil
+}
+
+func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemVersion(ctx context.Context, req *eval_set.GetEvaluationSetItemVersionRequest) (resp *eval_set.GetEvaluationSetItemVersionResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "GetEvaluationSetItemVersion req: %v", json.Jsonify(req))
+	defer func() {
+		logs.CtxInfo(ctx, "GetEvaluationSetItemVersion resp: %v, err: %v", json.Jsonify(resp), err)
+	}()
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, gptr.Of(true))
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.WorkspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	version, err := e.evaluationSetItemService.GetEvaluationSetItemVersion(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID, req.ItemVersionID, req.ItemVersion)
+	if err != nil {
+		return nil, err
+	}
+	return &eval_set.GetEvaluationSetItemVersionResponse{
+		Version: evaluation_set.ItemVersionDO2DTO(version),
+	}, nil
+}
+
+func (e *EvaluationSetApplicationImpl) UpdateEvaluationSetItemVersion(ctx context.Context, req *eval_set.UpdateEvaluationSetItemVersionRequest) (resp *eval_set.UpdateEvaluationSetItemVersionResponse, err error) {
+	// TODO: remove debug logging after versioned_item feature is stable
+	logs.CtxInfo(ctx, "UpdateEvaluationSetItemVersion req: %v", json.Jsonify(req))
+	defer func() {
+		logs.CtxInfo(ctx, "UpdateEvaluationSetItemVersion resp: %v, err: %v", json.Jsonify(resp), err)
+	}()
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.WorkspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = e.evaluationSetItemService.UpdateEvaluationSetItemVersion(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID, req.ItemVersionID, req.Status, req.Description, req.ItemVersion)
+	if err != nil {
+		return nil, err
+	}
+	return &eval_set.UpdateEvaluationSetItemVersionResponse{}, nil
+}
+
+func (e *EvaluationSetApplicationImpl) BatchAddExistEvaluationSetItems(ctx context.Context, req *eval_set.BatchAddExistEvaluationSetItemsRequest) (resp *eval_set.BatchAddExistEvaluationSetItemsResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if len(req.Items) == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is empty"))
+	}
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.WorkspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	result, err := e.evaluationSetItemService.BatchAddExistEvaluationSetItems(ctx, &entity.BatchAddExistEvaluationSetItemsParam{
+		SpaceID:         req.WorkspaceID,
+		EvaluationSetID: req.EvaluationSetID,
+		Items:           evaluation_set.ItemVersionRefDTO2DOs(req.Items),
+		AllowPartialAdd: req.AllowPartialAdd,
+	})
+	if err != nil {
+		return nil, err
+	}
+	resp = &eval_set.BatchAddExistEvaluationSetItemsResponse{}
+	if result != nil {
+		resp.SuccessCount = result.SuccessCount
+		resp.FailedCount = result.FailedCount
+		resp.FailedItems = evaluation_set.ItemVersionRefDO2DTOs(result.FailedItems)
+	}
+	return resp, nil
 }

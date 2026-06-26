@@ -214,7 +214,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 				},
 			},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil)
 		assert.NoError(t, err)
 	})
 
@@ -262,7 +262,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 				},
 			},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, fieldWriteOptions)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, fieldWriteOptions, nil)
 		assert.NoError(t, err)
 	})
 
@@ -279,7 +279,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 		turns := []*entity.Turn{
 			{FieldDataList: []*entity.FieldData{{Key: "k1", Name: "n1", Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("text")}}}},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil)
 		assert.Error(t, err)
 	})
 
@@ -296,7 +296,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 		turns := []*entity.Turn{
 			{FieldDataList: []*entity.FieldData{{Key: "k1", Name: "n1", Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("text")}}}},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil)
 		assert.Error(t, err)
 	})
 
@@ -315,7 +315,7 @@ func TestUpdateDatasetItem(t *testing.T) {
 		turns := []*entity.Turn{
 			{FieldDataList: []*entity.FieldData{{Key: "k1", Name: "n1", Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("text")}}}},
 		}
-		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil)
+		err := adapter.UpdateDatasetItem(ctx, 100, 200, 300, turns, nil, nil)
 		assert.Error(t, err)
 	})
 }
@@ -606,7 +606,7 @@ func TestUpdateDataset(t *testing.T) {
 				BaseResp: &base.BaseResp{StatusCode: 0},
 			}, nil)
 
-		err := adapter.UpdateDataset(ctx, 1, 2, gptr.Of("name"), gptr.Of("desc"))
+		err := adapter.UpdateDataset(ctx, 1, 2, gptr.Of("name"), gptr.Of("desc"), nil)
 		assert.NoError(t, err)
 	})
 
@@ -620,7 +620,7 @@ func TestUpdateDataset(t *testing.T) {
 		mockClient.EXPECT().UpdateDataset(gomock.Any(), gomock.Any()).
 			Return(nil, errors.New("rpc error"))
 
-		err := adapter.UpdateDataset(ctx, 1, 2, gptr.Of("name"), nil)
+		err := adapter.UpdateDataset(ctx, 1, 2, gptr.Of("name"), nil, nil)
 		assert.Error(t, err)
 	})
 }

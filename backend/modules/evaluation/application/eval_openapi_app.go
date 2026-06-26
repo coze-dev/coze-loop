@@ -2788,3 +2788,83 @@ func (e *EvalOpenAPIApplication) GetEvalTargetRecordOApi(ctx context.Context, re
 		},
 	}, nil
 }
+
+func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetItemVersionsOApiRequest) (r *openapi.ListEvaluationSetItemVersionsOApiResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	versions, total, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItemVersions(ctx, &entity.ListEvaluationSetItemVersionsParam{
+		SpaceID:         req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvaluationSetID(),
+		ItemID:          req.GetItemID(),
+		PageSize:        req.PageSize,
+		PageToken:       req.PageToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &openapi.ListEvaluationSetItemVersionsOApiResponse{
+		Data: &openapi.ListEvaluationSetItemVersionsOpenAPIData{
+			Versions:      evaluation_set.OpenAPIItemVersionDO2DTOs(versions),
+			Total:         total,
+			NextPageToken: nextPageToken,
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) GetEvaluationSetItemVersionOApi(ctx context.Context, req *openapi.GetEvaluationSetItemVersionOApiRequest) (r *openapi.GetEvaluationSetItemVersionOApiResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	version, err := e.evaluationSetItemService.GetEvaluationSetItemVersion(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), req.GetItemID(), req.ItemVersionID, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &openapi.GetEvaluationSetItemVersionOApiResponse{
+		Data: &openapi.GetEvaluationSetItemVersionOpenAPIData{
+			Version: evaluation_set.OpenAPIItemVersionDO2DTO(version),
+		},
+	}, nil
+}

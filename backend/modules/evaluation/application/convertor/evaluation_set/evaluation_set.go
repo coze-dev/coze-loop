@@ -4,9 +4,14 @@
 package evaluation_set
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+	data_tag "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	app_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
@@ -62,7 +67,102 @@ func EvaluationSetDO2DTO(do *entity.EvaluationSet) *eval_set.EvaluationSet {
 		LatestVersion:        gptr.Of(do.LatestVersion),
 		NextVersionNum:       gptr.Of(do.NextVersionNum),
 		BaseInfo:             common.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		Type:                 do.DatasetType,
+		Tags:                 ResourceTagDO2DTOs(do.Tags),
 	}
+}
+
+func ResourceTagRefDTO2DOs(dtos []*eval_set.ResourceTagRef) []*entity.ResourceTagRef {
+	if dtos == nil {
+		return nil
+	}
+	result := make([]*entity.ResourceTagRef, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		result = append(result, &entity.ResourceTagRef{
+			TagName: dto.GetTagName(),
+		})
+	}
+	return result
+}
+
+func ResourceTagDO2DTOs(dos []*entity.ResourceTag) []*eval_set.ResourceTag {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*eval_set.ResourceTag, 0, len(dos))
+	for _, do := range dos {
+		dto := ResourceTagDO2DTO(do)
+		if dto != nil {
+			result = append(result, dto)
+		}
+	}
+	return result
+}
+
+func ResourceTagDO2DTO(do *entity.ResourceTag) *eval_set.ResourceTag {
+	if do == nil {
+		return nil
+	}
+	dto := &eval_set.ResourceTag{
+		TagName: do.TagName,
+	}
+	if do.TagKeyID != 0 {
+		dto.TagKeyID = gptr.Of(do.TagKeyID)
+	}
+	if do.ContentType != "" {
+		contentType := data_tag.TagContentType(do.ContentType)
+		dto.ContentType = &contentType
+	}
+	if do.Status != "" {
+		status := data_tag.TagStatus(do.Status)
+		dto.Status = &status
+	}
+	return dto
+}
+
+func TagFilterDTO2DO(dto *eval_set.TagFilter) (*entity.TagFilter, error) {
+	if dto == nil {
+		return nil, nil
+	}
+	tagNames, err := normalizeTagNames(dto.GetTagNames())
+	if err != nil {
+		return nil, err
+	}
+	if len(tagNames) == 0 {
+		return nil, fmt.Errorf("tag_filter.tag_names is required")
+	}
+	relation := entity.TagFilterRelationOr
+	switch dto.GetRelation() {
+	case "", eval_set.TagFilterRelationOr:
+	case eval_set.TagFilterRelationAnd:
+		relation = entity.TagFilterRelationAnd
+	default:
+		return nil, fmt.Errorf("tag_filter.relation must be or or and")
+	}
+	return &entity.TagFilter{
+		TagNames: tagNames,
+		Relation: relation,
+	}, nil
+}
+
+func normalizeTagNames(tagNames []string) ([]string, error) {
+	uniq := make(map[string]struct{}, len(tagNames))
+	for _, tagName := range tagNames {
+		normalized := strings.TrimSpace(tagName)
+		if normalized == "" {
+			return nil, fmt.Errorf("tag_name is required")
+		}
+		uniq[normalized] = struct{}{}
+	}
+	res := make([]string, 0, len(uniq))
+	for tagName := range uniq {
+		res = append(res, tagName)
+	}
+	sort.Strings(res)
+	return res, nil
 }
 
 func FieldWriteOptionDTO2DOs(dtos []*dataset.FieldWriteOption) []*entity.FieldWriteOption {
@@ -80,10 +180,16 @@ func FieldWriteOptionDTO2DO(dto *dataset.FieldWriteOption) *entity.FieldWriteOpt
 	if dto == nil {
 		return nil
 	}
+	var messageListStrategy *entity.MultiModalStoreStrategy
+	if dto.MessageListStoreStrategy != nil {
+		s := entity.MultiModalStoreStrategy(*dto.MessageListStoreStrategy)
+		messageListStrategy = &s
+	}
 	return &entity.FieldWriteOption{
-		FieldName:          dto.FieldName,
-		FieldKey:           dto.FieldKey,
-		MultiModalStoreOpt: MultiModalStoreOptionDTO2DO(dto.MultiModalStoreOpt),
+		FieldName:                dto.FieldName,
+		FieldKey:                 dto.FieldKey,
+		MultiModalStoreOpt:       MultiModalStoreOptionDTO2DO(dto.MultiModalStoreOpt),
+		MessageListStoreStrategy: messageListStrategy,
 	}
 }
 

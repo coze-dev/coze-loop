@@ -14,6 +14,8 @@ type CreateEvaluationSetParam struct {
 	EvaluationSetSchema *EvaluationSetSchema
 	BizCategory         *BizCategory
 	Session             *Session
+	DatasetType         *string
+	Tags                []*ResourceTagRef
 }
 
 type CreateEvaluationSetWithImportParam struct {
@@ -27,6 +29,7 @@ type CreateEvaluationSetWithImportParam struct {
 	FieldMappings       []*FieldMapping
 	Session             *Session
 	Option              *DatasetIOJobOption
+	DatasetType         *string
 }
 
 type UpdateEvaluationSetParam struct {
@@ -34,6 +37,7 @@ type UpdateEvaluationSetParam struct {
 	EvaluationSetID int64
 	Name            *string
 	Description     *string
+	Tags            []*ResourceTagRef
 }
 
 type ListEvaluationSetsParam struct {
@@ -45,6 +49,7 @@ type ListEvaluationSetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*OrderBy
+	TagFilter        *TagFilter
 }
 
 type ListEvaluationSetItemsParam struct {
@@ -57,16 +62,20 @@ type ListEvaluationSetItemsParam struct {
 	OrderBys        []*OrderBy
 	ItemIDsNotIn    []int64
 	Filter          *Filter
+	TagFilter       *TagFilter
 }
 type BatchGetEvaluationSetItemsParam struct {
-	SpaceID         int64
-	EvaluationSetID int64
-	ItemIDs         []int64
-	VersionID       *int64
-	PageNumber      *int32
-	PageSize        *int32
-	PageToken       *string
-	OrderBys        []*OrderBy
+	SpaceID            int64
+	EvaluationSetID    int64
+	ItemIDs            []int64
+	ItemVersionQueries []*EvaluationItemVersionRef
+	VersionID          *int64
+	PageNumber         *int32
+	PageSize           *int32
+	PageToken          *string
+	OrderBys           []*OrderBy
+	Filter             *Filter
+	TagFilter          *TagFilter
 }
 
 type GetEvaluationSetItemFieldParam struct {
@@ -98,7 +107,8 @@ type BatchUpdateEvaluationSetItemsParam struct {
 	EvaluationSetID int64
 	Items           []*EvaluationSetItem
 	// items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
-	SkipInvalidItems *bool
+	SkipInvalidItems  *bool
+	FieldWriteOptions []*FieldWriteOption
 }
 
 type CreateEvaluationSetVersionParam struct {
@@ -564,4 +574,36 @@ type ListEvaluatorTemplateResponse struct {
 	PageSize   int32                `json:"page_size"`   // 分页大小
 	PageNum    int32                `json:"page_num"`    // 页码
 	TotalPages int32                `json:"total_pages"` // 总页数
+}
+
+type ListEvaluationSetItemDefsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*OrderBy
+}
+
+type ListEvaluationSetItemVersionsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	ItemID          int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*OrderBy
+}
+
+type BatchAddExistEvaluationSetItemsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	Items           []*EvaluationItemVersionRef
+	AllowPartialAdd *bool
+}
+
+type BatchAddExistEvaluationSetItemsResult struct {
+	SuccessCount *int32
+	FailedCount  *int32
+	FailedItems  []*EvaluationItemVersionRef
 }
