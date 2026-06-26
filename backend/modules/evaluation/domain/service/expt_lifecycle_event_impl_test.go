@@ -15,6 +15,7 @@ import (
 
 	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 )
 
@@ -22,23 +23,27 @@ type testLifecycleEventMocks struct {
 	exptRepo         *repoMocks.MockIExperimentRepo
 	notifyRPCAdapter *rpcMocks.MockINotifyRPCAdapter
 	userProvider     *rpcMocks.MockIUserProvider
+	eventPublisher   *eventsMocks.MockExptEventPublisher
 }
 
 func newTestLifecycleEventHandler(ctrl *gomock.Controller) (*ExptLifecycleEventHandlerImpl, *testLifecycleEventMocks) {
 	mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
+	mockEventPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
 
 	handler := &ExptLifecycleEventHandlerImpl{
 		exptRepo:         mockExptRepo,
 		notifyRPCAdapter: mockNotifyRPCAdapter,
 		userProvider:     mockUserProvider,
+		eventPublisher:   mockEventPublisher,
 	}
 
 	return handler, &testLifecycleEventMocks{
 		exptRepo:         mockExptRepo,
 		notifyRPCAdapter: mockNotifyRPCAdapter,
 		userProvider:     mockUserProvider,
+		eventPublisher:   mockEventPublisher,
 	}
 }
 
@@ -49,8 +54,9 @@ func TestNewExptLifecycleEventHandler(t *testing.T) {
 	mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
+	mockEventPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
 
-	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider)
+	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider, mockEventPublisher)
 	assert.NotNil(t, handler)
 
 	impl, ok := handler.(*ExptLifecycleEventHandlerImpl)
@@ -58,6 +64,7 @@ func TestNewExptLifecycleEventHandler(t *testing.T) {
 	assert.Equal(t, mockExptRepo, impl.exptRepo)
 	assert.Equal(t, mockNotifyRPCAdapter, impl.notifyRPCAdapter)
 	assert.Equal(t, mockUserProvider, impl.userProvider)
+	assert.Equal(t, mockEventPublisher, impl.eventPublisher)
 }
 
 func TestHandleLifecycleEvent(t *testing.T) {

@@ -445,6 +445,11 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.SetExptSource(fallback)
 	}
 
+	// 通知配置
+	if len(experiment.Notifications) > 0 {
+		res.Notifications = NotificationConfigsDO2DTO(experiment.Notifications)
+	}
+
 	return res
 }
 
@@ -556,6 +561,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	}
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
+	}
+	if cer.IsSetNotifications() {
+		param.Notifications = NotificationConfigsDTO2DO(cer.GetNotifications())
 	}
 	return param, nil
 }
