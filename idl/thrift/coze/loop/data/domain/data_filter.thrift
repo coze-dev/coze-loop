@@ -76,3 +76,12 @@ struct FieldMetaInfoData {
     1: required map<string, FieldMeta> field_metas
 }
 
+typedef string TagFilterRelation(ts.enum="true")
+const TagFilterRelation TagFilterRelation_And = "and"
+const TagFilterRelation TagFilterRelation_Or = "or"
+
+struct TagFilter {
+    1: required list<string> tag_names (vt.min_size = "1", vt.max_size = "50", vt.elem.min_size = "1", vt.elem.max_size = "128")
+    2: optional TagFilterRelation relation
+}
+

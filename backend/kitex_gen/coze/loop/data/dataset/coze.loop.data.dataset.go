@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"strings"
 )
 
@@ -16994,7 +16995,10 @@ type ListDatasetItemsRequest struct {
 	// 与 page 同时提供时，优先使用 cursor
 	PageToken *string            `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
 	OrderBys  []*dataset.OrderBy `thrift:"order_bys,103,optional" frugal:"103,optional,list<dataset.OrderBy>" form:"order_bys" json:"order_bys,omitempty" query:"order_bys"`
-	Base      *base.Base         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	/* filter */
+	Filter    *filter.Filter    `thrift:"filter,200,optional" frugal:"200,optional,filter.Filter" form:"filter" json:"filter,omitempty" query:"filter"`
+	TagFilter *filter.TagFilter `thrift:"tag_filter,211,optional" frugal:"211,optional,filter.TagFilter" form:"tag_filter" json:"tag_filter,omitempty" query:"tag_filter"`
+	Base      *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListDatasetItemsRequest() *ListDatasetItemsRequest {
@@ -17071,6 +17075,30 @@ func (p *ListDatasetItemsRequest) GetOrderBys() (v []*dataset.OrderBy) {
 	return p.OrderBys
 }
 
+var ListDatasetItemsRequest_Filter_DEFAULT *filter.Filter
+
+func (p *ListDatasetItemsRequest) GetFilter() (v *filter.Filter) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilter() {
+		return ListDatasetItemsRequest_Filter_DEFAULT
+	}
+	return p.Filter
+}
+
+var ListDatasetItemsRequest_TagFilter_DEFAULT *filter.TagFilter
+
+func (p *ListDatasetItemsRequest) GetTagFilter() (v *filter.TagFilter) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagFilter() {
+		return ListDatasetItemsRequest_TagFilter_DEFAULT
+	}
+	return p.TagFilter
+}
+
 var ListDatasetItemsRequest_Base_DEFAULT *base.Base
 
 func (p *ListDatasetItemsRequest) GetBase() (v *base.Base) {
@@ -17100,6 +17128,12 @@ func (p *ListDatasetItemsRequest) SetPageToken(val *string) {
 func (p *ListDatasetItemsRequest) SetOrderBys(val []*dataset.OrderBy) {
 	p.OrderBys = val
 }
+func (p *ListDatasetItemsRequest) SetFilter(val *filter.Filter) {
+	p.Filter = val
+}
+func (p *ListDatasetItemsRequest) SetTagFilter(val *filter.TagFilter) {
+	p.TagFilter = val
+}
 func (p *ListDatasetItemsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -17111,6 +17145,8 @@ var fieldIDToName_ListDatasetItemsRequest = map[int16]string{
 	101: "page_size",
 	102: "page_token",
 	103: "order_bys",
+	200: "filter",
+	211: "tag_filter",
 	255: "Base",
 }
 
@@ -17132,6 +17168,14 @@ func (p *ListDatasetItemsRequest) IsSetPageToken() bool {
 
 func (p *ListDatasetItemsRequest) IsSetOrderBys() bool {
 	return p.OrderBys != nil
+}
+
+func (p *ListDatasetItemsRequest) IsSetFilter() bool {
+	return p.Filter != nil
+}
+
+func (p *ListDatasetItemsRequest) IsSetTagFilter() bool {
+	return p.TagFilter != nil
 }
 
 func (p *ListDatasetItemsRequest) IsSetBase() bool {
@@ -17201,6 +17245,22 @@ func (p *ListDatasetItemsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 103:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField103(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 211:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField211(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17327,6 +17387,22 @@ func (p *ListDatasetItemsRequest) ReadField103(iprot thrift.TProtocol) error {
 	p.OrderBys = _field
 	return nil
 }
+func (p *ListDatasetItemsRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := filter.NewFilter()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Filter = _field
+	return nil
+}
+func (p *ListDatasetItemsRequest) ReadField211(iprot thrift.TProtocol) error {
+	_field := filter.NewTagFilter()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TagFilter = _field
+	return nil
+}
 func (p *ListDatasetItemsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -17364,6 +17440,14 @@ func (p *ListDatasetItemsRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField103(oprot); err != nil {
 			fieldId = 103
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField211(oprot); err != nil {
+			fieldId = 211
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -17502,6 +17586,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
 }
+func (p *ListDatasetItemsRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilter() {
+		if err = oprot.WriteFieldBegin("filter", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Filter.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *ListDatasetItemsRequest) writeField211(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagFilter() {
+		if err = oprot.WriteFieldBegin("tag_filter", thrift.STRUCT, 211); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TagFilter.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 211 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 211 end error: ", p), err)
+}
 func (p *ListDatasetItemsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -17551,6 +17671,12 @@ func (p *ListDatasetItemsRequest) DeepEqual(ano *ListDatasetItemsRequest) bool {
 		return false
 	}
 	if !p.Field103DeepEqual(ano.OrderBys) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Filter) {
+		return false
+	}
+	if !p.Field211DeepEqual(ano.TagFilter) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -17624,6 +17750,20 @@ func (p *ListDatasetItemsRequest) Field103DeepEqual(src []*dataset.OrderBy) bool
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ListDatasetItemsRequest) Field200DeepEqual(src *filter.Filter) bool {
+
+	if !p.Filter.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListDatasetItemsRequest) Field211DeepEqual(src *filter.TagFilter) bool {
+
+	if !p.TagFilter.DeepEqual(src) {
+		return false
 	}
 	return true
 }
@@ -18147,7 +18287,10 @@ type ListDatasetItemsByVersionRequest struct {
 	// 与 page 同时提供时，优先使用 cursor
 	PageToken *string            `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
 	OrderBys  []*dataset.OrderBy `thrift:"order_bys,103,optional" frugal:"103,optional,list<dataset.OrderBy>" form:"order_bys" json:"order_bys,omitempty" query:"order_bys"`
-	Base      *base.Base         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	/* filter */
+	Filter    *filter.Filter    `thrift:"filter,200,optional" frugal:"200,optional,filter.Filter" form:"filter" json:"filter,omitempty" query:"filter"`
+	TagFilter *filter.TagFilter `thrift:"tag_filter,211,optional" frugal:"211,optional,filter.TagFilter" form:"tag_filter" json:"tag_filter,omitempty" query:"tag_filter"`
+	Base      *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListDatasetItemsByVersionRequest() *ListDatasetItemsByVersionRequest {
@@ -18231,6 +18374,30 @@ func (p *ListDatasetItemsByVersionRequest) GetOrderBys() (v []*dataset.OrderBy) 
 	return p.OrderBys
 }
 
+var ListDatasetItemsByVersionRequest_Filter_DEFAULT *filter.Filter
+
+func (p *ListDatasetItemsByVersionRequest) GetFilter() (v *filter.Filter) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilter() {
+		return ListDatasetItemsByVersionRequest_Filter_DEFAULT
+	}
+	return p.Filter
+}
+
+var ListDatasetItemsByVersionRequest_TagFilter_DEFAULT *filter.TagFilter
+
+func (p *ListDatasetItemsByVersionRequest) GetTagFilter() (v *filter.TagFilter) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagFilter() {
+		return ListDatasetItemsByVersionRequest_TagFilter_DEFAULT
+	}
+	return p.TagFilter
+}
+
 var ListDatasetItemsByVersionRequest_Base_DEFAULT *base.Base
 
 func (p *ListDatasetItemsByVersionRequest) GetBase() (v *base.Base) {
@@ -18263,6 +18430,12 @@ func (p *ListDatasetItemsByVersionRequest) SetPageToken(val *string) {
 func (p *ListDatasetItemsByVersionRequest) SetOrderBys(val []*dataset.OrderBy) {
 	p.OrderBys = val
 }
+func (p *ListDatasetItemsByVersionRequest) SetFilter(val *filter.Filter) {
+	p.Filter = val
+}
+func (p *ListDatasetItemsByVersionRequest) SetTagFilter(val *filter.TagFilter) {
+	p.TagFilter = val
+}
 func (p *ListDatasetItemsByVersionRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -18275,6 +18448,8 @@ var fieldIDToName_ListDatasetItemsByVersionRequest = map[int16]string{
 	101: "page_size",
 	102: "page_token",
 	103: "order_bys",
+	200: "filter",
+	211: "tag_filter",
 	255: "Base",
 }
 
@@ -18296,6 +18471,14 @@ func (p *ListDatasetItemsByVersionRequest) IsSetPageToken() bool {
 
 func (p *ListDatasetItemsByVersionRequest) IsSetOrderBys() bool {
 	return p.OrderBys != nil
+}
+
+func (p *ListDatasetItemsByVersionRequest) IsSetFilter() bool {
+	return p.Filter != nil
+}
+
+func (p *ListDatasetItemsByVersionRequest) IsSetTagFilter() bool {
+	return p.TagFilter != nil
 }
 
 func (p *ListDatasetItemsByVersionRequest) IsSetBase() bool {
@@ -18375,6 +18558,22 @@ func (p *ListDatasetItemsByVersionRequest) Read(iprot thrift.TProtocol) (err err
 		case 103:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField103(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 211:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField211(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18517,6 +18716,22 @@ func (p *ListDatasetItemsByVersionRequest) ReadField103(iprot thrift.TProtocol) 
 	p.OrderBys = _field
 	return nil
 }
+func (p *ListDatasetItemsByVersionRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := filter.NewFilter()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Filter = _field
+	return nil
+}
+func (p *ListDatasetItemsByVersionRequest) ReadField211(iprot thrift.TProtocol) error {
+	_field := filter.NewTagFilter()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TagFilter = _field
+	return nil
+}
 func (p *ListDatasetItemsByVersionRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -18558,6 +18773,14 @@ func (p *ListDatasetItemsByVersionRequest) Write(oprot thrift.TProtocol) (err er
 		}
 		if err = p.writeField103(oprot); err != nil {
 			fieldId = 103
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField211(oprot); err != nil {
+			fieldId = 211
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -18712,6 +18935,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
 }
+func (p *ListDatasetItemsByVersionRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilter() {
+		if err = oprot.WriteFieldBegin("filter", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Filter.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *ListDatasetItemsByVersionRequest) writeField211(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagFilter() {
+		if err = oprot.WriteFieldBegin("tag_filter", thrift.STRUCT, 211); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TagFilter.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 211 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 211 end error: ", p), err)
+}
 func (p *ListDatasetItemsByVersionRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -18764,6 +19023,12 @@ func (p *ListDatasetItemsByVersionRequest) DeepEqual(ano *ListDatasetItemsByVers
 		return false
 	}
 	if !p.Field103DeepEqual(ano.OrderBys) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Filter) {
+		return false
+	}
+	if !p.Field211DeepEqual(ano.TagFilter) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -18844,6 +19109,20 @@ func (p *ListDatasetItemsByVersionRequest) Field103DeepEqual(src []*dataset.Orde
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ListDatasetItemsByVersionRequest) Field200DeepEqual(src *filter.Filter) bool {
+
+	if !p.Filter.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListDatasetItemsByVersionRequest) Field211DeepEqual(src *filter.TagFilter) bool {
+
+	if !p.TagFilter.DeepEqual(src) {
+		return false
 	}
 	return true
 }

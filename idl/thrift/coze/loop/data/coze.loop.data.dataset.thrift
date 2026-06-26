@@ -3,6 +3,7 @@ namespace go coze.loop.data.dataset
 include "../../../base.thrift"
 include "domain/dataset.thrift"
 include "domain/dataset_job.thrift"
+include "domain/filter.thrift"
 
 struct CreateDatasetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', vt.gt = "0")
@@ -344,6 +345,10 @@ struct ListDatasetItemsRequest {
     102: optional string page_token                                                          // 与 page 同时提供时，优先使用 cursor
     103: optional list<dataset.OrderBy> order_bys
 
+    /* filter */
+    200: optional filter.Filter filter
+    211: optional filter.TagFilter tag_filter
+
     255: optional base.Base Base
 }
 
@@ -368,6 +373,10 @@ struct ListDatasetItemsByVersionRequest {
     101: optional i32 page_size (vt.gt = "0", vt.le = "200")                              // 分页大小(0, 200]，默认为 20
     102: optional string page_token                                                          // 与 page 同时提供时，优先使用 cursor
     103: optional list<dataset.OrderBy> order_bys
+
+    /* filter */
+    200: optional filter.Filter filter
+    211: optional filter.TagFilter tag_filter
 
     255: optional base.Base Base
 }

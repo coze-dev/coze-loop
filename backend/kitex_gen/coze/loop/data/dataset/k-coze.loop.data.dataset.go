@@ -14,12 +14,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 )
 
 var (
 	_ = base.KitexUnusedProtection
 	_ = dataset.KitexUnusedProtection
 	_ = dataset_job.KitexUnusedProtection
+	_ = filter.KitexUnusedProtection
 )
 
 // unused protection
@@ -12478,6 +12480,34 @@ func (p *ListDatasetItemsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField200(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 211:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField211(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -12611,6 +12641,30 @@ func (p *ListDatasetItemsRequest) FastReadField103(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListDatasetItemsRequest) FastReadField200(buf []byte) (int, error) {
+	offset := 0
+	_field := filter.NewFilter()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Filter = _field
+	return offset, nil
+}
+
+func (p *ListDatasetItemsRequest) FastReadField211(buf []byte) (int, error) {
+	offset := 0
+	_field := filter.NewTagFilter()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.TagFilter = _field
+	return offset, nil
+}
+
 func (p *ListDatasetItemsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -12636,6 +12690,8 @@ func (p *ListDatasetItemsRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
+		offset += p.fastWriteField200(buf[offset:], w)
+		offset += p.fastWriteField211(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -12651,6 +12707,8 @@ func (p *ListDatasetItemsRequest) BLength() int {
 		l += p.field101Length()
 		l += p.field102Length()
 		l += p.field103Length()
+		l += p.field200Length()
+		l += p.field211Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -12712,6 +12770,24 @@ func (p *ListDatasetItemsRequest) fastWriteField103(buf []byte, w thrift.NocopyW
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *ListDatasetItemsRequest) fastWriteField200(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilter() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 200)
+		offset += p.Filter.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ListDatasetItemsRequest) fastWriteField211(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTagFilter() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 211)
+		offset += p.TagFilter.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -12781,6 +12857,24 @@ func (p *ListDatasetItemsRequest) field103Length() int {
 	return l
 }
 
+func (p *ListDatasetItemsRequest) field200Length() int {
+	l := 0
+	if p.IsSetFilter() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Filter.BLength()
+	}
+	return l
+}
+
+func (p *ListDatasetItemsRequest) field211Length() int {
+	l := 0
+	if p.IsSetTagFilter() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.TagFilter.BLength()
+	}
+	return l
+}
+
 func (p *ListDatasetItemsRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -12835,6 +12929,24 @@ func (p *ListDatasetItemsRequest) DeepCopy(s interface{}) error {
 			p.OrderBys = append(p.OrderBys, _elem)
 		}
 	}
+
+	var _filter *filter.Filter
+	if src.Filter != nil {
+		_filter = &filter.Filter{}
+		if err := _filter.DeepCopy(src.Filter); err != nil {
+			return err
+		}
+	}
+	p.Filter = _filter
+
+	var _tagFilter *filter.TagFilter
+	if src.TagFilter != nil {
+		_tagFilter = &filter.TagFilter{}
+		if err := _tagFilter.DeepCopy(src.TagFilter); err != nil {
+			return err
+		}
+	}
+	p.TagFilter = _tagFilter
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -13329,6 +13441,34 @@ func (p *ListDatasetItemsByVersionRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField200(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 211:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField211(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -13481,6 +13621,30 @@ func (p *ListDatasetItemsByVersionRequest) FastReadField103(buf []byte) (int, er
 	return offset, nil
 }
 
+func (p *ListDatasetItemsByVersionRequest) FastReadField200(buf []byte) (int, error) {
+	offset := 0
+	_field := filter.NewFilter()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Filter = _field
+	return offset, nil
+}
+
+func (p *ListDatasetItemsByVersionRequest) FastReadField211(buf []byte) (int, error) {
+	offset := 0
+	_field := filter.NewTagFilter()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.TagFilter = _field
+	return offset, nil
+}
+
 func (p *ListDatasetItemsByVersionRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -13507,6 +13671,8 @@ func (p *ListDatasetItemsByVersionRequest) FastWriteNocopy(buf []byte, w thrift.
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
+		offset += p.fastWriteField200(buf[offset:], w)
+		offset += p.fastWriteField211(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -13523,6 +13689,8 @@ func (p *ListDatasetItemsByVersionRequest) BLength() int {
 		l += p.field101Length()
 		l += p.field102Length()
 		l += p.field103Length()
+		l += p.field200Length()
+		l += p.field211Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -13591,6 +13759,24 @@ func (p *ListDatasetItemsByVersionRequest) fastWriteField103(buf []byte, w thrif
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *ListDatasetItemsByVersionRequest) fastWriteField200(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilter() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 200)
+		offset += p.Filter.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ListDatasetItemsByVersionRequest) fastWriteField211(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTagFilter() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 211)
+		offset += p.TagFilter.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -13667,6 +13853,24 @@ func (p *ListDatasetItemsByVersionRequest) field103Length() int {
 	return l
 }
 
+func (p *ListDatasetItemsByVersionRequest) field200Length() int {
+	l := 0
+	if p.IsSetFilter() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Filter.BLength()
+	}
+	return l
+}
+
+func (p *ListDatasetItemsByVersionRequest) field211Length() int {
+	l := 0
+	if p.IsSetTagFilter() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.TagFilter.BLength()
+	}
+	return l
+}
+
 func (p *ListDatasetItemsByVersionRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -13723,6 +13927,24 @@ func (p *ListDatasetItemsByVersionRequest) DeepCopy(s interface{}) error {
 			p.OrderBys = append(p.OrderBys, _elem)
 		}
 	}
+
+	var _filter *filter.Filter
+	if src.Filter != nil {
+		_filter = &filter.Filter{}
+		if err := _filter.DeepCopy(src.Filter); err != nil {
+			return err
+		}
+	}
+	p.Filter = _filter
+
+	var _tagFilter *filter.TagFilter
+	if src.TagFilter != nil {
+		_tagFilter = &filter.TagFilter{}
+		if err := _tagFilter.DeepCopy(src.TagFilter); err != nil {
+			return err
+		}
+	}
+	p.TagFilter = _tagFilter
 
 	var _base *base.Base
 	if src.Base != nil {

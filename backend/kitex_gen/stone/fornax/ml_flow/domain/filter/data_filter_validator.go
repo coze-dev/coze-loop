@@ -49,3 +49,21 @@ func (p *FieldMeta) IsValid() error {
 func (p *FieldMetaInfoData) IsValid() error {
 	return nil
 }
+func (p *TagFilter) IsValid() error {
+	if len(p.TagNames) < int(1) {
+		return fmt.Errorf("field TagNames MinLen rule failed, current value: %v", p.TagNames)
+	}
+	if len(p.TagNames) > int(50) {
+		return fmt.Errorf("field TagNames MaxLen rule failed, current value: %v", p.TagNames)
+	}
+	for i := 0; i < len(p.TagNames); i++ {
+		_elem := p.TagNames[i]
+		if len(_elem) < int(1) {
+			return fmt.Errorf("field _elem min_len rule failed, current value: %d", len(_elem))
+		}
+		if len(_elem) > int(128) {
+			return fmt.Errorf("field _elem max_len rule failed, current value: %d", len(_elem))
+		}
+	}
+	return nil
+}
