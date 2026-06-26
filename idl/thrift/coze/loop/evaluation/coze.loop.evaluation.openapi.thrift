@@ -21,6 +21,7 @@ struct CreateEvaluationSetOApiRequest {
     3: optional string description (api.body = "description", vt.max_size = "2048")
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema (api.body = "evaluation_set_schema")
     5: optional eval_set.EvaluationSetType type (api.body = "type", vt.max_size = "128")
+    6: optional list<eval_set.ResourceTagRef> tags (api.body = "tags", vt.elem.skip = "false")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -66,6 +67,7 @@ struct UpdateEvaluationSetOApiRequest {
 
     3: optional string name (api.body = "name", vt.min_size = "1", vt.max_size = "255"),
     4: optional string description (api.body = "description", vt.max_size = "2048"),
+    5: optional list<eval_set.ResourceTagRef> tags (api.body = "tags", vt.elem.skip = "false"),
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -108,6 +110,8 @@ struct ListEvaluationSetsOApiRequest {
     2: optional string name (api.query = "name")
     3: optional list<string> creators (api.query = "creators")
     4: optional list<i64> evaluation_set_ids (api.query = "evaluation_set_ids", api.js_conv = "true", go.tag = 'json:"evaluation_set_ids"'),
+    5: optional list<string> tag_names (api.query = "tag_names", vt.max_size = "50", vt.elem.min_size = "1", vt.elem.max_size = "128")
+    6: optional eval_set.TagFilterRelation tag_filter_relation (api.query = "tag_filter_relation")
 
     100: optional string page_token (api.query = "page_token")
     101: optional i32 page_size (api.query = "page_size", vt.gt = "0", vt.le = "200")
@@ -305,9 +309,12 @@ struct ListEvaluationSetVersionItemsOApiRequest {
     1: optional i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv = "true", go.tag = 'json:"evaluation_set_id"')
     3: optional i64 version_id (api.query = "version_id", api.js_conv = "true", go.tag = 'json:"version_id"')
+    4: optional list<string> tag_names (api.query = "tag_names", vt.max_size = "50", vt.elem.min_size = "1", vt.elem.max_size = "128")
+    5: optional eval_set.TagFilterRelation tag_filter_relation (api.query = "tag_filter_relation")
 
     100: optional string page_token (api.query = "page_token")
     101: optional i32 page_size (api.query = "page_size", vt.gt = "0", vt.le = "200")
+    201: optional string filter (api.query = "filter")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base

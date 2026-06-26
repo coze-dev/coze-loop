@@ -4,6 +4,11 @@
 package evaluation_set
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/url"
+	"strings"
+
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
@@ -255,6 +260,146 @@ func OrderByDTO2DO(dto *common.OrderBy) *entity.OrderBy {
 	}
 }
 
+func OpenAPIResourceTagRefDTO2DOs(dtos []*openapi_eval_set.ResourceTagRef) []*entity.ResourceTagRef {
+	if dtos == nil {
+		return nil
+	}
+	result := make([]*entity.ResourceTagRef, 0, len(dtos))
+	for _, dto := range dtos {
+		result = append(result, OpenAPIResourceTagRefDTO2DO(dto))
+	}
+	return result
+}
+
+func OpenAPIResourceTagRefDTO2DO(dto *openapi_eval_set.ResourceTagRef) *entity.ResourceTagRef {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ResourceTagRef{
+		TagName: dto.GetTagName(),
+	}
+}
+
+func OpenAPIResourceTagDTO2DOs(dtos []*openapi_eval_set.ResourceTag) []*entity.ResourceTag {
+	if dtos == nil {
+		return nil
+	}
+	result := make([]*entity.ResourceTag, 0, len(dtos))
+	for _, dto := range dtos {
+		result = append(result, OpenAPIResourceTagDTO2DO(dto))
+	}
+	return result
+}
+
+func OpenAPIResourceTagDTO2DO(dto *openapi_eval_set.ResourceTag) *entity.ResourceTag {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ResourceTag{
+		TagName:     dto.GetTagName(),
+		TagKeyID:    dto.GetTagKeyID(),
+		ContentType: dto.GetContentType(),
+		Status:      dto.GetStatus(),
+	}
+}
+
+func OpenAPIResourceTagDO2DTOs(dos []*entity.ResourceTag) []*openapi_eval_set.ResourceTag {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.ResourceTag, 0, len(dos))
+	for _, do := range dos {
+		result = append(result, OpenAPIResourceTagDO2DTO(do))
+	}
+	return result
+}
+
+func OpenAPIResourceTagDO2DTO(do *entity.ResourceTag) *openapi_eval_set.ResourceTag {
+	if do == nil {
+		return nil
+	}
+	dto := &openapi_eval_set.ResourceTag{
+		TagName: do.TagName,
+	}
+	if do.TagKeyID != 0 {
+		dto.TagKeyID = gptr.Of(do.TagKeyID)
+	}
+	if do.ContentType != "" {
+		dto.ContentType = gptr.Of(do.ContentType)
+	}
+	if do.Status != "" {
+		dto.Status = gptr.Of(do.Status)
+	}
+	return dto
+}
+
+func OpenAPITagFilterDTO2DO(dto *openapi_eval_set.TagFilter) (*entity.TagFilter, error) {
+	if dto == nil {
+		return nil, nil
+	}
+	return openAPITagFilterValuesDTO2DO(dto.GetTagNames(), dto.GetRelation())
+}
+
+func OpenAPITagFilterQueryDTO2DO(tagNames []string, relation *openapi_eval_set.TagFilterRelation) (*entity.TagFilter, error) {
+	if len(tagNames) == 0 && relation == nil {
+		return nil, nil
+	}
+	return openAPITagFilterValuesDTO2DO(tagNames, gptr.Indirect(relation))
+}
+
+func OpenAPIFilterQueryDTO2DO(filterQuery *string) (*entity.Filter, error) {
+	if filterQuery == nil {
+		return nil, nil
+	}
+	rawFilter := strings.TrimSpace(*filterQuery)
+	if rawFilter == "" {
+		return nil, nil
+	}
+	filter, err := parseOpenAPIFilterQuery(rawFilter)
+	if err == nil {
+		return filter, nil
+	}
+	decodedFilter, decodeErr := url.QueryUnescape(rawFilter)
+	if decodeErr != nil || decodedFilter == rawFilter {
+		return nil, fmt.Errorf("filter must be a JSON encoded filter.Filter")
+	}
+	filter, decodedErr := parseOpenAPIFilterQuery(decodedFilter)
+	if decodedErr != nil {
+		return nil, fmt.Errorf("filter must be a JSON encoded filter.Filter")
+	}
+	return filter, nil
+}
+
+func parseOpenAPIFilterQuery(rawFilter string) (*entity.Filter, error) {
+	filter := &entity.Filter{}
+	if err := json.Unmarshal([]byte(rawFilter), filter); err != nil {
+		return nil, err
+	}
+	return filter, nil
+}
+
+func openAPITagFilterValuesDTO2DO(tagNames []string, relation openapi_eval_set.TagFilterRelation) (*entity.TagFilter, error) {
+	normalizedTagNames, err := normalizeTagNames(tagNames)
+	if err != nil {
+		return nil, err
+	}
+	if len(normalizedTagNames) == 0 {
+		return nil, fmt.Errorf("tag_filter.tag_names is required")
+	}
+	filterRelation := entity.TagFilterRelationOr
+	switch relation {
+	case "", openapi_eval_set.TagFilterRelationOr:
+	case openapi_eval_set.TagFilterRelationAnd:
+		filterRelation = entity.TagFilterRelationAnd
+	default:
+		return nil, fmt.Errorf("tag_filter.relation must be or or and")
+	}
+	return &entity.TagFilter{
+		TagNames: normalizedTagNames,
+		Relation: filterRelation,
+	}, nil
+}
+
 // 内部DTO转OpenAPI DTO
 func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.EvaluationSet {
 	if do == nil {
@@ -272,6 +417,7 @@ func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.Eval
 		Type:                do.DatasetType,
 		CurrentVersion:      OpenAPIEvaluationSetVersionDO2DTO(do.EvaluationSetVersion),
 		BaseInfo:            ConvertBaseInfoDO2DTO(do.BaseInfo),
+		Tags:                OpenAPIResourceTagDO2DTOs(do.Tags),
 	}
 }
 
@@ -409,6 +555,7 @@ func OpenAPIItemDTO2DO(evalSetID int64, dto *openapi_eval_set.EvaluationSetItem)
 		ItemKey:     gptr.Indirect(dto.ItemKey),
 		ItemVersion: dto.ItemVersion,
 		Turns:       OpenAPITurnDTO2DOs(evalSetID, dto.GetID(), dto.Turns),
+		Tags:        OpenAPIResourceTagDTO2DOs(dto.Tags),
 	}
 }
 
@@ -532,6 +679,7 @@ func OpenAPIItemDO2DTO(do *entity.EvaluationSetItem) *openapi_eval_set.Evaluatio
 		ItemKey:  gptr.Of(do.ItemKey),
 		Turns:    OpenAPITurnDO2DTOs(do.Turns),
 		BaseInfo: ConvertBaseInfoDO2DTO(do.BaseInfo),
+		Tags:     OpenAPIResourceTagDO2DTOs(do.Tags),
 	}
 }
 

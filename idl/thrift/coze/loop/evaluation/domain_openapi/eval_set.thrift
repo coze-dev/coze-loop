@@ -2,6 +2,26 @@ namespace go coze.loop.evaluation.domain_openapi.eval_set
 
 include "common.thrift"
 
+typedef string TagFilterRelation(ts.enum="true")
+const TagFilterRelation TagFilterRelation_And = "and"
+const TagFilterRelation TagFilterRelation_Or = "or"
+
+struct ResourceTagRef {
+    1: required string tag_name (vt.min_size = "1", vt.max_size = "128")
+}
+
+struct ResourceTag {
+    1: required string tag_name
+    2: optional i64 tag_key_id (api.js_conv="true", go.tag='json:"tag_key_id"')
+    3: optional string content_type
+    4: optional string status
+}
+
+struct TagFilter {
+    1: required list<string> tag_names (vt.min_size = "1", vt.max_size = "50", vt.elem.min_size = "1", vt.elem.max_size = "128")
+    2: optional TagFilterRelation relation
+}
+
 // 评测集状态
 typedef string EvaluationSetStatus(ts.enum="true")
 const EvaluationSetStatus EvaluationSetStatus_Active = "active"
@@ -63,6 +83,7 @@ struct EvaluationSet {
     8: optional EvaluationSetType type
 
     20: optional EvaluationSetVersion current_version
+    21: optional list<ResourceTag> tags
 
     100: optional common.BaseInfo base_info
 }
@@ -86,6 +107,7 @@ struct EvaluationSetItem {
     3: optional list<Turn> turns
     20: optional i64 item_version_id (api.js_conv="true", go.tag = 'json:"item_version_id"')
     21: optional string item_version
+    24: optional list<ResourceTag> tags
     100: optional common.BaseInfo base_info
 }
 
