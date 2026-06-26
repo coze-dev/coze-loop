@@ -142,6 +142,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 		Name:                req.GetName(),
 		Description:         req.Description,
 		EvaluationSetSchema: evaluation_set.OpenAPIEvaluationSetSchemaDTO2DO(req.EvaluationSetSchema),
+		Tags:                evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -333,6 +334,7 @@ func (e *EvalOpenAPIApplication) UpdateEvaluationSetOApi(ctx context.Context, re
 		EvaluationSetID: req.GetEvaluationSetID(),
 		Name:            req.Name,
 		Description:     req.Description,
+		Tags:            evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
 	})
 	if err != nil {
 		return nil, err
@@ -406,6 +408,10 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 	if err != nil {
 		return nil, err
 	}
+	tagFilter, err := evaluation_set.OpenAPITagFilterQueryDTO2DO(req.GetTagNames(), req.TagFilterRelation)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	// 调用domain服务
 	sets, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSets(ctx, &entity.ListEvaluationSetsParam{
 		SpaceID:          req.GetWorkspaceID(),
@@ -414,6 +420,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 		Creators:         req.Creators,
 		PageSize:         req.PageSize,
 		PageToken:        req.PageToken,
+		TagFilter:        tagFilter,
 	})
 	if err != nil {
 		return nil, err
@@ -734,6 +741,15 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 		return nil, err
 	}
 
+	tagFilter, err := evaluation_set.OpenAPITagFilterQueryDTO2DO(req.GetTagNames(), req.TagFilterRelation)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+	filter, err := evaluation_set.OpenAPIFilterQueryDTO2DO(req.Filter)
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+
 	// 调用domain服务
 	items, total, _, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 		SpaceID:         req.GetWorkspaceID(),
@@ -741,6 +757,8 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 		VersionID:       req.VersionID,
 		PageSize:        req.PageSize,
 		PageToken:       req.PageToken,
+		Filter:          filter,
+		TagFilter:       tagFilter,
 	})
 	if err != nil {
 		return nil, err
