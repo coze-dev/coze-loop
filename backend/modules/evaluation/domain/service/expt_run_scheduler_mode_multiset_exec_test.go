@@ -474,3 +474,67 @@ func TestExtractItemIDFilter(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestExtractNormalColumnFilter(t *testing.T) {
+	t.Run("nil / 无普通列 -> nil", func(t *testing.T) {
+		assert.Nil(t, extractNormalColumnFilter(nil))
+		// 只有 item_id + tag, 无普通列
+		f := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
+			{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"1"}},
+			{FieldName: "lang", FieldType: "tag", QueryType: "in", Values: []string{"zh"}},
+		}}
+		assert.Nil(t, extractNormalColumnFilter(f))
+	})
+
+	t.Run("混合 -> 只抽普通列, 跳过 item_id/tag", func(t *testing.T) {
+		f := &entity.ExptItemFilter{
+			QueryAndOr: "and",
+			FilterFields: []*entity.ExptItemFilterField{
+				{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"1"}},
+				{FieldName: "lang", FieldType: "tag", QueryType: "in", Values: []string{"zh"}},
+				{FieldName: "category", FieldType: "string", QueryType: "match", Values: []string{"math"}},
+				{FieldName: "difficulty", FieldType: "integer", QueryType: "not_eq", Values: []string{"5"}},
+			},
+		}
+		out := extractNormalColumnFilter(f)
+		assert.NotNil(t, out)
+		assert.Len(t, out.FilterFields, 2)
+		assert.Equal(t, "and", ptr.From(out.QueryAndOr))
+		assert.Equal(t, "category", out.FilterFields[0].FieldName)
+		assert.Equal(t, "match", ptr.From(out.FilterFields[0].QueryType))
+		assert.Equal(t, "difficulty", out.FilterFields[1].FieldName)
+	})
+}
+
+func TestExtractTagFilter(t *testing.T) {
+	t.Run("nil / 无 tag -> nil", func(t *testing.T) {
+		assert.Nil(t, extractTagFilter(nil))
+		f := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
+			{FieldName: "category", FieldType: "string", QueryType: "match", Values: []string{"math"}},
+		}}
+		assert.Nil(t, extractTagFilter(f))
+	})
+
+	t.Run("抽 tag values 扁平收集, relation 默认 or", func(t *testing.T) {
+		f := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
+			{FieldName: "lang", FieldType: "tag", QueryType: "in", Values: []string{"zh", "en"}},
+			{FieldName: "level", FieldType: "tag", QueryType: "in", Values: []string{"hard"}},
+		}}
+		out := extractTagFilter(f)
+		assert.NotNil(t, out)
+		assert.ElementsMatch(t, []string{"zh", "en", "hard"}, out.TagNames)
+		assert.Equal(t, entity.TagFilterRelationOr, out.Relation)
+	})
+
+	t.Run("query_and_or=and -> relation And", func(t *testing.T) {
+		f := &entity.ExptItemFilter{
+			QueryAndOr: "and",
+			FilterFields: []*entity.ExptItemFilterField{
+				{FieldName: "lang", FieldType: "tag", QueryType: "in", Values: []string{"zh"}},
+			},
+		}
+		out := extractTagFilter(f)
+		assert.NotNil(t, out)
+		assert.Equal(t, entity.TagFilterRelationAnd, out.Relation)
+	})
+}

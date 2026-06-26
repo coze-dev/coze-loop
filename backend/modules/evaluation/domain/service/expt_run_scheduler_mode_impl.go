@@ -1963,15 +1963,16 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			return nil
 		}
 
-		// 解析 set 级 item_filter: item_id 点选裁剪 (tag 圈选执行侧裁剪未接, 见 tech debt)
-		includeIDs, excludeIDs, hasTagFilter, ferr := extractItemIDFilter(setConf.ItemFilter)
+		// 解析 set 级 item_filter:
+		//   - item_id 点选 → BatchGet 的 ItemVersionQueries
+		//   - 普通列 → 下游 Filter (commercial 走 ml_flow 服务端裁剪; 开源版无字段降级全量)
+		//   - tag → 下游 TagFilter (同上)
+		includeIDs, excludeIDs, _, ferr := extractItemIDFilter(setConf.ItemFilter)
 		if ferr != nil {
 			return ferr
 		}
-		if hasTagFilter {
-			logs.CtxWarn(ctx, "exptStartMultiSet: set 级 tag 圈选 item_filter 执行侧裁剪未接, 该 set 全量进实验, expt_id=%d, set_id=%d",
-				event.ExptID, setConf.EvalSetID)
-		}
+		nFilter := extractNormalColumnFilter(setConf.ItemFilter)
+		tFilter := extractTagFilter(setConf.ItemFilter)
 		excludeSet := make(map[int64]struct{}, len(excludeIDs))
 		for _, id := range excludeIDs {
 			excludeSet[id] = struct{}{}
@@ -1998,6 +1999,8 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 						EvaluationSetID:    setConf.EvalSetID,
 						VersionID:          &setConf.EvalSetVersionID,
 						ItemVersionQueries: queries,
+						Filter:             nFilter,
+						TagFilter:          tFilter,
 					})
 					return retryErr
 				}); err != nil {
@@ -2010,7 +2013,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			continue
 		}
 
-		// 无 item_id 点选 (无 filter / 纯 tag): List 分页拉全集 (tag 暂不下传), exclude 在内存过滤
+		// 无 item_id 点选 (无 filter / 普通列 / tag): List 分页, Filter/TagFilter 下传服务端裁剪, exclude 在内存过滤
 		var pageToken *string
 		pageTotalCnt := 0
 		for loop := 0; loop < 10000; loop++ {
@@ -2028,6 +2031,8 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 					VersionID:       &setConf.EvalSetVersionID,
 					PageSize:        &pageSizePtr,
 					PageToken:       pageToken,
+					Filter:          nFilter,
+					TagFilter:       tFilter,
 				})
 				return retryErr
 			}); err != nil {
@@ -2035,6 +2040,9 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			}
 
 			pageTotalCnt += len(items)
+			// item_id not_in/not_eq 排除: 逐页内存剔 (每页 pageSize, 非全集进内存, excludeSet 只存 id)。
+			// 下游既无 not_in 专用字段、也无 item_id 作通用 filter 的约定, 暂只能内存排除;
+			// 代价是纯 not_in 仍要分页遍历整集。TODO: 下游就绪后改服务端排除省整集遍历。
 			if len(excludeSet) > 0 {
 				kept := items[:0]
 				for _, it := range items {
@@ -2129,5 +2137,66 @@ func extractItemIDFilter(f *entity.ExptItemFilter) (includeIDs, excludeIDs []int
 		}
 	}
 	return includeIDs, excludeIDs, hasTagFilter, nil
+}
+
+// extractNormalColumnFilter 从 set 级 ItemFilter 抽出普通业务列条件 (非 item_id、非 tag),
+// 组成下游 entity.Filter (= data_filter.Filter)。无普通列字段时返回 nil。
+//
+// 下游 commercial adapter 透传给 ml_flow 做服务端裁剪; 开源版下游无 filter 字段会丢弃 (降级全量)。
+func extractNormalColumnFilter(f *entity.ExptItemFilter) *entity.Filter {
+	if f == nil || len(f.FilterFields) == 0 {
+		return nil
+	}
+	fields := make([]*entity.FilterField, 0, len(f.FilterFields))
+	for _, ff := range f.FilterFields {
+		if ff == nil {
+			continue
+		}
+		if ff.FieldType == "tag" || ff.FieldName == "item_id" {
+			continue
+		}
+		field := &entity.FilterField{
+			FieldName: ff.FieldName,
+			FieldType: ff.FieldType,
+			Values:    ff.Values,
+		}
+		if ff.QueryType != "" {
+			field.QueryType = gptr.Of(ff.QueryType)
+		}
+		fields = append(fields, field)
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+	out := &entity.Filter{FilterFields: fields}
+	if f.QueryAndOr != "" {
+		out.QueryAndOr = gptr.Of(f.QueryAndOr)
+	}
+	return out
+}
+
+// extractTagFilter 从 set 级 ItemFilter 抽出 tag 条件 (field_type=tag),
+// 把各 tag field 的 values 扁平收集成下游 entity.TagFilter{TagNames, Relation}。无 tag 时返回 nil。
+//
+// Relation 由 ItemFilter.QueryAndOr 映射 (and→And, 其余→Or, 与下游 TagFilter 默认一致)。
+func extractTagFilter(f *entity.ExptItemFilter) *entity.TagFilter {
+	if f == nil || len(f.FilterFields) == 0 {
+		return nil
+	}
+	var tagNames []string
+	for _, ff := range f.FilterFields {
+		if ff == nil || ff.FieldType != "tag" {
+			continue
+		}
+		tagNames = append(tagNames, ff.Values...)
+	}
+	if len(tagNames) == 0 {
+		return nil
+	}
+	relation := entity.TagFilterRelationOr
+	if f.QueryAndOr == "and" {
+		relation = entity.TagFilterRelationAnd
+	}
+	return &entity.TagFilter{TagNames: tagNames, Relation: relation}
 }
 

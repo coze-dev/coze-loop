@@ -99,9 +99,31 @@ func TestValidateEvalSetConfigs(t *testing.T) {
 				{EvalSetID: 1, EvalSetVersionID: 11, EvaluatorConfs: []*ExptEvaluatorConf{
 					{EvaluatorVersionID: 100, Filter: &ExptItemFilter{
 						FilterFields: []*ExptItemFilterField{
-							{FieldName: "item_id", FieldType: "double", QueryType: "eq"},
+							{FieldName: "item_id", FieldType: "unknown_type", QueryType: "eq"},
 						},
 					}},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "非法: filter query_type 超白名单 (contains 已不在白名单)",
+			configs: []*EvalSetConfig{
+				{EvalSetID: 1, EvalSetVersionID: 11, ItemFilter: &ExptItemFilter{
+					FilterFields: []*ExptItemFilterField{
+						{FieldName: "category", FieldType: "string", QueryType: "contains"},
+					},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "非法: filter field_name 为空",
+			configs: []*EvalSetConfig{
+				{EvalSetID: 1, EvalSetVersionID: 11, ItemFilter: &ExptItemFilter{
+					FilterFields: []*ExptItemFilterField{
+						{FieldName: "", FieldType: "string", QueryType: "eq", Values: []string{"x"}},
+					},
 				}},
 			},
 			wantErr: true,
@@ -146,6 +168,31 @@ func TestValidateEvalSetConfigs(t *testing.T) {
 				{EvalSetID: 1, EvalSetVersionID: 11, ItemFilter: &ExptItemFilter{
 					FilterFields: []*ExptItemFilterField{
 						{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"1", "2"}},
+					},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "合法: 普通列 string + match",
+			configs: []*EvalSetConfig{
+				{EvalSetID: 1, EvalSetVersionID: 11, ItemFilter: &ExptItemFilter{
+					FilterFields: []*ExptItemFilterField{
+						{FieldName: "category", FieldType: "string", QueryType: "match", Values: []string{"math"}},
+					},
+				}},
+			},
+			wantErr: false,
+		},
+		{
+			name: "合法: 普通列 + tag + item_id 混合",
+			configs: []*EvalSetConfig{
+				{EvalSetID: 1, EvalSetVersionID: 11, ItemFilter: &ExptItemFilter{
+					QueryAndOr: "and",
+					FilterFields: []*ExptItemFilterField{
+						{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"1"}},
+						{FieldName: "lang", FieldType: "tag", QueryType: "eq", Values: []string{"zh"}},
+						{FieldName: "difficulty", FieldType: "integer", QueryType: "not_eq", Values: []string{"5"}},
 					},
 				}},
 			},

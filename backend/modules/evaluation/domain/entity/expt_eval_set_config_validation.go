@@ -24,10 +24,17 @@ var (
 	// alias 字符集白名单 [a-zA-Z0-9_-]
 	aliasPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
-	// filter 字段白名单
-	allowedFilterFieldNames = map[string]struct{}{"item_id": {}}                                              // tag key 走 field_type=tag 放行
-	allowedFilterFieldTypes = map[string]struct{}{"long": {}, "tag": {}}                                       // long(item_id) / tag
-	allowedFilterQueryTypes = map[string]struct{}{"eq": {}, "not_eq": {}, "in": {}, "not_in": {}}              // 单层比较
+	// filter 字段白名单 (对齐下游 data_filter.thrift FieldType / QueryType 词表)
+	//   field_type: long(item_id) / tag(标签) / string,double,bool,float,integer(普通业务列)
+	//   query_type: 单层比较 + match/not_match(子串)
+	//   field_name: 只校验非空 (item_id / tag key / 普通列名), 不查 schema 是否存在
+	allowedFilterFieldTypes = map[string]struct{}{
+		"long": {}, "tag": {},
+		"string": {}, "double": {}, "bool": {}, "float": {}, "integer": {},
+	}
+	allowedFilterQueryTypes = map[string]struct{}{
+		"eq": {}, "not_eq": {}, "in": {}, "not_in": {}, "match": {}, "not_match": {},
+	}
 )
 
 // ValidateEvalSetConfigs 校验新路径 (MultiSetConfig) 的多评测集配置。
@@ -103,7 +110,8 @@ func ValidateEvalSetConfigs(configs []*EvalSetConfig) error {
 	return nil
 }
 
-// validateFilter 对 item_filter / evaluator filter 套用白名单：字段名/类型/操作符白名单、单层不嵌套、数量上限、点选基本校验。
+// validateFilter 对 item_filter / evaluator filter 套用白名单：field_type/query_type 白名单、
+// field_name 非空、数量上限、item_id 点选基本校验。支持 item_id / tag / 普通业务列三类。
 func validateFilter(f *ExptItemFilter, path string) error {
 	if f == nil {
 		return nil
@@ -120,17 +128,15 @@ func validateFilter(f *ExptItemFilter, path string) error {
 		}
 		// field_type 白名单
 		if _, ok := allowedFilterFieldTypes[ff.FieldType]; !ok {
-			return invalidParam(fmt.Sprintf("%s.filter_fields[%d]: field_type %q not allowed (only long/tag)", path, fi, ff.FieldType))
+			return invalidParam(fmt.Sprintf("%s.filter_fields[%d]: field_type %q not allowed (long/tag/string/double/bool/float/integer)", path, fi, ff.FieldType))
 		}
 		// query_type 白名单
 		if _, ok := allowedFilterQueryTypes[ff.QueryType]; !ok {
-			return invalidParam(fmt.Sprintf("%s.filter_fields[%d]: query_type %q not allowed (only eq/not_eq/in/not_in)", path, fi, ff.QueryType))
+			return invalidParam(fmt.Sprintf("%s.filter_fields[%d]: query_type %q not allowed (eq/not_eq/in/not_in/match/not_match)", path, fi, ff.QueryType))
 		}
-		// field_name 白名单: item_id 显式放行；其余仅当 field_type=tag 时视为 tag key 放行
-		if _, ok := allowedFilterFieldNames[ff.FieldName]; !ok {
-			if ff.FieldType != "tag" {
-				return invalidParam(fmt.Sprintf("%s.filter_fields[%d]: field_name %q not allowed (only item_id or tag key with field_type=tag)", path, fi, ff.FieldName))
-			}
+		// field_name 只校验非空 (item_id / tag key / 普通列名), 不查评测集 schema 是否存在
+		if ff.FieldName == "" {
+			return invalidParam(fmt.Sprintf("%s.filter_fields[%d]: field_name must not be empty", path, fi))
 		}
 		// 点选 (item_id in) 基本校验: values 非空。
 		// TODO: 文档要求"点选 values 必须全部属于对应 eval_set_version 快照(缺一报错)"，依赖 Data 侧按 version 拉 item 接口，

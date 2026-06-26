@@ -76,10 +76,8 @@ func MatchExptItemFilter(filter *entity.ExptItemFilter, item *entity.EvaluationS
 
 // matchFilterField 单字段匹配。
 //   - field_name=item_id: 用 item.ItemID 比较 (item 级, 不依赖 turn)
-//   - 其余: 从 turn.FieldDataList 按 name/key 取字段文本值
-//
-// 注: tag (field_type=tag) 暂未支持 — matcher 尚无 tag 分支, 配 tag 会走文本路径匹配不上,
-// 见 tech debt; 普通 turn 字段创建侧白名单当前未放行 (仅 item_id / tag)。
+//   - field_type=tag: 用 item.Tags 里持有的 tag 名集合做存在性比较 (对齐下游 TagFilter 语义)
+//   - 其余 (普通列): 从 turn.FieldDataList 按 name/key 取字段文本值
 func matchFilterField(ff *entity.ExptItemFilterField, item *entity.EvaluationSetItem, turn *entity.Turn) bool {
 	// item_id: 直接读 item 级 ItemID, 不走 turn 文本路径
 	if ff.FieldName == "item_id" {
@@ -89,6 +87,12 @@ func matchFilterField(ff *entity.ExptItemFilterField, item *entity.EvaluationSet
 		return matchByQueryType(ff.QueryType, strconv.FormatInt(item.ItemID, 10), ff.Values)
 	}
 
+	// tag: 按 item.Tags 的 TagName 存在性匹配。
+	// 期望 tag 名取自 ff.Values (与 set 级 extractTagFilter 收集口径一致); 命中=item 含其一。
+	if strings.EqualFold(ff.FieldType, "tag") {
+		return matchTagField(ff, item)
+	}
+
 	actual, ok := getFieldTextValue(ff.FieldName, item, turn)
 	if !ok {
 		return matchMissingField(ff.QueryType)
@@ -96,10 +100,39 @@ func matchFilterField(ff *entity.ExptItemFilterField, item *entity.EvaluationSet
 	return matchByQueryType(ff.QueryType, actual, ff.Values)
 }
 
+// matchTagField 按 item 持有的 tag 名集合做 in/not_in 风格匹配。
+//   - in/eq/match: item 含 ff.Values 中任一 tag → 命中
+//   - not_in/not_eq/not_match: item 不含任一 → 命中 (取反)
+//   - item 无 tag: 走 matchMissingField (in→不命中, not_in→命中)
+func matchTagField(ff *entity.ExptItemFilterField, item *entity.EvaluationSetItem) bool {
+	if item == nil || len(item.Tags) == 0 {
+		return matchMissingField(ff.QueryType)
+	}
+	owned := make(map[string]struct{}, len(item.Tags))
+	for _, t := range item.Tags {
+		if t != nil && t.TagName != "" {
+			owned[t.TagName] = struct{}{}
+		}
+	}
+	hit := false
+	for _, v := range ff.Values {
+		if _, ok := owned[v]; ok {
+			hit = true
+			break
+		}
+	}
+	switch strings.ToLower(ff.QueryType) {
+	case "not_equal", "ne", "not_in", "not_eq", "not_match":
+		return !hit
+	default: // eq/in/match/空
+		return hit
+	}
+}
+
 // matchMissingField 字段不存在时的语义: equal/in 不命中 (false); not_equal/not_in 取反命中 (true)。
 func matchMissingField(queryType string) bool {
 	switch strings.ToLower(queryType) {
-	case "not_equal", "ne", "not_in", "not_eq":
+	case "not_equal", "ne", "not_in", "not_eq", "not_match":
 		return true
 	}
 	return false
@@ -143,14 +176,14 @@ func matchByQueryType(queryType, actual string, values []string) bool {
 			}
 		}
 		return true
-	case "contains":
+	case "match":
 		for _, v := range values {
 			if strings.Contains(actual, v) {
 				return true
 			}
 		}
 		return false
-	case "not_contains":
+	case "not_match":
 		for _, v := range values {
 			if strings.Contains(actual, v) {
 				return false
