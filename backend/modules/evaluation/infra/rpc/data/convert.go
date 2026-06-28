@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
+	domain_filter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -35,6 +36,23 @@ func convert2DatasetOrderBy(ctx context.Context, orderBy *entity.OrderBy) (datas
 	return &dataset.OrderBy{
 		Field: orderBy.Field,
 		IsAsc: orderBy.IsAsc,
+	}
+}
+
+// convert2DatasetTagFilter 把 entity.TagFilter (自定义 struct) 转成下游 filter.TagFilter。
+// entity.Filter 本身是 filter.Filter 的别名 (见 entity/common.go), 可直传, 无需转换器;
+// 只有 TagFilter 是独立 struct (Relation 非指针), 需在此映射。
+func convert2DatasetTagFilter(tagFilter *entity.TagFilter) *domain_filter.TagFilter {
+	if tagFilter == nil {
+		return nil
+	}
+	relation := domain_filter.TagFilterRelationOr
+	if tagFilter.Relation == entity.TagFilterRelationAnd {
+		relation = domain_filter.TagFilterRelationAnd
+	}
+	return &domain_filter.TagFilter{
+		TagNames: tagFilter.TagNames,
+		Relation: &relation,
 	}
 }
 

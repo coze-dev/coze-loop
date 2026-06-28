@@ -412,6 +412,8 @@ func (a *DatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.Lis
 		PageSize:    param.PageSize,
 		PageToken:   param.PageToken,
 		OrderBys:    convert2DatasetOrderBys(ctx, param.OrderBys),
+		Filter:      param.Filter, // entity.Filter 即 filter.Filter 别名, 直传
+		TagFilter:   convert2DatasetTagFilter(param.TagFilter),
 		// todo
 		// ItemIDsNotIn: param.ItemIDsNotIn,
 	})
@@ -436,6 +438,8 @@ func (a *DatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param
 		PageSize:    param.PageSize,
 		PageToken:   param.PageToken,
 		OrderBys:    convert2DatasetOrderBys(ctx, param.OrderBys),
+		Filter:      param.Filter, // entity.Filter 即 filter.Filter 别名, 直传
+		TagFilter:   convert2DatasetTagFilter(param.TagFilter),
 	})
 	if err != nil {
 		return nil, nil, nil, nil, err
