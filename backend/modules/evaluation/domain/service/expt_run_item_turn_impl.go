@@ -653,25 +653,6 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 
 		// 1) filter 守卫: 不命中 → 直接占位 Skipped record
 		run, ferr := ShouldRunByFilter(icConf.Filter, icConf.FilterMode, item, turn)
-		if icConf.FilterMode != 0 {
-			dbgFields := make([]string, 0)
-			if turn != nil {
-				for _, fd := range turn.FieldDataList {
-					if fd == nil {
-						continue
-					}
-					tx := ""
-					omitted := false
-					if fd.Content != nil {
-						tx = gptr.Indirect(fd.Content.Text)
-						omitted = fd.Content.IsContentOmitted()
-					}
-					dbgFields = append(dbgFields, fmt.Sprintf("{name=%q key=%q omitted=%v text=%q}", fd.Name, fd.Key, omitted, tx))
-				}
-			}
-			logs.CtxInfo(ctx, "[CallEvaluators][FILTERDBG] expt_id=%d item_id=%d alias=%s mode=%d run=%v filter=%s turnFields=%v",
-				etec.Event.ExptID, item.ItemID, alias, icConf.FilterMode, run, json.Jsonify(icConf.Filter), dbgFields)
-		}
 		if ferr != nil {
 			logs.CtxWarn(ctx, "[CallEvaluators] filter match error, version_id: %d, alias: %s, err: %v — default RUN", versionID, alias, ferr)
 		}
