@@ -830,6 +830,29 @@ func (l *LocalEvaluationOpenAPIService) RunEvaluatorOApi(ctx context.Context, re
 	return result.GetSuccess(), nil
 }
 
+// AsyncRunEvaluatorOApi
+// 异步执行评估器
+func (l *LocalEvaluationOpenAPIService) AsyncRunEvaluatorOApi(ctx context.Context, req *openapi.AsyncRunEvaluatorOApiRequest, callOptions ...callopt.Option) (*openapi.AsyncRunEvaluatorOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult)
+		resp, err := l.impl.AsyncRunEvaluatorOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "AsyncRunEvaluatorOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // RunBuiltinEvaluatorOApi
 // 执行预置评估器（按标识）
 func (l *LocalEvaluationOpenAPIService) RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest, callOptions ...callopt.Option) (*openapi.RunBuiltinEvaluatorOApiResponse, error) {

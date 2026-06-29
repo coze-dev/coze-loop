@@ -302,3 +302,19 @@ func ExportExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
 func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentResultExportRecordOApi)
 }
+
+// AsyncRunEvaluatorOApi .
+// @router /v1/loop/evaluation/evaluators_versions/:evaluator_version_id/async_run [POST]
+func AsyncRunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.AsyncRunEvaluatorOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.AsyncRunEvaluatorOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
