@@ -6,7 +6,9 @@ package entity
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/mitchellh/mapstructure"
@@ -15,6 +17,29 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
+
+const (
+	MaxExperimentNameLength = 65
+	// experimentNamePattern 首字符为字母/数字/中文，其余字符仅允许字母、数字、中文、'_'、'-'、'.'。
+	experimentNamePattern = `^[a-zA-Z0-9\x{4e00}-\x{9fa5}][\w\x{4e00}-\x{9fa5}\-.]*$`
+)
+
+var validExperimentNameRegex = regexp.MustCompile(experimentNamePattern)
+
+// ValidateExperimentName 校验实验名称的值级约束：长度 1-65，
+// 首字符为字母/数字/中文，其余字符仅允许字母、数字、中文、'_'、'-'、'.'。
+func ValidateExperimentName(name string) error {
+	length := utf8.RuneCountInString(name)
+	if length == 0 || length > MaxExperimentNameLength {
+		return errorx.NewByCode(errno.ExperimentNameInvalidFormatCode,
+			errorx.WithExtraMsg(fmt.Sprintf("name length must be 1-%d, got %d", MaxExperimentNameLength, length)))
+	}
+	if !validExperimentNameRegex.MatchString(name) {
+		return errorx.NewByCode(errno.ExperimentNameInvalidFormatCode,
+			errorx.WithExtraMsg(fmt.Sprintf("name must start with a letter/digit/Chinese character, and contain only letters, digits, Chinese characters, '_', '-', '.', got %q", name)))
+	}
+	return nil
+}
 
 type (
 	ExptStatus                int64

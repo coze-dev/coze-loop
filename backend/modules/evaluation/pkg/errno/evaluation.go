@@ -132,6 +132,10 @@ const (
 	experimentIsCompletingMessage           = "experiment is completing, please try later"
 	experimentIsCompletingNoAffectStability = true
 
+	ExperimentNameInvalidFormatCode              = 601204017 // experiment name format is invalid
+	experimentNameInvalidFormatMessage           = "experiment name format is invalid"
+	experimentNameInvalidFormatNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -563,6 +567,12 @@ func init() {
 		ExperimentIsCompletingCode,
 		experimentIsCompletingMessage,
 		code.WithAffectStability(!experimentIsCompletingNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentNameInvalidFormatCode,
+		experimentNameInvalidFormatMessage,
+		code.WithAffectStability(!experimentNameInvalidFormatNoAffectStability),
 	)
 
 	code.Register(

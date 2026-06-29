@@ -364,14 +364,15 @@ func (e *ExptMangerImpl) fillExptTemplates(ctx context.Context, expts []*entity.
 }
 
 func (e *ExptMangerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (pass bool, err error) {
+	if err = entity.ValidateExperimentName(name); err != nil {
+		return false, err
+	}
+
 	_, exist, err := e.exptRepo.GetByName(ctx, name, spaceID)
 	if err != nil {
 		return false, err
 	}
-	if !exist {
-		return true, nil
-	}
-	return false, nil
+	return !exist, nil
 }
 
 func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) error {
@@ -904,11 +905,11 @@ func (e *ExptMangerImpl) Create(ctx context.Context, expt *entity.Experiment, se
 	refs := expt.ToEvaluatorRefDO()
 
 	pass, err := e.CheckName(ctx, expt.Name, expt.SpaceID, session)
-	if !pass {
-		return errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("name %s", expt.Name)))
-	}
 	if err != nil {
 		return err
+	}
+	if !pass {
+		return errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("name %s", expt.Name)))
 	}
 
 	if err = e.exptRepo.Create(ctx, expt, refs); err != nil {

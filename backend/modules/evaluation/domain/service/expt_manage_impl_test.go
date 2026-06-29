@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -124,6 +125,12 @@ func TestExptMangerImpl_CheckName(t *testing.T) {
 	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, "foo", int64(1)).Return(nil, false, nil).AnyTimes()
 	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, "bar", int64(1)).Return(nil, true, nil).AnyTimes()
 	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, "err", int64(1)).Return(nil, false, errors.New("db error")).AnyTimes()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, "实验1", int64(1)).Return(nil, false, nil).AnyTimes()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, "name_1", int64(1)).Return(nil, false, nil).AnyTimes()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, "name-1", int64(1)).Return(nil, false, nil).AnyTimes()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, "name.1", int64(1)).Return(nil, false, nil).AnyTimes()
+
+	longName := strings.Repeat("a", entity.MaxExperimentNameLength+1)
 
 	tests := []struct {
 		name    string
@@ -134,7 +141,18 @@ func TestExptMangerImpl_CheckName(t *testing.T) {
 		{"not exist", "foo", true, false},
 		{"exist", "bar", false, false},
 		{"db error", "err", false, true},
+		{"empty name", "", false, true},
+		{"too long name", longName, false, true},
+		{"invalid char bracket", "name[]", false, true},
+		{"invalid char slash", "name/sub", false, true},
+		{"leading dot is invalid", ".name", false, true},
+		{"leading dash is invalid", "-name", false, true},
+		{"chinese allowed", "实验1", true, false},
+		{"underscore allowed", "name_1", true, false},
+		{"dash allowed", "name-1", true, false},
+		{"dot allowed", "name.1", true, false},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := mgr.CheckName(ctx, tt.input, 1, session)
