@@ -623,8 +623,8 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet(t *testing
 	assert.Equal(t, itemConfig, got.ItemConfig)
 }
 
-// 草稿集 item: ref 落 EvalSetVersionID=0 → 单行取数走 live (BatchGet VersionID=nil)。
-// 这是「实验引用草稿版本评测集」运行时实时读草稿的执行侧落地。
+// 草稿集 item: ref 落 EvalSetVersionID=0 + ItemVersionID=0 → 单行取数按 item_id (version=nil) 读当前草稿。
+// 冻结粒度=item_id 集合 (ExptStart 固定了哪些 item 参与); item 内容是实时读 (草稿无 item 版本, 这是预期)。
 func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet_Draft(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

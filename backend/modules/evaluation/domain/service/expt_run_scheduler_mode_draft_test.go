@@ -38,7 +38,9 @@ func TestDraftEvalSetSentinel_Resolvers(t *testing.T) {
 	})
 }
 
-// 扫描层: 草稿集 List 拉取必须传 VersionID=nil (走 live), 且 expt_item_ref.EvalSetVersionID 落 0。
+// 扫描层: 草稿集 ExptStart 那一刻把当前 item_id 集合扁平化固定进 expt_item_ref
+// (冻结"哪些 item 参与"; List 拉取 VersionID=nil 读当前草稿, EvalSetVersionID 落 0)。
+// 注: 草稿 item 无 item 级版本, item 内容是实时读 (草稿无内容冻结, 这是预期); 冻结粒度=item_id 集合。
 func TestExptSubmitExec_exptStartMultiSet_DraftSet(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -53,7 +55,7 @@ func TestExptSubmitExec_exptStartMultiSet_DraftSet(t *testing.T) {
 		}).AnyTimes()
 
 	// 草稿集 set_id=draftSet, version_id 提交侧用 set_id 当占位哨兵。
-	// List 拉取时必须 VersionID==nil (live 读当前草稿)。
+	// List 拉取时必须 VersionID==nil (读当前草稿, 取这一刻的 item_id 集合冻结进 ref)。
 	const draftSet = int64(7656754417005232130)
 	var sawVersionID *int64
 	var sawVersionIDSet bool
@@ -61,9 +63,11 @@ func TestExptSubmitExec_exptStartMultiSet_DraftSet(t *testing.T) {
 		func(_ context.Context, p *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
 			sawVersionID = p.VersionID
 			sawVersionIDSet = true
+			// ExptStart 那一刻草稿集有 item 1、2 → 这两个 item_id 应被固定进 ref
 			return []*entity.EvaluationSetItem{
 				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
-			}, ptr.Of(int64(1)), nil, nil, nil
+				{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
+			}, ptr.Of(int64(2)), nil, nil, nil
 		}).Times(1)
 
 	expt := &entity.Experiment{
@@ -80,10 +84,15 @@ func TestExptSubmitExec_exptStartMultiSet_DraftSet(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.True(t, sawVersionIDSet, "ListEvaluationSetItems 应被调用")
-	assert.Nil(t, sawVersionID, "草稿集读侧 VersionID 必须为 nil → 走 live BatchGet/List")
-	assert.Len(t, captured, 1)
-	assert.Equal(t, draftSet, captured[0].EvalSetID)
-	assert.Equal(t, int64(0), captured[0].EvalSetVersionID, "草稿集 expt_item_ref.eval_set_version_id 落 0")
+	assert.Nil(t, sawVersionID, "草稿集读侧 VersionID 必须为 nil → 读当前草稿")
+	// ★ 冻结粒度=item_id 集合: ExptStart 那刻的 item 1、2 被扁平化固定进 expt_item_ref
+	assert.Len(t, captured, 2)
+	assert.ElementsMatch(t, []int64{1, 2}, []int64{captured[0].ItemID, captured[1].ItemID})
+	for _, ref := range captured {
+		assert.Equal(t, draftSet, ref.EvalSetID)
+		assert.Equal(t, int64(0), ref.EvalSetVersionID, "草稿集 expt_item_ref.eval_set_version_id 落 0")
+		assert.Equal(t, int64(0), ref.ItemVersionID, "草稿 item 无 item 级版本 → ItemVersionID=0")
+	}
 }
 
 // 扫描层: committed 集维持 ByVersion (VersionID 非 nil) + ref 落真实 version_id 不变 (回归守卫)。
