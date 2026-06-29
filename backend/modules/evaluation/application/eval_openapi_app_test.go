@@ -7134,3 +7134,185 @@ func TestEvalOpenAPIApplication_ListExperimentResultOApi_PopulatedResult(t *test
 		assert.Equal(t, "https://signed/k1", *url)
 	}
 }
+
+func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(1001)
+	evaluatorVersionID := int64(3003)
+	invokeID := int64(4004)
+
+	tests := []struct {
+		name    string
+		req     *openapi.AsyncRunEvaluatorOApiRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, asyncRepo *repomocks.MockIEvalAsyncRepo)
+		wantErr int32
+	}{
+		{
+			name:    "nil request",
+			req:     nil,
+			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "evaluator version not found",
+			req: &openapi.AsyncRunEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(nil, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "evaluator version not found in workspace",
+			req: &openapi.AsyncRunEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+				evaluator := &entity.Evaluator{ID: evaluatorVersionID, SpaceID: workspaceID + 1, Builtin: false}
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "auth failed",
+			req: &openapi.AsyncRunEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+				evaluator := &entity.Evaluator{
+					ID: evaluatorVersionID, SpaceID: workspaceID,
+					BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("owner")}},
+				}
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "async run failed (e.g. non-agent type)",
+			req: &openapi.AsyncRunEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+				evaluator := &entity.Evaluator{
+					ID: evaluatorVersionID, SpaceID: workspaceID,
+					BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("owner")}},
+				}
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("async run failed"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "set async ctx failed",
+			req: &openapi.AsyncRunEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, asyncRepo *repomocks.MockIEvalAsyncRepo) {
+				evaluator := &entity.Evaluator{
+					ID: evaluatorVersionID, SpaceID: workspaceID,
+					BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("owner")}},
+				}
+				record := &entity.EvaluatorRecord{ID: invokeID, Status: entity.EvaluatorRunStatusAsyncInvoking}
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(record, nil)
+				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("redis error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "success",
+			req: &openapi.AsyncRunEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, asyncRepo *repomocks.MockIEvalAsyncRepo) {
+				evaluator := &entity.Evaluator{
+					ID: evaluatorVersionID, SpaceID: workspaceID, Name: "agent-eval",
+					BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("owner")}},
+				}
+				record := &entity.EvaluatorRecord{ID: invokeID, Status: entity.EvaluatorRunStatusAsyncInvoking}
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(record, nil)
+				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:4004", gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name: "builtin success",
+			req: &openapi.AsyncRunEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, asyncRepo *repomocks.MockIEvalAsyncRepo) {
+				evaluator := &entity.Evaluator{ID: evaluatorVersionID, SpaceID: workspaceID + 999, Builtin: true, Name: "builtin-agent"}
+				record := &entity.EvaluatorRecord{ID: invokeID, Status: entity.EvaluatorRunStatusAsyncInvoking}
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
+				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(record, nil)
+				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:4004", gomock.Any()).Return(nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			metric := &fakeOpenAPIMetric{}
+
+			app := &EvalOpenAPIApplication{
+				auth:             auth,
+				evaluatorService: evaluatorSvc,
+				asyncRepo:        asyncRepo,
+				metric:           metric,
+			}
+
+			if tc.name == "nil request" {
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Times(0)
+			} else {
+				tc.setup(auth, evaluatorSvc, asyncRepo)
+			}
+
+			resp, err := app.AsyncRunEvaluatorOApi(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.Equal(t, invokeID, resp.GetData().GetInvokeID())
+				assert.NotNil(t, resp.GetData().GetRecord())
+			}
+
+			if tc.req != nil {
+				assert.True(t, metric.called)
+				assert.Equal(t, tc.req.GetWorkspaceID(), metric.spaceID)
+				assert.Equal(t, tc.req.GetEvaluatorVersionID(), metric.evaluationSetID)
+			}
+		})
+	}
+}
