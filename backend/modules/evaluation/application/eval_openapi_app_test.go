@@ -7244,7 +7244,13 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
 				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(record, nil)
-				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:4004", gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:4004", gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ string, actx *entity.EvalAsyncCtx) error {
+						assert.Equal(t, invokeID, actx.RecordID)
+						assert.Equal(t, evaluatorVersionID, actx.EvaluatorVersionID)
+						assert.Nil(t, actx.Event)
+						return nil
+					})
 			},
 		},
 		{
@@ -7258,7 +7264,13 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				record := &entity.EvaluatorRecord{ID: invokeID, Status: entity.EvaluatorRunStatusAsyncInvoking}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
 				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(record, nil)
-				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:4004", gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:4004", gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ string, actx *entity.EvalAsyncCtx) error {
+						assert.Equal(t, invokeID, actx.RecordID)
+						assert.Equal(t, evaluatorVersionID, actx.EvaluatorVersionID)
+						assert.Nil(t, actx.Event)
+						return nil
+					})
 			},
 		},
 	}
