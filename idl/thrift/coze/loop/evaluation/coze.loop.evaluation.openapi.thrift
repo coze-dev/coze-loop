@@ -430,7 +430,9 @@ struct SubmitExperimentOApiRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
 
-    100: optional map<string, string> ext (api.body = 'ext')    
+    100: optional map<string, string> ext (api.body = 'ext')
+    // 实验状态变更通知配置（Webhook / 飞书），不传则按默认行为
+    101: optional experiment.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base

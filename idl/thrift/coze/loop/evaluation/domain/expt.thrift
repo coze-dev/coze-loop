@@ -105,6 +105,31 @@ struct Experiment {
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+    // 实验通知配置（状态变更 Webhook / 飞书通知，复用 Filters 表达触发条件）
+    102: optional ExptNotificationConf notification_conf
+}
+
+// 实验通知配置（挂到 Experiment 与 ExptTemplate，复用既有 Filters{filter_conditions, logic_op} 表达触发条件）
+struct ExptNotificationConf {
+    // 触发条件：本期单 condition，field.field_type=ExptStatus(3)，operator=In(7)/NotIn(8)，value=状态枚举多选
+    1: optional Filters filter
+    // Webhook 渠道配置
+    10: optional WebhookNotificationConf webhook
+    // 飞书渠道配置
+    11: optional FeishuNotificationConf feishu
+}
+
+// Webhook 通知渠道配置（签名密钥唯一来源=空间 SK，不开放用户 override，故无 secret 字段）
+struct WebhookNotificationConf {
+    1: optional bool enable                  // 默认 false
+    2: optional list<string> urls            // enable=true 时非空（service 层校验）
+    4: optional Filters override_filter      // 预留：渠道级独立条件（一期不暴露 UI）
+}
+
+// 飞书通知渠道配置
+struct FeishuNotificationConf {
+    1: optional bool enable                  // 默认 true（向后兼容现有终态飞书行为）
+    4: optional Filters override_filter      // 预留：渠道级独立条件（一期不暴露 UI）
 }
 
 // 实验模板基础信息
@@ -152,6 +177,8 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+    // 模板级实验通知配置，派生实验默认继承（DB 复用 template_conf BLOB 嵌套承载，不新增独立列）
+    8: optional ExptNotificationConf notification_conf
 
     255: optional common.BaseInfo base_info
 }

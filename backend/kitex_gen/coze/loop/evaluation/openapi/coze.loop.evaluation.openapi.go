@@ -18976,8 +18976,10 @@ type SubmitExperimentOApiRequest struct {
 	ItemRetryNum            *int32               `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
 	EnableExtractTrajectory *bool                `thrift:"enable_extract_trajectory,46,optional" frugal:"46,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
 	Ext                     map[string]string    `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Extra                   *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base                    *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 实验状态变更通知配置（Webhook / 飞书），不传则按默认行为
+	NotificationConf *experiment.ExptNotificationConf `thrift:"notification_conf,101,optional" frugal:"101,optional,experiment.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
+	Extra            *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base             *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewSubmitExperimentOApiRequest() *SubmitExperimentOApiRequest {
@@ -19143,6 +19145,18 @@ func (p *SubmitExperimentOApiRequest) GetExt() (v map[string]string) {
 	return p.Ext
 }
 
+var SubmitExperimentOApiRequest_NotificationConf_DEFAULT *experiment.ExptNotificationConf
+
+func (p *SubmitExperimentOApiRequest) GetNotificationConf() (v *experiment.ExptNotificationConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotificationConf() {
+		return SubmitExperimentOApiRequest_NotificationConf_DEFAULT
+	}
+	return p.NotificationConf
+}
+
 var SubmitExperimentOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *SubmitExperimentOApiRequest) GetExtra() (v *extra.Extra) {
@@ -19205,6 +19219,9 @@ func (p *SubmitExperimentOApiRequest) SetEnableExtractTrajectory(val *bool) {
 func (p *SubmitExperimentOApiRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
+func (p *SubmitExperimentOApiRequest) SetNotificationConf(val *experiment.ExptNotificationConf) {
+	p.NotificationConf = val
+}
 func (p *SubmitExperimentOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -19226,6 +19243,7 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	45:  "item_retry_num",
 	46:  "enable_extract_trajectory",
 	100: "ext",
+	101: "notification_conf",
 	254: "extra",
 	255: "Base",
 }
@@ -19280,6 +19298,10 @@ func (p *SubmitExperimentOApiRequest) IsSetEnableExtractTrajectory() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetExt() bool {
 	return p.Ext != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetNotificationConf() bool {
+	return p.NotificationConf != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetExtra() bool {
@@ -19407,6 +19429,14 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -19630,6 +19660,14 @@ func (p *SubmitExperimentOApiRequest) ReadField100(iprot thrift.TProtocol) error
 	p.Ext = _field
 	return nil
 }
+func (p *SubmitExperimentOApiRequest) ReadField101(iprot thrift.TProtocol) error {
+	_field := experiment.NewExptNotificationConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.NotificationConf = _field
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -19703,6 +19741,10 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -19992,6 +20034,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
+func (p *SubmitExperimentOApiRequest) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotificationConf() {
+		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.NotificationConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
 func (p *SubmitExperimentOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -20080,6 +20140,9 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.NotificationConf) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -20227,6 +20290,13 @@ func (p *SubmitExperimentOApiRequest) Field100DeepEqual(src map[string]string) b
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field101DeepEqual(src *experiment.ExptNotificationConf) bool {
+
+	if !p.NotificationConf.DeepEqual(src) {
+		return false
 	}
 	return true
 }

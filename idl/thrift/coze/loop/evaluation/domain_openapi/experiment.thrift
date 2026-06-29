@@ -421,6 +421,30 @@ struct ExperimentResultFilter {
 }
 
 // ===============================
+// 实验通知配置（对应 domain/expt ExptNotificationConf / WebhookNotificationConf / FeishuNotificationConf）
+// ===============================
+
+// 实验通知配置（复用上方 Filters 表达触发条件：field_type=expt_status, operator=in/not_in）
+struct ExptNotificationConf {
+    1: optional Filters filter
+    10: optional WebhookNotificationConf webhook
+    11: optional FeishuNotificationConf feishu
+}
+
+// Webhook 通知渠道配置（签名密钥唯一来源=空间 SK，无 secret 字段）
+struct WebhookNotificationConf {
+    1: optional bool enable                  // 默认 false
+    2: optional list<string> urls            // enable=true 时非空
+    4: optional Filters override_filter      // 预留：渠道级独立条件
+}
+
+// 飞书通知渠道配置
+struct FeishuNotificationConf {
+    1: optional bool enable                  // 默认 true（向后兼容）
+    4: optional Filters override_filter      // 预留：渠道级独立条件
+}
+
+// ===============================
 // 实验报告导出相关结构（对应 domain/expt ExptResultExportType / ExptResultExportRecord）
 // ===============================
 

@@ -278,6 +278,40 @@ func (p *ExperimentResultFilter) IsValid() error {
 	}
 	return nil
 }
+func (p *ExptNotificationConf) IsValid() error {
+	if p.Filter != nil {
+		if err := p.Filter.IsValid(); err != nil {
+			return fmt.Errorf("field Filter not valid, %w", err)
+		}
+	}
+	if p.Webhook != nil {
+		if err := p.Webhook.IsValid(); err != nil {
+			return fmt.Errorf("field Webhook not valid, %w", err)
+		}
+	}
+	if p.Feishu != nil {
+		if err := p.Feishu.IsValid(); err != nil {
+			return fmt.Errorf("field Feishu not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *WebhookNotificationConf) IsValid() error {
+	if p.OverrideFilter != nil {
+		if err := p.OverrideFilter.IsValid(); err != nil {
+			return fmt.Errorf("field OverrideFilter not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *FeishuNotificationConf) IsValid() error {
+	if p.OverrideFilter != nil {
+		if err := p.OverrideFilter.IsValid(); err != nil {
+			return fmt.Errorf("field OverrideFilter not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *RunError) IsValid() error {
 	return nil
 }
