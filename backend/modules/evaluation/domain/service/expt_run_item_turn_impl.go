@@ -595,6 +595,41 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	var pending []pendingTask
 	hasPending := false
 
+	// 行级 filter 需要按字段内容判定 (普通列 match/eq 等)。评测集大字段在拉取阶段可能被裁剪
+	// (Content.IsContentOmitted()=true, text 截断), 直接拿截断文本匹配会漏判 (命中项被误跳)。
+	// 故在进入 filter 守卫前, 若存在带 filter 的 conf, 先把 turn 上被裁剪的字段补全为完整内容,
+	// 与 evaluator 取字段路径 (buildEvalSetFields) 同口径。
+	needFilterMatch := false
+	for _, ic := range etec.ItemConfig.EvaluatorConfs {
+		if ic != nil && ic.FilterMode != filterModeNone && ic.Filter != nil && len(ic.Filter.FilterFields) > 0 {
+			needFilterMatch = true
+			break
+		}
+	}
+	if needFilterMatch && turn != nil {
+		for _, fd := range turn.FieldDataList {
+			if fd == nil || fd.Content == nil || !fd.Content.IsContentOmitted() {
+				continue
+			}
+			req := &entity.GetEvaluationSetItemFieldParam{
+				SpaceID:         spaceID,
+				EvaluationSetID: turn.EvalSetID,
+				ItemPK:          turn.ItemID,
+				FieldName:       fd.Name,
+				FieldKey:        gptr.Of(fd.Key),
+				TurnID:          gptr.Of(turn.ID),
+			}
+			full, ferr := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, req)
+			if ferr != nil {
+				logs.CtxWarn(ctx, "[CallEvaluators] hydrate omitted field for filter failed, field: %s, err: %v", fd.Name, ferr)
+				continue
+			}
+			if full != nil && full.Content != nil {
+				fd.Content = full.Content
+			}
+		}
+	}
+
 	for _, icConf := range etec.ItemConfig.EvaluatorConfs {
 		if icConf == nil {
 			continue
