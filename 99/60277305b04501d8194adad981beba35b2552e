@@ -1,0 +1,26 @@
+backend/modules/evaluation/infra/repo/experiment/mysql/expt.go
+  s_4c20225fbf54e3::t_3e9a9f4082daaf 295-297
+  s_4c20225fbf54e3::t_f5fdb13fd1734b 298
+backend/modules/evaluation/infra/repo/experiment/mysql/expt_template.go
+  s_4c20225fbf54e3::t_6b8e49a3a95ca6 20,83
+backend/modules/evaluation/infra/repo/experiment/mysql/expt_template_evaluator_ref.go
+  s_4c20225fbf54e3::t_57b20c90a578fd 13,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9960277305b04501d8194adad981beba35b2552e",
+  "prompts": {},
+  "sessions": {
+    "s_4c20225fbf54e3": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a41f84f7029445cffe56070",
+        "model": "c_o_new_thinking__dev"
+      },
+      "human_author": "luozhenghua.007 <luozhenghua.007@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
