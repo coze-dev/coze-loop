@@ -68,6 +68,15 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		expt.TrialRunItemCount = gptr.Of(experiment.TrialRunItemCount)
 	}
 
+	// notification_conf：nil（历史/未配置）→ 不写列（NULL），上层读到 nil 时按默认行为处理。
+	if experiment.NotificationConf != nil {
+		bytes, err := json.Marshal(experiment.NotificationConf)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConf json marshal fail")
+		}
+		expt.NotificationConf = &bytes
+	}
+
 	return expt, nil
 }
 
@@ -87,6 +96,15 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 			EvaluatorVersionID: ref.EvaluatorVersionID,
 			EvaluatorID:        ref.EvaluatorID,
 		})
+	}
+
+	// notification_conf：NULL/空（历史实验/未配置）→ nil，上层按 DefaultNotificationConf 兜底（向后兼容、零迁移）。
+	var notificationConf *entity.NotificationConf
+	if len(gptr.Indirect(expt.NotificationConf)) > 0 {
+		notificationConf = new(entity.NotificationConf)
+		if err := json.Unmarshal(gptr.Indirect(expt.NotificationConf), notificationConf); err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConf json unmarshal fail, expt_id: %v, raw: %v", expt.ID, conv.UnsafeBytesToString(gptr.Indirect(expt.NotificationConf)))
+		}
 	}
 
 	res := &entity.Experiment{
@@ -117,6 +135,7 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		ThreadID:                  expt.ThreadID,
 		TrialRunItemCount:         gptr.Indirect(expt.TrialRunItemCount),
 		TriggerType:               expt.TriggerType,
+		NotificationConf:          notificationConf,
 	}
 
 	// 如果数据库中有模板 ID，则在 ExptTemplateMeta 中回填 ID，方便上层按模板 ID 查询和聚合

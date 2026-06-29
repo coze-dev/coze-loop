@@ -314,6 +314,8 @@ type CreateExptParam struct {
 	ItemRetryNum          *int                     `json:"item_retry_num,omitempty"`
 	TrialRunItemCount     int64                    `json:"trial_run_item_count"`
 	TriggerType           string                   `json:"trigger_type,omitempty"`
+	// NotificationConf 实验通知配置（Webhook + 飞书）。nil 表示未配置，按 DefaultNotificationConf 兜底（向后兼容）。
+	NotificationConf *NotificationConf `json:"notification_conf,omitempty"`
 }
 
 type ExptRunCheckOption struct {

@@ -373,6 +373,9 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.TriggerType = &tt
 	}
 
+	// 实验通知配置（状态变更 Webhook/飞书通知）。nil（历史实验/未配置）→ 不返回字段。
+	res.NotificationConf = NotificationConfDO2DTO(experiment.NotificationConf)
+
 	// 注意：Experiment DTO 中没有 TripleConfig 字段，如果需要可以通过其他方式传递
 
 	if experiment.StartAt != nil {
@@ -557,6 +560,8 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+	// 实验通知配置（状态变更 Webhook/飞书通知）。nil 入参 → nil，由 service/entity 层按默认配置兜底。
+	param.NotificationConf = NotificationConfDTO2DO(cer.GetNotificationConf())
 	return param, nil
 }
 

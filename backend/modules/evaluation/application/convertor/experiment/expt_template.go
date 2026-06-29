@@ -260,6 +260,10 @@ func buildTemplateConfForCreate(
 		templateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
 	}
 
+	// 实验通知配置（状态变更 Webhook/飞书通知）：模板侧承载于 template_conf BLOB 嵌套字段（不新增独立 column）。
+	// nil 入参 → nil，派生实验时按默认配置兜底（向后兼容、零迁移）。
+	templateConf.NotificationConf = NotificationConfDTO2DO(req.GetNotificationConf())
+
 	if targetFieldMapping == nil && len(evaluatorConfs) == 0 {
 		// 即使没有字段映射，也需要设置 ExptSource
 		if param.ExptSource != nil {
@@ -425,6 +429,8 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	dto.ScoreWeightConfig = buildTemplateScoreWeightConfigDTO(template)
 	if template.TemplateConf != nil {
 		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+		// 实验通知配置：模板侧承载于 template_conf。nil（历史模板/未配置）→ 不返回字段。
+		dto.NotificationConf = NotificationConfDO2DTO(template.TemplateConf.NotificationConf)
 	}
 
 	// 填充关联数据（EvalSet、EvalTarget、Evaluators）到 TripleConfig
@@ -1129,6 +1135,12 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 
 	if template.TemplateConf != nil && template.TemplateConf.EnableExtractTrajectory != nil {
 		req.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+	}
+
+	// 模板派生（含定时触发 / BITs 触发）：拷贝模板通知配置到新实验请求。
+	// 调用方可在拿到 req 后用入参覆盖（可覆盖语义）；模板未配置时为 nil，派生实验按默认配置兜底。
+	if template.TemplateConf != nil {
+		req.NotificationConf = NotificationConfDO2DTO(template.TemplateConf.NotificationConf)
 	}
 
 	return req

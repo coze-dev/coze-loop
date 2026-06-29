@@ -1060,6 +1060,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		TriggerType:             gptr.Of(domain_expt.OpenAPI),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.GetExt(),
+		NotificationConf:        experiment_convertor.OpenAPINotificationConfDTO2DomainDTO(req.GetNotificationConf()),
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)

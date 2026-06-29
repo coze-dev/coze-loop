@@ -516,6 +516,8 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.Ext,
+		// 透传实验通知配置（含模板派生/定时/BITs 触发拷贝的模板 notification_conf，可被入参覆盖）
+		NotificationConf: req.NotificationConf,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())

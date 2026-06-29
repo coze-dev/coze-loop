@@ -205,6 +205,12 @@ type ExptTemplateConfiguration struct {
 
 	// ExptSource 实验来源信息
 	ExptSource *ExptSource `json:"expt_source,omitempty"`
+
+	// NotificationConf 实验通知配置（Webhook + 飞书）。
+	// 模板侧复用 template_conf BLOB 嵌套承载，不新增独立 column（见 ADR-0150）；
+	// 派生实验时由上层提取并写入 experiment.notification_conf 列。
+	// 历史模板 template_conf JSON 无该子段时反序列化为 nil，按默认行为处理（向后兼容）。
+	NotificationConf *NotificationConf `json:"notification_conf,omitempty"`
 }
 
 // ToEvaluatorRefDO 转换为评估器引用DO

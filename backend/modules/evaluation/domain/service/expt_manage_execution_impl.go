@@ -321,11 +321,31 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 
 	switch runMode {
 	case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
-		if err := e.sendNotifyCard(ctx, expt); err != nil {
-			logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
-		}
+		// 「开始执行」改为统一走 ExptLifecycleEvent（Pending→Processing）异步分发，
+		// 不再在此直发飞书卡片：飞书侧由 base handler 条件化处理（仍仅 4 终态发卡片），
+		// Processing 事件供 webhook fan-out 消费（见后端 design D5）。
+		e.sendExptLifecycleEvent(ctx, expt, gptr.Of(runID), entity.ExptStatus_Pending, entity.ExptStatus_Processing)
 	}
 	return nil
+}
+
+// sendExptLifecycleEvent 发布一次实验生命周期事件到消息总线（RocketMQ delay ~3s），
+// 由消费侧 fan-out（飞书 / webhook / offline-analysis）。失败重试后兜底 logs.CtxWarn，不阻塞主链路。
+func (e *ExptMangerImpl) sendExptLifecycleEvent(ctx context.Context, expt *entity.Experiment, exptRunID *int64, fromStatus, toStatus entity.ExptStatus) {
+	event := &entity.ExptLifecycleEvent{
+		ExptID:     expt.ID,
+		ExptRunID:  exptRunID,
+		SpaceID:    expt.SpaceID,
+		FromStatus: fromStatus,
+		ToStatus:   toStatus,
+		ExptType:   expt.ExptType,
+		SourceType: expt.SourceType,
+	}
+	if err := backoff.RetryWithElapsedTime(ctx, 15*time.Second, func() error {
+		return e.publisher.PublishExptLifecycleEvent(ctx, event, gptr.Of(time.Second*3))
+	}); err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent failed after retry, expt_id: %v, to_status: %v, err: %v", expt.ID, toStatus, err)
+	}
 }
 
 func (e *ExptMangerImpl) sendNotifyCard(ctx context.Context, expt *entity.Experiment) error {
