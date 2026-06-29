@@ -885,6 +885,32 @@ struct RunEvaluatorOpenAPIData {
     1: optional evaluator.EvaluatorRecord record (api.body = "record")
 }
 
+// 3.10.2 异步执行评估器
+struct AsyncRunEvaluatorOApiRequest {
+    1: optional i64 evaluator_version_id (api.path = "evaluator_version_id", api.js_conv = "true", go.tag = 'json:"evaluator_version_id"')
+    2: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    3: optional evaluator.EvaluatorInputData input_data (api.body = "input_data")
+    4: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body = "evaluator_run_conf")
+
+    100: optional map<string, string> ext (api.body = "ext")
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct AsyncRunEvaluatorOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional AsyncRunEvaluatorOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct AsyncRunEvaluatorOpenAPIData {
+    1: optional i64 invoke_id (api.body = "invoke_id", api.js_conv = "true", go.tag = 'json:"invoke_id"')
+    2: optional evaluator.EvaluatorRecord record (api.body = "record") // status = AsyncInvoking
+}
+
 // 3.10.1 执行预置评估器（按标识）
 struct RunBuiltinEvaluatorOApiRequest {
     1: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
@@ -1233,6 +1259,8 @@ service EvaluationOpenAPIService {
     SubmitEvaluatorVersionOApiResponse SubmitEvaluatorVersionOApi(1: SubmitEvaluatorVersionOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/evaluators/:evaluator_id/submit_version")
     // 执行评估器
     RunEvaluatorOApiResponse RunEvaluatorOApi(1: RunEvaluatorOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/evaluators_versions/:evaluator_version_id/run")
+    // 异步执行评估器
+    AsyncRunEvaluatorOApiResponse AsyncRunEvaluatorOApi(1: AsyncRunEvaluatorOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/evaluators_versions/:evaluator_version_id/async_run")
     // 执行预置评估器（按标识）
     RunBuiltinEvaluatorOApiResponse RunBuiltinEvaluatorOApi(1: RunBuiltinEvaluatorOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/evaluators/builtin/run")
     // 修正评估记录
