@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	usersession "github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 
@@ -1975,6 +1976,92 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 	return &openapi.RunEvaluatorOApiResponse{
 		Data: &openapi.RunEvaluatorOpenAPIData{
 			Record: evaluator_convertor.OpenAPIEvaluatorRecordDO2DTO(record),
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) AsyncRunEvaluatorOApi(ctx context.Context, req *openapi.AsyncRunEvaluatorOApiRequest) (r *openapi.AsyncRunEvaluatorOApiResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	startTime := time.Now()
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluatorVersionID(), kitexutil.GetTOMethod(ctx), startTime.UnixMilli(), err)
+	}()
+
+	// 校验评估器版本是否存在且有权限
+	// 预置评估器（Builtin）允许跨 workspace 执行：查询时不传 spaceID
+	evaluator, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, req.GetEvaluatorVersionID(), false, false)
+	if err != nil {
+		return nil, err
+	}
+	if evaluator == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
+	}
+
+	if !evaluator.Builtin {
+		if evaluator.SpaceID != req.GetWorkspaceID() {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
+		}
+
+		var ownerID *string
+		if evaluator.BaseInfo != nil && evaluator.BaseInfo.CreatedBy != nil {
+			ownerID = evaluator.BaseInfo.CreatedBy.UserID
+		}
+		err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(evaluator.ID, 10),
+			SpaceID:         req.GetWorkspaceID(),
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+			OwnerID:         ownerID,
+			ResourceSpaceID: evaluator.SpaceID,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	inputData := evaluator_convertor.OpenAPIEvaluatorInputDataDTO2DO(req.InputData)
+	runConf := evaluator_convertor.OpenAPIEvaluatorRunConfigDTO2DO(req.EvaluatorRunConf)
+	// 与 EvaluatorHandlerImpl.buildRunEvaluatorRequest 一致：将 evaluator_runtime_param 注入到 InputData.Ext，供下游执行时使用
+	if runConf != nil && runConf.EvaluatorRuntimeParam != nil && runConf.EvaluatorRuntimeParam.JSONValue != nil && len(*runConf.EvaluatorRuntimeParam.JSONValue) > 0 {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = *runConf.EvaluatorRuntimeParam.JSONValue
+	}
+
+	// 异步提交（评估器类型限制由领域层 AsyncRunEvaluator 继承处理）
+	record, err := e.evaluatorService.AsyncRunEvaluator(ctx, &entity.AsyncRunEvaluatorRequest{
+		SpaceID:            req.GetWorkspaceID(),
+		Name:               evaluator.Name,
+		EvaluatorVersionID: req.GetEvaluatorVersionID(),
+		InputData:          inputData,
+		EvaluatorRunConf:   runConf,
+		Ext:                req.Ext,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 写入异步上下文供 ReportEvaluatorInvokeResult 回调读取；独立调用 Event 留空
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", record.ID)
+	if err = e.asyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		RecordID:           record.ID,
+		AsyncUnixMS:        startTime.UnixMilli(),
+		Session:            &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
+		EvaluatorVersionID: req.GetEvaluatorVersionID(),
+	}); err != nil {
+		logs.CtxError(ctx, "[AsyncRunEvaluatorOApi] SetEvalAsyncCtx fail, invokeID: %d, err: %v", record.ID, err)
+		return nil, err
+	}
+
+	return &openapi.AsyncRunEvaluatorOApiResponse{
+		Data: &openapi.AsyncRunEvaluatorOpenAPIData{
+			InvokeID: gptr.Of(record.ID),
+			Record:   evaluator_convertor.OpenAPIEvaluatorRecordDO2DTO(record),
 		},
 	}, nil
 }
