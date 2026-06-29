@@ -319,8 +319,8 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 			itemConfig = ref.ItemConfig
 			if ref.EvalSetID > 0 {
 				evalSetID = ref.EvalSetID
-			}
-			if ref.EvalSetVersionID > 0 {
+				// 该 item 真正归属集的版本以 ref 为准 (含草稿: ref.EvalSetVersionID==0 → 走下面 live 分支)。
+				// 不能再用实验级主集版本兜底, 否则非主集 item 会被错误地按主集版本查询。
 				evalSetVerID = ref.EvalSetVersionID
 			}
 			if ref.ItemVersionID > 0 {
@@ -339,7 +339,10 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 			{ItemID: event.EvalSetItemID, ItemVersionID: itemVersionID},
 		},
 	}
-	if evalSetID == evalSetVerID {
+	// 草稿哨兵: evalSetVerID==0 (ref 落 0 的草稿) 或 evalSetID==evalSetVerID (提交侧占位哨兵)
+	// → 不锁版本, 读侧走 live (BatchGetEvaluationSetItems VersionID=nil 读当前 dataset_item 草稿)。
+	// committed (真实 version_id) 维持 ByVersion 冻结快照不变。
+	if evalSetVerID == 0 || evalSetID == evalSetVerID {
 		batchGetEvaluationSetItemsParam.VersionID = nil
 	}
 	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, batchGetEvaluationSetItemsParam)

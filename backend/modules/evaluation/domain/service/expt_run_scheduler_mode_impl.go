@@ -325,7 +325,7 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 				SpaceID:         event.SpaceID,
 				EvaluationSetID: evalSetID,
-				VersionID:       &evalSetVersionID,
+				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 				PageSize:        &pageSize,
 				PageToken:       pageToken,
 				OrderBys: []*entity.OrderBy{{
@@ -444,7 +444,7 @@ func (e *ExptTrialRunExec) exptStartByItemIds(ctx context.Context, event *entity
 		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
 			SpaceID:         event.SpaceID,
 			EvaluationSetID: evalSetID,
-			VersionID:       &evalSetVersionID,
+			VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 			ItemIDs:         chunk,
 		})
 		if err != nil {
@@ -548,7 +548,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 				SpaceID:         event.SpaceID,
 				EvaluationSetID: evalSetID,
-				VersionID:       &evalSetVersionID,
+				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 				PageSize:        &pageSize,
 				PageToken:       pageToken,
 			})
@@ -1407,7 +1407,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 				SpaceID:         event.SpaceID,
 				EvaluationSetID: evalSetID,
-				VersionID:       &evalSetVersionID,
+				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 				PageSize:        &pageSize,
 				PageToken:       pageToken,
 			})
@@ -1678,7 +1678,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
 			SpaceID:         event.SpaceID,
 			EvaluationSetID: evalSetID,
-			VersionID:       &evalSetVersionID,
+			VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 			ItemIDs:         chunk,
 		})
 		if err != nil {
@@ -1880,6 +1880,10 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 		// 构建该 set 下每 item 共享的 item_config (per-set 级配置下沉到行)
 		baseItemConfig := buildItemConfigFromSetConf(setConf)
 
+		// 草稿哨兵: 草稿集读侧走 live (VersionID=nil), ref 落 0; committed 走 ByVersion 冻结。
+		setReadVersionID := resolveSetReadVersionID(setConf.EvalSetID, setConf.EvalSetVersionID)
+		setRefVersionID := resolveSetRefVersionID(setConf.EvalSetID, setConf.EvalSetVersionID)
+
 		// 每批 item → 建 expt_item_ref / item_result / turn_result 并落库 (List 分页 / BatchGet 点选共用)
 		persistBatch := func(items []*entity.EvaluationSetItem) error {
 			if len(items) == 0 {
@@ -1911,7 +1915,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 					ItemID:           item.ItemID,
 					ItemVersionID:    itemVerID,
 					EvalSetID:        setConf.EvalSetID,
-					EvalSetVersionID: setConf.EvalSetVersionID,
+					EvalSetVersionID: setRefVersionID,
 					ItemConfig:       baseItemConfig,
 					OrderIdx:         itemIdx,
 				}
@@ -1997,7 +2001,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 					items, retryErr = e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
 						SpaceID:            event.SpaceID,
 						EvaluationSetID:    setConf.EvalSetID,
-						VersionID:          &setConf.EvalSetVersionID,
+						VersionID:          setReadVersionID,
 						ItemVersionQueries: queries,
 						Filter:             nFilter,
 						TagFilter:          tFilter,
@@ -2028,7 +2032,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 				items, total, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 					SpaceID:         event.SpaceID,
 					EvaluationSetID: setConf.EvalSetID,
-					VersionID:       &setConf.EvalSetVersionID,
+					VersionID:       setReadVersionID,
 					PageSize:        &pageSizePtr,
 					PageToken:       pageToken,
 					Filter:          nFilter,
@@ -2065,6 +2069,37 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 	}
 
 	return e.finishExptStart(ctx, event, expt, totalItemCnt, makeStartIdemKey(event))
+}
+
+// isDraftEvalSet 判定该 set 引用的是否为「草稿 / 不锁版本」。
+//
+// 草稿哨兵约定 (与执行侧 expt_run_item_event_impl.go BuildExptRecordEvalCtx 一致):
+//   - EvalSetVersionID == 0            : 显式不锁版本 (虽然当前提交校验挡 0, 仍兜底)
+//   - EvalSetVersionID == EvalSetID    : 提交侧为绕过「version_id 必填」用 set_id 当占位的草稿哨兵
+//
+// committed (已提交不可变) 版本: EvalSetVersionID 为真实 version_id (≠ set_id 且 ≠ 0)。
+func isDraftEvalSet(evalSetID, evalSetVersionID int64) bool {
+	return evalSetVersionID == 0 || evalSetVersionID == evalSetID
+}
+
+// resolveSetReadVersionID 计算扫描层拉取 item 时下传给读侧的集级 VersionID。
+//   - 草稿: 返回 nil → 读侧走 BatchGetDatasetItems/ListDatasetItems (live, 读当前 dataset_item 草稿)
+//   - committed: 返回 &version → 读侧走 ...ByVersion (冻结快照, 不可变, 行为完全不变)
+func resolveSetReadVersionID(evalSetID, evalSetVersionID int64) *int64 {
+	if isDraftEvalSet(evalSetID, evalSetVersionID) {
+		return nil
+	}
+	return &evalSetVersionID
+}
+
+// resolveSetRefVersionID 计算落 expt_item_ref.eval_set_version_id 的值。
+// 草稿落 0 (与老路径 ItemVersionID=0 口径一致, 全链路下游据此识别草稿 → live 读),
+// committed 落真实 version_id (调度键, 配合 item_id 定位 dataset_item_snapshot 冻结快照)。
+func resolveSetRefVersionID(evalSetID, evalSetVersionID int64) int64 {
+	if isDraftEvalSet(evalSetID, evalSetVersionID) {
+		return 0
+	}
+	return evalSetVersionID
 }
 
 // buildItemConfigFromSetConf 将 per-set 配置下沉为 ExptItemConfig (同 set 所有 item 共享)
@@ -2199,4 +2234,3 @@ func extractTagFilter(f *entity.ExptItemFilter) *entity.TagFilter {
 	}
 	return &entity.TagFilter{TagNames: tagNames, Relation: relation}
 }
-

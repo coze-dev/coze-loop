@@ -623,6 +623,75 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet(t *testing
 	assert.Equal(t, itemConfig, got.ItemConfig)
 }
 
+// 草稿集 item: ref 落 EvalSetVersionID=0 → 单行取数走 live (BatchGet VersionID=nil)。
+// 这是「实验引用草稿版本评测集」运行时实时读草稿的执行侧落地。
+func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet_Draft(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := svcmocks.NewMockIExptManager(ctrl)
+	mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	mockExptItemRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+
+	service := &ExptItemEventEvalServiceImpl{
+		manager:                  mockManager,
+		evaluationSetItemService: mockEvalSetItemSvc,
+		exptTurnResultRepo:       mockExptTurnResultRepo,
+		exptItemResultRepo:       mockExptItemResultRepo,
+		exptItemRefRepo:          mockExptItemRefRepo,
+	}
+
+	const (
+		primarySetID = int64(100)
+		primaryVerID = int64(101)
+		draftSetID   = int64(7656754417005232130)
+		draftItemID  = int64(2002)
+	)
+
+	mockExpt := &entity.Experiment{
+		ID:                1,
+		EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+		EvalSet: &entity.EvaluationSet{
+			EvaluationSetVersion: &entity.EvaluationSetVersion{
+				ID:              primaryVerID,
+				EvaluationSetID: primarySetID,
+			},
+		},
+	}
+	// 草稿集 ref: EvalSetVersionID 落 0 (扫描层 resolveSetRefVersionID 的口径)
+	draftRef := &entity.ExptItemRef{
+		ItemID:           draftItemID,
+		EvalSetID:        draftSetID,
+		EvalSetVersionID: 0,
+		ItemConfig:       &entity.ExptItemConfig{},
+	}
+
+	mockManager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(mockExpt, nil)
+	mockExptItemRefRepo.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(3), int64(1), draftItemID).Return(draftRef, nil)
+	// ★ 关键断言: 草稿集 VersionID 必须为 nil → 走 live 读当前草稿; 集 id 用 ref 里草稿集
+	mockEvalSetItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, param *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+			assert.Equal(t, draftSetID, param.EvaluationSetID)
+			assert.Nil(t, param.VersionID, "草稿集执行侧取数 VersionID 必须为 nil (live)")
+			assert.Len(t, param.ItemVersionQueries, 1)
+			assert.Equal(t, draftItemID, param.ItemVersionQueries[0].ItemID)
+			return []*entity.EvaluationSetItem{{ID: draftItemID, ItemID: draftItemID}}, nil
+		})
+	mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
+	mockExptItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptItemResultRunLog{}, nil)
+
+	got, err := service.BuildExptRecordEvalCtx(context.Background(), &entity.ExptItemEvalEvent{
+		ExptID:        1,
+		SpaceID:       3,
+		EvalSetItemID: draftItemID,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Equal(t, draftItemID, got.EvalSetItem.ItemID)
+}
+
 // 新数据集: ref 带 ItemVersionID → 单行取数走 ItemVersionQueries (item_id + item_version_id), 不走 ItemIDs。
 func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet_ItemVersion(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -643,10 +712,10 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet_ItemVersio
 	}
 
 	const (
-		setID      = int64(300)
-		setVerID   = int64(301)
-		itemID     = int64(3003)
-		itemVerID  = int64(999)
+		setID     = int64(300)
+		setVerID  = int64(301)
+		itemID    = int64(3003)
+		itemVerID = int64(999)
 	)
 
 	mockExpt := &entity.Experiment{
