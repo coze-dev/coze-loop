@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -2489,6 +2490,11 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		metaRules = metaCfg.Spaces[workspaceID]
 	}
 
+	var maxBytes int64
+	if backfillCfg := r.traceConfig.GetBackfillConfig(ctx); backfillCfg != nil {
+		maxBytes = backfillCfg.GetTrajectoryMaxBytes(workspaceID)
+	}
+
 	allSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
 		Tenants: tenant,
 		Filters: &loop_span.FilterFields{
@@ -2506,8 +2512,13 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		Limit:              1000,
 		NotQueryAnnotation: true,
 		SelectColumns:      []string{loop_span.SpanFieldTraceId, loop_span.SpanFieldSpanId, loop_span.SpanFieldParentID, loop_span.SpanFieldSpaceId, loop_span.SpanFieldSpanName},
+		MaxBytes:           maxBytes,
 	})
 	if err != nil {
+		if errors.Is(err, repo.ErrMaxBytesExceeded) {
+			logs.CtxWarn(ctx, "GetTrajectories skipped: allSpans exceeded max bytes, traceIDs:%v, maxBytes:%d", traceIDs, maxBytes)
+			return map[string]*loop_span.Trajectory{}, nil
+		}
 		logs.CtxError(ctx, "Failed to list all spans, err:%+v", err)
 		return nil, err
 	}
@@ -2520,8 +2531,13 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		EndAt:              endTime,
 		Limit:              100,
 		NotQueryAnnotation: true,
+		MaxBytes:           maxBytes,
 	})
 	if err != nil {
+		if errors.Is(err, repo.ErrMaxBytesExceeded) {
+			logs.CtxWarn(ctx, "GetTrajectories skipped: selectedSpans exceeded max bytes, traceIDs:%v, maxBytes:%d", traceIDs, maxBytes)
+			return map[string]*loop_span.Trajectory{}, nil
+		}
 		logs.CtxError(ctx, "Failed to list selected spans, err:%+v", err)
 		return nil, err
 	}

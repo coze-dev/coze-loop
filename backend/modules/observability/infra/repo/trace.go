@@ -296,12 +296,22 @@ func (t *TraceRepoImpl) ListSpansRepeat(ctx context.Context, req *repo.ListSpans
 
 	clonedReq := *req
 	totalSpans := loop_span.SpanList{}
+	var totalBytes int64
 
 	for {
 		resp, err := t.ListSpans(ctx, &clonedReq)
 		if err != nil {
 			return nil, err
 		}
+
+		if req.MaxBytes > 0 {
+			pageBytes := int64(loop_span.SizeofSpans(resp.Spans))
+			if totalBytes+pageBytes > req.MaxBytes {
+				return nil, repo.ErrMaxBytesExceeded
+			}
+			totalBytes += pageBytes
+		}
+
 		totalSpans = append(totalSpans, resp.Spans...)
 		if !resp.HasMore || resp.PageToken == "" {
 			break

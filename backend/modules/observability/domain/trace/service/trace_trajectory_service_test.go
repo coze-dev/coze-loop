@@ -129,6 +129,7 @@ func TestTraceServiceImpl_GetTrajectories_and_ListTrajectory(t *testing.T) {
 	repoMock.EXPECT().GetTrajectoryConfig(gomock.Any(), repo.GetTrajectoryConfigParam{WorkspaceId: 1}).Return(nil, nil).AnyTimes()
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	traceConfigMock.EXPECT().GetTrajectoryMetadataConfig(gomock.Any()).Return(nil).AnyTimes()
+	traceConfigMock.EXPECT().GetBackfillConfig(gomock.Any()).Return(nil).AnyTimes()
 
 	svc := &TraceServiceImpl{traceRepo: repoMock, buildHelper: builder, tenantProvider: tenantProviderMock, traceConfig: traceConfigMock}
 	// mock list all spans
