@@ -67,9 +67,14 @@ func (c *WebhookDeliveryConsumer) HandleMessage(ctx context.Context, ext *mq.Mes
 		logs.CtxInfo(ctx, "[Webhook] disabled, skip delivery, delivery_id: %v, space_id: %v", event.DeliveryID, event.SpaceID)
 		return nil
 	}
-	secret := webhookConf.GetSigningSecret(event.SpaceID)
+	var secret string
+	if event.ChannelType == "bits_callback" {
+		secret = webhookConf.GetBitsCallbackSecret()
+	} else {
+		secret = webhookConf.GetSigningSecret(event.SpaceID)
+	}
 	if secret == "" {
-		logs.CtxError(ctx, "[Webhook] delivery secret is empty, delivery_id: %v, space_id: %v", event.DeliveryID, event.SpaceID)
+		logs.CtxError(ctx, "[Webhook] delivery secret is empty, delivery_id: %v, space_id: %v, channel_type: %v", event.DeliveryID, event.SpaceID, event.ChannelType)
 		return c.markFailed(ctx, event, nil, "webhook signing secret is empty")
 	}
 	retryConf := c.configer.GetWebhookRetryConf(ctx)
@@ -205,8 +210,8 @@ func buildWebhookPayload(event *entity.WebhookDeliveryMessage, expt *entity.Expe
 			Name:      expt.Name,
 			Status:    webhookStatus(expt.Status),
 			Progress:  buildWebhookProgress(expt.Stats),
-			Metrics:   buildWebhookMetrics(event.EventType, expt.AggregateResult),
-			ResultURL: webhookConf.BuildResultURL(event.SpaceID, expt.ID),
+			Metrics:   nil,
+			ResultURL: nil,
 		},
 	}
 }

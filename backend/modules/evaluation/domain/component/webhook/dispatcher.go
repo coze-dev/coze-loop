@@ -131,14 +131,15 @@ func (d *dispatcherImpl) Dispatch(ctx context.Context, expt *entity.Experiment, 
 			return err
 		}
 		message := &entity.WebhookDeliveryMessage{
-			DeliveryID: deliveryID,
-			ExptID:     expt.ID,
-			SpaceID:    expt.SpaceID,
-			EventType:  eventType,
-			WebhookURL: target.url,
-			Attempt:    0,
-			CreatedAt:  now.Unix(),
-			SourceType: target.sourceType,
+			DeliveryID:  deliveryID,
+			ExptID:      expt.ID,
+			SpaceID:     expt.SpaceID,
+			EventType:   eventType,
+			WebhookURL:  target.url,
+			Attempt:     0,
+			CreatedAt:   now.Unix(),
+			SourceType:  target.sourceType,
+			ChannelType: target.channelType,
 		}
 		if err := d.publisher.PublishWebhookDeliveryEvent(ctx, message, nil); err != nil {
 			return err

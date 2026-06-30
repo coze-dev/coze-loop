@@ -52,8 +52,9 @@ type WebhookDeliveryMessage struct {
 	EventType  WebhookEventType `json:"event_type"`
 	WebhookURL string           `json:"webhook_url"`
 	Attempt    int              `json:"attempt"`
-	CreatedAt  int64            `json:"created_at"`
-	SourceType string           `json:"source_type,omitempty"`
+	CreatedAt   int64            `json:"created_at"`
+	SourceType  string           `json:"source_type,omitempty"`
+	ChannelType string           `json:"channel_type,omitempty"`
 }
 
 type WebhookPayload struct {

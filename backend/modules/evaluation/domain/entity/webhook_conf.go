@@ -16,6 +16,7 @@ type WebhookGlobalConf struct {
 	SpaceSecrets            map[string]string `json:"space_secrets" mapstructure:"space_secrets"`
 	ResultURLTemplate       string            `json:"result_url_template" mapstructure:"result_url_template"`
 	BitsCallbackURLTemplate string            `json:"bits_callback_url_template" mapstructure:"bits_callback_url_template"`
+	BitsCallbackSecret      string            `json:"bits_callback_secret" mapstructure:"bits_callback_secret"`
 	DisabledSpaces          []int64           `json:"disabled_spaces" mapstructure:"disabled_spaces"`
 }
 
@@ -50,6 +51,16 @@ func (c *WebhookGlobalConf) GetSigningSecret(spaceID int64) string {
 				return secret
 			}
 		}
+	}
+	return strings.TrimSpace(c.Secret)
+}
+
+func (c *WebhookGlobalConf) GetBitsCallbackSecret() string {
+	if c == nil {
+		return ""
+	}
+	if secret := strings.TrimSpace(c.BitsCallbackSecret); secret != "" {
+		return secret
 	}
 	return strings.TrimSpace(c.Secret)
 }
