@@ -83,5 +83,5 @@ func TestEvaluatorCallbackDispatcher_Non2xx_RetriesThenReturnsNil(t *testing.T) 
 	// 3s 窗口耗尽仍失败 → 不抛错
 	assert.NoError(t, err)
 	// 至少调用了一次（退避会重试多次）
-	assert.GreaterOrEqual(t, atomic.LoadInt32(&called), int32(1))
+	assert.Greater(t, atomic.LoadInt32(&called), int32(1))
 }

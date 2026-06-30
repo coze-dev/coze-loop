@@ -22,6 +22,9 @@ import (
 
 // IEvaluatorCallbackDispatcher 评估器异步执行完成回调分发器
 type IEvaluatorCallbackDispatcher interface {
+	// Dispatch posts the signed payload to callbackURL. A callbackURL of "" is a no-op.
+	// If payload.DeliveryID is empty, it is generated and written back into payload.
+	// Delivery failures are logged and never returned — they must not block the caller's report flow.
 	Dispatch(ctx context.Context, spaceID int64, callbackURL string, payload *entity.EvaluatorCallbackPayload) error
 }
 
