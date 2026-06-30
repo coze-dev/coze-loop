@@ -5594,7 +5594,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 	tests := []struct {
 		name    string
 		req     *openapi.ReportEvaluatorInvokeResultRequest
-		setup   func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher)
+		setup   func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher, dispatcher *servicemocks.MockIEvaluatorCallbackDispatcher)
 		wantErr int32
 	}{
 		{
@@ -5604,7 +5604,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				InvokeID:    gptr.Of(invokeID),
 				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, _ *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
 			},
 			wantErr: errno.CommonNoPermissionCode,
@@ -5616,7 +5616,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				InvokeID:    gptr.Of(invokeID),
 				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(nil, errors.New("get failed"))
 			},
@@ -5629,7 +5629,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				InvokeID:    gptr.Of(invokeID),
 				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(nil, nil)
 			},
@@ -5645,7 +5645,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9))},
 				},
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
 					Event:              event,
@@ -5666,7 +5666,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					EvaluatorRunError: &spi.InvokeEvaluatorRunError{Code: gptr.Of(int32(123)), Message: gptr.Of("m")},
 				},
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
 					Event:              event,
@@ -5688,7 +5688,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.8))},
 				},
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
 					Event:              nil,
@@ -5709,7 +5709,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					EvaluatorUsage:   &spi.InvokeEvaluatorUsage{InputTokens: gptr.Of(int64(1)), OutputTokens: gptr.Of(int64(2))},
 				},
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
 					Event:              event,
@@ -5735,6 +5735,80 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				)
 			},
 		},
+		{
+			name: "callback url present -> dispatch called",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				InvokeID:    gptr.Of(invokeID),
+				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+				Output: &spi.InvokeEvaluatorOutputData{
+					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9))},
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, dispatcher *servicemocks.MockIEvaluatorCallbackDispatcher) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
+					Event:              nil,
+					AsyncUnixMS:        time.Now().UnixMilli() - 10,
+					EvaluatorVersionID: 9,
+					CallbackURL:        "https://cb.example.com/hook",
+				}, nil)
+				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
+				dispatcher.EXPECT().Dispatch(gomock.Any(), workspaceID, "https://cb.example.com/hook", gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ int64, _ string, p *entity.EvaluatorCallbackPayload) error {
+						assert.Equal(t, invokeID, p.InvokeID)
+						assert.Equal(t, workspaceID, p.WorkspaceID)
+						assert.Equal(t, int64(9), p.EvaluatorVersionID)
+						assert.Equal(t, "success", p.Status)
+						return nil
+					})
+			},
+		},
+		{
+			name: "no callback url -> dispatch not called",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				InvokeID:    gptr.Of(invokeID),
+				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+				Output: &spi.InvokeEvaluatorOutputData{
+					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9))},
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, dispatcher *servicemocks.MockIEvaluatorCallbackDispatcher) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
+					Event:              nil,
+					AsyncUnixMS:        time.Now().UnixMilli() - 10,
+					EvaluatorVersionID: 9,
+					CallbackURL:        "",
+				}, nil)
+				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
+				dispatcher.EXPECT().Dispatch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name: "dispatch error does not fail report",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				InvokeID:    gptr.Of(invokeID),
+				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+				Output: &spi.InvokeEvaluatorOutputData{
+					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9))},
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, dispatcher *servicemocks.MockIEvaluatorCallbackDispatcher) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
+					Event:              nil,
+					AsyncUnixMS:        time.Now().UnixMilli() - 10,
+					EvaluatorVersionID: 9,
+					CallbackURL:        "https://cb.example.com/hook",
+				}, nil)
+				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
+				dispatcher.EXPECT().Dispatch(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("boom"))
+			},
+			// wantErr stays 0 (zero value): report must still succeed despite dispatch error
+		},
 	}
 
 	for _, tt := range tests {
@@ -5749,17 +5823,19 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 			evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
 			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+			callbackDispatcher := servicemocks.NewMockIEvaluatorCallbackDispatcher(ctrl)
 			metric := &fakeOpenAPIMetric{}
 
 			app := &EvalOpenAPIApplication{
-				auth:             auth,
-				asyncRepo:        asyncRepo,
-				evaluatorService: evaluatorSvc,
-				publisher:        publisher,
-				metric:           metric,
+				auth:               auth,
+				asyncRepo:          asyncRepo,
+				evaluatorService:   evaluatorSvc,
+				publisher:          publisher,
+				callbackDispatcher: callbackDispatcher,
+				metric:             metric,
 			}
 
-			tc.setup(auth, asyncRepo, evaluatorSvc, publisher)
+			tc.setup(auth, asyncRepo, evaluatorSvc, publisher, callbackDispatcher)
 
 			resp, err := app.ReportEvaluatorInvokeResult_(context.Background(), tc.req)
 			if tc.wantErr != 0 {
@@ -7149,9 +7225,10 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 		wantErr int32
 	}{
 		{
-			name:    "nil request",
-			req:     nil,
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {},
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
@@ -7234,6 +7311,7 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 			req: &openapi.AsyncRunEvaluatorOApiRequest{
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+				CallbackURL:        gptr.Of("https://example.com/hook"),
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, asyncRepo *repomocks.MockIEvalAsyncRepo) {
 				evaluator := &entity.Evaluator{
@@ -7249,6 +7327,7 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 						assert.Equal(t, invokeID, actx.RecordID)
 						assert.Equal(t, evaluatorVersionID, actx.EvaluatorVersionID)
 						assert.Nil(t, actx.Event)
+						assert.Equal(t, "https://example.com/hook", actx.CallbackURL)
 						return nil
 					})
 			},
@@ -7269,6 +7348,7 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 						assert.Equal(t, invokeID, actx.RecordID)
 						assert.Equal(t, evaluatorVersionID, actx.EvaluatorVersionID)
 						assert.Nil(t, actx.Event)
+						assert.Equal(t, "", actx.CallbackURL)
 						return nil
 					})
 			},
