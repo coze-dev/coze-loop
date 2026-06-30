@@ -158,22 +158,22 @@ func TestComputeHMACSHA256_BitsUT(t *testing.T) {
 
 	t.Run("deterministic output", func(t *testing.T) {
 		t.Parallel()
-		result1 := computeHMACSHA256("secret", "message")
-		result2 := computeHMACSHA256("secret", "message")
+		result1 := ComputeHMACSHA256("secret", "message")
+		result2 := ComputeHMACSHA256("secret", "message")
 		assert.Equal(t, result1, result2)
 		assert.Len(t, result1, 64) // hex-encoded SHA256 = 64 chars
 	})
 
 	t.Run("empty secret produces valid hash", func(t *testing.T) {
 		t.Parallel()
-		result := computeHMACSHA256("", "test\nnonce\n")
+		result := ComputeHMACSHA256("", "test\nnonce\n")
 		assert.Len(t, result, 64)
 	})
 
 	t.Run("different secrets produce different hashes", func(t *testing.T) {
 		t.Parallel()
-		r1 := computeHMACSHA256("secret1", "msg")
-		r2 := computeHMACSHA256("secret2", "msg")
+		r1 := ComputeHMACSHA256("secret1", "msg")
+		r2 := ComputeHMACSHA256("secret2", "msg")
 		assert.NotEqual(t, r1, r2)
 	})
 }
@@ -300,7 +300,7 @@ func TestWebhookDispatcher_Dispatch_BitsUT(t *testing.T) {
 		// Verify signature
 		ts := capturedHeaders.Get("X-CozeLoop-Timestamp")
 		nonce := capturedHeaders.Get("X-CozeLoop-Nonce")
-		expectedSig := computeHMACSHA256("", ts+"\n"+nonce+"\n")
+		expectedSig := ComputeHMACSHA256("", ts+"\n"+nonce+"\n")
 		assert.Equal(t, expectedSig, capturedHeaders.Get("X-CozeLoop-Signature"))
 
 		// Verify body
