@@ -891,6 +891,7 @@ struct AsyncRunEvaluatorOApiRequest {
     2: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
     3: optional evaluator.EvaluatorInputData input_data (api.body = "input_data")
     4: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body = "evaluator_run_conf")
+    5: optional string callback_url (api.body = "callback_url")
 
     100: optional map<string, string> ext (api.body = "ext")
 
