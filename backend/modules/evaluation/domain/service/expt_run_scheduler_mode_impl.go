@@ -35,6 +35,22 @@ func emptyEvaluatorResultIDsJSONForRunLogUpdate() []byte {
 	return b
 }
 
+// publishExptStartedEvent emits a Pending→Processing lifecycle event so webhook subscribers
+// see the experiment-started transition. Failures are logged, not returned.
+func publishExptStartedEvent(ctx context.Context, publisher events.ExptEventPublisher, event *entity.ExptScheduleEvent, expt *entity.Experiment) {
+	if publisher == nil {
+		return
+	}
+	runID := event.ExptRunID
+	if err := publisher.PublishExptLifecycleEvent(ctx, &entity.ExptLifecycleEvent{
+		ExptID: event.ExptID, ExptRunID: &runID, SpaceID: event.SpaceID,
+		FromStatus: expt.Status, ToStatus: entity.ExptStatus_Processing,
+		ExptType: event.ExptType, SourceType: expt.SourceType,
+	}, gptr.Of(time.Second*3)); err != nil {
+		logs.CtxWarn(ctx, "publishExptStartedEvent failed, expt_id=%v err=%v", event.ExptID, err)
+	}
+}
+
 func clearExptTurnRunLogResultRefsOnItems(ctx context.Context, turnResultRepo repo.IExptTurnResultRepo, spaceID, exptID, exptRunID int64, itemIDs []int64) error {
 	if len(itemIDs) == 0 {
 		return nil
@@ -232,6 +248,7 @@ func (e *ExptSubmitExec) finishExptStart(ctx context.Context, event *entity.Expt
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
 	}
+	publishExptStartedEvent(ctx, e.publisher, event, expt)
 
 	var templateID int64
 	if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
@@ -621,6 +638,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
 	}
+	publishExptStartedEvent(ctx, e.publisher, event, expt)
 
 	// 如果实验关联了模板，更新模板的 ExptInfo
 	var templateID int64
@@ -873,6 +891,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
 	}
+	publishExptStartedEvent(ctx, e.publisher, event, expt)
 
 	// 如果实验关联了模板，在 FailRetry 模式下重新开始时，也需要更新模板上的最新实验状态
 	if e.templateManager != nil {
@@ -1496,6 +1515,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
 	}
+	publishExptStartedEvent(ctx, e.publisher, event, expt)
 
 	if e.templateManager != nil {
 		var templateID int64
@@ -1620,6 +1640,7 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 	}); err != nil {
 		return err
 	}
+	publishExptStartedEvent(ctx, e.publisher, event, expt)
 
 	if e.templateManager != nil {
 		var templateID int64
