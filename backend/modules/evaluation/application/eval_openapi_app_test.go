@@ -5765,6 +5765,32 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			},
 		},
 		{
+			name: "callback url present with failed status -> dispatch called with fail",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				InvokeID:    gptr.Of(invokeID),
+				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_FAILED),
+				Output: &spi.InvokeEvaluatorOutputData{
+					EvaluatorRunError: &spi.InvokeEvaluatorRunError{Code: gptr.Of(int32(500)), Message: gptr.Of("boom")},
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, dispatcher *servicemocks.MockIEvaluatorCallbackDispatcher) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
+					Event:              nil,
+					AsyncUnixMS:        time.Now().UnixMilli() - 10,
+					EvaluatorVersionID: 9,
+					CallbackURL:        "https://cb.example.com/hook",
+				}, nil)
+				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
+				dispatcher.EXPECT().Dispatch(gomock.Any(), workspaceID, "https://cb.example.com/hook", gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ int64, _ string, p *entity.EvaluatorCallbackPayload) error {
+						assert.Equal(t, "fail", p.Status)
+						return nil
+					})
+			},
+		},
+		{
 			name: "no callback url -> dispatch not called",
 			req: &openapi.ReportEvaluatorInvokeResultRequest{
 				WorkspaceID: gptr.Of(workspaceID),
