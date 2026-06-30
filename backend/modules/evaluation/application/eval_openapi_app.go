@@ -2628,8 +2628,8 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 			Status:             evaluatorCallbackStatusString(runStatus),
 			TimeConsumingMS:    time.Now().UnixMilli() - actx.AsyncUnixMS,
 		}
-		if out := req.GetOutput(); out != nil {
-			payload.Output = out
+		if outputData != nil {
+			payload.Output = outputData
 		}
 		if derr := e.callbackDispatcher.Dispatch(ctx, req.GetWorkspaceID(), actx.CallbackURL, payload); derr != nil {
 			logs.CtxError(ctx, "[ReportEvaluatorInvokeResult] callback dispatch fail, invoke_id: %v, url: %v, err: %v",
