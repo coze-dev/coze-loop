@@ -608,7 +608,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 			return err
 		}
 
-		if itemCnt >= int(total) || len(items) == 0 || pageToken == nil || *pageToken == "" {
+		if (total > 0 && itemCnt >= int(total)) || len(items) == 0 || pageToken == nil || *pageToken == "" {
 			break
 		}
 
@@ -1478,7 +1478,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			return err
 		}
 
-		if itemCnt >= int(total) || len(items) == 0 || pageToken == nil || *pageToken == "" {
+		if (total > 0 && itemCnt >= int(total)) || len(items) == 0 || pageToken == nil || *pageToken == "" {
 			break
 		}
 
@@ -2062,7 +2062,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			}
 
 			pageToken = nextPageToken
-			if int64(pageTotalCnt) >= gptr.Indirect(total) || len(items) == 0 || pageToken == nil || *pageToken == "" {
+			if (gptr.Indirect(total) > 0 && int64(pageTotalCnt) >= gptr.Indirect(total)) || len(items) == 0 || pageToken == nil || *pageToken == "" {
 				break
 			}
 		}

@@ -417,7 +417,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	}
 
 	execEvalVerIDMap := gslice.ToMap(execEvaluatorVersionIDs, func(t int64) (int64, bool) { return t, true })
-	targetFields := targetResult.EvalTargetOutputData.OutputFields
+	var targetFields map[string]*entity.Content
+	if targetResult.EvalTargetOutputData != nil {
+		targetFields = targetResult.EvalTargetOutputData.OutputFields
+	}
 
 	// 评估器需要完整的 target_output，从 TOS 加载被裁剪的大字段
 	if targetResult.EvalTargetOutputData != nil && targetResult.EvalTargetOutputData.OutputFields != nil {
@@ -569,7 +572,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	}
 
 	// 大字段 (target_output) 预加载: 行级只需一次, 在调度前完成
-	targetFields := targetResult.EvalTargetOutputData.OutputFields
+	var targetFields map[string]*entity.Content
+	if targetResult.EvalTargetOutputData != nil {
+		targetFields = targetResult.EvalTargetOutputData.OutputFields
+	}
 	if targetResult.EvalTargetOutputData != nil && targetResult.EvalTargetOutputData.OutputFields != nil {
 		omitKeys := make([]string, 0)
 		for k, c := range targetResult.EvalTargetOutputData.OutputFields {
