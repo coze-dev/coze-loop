@@ -66,6 +66,7 @@ type EvalOpenAPIApplication struct {
 	exptTemplateManager    service.IExptTemplateManager
 	configer               component.IConfiger
 	fileProvider           rpc.IFileProvider
+	callbackDispatcher     service.IEvaluatorCallbackDispatcher
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -86,6 +87,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	exptTemplateManager service.IExptTemplateManager,
 	configer component.IConfiger,
 	fileProvider rpc.IFileProvider,
+	callbackDispatcher service.IEvaluatorCallbackDispatcher,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -107,6 +109,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		exptTemplateManager:         exptTemplateManager,
 		configer:                    configer,
 		fileProvider:                fileProvider,
+		callbackDispatcher:          callbackDispatcher,
 	}
 }
 
@@ -2053,6 +2056,7 @@ func (e *EvalOpenAPIApplication) AsyncRunEvaluatorOApi(ctx context.Context, req 
 		AsyncUnixMS:        startTime.UnixMilli(),
 		Session:            &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
 		EvaluatorVersionID: req.GetEvaluatorVersionID(),
+		CallbackURL:        req.GetCallbackURL(),
 	}); err != nil {
 		logs.CtxError(ctx, "[AsyncRunEvaluatorOApi] SetEvalAsyncCtx fail, invokeID: %d, err: %v", record.ID, err)
 		return nil, err
@@ -2615,6 +2619,22 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		}
 	}
 
+	if actx.CallbackURL != "" {
+		payload := &entity.EvaluatorCallbackPayload{
+			InvokeID:           req.GetInvokeID(),
+			WorkspaceID:        req.GetWorkspaceID(),
+			EvaluatorVersionID: actx.EvaluatorVersionID,
+			Status:             evaluatorCallbackStatusString(evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus())),
+			Output:             req.GetOutput(),
+			TimeConsumingMS:    time.Now().UnixMilli() - actx.AsyncUnixMS,
+		}
+		if derr := e.callbackDispatcher.Dispatch(ctx, req.GetWorkspaceID(), actx.CallbackURL, payload); derr != nil {
+			logs.CtxError(ctx, "[ReportEvaluatorInvokeResult] callback dispatch fail, invoke_id: %v, url: %v, err: %v",
+				req.GetInvokeID(), actx.CallbackURL, derr)
+			// 不返回错误：回调失败不影响运行时回报接口成功
+		}
+	}
+
 	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 }
 
@@ -2664,4 +2684,11 @@ func (e *EvalOpenAPIApplication) fillExtraOutputURLs(ctx context.Context, itemRe
 		}
 	}
 	return nil
+}
+
+func evaluatorCallbackStatusString(status entity.EvaluatorRunStatus) string {
+	if status == entity.EvaluatorRunStatusSuccess {
+		return "success"
+	}
+	return "fail"
 }
