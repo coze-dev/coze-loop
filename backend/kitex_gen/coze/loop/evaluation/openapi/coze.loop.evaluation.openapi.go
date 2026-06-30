@@ -42342,6 +42342,7 @@ type AsyncRunEvaluatorOApiRequest struct {
 	WorkspaceID        *int64                        `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
 	InputData          *evaluator.EvaluatorInputData `thrift:"input_data,3,optional" frugal:"3,optional,evaluator.EvaluatorInputData" form:"input_data" json:"input_data,omitempty"`
 	EvaluatorRunConf   *evaluator.EvaluatorRunConfig `thrift:"evaluator_run_conf,4,optional" frugal:"4,optional,evaluator.EvaluatorRunConfig" form:"evaluator_run_conf" json:"evaluator_run_conf,omitempty"`
+	CallbackURL        *string                       `thrift:"callback_url,5,optional" frugal:"5,optional,string" form:"callback_url" json:"callback_url,omitempty"`
 	Ext                map[string]string             `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Extra              *extra.Extra                  `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base               *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -42402,6 +42403,18 @@ func (p *AsyncRunEvaluatorOApiRequest) GetEvaluatorRunConf() (v *evaluator.Evalu
 	return p.EvaluatorRunConf
 }
 
+var AsyncRunEvaluatorOApiRequest_CallbackURL_DEFAULT string
+
+func (p *AsyncRunEvaluatorOApiRequest) GetCallbackURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCallbackURL() {
+		return AsyncRunEvaluatorOApiRequest_CallbackURL_DEFAULT
+	}
+	return *p.CallbackURL
+}
+
 var AsyncRunEvaluatorOApiRequest_Ext_DEFAULT map[string]string
 
 func (p *AsyncRunEvaluatorOApiRequest) GetExt() (v map[string]string) {
@@ -42449,6 +42462,9 @@ func (p *AsyncRunEvaluatorOApiRequest) SetInputData(val *evaluator.EvaluatorInpu
 func (p *AsyncRunEvaluatorOApiRequest) SetEvaluatorRunConf(val *evaluator.EvaluatorRunConfig) {
 	p.EvaluatorRunConf = val
 }
+func (p *AsyncRunEvaluatorOApiRequest) SetCallbackURL(val *string) {
+	p.CallbackURL = val
+}
 func (p *AsyncRunEvaluatorOApiRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -42464,6 +42480,7 @@ var fieldIDToName_AsyncRunEvaluatorOApiRequest = map[int16]string{
 	2:   "workspace_id",
 	3:   "input_data",
 	4:   "evaluator_run_conf",
+	5:   "callback_url",
 	100: "ext",
 	254: "extra",
 	255: "Base",
@@ -42483,6 +42500,10 @@ func (p *AsyncRunEvaluatorOApiRequest) IsSetInputData() bool {
 
 func (p *AsyncRunEvaluatorOApiRequest) IsSetEvaluatorRunConf() bool {
 	return p.EvaluatorRunConf != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetCallbackURL() bool {
+	return p.CallbackURL != nil
 }
 
 func (p *AsyncRunEvaluatorOApiRequest) IsSetExt() bool {
@@ -42542,6 +42563,14 @@ func (p *AsyncRunEvaluatorOApiRequest) Read(iprot thrift.TProtocol) (err error) 
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -42638,6 +42667,17 @@ func (p *AsyncRunEvaluatorOApiRequest) ReadField4(iprot thrift.TProtocol) error 
 	p.EvaluatorRunConf = _field
 	return nil
 }
+func (p *AsyncRunEvaluatorOApiRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CallbackURL = _field
+	return nil
+}
 func (p *AsyncRunEvaluatorOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -42704,6 +42744,10 @@ func (p *AsyncRunEvaluatorOApiRequest) Write(oprot thrift.TProtocol) (err error)
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -42808,6 +42852,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *AsyncRunEvaluatorOApiRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCallbackURL() {
+		if err = oprot.WriteFieldBegin("callback_url", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CallbackURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *AsyncRunEvaluatorOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -42900,6 +42962,9 @@ func (p *AsyncRunEvaluatorOApiRequest) DeepEqual(ano *AsyncRunEvaluatorOApiReque
 	if !p.Field4DeepEqual(ano.EvaluatorRunConf) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.CallbackURL) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -42946,6 +43011,18 @@ func (p *AsyncRunEvaluatorOApiRequest) Field3DeepEqual(src *evaluator.EvaluatorI
 func (p *AsyncRunEvaluatorOApiRequest) Field4DeepEqual(src *evaluator.EvaluatorRunConfig) bool {
 
 	if !p.EvaluatorRunConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiRequest) Field5DeepEqual(src *string) bool {
+
+	if p.CallbackURL == src {
+		return true
+	} else if p.CallbackURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CallbackURL, *src) != 0 {
 		return false
 	}
 	return true
