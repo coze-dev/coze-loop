@@ -554,8 +554,8 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			setup: func() {
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
-					Return(true, nil)
+					BackoffLockWithValue(ctx, gomock.Any(), "456", gomock.Any(), time.Second).
+					Return(true, "", nil)
 
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
@@ -595,8 +595,8 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			setup: func() {
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
-					Return(false, nil)
+					BackoffLockWithValue(ctx, gomock.Any(), "456", gomock.Any(), time.Second).
+					Return(false, "", nil)
 			},
 			wantErr: true,
 		},
@@ -609,8 +609,8 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			setup: func() {
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
-					Return(true, nil)
+					BackoffLockWithValue(ctx, gomock.Any(), "456", gomock.Any(), time.Second).
+					Return(true, "", nil)
 
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
@@ -632,8 +632,8 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			setup: func() {
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
-					Return(true, nil)
+					BackoffLockWithValue(ctx, gomock.Any(), "456", gomock.Any(), time.Second).
+					Return(true, "", nil)
 
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
