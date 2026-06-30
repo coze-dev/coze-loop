@@ -85,6 +85,8 @@ type ModelConfig struct {
 	Protocol *manage.Protocol `thrift:"protocol,12,optional" frugal:"12,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
 	// 是否为预置模型
 	PresetModel *bool `thrift:"preset_model,13,optional" frugal:"13,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
+	// 模型 Key（用于定位模型，与 model_id 二选一）
+	ModelKey *string `thrift:"model_key,14,optional" frugal:"14,optional,string" form:"model_key" json:"model_key,omitempty" query:"model_key"`
 	// 与ParamSchema对应
 	ParamConfigValues []*ParamConfigValue `thrift:"param_config_values,100,optional" frugal:"100,optional,list<ParamConfigValue>" form:"param_config_values" json:"param_config_values,omitempty" query:"param_config_values"`
 	Extra             *string             `thrift:"extra,101,optional" frugal:"101,optional,string" form:"extra" json:"extra,omitempty" query:"extra"`
@@ -248,6 +250,18 @@ func (p *ModelConfig) GetPresetModel() (v bool) {
 	return *p.PresetModel
 }
 
+var ModelConfig_ModelKey_DEFAULT string
+
+func (p *ModelConfig) GetModelKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKey() {
+		return ModelConfig_ModelKey_DEFAULT
+	}
+	return *p.ModelKey
+}
+
 var ModelConfig_ParamConfigValues_DEFAULT []*ParamConfigValue
 
 func (p *ModelConfig) GetParamConfigValues() (v []*ParamConfigValue) {
@@ -310,6 +324,9 @@ func (p *ModelConfig) SetProtocol(val *manage.Protocol) {
 func (p *ModelConfig) SetPresetModel(val *bool) {
 	p.PresetModel = val
 }
+func (p *ModelConfig) SetModelKey(val *string) {
+	p.ModelKey = val
+}
 func (p *ModelConfig) SetParamConfigValues(val []*ParamConfigValue) {
 	p.ParamConfigValues = val
 }
@@ -331,6 +348,7 @@ var fieldIDToName_ModelConfig = map[int16]string{
 	11:  "identification",
 	12:  "protocol",
 	13:  "preset_model",
+	14:  "model_key",
 	100: "param_config_values",
 	101: "extra",
 }
@@ -381,6 +399,10 @@ func (p *ModelConfig) IsSetProtocol() bool {
 
 func (p *ModelConfig) IsSetPresetModel() bool {
 	return p.PresetModel != nil
+}
+
+func (p *ModelConfig) IsSetModelKey() bool {
+	return p.ModelKey != nil
 }
 
 func (p *ModelConfig) IsSetParamConfigValues() bool {
@@ -510,6 +532,14 @@ func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -718,6 +748,17 @@ func (p *ModelConfig) ReadField13(iprot thrift.TProtocol) error {
 	p.PresetModel = _field
 	return nil
 }
+func (p *ModelConfig) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelKey = _field
+	return nil
+}
 func (p *ModelConfig) ReadField100(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -809,6 +850,10 @@ func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -1077,6 +1122,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
+func (p *ModelConfig) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelKey() {
+		if err = oprot.WriteFieldBegin("model_key", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
 func (p *ModelConfig) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetParamConfigValues() {
 		if err = oprot.WriteFieldBegin("param_config_values", thrift.LIST, 100); err != nil {
@@ -1173,6 +1236,9 @@ func (p *ModelConfig) DeepEqual(ano *ModelConfig) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.PresetModel) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.ModelKey) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.ParamConfigValues) {
@@ -1327,6 +1393,18 @@ func (p *ModelConfig) Field13DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.PresetModel != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelConfig) Field14DeepEqual(src *string) bool {
+
+	if p.ModelKey == src {
+		return true
+	} else if p.ModelKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModelKey, *src) != 0 {
 		return false
 	}
 	return true

@@ -9,6 +9,7 @@ struct Filter {
     2: optional list<manage.Family> families
     3: optional list<manage.ModelStatus> statuses
     4: optional list<manage.AbilityEnum> abilities
+    5: optional string model_key_exact // 按 model_key 精确匹配
 }
 
 struct ListModelsRequest {
@@ -41,6 +42,7 @@ struct GetModelRequest {
     3: optional string identification
     4: optional manage.Protocol protocol
     5: optional bool preset_model // 是否为预置模型
+    6: optional string model_key // 通过 model_key 查询模型（与 model_id 二选一）
 
     255: optional base.Base Base
 }

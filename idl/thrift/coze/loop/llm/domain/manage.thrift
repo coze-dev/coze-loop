@@ -20,11 +20,13 @@ struct Model {
     15: optional ModelStatus status // 模型状态
     16: optional string original_model_url // 模型跳转链接
     17: optional bool preset_model // 是否为预置模型
+    18: optional string model_key // 模型 Key: 空间内唯一的语义化名称 (slug 格式)
 
     100: optional string created_by
     101: optional i64 created_at
     102: optional string updated_by
     103: optional i64 updated_at
+    104: optional i64 edit_version (api.js_conv='true', go.tag='json:"edit_version"') // 乐观锁版本号
 }
 
 struct Series {

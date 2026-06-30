@@ -17,6 +17,8 @@ type Filter struct {
 	Families  []manage.Family      `thrift:"families,2,optional" frugal:"2,optional,list<string>" form:"families" json:"families,omitempty" query:"families"`
 	Statuses  []manage.ModelStatus `thrift:"statuses,3,optional" frugal:"3,optional,list<string>" form:"statuses" json:"statuses,omitempty" query:"statuses"`
 	Abilities []manage.AbilityEnum `thrift:"abilities,4,optional" frugal:"4,optional,list<string>" form:"abilities" json:"abilities,omitempty" query:"abilities"`
+	// 按 model_key 精确匹配
+	ModelKeyExact *string `thrift:"model_key_exact,5,optional" frugal:"5,optional,string" form:"model_key_exact" json:"model_key_exact,omitempty" query:"model_key_exact"`
 }
 
 func NewFilter() *Filter {
@@ -73,6 +75,18 @@ func (p *Filter) GetAbilities() (v []manage.AbilityEnum) {
 	}
 	return p.Abilities
 }
+
+var Filter_ModelKeyExact_DEFAULT string
+
+func (p *Filter) GetModelKeyExact() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKeyExact() {
+		return Filter_ModelKeyExact_DEFAULT
+	}
+	return *p.ModelKeyExact
+}
 func (p *Filter) SetNameLike(val *string) {
 	p.NameLike = val
 }
@@ -85,12 +99,16 @@ func (p *Filter) SetStatuses(val []manage.ModelStatus) {
 func (p *Filter) SetAbilities(val []manage.AbilityEnum) {
 	p.Abilities = val
 }
+func (p *Filter) SetModelKeyExact(val *string) {
+	p.ModelKeyExact = val
+}
 
 var fieldIDToName_Filter = map[int16]string{
 	1: "name_like",
 	2: "families",
 	3: "statuses",
 	4: "abilities",
+	5: "model_key_exact",
 }
 
 func (p *Filter) IsSetNameLike() bool {
@@ -107,6 +125,10 @@ func (p *Filter) IsSetStatuses() bool {
 
 func (p *Filter) IsSetAbilities() bool {
 	return p.Abilities != nil
+}
+
+func (p *Filter) IsSetModelKeyExact() bool {
+	return p.ModelKeyExact != nil
 }
 
 func (p *Filter) Read(iprot thrift.TProtocol) (err error) {
@@ -154,6 +176,14 @@ func (p *Filter) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -268,6 +298,17 @@ func (p *Filter) ReadField4(iprot thrift.TProtocol) error {
 	p.Abilities = _field
 	return nil
 }
+func (p *Filter) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelKeyExact = _field
+	return nil
+}
 
 func (p *Filter) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -289,6 +330,10 @@ func (p *Filter) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -405,6 +450,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *Filter) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelKeyExact() {
+		if err = oprot.WriteFieldBegin("model_key_exact", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelKeyExact); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *Filter) String() string {
 	if p == nil {
@@ -430,6 +493,9 @@ func (p *Filter) DeepEqual(ano *Filter) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.Abilities) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ModelKeyExact) {
 		return false
 	}
 	return true
@@ -483,6 +549,18 @@ func (p *Filter) Field4DeepEqual(src []manage.AbilityEnum) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *Filter) Field5DeepEqual(src *string) bool {
+
+	if p.ModelKeyExact == src {
+		return true
+	} else if p.ModelKeyExact == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModelKeyExact, *src) != 0 {
+		return false
 	}
 	return true
 }
@@ -1775,8 +1853,10 @@ type GetModelRequest struct {
 	Identification *string          `thrift:"identification,3,optional" frugal:"3,optional,string" form:"identification" json:"identification,omitempty" query:"identification"`
 	Protocol       *manage.Protocol `thrift:"protocol,4,optional" frugal:"4,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
 	// 是否为预置模型
-	PresetModel *bool      `thrift:"preset_model,5,optional" frugal:"5,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
-	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PresetModel *bool `thrift:"preset_model,5,optional" frugal:"5,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
+	// 通过 model_key 查询模型（与 model_id 二选一）
+	ModelKey *string    `thrift:"model_key,6,optional" frugal:"6,optional,string" form:"model_key" json:"model_key,omitempty" query:"model_key"`
+	Base     *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetModelRequest() *GetModelRequest {
@@ -1846,6 +1926,18 @@ func (p *GetModelRequest) GetPresetModel() (v bool) {
 	return *p.PresetModel
 }
 
+var GetModelRequest_ModelKey_DEFAULT string
+
+func (p *GetModelRequest) GetModelKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKey() {
+		return GetModelRequest_ModelKey_DEFAULT
+	}
+	return *p.ModelKey
+}
+
 var GetModelRequest_Base_DEFAULT *base.Base
 
 func (p *GetModelRequest) GetBase() (v *base.Base) {
@@ -1872,6 +1964,9 @@ func (p *GetModelRequest) SetProtocol(val *manage.Protocol) {
 func (p *GetModelRequest) SetPresetModel(val *bool) {
 	p.PresetModel = val
 }
+func (p *GetModelRequest) SetModelKey(val *string) {
+	p.ModelKey = val
+}
 func (p *GetModelRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -1882,6 +1977,7 @@ var fieldIDToName_GetModelRequest = map[int16]string{
 	3:   "identification",
 	4:   "protocol",
 	5:   "preset_model",
+	6:   "model_key",
 	255: "Base",
 }
 
@@ -1903,6 +1999,10 @@ func (p *GetModelRequest) IsSetProtocol() bool {
 
 func (p *GetModelRequest) IsSetPresetModel() bool {
 	return p.PresetModel != nil
+}
+
+func (p *GetModelRequest) IsSetModelKey() bool {
+	return p.ModelKey != nil
 }
 
 func (p *GetModelRequest) IsSetBase() bool {
@@ -1962,6 +2062,14 @@ func (p *GetModelRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2059,6 +2167,17 @@ func (p *GetModelRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.PresetModel = _field
 	return nil
 }
+func (p *GetModelRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelKey = _field
+	return nil
+}
 func (p *GetModelRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -2092,6 +2211,10 @@ func (p *GetModelRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -2206,6 +2329,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *GetModelRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelKey() {
+		if err = oprot.WriteFieldBegin("model_key", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *GetModelRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -2252,6 +2393,9 @@ func (p *GetModelRequest) DeepEqual(ano *GetModelRequest) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.PresetModel) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.ModelKey) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -2316,6 +2460,18 @@ func (p *GetModelRequest) Field5DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.PresetModel != *src {
+		return false
+	}
+	return true
+}
+func (p *GetModelRequest) Field6DeepEqual(src *string) bool {
+
+	if p.ModelKey == src {
+		return true
+	} else if p.ModelKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModelKey, *src) != 0 {
 		return false
 	}
 	return true

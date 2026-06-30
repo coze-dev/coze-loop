@@ -282,6 +282,20 @@ func (p *Model) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 18:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField18(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField100(buf[offset:])
@@ -327,6 +341,20 @@ func (p *Model) FastRead(buf []byte) (int, error) {
 		case 103:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField103(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 104:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField104(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -613,6 +641,20 @@ func (p *Model) FastReadField17(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Model) FastReadField18(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ModelKey = _field
+	return offset, nil
+}
+
 func (p *Model) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -669,6 +711,20 @@ func (p *Model) FastReadField103(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Model) FastReadField104(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EditVersion = _field
+	return offset, nil
+}
+
 func (p *Model) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -681,6 +737,7 @@ func (p *Model) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField17(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
+		offset += p.fastWriteField104(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
@@ -695,6 +752,7 @@ func (p *Model) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField15(buf[offset:], w)
 		offset += p.fastWriteField16(buf[offset:], w)
+		offset += p.fastWriteField18(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 	}
@@ -722,10 +780,12 @@ func (p *Model) BLength() int {
 		l += p.field15Length()
 		l += p.field16Length()
 		l += p.field17Length()
+		l += p.field18Length()
 		l += p.field100Length()
 		l += p.field101Length()
 		l += p.field102Length()
 		l += p.field103Length()
+		l += p.field104Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -899,6 +959,15 @@ func (p *Model) fastWriteField17(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Model) fastWriteField18(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetModelKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 18)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ModelKey)
+	}
+	return offset
+}
+
 func (p *Model) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetCreatedBy() {
@@ -931,6 +1000,15 @@ func (p *Model) fastWriteField103(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetUpdatedAt() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 103)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.UpdatedAt)
+	}
+	return offset
+}
+
+func (p *Model) fastWriteField104(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEditVersion() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 104)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EditVersion)
 	}
 	return offset
 }
@@ -1098,6 +1176,15 @@ func (p *Model) field17Length() int {
 	return l
 }
 
+func (p *Model) field18Length() int {
+	l := 0
+	if p.IsSetModelKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ModelKey)
+	}
+	return l
+}
+
 func (p *Model) field100Length() int {
 	l := 0
 	if p.IsSetCreatedBy() {
@@ -1128,6 +1215,15 @@ func (p *Model) field102Length() int {
 func (p *Model) field103Length() int {
 	l := 0
 	if p.IsSetUpdatedAt() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *Model) field104Length() int {
+	l := 0
+	if p.IsSetEditVersion() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -1279,6 +1375,14 @@ func (p *Model) DeepCopy(s interface{}) error {
 		p.PresetModel = &tmp
 	}
 
+	if src.ModelKey != nil {
+		var tmp string
+		if *src.ModelKey != "" {
+			tmp = kutils.StringDeepCopy(*src.ModelKey)
+		}
+		p.ModelKey = &tmp
+	}
+
 	if src.CreatedBy != nil {
 		var tmp string
 		if *src.CreatedBy != "" {
@@ -1303,6 +1407,11 @@ func (p *Model) DeepCopy(s interface{}) error {
 	if src.UpdatedAt != nil {
 		tmp := *src.UpdatedAt
 		p.UpdatedAt = &tmp
+	}
+
+	if src.EditVersion != nil {
+		tmp := *src.EditVersion
+		p.EditVersion = &tmp
 	}
 
 	return nil

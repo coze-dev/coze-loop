@@ -215,11 +215,15 @@ type Model struct {
 	// 模型跳转链接
 	OriginalModelURL *string `thrift:"original_model_url,16,optional" frugal:"16,optional,string" form:"original_model_url" json:"original_model_url,omitempty" query:"original_model_url"`
 	// 是否为预置模型
-	PresetModel *bool   `thrift:"preset_model,17,optional" frugal:"17,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
-	CreatedBy   *string `thrift:"created_by,100,optional" frugal:"100,optional,string" form:"created_by" json:"created_by,omitempty" query:"created_by"`
-	CreatedAt   *int64  `thrift:"created_at,101,optional" frugal:"101,optional,i64" form:"created_at" json:"created_at,omitempty" query:"created_at"`
-	UpdatedBy   *string `thrift:"updated_by,102,optional" frugal:"102,optional,string" form:"updated_by" json:"updated_by,omitempty" query:"updated_by"`
-	UpdatedAt   *int64  `thrift:"updated_at,103,optional" frugal:"103,optional,i64" form:"updated_at" json:"updated_at,omitempty" query:"updated_at"`
+	PresetModel *bool `thrift:"preset_model,17,optional" frugal:"17,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
+	// 模型 Key: 空间内唯一的语义化名称 (slug 格式)
+	ModelKey  *string `thrift:"model_key,18,optional" frugal:"18,optional,string" form:"model_key" json:"model_key,omitempty" query:"model_key"`
+	CreatedBy *string `thrift:"created_by,100,optional" frugal:"100,optional,string" form:"created_by" json:"created_by,omitempty" query:"created_by"`
+	CreatedAt *int64  `thrift:"created_at,101,optional" frugal:"101,optional,i64" form:"created_at" json:"created_at,omitempty" query:"created_at"`
+	UpdatedBy *string `thrift:"updated_by,102,optional" frugal:"102,optional,string" form:"updated_by" json:"updated_by,omitempty" query:"updated_by"`
+	UpdatedAt *int64  `thrift:"updated_at,103,optional" frugal:"103,optional,i64" form:"updated_at" json:"updated_at,omitempty" query:"updated_at"`
+	// 乐观锁版本号
+	EditVersion *int64 `thrift:"edit_version,104,optional" frugal:"104,optional,i64" json:"edit_version" form:"edit_version" query:"edit_version"`
 }
 
 func NewModel() *Model {
@@ -433,6 +437,18 @@ func (p *Model) GetPresetModel() (v bool) {
 	return *p.PresetModel
 }
 
+var Model_ModelKey_DEFAULT string
+
+func (p *Model) GetModelKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKey() {
+		return Model_ModelKey_DEFAULT
+	}
+	return *p.ModelKey
+}
+
 var Model_CreatedBy_DEFAULT string
 
 func (p *Model) GetCreatedBy() (v string) {
@@ -479,6 +495,18 @@ func (p *Model) GetUpdatedAt() (v int64) {
 		return Model_UpdatedAt_DEFAULT
 	}
 	return *p.UpdatedAt
+}
+
+var Model_EditVersion_DEFAULT int64
+
+func (p *Model) GetEditVersion() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEditVersion() {
+		return Model_EditVersion_DEFAULT
+	}
+	return *p.EditVersion
 }
 func (p *Model) SetModelID(val *int64) {
 	p.ModelID = val
@@ -531,6 +559,9 @@ func (p *Model) SetOriginalModelURL(val *string) {
 func (p *Model) SetPresetModel(val *bool) {
 	p.PresetModel = val
 }
+func (p *Model) SetModelKey(val *string) {
+	p.ModelKey = val
+}
 func (p *Model) SetCreatedBy(val *string) {
 	p.CreatedBy = val
 }
@@ -542,6 +573,9 @@ func (p *Model) SetUpdatedBy(val *string) {
 }
 func (p *Model) SetUpdatedAt(val *int64) {
 	p.UpdatedAt = val
+}
+func (p *Model) SetEditVersion(val *int64) {
+	p.EditVersion = val
 }
 
 var fieldIDToName_Model = map[int16]string{
@@ -562,10 +596,12 @@ var fieldIDToName_Model = map[int16]string{
 	15:  "status",
 	16:  "original_model_url",
 	17:  "preset_model",
+	18:  "model_key",
 	100: "created_by",
 	101: "created_at",
 	102: "updated_by",
 	103: "updated_at",
+	104: "edit_version",
 }
 
 func (p *Model) IsSetModelID() bool {
@@ -636,6 +672,10 @@ func (p *Model) IsSetPresetModel() bool {
 	return p.PresetModel != nil
 }
 
+func (p *Model) IsSetModelKey() bool {
+	return p.ModelKey != nil
+}
+
 func (p *Model) IsSetCreatedBy() bool {
 	return p.CreatedBy != nil
 }
@@ -650,6 +690,10 @@ func (p *Model) IsSetUpdatedBy() bool {
 
 func (p *Model) IsSetUpdatedAt() bool {
 	return p.UpdatedAt != nil
+}
+
+func (p *Model) IsSetEditVersion() bool {
+	return p.EditVersion != nil
 }
 
 func (p *Model) Read(iprot thrift.TProtocol) (err error) {
@@ -806,6 +850,14 @@ func (p *Model) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 18:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 100:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField100(iprot); err != nil {
@@ -833,6 +885,14 @@ func (p *Model) Read(iprot thrift.TProtocol) (err error) {
 		case 103:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField103(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 104:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField104(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1069,6 +1129,17 @@ func (p *Model) ReadField17(iprot thrift.TProtocol) error {
 	p.PresetModel = _field
 	return nil
 }
+func (p *Model) ReadField18(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelKey = _field
+	return nil
+}
 func (p *Model) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -1111,6 +1182,17 @@ func (p *Model) ReadField103(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.UpdatedAt = _field
+	return nil
+}
+func (p *Model) ReadField104(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EditVersion = _field
 	return nil
 }
 
@@ -1188,6 +1270,10 @@ func (p *Model) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 17
 			goto WriteFieldError
 		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
+			goto WriteFieldError
+		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
 			goto WriteFieldError
@@ -1202,6 +1288,10 @@ func (p *Model) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField103(oprot); err != nil {
 			fieldId = 103
+			goto WriteFieldError
+		}
+		if err = p.writeField104(oprot); err != nil {
+			fieldId = 104
 			goto WriteFieldError
 		}
 	}
@@ -1547,6 +1637,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
 }
+func (p *Model) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelKey() {
+		if err = oprot.WriteFieldBegin("model_key", thrift.STRING, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
 func (p *Model) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCreatedBy() {
 		if err = oprot.WriteFieldBegin("created_by", thrift.STRING, 100); err != nil {
@@ -1619,6 +1727,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
 }
+func (p *Model) writeField104(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEditVersion() {
+		if err = oprot.WriteFieldBegin("edit_version", thrift.I64, 104); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EditVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 104 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 104 end error: ", p), err)
+}
 
 func (p *Model) String() string {
 	if p == nil {
@@ -1685,6 +1811,9 @@ func (p *Model) DeepEqual(ano *Model) bool {
 	if !p.Field17DeepEqual(ano.PresetModel) {
 		return false
 	}
+	if !p.Field18DeepEqual(ano.ModelKey) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.CreatedBy) {
 		return false
 	}
@@ -1695,6 +1824,9 @@ func (p *Model) DeepEqual(ano *Model) bool {
 		return false
 	}
 	if !p.Field103DeepEqual(ano.UpdatedAt) {
+		return false
+	}
+	if !p.Field104DeepEqual(ano.EditVersion) {
 		return false
 	}
 	return true
@@ -1881,6 +2013,18 @@ func (p *Model) Field17DeepEqual(src *bool) bool {
 	}
 	return true
 }
+func (p *Model) Field18DeepEqual(src *string) bool {
+
+	if p.ModelKey == src {
+		return true
+	} else if p.ModelKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModelKey, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *Model) Field100DeepEqual(src *string) bool {
 
 	if p.CreatedBy == src {
@@ -1925,6 +2069,18 @@ func (p *Model) Field103DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.UpdatedAt != *src {
+		return false
+	}
+	return true
+}
+func (p *Model) Field104DeepEqual(src *int64) bool {
+
+	if p.EditVersion == src {
+		return true
+	} else if p.EditVersion == nil || src == nil {
+		return false
+	}
+	if *p.EditVersion != *src {
 		return false
 	}
 	return true
