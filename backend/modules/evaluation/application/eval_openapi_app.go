@@ -2602,11 +2602,12 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		outputData.TimeConsumingMS = time.Now().UnixMilli() - actx.AsyncUnixMS
 	}
 
+	runStatus := evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus())
 	if err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
 		SpaceID:    req.GetWorkspaceID(),
 		RecordID:   req.GetInvokeID(),
 		OutputData: outputData,
-		Status:     evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus()),
+		Status:     runStatus,
 	}); err != nil {
 		return nil, err
 	}
@@ -2624,9 +2625,11 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 			InvokeID:           req.GetInvokeID(),
 			WorkspaceID:        req.GetWorkspaceID(),
 			EvaluatorVersionID: actx.EvaluatorVersionID,
-			Status:             evaluatorCallbackStatusString(evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus())),
-			Output:             req.GetOutput(),
+			Status:             evaluatorCallbackStatusString(runStatus),
 			TimeConsumingMS:    time.Now().UnixMilli() - actx.AsyncUnixMS,
+		}
+		if out := req.GetOutput(); out != nil {
+			payload.Output = out
 		}
 		if derr := e.callbackDispatcher.Dispatch(ctx, req.GetWorkspaceID(), actx.CallbackURL, payload); derr != nil {
 			logs.CtxError(ctx, "[ReportEvaluatorInvokeResult] callback dispatch fail, invoke_id: %v, url: %v, err: %v",
