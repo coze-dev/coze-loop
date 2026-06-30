@@ -4,6 +4,8 @@
 package convert
 
 import (
+	"context"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/samber/lo"
 
@@ -12,7 +14,19 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
+
+// notificationConfRawLogLimit 反序列化失败时记录原始内容的截断长度，避免脏数据撑爆日志。
+const notificationConfRawLogLimit = 256
+
+// truncateForLog 把原始 BLOB 文本截断到指定长度用于告警日志。
+func truncateForLog(s string, limit int) string {
+	if len(s) <= limit {
+		return s
+	}
+	return s[:limit] + "...(truncated)"
+}
 
 func NewExptConverter() ExptConverter {
 	return ExptConverter{}
@@ -99,11 +113,18 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 	}
 
 	// notification_conf：NULL/空（历史实验/未配置）→ nil，上层按 DefaultNotificationConf 兜底（向后兼容、零迁移）。
+	// 脏数据/旧格式（如 webhook.urls 历史上存成 string 而非 []string）导致 unmarshal 失败时，
+	// 同样降级为 nil 并记 warn，不阻断该实验返回，更不能让整个 list 查询失败。
 	var notificationConf *entity.NotificationConf
-	if len(gptr.Indirect(expt.NotificationConf)) > 0 {
-		notificationConf = new(entity.NotificationConf)
-		if err := json.Unmarshal(gptr.Indirect(expt.NotificationConf), notificationConf); err != nil {
-			return nil, errorx.Wrapf(err, "NotificationConf json unmarshal fail, expt_id: %v, raw: %v", expt.ID, conv.UnsafeBytesToString(gptr.Indirect(expt.NotificationConf)))
+	if raw := gptr.Indirect(expt.NotificationConf); len(raw) > 0 {
+		parsed := new(entity.NotificationConf)
+		if err := json.Unmarshal(raw, parsed); err != nil {
+			logs.CtxWarn(context.Background(),
+				"NotificationConf json unmarshal fail, degrade to default, expt_id: %v, err: %v, raw: %v",
+				expt.ID, err, truncateForLog(conv.UnsafeBytesToString(raw), notificationConfRawLogLimit))
+			notificationConf = nil
+		} else {
+			notificationConf = parsed
 		}
 	}
 
