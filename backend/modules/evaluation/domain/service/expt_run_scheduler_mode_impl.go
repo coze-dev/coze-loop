@@ -368,13 +368,14 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		etrs := make([]*entity.ExptTurnResult, 0, len(items))
 		for _, item := range items {
 			eir := &entity.ExptItemResult{
-				ID:        ids[idIdx],
-				SpaceID:   event.SpaceID,
-				ExptID:    event.ExptID,
-				ExptRunID: event.ExptRunID,
-				ItemID:    item.ItemID,
-				ItemIdx:   itemIdx,
-				Status:    entity.ItemRunState_Queueing,
+				ID:            ids[idIdx],
+				SpaceID:       event.SpaceID,
+				ExptID:        event.ExptID,
+				ExptRunID:     event.ExptRunID,
+				ItemID:        item.ItemID,
+				ItemVersionID: gptr.Indirect(item.ItemVersionID), // item 级版本 (版本评测集真值 / 无版本 0); 供单行执行按版本取数
+				ItemIdx:       itemIdx,
+				Status:        entity.ItemRunState_Queueing,
 			}
 			eirs = append(eirs, eir)
 			itemIdx++
@@ -382,14 +383,15 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 
 			for turnIdx, turn := range item.Turns {
 				etr := &entity.ExptTurnResult{
-					ID:        ids[idIdx],
-					SpaceID:   event.SpaceID,
-					ExptID:    event.ExptID,
-					ExptRunID: event.ExptRunID,
-					ItemID:    item.ItemID,
-					TurnID:    turn.ID,
-					TurnIdx:   int32(turnIdx),
-					Status:    int32(entity.TurnRunState_Queueing),
+					ID:            ids[idIdx],
+					SpaceID:       event.SpaceID,
+					ExptID:        event.ExptID,
+					ExptRunID:     event.ExptRunID,
+					ItemID:        item.ItemID,
+					ItemVersionID: gptr.Indirect(item.ItemVersionID), // item 级版本 (版本评测集真值 / 无版本 0)
+					TurnID:        turn.ID,
+					TurnIdx:       int32(turnIdx),
+					Status:        int32(entity.TurnRunState_Queueing),
 				}
 				etrs = append(etrs, etr)
 				idIdx++
@@ -468,13 +470,14 @@ func (e *ExptTrialRunExec) exptStartByItemIds(ctx context.Context, event *entity
 		etrs := make([]*entity.ExptTurnResult, 0, len(items))
 		for _, item := range items {
 			eir := &entity.ExptItemResult{
-				ID:        ids[idIdx],
-				SpaceID:   event.SpaceID,
-				ExptID:    event.ExptID,
-				ExptRunID: event.ExptRunID,
-				ItemID:    item.ItemID,
-				ItemIdx:   itemIdx,
-				Status:    entity.ItemRunState_Queueing,
+				ID:            ids[idIdx],
+				SpaceID:       event.SpaceID,
+				ExptID:        event.ExptID,
+				ExptRunID:     event.ExptRunID,
+				ItemID:        item.ItemID,
+				ItemVersionID: gptr.Indirect(item.ItemVersionID), // item 级版本 (版本评测集真值 / 无版本 0); 供单行执行按版本取数
+				ItemIdx:       itemIdx,
+				Status:        entity.ItemRunState_Queueing,
 			}
 			eirs = append(eirs, eir)
 			itemIdx++
@@ -482,14 +485,15 @@ func (e *ExptTrialRunExec) exptStartByItemIds(ctx context.Context, event *entity
 
 			for turnIdx, turn := range item.Turns {
 				etr := &entity.ExptTurnResult{
-					ID:        ids[idIdx],
-					SpaceID:   event.SpaceID,
-					ExptID:    event.ExptID,
-					ExptRunID: event.ExptRunID,
-					ItemID:    item.ItemID,
-					TurnID:    turn.ID,
-					TurnIdx:   int32(turnIdx),
-					Status:    int32(entity.TurnRunState_Queueing),
+					ID:            ids[idIdx],
+					SpaceID:       event.SpaceID,
+					ExptID:        event.ExptID,
+					ExptRunID:     event.ExptRunID,
+					ItemID:        item.ItemID,
+					ItemVersionID: gptr.Indirect(item.ItemVersionID), // item 级版本 (版本评测集真值 / 无版本 0)
+					TurnID:        turn.ID,
+					TurnIdx:       int32(turnIdx),
+					Status:        int32(entity.TurnRunState_Queueing),
 				}
 				etrs = append(etrs, etr)
 				idIdx++
@@ -576,13 +580,14 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		etrs := make([]*entity.ExptTurnResult, 0, len(items))
 		for _, item := range items {
 			eir := &entity.ExptItemResult{
-				ID:        ids[idIdx],
-				SpaceID:   event.SpaceID,
-				ExptID:    event.ExptID,
-				ExptRunID: event.ExptRunID,
-				ItemID:    item.ItemID,
-				ItemIdx:   itemIdx,
-				Status:    entity.ItemRunState_Queueing,
+				ID:            ids[idIdx],
+				SpaceID:       event.SpaceID,
+				ExptID:        event.ExptID,
+				ExptRunID:     event.ExptRunID,
+				ItemID:        item.ItemID,
+				ItemVersionID: gptr.Indirect(item.ItemVersionID), // item 级版本 (版本评测集真值 / 无版本 0); 供单行执行按版本取数
+				ItemIdx:       itemIdx,
+				Status:        entity.ItemRunState_Queueing,
 			}
 			eirs = append(eirs, eir)
 			itemIdx++
@@ -590,14 +595,15 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 
 			for turnIdx, turn := range item.Turns {
 				etr := &entity.ExptTurnResult{
-					ID:        ids[idIdx],
-					SpaceID:   event.SpaceID,
-					ExptID:    event.ExptID,
-					ExptRunID: event.ExptRunID,
-					ItemID:    item.ItemID,
-					TurnID:    turn.ID,
-					TurnIdx:   int32(turnIdx),
-					Status:    int32(entity.TurnRunState_Queueing),
+					ID:            ids[idIdx],
+					SpaceID:       event.SpaceID,
+					ExptID:        event.ExptID,
+					ExptRunID:     event.ExptRunID,
+					ItemID:        item.ItemID,
+					ItemVersionID: gptr.Indirect(item.ItemVersionID), // item 级版本 (版本评测集真值 / 无版本 0)
+					TurnID:        turn.ID,
+					TurnIdx:       int32(turnIdx),
+					Status:        int32(entity.TurnRunState_Queueing),
 				}
 				etrs = append(etrs, etr)
 				idIdx++
@@ -687,14 +693,15 @@ func (e *ExptSubmitExec) createItemTurnResults(ctx context.Context, eirs []*enti
 	eirLogs := make([]*entity.ExptItemResultRunLog, 0, len(eirs))
 	for idx, eir := range eirs {
 		eirLog := &entity.ExptItemResultRunLog{
-			ID:        ids[idx],
-			SpaceID:   eir.SpaceID,
-			ExptID:    eir.ExptID,
-			ExptRunID: eir.ExptRunID,
-			ItemID:    eir.ItemID,
-			Status:    int32(eir.Status),
-			ErrMsg:    conv.UnsafeStringToBytes(eir.ErrMsg),
-			LogID:     eir.LogID,
+			ID:            ids[idx],
+			SpaceID:       eir.SpaceID,
+			ExptID:        eir.ExptID,
+			ExptRunID:     eir.ExptRunID,
+			ItemID:        eir.ItemID,
+			ItemVersionID: eir.ItemVersionID, // 从 item_result 平移 item 级版本, 供单行执行 GetItemRunLog 读回
+			Status:        int32(eir.Status),
+			ErrMsg:        conv.UnsafeStringToBytes(eir.ErrMsg),
+			LogID:         eir.LogID,
 		}
 		eirLogs = append(eirLogs, eirLog)
 	}
@@ -811,9 +818,11 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		}
 
 		itemIDs := make(map[int64]bool)
+		itemVersionIDs := make(map[int64]int64) // itemID → item 版本 (同 item 各 turn 共享), 平移到重试 run_log
 		itemTurnIDs := make([]*entity.ItemTurnID, 0, len(turnResults))
 		for _, tr := range turnResults {
 			itemIDs[tr.ItemID] = true
+			itemVersionIDs[tr.ItemID] = tr.ItemVersionID
 			itemTurnIDs = append(itemTurnIDs, &entity.ItemTurnID{
 				ItemID: tr.ItemID,
 				TurnID: tr.TurnID,
@@ -829,12 +838,13 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDs))
 		for itemID := range itemIDs {
 			itemRunLogs = append(itemRunLogs, &entity.ExptItemResultRunLog{
-				ID:        ids[idIdx],
-				SpaceID:   event.SpaceID,
-				ExptID:    event.ExptID,
-				ExptRunID: event.ExptRunID,
-				ItemID:    itemID,
-				Status:    int32(entity.ItemRunState_Queueing),
+				ID:            ids[idIdx],
+				SpaceID:       event.SpaceID,
+				ExptID:        event.ExptID,
+				ExptRunID:     event.ExptRunID,
+				ItemID:        itemID,
+				ItemVersionID: itemVersionIDs[itemID], // 平移已落库的 item 版本, 供重试后单行执行按版本取数
+				Status:        int32(entity.ItemRunState_Queueing),
 			})
 			idIdx++
 		}

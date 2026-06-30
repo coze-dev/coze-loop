@@ -329,6 +329,18 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 		}
 	}
 
+	// 老链路 (SingleSet) 或 ref 未命中时 itemVersionID 仍为 nil。
+	// item 版本在 ExptStart 已落进 expt_item_result_run_log, 这里读回 (供版本评测集按 item 版本取数);
+	// 无版本评测集 run_log.ItemVersionID==0 → 保持 nil, 按集版本定位, 行为不变。
+	if itemVersionID == nil {
+		if runLog, rlErr := e.exptItemResultRepo.GetItemRunLog(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID); rlErr != nil {
+			logs.CtxWarn(ctx, "BuildExptRecordEvalCtx GetItemRunLog for item version fail, expt_id: %v, item_id: %v, err: %v",
+				event.ExptID, event.EvalSetItemID, rlErr)
+		} else if runLog != nil && runLog.ItemVersionID > 0 {
+			itemVersionID = gptr.Of(runLog.ItemVersionID)
+		}
+	}
+
 	// 统一走 ItemVersionQueries: 每个 query 必带 ItemID; 新数据集额外带 ItemVersionID, 老数据集 versionID 留空。
 	// 集级 VersionID 仍透传, 供老数据集(versionID 留空)按集版本定位。
 	batchGetEvaluationSetItemsParam := &entity.BatchGetEvaluationSetItemsParam{

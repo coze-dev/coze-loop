@@ -2489,6 +2489,53 @@ func TestExptSubmitExec_createItemTurnResults_errors(t *testing.T) {
 	}
 }
 
+// TestExptSubmitExec_createItemTurnResults_ItemVersionMigrated 断言旧链路占位行的 item 版本
+// 从 ExptItemResult 平移到 ExptItemResultRunLog (供单行执行 GetItemRunLog 读回)。
+func TestExptSubmitExec_createItemTurnResults_ItemVersionMigrated(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	itemResultRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+	turnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	idgen := idgenmocks.NewMockIIDGenerator(ctrl)
+
+	eirs := []*entity.ExptItemResult{
+		{ID: 100, SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 10, ItemVersionID: 777, Status: entity.ItemRunState_Queueing}, // 版本评测集 item
+		{ID: 101, SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 11, ItemVersionID: 0, Status: entity.ItemRunState_Queueing},   // 无版本 item
+	}
+	etrs := []*entity.ExptTurnResult{
+		{ID: 200, SpaceID: 3, ExptID: 1, ExptRunID: 2, ItemID: 10, TurnID: 20, Status: int32(entity.TurnRunState_Queueing)},
+	}
+
+	turnResultRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).Return(nil)
+	itemResultRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).Return(nil)
+	idgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{900, 901}, nil)
+
+	var capturedLogs []*entity.ExptItemResultRunLog
+	itemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, logs []*entity.ExptItemResultRunLog) error {
+			capturedLogs = logs
+			return nil
+		})
+
+	e := &ExptSubmitExec{
+		exptItemResultRepo: itemResultRepo,
+		exptTurnResultRepo: turnResultRepo,
+		idgenerator:        idgen,
+	}
+
+	err := e.createItemTurnResults(context.Background(), eirs, etrs, nil)
+	assert.NoError(t, err)
+	assert.Len(t, capturedLogs, 2)
+	// run_log 的 ItemVersionID 与对应 item_result 一致 (版本评测集 → 真值, 无版本 → 0)
+	byItem := map[int64]int64{}
+	for _, l := range capturedLogs {
+		byItem[l.ItemID] = l.ItemVersionID
+	}
+	assert.Equal(t, int64(777), byItem[10])
+	assert.Equal(t, int64(0), byItem[11])
+}
+
 func TestExptSubmitExec_ExptStart_error_scenarios(t *testing.T) {
 	testUserID := "test_user_id_123"
 	mockExpt := &entity.Experiment{
