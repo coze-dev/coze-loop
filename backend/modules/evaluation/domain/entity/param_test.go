@@ -61,3 +61,28 @@ func TestWithAgentConnection(t *testing.T) {
 		assert.Nil(t, opt.AgentConnection)
 	})
 }
+
+func TestWithSandboxAgent(t *testing.T) {
+	t.Parallel()
+
+	t.Run("set sandbox agent", func(t *testing.T) {
+		sa := &SandboxAgent{
+			Name:          "demo",
+			ModelName:     "doubao",
+			AgentSetupCmd: "setup.sh",
+			AgentRunCmd:   "run.sh",
+			Envs:          []*SandboxEnvVar{{Key: "K", Value: "V"}},
+		}
+		opt := &Opt{}
+		WithSandboxAgent(sa)(opt)
+		assert.Equal(t, sa, opt.SandboxAgent)
+		assert.Equal(t, "demo", opt.SandboxAgent.Name)
+		assert.Equal(t, "run.sh", opt.SandboxAgent.AgentRunCmd)
+	})
+
+	t.Run("set nil sandbox agent", func(t *testing.T) {
+		opt := &Opt{}
+		WithSandboxAgent(nil)(opt)
+		assert.Nil(t, opt.SandboxAgent)
+	})
+}
