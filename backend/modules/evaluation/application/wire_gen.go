@@ -420,7 +420,8 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	webhookDispatcher := service.NewWebhookDispatcher(exptEventPublisher, noopWebhookSecretProvider, iExptStatsRepo)
 	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher)
 	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler)
-	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, iFileProvider)
+	evaluatorCallbackDispatcher := service.NewEvaluatorCallbackDispatcher(noopWebhookSecretProvider)
+	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, iFileProvider, evaluatorCallbackDispatcher)
 	return evalOpenAPIService, nil
 }
 
@@ -448,7 +449,7 @@ var (
 
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
-		experimentSet, conf2.NewConfiger, openapi.OpenAPIMetricsSet,
+		experimentSet, conf2.NewConfiger, openapi.OpenAPIMetricsSet, service.NewEvaluatorCallbackDispatcher, wire.Bind(new(service.IEvaluatorCallbackDispatcher), new(*service.EvaluatorCallbackDispatcher)),
 	)
 )
 

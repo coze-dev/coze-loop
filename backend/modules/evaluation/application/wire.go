@@ -130,6 +130,8 @@ var (
 		experimentSet,
 		evalconf.NewConfiger,
 		openapimetrics.OpenAPIMetricsSet,
+		domainservice.NewEvaluatorCallbackDispatcher,
+		wire.Bind(new(domainservice.IEvaluatorCallbackDispatcher), new(*domainservice.EvaluatorCallbackDispatcher)),
 	)
 )
 
