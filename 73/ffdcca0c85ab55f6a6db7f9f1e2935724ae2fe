@@ -1,0 +1,124 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "73ffdcca0c85ab55f6a6db7f9f1e2935724ae2fe",
+  "prompts": {
+    "308bd7fea2dcc436": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a0d36eefa588bfd937cd5a5",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 179,
+      "total_deletions": 0,
+      "accepted_lines": 173,
+      "overriden_lines": 6
+    },
+    "56fa536415a9075a": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-b8005ef1-bc14-4924-b7aa-703954910809",
+        "model": "default"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "769d242cecc1fd18": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a0c97b8fa588bfd937cd150",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "8a9dc1c455cbbe9e": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a0c59a5fa588bfd937ccad4",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 953,
+      "total_deletions": 439,
+      "accepted_lines": 525,
+      "overriden_lines": 30
+    },
+    "f535b79d26960b73": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a0d2cb9fa588bfd937cd453",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 150,
+      "total_deletions": 66,
+      "accepted_lines": 84,
+      "overriden_lines": 0
+    },
+    "f9040c46cfd99964": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a0d597dfa588bfd937cd6f5",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 257,
+      "total_deletions": 13,
+      "accepted_lines": 252,
+      "overriden_lines": 5
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {
+    "308bd7fea2dcc436": {
+      "tool": "trae",
+      "conversation_id": "6a0d36eefa588bfd937cd5a5",
+      "session_id": "6a0d36eefa588bfd937cd5a5",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "769d242cecc1fd18": {
+      "tool": "trae",
+      "conversation_id": "6a0c97b8fa588bfd937cd150",
+      "session_id": "6a0c97b8fa588bfd937cd150",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "8a9dc1c455cbbe9e": {
+      "tool": "trae",
+      "conversation_id": "6a0c59a5fa588bfd937ccad4",
+      "session_id": "6a0c59a5fa588bfd937ccad4",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "f535b79d26960b73": {
+      "tool": "trae",
+      "conversation_id": "6a0d2cb9fa588bfd937cd453",
+      "session_id": "6a0d2cb9fa588bfd937cd453",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "f9040c46cfd99964": {
+      "tool": "trae",
+      "conversation_id": "6a0d597dfa588bfd937cd6f5",
+      "session_id": "6a0d597dfa588bfd937cd6f5",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

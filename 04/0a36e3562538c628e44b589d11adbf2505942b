@@ -1,0 +1,75 @@
+backend/modules/evaluation/application/eval_openapi_app_test.go
+  edbaa5bf8f084023 4291-4326,4376-4379 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0daa7bb4cd1c1fc05a0e4c","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[4291,4326]},{"Range":[4376,4379]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "040a36e3562538c628e44b589d11adbf2505942b",
+  "prompts": {
+    "edbaa5bf8f084023": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a0a896db4cd1c1fc05a0b47",
+        "model": "Doubao_1_6__dev"
+      },
+      "human_author": "dushaofeng <dushaofeng@bytedance.com>",
+      "messages": [],
+      "total_additions": 41,
+      "total_deletions": 1,
+      "accepted_lines": 41,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/application/eval_openapi_app_test.go": [
+      {
+        "hash": "edbaa5bf8f084023",
+        "line_ranges": [
+          {
+            "Range": [
+              4291,
+              4326
+            ]
+          },
+          {
+            "Range": [
+              4376,
+              4379
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0daa7bb4cd1c1fc05a0e4c",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  4291,
+                  4326
+                ]
+              },
+              {
+                "Range": [
+                  4376,
+                  4379
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "edbaa5bf8f084023": {
+      "tool": "trae",
+      "conversation_id": "6a0a896db4cd1c1fc05a0b47",
+      "session_id": "6a0a896db4cd1c1fc05a0b47",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

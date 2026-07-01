@@ -1,0 +1,248 @@
+backend/modules/evaluation/application/convertor/experiment/openapi_test.go
+  b1337a7a6252bcf4 3174,3178-3179,3200,3204,3237,3241-3242 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2fc664af0c95c626cffc70","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":3174},{"Range":[3178,3179]},{"Single":3200},{"Single":3204},{"Single":3237},{"Range":[3241,3242]}]}]}
+backend/modules/evaluation/infra/mq/rocket/consumer/webhook_retry_test.go
+  b1337a7a6252bcf4 106,114,379 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2fc664af0c95c626cffc70","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":106},{"Single":114},{"Single":379}]}]}
+backend/modules/evaluation/application/convertor/experiment/openapi.go
+  b1337a7a6252bcf4 2794,2839 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2fc664af0c95c626cffc70","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":2794},{"Single":2839}]}]}
+backend/modules/evaluation/domain/service/webhook_dispatcher.go
+  b1337a7a6252bcf4 160 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2fc664af0c95c626cffc70","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":160}]}]}
+backend/modules/evaluation/infra/mq/rocket/consumer/webhook_retry.go
+  b1337a7a6252bcf4 119 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2fc664af0c95c626cffc70","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":119}]}]}
+backend/modules/evaluation/domain/service/expt_lifecycle_event_impl.go
+  b1337a7a6252bcf4 60,86 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2fc664af0c95c626cffc70","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":60},{"Single":86}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "f311d467af367bd0a2eafc58d812b29395190826",
+  "prompts": {
+    "b1337a7a6252bcf4": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a2fc31caf0c95c626cffb41",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 17,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/application/convertor/experiment/openapi.go": [
+      {
+        "hash": "b1337a7a6252bcf4",
+        "line_ranges": [
+          {
+            "Single": 2794
+          },
+          {
+            "Single": 2839
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2fc664af0c95c626cffc70",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 2794
+              },
+              {
+                "Single": 2839
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/application/convertor/experiment/openapi_test.go": [
+      {
+        "hash": "b1337a7a6252bcf4",
+        "line_ranges": [
+          {
+            "Single": 3174
+          },
+          {
+            "Range": [
+              3178,
+              3179
+            ]
+          },
+          {
+            "Single": 3200
+          },
+          {
+            "Single": 3204
+          },
+          {
+            "Single": 3237
+          },
+          {
+            "Range": [
+              3241,
+              3242
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2fc664af0c95c626cffc70",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 3174
+              },
+              {
+                "Range": [
+                  3178,
+                  3179
+                ]
+              },
+              {
+                "Single": 3200
+              },
+              {
+                "Single": 3204
+              },
+              {
+                "Single": 3237
+              },
+              {
+                "Range": [
+                  3241,
+                  3242
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_lifecycle_event_impl.go": [
+      {
+        "hash": "b1337a7a6252bcf4",
+        "line_ranges": [
+          {
+            "Single": 60
+          },
+          {
+            "Single": 86
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2fc664af0c95c626cffc70",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 60
+              },
+              {
+                "Single": 86
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/webhook_dispatcher.go": [
+      {
+        "hash": "b1337a7a6252bcf4",
+        "line_ranges": [
+          {
+            "Single": 160
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2fc664af0c95c626cffc70",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 160
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/infra/mq/rocket/consumer/webhook_retry.go": [
+      {
+        "hash": "b1337a7a6252bcf4",
+        "line_ranges": [
+          {
+            "Single": 119
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2fc664af0c95c626cffc70",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 119
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/infra/mq/rocket/consumer/webhook_retry_test.go": [
+      {
+        "hash": "b1337a7a6252bcf4",
+        "line_ranges": [
+          {
+            "Single": 106
+          },
+          {
+            "Single": 114
+          },
+          {
+            "Single": 379
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2fc664af0c95c626cffc70",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 106
+              },
+              {
+                "Single": 114
+              },
+              {
+                "Single": 379
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "b1337a7a6252bcf4": {
+      "tool": "trae",
+      "conversation_id": "6a2fc31caf0c95c626cffb41",
+      "session_id": "6a2fc31caf0c95c626cffb41",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

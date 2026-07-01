@@ -1,0 +1,136 @@
+backend/modules/evaluation/application/eval_openapi_app.go
+  fdc8090da31e8565 1067 gitai:{"mixed_line_ranges":[{"Single":1067}],"operations":[{"operation_id":"6a1ea93d40ab639c29c73b17","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":1067}]}]}
+backend/modules/evaluation/domain/service/webhook_dispatcher.go
+  fdc8090da31e8565 320-327 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ea93d40ab639c29c73b17","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[320,327]}]}]}
+backend/modules/evaluation/application/convertor/experiment/openapi.go
+  fdc8090da31e8565 2701-2728 gitai:{"mixed_line_ranges":[{"Single":2703},{"Single":2705},{"Single":2709},{"Single":2727}],"operations":[{"operation_id":"6a1ea93d40ab639c29c73b17","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[2701,2728]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "0c34a59aadf3c58ce87d61c52b2961c8e6f061ae",
+  "prompts": {
+    "fdc8090da31e8565": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a1e5ab140ab639c29c73425",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 83,
+      "total_deletions": 49,
+      "accepted_lines": 30,
+      "overriden_lines": 5
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/application/convertor/experiment/openapi.go": [
+      {
+        "hash": "fdc8090da31e8565",
+        "line_ranges": [
+          {
+            "Range": [
+              2701,
+              2728
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 2703
+          },
+          {
+            "Single": 2705
+          },
+          {
+            "Single": 2709
+          },
+          {
+            "Single": 2727
+          }
+        ],
+        "operations": [
+          {
+            "operation_id": "6a1ea93d40ab639c29c73b17",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  2701,
+                  2728
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/application/eval_openapi_app.go": [
+      {
+        "hash": "fdc8090da31e8565",
+        "line_ranges": [
+          {
+            "Single": 1067
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 1067
+          }
+        ],
+        "operations": [
+          {
+            "operation_id": "6a1ea93d40ab639c29c73b17",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 1067
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/webhook_dispatcher.go": [
+      {
+        "hash": "fdc8090da31e8565",
+        "line_ranges": [
+          {
+            "Range": [
+              320,
+              327
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ea93d40ab639c29c73b17",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  320,
+                  327
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "fdc8090da31e8565": {
+      "tool": "trae",
+      "conversation_id": "6a1e5ab140ab639c29c73425",
+      "session_id": "6a1e5ab140ab639c29c73425",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
