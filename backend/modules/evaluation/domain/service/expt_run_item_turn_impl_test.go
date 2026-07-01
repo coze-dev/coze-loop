@@ -3897,6 +3897,91 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 	}
 }
 
+// TestDefaultExptTurnEvaluationImpl_CallEvaluators_MultiSetEmptyEvaluator 回归:
+// 多评测集实验 (MultiSetConfig) 里某个评测集未配置评估器时, 该集 item 应跑 0 个评估器,
+// 绝不能回退到实验级 expt.Evaluators (所有集评估器的并集)。
+// bug: CallEvaluators:325 老守卫 `len(ItemConfig.EvaluatorConfs) > 0` 为 false 时会 fallthrough
+// 到 expt.Evaluators 老路径, 导致"没配评估器的集"被误跑全部评估器。
+func TestDefaultExptTurnEvaluationImpl_CallEvaluators_MultiSetEmptyEvaluator(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:            mockMetric,
+		evaluatorService:  mockEvaluatorService,
+		benefitService:    mockBenefitService,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	// 关键: 显式给 expt.Evaluators 塞一个评估器 + 非 nil EvaluatorsConf。
+	// 若 fallthrough 到老路径, 就会尝试跑它 (进而调 CheckBenefit / RunEvaluator);
+	// 本用例不给 mock 任何这类调用, 一旦发生 gomock 会因 unexpected call 直接 fail。
+	newMultiSetExpt := func() *entity.Experiment {
+		return &entity.Experiment{
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			Evaluators: []*entity.Evaluator{
+				{
+					ID:            99,
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 99},
+				},
+			},
+			EvalConf: &entity.EvaluationConfiguration{
+				ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{
+						EvaluatorConf: []*entity.EvaluatorConf{{EvaluatorVersionID: 99}},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name string
+		etec *entity.ExptTurnEvalCtx
+	}{
+		{
+			name: "MultiSetConfig set with empty EvaluatorConfs -> run zero evaluators",
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Expt:        newMultiSetExpt(),
+					Event:       &entity.ExptItemEvalEvent{ExptID: 1, SpaceID: 2},
+					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					ItemConfig:  &entity.ExptItemConfig{EvaluatorConfs: nil}, // 本集没配评估器
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+		},
+		{
+			name: "MultiSetConfig set with nil ItemConfig -> run zero evaluators (no fallthrough)",
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Expt:        newMultiSetExpt(),
+					Event:       &entity.ExptItemEvalEvent{ExptID: 1, SpaceID: 2},
+					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					ItemConfig:  nil,
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := service.CallEvaluators(context.Background(), tt.etec, &entity.EvalTargetRecord{})
+			assert.NoError(t, err)
+			assert.Empty(t, result) // 跑了 0 个评估器
+		})
+	}
+}
+
 func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) {
 	t.Parallel()
 
@@ -4336,8 +4421,9 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_DynamicParam(t
 				SpaceID: 2,
 			},
 			Expt: &entity.Experiment{
-				ID:      1,
-				SpaceID: 2,
+				ID:                1,
+				SpaceID:           2,
+				EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, // 新实验类型: 走 ItemConfig 驱动路径
 				Evaluators: []*entity.Evaluator{
 					{
 						ID:                     1,
@@ -4462,8 +4548,9 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_FilterSkipped(
 				SpaceID: 2,
 			},
 			Expt: &entity.Experiment{
-				ID:      1,
-				SpaceID: 2,
+				ID:                1,
+				SpaceID:           2,
+				EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, // 新实验类型: 走 ItemConfig 驱动路径
 				Evaluators: []*entity.Evaluator{
 					{
 						ID:                     1,

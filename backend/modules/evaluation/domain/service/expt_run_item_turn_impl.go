@@ -319,10 +319,16 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		return etec.ExptTurnRunResult.EvaluatorResults, nil
 	}
 
-	// ★ 新实验类型 (ItemConfig 非 nil): 按 ItemConfig.EvaluatorConfs 跑 alias 多实例;
-	//   每个 conf = 一个独立实例 (即使 (versionID) 相同, alias 不同也跑两次)。
-	//   filter 不命中 → 写 Skipped 占位 record (供 GUI / 数仓展示)。
-	if etec.ItemConfig != nil && len(etec.ItemConfig.EvaluatorConfs) > 0 {
+	// ★ 新实验类型 (MultiSetConfig): 一律按本评测集自己绑定的 ItemConfig.EvaluatorConfs 执行。
+	//   - 按 conf 跑 alias 多实例 (即使 (versionID) 相同, alias 不同也跑两次); filter 不命中 → 写 Skipped 占位 record。
+	//   - 若本评测集未配置评估器 (EvaluatorConfs 为空), 应跑 0 个评估器, 绝不能回退到实验级 expt.Evaluators
+	//     (那是所有评测集评估器的并集); 否则"没配评估器的集"会被误跑全部评估器。
+	//   区分依据: EvalSetSourceType == MultiSetConfig。老实验 (SingleSet, ItemConfig 恒 nil) 才走下方 expt.Evaluators 老路径。
+	if etec.Expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		if etec.ItemConfig == nil || len(etec.ItemConfig.EvaluatorConfs) == 0 {
+			logs.CtxInfo(ctx, "[ExptTurnEval] MultiSetConfig eval set has no evaluator conf, skip evaluation. expt_id: %d, item_id: %d", etec.Event.ExptID, etec.EvalSetItem.ItemID)
+			return nil, nil
+		}
 		return e.callEvaluatorsByItemConfig(ctx, etec, targetResult)
 	}
 
