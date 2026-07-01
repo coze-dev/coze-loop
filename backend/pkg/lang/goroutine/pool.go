@@ -30,17 +30,29 @@ type IPool interface {
 	Add(task func() error)
 	Exec(ctx context.Context) error
 	ExecAll(ctx context.Context) error
+	// Release 释放底层 ants pool 及其常驻协程(purge / ticktock)。幂等,可多次调用。
+	// 调用方应在 NewPool 成功后立即 defer Release(),确保即使不走 Exec/ExecAll(如中途提前 return)
+	// 也能释放,避免协程泄漏。
+	Release()
 }
 
 type task = func() error
 
 type pool struct {
-	p     *ants.Pool
-	tasks []task
+	p           *ants.Pool
+	tasks       []task
+	releaseOnce sync.Once
 }
 
 func (p *pool) Add(task func() error) {
 	p.tasks = append(p.tasks, task)
+}
+
+// Release 幂等释放底层 ants pool;exec() 的 defer 与调用方的 defer 都会走到这里,sync.Once 保证只释放一次。
+func (p *pool) Release() {
+	p.releaseOnce.Do(func() {
+		p.p.Release()
+	})
 }
 
 func (p *pool) Exec(ctx context.Context) error {
@@ -52,7 +64,7 @@ func (p *pool) ExecAll(ctx context.Context) error {
 }
 
 func (p *pool) exec(ctx context.Context, ignoreErr bool) error {
-	defer p.p.Release()
+	defer p.Release()
 
 	var (
 		mu   sync.Mutex
