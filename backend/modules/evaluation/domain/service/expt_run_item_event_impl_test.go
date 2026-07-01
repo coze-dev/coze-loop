@@ -623,6 +623,79 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet(t *testing
 	assert.Equal(t, itemConfig, got.ItemConfig)
 }
 
+// TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet_RefFail 回归:
+// MultiSetConfig 实验里读 expt_item_ref 失败(repo 报错 / ref==nil / ref.ItemConfig==nil)时,
+// BuildExptRecordEvalCtx 必须返回 error(触发重试),不能静默降级为 itemConfig=nil。
+// 否则下游 CallEvaluators 会把 nil ItemConfig 当成"合法空评估器集"跑 0 个评估器并把 turn 标 Success —
+// 本该有评估器的正常集被静默漏评还显示成功(fail-silent)。
+// 正常调度 exptStartMultiSet 对每个 item 都写非 nil ItemConfig, 所以读到 nil 只可能是读失败, 一律报错。
+func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet_RefFail(t *testing.T) {
+	const (
+		primarySetID = int64(100)
+		primaryVerID = int64(101)
+		itemID       = int64(2002)
+	)
+	newMultiSetExpt := func() *entity.Experiment {
+		return &entity.Experiment{
+			ID:                1,
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			EvalSet: &entity.EvaluationSet{
+				EvaluationSetVersion: &entity.EvaluationSetVersion{
+					ID:              primaryVerID,
+					EvaluationSetID: primarySetID,
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name  string
+		refFn func() (*entity.ExptItemRef, error)
+	}{
+		{
+			name:  "repo error -> return err, no silent fallback",
+			refFn: func() (*entity.ExptItemRef, error) { return nil, errors.New("db timeout") },
+		},
+		{
+			name:  "ref nil -> return err",
+			refFn: func() (*entity.ExptItemRef, error) { return nil, nil },
+		},
+		{
+			name: "ref with nil ItemConfig -> return err",
+			refFn: func() (*entity.ExptItemRef, error) {
+				return &entity.ExptItemRef{ItemID: itemID, EvalSetID: primarySetID, EvalSetVersionID: primaryVerID, ItemConfig: nil}, nil
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockManager := svcmocks.NewMockIExptManager(ctrl)
+			mockExptItemRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+			service := &ExptItemEventEvalServiceImpl{
+				manager:         mockManager,
+				exptItemRefRepo: mockExptItemRefRepo,
+			}
+
+			ref, refErr := tt.refFn()
+			mockManager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(newMultiSetExpt(), nil)
+			mockExptItemRefRepo.EXPECT().GetByExptIDAndItemID(gomock.Any(), int64(3), int64(1), itemID).Return(ref, refErr)
+			// 关键: 报错即返回, 不应再往下调 BatchGetEvaluationSetItems 等(不给这些 mock 期望, 一旦调用 gomock 会 fail)。
+
+			got, err := service.BuildExptRecordEvalCtx(context.Background(), &entity.ExptItemEvalEvent{
+				ExptID:        1,
+				SpaceID:       3,
+				EvalSetItemID: itemID,
+			})
+			assert.Error(t, err)
+			assert.Nil(t, got)
+		})
+	}
+}
+
 // 草稿集 item: ref 落 EvalSetVersionID=0 + ItemVersionID=0 → 单行取数按 item_id (version=nil) 读当前草稿。
 // 冻结粒度=item_id 集合 (ExptStart 固定了哪些 item 参与); item 内容是实时读 (草稿无 item 版本, 这是预期)。
 func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx_MultiSet_Draft(t *testing.T) {

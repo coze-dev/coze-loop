@@ -307,25 +307,37 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 	//   ② 该 item 真正归属的 (eval_set_id, eval_set_version_id) —— 多评测集下各 item 归属不同集,
 	//      绝不能用实验级主集去捞 item, 否则非主集 item 捞不到 (len=0) 直接报错卡死, 永远停在 incomplete。
 	// 老实验类型: ItemConfig 留 nil, 执行侧 fallback 到 expt 级 EvaluatorsConf 老路径; 集 id/version 用主集。
-	// 即使是新实验类型, 读不到 ref 也不阻塞 (例如 Append/Online 边界场景), 降级用主集。
+	// ⚠️ 读失败不能静默降级: exptStartMultiSet 对每个入队 item 都会写非 nil ItemConfig(空评估器集也写
+	//    &entity.ExptItemConfig{}), 所以 MultiSetConfig 实验里读到 refErr / ref==nil / ItemConfig==nil,
+	//    只可能是"读失败"(DB 抖动 / ref 未写全 / item_config 反序列化失败 / 列 NULL), 绝不可能是"合法空集"。
+	//    此时必须报错触发重试, 否则 CallEvaluators 会把 nil ItemConfig 当成"合法空集"跑 0 个评估器并把 turn
+	//    标成 Success —— 本该有评估器的正常集被静默漏评还显示成功 (fail-silent 数据正确性缺陷)。
+	//    区分口径: ref!=nil && ItemConfig!=nil 才是可信配置; EvaluatorConfs 空由执行侧判为"真空集跑 0 个"。
 	var itemConfig *entity.ExptItemConfig
 	var itemVersionID *int64 // 新数据集 item 级版本; nil=老数据集(无 item 版本)
 	if exptDetail.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && e.exptItemRefRepo != nil {
 		ref, refErr := e.exptItemRefRepo.GetByExptIDAndItemID(ctx, event.SpaceID, event.ExptID, event.EvalSetItemID)
 		if refErr != nil {
-			logs.CtxWarn(ctx, "BuildExptRecordEvalCtx GetByExptIDAndItemID fail, expt_id: %v, item_id: %v, err: %v, fallback to legacy path",
+			logs.CtxError(ctx, "BuildExptRecordEvalCtx GetByExptIDAndItemID fail, expt_id: %v, item_id: %v, err: %v",
 				event.ExptID, event.EvalSetItemID, refErr)
-		} else if ref != nil {
-			itemConfig = ref.ItemConfig
-			if ref.EvalSetID > 0 {
-				evalSetID = ref.EvalSetID
-				// 该 item 真正归属集的版本以 ref 为准 (含草稿: ref.EvalSetVersionID==0 → 走下面 live 分支)。
-				// 不能再用实验级主集版本兜底, 否则非主集 item 会被错误地按主集版本查询。
-				evalSetVerID = ref.EvalSetVersionID
-			}
-			if ref.ItemVersionID > 0 {
-				itemVersionID = gptr.Of(ref.ItemVersionID)
-			}
+			return nil, errorx.Wrapf(refErr, "get expt_item_ref fail, expt_id: %v, item_id: %v", event.ExptID, event.EvalSetItemID)
+		}
+		if ref == nil || ref.ItemConfig == nil {
+			// 正常调度必已写非 nil ItemConfig; 走到这里是 ref 未写全或 item_config 读空 —— 报错重试, 不静默漏评。
+			logs.CtxError(ctx, "BuildExptRecordEvalCtx expt_item_ref missing item_config, expt_id: %v, item_id: %v, ref_nil: %v",
+				event.ExptID, event.EvalSetItemID, ref == nil)
+			return nil, errorx.NewByCode(errno.CommonInternalErrorCode,
+				errorx.WithExtraMsg(fmt.Sprintf("expt_item_ref missing item_config, expt_id: %v, item_id: %v", event.ExptID, event.EvalSetItemID)))
+		}
+		itemConfig = ref.ItemConfig
+		if ref.EvalSetID > 0 {
+			evalSetID = ref.EvalSetID
+			// 该 item 真正归属集的版本以 ref 为准 (含草稿: ref.EvalSetVersionID==0 → 走下面 live 分支)。
+			// 不能再用实验级主集版本兜底, 否则非主集 item 会被错误地按主集版本查询。
+			evalSetVerID = ref.EvalSetVersionID
+		}
+		if ref.ItemVersionID > 0 {
+			itemVersionID = gptr.Of(ref.ItemVersionID)
 		}
 	}
 
