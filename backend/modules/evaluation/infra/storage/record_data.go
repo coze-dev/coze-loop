@@ -7,11 +7,13 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
+	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -243,7 +245,12 @@ func (s *RecordDataStorage) processContent(ctx context.Context, content *entity.
 	}
 	// 上传完整内容到 S3
 	key := EvalRecordFieldKeyPrefix + uuid.New().String()
-	if err := s.batchStorage.Upload(ctx, key, bytes.NewReader([]byte(text))); err != nil {
+	// ImageX/对象存储偶发单实例迁移会返回临时错误（如 201007 / bad gateway），系统会自动迁移恢复，重试即可成功。
+	// 这里做固定间隔的止血重试：最多 2 次重试（共 3 次尝试）、间隔 1.5s；每轮都重建 reader，避免上一轮已消费导致重传空内容。
+	data := []byte(text)
+	if err := backoff.RetryWithMaxTimesAndInterval(ctx, 2, 1500*time.Millisecond, func() error {
+		return s.batchStorage.Upload(ctx, key, bytes.NewReader(data))
+	}); err != nil {
 		return errors.WithMessagef(err, "upload field to S3, key=%s", key)
 	}
 	logs.CtxInfo(ctx, "upload successful for tos storage, key=%s", key)
