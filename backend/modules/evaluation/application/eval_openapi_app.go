@@ -887,6 +887,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		Status:                  target.ToTargetRunStatsDO(req.GetStatus()),
 		Session:                 actx.Session,
 		EnableExtractTrajectory: actx.EnableExtractTrajectory,
+		AsyncUnixMS:             actx.AsyncUnixMS,
 	}); err != nil {
 		return nil, err
 	}
