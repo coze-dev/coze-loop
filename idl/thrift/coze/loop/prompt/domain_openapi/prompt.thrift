@@ -266,6 +266,7 @@ struct ModelConfig {
     8: optional bool json_mode
     9: optional string extra
     10: optional ThinkingConfig thinking
+    11: optional string model_key (go.tag='json:"model_key"') // 与 model_id 并列;同时传以 model_id 为准;仅 model_id=0 且 model_key 非空时走 ResolveModel
 
     100: optional list<ParamConfigValue> param_config_values
 }

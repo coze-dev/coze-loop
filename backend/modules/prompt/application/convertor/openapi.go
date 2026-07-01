@@ -574,6 +574,7 @@ func OpenAPIModelConfigDTO2DO(dto *domainopenapi.ModelConfig) *entity.ModelConfi
 	}
 	return &entity.ModelConfig{
 		ModelID:           dto.GetModelID(),
+		ModelKey:          dto.GetModelKey(),
 		MaxTokens:         dto.MaxTokens,
 		Temperature:       dto.Temperature,
 		TopK:              dto.TopK,

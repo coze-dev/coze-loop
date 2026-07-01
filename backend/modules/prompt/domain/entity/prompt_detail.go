@@ -192,6 +192,7 @@ type FunctionCall struct {
 
 type ModelConfig struct {
 	ModelID           int64               `json:"model_id"`
+	ModelKey          string              `json:"model_key,omitempty"` // 与 model_id 并列;同时传以 model_id 为准;ResolveModel 由下游服务负责
 	MaxTokens         *int32              `json:"max_tokens,omitempty"`
 	Temperature       *float64            `json:"temperature,omitempty"`
 	TopK              *int32              `json:"top_k,omitempty"`

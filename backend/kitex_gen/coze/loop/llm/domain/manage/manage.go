@@ -215,11 +215,13 @@ type Model struct {
 	// 模型跳转链接
 	OriginalModelURL *string `thrift:"original_model_url,16,optional" frugal:"16,optional,string" form:"original_model_url" json:"original_model_url,omitempty" query:"original_model_url"`
 	// 是否为预置模型
-	PresetModel *bool   `thrift:"preset_model,17,optional" frugal:"17,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
-	CreatedBy   *string `thrift:"created_by,100,optional" frugal:"100,optional,string" form:"created_by" json:"created_by,omitempty" query:"created_by"`
-	CreatedAt   *int64  `thrift:"created_at,101,optional" frugal:"101,optional,i64" form:"created_at" json:"created_at,omitempty" query:"created_at"`
-	UpdatedBy   *string `thrift:"updated_by,102,optional" frugal:"102,optional,string" form:"updated_by" json:"updated_by,omitempty" query:"updated_by"`
-	UpdatedAt   *int64  `thrift:"updated_at,103,optional" frugal:"103,optional,i64" form:"updated_at" json:"updated_at,omitempty" query:"updated_at"`
+	PresetModel *bool `thrift:"preset_model,17,optional" frugal:"17,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
+	// 空间内唯一的语义化模型 key(slug,≤128,一经设置不可修改)
+	ModelKey  *string `thrift:"model_key,18,optional" frugal:"18,optional,string" json:"model_key" form:"model_key" query:"model_key"`
+	CreatedBy *string `thrift:"created_by,100,optional" frugal:"100,optional,string" form:"created_by" json:"created_by,omitempty" query:"created_by"`
+	CreatedAt *int64  `thrift:"created_at,101,optional" frugal:"101,optional,i64" form:"created_at" json:"created_at,omitempty" query:"created_at"`
+	UpdatedBy *string `thrift:"updated_by,102,optional" frugal:"102,optional,string" form:"updated_by" json:"updated_by,omitempty" query:"updated_by"`
+	UpdatedAt *int64  `thrift:"updated_at,103,optional" frugal:"103,optional,i64" form:"updated_at" json:"updated_at,omitempty" query:"updated_at"`
 }
 
 func NewModel() *Model {
@@ -433,6 +435,18 @@ func (p *Model) GetPresetModel() (v bool) {
 	return *p.PresetModel
 }
 
+var Model_ModelKey_DEFAULT string
+
+func (p *Model) GetModelKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKey() {
+		return Model_ModelKey_DEFAULT
+	}
+	return *p.ModelKey
+}
+
 var Model_CreatedBy_DEFAULT string
 
 func (p *Model) GetCreatedBy() (v string) {
@@ -531,6 +545,9 @@ func (p *Model) SetOriginalModelURL(val *string) {
 func (p *Model) SetPresetModel(val *bool) {
 	p.PresetModel = val
 }
+func (p *Model) SetModelKey(val *string) {
+	p.ModelKey = val
+}
 func (p *Model) SetCreatedBy(val *string) {
 	p.CreatedBy = val
 }
@@ -562,6 +579,7 @@ var fieldIDToName_Model = map[int16]string{
 	15:  "status",
 	16:  "original_model_url",
 	17:  "preset_model",
+	18:  "model_key",
 	100: "created_by",
 	101: "created_at",
 	102: "updated_by",
@@ -634,6 +652,10 @@ func (p *Model) IsSetOriginalModelURL() bool {
 
 func (p *Model) IsSetPresetModel() bool {
 	return p.PresetModel != nil
+}
+
+func (p *Model) IsSetModelKey() bool {
+	return p.ModelKey != nil
 }
 
 func (p *Model) IsSetCreatedBy() bool {
@@ -801,6 +823,14 @@ func (p *Model) Read(iprot thrift.TProtocol) (err error) {
 		case 17:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField17(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 18:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField18(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1069,6 +1099,17 @@ func (p *Model) ReadField17(iprot thrift.TProtocol) error {
 	p.PresetModel = _field
 	return nil
 }
+func (p *Model) ReadField18(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelKey = _field
+	return nil
+}
 func (p *Model) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -1186,6 +1227,10 @@ func (p *Model) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField17(oprot); err != nil {
 			fieldId = 17
+			goto WriteFieldError
+		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -1547,6 +1592,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
 }
+func (p *Model) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelKey() {
+		if err = oprot.WriteFieldBegin("model_key", thrift.STRING, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
 func (p *Model) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCreatedBy() {
 		if err = oprot.WriteFieldBegin("created_by", thrift.STRING, 100); err != nil {
@@ -1683,6 +1746,9 @@ func (p *Model) DeepEqual(ano *Model) bool {
 		return false
 	}
 	if !p.Field17DeepEqual(ano.PresetModel) {
+		return false
+	}
+	if !p.Field18DeepEqual(ano.ModelKey) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.CreatedBy) {
@@ -1877,6 +1943,18 @@ func (p *Model) Field17DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.PresetModel != *src {
+		return false
+	}
+	return true
+}
+func (p *Model) Field18DeepEqual(src *string) bool {
+
+	if p.ModelKey == src {
+		return true
+	} else if p.ModelKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModelKey, *src) != 0 {
 		return false
 	}
 	return true

@@ -90,7 +90,7 @@ func TestManageApp_GetModel(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockAuth.EXPECT().CheckSpacePermission(ctx, int64(1), "getModel").Return(nil)
-		mockSrv.EXPECT().GetModelByID(ctx, int64(100)).Return(&entity.Model{ID: 100}, nil)
+		mockSrv.EXPECT().ResolveModel(ctx, gomock.Any()).Return(&entity.Model{ID: 100}, nil)
 
 		req := &manage.GetModelRequest{WorkspaceID: gptr.Of(int64(1)), ModelID: gptr.Of(int64(100))}
 		res, err := app.GetModel(ctx, req)
@@ -98,9 +98,19 @@ func TestManageApp_GetModel(t *testing.T) {
 		assert.Equal(t, int64(100), *res.Model.ModelID)
 	})
 
+	t.Run("success_by_key", func(t *testing.T) {
+		mockAuth.EXPECT().CheckSpacePermission(ctx, int64(1), "getModel").Return(nil)
+		mockSrv.EXPECT().ResolveModel(ctx, gomock.Any()).Return(&entity.Model{ID: 200}, nil)
+
+		req := &manage.GetModelRequest{WorkspaceID: gptr.Of(int64(1)), ModelKey: gptr.Of("gpt-4o")}
+		res, err := app.GetModel(ctx, req)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(200), *res.Model.ModelID)
+	})
+
 	t.Run("srv_error", func(t *testing.T) {
 		mockAuth.EXPECT().CheckSpacePermission(ctx, int64(1), "getModel").Return(nil)
-		mockSrv.EXPECT().GetModelByID(ctx, int64(100)).Return(nil, assert.AnError)
+		mockSrv.EXPECT().ResolveModel(ctx, gomock.Any()).Return(nil, assert.AnError)
 
 		req := &manage.GetModelRequest{WorkspaceID: gptr.Of(int64(1)), ModelID: gptr.Of(int64(100))}
 		_, err := app.GetModel(ctx, req)

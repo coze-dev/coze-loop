@@ -450,10 +450,11 @@ type Series struct {
 }
 
 type ListModelReq struct {
-	WorkspaceID *int64
-	Scenario    *Scenario
-	PageToken   int64
-	PageSize    int64
+	WorkspaceID  *int64
+	Scenario     *Scenario
+	PageToken    int64
+	PageSize     int64
+	ModelKeyList []string // v2 精确匹配;非空 → 仅返回 model_key ∈ 集合的行
 }
 
 type GetModelReq struct {

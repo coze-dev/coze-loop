@@ -10701,16 +10701,18 @@ func (p *ThinkingConfig) Field3DeepEqual(src *ReasoningEffort) bool {
 }
 
 type ModelConfig struct {
-	ModelID           *int64              `thrift:"model_id,1,optional" frugal:"1,optional,i64" json:"model_id" form:"model_id" query:"model_id"`
-	MaxTokens         *int32              `thrift:"max_tokens,2,optional" frugal:"2,optional,i32" form:"max_tokens" json:"max_tokens,omitempty" query:"max_tokens"`
-	Temperature       *float64            `thrift:"temperature,3,optional" frugal:"3,optional,double" form:"temperature" json:"temperature,omitempty" query:"temperature"`
-	TopK              *int32              `thrift:"top_k,4,optional" frugal:"4,optional,i32" form:"top_k" json:"top_k,omitempty" query:"top_k"`
-	TopP              *float64            `thrift:"top_p,5,optional" frugal:"5,optional,double" form:"top_p" json:"top_p,omitempty" query:"top_p"`
-	PresencePenalty   *float64            `thrift:"presence_penalty,6,optional" frugal:"6,optional,double" form:"presence_penalty" json:"presence_penalty,omitempty" query:"presence_penalty"`
-	FrequencyPenalty  *float64            `thrift:"frequency_penalty,7,optional" frugal:"7,optional,double" form:"frequency_penalty" json:"frequency_penalty,omitempty" query:"frequency_penalty"`
-	JSONMode          *bool               `thrift:"json_mode,8,optional" frugal:"8,optional,bool" form:"json_mode" json:"json_mode,omitempty" query:"json_mode"`
-	Extra             *string             `thrift:"extra,9,optional" frugal:"9,optional,string" form:"extra" json:"extra,omitempty" query:"extra"`
-	Thinking          *ThinkingConfig     `thrift:"thinking,10,optional" frugal:"10,optional,ThinkingConfig" form:"thinking" json:"thinking,omitempty" query:"thinking"`
+	ModelID          *int64          `thrift:"model_id,1,optional" frugal:"1,optional,i64" json:"model_id" form:"model_id" query:"model_id"`
+	MaxTokens        *int32          `thrift:"max_tokens,2,optional" frugal:"2,optional,i32" form:"max_tokens" json:"max_tokens,omitempty" query:"max_tokens"`
+	Temperature      *float64        `thrift:"temperature,3,optional" frugal:"3,optional,double" form:"temperature" json:"temperature,omitempty" query:"temperature"`
+	TopK             *int32          `thrift:"top_k,4,optional" frugal:"4,optional,i32" form:"top_k" json:"top_k,omitempty" query:"top_k"`
+	TopP             *float64        `thrift:"top_p,5,optional" frugal:"5,optional,double" form:"top_p" json:"top_p,omitempty" query:"top_p"`
+	PresencePenalty  *float64        `thrift:"presence_penalty,6,optional" frugal:"6,optional,double" form:"presence_penalty" json:"presence_penalty,omitempty" query:"presence_penalty"`
+	FrequencyPenalty *float64        `thrift:"frequency_penalty,7,optional" frugal:"7,optional,double" form:"frequency_penalty" json:"frequency_penalty,omitempty" query:"frequency_penalty"`
+	JSONMode         *bool           `thrift:"json_mode,8,optional" frugal:"8,optional,bool" form:"json_mode" json:"json_mode,omitempty" query:"json_mode"`
+	Extra            *string         `thrift:"extra,9,optional" frugal:"9,optional,string" form:"extra" json:"extra,omitempty" query:"extra"`
+	Thinking         *ThinkingConfig `thrift:"thinking,10,optional" frugal:"10,optional,ThinkingConfig" form:"thinking" json:"thinking,omitempty" query:"thinking"`
+	// 与 model_id 并列;同时传以 model_id 为准;仅 model_id=0 且 model_key 非空时走 ResolveModel
+	ModelKey          *string             `thrift:"model_key,11,optional" frugal:"11,optional,string" json:"model_key" form:"model_key" query:"model_key"`
 	ParamConfigValues []*ParamConfigValue `thrift:"param_config_values,100,optional" frugal:"100,optional,list<ParamConfigValue>" form:"param_config_values" json:"param_config_values,omitempty" query:"param_config_values"`
 }
 
@@ -10841,6 +10843,18 @@ func (p *ModelConfig) GetThinking() (v *ThinkingConfig) {
 	return p.Thinking
 }
 
+var ModelConfig_ModelKey_DEFAULT string
+
+func (p *ModelConfig) GetModelKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKey() {
+		return ModelConfig_ModelKey_DEFAULT
+	}
+	return *p.ModelKey
+}
+
 var ModelConfig_ParamConfigValues_DEFAULT []*ParamConfigValue
 
 func (p *ModelConfig) GetParamConfigValues() (v []*ParamConfigValue) {
@@ -10882,6 +10896,9 @@ func (p *ModelConfig) SetExtra(val *string) {
 func (p *ModelConfig) SetThinking(val *ThinkingConfig) {
 	p.Thinking = val
 }
+func (p *ModelConfig) SetModelKey(val *string) {
+	p.ModelKey = val
+}
 func (p *ModelConfig) SetParamConfigValues(val []*ParamConfigValue) {
 	p.ParamConfigValues = val
 }
@@ -10897,6 +10914,7 @@ var fieldIDToName_ModelConfig = map[int16]string{
 	8:   "json_mode",
 	9:   "extra",
 	10:  "thinking",
+	11:  "model_key",
 	100: "param_config_values",
 }
 
@@ -10938,6 +10956,10 @@ func (p *ModelConfig) IsSetExtra() bool {
 
 func (p *ModelConfig) IsSetThinking() bool {
 	return p.Thinking != nil
+}
+
+func (p *ModelConfig) IsSetModelKey() bool {
+	return p.ModelKey != nil
 }
 
 func (p *ModelConfig) IsSetParamConfigValues() bool {
@@ -11037,6 +11059,14 @@ func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11186,6 +11216,17 @@ func (p *ModelConfig) ReadField10(iprot thrift.TProtocol) error {
 	p.Thinking = _field
 	return nil
 }
+func (p *ModelConfig) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelKey = _field
+	return nil
+}
 func (p *ModelConfig) ReadField100(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -11254,6 +11295,10 @@ func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -11458,6 +11503,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *ModelConfig) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelKey() {
+		if err = oprot.WriteFieldBegin("model_key", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *ModelConfig) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetParamConfigValues() {
 		if err = oprot.WriteFieldBegin("param_config_values", thrift.LIST, 100); err != nil {
@@ -11527,6 +11590,9 @@ func (p *ModelConfig) DeepEqual(ano *ModelConfig) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.Thinking) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.ModelKey) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.ParamConfigValues) {
@@ -11646,6 +11712,18 @@ func (p *ModelConfig) Field9DeepEqual(src *string) bool {
 func (p *ModelConfig) Field10DeepEqual(src *ThinkingConfig) bool {
 
 	if !p.Thinking.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ModelConfig) Field11DeepEqual(src *string) bool {
+
+	if p.ModelKey == src {
+		return true
+	} else if p.ModelKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModelKey, *src) != 0 {
 		return false
 	}
 	return true

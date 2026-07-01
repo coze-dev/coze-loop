@@ -34,11 +34,24 @@ func (m *ManageImpl) ListModels(ctx context.Context, req entity.ListModelReq) (m
 	if err != nil {
 		return models, total, hasMore, nextPageToken, err
 	}
+	var keySet map[string]struct{}
+	if len(req.ModelKeyList) > 0 {
+		keySet = make(map[string]struct{}, len(req.ModelKeyList))
+		for _, k := range req.ModelKeyList {
+			keySet[k] = struct{}{}
+		}
+	}
 	if req.Scenario != nil {
 		for _, md := range modelsInCfg {
-			if md.Available(req.Scenario) {
-				models = append(models, md)
+			if !md.Available(req.Scenario) {
+				continue
 			}
+			if keySet != nil {
+				if _, ok := keySet[md.ModelKey]; !ok {
+					continue
+				}
+			}
+			models = append(models, md)
 		}
 	}
 	total = int64(len(models))

@@ -1311,8 +1311,11 @@ func (p *PromptOpenAPIApplicationImpl) validateAndApplyCustomModelConfig(promptD
 		return nil
 	}
 
-	// 如果没有提供ModelID，当作用户没传自定义模型配置，直接返回
-	if !customModelConfig.IsSetModelID() || customModelConfig.GetModelID() == 0 {
+	// 如果既没有提供 ModelID,也没有 ModelKey,当作用户没传自定义模型配置,直接返回。
+	// 有 ModelKey 时保留应用配置,由下游 ResolveModel(spaceID, key) 补齐 ID(同时传 ID+Key 以 ID 为准)。
+	hasID := customModelConfig.IsSetModelID() && customModelConfig.GetModelID() != 0
+	hasKey := customModelConfig.IsSetModelKey() && customModelConfig.GetModelKey() != ""
+	if !hasID && !hasKey {
 		return nil
 	}
 

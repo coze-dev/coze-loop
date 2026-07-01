@@ -42,11 +42,16 @@ func (m *manageApp) ListModels(ctx context.Context, req *manage.ListModelsReques
 		scenario = ptr.Of(entity.ScenarioDefault)
 	}
 	pageToken, _ := strconv.ParseInt(req.GetPageToken(), 10, 64)
+	var modelKeyList []string
+	if req.Filter != nil {
+		modelKeyList = req.Filter.GetModelKeyList()
+	}
 	models, total, hasMore, nextPageToken, err := m.manageSrv.ListModels(ctx, entity.ListModelReq{
-		WorkspaceID: req.WorkspaceID,
-		Scenario:    scenario,
-		PageSize:    int64(req.GetPageSize()),
-		PageToken:   pageToken,
+		WorkspaceID:  req.WorkspaceID,
+		Scenario:     scenario,
+		PageSize:     int64(req.GetPageSize()),
+		PageToken:    pageToken,
+		ModelKeyList: modelKeyList,
 	})
 	if err != nil {
 		return r, err
@@ -63,7 +68,12 @@ func (m *manageApp) GetModel(ctx context.Context, req *manage.GetModelRequest) (
 	if err := m.auth.CheckSpacePermission(ctx, req.GetWorkspaceID(), "getModel"); err != nil {
 		return r, err
 	}
-	model, err := m.manageSrv.GetModelByID(ctx, req.GetModelID())
+	// 统一解析:ID 优先,Key 备用(见 IManage.ResolveModel)。同时传以 ID 为准。
+	model, err := m.manageSrv.ResolveModel(ctx, entity.GetModelReq{
+		WorkspaceID: req.WorkspaceID,
+		ModelID:     req.GetModelID(),
+		ModelKey:    req.GetModelKey(),
+	})
 	if err != nil {
 		return r, err
 	}
