@@ -159,3 +159,114 @@ func TestManageImpl_ListModels(t *testing.T) {
 		})
 	}
 }
+
+func TestManageImpl_ResolveModel(t *testing.T) {
+	type fields struct {
+		conf conf.IConfigManage
+	}
+	type args struct {
+		ctx context.Context
+		req entity.GetModelReq
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantModelID  int64
+		wantErr      error
+	}{
+		{
+			name: "id_first: model_id set → GetModelByID hit",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := llmconfmocks.NewMockIConfigManage(ctrl)
+				confMock.EXPECT().GetModel(gomock.Any(), int64(42)).Return(&entity.Model{ID: 42}, nil)
+				return fields{conf: confMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: entity.GetModelReq{ModelID: 42},
+			},
+			wantModelID: 42,
+			wantErr:     nil,
+		},
+		{
+			name: "id_first_beats_key: both set → ID branch wins",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := llmconfmocks.NewMockIConfigManage(ctrl)
+				// only ID branch should be called; key branch must not fire
+				confMock.EXPECT().GetModel(gomock.Any(), int64(7)).Return(&entity.Model{ID: 7}, nil)
+				return fields{conf: confMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: entity.GetModelReq{ModelID: 7, ModelKey: "any-key"},
+			},
+			wantModelID: 7,
+			wantErr:     nil,
+		},
+		{
+			name: "id_not_found: propagates NotFound",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := llmconfmocks.NewMockIConfigManage(ctrl)
+				confMock.EXPECT().GetModel(gomock.Any(), int64(999)).Return(nil, gorm.ErrRecordNotFound)
+				return fields{conf: confMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: entity.GetModelReq{ModelID: 999},
+			},
+			wantErr: errorx.NewByCode(llm_errorx.ResourceNotFoundCode),
+		},
+		{
+			name: "key_branch_valid_slug: NotFound placeholder (yaml source, DB not wired)",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				// key branch does NOT call conf in current skeleton
+				return fields{conf: llmconfmocks.NewMockIConfigManage(ctrl)}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: entity.GetModelReq{ModelKey: "gpt-4-turbo"},
+			},
+			wantErr: errorx.NewByCode(llm_errorx.ResourceNotFoundCode),
+		},
+		{
+			name: "key_branch_invalid_slug: InvalidParam",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{conf: llmconfmocks.NewMockIConfigManage(ctrl)}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: entity.GetModelReq{ModelKey: "GPT_UPPER"},
+			},
+			wantErr: errorx.NewByCode(llm_errorx.CommonInvalidParamCode),
+		},
+		{
+			name: "neither_id_nor_key: InvalidParam",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{conf: llmconfmocks.NewMockIConfigManage(ctrl)}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: entity.GetModelReq{},
+			},
+			wantErr: errorx.NewByCode(llm_errorx.CommonInvalidParamCode),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ttFields := tt.fieldsGetter(ctrl)
+			m := &ManageImpl{conf: ttFields.conf}
+			gotModel, err := m.ResolveModel(tt.args.ctx, tt.args.req)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+			if err != nil {
+				return
+			}
+			assert.NotNil(t, gotModel)
+			assert.Equal(t, tt.wantModelID, gotModel.ID)
+		})
+	}
+}

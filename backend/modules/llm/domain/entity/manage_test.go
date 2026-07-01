@@ -522,3 +522,48 @@ func TestAbility_GetAbilityEnums(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateModelKey(t *testing.T) {
+	tests := []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{name: "empty is allowed (optional)", key: "", wantErr: false},
+		{name: "simple lowercase", key: "gpt4", wantErr: false},
+		{name: "with hyphen", key: "gpt-4-turbo", wantErr: false},
+		{name: "with underscore", key: "gpt_4_turbo", wantErr: false},
+		{name: "mixed digits and letters", key: "doubao-1-5-pro-32k", wantErr: false},
+		{name: "single char", key: "a", wantErr: false},
+		{name: "single digit", key: "9", wantErr: false},
+		{name: "exact 128 valid chars", key: func() string {
+			b := make([]byte, 128)
+			for i := range b {
+				b[i] = 'a'
+			}
+			return string(b)
+		}(), wantErr: false},
+		{name: "over 128 chars", key: func() string {
+			b := make([]byte, 129)
+			for i := range b {
+				b[i] = 'a'
+			}
+			return string(b)
+		}(), wantErr: true},
+		{name: "uppercase rejected", key: "GPT4", wantErr: true},
+		{name: "starts with hyphen", key: "-gpt", wantErr: true},
+		{name: "ends with hyphen", key: "gpt-", wantErr: true},
+		{name: "starts with underscore", key: "_gpt", wantErr: true},
+		{name: "ends with underscore", key: "gpt_", wantErr: true},
+		{name: "contains space", key: "gpt 4", wantErr: true},
+		{name: "contains dot", key: "gpt.4", wantErr: true},
+		{name: "contains slash", key: "gpt/4", wantErr: true},
+		{name: "contains chinese", key: "模型key", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateModelKey(tt.key)
+			assert.Equal(t, tt.wantErr, err != nil, "ValidateModelKey(%q)", tt.key)
+		})
+	}
+}
