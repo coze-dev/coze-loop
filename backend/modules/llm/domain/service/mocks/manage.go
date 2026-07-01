@@ -73,3 +73,18 @@ func (mr *MockIManageMockRecorder) ListModels(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListModels", reflect.TypeOf((*MockIManage)(nil).ListModels), ctx, req)
 }
+
+// ResolveModel mocks base method.
+func (m *MockIManage) ResolveModel(ctx context.Context, req entity.GetModelReq) (*entity.Model, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveModel", ctx, req)
+	ret0, _ := ret[0].(*entity.Model)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResolveModel indicates an expected call of ResolveModel.
+func (mr *MockIManageMockRecorder) ResolveModel(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveModel", reflect.TypeOf((*MockIManage)(nil).ResolveModel), ctx, req)
+}

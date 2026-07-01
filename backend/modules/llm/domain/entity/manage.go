@@ -4,12 +4,35 @@
 package entity
 
 import (
+	"regexp"
 	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/pkg/errors"
 )
+
+// ModelKeyMaxLen model_key 最大长度(与 IDL 约束一致)。
+const ModelKeyMaxLen = 128
+
+// modelKeyPattern slug 正则:小写字母/数字/短横线/下划线,首尾必须为字母数字,长度 1-128。
+// 与 tech_design 第 IDL 段一致 ^[a-z0-9]([a-z0-9_-]{0,126}[a-z0-9])?$
+var modelKeyPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9_-]{0,126}[a-z0-9])?$`)
+
+// ValidateModelKey 校验 model_key 格式;空串直接返回 nil(model_key 为 optional)。
+// 非空时必须命中 slug 正则且长度 ≤ ModelKeyMaxLen。
+func ValidateModelKey(s string) error {
+	if s == "" {
+		return nil
+	}
+	if len(s) > ModelKeyMaxLen {
+		return errors.Errorf("model_key length %d exceeds max %d", len(s), ModelKeyMaxLen)
+	}
+	if !modelKeyPattern.MatchString(s) {
+		return errors.Errorf("invalid model_key format: %q", s)
+	}
+	return nil
+}
 
 type Model struct {
 	ID          int64  `json:"id" yaml:"id" mapstructure:"id"`                               // id
@@ -25,6 +48,7 @@ type Model struct {
 	ScenarioConfigs  map[Scenario]*ScenarioConfig `json:"scenario_configs" yaml:"scenario_configs" mapstructure:"scenario_configs"` // 该模型的场景配置
 	ParamConfig      *ParamConfig                 `json:"param_config" yaml:"param_config" mapstructure:"param_config"`             // 该模型的参数配置
 	Identification   string                       `json:"identification" yaml:"identification"`
+	ModelKey         string                       `json:"model_key" yaml:"model_key" mapstructure:"model_key"` // 空间内唯一的语义化模型 key(slug,≤128,一经设置不可修改)
 	Series           *Series                      `json:"series" yaml:"series"`
 	Visibility       *Visibility                  `json:"visibility" yaml:"visibility"`
 	Icon             string                       `json:"icon" yaml:"icon" mapstructure:"icon"`                                           // 模型图标
@@ -435,6 +459,7 @@ type ListModelReq struct {
 type GetModelReq struct {
 	WorkspaceID *int64
 	ModelID     int64
+	ModelKey    string // 与 ModelID 并列;应用层 ResolveModel 内 ID 优先(见 IManage.ResolveModel)
 }
 
 type VisibleMode string
@@ -464,6 +489,7 @@ type ListModelsFilter struct {
 	Families      []Family      `json:"families,omitempty"`
 	ModelStatuses []ModelStatus `json:"model_statuses,omitempty"`
 	Abilities     []AbilityEnum `json:"abilities,omitempty"`
+	ModelKeyList  []string      `json:"model_key_list,omitempty"` // v2 精确匹配,非空 → SQL WHERE model_key IN (?)
 }
 
 type AbilityEnum string
