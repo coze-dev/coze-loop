@@ -43700,6 +43700,646 @@ func (p *AsyncRunEvaluatorOpenAPIData) Field2DeepEqual(src *evaluator.EvaluatorR
 	return true
 }
 
+// 异步评估器执行完成后，服务端主动 POST 给 callback_url 的回调 body
+type EvaluatorCallbackPayloadOApi struct {
+	// 本次回调投递的唯一 ID（服务端生成，用于重试去重）
+	Cid *string `thrift:"cid,1,optional" frugal:"1,optional,string" json:"cid" form:"cid" query:"cid"`
+	// = async_run 返回的 invoke_id
+	InvokeID           *int64 `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" json:"invoke_id" form:"invoke_id" query:"invoke_id"`
+	WorkspaceID        *int64 `thrift:"workspace_id,3,optional" frugal:"3,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	EvaluatorVersionID *int64 `thrift:"evaluator_version_id,4,optional" frugal:"4,optional,i64" json:"evaluator_version_id" form:"evaluator_version_id" query:"evaluator_version_id"`
+	// success | fail
+	Status *string `thrift:"status,5,optional" frugal:"5,optional,string" json:"status" form:"status" query:"status"`
+	// 仅 success 时携带
+	Output          *evaluator.EvaluatorOutputData `thrift:"output,6,optional" frugal:"6,optional,evaluator.EvaluatorOutputData" json:"output,omitempty" form:"output" query:"output"`
+	TimeConsumingMs *int64                         `thrift:"time_consuming_ms,7,optional" frugal:"7,optional,i64" json:"time_consuming_ms" form:"time_consuming_ms" query:"time_consuming_ms"`
+}
+
+func NewEvaluatorCallbackPayloadOApi() *EvaluatorCallbackPayloadOApi {
+	return &EvaluatorCallbackPayloadOApi{}
+}
+
+func (p *EvaluatorCallbackPayloadOApi) InitDefault() {
+}
+
+var EvaluatorCallbackPayloadOApi_Cid_DEFAULT string
+
+func (p *EvaluatorCallbackPayloadOApi) GetCid() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCid() {
+		return EvaluatorCallbackPayloadOApi_Cid_DEFAULT
+	}
+	return *p.Cid
+}
+
+var EvaluatorCallbackPayloadOApi_InvokeID_DEFAULT int64
+
+func (p *EvaluatorCallbackPayloadOApi) GetInvokeID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeID() {
+		return EvaluatorCallbackPayloadOApi_InvokeID_DEFAULT
+	}
+	return *p.InvokeID
+}
+
+var EvaluatorCallbackPayloadOApi_WorkspaceID_DEFAULT int64
+
+func (p *EvaluatorCallbackPayloadOApi) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return EvaluatorCallbackPayloadOApi_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var EvaluatorCallbackPayloadOApi_EvaluatorVersionID_DEFAULT int64
+
+func (p *EvaluatorCallbackPayloadOApi) GetEvaluatorVersionID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorVersionID() {
+		return EvaluatorCallbackPayloadOApi_EvaluatorVersionID_DEFAULT
+	}
+	return *p.EvaluatorVersionID
+}
+
+var EvaluatorCallbackPayloadOApi_Status_DEFAULT string
+
+func (p *EvaluatorCallbackPayloadOApi) GetStatus() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatus() {
+		return EvaluatorCallbackPayloadOApi_Status_DEFAULT
+	}
+	return *p.Status
+}
+
+var EvaluatorCallbackPayloadOApi_Output_DEFAULT *evaluator.EvaluatorOutputData
+
+func (p *EvaluatorCallbackPayloadOApi) GetOutput() (v *evaluator.EvaluatorOutputData) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOutput() {
+		return EvaluatorCallbackPayloadOApi_Output_DEFAULT
+	}
+	return p.Output
+}
+
+var EvaluatorCallbackPayloadOApi_TimeConsumingMs_DEFAULT int64
+
+func (p *EvaluatorCallbackPayloadOApi) GetTimeConsumingMs() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTimeConsumingMs() {
+		return EvaluatorCallbackPayloadOApi_TimeConsumingMs_DEFAULT
+	}
+	return *p.TimeConsumingMs
+}
+func (p *EvaluatorCallbackPayloadOApi) SetCid(val *string) {
+	p.Cid = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetInvokeID(val *int64) {
+	p.InvokeID = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetEvaluatorVersionID(val *int64) {
+	p.EvaluatorVersionID = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetStatus(val *string) {
+	p.Status = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetOutput(val *evaluator.EvaluatorOutputData) {
+	p.Output = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetTimeConsumingMs(val *int64) {
+	p.TimeConsumingMs = val
+}
+
+var fieldIDToName_EvaluatorCallbackPayloadOApi = map[int16]string{
+	1: "cid",
+	2: "invoke_id",
+	3: "workspace_id",
+	4: "evaluator_version_id",
+	5: "status",
+	6: "output",
+	7: "time_consuming_ms",
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetCid() bool {
+	return p.Cid != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetInvokeID() bool {
+	return p.InvokeID != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetEvaluatorVersionID() bool {
+	return p.EvaluatorVersionID != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetOutput() bool {
+	return p.Output != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetTimeConsumingMs() bool {
+	return p.TimeConsumingMs != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorCallbackPayloadOApi[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorCallbackPayloadOApi) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Cid = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InvokeID = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EvaluatorVersionID = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Status = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField6(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorOutputData()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Output = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TimeConsumingMs = _field
+	return nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvaluatorCallbackPayloadOApi"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorCallbackPayloadOApi) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCid() {
+		if err = oprot.WriteFieldBegin("cid", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Cid); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeID() {
+		if err = oprot.WriteFieldBegin("invoke_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InvokeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorVersionID() {
+		if err = oprot.WriteFieldBegin("evaluator_version_id", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EvaluatorVersionID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Status); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOutput() {
+		if err = oprot.WriteFieldBegin("output", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Output.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeConsumingMs() {
+		if err = oprot.WriteFieldBegin("time_consuming_ms", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TimeConsumingMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *EvaluatorCallbackPayloadOApi) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorCallbackPayloadOApi(%+v)", *p)
+
+}
+
+func (p *EvaluatorCallbackPayloadOApi) DeepEqual(ano *EvaluatorCallbackPayloadOApi) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Cid) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.InvokeID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EvaluatorVersionID) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Output) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.TimeConsumingMs) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorCallbackPayloadOApi) Field1DeepEqual(src *string) bool {
+
+	if p.Cid == src {
+		return true
+	} else if p.Cid == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Cid, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field2DeepEqual(src *int64) bool {
+
+	if p.InvokeID == src {
+		return true
+	} else if p.InvokeID == nil || src == nil {
+		return false
+	}
+	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field3DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field4DeepEqual(src *int64) bool {
+
+	if p.EvaluatorVersionID == src {
+		return true
+	} else if p.EvaluatorVersionID == nil || src == nil {
+		return false
+	}
+	if *p.EvaluatorVersionID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field5DeepEqual(src *string) bool {
+
+	if p.Status == src {
+		return true
+	} else if p.Status == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Status, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field6DeepEqual(src *evaluator.EvaluatorOutputData) bool {
+
+	if !p.Output.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field7DeepEqual(src *int64) bool {
+
+	if p.TimeConsumingMs == src {
+		return true
+	} else if p.TimeConsumingMs == nil || src == nil {
+		return false
+	}
+	if *p.TimeConsumingMs != *src {
+		return false
+	}
+	return true
+}
+
 // 3.10.1 执行预置评估器（按标识）
 type RunBuiltinEvaluatorOApiRequest struct {
 	WorkspaceID *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `

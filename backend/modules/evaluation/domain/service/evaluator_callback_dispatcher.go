@@ -12,8 +12,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/infra/backoff"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -23,9 +25,9 @@ import (
 // IEvaluatorCallbackDispatcher 评估器异步执行完成回调分发器
 type IEvaluatorCallbackDispatcher interface {
 	// Dispatch posts the signed payload to callbackURL. A callbackURL of "" is a no-op.
-	// If payload.DeliveryID is empty, it is generated and written back into payload.
+	// If payload.Cid is empty, it is generated and written back into payload.
 	// Delivery failures are logged and never returned — they must not block the caller's report flow.
-	Dispatch(ctx context.Context, spaceID int64, callbackURL string, payload *entity.EvaluatorCallbackPayload) error
+	Dispatch(ctx context.Context, spaceID int64, callbackURL string, payload *openapi.EvaluatorCallbackPayloadOApi) error
 }
 
 // EvaluatorCallbackDispatcher 同步 POST + backoff 重试投递；失败仅记日志，不进 MQ
@@ -41,17 +43,17 @@ func NewEvaluatorCallbackDispatcher(secretProvider IWebhookSecretProvider) *Eval
 	}
 }
 
-func (d *EvaluatorCallbackDispatcher) Dispatch(ctx context.Context, spaceID int64, callbackURL string, payload *entity.EvaluatorCallbackPayload) error {
+func (d *EvaluatorCallbackDispatcher) Dispatch(ctx context.Context, spaceID int64, callbackURL string, payload *openapi.EvaluatorCallbackPayloadOApi) error {
 	if callbackURL == "" {
 		return nil
 	}
-	if payload.DeliveryID == "" {
-		payload.DeliveryID = GenerateNonce()
+	if payload.GetCid() == "" {
+		payload.Cid = gptr.Of(GenerateNonce())
 	}
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		logs.CtxError(ctx, "[EvaluatorCallbackDispatcher] marshal payload fail, invoke_id: %v, err: %v", payload.InvokeID, err)
+		logs.CtxError(ctx, "[EvaluatorCallbackDispatcher] marshal payload fail, invoke_id: %v, err: %v", payload.GetInvokeID(), err)
 		return nil // 不阻塞主流程
 	}
 
@@ -67,7 +69,9 @@ func (d *EvaluatorCallbackDispatcher) Dispatch(ctx context.Context, spaceID int6
 		signature := ComputeHMACSHA256(secret, timestamp+"\n"+nonce+"\n")
 		return d.doPost(ctx, callbackURL, body, timestamp, nonce, signature)
 	}); rerr != nil {
-		logs.CtxError(ctx, "[EvaluatorCallbackDispatcher] post fail after retry, invoke_id: %v, url: %v, err: %v", payload.InvokeID, callbackURL, rerr)
+		logs.CtxError(ctx, "[EvaluatorCallbackDispatcher] post fail after retry, invoke_id: %v, url: %v, err: %v", payload.GetInvokeID(), callbackURL, rerr)
+	} else {
+		logs.CtxInfo(ctx, "[EvaluatorCallbackDispatcher] post success, invoke_id: %v, url: %v, cid: %v", payload.GetInvokeID(), callbackURL, payload.GetCid())
 	}
 	return nil
 }

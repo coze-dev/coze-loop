@@ -1987,6 +1987,7 @@ func (e *EvalOpenAPIApplication) AsyncRunEvaluatorOApi(ctx context.Context, req 
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
+	logs.CtxInfo(ctx, "AsyncRunEvaluatorOApi receive req: %v", json.Jsonify(req))
 	startTime := time.Now()
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluatorVersionID(), kitexutil.GetTOMethod(ctx), startTime.UnixMilli(), err)
@@ -2621,15 +2622,15 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	if actx.CallbackURL != "" {
-		payload := &entity.EvaluatorCallbackPayload{
-			InvokeID:           req.GetInvokeID(),
-			WorkspaceID:        req.GetWorkspaceID(),
-			EvaluatorVersionID: actx.EvaluatorVersionID,
-			Status:             evaluatorCallbackStatusString(runStatus),
-			TimeConsumingMS:    time.Now().UnixMilli() - actx.AsyncUnixMS,
+		payload := &openapi.EvaluatorCallbackPayloadOApi{
+			InvokeID:           gptr.Of(req.GetInvokeID()),
+			WorkspaceID:        gptr.Of(req.GetWorkspaceID()),
+			EvaluatorVersionID: gptr.Of(actx.EvaluatorVersionID),
+			Status:             gptr.Of(evaluatorCallbackStatusString(runStatus)),
+			TimeConsumingMs:    gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS),
 		}
 		if outputData != nil {
-			payload.Output = outputData
+			payload.Output = evaluator_convertor.OpenAPIEvaluatorOutputDataDO2DTO(outputData)
 		}
 		if derr := e.callbackDispatcher.Dispatch(ctx, req.GetWorkspaceID(), actx.CallbackURL, payload); derr != nil {
 			logs.CtxError(ctx, "[ReportEvaluatorInvokeResult] callback dispatch fail, invoke_id: %v, url: %v, err: %v",

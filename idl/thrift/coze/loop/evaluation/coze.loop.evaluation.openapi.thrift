@@ -912,6 +912,17 @@ struct AsyncRunEvaluatorOpenAPIData {
     2: optional evaluator.EvaluatorRecord record (api.body = "record") // status = AsyncInvoking
 }
 
+// 异步评估器执行完成后，服务端主动 POST 给 callback_url 的回调 body
+struct EvaluatorCallbackPayloadOApi {
+    1: optional string cid (go.tag = 'json:"cid"')                                          // 本次回调投递的唯一 ID（服务端生成，用于重试去重）
+    2: optional i64 invoke_id (go.tag = 'json:"invoke_id"')                                 // = async_run 返回的 invoke_id
+    3: optional i64 workspace_id (go.tag = 'json:"workspace_id"')
+    4: optional i64 evaluator_version_id (go.tag = 'json:"evaluator_version_id"')
+    5: optional string status (go.tag = 'json:"status"')                                    // success | fail
+    6: optional evaluator.EvaluatorOutputData output (go.tag = 'json:"output,omitempty"')   // 仅 success 时携带
+    7: optional i64 time_consuming_ms (go.tag = 'json:"time_consuming_ms"')
+}
+
 // 3.10.1 执行预置评估器（按标识）
 struct RunBuiltinEvaluatorOApiRequest {
     1: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')

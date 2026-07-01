@@ -5755,11 +5755,11 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				}, nil)
 				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
 				dispatcher.EXPECT().Dispatch(gomock.Any(), workspaceID, "https://cb.example.com/hook", gomock.Any()).
-					DoAndReturn(func(_ context.Context, _ int64, _ string, p *entity.EvaluatorCallbackPayload) error {
-						assert.Equal(t, invokeID, p.InvokeID)
-						assert.Equal(t, workspaceID, p.WorkspaceID)
-						assert.Equal(t, int64(9), p.EvaluatorVersionID)
-						assert.Equal(t, "success", p.Status)
+					DoAndReturn(func(_ context.Context, _ int64, _ string, p *openapi.EvaluatorCallbackPayloadOApi) error {
+						assert.Equal(t, invokeID, p.GetInvokeID())
+						assert.Equal(t, workspaceID, p.GetWorkspaceID())
+						assert.Equal(t, int64(9), p.GetEvaluatorVersionID())
+						assert.Equal(t, "success", p.GetStatus())
 						return nil
 					})
 			},
@@ -5784,8 +5784,8 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				}, nil)
 				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
 				dispatcher.EXPECT().Dispatch(gomock.Any(), workspaceID, "https://cb.example.com/hook", gomock.Any()).
-					DoAndReturn(func(_ context.Context, _ int64, _ string, p *entity.EvaluatorCallbackPayload) error {
-						assert.Equal(t, "fail", p.Status)
+					DoAndReturn(func(_ context.Context, _ int64, _ string, p *openapi.EvaluatorCallbackPayloadOApi) error {
+						assert.Equal(t, "fail", p.GetStatus())
 						return nil
 					})
 			},

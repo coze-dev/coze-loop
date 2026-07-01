@@ -1316,6 +1316,14 @@ func (p *AsyncRunEvaluatorOpenAPIData) IsValid() error {
 	}
 	return nil
 }
+func (p *EvaluatorCallbackPayloadOApi) IsValid() error {
+	if p.Output != nil {
+		if err := p.Output.IsValid(); err != nil {
+			return fmt.Errorf("field Output not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *RunBuiltinEvaluatorOApiRequest) IsValid() error {
 	if p.InputData != nil {
 		if err := p.InputData.IsValid(); err != nil {
