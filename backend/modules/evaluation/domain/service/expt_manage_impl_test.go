@@ -810,6 +810,132 @@ func TestExptMangerImpl_CreateExpt_WithExistingTarget(t *testing.T) {
 	assert.Equal(t, entity.EvalTargetTypeLoopTrace, expt.TargetType, "TargetType 应从 tuple.Target.EvalTargetVersion.EvalTargetType 设置")
 }
 
+// TestExptMangerImpl_CreateExpt_NotificationConfPassthrough 覆盖 CreateExpt 服务层
+// param(CreateExptParam.NotificationConf) → entity(Experiment.NotificationConf) 映射。
+// 回归：此前 entity.Experiment{} 构造体漏映射该字段，导致 do.NotificationConf 恒 nil，
+// DO2PO 因 != nil 判断跳过写列 → notification_conf 落库 NULL。
+// 手动配置与模板派生两条路径最终都收敛到 req.NotificationConf，故此断言同时守护两者。
+func TestExptMangerImpl_CreateExpt_NotificationConfPassthrough(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+	session := &entity.Session{UserID: "1"}
+	targetID := int64(100)
+	targetVersionID := int64(101)
+
+	notificationConf := &entity.NotificationConf{
+		Filter: &entity.NotificationFilterCondition{
+			FieldType: entity.FieldType_ExptStatus,
+			Operator:  entity.NotificationFilterOperatorType_In,
+			Values:    []entity.NotificationStatusValue{entity.NotificationStatusValue_Succeeded},
+		},
+		Webhook: &entity.WebhookNotificationConf{Enable: true, URLs: []string{"https://example.com/hook"}},
+		Feishu:  &entity.FeishuNotificationConf{Enable: true},
+	}
+
+	param := &entity.CreateExptParam{
+		WorkspaceID:         1,
+		Name:                "expt_with_notification_conf",
+		EvalSetID:           2,
+		EvalSetVersionID:    3,
+		TargetID:            &targetID,
+		TargetVersionID:     targetVersionID,
+		EvaluatorVersionIds: []int64{10},
+		NotificationConf:    notificationConf,
+		ExptConf: &entity.EvaluationConfiguration{
+			ConnectorConf: entity.Connector{
+				TargetConf: &entity.TargetConf{
+					TargetVersionID: targetVersionID,
+					IngressConf: &entity.TargetIngressConf{
+						EvalSetAdapter: &entity.FieldAdapter{
+							FieldConfs: []*entity.FieldConf{{FromField: "field1"}},
+						},
+					},
+				},
+				EvaluatorsConf: &entity.EvaluatorsConf{
+					EvaluatorConf: []*entity.EvaluatorConf{
+						{
+							EvaluatorVersionID: 10,
+							IngressConf: &entity.EvaluatorIngressConf{
+								EvalSetAdapter: &entity.FieldAdapter{
+									FieldConfs: []*entity.FieldConf{{FromField: "field1"}},
+								},
+								TargetAdapter: &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+		EXPECT().
+		GetEvalTargetVersion(ctx, int64(1), targetVersionID, true).
+		Return(&entity.EvalTarget{
+			ID:             targetID,
+			SpaceID:        1,
+			EvalTargetType: 0,
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				ID:             targetVersionID,
+				EvalTargetType: entity.EvalTargetTypeLoopTrace,
+				OutputSchema:   []*entity.ArgsSchema{},
+			},
+		}, nil)
+	version := &entity.EvaluationSetVersion{
+		ID:        3,
+		ItemCount: 1,
+		EvaluationSetSchema: &entity.EvaluationSetSchema{
+			FieldSchemas: []*entity.FieldSchema{{Name: "field1"}},
+		},
+	}
+	mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
+		EXPECT().
+		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(version, &entity.EvaluationSet{ID: 2, SpaceID: 1}, nil)
+	mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
+		EXPECT().
+		BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.Evaluator{{
+			ID:            10,
+			SpaceID:       1,
+			EvaluatorType: entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+				ID:          10,
+				SpaceID:     1,
+				EvaluatorID: 10,
+			},
+		}}, nil)
+	mgr.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenMultiIDs(ctx, 2).Return([]int64{1, 2}, nil)
+	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().CreateStats(ctx, gomock.Any(), session).Return(nil)
+	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().InsertExptTurnResultFilterKeyMappings(ctx, gomock.Any()).Return(nil)
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Create(ctx, gomock.Any(), gomock.Any()).Return(nil)
+	mgr.lwt.(*lwtMocks.MockILatestWriteTracker).EXPECT().SetWriteFlag(ctx, gomock.Any(), gomock.Any()).Return()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, gomock.Any(), gomock.Any()).Return(nil, false, nil)
+	mgr.audit.(*auditMocks.MockIAuditService).
+		EXPECT().
+		Audit(gomock.Any(), gomock.Any()).
+		Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+	mgr.benefitService.(*benefitMocks.MockIBenefitService).
+		EXPECT().
+		CheckAndDeductEvalBenefit(ctx, gomock.Any()).
+		Return(&benefit.CheckAndDeductEvalBenefitResult{
+			IsFreeEvaluate: gptr.Of(true),
+		}, nil)
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+		EXPECT().
+		Update(ctx, gomock.Any()).
+		Return(nil)
+
+	expt, err := mgr.CreateExpt(ctx, param, session)
+	assert.NoError(t, err)
+	assert.NotNil(t, expt)
+	// 核心断言：param.NotificationConf 必须透传到构造的 Experiment DO（非 nil 才能被 DO2PO 落库）。
+	assert.NotNil(t, expt.NotificationConf, "CreateExpt 构造的 Experiment.NotificationConf 不应为 nil（回归：漏字段映射）")
+	assert.Equal(t, notificationConf, expt.NotificationConf, "Experiment.NotificationConf 应等于入参 CreateExptParam.NotificationConf")
+}
+
 func TestExptMangerImpl_Update(t *testing.T) {
 	tests := []struct {
 		name    string

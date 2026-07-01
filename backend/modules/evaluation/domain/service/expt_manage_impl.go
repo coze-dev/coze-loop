@@ -825,6 +825,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		SourceID:            req.SourceID,
 		TrialRunItemCount:   req.TrialRunItemCount,
 		TriggerType:         triggerType,
+		NotificationConf:    req.NotificationConf, // 透传通知配置(手动配置 + 模板派生两条路径都覆盖)
 
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
