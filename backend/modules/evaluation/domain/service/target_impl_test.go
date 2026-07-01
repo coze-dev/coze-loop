@@ -1304,9 +1304,9 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 	ctx := context.Background()
 	spaceID := int64(1)
 
-	const createdAtMS = int64(2_000_000)  // record 保存时间(偏晚)
-	const asyncUnixMS = int64(1_000_000)  // 请求发起时间(更早)
-	const bufferMS = int64(60 * 1000)     // ExtractTrajectory 额外预留的 1 分钟 buffer
+	const createdAtMS = int64(2_000_000) // record 保存时间(偏晚)
+	const asyncUnixMS = int64(1_000_000) // 请求发起时间(更早)
+	const bufferMS = int64(60 * 1000)    // ExtractTrajectory 额外预留的 1 分钟 buffer
 
 	tests := []struct {
 		name          string
