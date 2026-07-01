@@ -4337,8 +4337,8 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak(t *testing
 					SpaceID: 2,
 					Evaluators: []*entity.Evaluator{
 						{
-							ID:            1,
-							EvaluatorType: entity.EvaluatorTypePrompt,
+							ID:                     1,
+							EvaluatorType:          entity.EvaluatorTypePrompt,
 							PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
 						},
 					},
