@@ -216,6 +216,8 @@ type Model struct {
 	OriginalModelURL *string `thrift:"original_model_url,16,optional" frugal:"16,optional,string" form:"original_model_url" json:"original_model_url,omitempty" query:"original_model_url"`
 	// 是否为预置模型
 	PresetModel *bool   `thrift:"preset_model,17,optional" frugal:"17,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
+	// 空间内唯一 slug 锚点; 一经设置不可修改 (INFERRED: Go-level accessor only; full wire codegen 待 rerun)
+	ModelKey    *string `thrift:"model_key,18,optional" frugal:"18,optional,string" form:"model_key" json:"model_key,omitempty" query:"model_key"`
 	CreatedBy   *string `thrift:"created_by,100,optional" frugal:"100,optional,string" form:"created_by" json:"created_by,omitempty" query:"created_by"`
 	CreatedAt   *int64  `thrift:"created_at,101,optional" frugal:"101,optional,i64" form:"created_at" json:"created_at,omitempty" query:"created_at"`
 	UpdatedBy   *string `thrift:"updated_by,102,optional" frugal:"102,optional,string" form:"updated_by" json:"updated_by,omitempty" query:"updated_by"`
@@ -433,6 +435,19 @@ func (p *Model) GetPresetModel() (v bool) {
 	return *p.PresetModel
 }
 
+var Model_ModelKey_DEFAULT string
+
+// GetModelKey returns the language-level accessor for the new field 18 (INFERRED: full wire codegen 待 rerun).
+func (p *Model) GetModelKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKey() {
+		return Model_ModelKey_DEFAULT
+	}
+	return *p.ModelKey
+}
+
 var Model_CreatedBy_DEFAULT string
 
 func (p *Model) GetCreatedBy() (v string) {
@@ -530,6 +545,9 @@ func (p *Model) SetOriginalModelURL(val *string) {
 }
 func (p *Model) SetPresetModel(val *bool) {
 	p.PresetModel = val
+}
+func (p *Model) SetModelKey(val *string) {
+	p.ModelKey = val
 }
 func (p *Model) SetCreatedBy(val *string) {
 	p.CreatedBy = val
@@ -634,6 +652,10 @@ func (p *Model) IsSetOriginalModelURL() bool {
 
 func (p *Model) IsSetPresetModel() bool {
 	return p.PresetModel != nil
+}
+
+func (p *Model) IsSetModelKey() bool {
+	return p.ModelKey != nil
 }
 
 func (p *Model) IsSetCreatedBy() bool {

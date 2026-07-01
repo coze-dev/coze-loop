@@ -16,6 +16,7 @@ type Model struct {
 	WorkspaceID int64  `json:"workspace_id" yaml:"workspace_id" mapstructure:"workspace_id"` // 空间id，to be used in future
 	Name        string `json:"name" yaml:"name" mapstructure:"name"`                         // 模型展示名称
 	Desc        string `json:"desc" yaml:"desc" mapstructure:"desc"`                         // 模型描述
+	ModelKey    string `json:"model_key" yaml:"model_key" mapstructure:"model_key"`          // 空间内唯一 slug 锚点; 一经设置不可修改; 允许为空(存量模型)
 
 	Ability *Ability `json:"ability" yaml:"ability" mapstructure:"ability"` // 模型能力
 
@@ -464,6 +465,7 @@ type ListModelsFilter struct {
 	Families      []Family      `json:"families,omitempty"`
 	ModelStatuses []ModelStatus `json:"model_statuses,omitempty"`
 	Abilities     []AbilityEnum `json:"abilities,omitempty"`
+	ModelKeyList  []string      `json:"model_key_list,omitempty"` // 按 model_key 精确匹配集合
 }
 
 type AbilityEnum string

@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	entity "github.com/coze-dev/coze-loop/backend/modules/llm/domain/entity"
+	service "github.com/coze-dev/coze-loop/backend/modules/llm/domain/service"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -54,6 +55,36 @@ func (m *MockIManage) GetModelByID(ctx context.Context, id int64) (*entity.Model
 func (mr *MockIManageMockRecorder) GetModelByID(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelByID", reflect.TypeOf((*MockIManage)(nil).GetModelByID), ctx, id)
+}
+
+// GetModelByKey mocks base method.
+func (m *MockIManage) GetModelByKey(ctx context.Context, workspaceID int64, key string) (*entity.Model, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetModelByKey", ctx, workspaceID, key)
+	ret0, _ := ret[0].(*entity.Model)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetModelByKey indicates an expected call of GetModelByKey.
+func (mr *MockIManageMockRecorder) GetModelByKey(ctx, workspaceID, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelByKey", reflect.TypeOf((*MockIManage)(nil).GetModelByKey), ctx, workspaceID, key)
+}
+
+// ResolveByKeyOrID mocks base method.
+func (m *MockIManage) ResolveByKeyOrID(ctx context.Context, ref service.KeyOrIDRef) (*entity.Model, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveByKeyOrID", ctx, ref)
+	ret0, _ := ret[0].(*entity.Model)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResolveByKeyOrID indicates an expected call of ResolveByKeyOrID.
+func (mr *MockIManageMockRecorder) ResolveByKeyOrID(ctx, ref any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveByKeyOrID", reflect.TypeOf((*MockIManage)(nil).ResolveByKeyOrID), ctx, ref)
 }
 
 // ListModels mocks base method.

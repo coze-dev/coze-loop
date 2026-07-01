@@ -13,10 +13,12 @@ import (
 )
 
 type Filter struct {
-	NameLike  *string              `thrift:"name_like,1,optional" frugal:"1,optional,string" form:"name_like" json:"name_like,omitempty" query:"name_like"`
-	Families  []manage.Family      `thrift:"families,2,optional" frugal:"2,optional,list<string>" form:"families" json:"families,omitempty" query:"families"`
-	Statuses  []manage.ModelStatus `thrift:"statuses,3,optional" frugal:"3,optional,list<string>" form:"statuses" json:"statuses,omitempty" query:"statuses"`
-	Abilities []manage.AbilityEnum `thrift:"abilities,4,optional" frugal:"4,optional,list<string>" form:"abilities" json:"abilities,omitempty" query:"abilities"`
+	NameLike     *string              `thrift:"name_like,1,optional" frugal:"1,optional,string" form:"name_like" json:"name_like,omitempty" query:"name_like"`
+	Families     []manage.Family      `thrift:"families,2,optional" frugal:"2,optional,list<string>" form:"families" json:"families,omitempty" query:"families"`
+	Statuses     []manage.ModelStatus `thrift:"statuses,3,optional" frugal:"3,optional,list<string>" form:"statuses" json:"statuses,omitempty" query:"statuses"`
+	Abilities    []manage.AbilityEnum `thrift:"abilities,4,optional" frugal:"4,optional,list<string>" form:"abilities" json:"abilities,omitempty" query:"abilities"`
+	// v2 列表按 model_key 精确匹配集合 (INFERRED: Go-level accessor only; full wire codegen 待 rerun)
+	ModelKeyList []string             `thrift:"model_key_list,5,optional" frugal:"5,optional,list<string>" form:"model_key_list" json:"model_key_list,omitempty" query:"model_key_list"`
 }
 
 func NewFilter() *Filter {
@@ -73,6 +75,19 @@ func (p *Filter) GetAbilities() (v []manage.AbilityEnum) {
 	}
 	return p.Abilities
 }
+
+var Filter_ModelKeyList_DEFAULT []string
+
+// GetModelKeyList returns the language-level accessor for the new field 5 (INFERRED: full wire codegen 待 rerun).
+func (p *Filter) GetModelKeyList() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKeyList() {
+		return Filter_ModelKeyList_DEFAULT
+	}
+	return p.ModelKeyList
+}
 func (p *Filter) SetNameLike(val *string) {
 	p.NameLike = val
 }
@@ -84,6 +99,9 @@ func (p *Filter) SetStatuses(val []manage.ModelStatus) {
 }
 func (p *Filter) SetAbilities(val []manage.AbilityEnum) {
 	p.Abilities = val
+}
+func (p *Filter) SetModelKeyList(val []string) {
+	p.ModelKeyList = val
 }
 
 var fieldIDToName_Filter = map[int16]string{
@@ -107,6 +125,10 @@ func (p *Filter) IsSetStatuses() bool {
 
 func (p *Filter) IsSetAbilities() bool {
 	return p.Abilities != nil
+}
+
+func (p *Filter) IsSetModelKeyList() bool {
+	return p.ModelKeyList != nil
 }
 
 func (p *Filter) Read(iprot thrift.TProtocol) (err error) {
@@ -1776,6 +1798,8 @@ type GetModelRequest struct {
 	Protocol       *manage.Protocol `thrift:"protocol,4,optional" frugal:"4,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
 	// 是否为预置模型
 	PresetModel *bool      `thrift:"preset_model,5,optional" frugal:"5,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
+	// 与 model_id 二选一, 后端 ResolveByKeyOrID 归一; REST path 保持 :model_id (INFERRED: Go-level accessor only)
+	ModelKey    *string    `thrift:"model_key,6,optional" frugal:"6,optional,string" form:"model_key" json:"model_key,omitempty" query:"model_key"`
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -1846,6 +1870,19 @@ func (p *GetModelRequest) GetPresetModel() (v bool) {
 	return *p.PresetModel
 }
 
+var GetModelRequest_ModelKey_DEFAULT string
+
+// GetModelKey returns the language-level accessor for the new field 6 (INFERRED: full wire codegen 待 rerun).
+func (p *GetModelRequest) GetModelKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKey() {
+		return GetModelRequest_ModelKey_DEFAULT
+	}
+	return *p.ModelKey
+}
+
 var GetModelRequest_Base_DEFAULT *base.Base
 
 func (p *GetModelRequest) GetBase() (v *base.Base) {
@@ -1871,6 +1908,9 @@ func (p *GetModelRequest) SetProtocol(val *manage.Protocol) {
 }
 func (p *GetModelRequest) SetPresetModel(val *bool) {
 	p.PresetModel = val
+}
+func (p *GetModelRequest) SetModelKey(val *string) {
+	p.ModelKey = val
 }
 func (p *GetModelRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -1903,6 +1943,10 @@ func (p *GetModelRequest) IsSetProtocol() bool {
 
 func (p *GetModelRequest) IsSetPresetModel() bool {
 	return p.PresetModel != nil
+}
+
+func (p *GetModelRequest) IsSetModelKey() bool {
+	return p.ModelKey != nil
 }
 
 func (p *GetModelRequest) IsSetBase() bool {

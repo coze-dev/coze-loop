@@ -63,7 +63,12 @@ func (m *manageApp) GetModel(ctx context.Context, req *manage.GetModelRequest) (
 	if err := m.auth.CheckSpacePermission(ctx, req.GetWorkspaceID(), "getModel"); err != nil {
 		return r, err
 	}
-	model, err := m.manageSrv.GetModelByID(ctx, req.GetModelID())
+	// 支持 modelID / modelKey; 同传以 modelID 为准
+	model, err := m.manageSrv.ResolveByKeyOrID(ctx, service.KeyOrIDRef{
+		WorkspaceID: req.GetWorkspaceID(),
+		ID:          req.GetModelID(),
+		Key:         req.GetModelKey(),
+	})
 	if err != nil {
 		return r, err
 	}

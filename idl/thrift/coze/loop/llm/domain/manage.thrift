@@ -20,6 +20,7 @@ struct Model {
     15: optional ModelStatus status // 模型状态
     16: optional string original_model_url // 模型跳转链接
     17: optional bool preset_model // 是否为预置模型
+    18: optional string model_key (go.tag='json:"model_key"') // 空间内唯一 slug 锚点, /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/ 长度<=128, 一经设置不可修改
 
     100: optional string created_by
     101: optional i64 created_at

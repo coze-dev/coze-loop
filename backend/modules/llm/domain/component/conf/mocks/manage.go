@@ -56,6 +56,21 @@ func (mr *MockIConfigManageMockRecorder) GetModel(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModel", reflect.TypeOf((*MockIConfigManage)(nil).GetModel), ctx, id)
 }
 
+// GetModelByKey mocks base method.
+func (m *MockIConfigManage) GetModelByKey(ctx context.Context, workspaceID int64, key string) (*entity.Model, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetModelByKey", ctx, workspaceID, key)
+	ret0, _ := ret[0].(*entity.Model)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetModelByKey indicates an expected call of GetModelByKey.
+func (mr *MockIConfigManageMockRecorder) GetModelByKey(ctx, workspaceID, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModelByKey", reflect.TypeOf((*MockIConfigManage)(nil).GetModelByKey), ctx, workspaceID, key)
+}
+
 // ListModels mocks base method.
 func (m *MockIConfigManage) ListModels(ctx context.Context, req entity.ListModelReq) ([]*entity.Model, int64, bool, int64, error) {
 	m.ctrl.T.Helper()

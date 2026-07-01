@@ -57,8 +57,12 @@ func (r *runtimeApp) Chat(ctx context.Context, req *runtime.ChatRequest) (resp *
 	if err = r.validateChatReq(ctx, req); err != nil {
 		return resp, errorx.NewByCode(llm_errorx.RequestNotValidCode, errorx.WithExtraMsg(err.Error()))
 	}
-	// 1. 模型信息获取
-	model, err := r.manageSrv.GetModelByID(ctx, req.GetModelConfig().GetModelID())
+	// 1. 模型信息获取 (支持 modelID / modelKey; 同传以 modelID 为准)
+	model, err := r.manageSrv.ResolveByKeyOrID(ctx, service.KeyOrIDRef{
+		WorkspaceID: req.GetBizParam().GetWorkspaceID(),
+		ID:          req.GetModelConfig().GetModelID(),
+		Key:         req.GetModelConfig().GetModelKey(),
+	})
 	if err != nil {
 		return resp, err
 	}
@@ -117,8 +121,12 @@ func (r *runtimeApp) ChatStream(ctx context.Context, req *runtime.ChatRequest, s
 	if err = r.validateChatReq(ctx, req); err != nil {
 		return errorx.NewByCode(llm_errorx.RequestNotValidCode, errorx.WithExtraMsg(err.Error()))
 	}
-	// 1. 模型信息获取
-	model, err := r.manageSrv.GetModelByID(ctx, req.GetModelConfig().GetModelID())
+	// 1. 模型信息获取 (支持 modelID / modelKey; 同传以 modelID 为准)
+	model, err := r.manageSrv.ResolveByKeyOrID(ctx, service.KeyOrIDRef{
+		WorkspaceID: req.GetBizParam().GetWorkspaceID(),
+		ID:          req.GetModelConfig().GetModelID(),
+		Key:         req.GetModelConfig().GetModelKey(),
+	})
 	if err != nil {
 		return err
 	}

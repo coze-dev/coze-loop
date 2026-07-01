@@ -85,6 +85,8 @@ type ModelConfig struct {
 	Protocol *manage.Protocol `thrift:"protocol,12,optional" frugal:"12,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
 	// 是否为预置模型
 	PresetModel *bool `thrift:"preset_model,13,optional" frugal:"13,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
+	// 与 model_id 二选一; 两者都传以 model_id 为准 (INFERRED: Go-level accessor only; 完整 wire codegen 需 rerun cloudwego thriftgo)
+	ModelKey *string `thrift:"model_key,14,optional" frugal:"14,optional,string" form:"model_key" json:"model_key,omitempty" query:"model_key"`
 	// 与ParamSchema对应
 	ParamConfigValues []*ParamConfigValue `thrift:"param_config_values,100,optional" frugal:"100,optional,list<ParamConfigValue>" form:"param_config_values" json:"param_config_values,omitempty" query:"param_config_values"`
 	Extra             *string             `thrift:"extra,101,optional" frugal:"101,optional,string" form:"extra" json:"extra,omitempty" query:"extra"`
@@ -248,6 +250,20 @@ func (p *ModelConfig) GetPresetModel() (v bool) {
 	return *p.PresetModel
 }
 
+var ModelConfig_ModelKey_DEFAULT string
+
+// GetModelKey returns the language-level accessor for the new field 14.
+// INFERRED: full wire (thrift Read/Write/BLength) 尚未 codegen; 目前该 field 只在 Go 侧可读写。
+func (p *ModelConfig) GetModelKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelKey() {
+		return ModelConfig_ModelKey_DEFAULT
+	}
+	return *p.ModelKey
+}
+
 var ModelConfig_ParamConfigValues_DEFAULT []*ParamConfigValue
 
 func (p *ModelConfig) GetParamConfigValues() (v []*ParamConfigValue) {
@@ -309,6 +325,9 @@ func (p *ModelConfig) SetProtocol(val *manage.Protocol) {
 }
 func (p *ModelConfig) SetPresetModel(val *bool) {
 	p.PresetModel = val
+}
+func (p *ModelConfig) SetModelKey(val *string) {
+	p.ModelKey = val
 }
 func (p *ModelConfig) SetParamConfigValues(val []*ParamConfigValue) {
 	p.ParamConfigValues = val
@@ -381,6 +400,10 @@ func (p *ModelConfig) IsSetProtocol() bool {
 
 func (p *ModelConfig) IsSetPresetModel() bool {
 	return p.PresetModel != nil
+}
+
+func (p *ModelConfig) IsSetModelKey() bool {
+	return p.ModelKey != nil
 }
 
 func (p *ModelConfig) IsSetParamConfigValues() bool {

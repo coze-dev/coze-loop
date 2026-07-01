@@ -63,6 +63,27 @@ func (m *ManageImpl) GetModel(ctx context.Context, id int64) (model *entity.Mode
 	return nil, gorm.ErrRecordNotFound
 }
 
+// GetModelByKey yaml 场景下 workspaceID 通常为 0 或与配置项一致，此处以 (workspaceID, key) 为主匹配；
+// 若配置中 md.WorkspaceID 为 0 视为跨空间通用，允许命中。
+func (m *ManageImpl) GetModelByKey(ctx context.Context, workspaceID int64, key string) (model *entity.Model, err error) {
+	if key == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+	models, err := m.readConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, md := range models {
+		if md.ModelKey != key {
+			continue
+		}
+		if md.WorkspaceID == 0 || md.WorkspaceID == workspaceID {
+			return md, nil
+		}
+	}
+	return nil, gorm.ErrRecordNotFound
+}
+
 func (m *ManageImpl) readConfig(ctx context.Context) ([]*entity.Model, error) {
 	var models []*entity.Model
 	if err := m.loader.UnmarshalKey(ctx, "models", &models); err != nil {
