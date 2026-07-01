@@ -9,6 +9,7 @@ struct Filter {
     2: optional list<manage.Family> families
     3: optional list<manage.ModelStatus> statuses
     4: optional list<manage.AbilityEnum> abilities
+    5: optional list<string> model_key_list (go.tag='json:"model_key_list"') // v2 精确匹配,非空 → WHERE model_key IN (?)
 }
 
 struct ListModelsRequest {
@@ -41,6 +42,7 @@ struct GetModelRequest {
     3: optional string identification
     4: optional manage.Protocol protocol
     5: optional bool preset_model // 是否为预置模型
+    6: optional string model_key (go.tag='json:"model_key"') // 与 model_id 并列;同时传以 model_id 为准(见 IManage.ResolveModel)
 
     255: optional base.Base Base
 }
