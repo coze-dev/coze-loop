@@ -725,7 +725,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 
 	recordTrajectory := func() error {
 		var sms *int64
-		if record.BaseInfo != nil {
+		// 优先用「请求发起时间」作为抽取 trajectory 的时间下界;它比 record.BaseInfo.CreatedAt(异步返回后才 stamp)
+		// 更早,避免漏掉请求发起到返回之间的 span。为 0(未透传)时回退到 CreatedAt,保持向前兼容。
+		if param.AsyncUnixMS > 0 {
+			sms = gptr.Of(param.AsyncUnixMS)
+		} else if record.BaseInfo != nil {
 			sms = record.BaseInfo.CreatedAt
 		}
 		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, sms)
