@@ -1257,6 +1257,46 @@ func TestEvalTargetServiceImpl_ExtractTrajectory_EmptyTraceID(t *testing.T) {
 	assert.Nil(t, res)
 }
 
+// TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer 验证抽取 trajectory 时下界额外向前预留 1 分钟 buffer;
+// startTimeMS 为 nil 时保持 nil 不做偏移。
+func TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	const spaceID = int64(1)
+	const bufferMS = int64(60 * 1000)
+
+	tests := []struct {
+		name    string
+		in      *int64
+		wantOut *int64
+	}{
+		{name: "有下界时减去 1 分钟 buffer", in: gptr.Of(int64(5_000_000)), wantOut: gptr.Of(int64(5_000_000) - bufferMS)},
+		{name: "下界为 nil 时保持 nil", in: nil, wantOut: nil},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			adapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+			adapter.EXPECT().
+				ListTrajectory(gomock.Any(), spaceID, []string{"trace-x"}, gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ int64, _ []string, got *int64) ([]*entity.Trajectory, error) {
+					if tt.wantOut == nil {
+						assert.Nil(t, got)
+					} else {
+						require.NotNil(t, got)
+						assert.Equal(t, *tt.wantOut, *got)
+					}
+					return nil, nil
+				})
+			svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter}
+			_, err := svc.ExtractTrajectory(ctx, spaceID, "trace-x", tt.in)
+			require.NoError(t, err)
+		})
+	}
+}
+
 // TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime 验证抽取 trajectory 的时间下界选取:
 // 优先使用 param.AsyncUnixMS(请求发起时间),仅当其为 0 时才回退到 record.BaseInfo.CreatedAt(record 保存时间)。
 func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testing.T) {
@@ -1266,14 +1306,15 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testin
 
 	const createdAtMS = int64(2_000_000)  // record 保存时间(偏晚)
 	const asyncUnixMS = int64(1_000_000)  // 请求发起时间(更早)
+	const bufferMS = int64(60 * 1000)     // ExtractTrajectory 额外预留的 1 分钟 buffer
 
 	tests := []struct {
 		name          string
 		asyncUnixMS   int64
 		wantStartTime int64
 	}{
-		{name: "AsyncUnixMS 优先作为下界", asyncUnixMS: asyncUnixMS, wantStartTime: asyncUnixMS},
-		{name: "AsyncUnixMS 为0时回退 CreatedAt", asyncUnixMS: 0, wantStartTime: createdAtMS},
+		{name: "AsyncUnixMS 优先作为下界", asyncUnixMS: asyncUnixMS, wantStartTime: asyncUnixMS - bufferMS},
+		{name: "AsyncUnixMS 为0时回退 CreatedAt", asyncUnixMS: 0, wantStartTime: createdAtMS - bufferMS},
 	}
 
 	for _, tt := range tests {
