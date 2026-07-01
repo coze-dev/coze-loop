@@ -109,6 +109,7 @@ var fieldIDToName_Filter = map[int16]string{
 	2: "families",
 	3: "statuses",
 	4: "abilities",
+	5: "model_key_list",
 }
 
 func (p *Filter) IsSetNameLike() bool {
@@ -176,6 +177,14 @@ func (p *Filter) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -290,6 +299,29 @@ func (p *Filter) ReadField4(iprot thrift.TProtocol) error {
 	p.Abilities = _field
 	return nil
 }
+func (p *Filter) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ModelKeyList = _field
+	return nil
+}
 
 func (p *Filter) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -311,6 +343,10 @@ func (p *Filter) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -427,6 +463,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *Filter) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelKeyList() {
+		if err = oprot.WriteFieldBegin("model_key_list", thrift.LIST, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.ModelKeyList)); err != nil {
+			return err
+		}
+		for _, v := range p.ModelKeyList {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *Filter) String() string {
 	if p == nil {
@@ -452,6 +514,9 @@ func (p *Filter) DeepEqual(ano *Filter) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.Abilities) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ModelKeyList) {
 		return false
 	}
 	return true
@@ -501,6 +566,19 @@ func (p *Filter) Field4DeepEqual(src []manage.AbilityEnum) bool {
 		return false
 	}
 	for i, v := range p.Abilities {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *Filter) Field5DeepEqual(src []string) bool {
+
+	if len(p.ModelKeyList) != len(src) {
+		return false
+	}
+	for i, v := range p.ModelKeyList {
 		_src := src[i]
 		if strings.Compare(v, _src) != 0 {
 			return false
@@ -1922,6 +2000,7 @@ var fieldIDToName_GetModelRequest = map[int16]string{
 	3:   "identification",
 	4:   "protocol",
 	5:   "preset_model",
+	6:   "model_key",
 	255: "Base",
 }
 
@@ -2006,6 +2085,14 @@ func (p *GetModelRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2103,6 +2190,17 @@ func (p *GetModelRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.PresetModel = _field
 	return nil
 }
+func (p *GetModelRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelKey = _field
+	return nil
+}
 func (p *GetModelRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -2136,6 +2234,10 @@ func (p *GetModelRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -2249,6 +2351,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *GetModelRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelKey() {
+		if err = oprot.WriteFieldBegin("model_key", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *GetModelRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {

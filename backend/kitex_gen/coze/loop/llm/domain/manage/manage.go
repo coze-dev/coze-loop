@@ -580,6 +580,7 @@ var fieldIDToName_Model = map[int16]string{
 	15:  "status",
 	16:  "original_model_url",
 	17:  "preset_model",
+	18:  "model_key",
 	100: "created_by",
 	101: "created_at",
 	102: "updated_by",
@@ -823,6 +824,14 @@ func (p *Model) Read(iprot thrift.TProtocol) (err error) {
 		case 17:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField17(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 18:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField18(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1091,6 +1100,17 @@ func (p *Model) ReadField17(iprot thrift.TProtocol) error {
 	p.PresetModel = _field
 	return nil
 }
+func (p *Model) ReadField18(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelKey = _field
+	return nil
+}
 func (p *Model) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -1208,6 +1228,10 @@ func (p *Model) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField17(oprot); err != nil {
 			fieldId = 17
+			goto WriteFieldError
+		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -1569,6 +1593,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
 }
+func (p *Model) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelKey() {
+		if err = oprot.WriteFieldBegin("model_key", thrift.STRING, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
 func (p *Model) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCreatedBy() {
 		if err = oprot.WriteFieldBegin("created_by", thrift.STRING, 100); err != nil {
@@ -1705,6 +1747,9 @@ func (p *Model) DeepEqual(ano *Model) bool {
 		return false
 	}
 	if !p.Field17DeepEqual(ano.PresetModel) {
+		return false
+	}
+	if !p.Field18DeepEqual(ano.ModelKey) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.CreatedBy) {
@@ -1899,6 +1944,18 @@ func (p *Model) Field17DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.PresetModel != *src {
+		return false
+	}
+	return true
+}
+func (p *Model) Field18DeepEqual(src *string) bool {
+
+	if p.ModelKey == src {
+		return true
+	} else if p.ModelKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModelKey, *src) != 0 {
 		return false
 	}
 	return true
