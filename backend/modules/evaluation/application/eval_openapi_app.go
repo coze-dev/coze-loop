@@ -1065,6 +1065,13 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		}
 	}
 
+	// Long-connection eval targets (custom_agent / a2a_agent / custom_rpc_server) require
+	// cluster/env to resolve a live client at run time. Validate up front so a missing value
+	// fails with a clear param error here instead of an opaque RPC error during experiment run.
+	if err := experiment_convertor.ValidateOpenAPIEvalTargetClusterEnv(req.EvalTargetParam); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+
 	createEvalTargetParam, err := experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam)
 	if err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
