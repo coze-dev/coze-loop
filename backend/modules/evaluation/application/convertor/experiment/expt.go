@@ -636,8 +636,10 @@ func NotificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) (*entity.Exp
 	}
 	if conf.Webhook != nil {
 		result.Webhook = &entity.WebhookNotificationConf{
-			Enable: conf.Webhook.Enable,
-			Urls:   conf.Webhook.Urls,
+			Enable:      conf.Webhook.Enable,
+			Urls:        conf.Webhook.Urls,
+			Environment: webhookEnvironmentDTO2Domain(conf.Webhook.Environment),
+			Lane:        conf.Webhook.Lane,
 		}
 	}
 	if conf.FeishuNotification != nil {
@@ -647,6 +649,25 @@ func NotificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) (*entity.Exp
 		}
 	}
 	return result, nil
+}
+
+// webhookEnvironmentDTO2Domain 将 IDL 生成的 WebhookEnvironment 指针转换为领域枚举指针。
+// nil 透传 nil（=> 领域侧按 Prod 处理，向后兼容）。
+func webhookEnvironmentDTO2Domain(env *domain_expt.WebhookEnvironment) *entity.WebhookEnvironment {
+	if env == nil {
+		return nil
+	}
+	de := entity.WebhookEnvironment(*env)
+	return &de
+}
+
+// webhookEnvironmentDomain2DTO 将领域枚举指针转换回 IDL 生成的 WebhookEnvironment 指针。
+func webhookEnvironmentDomain2DTO(env *entity.WebhookEnvironment) *domain_expt.WebhookEnvironment {
+	if env == nil {
+		return nil
+	}
+	de := domain_expt.WebhookEnvironment(*env)
+	return &de
 }
 
 func validateNotificationOperator(op entity.NotificationOperatorType) error {
@@ -715,8 +736,10 @@ func notificationConfDO2DTO(conf *entity.ExptNotificationConf) *domain_expt.Expt
 	}
 	if conf.Webhook != nil {
 		result.Webhook = &domain_expt.WebhookNotificationConf{
-			Enable: conf.Webhook.Enable,
-			Urls:   conf.Webhook.Urls,
+			Enable:      conf.Webhook.Enable,
+			Urls:        conf.Webhook.Urls,
+			Environment: webhookEnvironmentDomain2DTO(conf.Webhook.Environment),
+			Lane:        conf.Webhook.Lane,
 		}
 	}
 	if conf.FeishuNotification != nil {

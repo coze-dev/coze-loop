@@ -214,6 +214,10 @@ type WebhookRetryEvent struct {
 	WebhookURL string `json:"webhook_url"`
 	Payload    string `json:"payload"`     // JSON string of the webhook body
 	AttemptNum int    `json:"attempt_num"` // 当前第几次重试 (1/2/3)
+	// Environment / Lane 携带首发时的环境语义，保证重试请求附加相同的泳道路由 header。
+	// 旧消息（无此字段）反序列化后为 nil => 按 Prod 处理，向后兼容不 panic。
+	Environment *WebhookEnvironment `json:"environment,omitempty"`
+	Lane        *string             `json:"lane,omitempty"`
 }
 
 type ExportScene int

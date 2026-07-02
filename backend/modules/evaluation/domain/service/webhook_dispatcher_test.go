@@ -370,3 +370,56 @@ func TestMapExptStatusToEventType_BitsUT(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildLaneHeaders_BitsUT(t *testing.T) {
+	t.Parallel()
+
+	ppe := entity.WebhookEnvironment_PPE
+	boe := entity.WebhookEnvironment_BOE
+	prod := entity.WebhookEnvironment_Prod
+
+	t.Run("ppe with lane -> x-tt-env + x-use-ppe", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&ppe, gptr.Of("ppe_lane_1"))
+		assert.Equal(t, "ppe_lane_1", h["x-tt-env"])
+		assert.Equal(t, "1", h["x-use-ppe"])
+		assert.Len(t, h, 2)
+	})
+
+	t.Run("boe with lane -> x-tt-env only", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&boe, gptr.Of("boe_lane_2"))
+		assert.Equal(t, "boe_lane_2", h["x-tt-env"])
+		_, hasPPE := h["x-use-ppe"]
+		assert.False(t, hasPPE)
+		assert.Len(t, h, 1)
+	})
+
+	t.Run("prod -> no routing header", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&prod, gptr.Of("ignored_lane"))
+		assert.Empty(t, h)
+	})
+
+	t.Run("nil env (未设置/历史数据) -> no routing header, no panic", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(nil, gptr.Of("some_lane"))
+		assert.Empty(t, h)
+	})
+
+	t.Run("ppe but lane nil -> defensive downgrade, no x-tt-env, no panic", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&ppe, nil)
+		_, has := h["x-tt-env"]
+		assert.False(t, has)
+		assert.Empty(t, h)
+	})
+
+	t.Run("ppe but lane empty/whitespace -> defensive downgrade", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&ppe, gptr.Of("   "))
+		_, has := h["x-tt-env"]
+		assert.False(t, has)
+		assert.Empty(t, h)
+	})
+}
