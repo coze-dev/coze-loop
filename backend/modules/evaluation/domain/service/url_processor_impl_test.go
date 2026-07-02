@@ -58,8 +58,8 @@ func TestDefaultURLProcessor_ProcessSignURL(t *testing.T) {
 			want: "/api/download?token=abc",
 		},
 		{
-			name:    "URL解码 - Unicode转义",
-			signURL: "https://example.com/path\u0026file?param=value\u003d123",
+			name:    "Unicode转义还原(JSON \\uXXXX 字面量)",
+			signURL: "https://example.com/path&file?param=value=123",
 			setupEnv: func() {
 				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
 				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
@@ -68,24 +68,16 @@ func TestDefaultURLProcessor_ProcessSignURL(t *testing.T) {
 			want: "https://example.com/path&file?param=value=123",
 		},
 		{
-			name:    "URL解码 - 普通URL编码",
+			// 修复后：path/query 的 percent-encoding 必须原样保留（不再反转义），
+			// 否则与签名服务签发时的编码不一致会破坏签名 / 路径结构。
+			name:    "保留path的percent编码(中文与空格)",
 			signURL: "https://example.com/path%20with%20spaces?param=%E4%B8%AD%E6%96%87",
 			setupEnv: func() {
 				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
 				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
 				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
-			want: "https://example.com/path with spaces?param=中文",
-		},
-		{
-			name:    "URL解码 - 混合编码",
-			signURL: "https://example.com/path\u0020with%20spaces?param=value\u003d123%26end",
-			setupEnv: func() {
-				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
-				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
-				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
-			},
-			want: "https://example.com/path with spaces?param=value=123&end",
+			want: "https://example.com/path%20with%20spaces?param=%E4%B8%AD%E6%96%87",
 		},
 		{
 			name:    "无效URL - 仍然返回原始值",
@@ -108,7 +100,7 @@ func TestDefaultURLProcessor_ProcessSignURL(t *testing.T) {
 			want: "",
 		},
 		{
-			name:    "URL解码失败 - 仍然继续处理",
+			name:    "非法百分号编码 - 原样保留",
 			signURL: "https://example.com/path%ZZinvalid?param=value",
 			setupEnv: func() {
 				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
@@ -128,24 +120,27 @@ func TestDefaultURLProcessor_ProcessSignURL(t *testing.T) {
 			want: "https://external.com/path?param=value",
 		},
 		{
-			name:    "复杂路径和查询参数",
+			// 签名参数（signature=xyz%3D%3D）必须保持原始编码，不能被反转义成 xyz==。
+			name:    "复杂路径和查询参数 - 保留签名编码",
 			signURL: "https://test.com/api/v1/users/123/files/document.pdf?token=abc123&expires=1234567890&signature=xyz%3D%3D",
 			setupEnv: func() {
 				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
 				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "test.com")
 				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
-			want: "https://test.com/api/v1/users/123/files/document.pdf?token=abc123&expires=1234567890&signature=xyz==",
+			want: "https://test.com/api/v1/users/123/files/document.pdf?token=abc123&expires=1234567890&signature=xyz%3D%3D",
 		},
 		{
-			name:    "URL解码 - 只有Unicode转义",
-			signURL: "https://example.com/api\u002Ftest\u003Fparam\u003Dvalue",
+			// 复现并验证缺陷修复：实验名含 '[' ']' '/' 时，path 的 percent-encoding 必须保留，
+			// 不能被反转义成裸字符（否则签名失效，且 '/' 会破坏 object key 结构导致 404）。
+			name:    "保留特殊字符编码([] / 中文 与签名)",
+			signURL: "https://p9.byteimg.com/tos-cn-i-x/%5Bauto%5DPMO%2F%E9%A3%8E%E9%99%A9_%E5%AE%9E%E9%AA%8C%E6%8A%A5%E5%91%8A.csv~tplv-x-image.image?rk3s=eb124da7&x-signature=ab%2Bcd%3D",
 			setupEnv: func() {
 				_ = os.Setenv("COZE_LOOP_OSS_PROTOCOL", "https")
 				_ = os.Setenv("COZE_LOOP_OSS_DOMAIN", "other.com")
 				_ = os.Setenv("COZE_LOOP_OSS_PORT", "")
 			},
-			want: "https://example.com/api/test?param=value",
+			want: "https://p9.byteimg.com/tos-cn-i-x/%5Bauto%5DPMO%2F%E9%A3%8E%E9%99%A9_%E5%AE%9E%E9%AA%8C%E6%8A%A5%E5%91%8A.csv~tplv-x-image.image?rk3s=eb124da7&x-signature=ab%2Bcd%3D",
 		},
 	}
 

@@ -58,7 +58,7 @@ func RetryWithElapsedTime(ctx context.Context, maxElapsedTime time.Duration, fn 
 	return backoffFn(ctx, fn, policy)
 }
 
-func backoffFn(ctx context.Context, fn func() error, policy *backoff.ExponentialBackOff) error {
+func backoffFn(ctx context.Context, fn func() error, policy backoff.BackOff) error {
 	ctxWithCancel, cancelFn := context.WithCancel(ctx)
 	defer cancelFn()
 
@@ -69,4 +69,11 @@ func backoffFn(ctx context.Context, fn func() error, policy *backoff.Exponential
 
 func RetryWithMaxTimes(ctx context.Context, max int, fn func() error) error {
 	return backoff.Retry(fn, backoff.WithMaxRetries(&backoff.ZeroBackOff{}, uint64(max)))
+}
+
+// RetryWithMaxTimesAndInterval 以固定间隔 interval 最多重试 maxRetries 次（即总尝试次数为 maxRetries+1），
+// 适用于依赖偶发抖动（如对象存储/上传服务单实例迁移）时的止血重试：固定间隔而非指数退避，次数可控。
+func RetryWithMaxTimesAndInterval(ctx context.Context, maxRetries int, interval time.Duration, fn func() error) error {
+	policy := backoff.WithMaxRetries(backoff.NewConstantBackOff(interval), uint64(maxRetries))
+	return backoffFn(ctx, fn, policy)
 }

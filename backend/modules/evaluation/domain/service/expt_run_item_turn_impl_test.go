@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"errors"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -4291,4 +4292,93 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 			}
 		})
 	}
+}
+
+// TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak 在真实泄漏点 callEvaluators 直接验证:
+// 当 evaluator conf 缺失导致中途提前 return(跳过 pool.ExecAll)时,协程池仍被释放,不泄漏 goroutine。
+// 修复前(NewPool 后无 defer pool.Release()),每次调用会泄漏底层 ants pool 的 2 个常驻协程(purge/ticktock),
+// 此测试会因协程数持续增长而失败;修复后应保持平稳。
+func TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// evalTargetService 在提前 return 前不会被调用到(OutputFields 无 omitted 大字段),这里可留空 mock。
+	// benefitService 在 callEvaluators 之前的权益校验会被调用,mock 成功放行。
+	mockBenefit := benefitmocks.NewMockIBenefitService(ctrl)
+	mockBenefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).
+		Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).AnyTimes()
+	service := &DefaultExptTurnEvaluationImpl{
+		evalTargetService: svcmocks.NewMockIEvalTargetService(ctrl),
+		benefitService:    mockBenefit,
+		metric:            metricsmocks.NewMockExptMetric(ctrl),
+	}
+
+	target := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{
+				"field1": {Text: gptr.Of("v")},
+			},
+		},
+	}
+
+	// 构造一个会触发 "evaluator conf not found" 提前 return 的 etec:
+	// Expt.Evaluators 里有 versionID=1 的 evaluator,但 EvaluatorsConf.EvaluatorConf 为空 → GetEvaluatorConf(1)=nil。
+	newEtec := func() *entity.ExptTurnEvalCtx {
+		return &entity.ExptTurnEvalCtx{
+			ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+				EvalSetItem: &entity.EvaluationSetItem{ID: 1, ItemID: 2},
+				Event: &entity.ExptItemEvalEvent{
+					Session: &entity.Session{UserID: "u"},
+					ExptID:  1,
+					SpaceID: 2,
+				},
+				Expt: &entity.Experiment{
+					ID:      1,
+					SpaceID: 2,
+					Evaluators: []*entity.Evaluator{
+						{
+							ID:                     1,
+							EvaluatorType:          entity.EvaluatorTypePrompt,
+							PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+						},
+					},
+					EvalConf: &entity.EvaluationConfiguration{
+						ItemConcurNum: gptr.Of(1),
+						ConnectorConf: entity.Connector{
+							EvaluatorsConf: &entity.EvaluatorsConf{
+								EvaluatorConcurNum: gptr.Of(1),
+								// 故意不放 versionID=1 的 conf → 触发 :433 提前 return
+								EvaluatorConf: []*entity.EvaluatorConf{},
+							},
+						},
+					},
+				},
+			},
+			ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			Turn:              &entity.Turn{FieldDataList: []*entity.FieldData{}},
+		}
+	}
+
+	// 先跑一次预热(确保触发的是提前 return 路径),并让运行时协程稳定。
+	if _, err := service.CallEvaluators(context.Background(), newEtec(), target); err == nil {
+		t.Fatalf("expected evaluator-conf-not-found error to hit the early-return path")
+	}
+	time.Sleep(200 * time.Millisecond)
+	runtime.GC()
+	before := runtime.NumGoroutine()
+
+	const N = 50
+	for i := 0; i < N; i++ {
+		_, err := service.CallEvaluators(context.Background(), newEtec(), target)
+		assert.Error(t, err) // 每次都走 conf-not-found 提前 return
+	}
+
+	// 等底层 ants pool 的常驻协程随 Release 退出。
+	time.Sleep(500 * time.Millisecond)
+	runtime.GC()
+	after := runtime.NumGoroutine()
+
+	// 修复前:N 次泄漏 ≈ 2N=100 个常驻协程;修复后应基本持平,留少量裕度。
+	assert.Less(t, after-before, 20,
+		"goroutine leak in callEvaluators early-return path: before=%d after=%d (delta=%d)", before, after, after-before)
 }

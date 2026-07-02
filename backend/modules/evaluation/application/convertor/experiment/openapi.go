@@ -248,6 +248,35 @@ func IsSupportedOpenAPIEvalTargetType(t openapiEvalTarget.EvalTargetType) bool {
 	return err == nil
 }
 
+// ValidateOpenAPIEvalTargetClusterEnv validates the required cluster/env for
+// long-connection eval targets (custom_agent / a2a_agent / custom_rpc_server).
+// These are resolved to a live RPC/frontier client at run time, so a missing
+// cluster/env passes creation silently and only fails later with an opaque RPC
+// error. Rejecting it up front yields a clear param error with common values.
+//   - custom_agent / a2a_agent: both cluster and env are caller-supplied → required.
+//   - custom_rpc_server: cluster comes from the app config, only env is required.
+//
+// Returns nil when param/type is nil or the type is not a long-connection target.
+func ValidateOpenAPIEvalTargetClusterEnv(param *openapi.SubmitExperimentEvalTargetParam) error {
+	if param == nil || param.EvalTargetType == nil {
+		return nil
+	}
+	switch *param.EvalTargetType {
+	case openapiEvalTarget.EvalTargetTypeCustomAgent, openapiEvalTarget.EvalTargetTypeA2Agent:
+		if param.GetCluster() == "" {
+			return fmt.Errorf("cluster is required for eval target type %s (e.g. \"default\")", *param.EvalTargetType)
+		}
+		if param.GetEnv() == "" {
+			return fmt.Errorf("env is required for eval target type %s (lane/env identifier, e.g. \"ppe_fornax_eval\")", *param.EvalTargetType)
+		}
+	case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
+		if param.GetEnv() == "" {
+			return fmt.Errorf("env is required for eval target type %s (lane/env identifier, e.g. \"ppe_fornax_eval\")", *param.EvalTargetType)
+		}
+	}
+	return nil
+}
+
 func mapOpenAPIEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (domaindoEvalTarget.EvalTargetType, error) {
 	switch openapiType {
 	case openapiEvalTarget.EvalTargetTypeCozeBot:

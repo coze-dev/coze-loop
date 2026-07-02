@@ -416,6 +416,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	if err != nil {
 		return nil, err
 	}
+	// 立即绑定释放到 pool 生命周期:即使下方循环中途提前 return(如 conf 为 nil / buildEvaluatorInputData 失败)
+	// 跳过了 ExecAll,也能释放底层 ants pool 及其常驻协程(purge / ticktock),避免 goroutine 泄漏。
+	// Release 幂等,与 ExecAll 内部的释放不冲突。
+	defer pool.Release()
 
 	for idx := range expt.Evaluators {
 		ev := expt.Evaluators[idx]

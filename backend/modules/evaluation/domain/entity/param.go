@@ -457,6 +457,10 @@ type ReportTargetRecordParam struct {
 
 	Session                 *Session
 	EnableExtractTrajectory *bool
+	// AsyncUnixMS 异步评测对象「请求发起」的时间(unix ms),即提交异步调用之前的时刻。
+	// 用作抽取 trajectory 的时间下界:record.BaseInfo.CreatedAt 是异步返回后才 stamp 的,偏晚会漏掉
+	// 请求发起到返回之间的 span。为 0 时回退到 record.BaseInfo.CreatedAt。
+	AsyncUnixMS int64
 }
 
 type DebugTargetParam struct {

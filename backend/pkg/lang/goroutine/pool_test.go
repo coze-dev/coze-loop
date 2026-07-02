@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -321,5 +322,58 @@ func Test_pool_execute(t *testing.T) {
 		err = p.Exec(ctx)
 		assert.Error(t, err)
 		assert.Equal(t, "test err", err.Error())
+	})
+}
+
+// TestPool_Release_WithoutExec 验证:不调用 Exec/ExecAll 而直接 Release(模拟 NewPool 后中途提前 return)
+// 也能释放底层 ants pool 及其常驻协程,避免泄漏;且 Release 幂等、与 Exec 后再 Release 不冲突。
+func TestPool_Release_WithoutExec(t *testing.T) {
+	t.Run("release without exec closes underlying ants pool", func(t *testing.T) {
+		p, err := NewPool(3)
+		assert.NoError(t, err)
+		ip := p.(*pool)
+		assert.False(t, ip.p.IsClosed(), "pool should be open right after NewPool")
+
+		// 未调用 Exec/ExecAll,直接 Release —— 这正是提前 return 场景应有的行为
+		p.Release()
+		assert.True(t, ip.p.IsClosed(), "pool must be released even without Exec/ExecAll")
+	})
+
+	t.Run("release is idempotent", func(t *testing.T) {
+		p, err := NewPool(2)
+		assert.NoError(t, err)
+		ip := p.(*pool)
+		assert.NotPanics(t, func() {
+			p.Release()
+			p.Release()
+			p.Release()
+		})
+		assert.True(t, ip.p.IsClosed())
+	})
+
+	t.Run("release after ExecAll does not double-release or panic", func(t *testing.T) {
+		p, err := NewPool(2)
+		assert.NoError(t, err)
+		ip := p.(*pool)
+		p.Add(func() error { return nil })
+		assert.NoError(t, p.ExecAll(context.Background()))
+		assert.True(t, ip.p.IsClosed(), "ExecAll should have released the pool")
+		// 调用方 defer 的 Release 再次触发,必须安全无副作用
+		assert.NotPanics(t, func() { p.Release() })
+	})
+
+	t.Run("no goroutine leak when pool released without exec", func(t *testing.T) {
+		// 基线:反复 NewPool+Release(不 Exec),协程数不应持续增长
+		time.Sleep(100 * time.Millisecond)
+		before := runtime.NumGoroutine()
+		for i := 0; i < 50; i++ {
+			p, err := NewPool(4)
+			assert.NoError(t, err)
+			p.Release()
+		}
+		time.Sleep(300 * time.Millisecond) // 等 purge/ticktock 协程随 Release 退出
+		after := runtime.NumGoroutine()
+		// 50 次 pool 若泄漏会多出 ~100 个常驻协程;正确释放后应基本持平(留少量抖动裕度)
+		assert.Less(t, after-before, 20, "goroutines should not accumulate: before=%d after=%d", before, after)
 	})
 }
