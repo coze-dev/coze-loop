@@ -168,6 +168,24 @@ struct UpdateExperimentResponse {
     255: base.BaseResp BaseResp
 }
 
+// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// 仅对处于 Pending / Processing 状态的实验生效。
+struct UpdateExptRunConfRequest {
+    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
+
+    // 评测项并发度：不传或 0 表示不修改；范围 (0, MaxItemConcurNum]
+    3: optional i32 item_concur_num (api.body='item_concur_num')
+    // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
+    4: optional i32 item_retry_num (api.body='item_retry_num')
+
+    255: optional base.Base Base
+}
+
+struct UpdateExptRunConfResponse {
+    255: base.BaseResp BaseResp
+}
+
 struct DeleteExperimentRequest {
     1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
@@ -835,6 +853,11 @@ service ExperimentService {
 
     UpdateExperimentResponse UpdateExperiment(1: UpdateExperimentRequest req) (
         api.patch = '/api/evaluation/v1/experiments/:expt_id', api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
+
+    // UpdateExptRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）
+    UpdateExptRunConfResponse UpdateExptRunConf(1: UpdateExptRunConfRequest req) (
+        api.patch = '/api/evaluation/v1/experiments/:expt_id/run_conf', api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
     )
 
     DeleteExperimentResponse DeleteExperiment(1: DeleteExperimentRequest req) (

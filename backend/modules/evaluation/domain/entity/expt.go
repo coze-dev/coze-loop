@@ -265,6 +265,18 @@ type EvaluationConfiguration struct {
 	Ext                     map[string]string
 }
 
+// MaxItemRetryNum 数据行 Item 最大重试次数的上界（创建侧与更新侧共用）。
+const MaxItemRetryNum = 10
+
+// ValidateItemRetryNum 校验数据行 Item 最大重试次数是否落在 [0, MaxItemRetryNum] 区间。
+// itemRetryNum 为 nil 表示"不修改/未设置"，直接放过；0 是合法值（显式设为不重试）。
+func ValidateItemRetryNum(itemRetryNum *int) bool {
+	if itemRetryNum == nil {
+		return true
+	}
+	return *itemRetryNum >= 0 && *itemRetryNum <= MaxItemRetryNum
+}
+
 type Connector struct {
 	TargetConf     *TargetConf
 	EvaluatorsConf *EvaluatorsConf

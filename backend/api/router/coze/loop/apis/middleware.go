@@ -2294,3 +2294,13 @@ func _listtrajectoryoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _expt_id0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updateexptrunconfMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

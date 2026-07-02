@@ -330,3 +330,9 @@ func CheckExperimentTemplateName(ctx context.Context, c *app.RequestContext) {
 func SubmitExptFromTemplate(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localExptSvc.SubmitExptFromTemplate)
 }
+
+// UpdateExptRunConf .
+// @router /api/evaluation/v1/experiments/:expt_id/run_conf [PATCH]
+func UpdateExptRunConf(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.UpdateExptRunConf)
+}
