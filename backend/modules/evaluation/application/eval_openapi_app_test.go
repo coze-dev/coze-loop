@@ -1407,11 +1407,12 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionItemsOApi(t *testing.T) 
 	}
 
 	tests := []struct {
-		name     string
-		buildReq func() *openapi.ListEvaluationSetVersionItemsOApiRequest
-		setup    func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService)
-		wantErr  int32
-		wantLen  int
+		name      string
+		buildReq  func() *openapi.ListEvaluationSetVersionItemsOApiRequest
+		setup     func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService)
+		wantErr   int32
+		wantLen   int
+		wantTotal *int64
 	}{
 		{
 			name: "set not found",
@@ -1470,7 +1471,8 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionItemsOApi(t *testing.T) 
 				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evaluationSetID, gomock.Any()).Return(set, nil)
 				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
 				items := []*entity.EvaluationSetItem{{ID: 1}, {ID: 2}}
-				total := gptr.Of(int64(2))
+				total := gptr.Of(int64(20))
+				filterTotal := gptr.Of(int64(5))
 				next := gptr.Of("cursor")
 				itemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetItemsParam{})).DoAndReturn(func(_ context.Context, param *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
 					assert.Equal(t, &entity.TagFilter{
@@ -1480,10 +1482,11 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionItemsOApi(t *testing.T) 
 					assert.Equal(t, buildFilter(), param.Filter)
 					require.NotNil(t, param.VersionID)
 					assert.Equal(t, versionID, *param.VersionID)
-					return items, total, total, next, nil
+					return items, total, filterTotal, next, nil
 				})
 			},
-			wantLen: 2,
+			wantLen:   2,
+			wantTotal: gptr.Of(int64(5)),
 		},
 	}
 
@@ -1524,6 +1527,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionItemsOApi(t *testing.T) 
 				assert.NoError(t, err)
 				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) {
 					assert.Len(t, resp.Data.Items, tc.wantLen)
+					assert.Equal(t, tc.wantTotal, resp.Data.Total)
 				}
 			}
 

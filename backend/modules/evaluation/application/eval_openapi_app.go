@@ -756,7 +756,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 	}
 
 	// 调用domain服务
-	items, total, _, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+	items, total, filterTotal, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 		SpaceID:         req.GetWorkspaceID(),
 		EvaluationSetID: req.GetEvaluationSetID(),
 		VersionID:       req.VersionID,
@@ -774,12 +774,16 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 
 	// 构建响应
 	hasMore := items != nil && len(items) == int(req.GetPageSize())
+	respTotal := total
+	if filterTotal != nil {
+		respTotal = filterTotal
+	}
 	return &openapi.ListEvaluationSetVersionItemsOApiResponse{
 		Data: &openapi.ListEvaluationSetVersionItemsOpenAPIData{
 			Items:         dtos,
 			HasMore:       gptr.Of(hasMore),
 			NextPageToken: nextPageToken,
-			Total:         total,
+			Total:         respTotal,
 		},
 	}, nil
 }
