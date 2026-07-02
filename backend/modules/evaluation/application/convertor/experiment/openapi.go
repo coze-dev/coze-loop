@@ -267,11 +267,11 @@ func ValidateOpenAPIEvalTargetClusterEnv(param *openapi.SubmitExperimentEvalTarg
 			return fmt.Errorf("cluster is required for eval target type %s (e.g. \"default\")", *param.EvalTargetType)
 		}
 		if param.GetEnv() == "" {
-			return fmt.Errorf("env is required for eval target type %s (e.g. \"cn\")", *param.EvalTargetType)
+			return fmt.Errorf("env is required for eval target type %s (lane/env identifier, e.g. \"ppe_fornax_eval\")", *param.EvalTargetType)
 		}
 	case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
 		if param.GetEnv() == "" {
-			return fmt.Errorf("env is required for eval target type %s (e.g. \"cn\")", *param.EvalTargetType)
+			return fmt.Errorf("env is required for eval target type %s (lane/env identifier, e.g. \"ppe_fornax_eval\")", *param.EvalTargetType)
 		}
 	}
 	return nil
