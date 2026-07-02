@@ -465,3 +465,17 @@ func (mr *MockIExptManagerMockRecorder) Update(ctx, expt, session any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptManager)(nil).Update), ctx, expt, session)
 }
+
+// UpdateRunConf mocks base method.
+func (m *MockIExptManager) UpdateRunConf(ctx context.Context, exptID, spaceID int64, itemConcurNum, itemRetryNum *int, session *entity.Session) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRunConf", ctx, exptID, spaceID, itemConcurNum, itemRetryNum, session)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateRunConf indicates an expected call of UpdateRunConf.
+func (mr *MockIExptManagerMockRecorder) UpdateRunConf(ctx, exptID, spaceID, itemConcurNum, itemRetryNum, session any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRunConf", reflect.TypeOf((*MockIExptManager)(nil).UpdateRunConf), ctx, exptID, spaceID, itemConcurNum, itemRetryNum, session)
+}

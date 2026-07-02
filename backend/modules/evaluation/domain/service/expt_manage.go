@@ -22,6 +22,10 @@ type IExptConfigManager interface {
 	CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error)
 
 	Update(ctx context.Context, expt *entity.Experiment, session *entity.Session) error
+	// UpdateRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+	// itemConcurNum / itemRetryNum 为 nil 表示该字段不修改；非 nil 则覆盖对应值。
+	// 仅允许对 Pending / Processing 状态的实验修改，采用 read-modify-write 整个 EvalConf 后只写 eval_conf 单列。
+	UpdateRunConf(ctx context.Context, exptID, spaceID int64, itemConcurNum, itemRetryNum *int, session *entity.Session) error
 	Delete(ctx context.Context, exptID, spaceID int64, session *entity.Session) error
 	MDelete(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) error
 

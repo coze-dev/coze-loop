@@ -7733,3 +7733,132 @@ func TestExperimentApplication_UpdateExperiment_MoreBranches(t *testing.T) {
 		})
 	}
 }
+
+func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+
+	const (
+		validWorkspaceID = int64(123)
+		validExptID      = int64(456)
+		validUserID      = "789"
+		maxItemConcurNum = 200
+	)
+	execConf := &entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{MaxItemConcurNum: maxItemConcurNum}}
+	baseExpt := &entity.Experiment{ID: validExptID, SpaceID: validWorkspaceID, Status: entity.ExptStatus_Processing, CreatedBy: validUserID}
+
+	tests := []struct {
+		name      string
+		req       *exptpb.UpdateExptRunConfRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "并发度>0 正常传给 domain",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), &entity.Session{}).DoAndReturn(
+					func(_ context.Context, _, _ int64, concur, retry *int, _ *entity.Session) error {
+						assert.Equal(t, 10, gptr.Indirect(concur)) // 传了 *10
+						assert.Nil(t, retry)                        // 未传
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度=0 视为不修改（传 nil）",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(0)), ItemRetryNum: gptr.Of(int32(3))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), &entity.Session{}).DoAndReturn(
+					func(_ context.Context, _, _ int64, concur, retry *int, _ *entity.Session) error {
+						assert.Nil(t, concur)                 // 0 → 不修改
+						assert.Equal(t, 3, gptr.Indirect(retry))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "重试=0 显式落库（传 *0）",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemRetryNum: gptr.Of(int32(0))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), &entity.Session{}).DoAndReturn(
+					func(_ context.Context, _, _ int64, concur, retry *int, _ *entity.Session) error {
+						assert.Nil(t, concur)
+						assert.NotNil(t, retry)               // IsSet → 传指针
+						assert.Equal(t, 0, gptr.Indirect(retry))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度<0 拒绝",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(-1))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				// 不应调用 UpdateRunConf
+			},
+			wantErr: true,
+		},
+		{
+			name: "并发度超上限拒绝",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(maxItemConcurNum + 1))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "重试超上限拒绝",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemRetryNum: gptr.Of(int32(entity.MaxItemRetryNum + 1))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "越权拒绝（space 不匹配）",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mismatch := &entity.Experiment{ID: validExptID, SpaceID: validWorkspaceID + 1, Status: entity.ExptStatus_Processing, CreatedBy: validUserID}
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(mismatch, nil)
+				// 不应调用鉴权 / UpdateRunConf
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &experimentApplication{
+				manager:  mockManager,
+				auth:     mockAuth,
+				configer: mockConfiger,
+			}
+			tt.mockSetup()
+			_, err := app.UpdateExptRunConf(context.Background(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
