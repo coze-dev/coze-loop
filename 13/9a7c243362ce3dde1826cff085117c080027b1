@@ -1,0 +1,21 @@
+backend/modules/evaluation/domain/entity/expt.go
+  s_3d2928112072a9::t_793c3daaae5348 22,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "139a7c243362ce3dde1826cff085117c080027b1",
+  "prompts": {},
+  "sessions": {
+    "s_3d2928112072a9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c04f35bc-c2f2-4242-a246-b9e5452e9896",
+        "model": "unknown"
+      },
+      "human_author": "luozhenghua.007 <luozhenghua.007@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
