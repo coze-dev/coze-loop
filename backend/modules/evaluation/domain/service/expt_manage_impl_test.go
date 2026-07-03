@@ -2410,7 +2410,7 @@ func TestExptMangerImpl_UpdateRunConf(t *testing.T) {
 				return nil
 			})
 
-		err := mgr.UpdateRunConf(context.Background(), exptID, spaceID, gptr.Of(10), gptr.Of(5), session)
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), ItemRetryNum: gptr.Of(5), Session: session})
 		assert.NoError(t, err)
 	})
 
@@ -2431,7 +2431,7 @@ func TestExptMangerImpl_UpdateRunConf(t *testing.T) {
 				return nil
 			})
 
-		err := mgr.UpdateRunConf(context.Background(), exptID, spaceID, nil, gptr.Of(0), session)
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemRetryNum: gptr.Of(0), Session: session})
 		assert.NoError(t, err)
 	})
 
@@ -2444,7 +2444,7 @@ func TestExptMangerImpl_UpdateRunConf(t *testing.T) {
 		mockRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(buildExpt(entity.ExptStatus_Success), nil)
 		// 不应调用 UpdateFields
 
-		err := mgr.UpdateRunConf(context.Background(), exptID, spaceID, gptr.Of(10), nil, session)
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session})
 		assert.Error(t, err)
 	})
 }

@@ -1028,13 +1028,13 @@ func (e *ExptMangerImpl) Update(ctx context.Context, expt *entity.Experiment, se
 // UpdateRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）。
 // 采用 read-modify-write：读出完整实验 → 内存中仅覆盖指定字段 → 序列化完整 EvalConf → 只写 eval_conf 单列。
 // 严禁用只含两字段的裸 EvalConf 覆盖该列（会清空 ConnectorConf/TimeRange/Ext）。
-func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, exptID, spaceID int64, itemConcurNum, itemRetryNum *int, session *entity.Session) error {
-	got, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
+func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.UpdateRunConfParam) error {
+	got, err := e.exptRepo.GetByID(ctx, param.ExptID, param.SpaceID)
 	if err != nil {
 		return err
 	}
-	if got.SpaceID != spaceID {
-		return errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("experiment %d not found in space %d", exptID, spaceID)))
+	if got.SpaceID != param.SpaceID {
+		return errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("experiment %d not found in space %d", param.ExptID, param.SpaceID)))
 	}
 
 	// 状态门：仅允许对「待执行 / 进行中」的实验修改运行配置，终态/排空态一律拒绝。
@@ -1049,20 +1049,20 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, exptID, spaceID int6
 
 	// read-modify-write：在完整 EvalConf 上仅覆盖需要修改的字段。
 	evalConf := got.EvalConf
-	if itemConcurNum != nil {
-		evalConf.ItemConcurNum = itemConcurNum
+	if param.ItemConcurNum != nil {
+		evalConf.ItemConcurNum = param.ItemConcurNum
 	}
-	if itemRetryNum != nil {
-		evalConf.ItemRetryNum = itemRetryNum
+	if param.ItemRetryNum != nil {
+		evalConf.ItemRetryNum = param.ItemRetryNum
 	}
 
 	bytes, err := json.Marshal(evalConf)
 	if err != nil {
-		return errorx.Wrapf(err, "marshal EvalConf fail, expt_id: %v", exptID)
+		return errorx.Wrapf(err, "marshal EvalConf fail, expt_id: %v", param.ExptID)
 	}
 
 	// 只写 eval_conf 单列，与调度器的 status 写列级不重叠，爆炸半径最小。
-	return e.exptRepo.UpdateFields(ctx, exptID, map[string]any{"eval_conf": &bytes})
+	return e.exptRepo.UpdateFields(ctx, param.ExptID, map[string]any{"eval_conf": &bytes})
 }
 
 func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {

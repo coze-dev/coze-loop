@@ -1165,7 +1165,13 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 		itemRetryNum = gptr.Of(v)
 	}
 
-	if err = e.manager.UpdateRunConf(ctx, req.GetExptID(), req.GetWorkspaceID(), itemConcurNum, itemRetryNum, session); err != nil {
+	if err = e.manager.UpdateRunConf(ctx, &entity.UpdateRunConfParam{
+		ExptID:        req.GetExptID(),
+		SpaceID:       req.GetWorkspaceID(),
+		ItemConcurNum: itemConcurNum,
+		ItemRetryNum:  itemRetryNum,
+		Session:       session,
+	}); err != nil {
 		return nil, err
 	}
 

@@ -7764,10 +7764,12 @@ func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
 				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
-				mockManager.EXPECT().UpdateRunConf(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), &entity.Session{}).DoAndReturn(
-					func(_ context.Context, _, _ int64, concur, retry *int, _ *entity.Session) error {
-						assert.Equal(t, 10, gptr.Indirect(concur)) // 传了 *10
-						assert.Nil(t, retry)                        // 未传
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.UpdateRunConfParam) error {
+						assert.Equal(t, validExptID, param.ExptID)
+						assert.Equal(t, validWorkspaceID, param.SpaceID)
+						assert.Equal(t, 10, gptr.Indirect(param.ItemConcurNum)) // 传了 *10
+						assert.Nil(t, param.ItemRetryNum)                       // 未传
 						return nil
 					})
 			},
@@ -7779,10 +7781,10 @@ func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
 			mockSetup: func() {
 				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-				mockManager.EXPECT().UpdateRunConf(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), &entity.Session{}).DoAndReturn(
-					func(_ context.Context, _, _ int64, concur, retry *int, _ *entity.Session) error {
-						assert.Nil(t, concur)                 // 0 → 不修改
-						assert.Equal(t, 3, gptr.Indirect(retry))
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.UpdateRunConfParam) error {
+						assert.Nil(t, param.ItemConcurNum)                 // 0 → 不修改
+						assert.Equal(t, 3, gptr.Indirect(param.ItemRetryNum))
 						return nil
 					})
 			},
@@ -7794,11 +7796,11 @@ func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
 			mockSetup: func() {
 				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-				mockManager.EXPECT().UpdateRunConf(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), &entity.Session{}).DoAndReturn(
-					func(_ context.Context, _, _ int64, concur, retry *int, _ *entity.Session) error {
-						assert.Nil(t, concur)
-						assert.NotNil(t, retry)               // IsSet → 传指针
-						assert.Equal(t, 0, gptr.Indirect(retry))
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.UpdateRunConfParam) error {
+						assert.Nil(t, param.ItemConcurNum)
+						assert.NotNil(t, param.ItemRetryNum)               // IsSet → 传指针
+						assert.Equal(t, 0, gptr.Indirect(param.ItemRetryNum))
 						return nil
 					})
 			},
