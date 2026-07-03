@@ -263,6 +263,13 @@ func ValidateOpenAPIEvalTargetClusterEnv(param *openapi.SubmitExperimentEvalTarg
 	}
 	switch *param.EvalTargetType {
 	case openapiEvalTarget.EvalTargetTypeCustomAgent, openapiEvalTarget.EvalTargetTypeA2Agent:
+		// When an explicit AgentConnection (frontier direct-connect) is provided, the target
+		// is dispatched by the frontier tuple (ProductID/AppID/UserID/DeviceID) and cluster/env
+		// are not used at run time, so do not require them here — requiring them would wrongly
+		// reject the legitimate direct-connect path.
+		if param.IsSetAgentConnection() {
+			return nil
+		}
 		if param.GetCluster() == "" {
 			return fmt.Errorf("cluster is required for eval target type %s (e.g. \"default\")", *param.EvalTargetType)
 		}

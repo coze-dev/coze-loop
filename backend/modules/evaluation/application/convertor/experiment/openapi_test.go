@@ -3859,6 +3859,11 @@ func TestValidateOpenAPIEvalTargetClusterEnv(t *testing.T) {
 			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), Cluster: gptr.Of("default"), Env: gptr.Of("cn")},
 		},
 		{
+			// direct-connect (AgentConnection) exempts cluster/env — must not require them.
+			name:  "custom_agent with AgentConnection exempts cluster/env",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), AgentConnection: &openapiEvalTarget.AgentConnection{}},
+		},
+		{
 			name:    "a2a_agent missing cluster",
 			param:   &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeA2Agent), Env: gptr.Of("cn")},
 			wantErr: "cluster is required",
