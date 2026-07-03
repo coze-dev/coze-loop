@@ -248,6 +248,30 @@ func TestToInvokeEvaluatorOutputDataDO(t *testing.T) {
 			},
 		},
 		{
+			name: "failed preserves usage",
+			in: &spi.InvokeEvaluatorOutputData{
+				EvaluatorUsage: &spi.InvokeEvaluatorUsage{InputTokens: gptr.Of(int64(105119)), OutputTokens: gptr.Of(int64(1938))},
+				EvaluatorRunError: &spi.InvokeEvaluatorRunError{
+					Code:    gptr.Of(int32(3)),
+					Message: gptr.Of("run error"),
+				},
+			},
+			status: spi.InvokeEvaluatorRunStatus_FAILED,
+			check: func(t *testing.T, got *evaluatorentity.EvaluatorOutputData) {
+				if assert.NotNil(t, got) {
+					assert.Nil(t, got.EvaluatorResult)
+					if assert.NotNil(t, got.EvaluatorUsage) {
+						assert.Equal(t, int64(105119), got.EvaluatorUsage.InputTokens)
+						assert.Equal(t, int64(1938), got.EvaluatorUsage.OutputTokens)
+					}
+					if assert.NotNil(t, got.EvaluatorRunError) {
+						assert.Equal(t, int32(3), got.EvaluatorRunError.Code)
+						assert.Equal(t, "run error", got.EvaluatorRunError.Message)
+					}
+				}
+			},
+		},
+		{
 			name: "unknown status returns nil",
 			in: &spi.InvokeEvaluatorOutputData{
 				EvaluatorUsage: &spi.InvokeEvaluatorUsage{InputTokens: gptr.Of(int64(1))},
