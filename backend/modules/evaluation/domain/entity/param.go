@@ -219,15 +219,16 @@ type ExecuteEvalTargetParam struct {
 }
 
 // EvalSetItemMeta 承载评测集与 item 层面的元数据快照, 用于评测对象 (如 SandboxAgent) 透传给外部执行侧。
+// id 字段统一使用 string, 避免 JSON 序列化后被 JS 等消费方按 number 解析导致精度丢失。
 // 字段可能为空 (旧数据集无 item 版本、调试场景无实验等), 使用方需容忍缺省值。
 type EvalSetItemMeta struct {
-	EvalSetID        int64  `json:"eval_set_id,omitempty"`
+	EvalSetID        string `json:"eval_set_id,omitempty"`
 	EvalSetName      string `json:"eval_set_name,omitempty"`
-	EvalSetVersionID int64  `json:"eval_set_version_id,omitempty"`
+	EvalSetVersionID string `json:"eval_set_version_id,omitempty"`
 	EvalSetVersion   string `json:"eval_set_version,omitempty"`
-	ItemID           int64  `json:"item_id,omitempty"`
+	ItemID           string `json:"item_id,omitempty"`
 	ItemKey          string `json:"item_key,omitempty"`
-	ItemVersionID    int64  `json:"item_version_id,omitempty"`
+	ItemVersionID    string `json:"item_version_id,omitempty"`
 	ItemVersion      string `json:"item_version,omitempty"`
 }
 
