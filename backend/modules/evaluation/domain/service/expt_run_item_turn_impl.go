@@ -275,6 +275,8 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		ExperimentRunID: gptr.Of(etec.Event.ExptRunID),
 		ItemID:          etec.EvalSetItem.ItemID,
 		TurnID:          etec.Turn.ID,
+		LogID:           logs.GetLogID(ctx),
+		ItemMeta:        buildEvalSetItemMeta(etec),
 	}
 	if etec.Expt.EvalConf != nil {
 		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory
@@ -1113,4 +1115,34 @@ func (e *DefaultExptTurnEvaluationImpl) getAllEvalSetFields(ctx context.Context,
 		result[field.Name] = content
 	}
 	return result, nil
+}
+
+// buildEvalSetItemMeta 从 ExptTurnEvalCtx 中提取评测集/条目元数据, 供评测对象 (SandboxAgent 等)
+// 透传给外部执行侧。任意字段缺失时对应位置留空, 不返回错误。
+func buildEvalSetItemMeta(etec *entity.ExptTurnEvalCtx) *entity.EvalSetItemMeta {
+	if etec == nil {
+		return nil
+	}
+	meta := &entity.EvalSetItemMeta{}
+	if etec.Expt != nil {
+		meta.EvalSetID = etec.Expt.EvalSetID
+		meta.EvalSetVersionID = etec.Expt.EvalSetVersionID
+		if etec.Expt.EvalSet != nil {
+			meta.EvalSetName = etec.Expt.EvalSet.Name
+			if etec.Expt.EvalSet.EvaluationSetVersion != nil {
+				meta.EvalSetVersion = etec.Expt.EvalSet.EvaluationSetVersion.Version
+			}
+		}
+	}
+	if etec.EvalSetItem != nil {
+		meta.ItemID = etec.EvalSetItem.ItemID
+		meta.ItemKey = etec.EvalSetItem.ItemKey
+		if etec.EvalSetItem.ItemVersionID != nil {
+			meta.ItemVersionID = *etec.EvalSetItem.ItemVersionID
+		}
+		if etec.EvalSetItem.ItemVersion != nil {
+			meta.ItemVersion = *etec.EvalSetItem.ItemVersion
+		}
+	}
+	return meta
 }

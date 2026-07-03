@@ -517,6 +517,8 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		EvalTarget:          target,
 		EvalSetItemID:       gptr.Of(param.ItemID),
 		EvalSetTurnID:       gptr.Of(param.TurnID),
+		LogID:               param.LogID,
+		ItemMeta:            param.ItemMeta,
 	})
 	if execErr != nil {
 		// If an asynchronous call fails, return immediately without logging the error or propagating the exception.
