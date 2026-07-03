@@ -212,6 +212,23 @@ type ExecuteEvalTargetParam struct {
 	EvalTarget          *EvalTarget // 透传，各个评测对象如需额外信息可以从这里消费
 	EvalSetItemID       *int64
 	EvalSetTurnID       *int64
+	// LogID 当前调用链的 log id, 供评测对象 (如 SandboxAgent) 透传到外部执行侧做端到端定位。
+	LogID string
+	// ItemMeta 评测集/条目元数据快照 (评测集 id/名称/版本, item id/key/version 等), 供评测对象透传给外部执行侧。
+	ItemMeta *EvalSetItemMeta
+}
+
+// EvalSetItemMeta 承载评测集与 item 层面的元数据快照, 用于评测对象 (如 SandboxAgent) 透传给外部执行侧。
+// 字段可能为空 (旧数据集无 item 版本、调试场景无实验等), 使用方需容忍缺省值。
+type EvalSetItemMeta struct {
+	EvalSetID        int64  `json:"eval_set_id,omitempty"`
+	EvalSetName      string `json:"eval_set_name,omitempty"`
+	EvalSetVersionID int64  `json:"eval_set_version_id,omitempty"`
+	EvalSetVersion   string `json:"eval_set_version,omitempty"`
+	ItemID           int64  `json:"item_id,omitempty"`
+	ItemKey          string `json:"item_key,omitempty"`
+	ItemVersionID    int64  `json:"item_version_id,omitempty"`
+	ItemVersion      string `json:"item_version,omitempty"`
 }
 
 type ListEvaluatorRequest struct {
