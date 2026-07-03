@@ -296,6 +296,18 @@ type EvaluationConfiguration struct {
 	EvalSetConfigs []*EvalSetConfig `json:"eval_set_configs,omitempty"`
 }
 
+// DefaultSubmitItemConcurNum 提交评测实验时，未传或非正数时的兜底并发度。
+const DefaultSubmitItemConcurNum = 5
+
+// NormalizeSubmitItemConcurNum 提交评测实验时归一化 item 并发度：nil 或 <=0 补为 DefaultSubmitItemConcurNum。
+func NormalizeSubmitItemConcurNum(v *int) *int {
+	if v == nil || *v <= 0 {
+		n := DefaultSubmitItemConcurNum
+		return &n
+	}
+	return v
+}
+
 type Connector struct {
 	TargetConf     *TargetConf
 	EvaluatorsConf *EvaluatorsConf

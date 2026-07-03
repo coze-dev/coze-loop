@@ -34,7 +34,7 @@ type EvalConfConvert struct{}
 
 func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (*entity.EvaluationConfiguration, error) {
 	ec := &entity.EvaluationConfiguration{
-		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
+		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:           cer.Ext,
 	}
 
@@ -942,7 +942,7 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 	}
 
 	ec := &entity.EvaluationConfiguration{
-		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
+		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:           cer.Ext,
 	}
 	if cer.GetItemRetryNum() > 0 {
