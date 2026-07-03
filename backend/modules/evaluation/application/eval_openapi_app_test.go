@@ -5663,6 +5663,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				InvokeID:    gptr.Of(invokeID),
 				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_FAILED),
 				Output: &spi.InvokeEvaluatorOutputData{
+					EvaluatorUsage:    &spi.InvokeEvaluatorUsage{InputTokens: gptr.Of(int64(105119)), OutputTokens: gptr.Of(int64(1938))},
 					EvaluatorRunError: &spi.InvokeEvaluatorRunError{Code: gptr.Of(int32(123)), Message: gptr.Of("m")},
 				},
 			},
@@ -5673,7 +5674,14 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					AsyncUnixMS:        time.Now().UnixMilli() - 10,
 					EvaluatorVersionID: 9,
 				}, nil)
-				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
+				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *entity.ReportEvaluatorRecordParam) error {
+					assert.Equal(t, entity.EvaluatorRunStatusFail, param.Status)
+					if assert.NotNil(t, param.OutputData) && assert.NotNil(t, param.OutputData.EvaluatorUsage) {
+						assert.Equal(t, int64(105119), param.OutputData.EvaluatorUsage.InputTokens)
+						assert.Equal(t, int64(1938), param.OutputData.EvaluatorUsage.OutputTokens)
+					}
+					return nil
+				})
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Not(gomock.Nil()), gomock.Any()).Return(errors.New("pub failed"))
 			},
 			wantErr: -1,
