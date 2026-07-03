@@ -1118,15 +1118,20 @@ func (e *DefaultExptTurnEvaluationImpl) getAllEvalSetFields(ctx context.Context,
 }
 
 // buildEvalSetItemMeta 从 ExptTurnEvalCtx 中提取评测集/条目元数据, 供评测对象 (SandboxAgent 等)
-// 透传给外部执行侧。任意字段缺失时对应位置留空, 不返回错误。
+// 透传给外部执行侧。id 统一转成字符串, 避免 JSON 消费方按 number 解析导致精度丢失。
+// 任意字段缺失时对应位置留空, 不返回错误。
 func buildEvalSetItemMeta(etec *entity.ExptTurnEvalCtx) *entity.EvalSetItemMeta {
 	if etec == nil {
 		return nil
 	}
 	meta := &entity.EvalSetItemMeta{}
 	if etec.Expt != nil {
-		meta.EvalSetID = etec.Expt.EvalSetID
-		meta.EvalSetVersionID = etec.Expt.EvalSetVersionID
+		if etec.Expt.EvalSetID != 0 {
+			meta.EvalSetID = strconv.FormatInt(etec.Expt.EvalSetID, 10)
+		}
+		if etec.Expt.EvalSetVersionID != 0 {
+			meta.EvalSetVersionID = strconv.FormatInt(etec.Expt.EvalSetVersionID, 10)
+		}
 		if etec.Expt.EvalSet != nil {
 			meta.EvalSetName = etec.Expt.EvalSet.Name
 			if etec.Expt.EvalSet.EvaluationSetVersion != nil {
@@ -1135,10 +1140,12 @@ func buildEvalSetItemMeta(etec *entity.ExptTurnEvalCtx) *entity.EvalSetItemMeta 
 		}
 	}
 	if etec.EvalSetItem != nil {
-		meta.ItemID = etec.EvalSetItem.ItemID
+		if etec.EvalSetItem.ItemID != 0 {
+			meta.ItemID = strconv.FormatInt(etec.EvalSetItem.ItemID, 10)
+		}
 		meta.ItemKey = etec.EvalSetItem.ItemKey
-		if etec.EvalSetItem.ItemVersionID != nil {
-			meta.ItemVersionID = *etec.EvalSetItem.ItemVersionID
+		if etec.EvalSetItem.ItemVersionID != nil && *etec.EvalSetItem.ItemVersionID != 0 {
+			meta.ItemVersionID = strconv.FormatInt(*etec.EvalSetItem.ItemVersionID, 10)
 		}
 		if etec.EvalSetItem.ItemVersion != nil {
 			meta.ItemVersion = *etec.EvalSetItem.ItemVersion
