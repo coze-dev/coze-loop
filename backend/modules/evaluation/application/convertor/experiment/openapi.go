@@ -261,8 +261,9 @@ func ValidateOpenAPIEvalTargetClusterEnv(param *openapi.SubmitExperimentEvalTarg
 	if param == nil || param.EvalTargetType == nil {
 		return nil
 	}
-	switch *param.EvalTargetType {
-	case openapiEvalTarget.EvalTargetTypeCustomAgent, openapiEvalTarget.EvalTargetTypeA2Agent:
+	// Only validate custom_agent (the in-house long-connection agent). a2a_agent /
+	// custom_rpc_server are intentionally left un-validated for now.
+	if *param.EvalTargetType == openapiEvalTarget.EvalTargetTypeCustomAgent {
 		// When an explicit AgentConnection (frontier direct-connect) is provided, the target
 		// is dispatched by the frontier tuple (ProductID/AppID/UserID/DeviceID) and cluster/env
 		// are not used at run time, so do not require them here — requiring them would wrongly
@@ -273,10 +274,6 @@ func ValidateOpenAPIEvalTargetClusterEnv(param *openapi.SubmitExperimentEvalTarg
 		if param.GetCluster() == "" {
 			return fmt.Errorf("cluster is required for eval target type %s (e.g. \"default\")", *param.EvalTargetType)
 		}
-		if param.GetEnv() == "" {
-			return fmt.Errorf("env is required for eval target type %s (lane/env identifier, e.g. \"ppe_fornax_eval\")", *param.EvalTargetType)
-		}
-	case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
 		if param.GetEnv() == "" {
 			return fmt.Errorf("env is required for eval target type %s (lane/env identifier, e.g. \"ppe_fornax_eval\")", *param.EvalTargetType)
 		}

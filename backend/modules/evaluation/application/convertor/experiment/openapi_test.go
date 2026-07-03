@@ -3864,18 +3864,14 @@ func TestValidateOpenAPIEvalTargetClusterEnv(t *testing.T) {
 			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), AgentConnection: &openapiEvalTarget.AgentConnection{}},
 		},
 		{
-			name:    "a2a_agent missing cluster",
-			param:   &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeA2Agent), Env: gptr.Of("cn")},
-			wantErr: "cluster is required",
+			// a2a_agent is intentionally not validated for now → no error even without cluster/env.
+			name:  "a2a_agent not validated",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeA2Agent)},
 		},
 		{
-			name:  "custom_rpc_server only needs env (cluster from app config)",
-			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomRPCServer), Env: gptr.Of("cn")},
-		},
-		{
-			name:    "custom_rpc_server missing env",
-			param:   &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomRPCServer)},
-			wantErr: "env is required",
+			// custom_rpc_server is intentionally not validated for now → no error even without env.
+			name:  "custom_rpc_server not validated",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomRPCServer)},
 		},
 	}
 	for _, tt := range tests {
