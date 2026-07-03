@@ -348,6 +348,45 @@ func TestWebhookDispatcher_Dispatch_BitsUT(t *testing.T) {
 		err := d.Dispatch(context.Background(), event, expt)
 		assert.NoError(t, err)
 	})
+
+	t.Run("ppe conf -> request carries x-tt-env + x-use-ppe (end-to-end)", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		var capturedHeaders http.Header
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			capturedHeaders = r.Header.Clone()
+			w.WriteHeader(200)
+		}))
+		defer server.Close()
+
+		ppe := entity.WebhookEnvironment_PPE
+		d := NewWebhookDispatcher(mocks.NewMockExptEventPublisher(ctrl), NewNoopWebhookSecretProvider(), nil)
+		expt := &entity.Experiment{
+			ID: 42, SpaceID: 100, Name: "ppe-lane-test",
+			NotificationConf: &entity.ExptNotificationConf{
+				Webhook: &entity.WebhookNotificationConf{
+					Enable:      true,
+					Urls:        gptr.Of(server.URL),
+					Environment: &ppe,
+					Lane:        gptr.Of("ppe_lane_e2e"),
+				},
+			},
+		}
+		event := &entity.ExptLifecycleEvent{
+			ExptID: 42, SpaceID: 100, ExptRunID: gptr.Of(int64(7)),
+			FromStatus: entity.ExptStatus_Processing, ToStatus: entity.ExptStatus_Success,
+			IdempotentKey: "expt_42_7_3_11",
+		}
+
+		err := d.Dispatch(context.Background(), event, expt)
+		assert.NoError(t, err)
+		// 端到端：真实 HTTP 请求带上了泳道路由 header，且未破坏既有安全 header
+		assert.Equal(t, "ppe_lane_e2e", capturedHeaders.Get("x-tt-env"))
+		assert.Equal(t, "1", capturedHeaders.Get("x-use-ppe"))
+		assert.NotEmpty(t, capturedHeaders.Get("X-CozeLoop-Signature"))
+	})
 }
 
 func TestMapExptStatusToEventType_BitsUT(t *testing.T) {
