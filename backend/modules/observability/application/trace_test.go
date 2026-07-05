@@ -710,7 +710,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 					WorkspaceID: 12,
 					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
 					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
+					TraceID:     ptr.Of("123"),
 				},
 			},
 			want: &trace.GetTraceResponse{
@@ -742,7 +742,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 					WorkspaceID: 12,
 					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
 					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
+					TraceID:     ptr.Of("123"),
 				},
 			},
 			want:    nil,
@@ -766,7 +766,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 					WorkspaceID: 12,
 					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
 					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
+					TraceID:     ptr.Of("123"),
 				},
 			},
 			want:    nil,
@@ -783,7 +783,60 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 					WorkspaceID: 0,
 					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
 					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
+					TraceID:     ptr.Of("123"),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "query by logid only success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, req *service.GetTraceReq) (*service.GetTraceResp, error) {
+						assert.Equal(t, "log-123", req.LogID)
+						assert.Equal(t, "", req.TraceID)
+						return &service.GetTraceResp{}, nil
+					})
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetTraceRequest{
+					WorkspaceID: 12,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					Logid:       ptr.Of("log-123"),
+				},
+			},
+			want: &trace.GetTraceResponse{
+				Spans: make([]*span.OutputSpan, 0),
+				TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+					Tokens: &trace.TokenCost{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing both trace_id and logid error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetTraceRequest{
+					WorkspaceID: 12,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
 				},
 			},
 			want:    nil,
@@ -810,7 +863,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 					WorkspaceID: 12,
 					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
 					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
+					TraceID:     ptr.Of("123"),
 					SpanIds:     []string{"123"},
 				},
 			},
@@ -846,7 +899,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 					WorkspaceID: 12,
 					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
 					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
+					TraceID:     ptr.Of("123"),
 					PageSize:    ptr.Of(int32(10)),
 				},
 			},
@@ -884,7 +937,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 					WorkspaceID: 12,
 					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
 					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
+					TraceID:     ptr.Of("123"),
 					PageToken:   ptr.Of("some_token"),
 					Filters: &filter.FilterFields{
 						FilterFields: []*filter.FilterField{
@@ -923,7 +976,7 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 					WorkspaceID: 12,
 					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
 					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
+					TraceID:     ptr.Of("123"),
 					Filters: &filter.FilterFields{
 						FilterFields: []*filter.FilterField{
 							{

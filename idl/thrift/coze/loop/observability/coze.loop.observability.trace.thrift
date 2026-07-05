@@ -64,9 +64,10 @@ struct TraceAdvanceInfo {
 
 struct GetTraceRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.query="workspace_id")
-    2: required string trace_id (api.path="trace_id")
+    2: optional string trace_id (api.path="trace_id")
     3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.query="start_time") // ms
     4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.query="end_time") // ms
+    5: optional string logid (api.query="logid")
     8: optional common.PlatformType platform_type (api.query="platform_type")
     9: optional list<string> span_ids (api.query="span_ids")
     10: optional filter.FilterFields filters (api.query="filters")
