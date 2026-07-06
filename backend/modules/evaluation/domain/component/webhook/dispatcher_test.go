@@ -16,6 +16,42 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 )
 
+func TestDispatcher_BitsInjection_TerminalOnly(t *testing.T) {
+	newDispatcher := func() (*fakeDeliveryRepo, *fakeDeliveryPublisher, IWebhookDispatcher) {
+		r := &fakeDeliveryRepo{}
+		p := &fakeDeliveryPublisher{}
+		d := NewWebhookDispatcher(r, p, &fakeWebhookConfiger{
+			global: &entity.WebhookGlobalConf{
+				Enable:                  true,
+				Secret:                  "secret",
+				BitsCallbackURLTemplate: "https://bits.example.com/callback?workflow_id={source_id}&experiment_id={experiment_id}",
+			},
+			retry: &entity.WebhookRetryConf{MaxRetries: 3},
+		})
+		return r, p, d
+	}
+	buildExpt := func(status entity.ExptStatus, srcType entity.SourceType, srcID string) *entity.Experiment {
+		return &entity.Experiment{ID: 1, SpaceID: 2, CreatedBy: "u", Status: status, SourceType: srcType, SourceID: srcID}
+	}
+	buildEvt := func(status entity.ExptStatus) *entity.ExptLifecycleEvent {
+		return &entity.ExptLifecycleEvent{ExptID: 1, SpaceID: 2, ToStatus: status}
+	}
+	t.Run("processing_no_bits", func(t *testing.T) {
+		r, _, d := newDispatcher()
+		require.NoError(t, d.Dispatch(context.Background(), buildExpt(entity.ExptStatus_Processing, entity.SourceType_Workflow, "wf_1"), buildEvt(entity.ExptStatus_Processing)))
+		for _, c := range r.created {
+			assert.NotEqual(t, "bits_callback", c.ChannelType, "processing must not inject bits_callback")
+		}
+	})
+	t.Run("non_workflow_source_no_bits", func(t *testing.T) {
+		r, _, d := newDispatcher()
+		require.NoError(t, d.Dispatch(context.Background(), buildExpt(entity.ExptStatus_Success, entity.SourceType(0), ""), buildEvt(entity.ExptStatus_Success)))
+		for _, c := range r.created {
+			assert.NotEqual(t, "bits_callback", c.ChannelType, "non-workflow source must not inject bits_callback")
+		}
+	})
+}
+
 func TestDispatcherDispatchesBitsCallbackForWorkflowTerminalEvent(t *testing.T) {
 	repo := &fakeDeliveryRepo{}
 	publisher := &fakeDeliveryPublisher{}
