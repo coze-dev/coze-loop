@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
 	fsMocks "github.com/coze-dev/coze-loop/backend/infra/fileserver/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -539,7 +540,7 @@ func Test_processContent_upload_error(t *testing.T) {
 	defer ctrl.Finish()
 	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
 
-	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload failed"))
+	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload failed")).Times(3)
 
 	cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 10}}}
 	s := &RecordDataStorage{batchStorage: mockS3, configer: &fakeConfiger{cfg: cfg}}
@@ -549,6 +550,41 @@ func Test_processContent_upload_error(t *testing.T) {
 	err := s.processContent(context.Background(), c, 10)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "upload")
+}
+
+// Test_processContent_upload_retry_success 验证偶发抖动场景：前两次 Upload 失败、第三次成功，
+// 重试后整体成功，且每轮都重建 reader（内容不会因上一轮被消费而丢失），大字段被正常剪裁上传。
+func Test_processContent_upload_retry_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+
+	longText := strings.Repeat("x", 100)
+	attempt := 0
+	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ string, r io.Reader, _ ...fileserver.UploadOpt) error {
+			attempt++
+			// 每轮 reader 都应能读到完整内容（重建 reader）
+			data, _ := io.ReadAll(r)
+			assert.Equal(t, len(longText), len(data))
+			if attempt < 3 {
+				return errors.New("bad gateway 201007")
+			}
+			return nil
+		},
+	).Times(3)
+
+	cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 10}}}
+	s := &RecordDataStorage{batchStorage: mockS3, configer: &fakeConfiger{cfg: cfg}}
+
+	c := &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of(longText)}
+	err := s.processContent(context.Background(), c, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, attempt)
+	// 成功后应完成剪裁与 FullContent 设置
+	assert.True(t, c.IsContentOmitted())
+	assert.NotNil(t, c.FullContent)
+	assert.NotNil(t, c.FullContent.URI)
 }
 
 func Test_loadContentFromS3_readAll_error(t *testing.T) {
@@ -581,7 +617,7 @@ func Test_SaveEvaluatorRecordData_processInputData_error(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
-	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err")).Times(3)
 
 	cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
 	s := NewRecordDataStorage(mockS3, &fakeConfiger{cfg: cfg})
@@ -625,7 +661,7 @@ func Test_SaveEvalTargetRecordData_processInput_error(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
-	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err")).Times(3)
 
 	cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
 	s := NewRecordDataStorage(mockS3, &fakeConfiger{cfg: cfg})
@@ -647,7 +683,7 @@ func Test_SaveEvalTargetRecordData_processOutput_error(t *testing.T) {
 	defer ctrl.Finish()
 	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
 	// input "short" (5 chars) <= maxSize 5, no upload; output "longoutput" (10 chars) triggers upload
-	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err")).Times(3)
 
 	cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
 	s := NewRecordDataStorage(mockS3, &fakeConfiger{cfg: cfg})
