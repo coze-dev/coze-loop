@@ -146,6 +146,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UpdateExptRunConfOApi": kitex.NewMethodInfo(
+		updateExptRunConfOApiHandler,
+		newEvaluationOpenAPIServiceUpdateExptRunConfOApiArgs,
+		newEvaluationOpenAPIServiceUpdateExptRunConfOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListExperimentsOApi": kitex.NewMethodInfo(
 		listExperimentsOApiHandler,
 		newEvaluationOpenAPIServiceListExperimentsOApiArgs,
@@ -727,6 +734,25 @@ func newEvaluationOpenAPIServiceGetExperimentsOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceGetExperimentsOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceGetExperimentsOApiResult()
+}
+
+func updateExptRunConfOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceUpdateExptRunConfOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceUpdateExptRunConfOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).UpdateExptRunConfOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceUpdateExptRunConfOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateExptRunConfOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceUpdateExptRunConfOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateExptRunConfOApiResult()
 }
 
 func listExperimentsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1439,6 +1465,16 @@ func (p *kClient) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperi
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceGetExperimentsOApiResult
 	if err = p.c.Call(ctx, "GetExperimentsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateExptRunConfOApi(ctx context.Context, req *openapi.UpdateExptRunConfOApiRequest) (r *openapi.UpdateExptRunConfOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceUpdateExptRunConfOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceUpdateExptRunConfOApiResult
+	if err = p.c.Call(ctx, "UpdateExptRunConfOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

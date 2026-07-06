@@ -493,6 +493,28 @@ struct GetExperimentsOApiResponse {
     255: base.BaseResp BaseResp
 }
 
+// UpdateExptRunConfOApiRequest 通过 OpenAPI 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// 仅对处于 Pending / Processing 状态的实验生效。
+struct UpdateExptRunConfOApiRequest {
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: optional i64 experiment_id (api.path = 'experiment_id', api.js_conv = 'true', go.tag = 'json:"experiment_id"')
+
+    // 评测项并发度：不传或 0 表示不修改；范围 (0, MaxItemConcurNum]
+    20: optional i32 item_concur_num (api.body = 'item_concur_num')
+    // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
+    45: optional i32 item_retry_num (api.body = 'item_retry_num')
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct UpdateExptRunConfOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+
+    255: base.BaseResp BaseResp
+}
+
 struct GetExperimentsOpenAPIDataData {
     1: optional experiment.Experiment experiment
 
@@ -1199,6 +1221,9 @@ service EvaluationOpenAPIService {
     SubmitExperimentOApiResponse SubmitExperimentOApi(1: SubmitExperimentOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/experiments")
     // 获取评测实验
     GetExperimentsOApiResponse GetExperimentsOApi(1: GetExperimentsOApiRequest req) (api.category = "openapi", api.get = '/v1/loop/evaluation/experiments/:experiment_id')
+
+    // UpdateExptRunConfOApi 修改进行中实验的运行配置（并发度 / Item 重试次数）
+    UpdateExptRunConfOApiResponse UpdateExptRunConfOApi(1: UpdateExptRunConfOApiRequest req) (api.category = "openapi", api.patch = '/v1/loop/evaluation/experiments/:experiment_id/run_conf')
     // 查询评测实验列表
     ListExperimentsOApiResponse ListExperimentsOApi(1: ListExperimentsOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/experiments/list")
     // 查询评测实验结果

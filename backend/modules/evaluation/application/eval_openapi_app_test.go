@@ -7142,3 +7142,105 @@ func TestEvalOpenAPIApplication_ListExperimentResultOApi_PopulatedResult(t *test
 		assert.Equal(t, "https://signed/k1", *url)
 	}
 }
+
+func TestEvalOpenAPIApplication_UpdateExptRunConfOApi(t *testing.T) {
+	const (
+		wsID    = int64(123)
+		exptID  = int64(456)
+		userID  = "789"
+		maxCncr = 200
+	)
+	execConf := &entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{MaxItemConcurNum: maxCncr}}
+	detail := &entity.Experiment{ID: exptID, SpaceID: wsID, Status: entity.ExptStatus_Processing, CreatedBy: userID}
+
+	tests := []struct {
+		name    string
+		req     *openapi.UpdateExptRunConfOApiRequest
+		setup   func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger)
+		wantErr bool
+	}{
+		{
+			name: "正常改并发度+重试",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10)), ItemRetryNum: gptr.Of(int32(3))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				cfg.EXPECT().GetExptExecConf(gomock.Any(), wsID).Return(execConf).AnyTimes()
+				mgr.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, p *entity.UpdateRunConfParam) error {
+						assert.Equal(t, 10, gptr.Indirect(p.ItemConcurNum))
+						assert.Equal(t, 3, gptr.Indirect(p.ItemRetryNum))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度=0 不改，重试=0 落库",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(0)), ItemRetryNum: gptr.Of(int32(0))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, p *entity.UpdateRunConfParam) error {
+						assert.Nil(t, p.ItemConcurNum)
+						assert.NotNil(t, p.ItemRetryNum)
+						assert.Equal(t, 0, gptr.Indirect(p.ItemRetryNum))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度超上限拒绝",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(maxCncr + 1))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				cfg.EXPECT().GetExptExecConf(gomock.Any(), wsID).Return(execConf).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "重试越界拒绝",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemRetryNum: gptr.Of(int32(entity.MaxItemRetryNum + 1))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "workspace_id 缺失拒绝",
+			req:  &openapi.UpdateExptRunConfOApiRequest{ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				// 参数校验在最前，不应触达 GetDetail
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mgr := servicemocks.NewMockIExptManager(ctrl)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			cfg := configermocks.NewMockIConfiger(ctrl)
+			app := &EvalOpenAPIApplication{
+				auth:     auth,
+				manager:  mgr,
+				configer: cfg,
+				metric:   &fakeOpenAPIMetric{},
+			}
+			tc.setup(mgr, auth, cfg)
+
+			_, err := app.UpdateExptRunConfOApi(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
