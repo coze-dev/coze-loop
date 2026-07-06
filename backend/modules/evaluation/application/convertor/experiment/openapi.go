@@ -248,15 +248,16 @@ func IsSupportedOpenAPIEvalTargetType(t openapiEvalTarget.EvalTargetType) bool {
 	return err == nil
 }
 
-// ValidateOpenAPIEvalTargetClusterEnv validates the required cluster/env for
-// long-connection eval targets (custom_agent / a2a_agent / custom_rpc_server).
-// These are resolved to a live RPC/frontier client at run time, so a missing
-// cluster/env passes creation silently and only fails later with an opaque RPC
-// error. Rejecting it up front yields a clear param error with common values.
-//   - custom_agent / a2a_agent: both cluster and env are caller-supplied → required.
-//   - custom_rpc_server: cluster comes from the app config, only env is required.
+// ValidateOpenAPIEvalTargetClusterEnv validates the required cluster/env for the
+// long-connection custom_agent eval target. custom_agent is resolved to a live
+// RPC/frontier client at run time, so a missing cluster/env passes creation
+// silently and only fails later with an opaque RPC error; rejecting it up front
+// yields a clear param error with common values.
+//   - custom_agent: cluster and env are required, UNLESS an explicit AgentConnection
+//     (frontier direct-connect) is provided — direct-connect does not use cluster/env.
+//   - a2a_agent / custom_rpc_server: intentionally NOT validated for now.
 //
-// Returns nil when param/type is nil or the type is not a long-connection target.
+// Returns nil when param/type is nil or the type is not custom_agent.
 func ValidateOpenAPIEvalTargetClusterEnv(param *openapi.SubmitExperimentEvalTargetParam) error {
 	if param == nil || param.EvalTargetType == nil {
 		return nil

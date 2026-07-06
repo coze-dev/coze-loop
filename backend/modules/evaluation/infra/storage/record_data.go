@@ -247,6 +247,8 @@ func (s *RecordDataStorage) processContent(ctx context.Context, content *entity.
 	key := EvalRecordFieldKeyPrefix + uuid.New().String()
 	// ImageX/对象存储偶发单实例迁移会返回临时错误（如 201007 / bad gateway），系统会自动迁移恢复，重试即可成功。
 	// 这里做固定间隔的止血重试：最多 2 次重试（共 3 次尝试）、间隔 1.5s；每轮都重建 reader，避免上一轮已消费导致重传空内容。
+	// 注意：当前对所有 error 无差别重试，未区分瞬时/永久错误——权限、参数非法等确定性失败也会重试满 3 次（额外等 ~3s）后才返回。
+	// 若后续拿到可重试错误码集合，可在闭包内对非瞬时错误用 backoff.Permanent(err) 短路。
 	data := []byte(text)
 	if err := backoff.RetryWithMaxTimesAndInterval(ctx, 2, 1500*time.Millisecond, func() error {
 		return s.batchStorage.Upload(ctx, key, bytes.NewReader(data))
