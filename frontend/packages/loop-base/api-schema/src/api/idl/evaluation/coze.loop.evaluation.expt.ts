@@ -550,6 +550,17 @@ export interface GetAnalysisRecordFeedbackVoteRequest {
 export interface GetAnalysisRecordFeedbackVoteResponse {
   vote?: expt.ExptInsightAnalysisFeedbackVote
 }
+export interface ListWebhookDeliveryRequest {
+  workspace_id: string,
+  experiment_id: string,
+  page_number?: number,
+  page_size?: number,
+  session?: common.Session,
+}
+export interface ListWebhookDeliveryResponse {
+  deliveries?: expt.WebhookDelivery[],
+  total?: number,
+}
 export const CheckExperimentName = /*#__PURE__*/createAPI<CheckExperimentNameRequest, CheckExperimentNameResponse>({
   "url": "/api/evaluation/v1/experiments/check_name",
   "method": "POST",
@@ -986,6 +997,19 @@ export const CheckExperimentTemplateName = /*#__PURE__*/createAPI<CheckExperimen
     "body": ["workspace_id", "name", "template_id", "expt_type"]
   },
   "resType": "CheckExperimentTemplateNameResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+/** 实验通知投递记录列表（用于详情页「通知日志」tab） */
+export const ListWebhookDelivery = /*#__PURE__*/createAPI<ListWebhookDeliveryRequest, ListWebhookDeliveryResponse>({
+  "url": "/api/evaluation/v1/experiments/webhook_deliveries",
+  "method": "GET",
+  "name": "ListWebhookDelivery",
+  "reqType": "ListWebhookDeliveryRequest",
+  "reqMapping": {
+    "query": ["workspace_id", "experiment_id", "page_number", "page_size"]
+  },
+  "resType": "ListWebhookDeliveryResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
   "service": "evaluationExpt"
 });

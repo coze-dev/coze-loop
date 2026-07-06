@@ -32,6 +32,7 @@ import ExperimentHeader from './components/experiment-header';
 import ExperimentTable from './components/experiment-detail-table';
 import ExperimentDescription from './components/experiment-description';
 import ExperimentChart from './components/experiment-chart';
+import NotificationLog from './components/notification-log';
 
 export default function ({
   defaultModuleRoute,
@@ -131,6 +132,7 @@ export default function ({
     const result: { tab: React.JSX.Element | string; itemKey: string }[] = [
       { tab: I18n.t('data_detail'), itemKey: 'detail' },
       { tab: I18n.t('measure_stat'), itemKey: 'chart' },
+      { tab: '通知日志', itemKey: 'notification_log' },
     ];
 
     if (exptTabList?.length && enableEvaluationAnalysis) {
@@ -204,6 +206,14 @@ export default function ({
                 columnAnnotations={base.data?.columnAnnotations}
                 experimentID={experimentID}
                 loading={base.loading}
+              />
+            </div>
+          )}
+          {activeKey === 'notification_log' && (
+            <div className="h-full overflow-hidden px-6 pt-4 pb-4">
+              <NotificationLog
+                spaceID={spaceID}
+                experimentID={experimentID}
               />
             </div>
           )}

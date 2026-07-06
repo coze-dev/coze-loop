@@ -82,6 +82,22 @@ export interface ExptNotificationConf {
   webhook?: WebhookNotificationConf,
   feishu_notification?: FeishuNotificationConf,
 }
+export interface WebhookDelivery {
+  delivery_id?: string,
+  /** started/succeeded/failed/terminated */
+  event_type?: string,
+  /** webhook / bits_callback */
+  channel_type?: string,
+  webhook_url?: string,
+  /** pending/success/retrying/failed */
+  status?: string,
+  attempt_count?: number,
+  max_attempts?: number,
+  first_sent_at_ms?: string,
+  last_sent_at_ms?: string,
+  response_code?: number,
+  error_message?: string,
+}
 export interface Experiment {
   id?: string,
   name?: string,
