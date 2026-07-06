@@ -14,6 +14,7 @@ import { type CreateExperimentValues } from '@/types/experiment/experiment-creat
 import { ReadonlyMappingItem } from '@/components/mapping-item-field/readonly-mapping-item';
 
 import { OpenDetailButton } from '../../open-detail-button';
+import { NotificationForm } from '../notification-form';
 import { EvaluateSetColList } from '../../evaluate-set-col-list';
 import { EvaluateItemRender } from '../../evaluate-item-render';
 
@@ -235,6 +236,10 @@ export const ViewSubmitForm = (props: {
           </div>
         )}
       </div>
+
+      <div className="h-10" />
+
+      <NotificationForm />
     </div>
   );
 };
