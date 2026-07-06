@@ -72,18 +72,20 @@ func (c *WebhookRetryConsumer) HandleMessage(ctx context.Context, msg *mq.Messag
 	signature := computeRetryHMACSHA256(secret, timestamp+"\n"+nonce+"\n")
 
 	// HTTP POST
-	if err := c.doPost(ctx, event.WebhookURL, []byte(event.Payload), timestamp, nonce, signature); err != nil {
+	if err := c.doPost(ctx, event.WebhookURL, []byte(event.Payload), timestamp, nonce, signature, event.Environment, event.Lane); err != nil {
 		logs.CtxWarn(ctx, "[WebhookRetryConsumer] retry attempt %d failed, url: %v, err: %v", event.AttemptNum, event.WebhookURL, err)
 
 		// 如果还有重试机会，发布下一次重试
 		if event.AttemptNum < len(retryDelays) {
 			nextEvent := &entity.WebhookRetryEvent{
-				ExptID:     event.ExptID,
-				SpaceID:    event.SpaceID,
-				DeliveryID: event.DeliveryID,
-				WebhookURL: event.WebhookURL,
-				Payload:    event.Payload,
-				AttemptNum: event.AttemptNum + 1,
+				ExptID:      event.ExptID,
+				SpaceID:     event.SpaceID,
+				DeliveryID:  event.DeliveryID,
+				WebhookURL:  event.WebhookURL,
+				Payload:     event.Payload,
+				AttemptNum:  event.AttemptNum + 1,
+				Environment: event.Environment,
+				Lane:        event.Lane,
 			}
 			delay := retryDelays[event.AttemptNum] // AttemptNum 从 1 开始，索引 [1] = 5min, [2] = 30min
 			if pubErr := c.publisher.PublishExptWebhookNotifyEvent(ctx, nextEvent, &delay); pubErr != nil {
@@ -101,7 +103,7 @@ func (c *WebhookRetryConsumer) HandleMessage(ctx context.Context, msg *mq.Messag
 	return nil
 }
 
-func (c *WebhookRetryConsumer) doPost(ctx context.Context, url string, body []byte, timestamp, nonce, signature string) error {
+func (c *WebhookRetryConsumer) doPost(ctx context.Context, url string, body []byte, timestamp, nonce, signature string, env *entity.WebhookEnvironment, lane *string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -111,6 +113,11 @@ func (c *WebhookRetryConsumer) doPost(ctx context.Context, url string, body []by
 	req.Header.Set("X-CozeLoop-Timestamp", timestamp)
 	req.Header.Set("X-CozeLoop-Nonce", nonce)
 	req.Header.Set("X-CozeLoop-Signature", signature)
+
+	// 按环境附加泳道路由 header，与首发共用 service.BuildLaneHeaders（在安全 header 之后 set，不覆盖安全 header）
+	for k, v := range service.BuildLaneHeaders(env, lane) {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

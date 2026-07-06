@@ -343,6 +343,54 @@ func (p *SourceType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type WebhookEnvironment int64
+
+const (
+	// 默认，不加任何路由 header
+	WebhookEnvironment_Prod WebhookEnvironment = 1
+	WebhookEnvironment_PPE  WebhookEnvironment = 2
+	WebhookEnvironment_BOE  WebhookEnvironment = 3
+)
+
+func (p WebhookEnvironment) String() string {
+	switch p {
+	case WebhookEnvironment_Prod:
+		return "Prod"
+	case WebhookEnvironment_PPE:
+		return "PPE"
+	case WebhookEnvironment_BOE:
+		return "BOE"
+	}
+	return "<UNSET>"
+}
+
+func WebhookEnvironmentFromString(s string) (WebhookEnvironment, error) {
+	switch s {
+	case "Prod":
+		return WebhookEnvironment_Prod, nil
+	case "PPE":
+		return WebhookEnvironment_PPE, nil
+	case "BOE":
+		return WebhookEnvironment_BOE, nil
+	}
+	return WebhookEnvironment(0), fmt.Errorf("not a valid WebhookEnvironment string")
+}
+
+func WebhookEnvironmentPtr(v WebhookEnvironment) *WebhookEnvironment { return &v }
+func (p *WebhookEnvironment) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = WebhookEnvironment(result.Int64)
+	return
+}
+
+func (p *WebhookEnvironment) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type ExptRetryMode int64
 
 const (
@@ -11475,6 +11523,10 @@ type WebhookNotificationConf struct {
 	Enable bool `thrift:"enable,1,required" frugal:"1,required,bool" form:"enable,required" json:"enable,required" query:"enable,required"`
 	// Webhook URL 列表，多个用逗号分隔
 	Urls *string `thrift:"urls,2,optional" frugal:"2,optional,string" form:"urls" json:"urls,omitempty" query:"urls"`
+	// 缺省 => Prod（向后兼容）
+	Environment *WebhookEnvironment `thrift:"environment,3,optional" frugal:"3,optional,WebhookEnvironment" form:"environment" json:"environment,omitempty" query:"environment"`
+	// ppe/boe 泳道名；prod 时忽略
+	Lane *string `thrift:"lane,4,optional" frugal:"4,optional,string" form:"lane" json:"lane,omitempty" query:"lane"`
 }
 
 func NewWebhookNotificationConf() *WebhookNotificationConf {
@@ -11502,20 +11554,60 @@ func (p *WebhookNotificationConf) GetUrls() (v string) {
 	}
 	return *p.Urls
 }
+
+var WebhookNotificationConf_Environment_DEFAULT WebhookEnvironment
+
+func (p *WebhookNotificationConf) GetEnvironment() (v WebhookEnvironment) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnvironment() {
+		return WebhookNotificationConf_Environment_DEFAULT
+	}
+	return *p.Environment
+}
+
+var WebhookNotificationConf_Lane_DEFAULT string
+
+func (p *WebhookNotificationConf) GetLane() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLane() {
+		return WebhookNotificationConf_Lane_DEFAULT
+	}
+	return *p.Lane
+}
 func (p *WebhookNotificationConf) SetEnable(val bool) {
 	p.Enable = val
 }
 func (p *WebhookNotificationConf) SetUrls(val *string) {
 	p.Urls = val
 }
+func (p *WebhookNotificationConf) SetEnvironment(val *WebhookEnvironment) {
+	p.Environment = val
+}
+func (p *WebhookNotificationConf) SetLane(val *string) {
+	p.Lane = val
+}
 
 var fieldIDToName_WebhookNotificationConf = map[int16]string{
 	1: "enable",
 	2: "urls",
+	3: "environment",
+	4: "lane",
 }
 
 func (p *WebhookNotificationConf) IsSetUrls() bool {
 	return p.Urls != nil
+}
+
+func (p *WebhookNotificationConf) IsSetEnvironment() bool {
+	return p.Environment != nil
+}
+
+func (p *WebhookNotificationConf) IsSetLane() bool {
+	return p.Lane != nil
 }
 
 func (p *WebhookNotificationConf) Read(iprot thrift.TProtocol) (err error) {
@@ -11549,6 +11641,22 @@ func (p *WebhookNotificationConf) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11611,6 +11719,29 @@ func (p *WebhookNotificationConf) ReadField2(iprot thrift.TProtocol) error {
 	p.Urls = _field
 	return nil
 }
+func (p *WebhookNotificationConf) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *WebhookEnvironment
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := WebhookEnvironment(v)
+		_field = &tmp
+	}
+	p.Environment = _field
+	return nil
+}
+func (p *WebhookNotificationConf) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Lane = _field
+	return nil
+}
 
 func (p *WebhookNotificationConf) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -11624,6 +11755,14 @@ func (p *WebhookNotificationConf) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -11678,6 +11817,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *WebhookNotificationConf) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnvironment() {
+		if err = oprot.WriteFieldBegin("environment", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.Environment)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *WebhookNotificationConf) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLane() {
+		if err = oprot.WriteFieldBegin("lane", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Lane); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *WebhookNotificationConf) String() string {
 	if p == nil {
@@ -11699,6 +11874,12 @@ func (p *WebhookNotificationConf) DeepEqual(ano *WebhookNotificationConf) bool {
 	if !p.Field2DeepEqual(ano.Urls) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.Environment) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Lane) {
+		return false
+	}
 	return true
 }
 
@@ -11717,6 +11898,30 @@ func (p *WebhookNotificationConf) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Urls, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *WebhookNotificationConf) Field3DeepEqual(src *WebhookEnvironment) bool {
+
+	if p.Environment == src {
+		return true
+	} else if p.Environment == nil || src == nil {
+		return false
+	}
+	if *p.Environment != *src {
+		return false
+	}
+	return true
+}
+func (p *WebhookNotificationConf) Field4DeepEqual(src *string) bool {
+
+	if p.Lane == src {
+		return true
+	} else if p.Lane == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Lane, *src) != 0 {
 		return false
 	}
 	return true
