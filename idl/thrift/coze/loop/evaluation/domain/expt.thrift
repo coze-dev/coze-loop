@@ -72,6 +72,20 @@ struct ExptNotificationConf {
     3: optional FeishuNotificationConf feishu_notification
 }
 
+struct WebhookDelivery {
+    1: optional string delivery_id
+    2: optional string event_type          // started/succeeded/failed/terminated
+    3: optional string channel_type        // webhook / bits_callback
+    4: optional string webhook_url
+    5: optional string status              // pending/success/retrying/failed
+    6: optional i32 attempt_count
+    7: optional i32 max_attempts
+    8: optional i64 first_sent_at_ms (api.js_conv='true', go.tag='json:"first_sent_at_ms"')
+    9: optional i64 last_sent_at_ms (api.js_conv='true', go.tag='json:"last_sent_at_ms"')
+    10: optional i32 response_code
+    11: optional string error_message
+}
+
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
     2: optional string name

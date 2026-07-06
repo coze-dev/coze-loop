@@ -806,6 +806,23 @@ struct GetAnalysisRecordFeedbackVoteResponse {
     255: base.BaseResp BaseResp
 }
 
+struct ListWebhookDeliveryRequest {
+    1: required i64 workspace_id (api.query = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 experiment_id (api.query = 'experiment_id', api.js_conv = 'true', go.tag = 'json:"experiment_id"')
+    3: optional i32 page_number (api.query = 'page_number', go.tag = 'json:"page_number"')
+    4: optional i32 page_size (api.query = 'page_size', go.tag = 'json:"page_size"')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct ListWebhookDeliveryResponse {
+    1: optional list<expt.WebhookDelivery> deliveries
+    20: optional i64 total (api.body = 'total', go.tag = 'json:"total"')
+
+    255: base.BaseResp BaseResp
+}
+
 service ExperimentService {
 
     CheckExperimentNameResponse CheckExperimentName(1: CheckExperimentNameRequest req) (
@@ -904,6 +921,10 @@ service ExperimentService {
     ListExptInsightAnalysisCommentResponse ListExptInsightAnalysisComment(1: ListExptInsightAnalysisCommentRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/comments/list")
     GetAnalysisRecordFeedbackVoteResponse GetAnalysisRecordFeedbackVote(1: GetAnalysisRecordFeedbackVoteRequest req) (api.get="/api/evaluation/v1/experiments/insight_analysis_records/:insight_analysis_record_id/feedback_vote")
 
+    // 实验通知投递记录列表（用于详情页「通知日志」tab）
+    ListWebhookDeliveryResponse ListWebhookDelivery(1: ListWebhookDeliveryRequest req) (
+        api.get = '/api/evaluation/v1/experiments/webhook_deliveries', api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
     // 实验模板
     CreateExperimentTemplateResponse CreateExperimentTemplate(1: CreateExperimentTemplateRequest req) (
         api.post = '/api/evaluation/v1/experiment_templates', api.op_type = 'create', api.tag = 'volc-agentkit', api.category = 'experiment'
