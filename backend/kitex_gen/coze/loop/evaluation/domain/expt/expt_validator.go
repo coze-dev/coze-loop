@@ -45,6 +45,9 @@ func (p *ExptNotificationConf) IsValid() error {
 	}
 	return nil
 }
+func (p *WebhookDelivery) IsValid() error {
+	return nil
+}
 func (p *Experiment) IsValid() error {
 	if p.EvalSet != nil {
 		if err := p.EvalSet.IsValid(); err != nil {

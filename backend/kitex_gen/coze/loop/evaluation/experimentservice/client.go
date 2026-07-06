@@ -44,6 +44,7 @@ type Client interface {
 	FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest, callOptions ...callopt.Option) (r *expt.FeedbackExptInsightAnalysisReportResponse, err error)
 	ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisCommentResponse, err error)
 	GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error)
+	ListWebhookDelivery(ctx context.Context, req *expt.ListWebhookDeliveryRequest, callOptions ...callopt.Option) (r *expt.ListWebhookDeliveryResponse, err error)
 	CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.CreateExperimentTemplateResponse, err error)
 	BatchGetExperimentTemplate(ctx context.Context, req *expt.BatchGetExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentTemplateResponse, err error)
 	UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentTemplateMetaResponse, err error)
@@ -246,6 +247,11 @@ func (p *kExperimentServiceClient) ListExptInsightAnalysisComment(ctx context.Co
 func (p *kExperimentServiceClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetAnalysisRecordFeedbackVote(ctx, req)
+}
+
+func (p *kExperimentServiceClient) ListWebhookDelivery(ctx context.Context, req *expt.ListWebhookDeliveryRequest, callOptions ...callopt.Option) (r *expt.ListWebhookDeliveryResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListWebhookDelivery(ctx, req)
 }
 
 func (p *kExperimentServiceClient) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.CreateExperimentTemplateResponse, err error) {

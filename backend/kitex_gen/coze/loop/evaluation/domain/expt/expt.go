@@ -1910,6 +1910,960 @@ func (p *ExptNotificationConf) Field3DeepEqual(src *FeishuNotificationConf) bool
 	return true
 }
 
+type WebhookDelivery struct {
+	DeliveryID *string `thrift:"delivery_id,1,optional" frugal:"1,optional,string" form:"delivery_id" json:"delivery_id,omitempty" query:"delivery_id"`
+	// started/succeeded/failed/terminated
+	EventType *string `thrift:"event_type,2,optional" frugal:"2,optional,string" form:"event_type" json:"event_type,omitempty" query:"event_type"`
+	// webhook / bits_callback
+	ChannelType *string `thrift:"channel_type,3,optional" frugal:"3,optional,string" form:"channel_type" json:"channel_type,omitempty" query:"channel_type"`
+	WebhookURL  *string `thrift:"webhook_url,4,optional" frugal:"4,optional,string" form:"webhook_url" json:"webhook_url,omitempty" query:"webhook_url"`
+	// pending/success/retrying/failed
+	Status        *string `thrift:"status,5,optional" frugal:"5,optional,string" form:"status" json:"status,omitempty" query:"status"`
+	AttemptCount  *int32  `thrift:"attempt_count,6,optional" frugal:"6,optional,i32" form:"attempt_count" json:"attempt_count,omitempty" query:"attempt_count"`
+	MaxAttempts   *int32  `thrift:"max_attempts,7,optional" frugal:"7,optional,i32" form:"max_attempts" json:"max_attempts,omitempty" query:"max_attempts"`
+	FirstSentAtMs *int64  `thrift:"first_sent_at_ms,8,optional" frugal:"8,optional,i64" json:"first_sent_at_ms" form:"first_sent_at_ms" query:"first_sent_at_ms"`
+	LastSentAtMs  *int64  `thrift:"last_sent_at_ms,9,optional" frugal:"9,optional,i64" json:"last_sent_at_ms" form:"last_sent_at_ms" query:"last_sent_at_ms"`
+	ResponseCode  *int32  `thrift:"response_code,10,optional" frugal:"10,optional,i32" form:"response_code" json:"response_code,omitempty" query:"response_code"`
+	ErrorMessage  *string `thrift:"error_message,11,optional" frugal:"11,optional,string" form:"error_message" json:"error_message,omitempty" query:"error_message"`
+}
+
+func NewWebhookDelivery() *WebhookDelivery {
+	return &WebhookDelivery{}
+}
+
+func (p *WebhookDelivery) InitDefault() {
+}
+
+var WebhookDelivery_DeliveryID_DEFAULT string
+
+func (p *WebhookDelivery) GetDeliveryID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDeliveryID() {
+		return WebhookDelivery_DeliveryID_DEFAULT
+	}
+	return *p.DeliveryID
+}
+
+var WebhookDelivery_EventType_DEFAULT string
+
+func (p *WebhookDelivery) GetEventType() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEventType() {
+		return WebhookDelivery_EventType_DEFAULT
+	}
+	return *p.EventType
+}
+
+var WebhookDelivery_ChannelType_DEFAULT string
+
+func (p *WebhookDelivery) GetChannelType() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetChannelType() {
+		return WebhookDelivery_ChannelType_DEFAULT
+	}
+	return *p.ChannelType
+}
+
+var WebhookDelivery_WebhookURL_DEFAULT string
+
+func (p *WebhookDelivery) GetWebhookURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWebhookURL() {
+		return WebhookDelivery_WebhookURL_DEFAULT
+	}
+	return *p.WebhookURL
+}
+
+var WebhookDelivery_Status_DEFAULT string
+
+func (p *WebhookDelivery) GetStatus() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatus() {
+		return WebhookDelivery_Status_DEFAULT
+	}
+	return *p.Status
+}
+
+var WebhookDelivery_AttemptCount_DEFAULT int32
+
+func (p *WebhookDelivery) GetAttemptCount() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAttemptCount() {
+		return WebhookDelivery_AttemptCount_DEFAULT
+	}
+	return *p.AttemptCount
+}
+
+var WebhookDelivery_MaxAttempts_DEFAULT int32
+
+func (p *WebhookDelivery) GetMaxAttempts() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxAttempts() {
+		return WebhookDelivery_MaxAttempts_DEFAULT
+	}
+	return *p.MaxAttempts
+}
+
+var WebhookDelivery_FirstSentAtMs_DEFAULT int64
+
+func (p *WebhookDelivery) GetFirstSentAtMs() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFirstSentAtMs() {
+		return WebhookDelivery_FirstSentAtMs_DEFAULT
+	}
+	return *p.FirstSentAtMs
+}
+
+var WebhookDelivery_LastSentAtMs_DEFAULT int64
+
+func (p *WebhookDelivery) GetLastSentAtMs() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLastSentAtMs() {
+		return WebhookDelivery_LastSentAtMs_DEFAULT
+	}
+	return *p.LastSentAtMs
+}
+
+var WebhookDelivery_ResponseCode_DEFAULT int32
+
+func (p *WebhookDelivery) GetResponseCode() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetResponseCode() {
+		return WebhookDelivery_ResponseCode_DEFAULT
+	}
+	return *p.ResponseCode
+}
+
+var WebhookDelivery_ErrorMessage_DEFAULT string
+
+func (p *WebhookDelivery) GetErrorMessage() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetErrorMessage() {
+		return WebhookDelivery_ErrorMessage_DEFAULT
+	}
+	return *p.ErrorMessage
+}
+func (p *WebhookDelivery) SetDeliveryID(val *string) {
+	p.DeliveryID = val
+}
+func (p *WebhookDelivery) SetEventType(val *string) {
+	p.EventType = val
+}
+func (p *WebhookDelivery) SetChannelType(val *string) {
+	p.ChannelType = val
+}
+func (p *WebhookDelivery) SetWebhookURL(val *string) {
+	p.WebhookURL = val
+}
+func (p *WebhookDelivery) SetStatus(val *string) {
+	p.Status = val
+}
+func (p *WebhookDelivery) SetAttemptCount(val *int32) {
+	p.AttemptCount = val
+}
+func (p *WebhookDelivery) SetMaxAttempts(val *int32) {
+	p.MaxAttempts = val
+}
+func (p *WebhookDelivery) SetFirstSentAtMs(val *int64) {
+	p.FirstSentAtMs = val
+}
+func (p *WebhookDelivery) SetLastSentAtMs(val *int64) {
+	p.LastSentAtMs = val
+}
+func (p *WebhookDelivery) SetResponseCode(val *int32) {
+	p.ResponseCode = val
+}
+func (p *WebhookDelivery) SetErrorMessage(val *string) {
+	p.ErrorMessage = val
+}
+
+var fieldIDToName_WebhookDelivery = map[int16]string{
+	1:  "delivery_id",
+	2:  "event_type",
+	3:  "channel_type",
+	4:  "webhook_url",
+	5:  "status",
+	6:  "attempt_count",
+	7:  "max_attempts",
+	8:  "first_sent_at_ms",
+	9:  "last_sent_at_ms",
+	10: "response_code",
+	11: "error_message",
+}
+
+func (p *WebhookDelivery) IsSetDeliveryID() bool {
+	return p.DeliveryID != nil
+}
+
+func (p *WebhookDelivery) IsSetEventType() bool {
+	return p.EventType != nil
+}
+
+func (p *WebhookDelivery) IsSetChannelType() bool {
+	return p.ChannelType != nil
+}
+
+func (p *WebhookDelivery) IsSetWebhookURL() bool {
+	return p.WebhookURL != nil
+}
+
+func (p *WebhookDelivery) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *WebhookDelivery) IsSetAttemptCount() bool {
+	return p.AttemptCount != nil
+}
+
+func (p *WebhookDelivery) IsSetMaxAttempts() bool {
+	return p.MaxAttempts != nil
+}
+
+func (p *WebhookDelivery) IsSetFirstSentAtMs() bool {
+	return p.FirstSentAtMs != nil
+}
+
+func (p *WebhookDelivery) IsSetLastSentAtMs() bool {
+	return p.LastSentAtMs != nil
+}
+
+func (p *WebhookDelivery) IsSetResponseCode() bool {
+	return p.ResponseCode != nil
+}
+
+func (p *WebhookDelivery) IsSetErrorMessage() bool {
+	return p.ErrorMessage != nil
+}
+
+func (p *WebhookDelivery) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebhookDelivery[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *WebhookDelivery) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DeliveryID = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EventType = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ChannelType = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WebhookURL = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Status = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AttemptCount = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxAttempts = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FirstSentAtMs = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LastSentAtMs = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ResponseCode = _field
+	return nil
+}
+func (p *WebhookDelivery) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ErrorMessage = _field
+	return nil
+}
+
+func (p *WebhookDelivery) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("WebhookDelivery"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *WebhookDelivery) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDeliveryID() {
+		if err = oprot.WriteFieldBegin("delivery_id", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DeliveryID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEventType() {
+		if err = oprot.WriteFieldBegin("event_type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.EventType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetChannelType() {
+		if err = oprot.WriteFieldBegin("channel_type", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ChannelType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWebhookURL() {
+		if err = oprot.WriteFieldBegin("webhook_url", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.WebhookURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Status); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAttemptCount() {
+		if err = oprot.WriteFieldBegin("attempt_count", thrift.I32, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.AttemptCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxAttempts() {
+		if err = oprot.WriteFieldBegin("max_attempts", thrift.I32, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxAttempts); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFirstSentAtMs() {
+		if err = oprot.WriteFieldBegin("first_sent_at_ms", thrift.I64, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.FirstSentAtMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLastSentAtMs() {
+		if err = oprot.WriteFieldBegin("last_sent_at_ms", thrift.I64, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LastSentAtMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetResponseCode() {
+		if err = oprot.WriteFieldBegin("response_code", thrift.I32, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ResponseCode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *WebhookDelivery) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErrorMessage() {
+		if err = oprot.WriteFieldBegin("error_message", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ErrorMessage); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
+func (p *WebhookDelivery) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WebhookDelivery(%+v)", *p)
+
+}
+
+func (p *WebhookDelivery) DeepEqual(ano *WebhookDelivery) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.DeliveryID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EventType) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.ChannelType) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.WebhookURL) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.AttemptCount) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.MaxAttempts) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.FirstSentAtMs) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.LastSentAtMs) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.ResponseCode) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.ErrorMessage) {
+		return false
+	}
+	return true
+}
+
+func (p *WebhookDelivery) Field1DeepEqual(src *string) bool {
+
+	if p.DeliveryID == src {
+		return true
+	} else if p.DeliveryID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DeliveryID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field2DeepEqual(src *string) bool {
+
+	if p.EventType == src {
+		return true
+	} else if p.EventType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.EventType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field3DeepEqual(src *string) bool {
+
+	if p.ChannelType == src {
+		return true
+	} else if p.ChannelType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ChannelType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field4DeepEqual(src *string) bool {
+
+	if p.WebhookURL == src {
+		return true
+	} else if p.WebhookURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.WebhookURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field5DeepEqual(src *string) bool {
+
+	if p.Status == src {
+		return true
+	} else if p.Status == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Status, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field6DeepEqual(src *int32) bool {
+
+	if p.AttemptCount == src {
+		return true
+	} else if p.AttemptCount == nil || src == nil {
+		return false
+	}
+	if *p.AttemptCount != *src {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field7DeepEqual(src *int32) bool {
+
+	if p.MaxAttempts == src {
+		return true
+	} else if p.MaxAttempts == nil || src == nil {
+		return false
+	}
+	if *p.MaxAttempts != *src {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field8DeepEqual(src *int64) bool {
+
+	if p.FirstSentAtMs == src {
+		return true
+	} else if p.FirstSentAtMs == nil || src == nil {
+		return false
+	}
+	if *p.FirstSentAtMs != *src {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field9DeepEqual(src *int64) bool {
+
+	if p.LastSentAtMs == src {
+		return true
+	} else if p.LastSentAtMs == nil || src == nil {
+		return false
+	}
+	if *p.LastSentAtMs != *src {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field10DeepEqual(src *int32) bool {
+
+	if p.ResponseCode == src {
+		return true
+	} else if p.ResponseCode == nil || src == nil {
+		return false
+	}
+	if *p.ResponseCode != *src {
+		return false
+	}
+	return true
+}
+func (p *WebhookDelivery) Field11DeepEqual(src *string) bool {
+
+	if p.ErrorMessage == src {
+		return true
+	} else if p.ErrorMessage == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ErrorMessage, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type Experiment struct {
 	ID            *int64      `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
 	Name          *string     `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`

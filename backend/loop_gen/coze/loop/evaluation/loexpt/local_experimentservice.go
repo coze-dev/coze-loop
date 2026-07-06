@@ -733,6 +733,29 @@ func (l *LocalExperimentService) GetAnalysisRecordFeedbackVote(ctx context.Conte
 	return result.GetSuccess(), nil
 }
 
+// ListWebhookDelivery
+// 实验通知投递记录列表（用于详情页「通知日志」tab）
+func (l *LocalExperimentService) ListWebhookDelivery(ctx context.Context, req *expt.ListWebhookDeliveryRequest, callOptions ...callopt.Option) (*expt.ListWebhookDeliveryResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceListWebhookDeliveryArgs)
+		result := out.(*expt.ExperimentServiceListWebhookDeliveryResult)
+		resp, err := l.impl.ListWebhookDelivery(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceListWebhookDeliveryArgs{Req: req}
+	result := &expt.ExperimentServiceListWebhookDeliveryResult{}
+	ctx = l.injectRPCInfo(ctx, "ListWebhookDelivery")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // CreateExperimentTemplate
 // 实验模板
 func (l *LocalExperimentService) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.CreateExperimentTemplateResponse, error) {

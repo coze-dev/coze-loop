@@ -37188,6 +37188,885 @@ func (p *GetAnalysisRecordFeedbackVoteResponse) Field255DeepEqual(src *base.Base
 	return true
 }
 
+type ListWebhookDeliveryRequest struct {
+	WorkspaceID  int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
+	ExperimentID int64           `thrift:"experiment_id,2,required" frugal:"2,required,i64" json:"experiment_id" query:"experiment_id,required" `
+	PageNumber   *int32          `thrift:"page_number,3,optional" frugal:"3,optional,i32" json:"page_number" query:"page_number" `
+	PageSize     *int32          `thrift:"page_size,4,optional" frugal:"4,optional,i32" json:"page_size" query:"page_size" `
+	Session      *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base         *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewListWebhookDeliveryRequest() *ListWebhookDeliveryRequest {
+	return &ListWebhookDeliveryRequest{}
+}
+
+func (p *ListWebhookDeliveryRequest) InitDefault() {
+}
+
+func (p *ListWebhookDeliveryRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *ListWebhookDeliveryRequest) GetExperimentID() (v int64) {
+	if p != nil {
+		return p.ExperimentID
+	}
+	return
+}
+
+var ListWebhookDeliveryRequest_PageNumber_DEFAULT int32
+
+func (p *ListWebhookDeliveryRequest) GetPageNumber() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageNumber() {
+		return ListWebhookDeliveryRequest_PageNumber_DEFAULT
+	}
+	return *p.PageNumber
+}
+
+var ListWebhookDeliveryRequest_PageSize_DEFAULT int32
+
+func (p *ListWebhookDeliveryRequest) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return ListWebhookDeliveryRequest_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
+var ListWebhookDeliveryRequest_Session_DEFAULT *common.Session
+
+func (p *ListWebhookDeliveryRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return ListWebhookDeliveryRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
+var ListWebhookDeliveryRequest_Base_DEFAULT *base.Base
+
+func (p *ListWebhookDeliveryRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ListWebhookDeliveryRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ListWebhookDeliveryRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *ListWebhookDeliveryRequest) SetExperimentID(val int64) {
+	p.ExperimentID = val
+}
+func (p *ListWebhookDeliveryRequest) SetPageNumber(val *int32) {
+	p.PageNumber = val
+}
+func (p *ListWebhookDeliveryRequest) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+func (p *ListWebhookDeliveryRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
+func (p *ListWebhookDeliveryRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ListWebhookDeliveryRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "experiment_id",
+	3:   "page_number",
+	4:   "page_size",
+	200: "session",
+	255: "Base",
+}
+
+func (p *ListWebhookDeliveryRequest) IsSetPageNumber() bool {
+	return p.PageNumber != nil
+}
+
+func (p *ListWebhookDeliveryRequest) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListWebhookDeliveryRequest) IsSetSession() bool {
+	return p.Session != nil
+}
+
+func (p *ListWebhookDeliveryRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ListWebhookDeliveryRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetExperimentID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExperimentID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetExperimentID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListWebhookDeliveryRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListWebhookDeliveryRequest[fieldId]))
+}
+
+func (p *ListWebhookDeliveryRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ListWebhookDeliveryRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ExperimentID = _field
+	return nil
+}
+func (p *ListWebhookDeliveryRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageNumber = _field
+	return nil
+}
+func (p *ListWebhookDeliveryRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
+func (p *ListWebhookDeliveryRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
+func (p *ListWebhookDeliveryRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ListWebhookDeliveryRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListWebhookDeliveryRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListWebhookDeliveryRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListWebhookDeliveryRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("experiment_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.ExperimentID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListWebhookDeliveryRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageNumber() {
+		if err = oprot.WriteFieldBegin("page_number", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageNumber); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListWebhookDeliveryRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ListWebhookDeliveryRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *ListWebhookDeliveryRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListWebhookDeliveryRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListWebhookDeliveryRequest(%+v)", *p)
+
+}
+
+func (p *ListWebhookDeliveryRequest) DeepEqual(ano *ListWebhookDeliveryRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ExperimentID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.PageNumber) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.PageSize) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Session) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ListWebhookDeliveryRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *ListWebhookDeliveryRequest) Field2DeepEqual(src int64) bool {
+
+	if p.ExperimentID != src {
+		return false
+	}
+	return true
+}
+func (p *ListWebhookDeliveryRequest) Field3DeepEqual(src *int32) bool {
+
+	if p.PageNumber == src {
+		return true
+	} else if p.PageNumber == nil || src == nil {
+		return false
+	}
+	if *p.PageNumber != *src {
+		return false
+	}
+	return true
+}
+func (p *ListWebhookDeliveryRequest) Field4DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *ListWebhookDeliveryRequest) Field200DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListWebhookDeliveryRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListWebhookDeliveryResponse struct {
+	Deliveries []*expt.WebhookDelivery `thrift:"deliveries,1,optional" frugal:"1,optional,list<expt.WebhookDelivery>" form:"deliveries" json:"deliveries,omitempty" query:"deliveries"`
+	Total      *int64                  `thrift:"total,20,optional" frugal:"20,optional,i64" json:"total" form:"total" `
+	BaseResp   *base.BaseResp          `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewListWebhookDeliveryResponse() *ListWebhookDeliveryResponse {
+	return &ListWebhookDeliveryResponse{}
+}
+
+func (p *ListWebhookDeliveryResponse) InitDefault() {
+}
+
+var ListWebhookDeliveryResponse_Deliveries_DEFAULT []*expt.WebhookDelivery
+
+func (p *ListWebhookDeliveryResponse) GetDeliveries() (v []*expt.WebhookDelivery) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDeliveries() {
+		return ListWebhookDeliveryResponse_Deliveries_DEFAULT
+	}
+	return p.Deliveries
+}
+
+var ListWebhookDeliveryResponse_Total_DEFAULT int64
+
+func (p *ListWebhookDeliveryResponse) GetTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotal() {
+		return ListWebhookDeliveryResponse_Total_DEFAULT
+	}
+	return *p.Total
+}
+
+var ListWebhookDeliveryResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ListWebhookDeliveryResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ListWebhookDeliveryResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ListWebhookDeliveryResponse) SetDeliveries(val []*expt.WebhookDelivery) {
+	p.Deliveries = val
+}
+func (p *ListWebhookDeliveryResponse) SetTotal(val *int64) {
+	p.Total = val
+}
+func (p *ListWebhookDeliveryResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ListWebhookDeliveryResponse = map[int16]string{
+	1:   "deliveries",
+	20:  "total",
+	255: "BaseResp",
+}
+
+func (p *ListWebhookDeliveryResponse) IsSetDeliveries() bool {
+	return p.Deliveries != nil
+}
+
+func (p *ListWebhookDeliveryResponse) IsSetTotal() bool {
+	return p.Total != nil
+}
+
+func (p *ListWebhookDeliveryResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ListWebhookDeliveryResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListWebhookDeliveryResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListWebhookDeliveryResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*expt.WebhookDelivery, 0, size)
+	values := make([]expt.WebhookDelivery, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Deliveries = _field
+	return nil
+}
+func (p *ListWebhookDeliveryResponse) ReadField20(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Total = _field
+	return nil
+}
+func (p *ListWebhookDeliveryResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ListWebhookDeliveryResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListWebhookDeliveryResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListWebhookDeliveryResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDeliveries() {
+		if err = oprot.WriteFieldBegin("deliveries", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Deliveries)); err != nil {
+			return err
+		}
+		for _, v := range p.Deliveries {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListWebhookDeliveryResponse) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotal() {
+		if err = oprot.WriteFieldBegin("total", thrift.I64, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Total); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+func (p *ListWebhookDeliveryResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListWebhookDeliveryResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListWebhookDeliveryResponse(%+v)", *p)
+
+}
+
+func (p *ListWebhookDeliveryResponse) DeepEqual(ano *ListWebhookDeliveryResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Deliveries) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.Total) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ListWebhookDeliveryResponse) Field1DeepEqual(src []*expt.WebhookDelivery) bool {
+
+	if len(p.Deliveries) != len(src) {
+		return false
+	}
+	for i, v := range p.Deliveries {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListWebhookDeliveryResponse) Field20DeepEqual(src *int64) bool {
+
+	if p.Total == src {
+		return true
+	} else if p.Total == nil || src == nil {
+		return false
+	}
+	if *p.Total != *src {
+		return false
+	}
+	return true
+}
+func (p *ListWebhookDeliveryResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type ExperimentService interface {
 	CheckExperimentName(ctx context.Context, req *CheckExperimentNameRequest) (r *CheckExperimentNameResponse, err error)
 	// CreateExperiment 只创建，不提交运行
@@ -37254,6 +38133,8 @@ type ExperimentService interface {
 	ListExptInsightAnalysisComment(ctx context.Context, req *ListExptInsightAnalysisCommentRequest) (r *ListExptInsightAnalysisCommentResponse, err error)
 
 	GetAnalysisRecordFeedbackVote(ctx context.Context, req *GetAnalysisRecordFeedbackVoteRequest) (r *GetAnalysisRecordFeedbackVoteResponse, err error)
+	// 实验通知投递记录列表（用于详情页「通知日志」tab）
+	ListWebhookDelivery(ctx context.Context, req *ListWebhookDeliveryRequest) (r *ListWebhookDeliveryResponse, err error)
 	// 实验模板
 	CreateExperimentTemplate(ctx context.Context, req *CreateExperimentTemplateRequest) (r *CreateExperimentTemplateResponse, err error)
 
@@ -37595,6 +38476,15 @@ func (p *ExperimentServiceClient) GetAnalysisRecordFeedbackVote(ctx context.Cont
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *ExperimentServiceClient) ListWebhookDelivery(ctx context.Context, req *ListWebhookDeliveryRequest) (r *ListWebhookDeliveryResponse, err error) {
+	var _args ExperimentServiceListWebhookDeliveryArgs
+	_args.Req = req
+	var _result ExperimentServiceListWebhookDeliveryResult
+	if err = p.Client_().Call(ctx, "ListWebhookDelivery", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *ExperimentServiceClient) CreateExperimentTemplate(ctx context.Context, req *CreateExperimentTemplateRequest) (r *CreateExperimentTemplateResponse, err error) {
 	var _args ExperimentServiceCreateExperimentTemplateArgs
 	_args.Req = req
@@ -37721,6 +38611,7 @@ func NewExperimentServiceProcessor(handler ExperimentService) *ExperimentService
 	self.AddToProcessorMap("FeedbackExptInsightAnalysisReport", &experimentServiceProcessorFeedbackExptInsightAnalysisReport{handler: handler})
 	self.AddToProcessorMap("ListExptInsightAnalysisComment", &experimentServiceProcessorListExptInsightAnalysisComment{handler: handler})
 	self.AddToProcessorMap("GetAnalysisRecordFeedbackVote", &experimentServiceProcessorGetAnalysisRecordFeedbackVote{handler: handler})
+	self.AddToProcessorMap("ListWebhookDelivery", &experimentServiceProcessorListWebhookDelivery{handler: handler})
 	self.AddToProcessorMap("CreateExperimentTemplate", &experimentServiceProcessorCreateExperimentTemplate{handler: handler})
 	self.AddToProcessorMap("BatchGetExperimentTemplate", &experimentServiceProcessorBatchGetExperimentTemplate{handler: handler})
 	self.AddToProcessorMap("UpdateExperimentTemplateMeta", &experimentServiceProcessorUpdateExperimentTemplateMeta{handler: handler})
@@ -39316,6 +40207,54 @@ func (p *experimentServiceProcessorGetAnalysisRecordFeedbackVote) Process(ctx co
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("GetAnalysisRecordFeedbackVote", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorListWebhookDelivery struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorListWebhookDelivery) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceListWebhookDeliveryArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ListWebhookDelivery", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceListWebhookDeliveryResult{}
+	var retval *ListWebhookDeliveryResponse
+	if retval, err2 = p.handler.ListWebhookDelivery(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListWebhookDelivery: "+err2.Error())
+		oprot.WriteMessageBegin("ListWebhookDelivery", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ListWebhookDelivery", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -51062,6 +52001,350 @@ func (p *ExperimentServiceGetAnalysisRecordFeedbackVoteResult) DeepEqual(ano *Ex
 }
 
 func (p *ExperimentServiceGetAnalysisRecordFeedbackVoteResult) Field0DeepEqual(src *GetAnalysisRecordFeedbackVoteResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceListWebhookDeliveryArgs struct {
+	Req *ListWebhookDeliveryRequest `thrift:"req,1" frugal:"1,default,ListWebhookDeliveryRequest"`
+}
+
+func NewExperimentServiceListWebhookDeliveryArgs() *ExperimentServiceListWebhookDeliveryArgs {
+	return &ExperimentServiceListWebhookDeliveryArgs{}
+}
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) InitDefault() {
+}
+
+var ExperimentServiceListWebhookDeliveryArgs_Req_DEFAULT *ListWebhookDeliveryRequest
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) GetReq() (v *ListWebhookDeliveryRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceListWebhookDeliveryArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceListWebhookDeliveryArgs) SetReq(val *ListWebhookDeliveryRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceListWebhookDeliveryArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceListWebhookDeliveryArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListWebhookDeliveryRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListWebhookDelivery_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceListWebhookDeliveryArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) DeepEqual(ano *ExperimentServiceListWebhookDeliveryArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceListWebhookDeliveryArgs) Field1DeepEqual(src *ListWebhookDeliveryRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceListWebhookDeliveryResult struct {
+	Success *ListWebhookDeliveryResponse `thrift:"success,0,optional" frugal:"0,optional,ListWebhookDeliveryResponse"`
+}
+
+func NewExperimentServiceListWebhookDeliveryResult() *ExperimentServiceListWebhookDeliveryResult {
+	return &ExperimentServiceListWebhookDeliveryResult{}
+}
+
+func (p *ExperimentServiceListWebhookDeliveryResult) InitDefault() {
+}
+
+var ExperimentServiceListWebhookDeliveryResult_Success_DEFAULT *ListWebhookDeliveryResponse
+
+func (p *ExperimentServiceListWebhookDeliveryResult) GetSuccess() (v *ListWebhookDeliveryResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceListWebhookDeliveryResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceListWebhookDeliveryResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListWebhookDeliveryResponse)
+}
+
+var fieldIDToName_ExperimentServiceListWebhookDeliveryResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceListWebhookDeliveryResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceListWebhookDeliveryResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceListWebhookDeliveryResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListWebhookDeliveryResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListWebhookDeliveryResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceListWebhookDeliveryResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListWebhookDelivery_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceListWebhookDeliveryResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceListWebhookDeliveryResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceListWebhookDeliveryResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceListWebhookDeliveryResult) DeepEqual(ano *ExperimentServiceListWebhookDeliveryResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceListWebhookDeliveryResult) Field0DeepEqual(src *ListWebhookDeliveryResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

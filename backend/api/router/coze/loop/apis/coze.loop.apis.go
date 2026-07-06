@@ -268,6 +268,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_experiments.PATCH("/:expt_id", append(_updateexperimentMw(handler), apis.UpdateExperiment)...)
 					_experiments.POST("/list", append(_listexperimentsMw(handler), apis.ListExperiments)...)
 					_experiments.POST("/submit", append(_submitexperimentMw(handler), apis.SubmitExperiment)...)
+					_experiments.GET("/webhook_deliveries", append(_listwebhookdeliveryMw(handler), apis.ListWebhookDelivery)...)
 					{
 						_aggr_results := _experiments.Group("/aggr_results", _aggr_resultsMw(handler)...)
 						_aggr_results.POST("/batch_get", append(_batchgetexperimentaggrresultMw(handler), apis.BatchGetExperimentAggrResult)...)

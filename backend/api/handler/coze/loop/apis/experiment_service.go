@@ -330,3 +330,19 @@ func CheckExperimentTemplateName(ctx context.Context, c *app.RequestContext) {
 func SubmitExptFromTemplate(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localExptSvc.SubmitExptFromTemplate)
 }
+
+// ListWebhookDelivery .
+// @router /api/evaluation/v1/experiments/webhook_deliveries [GET]
+func ListWebhookDelivery(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.ListWebhookDeliveryRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.ListWebhookDeliveryResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

@@ -244,6 +244,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListWebhookDelivery": kitex.NewMethodInfo(
+		listWebhookDeliveryHandler,
+		newExperimentServiceListWebhookDeliveryArgs,
+		newExperimentServiceListWebhookDeliveryResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateExperimentTemplate": kitex.NewMethodInfo(
 		createExperimentTemplateHandler,
 		newExperimentServiceCreateExperimentTemplateArgs,
@@ -960,6 +967,25 @@ func newExperimentServiceGetAnalysisRecordFeedbackVoteResult() interface{} {
 	return expt.NewExperimentServiceGetAnalysisRecordFeedbackVoteResult()
 }
 
+func listWebhookDeliveryHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceListWebhookDeliveryArgs)
+	realResult := result.(*expt.ExperimentServiceListWebhookDeliveryResult)
+	success, err := handler.(expt.ExperimentService).ListWebhookDelivery(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceListWebhookDeliveryArgs() interface{} {
+	return expt.NewExperimentServiceListWebhookDeliveryArgs()
+}
+
+func newExperimentServiceListWebhookDeliveryResult() interface{} {
+	return expt.NewExperimentServiceListWebhookDeliveryResult()
+}
+
 func createExperimentTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*expt.ExperimentServiceCreateExperimentTemplateArgs)
 	realResult := result.(*expt.ExperimentServiceCreateExperimentTemplateResult)
@@ -1449,6 +1475,16 @@ func (p *kClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.G
 	_args.Req = req
 	var _result expt.ExperimentServiceGetAnalysisRecordFeedbackVoteResult
 	if err = p.c.Call(ctx, "GetAnalysisRecordFeedbackVote", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListWebhookDelivery(ctx context.Context, req *expt.ListWebhookDeliveryRequest) (r *expt.ListWebhookDeliveryResponse, err error) {
+	var _args expt.ExperimentServiceListWebhookDeliveryArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceListWebhookDeliveryResult
+	if err = p.c.Call(ctx, "ListWebhookDelivery", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
