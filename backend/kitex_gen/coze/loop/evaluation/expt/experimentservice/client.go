@@ -17,6 +17,7 @@ type Client interface {
 	BatchGetExperiments(ctx context.Context, req *expt.BatchGetExperimentsRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentsResponse, err error)
 	ListExperiments(ctx context.Context, req *expt.ListExperimentsRequest, callOptions ...callopt.Option) (r *expt.ListExperimentsResponse, err error)
 	UpdateExperiment(ctx context.Context, req *expt.UpdateExperimentRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentResponse, err error)
+	UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest, callOptions ...callopt.Option) (r *expt.UpdateExptRunConfResponse, err error)
 	DeleteExperiment(ctx context.Context, req *expt.DeleteExperimentRequest, callOptions ...callopt.Option) (r *expt.DeleteExperimentResponse, err error)
 	BatchDeleteExperiments(ctx context.Context, req *expt.BatchDeleteExperimentsRequest, callOptions ...callopt.Option) (r *expt.BatchDeleteExperimentsResponse, err error)
 	CloneExperiment(ctx context.Context, req *expt.CloneExperimentRequest, callOptions ...callopt.Option) (r *expt.CloneExperimentResponse, err error)
@@ -111,6 +112,11 @@ func (p *kExperimentServiceClient) ListExperiments(ctx context.Context, req *exp
 func (p *kExperimentServiceClient) UpdateExperiment(ctx context.Context, req *expt.UpdateExperimentRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.UpdateExperiment(ctx, req)
+}
+
+func (p *kExperimentServiceClient) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest, callOptions ...callopt.Option) (r *expt.UpdateExptRunConfResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateExptRunConf(ctx, req)
 }
 
 func (p *kExperimentServiceClient) DeleteExperiment(ctx context.Context, req *expt.DeleteExperimentRequest, callOptions ...callopt.Option) (r *expt.DeleteExperimentResponse, err error) {

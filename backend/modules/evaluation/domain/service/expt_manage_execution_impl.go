@@ -100,6 +100,10 @@ func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment,
 	if gptr.Indirect(expt.EvalConf.ItemConcurNum) > e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetMaxItemConcurNum() {
 		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item concurrent num must not be greater than %d", e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetMaxItemConcurNum())))
 	}
+	// Item 最大重试次数须落在 [0, MaxItemRetryNum]（补齐 OSS 原无上界的缺口，与更新侧共用规则）
+	if !entity.ValidateItemRetryNum(expt.EvalConf.ItemRetryNum) {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item retry num must be in range [0, %d]", entity.MaxItemRetryNum)))
+	}
 
 	return nil
 }

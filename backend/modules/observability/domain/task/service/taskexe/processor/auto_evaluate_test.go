@@ -351,6 +351,10 @@ func (f *fakeExperimentClient) SubmitExptFromTemplate(ctx context.Context, req *
 	return nil, nil
 }
 
+func (f *fakeExperimentClient) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest, callOptions ...callopt.Option) (*expt.UpdateExptRunConfResponse, error) {
+	return nil, nil
+}
+
 // 使用真实 EvaluationProvider 注入 Processor，验证三种路径：BizStatus、非 BizStatus 包装、成功返回条数
 func TestAutoEvaluateProcessor_Invoke_WithEvaluationProvider_BizStatusPassthrough(t *testing.T) {
 	t.Parallel()

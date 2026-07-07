@@ -2586,3 +2586,71 @@ func (e *EvalOpenAPIApplication) fillExtraOutputURLs(ctx context.Context, itemRe
 	}
 	return nil
 }
+
+// UpdateExptRunConfOApi 通过 OpenAPI 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// 仅对 Pending / Processing 状态的实验生效；校验规则与前端接口共用（兜住直连链路）。
+func (e *EvalOpenAPIApplication) UpdateExptRunConfOApi(ctx context.Context, req *openapi.UpdateExptRunConfOApiRequest) (r *openapi.UpdateExptRunConfOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if !req.IsSetWorkspaceID() || req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	session := entity.NewSession(ctx)
+	do, err := e.manager.GetDetail(ctx, req.GetExperimentID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 鉴权：Edit 权限 + 归属校验
+	if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(do.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	}); err != nil {
+		return nil, err
+	}
+
+	// 解析并校验两个可变字段（0 值语义不对称：ItemConcurNum 用 >0，ItemRetryNum 用 IsSet）。
+	var itemConcurNum, itemRetryNum *int
+	if req.IsSetItemConcurNum() {
+		v := int(req.GetItemConcurNum())
+		if v < 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item concurrent num must not be negative"))
+		}
+		if v > 0 {
+			maxItemConcurNum := e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).GetExptItemEvalConf().GetMaxItemConcurNum()
+			if v > maxItemConcurNum {
+				return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("item concurrent num must not be greater than %d", maxItemConcurNum)))
+			}
+			itemConcurNum = gptr.Of(v)
+		}
+	}
+	if req.IsSetItemRetryNum() {
+		v := int(req.GetItemRetryNum())
+		if !entity.ValidateItemRetryNum(gptr.Of(v)) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("item retry num must be in range [0, %d]", entity.MaxItemRetryNum)))
+		}
+		itemRetryNum = gptr.Of(v)
+	}
+
+	if err = e.manager.UpdateRunConf(ctx, &entity.UpdateRunConfParam{
+		ExptID:        req.GetExperimentID(),
+		SpaceID:       req.GetWorkspaceID(),
+		ItemConcurNum: itemConcurNum,
+		ItemRetryNum:  itemRetryNum,
+		Session:       session,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &openapi.UpdateExptRunConfOApiResponse{}, nil
+}

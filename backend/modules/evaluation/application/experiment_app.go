@@ -1110,6 +1110,76 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 	}, nil
 }
 
+// UpdateExptRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// 仅对 Pending / Processing 状态的实验生效；改的是整数值，跳过内容审核。
+func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest) (r *expt.UpdateExptRunConfResponse, err error) {
+	session := entity.NewSession(ctx)
+
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 水平越权校验：仅当实验确实归属当前 workspace 时才允许更新。
+	if got.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("expt %d not found in space %d", req.GetExptID(), req.GetWorkspaceID())))
+	}
+
+	if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	}); err != nil {
+		return nil, err
+	}
+
+	// 解析并校验两个可变字段，得到用于 RMW 的指针（nil = 不修改）。
+	// 注意 0 值语义不对称：ItemConcurNum 的 0 表示"不修改"；ItemRetryNum 的 0 是合法值"不重试"。
+	var itemConcurNum, itemRetryNum *int
+
+	// ItemConcurNum：nil 或 0 = 不修改；<0 拒绝；(0, MaxItemConcurNum] 接受；越上界拒绝。
+	if req.IsSetItemConcurNum() {
+		v := int(req.GetItemConcurNum())
+		if v < 0 {
+			return nil, errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("item concurrent num must not be negative"))
+		}
+		if v > 0 {
+			maxItemConcurNum := e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).GetExptItemEvalConf().GetMaxItemConcurNum()
+			if v > maxItemConcurNum {
+				return nil, errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item concurrent num must not be greater than %d", maxItemConcurNum)))
+			}
+			itemConcurNum = gptr.Of(v)
+		}
+		// v == 0 时保持 itemConcurNum = nil，即不修改
+	}
+
+	// ItemRetryNum：nil = 不修改；[0, MaxItemRetryNum] 接受（0 = 显式不重试）；越界拒绝。
+	// 用 IsSet 判定而非 >0，避免把"改成不重试(0)"误当"不修改"。
+	if req.IsSetItemRetryNum() {
+		v := int(req.GetItemRetryNum())
+		if !entity.ValidateItemRetryNum(gptr.Of(v)) {
+			return nil, errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item retry num must be in range [0, %d]", entity.MaxItemRetryNum)))
+		}
+		itemRetryNum = gptr.Of(v)
+	}
+
+	if err = e.manager.UpdateRunConf(ctx, &entity.UpdateRunConfParam{
+		ExptID:        req.GetExptID(),
+		SpaceID:       req.GetWorkspaceID(),
+		ItemConcurNum: itemConcurNum,
+		ItemRetryNum:  itemRetryNum,
+		Session:       session,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &expt.UpdateExptRunConfResponse{
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
 func (e *experimentApplication) DeleteExperiment(ctx context.Context, req *expt.DeleteExperimentRequest) (r *expt.DeleteExperimentResponse, err error) {
 	session := entity.NewSession(ctx)
 

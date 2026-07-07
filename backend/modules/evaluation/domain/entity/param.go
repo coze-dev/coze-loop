@@ -293,6 +293,16 @@ type ReportEvaluatorRecordParam struct {
 	Status     EvaluatorRunStatus   `json:"status"`
 }
 
+// UpdateRunConfParam 修改进行中实验运行配置的参数。
+// ItemConcurNum / ItemRetryNum 为 nil 表示该字段不修改。
+type UpdateRunConfParam struct {
+	ExptID        int64
+	SpaceID       int64
+	ItemConcurNum *int
+	ItemRetryNum  *int
+	Session       *Session
+}
+
 type CreateExptParam struct {
 	WorkspaceID           int64                    `json:"workspace_id"`
 	EvalSetVersionID      int64                    `json:"eval_set_version_id"`

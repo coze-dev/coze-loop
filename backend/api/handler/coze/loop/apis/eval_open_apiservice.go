@@ -302,3 +302,9 @@ func ExportExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
 func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentResultExportRecordOApi)
 }
+
+// UpdateExptRunConfOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/run_conf [PATCH]
+func UpdateExptRunConfOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateExptRunConfOApi)
+}

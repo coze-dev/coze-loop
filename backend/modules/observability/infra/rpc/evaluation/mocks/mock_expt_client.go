@@ -842,6 +842,26 @@ func (mr *MockClientMockRecorder) UpdateExperimentTemplateMeta(ctx, req any, cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExperimentTemplateMeta", reflect.TypeOf((*MockClient)(nil).UpdateExperimentTemplateMeta), varargs...)
 }
 
+// UpdateExptRunConf mocks base method.
+func (m *MockClient) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest, callOptions ...callopt.Option) (*expt.UpdateExptRunConfResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range callOptions {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateExptRunConf", varargs...)
+	ret0, _ := ret[0].(*expt.UpdateExptRunConfResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateExptRunConf indicates an expected call of UpdateExptRunConf.
+func (mr *MockClientMockRecorder) UpdateExptRunConf(ctx, req any, callOptions ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, callOptions...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptRunConf", reflect.TypeOf((*MockClient)(nil).UpdateExptRunConf), varargs...)
+}
+
 // UpsertExptTurnResultFilter mocks base method.
 func (m *MockClient) UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest, callOptions ...callopt.Option) (*expt.UpsertExptTurnResultFilterResponse, error) {
 	m.ctrl.T.Helper()

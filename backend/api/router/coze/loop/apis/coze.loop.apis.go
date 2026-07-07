@@ -265,7 +265,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						_results := _expt_id.Group("/results", _resultsMw(handler)...)
 						_results.POST("/export", append(_exportexptresultMw(handler), apis.ExportExptResult)...)
 					}
-					_experiments.PATCH("/:expt_id", append(_updateexperimentMw(handler), apis.UpdateExperiment)...)
+					_experiments.PATCH("/:expt_id", append(_expt_id0Mw(handler), apis.UpdateExperiment)...)
+					_expt_id0 := _experiments.Group("/:expt_id", _expt_id0Mw(handler)...)
+					_expt_id0.PATCH("/run_conf", append(_updateexptrunconfMw(handler), apis.UpdateExptRunConf)...)
 					_experiments.POST("/list", append(_listexperimentsMw(handler), apis.ListExperiments)...)
 					_experiments.POST("/submit", append(_submitexperimentMw(handler), apis.SubmitExperiment)...)
 					{
@@ -550,6 +552,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_results1 := _experiment_id.Group("/results", _results1Mw(handler)...)
 				_results1.POST("/export", append(_exportexperimentresultoapiMw(handler), apis.ExportExperimentResultOApi)...)
 				_experiment_id.POST("/retry", append(_retryexperimentoapiMw(handler), apis.RetryExperimentOApi)...)
+				_experiment_id.PATCH("/run_conf", append(_updateexptrunconfoapiMw(handler), apis.UpdateExptRunConfOApi)...)
 				{
 					_export_records0 := _experiment_id.Group("/export_records", _export_records0Mw(handler)...)
 					_export_records0.GET("/:export_id", append(_getexperimentresultexportrecordoapiMw(handler), apis.GetExperimentResultExportRecordOApi)...)
