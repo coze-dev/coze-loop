@@ -612,6 +612,7 @@ func SandboxAgentDTO2DO(dtoObj *dto.SandboxAgent) *do.SandboxAgent {
 		AgentSetupCmd: gptr.Indirect(dtoObj.AgentSetupCmd),
 		AgentRunCmd:   gptr.Indirect(dtoObj.AgentRunCmd),
 		Envs:          SandboxEnvVarsDTO2DO(dtoObj.Envs),
+		Image:         gptr.Indirect(dtoObj.Image),
 	}
 }
 
@@ -626,6 +627,7 @@ func SandboxAgentDO2DTO(doObj *do.SandboxAgent) *dto.SandboxAgent {
 		AgentSetupCmd: gptr.Of(doObj.AgentSetupCmd),
 		AgentRunCmd:   gptr.Of(doObj.AgentRunCmd),
 		Envs:          SandboxEnvVarsDO2DTO(doObj.Envs),
+		Image:         gptr.Of(doObj.Image),
 	}
 }
 

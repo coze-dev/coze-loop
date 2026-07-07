@@ -220,6 +220,9 @@ struct SandboxAgent {
 
     // Agent 环境变量，容器初始化时静态注入，对所有阶段可见
     7: optional list<SandboxEnvVar> envs
+
+    // 沙箱镜像
+    8: optional string image
 }
 
 struct AgentConnection {
