@@ -1,0 +1,205 @@
+backend/modules/evaluation/domain/service/expt_run_item_event_impl_test.go
+  f6a7c64b43a92b69 1047-1315 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a13fe8517a310ee142b50d9","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1047,1315]}]}]}
+backend/modules/evaluation/application/convertor/experiment/openapi_test.go
+  f6a7c64b43a92b69 3034-3092 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a13fe8517a310ee142b50d9","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[3034,3092]}]}]}
+backend/modules/evaluation/application/convertor/experiment/expt.go
+  f6a7c64b43a92b69 343-351,355-363 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a13fe8517a310ee142b50d9","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[343,351]},{"Range":[355,363]}]}]}
+backend/modules/evaluation/domain/service/expt_run_scheduler_event_impl_test.go
+  f6a7c64b43a92b69 734-737,1312-1510 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a13fe8517a310ee142b50d9","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[734,737]},{"Range":[1312,1510]}]}]}
+backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model/experiment.gen.go
+  f6a7c64b43a92b69 46 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a13fe8517a310ee142b50d9","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":46}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "e21080314e809dc35d4f66eec8ddad67932143e9",
+  "prompts": {
+    "f6a7c64b43a92b69": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a101964301ac5294bf56e72",
+        "model": "c_o_new_thinking__dev"
+      },
+      "human_author": "shenjiayun <shenjiayun@bytedance.com>",
+      "messages": [],
+      "total_additions": 561,
+      "total_deletions": 34,
+      "accepted_lines": 550,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/application/convertor/experiment/expt.go": [
+      {
+        "hash": "f6a7c64b43a92b69",
+        "line_ranges": [
+          {
+            "Range": [
+              343,
+              351
+            ]
+          },
+          {
+            "Range": [
+              355,
+              363
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a13fe8517a310ee142b50d9",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  343,
+                  351
+                ]
+              },
+              {
+                "Range": [
+                  355,
+                  363
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/application/convertor/experiment/openapi_test.go": [
+      {
+        "hash": "f6a7c64b43a92b69",
+        "line_ranges": [
+          {
+            "Range": [
+              3034,
+              3092
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a13fe8517a310ee142b50d9",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  3034,
+                  3092
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_run_item_event_impl_test.go": [
+      {
+        "hash": "f6a7c64b43a92b69",
+        "line_ranges": [
+          {
+            "Range": [
+              1047,
+              1315
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a13fe8517a310ee142b50d9",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1047,
+                  1315
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_run_scheduler_event_impl_test.go": [
+      {
+        "hash": "f6a7c64b43a92b69",
+        "line_ranges": [
+          {
+            "Range": [
+              734,
+              737
+            ]
+          },
+          {
+            "Range": [
+              1312,
+              1510
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a13fe8517a310ee142b50d9",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  734,
+                  737
+                ]
+              },
+              {
+                "Range": [
+                  1312,
+                  1510
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model/experiment.gen.go": [
+      {
+        "hash": "f6a7c64b43a92b69",
+        "line_ranges": [
+          {
+            "Single": 46
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a13fe8517a310ee142b50d9",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 46
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "f6a7c64b43a92b69": {
+      "tool": "trae",
+      "conversation_id": "6a101964301ac5294bf56e72",
+      "session_id": "6a101964301ac5294bf56e72",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

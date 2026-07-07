@@ -1,0 +1,113 @@
+backend/modules/evaluation/domain/service/expt_manage_execution_impl.go
+  703211011326e608 324,343 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ef5ceaf0c95c626cf856a","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":324},{"Single":343}]}]}
+backend/modules/evaluation/domain/service/expt_manage_execution_impl_test.go
+  703211011326e608 3611 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ef5ceaf0c95c626cf856a","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":3611}]}]}
+backend/modules/evaluation/domain/service/expt_lifecycle_event_impl.go
+  703211011326e608 109 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1ef5ceaf0c95c626cf856a","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":109}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "d25315b27efdfc8860e4a9f0870e2139e435e6ce",
+  "prompts": {
+    "703211011326e608": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a1ecc13af0c95c626cf834e",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 4,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/domain/service/expt_lifecycle_event_impl.go": [
+      {
+        "hash": "703211011326e608",
+        "line_ranges": [
+          {
+            "Single": 109
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ef5ceaf0c95c626cf856a",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 109
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_manage_execution_impl.go": [
+      {
+        "hash": "703211011326e608",
+        "line_ranges": [
+          {
+            "Single": 324
+          },
+          {
+            "Single": 343
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ef5ceaf0c95c626cf856a",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 324
+              },
+              {
+                "Single": 343
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_manage_execution_impl_test.go": [
+      {
+        "hash": "703211011326e608",
+        "line_ranges": [
+          {
+            "Single": 3611
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1ef5ceaf0c95c626cf856a",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 3611
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "703211011326e608": {
+      "tool": "trae",
+      "conversation_id": "6a1ecc13af0c95c626cf834e",
+      "session_id": "6a1ecc13af0c95c626cf834e",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
