@@ -2698,3 +2698,42 @@ func toTargetFieldMappingDOForTemplateV2(mapping *openapiExperiment.TargetFieldM
 	}
 	return tic
 }
+
+// OpenAPINotificationRulesDTO2Domain 把 IDL SubmitExperimentOApiRequest.Notifications
+// 转为 domain entity.NotificationRule 切片,供 pkg/webhook/notifications.ResolveOrDefault 消费。
+// nil dto -> nil rules (caller 应传 present=false);non-nil dto (含空切片) -> non-nil rules,长度可能为 0(显式禁用)。
+func OpenAPINotificationRulesDTO2Domain(dtos []*openapi.NotificationRule) []entity.NotificationRule {
+	if dtos == nil {
+		return nil
+	}
+	rules := make([]entity.NotificationRule, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		rule := entity.NotificationRule{
+			Field:    gptr.Indirect(dto.Field),
+			Operator: gptr.Indirect(dto.Operator),
+		}
+		if len(dto.Triggers) > 0 {
+			rule.Triggers = make([]entity.NotificationTrigger, 0, len(dto.Triggers))
+			for _, t := range dto.Triggers {
+				rule.Triggers = append(rule.Triggers, entity.NotificationTrigger(t))
+			}
+		}
+		if len(dto.Actions) > 0 {
+			rule.Actions = make([]entity.NotificationAction, 0, len(dto.Actions))
+			for _, a := range dto.Actions {
+				if a == nil {
+					continue
+				}
+				rule.Actions = append(rule.Actions, entity.NotificationAction{
+					Type: entity.NotificationActionType(gptr.Indirect(a.Type)),
+					URL:  gptr.Indirect(a.URL),
+				})
+			}
+		}
+		rules = append(rules, rule)
+	}
+	return rules
+}

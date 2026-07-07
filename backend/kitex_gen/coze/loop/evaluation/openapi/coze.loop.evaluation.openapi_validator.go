@@ -608,6 +608,12 @@ func (p *GetEvaluationSetIOJobOApiResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *NotificationAction) IsValid() error {
+	return nil
+}
+func (p *NotificationRule) IsValid() error {
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) IsValid() error {
 	if p.EvalSetParam != nil {
 		if err := p.EvalSetParam.IsValid(); err != nil {

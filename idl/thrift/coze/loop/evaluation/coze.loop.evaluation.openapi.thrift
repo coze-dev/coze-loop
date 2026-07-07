@@ -408,6 +408,36 @@ struct GetEvaluationSetIOJobOApiResponse {
 // 评测实验相关接口
 // ===============================
 
+// 通知触发事件枚举，与 backend/modules/evaluation/domain/entity/notification.go NotificationTrigger 对齐。
+enum NotificationTrigger {
+    Unknown    = 0
+    Started    = 1
+    Succeeded  = 2
+    Failed     = 3
+    Terminated = 4
+}
+
+// 通知渠道类型枚举，与 domain/entity/notification.go NotificationActionType 对齐。
+enum NotificationActionType {
+    Unknown = 0
+    Webhook = 1
+    Feishu  = 2
+}
+
+// 单一通知动作；type=Webhook 时 url 必填。
+struct NotificationAction {
+    1: optional NotificationActionType type (api.body = 'type')
+    2: optional string url (api.body = 'url')
+}
+
+// 一条通知规则；一条规则可 fan-out 多渠道。
+struct NotificationRule {
+    1: optional string field (api.body = 'field')       // 本期固定 "experiment.status"
+    2: optional string operator (api.body = 'operator') // "contains" | "not_contains"
+    3: optional list<NotificationTrigger> triggers (api.body = 'triggers')
+    4: optional list<NotificationAction> actions (api.body = 'actions')
+}
+
 // 3.1 创建评测实验
 struct SubmitExperimentOApiRequest {
     // 基础信息
@@ -430,7 +460,10 @@ struct SubmitExperimentOApiRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
 
-    100: optional map<string, string> ext (api.body = 'ext')    
+    // 通知规则；缺省(未传/nil) → 走 PRD 默认(pkg/webhook/notifications.ResolveOrDefault);空数组 → 显式禁用。
+    47: optional list<NotificationRule> notifications (api.body = 'notifications')
+
+    100: optional map<string, string> ext (api.body = 'ext')
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base

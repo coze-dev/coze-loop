@@ -1064,11 +1064,13 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		Ext:                     req.GetExt(),
 	}
 
-	// iter_12 skeleton: notifications 字段还未在 openapi IDL 铺开(SubmitExperimentOApiRequest 无 NotificationsPresent/Notifications),
-	// 先按 present=false + rules=nil 落 defaults resolver + validator 入口,保证 pkg/webhook/{validator,notifications} import 闭环。
-	// IDL 铺完字段后,只需把两个入参换成 req.NotificationsPresent / req.Notifications 即可,后续再把 notifications 透传给
-	// experimentApp.SubmitExperiment 并落库 experiment.notifications 列(tech_design 决策 1)。
-	notificationRules := webhooknotifications.ResolveOrDefault(false, nil)
+	// notifications: 未传 field 47 → present=false 走 PRD 默认;传空数组 → 显式禁用;传规则 → 校验后落库。
+	// experiment.notifications 持久化 tech_design 决策 Q3 后置(hand-written PO overlay follow-up),
+	// 本轮只完成 IDL 消费闭环:validator + defaults resolver + import 闭环。
+	notificationRules := webhooknotifications.ResolveOrDefault(
+		req.IsSetNotifications(),
+		experiment_convertor.OpenAPINotificationRulesDTO2Domain(req.GetNotifications()),
+	)
 	if err := webhookvalidator.Validate(notificationRules); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
