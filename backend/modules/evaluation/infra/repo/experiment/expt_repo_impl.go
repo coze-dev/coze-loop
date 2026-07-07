@@ -21,14 +21,15 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func NewExptRepo(exptDAO mysql.IExptDAO, exptEvaluatorRefDAO mysql.IExptEvaluatorRefDAO, idgen idgen.IIDGenerator) repo.IExperimentRepo {
-	return &exptRepoImpl{exptDAO: exptDAO, exptEvaluatorRefDAO: exptEvaluatorRefDAO, idgen: idgen}
+func NewExptRepo(exptDAO mysql.IExptDAO, exptEvaluatorRefDAO mysql.IExptEvaluatorRefDAO, notificationsDAO mysql.INotificationsOverlayDAO, idgen idgen.IIDGenerator) repo.IExperimentRepo {
+	return &exptRepoImpl{exptDAO: exptDAO, exptEvaluatorRefDAO: exptEvaluatorRefDAO, notificationsDAO: notificationsDAO, idgen: idgen}
 }
 
 type exptRepoImpl struct {
 	idgen               idgen.IIDGenerator
 	exptDAO             mysql.IExptDAO
 	exptEvaluatorRefDAO mysql.IExptEvaluatorRefDAO
+	notificationsDAO    mysql.INotificationsOverlayDAO
 }
 
 func (e *exptRepoImpl) Create(ctx context.Context, expt *entity.Experiment, exptEvaluatorRefs []*entity.ExptEvaluatorRef) error {
@@ -39,6 +40,12 @@ func (e *exptRepoImpl) Create(ctx context.Context, expt *entity.Experiment, expt
 
 	if err := e.exptDAO.Create(ctx, po); err != nil {
 		return err
+	}
+
+	if e.notificationsDAO != nil && expt.Notifications != nil {
+		if err := e.notificationsDAO.Upsert(ctx, po.ID, expt.Notifications); err != nil {
+			return err
+		}
 	}
 
 	ids, err := e.idgen.GenMultiIDs(ctx, len(exptEvaluatorRefs))
@@ -63,7 +70,15 @@ func (e *exptRepoImpl) Update(ctx context.Context, expt *entity.Experiment) erro
 	if err != nil {
 		return err
 	}
-	return e.exptDAO.Update(ctx, po)
+	if err := e.exptDAO.Update(ctx, po); err != nil {
+		return err
+	}
+	if e.notificationsDAO != nil && expt.Notifications != nil {
+		if err := e.notificationsDAO.Upsert(ctx, expt.ID, expt.Notifications); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (e *exptRepoImpl) UpdateFields(ctx context.Context, exptID int64, ufields map[string]any) error {
@@ -150,6 +165,13 @@ func (e *exptRepoImpl) MGetByID(ctx context.Context, ids []int64, spaceID int64)
 		if err != nil {
 			return nil, err
 		}
+		if e.notificationsDAO != nil {
+			rules, gerr := e.notificationsDAO.Get(ctx, do.ID)
+			if gerr != nil {
+				return nil, gerr
+			}
+			do.Notifications = rules
+		}
 		dos = append(dos, do)
 	}
 
@@ -185,6 +207,13 @@ func (e *exptRepoImpl) GetByName(ctx context.Context, name string, spaceID int64
 	do, err := convert.NewExptConverter().PO2DO(po, nil)
 	if err != nil {
 		return nil, false, err
+	}
+	if e.notificationsDAO != nil {
+		rules, gerr := e.notificationsDAO.Get(ctx, do.ID)
+		if gerr != nil {
+			return nil, false, gerr
+		}
+		do.Notifications = rules
 	}
 
 	return do, true, nil
