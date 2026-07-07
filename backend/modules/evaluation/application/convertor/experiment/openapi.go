@@ -248,6 +248,40 @@ func IsSupportedOpenAPIEvalTargetType(t openapiEvalTarget.EvalTargetType) bool {
 	return err == nil
 }
 
+// ValidateOpenAPIEvalTargetClusterEnv validates the required cluster/env for the
+// long-connection custom_agent eval target. custom_agent is resolved to a live
+// RPC/frontier client at run time, so a missing cluster/env passes creation
+// silently and only fails later with an opaque RPC error; rejecting it up front
+// yields a clear param error with common values.
+//   - custom_agent: cluster and env are required, UNLESS an explicit AgentConnection
+//     (frontier direct-connect) is provided — direct-connect does not use cluster/env.
+//   - a2a_agent / custom_rpc_server: intentionally NOT validated for now.
+//
+// Returns nil when param/type is nil or the type is not custom_agent.
+func ValidateOpenAPIEvalTargetClusterEnv(param *openapi.SubmitExperimentEvalTargetParam) error {
+	if param == nil || param.EvalTargetType == nil {
+		return nil
+	}
+	// Only validate custom_agent (the in-house long-connection agent). a2a_agent /
+	// custom_rpc_server are intentionally left un-validated for now.
+	if *param.EvalTargetType == openapiEvalTarget.EvalTargetTypeCustomAgent {
+		// When an explicit AgentConnection (frontier direct-connect) is provided, the target
+		// is dispatched by the frontier tuple (ProductID/AppID/UserID/DeviceID) and cluster/env
+		// are not used at run time, so do not require them here — requiring them would wrongly
+		// reject the legitimate direct-connect path.
+		if param.IsSetAgentConnection() {
+			return nil
+		}
+		if param.GetCluster() == "" {
+			return fmt.Errorf("cluster is required for eval target type %s (e.g. \"default\")", *param.EvalTargetType)
+		}
+		if param.GetEnv() == "" {
+			return fmt.Errorf("env is required for eval target type %s (lane/env identifier, e.g. \"ppe_fornax_eval\")", *param.EvalTargetType)
+		}
+	}
+	return nil
+}
+
 func mapOpenAPIEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (domaindoEvalTarget.EvalTargetType, error) {
 	switch openapiType {
 	case openapiEvalTarget.EvalTargetTypeCozeBot:

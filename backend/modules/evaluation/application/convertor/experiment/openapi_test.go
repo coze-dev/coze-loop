@@ -3830,3 +3830,59 @@ func TestDomainFilterLogicOpToOpenAPI(t *testing.T) {
 	assert.Equal(t, "or", domainFilterLogicOpToOpenAPI(domainExpt.FilterLogicOp_Or))
 	assert.Equal(t, "999", domainFilterLogicOpToOpenAPI(domainExpt.FilterLogicOp(999)))
 }
+
+func TestValidateOpenAPIEvalTargetClusterEnv(t *testing.T) {
+	tp := func(v openapiEvalTarget.EvalTargetType) *openapiEvalTarget.EvalTargetType { return &v }
+	tests := []struct {
+		name    string
+		param   *openapi.SubmitExperimentEvalTargetParam
+		wantErr string // 空=期望无错; 否则 err 应包含该子串
+	}{
+		{name: "nil param", param: nil},
+		{name: "nil type", param: &openapi.SubmitExperimentEvalTargetParam{}},
+		{
+			name:  "non long-connection type skipped (coze_loop_prompt)",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCozeLoopPrompt)},
+		},
+		{
+			name:    "custom_agent missing cluster",
+			param:   &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), Env: gptr.Of("cn")},
+			wantErr: "cluster is required",
+		},
+		{
+			name:    "custom_agent missing env",
+			param:   &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), Cluster: gptr.Of("default")},
+			wantErr: "env is required",
+		},
+		{
+			name:  "custom_agent both present",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), Cluster: gptr.Of("default"), Env: gptr.Of("cn")},
+		},
+		{
+			// direct-connect (AgentConnection) exempts cluster/env — must not require them.
+			name:  "custom_agent with AgentConnection exempts cluster/env",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), AgentConnection: &openapiEvalTarget.AgentConnection{}},
+		},
+		{
+			// a2a_agent is intentionally not validated for now → no error even without cluster/env.
+			name:  "a2a_agent not validated",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeA2Agent)},
+		},
+		{
+			// custom_rpc_server is intentionally not validated for now → no error even without env.
+			name:  "custom_rpc_server not validated",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomRPCServer)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateOpenAPIEvalTargetClusterEnv(tt.param)
+			if tt.wantErr == "" {
+				assert.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+			}
+		})
+	}
+}

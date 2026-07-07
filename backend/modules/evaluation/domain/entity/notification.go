@@ -51,10 +51,24 @@ const (
 	NotificationOperatorType_NotIn    NotificationOperatorType = 8 // 不包含于
 )
 
+// WebhookEnvironment Webhook 目标环境（决定是否附加泳道路由 header）
+// 取值与 IDL enum WebhookEnvironment 对齐：Prod=1 / PPE=2 / BOE=3。
+type WebhookEnvironment int64
+
+const (
+	WebhookEnvironment_Prod WebhookEnvironment = 1 // 默认，不加任何路由 header
+	WebhookEnvironment_PPE  WebhookEnvironment = 2
+	WebhookEnvironment_BOE  WebhookEnvironment = 3
+)
+
 // WebhookNotificationConf Webhook 通知配置
 type WebhookNotificationConf struct {
 	Enable bool    `json:"enable"`
 	Urls   *string `json:"urls,omitempty"`
+	// Environment 缺省（nil）=> Prod（向后兼容，历史数据反序列化为未设置）
+	Environment *WebhookEnvironment `json:"environment,omitempty"`
+	// Lane ppe/boe 泳道名；prod / 未设置时忽略
+	Lane *string `json:"lane,omitempty"`
 }
 
 // FeishuNotificationConf 飞书通知配置
