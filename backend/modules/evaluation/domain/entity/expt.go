@@ -169,6 +169,11 @@ type Experiment struct {
 
 	Visibility Visibility // 实验模板可见性，默认为空，可见
 	ThreadID   *string    // 关联的智能评测会话ID
+
+	// Notifications 通知规则数组;SubmitExperimentOApi / UpdateExperimentOApi 落库前经 pkg/webhook/validator 校验,
+	// 缺省经 pkg/webhook/notifications.ResolveOrDefault 回落 PRD 默认(test_case 2 / 6)。空 slice 视为显式禁用(test_case 4)。
+	// tech_design 决策 1: 存 JSON 列(experiment.notifications, `type:json`);PO 侧字段留后续 gorm.io/gen 迁移。
+	Notifications []NotificationRule
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {

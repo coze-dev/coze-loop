@@ -39,6 +39,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	webhooknotifications "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/webhook/notifications"
+	webhookvalidator "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/webhook/validator"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -1061,6 +1063,16 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.GetExt(),
 	}
+
+	// iter_12 skeleton: notifications 字段还未在 openapi IDL 铺开(SubmitExperimentOApiRequest 无 NotificationsPresent/Notifications),
+	// 先按 present=false + rules=nil 落 defaults resolver + validator 入口,保证 pkg/webhook/{validator,notifications} import 闭环。
+	// IDL 铺完字段后,只需把两个入参换成 req.NotificationsPresent / req.Notifications 即可,后续再把 notifications 透传给
+	// experimentApp.SubmitExperiment 并落库 experiment.notifications 列(tech_design 决策 1)。
+	notificationRules := webhooknotifications.ResolveOrDefault(false, nil)
+	if err := webhookvalidator.Validate(notificationRules); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+	logs.CtxInfo(ctx, "SubmitExperimentOApi notifications resolved: %s", json.Jsonify(notificationRules))
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
 	if err != nil {
