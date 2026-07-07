@@ -19,13 +19,15 @@ type ExptLifecycleEventHandlerImpl struct {
 	exptRepo         repo.IExperimentRepo
 	notifyRPCAdapter rpc.INotifyRPCAdapter
 	userProvider     rpc.IUserProvider
+	webhookHook      IWebhookLifecycleHook
 }
 
-func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider) ExptLifecycleEventHandler {
+func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider, webhookHook IWebhookLifecycleHook) ExptLifecycleEventHandler {
 	return &ExptLifecycleEventHandlerImpl{
 		exptRepo:         exptRepo,
 		notifyRPCAdapter: notifyRPCAdapter,
 		userProvider:     userProvider,
+		webhookHook:      webhookHook,
 	}
 }
 
@@ -33,6 +35,12 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 	expt, err := h.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 	if err != nil {
 		return err
+	}
+
+	if h.webhookHook != nil {
+		if hookErr := h.webhookHook.OnStatusChange(ctx, event, expt); hookErr != nil {
+			logs.CtxWarn(ctx, "webhook lifecycle hook err (non-blocking): expt=%v err=%v", event.ExptID, hookErr)
+		}
 	}
 
 	switch event.ToStatus {
