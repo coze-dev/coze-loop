@@ -7218,6 +7218,51 @@ func TestEvalOpenAPIApplication_UpdateExptRunConfOApi(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "req 为 nil 拒绝",
+			req:  nil,
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				// 顶部 nil 校验，不应触达任何依赖
+			},
+			wantErr: true,
+		},
+		{
+			name: "并发度<0 拒绝",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(-1))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "GetDetail 返回错误早退",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(nil, errors.New("not found"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "鉴权失败早退",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("forbidden"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "domain UpdateRunConf 返回错误透传",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				cfg.EXPECT().GetExptExecConf(gomock.Any(), wsID).Return(execConf).AnyTimes()
+				mgr.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).Return(errors.New("domain fail"))
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {

@@ -2447,4 +2447,89 @@ func TestExptMangerImpl_UpdateRunConf(t *testing.T) {
 		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session})
 		assert.Error(t, err)
 	})
+
+	t.Run("GetByID 返回错误早退", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockRepo}
+
+		mockRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(nil, errors.New("db err"))
+
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session})
+		assert.Error(t, err)
+	})
+
+	t.Run("domain 层 space 越权（防绕过 App 层）", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockRepo}
+
+		mismatch := buildExpt(entity.ExptStatus_Processing)
+		mismatch.SpaceID = spaceID + 1
+		mockRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(mismatch, nil)
+		// 不应调用 UpdateFields
+
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session})
+		assert.Error(t, err)
+	})
+
+	t.Run("EvalConf 为 nil 拒绝", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockRepo}
+
+		expt := &entity.Experiment{ID: exptID, SpaceID: spaceID, Status: entity.ExptStatus_Pending, EvalConf: nil}
+		mockRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(expt, nil)
+		// 不应调用 UpdateFields
+
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session})
+		assert.Error(t, err)
+	})
+
+	t.Run("UpdateFields 返回错误透传", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockRepo}
+
+		mockRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(buildExpt(entity.ExptStatus_Processing), nil)
+		mockRepo.EXPECT().UpdateFields(gomock.Any(), exptID, gomock.Any()).Return(errors.New("write err"))
+
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session})
+		assert.Error(t, err)
+	})
+}
+
+func TestExptMangerImpl_CheckExpt_ItemRetryNumBounds(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// audit 桩为 Approved，configer 由 newTestExptManager 桩 MaxItemConcurNum=100
+	mgr := newTestExptManager(ctrl)
+	mgr.audit.(*auditMocks.MockIAuditService).EXPECT().
+		Audit(gomock.Any(), gomock.Any()).
+		Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).AnyTimes()
+
+	buildExpt := func(retry *int) *entity.Experiment {
+		return &entity.Experiment{
+			ID: 1, SpaceID: 100, Name: "n", Description: "d",
+			EvalConf: &entity.EvaluationConfiguration{
+				ItemConcurNum: gptr.Of(3),
+				ItemRetryNum:  retry,
+			},
+		}
+	}
+
+	t.Run("重试上界内通过", func(t *testing.T) {
+		err := mgr.CheckExpt(context.Background(), buildExpt(gptr.Of(entity.MaxItemRetryNum)), &entity.Session{})
+		assert.NoError(t, err)
+	})
+
+	t.Run("重试越上界拒绝", func(t *testing.T) {
+		err := mgr.CheckExpt(context.Background(), buildExpt(gptr.Of(entity.MaxItemRetryNum+1)), &entity.Session{})
+		assert.Error(t, err)
+	})
 }

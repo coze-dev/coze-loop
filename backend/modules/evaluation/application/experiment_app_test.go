@@ -7845,6 +7845,34 @@ func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "manager.Get 返回错误早退",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(nil, errors.New("db err"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "鉴权失败早退",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("forbidden"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "domain UpdateRunConf 返回错误透传",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).Return(errors.New("domain fail"))
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
