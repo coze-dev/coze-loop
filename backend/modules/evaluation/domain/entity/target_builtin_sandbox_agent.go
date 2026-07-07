@@ -21,6 +21,7 @@ type SandboxAgent struct {
 	AgentSetupCmd string           `json:"agent_setup_cmd"`
 	AgentRunCmd   string           `json:"agent_run_cmd"`
 	Envs          []*SandboxEnvVar `json:"envs"`
+	Image         string           `json:"image"`
 	// 自定义输出结果，与 CustomRPCServer.CustomFieldSchemas 对齐
 	CustomFieldSchemas []*CustomFieldSchema `json:"custom_field_schemas,omitempty"`
 }

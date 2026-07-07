@@ -10702,6 +10702,8 @@ type SandboxAgent struct {
 	// Agent 环境变量，容器初始化时静态注入，对所有阶段可见
 	// 可用于承载非必填环境变量（如 Agent 版本、模式、命名空间等）
 	Envs []*SandboxEnvVar `thrift:"envs,7,optional" frugal:"7,optional,list<SandboxEnvVar>" form:"envs" json:"envs,omitempty" query:"envs"`
+	// 沙箱镜像
+	Image *string `thrift:"image,8,optional" frugal:"8,optional,string" form:"image" json:"image,omitempty" query:"image"`
 }
 
 func NewSandboxAgent() *SandboxAgent {
@@ -10782,6 +10784,18 @@ func (p *SandboxAgent) GetEnvs() (v []*SandboxEnvVar) {
 	}
 	return p.Envs
 }
+
+var SandboxAgent_Image_DEFAULT string
+
+func (p *SandboxAgent) GetImage() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetImage() {
+		return SandboxAgent_Image_DEFAULT
+	}
+	return *p.Image
+}
 func (p *SandboxAgent) SetName(val *string) {
 	p.Name = val
 }
@@ -10800,6 +10814,9 @@ func (p *SandboxAgent) SetAgentRunCmd(val *string) {
 func (p *SandboxAgent) SetEnvs(val []*SandboxEnvVar) {
 	p.Envs = val
 }
+func (p *SandboxAgent) SetImage(val *string) {
+	p.Image = val
+}
 
 var fieldIDToName_SandboxAgent = map[int16]string{
 	1: "name",
@@ -10808,6 +10825,7 @@ var fieldIDToName_SandboxAgent = map[int16]string{
 	5: "agent_setup_cmd",
 	6: "agent_run_cmd",
 	7: "envs",
+	8: "image",
 }
 
 func (p *SandboxAgent) IsSetName() bool {
@@ -10832,6 +10850,10 @@ func (p *SandboxAgent) IsSetAgentRunCmd() bool {
 
 func (p *SandboxAgent) IsSetEnvs() bool {
 	return p.Envs != nil
+}
+
+func (p *SandboxAgent) IsSetImage() bool {
+	return p.Image != nil
 }
 
 func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
@@ -10895,6 +10917,14 @@ func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11007,6 +11037,17 @@ func (p *SandboxAgent) ReadField7(iprot thrift.TProtocol) error {
 	p.Envs = _field
 	return nil
 }
+func (p *SandboxAgent) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Image = _field
+	return nil
+}
 
 func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -11036,6 +11077,10 @@ func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -11172,6 +11217,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *SandboxAgent) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetImage() {
+		if err = oprot.WriteFieldBegin("image", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Image); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 
 func (p *SandboxAgent) String() string {
 	if p == nil {
@@ -11203,6 +11266,9 @@ func (p *SandboxAgent) DeepEqual(ano *SandboxAgent) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.Envs) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.Image) {
 		return false
 	}
 	return true
@@ -11278,6 +11344,18 @@ func (p *SandboxAgent) Field7DeepEqual(src []*SandboxEnvVar) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *SandboxAgent) Field8DeepEqual(src *string) bool {
+
+	if p.Image == src {
+		return true
+	} else if p.Image == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Image, *src) != 0 {
+		return false
 	}
 	return true
 }

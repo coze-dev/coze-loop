@@ -219,6 +219,7 @@ func openapiSandboxAgentDTO2Domain(dtoObj *openapiEvalTarget.SandboxAgent) *doma
 		AgentSetupCmd: dtoObj.AgentSetupCmd,
 		AgentRunCmd:   dtoObj.AgentRunCmd,
 		Envs:          envs,
+		Image:         dtoObj.Image,
 	}
 	if dtoObj.Type != nil {
 		t := domaindoEvalTarget.SandboxAgentType(*dtoObj.Type)
@@ -1993,6 +1994,7 @@ func OpenAPISandboxAgentDO2DTO(do *entity.SandboxAgent) *openapiEvalTarget.Sandb
 		AgentSetupCmd: gptr.Of(do.AgentSetupCmd),
 		AgentRunCmd:   gptr.Of(do.AgentRunCmd),
 		Envs:          envs,
+		Image:         gptr.Of(do.Image),
 	}
 }
 
@@ -2017,6 +2019,7 @@ func OpenAPISandboxAgentDTO2DO(dto *openapiEvalTarget.SandboxAgent) *entity.Sand
 		AgentSetupCmd: dto.GetAgentSetupCmd(),
 		AgentRunCmd:   dto.GetAgentRunCmd(),
 		Envs:          envs,
+		Image:         dto.GetImage(),
 	}
 }
 
