@@ -2093,7 +2093,7 @@ func TestEvalTargetRepoImpl_SaveEvalTargetRecord(t *testing.T) {
 
 	t.Run("recordDataStorage SaveEvalTargetRecordData error returns err", func(t *testing.T) {
 		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
-		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err")).Times(3)
 		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
 		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeRecordStorageConfiger{cfg: cfg})
 
@@ -2178,7 +2178,7 @@ func TestEvalTargetRepoImpl_UpdateEvalTargetRecord(t *testing.T) {
 
 	t.Run("recordDataStorage SaveEvalTargetRecordData error returns err", func(t *testing.T) {
 		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
-		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err")).Times(3)
 		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
 		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeRecordStorageConfiger{cfg: cfg})
 

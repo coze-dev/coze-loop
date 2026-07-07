@@ -262,9 +262,17 @@ struct ExptNotificationConf {
     11: optional FeishuNotificationConf feishu_notification
 }
 
+enum WebhookEnvironment {
+    Prod = 1   // 默认，不加任何路由 header
+    PPE  = 2
+    BOE  = 3
+}
+
 struct WebhookNotificationConf {
     1: required bool enable
     2: optional string urls             // Webhook URL 列表，多个用逗号分隔
+    3: optional WebhookEnvironment environment  // 缺省 => Prod（向后兼容）
+    4: optional string lane                     // ppe/boe 泳道名；prod 时忽略
 }
 
 struct FeishuNotificationConf {

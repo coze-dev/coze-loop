@@ -193,7 +193,7 @@ func ToInvokeEvaluatorOutputDataDO(outputData *spi.InvokeEvaluatorOutputData, st
 	case spi.InvokeEvaluatorRunStatus_FAILED:
 		return &evaluatorentity.EvaluatorOutputData{
 			EvaluatorResult:   nil,
-			EvaluatorUsage:    nil,
+			EvaluatorUsage:    toInvokeEvaluatorUsageDO(outputData.EvaluatorUsage),
 			EvaluatorRunError: toInvokeEvaluatorRunErrorDO(outputData.EvaluatorRunError),
 			ExtraOutput:       toInvokeEvaluatorExtraOutputDO(outputData.ExtraOutput),
 		}

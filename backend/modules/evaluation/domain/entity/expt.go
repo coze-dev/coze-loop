@@ -19,14 +19,14 @@ import (
 )
 
 const (
-	MaxExperimentNameLength = 65
+	MaxExperimentNameLength = 200
 	// experimentNamePattern 首字符为字母/数字/中文，其余字符仅允许字母、数字、中文、'_'、'-'、'.'。
 	experimentNamePattern = `^[a-zA-Z0-9\x{4e00}-\x{9fa5}][\w\x{4e00}-\x{9fa5}\-.]*$`
 )
 
 var validExperimentNameRegex = regexp.MustCompile(experimentNamePattern)
 
-// ValidateExperimentName 校验实验名称的值级约束：长度 1-65，
+// ValidateExperimentName 校验实验名称的值级约束：长度 1-200，
 // 首字符为字母/数字/中文，其余字符仅允许字母、数字、中文、'_'、'-'、'.'。
 func ValidateExperimentName(name string) error {
 	length := utf8.RuneCountInString(name)
