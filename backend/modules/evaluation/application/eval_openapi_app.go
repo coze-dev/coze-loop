@@ -1076,6 +1076,9 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	}
 	logs.CtxInfo(ctx, "SubmitExperimentOApi notifications resolved: %s", json.Jsonify(notificationRules))
 
+	// 透传已解析的 notification rules 到 experimentApp.SubmitExperiment → CreateExperiment → CreateExpt，
+	// 让 domain 层 Experiment 实例携带 rules。避免修改 kitex_gen CreateExperimentRequest IDL。
+	ctx = webhooknotifications.WithRules(ctx, notificationRules)
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err

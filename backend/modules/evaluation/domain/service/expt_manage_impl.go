@@ -830,6 +830,11 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
 	}
+	if len(req.Notifications) > 0 {
+		// 从 CreateExptParam 透传 notifications 到 in-memory Experiment 实例;
+		// PO/持久化层由 iter_19+ hand-written PO overlay 承接,本轮仅保证 domain 携带 rules。
+		do.Notifications = req.Notifications
+	}
 	if req.Visibility != nil {
 		do.Visibility = *req.Visibility
 	}

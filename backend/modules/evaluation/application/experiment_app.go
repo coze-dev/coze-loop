@@ -31,6 +31,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
+	webhooknotifications "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/webhook/notifications"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -160,6 +161,11 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	param, err := experiment.ConvertCreateReq(req, evaluatorVersionRunConfigs)
 	if err != nil {
 		return nil, err
+	}
+	// notifications 透传:SubmitExperimentOApi 已把解析后的 rules 挂到 ctx (WithRules),
+	// 这里读回填到 param,下游 CreateExpt 会把 param.Notifications 映射到 Experiment 实例。
+	if rules := webhooknotifications.RulesFromContext(ctx); len(rules) > 0 {
+		param.Notifications = rules
 	}
 	createExpt, err := e.manager.CreateExpt(ctx, param, session)
 	if err != nil {
