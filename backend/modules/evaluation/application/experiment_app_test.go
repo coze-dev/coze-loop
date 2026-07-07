@@ -7783,7 +7783,7 @@ func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(_ context.Context, param *entity.UpdateRunConfParam) error {
-						assert.Nil(t, param.ItemConcurNum)                 // 0 → 不修改
+						assert.Nil(t, param.ItemConcurNum) // 0 → 不修改
 						assert.Equal(t, 3, gptr.Indirect(param.ItemRetryNum))
 						return nil
 					})
@@ -7799,7 +7799,7 @@ func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
 				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(_ context.Context, param *entity.UpdateRunConfParam) error {
 						assert.Nil(t, param.ItemConcurNum)
-						assert.NotNil(t, param.ItemRetryNum)               // IsSet → 传指针
+						assert.NotNil(t, param.ItemRetryNum) // IsSet → 传指针
 						assert.Equal(t, 0, gptr.Indirect(param.ItemRetryNum))
 						return nil
 					})

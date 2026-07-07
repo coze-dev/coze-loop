@@ -2426,7 +2426,7 @@ func TestExptMangerImpl_UpdateRunConf(t *testing.T) {
 				raw := ufields["eval_conf"].(*[]byte)
 				var got entity.EvaluationConfiguration
 				assert.NoError(t, json.Unmarshal(*raw, &got))
-				assert.Equal(t, 0, gptr.Indirect(got.ItemRetryNum)) // 0 落库
+				assert.Equal(t, 0, gptr.Indirect(got.ItemRetryNum))  // 0 落库
 				assert.Equal(t, 3, gptr.Indirect(got.ItemConcurNum)) // 未传则不变
 				return nil
 			})
