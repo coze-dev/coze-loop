@@ -27,4 +27,5 @@ var ExperimentMySQLDAOSet = wire.NewSet(
 	NewExptTemplateDAO,
 	NewExptTemplateEvaluatorRefDAO,
 	NewNotificationsOverlayDAO,
+	NewWebhookDeliveryRepo,
 )

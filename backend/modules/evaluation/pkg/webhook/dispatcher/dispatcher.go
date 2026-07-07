@@ -63,6 +63,11 @@ type Dispatcher struct {
 	NewID   func() string
 }
 
+// New 构造 Dispatcher 供 wire DI 使用;Client / Now / NewID 走默认(dispatchOne 内部按需 fallback)。
+func New(r repo.IWebhookDeliveryRepo, secrets SecretProvider, retry RetryEnqueuer) *Dispatcher {
+	return &Dispatcher{Repo: r, Secrets: secrets, Retry: retry}
+}
+
 // Match 判断某规则是否命中 event。
 //   - contains：triggers 数组包含 event → 命中；
 //   - not_contains：triggers 数组不包含 event → 命中（test_case 9 排除语义）；
