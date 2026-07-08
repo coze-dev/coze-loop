@@ -1,0 +1,226 @@
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl.go
+  421010375f1b327a 219-223,232-233,237,240,245,269,318,396-399,403-404,408,411,416,424,474,1250-1254,1258-1259,1263,1266,1271,1279,1335 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0435d8c36d2699286c57c0","tool_type":"builtin","tool_id":"icube:applyChatSnapshotPatch","line_ranges":[{"Range":[219,223]},{"Range":[232,233]},{"Single":237},{"Single":240},{"Single":245},{"Single":269},{"Single":318},{"Range":[396,399]},{"Range":[403,404]},{"Single":408},{"Single":411},{"Single":416},{"Single":424},{"Single":474},{"Range":[1250,1254]},{"Range":[1258,1259]},{"Single":1263},{"Single":1266},{"Single":1271},{"Single":1279},{"Single":1335}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "81ad3ba6d520c2a9c6ae39f6412af63732854764",
+  "prompts": {
+    "421010375f1b327a": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a042afac36d2699286c5681",
+        "model": "c_o_new"
+      },
+      "human_author": "xueyizheng <xueyizheng@bytedance.com>",
+      "messages": [],
+      "total_additions": 35,
+      "total_deletions": 32,
+      "accepted_lines": 35,
+      "overriden_lines": 0
+    },
+    "a60ac469bced931b": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-509c5bac-a1db-453e-8cdb-6a2f3030dba0",
+        "model": "default"
+      },
+      "human_author": "xueyizheng <xueyizheng@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl.go": [
+      {
+        "hash": "421010375f1b327a",
+        "line_ranges": [
+          {
+            "Range": [
+              219,
+              223
+            ]
+          },
+          {
+            "Range": [
+              232,
+              233
+            ]
+          },
+          {
+            "Single": 237
+          },
+          {
+            "Single": 240
+          },
+          {
+            "Single": 245
+          },
+          {
+            "Single": 269
+          },
+          {
+            "Single": 318
+          },
+          {
+            "Range": [
+              396,
+              399
+            ]
+          },
+          {
+            "Range": [
+              403,
+              404
+            ]
+          },
+          {
+            "Single": 408
+          },
+          {
+            "Single": 411
+          },
+          {
+            "Single": 416
+          },
+          {
+            "Single": 424
+          },
+          {
+            "Single": 474
+          },
+          {
+            "Range": [
+              1250,
+              1254
+            ]
+          },
+          {
+            "Range": [
+              1258,
+              1259
+            ]
+          },
+          {
+            "Single": 1263
+          },
+          {
+            "Single": 1266
+          },
+          {
+            "Single": 1271
+          },
+          {
+            "Single": 1279
+          },
+          {
+            "Single": 1335
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0435d8c36d2699286c57c0",
+            "tool_type": "builtin",
+            "tool_id": "icube:applyChatSnapshotPatch",
+            "line_ranges": [
+              {
+                "Range": [
+                  219,
+                  223
+                ]
+              },
+              {
+                "Range": [
+                  232,
+                  233
+                ]
+              },
+              {
+                "Single": 237
+              },
+              {
+                "Single": 240
+              },
+              {
+                "Single": 245
+              },
+              {
+                "Single": 269
+              },
+              {
+                "Single": 318
+              },
+              {
+                "Range": [
+                  396,
+                  399
+                ]
+              },
+              {
+                "Range": [
+                  403,
+                  404
+                ]
+              },
+              {
+                "Single": 408
+              },
+              {
+                "Single": 411
+              },
+              {
+                "Single": 416
+              },
+              {
+                "Single": 424
+              },
+              {
+                "Single": 474
+              },
+              {
+                "Range": [
+                  1250,
+                  1254
+                ]
+              },
+              {
+                "Range": [
+                  1258,
+                  1259
+                ]
+              },
+              {
+                "Single": 1263
+              },
+              {
+                "Single": 1266
+              },
+              {
+                "Single": 1271
+              },
+              {
+                "Single": 1279
+              },
+              {
+                "Single": 1335
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "421010375f1b327a": {
+      "tool": "trae",
+      "conversation_id": "6a042afac36d2699286c5681",
+      "session_id": "6a042afac36d2699286c5681",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

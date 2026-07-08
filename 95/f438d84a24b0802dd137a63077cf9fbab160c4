@@ -1,0 +1,52 @@
+backend/modules/evaluation/domain/entity/expt_test.go
+  s_311d8937f5bb41::t_a0a8ffeefb3a0b 7,12-13,465-516
+backend/script/errorx/evaluation.yaml
+  s_311d8937f5bb41::t_08b4471395a22f 127-128,130-132
+  s_311d8937f5bb41::t_deee617cca8758 129
+  s_311d8937f5bb41::t_b39b4348660e28 497-502
+backend/modules/evaluation/domain/service/expt_template_impl_test.go
+  s_311d8937f5bb41::t_910a3d7473904d 1406,1411
+backend/modules/evaluation/domain/service/expt_manage_impl.go
+  h_1edf4212410de1 367
+  s_311d8937f5bb41::t_e0aed251299833 368,375
+  s_311d8937f5bb41::t_64523deebad193 369-370
+  s_311d8937f5bb41::t_005b2f26978179 911-912
+backend/modules/evaluation/domain/entity/expt.go
+  s_311d8937f5bb41::t_a055d76ffb58ce 9,11,26,28-31,34,36-38,40-42
+  s_311d8937f5bb41::t_bdeb388342314e 21-25,27
+  s_311d8937f5bb41::t_3c610651736708 32-33,35,39
+backend/modules/evaluation/domain/service/expt_template_impl.go
+  s_311d8937f5bb41::t_0b97e3f67b6c9a 83-87
+  s_311d8937f5bb41::t_3001aebcf6b789 101-102
+  s_311d8937f5bb41::t_30e64b5ebee0d4 301-303,572-573
+backend/modules/evaluation/domain/service/expt_manage_impl_test.go
+  s_311d8937f5bb41::t_a95294da5bc783 10
+  s_311d8937f5bb41::t_1f83e0d9370713 128-131,144-153
+  s_311d8937f5bb41::t_775baec22d2967 133,155
+backend/modules/evaluation/pkg/errno/evaluation.go
+  h_1edf4212410de1 135,137-138
+  s_311d8937f5bb41::t_aa0f97bf3b1aa4 573-577
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "95f438d84a24b0802dd137a63077cf9fbab160c4",
+  "prompts": {},
+  "humans": {
+    "h_1edf4212410de1": {
+      "author": "luozhenghua.007 <luozhenghua.007@bytedance.com>"
+    }
+  },
+  "sessions": {
+    "s_311d8937f5bb41": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3b557f89fbe131766c9ff9",
+        "model": "c_o_new_thinking__dev"
+      },
+      "human_author": null
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

@@ -1,0 +1,130 @@
+idl/thrift/coze/loop/evaluation/domain/expt.thrift
+  832350c2ab782c53 32-40,105-107,159-161,251-272
+release/deployment/helm-chart/charts/app/bootstrap/init/rmq/init-subscription/subscriptions.cfg
+  832350c2ab782c53 16-17
+release/deployment/docker-compose/bootstrap/mysql-init/init-sql/expt_template.sql
+  832350c2ab782c53 27
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/experiment.sql
+  832350c2ab782c53 33
+backend/modules/evaluation/domain/entity/event.go
+  832350c2ab782c53 208-216
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_template.sql
+  832350c2ab782c53 27
+idl/thrift/coze/loop/evaluation/domain_openapi/experiment.thrift
+  28bf439912582910 427-478,484-495,498-500
+  832350c2ab782c53 23-30,167-171,173-175,306-308,480-483,496-497,501-503
+backend/modules/evaluation/infra/repo/experiment/mysql/convert/expt_template.go
+  832350c2ab782c53 101-109,280-288,298
+release/deployment/docker-compose/bootstrap/rmq-init/init-subscription/subscriptions.cfg
+  832350c2ab782c53 16-17
+backend/modules/evaluation/domain/entity/notification.go
+  d8dbc46921774bff 27,53-59
+  28bf439912582910 1-18,20-23,61-64
+  832350c2ab782c53 19,24-26,28-52
+backend/cmd/main.go
+  832350c2ab782c53 69
+backend/modules/evaluation/domain/entity/param.go
+  832350c2ab782c53 317
+release/deployment/helm-chart/umbrella/conf/evaluation.yaml
+  832350c2ab782c53 61-66
+backend/modules/evaluation/domain/service/expt_run_scheduler_event_impl.go
+  832350c2ab782c53 257-275,441-444,464-467,474-477,483-541
+backend/modules/evaluation/infra/mq/rocket/consumer/consumer.go
+  832350c2ab782c53 13,21,30
+backend/modules/evaluation/domain/entity/expt_template.go
+  832350c2ab782c53 40-42,430,449-450,462-487
+release/deployment/docker-compose/conf/evaluation.yaml
+  832350c2ab782c53 61-66
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/expt_template_alter.sql
+  832350c2ab782c53 5-6
+backend/modules/evaluation/application/convertor/experiment/expt_template.go
+  832350c2ab782c53 1407-1408
+  28bf439912582910 1409-1410
+backend/modules/evaluation/domain/events/publisher.go
+  832350c2ab782c53 23
+backend/modules/evaluation/infra/mq/rocket/producer/expt_event_pub.go
+  832350c2ab782c53 63,165-166
+  d8dbc46921774bff 163-164
+backend/cmd/consumer.go
+  832350c2ab782c53 7-8,15,23,35-41
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/experiment_alter.sql
+  832350c2ab782c53 18-21
+backend/modules/evaluation/domain/service/expt_lifecycle_event_impl.go
+  832350c2ab782c53 38-45,47-48,52,55
+  d8dbc46921774bff 46,49
+  28bf439912582910 50-51
+release/deployment/docker-compose/bootstrap/mysql-init/init-sql/experiment.sql
+  832350c2ab782c53 33
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.expt.thrift
+  832350c2ab782c53 49-51,102-107,159-161,416-417,481-483,545-547
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/experiment_alter.sql
+  832350c2ab782c53 18-21
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.openapi.thrift
+  832350c2ab782c53 433-435,581-649,975-977,1048-1050,1118-1119,1123
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_template_alter.sql
+  832350c2ab782c53 5-6
+backend/modules/evaluation/domain/service/webhook_dispatcher.go
+  832350c2ab782c53 30-71
+backend/modules/evaluation/application/convertor/experiment/expt.go
+  832350c2ab782c53 560-561,578-626
+  28bf439912582910 562
+backend/modules/evaluation/infra/mq/rocket/conf.go
+  832350c2ab782c53 25
+backend/modules/evaluation/infra/repo/experiment/mysql/convert/expt.go
+  832350c2ab782c53 130-138
+  d8dbc46921774bff 71-77
+backend/modules/evaluation/domain/events/mocks/expt_event_publisher_mock.go
+  832350c2ab782c53 101-114
+backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model/experiment.gen.go
+  d8dbc46921774bff 47
+backend/modules/evaluation/domain/entity/expt.go
+  832350c2ab782c53 171-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "bd364cec852afd459cf82f7bd4b8d0d2d63ac126",
+  "prompts": {
+    "28bf439912582910": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a13f458d09bd7ffd2750297",
+        "model": "minimax-m2.5__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 1358,
+      "total_deletions": 97,
+      "accepted_lines": 98,
+      "overriden_lines": 0
+    },
+    "832350c2ab782c53": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a15c9ccd37d75eee1a55a41",
+        "model": "c_o_new_thinking__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 388,
+      "total_deletions": 309,
+      "accepted_lines": 530,
+      "overriden_lines": 0
+    },
+    "d8dbc46921774bff": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a159b50d37d75eee1a55479",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 210,
+      "total_deletions": 163,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

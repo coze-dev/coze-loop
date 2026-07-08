@@ -1,0 +1,67 @@
+backend/modules/evaluation/application/convertor/experiment/expt_template.go
+  703211011326e608 54-61 gitai:{"mixed_line_ranges":[{"Single":55}],"operations":[{"operation_id":"6a1f0a44af0c95c626cf8826","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[54,61]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "a7c91f4a40b52da5dfdb1299f9218b3b03237899",
+  "prompts": {
+    "703211011326e608": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a1ecc13af0c95c626cf834e",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 1
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/application/convertor/experiment/expt_template.go": [
+      {
+        "hash": "703211011326e608",
+        "line_ranges": [
+          {
+            "Range": [
+              54,
+              61
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 55
+          }
+        ],
+        "operations": [
+          {
+            "operation_id": "6a1f0a44af0c95c626cf8826",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  54,
+                  61
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "703211011326e608": {
+      "tool": "trae",
+      "conversation_id": "6a1ecc13af0c95c626cf834e",
+      "session_id": "6a1ecc13af0c95c626cf834e",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
