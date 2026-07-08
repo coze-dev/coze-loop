@@ -603,20 +603,6 @@ func (p *Dataset) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 151:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField151(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -989,20 +975,6 @@ func (p *Dataset) FastReadField150(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *Dataset) FastReadField151(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.DatasetKey = _field
-	return offset, nil
-}
-
 func (p *Dataset) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1034,7 +1006,6 @@ func (p *Dataset) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField23(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
-		offset += p.fastWriteField151(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1067,7 +1038,6 @@ func (p *Dataset) BLength() int {
 		l += p.field103Length()
 		l += p.field104Length()
 		l += p.field150Length()
-		l += p.field151Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1283,15 +1253,6 @@ func (p *Dataset) fastWriteField150(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *Dataset) fastWriteField151(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetDatasetKey() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 151)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.DatasetKey)
-	}
-	return offset
-}
-
 func (p *Dataset) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -1502,15 +1463,6 @@ func (p *Dataset) field150Length() int {
 	return l
 }
 
-func (p *Dataset) field151Length() int {
-	l := 0
-	if p.IsSetDatasetKey() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.DatasetKey)
-	}
-	return l
-}
-
 func (p *Dataset) DeepCopy(s interface{}) error {
 	src, ok := s.(*Dataset)
 	if !ok {
@@ -1659,14 +1611,6 @@ func (p *Dataset) DeepCopy(s interface{}) error {
 	if src.ChangeUncommitted != nil {
 		tmp := *src.ChangeUncommitted
 		p.ChangeUncommitted = &tmp
-	}
-
-	if src.DatasetKey != nil {
-		var tmp string
-		if *src.DatasetKey != "" {
-			tmp = kutils.StringDeepCopy(*src.DatasetKey)
-		}
-		p.DatasetKey = &tmp
 	}
 
 	return nil

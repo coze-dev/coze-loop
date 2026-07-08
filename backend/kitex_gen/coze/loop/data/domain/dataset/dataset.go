@@ -1152,8 +1152,6 @@ type Dataset struct {
 	ExpiredAt *int64  `thrift:"expired_at,104,optional" frugal:"104,optional,i64" json:"expired_at" form:"expired_at" query:"expired_at"`
 	/* DTO 专用字段 */
 	ChangeUncommitted *bool `thrift:"change_uncommitted,150,optional" frugal:"150,optional,bool" form:"change_uncommitted" json:"change_uncommitted,omitempty" query:"change_uncommitted"`
-	// 数据集业务唯一键，创建后不可变
-	DatasetKey *string `thrift:"dataset_key,151,optional" frugal:"151,optional,string" form:"dataset_key" json:"dataset_key,omitempty" query:"dataset_key"`
 }
 
 func NewDataset() *Dataset {
@@ -1435,18 +1433,6 @@ func (p *Dataset) GetChangeUncommitted() (v bool) {
 	}
 	return *p.ChangeUncommitted
 }
-
-var Dataset_DatasetKey_DEFAULT string
-
-func (p *Dataset) GetDatasetKey() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetDatasetKey() {
-		return Dataset_DatasetKey_DEFAULT
-	}
-	return *p.DatasetKey
-}
 func (p *Dataset) SetID(val int64) {
 	p.ID = val
 }
@@ -1519,9 +1505,6 @@ func (p *Dataset) SetExpiredAt(val *int64) {
 func (p *Dataset) SetChangeUncommitted(val *bool) {
 	p.ChangeUncommitted = val
 }
-func (p *Dataset) SetDatasetKey(val *string) {
-	p.DatasetKey = val
-}
 
 var fieldIDToName_Dataset = map[int16]string{
 	1:   "id",
@@ -1548,7 +1531,6 @@ var fieldIDToName_Dataset = map[int16]string{
 	103: "updated_at",
 	104: "expired_at",
 	150: "change_uncommitted",
-	151: "dataset_key",
 }
 
 func (p *Dataset) IsSetAppID() bool {
@@ -1633,10 +1615,6 @@ func (p *Dataset) IsSetExpiredAt() bool {
 
 func (p *Dataset) IsSetChangeUncommitted() bool {
 	return p.ChangeUncommitted != nil
-}
-
-func (p *Dataset) IsSetDatasetKey() bool {
-	return p.DatasetKey != nil
 }
 
 func (p *Dataset) Read(iprot thrift.TProtocol) (err error) {
@@ -1850,14 +1828,6 @@ func (p *Dataset) Read(iprot thrift.TProtocol) (err error) {
 		case 150:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField150(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 151:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField151(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2167,17 +2137,6 @@ func (p *Dataset) ReadField150(iprot thrift.TProtocol) error {
 	p.ChangeUncommitted = _field
 	return nil
 }
-func (p *Dataset) ReadField151(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.DatasetKey = _field
-	return nil
-}
 
 func (p *Dataset) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2279,10 +2238,6 @@ func (p *Dataset) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField150(oprot); err != nil {
 			fieldId = 150
-			goto WriteFieldError
-		}
-		if err = p.writeField151(oprot); err != nil {
-			fieldId = 151
 			goto WriteFieldError
 		}
 	}
@@ -2729,24 +2684,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 150 end error: ", p), err)
 }
-func (p *Dataset) writeField151(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDatasetKey() {
-		if err = oprot.WriteFieldBegin("dataset_key", thrift.STRING, 151); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.DatasetKey); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 151 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 151 end error: ", p), err)
-}
 
 func (p *Dataset) String() string {
 	if p == nil {
@@ -2832,9 +2769,6 @@ func (p *Dataset) DeepEqual(ano *Dataset) bool {
 		return false
 	}
 	if !p.Field150DeepEqual(ano.ChangeUncommitted) {
-		return false
-	}
-	if !p.Field151DeepEqual(ano.DatasetKey) {
 		return false
 	}
 	return true
@@ -3094,18 +3028,6 @@ func (p *Dataset) Field150DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.ChangeUncommitted != *src {
-		return false
-	}
-	return true
-}
-func (p *Dataset) Field151DeepEqual(src *string) bool {
-
-	if p.DatasetKey == src {
-		return true
-	} else if p.DatasetKey == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.DatasetKey, *src) != 0 {
 		return false
 	}
 	return true
