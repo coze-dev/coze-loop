@@ -1153,7 +1153,7 @@ func (p *OpenAPIApplication) AllowAnnotationByKey(ctx context.Context, key strin
 		logs.CtxError(ctx, "get annotation max qps failed, err=%v, key=%s", err, key)
 		return true
 	}
-	result, err := p.rateLimiter.AllowN(ctx, key, 1,
+	result, err := p.rateLimiter.AllowN(ctx, "annotation:"+key, 1,
 		limiter.WithLimit(&limiter.Limit{
 			Rate:   maxQPS,
 			Burst:  maxQPS,

@@ -3413,6 +3413,74 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 	})
 }
 
+func TestOpenAPIApplication_AllowAnnotationByKey(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("allow annotation - success", func(t *testing.T) {
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+
+		traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "test_key").Return(10, nil)
+		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:test_key", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+
+		app := &OpenAPIApplication{
+			traceConfig: traceConfigMock,
+			rateLimiter: rateLimiterMock,
+		}
+
+		result := app.AllowAnnotationByKey(context.Background(), "test_key")
+		assert.True(t, result)
+	})
+
+	t.Run("allow annotation - rate limited", func(t *testing.T) {
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+
+		traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "test_key").Return(10, nil)
+		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:test_key", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
+
+		app := &OpenAPIApplication{
+			traceConfig: traceConfigMock,
+			rateLimiter: rateLimiterMock,
+		}
+
+		result := app.AllowAnnotationByKey(context.Background(), "test_key")
+		assert.False(t, result)
+	})
+
+	t.Run("allow annotation - config error", func(t *testing.T) {
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+
+		traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "test_key").Return(0, assert.AnError)
+
+		app := &OpenAPIApplication{
+			traceConfig: traceConfigMock,
+			rateLimiter: rateLimiterMock,
+		}
+
+		result := app.AllowAnnotationByKey(context.Background(), "test_key")
+		assert.True(t, result)
+	})
+
+	t.Run("allow annotation - rate limiter error", func(t *testing.T) {
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+
+		traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "test_key").Return(10, nil)
+		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:test_key", 1, gomock.Any()).Return(nil, assert.AnError)
+
+		app := &OpenAPIApplication{
+			traceConfig: traceConfigMock,
+			rateLimiter: rateLimiterMock,
+		}
+
+		result := app.AllowAnnotationByKey(context.Background(), "test_key")
+		assert.True(t, result)
+	})
+}
+
 // 补充辅助函数测试
 func TestUnmarshalOtelSpan(t *testing.T) {
 	t.Run("protobuf content type", func(t *testing.T) {
