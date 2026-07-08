@@ -25,6 +25,7 @@ const (
 	traceMaxDurationDay                = "trace_max_duration_day"
 	annotationSourceCfgKey             = "annotation_source_cfg"
 	queryTraceRateLimitCfgKey          = "query_trace_rate_limit_config"
+	annotationRateLimitCfgKey          = "annotation_rate_limit_config"
 	keySpanTypeCfgKey                  = "key_span_type"
 	backfillMqProducerCfgKey           = "backfill_mq_producer_config"
 	consumerListeningCfgKey            = "consumer_listening"
@@ -178,6 +179,17 @@ func (t *TraceConfigCenter) GetAnnotationSourceCfg(ctx context.Context) (*config
 func (t *TraceConfigCenter) GetQueryMaxQPS(ctx context.Context, key string) (int, error) {
 	qpsConfig := new(config.QueryTraceRateLimitConfig)
 	if err := t.UnmarshalKey(ctx, queryTraceRateLimitCfgKey, &qpsConfig); err != nil {
+		return 0, err
+	}
+	if qps, ok := qpsConfig.SpaceMaxQPS[key]; ok {
+		return qps, nil
+	}
+	return qpsConfig.DefaultMaxQPS, nil
+}
+
+func (t *TraceConfigCenter) GetAnnotationMaxQPS(ctx context.Context, key string) (int, error) {
+	qpsConfig := new(config.AnnotationRateLimitConfig)
+	if err := t.UnmarshalKey(ctx, annotationRateLimitCfgKey, &qpsConfig); err != nil {
 		return 0, err
 	}
 	if qps, ok := qpsConfig.SpaceMaxQPS[key]; ok {
