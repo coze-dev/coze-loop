@@ -45,6 +45,7 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, para
 		Session:            param.Session,
 		DatasetType:        param.DatasetType,
 		Tags:               param.Tags,
+		DatasetKey:         param.DatasetKey,
 	})
 }
 
@@ -116,6 +117,7 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 		PageToken:        param.PageToken,
 		OrderBys:         param.OrderBys,
 		TagFilter:        param.TagFilter,
+		DatasetKeys:      param.DatasetKeys,
 	})
 }
 

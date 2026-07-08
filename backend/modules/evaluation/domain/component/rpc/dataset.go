@@ -72,6 +72,7 @@ type CreateDatasetParam struct {
 	Session            *entity.Session
 	DatasetType        *string
 	Tags               []*entity.ResourceTagRef
+	DatasetKey         *string
 }
 
 type CreateDatasetWithImportParam struct {
@@ -107,6 +108,7 @@ type ListDatasetsParam struct {
 	PageToken        *string
 	OrderBys         []*entity.OrderBy
 	TagFilter        *entity.TagFilter
+	DatasetKeys      []string
 }
 
 type ListDatasetItemsParam struct {

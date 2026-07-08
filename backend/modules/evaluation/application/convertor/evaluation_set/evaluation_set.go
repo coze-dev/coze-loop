@@ -69,6 +69,7 @@ func EvaluationSetDO2DTO(do *entity.EvaluationSet) *eval_set.EvaluationSet {
 		BaseInfo:             common.ConvertBaseInfoDO2DTO(do.BaseInfo),
 		Type:                 do.DatasetType,
 		Tags:                 ResourceTagDO2DTOs(do.Tags),
+		DatasetKey:           gptr.Of(do.DatasetKey),
 	}
 }
 

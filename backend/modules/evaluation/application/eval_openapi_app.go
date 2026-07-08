@@ -147,6 +147,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 		EvaluationSetSchema: evaluation_set.OpenAPIEvaluationSetSchemaDTO2DO(req.EvaluationSetSchema),
 		DatasetType:         req.Type,
 		Tags:                evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
+		DatasetKey:          req.DatasetKey,
 	})
 	if err != nil {
 		return nil, err
@@ -425,6 +426,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 		PageSize:         req.PageSize,
 		PageToken:        req.PageToken,
 		TagFilter:        tagFilter,
+		DatasetKeys:      req.DatasetKeys,
 	})
 	if err != nil {
 		return nil, err

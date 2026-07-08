@@ -41,6 +41,7 @@ struct EvaluationSet {
     17: optional BizCategory biz_category               // 业务分类
     20: optional EvaluationSetType type                 // 评测集类型
     21: optional list<ResourceTag> tags                 // 系统资源标签
+    22: optional string dataset_key                     // 数据集业务唯一键，创建后不可变
 
     // 版本信息
     30: optional EvaluationSetVersion evaluation_set_version,  // 版本详情信息

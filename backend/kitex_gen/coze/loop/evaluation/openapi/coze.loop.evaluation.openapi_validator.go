@@ -53,6 +53,11 @@ func (p *CreateEvaluationSetOApiRequest) IsValid() error {
 			}
 		}
 	}
+	if p.DatasetKey != nil {
+		if len(*p.DatasetKey) > int(255) {
+			return fmt.Errorf("field DatasetKey max_len rule failed, current value: %d", len(*p.DatasetKey))
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -206,6 +211,9 @@ func (p *ListEvaluationSetsOApiRequest) IsValid() error {
 		if len(_elem) > int(128) {
 			return fmt.Errorf("field _elem max_len rule failed, current value: %d", len(_elem))
 		}
+	}
+	if len(p.DatasetKeys) > int(255) {
+		return fmt.Errorf("field DatasetKeys MaxLen rule failed, current value: %v", p.DatasetKeys)
 	}
 	if p.PageSize != nil {
 		if *p.PageSize <= int32(0) {

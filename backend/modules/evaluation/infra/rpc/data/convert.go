@@ -367,6 +367,7 @@ func convert2EvaluationSet(ctx context.Context, dataset *dataset.Dataset) (evalu
 			CreatedBy: &entity.UserInfo{UserID: dataset.CreatedBy},
 			UpdatedBy: &entity.UserInfo{UserID: dataset.UpdatedBy},
 		},
+		DatasetKey: gptr.Indirect(dataset.DatasetKey),
 	}
 	return evaluationSet
 }

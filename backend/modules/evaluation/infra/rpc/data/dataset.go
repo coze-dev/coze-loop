@@ -50,6 +50,7 @@ func (a *DatasetRPCAdapter) CreateDataset(ctx context.Context, param *rpc.Create
 		Features: &domain_dataset.DatasetFeatures{
 			EditSchema: gptr.Of(true),
 		},
+		DatasetKey: param.DatasetKey,
 	})
 	if err != nil {
 		return 0, err
@@ -198,6 +199,7 @@ func (a *DatasetRPCAdapter) ListDatasets(ctx context.Context, param *rpc.ListDat
 		PageToken:   param.PageToken,
 		OrderBys:    convert2DatasetOrderBys(ctx, param.OrderBys),
 		Category:    domain_dataset.DatasetCategoryPtr(domain_dataset.DatasetCategory_Evaluation),
+		DatasetKeys: param.DatasetKeys,
 	})
 	if err != nil {
 		return nil, nil, nil, err

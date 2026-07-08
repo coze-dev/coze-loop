@@ -57,6 +57,11 @@ func (p *CreateDatasetRequest) IsValid() error {
 			}
 		}
 	}
+	if p.DatasetKey != nil {
+		if len(*p.DatasetKey) > int(255) {
+			return fmt.Errorf("field DatasetKey max_len rule failed, current value: %d", len(*p.DatasetKey))
+		}
+	}
 	if p.SecurityLevel != nil {
 		if p.SecurityLevel.String() == "<UNSET>" {
 			return fmt.Errorf("field SecurityLevel defined_only rule failed")
@@ -212,6 +217,9 @@ func (p *ListDatasetsRequest) IsValid() error {
 		if len(*p.Name) > int(255) {
 			return fmt.Errorf("field Name max_len rule failed, current value: %d", len(*p.Name))
 		}
+	}
+	if len(p.DatasetKeys) > int(255) {
+		return fmt.Errorf("field DatasetKeys MaxLen rule failed, current value: %v", p.DatasetKeys)
 	}
 	if p.PageNumber != nil {
 		if *p.PageNumber <= int32(0) {

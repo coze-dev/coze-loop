@@ -15,6 +15,7 @@ struct CreateEvaluationSetRequest {
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema,
     5: optional eval_set.BizCategory biz_category (vt.max_size = "128") // 业务分类
     6: optional list<eval_set.ResourceTagRef> tags (vt.elem.skip = "false"),
+    7: optional string dataset_key (vt.max_size = "255"),  // 数据集业务唯一键，创建后不可变
     10: optional eval_set.EvaluationSetType type (vt.max_size = "128") // 评测集类型，默认 default
 
     200: optional common.Session session (api.none = 'true')
@@ -125,6 +126,7 @@ struct ListEvaluationSetsRequest {
     3: optional list<string> creators,
     4: optional list<i64> evaluation_set_ids (api.js_conv="true", go.tag='json:"evaluation_set_ids"'),
     5: optional eval_set.EvaluationSetType type (vt.max_size = "128"), // 按评测集类型过滤
+    6: optional list<string> dataset_keys (vt.max_size = "255"), // 按 dataset_key 精确匹配
     7: optional eval_set.TagFilter tag_filter,          // 系统资源标签过滤
 
     100: optional i32 page_number (vt.gt = "0"),

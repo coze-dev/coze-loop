@@ -53,6 +53,11 @@ func (p *CreateEvaluationSetRequest) IsValid() error {
 			}
 		}
 	}
+	if p.DatasetKey != nil {
+		if len(*p.DatasetKey) > int(255) {
+			return fmt.Errorf("field DatasetKey max_len rule failed, current value: %d", len(*p.DatasetKey))
+		}
+	}
 	if p.Type != nil {
 		if len(*p.Type) > int(128) {
 			return fmt.Errorf("field Type max_len rule failed, current value: %d", len(*p.Type))
@@ -262,6 +267,9 @@ func (p *ListEvaluationSetsRequest) IsValid() error {
 		if len(*p.Type) > int(128) {
 			return fmt.Errorf("field Type max_len rule failed, current value: %d", len(*p.Type))
 		}
+	}
+	if len(p.DatasetKeys) > int(255) {
+		return fmt.Errorf("field DatasetKeys MaxLen rule failed, current value: %v", p.DatasetKeys)
 	}
 	if p.TagFilter != nil {
 		if err := p.TagFilter.IsValid(); err != nil {

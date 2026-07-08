@@ -905,6 +905,8 @@ type EvaluationSet struct {
 	Type *EvaluationSetType `thrift:"type,20,optional" frugal:"20,optional,string" form:"type" json:"type,omitempty" query:"type"`
 	// 系统资源标签
 	Tags []*ResourceTag `thrift:"tags,21,optional" frugal:"21,optional,list<ResourceTag>" form:"tags" json:"tags,omitempty" query:"tags"`
+	// 数据集业务唯一键，创建后不可变
+	DatasetKey *string `thrift:"dataset_key,22,optional" frugal:"22,optional,string" form:"dataset_key" json:"dataset_key,omitempty" query:"dataset_key"`
 	// 版本信息
 	EvaluationSetVersion *EvaluationSetVersion `thrift:"evaluation_set_version,30,optional" frugal:"30,optional,EvaluationSetVersion" form:"evaluation_set_version" json:"evaluation_set_version,omitempty" query:"evaluation_set_version"`
 	// 最新的版本号
@@ -1078,6 +1080,18 @@ func (p *EvaluationSet) GetTags() (v []*ResourceTag) {
 	return p.Tags
 }
 
+var EvaluationSet_DatasetKey_DEFAULT string
+
+func (p *EvaluationSet) GetDatasetKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetKey() {
+		return EvaluationSet_DatasetKey_DEFAULT
+	}
+	return *p.DatasetKey
+}
+
 var EvaluationSet_EvaluationSetVersion_DEFAULT *EvaluationSetVersion
 
 func (p *EvaluationSet) GetEvaluationSetVersion() (v *EvaluationSetVersion) {
@@ -1164,6 +1178,9 @@ func (p *EvaluationSet) SetType(val *EvaluationSetType) {
 func (p *EvaluationSet) SetTags(val []*ResourceTag) {
 	p.Tags = val
 }
+func (p *EvaluationSet) SetDatasetKey(val *string) {
+	p.DatasetKey = val
+}
 func (p *EvaluationSet) SetEvaluationSetVersion(val *EvaluationSetVersion) {
 	p.EvaluationSetVersion = val
 }
@@ -1191,6 +1208,7 @@ var fieldIDToName_EvaluationSet = map[int16]string{
 	17:  "biz_category",
 	20:  "type",
 	21:  "tags",
+	22:  "dataset_key",
 	30:  "evaluation_set_version",
 	31:  "latest_version",
 	32:  "next_version_num",
@@ -1247,6 +1265,10 @@ func (p *EvaluationSet) IsSetType() bool {
 
 func (p *EvaluationSet) IsSetTags() bool {
 	return p.Tags != nil
+}
+
+func (p *EvaluationSet) IsSetDatasetKey() bool {
+	return p.DatasetKey != nil
 }
 
 func (p *EvaluationSet) IsSetEvaluationSetVersion() bool {
@@ -1382,6 +1404,14 @@ func (p *EvaluationSet) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 22:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField22(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1598,6 +1628,17 @@ func (p *EvaluationSet) ReadField21(iprot thrift.TProtocol) error {
 	p.Tags = _field
 	return nil
 }
+func (p *EvaluationSet) ReadField22(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DatasetKey = _field
+	return nil
+}
 func (p *EvaluationSet) ReadField30(iprot thrift.TProtocol) error {
 	_field := NewEvaluationSetVersion()
 	if err := _field.Read(iprot); err != nil {
@@ -1693,6 +1734,10 @@ func (p *EvaluationSet) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
 			goto WriteFieldError
 		}
 		if err = p.writeField30(oprot); err != nil {
@@ -1971,6 +2016,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
+func (p *EvaluationSet) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetKey() {
+		if err = oprot.WriteFieldBegin("dataset_key", thrift.STRING, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DatasetKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
 func (p *EvaluationSet) writeField30(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluationSetVersion() {
 		if err = oprot.WriteFieldBegin("evaluation_set_version", thrift.STRUCT, 30); err != nil {
@@ -2095,6 +2158,9 @@ func (p *EvaluationSet) DeepEqual(ano *EvaluationSet) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.Tags) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.DatasetKey) {
 		return false
 	}
 	if !p.Field30DeepEqual(ano.EvaluationSetVersion) {
@@ -2256,6 +2322,18 @@ func (p *EvaluationSet) Field21DeepEqual(src []*ResourceTag) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *EvaluationSet) Field22DeepEqual(src *string) bool {
+
+	if p.DatasetKey == src {
+		return true
+	} else if p.DatasetKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DatasetKey, *src) != 0 {
+		return false
 	}
 	return true
 }

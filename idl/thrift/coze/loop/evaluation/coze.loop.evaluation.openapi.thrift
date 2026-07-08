@@ -22,6 +22,7 @@ struct CreateEvaluationSetOApiRequest {
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema (api.body = "evaluation_set_schema")
     5: optional eval_set.EvaluationSetType type (api.body = "type", vt.max_size = "128")
     6: optional list<eval_set.ResourceTagRef> tags (api.body = "tags", vt.elem.skip = "false")
+    7: optional string dataset_key (api.body = "dataset_key", vt.max_size = "255")  // 数据集业务唯一键，创建后不可变
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -112,6 +113,7 @@ struct ListEvaluationSetsOApiRequest {
     4: optional list<i64> evaluation_set_ids (api.query = "evaluation_set_ids", api.js_conv = "true", go.tag = 'json:"evaluation_set_ids"'),
     5: optional list<string> tag_names (api.query = "tag_names", vt.max_size = "50", vt.elem.min_size = "1", vt.elem.max_size = "128")
     6: optional eval_set.TagFilterRelation tag_filter_relation (api.query = "tag_filter_relation")
+    7: optional list<string> dataset_keys (api.query = "dataset_keys", vt.max_size = "255")  // 按 dataset_key 精确匹配
 
     100: optional string page_token (api.query = "page_token")
     101: optional i32 page_size (api.query = "page_size", vt.gt = "0", vt.le = "200")

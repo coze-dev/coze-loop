@@ -830,6 +830,20 @@ func (p *EvaluationSet) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 22:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField22(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 30:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField30(buf[offset:])
@@ -1095,6 +1109,20 @@ func (p *EvaluationSet) FastReadField21(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluationSet) FastReadField22(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.DatasetKey = _field
+	return offset, nil
+}
+
 func (p *EvaluationSet) FastReadField30(buf []byte) (int, error) {
 	offset := 0
 	_field := NewEvaluationSetVersion()
@@ -1168,6 +1196,7 @@ func (p *EvaluationSet) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField17(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
+		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField30(buf[offset:], w)
 		offset += p.fastWriteField31(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
@@ -1192,6 +1221,7 @@ func (p *EvaluationSet) BLength() int {
 		l += p.field17Length()
 		l += p.field20Length()
 		l += p.field21Length()
+		l += p.field22Length()
 		l += p.field30Length()
 		l += p.field31Length()
 		l += p.field32Length()
@@ -1321,6 +1351,15 @@ func (p *EvaluationSet) fastWriteField21(buf []byte, w thrift.NocopyWriter) int 
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *EvaluationSet) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDatasetKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 22)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.DatasetKey)
 	}
 	return offset
 }
@@ -1482,6 +1521,15 @@ func (p *EvaluationSet) field21Length() int {
 	return l
 }
 
+func (p *EvaluationSet) field22Length() int {
+	l := 0
+	if p.IsSetDatasetKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.DatasetKey)
+	}
+	return l
+}
+
 func (p *EvaluationSet) field30Length() int {
 	l := 0
 	if p.IsSetEvaluationSetVersion() {
@@ -1611,6 +1659,14 @@ func (p *EvaluationSet) DeepCopy(s interface{}) error {
 
 			p.Tags = append(p.Tags, _elem)
 		}
+	}
+
+	if src.DatasetKey != nil {
+		var tmp string
+		if *src.DatasetKey != "" {
+			tmp = kutils.StringDeepCopy(*src.DatasetKey)
+		}
+		p.DatasetKey = &tmp
 	}
 
 	var _evaluationSetVersion *EvaluationSetVersion

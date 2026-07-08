@@ -16,6 +16,7 @@ type CreateEvaluationSetParam struct {
 	Session             *Session
 	DatasetType         *string
 	Tags                []*ResourceTagRef
+	DatasetKey          *string
 }
 
 type CreateEvaluationSetWithImportParam struct {
@@ -50,6 +51,7 @@ type ListEvaluationSetsParam struct {
 	PageToken        *string
 	OrderBys         []*OrderBy
 	TagFilter        *TagFilter
+	DatasetKeys      []string
 }
 
 type ListEvaluationSetItemsParam struct {

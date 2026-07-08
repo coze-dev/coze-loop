@@ -27,6 +27,7 @@ type EvaluationSet struct {
 	BizCategory          BizCategory           `json:"biz_category,omitempty"`
 	DatasetType          *string               `json:"dataset_type,omitempty"`
 	Tags                 []*ResourceTag        `json:"tags,omitempty"`
+	DatasetKey           string                `json:"dataset_key,omitempty"`
 }
 
 type DatasetSpec struct {

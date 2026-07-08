@@ -13,6 +13,7 @@ struct CreateDatasetRequest {
     5: optional dataset.DatasetCategory category (vt.defined_only = "true")
     6: optional string biz_category (vt.max_size = "128")
     7: optional list<dataset.FieldSchema> fields (vt.min_size = "1", vt.elem.skip = "false")
+    8: optional string dataset_key (vt.max_size = "255")  // 数据集业务唯一键，创建后不可变
     15: optional dataset.SecurityLevel security_level (vt.defined_only = "true")
     16: optional dataset.DatasetVisibility visibility (vt.defined_only = "true")
     17: optional dataset.DatasetSpec spec
@@ -78,6 +79,7 @@ struct ListDatasetsRequest {
     4: optional string name (vt.max_size = "255")                                    // 支持模糊搜索
     5: optional list<string> created_bys
     6: optional list<string> biz_categorys
+    7: optional list<string> dataset_keys (vt.max_size = "255")                      // 按 dataset_key 精确匹配
 
     /* pagination */
     100: optional i32 page_number (vt.gt = "0")

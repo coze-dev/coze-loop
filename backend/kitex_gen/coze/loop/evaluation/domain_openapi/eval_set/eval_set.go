@@ -2396,17 +2396,19 @@ func (p *EvaluationSetVersion) Field100DeepEqual(src *common.BaseInfo) bool {
 
 // 评测集
 type EvaluationSet struct {
-	ID                  *int64                `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
-	Name                *string               `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description         *string               `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
-	Status              *EvaluationSetStatus  `thrift:"status,4,optional" frugal:"4,optional,string" form:"status" json:"status,omitempty" query:"status"`
-	ItemCount           *int64                `thrift:"item_count,5,optional" frugal:"5,optional,i64" form:"item_count" json:"item_count,omitempty" query:"item_count"`
-	LatestVersion       *string               `thrift:"latest_version,6,optional" frugal:"6,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
-	IsChangeUncommitted *bool                 `thrift:"is_change_uncommitted,7,optional" frugal:"7,optional,bool" form:"is_change_uncommitted" json:"is_change_uncommitted,omitempty" query:"is_change_uncommitted"`
-	Type                *EvaluationSetType    `thrift:"type,8,optional" frugal:"8,optional,string" form:"type" json:"type,omitempty" query:"type"`
-	CurrentVersion      *EvaluationSetVersion `thrift:"current_version,20,optional" frugal:"20,optional,EvaluationSetVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
-	Tags                []*ResourceTag        `thrift:"tags,21,optional" frugal:"21,optional,list<ResourceTag>" form:"tags" json:"tags,omitempty" query:"tags"`
-	BaseInfo            *common.BaseInfo      `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	ID                  *int64               `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	Name                *string              `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Description         *string              `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	Status              *EvaluationSetStatus `thrift:"status,4,optional" frugal:"4,optional,string" form:"status" json:"status,omitempty" query:"status"`
+	ItemCount           *int64               `thrift:"item_count,5,optional" frugal:"5,optional,i64" form:"item_count" json:"item_count,omitempty" query:"item_count"`
+	LatestVersion       *string              `thrift:"latest_version,6,optional" frugal:"6,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
+	IsChangeUncommitted *bool                `thrift:"is_change_uncommitted,7,optional" frugal:"7,optional,bool" form:"is_change_uncommitted" json:"is_change_uncommitted,omitempty" query:"is_change_uncommitted"`
+	Type                *EvaluationSetType   `thrift:"type,8,optional" frugal:"8,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	// 数据集业务唯一键，创建后不可变
+	DatasetKey     *string               `thrift:"dataset_key,9,optional" frugal:"9,optional,string" form:"dataset_key" json:"dataset_key,omitempty" query:"dataset_key"`
+	CurrentVersion *EvaluationSetVersion `thrift:"current_version,20,optional" frugal:"20,optional,EvaluationSetVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
+	Tags           []*ResourceTag        `thrift:"tags,21,optional" frugal:"21,optional,list<ResourceTag>" form:"tags" json:"tags,omitempty" query:"tags"`
+	BaseInfo       *common.BaseInfo      `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewEvaluationSet() *EvaluationSet {
@@ -2512,6 +2514,18 @@ func (p *EvaluationSet) GetType() (v EvaluationSetType) {
 	return *p.Type
 }
 
+var EvaluationSet_DatasetKey_DEFAULT string
+
+func (p *EvaluationSet) GetDatasetKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetKey() {
+		return EvaluationSet_DatasetKey_DEFAULT
+	}
+	return *p.DatasetKey
+}
+
 var EvaluationSet_CurrentVersion_DEFAULT *EvaluationSetVersion
 
 func (p *EvaluationSet) GetCurrentVersion() (v *EvaluationSetVersion) {
@@ -2571,6 +2585,9 @@ func (p *EvaluationSet) SetIsChangeUncommitted(val *bool) {
 func (p *EvaluationSet) SetType(val *EvaluationSetType) {
 	p.Type = val
 }
+func (p *EvaluationSet) SetDatasetKey(val *string) {
+	p.DatasetKey = val
+}
 func (p *EvaluationSet) SetCurrentVersion(val *EvaluationSetVersion) {
 	p.CurrentVersion = val
 }
@@ -2590,6 +2607,7 @@ var fieldIDToName_EvaluationSet = map[int16]string{
 	6:   "latest_version",
 	7:   "is_change_uncommitted",
 	8:   "type",
+	9:   "dataset_key",
 	20:  "current_version",
 	21:  "tags",
 	100: "base_info",
@@ -2625,6 +2643,10 @@ func (p *EvaluationSet) IsSetIsChangeUncommitted() bool {
 
 func (p *EvaluationSet) IsSetType() bool {
 	return p.Type != nil
+}
+
+func (p *EvaluationSet) IsSetDatasetKey() bool {
+	return p.DatasetKey != nil
 }
 
 func (p *EvaluationSet) IsSetCurrentVersion() bool {
@@ -2716,6 +2738,14 @@ func (p *EvaluationSet) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2862,6 +2892,17 @@ func (p *EvaluationSet) ReadField8(iprot thrift.TProtocol) error {
 	p.Type = _field
 	return nil
 }
+func (p *EvaluationSet) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DatasetKey = _field
+	return nil
+}
 func (p *EvaluationSet) ReadField20(iprot thrift.TProtocol) error {
 	_field := NewEvaluationSetVersion()
 	if err := _field.Read(iprot); err != nil {
@@ -2938,6 +2979,10 @@ func (p *EvaluationSet) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -3114,6 +3159,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *EvaluationSet) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetKey() {
+		if err = oprot.WriteFieldBegin("dataset_key", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DatasetKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
 func (p *EvaluationSet) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCurrentVersion() {
 		if err = oprot.WriteFieldBegin("current_version", thrift.STRUCT, 20); err != nil {
@@ -3213,6 +3276,9 @@ func (p *EvaluationSet) DeepEqual(ano *EvaluationSet) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.Type) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.DatasetKey) {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.CurrentVersion) {
@@ -3319,6 +3385,18 @@ func (p *EvaluationSet) Field8DeepEqual(src *EvaluationSetType) bool {
 		return false
 	}
 	if strings.Compare(*p.Type, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSet) Field9DeepEqual(src *string) bool {
+
+	if p.DatasetKey == src {
+		return true
+	} else if p.DatasetKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DatasetKey, *src) != 0 {
 		return false
 	}
 	return true

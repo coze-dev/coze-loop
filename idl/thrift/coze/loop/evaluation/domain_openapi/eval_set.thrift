@@ -81,6 +81,7 @@ struct EvaluationSet {
     6: optional string latest_version
     7: optional bool is_change_uncommitted
     8: optional EvaluationSetType type
+    9: optional string dataset_key                     // 数据集业务唯一键，创建后不可变
 
     20: optional EvaluationSetVersion current_version
     21: optional list<ResourceTag> tags

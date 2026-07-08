@@ -23,6 +23,8 @@ type CreateEvaluationSetRequest struct {
 	// 业务分类
 	BizCategory *eval_set.BizCategory      `thrift:"biz_category,5,optional" frugal:"5,optional,string" form:"biz_category" json:"biz_category,omitempty" query:"biz_category"`
 	Tags        []*eval_set.ResourceTagRef `thrift:"tags,6,optional" frugal:"6,optional,list<eval_set.ResourceTagRef>" form:"tags" json:"tags,omitempty" query:"tags"`
+	// 数据集业务唯一键，创建后不可变
+	DatasetKey *string `thrift:"dataset_key,7,optional" frugal:"7,optional,string" form:"dataset_key" json:"dataset_key,omitempty" query:"dataset_key"`
 	// 评测集类型，默认 default
 	Type    *eval_set.EvaluationSetType `thrift:"type,10,optional" frugal:"10,optional,string" form:"type" json:"type,omitempty" query:"type"`
 	Session *common.Session             `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"-" json:"-" query:"-"`
@@ -103,6 +105,18 @@ func (p *CreateEvaluationSetRequest) GetTags() (v []*eval_set.ResourceTagRef) {
 	return p.Tags
 }
 
+var CreateEvaluationSetRequest_DatasetKey_DEFAULT string
+
+func (p *CreateEvaluationSetRequest) GetDatasetKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetKey() {
+		return CreateEvaluationSetRequest_DatasetKey_DEFAULT
+	}
+	return *p.DatasetKey
+}
+
 var CreateEvaluationSetRequest_Type_DEFAULT eval_set.EvaluationSetType
 
 func (p *CreateEvaluationSetRequest) GetType() (v eval_set.EvaluationSetType) {
@@ -156,6 +170,9 @@ func (p *CreateEvaluationSetRequest) SetBizCategory(val *eval_set.BizCategory) {
 func (p *CreateEvaluationSetRequest) SetTags(val []*eval_set.ResourceTagRef) {
 	p.Tags = val
 }
+func (p *CreateEvaluationSetRequest) SetDatasetKey(val *string) {
+	p.DatasetKey = val
+}
 func (p *CreateEvaluationSetRequest) SetType(val *eval_set.EvaluationSetType) {
 	p.Type = val
 }
@@ -173,6 +190,7 @@ var fieldIDToName_CreateEvaluationSetRequest = map[int16]string{
 	4:   "evaluation_set_schema",
 	5:   "biz_category",
 	6:   "tags",
+	7:   "dataset_key",
 	10:  "type",
 	200: "session",
 	255: "Base",
@@ -196,6 +214,10 @@ func (p *CreateEvaluationSetRequest) IsSetBizCategory() bool {
 
 func (p *CreateEvaluationSetRequest) IsSetTags() bool {
 	return p.Tags != nil
+}
+
+func (p *CreateEvaluationSetRequest) IsSetDatasetKey() bool {
+	return p.DatasetKey != nil
 }
 
 func (p *CreateEvaluationSetRequest) IsSetType() bool {
@@ -273,6 +295,14 @@ func (p *CreateEvaluationSetRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -412,6 +442,17 @@ func (p *CreateEvaluationSetRequest) ReadField6(iprot thrift.TProtocol) error {
 	p.Tags = _field
 	return nil
 }
+func (p *CreateEvaluationSetRequest) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DatasetKey = _field
+	return nil
+}
 func (p *CreateEvaluationSetRequest) ReadField10(iprot thrift.TProtocol) error {
 
 	var _field *eval_set.EvaluationSetType
@@ -468,6 +509,10 @@ func (p *CreateEvaluationSetRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField10(oprot); err != nil {
@@ -614,6 +659,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *CreateEvaluationSetRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetKey() {
+		if err = oprot.WriteFieldBegin("dataset_key", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DatasetKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *CreateEvaluationSetRequest) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetType() {
 		if err = oprot.WriteFieldBegin("type", thrift.STRING, 10); err != nil {
@@ -701,6 +764,9 @@ func (p *CreateEvaluationSetRequest) DeepEqual(ano *CreateEvaluationSetRequest) 
 	if !p.Field6DeepEqual(ano.Tags) {
 		return false
 	}
+	if !p.Field7DeepEqual(ano.DatasetKey) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.Type) {
 		return false
 	}
@@ -773,6 +839,18 @@ func (p *CreateEvaluationSetRequest) Field6DeepEqual(src []*eval_set.ResourceTag
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *CreateEvaluationSetRequest) Field7DeepEqual(src *string) bool {
+
+	if p.DatasetKey == src {
+		return true
+	} else if p.DatasetKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DatasetKey, *src) != 0 {
+		return false
 	}
 	return true
 }
@@ -5618,6 +5696,8 @@ type ListEvaluationSetsRequest struct {
 	EvaluationSetIds []int64  `thrift:"evaluation_set_ids,4,optional" frugal:"4,optional,list<i64>" json:"evaluation_set_ids" form:"evaluation_set_ids" query:"evaluation_set_ids"`
 	// 按评测集类型过滤
 	Type *eval_set.EvaluationSetType `thrift:"type,5,optional" frugal:"5,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	// 按 dataset_key 精确匹配
+	DatasetKeys []string `thrift:"dataset_keys,6,optional" frugal:"6,optional,list<string>" form:"dataset_keys" json:"dataset_keys,omitempty" query:"dataset_keys"`
 	// 系统资源标签过滤
 	TagFilter  *eval_set.TagFilter `thrift:"tag_filter,7,optional" frugal:"7,optional,eval_set.TagFilter" form:"tag_filter" json:"tag_filter,omitempty" query:"tag_filter"`
 	PageNumber *int32              `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
@@ -5689,6 +5769,18 @@ func (p *ListEvaluationSetsRequest) GetType() (v eval_set.EvaluationSetType) {
 		return ListEvaluationSetsRequest_Type_DEFAULT
 	}
 	return *p.Type
+}
+
+var ListEvaluationSetsRequest_DatasetKeys_DEFAULT []string
+
+func (p *ListEvaluationSetsRequest) GetDatasetKeys() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetKeys() {
+		return ListEvaluationSetsRequest_DatasetKeys_DEFAULT
+	}
+	return p.DatasetKeys
 }
 
 var ListEvaluationSetsRequest_TagFilter_DEFAULT *eval_set.TagFilter
@@ -5777,6 +5869,9 @@ func (p *ListEvaluationSetsRequest) SetEvaluationSetIds(val []int64) {
 func (p *ListEvaluationSetsRequest) SetType(val *eval_set.EvaluationSetType) {
 	p.Type = val
 }
+func (p *ListEvaluationSetsRequest) SetDatasetKeys(val []string) {
+	p.DatasetKeys = val
+}
 func (p *ListEvaluationSetsRequest) SetTagFilter(val *eval_set.TagFilter) {
 	p.TagFilter = val
 }
@@ -5802,6 +5897,7 @@ var fieldIDToName_ListEvaluationSetsRequest = map[int16]string{
 	3:   "creators",
 	4:   "evaluation_set_ids",
 	5:   "type",
+	6:   "dataset_keys",
 	7:   "tag_filter",
 	100: "page_number",
 	101: "page_size",
@@ -5824,6 +5920,10 @@ func (p *ListEvaluationSetsRequest) IsSetEvaluationSetIds() bool {
 
 func (p *ListEvaluationSetsRequest) IsSetType() bool {
 	return p.Type != nil
+}
+
+func (p *ListEvaluationSetsRequest) IsSetDatasetKeys() bool {
+	return p.DatasetKeys != nil
 }
 
 func (p *ListEvaluationSetsRequest) IsSetTagFilter() bool {
@@ -5905,6 +6005,14 @@ func (p *ListEvaluationSetsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6072,6 +6180,29 @@ func (p *ListEvaluationSetsRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.Type = _field
 	return nil
 }
+func (p *ListEvaluationSetsRequest) ReadField6(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.DatasetKeys = _field
+	return nil
+}
 func (p *ListEvaluationSetsRequest) ReadField7(iprot thrift.TProtocol) error {
 	_field := eval_set.NewTagFilter()
 	if err := _field.Read(iprot); err != nil {
@@ -6169,6 +6300,10 @@ func (p *ListEvaluationSetsRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField7(oprot); err != nil {
@@ -6317,6 +6452,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ListEvaluationSetsRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetKeys() {
+		if err = oprot.WriteFieldBegin("dataset_keys", thrift.LIST, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.DatasetKeys)); err != nil {
+			return err
+		}
+		for _, v := range p.DatasetKeys {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *ListEvaluationSetsRequest) writeField7(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTagFilter() {
 		if err = oprot.WriteFieldBegin("tag_filter", thrift.STRUCT, 7); err != nil {
@@ -6463,6 +6624,9 @@ func (p *ListEvaluationSetsRequest) DeepEqual(ano *ListEvaluationSetsRequest) bo
 	if !p.Field5DeepEqual(ano.Type) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.DatasetKeys) {
+		return false
+	}
 	if !p.Field7DeepEqual(ano.TagFilter) {
 		return false
 	}
@@ -6538,6 +6702,19 @@ func (p *ListEvaluationSetsRequest) Field5DeepEqual(src *eval_set.EvaluationSetT
 	}
 	if strings.Compare(*p.Type, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *ListEvaluationSetsRequest) Field6DeepEqual(src []string) bool {
+
+	if len(p.DatasetKeys) != len(src) {
+		return false
+	}
+	for i, v := range p.DatasetKeys {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

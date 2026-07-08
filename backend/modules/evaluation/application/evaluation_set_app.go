@@ -109,6 +109,7 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 		Session:             session,
 		DatasetType:         req.Type,
 		Tags:                evaluation_set.ResourceTagRefDTO2DOs(req.Tags),
+		DatasetKey:          req.DatasetKey,
 	})
 	if err != nil {
 		return nil, err
@@ -383,6 +384,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 		PageToken:        req.PageToken,
 		OrderBys:         common.ConvertOrderByDTO2DOs(req.OrderBys),
 		TagFilter:        tagFilter,
+		DatasetKeys:      req.DatasetKeys,
 	})
 	if err != nil {
 		return nil, err
