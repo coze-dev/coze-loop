@@ -1,0 +1,967 @@
+modules/evaluation/infra/config/evaluator.go
+  6b1a837ec17a7848 21-22,25,28 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[21,22]},{"Single":25},{"Single":28}]}]}
+modules/evaluation/infra/config/evaluator_progress.go
+  6b1a837ec17a7848 9,24-25,28,31 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":9},{"Range":[24,25]},{"Single":28},{"Single":31}]}]}
+modules/evaluation/infra/config/skill.go
+  6b1a837ec17a7848 10,18-19,22,25 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":10},{"Range":[18,19]},{"Single":22},{"Single":25}]}]}
+modules/evaluation/infra/config/runtime.go
+  6b1a837ec17a7848 9,21,24,27 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":9},{"Single":21},{"Single":24},{"Single":27}]}]}
+modules/evaluation/infra/config/target.go
+  6b1a837ec17a7848 9,17-18,21,24,52-53,56,59 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":9},{"Range":[17,18]},{"Single":21},{"Single":24},{"Range":[52,53]},{"Single":56},{"Single":59}]}]}
+cmd/evaluation/main.go
+  6b1a837ec17a7848 133,141,143,145,147,181,188,196,204,210,320-322,325,330,337,348,354,358,363,365-367,377,379,382,384,388,398,404,414,438,447,452,474,476,481-483,486,488,496,509,511,523,527,539,542,548-549,552,557,559,564-566,571-572,576 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":133},{"Single":141},{"Single":143},{"Single":145},{"Single":147},{"Single":181},{"Single":188},{"Single":196},{"Single":204},{"Single":210},{"Range":[320,322]},{"Single":325},{"Single":330},{"Single":337},{"Single":348},{"Single":354},{"Single":358},{"Single":363},{"Range":[365,367]},{"Single":377},{"Single":379},{"Single":382},{"Single":384},{"Single":388},{"Single":398},{"Single":404},{"Single":414},{"Single":438},{"Single":447},{"Single":452},{"Single":474},{"Single":476},{"Range":[481,483]},{"Single":486},{"Single":488},{"Single":496},{"Single":509},{"Single":511},{"Single":523},{"Single":527},{"Single":539},{"Single":542},{"Range":[548,549]},{"Single":552},{"Single":557},{"Single":559},{"Range":[564,566]},{"Range":[571,572]},{"Single":576}]}]}
+infra/conf/orch/orch.go
+  6b1a837ec17a7848 11,63-64,72,75,78,81,84,87 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":11},{"Range":[63,64]},{"Single":72},{"Single":75},{"Single":78},{"Single":81},{"Single":84},{"Single":87}]}]}
+infra/conf/dyconf/dyconf.go
+  6b1a837ec17a7848 4,14,18,35,44,47,50 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":4},{"Single":14},{"Single":18},{"Single":35},{"Single":44},{"Single":47},{"Single":50}]}]}
+modules/evaluation/infra/config/expt.go
+  6b1a837ec17a7848 19,22,25,32,35,38 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":19},{"Single":22},{"Single":25},{"Single":32},{"Single":35},{"Single":38}]}]}
+modules/evaluation/infra/config/onboard.go
+  6b1a837ec17a7848 14,29-30,33,36 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":14},{"Range":[29,30]},{"Single":33},{"Single":36}]}]}
+infra/conf/dyconf/tcc.go
+  6b1a837ec17a7848 17,33,35,76,79,82,112-113,115-121,125-131 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a204d8caf0c95c626cf97de","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":17},{"Single":33},{"Single":35},{"Single":76},{"Single":79},{"Single":82},{"Range":[112,113]},{"Range":[115,121]},{"Range":[125,131]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "9537de2c3f5abcb37ba96a2e7d3b5dacd3b5acda",
+  "prompts": {
+    "6b1a837ec17a7848": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a2043a1af0c95c626cf93a7",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 140,
+      "total_deletions": 9,
+      "accepted_lines": 136,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "cmd/evaluation/main.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 133
+          },
+          {
+            "Single": 141
+          },
+          {
+            "Single": 143
+          },
+          {
+            "Single": 145
+          },
+          {
+            "Single": 147
+          },
+          {
+            "Single": 181
+          },
+          {
+            "Single": 188
+          },
+          {
+            "Single": 196
+          },
+          {
+            "Single": 204
+          },
+          {
+            "Single": 210
+          },
+          {
+            "Range": [
+              320,
+              322
+            ]
+          },
+          {
+            "Single": 325
+          },
+          {
+            "Single": 330
+          },
+          {
+            "Single": 337
+          },
+          {
+            "Single": 348
+          },
+          {
+            "Single": 354
+          },
+          {
+            "Single": 358
+          },
+          {
+            "Single": 363
+          },
+          {
+            "Range": [
+              365,
+              367
+            ]
+          },
+          {
+            "Single": 377
+          },
+          {
+            "Single": 379
+          },
+          {
+            "Single": 382
+          },
+          {
+            "Single": 384
+          },
+          {
+            "Single": 388
+          },
+          {
+            "Single": 398
+          },
+          {
+            "Single": 404
+          },
+          {
+            "Single": 414
+          },
+          {
+            "Single": 438
+          },
+          {
+            "Single": 447
+          },
+          {
+            "Single": 452
+          },
+          {
+            "Single": 474
+          },
+          {
+            "Single": 476
+          },
+          {
+            "Range": [
+              481,
+              483
+            ]
+          },
+          {
+            "Single": 486
+          },
+          {
+            "Single": 488
+          },
+          {
+            "Single": 496
+          },
+          {
+            "Single": 509
+          },
+          {
+            "Single": 511
+          },
+          {
+            "Single": 523
+          },
+          {
+            "Single": 527
+          },
+          {
+            "Single": 539
+          },
+          {
+            "Single": 542
+          },
+          {
+            "Range": [
+              548,
+              549
+            ]
+          },
+          {
+            "Single": 552
+          },
+          {
+            "Single": 557
+          },
+          {
+            "Single": 559
+          },
+          {
+            "Range": [
+              564,
+              566
+            ]
+          },
+          {
+            "Range": [
+              571,
+              572
+            ]
+          },
+          {
+            "Single": 576
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 133
+              },
+              {
+                "Single": 141
+              },
+              {
+                "Single": 143
+              },
+              {
+                "Single": 145
+              },
+              {
+                "Single": 147
+              },
+              {
+                "Single": 181
+              },
+              {
+                "Single": 188
+              },
+              {
+                "Single": 196
+              },
+              {
+                "Single": 204
+              },
+              {
+                "Single": 210
+              },
+              {
+                "Range": [
+                  320,
+                  322
+                ]
+              },
+              {
+                "Single": 325
+              },
+              {
+                "Single": 330
+              },
+              {
+                "Single": 337
+              },
+              {
+                "Single": 348
+              },
+              {
+                "Single": 354
+              },
+              {
+                "Single": 358
+              },
+              {
+                "Single": 363
+              },
+              {
+                "Range": [
+                  365,
+                  367
+                ]
+              },
+              {
+                "Single": 377
+              },
+              {
+                "Single": 379
+              },
+              {
+                "Single": 382
+              },
+              {
+                "Single": 384
+              },
+              {
+                "Single": 388
+              },
+              {
+                "Single": 398
+              },
+              {
+                "Single": 404
+              },
+              {
+                "Single": 414
+              },
+              {
+                "Single": 438
+              },
+              {
+                "Single": 447
+              },
+              {
+                "Single": 452
+              },
+              {
+                "Single": 474
+              },
+              {
+                "Single": 476
+              },
+              {
+                "Range": [
+                  481,
+                  483
+                ]
+              },
+              {
+                "Single": 486
+              },
+              {
+                "Single": 488
+              },
+              {
+                "Single": 496
+              },
+              {
+                "Single": 509
+              },
+              {
+                "Single": 511
+              },
+              {
+                "Single": 523
+              },
+              {
+                "Single": 527
+              },
+              {
+                "Single": 539
+              },
+              {
+                "Single": 542
+              },
+              {
+                "Range": [
+                  548,
+                  549
+                ]
+              },
+              {
+                "Single": 552
+              },
+              {
+                "Single": 557
+              },
+              {
+                "Single": 559
+              },
+              {
+                "Range": [
+                  564,
+                  566
+                ]
+              },
+              {
+                "Range": [
+                  571,
+                  572
+                ]
+              },
+              {
+                "Single": 576
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "infra/conf/dyconf/dyconf.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 4
+          },
+          {
+            "Single": 14
+          },
+          {
+            "Single": 18
+          },
+          {
+            "Single": 35
+          },
+          {
+            "Single": 44
+          },
+          {
+            "Single": 47
+          },
+          {
+            "Single": 50
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 4
+              },
+              {
+                "Single": 14
+              },
+              {
+                "Single": 18
+              },
+              {
+                "Single": 35
+              },
+              {
+                "Single": 44
+              },
+              {
+                "Single": 47
+              },
+              {
+                "Single": 50
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "infra/conf/dyconf/tcc.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 17
+          },
+          {
+            "Single": 33
+          },
+          {
+            "Single": 35
+          },
+          {
+            "Single": 76
+          },
+          {
+            "Single": 79
+          },
+          {
+            "Single": 82
+          },
+          {
+            "Range": [
+              112,
+              113
+            ]
+          },
+          {
+            "Range": [
+              115,
+              121
+            ]
+          },
+          {
+            "Range": [
+              125,
+              131
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 17
+              },
+              {
+                "Single": 33
+              },
+              {
+                "Single": 35
+              },
+              {
+                "Single": 76
+              },
+              {
+                "Single": 79
+              },
+              {
+                "Single": 82
+              },
+              {
+                "Range": [
+                  112,
+                  113
+                ]
+              },
+              {
+                "Range": [
+                  115,
+                  121
+                ]
+              },
+              {
+                "Range": [
+                  125,
+                  131
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "infra/conf/orch/orch.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 11
+          },
+          {
+            "Range": [
+              63,
+              64
+            ]
+          },
+          {
+            "Single": 72
+          },
+          {
+            "Single": 75
+          },
+          {
+            "Single": 78
+          },
+          {
+            "Single": 81
+          },
+          {
+            "Single": 84
+          },
+          {
+            "Single": 87
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 11
+              },
+              {
+                "Range": [
+                  63,
+                  64
+                ]
+              },
+              {
+                "Single": 72
+              },
+              {
+                "Single": 75
+              },
+              {
+                "Single": 78
+              },
+              {
+                "Single": 81
+              },
+              {
+                "Single": 84
+              },
+              {
+                "Single": 87
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/config/evaluator.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Range": [
+              21,
+              22
+            ]
+          },
+          {
+            "Single": 25
+          },
+          {
+            "Single": 28
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  21,
+                  22
+                ]
+              },
+              {
+                "Single": 25
+              },
+              {
+                "Single": 28
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/config/evaluator_progress.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 9
+          },
+          {
+            "Range": [
+              24,
+              25
+            ]
+          },
+          {
+            "Single": 28
+          },
+          {
+            "Single": 31
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 9
+              },
+              {
+                "Range": [
+                  24,
+                  25
+                ]
+              },
+              {
+                "Single": 28
+              },
+              {
+                "Single": 31
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/config/expt.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 19
+          },
+          {
+            "Single": 22
+          },
+          {
+            "Single": 25
+          },
+          {
+            "Single": 32
+          },
+          {
+            "Single": 35
+          },
+          {
+            "Single": 38
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 19
+              },
+              {
+                "Single": 22
+              },
+              {
+                "Single": 25
+              },
+              {
+                "Single": 32
+              },
+              {
+                "Single": 35
+              },
+              {
+                "Single": 38
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/config/onboard.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 14
+          },
+          {
+            "Range": [
+              29,
+              30
+            ]
+          },
+          {
+            "Single": 33
+          },
+          {
+            "Single": 36
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 14
+              },
+              {
+                "Range": [
+                  29,
+                  30
+                ]
+              },
+              {
+                "Single": 33
+              },
+              {
+                "Single": 36
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/config/runtime.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 9
+          },
+          {
+            "Single": 21
+          },
+          {
+            "Single": 24
+          },
+          {
+            "Single": 27
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 9
+              },
+              {
+                "Single": 21
+              },
+              {
+                "Single": 24
+              },
+              {
+                "Single": 27
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/config/skill.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 10
+          },
+          {
+            "Range": [
+              18,
+              19
+            ]
+          },
+          {
+            "Single": 22
+          },
+          {
+            "Single": 25
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 10
+              },
+              {
+                "Range": [
+                  18,
+                  19
+                ]
+              },
+              {
+                "Single": 22
+              },
+              {
+                "Single": 25
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/config/target.go": [
+      {
+        "hash": "6b1a837ec17a7848",
+        "line_ranges": [
+          {
+            "Single": 9
+          },
+          {
+            "Range": [
+              17,
+              18
+            ]
+          },
+          {
+            "Single": 21
+          },
+          {
+            "Single": 24
+          },
+          {
+            "Range": [
+              52,
+              53
+            ]
+          },
+          {
+            "Single": 56
+          },
+          {
+            "Single": 59
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a204d8caf0c95c626cf97de",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 9
+              },
+              {
+                "Range": [
+                  17,
+                  18
+                ]
+              },
+              {
+                "Single": 21
+              },
+              {
+                "Single": 24
+              },
+              {
+                "Range": [
+                  52,
+                  53
+                ]
+              },
+              {
+                "Single": 56
+              },
+              {
+                "Single": 59
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "6b1a837ec17a7848": {
+      "tool": "trae",
+      "conversation_id": "6a2043a1af0c95c626cf93a7",
+      "session_id": "6a2043a1af0c95c626cf93a7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
