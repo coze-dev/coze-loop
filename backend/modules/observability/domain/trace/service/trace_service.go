@@ -1695,15 +1695,19 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	}
 
 	var traceDefaultRange string
-	if timeRangeCfg := r.traceConfig.GetTraceTimeRangeConfig(ctx); timeRangeCfg != nil {
+	timeRangeCfg := r.traceConfig.GetTraceTimeRangeConfig(ctx)
+	logs.CtxInfo(ctx, "GetTracesMetaInfo timeRangeCfg=%+v, workspaceID=%d", timeRangeCfg, req.WorkspaceID)
+	if timeRangeCfg != nil {
 		traceDefaultRange = timeRangeCfg[strconv.FormatInt(req.WorkspaceID, 10)]
 	}
 
-	return &GetTracesMetaInfoResp{
+	resp := &GetTracesMetaInfoResp{
 		FilesMetas:        fieldMetas,
 		KeySpanTypeList:   keySpanTypes,
 		TraceDefaultRange: traceDefaultRange,
-	}, nil
+	}
+	logs.CtxInfo(ctx, "GetTracesMetaInfo resp.TraceDefaultRange=%s", resp.TraceDefaultRange)
+	return resp, nil
 }
 
 func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataReq) (*ListMetadataResp, error) {

@@ -619,6 +619,7 @@ func (t *TraceApplication) GetTracesMetaInfo(ctx context.Context, req *trace.Get
 	if sResp.TraceDefaultRange != "" {
 		resp.TraceDefaultRange = &sResp.TraceDefaultRange
 	}
+	logs.CtxInfo(ctx, "GetTracesMetaInfo application resp.TraceDefaultRange=%v", resp.TraceDefaultRange)
 	return resp, nil
 }
 
