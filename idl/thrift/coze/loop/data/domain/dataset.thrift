@@ -115,6 +115,7 @@ struct Dataset {
 
     /* DTO 专用字段 */
     150: optional bool change_uncommitted              // 是否有未提交的修改
+    151: optional string dataset_key                   // 数据集业务唯一键，创建后不可变
 }
 
 struct DatasetSpec {
