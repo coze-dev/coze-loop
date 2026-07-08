@@ -1,0 +1,362 @@
+backend/modules/evaluation/application/convertor/evaluator/openapi.go
+  da6a460df4199c50 312,317-325 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a390dee4c461f2b73cdece6","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":312},{"Range":[317,325]}]}]}
+backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator/evaluator.go
+  da6a460df4199c50 5683-5688,5757-5768,5784-5786,5794,5817-5820,5879-5886,5962-5969,5997-6000,6109-6126,6157-6159,6208-6269 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a390dee4c461f2b73cdece6","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[5683,5688]},{"Range":[5757,5768]},{"Range":[5784,5786]},{"Single":5794},{"Range":[5817,5820]},{"Range":[5879,5886]},{"Range":[5962,5969]},{"Range":[5997,6000]},{"Range":[6109,6126]},{"Range":[6157,6159]},{"Range":[6208,6269]}]}]}
+backend/modules/evaluation/application/wire_gen.go
+  da6a460df4199c50 423 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a390dee4c461f2b73cdece6","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":423}]}]}
+backend/modules/evaluation/application/convertor/evaluator/openapi_test.go
+  da6a460df4199c50 212-239 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a390dee4c461f2b73cdece6","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[212,239]}]}]}
+idl/thrift/coze/loop/evaluation/domain_openapi/evaluator.thrift
+  da6a460df4199c50 157-162 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a390dee4c461f2b73cdece6","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[157,162]}]}]}
+backend/modules/evaluation/application/eval_openapi_app.go
+  da6a460df4199c50 67,87,108,1246-1249,2497-2542 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a390dee4c461f2b73cdece6","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":67},{"Single":87},{"Single":108},{"Range":[1246,1249]},{"Range":[2497,2542]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "ca5a2fbfc11649ecd749b92bc1aadb4777f6efc6",
+  "prompts": {
+    "da6a460df4199c50": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a38d95f4c461f2b73cde5fa",
+        "model": "c_o_new_thinking__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 166,
+      "total_deletions": 6,
+      "accepted_lines": 163,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator/evaluator.go": [
+      {
+        "hash": "da6a460df4199c50",
+        "line_ranges": [
+          {
+            "Range": [
+              5683,
+              5688
+            ]
+          },
+          {
+            "Range": [
+              5757,
+              5768
+            ]
+          },
+          {
+            "Range": [
+              5784,
+              5786
+            ]
+          },
+          {
+            "Single": 5794
+          },
+          {
+            "Range": [
+              5817,
+              5820
+            ]
+          },
+          {
+            "Range": [
+              5879,
+              5886
+            ]
+          },
+          {
+            "Range": [
+              5962,
+              5969
+            ]
+          },
+          {
+            "Range": [
+              5997,
+              6000
+            ]
+          },
+          {
+            "Range": [
+              6109,
+              6126
+            ]
+          },
+          {
+            "Range": [
+              6157,
+              6159
+            ]
+          },
+          {
+            "Range": [
+              6208,
+              6269
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a390dee4c461f2b73cdece6",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  5683,
+                  5688
+                ]
+              },
+              {
+                "Range": [
+                  5757,
+                  5768
+                ]
+              },
+              {
+                "Range": [
+                  5784,
+                  5786
+                ]
+              },
+              {
+                "Single": 5794
+              },
+              {
+                "Range": [
+                  5817,
+                  5820
+                ]
+              },
+              {
+                "Range": [
+                  5879,
+                  5886
+                ]
+              },
+              {
+                "Range": [
+                  5962,
+                  5969
+                ]
+              },
+              {
+                "Range": [
+                  5997,
+                  6000
+                ]
+              },
+              {
+                "Range": [
+                  6109,
+                  6126
+                ]
+              },
+              {
+                "Range": [
+                  6157,
+                  6159
+                ]
+              },
+              {
+                "Range": [
+                  6208,
+                  6269
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/application/convertor/evaluator/openapi.go": [
+      {
+        "hash": "da6a460df4199c50",
+        "line_ranges": [
+          {
+            "Single": 312
+          },
+          {
+            "Range": [
+              317,
+              325
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a390dee4c461f2b73cdece6",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 312
+              },
+              {
+                "Range": [
+                  317,
+                  325
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/application/convertor/evaluator/openapi_test.go": [
+      {
+        "hash": "da6a460df4199c50",
+        "line_ranges": [
+          {
+            "Range": [
+              212,
+              239
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a390dee4c461f2b73cdece6",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  212,
+                  239
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/application/eval_openapi_app.go": [
+      {
+        "hash": "da6a460df4199c50",
+        "line_ranges": [
+          {
+            "Single": 67
+          },
+          {
+            "Single": 87
+          },
+          {
+            "Single": 108
+          },
+          {
+            "Range": [
+              1246,
+              1249
+            ]
+          },
+          {
+            "Range": [
+              2497,
+              2542
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a390dee4c461f2b73cdece6",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 67
+              },
+              {
+                "Single": 87
+              },
+              {
+                "Single": 108
+              },
+              {
+                "Range": [
+                  1246,
+                  1249
+                ]
+              },
+              {
+                "Range": [
+                  2497,
+                  2542
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/application/wire_gen.go": [
+      {
+        "hash": "da6a460df4199c50",
+        "line_ranges": [
+          {
+            "Single": 423
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a390dee4c461f2b73cdece6",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 423
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "idl/thrift/coze/loop/evaluation/domain_openapi/evaluator.thrift": [
+      {
+        "hash": "da6a460df4199c50",
+        "line_ranges": [
+          {
+            "Range": [
+              157,
+              162
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a390dee4c461f2b73cdece6",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  157,
+                  162
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "da6a460df4199c50": {
+      "tool": "trae",
+      "conversation_id": "6a38d95f4c461f2b73cde5fa",
+      "session_id": "6a38d95f4c461f2b73cde5fa",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

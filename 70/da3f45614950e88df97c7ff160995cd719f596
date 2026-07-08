@@ -1,0 +1,63 @@
+backend/modules/evaluation/application/eval_openapi_app.go
+  0d89f5386d66c7f0 1287-1351 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a0a8ac6b4cd1c1fc05a0c63","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[1287,1351]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "70da3f45614950e88df97c7ff160995cd719f596",
+  "prompts": {
+    "0d89f5386d66c7f0": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "69fc2bc1e73936e2a9469cd4",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "dushaofeng <dushaofeng@bytedance.com>",
+      "messages": [],
+      "total_additions": 63,
+      "total_deletions": 2,
+      "accepted_lines": 63,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/application/eval_openapi_app.go": [
+      {
+        "hash": "0d89f5386d66c7f0",
+        "line_ranges": [
+          {
+            "Range": [
+              1287,
+              1351
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a0a8ac6b4cd1c1fc05a0c63",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  1287,
+                  1351
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "0d89f5386d66c7f0": {
+      "tool": "trae",
+      "conversation_id": "69fc2bc1e73936e2a9469cd4",
+      "session_id": "69fc2bc1e73936e2a9469cd4",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
