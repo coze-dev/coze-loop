@@ -164,6 +164,8 @@ func TestExptSubmitExec_ExptEnd(t *testing.T) {
 			if tc.mockSetup != nil {
 				tc.mockSetup(f)
 			}
+			// 终止前重扫默认无残留 item(除非用例自行覆盖)，使既有"正常结束"用例继续通过。
+			f.itemRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil).AnyTimes()
 			exec := &ExptSubmitExec{
 				manager:            f.manager,
 				idem:               f.idem,
@@ -179,6 +181,36 @@ func TestExptSubmitExec_ExptEnd(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestExptSubmitExec_ExptEnd_RescanGuard 覆盖终止前重扫护栏：
+// 即便本 tick 传入的 toSubmit/incomplete 均为 0(僵尸被清后的误判场景)，
+// 只要 DB 里仍有 Queueing/Processing 的 item，ExptEnd 必须返回 nextTick=true 且不结束实验。
+func TestExptSubmitExec_ExptEnd_RescanGuard(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	f := &exptSubmitExecFields{
+		manager:   svcmocks.NewMockIExptManager(ctrl),
+		idem:      idemmocks.NewMockIdempotentService(ctrl),
+		configer:  configmocks.NewMockIConfiger(ctrl),
+		itemRepo:  mock_repo.NewMockIExptItemResultRepo(ctrl),
+		publisher: eventmocks.NewMockExptEventPublisher(ctrl),
+	}
+	// 重扫命中一个仍在排队的 item：护栏应保持 tick，不得走 exptEnd(不允许调用 idem.Exist/CompleteRun/CompleteExpt)。
+	f.itemRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{{ItemID: 1001, Status: int32(entity.ItemRunState_Queueing)}}, int64(1), nil)
+
+	exec := &ExptSubmitExec{
+		manager:            f.manager,
+		idem:               f.idem,
+		configer:           f.configer,
+		exptItemResultRepo: f.itemRepo,
+	}
+	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptRunMode: 1, Session: &entity.Session{UserID: "u1"}}
+	nextTick, err := exec.ExptEnd(context.Background(), event, &entity.Experiment{}, 0, 0)
+	assert.NoError(t, err)
+	assert.True(t, nextTick, "still has queueing item -> must keep ticking, not terminate")
 }
 
 func TestExptSubmitExec_NextTick(t *testing.T) {
@@ -1316,6 +1348,8 @@ func TestExptFailRetryExec_ExptEnd(t *testing.T) {
 			if tt.prepareMock != nil {
 				tt.prepareMock(f, ctrl, tt.args)
 			}
+			// 终止前重扫默认无残留 item(除非用例自行覆盖)，使既有"正常结束"用例继续通过。
+			f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil).AnyTimes()
 
 			e := &ExptFailRetryExec{
 				manager:            f.manager,
@@ -3981,6 +4015,8 @@ func TestExptRetryAllExec_ExptEnd(t *testing.T) {
 			if tt.prepareMock != nil {
 				tt.prepareMock(f, tt.args)
 			}
+			// 终止前重扫默认无残留 item(除非用例自行覆盖)，使既有"正常结束"用例继续通过。
+			f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil).AnyTimes()
 
 			e := &ExptRetryAllExec{
 				manager:                  f.manager,
@@ -4829,6 +4865,8 @@ func TestExptRetryItemsExec_ExptEnd(t *testing.T) {
 			if tt.prepareMock != nil {
 				tt.prepareMock(f, tt.args)
 			}
+			// 终止前重扫默认无残留 item(除非用例自行覆盖)，使既有"正常结束"用例继续通过。
+			f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), nil).AnyTimes()
 
 			e := &ExptRetryItemsExec{
 				manager:                  f.manager,
