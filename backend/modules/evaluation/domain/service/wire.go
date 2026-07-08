@@ -50,7 +50,13 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	wire.Bind(new(IWebhookSecretProvider), new(*NoopWebhookSecretProvider)),
 	// Repo Sets
 	experimentrepo.ExperimentRepoSet,
+	// Open-source has no BMQ impl; commercial overrides via its own ProducerSet
+	ProvideNilItemCompletePublisher,
 )
+
+func ProvideNilItemCompletePublisher() component.IItemCompletePublisher {
+	return nil
+}
 
 // EvaluatorDomainServiceSet 提供所有 Evaluator 相关的 Domain Service
 var EvaluatorDomainServiceSet = wire.NewSet(
