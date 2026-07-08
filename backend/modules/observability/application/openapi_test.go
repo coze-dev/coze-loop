@@ -3481,6 +3481,56 @@ func TestOpenAPIApplication_AllowAnnotationByKey(t *testing.T) {
 	})
 }
 
+func TestOpenAPIApplication_CreateAnnotation_RateLimited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "1").Return(10, nil)
+
+	rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+	rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:1", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
+
+	app := &OpenAPIApplication{
+		traceConfig: traceConfigMock,
+		rateLimiter: rateLimiterMock,
+	}
+
+	resp, err := app.CreateAnnotation(context.Background(), &openapi.CreateAnnotationRequest{
+		WorkspaceID:         1,
+		AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeString)),
+		AnnotationValue:     "test",
+		Base:                &base.Base{Caller: "test"},
+	})
+	assert.Nil(t, resp)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "qps limit exceeded")
+}
+
+func TestOpenAPIApplication_DeleteAnnotation_RateLimited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "1").Return(10, nil)
+
+	rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+	rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:1", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
+
+	app := &OpenAPIApplication{
+		traceConfig: traceConfigMock,
+		rateLimiter: rateLimiterMock,
+	}
+
+	resp, err := app.DeleteAnnotation(context.Background(), &openapi.DeleteAnnotationRequest{
+		WorkspaceID: 1,
+		Base:        &base.Base{Caller: "test"},
+	})
+	assert.Nil(t, resp)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "qps limit exceeded")
+}
+
 // 补充辅助函数测试
 func TestUnmarshalOtelSpan(t *testing.T) {
 	t.Run("protobuf content type", func(t *testing.T) {
