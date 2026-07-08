@@ -41,6 +41,7 @@ func NewExptItemEvaluation(
 	benefitService benefit.IBenefitService,
 	evalAsyncRepo repo.IEvalAsyncRepo,
 	evalSetItemSvc EvaluationSetItemService,
+	itemCompletePublisher component.IItemCompletePublisher,
 ) ExptItemEvaluation {
 	return &ExptItemEvalCtxExecutor{
 		TurnResultRepo:         turnResultRepo,
@@ -53,6 +54,7 @@ func NewExptItemEvaluation(
 		benefitService:         benefitService,
 		evalAsyncRepo:          evalAsyncRepo,
 		evalSetItemSvc:         evalSetItemSvc,
+		itemCompletePublisher:  itemCompletePublisher,
 	}
 }
 
@@ -67,6 +69,7 @@ type ExptItemEvalCtxExecutor struct {
 	benefitService         benefit.IBenefitService
 	evalAsyncRepo          repo.IEvalAsyncRepo
 	evalSetItemSvc         EvaluationSetItemService
+	itemCompletePublisher  component.IItemCompletePublisher
 }
 
 const exptRunLogPersistTimeout = 5 * time.Second
@@ -311,6 +314,12 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *en
 
 	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
 		return err
+	}
+
+	if e.itemCompletePublisher != nil {
+		if err := e.itemCompletePublisher.PublishItemComplete(ctx, event.SpaceID, event.ExptID, event.EvalSetItemID, event.ExptRunID); err != nil {
+			logs.CtxWarn(ctx, "[ExptTurnEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, event.EvalSetItemID, err)
+		}
 	}
 
 	if e.evalErrNeedTerminateExpt(persistCtx, event.SpaceID, evalErr) {
