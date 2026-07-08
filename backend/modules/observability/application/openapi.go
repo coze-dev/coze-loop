@@ -492,6 +492,10 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 		}
 		val = loop_span.NewStringValue(req.AnnotationValue)
 	}
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowAnnotationByKey(ctx, limitKey) {
+		return nil, errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+	}
 	if err := o.auth.CheckWorkspacePermission(ctx,
 		rpc.AuthActionAnnotationCreate,
 		strconv.FormatInt(req.WorkspaceID, 10), true); err != nil {
@@ -521,6 +525,10 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 }
 
 func (o *OpenAPIApplication) DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest) (*openapi.DeleteAnnotationResponse, error) {
+	limitKey := strconv.FormatInt(req.WorkspaceID, 10)
+	if !o.AllowAnnotationByKey(ctx, limitKey) {
+		return nil, errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+	}
 	if err := o.auth.CheckWorkspacePermission(ctx,
 		rpc.AuthActionAnnotationDelete,
 		strconv.FormatInt(req.WorkspaceID, 10), true); err != nil {
@@ -1131,6 +1139,28 @@ func (p *OpenAPIApplication) AllowByKey(ctx context.Context, key string) bool {
 		}))
 	if err != nil {
 		logs.CtxError(ctx, "allow rate limit failed, err=%v", err)
+		return true
+	}
+	if result == nil || result.Allowed {
+		return true
+	}
+	return false
+}
+
+func (p *OpenAPIApplication) AllowAnnotationByKey(ctx context.Context, key string) bool {
+	maxQPS, err := p.traceConfig.GetAnnotationMaxQPS(ctx, key)
+	if err != nil {
+		logs.CtxError(ctx, "get annotation max qps failed, err=%v, key=%s", err, key)
+		return true
+	}
+	result, err := p.rateLimiter.AllowN(ctx, "annotation:"+key, 1,
+		limiter.WithLimit(&limiter.Limit{
+			Rate:   maxQPS,
+			Burst:  maxQPS,
+			Period: time.Second,
+		}))
+	if err != nil {
+		logs.CtxError(ctx, "allow annotation rate limit failed, err=%v", err)
 		return true
 	}
 	if result == nil || result.Allowed {

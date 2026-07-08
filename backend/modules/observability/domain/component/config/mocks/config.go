@@ -274,6 +274,21 @@ func (mr *MockITraceConfigMockRecorder) GetQueryMaxQPS(ctx, key any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueryMaxQPS", reflect.TypeOf((*MockITraceConfig)(nil).GetQueryMaxQPS), ctx, key)
 }
 
+// GetAnnotationMaxQPS mocks base method.
+func (m *MockITraceConfig) GetAnnotationMaxQPS(ctx context.Context, key string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnnotationMaxQPS", ctx, key)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnnotationMaxQPS indicates an expected call of GetAnnotationMaxQPS.
+func (mr *MockITraceConfigMockRecorder) GetAnnotationMaxQPS(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotationMaxQPS", reflect.TypeOf((*MockITraceConfig)(nil).GetAnnotationMaxQPS), ctx, key)
+}
+
 // GetSpanWithAnnotationMqProducerCfg mocks base method.
 func (m *MockITraceConfig) GetSpanWithAnnotationMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
 	m.ctrl.T.Helper()
