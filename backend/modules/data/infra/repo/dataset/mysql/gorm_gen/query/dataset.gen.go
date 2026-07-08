@@ -35,6 +35,7 @@ func newDataset(db *gorm.DB, opts ...gen.DOOption) dataset {
 	_dataset.Description = field.NewString(tableName, "description")
 	_dataset.Category = field.NewString(tableName, "category")
 	_dataset.BizCategory = field.NewString(tableName, "biz_category")
+	_dataset.Tag = field.NewString(tableName, "tag")
 	_dataset.Status = field.NewString(tableName, "status")
 	_dataset.SecurityLevel = field.NewString(tableName, "security_level")
 	_dataset.Visibility = field.NewString(tableName, "visibility")
@@ -68,6 +69,7 @@ type dataset struct {
 	Description    field.String // 数据集描述
 	Category       field.String // 业务场景分类
 	BizCategory    field.String // 业务场景下自定义分类
+	Tag            field.String // 上层业务自定义标签
 	Status         field.String // 状态
 	SecurityLevel  field.String // 安全等级
 	Visibility     field.String // 可见性
@@ -106,6 +108,7 @@ func (d *dataset) updateTableName(table string) *dataset {
 	d.Description = field.NewString(table, "description")
 	d.Category = field.NewString(table, "category")
 	d.BizCategory = field.NewString(table, "biz_category")
+	d.Tag = field.NewString(table, "tag")
 	d.Status = field.NewString(table, "status")
 	d.SecurityLevel = field.NewString(table, "security_level")
 	d.Visibility = field.NewString(table, "visibility")
@@ -153,6 +156,7 @@ func (d *dataset) fillFieldMap() {
 	d.fieldMap["description"] = d.Description
 	d.fieldMap["category"] = d.Category
 	d.fieldMap["biz_category"] = d.BizCategory
+	d.fieldMap["tag"] = d.Tag
 	d.fieldMap["status"] = d.Status
 	d.fieldMap["security_level"] = d.SecurityLevel
 	d.fieldMap["visibility"] = d.Visibility

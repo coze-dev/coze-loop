@@ -14,6 +14,7 @@ struct CreateEvaluationSetRequest {
     3: optional string description (vt.max_size = "2048"),
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema,
     5: optional eval_set.BizCategory biz_category (vt.max_size = "128") // 业务分类
+    6: optional string tag (vt.max_size = "128") // 用户自定义标签
 
     200: optional common.Session session (api.none = 'true')
     255: optional base.Base Base
@@ -79,6 +80,7 @@ struct UpdateEvaluationSetRequest {
 
     3: optional string name (vt.min_size = "1", vt.max_size = "255"),
     4: optional string description (vt.max_size = "2048"),
+    5: optional string tag (vt.max_size = "128") // 用户自定义标签
 
     255: optional base.Base Base
 }

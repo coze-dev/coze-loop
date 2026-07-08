@@ -45,6 +45,7 @@ func (a *DatasetRPCAdapter) CreateDataset(ctx context.Context, param *rpc.Create
 		Description: param.Desc,
 		Category:    domain_dataset.DatasetCategoryPtr(domain_dataset.DatasetCategory_Evaluation),
 		BizCategory: param.BizCategory,
+		Tag:         param.Tag,
 		Visibility:  domain_dataset.DatasetVisibilityPtr(domain_dataset.DatasetVisibility_Space),
 		Fields:      fields,
 		Features: &domain_dataset.DatasetFeatures{
@@ -115,12 +116,13 @@ func (a *DatasetRPCAdapter) ValidateMultiPartData(ctx context.Context, spaceID i
 	return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("ValidateMultiPartData not implemented"))
 }
 
-func (a *DatasetRPCAdapter) UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error) {
+func (a *DatasetRPCAdapter) UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc, tag *string) (err error) {
 	resp, err := a.client.UpdateDataset(ctx, &datasetdto.UpdateDatasetRequest{
 		WorkspaceID: &spaceID,
 		DatasetID:   evaluationSetID,
 		Name:        name,
 		Description: desc,
+		Tag:         tag,
 	})
 	if err != nil {
 		return err

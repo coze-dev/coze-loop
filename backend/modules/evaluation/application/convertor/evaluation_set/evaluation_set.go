@@ -61,6 +61,7 @@ func EvaluationSetDO2DTO(do *entity.EvaluationSet) *eval_set.EvaluationSet {
 		EvaluationSetVersion: VersionDO2DTO(do.EvaluationSetVersion),
 		LatestVersion:        gptr.Of(do.LatestVersion),
 		NextVersionNum:       gptr.Of(do.NextVersionNum),
+		Tag:                  gptr.Of(do.Tag),
 		BaseInfo:             common.ConvertBaseInfoDO2DTO(do.BaseInfo),
 	}
 }

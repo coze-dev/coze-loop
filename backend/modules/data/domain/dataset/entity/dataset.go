@@ -21,6 +21,7 @@ type Dataset struct {
 	Description    *string
 	Category       DatasetCategory   // 业务场景分类
 	BizCategory    string            // 业务场景下自定义分类
+	Tag            string            // 上层业务自定义标签
 	Status         DatasetStatus     // 状态
 	SecurityLevel  SecurityLevel     // 安全等级
 	Visibility     DatasetVisibility // 可见性

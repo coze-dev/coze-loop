@@ -17,7 +17,7 @@ type IDatasetRPCAdapter interface {
 	GetDatasetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error)
 	ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error)
 	ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error)
-	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error)
+	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc, tag *string) (err error)
 	DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
 	BatchGetDatasets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (sets []*entity.EvaluationSet, err error)
@@ -62,6 +62,7 @@ type CreateDatasetParam struct {
 	Desc               *string
 	EvaluationSetItems *entity.EvaluationSetSchema
 	BizCategory        *entity.BizCategory
+	Tag                *string
 	Session            *entity.Session
 }
 

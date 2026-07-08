@@ -120,6 +120,7 @@ func TestEvaluationSetDO2DTO_Simple(t *testing.T) {
 				ChangeUncommitted: gptr.Of(false),
 				LatestVersion:     gptr.Of(""),
 				NextVersionNum:    gptr.Of(int64(0)),
+				Tag:               gptr.Of(""),
 			},
 		},
 	}

@@ -24,6 +24,7 @@ type CreateDatasetRequest struct {
 	Visibility    *dataset.DatasetVisibility `thrift:"visibility,16,optional" frugal:"16,optional,DatasetVisibility" form:"visibility" json:"visibility,omitempty" query:"visibility"`
 	Spec          *dataset.DatasetSpec       `thrift:"spec,17,optional" frugal:"17,optional,dataset.DatasetSpec" form:"spec" json:"spec,omitempty" query:"spec"`
 	Features      *dataset.DatasetFeatures   `thrift:"features,18,optional" frugal:"18,optional,dataset.DatasetFeatures" form:"features" json:"features,omitempty" query:"features"`
+	Tag           *string                    `thrift:"tag,19,optional" frugal:"19,optional,string" form:"tag" json:"tag,omitempty" query:"tag"`
 	Base          *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -156,6 +157,18 @@ func (p *CreateDatasetRequest) GetFeatures() (v *dataset.DatasetFeatures) {
 	return p.Features
 }
 
+var CreateDatasetRequest_Tag_DEFAULT string
+
+func (p *CreateDatasetRequest) GetTag() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTag() {
+		return CreateDatasetRequest_Tag_DEFAULT
+	}
+	return *p.Tag
+}
+
 var CreateDatasetRequest_Base_DEFAULT *base.Base
 
 func (p *CreateDatasetRequest) GetBase() (v *base.Base) {
@@ -200,6 +213,9 @@ func (p *CreateDatasetRequest) SetSpec(val *dataset.DatasetSpec) {
 func (p *CreateDatasetRequest) SetFeatures(val *dataset.DatasetFeatures) {
 	p.Features = val
 }
+func (p *CreateDatasetRequest) SetTag(val *string) {
+	p.Tag = val
+}
 func (p *CreateDatasetRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -216,6 +232,7 @@ var fieldIDToName_CreateDatasetRequest = map[int16]string{
 	16:  "visibility",
 	17:  "spec",
 	18:  "features",
+	19:  "tag",
 	255: "Base",
 }
 
@@ -253,6 +270,10 @@ func (p *CreateDatasetRequest) IsSetSpec() bool {
 
 func (p *CreateDatasetRequest) IsSetFeatures() bool {
 	return p.Features != nil
+}
+
+func (p *CreateDatasetRequest) IsSetTag() bool {
+	return p.Tag != nil
 }
 
 func (p *CreateDatasetRequest) IsSetBase() bool {
@@ -364,6 +385,14 @@ func (p *CreateDatasetRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 18:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 19:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField19(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -547,6 +576,17 @@ func (p *CreateDatasetRequest) ReadField18(iprot thrift.TProtocol) error {
 	p.Features = _field
 	return nil
 }
+func (p *CreateDatasetRequest) ReadField19(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Tag = _field
+	return nil
+}
 func (p *CreateDatasetRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -604,6 +644,10 @@ func (p *CreateDatasetRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField18(oprot); err != nil {
 			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -830,6 +874,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
 }
+func (p *CreateDatasetRequest) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTag() {
+		if err = oprot.WriteFieldBegin("tag", thrift.STRING, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Tag); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
 func (p *CreateDatasetRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -894,6 +956,9 @@ func (p *CreateDatasetRequest) DeepEqual(ano *CreateDatasetRequest) bool {
 		return false
 	}
 	if !p.Field18DeepEqual(ano.Features) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.Tag) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -1011,6 +1076,18 @@ func (p *CreateDatasetRequest) Field17DeepEqual(src *dataset.DatasetSpec) bool {
 func (p *CreateDatasetRequest) Field18DeepEqual(src *dataset.DatasetFeatures) bool {
 
 	if !p.Features.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateDatasetRequest) Field19DeepEqual(src *string) bool {
+
+	if p.Tag == src {
+		return true
+	} else if p.Tag == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Tag, *src) != 0 {
 		return false
 	}
 	return true
@@ -1276,6 +1353,7 @@ type UpdateDatasetRequest struct {
 	DatasetID   int64      `thrift:"dataset_id,2,required" frugal:"2,required,i64" json:"dataset_id" path:"dataset_id,required" `
 	Name        *string    `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Description *string    `thrift:"description,4,optional" frugal:"4,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	Tag         *string    `thrift:"tag,5,optional" frugal:"5,optional,string" form:"tag" json:"tag,omitempty" query:"tag"`
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -1329,6 +1407,18 @@ func (p *UpdateDatasetRequest) GetDescription() (v string) {
 	return *p.Description
 }
 
+var UpdateDatasetRequest_Tag_DEFAULT string
+
+func (p *UpdateDatasetRequest) GetTag() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTag() {
+		return UpdateDatasetRequest_Tag_DEFAULT
+	}
+	return *p.Tag
+}
+
 var UpdateDatasetRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateDatasetRequest) GetBase() (v *base.Base) {
@@ -1352,6 +1442,9 @@ func (p *UpdateDatasetRequest) SetName(val *string) {
 func (p *UpdateDatasetRequest) SetDescription(val *string) {
 	p.Description = val
 }
+func (p *UpdateDatasetRequest) SetTag(val *string) {
+	p.Tag = val
+}
 func (p *UpdateDatasetRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -1361,6 +1454,7 @@ var fieldIDToName_UpdateDatasetRequest = map[int16]string{
 	2:   "dataset_id",
 	3:   "name",
 	4:   "description",
+	5:   "tag",
 	255: "Base",
 }
 
@@ -1374,6 +1468,10 @@ func (p *UpdateDatasetRequest) IsSetName() bool {
 
 func (p *UpdateDatasetRequest) IsSetDescription() bool {
 	return p.Description != nil
+}
+
+func (p *UpdateDatasetRequest) IsSetTag() bool {
+	return p.Tag != nil
 }
 
 func (p *UpdateDatasetRequest) IsSetBase() bool {
@@ -1427,6 +1525,14 @@ func (p *UpdateDatasetRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1519,6 +1625,17 @@ func (p *UpdateDatasetRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.Description = _field
 	return nil
 }
+func (p *UpdateDatasetRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Tag = _field
+	return nil
+}
 func (p *UpdateDatasetRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -1548,6 +1665,10 @@ func (p *UpdateDatasetRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -1642,6 +1763,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *UpdateDatasetRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTag() {
+		if err = oprot.WriteFieldBegin("tag", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Tag); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *UpdateDatasetRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -1685,6 +1824,9 @@ func (p *UpdateDatasetRequest) DeepEqual(ano *UpdateDatasetRequest) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Tag) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -1732,6 +1874,18 @@ func (p *UpdateDatasetRequest) Field4DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpdateDatasetRequest) Field5DeepEqual(src *string) bool {
+
+	if p.Tag == src {
+		return true
+	} else if p.Tag == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Tag, *src) != 0 {
 		return false
 	}
 	return true

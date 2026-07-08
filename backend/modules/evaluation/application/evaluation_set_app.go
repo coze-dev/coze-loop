@@ -101,6 +101,7 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 		Description:         req.Description,
 		EvaluationSetSchema: evaluation_set.SchemaDTO2DO(req.EvaluationSetSchema),
 		BizCategory:         req.BizCategory,
+		Tag:                 req.Tag,
 		Session:             session,
 	})
 	if err != nil {
@@ -266,6 +267,7 @@ func (e *EvaluationSetApplicationImpl) UpdateEvaluationSet(ctx context.Context, 
 		EvaluationSetID: req.EvaluationSetID,
 		Name:            req.Name,
 		Description:     req.Description,
+		Tag:             req.Tag,
 	})
 	if err != nil {
 		return nil, err

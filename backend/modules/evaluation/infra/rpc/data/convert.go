@@ -343,6 +343,7 @@ func convert2EvaluationSet(ctx context.Context, dataset *dataset.Dataset) (evalu
 		EvaluationSetVersion: convert2EvaluationSetDraftVersion(ctx, dataset),
 		LatestVersion:        gptr.Indirect(dataset.LatestVersion),
 		NextVersionNum:       gptr.Indirect(dataset.NextVersionNum),
+		Tag:                  gptr.Indirect(dataset.Tag),
 		BaseInfo: &entity.BaseInfo{
 			CreatedAt: dataset.CreatedAt,
 			UpdatedAt: dataset.UpdatedAt,

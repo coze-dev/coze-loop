@@ -13,6 +13,7 @@ type CreateEvaluationSetParam struct {
 	Description         *string
 	EvaluationSetSchema *EvaluationSetSchema
 	BizCategory         *BizCategory
+	Tag                 *string
 	Session             *Session
 }
 
@@ -34,6 +35,7 @@ type UpdateEvaluationSetParam struct {
 	EvaluationSetID int64
 	Name            *string
 	Description     *string
+	Tag             *string
 }
 
 type ListEvaluationSetsParam struct {

@@ -71,6 +71,7 @@ type UpdateDatasetParam struct {
 	DatasetID   int64
 	Name        string
 	Description *string
+	Tag         *string
 	UpdatedBy   string
 }
 

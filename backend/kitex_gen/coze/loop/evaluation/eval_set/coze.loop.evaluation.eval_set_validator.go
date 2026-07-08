@@ -45,6 +45,11 @@ func (p *CreateEvaluationSetRequest) IsValid() error {
 			return fmt.Errorf("field BizCategory max_len rule failed, current value: %d", len(*p.BizCategory))
 		}
 	}
+	if p.Tag != nil {
+		if len(*p.Tag) > int(128) {
+			return fmt.Errorf("field Tag max_len rule failed, current value: %d", len(*p.Tag))
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -172,6 +177,11 @@ func (p *UpdateEvaluationSetRequest) IsValid() error {
 	if p.Description != nil {
 		if len(*p.Description) > int(2048) {
 			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
+		}
+	}
+	if p.Tag != nil {
+		if len(*p.Tag) > int(128) {
+			return fmt.Errorf("field Tag max_len rule failed, current value: %d", len(*p.Tag))
 		}
 	}
 	if p.Base != nil {

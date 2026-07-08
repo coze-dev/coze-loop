@@ -89,6 +89,7 @@ func (h *DatasetApplicationImpl) CreateDataset(ctx context.Context, req *dataset
 		Description:   gptr.Of(req.GetDescription()),
 		Category:      convertor.ConvertCategoryDTO2DO(req.GetCategory()),
 		BizCategory:   req.GetBizCategory(),
+		Tag:           req.GetTag(),
 		SecurityLevel: convertor.SecurityLevelDTO2DO(req.GetSecurityLevel()),
 		Visibility:    convertor.VisibilityDTO2DO(req.GetVisibility()),
 		Spec:          convertor.SpecDTO2DO(req.GetSpec()),
@@ -156,6 +157,7 @@ func (h *DatasetApplicationImpl) UpdateDataset(ctx context.Context, req *dataset
 		DatasetID:   req.GetDatasetID(),
 		Name:        req.GetName(),
 		Description: gptr.Of(req.GetDescription()),
+		Tag:         req.Tag,
 		UpdatedBy:   session.UserIDInCtxOrEmpty(ctx),
 	})
 	if err != nil {

@@ -401,17 +401,17 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) QueryItemSnapshotMappings(ctx, req
 }
 
 // UpdateDataset mocks base method.
-func (m *MockIDatasetRPCAdapter) UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) error {
+func (m *MockIDatasetRPCAdapter) UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc, tag *string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateDataset", ctx, spaceID, evaluationSetID, name, desc)
+	ret := m.ctrl.Call(m, "UpdateDataset", ctx, spaceID, evaluationSetID, name, desc, tag)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateDataset indicates an expected call of UpdateDataset.
-func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDataset(ctx, spaceID, evaluationSetID, name, desc any) *gomock.Call {
+func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDataset(ctx, spaceID, evaluationSetID, name, desc, tag any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDataset", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).UpdateDataset), ctx, spaceID, evaluationSetID, name, desc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDataset", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).UpdateDataset), ctx, spaceID, evaluationSetID, name, desc, tag)
 }
 
 // UpdateDatasetItem mocks base method.

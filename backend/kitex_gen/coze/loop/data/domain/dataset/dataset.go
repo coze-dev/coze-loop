@@ -1136,6 +1136,8 @@ type Dataset struct {
 	NextVersionNum *int64 `thrift:"next_version_num,21,optional" frugal:"21,optional,i64" json:"next_version_num" form:"next_version_num" query:"next_version_num"`
 	// 数据条数
 	ItemCount *int64 `thrift:"item_count,22,optional" frugal:"22,optional,i64" json:"item_count" form:"item_count" query:"item_count"`
+	// 上层业务自定义标签
+	Tag *string `thrift:"tag,23,optional" frugal:"23,optional,string" form:"tag" json:"tag,omitempty" query:"tag"`
 	/* 通用信息 */
 	CreatedBy *string `thrift:"created_by,100,optional" frugal:"100,optional,string" form:"created_by" json:"created_by,omitempty" query:"created_by"`
 	CreatedAt *int64  `thrift:"created_at,101,optional" frugal:"101,optional,i64" json:"created_at" form:"created_at" query:"created_at"`
@@ -1342,6 +1344,18 @@ func (p *Dataset) GetItemCount() (v int64) {
 	return *p.ItemCount
 }
 
+var Dataset_Tag_DEFAULT string
+
+func (p *Dataset) GetTag() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTag() {
+		return Dataset_Tag_DEFAULT
+	}
+	return *p.Tag
+}
+
 var Dataset_CreatedBy_DEFAULT string
 
 func (p *Dataset) GetCreatedBy() (v string) {
@@ -1464,6 +1478,9 @@ func (p *Dataset) SetNextVersionNum(val *int64) {
 func (p *Dataset) SetItemCount(val *int64) {
 	p.ItemCount = val
 }
+func (p *Dataset) SetTag(val *string) {
+	p.Tag = val
+}
 func (p *Dataset) SetCreatedBy(val *string) {
 	p.CreatedBy = val
 }
@@ -1501,6 +1518,7 @@ var fieldIDToName_Dataset = map[int16]string{
 	20:  "latest_version",
 	21:  "next_version_num",
 	22:  "item_count",
+	23:  "tag",
 	100: "created_by",
 	101: "created_at",
 	102: "updated_by",
@@ -1563,6 +1581,10 @@ func (p *Dataset) IsSetNextVersionNum() bool {
 
 func (p *Dataset) IsSetItemCount() bool {
 	return p.ItemCount != nil
+}
+
+func (p *Dataset) IsSetTag() bool {
+	return p.Tag != nil
 }
 
 func (p *Dataset) IsSetCreatedBy() bool {
@@ -1744,6 +1766,14 @@ func (p *Dataset) Read(iprot thrift.TProtocol) (err error) {
 		case 22:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField23(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2024,6 +2054,17 @@ func (p *Dataset) ReadField22(iprot thrift.TProtocol) error {
 	p.ItemCount = _field
 	return nil
 }
+func (p *Dataset) ReadField23(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Tag = _field
+	return nil
+}
 func (p *Dataset) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -2163,6 +2204,10 @@ func (p *Dataset) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -2507,6 +2552,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *Dataset) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTag() {
+		if err = oprot.WriteFieldBegin("tag", thrift.STRING, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Tag); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
 func (p *Dataset) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCreatedBy() {
 		if err = oprot.WriteFieldBegin("created_by", thrift.STRING, 100); err != nil {
@@ -2679,6 +2742,9 @@ func (p *Dataset) DeepEqual(ano *Dataset) bool {
 		return false
 	}
 	if !p.Field22DeepEqual(ano.ItemCount) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.Tag) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.CreatedBy) {
@@ -2872,6 +2938,18 @@ func (p *Dataset) Field22DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ItemCount != *src {
+		return false
+	}
+	return true
+}
+func (p *Dataset) Field23DeepEqual(src *string) bool {
+
+	if p.Tag == src {
+		return true
+	} else if p.Tag == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Tag, *src) != 0 {
 		return false
 	}
 	return true

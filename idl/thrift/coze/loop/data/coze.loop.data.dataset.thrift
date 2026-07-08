@@ -16,6 +16,7 @@ struct CreateDatasetRequest {
     16: optional dataset.DatasetVisibility visibility (vt.defined_only = "true")
     17: optional dataset.DatasetSpec spec
     18: optional dataset.DatasetFeatures features
+    19: optional string tag (vt.max_size = "128")
     255: optional base.Base Base
 }
 
@@ -29,6 +30,7 @@ struct UpdateDatasetRequest {
     2: required i64 dataset_id (api.js_conv="true", go.tag='json:"dataset_id"', api.path = "dataset_id", vt.gt = "0")
     3: optional string name (vt.max_size = "255")
     4: optional string description (vt.max_size = "2048")
+    5: optional string tag (vt.max_size = "128")
     255: optional base.Base Base
 }
 

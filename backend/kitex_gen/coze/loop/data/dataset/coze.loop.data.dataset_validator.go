@@ -77,6 +77,11 @@ func (p *CreateDatasetRequest) IsValid() error {
 			return fmt.Errorf("field Features not valid, %w", err)
 		}
 	}
+	if p.Tag != nil {
+		if len(*p.Tag) > int(128) {
+			return fmt.Errorf("field Tag max_len rule failed, current value: %d", len(*p.Tag))
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -110,6 +115,11 @@ func (p *UpdateDatasetRequest) IsValid() error {
 	if p.Description != nil {
 		if len(*p.Description) > int(2048) {
 			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
+		}
+	}
+	if p.Tag != nil {
+		if len(*p.Tag) > int(128) {
+			return fmt.Errorf("field Tag max_len rule failed, current value: %d", len(*p.Tag))
 		}
 	}
 	if p.Base != nil {

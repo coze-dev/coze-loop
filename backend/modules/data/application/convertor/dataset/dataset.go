@@ -25,6 +25,7 @@ func DatasetDO2DTO(d *entity.Dataset, schema *entity.DatasetSchema) (dto *datase
 		Status:            gptr.Of(DatasetStatusDO2DTO(d.Status)),
 		Category:          gptr.Of(DatasetCategoryDO2DTO(d.Category)),
 		BizCategory:       gptr.Of(d.BizCategory),
+		Tag:               gptr.Of(d.Tag),
 		SecurityLevel:     gptr.Of(SecurityLevelDO2DTO(d.SecurityLevel)),
 		Visibility:        gptr.Of(DatasetVisibilityDO2DTO(d.Visibility)),
 		Spec:              DatasetSpecDO2DTO(d.Spec),

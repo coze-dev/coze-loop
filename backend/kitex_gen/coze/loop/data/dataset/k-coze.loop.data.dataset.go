@@ -206,6 +206,20 @@ func (p *CreateDatasetRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 19:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField19(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -416,6 +430,20 @@ func (p *CreateDatasetRequest) FastReadField18(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateDatasetRequest) FastReadField19(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Tag = _field
+	return offset, nil
+}
+
 func (p *CreateDatasetRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -446,6 +474,7 @@ func (p *CreateDatasetRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 		offset += p.fastWriteField16(buf[offset:], w)
 		offset += p.fastWriteField17(buf[offset:], w)
 		offset += p.fastWriteField18(buf[offset:], w)
+		offset += p.fastWriteField19(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -466,6 +495,7 @@ func (p *CreateDatasetRequest) BLength() int {
 		l += p.field16Length()
 		l += p.field17Length()
 		l += p.field18Length()
+		l += p.field19Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -570,6 +600,15 @@ func (p *CreateDatasetRequest) fastWriteField18(buf []byte, w thrift.NocopyWrite
 	if p.IsSetFeatures() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 18)
 		offset += p.Features.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *CreateDatasetRequest) fastWriteField19(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTag() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 19)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Tag)
 	}
 	return offset
 }
@@ -682,6 +721,15 @@ func (p *CreateDatasetRequest) field18Length() int {
 	return l
 }
 
+func (p *CreateDatasetRequest) field19Length() int {
+	l := 0
+	if p.IsSetTag() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Tag)
+	}
+	return l
+}
+
 func (p *CreateDatasetRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -771,6 +819,14 @@ func (p *CreateDatasetRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Features = _features
+
+	if src.Tag != nil {
+		var tmp string
+		if *src.Tag != "" {
+			tmp = kutils.StringDeepCopy(*src.Tag)
+		}
+		p.Tag = &tmp
+	}
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -1027,6 +1083,20 @@ func (p *UpdateDatasetRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -1121,6 +1191,20 @@ func (p *UpdateDatasetRequest) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *UpdateDatasetRequest) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Tag = _field
+	return offset, nil
+}
+
 func (p *UpdateDatasetRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -1144,6 +1228,7 @@ func (p *UpdateDatasetRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -1157,6 +1242,7 @@ func (p *UpdateDatasetRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -1193,6 +1279,15 @@ func (p *UpdateDatasetRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter
 	if p.IsSetDescription() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Description)
+	}
+	return offset
+}
+
+func (p *UpdateDatasetRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTag() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Tag)
 	}
 	return offset
 }
@@ -1240,6 +1335,15 @@ func (p *UpdateDatasetRequest) field4Length() int {
 	return l
 }
 
+func (p *UpdateDatasetRequest) field5Length() int {
+	l := 0
+	if p.IsSetTag() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Tag)
+	}
+	return l
+}
+
 func (p *UpdateDatasetRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -1276,6 +1380,14 @@ func (p *UpdateDatasetRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Description)
 		}
 		p.Description = &tmp
+	}
+
+	if src.Tag != nil {
+		var tmp string
+		if *src.Tag != "" {
+			tmp = kutils.StringDeepCopy(*src.Tag)
+		}
+		p.Tag = &tmp
 	}
 
 	var _base *base.Base

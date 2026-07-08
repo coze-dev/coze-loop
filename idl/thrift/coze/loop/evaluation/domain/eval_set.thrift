@@ -18,6 +18,7 @@ struct EvaluationSet {
     15: optional i64 item_count (api.js_conv="true", go.tag = 'json:"item_count"'),                        // 数据条数
     16: optional bool change_uncommitted           // 是否有未提交的修改
     17: optional BizCategory biz_category               // 业务分类
+    18: optional string tag                             // 用户自定义标签(单值自由文本)
 
     // 版本信息
     30: optional EvaluationSetVersion evaluation_set_version,  // 版本详情信息

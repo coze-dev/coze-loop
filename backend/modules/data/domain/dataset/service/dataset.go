@@ -40,6 +40,7 @@ func (s *DatasetServiceImpl) UpdateDataset(ctx context.Context, param *UpdateDat
 	patch := &entity.Dataset{
 		Name:        gcond.If(param.Name != "", param.Name, ds.Name),
 		Description: gcond.If(param.Description != nil, param.Description, ds.Description),
+		Tag:         gcond.If(param.Tag != nil, gptr.Indirect(param.Tag), ds.Tag),
 		UpdatedBy:   param.UpdatedBy,
 	}
 

@@ -42,6 +42,7 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, para
 		Desc:               param.Description,
 		EvaluationSetItems: param.EvaluationSetSchema,
 		BizCategory:        param.BizCategory,
+		Tag:                param.Tag,
 		Session:            param.Session,
 	})
 }
@@ -80,7 +81,7 @@ func (d *EvaluationSetServiceImpl) UpdateEvaluationSet(ctx context.Context, para
 		return errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 	// 依赖数据集服务
-	return d.datasetRPCAdapter.UpdateDataset(ctx, param.SpaceID, param.EvaluationSetID, param.Name, param.Description)
+	return d.datasetRPCAdapter.UpdateDataset(ctx, param.SpaceID, param.EvaluationSetID, param.Name, param.Description, param.Tag)
 }
 
 func (d *EvaluationSetServiceImpl) DeleteEvaluationSet(ctx context.Context, spaceID, evaluationSetID int64) (err error) {

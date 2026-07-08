@@ -163,6 +163,7 @@ func TestEvaluationSetServiceImpl_UpdateEvaluationSet(t *testing.T) {
 					testEvaluationSetID,
 					gptr.Of(testName),
 					gptr.Of(testDescription),
+					nil,
 				).Return(nil).Times(1) // Expect one call, returning no error
 			},
 			wantErr: false,
@@ -182,6 +183,7 @@ func TestEvaluationSetServiceImpl_UpdateEvaluationSet(t *testing.T) {
 					testEvaluationSetID,
 					nil, // Expecting nil name
 					nil, // Expecting nil description
+					nil, // Expecting nil tag
 				).Return(nil).Times(1)
 			},
 			wantErr: false,
@@ -200,6 +202,7 @@ func TestEvaluationSetServiceImpl_UpdateEvaluationSet(t *testing.T) {
 					testSpaceID,
 					testEvaluationSetID,
 					gptr.Of(testName),
+					nil,
 					nil,
 				).Return(nil).Times(1)
 			},
@@ -220,6 +223,7 @@ func TestEvaluationSetServiceImpl_UpdateEvaluationSet(t *testing.T) {
 					testEvaluationSetID,
 					nil,
 					gptr.Of(testDescription),
+					nil,
 				).Return(nil).Times(1)
 			},
 			wantErr: false,
@@ -239,6 +243,7 @@ func TestEvaluationSetServiceImpl_UpdateEvaluationSet(t *testing.T) {
 					testEvaluationSetID,
 					gptr.Of(testName),
 					gptr.Of(testDescription),
+					nil,
 				).Return(errors.New("RPC call failed")).Times(1) // Expect one call, returning an error
 			},
 			wantErr:     true,
@@ -259,6 +264,7 @@ func TestEvaluationSetServiceImpl_UpdateEvaluationSet(t *testing.T) {
 					testEvaluationSetID,
 					gptr.Of(testName),
 					gptr.Of(testDescription),
+					nil,
 				).Return(errorx.NewByCode(errno.CommonRPCErrorCode)).Times(1)
 			},
 			wantErr:     true,

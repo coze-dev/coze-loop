@@ -606,7 +606,7 @@ func TestUpdateDataset(t *testing.T) {
 				BaseResp: &base.BaseResp{StatusCode: 0},
 			}, nil)
 
-		err := adapter.UpdateDataset(ctx, 1, 2, gptr.Of("name"), gptr.Of("desc"))
+		err := adapter.UpdateDataset(ctx, 1, 2, gptr.Of("name"), gptr.Of("desc"), gptr.Of("tag"))
 		assert.NoError(t, err)
 	})
 
@@ -620,7 +620,7 @@ func TestUpdateDataset(t *testing.T) {
 		mockClient.EXPECT().UpdateDataset(gomock.Any(), gomock.Any()).
 			Return(nil, errors.New("rpc error"))
 
-		err := adapter.UpdateDataset(ctx, 1, 2, gptr.Of("name"), nil)
+		err := adapter.UpdateDataset(ctx, 1, 2, gptr.Of("name"), nil, nil)
 		assert.Error(t, err)
 	})
 }
