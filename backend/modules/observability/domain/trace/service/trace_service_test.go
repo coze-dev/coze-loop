@@ -545,6 +545,7 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 					string(loop_span.PlatformDefault):  {},
 					string(loop_span.PlatformCozeLoop): {},
 				})
+				confMock.EXPECT().GetTraceTimeRangeConfig(gomock.Any()).Return(nil)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)

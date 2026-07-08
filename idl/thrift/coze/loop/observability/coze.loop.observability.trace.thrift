@@ -156,6 +156,7 @@ struct GetTracesMetaInfoRequest {
 struct GetTracesMetaInfoResponse {
     1: required map<string, FieldMeta> field_metas
     2: optional list<string> key_span_type
+    3: optional string trace_default_range
 
     255: optional base.BaseResp BaseResp
 }

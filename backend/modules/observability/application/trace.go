@@ -612,10 +612,14 @@ func (t *TraceApplication) GetTracesMetaInfo(ctx context.Context, req *trace.Get
 		}
 		fMeta[k].FilterTypes = fTypes
 	}
-	return &trace.GetTracesMetaInfoResponse{
+	resp := &trace.GetTracesMetaInfoResponse{
 		FieldMetas:  fMeta,
 		KeySpanType: sResp.KeySpanTypeList,
-	}, nil
+	}
+	if sResp.TraceDefaultRange != "" {
+		resp.TraceDefaultRange = &sResp.TraceDefaultRange
+	}
+	return resp, nil
 }
 
 func (t *TraceApplication) buildGetTracesMetaInfoReq(req *trace.GetTracesMetaInfoRequest) *service.GetTracesMetaInfoReq {

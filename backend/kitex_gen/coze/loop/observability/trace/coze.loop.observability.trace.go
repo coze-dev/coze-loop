@@ -7482,6 +7482,7 @@ func (p *GetTracesMetaInfoRequest) Field255DeepEqual(src *base.Base) bool {
 type GetTracesMetaInfoResponse struct {
 	FieldMetas  map[string]*FieldMeta `thrift:"field_metas,1,required" frugal:"1,required,map<string:FieldMeta>" form:"field_metas,required" json:"field_metas,required" query:"field_metas,required"`
 	KeySpanType []string              `thrift:"key_span_type,2,optional" frugal:"2,optional,list<string>" form:"key_span_type" json:"key_span_type,omitempty" query:"key_span_type"`
+	TraceDefaultRange *string               `thrift:"trace_default_range,3,optional" frugal:"3,optional,string" form:"trace_default_range" json:"trace_default_range,omitempty" query:"trace_default_range"`
 	BaseResp    *base.BaseResp        `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 

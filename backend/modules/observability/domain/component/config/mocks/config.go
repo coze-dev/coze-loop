@@ -229,6 +229,20 @@ func (mr *MockITraceConfigMockRecorder) GetTrajectoryMetadataConfig(ctx any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectoryMetadataConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetTrajectoryMetadataConfig), ctx)
 }
 
+// GetTraceTimeRangeConfig mocks base method.
+func (m *MockITraceConfig) GetTraceTimeRangeConfig(ctx context.Context) map[string]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTraceTimeRangeConfig", ctx)
+	ret0, _ := ret[0].(map[string]string)
+	return ret0
+}
+
+// GetTraceTimeRangeConfig indicates an expected call of GetTraceTimeRangeConfig.
+func (mr *MockITraceConfigMockRecorder) GetTraceTimeRangeConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceTimeRangeConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetTraceTimeRangeConfig), ctx)
+}
+
 // GetPlatformSpansTrans mocks base method.
 func (m *MockITraceConfig) GetPlatformSpansTrans(ctx context.Context) (*config.SpanTransHandlerConfig, error) {
 	m.ctrl.T.Helper()
