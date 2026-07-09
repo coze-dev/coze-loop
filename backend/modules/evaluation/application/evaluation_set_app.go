@@ -383,6 +383,38 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 	}, nil
 }
 
+func (e *EvaluationSetApplicationImpl) CountEvaluationSets(ctx context.Context, req *eval_set.CountEvaluationSetsRequest) (resp *eval_set.CountEvaluationSetsResponse, err error) {
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.WorkspaceID <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	// 鉴权(复用 ListEvaluationSets 同款空间鉴权)
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	// 阈值兜底: 未传时默认 0(严格大于 0);前端固定传 10。
+	threshold := req.GetItemCountGt()
+	// domain调用
+	count, err := e.evaluationSetService.CountEvaluationSets(ctx, &entity.CountEvaluationSetsParam{
+		SpaceID:     req.WorkspaceID,
+		ItemCountGt: threshold,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &eval_set.CountEvaluationSetsResponse{
+		Count: gptr.Of(count),
+	}, nil
+}
+
 func (e *EvaluationSetApplicationImpl) BatchCreateEvaluationSetItems(ctx context.Context, req *eval_set.BatchCreateEvaluationSetItemsRequest) (resp *eval_set.BatchCreateEvaluationSetItemsResponse, err error) {
 	// 参数校验
 	if req == nil {

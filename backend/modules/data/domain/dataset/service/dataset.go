@@ -152,6 +152,72 @@ func (s *DatasetServiceImpl) SearchDataset(ctx context.Context, req *SearchDatas
 	return res, nil
 }
 
+// CountDataset 统计空间内 item_count 严格大于阈值(req.ItemCountGt)的数据集数量。
+//
+// 注意: item_count 存储在 Redis(见 IDatasetRepo.MGetItemCount),不是 MySQL 列,
+// 因此无法直接用 SQL COUNT(item_count > ?) 聚合。这里的实现为:
+//  1. 按 space + category 等条件分页拉取匹配的数据集主键(MySQL,已带软删除过滤);
+//  2. 一次性 MGetItemCount 从 Redis 批量取 item_count(无 N+1);
+//  3. 在内存中统计 item_count > 阈值 的数量。
+func (s *DatasetServiceImpl) CountDataset(ctx context.Context, req *CountDatasetsParam) (int64, error) {
+	if req == nil || req.SpaceID <= 0 {
+		return 0, errno.InvalidParamErrorf("invalid workspace_id")
+	}
+	// 阈值严格大于语义: item_count > ItemCountGt;缺省 0 -> item_count > 0
+	threshold := req.ItemCountGt
+	if threshold < 0 {
+		return 0, errno.InvalidParamErrorf("invalid item_count_gt=%d", threshold)
+	}
+
+	// 分页拉取空间内匹配的数据集主键。pageSize 取上限 200,循环跟随 cursor 直到取尽。
+	const pageSize int32 = 200
+	var (
+		datasetIDs []int64
+		cursor     string
+	)
+	for {
+		pg := pagination.New(
+			repo.DatasetOrderBy(""),
+			pagination.WithPrePage(nil, gptr.Of(pageSize), gcond.If(cursor == "", (*string)(nil), gptr.Of(cursor))),
+		)
+		listParam := &repo.ListDatasetsParams{
+			SpaceID:      req.SpaceID,
+			IDs:          req.DatasetIDs,
+			Category:     req.Category,
+			CreatedBys:   req.CreatedBys,
+			NameLike:     gptr.Indirect(req.Name),
+			BizCategorys: req.BizCategorys,
+			Paginator:    pg,
+		}
+		datasets, pr, err := s.repo.ListDatasets(ctx, listParam)
+		if err != nil {
+			return 0, err
+		}
+		for _, ds := range datasets {
+			datasetIDs = append(datasetIDs, ds.ID)
+		}
+		if pr == nil || pr.Cursor == "" || len(datasets) == 0 {
+			break
+		}
+		cursor = pr.Cursor
+	}
+	if len(datasetIDs) == 0 {
+		return 0, nil
+	}
+
+	itemCountM, err := s.repo.MGetItemCount(ctx, datasetIDs...)
+	if err != nil {
+		return 0, err
+	}
+	var count int64
+	for _, id := range datasetIDs {
+		if itemCountM[id] > threshold {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (s *DatasetServiceImpl) buildSearchDatasetParam(req *SearchDatasetsParam) *repo.ListDatasetsParams {
 	pg := pagination.New(
 		repo.DatasetOrderBy(gptr.Indirect(req.OrderBy.Field)),

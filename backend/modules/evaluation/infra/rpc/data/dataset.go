@@ -211,6 +211,24 @@ func (a *DatasetRPCAdapter) ListDatasets(ctx context.Context, param *rpc.ListDat
 	return convert2EvaluationSets(ctx, resp.Datasets), resp.Total, resp.NextPageToken, nil
 }
 
+func (a *DatasetRPCAdapter) CountDatasets(ctx context.Context, param *rpc.CountDatasetsParam) (count int64, err error) {
+	resp, err := a.client.CountDatasets(ctx, &datasetdto.CountDatasetsRequest{
+		WorkspaceID: param.SpaceID,
+		ItemCountGt: gptr.Of(param.ItemCountGt),
+		Category:    domain_dataset.DatasetCategoryPtr(domain_dataset.DatasetCategory_Evaluation),
+	})
+	if err != nil {
+		return 0, err
+	}
+	if resp == nil {
+		return 0, errorx.NewByCode(errno.CommonRPCErrorCode)
+	}
+	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
+		return 0, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
+	}
+	return resp.GetCount(), nil
+}
+
 func (a *DatasetRPCAdapter) CreateDatasetVersion(ctx context.Context, spaceID, evaluationSetID int64, version string, desc *string) (id int64, err error) {
 	resp, err := a.client.CreateDatasetVersion(ctx, &datasetdto.CreateDatasetVersionRequest{
 		WorkspaceID: &spaceID,

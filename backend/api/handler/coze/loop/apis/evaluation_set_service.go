@@ -139,3 +139,9 @@ func GetEvaluationItemField(ctx context.Context, c *app.RequestContext) {
 func ValidateEvaluationSetMultiPartData(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalSetSvc.ValidateEvaluationSetMultiPartData)
 }
+
+// CountEvaluationSets .
+// @router /api/evaluation/v1/evaluation_sets/count [POST]
+func CountEvaluationSets(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.CountEvaluationSets)
+}

@@ -66,6 +66,19 @@ type SearchDatasetsResults struct {
 	Total              int64
 }
 
+// CountDatasetsParam 统计满足条件的数据集数量的入参。
+// ItemCountGt 为数据项数量阈值(严格大于)；缺省 0 表示统计 item_count > 0 的数据集。
+type CountDatasetsParam struct {
+	SpaceID      int64
+	DatasetIDs   []int64
+	Category     entity.DatasetCategory
+	Name         *string
+	CreatedBys   []string
+	BizCategorys []string
+	// 数据项数量阈值(严格大于)。缺省 0 -> item_count > 0
+	ItemCountGt int64
+}
+
 type UpdateDatasetParam struct {
 	SpaceID     int64
 	DatasetID   int64
