@@ -106,6 +106,11 @@ type QueryTraceRateLimitConfig struct {
 	SpaceMaxQPS   map[string]int `mapstructure:"space_max_qps" json:"space_max_qps"`
 }
 
+type AnnotationRateLimitConfig struct {
+	DefaultMaxQPS int            `mapstructure:"default_max_qps" json:"default_max_qps"`
+	SpaceMaxQPS   map[string]int `mapstructure:"space_max_qps" json:"space_max_qps"`
+}
+
 type ConsumerListening struct {
 	IsEnabled  bool     `json:"is_enabled"`
 	Clusters   []string `json:"clusters"`
@@ -240,6 +245,7 @@ type ITraceConfig interface {
 	GetDefaultTraceTenant(ctx context.Context) string
 	GetAnnotationSourceCfg(ctx context.Context) (*AnnotationSourceConfig, error)
 	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
+	GetAnnotationMaxQPS(ctx context.Context, key string) (int, error)
 	GetKeySpanTypes(ctx context.Context) map[string][]string
 	GetBackfillMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 	GetConsumerListening(ctx context.Context) (*ConsumerListening, error)
