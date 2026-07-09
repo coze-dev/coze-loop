@@ -2404,3 +2404,13 @@ func _mgetexperimentstandardevaloutputsMw(handler *apis.APIHandler) []app.Handle
 	// your code...
 	return nil
 }
+
+func _experiments1Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _expt_id0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -954,11 +954,11 @@ service ExperimentService {
     )
 
     MGetExperimentStandardEvalOutputsResponse MGetExperimentStandardEvalOutputs(1: MGetExperimentStandardEvalOutputsRequest req) (
-        api.post = "/api/evaluation/v1/experiments/:expt_id/runs/:expt_run_id/standard_eval_outputs/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
+        api.post = "/v1/loop/evaluation/experiments/:expt_id/runs/:expt_run_id/standard_eval_outputs/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
     ListExperimentStandardEvalOutputsResponse ListExperimentStandardEvalOutputs(1: ListExperimentStandardEvalOutputsRequest req) (
-        api.post = "/api/evaluation/v1/experiments/:expt_id/runs/:expt_run_id/standard_eval_outputs/list", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
+        api.post = "/v1/loop/evaluation/experiments/:expt_id/runs/:expt_run_id/standard_eval_outputs/list", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
     CalculateExperimentAggrResultResponse CalculateExperimentAggrResult(1: CalculateExperimentAggrResultRequest req) (
