@@ -75,8 +75,6 @@ type ExptItemEvalCtxExecutor struct {
 const exptRunLogPersistTimeout = 5 * time.Second
 
 func (e *ExptItemEvalCtxExecutor) Eval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
-	event := eiec.Event
-
 	// if err := e.SetItemRunProcessing(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID, event.Session); err != nil {
 	//	return err
 	// }
@@ -86,7 +84,7 @@ func (e *ExptItemEvalCtxExecutor) Eval(ctx context.Context, eiec *entity.ExptIte
 		return nil
 	}
 
-	if err := e.CompleteItemRun(ctx, event, evalErr); err != nil {
+	if err := e.CompleteItemRun(ctx, eiec, evalErr); err != nil {
 		return err
 	}
 
@@ -291,7 +289,8 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	return etec, nil
 }
 
-func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) error {
+func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *entity.ExptItemEvalCtx, evalErr error) error {
+	event := eiec.Event
 	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer cancel()
 
@@ -317,7 +316,7 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *en
 	}
 
 	if e.itemCompletePublisher != nil {
-		if err := e.itemCompletePublisher.PublishItemComplete(ctx, event.SpaceID, event.ExptID, event.EvalSetItemID, event.ExptRunID); err != nil {
+		if err := e.itemCompletePublisher.PublishItemComplete(ctx, buildItemCompleteEvent(eiec)); err != nil {
 			logs.CtxWarn(ctx, "[ExptTurnEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, event.EvalSetItemID, err)
 		}
 	}
@@ -330,6 +329,49 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *en
 	logs.CtxInfo(ctx, "[ExptTurnEval] expt item eval finished, expt_id: %v, expt_run_id: %v, success: %v, update_fields: %v", event.ExptID, event.ExptRunID, evalErr == nil, ufields)
 	time.Sleep(time.Second * 2) // 确保日志落库
 	return nil
+}
+
+// buildItemCompleteEvent 从单行评测上下文组装 item-complete 事件，全部取内存已有数据，不发起额外 IO。
+// dataset 维度以 item 实际归属为准（多评测集下 EvalSetItem 来自 per-item ref 解析）；
+// 版本信息仅实验主集在内存中，非主集 item 留空由消费侧按 dataset_id 回查。
+func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemCompleteEvent {
+	event := eiec.Event
+	ev := &component.ItemCompleteEvent{
+		ExptWorkspaceID: strconv.FormatInt(event.SpaceID, 10),
+		ExptID:          strconv.FormatInt(event.ExptID, 10),
+		ExptRunID:       strconv.FormatInt(event.ExptRunID, 10),
+		ItemID:          strconv.FormatInt(event.EvalSetItemID, 10),
+		ItemKey:         strconv.FormatInt(event.EvalSetItemID, 10), // 旧版无 item_key，同 item_id
+	}
+
+	if expt := eiec.Expt; expt != nil {
+		ev.EvalTargetID = strconv.FormatInt(expt.TargetID, 10)
+		if expt.Target != nil {
+			ev.EvalTargetWorkspaceID = strconv.FormatInt(expt.Target.SpaceID, 10)
+		}
+	}
+
+	if item := eiec.EvalSetItem; item != nil {
+		ev.DatasetWorkspaceID = strconv.FormatInt(item.SpaceID, 10)
+		ev.DatasetID = strconv.FormatInt(item.EvaluationSetID, 10)
+		if item.ItemKey != "" {
+			ev.ItemKey = item.ItemKey
+		}
+	}
+
+	// 版本与 dataset_key 只有实验主集在内存中；多评测集非主集 item 不匹配时留空，避免张冠李戴
+	if expt := eiec.Expt; expt != nil && expt.EvalSet != nil {
+		es := expt.EvalSet
+		if eiec.EvalSetItem == nil || es.ID == eiec.EvalSetItem.EvaluationSetID {
+			ev.DatasetKey = es.DatasetKey
+			if ver := es.EvaluationSetVersion; ver != nil {
+				ev.DatasetVersionID = strconv.FormatInt(ver.ID, 10)
+				ev.DatasetVersionName = ver.Version
+			}
+		}
+	}
+
+	return ev
 }
 
 func (e *ExptItemEvalCtxExecutor) evalErrNeedRetry(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) (bool, time.Duration) {
