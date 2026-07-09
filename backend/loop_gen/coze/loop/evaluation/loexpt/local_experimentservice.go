@@ -303,6 +303,48 @@ func (l *LocalExperimentService) BatchGetExperimentResult_(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalExperimentService) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceMGetExperimentStandardEvalOutputsArgs)
+		result := out.(*expt.ExperimentServiceMGetExperimentStandardEvalOutputsResult)
+		resp, err := l.impl.MGetExperimentStandardEvalOutputs(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceMGetExperimentStandardEvalOutputsArgs{Req: req}
+	result := &expt.ExperimentServiceMGetExperimentStandardEvalOutputsResult{}
+	ctx = l.injectRPCInfo(ctx, "MGetExperimentStandardEvalOutputs")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalExperimentService) ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (*expt.ListExperimentStandardEvalOutputsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceListExperimentStandardEvalOutputsArgs)
+		result := out.(*expt.ExperimentServiceListExperimentStandardEvalOutputsResult)
+		resp, err := l.impl.ListExperimentStandardEvalOutputs(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceListExperimentStandardEvalOutputsArgs{Req: req}
+	result := &expt.ExperimentServiceListExperimentStandardEvalOutputsResult{}
+	ctx = l.injectRPCInfo(ctx, "ListExperimentStandardEvalOutputs")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest, callOptions ...callopt.Option) (*expt.CalculateExperimentAggrResultResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*expt.ExperimentServiceCalculateExperimentAggrResultArgs)

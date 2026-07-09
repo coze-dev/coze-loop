@@ -105,6 +105,15 @@ func (c *configer) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID
 	return nil, false
 }
 
+func (c *configer) GetStandardEvalOutputAPIKey(ctx context.Context) string {
+	const key = "standard_eval_output_api_key"
+	var apiKey string
+	if err := c.loader.UnmarshalKey(ctx, key, &apiKey); err != nil {
+		return ""
+	}
+	return apiKey
+}
+
 func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	const key = "system_maintainer_conf"
 	var maintainerConf *entity.SystemMaintainerConf

@@ -24,6 +24,8 @@ type Client interface {
 	RetryExperiment(ctx context.Context, req *expt.RetryExperimentRequest, callOptions ...callopt.Option) (r *expt.RetryExperimentResponse, err error)
 	KillExperiment(ctx context.Context, req *expt.KillExperimentRequest, callOptions ...callopt.Option) (r *expt.KillExperimentResponse, err error)
 	BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentResultResponse, err error)
+	MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (r *expt.MGetExperimentStandardEvalOutputsResponse, err error)
+	ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (r *expt.ListExperimentStandardEvalOutputsResponse, err error)
 	CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest, callOptions ...callopt.Option) (r *expt.CalculateExperimentAggrResultResponse, err error)
 	BatchGetExperimentAggrResult_(ctx context.Context, req *expt.BatchGetExperimentAggrResultRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentAggrResultResponse, err error)
 	InvokeExperiment(ctx context.Context, req *expt.InvokeExperimentRequest, callOptions ...callopt.Option) (r *expt.InvokeExperimentResponse, err error)
@@ -146,6 +148,16 @@ func (p *kExperimentServiceClient) KillExperiment(ctx context.Context, req *expt
 func (p *kExperimentServiceClient) BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentResultResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetExperimentResult_(ctx, req)
+}
+
+func (p *kExperimentServiceClient) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (r *expt.MGetExperimentStandardEvalOutputsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.MGetExperimentStandardEvalOutputs(ctx, req)
+}
+
+func (p *kExperimentServiceClient) ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (r *expt.ListExperimentStandardEvalOutputsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListExperimentStandardEvalOutputs(ctx, req)
 }
 
 func (p *kExperimentServiceClient) CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest, callOptions ...callopt.Option) (r *expt.CalculateExperimentAggrResultResponse, err error) {

@@ -278,6 +278,17 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						_results := _expt_id.Group("/results", _resultsMw(handler)...)
 						_results.POST("/export", append(_exportexptresultMw(handler), apis.ExportExptResult)...)
 					}
+					{
+						_runs := _expt_id.Group("/runs", _runsMw(handler)...)
+						{
+							_expt_run_id := _runs.Group("/:expt_run_id", _expt_run_idMw(handler)...)
+							{
+								_standard_eval_outputs := _expt_run_id.Group("/standard_eval_outputs", _standard_eval_outputsMw(handler)...)
+								_standard_eval_outputs.POST("/batch_get", append(_mgetexperimentstandardevaloutputsMw(handler), apis.MGetExperimentStandardEvalOutputs)...)
+								_standard_eval_outputs.POST("/list", append(_listexperimentstandardevaloutputsMw(handler), apis.ListExperimentStandardEvalOutputs)...)
+							}
+						}
+					}
 					_experiments.PATCH("/:expt_id", append(_updateexperimentMw(handler), apis.UpdateExperiment)...)
 					_experiments.POST("/list", append(_listexperimentsMw(handler), apis.ListExperiments)...)
 					_experiments.POST("/submit", append(_submitexperimentMw(handler), apis.SubmitExperiment)...)

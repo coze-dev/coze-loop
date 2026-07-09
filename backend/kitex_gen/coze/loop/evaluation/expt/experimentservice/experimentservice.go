@@ -104,6 +104,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"MGetExperimentStandardEvalOutputs": kitex.NewMethodInfo(
+		mGetExperimentStandardEvalOutputsHandler,
+		newExperimentServiceMGetExperimentStandardEvalOutputsArgs,
+		newExperimentServiceMGetExperimentStandardEvalOutputsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListExperimentStandardEvalOutputs": kitex.NewMethodInfo(
+		listExperimentStandardEvalOutputsHandler,
+		newExperimentServiceListExperimentStandardEvalOutputsArgs,
+		newExperimentServiceListExperimentStandardEvalOutputsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CalculateExperimentAggrResult": kitex.NewMethodInfo(
 		calculateExperimentAggrResult_Handler,
 		newExperimentServiceCalculateExperimentAggrResultArgs,
@@ -578,6 +592,44 @@ func newExperimentServiceBatchGetExperimentResultArgs() interface{} {
 
 func newExperimentServiceBatchGetExperimentResultResult() interface{} {
 	return expt.NewExperimentServiceBatchGetExperimentResultResult()
+}
+
+func mGetExperimentStandardEvalOutputsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceMGetExperimentStandardEvalOutputsArgs)
+	realResult := result.(*expt.ExperimentServiceMGetExperimentStandardEvalOutputsResult)
+	success, err := handler.(expt.ExperimentService).MGetExperimentStandardEvalOutputs(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceMGetExperimentStandardEvalOutputsArgs() interface{} {
+	return expt.NewExperimentServiceMGetExperimentStandardEvalOutputsArgs()
+}
+
+func newExperimentServiceMGetExperimentStandardEvalOutputsResult() interface{} {
+	return expt.NewExperimentServiceMGetExperimentStandardEvalOutputsResult()
+}
+
+func listExperimentStandardEvalOutputsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceListExperimentStandardEvalOutputsArgs)
+	realResult := result.(*expt.ExperimentServiceListExperimentStandardEvalOutputsResult)
+	success, err := handler.(expt.ExperimentService).ListExperimentStandardEvalOutputs(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceListExperimentStandardEvalOutputsArgs() interface{} {
+	return expt.NewExperimentServiceListExperimentStandardEvalOutputsArgs()
+}
+
+func newExperimentServiceListExperimentStandardEvalOutputsResult() interface{} {
+	return expt.NewExperimentServiceListExperimentStandardEvalOutputsResult()
 }
 
 func calculateExperimentAggrResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1249,6 +1301,26 @@ func (p *kClient) BatchGetExperimentResult_(ctx context.Context, req *expt.Batch
 	_args.Req = req
 	var _result expt.ExperimentServiceBatchGetExperimentResultResult
 	if err = p.c.Call(ctx, "BatchGetExperimentResult", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest) (r *expt.MGetExperimentStandardEvalOutputsResponse, err error) {
+	var _args expt.ExperimentServiceMGetExperimentStandardEvalOutputsArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceMGetExperimentStandardEvalOutputsResult
+	if err = p.c.Call(ctx, "MGetExperimentStandardEvalOutputs", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest) (r *expt.ListExperimentStandardEvalOutputsResponse, err error) {
+	var _args expt.ExperimentServiceListExperimentStandardEvalOutputsArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceListExperimentStandardEvalOutputsResult
+	if err = p.c.Call(ctx, "ListExperimentStandardEvalOutputs", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

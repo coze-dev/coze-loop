@@ -299,6 +299,82 @@ struct BatchGetExperimentResultResponse {
     255: base.BaseResp BaseResp
 }
 
+struct MGetExperimentStandardEvalOutputsRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: required i64 expt_run_id (api.path = 'expt_run_id', api.js_conv = 'true', go.tag = 'json:"expt_run_id"')
+
+    // MQ normal path passes one item_id; batch consumers can pass multiple.
+    10: required list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
+
+    // Optional top-level section filter: source/detail/rounds/agent/output/eval/extra/raw.
+    30: optional list<string> sections (api.body = 'sections', go.tag = 'json:"sections"')
+    31: optional bool include_raw (api.body = 'include_raw', go.tag = 'json:"include_raw"')
+    32: optional bool full_trajectory (api.query = 'full_trajectory', go.tag = 'json:"full_trajectory"')
+
+    // Temporary BOE self-test auth. Remove after formal auth is wired.
+    40: optional string api_key (api.body = 'api_key', go.tag = 'json:"api_key"')
+
+    255: optional base.Base Base
+}
+
+struct ListExperimentStandardEvalOutputsRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: required i64 expt_run_id (api.path = 'expt_run_id', api.js_conv = 'true', go.tag = 'json:"expt_run_id"')
+
+    // For abnormal data resync. Empty means list by experiment pagination.
+    20: optional i32 page_number (api.query = 'page_number', go.tag = 'json:"page_number"')
+    21: optional i32 page_size (api.query = 'page_size', go.tag = 'json:"page_size"')
+
+    // Optional top-level section filter: source/detail/rounds/agent/output/eval/extra/raw.
+    30: optional list<string> sections (api.body = 'sections', go.tag = 'json:"sections"')
+    31: optional bool include_raw (api.body = 'include_raw', go.tag = 'json:"include_raw"')
+    32: optional bool full_trajectory (api.query = 'full_trajectory', go.tag = 'json:"full_trajectory"')
+
+    // Temporary BOE self-test auth. Remove after formal auth is wired.
+    40: optional string api_key (api.body = 'api_key', go.tag = 'json:"api_key"')
+
+    255: optional base.Base Base
+}
+
+struct ItemStandardEvalOutput {
+    1: required i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    2: required i64 expt_run_id (api.js_conv = 'true', go.tag = 'json:"expt_run_id"')
+    3: required i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id"')
+    4: optional string item_key (go.tag = 'json:"item_key"')
+
+    10: optional string detail_id (go.tag = 'json:"detail_id"')
+
+    // Standard top-level blocks. Complex objects are encoded as JSON strings.
+    11: optional string source (go.tag = 'json:"source"')
+    12: optional string detail (go.tag = 'json:"detail"')
+    13: optional string rounds (go.tag = 'json:"rounds"')
+    14: optional string agent (go.tag = 'json:"agent"')
+    15: optional string output (go.tag = 'json:"output"')
+    16: optional string eval (go.tag = 'json:"eval"')
+    17: optional string extra (go.tag = 'json:"extra"')
+
+    // Large object references, for example output.detail / eval.detail / rounds.
+    20: optional map<string, string> object_refs (go.tag = 'json:"object_refs"')
+
+    // Raw standard JSON for troubleshooting or compatibility.
+    100: optional string raw_json (go.tag = 'json:"raw_json"')
+}
+
+struct MGetExperimentStandardEvalOutputsResponse {
+    1: optional list<ItemStandardEvalOutput> items (api.body = 'items')
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListExperimentStandardEvalOutputsResponse {
+    1: optional list<ItemStandardEvalOutput> items (api.body = 'items')
+    2: optional i64 total (api.body = 'total', go.tag = 'json:"total"')
+
+    255: base.BaseResp BaseResp
+}
+
 struct BatchGetExperimentAggrResultRequest {
     1: required i64 workspace_id (api.query = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required list<i64> experiment_ids (api.body = 'experiment_ids', api.js_conv = 'true', go.tag = 'json:"experiment_ids"')
@@ -877,6 +953,14 @@ service ExperimentService {
         api.post = "/api/evaluation/v1/experiments/results/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
+    MGetExperimentStandardEvalOutputsResponse MGetExperimentStandardEvalOutputs(1: MGetExperimentStandardEvalOutputsRequest req) (
+        api.post = "/api/evaluation/v1/experiments/:expt_id/runs/:expt_run_id/standard_eval_outputs/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
+    )
+
+    ListExperimentStandardEvalOutputsResponse ListExperimentStandardEvalOutputs(1: ListExperimentStandardEvalOutputsRequest req) (
+        api.post = "/api/evaluation/v1/experiments/:expt_id/runs/:expt_run_id/standard_eval_outputs/list", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
+    )
+
     CalculateExperimentAggrResultResponse CalculateExperimentAggrResult(1: CalculateExperimentAggrResultRequest req) (
         api.post = "/api/evaluation/v1/experiments/:expt_id/aggr_results", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
     )
@@ -945,4 +1029,3 @@ service ExperimentService {
     )
     SubmitExptFromTemplateResponse SubmitExptFromTemplate(1: SubmitExptFromTemplateRequest req)
 }
-
