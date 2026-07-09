@@ -430,6 +430,11 @@ type ExptItemEvalCtx struct {
 	// 含该 item 行级的 EvaluatorConfs (含 alias / filter / FilterMode) 和 EvalTargetConf。
 	// 老实验类型 (DataSet) 或读取失败时为 nil, 执行侧据此回退到 expt 级 EvaluatorsConf 老路径。
 	ItemConfig *ExptItemConfig
+
+	// EvalSetVersionID 该 item 归属评测集的版本 ID (per-item)。多评测集下各 item 可属不同集/版本,
+	// 由 BuildExptRecordEvalCtx 从 expt_item_ref 解析后回填; 单评测集/老实验为实验主集版本。
+	// EvalSetItem.EvaluationSetID 是归属集 ID, 二者配合可定位该 item 的 (集, 版本), 供下游事件组装。
+	EvalSetVersionID int64
 }
 
 func (e *ExptItemEvalCtx) GetRecordEvalLogID(ctx context.Context) (logID string) {

@@ -392,6 +392,7 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 		EvalSetItem:         items[0],
 		ExistItemEvalResult: existResult,
 		ItemConfig:          itemConfig,
+		EvalSetVersionID:    evalSetVerID, // per-item 归属集版本 (多评测集非主集也正确)
 	}, nil
 }
 

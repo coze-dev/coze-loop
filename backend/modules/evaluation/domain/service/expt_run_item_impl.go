@@ -332,8 +332,8 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 }
 
 // buildItemCompleteEvent 从单行评测上下文组装 item-complete 事件，全部取内存已有数据，不发起额外 IO。
-// dataset 维度以 item 实际归属为准（多评测集下 EvalSetItem 来自 per-item ref 解析）；
-// 版本信息仅实验主集在内存中，非主集 item 留空由消费侧按 dataset_id 回查。
+// dataset 维度以 item 实际归属为准（多评测集下 EvalSetItem/EvalSetVersionID 来自 per-item ref 解析）；
+// version_name / dataset_key 是评测集元数据, 仅实验主集在内存中, 非主集留空由消费侧按 id 回查。
 func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemCompleteEvent {
 	event := eiec.Event
 	ev := &component.ItemCompleteEvent{
@@ -359,13 +359,21 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 		}
 	}
 
-	// 版本与 dataset_key 只有实验主集在内存中；多评测集非主集 item 不匹配时留空，避免张冠李戴
+	// dataset_version_id 用 per-item 归属集版本 (多评测集非主集也正确, 来自 expt_item_ref)。
+	if eiec.EvalSetVersionID > 0 {
+		ev.DatasetVersionID = strconv.FormatInt(eiec.EvalSetVersionID, 10)
+	}
+
+	// version_name / dataset_key 是评测集元数据, 单行链路内存中仅实验主集有 (eiec.Expt.EvalSet)。
+	// 仅当 item 归属集 == 主集时填; 非主集留空, 由消费侧按 dataset_id + dataset_version_id 回查。
 	if expt := eiec.Expt; expt != nil && expt.EvalSet != nil {
 		es := expt.EvalSet
 		if eiec.EvalSetItem == nil || es.ID == eiec.EvalSetItem.EvaluationSetID {
 			ev.DatasetKey = es.DatasetKey
 			if ver := es.EvaluationSetVersion; ver != nil {
-				ev.DatasetVersionID = strconv.FormatInt(ver.ID, 10)
+				if ev.DatasetVersionID == "" {
+					ev.DatasetVersionID = strconv.FormatInt(ver.ID, 10)
+				}
 				ev.DatasetVersionName = ver.Version
 			}
 		}
