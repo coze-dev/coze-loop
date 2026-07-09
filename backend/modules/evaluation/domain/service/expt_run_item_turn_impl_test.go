@@ -3928,8 +3928,8 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_MultiSetEmptyEvaluator(t *
 			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
 			Evaluators: []*entity.Evaluator{
 				{
-					ID:            99,
-					EvaluatorType: entity.EvaluatorTypePrompt,
+					ID:                     99,
+					EvaluatorType:          entity.EvaluatorTypePrompt,
 					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 99},
 				},
 			},
@@ -4640,4 +4640,82 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_FilterSkipped(
 	assert.Equal(t, entity.EvaluatorRunStatusSuccess, byAlias["default"].Status)
 	assert.Equal(t, entity.EvaluatorRunStatusSkipped, byAlias["judge_b"].Status)
 	assert.Equal(t, int64(200), byAlias["judge_b"].ID)
+}
+
+func TestBuildEvalSetItemMeta_UsesPerItemEvalSetForMultiSet(t *testing.T) {
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetVersionID: 200,
+			EvalSetItem: &entity.EvaluationSetItem{
+				EvaluationSetID: 20,
+				ItemID:          2000,
+				ItemKey:         "item-a",
+				ItemVersionID:   gptr.Of(int64(20000)),
+				ItemVersion:     gptr.Of("item-v2"),
+			},
+			Expt: &entity.Experiment{
+				EvalSetID:        10,
+				EvalSetVersionID: 100,
+				EvalSet: &entity.EvaluationSet{
+					ID:   10,
+					Name: "primary-set",
+					EvaluationSetVersion: &entity.EvaluationSetVersion{
+						ID:      100,
+						Version: "primary-v1",
+					},
+				},
+				EvalSetDetails: []*entity.ExptEvalSetDetail{
+					{
+						EvalSetID:        20,
+						EvalSetVersionID: 200,
+						EvalSet: &entity.EvaluationSet{
+							ID:   20,
+							Name: "non-primary-set",
+							EvaluationSetVersion: &entity.EvaluationSetVersion{
+								ID:      200,
+								Version: "non-primary-v2",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got := buildEvalSetItemMeta(etec)
+	assert.Equal(t, "20", got.EvalSetID)
+	assert.Equal(t, "200", got.EvalSetVersionID)
+	assert.Equal(t, "non-primary-set", got.EvalSetName)
+	assert.Equal(t, "non-primary-v2", got.EvalSetVersion)
+	assert.Equal(t, "2000", got.ItemID)
+	assert.Equal(t, "item-a", got.ItemKey)
+	assert.Equal(t, "20000", got.ItemVersionID)
+	assert.Equal(t, "item-v2", got.ItemVersion)
+}
+
+func TestBuildEvalSetItemMeta_FallbackToExperimentTopLevel(t *testing.T) {
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+			Expt: &entity.Experiment{
+				EvalSetID:        10,
+				EvalSetVersionID: 100,
+				EvalSet: &entity.EvaluationSet{
+					ID:   10,
+					Name: "primary-set",
+					EvaluationSetVersion: &entity.EvaluationSetVersion{
+						ID:      100,
+						Version: "primary-v1",
+					},
+				},
+			},
+		},
+	}
+
+	got := buildEvalSetItemMeta(etec)
+	assert.Equal(t, "10", got.EvalSetID)
+	assert.Equal(t, "100", got.EvalSetVersionID)
+	assert.Equal(t, "primary-set", got.EvalSetName)
+	assert.Equal(t, "primary-v1", got.EvalSetVersion)
+	assert.Equal(t, "1", got.ItemID)
 }

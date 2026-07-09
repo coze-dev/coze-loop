@@ -1177,21 +1177,9 @@ func buildEvalSetItemMeta(etec *entity.ExptTurnEvalCtx) *entity.EvalSetItemMeta 
 		return nil
 	}
 	meta := &entity.EvalSetItemMeta{}
-	if etec.Expt != nil {
-		if etec.Expt.EvalSetID != 0 {
-			meta.EvalSetID = strconv.FormatInt(etec.Expt.EvalSetID, 10)
-		}
-		if etec.Expt.EvalSetVersionID != 0 {
-			meta.EvalSetVersionID = strconv.FormatInt(etec.Expt.EvalSetVersionID, 10)
-		}
-		if etec.Expt.EvalSet != nil {
-			meta.EvalSetName = etec.Expt.EvalSet.Name
-			if etec.Expt.EvalSet.EvaluationSetVersion != nil {
-				meta.EvalSetVersion = etec.Expt.EvalSet.EvaluationSetVersion.Version
-			}
-		}
-	}
+	var evalSetID, evalSetVersionID int64
 	if etec.EvalSetItem != nil {
+		evalSetID = etec.EvalSetItem.EvaluationSetID
 		if etec.EvalSetItem.ItemID != 0 {
 			meta.ItemID = strconv.FormatInt(etec.EvalSetItem.ItemID, 10)
 		}
@@ -1203,5 +1191,46 @@ func buildEvalSetItemMeta(etec *entity.ExptTurnEvalCtx) *entity.EvalSetItemMeta 
 			meta.ItemVersion = *etec.EvalSetItem.ItemVersion
 		}
 	}
+	if etec.ExptItemEvalCtx != nil && etec.ExptItemEvalCtx.EvalSetVersionID != 0 {
+		evalSetVersionID = etec.ExptItemEvalCtx.EvalSetVersionID
+	}
+	if etec.Expt != nil {
+		if evalSetID == 0 {
+			evalSetID = etec.Expt.EvalSetID
+		}
+		if evalSetVersionID == 0 {
+			evalSetVersionID = etec.Expt.EvalSetVersionID
+		}
+	}
+	if evalSetID != 0 {
+		meta.EvalSetID = strconv.FormatInt(evalSetID, 10)
+	}
+	if evalSetVersionID != 0 {
+		meta.EvalSetVersionID = strconv.FormatInt(evalSetVersionID, 10)
+	}
+	if evalSet := findEvalSetForItemMeta(etec.Expt, evalSetID, evalSetVersionID); evalSet != nil {
+		meta.EvalSetName = evalSet.Name
+		if evalSet.EvaluationSetVersion != nil {
+			meta.EvalSetVersion = evalSet.EvaluationSetVersion.Version
+		}
+	}
 	return meta
+}
+
+func findEvalSetForItemMeta(expt *entity.Experiment, evalSetID, evalSetVersionID int64) *entity.EvaluationSet {
+	if expt == nil {
+		return nil
+	}
+	for _, detail := range expt.EvalSetDetails {
+		if detail == nil || detail.EvalSet == nil || detail.EvalSetID != evalSetID {
+			continue
+		}
+		if evalSetVersionID == 0 || detail.EvalSetVersionID == evalSetVersionID {
+			return detail.EvalSet
+		}
+	}
+	if expt.EvalSet != nil && (evalSetID == 0 || expt.EvalSet.ID == evalSetID) {
+		return expt.EvalSet
+	}
+	return nil
 }

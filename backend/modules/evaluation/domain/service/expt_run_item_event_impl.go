@@ -380,6 +380,15 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 	if len(items) != 1 {
 		return nil, fmt.Errorf("BatchGetEvaluationSetItems with invalid item result, eval_set_id: %v, eval_set_ver_id: %v, item_id: %v, got items len: %v", evalSetID, evalSetVerID, event.EvalSetItemID, len(items))
 	}
+	// DataSet 读侧在部分路径不会回填集/条目版本元信息。执行上下文已根据
+	// expt_item_ref / run_log 解析出 per-item 归属, 在这里补齐给下游 ItemMeta 使用,
+	// 避免 MultiSetConfig 非主集 item 又回退到实验顶层主集。
+	if items[0].EvaluationSetID == 0 {
+		items[0].EvaluationSetID = evalSetID
+	}
+	if items[0].ItemVersionID == nil && itemVersionID != nil {
+		items[0].ItemVersionID = itemVersionID
+	}
 
 	existResult, err := e.GetExistExptRecordEvalResult(ctx, event)
 	if err != nil {
