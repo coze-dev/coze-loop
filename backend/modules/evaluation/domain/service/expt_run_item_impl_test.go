@@ -108,6 +108,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 				tt.benefitService,
 				tt.evalAsyncRepo,
 				tt.evalSetItemSvc,
+				nil,
 			)
 			assert.NotNil(t, inst)
 		})
