@@ -31,6 +31,7 @@ type IDatasetDAO interface {
 	GetDataset(ctx context.Context, spaceID, datasetID int64, opt ...db.Option) (*model.Dataset, error)
 	MGetDatasets(ctx context.Context, spaceID int64, ids []int64, opt ...db.Option) ([]*model.Dataset, error)
 	ListDatasets(ctx context.Context, params *ListDatasetsParams, opt ...db.Option) ([]*model.Dataset, *pagination.PageResult, error)
+	ListDatasetIDs(ctx context.Context, params *ListDatasetsParams, opt ...db.Option) ([]int64, *pagination.PageResult, error)
 	CountDatasets(ctx context.Context, params *ListDatasetsParams, opt ...db.Option) (int64, error)
 }
 
@@ -174,6 +175,34 @@ func (r *DatasetDAOImpl) ListDatasets(ctx context.Context, params *ListDatasetsP
 	}
 
 	return pos, params.Paginator.Result(), nil
+}
+
+// ListDatasetIDs 仅 SELECT id 的游标分页枚举，用于 item_count 阈值统计等无需完整 Dataset 行的场景。
+// 只读取 id 列，避免拉取/物化完整 Dataset PO；软删除由 model.Dataset 的 soft_delete scope 自动过滤。
+func (r *DatasetDAOImpl) ListDatasetIDs(ctx context.Context, params *ListDatasetsParams, opt ...db.Option) ([]int64, *pagination.PageResult, error) {
+	where, err := params.toWhere()
+	if err != nil {
+		return nil, nil, err
+	}
+	if !db.ContainWithMasterOpt(opt) && r.writeTracker.CheckWriteFlagBySearchParam(ctx, platestwrite.ResourceTypeDataset, strconv.FormatInt(params.SpaceID, 10)) {
+		opt = append(opt, db.WithMaster())
+	}
+	var (
+		// 仅 Select id：DB 只回传 id 列，但仍以 model.Dataset 承载以便 Paginator 反射出游标。
+		tx  = r.db.NewSession(ctx, opt...).Model(&model.Dataset{}).Select("id").Where(where)
+		pos []*model.Dataset
+	)
+
+	result := params.Paginator.Find(ctx, tx, &pos)
+	if result.Error != nil {
+		return nil, nil, errno.MaybeDBErr(result.Error, "list dataset ids")
+	}
+
+	ids := make([]int64, 0, len(pos))
+	for _, po := range pos {
+		ids = append(ids, po.ID)
+	}
+	return ids, params.Paginator.Result(), nil
 }
 
 func (r *DatasetDAOImpl) CountDatasets(ctx context.Context, params *ListDatasetsParams, opt ...db.Option) (int64, error) {

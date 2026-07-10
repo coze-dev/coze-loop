@@ -38,6 +38,9 @@ type IDatasetService interface {
 	GetDatasetWithOpt(ctx context.Context, spaceID, id int64, opt *GetOpt) (*DatasetWithSchema, error)
 	BatchGetDatasetWithOpt(ctx context.Context, spaceID int64, ids []int64, opt *GetOpt) ([]*DatasetWithSchema, error)
 	SearchDataset(ctx context.Context, req *SearchDatasetsParam) (*SearchDatasetsResults, error)
+	// CountDatasetsAboveItemCount 统计空间内 item_count 严格大于阈值的数据集数量。
+	// 通过有界游标分页枚举 id + 逐页批量读取 Redis item_count 累加，不物化完整 Dataset。
+	CountDatasetsAboveItemCount(ctx context.Context, req *CountDatasetsParam) (int64, error)
 }
 
 type ISchemaService interface {

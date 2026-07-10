@@ -115,6 +115,23 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 	})
 }
 
+func (d *EvaluationSetServiceImpl) CountEvaluationSets(ctx context.Context, param *entity.CountEvaluationSetsParam) (count int64, err error) {
+	if param == nil {
+		return 0, errorx.NewByCode(errno.CommonInternalErrorCode)
+	}
+	if param.WorkspaceID <= 0 {
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	if param.ItemCountGt < 0 {
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid item_count_gt"))
+	}
+	// 依赖数据集服务：评测集经 RPC 由 data 模块 Dataset 承载。
+	return d.datasetRPCAdapter.CountDatasets(ctx, &rpc.CountDatasetsParam{
+		SpaceID:     param.WorkspaceID,
+		ItemCountGt: param.ItemCountGt,
+	})
+}
+
 func (d *EvaluationSetServiceImpl) ImportEvaluationSet(ctx context.Context, param *entity.ImportEvaluationSetParam) (jobID int64, err error) {
 	if param == nil {
 		return 0, errorx.NewByCode(errno.CommonInternalErrorCode)

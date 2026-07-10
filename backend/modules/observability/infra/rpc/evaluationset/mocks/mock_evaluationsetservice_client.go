@@ -302,6 +302,26 @@ func (mr *MockClientMockRecorder) ListEvaluationSets(ctx, req any, callOptions .
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluationSets", reflect.TypeOf((*MockClient)(nil).ListEvaluationSets), varargs...)
 }
 
+// CountEvaluationSets mocks base method.
+func (m *MockClient) CountEvaluationSets(ctx context.Context, req *eval_set.CountEvaluationSetsRequest, callOptions ...callopt.Option) (*eval_set.CountEvaluationSetsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range callOptions {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CountEvaluationSets", varargs...)
+	ret0, _ := ret[0].(*eval_set.CountEvaluationSetsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountEvaluationSets indicates an expected call of CountEvaluationSets.
+func (mr *MockClientMockRecorder) CountEvaluationSets(ctx, req any, callOptions ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, callOptions...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountEvaluationSets", reflect.TypeOf((*MockClient)(nil).CountEvaluationSets), varargs...)
+}
+
 // UpdateEvaluationSet mocks base method.
 func (m *MockClient) UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest, callOptions ...callopt.Option) (*eval_set.UpdateEvaluationSetResponse, error) {
 	m.ctrl.T.Helper()

@@ -239,6 +239,34 @@ func (h *DatasetApplicationImpl) ListDatasets(ctx context.Context, req *dataset.
 	return resp, nil
 }
 
+// CountDatasets 统计当前空间内 item_count 严格大于阈值的数据集数量。
+// 单次请求返回聚合结果（不返回全量数据集列表）；阈值缺省兜底为 0（严格大于）。
+func (h *DatasetApplicationImpl) CountDatasets(ctx context.Context, req *dataset.CountDatasetsRequest) (resp *dataset.CountDatasetsResponse, err error) {
+	// 鉴权：复用 ListDatasets 同款空间鉴权。
+	err = h.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(rpc.CozeActionListLoopEvaluationSet), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var category entity.DatasetCategory
+	if req.Category != nil {
+		category = convertor.ConvertCategoryDTO2DO(gptr.Indirect(req.Category))
+	}
+	count, err := h.svc.CountDatasetsAboveItemCount(ctx, &service.CountDatasetsParam{
+		SpaceID:     req.GetWorkspaceID(),
+		Category:    category,
+		ItemCountGt: req.GetItemCountGt(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &dataset.CountDatasetsResponse{Count: gptr.Of(count)}, nil
+}
+
 func (h *DatasetApplicationImpl) GetDataset(ctx context.Context, req *dataset.GetDatasetRequest) (resp *dataset.GetDatasetResponse, err error) {
 	// 鉴权
 	err = h.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionRead)

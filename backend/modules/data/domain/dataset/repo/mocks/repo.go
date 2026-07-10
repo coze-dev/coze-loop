@@ -466,6 +466,27 @@ func (mr *MockIDatasetAPIMockRecorder) ListDatasets(ctx, params any, opt ...any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasets", reflect.TypeOf((*MockIDatasetAPI)(nil).ListDatasets), varargs...)
 }
 
+// ListDatasetIDs mocks base method.
+func (m *MockIDatasetAPI) ListDatasetIDs(ctx context.Context, params *repo.ListDatasetsParams, opt ...repo.Option) ([]int64, *pagination.PageResult, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range opt {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListDatasetIDs", varargs...)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(*pagination.PageResult)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListDatasetIDs indicates an expected call of ListDatasetIDs.
+func (mr *MockIDatasetAPIMockRecorder) ListDatasetIDs(ctx, params any, opt ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, opt...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasetIDs", reflect.TypeOf((*MockIDatasetAPI)(nil).ListDatasetIDs), varargs...)
+}
+
 // ListIOJobs mocks base method.
 func (m *MockIDatasetAPI) ListIOJobs(ctx context.Context, params *repo.ListIOJobsParams, opt ...repo.Option) ([]*entity.IOJob, error) {
 	m.ctrl.T.Helper()

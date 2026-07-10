@@ -47,6 +47,13 @@ type ListEvaluationSetsParam struct {
 	OrderBys         []*OrderBy
 }
 
+// CountEvaluationSetsParam 统计空间内 item_count 严格大于阈值的评测集数量的参数。
+type CountEvaluationSetsParam struct {
+	WorkspaceID int64
+	// item_count 阈值（严格大于）。缺省 0。
+	ItemCountGt int64
+}
+
 type ListEvaluationSetItemsParam struct {
 	SpaceID         int64
 	EvaluationSetID int64

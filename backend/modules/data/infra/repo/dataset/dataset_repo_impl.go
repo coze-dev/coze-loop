@@ -169,6 +169,22 @@ func (d *DatasetRepo) CountDatasets(ctx context.Context, params *repo.ListDatase
 	return count, nil
 }
 
+func (d *DatasetRepo) ListDatasetIDs(ctx context.Context, params *repo.ListDatasetsParams, opt ...repo.Option) ([]int64, *pagination.PageResult, error) {
+	ids, pr, err := d.datasetDAO.ListDatasetIDs(ctx, &mysql.ListDatasetsParams{
+		Paginator:    params.Paginator,
+		SpaceID:      params.SpaceID,
+		IDs:          params.IDs,
+		Category:     string(params.Category),
+		CreatedBys:   params.CreatedBys,
+		NameLike:     params.NameLike,
+		BizCategorys: params.BizCategorys,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return ids, pr, nil
+}
+
 func newSchemaOfDataset(dataset *entity.Dataset, fields []*entity.FieldSchema) *entity.DatasetSchema {
 	immutable := false
 	if dataset.Features != nil {

@@ -49,6 +49,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CountEvaluationSets": kitex.NewMethodInfo(
+		countEvaluationSetsHandler,
+		newEvaluationSetServiceCountEvaluationSetsArgs,
+		newEvaluationSetServiceCountEvaluationSetsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateEvaluationSetWithImport": kitex.NewMethodInfo(
 		createEvaluationSetWithImportHandler,
 		newEvaluationSetServiceCreateEvaluationSetWithImportArgs,
@@ -280,6 +287,25 @@ func newEvaluationSetServiceListEvaluationSetsArgs() interface{} {
 
 func newEvaluationSetServiceListEvaluationSetsResult() interface{} {
 	return eval_set.NewEvaluationSetServiceListEvaluationSetsResult()
+}
+
+func countEvaluationSetsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceCountEvaluationSetsArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceCountEvaluationSetsResult)
+	success, err := handler.(eval_set.EvaluationSetService).CountEvaluationSets(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceCountEvaluationSetsArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceCountEvaluationSetsArgs()
+}
+
+func newEvaluationSetServiceCountEvaluationSetsResult() interface{} {
+	return eval_set.NewEvaluationSetServiceCountEvaluationSetsResult()
 }
 
 func createEvaluationSetWithImportHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -624,6 +650,16 @@ func (p *kClient) ListEvaluationSets(ctx context.Context, req *eval_set.ListEval
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceListEvaluationSetsResult
 	if err = p.c.Call(ctx, "ListEvaluationSets", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CountEvaluationSets(ctx context.Context, req *eval_set.CountEvaluationSetsRequest) (r *eval_set.CountEvaluationSetsResponse, err error) {
+	var _args eval_set.EvaluationSetServiceCountEvaluationSetsArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceCountEvaluationSetsResult
+	if err = p.c.Call(ctx, "CountEvaluationSets", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

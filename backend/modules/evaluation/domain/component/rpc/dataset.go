@@ -22,6 +22,8 @@ type IDatasetRPCAdapter interface {
 	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
 	BatchGetDatasets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (sets []*entity.EvaluationSet, err error)
 	ListDatasets(ctx context.Context, param *ListDatasetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error)
+	// CountDatasets 统计空间内 item_count 严格大于阈值的数据集（评测集）数量。
+	CountDatasets(ctx context.Context, param *CountDatasetsParam) (count int64, err error)
 
 	CreateDatasetVersion(ctx context.Context, spaceID, evaluationSetID int64, version string, desc *string) (id int64, err error)
 	GetDatasetVersion(ctx context.Context, spaceID, versionID int64, deletedAt *bool) (version *entity.EvaluationSetVersion, set *entity.EvaluationSet, err error)
@@ -96,6 +98,13 @@ type ListDatasetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*entity.OrderBy
+}
+
+// CountDatasetsParam 统计满足 item_count 阈值的数据集（评测集）数量的参数。
+type CountDatasetsParam struct {
+	SpaceID int64
+	// item_count 阈值（严格大于）。缺省 0。
+	ItemCountGt int64
 }
 
 type ListDatasetItemsParam struct {

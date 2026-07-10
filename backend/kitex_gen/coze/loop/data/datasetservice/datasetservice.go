@@ -42,6 +42,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CountDatasets": kitex.NewMethodInfo(
+		countDatasetsHandler,
+		newDatasetServiceCountDatasetsArgs,
+		newDatasetServiceCountDatasetsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"GetDataset": kitex.NewMethodInfo(
 		getDatasetHandler,
 		newDatasetServiceGetDatasetArgs,
@@ -303,6 +310,25 @@ func newDatasetServiceListDatasetsArgs() interface{} {
 
 func newDatasetServiceListDatasetsResult() interface{} {
 	return dataset.NewDatasetServiceListDatasetsResult()
+}
+
+func countDatasetsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*dataset.DatasetServiceCountDatasetsArgs)
+	realResult := result.(*dataset.DatasetServiceCountDatasetsResult)
+	success, err := handler.(dataset.DatasetService).CountDatasets(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newDatasetServiceCountDatasetsArgs() interface{} {
+	return dataset.NewDatasetServiceCountDatasetsArgs()
+}
+
+func newDatasetServiceCountDatasetsResult() interface{} {
+	return dataset.NewDatasetServiceCountDatasetsResult()
 }
 
 func getDatasetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -770,6 +796,16 @@ func (p *kClient) ListDatasets(ctx context.Context, req *dataset.ListDatasetsReq
 	_args.Req = req
 	var _result dataset.DatasetServiceListDatasetsResult
 	if err = p.c.Call(ctx, "ListDatasets", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CountDatasets(ctx context.Context, req *dataset.CountDatasetsRequest) (r *dataset.CountDatasetsResponse, err error) {
+	var _args dataset.DatasetServiceCountDatasetsArgs
+	_args.Req = req
+	var _result dataset.DatasetServiceCountDatasetsResult
+	if err = p.c.Call(ctx, "CountDatasets", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

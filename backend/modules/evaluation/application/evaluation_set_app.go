@@ -383,6 +383,33 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 	}, nil
 }
 
+// CountEvaluationSets 统计当前空间内 item_count 严格大于阈值的评测集数量。
+// 单次请求返回聚合计数；阈值缺省兜底为 0（严格大于，前端固定传 10）。
+func (e *EvaluationSetApplicationImpl) CountEvaluationSets(ctx context.Context, req *eval_set.CountEvaluationSetsRequest) (resp *eval_set.CountEvaluationSetsResponse, err error) {
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	// 鉴权：复用 ListEvaluationSets 同款空间鉴权。
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	// domain 调用：阈值兜底为 0（req.GetItemCountGt() 未传时返回 0）。
+	count, err := e.evaluationSetService.CountEvaluationSets(ctx, &entity.CountEvaluationSetsParam{
+		WorkspaceID: req.WorkspaceID,
+		ItemCountGt: req.GetItemCountGt(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &eval_set.CountEvaluationSetsResponse{Count: gptr.Of(count)}, nil
+}
+
 func (e *EvaluationSetApplicationImpl) BatchCreateEvaluationSetItems(ctx context.Context, req *eval_set.BatchCreateEvaluationSetItemsRequest) (resp *eval_set.BatchCreateEvaluationSetItemsResponse, err error) {
 	// 参数校验
 	if req == nil {

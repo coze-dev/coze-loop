@@ -481,6 +481,26 @@ func (mr *MockClientMockRecorder) ListDatasets(arg0, arg1 any, arg2 ...any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasets", reflect.TypeOf((*MockClient)(nil).ListDatasets), varargs...)
 }
 
+// CountDatasets mocks base method.
+func (m *MockClient) CountDatasets(arg0 context.Context, arg1 *dataset.CountDatasetsRequest, arg2 ...callopt.Option) (*dataset.CountDatasetsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CountDatasets", varargs...)
+	ret0, _ := ret[0].(*dataset.CountDatasetsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountDatasets indicates an expected call of CountDatasets.
+func (mr *MockClientMockRecorder) CountDatasets(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDatasets", reflect.TypeOf((*MockClient)(nil).CountDatasets), varargs...)
+}
+
 // UpdateDataset mocks base method.
 func (m *MockClient) UpdateDataset(arg0 context.Context, arg1 *dataset.UpdateDatasetRequest, arg2 ...callopt.Option) (*dataset.UpdateDatasetResponse, error) {
 	m.ctrl.T.Helper()

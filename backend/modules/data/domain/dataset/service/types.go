@@ -66,6 +66,14 @@ type SearchDatasetsResults struct {
 	Total              int64
 }
 
+// CountDatasetsParam 统计满足 item_count 严格大于阈值的数据集数量的参数。
+type CountDatasetsParam struct {
+	SpaceID  int64
+	Category entity.DatasetCategory
+	// item_count 阈值（严格大于）。缺省 0。
+	ItemCountGt int64
+}
+
 type UpdateDatasetParam struct {
 	SpaceID     int64
 	DatasetID   int64

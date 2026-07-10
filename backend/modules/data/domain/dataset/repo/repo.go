@@ -34,6 +34,8 @@ type IDatasetRepo interface {
 	PatchDataset(ctx context.Context, patch, where *entity.Dataset, opt ...Option) error
 	DeleteDataset(ctx context.Context, spaceID, id int64, opt ...Option) error
 	ListDatasets(ctx context.Context, params *ListDatasetsParams, opt ...Option) ([]*entity.Dataset, *pagination.PageResult, error)
+	// ListDatasetIDs 仅返回满足条件的 dataset id（游标分页），用于 item_count 阈值统计等无需完整行的场景。
+	ListDatasetIDs(ctx context.Context, params *ListDatasetsParams, opt ...Option) ([]int64, *pagination.PageResult, error)
 	CountDatasets(ctx context.Context, params *ListDatasetsParams, opt ...Option) (int64, error)
 }
 

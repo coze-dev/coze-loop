@@ -170,6 +170,72 @@ func (s *DatasetServiceImpl) buildSearchDatasetParam(req *SearchDatasetsParam) *
 	return param
 }
 
+const (
+	// countDatasetsPageSize 有界游标分页每页固定大小：每次只 SELECT id 一页，峰值内存只限单页。
+	countDatasetsPageSize = 100
+	// countDatasetsMaxScan 单次统计允许扫描的评测集 id 总量安全上限。
+	// 触顶必须显式报错，不得返回截断后的不精确 count。
+	countDatasetsMaxScan = 100000
+)
+
+// CountDatasetsAboveItemCount 统计空间内 item_count 严格大于阈值的数据集数量。
+// 有界游标分页枚举 id（每页只 SELECT id），逐页批量读取 Redis item_count，
+// 内存中按阈值严格大于过滤并增量累加，不物化完整 Dataset DTO、不持有全量 id。
+func (s *DatasetServiceImpl) CountDatasetsAboveItemCount(ctx context.Context, req *CountDatasetsParam) (int64, error) {
+	if req == nil || req.SpaceID <= 0 {
+		return 0, errno.InvalidParamErrorf("invalid workspace_id for count datasets")
+	}
+	if req.ItemCountGt < 0 {
+		return 0, errno.InvalidParamErrorf("invalid item_count_gt for count datasets: %d", req.ItemCountGt)
+	}
+
+	var (
+		count   int64
+		scanned int64
+		cursor  string
+	)
+	for {
+		pg := pagination.New(
+			pagination.WithOrderBy(pagination.ColumnID),
+			pagination.WithLimit(countDatasetsPageSize),
+			pagination.WithCursor(cursor),
+		)
+		params := &repo.ListDatasetsParams{
+			SpaceID:   req.SpaceID,
+			Category:  req.Category,
+			Paginator: pg,
+		}
+		ids, pr, err := s.repo.ListDatasetIDs(ctx, params)
+		if err != nil {
+			return 0, err
+		}
+		if len(ids) == 0 {
+			break
+		}
+		scanned += int64(len(ids))
+		if scanned > countDatasetsMaxScan {
+			// 触顶显式报错，避免返回不精确的截断 count。
+			return 0, errno.InternalErrorf("count datasets exceeds max scan limit %d, space_id=%d", countDatasetsMaxScan, req.SpaceID)
+		}
+
+		itemCounts, err := s.repo.MGetItemCount(ctx, ids...)
+		if err != nil {
+			return 0, err
+		}
+		for _, id := range ids {
+			if itemCounts[id] > req.ItemCountGt {
+				count++
+			}
+		}
+
+		if pr == nil || pr.Cursor == "" {
+			break
+		}
+		cursor = pr.Cursor
+	}
+	return count, nil
+}
+
 func (s *DatasetServiceImpl) buildNewDataset(d *entity.Dataset) {
 	d.Status = gcond.If(d.Status == "", entity.DatasetStatusAvailable, d.Status)
 	d.Visibility = gcond.If(d.Visibility == "", entity.DatasetVisibilitySpace, d.Visibility)

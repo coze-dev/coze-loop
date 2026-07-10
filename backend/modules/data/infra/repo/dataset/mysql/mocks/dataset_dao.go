@@ -143,6 +143,27 @@ func (mr *MockIDatasetDAOMockRecorder) ListDatasets(ctx, params any, opt ...any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasets", reflect.TypeOf((*MockIDatasetDAO)(nil).ListDatasets), varargs...)
 }
 
+// ListDatasetIDs mocks base method.
+func (m *MockIDatasetDAO) ListDatasetIDs(ctx context.Context, params *mysql.ListDatasetsParams, opt ...db.Option) ([]int64, *pagination.PageResult, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range opt {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListDatasetIDs", varargs...)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(*pagination.PageResult)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListDatasetIDs indicates an expected call of ListDatasetIDs.
+func (mr *MockIDatasetDAOMockRecorder) ListDatasetIDs(ctx, params any, opt ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, opt...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasetIDs", reflect.TypeOf((*MockIDatasetDAO)(nil).ListDatasetIDs), varargs...)
+}
+
 // MGetDatasets mocks base method.
 func (m *MockIDatasetDAO) MGetDatasets(ctx context.Context, spaceID int64, ids []int64, opt ...db.Option) ([]*model.Dataset, error) {
 	m.ctrl.T.Helper()
