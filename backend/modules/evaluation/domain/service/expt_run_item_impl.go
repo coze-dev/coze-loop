@@ -333,9 +333,9 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 
 // buildItemCompleteEvent 从单行评测上下文组装 item-complete 事件，全部取内存已有数据、零额外 IO。
 // dataset 维度以 item 实际归属为准：dataset_id 从 EvalSetItem 取，dataset_version_id 用 per-item
-// EvalSetVersionID（来自 expt_item_ref）；version_name / dataset_key 从 eiec.Expt.EvalSetDetails 里
-// 按归属 eval_set_id 查找——EvalSetDetails 在 GetDetail 时已一次性批量拉全所有集详情（含主集/非主集），
-// 无需再逐 item 查下游。单评测集老实验无 EvalSetDetails 时回退主集 eiec.Expt.EvalSet。
+// EvalSetVersionID（来自 expt_item_ref）；version_name / dataset_key 由 findEvalSetForItem 按
+// experiment.eval_set_source_type 显式分流取值——多集从 EvalSetDetails 按归属集匹配（GetDetail 已批量
+// 拉全所有集详情），单集/老实验直接用主集 eiec.Expt.EvalSet，均零额外 IO。
 func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemCompleteEvent {
 	event := eiec.Event
 	ev := &component.ItemCompleteEvent{
@@ -382,19 +382,25 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 }
 
 // findEvalSetForItem 从实验详情里找 item 归属集的 EvaluationSet（含 version/dataset_key）。
-// 多评测集: 从 EvalSetDetails 里按 datasetID 匹配（GetDetail 已批量填充所有集详情）；
-// 单评测集/老实验: EvalSetDetails 为空时回退主集 eiec.Expt.EvalSet。
+// 按 experiment.eval_set_source_type 显式分流（权威分流开关，DB not null default 1）：
+//   - MultiSetConfig(2) 新实验: 从 EvalSetDetails 按 datasetID 匹配归属集（GetDetail 已批量填充所有集详情）；
+//     匹配不到即返回 nil，不回退主集，避免把主集版本误安到非主集 item 上（张冠李戴）。
+//   - SingleSet(1) 老实验/单评测集: 直接用主集单数字段 eiec.Expt.EvalSet。
 func findEvalSetForItem(eiec *entity.ExptItemEvalCtx, datasetID int64) *entity.EvaluationSet {
 	expt := eiec.Expt
 	if expt == nil {
 		return nil
 	}
-	for _, d := range expt.EvalSetDetails {
-		if d != nil && d.EvalSetID == datasetID && d.EvalSet != nil {
-			return d.EvalSet
+	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		// 多评测集: 只认 EvalSetDetails 里按归属 eval_set_id 命中的集，不回退主集。
+		for _, d := range expt.EvalSetDetails {
+			if d != nil && d.EvalSetID == datasetID && d.EvalSet != nil {
+				return d.EvalSet
+			}
 		}
+		return nil
 	}
-	// 回退主集（单评测集/老实验，或 datasetID 未知时）
+	// 单评测集/老实验（SingleSet 或未标记）: 用主集 EvalSet。
 	if expt.EvalSet != nil && (datasetID == 0 || expt.EvalSet.ID == datasetID) {
 		return expt.EvalSet
 	}
