@@ -315,7 +315,8 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		return err
 	}
 
-	if e.itemCompletePublisher != nil {
+	// 仅 item 评测成功才推送 item-complete；失败不发（下游只消费成功行）。
+	if evalErr == nil && e.itemCompletePublisher != nil {
 		if err := e.itemCompletePublisher.PublishItemComplete(ctx, buildItemCompleteEvent(eiec)); err != nil {
 			logs.CtxWarn(ctx, "[ExptTurnEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, event.EvalSetItemID, err)
 		}
