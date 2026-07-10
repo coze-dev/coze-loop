@@ -1602,6 +1602,51 @@ func TestTraceApplication_GetTracesMetaInfo(t *testing.T) {
 			},
 			want: &trace.GetTracesMetaInfoResponse{FieldMetas: map[string]*trace.FieldMeta{}},
 		},
+		{
+			name: "success with trace default range",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetTracesMetaInfo(gomock.Any(), gomock.Any()).Return(&service.GetTracesMetaInfoResp{
+					FilesMetas:        map[string]*config.FieldMeta{},
+					TraceDefaultRange: "1h",
+				}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetTracesMetaInfoRequest{WorkspaceID: ptr.Of(int64(1))},
+			},
+			want: &trace.GetTracesMetaInfoResponse{
+				FieldMetas:        map[string]*trace.FieldMeta{},
+				TraceDefaultRange: ptr.Of("1h"),
+			},
+		},
+		{
+			name: "success with empty trace default range",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetTracesMetaInfo(gomock.Any(), gomock.Any()).Return(&service.GetTracesMetaInfoResp{
+					FilesMetas:        map[string]*config.FieldMeta{},
+					TraceDefaultRange: "",
+				}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetTracesMetaInfoRequest{WorkspaceID: ptr.Of(int64(1))},
+			},
+			want: &trace.GetTracesMetaInfoResponse{FieldMetas: map[string]*trace.FieldMeta{}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

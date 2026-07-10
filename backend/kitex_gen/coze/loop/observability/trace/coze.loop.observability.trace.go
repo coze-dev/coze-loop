@@ -7480,9 +7480,10 @@ func (p *GetTracesMetaInfoRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type GetTracesMetaInfoResponse struct {
-	FieldMetas  map[string]*FieldMeta `thrift:"field_metas,1,required" frugal:"1,required,map<string:FieldMeta>" form:"field_metas,required" json:"field_metas,required" query:"field_metas,required"`
-	KeySpanType []string              `thrift:"key_span_type,2,optional" frugal:"2,optional,list<string>" form:"key_span_type" json:"key_span_type,omitempty" query:"key_span_type"`
-	BaseResp    *base.BaseResp        `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	FieldMetas        map[string]*FieldMeta `thrift:"field_metas,1,required" frugal:"1,required,map<string:FieldMeta>" form:"field_metas,required" json:"field_metas,required" query:"field_metas,required"`
+	KeySpanType       []string              `thrift:"key_span_type,2,optional" frugal:"2,optional,list<string>" form:"key_span_type" json:"key_span_type,omitempty" query:"key_span_type"`
+	TraceDefaultRange *string               `thrift:"trace_default_range,3,optional" frugal:"3,optional,string" form:"trace_default_range" json:"trace_default_range,omitempty" query:"trace_default_range"`
+	BaseResp          *base.BaseResp        `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewGetTracesMetaInfoResponse() *GetTracesMetaInfoResponse {
@@ -7511,6 +7512,18 @@ func (p *GetTracesMetaInfoResponse) GetKeySpanType() (v []string) {
 	return p.KeySpanType
 }
 
+var GetTracesMetaInfoResponse_TraceDefaultRange_DEFAULT string
+
+func (p *GetTracesMetaInfoResponse) GetTraceDefaultRange() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceDefaultRange() {
+		return GetTracesMetaInfoResponse_TraceDefaultRange_DEFAULT
+	}
+	return *p.TraceDefaultRange
+}
+
 var GetTracesMetaInfoResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *GetTracesMetaInfoResponse) GetBaseResp() (v *base.BaseResp) {
@@ -7528,6 +7541,9 @@ func (p *GetTracesMetaInfoResponse) SetFieldMetas(val map[string]*FieldMeta) {
 func (p *GetTracesMetaInfoResponse) SetKeySpanType(val []string) {
 	p.KeySpanType = val
 }
+func (p *GetTracesMetaInfoResponse) SetTraceDefaultRange(val *string) {
+	p.TraceDefaultRange = val
+}
 func (p *GetTracesMetaInfoResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -7535,11 +7551,16 @@ func (p *GetTracesMetaInfoResponse) SetBaseResp(val *base.BaseResp) {
 var fieldIDToName_GetTracesMetaInfoResponse = map[int16]string{
 	1:   "field_metas",
 	2:   "key_span_type",
+	3:   "trace_default_range",
 	255: "BaseResp",
 }
 
 func (p *GetTracesMetaInfoResponse) IsSetKeySpanType() bool {
 	return p.KeySpanType != nil
+}
+
+func (p *GetTracesMetaInfoResponse) IsSetTraceDefaultRange() bool {
+	return p.TraceDefaultRange != nil
 }
 
 func (p *GetTracesMetaInfoResponse) IsSetBaseResp() bool {
@@ -7577,6 +7598,14 @@ func (p *GetTracesMetaInfoResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7677,6 +7706,17 @@ func (p *GetTracesMetaInfoResponse) ReadField2(iprot thrift.TProtocol) error {
 	p.KeySpanType = _field
 	return nil
 }
+func (p *GetTracesMetaInfoResponse) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceDefaultRange = _field
+	return nil
+}
 func (p *GetTracesMetaInfoResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -7698,6 +7738,10 @@ func (p *GetTracesMetaInfoResponse) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -7775,6 +7819,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *GetTracesMetaInfoResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceDefaultRange() {
+		if err = oprot.WriteFieldBegin("trace_default_range", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceDefaultRange); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 func (p *GetTracesMetaInfoResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
@@ -7814,6 +7876,9 @@ func (p *GetTracesMetaInfoResponse) DeepEqual(ano *GetTracesMetaInfoResponse) bo
 	if !p.Field2DeepEqual(ano.KeySpanType) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.TraceDefaultRange) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -7843,6 +7908,18 @@ func (p *GetTracesMetaInfoResponse) Field2DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *GetTracesMetaInfoResponse) Field3DeepEqual(src *string) bool {
+
+	if p.TraceDefaultRange == src {
+		return true
+	} else if p.TraceDefaultRange == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceDefaultRange, *src) != 0 {
+		return false
 	}
 	return true
 }

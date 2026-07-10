@@ -256,6 +256,7 @@ type ITraceConfig interface {
 	GetReflowInsertConfig(ctx context.Context) *ReflowInsertConfig
 	GetSearchTraceTreeMaxSpanLimit(ctx context.Context, workspaceID int64) int32
 	GetTrajectoryMetadataConfig(ctx context.Context) *TrajectoryMetadataConfig
+	GetTraceTimeRangeConfig(ctx context.Context) map[string]string
 
 	conf.IConfigLoader
 }

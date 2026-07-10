@@ -247,8 +247,9 @@ type GetTracesMetaInfoReq struct {
 }
 
 type GetTracesMetaInfoResp struct {
-	FilesMetas      map[string]*config.FieldMeta
-	KeySpanTypeList []string
+	FilesMetas        map[string]*config.FieldMeta
+	KeySpanTypeList   []string
+	TraceDefaultRange string
 }
 
 type CreateAnnotationReq struct {
@@ -1692,10 +1693,21 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	if !ok {
 		keySpanTypes = spanTypeCfg[string(loop_span.PlatformDefault)]
 	}
-	return &GetTracesMetaInfoResp{
-		FilesMetas:      fieldMetas,
-		KeySpanTypeList: keySpanTypes,
-	}, nil
+
+	var traceDefaultRange string
+	timeRangeCfg := r.traceConfig.GetTraceTimeRangeConfig(ctx)
+	logs.CtxInfo(ctx, "GetTracesMetaInfo timeRangeCfg=%+v, workspaceID=%d", timeRangeCfg, req.WorkspaceID)
+	if timeRangeCfg != nil {
+		traceDefaultRange = timeRangeCfg[strconv.FormatInt(req.WorkspaceID, 10)]
+	}
+
+	resp := &GetTracesMetaInfoResp{
+		FilesMetas:        fieldMetas,
+		KeySpanTypeList:   keySpanTypes,
+		TraceDefaultRange: traceDefaultRange,
+	}
+	logs.CtxInfo(ctx, "GetTracesMetaInfo resp.TraceDefaultRange=%s", resp.TraceDefaultRange)
+	return resp, nil
 }
 
 func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataReq) (*ListMetadataResp, error) {

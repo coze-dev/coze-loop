@@ -35,6 +35,7 @@ const (
 	reflowInsertCfgKey                 = "reflow_insert_config"
 	searchTraceTreeMaxSpanLimitCfgKey  = "search_trace_tree_max_span_limit"
 	trajectoryMetadataCfgKey           = "trajectory_metadata_config"
+	traceTimeRangeCfgKey               = "trace_time_range"
 
 	defaultBackfillDispatchBatchSize   = 10
 	defaultBackfillDispatchIntervalMs  = 1000
@@ -306,4 +307,12 @@ func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {
 	logs.Info("default trace ingest tenant is %s", tenant)
 	ret.traceDefaultTenant = tenant
 	return ret
+}
+
+func (t *TraceConfigCenter) GetTraceTimeRangeConfig(ctx context.Context) map[string]string {
+	cfg := make(map[string]string)
+	if err := t.UnmarshalKey(ctx, traceTimeRangeCfgKey, &cfg); err != nil {
+		return nil
+	}
+	return cfg
 }
