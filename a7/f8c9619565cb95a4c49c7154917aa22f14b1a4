@@ -1,0 +1,23 @@
+saas/coze/loop/eval_analysis_platform/coze.loop.eval_analysis_platform.thrift
+  s_7a9fbaa417bcf4::t_18d59010bc513a 73
+saas/coze/loop/eval_analysis_platform/execution.thrift
+  s_7a9fbaa417bcf4::t_d1d3cce91dc952 28-47,137-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a7f8c9619565cb95a4c49c7154917aa22f14b1a4",
+  "prompts": {},
+  "sessions": {
+    "s_7a9fbaa417bcf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_7a9fbaa417bcf4",
+        "model": "unknown"
+      },
+      "human_author": "lizhanpeng <lizhanpeng@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
