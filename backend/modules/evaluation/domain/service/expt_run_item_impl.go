@@ -331,9 +331,11 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 	return nil
 }
 
-// buildItemCompleteEvent 从单行评测上下文组装 item-complete 事件，全部取内存已有数据，不发起额外 IO。
-// dataset 维度以 item 实际归属为准（多评测集下 EvalSetItem/EvalSetVersionID 来自 per-item ref 解析）；
-// version_name / dataset_key 是评测集元数据, 仅实验主集在内存中, 非主集留空由消费侧按 id 回查。
+// buildItemCompleteEvent 从单行评测上下文组装 item-complete 事件，全部取内存已有数据、零额外 IO。
+// dataset 维度以 item 实际归属为准：dataset_id 从 EvalSetItem 取，dataset_version_id 用 per-item
+// EvalSetVersionID（来自 expt_item_ref）；version_name / dataset_key 从 eiec.Expt.EvalSetDetails 里
+// 按归属 eval_set_id 查找——EvalSetDetails 在 GetDetail 时已一次性批量拉全所有集详情（含主集/非主集），
+// 无需再逐 item 查下游。单评测集老实验无 EvalSetDetails 时回退主集 eiec.Expt.EvalSet。
 func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemCompleteEvent {
 	event := eiec.Event
 	ev := &component.ItemCompleteEvent{
@@ -350,35 +352,53 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 		}
 	}
 
+	var datasetID int64
 	if item := eiec.EvalSetItem; item != nil {
+		datasetID = item.EvaluationSetID
 		ev.DatasetWorkspaceID = strconv.FormatInt(item.SpaceID, 10)
-		ev.DatasetID = strconv.FormatInt(item.EvaluationSetID, 10)
+		ev.DatasetID = strconv.FormatInt(datasetID, 10)
 		// item_key 直接透传评测集 item 的实体 ItemKey（由下游 data 服务写入），
 		// 空则保持空、不降级到 item_id，交由数据侧处理。
 		ev.ItemKey = item.ItemKey
 	}
 
-	// dataset_version_id 用 per-item 归属集版本 (多评测集非主集也正确, 来自 expt_item_ref)。
+	// dataset_version_id 用 per-item 归属集版本（多评测集非主集也正确，来自 expt_item_ref）。
 	if eiec.EvalSetVersionID > 0 {
 		ev.DatasetVersionID = strconv.FormatInt(eiec.EvalSetVersionID, 10)
 	}
 
-	// version_name / dataset_key 是评测集元数据, 单行链路内存中仅实验主集有 (eiec.Expt.EvalSet)。
-	// 仅当 item 归属集 == 主集时填; 非主集留空, 由消费侧按 dataset_id + dataset_version_id 回查。
-	if expt := eiec.Expt; expt != nil && expt.EvalSet != nil {
-		es := expt.EvalSet
-		if eiec.EvalSetItem == nil || es.ID == eiec.EvalSetItem.EvaluationSetID {
-			ev.DatasetKey = es.DatasetKey
-			if ver := es.EvaluationSetVersion; ver != nil {
-				if ev.DatasetVersionID == "" {
-					ev.DatasetVersionID = strconv.FormatInt(ver.ID, 10)
-				}
-				ev.DatasetVersionName = ver.Version
+	// version_name / dataset_key: 按 item 归属集从内存查找（GetDetail 已批量拉全所有集详情）。
+	if es := findEvalSetForItem(eiec, datasetID); es != nil {
+		ev.DatasetKey = es.DatasetKey
+		if ver := es.EvaluationSetVersion; ver != nil {
+			if ev.DatasetVersionID == "" {
+				ev.DatasetVersionID = strconv.FormatInt(ver.ID, 10)
 			}
+			ev.DatasetVersionName = ver.Version
 		}
 	}
 
 	return ev
+}
+
+// findEvalSetForItem 从实验详情里找 item 归属集的 EvaluationSet（含 version/dataset_key）。
+// 多评测集: 从 EvalSetDetails 里按 datasetID 匹配（GetDetail 已批量填充所有集详情）；
+// 单评测集/老实验: EvalSetDetails 为空时回退主集 eiec.Expt.EvalSet。
+func findEvalSetForItem(eiec *entity.ExptItemEvalCtx, datasetID int64) *entity.EvaluationSet {
+	expt := eiec.Expt
+	if expt == nil {
+		return nil
+	}
+	for _, d := range expt.EvalSetDetails {
+		if d != nil && d.EvalSetID == datasetID && d.EvalSet != nil {
+			return d.EvalSet
+		}
+	}
+	// 回退主集（单评测集/老实验，或 datasetID 未知时）
+	if expt.EvalSet != nil && (datasetID == 0 || expt.EvalSet.ID == datasetID) {
+		return expt.EvalSet
+	}
+	return nil
 }
 
 func (e *ExptItemEvalCtxExecutor) evalErrNeedRetry(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) (bool, time.Duration) {
