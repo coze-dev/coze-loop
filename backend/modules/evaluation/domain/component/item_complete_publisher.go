@@ -19,7 +19,7 @@ type ItemCompleteEvent struct {
 	DatasetKey            string `json:"dataset_key"`              // 数据集唯一 Key（预期不可修改）
 	DatasetVersionName    string `json:"dataset_version_name"`     // 数据集版本名字，如 0.0.1
 	ItemID                string `json:"item_id"`                  // 数据集某一行的 ID
-	ItemKey               string `json:"item_key"`                 // 旧版同 item_id；新版为题目名（评测集内唯一，不可修改）
+	ItemKey               string `json:"item_key"`                 // 评测集 item 的实体 ItemKey（下游 data 服务写入）；直接透传，为空则空、不降级
 }
 
 type IItemCompletePublisher interface {

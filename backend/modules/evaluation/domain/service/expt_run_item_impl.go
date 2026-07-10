@@ -341,7 +341,6 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 		ExptID:          strconv.FormatInt(event.ExptID, 10),
 		ExptRunID:       strconv.FormatInt(event.ExptRunID, 10),
 		ItemID:          strconv.FormatInt(event.EvalSetItemID, 10),
-		ItemKey:         strconv.FormatInt(event.EvalSetItemID, 10), // 旧版无 item_key，同 item_id
 	}
 
 	if expt := eiec.Expt; expt != nil {
@@ -354,9 +353,9 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 	if item := eiec.EvalSetItem; item != nil {
 		ev.DatasetWorkspaceID = strconv.FormatInt(item.SpaceID, 10)
 		ev.DatasetID = strconv.FormatInt(item.EvaluationSetID, 10)
-		if item.ItemKey != "" {
-			ev.ItemKey = item.ItemKey
-		}
+		// item_key 直接透传评测集 item 的实体 ItemKey（由下游 data 服务写入），
+		// 空则保持空、不降级到 item_id，交由数据侧处理。
+		ev.ItemKey = item.ItemKey
 	}
 
 	// dataset_version_id 用 per-item 归属集版本 (多评测集非主集也正确, 来自 expt_item_ref)。
