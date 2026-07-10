@@ -597,6 +597,101 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "get traces meta info with time range config matched",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetTraceFieldMetaInfo(gomock.Any()).Return(&config.TraceFieldMetaInfoCfg{
+					FieldMetas: map[loop_span.PlatformType]map[loop_span.SpanListType][]string{
+						loop_span.PlatformDefault: {
+							loop_span.SpanListTypeAllSpan: {"field1"},
+						},
+						loop_span.PlatformCozeLoop: {
+							loop_span.SpanListTypeAllSpan: {},
+						},
+					},
+					AvailableFields: map[string]*config.FieldMeta{
+						"field1": {FieldType: "string"},
+					},
+				}, nil)
+				confMock.EXPECT().GetKeySpanTypes(gomock.Any()).Return(map[string][]string{
+					string(loop_span.PlatformDefault):  {},
+					string(loop_span.PlatformCozeLoop): {},
+				})
+				confMock.EXPECT().GetTraceTimeRangeConfig(gomock.Any()).Return(map[string]string{"100": "1h", "200": "24h"})
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				return fields{
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTracesMetaInfoReq{
+					WorkspaceID:  100,
+					PlatformType: loop_span.PlatformCozeLoop,
+					SpanListType: loop_span.SpanListTypeAllSpan,
+				},
+			},
+			want: &GetTracesMetaInfoResp{
+				FilesMetas: map[string]*config.FieldMeta{
+					"field1": {FieldType: "string"},
+				},
+				KeySpanTypeList:   []string{},
+				TraceDefaultRange: "1h",
+			},
+		},
+		{
+			name: "get traces meta info with time range config but workspace not found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetTraceFieldMetaInfo(gomock.Any()).Return(&config.TraceFieldMetaInfoCfg{
+					FieldMetas: map[loop_span.PlatformType]map[loop_span.SpanListType][]string{
+						loop_span.PlatformDefault: {
+							loop_span.SpanListTypeAllSpan: {"field1"},
+						},
+						loop_span.PlatformCozeLoop: {
+							loop_span.SpanListTypeAllSpan: {},
+						},
+					},
+					AvailableFields: map[string]*config.FieldMeta{
+						"field1": {FieldType: "string"},
+					},
+				}, nil)
+				confMock.EXPECT().GetKeySpanTypes(gomock.Any()).Return(map[string][]string{
+					string(loop_span.PlatformDefault):  {},
+					string(loop_span.PlatformCozeLoop): {},
+				})
+				confMock.EXPECT().GetTraceTimeRangeConfig(gomock.Any()).Return(map[string]string{"999": "24h"})
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				return fields{
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTracesMetaInfoReq{
+					WorkspaceID:  100,
+					PlatformType: loop_span.PlatformCozeLoop,
+					SpanListType: loop_span.SpanListTypeAllSpan,
+				},
+			},
+			want: &GetTracesMetaInfoResp{
+				FilesMetas: map[string]*config.FieldMeta{
+					"field1": {FieldType: "string"},
+				},
+				KeySpanTypeList: []string{},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
