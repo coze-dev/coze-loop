@@ -1342,6 +1342,19 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
+	// SandboxAgent 评测对象：重试前重新初始化沙箱任务
+	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
+	if e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
+		concurrency := int32(gptr.Indirect(entity.NormalizeSubmitItemConcurNum(got.EvalConf.ItemConcurNum)))
+		if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
+			TaskID:      strconv.FormatInt(req.GetExptID(), 10),
+			Concurrency: concurrency,
+			WorkspaceID: req.GetWorkspaceID(),
+		}); initErr != nil {
+			return nil, errorx.Wrapf(initErr, "re-init sandbox task on retry fail, expt_id=%d", req.GetExptID())
+		}
+	}
+
 	switch runMode {
 	case entity.EvaluationModeRetryItems:
 		rid, retried, err := e.manager.LogRetryItemsRun(ctx, req.GetExptID(), runMode, req.GetWorkspaceID(), req.GetItemIds(), session)
@@ -1371,6 +1384,22 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		RunID:    gptr.Of(runID),
 		BaseResp: base.NewBaseResp(),
 	}, nil
+}
+
+// isSandboxAgentExperiment 判定实验的评测对象是否为 SandboxAgent。
+// 顶层 TargetType 与 Target.EvalTargetVersion.EvalTargetType 双兜底，兼容不同读路径填充口径。
+func isSandboxAgentExperiment(expt *entity.Experiment) bool {
+	if expt == nil {
+		return false
+	}
+	if expt.TargetType == entity.EvalTargetTypeSandboxAgent {
+		return true
+	}
+	if expt.Target != nil && expt.Target.EvalTargetVersion != nil &&
+		expt.Target.EvalTargetVersion.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+		return true
+	}
+	return false
 }
 
 func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.KillExperimentRequest) (r *expt.KillExperimentResponse, err error) {
