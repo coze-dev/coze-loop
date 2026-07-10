@@ -21,6 +21,8 @@ type Client interface {
 	ListTrajectoryOApi(ctx context.Context, req *openapi.ListTrajectoryOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTrajectoryOApiResponse, err error)
 	CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (r *openapi.CreateAnnotationResponse, err error)
 	DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest, callOptions ...callopt.Option) (r *openapi.DeleteAnnotationResponse, err error)
+	GetTrajectoryConfigOApi(ctx context.Context, req *openapi.GetTrajectoryConfigOApiRequest, callOptions ...callopt.Option) (r *openapi.GetTrajectoryConfigOApiResponse, err error)
+	UpsertTrajectoryConfigOApi(ctx context.Context, req *openapi.UpsertTrajectoryConfigOApiRequest, callOptions ...callopt.Option) (r *openapi.UpsertTrajectoryConfigOApiResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -100,4 +102,14 @@ func (p *kOpenAPIServiceClient) CreateAnnotation(ctx context.Context, req *opena
 func (p *kOpenAPIServiceClient) DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest, callOptions ...callopt.Option) (r *openapi.DeleteAnnotationResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.DeleteAnnotation(ctx, req)
+}
+
+func (p *kOpenAPIServiceClient) GetTrajectoryConfigOApi(ctx context.Context, req *openapi.GetTrajectoryConfigOApiRequest, callOptions ...callopt.Option) (r *openapi.GetTrajectoryConfigOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetTrajectoryConfigOApi(ctx, req)
+}
+
+func (p *kOpenAPIServiceClient) UpsertTrajectoryConfigOApi(ctx context.Context, req *openapi.UpsertTrajectoryConfigOApiRequest, callOptions ...callopt.Option) (r *openapi.UpsertTrajectoryConfigOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpsertTrajectoryConfigOApi(ctx, req)
 }

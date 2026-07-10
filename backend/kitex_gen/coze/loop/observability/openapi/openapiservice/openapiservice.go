@@ -83,6 +83,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetTrajectoryConfigOApi": kitex.NewMethodInfo(
+		getTrajectoryConfigOApiHandler,
+		newOpenAPIServiceGetTrajectoryConfigOApiArgs,
+		newOpenAPIServiceGetTrajectoryConfigOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpsertTrajectoryConfigOApi": kitex.NewMethodInfo(
+		upsertTrajectoryConfigOApiHandler,
+		newOpenAPIServiceUpsertTrajectoryConfigOApiArgs,
+		newOpenAPIServiceUpsertTrajectoryConfigOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -306,6 +320,44 @@ func newOpenAPIServiceDeleteAnnotationResult() interface{} {
 	return openapi.NewOpenAPIServiceDeleteAnnotationResult()
 }
 
+func getTrajectoryConfigOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceGetTrajectoryConfigOApiArgs)
+	realResult := result.(*openapi.OpenAPIServiceGetTrajectoryConfigOApiResult)
+	success, err := handler.(openapi.OpenAPIService).GetTrajectoryConfigOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceGetTrajectoryConfigOApiArgs() interface{} {
+	return openapi.NewOpenAPIServiceGetTrajectoryConfigOApiArgs()
+}
+
+func newOpenAPIServiceGetTrajectoryConfigOApiResult() interface{} {
+	return openapi.NewOpenAPIServiceGetTrajectoryConfigOApiResult()
+}
+
+func upsertTrajectoryConfigOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceUpsertTrajectoryConfigOApiArgs)
+	realResult := result.(*openapi.OpenAPIServiceUpsertTrajectoryConfigOApiResult)
+	success, err := handler.(openapi.OpenAPIService).UpsertTrajectoryConfigOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceUpsertTrajectoryConfigOApiArgs() interface{} {
+	return openapi.NewOpenAPIServiceUpsertTrajectoryConfigOApiArgs()
+}
+
+func newOpenAPIServiceUpsertTrajectoryConfigOApiResult() interface{} {
+	return openapi.NewOpenAPIServiceUpsertTrajectoryConfigOApiResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -413,6 +465,26 @@ func (p *kClient) DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnot
 	_args.Req = req
 	var _result openapi.OpenAPIServiceDeleteAnnotationResult
 	if err = p.c.Call(ctx, "DeleteAnnotation", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetTrajectoryConfigOApi(ctx context.Context, req *openapi.GetTrajectoryConfigOApiRequest) (r *openapi.GetTrajectoryConfigOApiResponse, err error) {
+	var _args openapi.OpenAPIServiceGetTrajectoryConfigOApiArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceGetTrajectoryConfigOApiResult
+	if err = p.c.Call(ctx, "GetTrajectoryConfigOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpsertTrajectoryConfigOApi(ctx context.Context, req *openapi.UpsertTrajectoryConfigOApiRequest) (r *openapi.UpsertTrajectoryConfigOApiResponse, err error) {
+	var _args openapi.OpenAPIServiceUpsertTrajectoryConfigOApiArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceUpsertTrajectoryConfigOApiResult
+	if err = p.c.Call(ctx, "UpsertTrajectoryConfigOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

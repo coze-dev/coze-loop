@@ -614,6 +614,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_traces0.POST("/search", append(_searchtraceoapiMw(handler), apis.SearchTraceOApi)...)
 				_traces0.POST("/search_tree", append(_searchtracetreeoapiMw(handler), apis.SearchTraceTreeOApi)...)
 				_traces0.POST("/trajectory", append(_listtrajectoryoapiMw(handler), apis.ListTrajectoryOApi)...)
+				_traces0.GET("/trajectory_config", append(_gettrajectoryconfigoapiMw(handler), apis.GetTrajectoryConfigOApi)...)
+				_traces0.POST("/trajectory_config", append(_upserttrajectoryconfigoapiMw(handler), apis.UpsertTrajectoryConfigOApi)...)
 			}
 		}
 	}

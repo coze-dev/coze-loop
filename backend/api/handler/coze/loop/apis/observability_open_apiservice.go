@@ -90,3 +90,15 @@ func ListPreSpanOApi(ctx context.Context, c *app.RequestContext) {
 func ListTrajectoryOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListTrajectoryOApi)
 }
+
+// GetTrajectoryConfigOApi .
+// @router /v1/loop/traces/trajectory_config [GET]
+func GetTrajectoryConfigOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.GetTrajectoryConfigOApi)
+}
+
+// UpsertTrajectoryConfigOApi .
+// @router /v1/loop/traces/trajectory_config [POST]
+func UpsertTrajectoryConfigOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.UpsertTrajectoryConfigOApi)
+}

@@ -1235,3 +1235,50 @@ func (o *OpenAPIApplication) validateListTrajectoryOApiReq(ctx context.Context, 
 	}
 	return nil
 }
+
+func (o *OpenAPIApplication) GetTrajectoryConfigOApi(ctx context.Context, req *openapi.GetTrajectoryConfigOApiRequest) (*openapi.GetTrajectoryConfigOApiResponse, error) {
+	if err := o.auth.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	confResp, err := o.traceService.GetTrajectoryConfig(ctx, &service.GetTrajectoryConfigRequest{
+		WorkspaceID: req.WorkspaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if confResp == nil {
+		return &openapi.GetTrajectoryConfigOApiResponse{}, nil
+	}
+
+	return &openapi.GetTrajectoryConfigOApiResponse{
+		Filters: tconv.FilterFieldsDO2DTO(confResp.Filters),
+	}, nil
+}
+
+func (o *OpenAPIApplication) UpsertTrajectoryConfigOApi(ctx context.Context, req *openapi.UpsertTrajectoryConfigOApiRequest) (*openapi.UpsertTrajectoryConfigOApiResponse, error) {
+	if err := o.auth.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	if userID == "" {
+		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+
+	if err := o.traceService.UpsertTrajectoryConfig(ctx, &service.UpsertTrajectoryConfigRequest{
+		WorkspaceID: req.WorkspaceID,
+		Filters:     tconv.FilterFieldsDTO2DO(req.Filters),
+		UserID:      userID,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &openapi.UpsertTrajectoryConfigOApiResponse{}, nil
+}

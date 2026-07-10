@@ -232,6 +232,48 @@ func (l *LocalOpenAPIService) DeleteAnnotation(ctx context.Context, req *openapi
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalOpenAPIService) GetTrajectoryConfigOApi(ctx context.Context, req *openapi.GetTrajectoryConfigOApiRequest, callOptions ...callopt.Option) (*openapi.GetTrajectoryConfigOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceGetTrajectoryConfigOApiArgs)
+		result := out.(*openapi.OpenAPIServiceGetTrajectoryConfigOApiResult)
+		resp, err := l.impl.GetTrajectoryConfigOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceGetTrajectoryConfigOApiArgs{Req: req}
+	result := &openapi.OpenAPIServiceGetTrajectoryConfigOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "GetTrajectoryConfigOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalOpenAPIService) UpsertTrajectoryConfigOApi(ctx context.Context, req *openapi.UpsertTrajectoryConfigOApiRequest, callOptions ...callopt.Option) (*openapi.UpsertTrajectoryConfigOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceUpsertTrajectoryConfigOApiArgs)
+		result := out.(*openapi.OpenAPIServiceUpsertTrajectoryConfigOApiResult)
+		resp, err := l.impl.UpsertTrajectoryConfigOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceUpsertTrajectoryConfigOApiArgs{Req: req}
+	result := &openapi.OpenAPIServiceUpsertTrajectoryConfigOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "UpsertTrajectoryConfigOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalOpenAPIService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

@@ -224,6 +224,31 @@ struct ListTrajectoryOApiData {
     1: required list<trajectory.Trajectory> trajectories
 }
 
+struct GetTrajectoryConfigOApiRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.query='workspace_id', vt.gt="0")
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct GetTrajectoryConfigOApiResponse {
+    1: optional filter.FilterFields filters
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct UpsertTrajectoryConfigOApiRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: optional filter.FilterFields filters (api.body="filters")
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct UpsertTrajectoryConfigOApiResponse {
+    255: optional base.BaseResp BaseResp
+}
+
 service OpenAPIService {
     IngestTracesResponse IngestTraces(1: IngestTracesRequest req) (api.post = '/v1/loop/traces/ingest')
     OtelIngestTracesResponse OtelIngestTraces(1: OtelIngestTracesRequest req) (api.post = '/v1/loop/opentelemetry/v1/traces')
@@ -235,4 +260,6 @@ service OpenAPIService {
     ListTrajectoryOApiResponse ListTrajectoryOApi(1: ListTrajectoryOApiRequest req) (api.post = '/v1/loop/traces/trajectory')
     CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req) (api.post = '/v1/loop/annotations', api.tag="openapi")
     DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req) (api.delete = '/v1/loop/annotations', api.tag="openapi")
+    GetTrajectoryConfigOApiResponse GetTrajectoryConfigOApi(1: GetTrajectoryConfigOApiRequest req) (api.get = '/v1/loop/traces/trajectory_config', api.tag="openapi")
+    UpsertTrajectoryConfigOApiResponse UpsertTrajectoryConfigOApi(1: UpsertTrajectoryConfigOApiRequest req) (api.post = '/v1/loop/traces/trajectory_config', api.tag="openapi")
 }
