@@ -20,8 +20,7 @@ import (
 func TestOpenAPICreateEvalTargetParamDTO2Domain_SandboxAgent(t *testing.T) {
 	t.Run("SandboxAgent 为 nil 时 result.SandboxAgent 也为 nil", func(t *testing.T) {
 		param := &openapi.SubmitExperimentEvalTargetParam{}
-		res, err := OpenAPICreateEvalTargetParamDTO2Domain(param)
-		assert.NoError(t, err)
+		res := OpenAPICreateEvalTargetParamDTO2Domain(param)
 		assert.NotNil(t, res)
 		assert.Nil(t, res.SandboxAgent)
 	})
@@ -41,8 +40,7 @@ func TestOpenAPICreateEvalTargetParamDTO2Domain_SandboxAgent(t *testing.T) {
 				},
 			},
 		}
-		res, err := OpenAPICreateEvalTargetParamDTO2Domain(param)
-		assert.NoError(t, err)
+		res := OpenAPICreateEvalTargetParamDTO2Domain(param)
 		assert.NotNil(t, res.SandboxAgent)
 		assert.Equal(t, gptr.Of("agent1"), res.SandboxAgent.Name)
 		assert.Equal(t, gptr.Of("doubao"), res.SandboxAgent.ModelName)

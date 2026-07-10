@@ -471,6 +471,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 	idGen := idgenmocks.NewMockIIDGenerator(ctrl)
 	evalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
 	schedulerModeFactory := svcmocks.NewMockSchedulerModeFactory(ctrl)
+	evalTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
 
 	svc := NewExptSchedulerSvc(
 		manager,
@@ -491,6 +492,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 		idGen,
 		evalSetItemSvc,
 		schedulerModeFactory,
+		evalTargetSvc,
 	)
 	assert.NotNil(t, svc)
 	assert.Implements(t, (*ExptSchedulerEvent)(nil), svc)

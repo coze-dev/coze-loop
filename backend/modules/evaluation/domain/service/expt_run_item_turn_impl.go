@@ -1144,12 +1144,6 @@ func buildEvalSetItemMeta(etec *entity.ExptTurnEvalCtx) *entity.EvalSetItemMeta 
 			meta.ItemID = strconv.FormatInt(etec.EvalSetItem.ItemID, 10)
 		}
 		meta.ItemKey = etec.EvalSetItem.ItemKey
-		if etec.EvalSetItem.ItemVersionID != nil && *etec.EvalSetItem.ItemVersionID != 0 {
-			meta.ItemVersionID = strconv.FormatInt(*etec.EvalSetItem.ItemVersionID, 10)
-		}
-		if etec.EvalSetItem.ItemVersion != nil {
-			meta.ItemVersion = *etec.EvalSetItem.ItemVersion
-		}
 	}
 	return meta
 }
