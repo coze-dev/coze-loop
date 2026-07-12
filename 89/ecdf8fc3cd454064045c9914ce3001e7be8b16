@@ -1,0 +1,16 @@
+backend/modules/evaluation/application/eval_openapi_app.go
+  h_8983d71e230e92 142,334,408-411,420,741-747,757-758
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "89ecdf8fc3cd454064045c9914ce3001e7be8b16",
+  "prompts": {},
+  "humans": {
+    "h_8983d71e230e92": {
+      "author": "liyunkun <liyunkun@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

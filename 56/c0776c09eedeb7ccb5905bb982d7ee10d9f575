@@ -1,0 +1,29 @@
+backend/modules/evaluation/application/eval_openapi_app.go
+  s_9a5beb431a3376::t_db7df176795a0d 141
+  s_9a5beb431a3376::t_a05ae12aa93292 641-642
+  s_9a5beb431a3376::t_0d5ac22ab878cd 110-111,115
+  s_9a5beb431a3376::t_bc7374ff2f548e 2514-2515,2518
+  s_9a5beb431a3376::t_fb97f066e2eacc 2604
+  s_9a5beb431a3376::t_9051d8a3be3717 2512-2513,2516-2517,2519-2569,2572-2573,2575-2603,2605-2617
+  s_9a5beb431a3376::t_631935857bc781 2570-2571,2574
+  h_8983d71e230e92 142,334,408-411,420,741-744,746-747,757-758
+  s_9a5beb431a3376::t_828f3600c8bdc6 745
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "56c0776c09eedeb7ccb5905bb982d7ee10d9f575",
+  "prompts": {},
+  "sessions": {
+    "s_9a5beb431a3376": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a37c15d19257bb0cba74ba5",
+        "model": "c_o_new__dev"
+      },
+      "human_author": null
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
