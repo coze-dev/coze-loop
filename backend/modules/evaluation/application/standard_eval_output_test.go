@@ -72,15 +72,14 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	assert.Equal(t, "dataset-1", got.DatasetKey)
 	require.NotNil(t, got.Output)
 	require.NotNil(t, got.Eval)
-	assert.Equal(t, "application/json", got.Output.GetContentType())
 	assert.False(t, got.Output.GetContentOmitted())
 
 	var output map[string]any
-	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetContent()), &output))
+	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
 	assert.Contains(t, output, "turns")
 
 	var eval map[string]any
-	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetContent()), &eval))
+	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
 	assert.Contains(t, eval, "turns")
 }
 
@@ -264,10 +263,8 @@ func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutput(t *testing.
 	require.NoError(t, err)
 	assert.Equal(t, "case-10", got.GetItemKey())
 	assert.Equal(t, "dataset-1", got.GetDatasetKey())
-	require.NotNil(t, got.Source)
-	assert.Equal(t, `"fornax"`, got.GetSource().GetContent())
 	require.NotNil(t, got.Agent)
-	assert.Contains(t, got.GetAgent().GetContent(), "codex")
+	assert.Contains(t, got.GetAgent().GetText(), "codex")
 }
 
 func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutputFields(t *testing.T) {
@@ -304,14 +301,12 @@ func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutputFields(t *te
 	require.NoError(t, err)
 	assert.Equal(t, "case-10", got.GetItemKey())
 	assert.Equal(t, "dataset-1", got.GetDatasetKey())
-	require.NotNil(t, got.Source)
-	assert.Contains(t, got.GetSource().GetContent(), "fornax")
 	require.NotNil(t, got.Agent)
-	assert.Contains(t, got.GetAgent().GetContent(), "codex")
+	assert.Contains(t, got.GetAgent().GetText(), "codex")
 	require.NotNil(t, got.Output)
-	assert.Contains(t, got.GetOutput().GetContent(), "file_diff")
+	assert.Contains(t, got.GetOutput().GetText(), "file_diff")
 	require.NotNil(t, got.Eval)
-	assert.Contains(t, got.GetEval().GetContent(), "score")
+	assert.Contains(t, got.GetEval().GetText(), "score")
 }
 
 func TestBuildItemStandardEvalOutput_DoesNotMisclassifyOrdinaryJSONActualOutput(t *testing.T) {
@@ -323,5 +318,5 @@ func TestBuildItemStandardEvalOutput_DoesNotMisclassifyOrdinaryJSONActualOutput(
 	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	require.NotNil(t, got.Output)
-	assert.Contains(t, got.Output.GetContent(), "output_fields")
+	assert.Contains(t, got.Output.GetText(), "output_fields")
 }

@@ -353,11 +353,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) IsValid() error {
 	return nil
 }
 func (p *ItemStandardEvalOutput) IsValid() error {
-	if p.Source != nil {
-		if err := p.Source.IsValid(); err != nil {
-			return fmt.Errorf("field Source not valid, %w", err)
-		}
-	}
 	if p.Detail != nil {
 		if err := p.Detail.IsValid(); err != nil {
 			return fmt.Errorf("field Detail not valid, %w", err)

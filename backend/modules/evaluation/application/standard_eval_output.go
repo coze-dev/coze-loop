@@ -20,7 +20,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
-const standardEvalOutputContentTypeJSON = "application/json"
 const maxStandardEvalOutputMGetItemIDs = 100
 
 var standardEvalOutputFieldKeys = []string{
@@ -171,9 +170,6 @@ func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutput
 	}
 
 	var err error
-	if res.Source, err = inlineJSONContent(std.Source); err != nil {
-		return nil, err
-	}
 	if res.Detail, err = inlineJSONContent(std.Detail); err != nil {
 		return nil, err
 	}
@@ -201,8 +197,6 @@ func inlineJSONContent(val any) (*expt.StandardEvalOutputContent, error) {
 		return nil, err
 	}
 	return &expt.StandardEvalOutputContent{
-		ContentType:    gptr.Of(standardEvalOutputContentTypeJSON),
-		Content:        gptr.Of(text),
 		Text:           gptr.Of(text),
 		ContentOmitted: gptr.Of(false),
 	}, nil
