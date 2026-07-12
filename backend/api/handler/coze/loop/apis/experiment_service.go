@@ -342,3 +342,19 @@ func ListExperimentStandardEvalOutputs(ctx context.Context, c *app.RequestContex
 func MGetExperimentStandardEvalOutputs(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localExptSvc.MGetExperimentStandardEvalOutputs)
 }
+
+// GetExperimentIDsByGroup .
+// @router /api/evaluation/v1/experiments/group_ids/batch_get [POST]
+func GetExperimentIDsByGroup(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.GetExperimentIDsByGroupRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.GetExperimentIDsByGroupResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

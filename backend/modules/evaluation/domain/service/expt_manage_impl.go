@@ -1016,12 +1016,17 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if triggerType == "" {
 		triggerType = "manual"
 	}
+	experimentGroupKey := strings.TrimSpace(req.ExperimentGroupKey)
+	if experimentGroupKey == "" {
+		experimentGroupKey = strconv.FormatInt(ids[0], 10)
+	}
 	do := &entity.Experiment{
 		ID:                  ids[0],
 		SpaceID:             req.WorkspaceID,
 		CreatedBy:           session.UserID,
 		Name:                req.Name,
 		Description:         req.Desc,
+		ExperimentGroupKey:  experimentGroupKey,
 		EvalSetVersionID:    req.EvalSetVersionID,
 		EvalSetID:           req.EvalSetID,
 		EvaluatorVersionRef: evaluatorRefs,

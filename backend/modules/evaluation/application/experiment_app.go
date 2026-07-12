@@ -17,9 +17,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
-	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
@@ -534,9 +534,10 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		Ext:                     req.Ext,
 		// ★ 新路径透传: Submit 的 eval_set_configs (75 号) 与 Create 同构，
 		// 分流唯一以 eval_set_source_type 为准 (== MultiSetConfig 走新路径), configs 仅作权威源数据。
-		EvalSetConfigs: req.EvalSetConfigs,
-		EvalSetSourceType: req.EvalSetSourceType,
-		NotificationConf:        req.NotificationConf,
+		EvalSetConfigs:     req.EvalSetConfigs,
+		EvalSetSourceType:  req.EvalSetSourceType,
+		ExperimentGroupKey: req.ExperimentGroupKey,
+		NotificationConf:   req.NotificationConf,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -1047,6 +1048,32 @@ func (e *experimentApplication) BatchGetExperiments(ctx context.Context, req *ex
 	return &expt.BatchGetExperimentsResponse{
 		Experiments: vos,
 		BaseResp:    base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest) (r *expt.GetExperimentIDsByGroupResponse, err error) {
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	// TODO: replace this mock with experiment_group_key DB lookup after the DDL is ready.
+	// The target default semantics is experiment_group_key == experiment_id, so parsing the
+	// group key as an experiment ID gives a usable single-experiment mock before DB rollout.
+	exptIDs := make([]int64, 0, 1)
+	groupKey := strings.TrimSpace(req.GetExperimentGroupKey())
+	if groupKey != "" {
+		if exptID, parseErr := strconv.ParseInt(groupKey, 10, 64); parseErr == nil && exptID > 0 {
+			exptIDs = append(exptIDs, exptID)
+		}
+	}
+
+	return &expt.GetExperimentIDsByGroupResponse{
+		ExptIds:  exptIDs,
+		BaseResp: base.NewBaseResp(),
 	}, nil
 }
 

@@ -4,6 +4,8 @@
 package convert
 
 import (
+	"strconv"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/samber/lo"
 
@@ -99,11 +101,14 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 	}
 
 	res := &entity.Experiment{
-		ID:                        expt.ID,
-		SpaceID:                   expt.SpaceID,
-		CreatedBy:                 expt.CreatedBy,
-		Name:                      expt.Name,
-		Description:               expt.Description,
+		ID:          expt.ID,
+		SpaceID:     expt.SpaceID,
+		CreatedBy:   expt.CreatedBy,
+		Name:        expt.Name,
+		Description: expt.Description,
+		// experiment_group_key is not persisted until the DB DDL is rolled out.
+		// Keep read paths aligned with the target default semantics: group key defaults to experiment ID.
+		ExperimentGroupKey:        strconv.FormatInt(expt.ID, 10),
 		EvalSetVersionID:          expt.EvalSetVersionID,
 		EvalSetID:                 expt.EvalSetID,
 		TargetVersionID:           expt.TargetVersionID,

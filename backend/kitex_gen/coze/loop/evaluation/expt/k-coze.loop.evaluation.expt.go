@@ -478,6 +478,20 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 90:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField90(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 110:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField110(buf[offset:])
@@ -1039,6 +1053,20 @@ func (p *CreateExperimentRequest) FastReadField71(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateExperimentRequest) FastReadField90(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ExperimentGroupKey = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentRequest) FastReadField110(buf []byte) (int, error) {
 	offset := 0
 	_field := expt.NewExptNotificationConf()
@@ -1144,6 +1172,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField70(buf[offset:], w)
 		offset += p.fastWriteField71(buf[offset:], w)
+		offset += p.fastWriteField90(buf[offset:], w)
 		offset += p.fastWriteField110(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
@@ -1186,6 +1215,7 @@ func (p *CreateExperimentRequest) BLength() int {
 		l += p.field50Length()
 		l += p.field70Length()
 		l += p.field71Length()
+		l += p.field90Length()
 		l += p.field110Length()
 		l += p.field100Length()
 		l += p.field200Length()
@@ -1495,6 +1525,15 @@ func (p *CreateExperimentRequest) fastWriteField71(buf []byte, w thrift.NocopyWr
 	if p.IsSetEvalSetSourceType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 71)
 		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.EvalSetSourceType))
+	}
+	return offset
+}
+
+func (p *CreateExperimentRequest) fastWriteField90(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExperimentGroupKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 90)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ExperimentGroupKey)
 	}
 	return offset
 }
@@ -1827,6 +1866,15 @@ func (p *CreateExperimentRequest) field71Length() int {
 	return l
 }
 
+func (p *CreateExperimentRequest) field90Length() int {
+	l := 0
+	if p.IsSetExperimentGroupKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ExperimentGroupKey)
+	}
+	return l
+}
+
 func (p *CreateExperimentRequest) field110Length() int {
 	l := 0
 	if p.IsSetNotificationConf() {
@@ -2086,6 +2134,14 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 	if src.EvalSetSourceType != nil {
 		tmp := *src.EvalSetSourceType
 		p.EvalSetSourceType = &tmp
+	}
+
+	if src.ExperimentGroupKey != nil {
+		var tmp string
+		if *src.ExperimentGroupKey != "" {
+			tmp = kutils.StringDeepCopy(*src.ExperimentGroupKey)
+		}
+		p.ExperimentGroupKey = &tmp
 	}
 
 	var _notificationConf *expt.ExptNotificationConf
@@ -2772,6 +2828,20 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 90:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField90(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 110:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField110(buf[offset:])
@@ -3355,6 +3425,20 @@ func (p *SubmitExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentRequest) FastReadField90(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ExperimentGroupKey = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentRequest) FastReadField110(buf []byte) (int, error) {
 	offset := 0
 	_field := expt.NewExptNotificationConf()
@@ -3430,6 +3514,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField75(buf[offset:], w)
 		offset += p.fastWriteField76(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
+		offset += p.fastWriteField90(buf[offset:], w)
 		offset += p.fastWriteField110(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -3473,6 +3558,7 @@ func (p *SubmitExperimentRequest) BLength() int {
 		l += p.field75Length()
 		l += p.field76Length()
 		l += p.field100Length()
+		l += p.field90Length()
 		l += p.field110Length()
 		l += p.field200Length()
 		l += p.field255Length()
@@ -3806,6 +3892,15 @@ func (p *SubmitExperimentRequest) fastWriteField100(buf []byte, w thrift.NocopyW
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
 		}
 		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentRequest) fastWriteField90(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExperimentGroupKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 90)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ExperimentGroupKey)
 	}
 	return offset
 }
@@ -4145,6 +4240,15 @@ func (p *SubmitExperimentRequest) field100Length() int {
 	return l
 }
 
+func (p *SubmitExperimentRequest) field90Length() int {
+	l := 0
+	if p.IsSetExperimentGroupKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ExperimentGroupKey)
+	}
+	return l
+}
+
 func (p *SubmitExperimentRequest) field110Length() int {
 	l := 0
 	if p.IsSetNotificationConf() {
@@ -4411,6 +4515,14 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 
 			p.Ext[_key] = _val
 		}
+	}
+
+	if src.ExperimentGroupKey != nil {
+		var tmp string
+		if *src.ExperimentGroupKey != "" {
+			tmp = kutils.StringDeepCopy(*src.ExperimentGroupKey)
+		}
+		p.ExperimentGroupKey = &tmp
 	}
 
 	var _notificationConf *expt.ExptNotificationConf
@@ -10916,6 +11028,403 @@ func (p *BatchGetExperimentResultResponse) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *StandardEvalOutputFullContent) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StandardEvalOutputFullContent[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *StandardEvalOutputFullContent) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Provider = _field
+	return offset, nil
+}
+
+func (p *StandardEvalOutputFullContent) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.URI = _field
+	return offset, nil
+}
+
+func (p *StandardEvalOutputFullContent) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.URL = _field
+	return offset, nil
+}
+
+func (p *StandardEvalOutputFullContent) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Bytes = _field
+	return offset, nil
+}
+
+func (p *StandardEvalOutputFullContent) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Sha256 = _field
+	return offset, nil
+}
+
+func (p *StandardEvalOutputFullContent) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Compression = _field
+	return offset, nil
+}
+
+func (p *StandardEvalOutputFullContent) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *StandardEvalOutputFullContent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *StandardEvalOutputFullContent) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *StandardEvalOutputFullContent) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetProvider() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Provider)
+	}
+	return offset
+}
+
+func (p *StandardEvalOutputFullContent) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetURI() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.URI)
+	}
+	return offset
+}
+
+func (p *StandardEvalOutputFullContent) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetURL() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.URL)
+	}
+	return offset
+}
+
+func (p *StandardEvalOutputFullContent) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBytes() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.Bytes)
+	}
+	return offset
+}
+
+func (p *StandardEvalOutputFullContent) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSha256() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Sha256)
+	}
+	return offset
+}
+
+func (p *StandardEvalOutputFullContent) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCompression() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Compression)
+	}
+	return offset
+}
+
+func (p *StandardEvalOutputFullContent) field1Length() int {
+	l := 0
+	if p.IsSetProvider() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Provider)
+	}
+	return l
+}
+
+func (p *StandardEvalOutputFullContent) field2Length() int {
+	l := 0
+	if p.IsSetURI() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.URI)
+	}
+	return l
+}
+
+func (p *StandardEvalOutputFullContent) field3Length() int {
+	l := 0
+	if p.IsSetURL() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.URL)
+	}
+	return l
+}
+
+func (p *StandardEvalOutputFullContent) field4Length() int {
+	l := 0
+	if p.IsSetBytes() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *StandardEvalOutputFullContent) field5Length() int {
+	l := 0
+	if p.IsSetSha256() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Sha256)
+	}
+	return l
+}
+
+func (p *StandardEvalOutputFullContent) field6Length() int {
+	l := 0
+	if p.IsSetCompression() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Compression)
+	}
+	return l
+}
+
+func (p *StandardEvalOutputFullContent) DeepCopy(s interface{}) error {
+	src, ok := s.(*StandardEvalOutputFullContent)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Provider != nil {
+		var tmp string
+		if *src.Provider != "" {
+			tmp = kutils.StringDeepCopy(*src.Provider)
+		}
+		p.Provider = &tmp
+	}
+
+	if src.URI != nil {
+		var tmp string
+		if *src.URI != "" {
+			tmp = kutils.StringDeepCopy(*src.URI)
+		}
+		p.URI = &tmp
+	}
+
+	if src.URL != nil {
+		var tmp string
+		if *src.URL != "" {
+			tmp = kutils.StringDeepCopy(*src.URL)
+		}
+		p.URL = &tmp
+	}
+
+	if src.Bytes != nil {
+		tmp := *src.Bytes
+		p.Bytes = &tmp
+	}
+
+	if src.Sha256 != nil {
+		var tmp string
+		if *src.Sha256 != "" {
+			tmp = kutils.StringDeepCopy(*src.Sha256)
+		}
+		p.Sha256 = &tmp
+	}
+
+	if src.Compression != nil {
+		var tmp string
+		if *src.Compression != "" {
+			tmp = kutils.StringDeepCopy(*src.Compression)
+		}
+		p.Compression = &tmp
+	}
+
+	return nil
+}
+
 func (p *StandardEvalOutputContent) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -10976,7 +11485,7 @@ func (p *StandardEvalOutputContent) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 4:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField4(buf[offset:])
 				offset += l
 				if err != nil {
@@ -10990,7 +11499,7 @@ func (p *StandardEvalOutputContent) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 5:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField5(buf[offset:])
 				offset += l
 				if err != nil {
@@ -11059,7 +11568,7 @@ func (p *StandardEvalOutputContent) FastReadField2(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.Text = _field
+	p.Content = _field
 	return offset, nil
 }
 
@@ -11073,37 +11582,33 @@ func (p *StandardEvalOutputContent) FastReadField3(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.URL = _field
+	p.Text = _field
 	return offset, nil
 }
 
 func (p *StandardEvalOutputContent) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *StandardEvalOutputContentStorage
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-
-		tmp := StandardEvalOutputContentStorage(v)
-		_field = &tmp
-	}
-	p.Storage = _field
-	return offset, nil
-}
-
-func (p *StandardEvalOutputContent) FastReadField5(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 		_field = &v
 	}
-	p.Bytes = _field
+	p.ContentOmitted = _field
+	return offset, nil
+}
+
+func (p *StandardEvalOutputContent) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+	_field := NewStandardEvalOutputFullContent()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.FullContent = _field
 	return offset, nil
 }
 
@@ -11117,7 +11622,7 @@ func (p *StandardEvalOutputContent) FastReadField6(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.Sha256 = _field
+	p.Parts = _field
 	return offset, nil
 }
 
@@ -11128,11 +11633,11 @@ func (p *StandardEvalOutputContent) FastWrite(buf []byte) int {
 func (p *StandardEvalOutputContent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
-		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
-		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -11164,45 +11669,45 @@ func (p *StandardEvalOutputContent) fastWriteField1(buf []byte, w thrift.NocopyW
 
 func (p *StandardEvalOutputContent) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetText() {
+	if p.IsSetContent() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Text)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Content)
 	}
 	return offset
 }
 
 func (p *StandardEvalOutputContent) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetURL() {
+	if p.IsSetText() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.URL)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Text)
 	}
 	return offset
 }
 
 func (p *StandardEvalOutputContent) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetStorage() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 4)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.Storage))
+	if p.IsSetContentOmitted() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 4)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.ContentOmitted)
 	}
 	return offset
 }
 
 func (p *StandardEvalOutputContent) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetBytes() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.Bytes)
+	if p.IsSetFullContent() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
+		offset += p.FullContent.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
 
 func (p *StandardEvalOutputContent) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetSha256() {
+	if p.IsSetParts() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Sha256)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Parts)
 	}
 	return offset
 }
@@ -11218,6 +11723,15 @@ func (p *StandardEvalOutputContent) field1Length() int {
 
 func (p *StandardEvalOutputContent) field2Length() int {
 	l := 0
+	if p.IsSetContent() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Content)
+	}
+	return l
+}
+
+func (p *StandardEvalOutputContent) field3Length() int {
+	l := 0
 	if p.IsSetText() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.Text)
@@ -11225,38 +11739,29 @@ func (p *StandardEvalOutputContent) field2Length() int {
 	return l
 }
 
-func (p *StandardEvalOutputContent) field3Length() int {
-	l := 0
-	if p.IsSetURL() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.URL)
-	}
-	return l
-}
-
 func (p *StandardEvalOutputContent) field4Length() int {
 	l := 0
-	if p.IsSetStorage() {
+	if p.IsSetContentOmitted() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.BoolLength()
 	}
 	return l
 }
 
 func (p *StandardEvalOutputContent) field5Length() int {
 	l := 0
-	if p.IsSetBytes() {
+	if p.IsSetFullContent() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += p.FullContent.BLength()
 	}
 	return l
 }
 
 func (p *StandardEvalOutputContent) field6Length() int {
 	l := 0
-	if p.IsSetSha256() {
+	if p.IsSetParts() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.Sha256)
+		l += thrift.Binary.StringLengthNocopy(*p.Parts)
 	}
 	return l
 }
@@ -11275,6 +11780,14 @@ func (p *StandardEvalOutputContent) DeepCopy(s interface{}) error {
 		p.ContentType = &tmp
 	}
 
+	if src.Content != nil {
+		var tmp string
+		if *src.Content != "" {
+			tmp = kutils.StringDeepCopy(*src.Content)
+		}
+		p.Content = &tmp
+	}
+
 	if src.Text != nil {
 		var tmp string
 		if *src.Text != "" {
@@ -11283,30 +11796,26 @@ func (p *StandardEvalOutputContent) DeepCopy(s interface{}) error {
 		p.Text = &tmp
 	}
 
-	if src.URL != nil {
-		var tmp string
-		if *src.URL != "" {
-			tmp = kutils.StringDeepCopy(*src.URL)
+	if src.ContentOmitted != nil {
+		tmp := *src.ContentOmitted
+		p.ContentOmitted = &tmp
+	}
+
+	var _fullContent *StandardEvalOutputFullContent
+	if src.FullContent != nil {
+		_fullContent = &StandardEvalOutputFullContent{}
+		if err := _fullContent.DeepCopy(src.FullContent); err != nil {
+			return err
 		}
-		p.URL = &tmp
 	}
+	p.FullContent = _fullContent
 
-	if src.Storage != nil {
-		tmp := *src.Storage
-		p.Storage = &tmp
-	}
-
-	if src.Bytes != nil {
-		tmp := *src.Bytes
-		p.Bytes = &tmp
-	}
-
-	if src.Sha256 != nil {
+	if src.Parts != nil {
 		var tmp string
-		if *src.Sha256 != "" {
-			tmp = kutils.StringDeepCopy(*src.Sha256)
+		if *src.Parts != "" {
+			tmp = kutils.StringDeepCopy(*src.Parts)
 		}
-		p.Sha256 = &tmp
+		p.Parts = &tmp
 	}
 
 	return nil
@@ -12434,7 +12943,8 @@ func (p *ItemStandardEvalOutput) FastReadField20(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	_field := make(map[string]string, size)
+	_field := make(map[string]*StandardEvalOutputFullContent, size)
+	values := make([]StandardEvalOutputFullContent, size)
 	for i := 0; i < size; i++ {
 		var _key string
 		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
@@ -12444,12 +12954,12 @@ func (p *ItemStandardEvalOutput) FastReadField20(buf []byte) (int, error) {
 			_key = v
 		}
 
-		var _val string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		_val := &values[i]
+		_val.InitDefault()
+		if l, err := _val.FastRead(buf[offset:]); err != nil {
 			return offset, err
 		} else {
 			offset += l
-			_val = v
 		}
 
 		_field[_key] = _val
@@ -12605,9 +13115,9 @@ func (p *ItemStandardEvalOutput) fastWriteField20(buf []byte, w thrift.NocopyWri
 		for k, v := range p.ObjectRefs {
 			length++
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -12714,7 +13224,7 @@ func (p *ItemStandardEvalOutput) field20Length() int {
 			_, _ = k, v
 
 			l += thrift.Binary.StringLengthNocopy(k)
-			l += thrift.Binary.StringLengthNocopy(v)
+			l += v.BLength()
 		}
 	}
 	return l
@@ -12806,16 +13316,19 @@ func (p *ItemStandardEvalOutput) DeepCopy(s interface{}) error {
 	p.Extra = _extra
 
 	if src.ObjectRefs != nil {
-		p.ObjectRefs = make(map[string]string, len(src.ObjectRefs))
+		p.ObjectRefs = make(map[string]*StandardEvalOutputFullContent, len(src.ObjectRefs))
 		for key, val := range src.ObjectRefs {
 			var _key string
 			if key != "" {
 				_key = kutils.StringDeepCopy(key)
 			}
 
-			var _val string
-			if val != "" {
-				_val = kutils.StringDeepCopy(val)
+			var _val *StandardEvalOutputFullContent
+			if val != nil {
+				_val = &StandardEvalOutputFullContent{}
+				if err := _val.DeepCopy(val); err != nil {
+					return err
+				}
 			}
 
 			p.ObjectRefs[_key] = _val

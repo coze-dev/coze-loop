@@ -1172,6 +1172,8 @@ type Experiment struct {
 	// 触发方式
 	TriggerType *ExptTriggerType `thrift:"trigger_type,70,optional" frugal:"70,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
 	ExptSource  *ExptSource      `thrift:"expt_source,71,optional" frugal:"71,optional,ExptSource" form:"expt_source" json:"expt_source,omitempty" query:"expt_source"`
+	// 实验分组 key；不填时后端默认为实验 id
+	ExperimentGroupKey *string `thrift:"experiment_group_key,90,optional" frugal:"90,optional,string" form:"experiment_group_key" json:"experiment_group_key,omitempty" query:"experiment_group_key"`
 	// 通知配置
 	NotificationConf *ExptNotificationConf `thrift:"notification_conf,80,optional" frugal:"80,optional,ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty" query:"notification_conf"`
 	Ext              map[string]string     `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
@@ -1629,6 +1631,18 @@ func (p *Experiment) GetExptSource() (v *ExptSource) {
 	return p.ExptSource
 }
 
+var Experiment_ExperimentGroupKey_DEFAULT string
+
+func (p *Experiment) GetExperimentGroupKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperimentGroupKey() {
+		return Experiment_ExperimentGroupKey_DEFAULT
+	}
+	return *p.ExperimentGroupKey
+}
+
 var Experiment_NotificationConf_DEFAULT *ExptNotificationConf
 
 func (p *Experiment) GetNotificationConf() (v *ExptNotificationConf) {
@@ -1832,6 +1846,9 @@ func (p *Experiment) SetTriggerType(val *ExptTriggerType) {
 func (p *Experiment) SetExptSource(val *ExptSource) {
 	p.ExptSource = val
 }
+func (p *Experiment) SetExperimentGroupKey(val *string) {
+	p.ExperimentGroupKey = val
+}
 func (p *Experiment) SetNotificationConf(val *ExptNotificationConf) {
 	p.NotificationConf = val
 }
@@ -1894,6 +1911,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	64:  "enable_extract_trajectory",
 	70:  "trigger_type",
 	71:  "expt_source",
+	90:  "experiment_group_key",
 	80:  "notification_conf",
 	100: "ext",
 	101: "offline_expt_analysis_status",
@@ -2046,6 +2064,10 @@ func (p *Experiment) IsSetTriggerType() bool {
 
 func (p *Experiment) IsSetExptSource() bool {
 	return p.ExptSource != nil
+}
+
+func (p *Experiment) IsSetExperimentGroupKey() bool {
+	return p.ExperimentGroupKey != nil
 }
 
 func (p *Experiment) IsSetNotificationConf() bool {
@@ -2381,6 +2403,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 71:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField71(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 90:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField90(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2899,6 +2929,17 @@ func (p *Experiment) ReadField71(iprot thrift.TProtocol) error {
 	p.ExptSource = _field
 	return nil
 }
+func (p *Experiment) ReadField90(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExperimentGroupKey = _field
+	return nil
+}
 func (p *Experiment) ReadField80(iprot thrift.TProtocol) error {
 	_field := NewExptNotificationConf()
 	if err := _field.Read(iprot); err != nil {
@@ -3177,6 +3218,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField71(oprot); err != nil {
 			fieldId = 71
+			goto WriteFieldError
+		}
+		if err = p.writeField90(oprot); err != nil {
+			fieldId = 90
 			goto WriteFieldError
 		}
 		if err = p.writeField80(oprot); err != nil {
@@ -3909,6 +3954,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 71 end error: ", p), err)
 }
+func (p *Experiment) writeField90(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperimentGroupKey() {
+		if err = oprot.WriteFieldBegin("experiment_group_key", thrift.STRING, 90); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ExperimentGroupKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 90 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
+}
 func (p *Experiment) writeField80(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNotificationConf() {
 		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 80); err != nil {
@@ -4201,6 +4264,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field71DeepEqual(ano.ExptSource) {
+		return false
+	}
+	if !p.Field90DeepEqual(ano.ExperimentGroupKey) {
 		return false
 	}
 	if !p.Field80DeepEqual(ano.NotificationConf) {
@@ -4617,6 +4683,18 @@ func (p *Experiment) Field70DeepEqual(src *ExptTriggerType) bool {
 func (p *Experiment) Field71DeepEqual(src *ExptSource) bool {
 
 	if !p.ExptSource.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field90DeepEqual(src *string) bool {
+
+	if p.ExperimentGroupKey == src {
+		return true
+	} else if p.ExperimentGroupKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ExperimentGroupKey, *src) != 0 {
 		return false
 	}
 	return true

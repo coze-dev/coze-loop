@@ -15,6 +15,7 @@ type Client interface {
 	CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest, callOptions ...callopt.Option) (r *expt.CreateExperimentResponse, err error)
 	SubmitExperiment(ctx context.Context, req *expt.SubmitExperimentRequest, callOptions ...callopt.Option) (r *expt.SubmitExperimentResponse, err error)
 	BatchGetExperiments(ctx context.Context, req *expt.BatchGetExperimentsRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentsResponse, err error)
+	GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest, callOptions ...callopt.Option) (r *expt.GetExperimentIDsByGroupResponse, err error)
 	ListExperiments(ctx context.Context, req *expt.ListExperimentsRequest, callOptions ...callopt.Option) (r *expt.ListExperimentsResponse, err error)
 	UpdateExperiment(ctx context.Context, req *expt.UpdateExperimentRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentResponse, err error)
 	DeleteExperiment(ctx context.Context, req *expt.DeleteExperimentRequest, callOptions ...callopt.Option) (r *expt.DeleteExperimentResponse, err error)
@@ -103,6 +104,11 @@ func (p *kExperimentServiceClient) SubmitExperiment(ctx context.Context, req *ex
 func (p *kExperimentServiceClient) BatchGetExperiments(ctx context.Context, req *expt.BatchGetExperimentsRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetExperiments(ctx, req)
+}
+
+func (p *kExperimentServiceClient) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest, callOptions ...callopt.Option) (r *expt.GetExperimentIDsByGroupResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetExperimentIDsByGroup(ctx, req)
 }
 
 func (p *kExperimentServiceClient) ListExperiments(ctx context.Context, req *expt.ListExperimentsRequest, callOptions ...callopt.Option) (r *expt.ListExperimentsResponse, err error) {

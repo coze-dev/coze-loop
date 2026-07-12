@@ -344,6 +344,7 @@ type CreateExptParam struct {
 	EvaluatorVersionIds   []int64                  `json:"evaluator_version_ids"`
 	Name                  string                   `json:"name"`
 	Desc                  string                   `json:"desc"`
+	ExperimentGroupKey    string                   `json:"experiment_group_key,omitempty"`
 	EvalSetID             int64                    `json:"eval_set_id"`
 	TargetID              *int64                   `json:"target_id,omitempty"`
 	CreateEvalTargetParam *CreateEvalTargetParam   `json:"create_eval_target_param,omitempty"`
@@ -362,7 +363,7 @@ type CreateExptParam struct {
 	EvalSetConfigs []*EvalSetConfig `json:"eval_set_configs,omitempty"`
 	// ★ 新增: 分流依据 (== MultiSetConfig 走新路径), 由 request 透传, 不再从 len(EvalSetConfigs) 派生
 	EvalSetSourceType ExptEvalSetSourceType `json:"eval_set_source_type"`
-	NotificationConf      *ExptNotificationConf    `json:"notification_conf,omitempty"`
+	NotificationConf  *ExptNotificationConf `json:"notification_conf,omitempty"`
 }
 
 type ExptRunCheckOption struct {

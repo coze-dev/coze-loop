@@ -4,8 +4,6 @@ package expt
 
 import (
 	"context"
-	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
@@ -25,50 +23,6 @@ const (
 
 	UpsertExptTurnResultFilterTypeCHECK = "check"
 )
-
-type StandardEvalOutputContentStorage int64
-
-const (
-	StandardEvalOutputContentStorage_Inline StandardEvalOutputContentStorage = 1
-	StandardEvalOutputContentStorage_URL    StandardEvalOutputContentStorage = 2
-)
-
-func (p StandardEvalOutputContentStorage) String() string {
-	switch p {
-	case StandardEvalOutputContentStorage_Inline:
-		return "Inline"
-	case StandardEvalOutputContentStorage_URL:
-		return "URL"
-	}
-	return "<UNSET>"
-}
-
-func StandardEvalOutputContentStorageFromString(s string) (StandardEvalOutputContentStorage, error) {
-	switch s {
-	case "Inline":
-		return StandardEvalOutputContentStorage_Inline, nil
-	case "URL":
-		return StandardEvalOutputContentStorage_URL, nil
-	}
-	return StandardEvalOutputContentStorage(0), fmt.Errorf("not a valid StandardEvalOutputContentStorage string")
-}
-
-func StandardEvalOutputContentStoragePtr(v StandardEvalOutputContentStorage) *StandardEvalOutputContentStorage {
-	return &v
-}
-func (p *StandardEvalOutputContentStorage) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = StandardEvalOutputContentStorage(result.Int64)
-	return
-}
-
-func (p *StandardEvalOutputContentStorage) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
 
 type UpsertExptTurnResultFilterType = string
 
@@ -111,6 +65,8 @@ type CreateExperimentRequest struct {
 	// ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
 	// 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
 	EvalSetSourceType *expt.ExptEvalSetSourceType `thrift:"eval_set_source_type,71,optional" frugal:"71,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
+	// 实验分组 key；不填时后端默认为实验 id
+	ExperimentGroupKey *string `thrift:"experiment_group_key,90,optional" frugal:"90,optional,string" json:"experiment_group_key" form:"experiment_group_key" `
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Ext              map[string]string          `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
@@ -480,6 +436,18 @@ func (p *CreateExperimentRequest) GetEvalSetSourceType() (v expt.ExptEvalSetSour
 	return *p.EvalSetSourceType
 }
 
+var CreateExperimentRequest_ExperimentGroupKey_DEFAULT string
+
+func (p *CreateExperimentRequest) GetExperimentGroupKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperimentGroupKey() {
+		return CreateExperimentRequest_ExperimentGroupKey_DEFAULT
+	}
+	return *p.ExperimentGroupKey
+}
+
 var CreateExperimentRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
 
 func (p *CreateExperimentRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
@@ -617,6 +585,9 @@ func (p *CreateExperimentRequest) SetEvalSetConfigs(val []*expt.EvalSetConfig) {
 func (p *CreateExperimentRequest) SetEvalSetSourceType(val *expt.ExptEvalSetSourceType) {
 	p.EvalSetSourceType = val
 }
+func (p *CreateExperimentRequest) SetExperimentGroupKey(val *string) {
+	p.ExperimentGroupKey = val
+}
 func (p *CreateExperimentRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
 	p.NotificationConf = val
 }
@@ -661,6 +632,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	50:  "trigger_type",
 	70:  "eval_set_configs",
 	71:  "eval_set_source_type",
+	90:  "experiment_group_key",
 	110: "notification_conf",
 	100: "ext",
 	200: "session",
@@ -781,6 +753,10 @@ func (p *CreateExperimentRequest) IsSetEvalSetConfigs() bool {
 
 func (p *CreateExperimentRequest) IsSetEvalSetSourceType() bool {
 	return p.EvalSetSourceType != nil
+}
+
+func (p *CreateExperimentRequest) IsSetExperimentGroupKey() bool {
+	return p.ExperimentGroupKey != nil
 }
 
 func (p *CreateExperimentRequest) IsSetNotificationConf() bool {
@@ -1054,6 +1030,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 71:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField71(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 90:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField90(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1516,6 +1500,17 @@ func (p *CreateExperimentRequest) ReadField71(iprot thrift.TProtocol) error {
 	p.EvalSetSourceType = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField90(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExperimentGroupKey = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField110(iprot thrift.TProtocol) error {
 	_field := expt.NewExptNotificationConf()
 	if err := _field.Read(iprot); err != nil {
@@ -1694,6 +1689,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField71(oprot); err != nil {
 			fieldId = 71
+			goto WriteFieldError
+		}
+		if err = p.writeField90(oprot); err != nil {
+			fieldId = 90
 			goto WriteFieldError
 		}
 		if err = p.writeField110(oprot); err != nil {
@@ -2311,6 +2310,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 71 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField90(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperimentGroupKey() {
+		if err = oprot.WriteFieldBegin("experiment_group_key", thrift.STRING, 90); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ExperimentGroupKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 90 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField110(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNotificationConf() {
 		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 110); err != nil {
@@ -2497,6 +2514,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field71DeepEqual(ano.EvalSetSourceType) {
+		return false
+	}
+	if !p.Field90DeepEqual(ano.ExperimentGroupKey) {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.NotificationConf) {
@@ -2859,6 +2879,18 @@ func (p *CreateExperimentRequest) Field71DeepEqual(src *expt.ExptEvalSetSourceTy
 	}
 	return true
 }
+func (p *CreateExperimentRequest) Field90DeepEqual(src *string) bool {
+
+	if p.ExperimentGroupKey == src {
+		return true
+	} else if p.ExperimentGroupKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ExperimentGroupKey, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *CreateExperimentRequest) Field110DeepEqual(src *expt.ExptNotificationConf) bool {
 
 	if !p.NotificationConf.DeepEqual(src) {
@@ -3177,6 +3209,8 @@ type SubmitExperimentRequest struct {
 	// 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
 	EvalSetSourceType *expt.ExptEvalSetSourceType `thrift:"eval_set_source_type,76,optional" frugal:"76,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
 	Ext               map[string]string           `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	// 实验分组 key；不填时后端默认为实验 id
+	ExperimentGroupKey *string `thrift:"experiment_group_key,90,optional" frugal:"90,optional,string" json:"experiment_group_key" form:"experiment_group_key" `
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Session          *common.Session            `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
@@ -3569,6 +3603,18 @@ func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
 	return p.Ext
 }
 
+var SubmitExperimentRequest_ExperimentGroupKey_DEFAULT string
+
+func (p *SubmitExperimentRequest) GetExperimentGroupKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperimentGroupKey() {
+		return SubmitExperimentRequest_ExperimentGroupKey_DEFAULT
+	}
+	return *p.ExperimentGroupKey
+}
+
 var SubmitExperimentRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
 
 func (p *SubmitExperimentRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
@@ -3700,6 +3746,9 @@ func (p *SubmitExperimentRequest) SetEvalSetSourceType(val *expt.ExptEvalSetSour
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
+func (p *SubmitExperimentRequest) SetExperimentGroupKey(val *string) {
+	p.ExperimentGroupKey = val
+}
 func (p *SubmitExperimentRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
 	p.NotificationConf = val
 }
@@ -3743,6 +3792,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	75:  "eval_set_configs",
 	76:  "eval_set_source_type",
 	100: "ext",
+	90:  "experiment_group_key",
 	110: "notification_conf",
 	200: "session",
 	255: "Base",
@@ -3870,6 +3920,10 @@ func (p *SubmitExperimentRequest) IsSetEvalSetSourceType() bool {
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
 	return p.Ext != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetExperimentGroupKey() bool {
+	return p.ExperimentGroupKey != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetNotificationConf() bool {
@@ -4155,6 +4209,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 90:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField90(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4640,6 +4702,17 @@ func (p *SubmitExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	p.Ext = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField90(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExperimentGroupKey = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField110(iprot thrift.TProtocol) error {
 	_field := expt.NewExptNotificationConf()
 	if err := _field.Read(iprot); err != nil {
@@ -4797,6 +4870,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField90(oprot); err != nil {
+			fieldId = 90
 			goto WriteFieldError
 		}
 		if err = p.writeField110(oprot); err != nil {
@@ -5454,6 +5531,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField90(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperimentGroupKey() {
+		if err = oprot.WriteFieldBegin("experiment_group_key", thrift.STRING, 90); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ExperimentGroupKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 90 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField110(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNotificationConf() {
 		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 110); err != nil {
@@ -5617,6 +5712,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
+		return false
+	}
+	if !p.Field90DeepEqual(ano.ExperimentGroupKey) {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.NotificationConf) {
@@ -5993,6 +6091,18 @@ func (p *SubmitExperimentRequest) Field100DeepEqual(src map[string]string) bool 
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field90DeepEqual(src *string) bool {
+
+	if p.ExperimentGroupKey == src {
+		return true
+	} else if p.ExperimentGroupKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ExperimentGroupKey, *src) != 0 {
+		return false
 	}
 	return true
 }
@@ -14863,13 +14973,590 @@ func (p *BatchGetExperimentResultResponse) Field255DeepEqual(src *base.BaseResp)
 	return true
 }
 
+type StandardEvalOutputFullContent struct {
+	// e.g. TOS / S3.
+	Provider *string `thrift:"provider,1,optional" frugal:"1,optional,string" json:"provider" form:"provider" query:"provider"`
+	// Internal object uri/key, e.g. eval:record:field:<uuid>.
+	URI *string `thrift:"uri,2,optional" frugal:"2,optional,string" json:"uri" form:"uri" query:"uri"`
+	// Optional direct downloadable url.
+	URL *string `thrift:"url,3,optional" frugal:"3,optional,string" json:"url" form:"url" query:"url"`
+	// Metadata of full content object.
+	Bytes  *int64  `thrift:"bytes,4,optional" frugal:"4,optional,i64" json:"bytes" form:"bytes" query:"bytes"`
+	Sha256 *string `thrift:"sha256,5,optional" frugal:"5,optional,string" json:"sha256" form:"sha256" query:"sha256"`
+	// e.g. none / gzip / zstd.
+	Compression *string `thrift:"compression,6,optional" frugal:"6,optional,string" json:"compression" form:"compression" query:"compression"`
+}
+
+func NewStandardEvalOutputFullContent() *StandardEvalOutputFullContent {
+	return &StandardEvalOutputFullContent{}
+}
+
+func (p *StandardEvalOutputFullContent) InitDefault() {
+}
+
+var StandardEvalOutputFullContent_Provider_DEFAULT string
+
+func (p *StandardEvalOutputFullContent) GetProvider() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetProvider() {
+		return StandardEvalOutputFullContent_Provider_DEFAULT
+	}
+	return *p.Provider
+}
+
+var StandardEvalOutputFullContent_URI_DEFAULT string
+
+func (p *StandardEvalOutputFullContent) GetURI() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetURI() {
+		return StandardEvalOutputFullContent_URI_DEFAULT
+	}
+	return *p.URI
+}
+
+var StandardEvalOutputFullContent_URL_DEFAULT string
+
+func (p *StandardEvalOutputFullContent) GetURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetURL() {
+		return StandardEvalOutputFullContent_URL_DEFAULT
+	}
+	return *p.URL
+}
+
+var StandardEvalOutputFullContent_Bytes_DEFAULT int64
+
+func (p *StandardEvalOutputFullContent) GetBytes() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBytes() {
+		return StandardEvalOutputFullContent_Bytes_DEFAULT
+	}
+	return *p.Bytes
+}
+
+var StandardEvalOutputFullContent_Sha256_DEFAULT string
+
+func (p *StandardEvalOutputFullContent) GetSha256() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSha256() {
+		return StandardEvalOutputFullContent_Sha256_DEFAULT
+	}
+	return *p.Sha256
+}
+
+var StandardEvalOutputFullContent_Compression_DEFAULT string
+
+func (p *StandardEvalOutputFullContent) GetCompression() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCompression() {
+		return StandardEvalOutputFullContent_Compression_DEFAULT
+	}
+	return *p.Compression
+}
+func (p *StandardEvalOutputFullContent) SetProvider(val *string) {
+	p.Provider = val
+}
+func (p *StandardEvalOutputFullContent) SetURI(val *string) {
+	p.URI = val
+}
+func (p *StandardEvalOutputFullContent) SetURL(val *string) {
+	p.URL = val
+}
+func (p *StandardEvalOutputFullContent) SetBytes(val *int64) {
+	p.Bytes = val
+}
+func (p *StandardEvalOutputFullContent) SetSha256(val *string) {
+	p.Sha256 = val
+}
+func (p *StandardEvalOutputFullContent) SetCompression(val *string) {
+	p.Compression = val
+}
+
+var fieldIDToName_StandardEvalOutputFullContent = map[int16]string{
+	1: "provider",
+	2: "uri",
+	3: "url",
+	4: "bytes",
+	5: "sha256",
+	6: "compression",
+}
+
+func (p *StandardEvalOutputFullContent) IsSetProvider() bool {
+	return p.Provider != nil
+}
+
+func (p *StandardEvalOutputFullContent) IsSetURI() bool {
+	return p.URI != nil
+}
+
+func (p *StandardEvalOutputFullContent) IsSetURL() bool {
+	return p.URL != nil
+}
+
+func (p *StandardEvalOutputFullContent) IsSetBytes() bool {
+	return p.Bytes != nil
+}
+
+func (p *StandardEvalOutputFullContent) IsSetSha256() bool {
+	return p.Sha256 != nil
+}
+
+func (p *StandardEvalOutputFullContent) IsSetCompression() bool {
+	return p.Compression != nil
+}
+
+func (p *StandardEvalOutputFullContent) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StandardEvalOutputFullContent[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *StandardEvalOutputFullContent) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Provider = _field
+	return nil
+}
+func (p *StandardEvalOutputFullContent) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.URI = _field
+	return nil
+}
+func (p *StandardEvalOutputFullContent) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.URL = _field
+	return nil
+}
+func (p *StandardEvalOutputFullContent) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Bytes = _field
+	return nil
+}
+func (p *StandardEvalOutputFullContent) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Sha256 = _field
+	return nil
+}
+func (p *StandardEvalOutputFullContent) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Compression = _field
+	return nil
+}
+
+func (p *StandardEvalOutputFullContent) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("StandardEvalOutputFullContent"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *StandardEvalOutputFullContent) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetProvider() {
+		if err = oprot.WriteFieldBegin("provider", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Provider); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *StandardEvalOutputFullContent) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetURI() {
+		if err = oprot.WriteFieldBegin("uri", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.URI); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *StandardEvalOutputFullContent) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetURL() {
+		if err = oprot.WriteFieldBegin("url", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.URL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *StandardEvalOutputFullContent) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBytes() {
+		if err = oprot.WriteFieldBegin("bytes", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Bytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *StandardEvalOutputFullContent) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSha256() {
+		if err = oprot.WriteFieldBegin("sha256", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Sha256); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *StandardEvalOutputFullContent) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCompression() {
+		if err = oprot.WriteFieldBegin("compression", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Compression); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *StandardEvalOutputFullContent) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("StandardEvalOutputFullContent(%+v)", *p)
+
+}
+
+func (p *StandardEvalOutputFullContent) DeepEqual(ano *StandardEvalOutputFullContent) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Provider) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.URI) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.URL) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Bytes) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Sha256) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Compression) {
+		return false
+	}
+	return true
+}
+
+func (p *StandardEvalOutputFullContent) Field1DeepEqual(src *string) bool {
+
+	if p.Provider == src {
+		return true
+	} else if p.Provider == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Provider, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StandardEvalOutputFullContent) Field2DeepEqual(src *string) bool {
+
+	if p.URI == src {
+		return true
+	} else if p.URI == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.URI, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StandardEvalOutputFullContent) Field3DeepEqual(src *string) bool {
+
+	if p.URL == src {
+		return true
+	} else if p.URL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.URL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StandardEvalOutputFullContent) Field4DeepEqual(src *int64) bool {
+
+	if p.Bytes == src {
+		return true
+	} else if p.Bytes == nil || src == nil {
+		return false
+	}
+	if *p.Bytes != *src {
+		return false
+	}
+	return true
+}
+func (p *StandardEvalOutputFullContent) Field5DeepEqual(src *string) bool {
+
+	if p.Sha256 == src {
+		return true
+	} else if p.Sha256 == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Sha256, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StandardEvalOutputFullContent) Field6DeepEqual(src *string) bool {
+
+	if p.Compression == src {
+		return true
+	} else if p.Compression == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Compression, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type StandardEvalOutputContent struct {
-	ContentType *string                           `thrift:"content_type,1,optional" frugal:"1,optional,string" json:"content_type" form:"content_type" query:"content_type"`
-	Text        *string                           `thrift:"text,2,optional" frugal:"2,optional,string" json:"text" form:"text" query:"text"`
-	URL         *string                           `thrift:"url,3,optional" frugal:"3,optional,string" json:"url" form:"url" query:"url"`
-	Storage     *StandardEvalOutputContentStorage `thrift:"storage,4,optional" frugal:"4,optional,StandardEvalOutputContentStorage" json:"storage" form:"storage" query:"storage"`
-	Bytes       *int64                            `thrift:"bytes,5,optional" frugal:"5,optional,i64" json:"bytes" form:"bytes" query:"bytes"`
-	Sha256      *string                           `thrift:"sha256,6,optional" frugal:"6,optional,string" json:"sha256" form:"sha256" query:"sha256"`
+	// e.g. text / json / multi_part / image.
+	ContentType *string `thrift:"content_type,1,optional" frugal:"1,optional,string" json:"content_type" form:"content_type" query:"content_type"`
+	// Canonical inline content. For JSON object fields, this can be serialized JSON.
+	Content *string `thrift:"content,2,optional" frugal:"2,optional,string" json:"content" form:"content" query:"content"`
+	// Legacy / preview text, compatible with existing content_type + text shape.
+	Text *string `thrift:"text,3,optional" frugal:"3,optional,string" json:"text" form:"text" query:"text"`
+	// Whether inline content/text is omitted or truncated.
+	ContentOmitted *bool `thrift:"content_omitted,4,optional" frugal:"4,optional,bool" json:"content_omitted" form:"content_omitted" query:"content_omitted"`
+	// Full object reference when content_omitted=true, or when full content is stored out-of-line.
+	FullContent *StandardEvalOutputFullContent `thrift:"full_content,5,optional" frugal:"5,optional,StandardEvalOutputFullContent" json:"full_content" form:"full_content" query:"full_content"`
+	// Optional raw multi-part JSON string if recursive parts are not modeled yet.
+	Parts *string `thrift:"parts,6,optional" frugal:"6,optional,string" json:"parts" form:"parts" query:"parts"`
 }
 
 func NewStandardEvalOutputContent() *StandardEvalOutputContent {
@@ -14891,6 +15578,18 @@ func (p *StandardEvalOutputContent) GetContentType() (v string) {
 	return *p.ContentType
 }
 
+var StandardEvalOutputContent_Content_DEFAULT string
+
+func (p *StandardEvalOutputContent) GetContent() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetContent() {
+		return StandardEvalOutputContent_Content_DEFAULT
+	}
+	return *p.Content
+}
+
 var StandardEvalOutputContent_Text_DEFAULT string
 
 func (p *StandardEvalOutputContent) GetText() (v string) {
@@ -14903,103 +15602,91 @@ func (p *StandardEvalOutputContent) GetText() (v string) {
 	return *p.Text
 }
 
-var StandardEvalOutputContent_URL_DEFAULT string
+var StandardEvalOutputContent_ContentOmitted_DEFAULT bool
 
-func (p *StandardEvalOutputContent) GetURL() (v string) {
+func (p *StandardEvalOutputContent) GetContentOmitted() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetURL() {
-		return StandardEvalOutputContent_URL_DEFAULT
+	if !p.IsSetContentOmitted() {
+		return StandardEvalOutputContent_ContentOmitted_DEFAULT
 	}
-	return *p.URL
+	return *p.ContentOmitted
 }
 
-var StandardEvalOutputContent_Storage_DEFAULT StandardEvalOutputContentStorage
+var StandardEvalOutputContent_FullContent_DEFAULT *StandardEvalOutputFullContent
 
-func (p *StandardEvalOutputContent) GetStorage() (v StandardEvalOutputContentStorage) {
+func (p *StandardEvalOutputContent) GetFullContent() (v *StandardEvalOutputFullContent) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetStorage() {
-		return StandardEvalOutputContent_Storage_DEFAULT
+	if !p.IsSetFullContent() {
+		return StandardEvalOutputContent_FullContent_DEFAULT
 	}
-	return *p.Storage
+	return p.FullContent
 }
 
-var StandardEvalOutputContent_Bytes_DEFAULT int64
+var StandardEvalOutputContent_Parts_DEFAULT string
 
-func (p *StandardEvalOutputContent) GetBytes() (v int64) {
+func (p *StandardEvalOutputContent) GetParts() (v string) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetBytes() {
-		return StandardEvalOutputContent_Bytes_DEFAULT
+	if !p.IsSetParts() {
+		return StandardEvalOutputContent_Parts_DEFAULT
 	}
-	return *p.Bytes
-}
-
-var StandardEvalOutputContent_Sha256_DEFAULT string
-
-func (p *StandardEvalOutputContent) GetSha256() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSha256() {
-		return StandardEvalOutputContent_Sha256_DEFAULT
-	}
-	return *p.Sha256
+	return *p.Parts
 }
 func (p *StandardEvalOutputContent) SetContentType(val *string) {
 	p.ContentType = val
 }
+func (p *StandardEvalOutputContent) SetContent(val *string) {
+	p.Content = val
+}
 func (p *StandardEvalOutputContent) SetText(val *string) {
 	p.Text = val
 }
-func (p *StandardEvalOutputContent) SetURL(val *string) {
-	p.URL = val
+func (p *StandardEvalOutputContent) SetContentOmitted(val *bool) {
+	p.ContentOmitted = val
 }
-func (p *StandardEvalOutputContent) SetStorage(val *StandardEvalOutputContentStorage) {
-	p.Storage = val
+func (p *StandardEvalOutputContent) SetFullContent(val *StandardEvalOutputFullContent) {
+	p.FullContent = val
 }
-func (p *StandardEvalOutputContent) SetBytes(val *int64) {
-	p.Bytes = val
-}
-func (p *StandardEvalOutputContent) SetSha256(val *string) {
-	p.Sha256 = val
+func (p *StandardEvalOutputContent) SetParts(val *string) {
+	p.Parts = val
 }
 
 var fieldIDToName_StandardEvalOutputContent = map[int16]string{
 	1: "content_type",
-	2: "text",
-	3: "url",
-	4: "storage",
-	5: "bytes",
-	6: "sha256",
+	2: "content",
+	3: "text",
+	4: "content_omitted",
+	5: "full_content",
+	6: "parts",
 }
 
 func (p *StandardEvalOutputContent) IsSetContentType() bool {
 	return p.ContentType != nil
 }
 
+func (p *StandardEvalOutputContent) IsSetContent() bool {
+	return p.Content != nil
+}
+
 func (p *StandardEvalOutputContent) IsSetText() bool {
 	return p.Text != nil
 }
 
-func (p *StandardEvalOutputContent) IsSetURL() bool {
-	return p.URL != nil
+func (p *StandardEvalOutputContent) IsSetContentOmitted() bool {
+	return p.ContentOmitted != nil
 }
 
-func (p *StandardEvalOutputContent) IsSetStorage() bool {
-	return p.Storage != nil
+func (p *StandardEvalOutputContent) IsSetFullContent() bool {
+	return p.FullContent != nil
 }
 
-func (p *StandardEvalOutputContent) IsSetBytes() bool {
-	return p.Bytes != nil
-}
-
-func (p *StandardEvalOutputContent) IsSetSha256() bool {
-	return p.Sha256 != nil
+func (p *StandardEvalOutputContent) IsSetParts() bool {
+	return p.Parts != nil
 }
 
 func (p *StandardEvalOutputContent) Read(iprot thrift.TProtocol) (err error) {
@@ -15045,7 +15732,7 @@ func (p *StandardEvalOutputContent) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 4:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -15053,7 +15740,7 @@ func (p *StandardEvalOutputContent) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 5:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -15116,7 +15803,7 @@ func (p *StandardEvalOutputContent) ReadField2(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.Text = _field
+	p.Content = _field
 	return nil
 }
 func (p *StandardEvalOutputContent) ReadField3(iprot thrift.TProtocol) error {
@@ -15127,30 +15814,26 @@ func (p *StandardEvalOutputContent) ReadField3(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.URL = _field
+	p.Text = _field
 	return nil
 }
 func (p *StandardEvalOutputContent) ReadField4(iprot thrift.TProtocol) error {
 
-	var _field *StandardEvalOutputContentStorage
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		tmp := StandardEvalOutputContentStorage(v)
-		_field = &tmp
-	}
-	p.Storage = _field
-	return nil
-}
-func (p *StandardEvalOutputContent) ReadField5(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
 		return err
 	} else {
 		_field = &v
 	}
-	p.Bytes = _field
+	p.ContentOmitted = _field
+	return nil
+}
+func (p *StandardEvalOutputContent) ReadField5(iprot thrift.TProtocol) error {
+	_field := NewStandardEvalOutputFullContent()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.FullContent = _field
 	return nil
 }
 func (p *StandardEvalOutputContent) ReadField6(iprot thrift.TProtocol) error {
@@ -15161,7 +15844,7 @@ func (p *StandardEvalOutputContent) ReadField6(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.Sha256 = _field
+	p.Parts = _field
 	return nil
 }
 
@@ -15232,11 +15915,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *StandardEvalOutputContent) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetText() {
-		if err = oprot.WriteFieldBegin("text", thrift.STRING, 2); err != nil {
+	if p.IsSetContent() {
+		if err = oprot.WriteFieldBegin("content", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.Text); err != nil {
+		if err := oprot.WriteString(*p.Content); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15250,11 +15933,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *StandardEvalOutputContent) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetURL() {
-		if err = oprot.WriteFieldBegin("url", thrift.STRING, 3); err != nil {
+	if p.IsSetText() {
+		if err = oprot.WriteFieldBegin("text", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.URL); err != nil {
+		if err := oprot.WriteString(*p.Text); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15268,11 +15951,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *StandardEvalOutputContent) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetStorage() {
-		if err = oprot.WriteFieldBegin("storage", thrift.I32, 4); err != nil {
+	if p.IsSetContentOmitted() {
+		if err = oprot.WriteFieldBegin("content_omitted", thrift.BOOL, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.Storage)); err != nil {
+		if err := oprot.WriteBool(*p.ContentOmitted); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15286,11 +15969,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *StandardEvalOutputContent) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetBytes() {
-		if err = oprot.WriteFieldBegin("bytes", thrift.I64, 5); err != nil {
+	if p.IsSetFullContent() {
+		if err = oprot.WriteFieldBegin("full_content", thrift.STRUCT, 5); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.Bytes); err != nil {
+		if err := p.FullContent.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15304,11 +15987,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 func (p *StandardEvalOutputContent) writeField6(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSha256() {
-		if err = oprot.WriteFieldBegin("sha256", thrift.STRING, 6); err != nil {
+	if p.IsSetParts() {
+		if err = oprot.WriteFieldBegin("parts", thrift.STRING, 6); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.Sha256); err != nil {
+		if err := oprot.WriteString(*p.Parts); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15339,19 +16022,19 @@ func (p *StandardEvalOutputContent) DeepEqual(ano *StandardEvalOutputContent) bo
 	if !p.Field1DeepEqual(ano.ContentType) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.Text) {
+	if !p.Field2DeepEqual(ano.Content) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.URL) {
+	if !p.Field3DeepEqual(ano.Text) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.Storage) {
+	if !p.Field4DeepEqual(ano.ContentOmitted) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.Bytes) {
+	if !p.Field5DeepEqual(ano.FullContent) {
 		return false
 	}
-	if !p.Field6DeepEqual(ano.Sha256) {
+	if !p.Field6DeepEqual(ano.Parts) {
 		return false
 	}
 	return true
@@ -15371,6 +16054,18 @@ func (p *StandardEvalOutputContent) Field1DeepEqual(src *string) bool {
 }
 func (p *StandardEvalOutputContent) Field2DeepEqual(src *string) bool {
 
+	if p.Content == src {
+		return true
+	} else if p.Content == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Content, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StandardEvalOutputContent) Field3DeepEqual(src *string) bool {
+
 	if p.Text == src {
 		return true
 	} else if p.Text == nil || src == nil {
@@ -15381,50 +16076,33 @@ func (p *StandardEvalOutputContent) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *StandardEvalOutputContent) Field3DeepEqual(src *string) bool {
+func (p *StandardEvalOutputContent) Field4DeepEqual(src *bool) bool {
 
-	if p.URL == src {
+	if p.ContentOmitted == src {
 		return true
-	} else if p.URL == nil || src == nil {
+	} else if p.ContentOmitted == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.URL, *src) != 0 {
+	if *p.ContentOmitted != *src {
 		return false
 	}
 	return true
 }
-func (p *StandardEvalOutputContent) Field4DeepEqual(src *StandardEvalOutputContentStorage) bool {
+func (p *StandardEvalOutputContent) Field5DeepEqual(src *StandardEvalOutputFullContent) bool {
 
-	if p.Storage == src {
-		return true
-	} else if p.Storage == nil || src == nil {
-		return false
-	}
-	if *p.Storage != *src {
-		return false
-	}
-	return true
-}
-func (p *StandardEvalOutputContent) Field5DeepEqual(src *int64) bool {
-
-	if p.Bytes == src {
-		return true
-	} else if p.Bytes == nil || src == nil {
-		return false
-	}
-	if *p.Bytes != *src {
+	if !p.FullContent.DeepEqual(src) {
 		return false
 	}
 	return true
 }
 func (p *StandardEvalOutputContent) Field6DeepEqual(src *string) bool {
 
-	if p.Sha256 == src {
+	if p.Parts == src {
 		return true
-	} else if p.Sha256 == nil || src == nil {
+	} else if p.Parts == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.Sha256, *src) != 0 {
+	if strings.Compare(*p.Parts, *src) != 0 {
 		return false
 	}
 	return true
@@ -16469,7 +17147,7 @@ type ItemStandardEvalOutput struct {
 	Eval       *StandardEvalOutputContent `thrift:"eval,16,optional" frugal:"16,optional,StandardEvalOutputContent" json:"eval" form:"eval" query:"eval"`
 	Extra      *StandardEvalOutputContent `thrift:"extra,17,optional" frugal:"17,optional,StandardEvalOutputContent" json:"extra" form:"extra" query:"extra"`
 	// Large object references, for example output.detail / eval.detail / rounds.
-	ObjectRefs map[string]string `thrift:"object_refs,20,optional" frugal:"20,optional,map<string:string>" json:"object_refs" form:"object_refs" query:"object_refs"`
+	ObjectRefs map[string]*StandardEvalOutputFullContent `thrift:"object_refs,20,optional" frugal:"20,optional,map<string:StandardEvalOutputFullContent>" json:"object_refs" form:"object_refs" query:"object_refs"`
 }
 
 func NewItemStandardEvalOutput() *ItemStandardEvalOutput {
@@ -16596,9 +17274,9 @@ func (p *ItemStandardEvalOutput) GetExtra() (v *StandardEvalOutputContent) {
 	return p.Extra
 }
 
-var ItemStandardEvalOutput_ObjectRefs_DEFAULT map[string]string
+var ItemStandardEvalOutput_ObjectRefs_DEFAULT map[string]*StandardEvalOutputFullContent
 
-func (p *ItemStandardEvalOutput) GetObjectRefs() (v map[string]string) {
+func (p *ItemStandardEvalOutput) GetObjectRefs() (v map[string]*StandardEvalOutputFullContent) {
 	if p == nil {
 		return
 	}
@@ -16640,7 +17318,7 @@ func (p *ItemStandardEvalOutput) SetEval(val *StandardEvalOutputContent) {
 func (p *ItemStandardEvalOutput) SetExtra(val *StandardEvalOutputContent) {
 	p.Extra = val
 }
-func (p *ItemStandardEvalOutput) SetObjectRefs(val map[string]string) {
+func (p *ItemStandardEvalOutput) SetObjectRefs(val map[string]*StandardEvalOutputFullContent) {
 	p.ObjectRefs = val
 }
 
@@ -16965,7 +17643,8 @@ func (p *ItemStandardEvalOutput) ReadField20(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	_field := make(map[string]string, size)
+	_field := make(map[string]*StandardEvalOutputFullContent, size)
+	values := make([]StandardEvalOutputFullContent, size)
 	for i := 0; i < size; i++ {
 		var _key string
 		if v, err := iprot.ReadString(); err != nil {
@@ -16974,11 +17653,10 @@ func (p *ItemStandardEvalOutput) ReadField20(iprot thrift.TProtocol) error {
 			_key = v
 		}
 
-		var _val string
-		if v, err := iprot.ReadString(); err != nil {
+		_val := &values[i]
+		_val.InitDefault()
+		if err := _val.Read(iprot); err != nil {
 			return err
-		} else {
-			_val = v
 		}
 
 		_field[_key] = _val
@@ -17259,14 +17937,14 @@ func (p *ItemStandardEvalOutput) writeField20(oprot thrift.TProtocol) (err error
 		if err = oprot.WriteFieldBegin("object_refs", thrift.MAP, 20); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.ObjectRefs)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.ObjectRefs)); err != nil {
 			return err
 		}
 		for k, v := range p.ObjectRefs {
 			if err := oprot.WriteString(k); err != nil {
 				return err
 			}
-			if err := oprot.WriteString(v); err != nil {
+			if err := v.Write(oprot); err != nil {
 				return err
 			}
 		}
@@ -17419,14 +18097,14 @@ func (p *ItemStandardEvalOutput) Field17DeepEqual(src *StandardEvalOutputContent
 	}
 	return true
 }
-func (p *ItemStandardEvalOutput) Field20DeepEqual(src map[string]string) bool {
+func (p *ItemStandardEvalOutput) Field20DeepEqual(src map[string]*StandardEvalOutputFullContent) bool {
 
 	if len(p.ObjectRefs) != len(src) {
 		return false
 	}
 	for k, v := range p.ObjectRefs {
 		_src := src[k]
-		if strings.Compare(v, _src) != 0 {
+		if !v.DeepEqual(_src) {
 			return false
 		}
 	}

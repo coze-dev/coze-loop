@@ -188,10 +188,10 @@ func inlineJSONContent(val any) (*expt.StandardEvalOutputContent, error) {
 		return nil, err
 	}
 	return &expt.StandardEvalOutputContent{
-		ContentType: gptr.Of(standardEvalOutputContentTypeJSON),
-		Text:        gptr.Of(text),
-		Storage:     expt.StandardEvalOutputContentStoragePtr(expt.StandardEvalOutputContentStorage_Inline),
-		Bytes:       gptr.Of(int64(len(text))),
+		ContentType:    gptr.Of(standardEvalOutputContentTypeJSON),
+		Content:        gptr.Of(text),
+		Text:           gptr.Of(text),
+		ContentOmitted: gptr.Of(false),
 	}, nil
 }
 

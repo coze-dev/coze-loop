@@ -51,6 +51,9 @@ struct CreateExperimentRequest {
     // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
     71: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
 
+    // 实验分组 key；不填时后端默认为实验 id
+    90: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag='json:"experiment_group_key"')
+
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
@@ -115,6 +118,9 @@ struct SubmitExperimentRequest {
     76: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
 
     100: optional map<string, string> ext (api.body = 'ext')
+
+    // 实验分组 key；不填时后端默认为实验 id
+    90: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag='json:"experiment_group_key"')
 
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
@@ -312,18 +318,33 @@ struct BatchGetExperimentResultResponse {
     255: base.BaseResp BaseResp
 }
 
-enum StandardEvalOutputContentStorage {
-    Inline = 1
-    URL = 2
+struct StandardEvalOutputFullContent {
+    // e.g. TOS / S3.
+    1: optional string provider (go.tag = 'json:"provider"')
+    // Internal object uri/key, e.g. eval:record:field:<uuid>.
+    2: optional string uri (go.tag = 'json:"uri"')
+    // Optional direct downloadable url.
+    3: optional string url (go.tag = 'json:"url"')
+    // Metadata of full content object.
+    4: optional i64 bytes (go.tag = 'json:"bytes"')
+    5: optional string sha256 (go.tag = 'json:"sha256"')
+    // e.g. none / gzip / zstd.
+    6: optional string compression (go.tag = 'json:"compression"')
 }
 
 struct StandardEvalOutputContent {
+    // e.g. text / json / multi_part / image.
     1: optional string content_type (go.tag = 'json:"content_type"')
-    2: optional string text (go.tag = 'json:"text"')
-    3: optional string url (go.tag = 'json:"url"')
-    4: optional StandardEvalOutputContentStorage storage (go.tag = 'json:"storage"')
-    5: optional i64 bytes (go.tag = 'json:"bytes"')
-    6: optional string sha256 (go.tag = 'json:"sha256"')
+    // Canonical inline content. For JSON object fields, this can be serialized JSON.
+    2: optional string content (go.tag = 'json:"content"')
+    // Legacy / preview text, compatible with existing content_type + text shape.
+    3: optional string text (go.tag = 'json:"text"')
+    // Whether inline content/text is omitted or truncated.
+    4: optional bool content_omitted (go.tag = 'json:"content_omitted"')
+    // Full object reference when content_omitted=true, or when full content is stored out-of-line.
+    5: optional StandardEvalOutputFullContent full_content (go.tag = 'json:"full_content"')
+    // Optional raw multi-part JSON string if recursive parts are not modeled yet.
+    6: optional string parts (go.tag = 'json:"parts"')
 }
 
 struct MGetExperimentStandardEvalOutputsRequest {
@@ -368,7 +389,7 @@ struct ItemStandardEvalOutput {
     17: optional StandardEvalOutputContent extra (go.tag = 'json:"extra"')
 
     // Large object references, for example output.detail / eval.detail / rounds.
-    20: optional map<string, string> object_refs (go.tag = 'json:"object_refs"')
+    20: optional map<string, StandardEvalOutputFullContent> object_refs (go.tag = 'json:"object_refs"')
 }
 
 struct MGetExperimentStandardEvalOutputsResponse {

@@ -128,6 +128,8 @@ type Experiment struct {
 	CreatedBy   string
 	Name        string
 	Description string
+	// ExperimentGroupKey groups related experiments; default is the experiment ID string.
+	ExperimentGroupKey string
 
 	EvalSetVersionID    int64
 	EvalSetID           int64
@@ -288,7 +290,7 @@ type EvaluationConfiguration struct {
 	ConnectorConf           Connector
 	ItemConcurNum           *int
 	ItemRetryNum            *int
-	TimeRange               *TaskTimeRangeDO  `json:"time_range,omitempty"`
+	TimeRange               *TaskTimeRangeDO `json:"time_range,omitempty"`
 	EnableExtractTrajectory *bool
 	Ext                     map[string]string
 
@@ -521,10 +523,10 @@ const (
 // 对应 IDL domain/expt.thrift:ExptEvalSetDetail (字段编号一致便于 DTO 转换)
 // 仅 MultiSetConfig 实验填充; Get 路径填详情, List 路径只填计数。
 type ExptEvalSetDetail struct {
-	EvalSetID        int64 // 1
-	EvalSetVersionID int64 // 2
-	IsPrimary        bool  // 3 主集 (封面), 与 experiment.eval_set_id 列一致
-	ItemCount        int32 // 4 该 set 选入实验的 item 数; 来源 expt_item_ref, 首跑前为 0
+	EvalSetID        int64          // 1
+	EvalSetVersionID int64          // 2
+	IsPrimary        bool           // 3 主集 (封面), 与 experiment.eval_set_id 列一致
+	ItemCount        int32          // 4 该 set 选入实验的 item 数; 来源 expt_item_ref, 首跑前为 0
 	EvalSet          *EvaluationSet // 5 Get 填详情; List 不填
 }
 
@@ -573,16 +575,16 @@ type ItemEvaluatorConf struct {
 
 // ExptItemFilter item 圈选 / evaluator 行级过滤 (与 data/domain/filter.thrift Filter 同构)
 type ExptItemFilter struct {
-	QueryAndOr   string                `json:"query_and_or,omitempty"`
+	QueryAndOr   string                 `json:"query_and_or,omitempty"`
 	FilterFields []*ExptItemFilterField `json:"filter_fields"`
 }
 
 // ExptItemFilterField 单个过滤字段
 type ExptItemFilterField struct {
-	FieldName  string   `json:"field_name"`
-	FieldType  string   `json:"field_type"`
-	Values     []string `json:"values,omitempty"`
-	QueryType  string   `json:"query_type,omitempty"`
+	FieldName string   `json:"field_name"`
+	FieldType string   `json:"field_type"`
+	Values    []string `json:"values,omitempty"`
+	QueryType string   `json:"query_type,omitempty"`
 }
 
 // EvalSetConfig 一个评测集 + 该集的完整配置包 (对应 IDL ExptDomain.EvalSetConfig)
@@ -618,4 +620,3 @@ type ExptEvaluatorConf struct {
 	ScoreWeight        *float64          `json:"score_weight,omitempty"`
 	Ext                map[string]string `json:"ext,omitempty"`
 }
-

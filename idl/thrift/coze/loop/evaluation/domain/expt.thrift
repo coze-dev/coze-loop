@@ -106,6 +106,9 @@ struct Experiment {
     70: optional ExptTriggerType trigger_type
     71: optional ExptSource expt_source
 
+    // 实验分组 key；不填时后端默认为实验 id
+    90: optional string experiment_group_key
+
     // 通知配置
     80: optional ExptNotificationConf notification_conf
 

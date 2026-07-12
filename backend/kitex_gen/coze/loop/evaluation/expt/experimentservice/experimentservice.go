@@ -41,6 +41,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetExperimentIDsByGroup": kitex.NewMethodInfo(
+		getExperimentIDsByGroupHandler,
+		newExperimentServiceGetExperimentIDsByGroupArgs,
+		newExperimentServiceGetExperimentIDsByGroupResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListExperiments": kitex.NewMethodInfo(
 		listExperimentsHandler,
 		newExperimentServiceListExperimentsArgs,
@@ -421,6 +428,25 @@ func newExperimentServiceBatchGetExperimentsArgs() interface{} {
 
 func newExperimentServiceBatchGetExperimentsResult() interface{} {
 	return expt.NewExperimentServiceBatchGetExperimentsResult()
+}
+
+func getExperimentIDsByGroupHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceGetExperimentIDsByGroupArgs)
+	realResult := result.(*expt.ExperimentServiceGetExperimentIDsByGroupResult)
+	success, err := handler.(expt.ExperimentService).GetExperimentIDsByGroup(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceGetExperimentIDsByGroupArgs() interface{} {
+	return expt.NewExperimentServiceGetExperimentIDsByGroupArgs()
+}
+
+func newExperimentServiceGetExperimentIDsByGroupResult() interface{} {
+	return expt.NewExperimentServiceGetExperimentIDsByGroupResult()
 }
 
 func listExperimentsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1211,6 +1237,16 @@ func (p *kClient) BatchGetExperiments(ctx context.Context, req *expt.BatchGetExp
 	_args.Req = req
 	var _result expt.ExperimentServiceBatchGetExperimentsResult
 	if err = p.c.Call(ctx, "BatchGetExperiments", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest) (r *expt.GetExperimentIDsByGroupResponse, err error) {
+	var _args expt.ExperimentServiceGetExperimentIDsByGroupArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceGetExperimentIDsByGroupResult
+	if err = p.c.Call(ctx, "GetExperimentIDsByGroup", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -14,9 +14,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
-	domain_filter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	domain_filter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
@@ -346,6 +346,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		ID:                        gptr.Of(experiment.ID),
 		Name:                      gptr.Of(experiment.Name),
 		Desc:                      gptr.Of(experiment.Description),
+		ExperimentGroupKey:        gptr.Of(experiment.ExperimentGroupKey),
 		CreatorBy:                 gptr.Of(experiment.CreatedBy),
 		EvalSetVersionID:          gptr.Of(experiment.EvalSetVersionID),
 		TargetVersionID:           gptr.Of(experiment.TargetVersionID),
@@ -575,7 +576,7 @@ func projectLegacyFieldsFromPrimarySet(experiment *entity.Experiment, res *domai
 }
 
 // projectEvaluatorFieldMappingFromSet 从单个评测集投影 evaluator_field_mapping:
-// 同一 evaluator_version_id 取默认实例 (alias==''); 无默认取首个实例 (接受信息损失)。
+// 同一 evaluator_version_id 取默认实例 (alias==”); 无默认取首个实例 (接受信息损失)。
 func projectEvaluatorFieldMappingFromSet(sc *entity.EvalSetConfig) []*domain_expt.EvaluatorFieldMapping {
 	if sc == nil || len(sc.EvaluatorConfs) == 0 {
 		return nil
@@ -610,7 +611,7 @@ func projectEvaluatorFieldMappingFromSet(sc *entity.EvalSetConfig) []*domain_exp
 }
 
 // projectScoreWeightsFromSet 从单个评测集投影 evaluator_version_id → score_weight:
-// 同 version 撞 key 取默认实例 (alias=='') 权重 (权威在 evaluator_confs[].score_weight)。
+// 同 version 撞 key 取默认实例 (alias==”) 权重 (权威在 evaluator_confs[].score_weight)。
 func projectScoreWeightsFromSet(sc *entity.EvalSetConfig) map[int64]float64 {
 	if sc == nil || len(sc.EvaluatorConfs) == 0 {
 		return nil
@@ -835,6 +836,7 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		EvaluatorVersionIds:   cer.GetEvaluatorVersionIds(),
 		Name:                  cer.GetName(),
 		Desc:                  cer.GetDesc(),
+		ExperimentGroupKey:    strings.TrimSpace(cer.GetExperimentGroupKey()),
 		EvalSetID:             cer.GetEvalSetID(),
 		TargetID:              cer.TargetID,
 		CreateEvalTargetParam: CreateEvalTargetParamDTO2DO(cer.GetCreateEvalTargetParam()),
@@ -900,6 +902,7 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 // 顶层 EvalSetID/EvalSetVersionID/TargetID 解析三元组详情并做权限校验，故在此用 configs 兜底回填：
 //   - 评测集: 取首个 set 作为"主集"标签 (与 CreateExpt 内主集兜底一致)；
 //   - 评测对象: 顶层未显式传时，取首个 set 的 target_confs[0] (本期 len<=1, 各 set 与实验级一致)。
+//
 // 仅在顶层字段缺省时填充，不覆盖调用方显式传入的值。
 func fillTopLevelIdentityFromEvalSetConfigs(cer *expt.CreateExperimentRequest, param *entity.CreateExptParam) {
 	configs := cer.GetEvalSetConfigs()

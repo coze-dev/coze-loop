@@ -319,7 +319,15 @@ func (p *BatchGetExperimentResultResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *StandardEvalOutputFullContent) IsValid() error {
+	return nil
+}
 func (p *StandardEvalOutputContent) IsValid() error {
+	if p.FullContent != nil {
+		if err := p.FullContent.IsValid(); err != nil {
+			return fmt.Errorf("field FullContent not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *MGetExperimentStandardEvalOutputsRequest) IsValid() error {
