@@ -49,7 +49,7 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 		return nil, err
 	}
 
-	items, err := buildItemStandardEvalOutputs(experimentReportItemResults(result), standardEvalOutputBuildOptions{ExptID: req.GetExptID()})
+	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{ExptID: req.GetExptID()})
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 		return nil, err
 	}
 
-	items, err := buildItemStandardEvalOutputs(experimentReportItemResults(result), standardEvalOutputBuildOptions{ExptID: req.GetExptID()})
+	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{ExptID: req.GetExptID()})
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,10 @@ func experimentReportItemResults(r *entity.MGetExperimentReportResult) []*entity
 	return r.ItemResults
 }
 
-type standardEvalOutputBuildOptions struct{ ExptID int64 }
+type standardEvalOutputBuildOptions struct {
+	ExptID               int64
+	EvaluatorByVersionID map[int64]*entity.ColumnEvaluator
+}
 
 type standardEvalOutputJSON struct {
 	Source any `json:"source,omitempty"`
@@ -140,7 +143,9 @@ type standardEvalOutputJSON struct {
 	Extra  any `json:"extra,omitempty"`
 }
 
-func buildItemStandardEvalOutputs(itemResults []*entity.ItemResult, opt standardEvalOutputBuildOptions) ([]*expt.ItemStandardEvalOutput, error) {
+func buildItemStandardEvalOutputs(result *entity.MGetExperimentReportResult, opt standardEvalOutputBuildOptions) ([]*expt.ItemStandardEvalOutput, error) {
+	itemResults := experimentReportItemResults(result)
+	opt.EvaluatorByVersionID = evaluatorByVersionID(result)
 	items := make([]*expt.ItemStandardEvalOutput, 0, len(itemResults))
 	for _, item := range itemResults {
 		if item == nil {
@@ -269,7 +274,7 @@ func buildStandardEvalOutputJSON(item *entity.ItemResult, opt standardEvalOutput
 		Rounds: standardTurns(item, opt.ExptID),
 		Agent:  standardAgent(item, opt.ExptID),
 		Output: standardOutput(item, opt.ExptID),
-		Eval:   standardEval(item, opt.ExptID),
+		Eval:   standardEval(item, opt.ExptID, opt),
 		Extra:  standardExtra(item),
 	}
 }
@@ -361,14 +366,26 @@ func looksLikeStandardEvalOutput(parsed map[string]any) bool {
 }
 
 func standardTurns(item *entity.ItemResult, exptID int64) []map[string]any {
-	rounds := make([]map[string]any, 0)
-	for _, payload := range standardPayloads(item, exptID) {
-		rounds = append(rounds, map[string]any{"turn_id": payload.TurnID, "kind": "eval_set_turn", "eval_set": payload.EvalSet})
+	payloads := standardPayloads(item, exptID)
+	rounds := make([]map[string]any, 0, len(payloads))
+	for i, payload := range payloads {
+		roundID := standardRoundID(payload)
+		rounds = append(rounds, map[string]any{
+			"round_id":   roundID,
+			"round_no":   i + 1,
+			"user_query": userQueryFromPayload(payload),
+			"latency":    latencyFromPayload(payload),
+			"start_time": startTimeFromPayload(payload),
+			"end_time":   endTimeFromPayload(payload),
+			"tokens":     tokensFromPayload(payload),
+			"context":    contextFromPayload(payload),
+		})
 	}
 	return rounds
 }
 
 func standardAgent(item *entity.ItemResult, exptID int64) map[string]any {
+	var first *entity.EvalTargetRecord
 	runs := make([]any, 0)
 	for _, payload := range standardPayloads(item, exptID) {
 		tr := payload.TargetOutput
@@ -376,57 +393,68 @@ func standardAgent(item *entity.ItemResult, exptID int64) map[string]any {
 			continue
 		}
 		rec := tr.EvalTargetRecord
-		runs = append(runs, map[string]any{"target_record_id": rec.ID, "target_id": rec.TargetID, "target_version_id": rec.TargetVersionID, "experiment_run_id": rec.ExperimentRunID, "status": rec.Status, "trace_id": rec.TraceID, "log_id": rec.LogID, "runtime_param": runtimeParamFromTargetRecord(rec)})
+		if first == nil {
+			first = rec
+		}
+		runs = append(runs, map[string]any{"target_record_id": rec.ID, "experiment_run_id": rec.ExperimentRunID, "status": rec.Status, "trace_id": rec.TraceID, "log_id": rec.LogID})
 	}
-	return map[string]any{"runs": runs}
+	runtimeParam := runtimeParamObjectFromTargetRecord(first)
+	return map[string]any{
+		"agent_id":          int64String(firstTargetID(first)),
+		"model_name":        stringFromRuntimeParam(runtimeParam, "model_name", "model", "model_id"),
+		"agent_name":        stringFromRuntimeParam(runtimeParam, "agent_name", "agent", "name"),
+		"agent_version":     stringFromRuntimeParam(runtimeParam, "agent_version", "version"),
+		"thinking_effort":   stringFromRuntimeParam(runtimeParam, "thinking_effort", "effort"),
+		"context_window":    stringFromRuntimeParam(runtimeParam, "context_window", "context_window_size", "main_context_window_size"),
+		"target_id":         firstTargetID(first),
+		"target_version_id": firstTargetVersionID(first),
+		"runtime_param":     runtimeParam,
+		"runs":              runs,
+	}
 }
 
 func standardOutput(item *entity.ItemResult, exptID int64) map[string]any {
-	turns := map[string]any{}
-	for _, payload := range standardPayloads(item, exptID) {
+	payloads := standardPayloads(item, exptID)
+	rounds := map[string]any{}
+	var detailOutput map[string]*entity.Content
+	for _, payload := range payloads {
 		tr := payload.TargetOutput
 		if tr == nil || tr.EvalTargetRecord == nil || tr.EvalTargetRecord.EvalTargetOutputData == nil {
 			continue
 		}
 		data := tr.EvalTargetRecord.EvalTargetOutputData
-		turns[strconv.FormatInt(payload.TurnID, 10)] = map[string]any{"target_record_id": tr.EvalTargetRecord.ID, "output_fields": data.OutputFields, "ext": data.Ext, "usage": data.EvalTargetUsage, "error": data.EvalTargetRunError, "time_consuming_ms": data.TimeConsumingMS}
+		out := data.OutputFields
+		if detailOutput == nil {
+			detailOutput = out
+		}
+		rounds[standardRoundID(payload)] = map[string]any{"output": out, "file_diff": []any{}}
 	}
-	return map[string]any{"turns": turns}
+	if len(payloads) > 0 {
+		last := payloads[len(payloads)-1]
+		if last.TargetOutput != nil && last.TargetOutput.EvalTargetRecord != nil && last.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
+			detailOutput = last.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
+		}
+	}
+	return map[string]any{"detail": map[string]any{"file_diff": []any{}, "output": detailOutput}, "rounds": rounds}
 }
 
-func standardEval(item *entity.ItemResult, exptID int64) map[string]any {
-	turns := map[string]any{}
-	for _, payload := range standardPayloads(item, exptID) {
-		eo := payload.EvaluatorOutput
-		if eo == nil {
-			continue
-		}
-		records := map[string]*entity.EvaluatorRecord{}
-		for key, record := range eo.EvaluatorRecords {
-			if record == nil {
-				continue
-			}
-			records[strconv.FormatInt(key, 10)] = record
-		}
-		turns[strconv.FormatInt(payload.TurnID, 10)] = map[string]any{"weighted_score": eo.WeightedScore, "evaluator_records": records}
+func standardEval(item *entity.ItemResult, exptID int64, opt standardEvalOutputBuildOptions) map[string]any {
+	payloads := standardPayloads(item, exptID)
+	rounds := map[string]any{}
+	var detailEval map[string]any
+	for _, payload := range payloads {
+		evalResult := standardEvalResult(payload, opt)
+		rounds[standardRoundID(payload)] = map[string]any{"run_status": turnRunStatus(payload), "eval_result": evalResult}
+		detailEval = evalResult
 	}
-	return map[string]any{"turns": turns}
+	if detailEval == nil {
+		detailEval = map[string]any{"type": "score", "score": nil, "reason": "", "results": map[string]any{}}
+	}
+	return map[string]any{"task_config": standardEvalTaskConfig(item), "detail": map[string]any{"run_status": itemRunStatus(item), "eval_result": detailEval}, "rounds": rounds}
 }
 
 func standardExtra(item *entity.ItemResult) map[string]any {
-	turns := map[string]any{}
-	for _, turnResult := range item.TurnResults {
-		if turnResult == nil {
-			continue
-		}
-		for _, er := range turnResult.ExperimentResults {
-			if er == nil || er.Payload == nil {
-				continue
-			}
-			turns[strconv.FormatInt(er.Payload.TurnID, 10)] = map[string]any{"system_info": er.Payload.SystemInfo, "annotations": er.Payload.AnnotateResult, "analysis": er.Payload.AnalysisRecord}
-		}
-	}
-	return map[string]any{"item_ext": item.Ext, "turns": turns}
+	return map[string]any{}
 }
 
 func standardPayloads(item *entity.ItemResult, exptID int64) []*entity.ExperimentTurnPayload {
@@ -453,4 +481,274 @@ func runtimeParamFromTargetRecord(record *entity.EvalTargetRecord) map[string]st
 		return map[string]string{consts.TargetExecuteExtRuntimeParamKey: v}
 	}
 	return nil
+}
+
+func standardRoundID(payload *entity.ExperimentTurnPayload) string {
+	if payload == nil {
+		return "round_0"
+	}
+	return "round_" + strconv.FormatInt(payload.TurnID, 10)
+}
+
+func userQueryFromPayload(payload *entity.ExperimentTurnPayload) string {
+	if payload == nil || payload.EvalSet == nil || payload.EvalSet.Turn == nil {
+		return ""
+	}
+	for _, field := range payload.EvalSet.Turn.FieldDataList {
+		if field == nil || field.Content == nil {
+			continue
+		}
+		key := field.Key
+		if key == "query" || key == "input" || key == "user_query" {
+			return field.Content.GetText()
+		}
+	}
+	return ""
+}
+
+func latencyFromPayload(payload *entity.ExperimentTurnPayload) int64 {
+	if payload == nil || payload.TargetOutput == nil || payload.TargetOutput.EvalTargetRecord == nil || payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData == nil || payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS == nil {
+		return 0
+	}
+	return *payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS
+}
+
+func tokensFromPayload(payload *entity.ExperimentTurnPayload) map[string]any {
+	var usage *entity.EvalTargetUsage
+	if payload != nil && payload.TargetOutput != nil && payload.TargetOutput.EvalTargetRecord != nil && payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
+		usage = payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage
+	}
+	return map[string]any{
+		"prompt_tokens":                gptr.Indirect(gptr.Of(usage.GetInputTokens())),
+		"completion_tokens":            gptr.Indirect(gptr.Of(usage.GetOutputTokens())),
+		"total_tokens":                 gptr.Indirect(gptr.Of(usage.GetTotalTokens())),
+		"reasoning_tokens":             0,
+		"input_cached_tokens":          0,
+		"input_creation_cached_tokens": 0,
+	}
+}
+
+func contextFromPayload(payload *entity.ExperimentTurnPayload) map[string]any {
+	ctx := map[string]any{"log_id": "", "message_id": "", "thread_id": "", "trace_id": "", "start_time": int64(0), "end_time": int64(0)}
+	if payload == nil {
+		return ctx
+	}
+	if payload.SystemInfo != nil && payload.SystemInfo.LogID != nil {
+		ctx["log_id"] = *payload.SystemInfo.LogID
+	}
+	if payload.TargetOutput != nil && payload.TargetOutput.EvalTargetRecord != nil {
+		rec := payload.TargetOutput.EvalTargetRecord
+		if rec.LogID != "" {
+			ctx["log_id"] = rec.LogID
+		}
+		ctx["trace_id"] = rec.TraceID
+	}
+	return ctx
+}
+
+func startTimeFromPayload(payload *entity.ExperimentTurnPayload) int64 { return 0 }
+
+func endTimeFromPayload(payload *entity.ExperimentTurnPayload) int64 { return 0 }
+
+func firstTargetID(record *entity.EvalTargetRecord) int64 {
+	if record == nil {
+		return 0
+	}
+	return record.TargetID
+}
+
+func firstTargetVersionID(record *entity.EvalTargetRecord) int64 {
+	if record == nil {
+		return 0
+	}
+	return record.TargetVersionID
+}
+
+func int64String(v int64) string {
+	if v == 0 {
+		return ""
+	}
+	return strconv.FormatInt(v, 10)
+}
+
+func runtimeParamObjectFromTargetRecord(record *entity.EvalTargetRecord) map[string]any {
+	if record == nil || record.EvalTargetInputData == nil || record.EvalTargetInputData.Ext == nil {
+		return nil
+	}
+	raw := record.EvalTargetInputData.Ext[consts.TargetExecuteExtRuntimeParamKey]
+	if raw == "" {
+		return nil
+	}
+	parsed := map[string]any{}
+	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+		return map[string]any{consts.TargetExecuteExtRuntimeParamKey: raw}
+	}
+	return parsed
+}
+
+func stringFromRuntimeParam(runtimeParam map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if v, ok := runtimeParam[key]; ok && v != nil {
+			switch t := v.(type) {
+			case string:
+				return t
+			case float64:
+				return strconv.FormatInt(int64(t), 10)
+			case int64:
+				return strconv.FormatInt(t, 10)
+			case int:
+				return strconv.Itoa(t)
+			}
+		}
+	}
+	return ""
+}
+
+func standardEvalTaskConfig(item *entity.ItemResult) map[string]any {
+	items := make([]map[string]any, 0, 1)
+	entry := map[string]any{"dataset_key": datasetKeyFromItem(item)}
+	if k := itemKeyFromItem(item); k != "" {
+		entry["item_key"] = k
+	}
+	items = append(items, entry)
+	return map[string]any{"items": items, "mode": "", "max_round": 0}
+}
+
+func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalOutputBuildOptions) map[string]any {
+	results := map[string]any{}
+	var score any
+	var reason string
+	if payload != nil && payload.EvaluatorOutput != nil {
+		if payload.EvaluatorOutput.WeightedScore != nil {
+			score = *payload.EvaluatorOutput.WeightedScore
+		}
+		for key, record := range payload.EvaluatorOutput.EvaluatorRecords {
+			if record == nil {
+				continue
+			}
+			resultKey := evaluatorResultKey(key, record)
+			if score == nil && record.GetScore() != nil {
+				score = *record.GetScore()
+			}
+			if reason == "" {
+				reason = record.GetReasoning()
+			}
+			results[resultKey] = map[string]any{
+				"evaluator_name":    evaluatorName(opt, key, record),
+				"evaluator_version": evaluatorVersion(opt, key, record),
+				"evaluator_alias":   record.Alias,
+				"type":              "score",
+				"score":             record.GetScore(),
+				"reason":            record.GetReasoning(),
+			}
+		}
+	}
+	return map[string]any{"type": "score", "score": score, "reason": reason, "results": results}
+}
+
+func evaluatorResultKey(key int64, record *entity.EvaluatorRecord) string {
+	if record != nil {
+		if record.Alias != "" {
+			return record.Alias
+		}
+		if record.InlineKey != "" {
+			return record.InlineKey
+		}
+	}
+	return strconv.FormatInt(key, 10)
+}
+
+func evaluatorName(opt standardEvalOutputBuildOptions, key int64, record *entity.EvaluatorRecord) string {
+	if meta := opt.EvaluatorByVersionID[key]; meta != nil && meta.Name != nil {
+		return *meta.Name
+	}
+	return ""
+}
+
+func evaluatorVersion(opt standardEvalOutputBuildOptions, key int64, record *entity.EvaluatorRecord) string {
+	if meta := opt.EvaluatorByVersionID[key]; meta != nil && meta.Version != nil {
+		return *meta.Version
+	}
+	return ""
+}
+
+func turnRunStatus(payload *entity.ExperimentTurnPayload) map[string]any {
+	status := "unknown"
+	failedReason := ""
+	if payload != nil && payload.SystemInfo != nil {
+		status = turnRunStateString(payload.SystemInfo.TurnRunState)
+		if payload.SystemInfo.Error != nil && payload.SystemInfo.Error.Message != nil {
+			failedReason = *payload.SystemInfo.Error.Message
+		}
+	}
+	return map[string]any{"status": status, "failed_reason": failedReason}
+}
+
+func itemRunStatus(item *entity.ItemResult) map[string]any {
+	status := "unknown"
+	failedReason := ""
+	if item != nil && item.SystemInfo != nil {
+		status = itemRunStateString(item.SystemInfo.RunState)
+		if item.SystemInfo.Error != nil && item.SystemInfo.Error.Message != nil {
+			failedReason = *item.SystemInfo.Error.Message
+		}
+	}
+	return map[string]any{"status": status, "failed_reason": failedReason}
+}
+
+func turnRunStateString(state entity.TurnRunState) string {
+	switch state {
+	case entity.TurnRunState_Success:
+		return "completed"
+	case entity.TurnRunState_Fail:
+		return "failed"
+	case entity.TurnRunState_Processing:
+		return "processing"
+	case entity.TurnRunState_Queueing:
+		return "queueing"
+	case entity.TurnRunState_Terminal:
+		return "terminated"
+	default:
+		return "unknown"
+	}
+}
+
+func itemRunStateString(state entity.ItemRunState) string {
+	switch state {
+	case entity.ItemRunState_Success:
+		return "completed"
+	case entity.ItemRunState_Fail:
+		return "failed"
+	case entity.ItemRunState_Processing:
+		return "processing"
+	case entity.ItemRunState_Queueing:
+		return "queueing"
+	case entity.ItemRunState_Terminal:
+		return "terminated"
+	default:
+		return "unknown"
+	}
+}
+
+func evaluatorByVersionID(result *entity.MGetExperimentReportResult) map[int64]*entity.ColumnEvaluator {
+	res := map[int64]*entity.ColumnEvaluator{}
+	if result == nil {
+		return res
+	}
+	for _, col := range result.ColumnEvaluators {
+		if col != nil {
+			res[col.EvaluatorVersionID] = col
+		}
+	}
+	for _, exptCol := range result.ExptColumnEvaluators {
+		if exptCol == nil {
+			continue
+		}
+		for _, col := range exptCol.ColumnEvaluators {
+			if col != nil {
+				res[col.EvaluatorVersionID] = col
+			}
+		}
+	}
+	return res
 }

@@ -81,11 +81,14 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 
 	var output map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
-	assert.Contains(t, output, "turns")
+	assert.Contains(t, output, "detail")
+	assert.Contains(t, output, "rounds")
 
 	var eval map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
-	assert.Contains(t, eval, "turns")
+	assert.Contains(t, eval, "task_config")
+	assert.Contains(t, eval, "detail")
+	assert.Contains(t, eval, "rounds")
 }
 
 func TestExperimentApplication_MGetExperimentStandardEvalOutputs_ItemIDsLimit(t *testing.T) {
@@ -328,5 +331,7 @@ func TestBuildItemStandardEvalOutput_DoesNotMisclassifyOrdinaryJSONActualOutput(
 	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	require.NotNil(t, got.Output)
-	assert.Contains(t, got.Output.GetText(), "output_fields")
+	assert.Contains(t, got.Output.GetText(), "actual_output")
+	assert.Contains(t, got.Output.GetText(), "detail")
+	assert.Contains(t, got.Output.GetText(), "rounds")
 }
