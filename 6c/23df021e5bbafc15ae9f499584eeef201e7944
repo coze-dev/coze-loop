@@ -1,0 +1,14 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6c23df021e5bbafc15ae9f499584eeef201e7944",
+  "prompts": {},
+  "humans": {
+    "h_af8f37ba380ae1": {
+      "author": "yangfeng.alanyf <yangfeng.alanyf@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
