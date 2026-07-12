@@ -31,6 +31,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.SpaceID = field.NewInt64(tableName, "space_id")
 	_experiment.CreatedBy = field.NewString(tableName, "created_by")
 	_experiment.Name = field.NewString(tableName, "name")
+	_experiment.ExperimentGroupKey = field.NewString(tableName, "experiment_group_key")
 	_experiment.Description = field.NewString(tableName, "description")
 	_experiment.EvalSetVersionID = field.NewInt64(tableName, "eval_set_version_id")
 	_experiment.TargetType = field.NewInt64(tableName, "target_type")
@@ -74,6 +75,7 @@ type experiment struct {
 	SpaceID                   field.Int64  // 空间 id
 	CreatedBy                 field.String // 创建者 id
 	Name                      field.String // 实验名称
+	ExperimentGroupKey        field.String // 实验分组key，默认实验ID
 	Description               field.String // 实验描述
 	EvalSetVersionID          field.Int64  // 评测集版本 id
 	TargetType                field.Int64  // 评估对象类型
@@ -122,6 +124,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.SpaceID = field.NewInt64(table, "space_id")
 	e.CreatedBy = field.NewString(table, "created_by")
 	e.Name = field.NewString(table, "name")
+	e.ExperimentGroupKey = field.NewString(table, "experiment_group_key")
 	e.Description = field.NewString(table, "description")
 	e.EvalSetVersionID = field.NewInt64(table, "eval_set_version_id")
 	e.TargetType = field.NewInt64(table, "target_type")
@@ -176,11 +179,12 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 31)
+	e.fieldMap = make(map[string]field.Expr, 32)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
 	e.fieldMap["name"] = e.Name
+	e.fieldMap["experiment_group_key"] = e.ExperimentGroupKey
 	e.fieldMap["description"] = e.Description
 	e.fieldMap["eval_set_version_id"] = e.EvalSetVersionID
 	e.fieldMap["target_type"] = e.TargetType

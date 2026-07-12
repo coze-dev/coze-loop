@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `space_id`            bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '空间 id',
     `created_by`          varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NOT NULL DEFAULT '' COMMENT '创建者 id',
     `name`                varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NOT NULL DEFAULT '' COMMENT '实验名称',
+    `experiment_group_key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '实验分组key，默认实验ID',
     `description`         varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '实验描述',
     `eval_set_version_id` bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评测集版本 id',
     `target_type`         bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评估对象类型',

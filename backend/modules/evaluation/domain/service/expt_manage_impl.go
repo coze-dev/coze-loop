@@ -1205,6 +1205,10 @@ func (e *ExptMangerImpl) MGet(ctx context.Context, exptIDs []int64, spaceID int6
 	return expts, nil
 }
 
+func (e *ExptMangerImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, session *entity.Session) ([]int64, error) {
+	return e.exptRepo.GetIDsByGroupKey(ctx, spaceID, groupKey)
+}
+
 func (e *ExptMangerImpl) List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.Experiment, int64, error) {
 	expts, count, err := e.exptRepo.List(ctx, page, pageSize, filter, orderBys, spaceID)
 	if err != nil {

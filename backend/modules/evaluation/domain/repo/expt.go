@@ -22,6 +22,7 @@ type IExperimentRepo interface {
 	MGetByID(ctx context.Context, ids []int64, spaceID int64) ([]*entity.Experiment, error)
 	MGetBasicByID(ctx context.Context, ids []int64) ([]*entity.Experiment, error)
 	GetByName(ctx context.Context, name string, spaceID int64) (*entity.Experiment, bool, error)
+	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error)
 	GetEvaluatorRefByExptIDs(ctx context.Context, exptID []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error)
 }
 

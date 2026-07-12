@@ -33,6 +33,7 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		SpaceID:                   experiment.SpaceID,
 		CreatedBy:                 experiment.CreatedBy,
 		Name:                      experiment.Name,
+		ExperimentGroupKey:        experiment.ExperimentGroupKey,
 		Description:               experiment.Description,
 		EvalSetVersionID:          experiment.EvalSetVersionID,
 		EvalSetID:                 experiment.EvalSetID,
@@ -100,15 +101,18 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		})
 	}
 
+	experimentGroupKey := expt.ExperimentGroupKey
+	if experimentGroupKey == "" {
+		experimentGroupKey = strconv.FormatInt(expt.ID, 10)
+	}
+
 	res := &entity.Experiment{
-		ID:          expt.ID,
-		SpaceID:     expt.SpaceID,
-		CreatedBy:   expt.CreatedBy,
-		Name:        expt.Name,
-		Description: expt.Description,
-		// experiment_group_key is not persisted until the DB DDL is rolled out.
-		// Keep read paths aligned with the target default semantics: group key defaults to experiment ID.
-		ExperimentGroupKey:        strconv.FormatInt(expt.ID, 10),
+		ID:                        expt.ID,
+		SpaceID:                   expt.SpaceID,
+		CreatedBy:                 expt.CreatedBy,
+		Name:                      expt.Name,
+		Description:               expt.Description,
+		ExperimentGroupKey:        experimentGroupKey,
 		EvalSetVersionID:          expt.EvalSetVersionID,
 		EvalSetID:                 expt.EvalSetID,
 		TargetVersionID:           expt.TargetVersionID,

@@ -42,6 +42,8 @@ type IExptDAO interface {
 	GetByID(ctx context.Context, id int64) (*model.Experiment, error)
 
 	MGetByID(ctx context.Context, ids []int64) ([]*model.Experiment, error)
+
+	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error)
 }
 
 func NewExptDAO(db db.Provider) IExptDAO {
@@ -389,4 +391,23 @@ func (d *exptDAOImpl) MGetByID(ctx context.Context, ids []int64) ([]*model.Exper
 	}
 
 	return sortedExperiments, nil
+}
+
+func (d *exptDAOImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error) {
+	expt := d.query.Experiment
+	q := expt.WithContext(ctx)
+	if contexts.CtxWriteDB(ctx) {
+		q = q.WriteDB()
+	}
+
+	var ids []int64
+	err := q.Where(
+		expt.SpaceID.Eq(spaceID),
+		expt.ExperimentGroupKey.Eq(groupKey),
+		expt.DeletedAt.IsNull(),
+	).Pluck(expt.ID, &ids)
+	if err != nil {
+		return nil, errorx.Wrapf(err, "mysql get experiment ids by group key fail, space_id: %v, group_key: %v", spaceID, groupKey)
+	}
+	return ids, nil
 }

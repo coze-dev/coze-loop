@@ -1052,6 +1052,7 @@ func (e *experimentApplication) BatchGetExperiments(ctx context.Context, req *ex
 }
 
 func (e *experimentApplication) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest) (r *expt.GetExperimentIDsByGroupResponse, err error) {
+	session := entity.NewSession(ctx)
 	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
 		SpaceID:       req.GetWorkspaceID(),
@@ -1060,15 +1061,13 @@ func (e *experimentApplication) GetExperimentIDsByGroup(ctx context.Context, req
 		return nil, err
 	}
 
-	// TODO: replace this mock with experiment_group_key DB lookup after the DDL is ready.
-	// The target default semantics is experiment_group_key == experiment_id, so parsing the
-	// group key as an experiment ID gives a usable single-experiment mock before DB rollout.
-	exptIDs := make([]int64, 0, 1)
 	groupKey := strings.TrimSpace(req.GetExperimentGroupKey())
-	if groupKey != "" {
-		if exptID, parseErr := strconv.ParseInt(groupKey, 10, 64); parseErr == nil && exptID > 0 {
-			exptIDs = append(exptIDs, exptID)
-		}
+	if groupKey == "" {
+		return &expt.GetExperimentIDsByGroupResponse{BaseResp: base.NewBaseResp()}, nil
+	}
+	exptIDs, err := e.manager.GetIDsByGroupKey(ctx, req.GetWorkspaceID(), groupKey, session)
+	if err != nil {
+		return nil, err
 	}
 
 	return &expt.GetExperimentIDsByGroupResponse{

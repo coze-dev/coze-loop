@@ -32,6 +32,7 @@ type IExptConfigManager interface {
 
 	Get(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error)
 	MGet(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error)
+	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, session *entity.Session) ([]int64, error)
 
 	Clone(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error)
 

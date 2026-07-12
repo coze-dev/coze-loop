@@ -201,6 +201,21 @@ func (mr *MockIExptManagerMockRecorder) Get(ctx, exptID, spaceID, session any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIExptManager)(nil).Get), ctx, exptID, spaceID, session)
 }
 
+// GetIDsByGroupKey mocks base method.
+func (m *MockIExptManager) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, session *entity.Session) ([]int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIDsByGroupKey", ctx, spaceID, groupKey, session)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIDsByGroupKey indicates an expected call of GetIDsByGroupKey.
+func (mr *MockIExptManagerMockRecorder) GetIDsByGroupKey(ctx, spaceID, groupKey, session any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIDsByGroupKey", reflect.TypeOf((*MockIExptManager)(nil).GetIDsByGroupKey), ctx, spaceID, groupKey, session)
+}
+
 // GetDetail mocks base method.
 func (m *MockIExptManager) GetDetail(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.GetExptTupleOptionFn) (*entity.Experiment, error) {
 	m.ctrl.T.Helper()

@@ -100,6 +100,21 @@ func (mr *MockIExptDAOMockRecorder) GetByName(ctx, name, spaceID any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockIExptDAO)(nil).GetByName), ctx, name, spaceID)
 }
 
+// GetIDsByGroupKey mocks base method.
+func (m *MockIExptDAO) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIDsByGroupKey", ctx, spaceID, groupKey)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIDsByGroupKey indicates an expected call of GetIDsByGroupKey.
+func (mr *MockIExptDAOMockRecorder) GetIDsByGroupKey(ctx, spaceID, groupKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIDsByGroupKey", reflect.TypeOf((*MockIExptDAO)(nil).GetIDsByGroupKey), ctx, spaceID, groupKey)
+}
+
 // List mocks base method.
 func (m *MockIExptDAO) List(ctx context.Context, page, size int32, filter *entity.ExptListFilter, orders []*entity.OrderBy, spaceID int64) ([]*model.Experiment, int64, error) {
 	m.ctrl.T.Helper()
