@@ -155,6 +155,22 @@ func (p *BatchGetExperimentsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *GetExperimentIDsByGroupRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetExperimentIDsByGroupResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *UpdateExperimentRequest) IsValid() error {
 	if p.NotificationConf != nil {
 		if err := p.NotificationConf.IsValid(); err != nil {
@@ -307,6 +323,12 @@ func (p *StandardEvalOutputContent) IsValid() error {
 	return nil
 }
 func (p *MGetExperimentStandardEvalOutputsRequest) IsValid() error {
+	if len(p.ItemIds) < int(1) {
+		return fmt.Errorf("field ItemIds MinLen rule failed, current value: %v", p.ItemIds)
+	}
+	if len(p.ItemIds) > int(100) {
+		return fmt.Errorf("field ItemIds MaxLen rule failed, current value: %v", p.ItemIds)
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

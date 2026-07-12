@@ -162,6 +162,19 @@ struct BatchGetExperimentsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct GetExperimentIDsByGroupRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required string experiment_group_key (api.body = 'experiment_group_key', go.tag = 'json:"experiment_group_key"')
+
+    255: optional base.Base Base
+}
+
+struct GetExperimentIDsByGroupResponse {
+    1: optional list<i64> expt_ids (api.body = 'expt_ids', api.js_conv = 'true', go.tag = 'json:"expt_ids"')
+
+    255: base.BaseResp BaseResp
+}
+
 struct UpdateExperimentRequest {
     1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
@@ -318,7 +331,7 @@ struct MGetExperimentStandardEvalOutputsRequest {
     2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
 
     // MQ normal path passes one item_id; batch consumers can pass multiple.
-    10: required list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
+    10: required list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"', vt.min_size = "1", vt.max_size = "100")
 
     // Temporary BOE self-test auth. Remove after formal auth is wired.
     40: optional string api_key (api.body = 'api_key', go.tag = 'json:"api_key"')
@@ -911,6 +924,10 @@ service ExperimentService {
 
     BatchGetExperimentsResponse BatchGetExperiments(1: BatchGetExperimentsRequest req) (
         api.post = '/api/evaluation/v1/experiments/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
+    )
+
+    GetExperimentIDsByGroupResponse GetExperimentIDsByGroup(1: GetExperimentIDsByGroupRequest req) (
+        api.post = '/api/evaluation/v1/experiments/group_ids/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
     ListExperimentsResponse ListExperiments(1: ListExperimentsRequest req) (

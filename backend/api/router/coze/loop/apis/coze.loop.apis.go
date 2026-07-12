@@ -291,6 +291,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						_aggr_results.POST("/batch_get", append(_batchgetexperimentaggrresultMw(handler), apis.BatchGetExperimentAggrResult)...)
 					}
 					{
+						_group_ids := _experiments.Group("/group_ids", _group_idsMw(handler)...)
+						_group_ids.POST("/batch_get", append(_getexperimentidsbygroupMw(handler), apis.GetExperimentIDsByGroup)...)
+					}
+					{
 						_insight_analysis_records0 := _experiments.Group("/insight_analysis_records", _insight_analysis_records0Mw(handler)...)
 						{
 							_insight_analysis_record_id0 := _insight_analysis_records0.Group("/:insight_analysis_record_id", _insight_analysis_record_id0Mw(handler)...)

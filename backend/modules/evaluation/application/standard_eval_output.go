@@ -21,14 +21,14 @@ import (
 )
 
 const standardEvalOutputContentTypeJSON = "application/json"
-const maxStandardEvalOutputMGetItemIDs = 200
+const maxStandardEvalOutputMGetItemIDs = 100
 
 func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
 	if req == nil || len(req.GetItemIds()) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is empty"))
 	}
 	if len(req.GetItemIds()) > maxStandardEvalOutputMGetItemIDs {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids exceeds maximum of 200"))
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids exceeds maximum of 100"))
 	}
 	if err := e.authStandardEvalOutput(ctx, req.GetWorkspaceID(), req.GetAPIKey()); err != nil {
 		return nil, err
