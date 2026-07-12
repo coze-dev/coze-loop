@@ -83,6 +83,24 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	assert.Contains(t, eval, "turns")
 }
 
+func TestExperimentApplication_MGetExperimentStandardEvalOutputs_ItemIDsLimit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
+	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Times(0)
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc}
+
+	itemIDs := make([]int64, maxStandardEvalOutputMGetItemIDs+1)
+	for i := range itemIDs {
+		itemIDs[i] = int64(i + 1)
+	}
+	_, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{WorkspaceID: 1, ExptID: 2, ItemIds: itemIDs})
+	require.Error(t, err)
+}
+
 func TestExperimentApplication_MGetExperimentStandardEvalOutputs_APIKeyBypass(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
