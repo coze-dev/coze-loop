@@ -12,8 +12,6 @@ import (
 
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
-	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
@@ -37,14 +35,6 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 		targetRecordID int64 = 6
 	)
 
-	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, param *rpc.AuthorizationParam) error {
-			assert.Equal(t, workspaceID, param.SpaceID)
-			require.Len(t, param.ActionObjects, 1)
-			assert.Equal(t, consts.ActionReadExpt, gptr.Indirect(param.ActionObjects[0].Action))
-			return nil
-		},
-	)
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
 			assert.Equal(t, workspaceID, param.SpaceID)
@@ -113,13 +103,12 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_APIKeyBypass(t 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	// 鉴权已临时移除，无论是否带 api_key 都不再触发 Authorization / configer 校验。
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
-	mockConfiger := componentmocks.NewMockIConfiger(ctrl)
-	mockConfiger.EXPECT().GetStandardEvalOutputAPIKey(gomock.Any()).Return("test-key")
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(makeStandardEvalOutputReportResult(2, 3, 4, 5, 6), nil)
-	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, configer: mockConfiger}
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc}
 
 	resp, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{
 		WorkspaceID: 1,
@@ -139,7 +128,6 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc}
 
-	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
 			assert.Equal(t, entity.NewPage(2, 10), param.Page)
@@ -177,7 +165,6 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_Error(t *testin
 	_, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{WorkspaceID: 1, ExptID: 2})
 	require.Error(t, err)
 
-	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
 	_, err = app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{WorkspaceID: 1, ExptID: 2, ItemIds: []int64{4}})
 	require.Error(t, err)
