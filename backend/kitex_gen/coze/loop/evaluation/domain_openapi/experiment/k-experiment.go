@@ -4438,6 +4438,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 10:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField10(buf[offset:])
@@ -4806,6 +4820,20 @@ func (p *Experiment) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ExperimentGroupKey = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 
@@ -5159,6 +5187,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField114(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField31(buf[offset:], w)
@@ -5185,6 +5214,7 @@ func (p *Experiment) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
@@ -5235,6 +5265,15 @@ func (p *Experiment) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetDescription() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Description)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExperimentGroupKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ExperimentGroupKey)
 	}
 	return offset
 }
@@ -5492,6 +5531,15 @@ func (p *Experiment) field3Length() int {
 	return l
 }
 
+func (p *Experiment) field4Length() int {
+	l := 0
+	if p.IsSetExperimentGroupKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ExperimentGroupKey)
+	}
+	return l
+}
+
 func (p *Experiment) field10Length() int {
 	l := 0
 	if p.IsSetStatus() {
@@ -5731,6 +5779,14 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Description)
 		}
 		p.Description = &tmp
+	}
+
+	if src.ExperimentGroupKey != nil {
+		var tmp string
+		if *src.ExperimentGroupKey != "" {
+			tmp = kutils.StringDeepCopy(*src.ExperimentGroupKey)
+		}
+		p.ExperimentGroupKey = &tmp
 	}
 
 	if src.Status != nil {

@@ -341,6 +341,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 		ID:                    dto.ID,
 		Name:                  dto.Name,
 		Description:           dto.Desc,
+		ExperimentGroupKey:    dto.ExperimentGroupKey,
 		ItemConcurNum:         dto.ItemConcurNum,
 		ItemRetryNum:          dto.ItemRetryNum,
 		TargetFieldMapping:    DomainTargetFieldMappingDTO2OpenAPI(dto.TargetFieldMapping),
@@ -645,9 +646,10 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	}
 
 	result := &openapiExperiment.Experiment{
-		ID:        gptr.Of(experiment.ID),
-		Name:      gptr.Of(experiment.Name),
-		ExptStats: openAPIExperimentStatsDO2DTO(experiment.Stats),
+		ID:                 gptr.Of(experiment.ID),
+		Name:               gptr.Of(experiment.Name),
+		ExperimentGroupKey: gptr.Of(experiment.ExperimentGroupKey),
+		ExptStats:          openAPIExperimentStatsDO2DTO(experiment.Stats),
 		BaseInfo: &openapiCommon.BaseInfo{
 			CreatedBy: &openapiCommon.UserInfo{
 				UserID: gptr.Of(experiment.CreatedBy),

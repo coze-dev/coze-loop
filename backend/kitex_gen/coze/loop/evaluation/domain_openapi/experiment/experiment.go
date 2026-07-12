@@ -6308,9 +6308,10 @@ func (p *ExperimentStatistics) Field5DeepEqual(src *int32) bool {
 // 评测实验
 type Experiment struct {
 	// 基本信息
-	ID          *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
-	Name        *string `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	ID                 *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	Name               *string `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Description        *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	ExperimentGroupKey *string `thrift:"experiment_group_key,4,optional" frugal:"4,optional,string" form:"experiment_group_key" json:"experiment_group_key,omitempty" query:"experiment_group_key"`
 	// 运行信息
 	Status *ExperimentStatus `thrift:"status,10,optional" frugal:"10,optional,string" form:"status" json:"status,omitempty" query:"status"`
 	// ISO 8601格式
@@ -6393,6 +6394,18 @@ func (p *Experiment) GetDescription() (v string) {
 		return Experiment_Description_DEFAULT
 	}
 	return *p.Description
+}
+
+var Experiment_ExperimentGroupKey_DEFAULT string
+
+func (p *Experiment) GetExperimentGroupKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperimentGroupKey() {
+		return Experiment_ExperimentGroupKey_DEFAULT
+	}
+	return *p.ExperimentGroupKey
 }
 
 var Experiment_Status_DEFAULT ExperimentStatus
@@ -6667,6 +6680,9 @@ func (p *Experiment) SetName(val *string) {
 func (p *Experiment) SetDescription(val *string) {
 	p.Description = val
 }
+func (p *Experiment) SetExperimentGroupKey(val *string) {
+	p.ExperimentGroupKey = val
+}
 func (p *Experiment) SetStatus(val *ExperimentStatus) {
 	p.Status = val
 }
@@ -6738,6 +6754,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	1:   "id",
 	2:   "name",
 	3:   "description",
+	4:   "experiment_group_key",
 	10:  "status",
 	11:  "started_at",
 	12:  "ended_at",
@@ -6772,6 +6789,10 @@ func (p *Experiment) IsSetName() bool {
 
 func (p *Experiment) IsSetDescription() bool {
 	return p.Description != nil
+}
+
+func (p *Experiment) IsSetExperimentGroupKey() bool {
+	return p.ExperimentGroupKey != nil
 }
 
 func (p *Experiment) IsSetStatus() bool {
@@ -6899,6 +6920,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7140,6 +7169,17 @@ func (p *Experiment) ReadField3(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.Description = _field
+	return nil
+}
+func (p *Experiment) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExperimentGroupKey = _field
 	return nil
 }
 func (p *Experiment) ReadField10(iprot thrift.TProtocol) error {
@@ -7427,6 +7467,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 3
 			goto WriteFieldError
 		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
 			goto WriteFieldError
@@ -7586,6 +7630,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *Experiment) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperimentGroupKey() {
+		if err = oprot.WriteFieldBegin("experiment_group_key", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ExperimentGroupKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *Experiment) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetStatus() {
@@ -8039,6 +8101,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 	if !p.Field3DeepEqual(ano.Description) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.ExperimentGroupKey) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.Status) {
 		return false
 	}
@@ -8140,6 +8205,18 @@ func (p *Experiment) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field4DeepEqual(src *string) bool {
+
+	if p.ExperimentGroupKey == src {
+		return true
+	} else if p.ExperimentGroupKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ExperimentGroupKey, *src) != 0 {
 		return false
 	}
 	return true

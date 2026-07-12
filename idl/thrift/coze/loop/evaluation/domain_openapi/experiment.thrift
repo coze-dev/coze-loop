@@ -197,6 +197,7 @@ struct Experiment {
     1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
     2: optional string name
     3: optional string description
+    4: optional string experiment_group_key
 
     // 运行信息
     10: optional ExperimentStatus status // 实验状态
