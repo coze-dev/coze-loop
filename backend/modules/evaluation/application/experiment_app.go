@@ -548,7 +548,10 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	// SandboxAgent 评测对象：在 RunExperiment 前初始化沙箱任务，Concurrency 沿用实验并发度（ItemConcurNum）
+	// SandboxAgent 评测对象：在 RunExperiment 前初始化沙箱任务，Concurrency 沿用实验并发度（ItemConcurNum）。
+	// 注意：SandboxSchedulerService 是 agent_studio 侧的下游服务面，部分部署分支可能尚未注册该服务。
+	// Init 失败只能影响沙箱调度预热，不能阻断 SubmitExperiment 主链路；否则 SandboxAgent 新建实验会在入口直接失败。
+	// 后续 agent_studio 补齐 SandboxSchedulerService 后，这里仍会尽力 Init，失败时保留 warn 便于排查。
 	if e.sandboxSchedulerAdapter != nil &&
 		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
 		exptID := cresp.GetExperiment().GetID()
@@ -558,7 +561,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 			Concurrency: concurrency,
 			WorkspaceID: req.GetWorkspaceID(),
 		}); initErr != nil {
-			return nil, errorx.Wrapf(initErr, "init sandbox task fail, expt_id=%d", exptID)
+			logs.CtxWarn(ctx, "init sandbox task fail, continue submit experiment, expt_id=%d, err=%v", exptID, initErr)
 		}
 	}
 
@@ -1370,6 +1373,8 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
+	// 但 Init 依赖 agent_studio 已注册 SandboxSchedulerService；下游服务面未补齐时，只记录 warn，不阻断 RetryExperiment 入口。
+	// 这样可以先保障用户可提交/可触发 retry，真正的沙箱执行能力由后续 SandboxSchedulerService 部署补齐。
 	if e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
 		concurrency := int32(gptr.Indirect(entity.NormalizeSubmitItemConcurNum(got.EvalConf.ItemConcurNum)))
 		if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
@@ -1377,7 +1382,7 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 			Concurrency: concurrency,
 			WorkspaceID: req.GetWorkspaceID(),
 		}); initErr != nil {
-			return nil, errorx.Wrapf(initErr, "re-init sandbox task on retry fail, expt_id=%d", req.GetExptID())
+			logs.CtxWarn(ctx, "re-init sandbox task on retry fail, continue retry experiment, expt_id=%d, err=%v", req.GetExptID(), initErr)
 		}
 	}
 

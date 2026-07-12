@@ -768,6 +768,7 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockScheduler := servicemocks.NewMockExptSchedulerEvent(ctrl)
 	mockIDGen := idgenmock.NewMockIIDGenerator(ctrl)
+	mockSandboxScheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
 	// Test data
 	// 测试数据
 	validWorkspaceID := int64(123)
@@ -875,6 +876,49 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "sandbox agent init failure does not block submit main path",
+			req: &exptpb.SubmitExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				Name:        gptr.Of("sandbox_experiment"),
+				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_SandboxAgent),
+				},
+				Session: &common.Session{
+					UserID: gptr.Of(int64(789)),
+				},
+				ItemConcurNum:      gptr.Of(int32(1)),
+				TargetFieldMapping: &expt.TargetFieldMapping{},
+			},
+			mockSetup: func() {
+				sandboxExpt := *validExpt
+				sandboxExpt.Name = "sandbox_experiment"
+				sandboxExpt.Target = &entity.EvalTarget{
+					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				}
+				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), &entity.Session{UserID: "789", AppID: 0}).Return(&sandboxExpt, nil)
+				mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
+					TaskID:      strconv.FormatInt(validExptID, 10),
+					Concurrency: int32(1),
+					WorkspaceID: validWorkspaceID,
+				}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
+				mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, gomock.Any(), validWorkspaceID, gomock.Any(), &entity.Session{UserID: "789", AppID: 0}).Return(nil)
+				mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), &entity.Session{UserID: "789", AppID: 0}, gomock.Any(), gomock.Any()).Return(nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			wantResp: &exptpb.SubmitExperimentResponse{
+				Experiment: &expt.Experiment{
+					ID:     gptr.Of(validExptID),
+					Name:   gptr.Of("sandbox_experiment"),
+					Desc:   gptr.Of("test description"),
+					Status: gptr.Of(expt.ExptStatus_Pending),
+				},
+				RunID:    gptr.Of(validRunID),
+				BaseResp: base.NewBaseResp(),
+			},
+			wantErr: false,
+		},
+		{
 			name: "parameter validation failed - CreateEvalTargetParam is empty",
 			req: &exptpb.SubmitExperimentRequest{
 				WorkspaceID: validWorkspaceID,
@@ -902,11 +946,12 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 			// Create object under test
 			// 创建被测试对象
 			app := &experimentApplication{
-				manager:            mockManager,
-				resultSvc:          mockResultSvc,
-				auth:               mockAuth,
-				ExptSchedulerEvent: mockScheduler,
-				idgen:              mockIDGen,
+				manager:                 mockManager,
+				resultSvc:               mockResultSvc,
+				auth:                    mockAuth,
+				ExptSchedulerEvent:      mockScheduler,
+				idgen:                   mockIDGen,
+				sandboxSchedulerAdapter: mockSandboxScheduler,
 			}
 			// Execute test
 			gotResp, err := app.SubmitExperiment(context.Background(), tt.req)
@@ -6887,6 +6932,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	mockManager := servicemocks.NewMockIExptManager(ctrl)
 	mockIDGen := idgenmock.NewMockIIDGenerator(ctrl)
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockSandboxScheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
 
 	validWorkspaceID := int64(123)
 	validExptID := int64(456)
@@ -6904,7 +6950,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	app := NewExperimentApplication(
 		nil, nil, mockManager, nil, nil, mockIDGen, nil, mockAuth,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		nil,
+		mockSandboxScheduler,
 	)
 
 	t.Run("auth fails", func(t *testing.T) {
@@ -6929,6 +6975,28 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 			ExptID:      gptr.Of(validExptID),
 			RetryMode:   expt.ExptRetryModePtr(expt.ExptRetryMode_RetryTargetItems),
 			ItemIds:     []int64{1, 2},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, validRunID, resp.GetRunID())
+	})
+
+	t.Run("SandboxAgent re-init failure does not block retry main path", func(t *testing.T) {
+		sandboxExpt := *baseExpt
+		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
+			TaskID:      strconv.FormatInt(validExptID, 10),
+			Concurrency: int32(entity.DefaultSubmitItemConcurNum),
+			WorkspaceID: validWorkspaceID,
+		}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+		resp, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, validRunID, resp.GetRunID())
