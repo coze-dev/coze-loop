@@ -46,9 +46,9 @@ func TestToExptDTO_MultiSetReadView_GetPath(t *testing.T) {
 		// enrichment 已填充的读视图字段
 		TotalItemCount: 42,
 		EvalSetDetails: []*entity.ExptEvalSetDetail{
-			{EvalSetID: 10, EvalSetVersionID: 110, IsPrimary: false, ItemCount: 12},
+			{EvalSetID: 10, EvalSetVersionID: 110, IsPrimary: false, ItemCount: 12, DatasetKey: "dataset-10"},
 			{EvalSetID: 20, EvalSetVersionID: 220, IsPrimary: true, ItemCount: 30,
-				EvalSet: &entity.EvaluationSet{ID: 20, Name: "primary-set"}},
+				DatasetKey: "dataset-20", EvalSet: &entity.EvaluationSet{ID: 20, Name: "primary-set"}},
 		},
 	}
 
@@ -60,9 +60,11 @@ func TestToExptDTO_MultiSetReadView_GetPath(t *testing.T) {
 	assert.Len(t, res.EvalSetDetails, 2)
 	assert.Equal(t, int64(10), res.EvalSetDetails[0].GetEvalSetID())
 	assert.Equal(t, int32(12), res.EvalSetDetails[0].GetItemCount())
+	assert.Equal(t, "dataset-10", res.EvalSetDetails[0].GetDatasetKey())
 	assert.False(t, res.EvalSetDetails[0].GetIsPrimary())
 	assert.True(t, res.EvalSetDetails[1].GetIsPrimary())
 	assert.Equal(t, int32(30), res.EvalSetDetails[1].GetItemCount())
+	assert.Equal(t, "dataset-20", res.EvalSetDetails[1].GetDatasetKey())
 	assert.NotNil(t, res.EvalSetDetails[1].EvalSet) // Get 路径填充详情
 
 	// §2 主集降级投影: eval_set_id/version 取主集 (set 20 / ver 220)
@@ -101,7 +103,7 @@ func TestToExptDTO_MultiSetReadView_ListPath(t *testing.T) {
 		},
 		TotalItemCount: 0, // 首跑前
 		EvalSetDetails: []*entity.ExptEvalSetDetail{
-			{EvalSetID: 10, EvalSetVersionID: 110, IsPrimary: true, ItemCount: 0}, // List 不填 EvalSet
+			{EvalSetID: 10, EvalSetVersionID: 110, IsPrimary: true, ItemCount: 0, DatasetKey: "dataset-10"}, // List 不填 EvalSet
 		},
 	}
 
@@ -110,6 +112,7 @@ func TestToExptDTO_MultiSetReadView_ListPath(t *testing.T) {
 	assert.Equal(t, int64(0), res.GetTotalItemCount())
 	assert.Len(t, res.EvalSetDetails, 1)
 	assert.Nil(t, res.EvalSetDetails[0].EvalSet) // List 路径不含详情
+	assert.Equal(t, "dataset-10", res.EvalSetDetails[0].GetDatasetKey())
 	assert.Equal(t, int64(10), res.GetEvalSetID())
 	assert.Equal(t, int64(110), res.GetEvalSetVersionID())
 }

@@ -399,6 +399,7 @@ func DomainEvalSetDetailsDTO2OpenAPI(dtos []*domainExpt.ExptEvalSetDetail) []*op
 			EvalSetVersionID: d.EvalSetVersionID,
 			IsPrimary:        d.IsPrimary,
 			ItemCount:        d.ItemCount,
+			DatasetKey:       d.DatasetKey,
 		})
 	}
 	return out
@@ -861,6 +862,7 @@ func entityEvalSetDetailsDO2OpenAPI(details []*entity.ExptEvalSetDetail) []*open
 			EvalSetVersionID: gptr.Of(d.EvalSetVersionID),
 			IsPrimary:        gptr.Of(d.IsPrimary),
 			ItemCount:        gptr.Of(d.ItemCount),
+			DatasetKey:       gptr.Of(d.DatasetKey),
 		})
 	}
 	return out

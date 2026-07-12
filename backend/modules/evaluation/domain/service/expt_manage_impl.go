@@ -688,8 +688,8 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 // 分流硬约束 (§3 要点): 必须以 experiment.eval_set_source_type 列判定, 不能用「有无 expt_item_ref 行」——
 // 已创建未提交的新实验无 ref 行, 用行探测会被误判为老实验。老实验 (SingleSet) 直接跳过, 老字段照旧。
 //
-// withSetDetail=true (Get/MGetDetail): 额外按 set 列表批拉 EvaluationSet 详情回填 detail.EvalSet;
-// withSetDetail=false (List): 只填 EvalSetID/EvalSetVersionID/IsPrimary/ItemCount, 省去 set 详情拉取。
+// withSetDetail=true (Get/MGetDetail): 按 set 列表批拉 EvaluationSet 详情回填 detail.EvalSet + dataset_key;
+// withSetDetail=false (List): 只填 EvalSetID/EvalSetVersionID/IsPrimary/ItemCount/dataset_key, 不回填 detail.EvalSet。
 //
 // item_count/total_item_count 来源 expt_item_ref.CountByEvalSetGrouped; 首跑前查不到行 → 计数缺省 (0), total 仅累加已查到的行。
 func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*entity.Experiment, spaceID int64, withSetDetail bool, session *entity.Session) error {
@@ -727,7 +727,8 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 		}
 	}
 
-	// 3. 逐实验构造 EvalSetDetails + TotalItemCount, 同时收集待批拉的 set 版本/草稿 id
+	// 3. 逐实验构造 EvalSetDetails + TotalItemCount, 同时收集待批拉的 set 版本/草稿 id。
+	// dataset_key 只存储在 EvaluationSet 侧；即使 List 不回填 EvalSet 详情，也需要批拉 set 元信息补齐 dataset_key。
 	type setKey struct {
 		evalSetID        int64
 		evalSetVersionID int64
@@ -759,21 +760,19 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 				ItemCount:        int32(cnt[setKey{sc.EvalSetID, sc.EvalSetVersionID}]),
 			}
 			details = append(details, detail)
-			if withSetDetail {
-				// 草稿 (version_id==0 或等于 set_id) 与版本化分流, 对齐 mgetExptTupleByID 写法
-				if sc.EvalSetVersionID == 0 || sc.EvalSetVersionID == sc.EvalSetID {
-					if sc.EvalSetID > 0 {
-						draftIDSet[sc.EvalSetID] = struct{}{}
-					}
-				} else {
-					versionIDSet[sc.EvalSetVersionID] = struct{}{}
+			// 草稿 (version_id==0 或等于 set_id) 与版本化分流, 对齐 mgetExptTupleByID 写法
+			if sc.EvalSetVersionID == 0 || sc.EvalSetVersionID == sc.EvalSetID {
+				if sc.EvalSetID > 0 {
+					draftIDSet[sc.EvalSetID] = struct{}{}
 				}
+			} else {
+				versionIDSet[sc.EvalSetVersionID] = struct{}{}
 			}
 		}
 		expt.EvalSetDetails = details
 	}
 
-	if !withSetDetail || (len(versionIDSet) == 0 && len(draftIDSet) == 0) {
+	if len(versionIDSet) == 0 && len(draftIDSet) == 0 {
 		return nil
 	}
 
@@ -823,10 +822,17 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 
 	for _, expt := range newExpts {
 		for _, detail := range expt.EvalSetDetails {
+			var evalSet *entity.EvaluationSet
 			if detail.EvalSetVersionID == 0 || detail.EvalSetVersionID == detail.EvalSetID {
-				detail.EvalSet = draftBySetID[detail.EvalSetID]
+				evalSet = draftBySetID[detail.EvalSetID]
 			} else {
-				detail.EvalSet = versionedByVersionID[detail.EvalSetVersionID]
+				evalSet = versionedByVersionID[detail.EvalSetVersionID]
+			}
+			if evalSet != nil {
+				detail.DatasetKey = evalSet.DatasetKey
+				if withSetDetail {
+					detail.EvalSet = evalSet
+				}
 			}
 		}
 	}

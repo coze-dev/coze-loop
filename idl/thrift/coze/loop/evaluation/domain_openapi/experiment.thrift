@@ -129,6 +129,7 @@ struct ExptEvalSetDetail {
     3: optional bool is_primary                      // 主集(封面), 与 experiment.eval_set_id 一致
     4: optional i32 item_count                       // 该 set 选入实验的 item 数; 首跑前为 0
     5: optional eval_set.EvaluationSet eval_set      // Get 填充详情; List 不填
+    6: optional string dataset_key                   // 评测集业务唯一键; 便于 GetExperiment 直接展示/定位
 }
 
 // Token使用量

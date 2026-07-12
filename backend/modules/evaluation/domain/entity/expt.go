@@ -528,6 +528,7 @@ type ExptEvalSetDetail struct {
 	IsPrimary        bool           // 3 主集 (封面), 与 experiment.eval_set_id 列一致
 	ItemCount        int32          // 4 该 set 选入实验的 item 数; 来源 expt_item_ref, 首跑前为 0
 	EvalSet          *EvaluationSet // 5 Get 填详情; List 不填
+	DatasetKey       string         // 6 评测集业务唯一键
 }
 
 // ExptItemRef 实验绑定 item 的扁平集合 (首次调度 ExptStart 写入, 单行执行唯一配置源)

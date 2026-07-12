@@ -492,6 +492,7 @@ func convertEvalSetDetailsDOToDTO(dos []*entity.ExptEvalSetDetail) []*domain_exp
 			EvalSetVersionID: gptr.Of(do.EvalSetVersionID),
 			IsPrimary:        gptr.Of(do.IsPrimary),
 			ItemCount:        gptr.Of(do.ItemCount),
+			DatasetKey:       gptr.Of(do.DatasetKey),
 		}
 		if do.EvalSet != nil {
 			dto.EvalSet = evaluation_set.EvaluationSetDO2DTO(do.EvalSet)

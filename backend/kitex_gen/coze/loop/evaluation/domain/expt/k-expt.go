@@ -22659,6 +22659,20 @@ func (p *ExptEvalSetDetail) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -22745,6 +22759,20 @@ func (p *ExptEvalSetDetail) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExptEvalSetDetail) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.DatasetKey = _field
+	return offset, nil
+}
+
 func (p *ExptEvalSetDetail) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -22757,6 +22785,7 @@ func (p *ExptEvalSetDetail) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -22770,6 +22799,7 @@ func (p *ExptEvalSetDetail) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -22820,6 +22850,15 @@ func (p *ExptEvalSetDetail) fastWriteField5(buf []byte, w thrift.NocopyWriter) i
 	return offset
 }
 
+func (p *ExptEvalSetDetail) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDatasetKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.DatasetKey)
+	}
+	return offset
+}
+
 func (p *ExptEvalSetDetail) field1Length() int {
 	l := 0
 	if p.IsSetEvalSetID() {
@@ -22865,6 +22904,15 @@ func (p *ExptEvalSetDetail) field5Length() int {
 	return l
 }
 
+func (p *ExptEvalSetDetail) field6Length() int {
+	l := 0
+	if p.IsSetDatasetKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.DatasetKey)
+	}
+	return l
+}
+
 func (p *ExptEvalSetDetail) DeepCopy(s interface{}) error {
 	src, ok := s.(*ExptEvalSetDetail)
 	if !ok {
@@ -22899,6 +22947,14 @@ func (p *ExptEvalSetDetail) DeepCopy(s interface{}) error {
 		}
 	}
 	p.EvalSet = _evalSet
+
+	if src.DatasetKey != nil {
+		var tmp string
+		if *src.DatasetKey != "" {
+			tmp = kutils.StringDeepCopy(*src.DatasetKey)
+		}
+		p.DatasetKey = &tmp
+	}
 
 	return nil
 }

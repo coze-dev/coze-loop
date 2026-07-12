@@ -2649,6 +2649,8 @@ type ExptEvalSetDetail struct {
 	ItemCount *int32 `thrift:"item_count,4,optional" frugal:"4,optional,i32" form:"item_count" json:"item_count,omitempty" query:"item_count"`
 	// Get 填充详情; List 不填
 	EvalSet *eval_set.EvaluationSet `thrift:"eval_set,5,optional" frugal:"5,optional,eval_set.EvaluationSet" form:"eval_set" json:"eval_set,omitempty" query:"eval_set"`
+	// 评测集业务唯一键; 便于 GetExperiment 直接展示/定位
+	DatasetKey *string `thrift:"dataset_key,6,optional" frugal:"6,optional,string" form:"dataset_key" json:"dataset_key,omitempty" query:"dataset_key"`
 }
 
 func NewExptEvalSetDetail() *ExptEvalSetDetail {
@@ -2717,6 +2719,18 @@ func (p *ExptEvalSetDetail) GetEvalSet() (v *eval_set.EvaluationSet) {
 	}
 	return p.EvalSet
 }
+
+var ExptEvalSetDetail_DatasetKey_DEFAULT string
+
+func (p *ExptEvalSetDetail) GetDatasetKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetKey() {
+		return ExptEvalSetDetail_DatasetKey_DEFAULT
+	}
+	return *p.DatasetKey
+}
 func (p *ExptEvalSetDetail) SetEvalSetID(val *int64) {
 	p.EvalSetID = val
 }
@@ -2732,6 +2746,9 @@ func (p *ExptEvalSetDetail) SetItemCount(val *int32) {
 func (p *ExptEvalSetDetail) SetEvalSet(val *eval_set.EvaluationSet) {
 	p.EvalSet = val
 }
+func (p *ExptEvalSetDetail) SetDatasetKey(val *string) {
+	p.DatasetKey = val
+}
 
 var fieldIDToName_ExptEvalSetDetail = map[int16]string{
 	1: "eval_set_id",
@@ -2739,6 +2756,7 @@ var fieldIDToName_ExptEvalSetDetail = map[int16]string{
 	3: "is_primary",
 	4: "item_count",
 	5: "eval_set",
+	6: "dataset_key",
 }
 
 func (p *ExptEvalSetDetail) IsSetEvalSetID() bool {
@@ -2759,6 +2777,10 @@ func (p *ExptEvalSetDetail) IsSetItemCount() bool {
 
 func (p *ExptEvalSetDetail) IsSetEvalSet() bool {
 	return p.EvalSet != nil
+}
+
+func (p *ExptEvalSetDetail) IsSetDatasetKey() bool {
+	return p.DatasetKey != nil
 }
 
 func (p *ExptEvalSetDetail) Read(iprot thrift.TProtocol) (err error) {
@@ -2814,6 +2836,14 @@ func (p *ExptEvalSetDetail) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2900,6 +2930,17 @@ func (p *ExptEvalSetDetail) ReadField5(iprot thrift.TProtocol) error {
 	p.EvalSet = _field
 	return nil
 }
+func (p *ExptEvalSetDetail) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DatasetKey = _field
+	return nil
+}
 
 func (p *ExptEvalSetDetail) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2925,6 +2966,10 @@ func (p *ExptEvalSetDetail) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -3035,6 +3080,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ExptEvalSetDetail) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetKey() {
+		if err = oprot.WriteFieldBegin("dataset_key", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DatasetKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *ExptEvalSetDetail) String() string {
 	if p == nil {
@@ -3063,6 +3126,9 @@ func (p *ExptEvalSetDetail) DeepEqual(ano *ExptEvalSetDetail) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.EvalSet) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.DatasetKey) {
 		return false
 	}
 	return true
@@ -3119,6 +3185,18 @@ func (p *ExptEvalSetDetail) Field4DeepEqual(src *int32) bool {
 func (p *ExptEvalSetDetail) Field5DeepEqual(src *eval_set.EvaluationSet) bool {
 
 	if !p.EvalSet.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptEvalSetDetail) Field6DeepEqual(src *string) bool {
+
+	if p.DatasetKey == src {
+		return true
+	} else if p.DatasetKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DatasetKey, *src) != 0 {
 		return false
 	}
 	return true

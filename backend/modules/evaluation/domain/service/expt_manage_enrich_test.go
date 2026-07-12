@@ -35,7 +35,8 @@ func TestEnrichEvalSetDetails_ListPath(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
-	mgr := &ExptMangerImpl{itemRefRepo: mockRefRepo}
+	mockSetVerSvc := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+	mgr := &ExptMangerImpl{itemRefRepo: mockRefRepo, evaluationSetVersionService: mockSetVerSvc}
 
 	expt := newMultiSetExpt(1001, 20)
 	spaceID := int64(7)
@@ -47,6 +48,12 @@ func TestEnrichEvalSetDetails_ListPath(t *testing.T) {
 				{ExptID: 1001, EvalSetID: 20, EvalSetVersionID: 220, ItemCount: 30},
 			},
 		}, nil)
+	mockSetVerSvc.EXPECT().
+		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.BatchGetEvaluationSetVersionsResult{
+			{Version: &entity.EvaluationSetVersion{ID: 110}, EvaluationSet: &entity.EvaluationSet{ID: 10, Name: "set-10", DatasetKey: "dataset-10"}},
+			{Version: &entity.EvaluationSetVersion{ID: 220}, EvaluationSet: &entity.EvaluationSet{ID: 20, Name: "set-20", DatasetKey: "dataset-20"}},
+		}, nil)
 
 	err := mgr.enrichEvalSetDetails(context.Background(), []*entity.Experiment{expt}, spaceID, false, nil)
 	assert.NoError(t, err)
@@ -55,7 +62,9 @@ func TestEnrichEvalSetDetails_ListPath(t *testing.T) {
 	assert.Equal(t, int32(12), expt.EvalSetDetails[0].ItemCount)
 	assert.False(t, expt.EvalSetDetails[0].IsPrimary)
 	assert.True(t, expt.EvalSetDetails[1].IsPrimary) // set 20 == primary
-	assert.Nil(t, expt.EvalSetDetails[0].EvalSet)    // List 不拉详情
+	assert.Nil(t, expt.EvalSetDetails[0].EvalSet)    // List 不回填详情
+	assert.Equal(t, "dataset-10", expt.EvalSetDetails[0].DatasetKey)
+	assert.Equal(t, "dataset-20", expt.EvalSetDetails[1].DatasetKey)
 }
 
 // TestEnrichEvalSetDetails_GetPath Get 路径 (withSetDetail=true): 额外按版本批拉 EvaluationSet 详情。
@@ -79,8 +88,8 @@ func TestEnrichEvalSetDetails_GetPath(t *testing.T) {
 	mockSetVerSvc.EXPECT().
 		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return([]*entity.BatchGetEvaluationSetVersionsResult{
-			{Version: &entity.EvaluationSetVersion{ID: 110}, EvaluationSet: &entity.EvaluationSet{ID: 10, Name: "set-10"}},
-			{Version: &entity.EvaluationSetVersion{ID: 220}, EvaluationSet: &entity.EvaluationSet{ID: 20, Name: "set-20"}},
+			{Version: &entity.EvaluationSetVersion{ID: 110}, EvaluationSet: &entity.EvaluationSet{ID: 10, Name: "set-10", DatasetKey: "dataset-10"}},
+			{Version: &entity.EvaluationSetVersion{ID: 220}, EvaluationSet: &entity.EvaluationSet{ID: 20, Name: "set-20", DatasetKey: "dataset-20"}},
 		}, nil)
 
 	err := mgr.enrichEvalSetDetails(context.Background(), []*entity.Experiment{expt}, spaceID, true, nil)
@@ -90,8 +99,10 @@ func TestEnrichEvalSetDetails_GetPath(t *testing.T) {
 	assert.Equal(t, int32(0), expt.EvalSetDetails[0].ItemCount)
 	assert.NotNil(t, expt.EvalSetDetails[0].EvalSet)
 	assert.Equal(t, "set-10", expt.EvalSetDetails[0].EvalSet.Name)
+	assert.Equal(t, "dataset-10", expt.EvalSetDetails[0].DatasetKey)
 	assert.NotNil(t, expt.EvalSetDetails[1].EvalSet)
 	assert.Equal(t, "set-20", expt.EvalSetDetails[1].EvalSet.Name)
+	assert.Equal(t, "dataset-20", expt.EvalSetDetails[1].DatasetKey)
 }
 
 // TestEnrichEvalSetDetails_SingleSetSkipped 老实验 (SingleSet) 跳过, 不查 ref repo, 不填新字段。
