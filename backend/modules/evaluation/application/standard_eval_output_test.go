@@ -53,6 +53,7 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 			assert.Equal(t, exptID, *param.BaseExptID)
 			assert.False(t, param.UseAccelerator)
 			assert.Equal(t, []int64{itemID}, param.ItemIDs)
+			assert.Equal(t, standardEvalOutputFieldKeys, param.LoadEvalTargetOutputFieldKeys)
 			return makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targetRecordID), nil
 		},
 	)
@@ -136,6 +137,7 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 		func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
 			assert.Equal(t, entity.NewPage(2, 10), param.Page)
 			assert.True(t, param.UseAccelerator)
+			assert.Equal(t, standardEvalOutputFieldKeys, param.LoadEvalTargetOutputFieldKeys)
 			return makeStandardEvalOutputReportResult(2, 3, 4, 5, 6), nil
 		},
 	)
@@ -266,6 +268,50 @@ func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutput(t *testing.
 	assert.Equal(t, `"fornax"`, got.GetSource().GetContent())
 	require.NotNil(t, got.Agent)
 	assert.Contains(t, got.GetAgent().GetContent(), "codex")
+}
+
+func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutputFields(t *testing.T) {
+	textType := entity.ContentTypeText
+	source := `{"type":"fornax"}`
+	rounds := `[{"round_no":1}]`
+	agent := `{"agent_name":"codex"}`
+	output := `{"detail":{"file_diff":[]}}`
+	eval := `{"score":1}`
+	extra := `{"sandbox_log":"https://example.com/log"}`
+	item := &entity.ItemResult{
+		ItemID: 10,
+		Ext:    map[string]string{"dataset_key": "dataset-1", "item_key": "case-10"},
+		TurnResults: []*entity.TurnResult{{ExperimentResults: []*entity.ExperimentResult{{
+			ExperimentID: 20,
+			Payload: &entity.ExperimentTurnPayload{
+				TurnID: 1,
+				TargetOutput: &entity.TurnTargetOutput{EvalTargetRecord: &entity.EvalTargetRecord{
+					ExperimentRunID: 30,
+					EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{
+						"source": {ContentType: &textType, Text: &source},
+						"rounds": {ContentType: &textType, Text: &rounds},
+						"agent":  {ContentType: &textType, Text: &agent},
+						"output": {ContentType: &textType, Text: &output},
+						"eval":   {ContentType: &textType, Text: &eval},
+						"extra":  {ContentType: &textType, Text: &extra},
+					}},
+				}},
+			},
+		}}}},
+	}
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	assert.Equal(t, "case-10", got.GetItemKey())
+	assert.Equal(t, "dataset-1", got.GetDatasetKey())
+	require.NotNil(t, got.Source)
+	assert.Contains(t, got.GetSource().GetContent(), "fornax")
+	require.NotNil(t, got.Agent)
+	assert.Contains(t, got.GetAgent().GetContent(), "codex")
+	require.NotNil(t, got.Output)
+	assert.Contains(t, got.GetOutput().GetContent(), "file_diff")
+	require.NotNil(t, got.Eval)
+	assert.Contains(t, got.GetEval().GetContent(), "score")
 }
 
 func TestBuildItemStandardEvalOutput_DoesNotMisclassifyOrdinaryJSONActualOutput(t *testing.T) {

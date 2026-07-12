@@ -319,31 +319,20 @@ struct BatchGetExperimentResultResponse {
 }
 
 struct StandardEvalOutputFullContent {
-    // e.g. TOS / S3.
     1: optional string provider (go.tag = 'json:"provider"')
-    // Internal object uri/key, e.g. eval:record:field:<uuid>.
     2: optional string uri (go.tag = 'json:"uri"')
-    // Optional direct downloadable url.
     3: optional string url (go.tag = 'json:"url"')
-    // Metadata of full content object.
     4: optional i64 bytes (go.tag = 'json:"bytes"')
     5: optional string sha256 (go.tag = 'json:"sha256"')
-    // e.g. none / gzip / zstd.
     6: optional string compression (go.tag = 'json:"compression"')
 }
 
 struct StandardEvalOutputContent {
-    // e.g. text / json / multi_part / image.
     1: optional string content_type (go.tag = 'json:"content_type"')
-    // Canonical inline content. For JSON object fields, this can be serialized JSON.
     2: optional string content (go.tag = 'json:"content"')
-    // Legacy / preview text, compatible with existing content_type + text shape.
     3: optional string text (go.tag = 'json:"text"')
-    // Whether inline content/text is omitted or truncated.
     4: optional bool content_omitted (go.tag = 'json:"content_omitted"')
-    // Full object reference when content_omitted=true, or when full content is stored out-of-line.
     5: optional StandardEvalOutputFullContent full_content (go.tag = 'json:"full_content"')
-    // Optional raw multi-part JSON string if recursive parts are not modeled yet.
     6: optional string parts (go.tag = 'json:"parts"')
 }
 
@@ -351,10 +340,8 @@ struct MGetExperimentStandardEvalOutputsRequest {
     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
 
-    // MQ normal path passes one item_id; batch consumers can pass multiple.
     10: required list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"', vt.min_size = "1", vt.max_size = "100")
 
-    // Temporary BOE self-test auth. Remove after formal auth is wired.
     40: optional string api_key (api.body = 'api_key', go.tag = 'json:"api_key"')
 
     255: optional base.Base Base
@@ -364,11 +351,9 @@ struct ListExperimentStandardEvalOutputsRequest {
     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
 
-    // For abnormal data resync. Empty means list by experiment pagination.
     20: optional i32 page_number (api.query = 'page_number', go.tag = 'json:"page_number"')
     21: optional i32 page_size (api.query = 'page_size', go.tag = 'json:"page_size"')
 
-    // Temporary BOE self-test auth. Remove after formal auth is wired.
     40: optional string api_key (api.body = 'api_key', go.tag = 'json:"api_key"')
 
     255: optional base.Base Base
@@ -387,9 +372,6 @@ struct ItemStandardEvalOutput {
     15: optional StandardEvalOutputContent output (go.tag = 'json:"output"')
     16: optional StandardEvalOutputContent eval (go.tag = 'json:"eval"')
     17: optional StandardEvalOutputContent extra (go.tag = 'json:"extra"')
-
-    // Large object references, for example output.detail / eval.detail / rounds.
-    20: optional map<string, StandardEvalOutputFullContent> object_refs (go.tag = 'json:"object_refs"')
 }
 
 struct MGetExperimentStandardEvalOutputsResponse {

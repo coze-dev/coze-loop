@@ -23,6 +23,17 @@ import (
 const standardEvalOutputContentTypeJSON = "application/json"
 const maxStandardEvalOutputMGetItemIDs = 100
 
+var standardEvalOutputFieldKeys = []string{
+	consts.EvalTargetOutputFieldKeyActualOutput,
+	"source",
+	"detail",
+	"rounds",
+	"agent",
+	"output",
+	"eval",
+	"extra",
+}
+
 func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
 	if req == nil || len(req.GetItemIds()) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is empty"))
@@ -35,11 +46,12 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 	}
 
 	param := &entity.MGetExperimentResultParam{
-		SpaceID:        req.GetWorkspaceID(),
-		ExptIDs:        []int64{req.GetExptID()},
-		BaseExptID:     gptr.Of(req.GetExptID()),
-		ItemIDs:        req.GetItemIds(),
-		UseAccelerator: false,
+		SpaceID:                       req.GetWorkspaceID(),
+		ExptIDs:                       []int64{req.GetExptID()},
+		BaseExptID:                    gptr.Of(req.GetExptID()),
+		ItemIDs:                       req.GetItemIds(),
+		UseAccelerator:                false,
+		LoadEvalTargetOutputFieldKeys: standardEvalOutputFieldKeys,
 	}
 
 	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
@@ -65,11 +77,12 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 	}
 
 	param := &entity.MGetExperimentResultParam{
-		SpaceID:        req.GetWorkspaceID(),
-		ExptIDs:        []int64{req.GetExptID()},
-		BaseExptID:     gptr.Of(req.GetExptID()),
-		Page:           entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())),
-		UseAccelerator: true,
+		SpaceID:                       req.GetWorkspaceID(),
+		ExptIDs:                       []int64{req.GetExptID()},
+		BaseExptID:                    gptr.Of(req.GetExptID()),
+		Page:                          entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())),
+		UseAccelerator:                true,
+		LoadEvalTargetOutputFieldKeys: standardEvalOutputFieldKeys,
 	}
 
 	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
@@ -230,6 +243,9 @@ func parseReportedStandardEvalOutput(item *entity.ItemResult, opt standardEvalOu
 			continue
 		}
 		fields := payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
+		if std, ok := parseStandardEvalOutputFields(fields); ok {
+			return std, true
+		}
 		actualOutput := fields[consts.EvalTargetOutputFieldKeyActualOutput]
 		if actualOutput == nil || actualOutput.GetText() == "" || !json.Valid([]byte(actualOutput.GetText())) {
 			continue
@@ -241,6 +257,45 @@ func parseReportedStandardEvalOutput(item *entity.ItemResult, opt standardEvalOu
 		return standardEvalOutputJSON{Source: parsed["source"], Detail: parsed["detail"], Rounds: parsed["rounds"], Agent: parsed["agent"], Output: parsed["output"], Eval: parsed["eval"], Extra: parsed["extra"]}, true
 	}
 	return standardEvalOutputJSON{}, false
+}
+
+func parseStandardEvalOutputFields(fields map[string]*entity.Content) (standardEvalOutputJSON, bool) {
+	if len(fields) == 0 {
+		return standardEvalOutputJSON{}, false
+	}
+	_, hasSource := fields["source"]
+	_, hasRounds := fields["rounds"]
+	_, hasOutput := fields["output"]
+	_, hasEval := fields["eval"]
+	_, hasAgent := fields["agent"]
+	if !(hasSource && hasRounds && hasOutput && (hasEval || hasAgent)) {
+		return standardEvalOutputJSON{}, false
+	}
+
+	return standardEvalOutputJSON{
+		Source: contentValue(fields["source"]),
+		Detail: contentValue(fields["detail"]),
+		Rounds: contentValue(fields["rounds"]),
+		Agent:  contentValue(fields["agent"]),
+		Output: contentValue(fields["output"]),
+		Eval:   contentValue(fields["eval"]),
+		Extra:  contentValue(fields["extra"]),
+	}, true
+}
+
+func contentValue(content *entity.Content) any {
+	if content == nil {
+		return nil
+	}
+	text := content.GetText()
+	if text != "" {
+		var parsed any
+		if json.Valid([]byte(text)) && json.Unmarshal([]byte(text), &parsed) == nil {
+			return parsed
+		}
+		return text
+	}
+	return content
 }
 
 func looksLikeStandardEvalOutput(parsed map[string]any) bool {

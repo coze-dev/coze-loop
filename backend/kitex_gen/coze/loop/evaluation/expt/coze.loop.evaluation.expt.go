@@ -14974,16 +14974,11 @@ func (p *BatchGetExperimentResultResponse) Field255DeepEqual(src *base.BaseResp)
 }
 
 type StandardEvalOutputFullContent struct {
-	// e.g. TOS / S3.
-	Provider *string `thrift:"provider,1,optional" frugal:"1,optional,string" json:"provider" form:"provider" query:"provider"`
-	// Internal object uri/key, e.g. eval:record:field:<uuid>.
-	URI *string `thrift:"uri,2,optional" frugal:"2,optional,string" json:"uri" form:"uri" query:"uri"`
-	// Optional direct downloadable url.
-	URL *string `thrift:"url,3,optional" frugal:"3,optional,string" json:"url" form:"url" query:"url"`
-	// Metadata of full content object.
-	Bytes  *int64  `thrift:"bytes,4,optional" frugal:"4,optional,i64" json:"bytes" form:"bytes" query:"bytes"`
-	Sha256 *string `thrift:"sha256,5,optional" frugal:"5,optional,string" json:"sha256" form:"sha256" query:"sha256"`
-	// e.g. none / gzip / zstd.
+	Provider    *string `thrift:"provider,1,optional" frugal:"1,optional,string" json:"provider" form:"provider" query:"provider"`
+	URI         *string `thrift:"uri,2,optional" frugal:"2,optional,string" json:"uri" form:"uri" query:"uri"`
+	URL         *string `thrift:"url,3,optional" frugal:"3,optional,string" json:"url" form:"url" query:"url"`
+	Bytes       *int64  `thrift:"bytes,4,optional" frugal:"4,optional,i64" json:"bytes" form:"bytes" query:"bytes"`
+	Sha256      *string `thrift:"sha256,5,optional" frugal:"5,optional,string" json:"sha256" form:"sha256" query:"sha256"`
 	Compression *string `thrift:"compression,6,optional" frugal:"6,optional,string" json:"compression" form:"compression" query:"compression"`
 }
 
@@ -15545,18 +15540,12 @@ func (p *StandardEvalOutputFullContent) Field6DeepEqual(src *string) bool {
 }
 
 type StandardEvalOutputContent struct {
-	// e.g. text / json / multi_part / image.
-	ContentType *string `thrift:"content_type,1,optional" frugal:"1,optional,string" json:"content_type" form:"content_type" query:"content_type"`
-	// Canonical inline content. For JSON object fields, this can be serialized JSON.
-	Content *string `thrift:"content,2,optional" frugal:"2,optional,string" json:"content" form:"content" query:"content"`
-	// Legacy / preview text, compatible with existing content_type + text shape.
-	Text *string `thrift:"text,3,optional" frugal:"3,optional,string" json:"text" form:"text" query:"text"`
-	// Whether inline content/text is omitted or truncated.
-	ContentOmitted *bool `thrift:"content_omitted,4,optional" frugal:"4,optional,bool" json:"content_omitted" form:"content_omitted" query:"content_omitted"`
-	// Full object reference when content_omitted=true, or when full content is stored out-of-line.
-	FullContent *StandardEvalOutputFullContent `thrift:"full_content,5,optional" frugal:"5,optional,StandardEvalOutputFullContent" json:"full_content" form:"full_content" query:"full_content"`
-	// Optional raw multi-part JSON string if recursive parts are not modeled yet.
-	Parts *string `thrift:"parts,6,optional" frugal:"6,optional,string" json:"parts" form:"parts" query:"parts"`
+	ContentType    *string                        `thrift:"content_type,1,optional" frugal:"1,optional,string" json:"content_type" form:"content_type" query:"content_type"`
+	Content        *string                        `thrift:"content,2,optional" frugal:"2,optional,string" json:"content" form:"content" query:"content"`
+	Text           *string                        `thrift:"text,3,optional" frugal:"3,optional,string" json:"text" form:"text" query:"text"`
+	ContentOmitted *bool                          `thrift:"content_omitted,4,optional" frugal:"4,optional,bool" json:"content_omitted" form:"content_omitted" query:"content_omitted"`
+	FullContent    *StandardEvalOutputFullContent `thrift:"full_content,5,optional" frugal:"5,optional,StandardEvalOutputFullContent" json:"full_content" form:"full_content" query:"full_content"`
+	Parts          *string                        `thrift:"parts,6,optional" frugal:"6,optional,string" json:"parts" form:"parts" query:"parts"`
 }
 
 func NewStandardEvalOutputContent() *StandardEvalOutputContent {
@@ -16109,13 +16098,11 @@ func (p *StandardEvalOutputContent) Field6DeepEqual(src *string) bool {
 }
 
 type MGetExperimentStandardEvalOutputsRequest struct {
-	WorkspaceID int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ExptID      int64 `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
-	// MQ normal path passes one item_id; batch consumers can pass multiple.
-	ItemIds []int64 `thrift:"item_ids,10,required" frugal:"10,required,list<i64>" json:"item_ids" form:"item_ids,required" `
-	// Temporary BOE self-test auth. Remove after formal auth is wired.
-	APIKey *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `
-	Base   *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID      int64      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	ItemIds     []int64    `thrift:"item_ids,10,required" frugal:"10,required,list<i64>" json:"item_ids" form:"item_ids,required" `
+	APIKey      *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewMGetExperimentStandardEvalOutputsRequest() *MGetExperimentStandardEvalOutputsRequest {
@@ -16592,14 +16579,12 @@ func (p *MGetExperimentStandardEvalOutputsRequest) Field255DeepEqual(src *base.B
 }
 
 type ListExperimentStandardEvalOutputsRequest struct {
-	WorkspaceID int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ExptID      int64 `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
-	// For abnormal data resync. Empty means list by experiment pagination.
-	PageNumber *int32 `thrift:"page_number,20,optional" frugal:"20,optional,i32" json:"page_number" query:"page_number" `
-	PageSize   *int32 `thrift:"page_size,21,optional" frugal:"21,optional,i32" json:"page_size" query:"page_size" `
-	// Temporary BOE self-test auth. Remove after formal auth is wired.
-	APIKey *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `
-	Base   *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID      int64      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	PageNumber  *int32     `thrift:"page_number,20,optional" frugal:"20,optional,i32" json:"page_number" query:"page_number" `
+	PageSize    *int32     `thrift:"page_size,21,optional" frugal:"21,optional,i32" json:"page_size" query:"page_size" `
+	APIKey      *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListExperimentStandardEvalOutputsRequest() *ListExperimentStandardEvalOutputsRequest {
@@ -17146,8 +17131,6 @@ type ItemStandardEvalOutput struct {
 	Output     *StandardEvalOutputContent `thrift:"output,15,optional" frugal:"15,optional,StandardEvalOutputContent" json:"output" form:"output" query:"output"`
 	Eval       *StandardEvalOutputContent `thrift:"eval,16,optional" frugal:"16,optional,StandardEvalOutputContent" json:"eval" form:"eval" query:"eval"`
 	Extra      *StandardEvalOutputContent `thrift:"extra,17,optional" frugal:"17,optional,StandardEvalOutputContent" json:"extra" form:"extra" query:"extra"`
-	// Large object references, for example output.detail / eval.detail / rounds.
-	ObjectRefs map[string]*StandardEvalOutputFullContent `thrift:"object_refs,20,optional" frugal:"20,optional,map<string:StandardEvalOutputFullContent>" json:"object_refs" form:"object_refs" query:"object_refs"`
 }
 
 func NewItemStandardEvalOutput() *ItemStandardEvalOutput {
@@ -17273,18 +17256,6 @@ func (p *ItemStandardEvalOutput) GetExtra() (v *StandardEvalOutputContent) {
 	}
 	return p.Extra
 }
-
-var ItemStandardEvalOutput_ObjectRefs_DEFAULT map[string]*StandardEvalOutputFullContent
-
-func (p *ItemStandardEvalOutput) GetObjectRefs() (v map[string]*StandardEvalOutputFullContent) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetObjectRefs() {
-		return ItemStandardEvalOutput_ObjectRefs_DEFAULT
-	}
-	return p.ObjectRefs
-}
 func (p *ItemStandardEvalOutput) SetExptID(val int64) {
 	p.ExptID = val
 }
@@ -17318,9 +17289,6 @@ func (p *ItemStandardEvalOutput) SetEval(val *StandardEvalOutputContent) {
 func (p *ItemStandardEvalOutput) SetExtra(val *StandardEvalOutputContent) {
 	p.Extra = val
 }
-func (p *ItemStandardEvalOutput) SetObjectRefs(val map[string]*StandardEvalOutputFullContent) {
-	p.ObjectRefs = val
-}
 
 var fieldIDToName_ItemStandardEvalOutput = map[int16]string{
 	1:  "expt_id",
@@ -17334,7 +17302,6 @@ var fieldIDToName_ItemStandardEvalOutput = map[int16]string{
 	15: "output",
 	16: "eval",
 	17: "extra",
-	20: "object_refs",
 }
 
 func (p *ItemStandardEvalOutput) IsSetItemKey() bool {
@@ -17367,10 +17334,6 @@ func (p *ItemStandardEvalOutput) IsSetEval() bool {
 
 func (p *ItemStandardEvalOutput) IsSetExtra() bool {
 	return p.Extra != nil
-}
-
-func (p *ItemStandardEvalOutput) IsSetObjectRefs() bool {
-	return p.ObjectRefs != nil
 }
 
 func (p *ItemStandardEvalOutput) Read(iprot thrift.TProtocol) (err error) {
@@ -17480,14 +17443,6 @@ func (p *ItemStandardEvalOutput) Read(iprot thrift.TProtocol) (err error) {
 		case 17:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField17(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 20:
-			if fieldTypeId == thrift.MAP {
-				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17638,35 +17593,6 @@ func (p *ItemStandardEvalOutput) ReadField17(iprot thrift.TProtocol) error {
 	p.Extra = _field
 	return nil
 }
-func (p *ItemStandardEvalOutput) ReadField20(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
-	if err != nil {
-		return err
-	}
-	_field := make(map[string]*StandardEvalOutputFullContent, size)
-	values := make([]StandardEvalOutputFullContent, size)
-	for i := 0; i < size; i++ {
-		var _key string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
-
-		_val := &values[i]
-		_val.InitDefault()
-		if err := _val.Read(iprot); err != nil {
-			return err
-		}
-
-		_field[_key] = _val
-	}
-	if err := iprot.ReadMapEnd(); err != nil {
-		return err
-	}
-	p.ObjectRefs = _field
-	return nil
-}
 
 func (p *ItemStandardEvalOutput) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -17716,10 +17642,6 @@ func (p *ItemStandardEvalOutput) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField17(oprot); err != nil {
 			fieldId = 17
-			goto WriteFieldError
-		}
-		if err = p.writeField20(oprot); err != nil {
-			fieldId = 20
 			goto WriteFieldError
 		}
 	}
@@ -17932,35 +17854,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
 }
-func (p *ItemStandardEvalOutput) writeField20(oprot thrift.TProtocol) (err error) {
-	if p.IsSetObjectRefs() {
-		if err = oprot.WriteFieldBegin("object_refs", thrift.MAP, 20); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.ObjectRefs)); err != nil {
-			return err
-		}
-		for k, v := range p.ObjectRefs {
-			if err := oprot.WriteString(k); err != nil {
-				return err
-			}
-			if err := v.Write(oprot); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteMapEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
-}
 
 func (p *ItemStandardEvalOutput) String() string {
 	if p == nil {
@@ -18007,9 +17900,6 @@ func (p *ItemStandardEvalOutput) DeepEqual(ano *ItemStandardEvalOutput) bool {
 		return false
 	}
 	if !p.Field17DeepEqual(ano.Extra) {
-		return false
-	}
-	if !p.Field20DeepEqual(ano.ObjectRefs) {
 		return false
 	}
 	return true
@@ -18094,19 +17984,6 @@ func (p *ItemStandardEvalOutput) Field17DeepEqual(src *StandardEvalOutputContent
 
 	if !p.Extra.DeepEqual(src) {
 		return false
-	}
-	return true
-}
-func (p *ItemStandardEvalOutput) Field20DeepEqual(src map[string]*StandardEvalOutputFullContent) bool {
-
-	if len(p.ObjectRefs) != len(src) {
-		return false
-	}
-	for k, v := range p.ObjectRefs {
-		_src := src[k]
-		if !v.DeepEqual(_src) {
-			return false
-		}
 	}
 	return true
 }
