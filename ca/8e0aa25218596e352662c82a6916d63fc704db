@@ -1,0 +1,148 @@
+modules/evaluation/infra/repo/experiment/bytehouse/model/cozeweb_analysis.go
+  6497f36267e6ad72 97-110 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4ba43d81cc7864aad74fde","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[97,110]}]}]}
+modules/evaluation/domain/service/offline_analysis_impl.go
+  6497f36267e6ad72 1938-1942,1944-1956,1965-1966,1981-1994,1996,2001-2052 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4ba43d81cc7864aad74fde","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[1938,1942]},{"Range":[1944,1956]},{"Range":[1965,1966]},{"Range":[1981,1994]},{"Single":1996},{"Range":[2001,2052]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "ca8e0aa25218596e352662c82a6916d63fc704db",
+  "prompts": {
+    "6497f36267e6ad72": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a46369d81cc7864aad744d4",
+        "model": "c_new_thinking__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 102,
+      "total_deletions": 24,
+      "accepted_lines": 102,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "modules/evaluation/domain/service/offline_analysis_impl.go": [
+      {
+        "hash": "6497f36267e6ad72",
+        "line_ranges": [
+          {
+            "Range": [
+              1938,
+              1942
+            ]
+          },
+          {
+            "Range": [
+              1944,
+              1956
+            ]
+          },
+          {
+            "Range": [
+              1965,
+              1966
+            ]
+          },
+          {
+            "Range": [
+              1981,
+              1994
+            ]
+          },
+          {
+            "Single": 1996
+          },
+          {
+            "Range": [
+              2001,
+              2052
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4ba43d81cc7864aad74fde",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  1938,
+                  1942
+                ]
+              },
+              {
+                "Range": [
+                  1944,
+                  1956
+                ]
+              },
+              {
+                "Range": [
+                  1965,
+                  1966
+                ]
+              },
+              {
+                "Range": [
+                  1981,
+                  1994
+                ]
+              },
+              {
+                "Single": 1996
+              },
+              {
+                "Range": [
+                  2001,
+                  2052
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/repo/experiment/bytehouse/model/cozeweb_analysis.go": [
+      {
+        "hash": "6497f36267e6ad72",
+        "line_ranges": [
+          {
+            "Range": [
+              97,
+              110
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4ba43d81cc7864aad74fde",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  97,
+                  110
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "6497f36267e6ad72": {
+      "tool": "trae",
+      "conversation_id": "6a46369d81cc7864aad744d4",
+      "session_id": "6a46369d81cc7864aad744d4",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

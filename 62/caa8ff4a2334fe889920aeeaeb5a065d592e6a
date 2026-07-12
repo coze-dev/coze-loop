@@ -1,0 +1,14 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "62caa8ff4a2334fe889920aeeaeb5a065d592e6a",
+  "prompts": {},
+  "humans": {
+    "h_ea11949bb6c618": {
+      "author": "lizwang11 <wanglizhi.pro@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

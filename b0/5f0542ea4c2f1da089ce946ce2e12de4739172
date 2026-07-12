@@ -1,0 +1,27 @@
+modules/evaluation/domain/service/webhook_test/expt_lifecycle_consumer_handler_test.go
+  ec5b86b3164d7f9c 62-63
+modules/evaluation/domain/service/webhook_test/expt_lifecycle_event_handler_test.go
+  ec5b86b3164d7f9c 9-214
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "b05f0542ea4c2f1da089ce946ce2e12de4739172",
+  "prompts": {
+    "ec5b86b3164d7f9c": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a2b7c61af0c95c626cff00c",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
