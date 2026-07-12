@@ -351,6 +351,12 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 		if expt.Target != nil {
 			ev.EvalTargetWorkspaceID = strconv.FormatInt(expt.Target.SpaceID, 10)
 		}
+		// experiment_group_key: 关联同组实验；建实验时默认回填为实验 ID 字符串。
+		// 兜底：老实验未回填时用实验 ID。
+		ev.ExperimentGroupKey = expt.ExperimentGroupKey
+		if ev.ExperimentGroupKey == "" {
+			ev.ExperimentGroupKey = strconv.FormatInt(event.ExptID, 10)
+		}
 	}
 
 	var datasetID int64

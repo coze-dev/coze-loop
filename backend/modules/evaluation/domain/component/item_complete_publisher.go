@@ -18,6 +18,7 @@ type ItemCompleteEvent struct {
 	DatasetVersionID      string `json:"dataset_version_id"`       // 数据集版本 ID
 	DatasetKey            string `json:"dataset_key"`              // 数据集唯一 Key（预期不可修改）
 	DatasetVersionName    string `json:"dataset_version_name"`     // 数据集版本名字，如 0.0.1
+	ExperimentGroupKey    string `json:"experiment_group_key"`     // 实验组 Key（关联同组实验），默认为实验 ID，空间内唯一
 	ItemID                string `json:"item_id"`                  // 数据集某一行的 ID
 	ItemKey               string `json:"item_key"`                 // 评测集 item 的实体 ItemKey（下游 data 服务写入）；直接透传，为空则空、不降级
 }
