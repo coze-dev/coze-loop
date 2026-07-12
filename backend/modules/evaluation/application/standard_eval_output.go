@@ -22,17 +22,6 @@ import (
 
 const maxStandardEvalOutputMGetItemIDs = 100
 
-var standardEvalOutputFieldKeys = []string{
-	consts.EvalTargetOutputFieldKeyActualOutput,
-	"source",
-	"detail",
-	"rounds",
-	"agent",
-	"output",
-	"eval",
-	"extra",
-}
-
 func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
 	if req == nil || len(req.GetItemIds()) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is empty"))
@@ -45,12 +34,14 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 	}
 
 	param := &entity.MGetExperimentResultParam{
-		SpaceID:                       req.GetWorkspaceID(),
-		ExptIDs:                       []int64{req.GetExptID()},
-		BaseExptID:                    gptr.Of(req.GetExptID()),
-		ItemIDs:                       req.GetItemIds(),
-		UseAccelerator:                false,
-		LoadEvalTargetOutputFieldKeys: standardEvalOutputFieldKeys,
+		SpaceID:                   req.GetWorkspaceID(),
+		ExptIDs:                   []int64{req.GetExptID()},
+		BaseExptID:                gptr.Of(req.GetExptID()),
+		ItemIDs:                   req.GetItemIds(),
+		UseAccelerator:            false,
+		FullTrajectory:            true,
+		LoadEvaluatorFullContent:  gptr.Of(true),
+		LoadEvalTargetFullContent: gptr.Of(true),
 	}
 
 	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
@@ -76,12 +67,14 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 	}
 
 	param := &entity.MGetExperimentResultParam{
-		SpaceID:                       req.GetWorkspaceID(),
-		ExptIDs:                       []int64{req.GetExptID()},
-		BaseExptID:                    gptr.Of(req.GetExptID()),
-		Page:                          entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())),
-		UseAccelerator:                true,
-		LoadEvalTargetOutputFieldKeys: standardEvalOutputFieldKeys,
+		SpaceID:                   req.GetWorkspaceID(),
+		ExptIDs:                   []int64{req.GetExptID()},
+		BaseExptID:                gptr.Of(req.GetExptID()),
+		Page:                      entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())),
+		UseAccelerator:            true,
+		FullTrajectory:            true,
+		LoadEvaluatorFullContent:  gptr.Of(true),
+		LoadEvalTargetFullContent: gptr.Of(true),
 	}
 
 	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
@@ -163,6 +156,9 @@ func buildItemStandardEvalOutputs(itemResults []*entity.ItemResult, opt standard
 }
 
 func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (*expt.ItemStandardEvalOutput, error) {
+	if out, ok := buildReportedItemStandardEvalOutput(item, opt); ok {
+		return out, nil
+	}
 	std := buildStandardEvalOutputJSON(item, opt)
 	res := &expt.ItemStandardEvalOutput{ExptID: opt.ExptID, ItemID: item.ItemID, DatasetKey: datasetKeyFromItem(item)}
 	if item != nil && item.Ext != nil && item.Ext["item_key"] != "" {
@@ -191,6 +187,30 @@ func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutput
 	return res, nil
 }
 
+func buildReportedItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (*expt.ItemStandardEvalOutput, bool) {
+	for _, payload := range standardPayloads(item, opt.ExptID) {
+		if payload == nil || payload.TargetOutput == nil || payload.TargetOutput.EvalTargetRecord == nil || payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData == nil {
+			continue
+		}
+		fields := payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
+		if !looksLikeStandardEvalOutputFields(fields) {
+			continue
+		}
+		res := &expt.ItemStandardEvalOutput{ExptID: opt.ExptID, ItemID: item.ItemID, DatasetKey: datasetKeyFromItem(item)}
+		if item != nil && item.Ext != nil && item.Ext["item_key"] != "" {
+			res.ItemKey = gptr.Of(item.Ext["item_key"])
+		}
+		res.Detail = contentToStandardEvalOutputContent(fields["detail"])
+		res.Rounds = contentToStandardEvalOutputContent(fields["rounds"])
+		res.Agent = contentToStandardEvalOutputContent(fields["agent"])
+		res.Output = contentToStandardEvalOutputContent(fields["output"])
+		res.Eval = contentToStandardEvalOutputContent(fields["eval"])
+		res.Extra = contentToStandardEvalOutputContent(fields["extra"])
+		return res, true
+	}
+	return nil, false
+}
+
 func inlineJSONContent(val any) (*expt.StandardEvalOutputContent, error) {
 	text, err := json.MarshalString(val)
 	if err != nil {
@@ -200,6 +220,36 @@ func inlineJSONContent(val any) (*expt.StandardEvalOutputContent, error) {
 		Text:           gptr.Of(text),
 		ContentOmitted: gptr.Of(false),
 	}, nil
+}
+
+func contentToStandardEvalOutputContent(content *entity.Content) *expt.StandardEvalOutputContent {
+	if content == nil {
+		return nil
+	}
+	res := &expt.StandardEvalOutputContent{
+		Text:           content.Text,
+		ContentOmitted: content.ContentOmitted,
+		FullContent:    objectStorageToStandardFullContent(content.FullContent, content.FullContentBytes),
+	}
+	return res
+}
+
+func objectStorageToStandardFullContent(storage *entity.ObjectStorage, bytes *int32) *expt.StandardEvalOutputFullContent {
+	if storage == nil && bytes == nil {
+		return nil
+	}
+	res := &expt.StandardEvalOutputFullContent{}
+	if storage != nil {
+		if storage.Provider != nil {
+			res.Provider = gptr.Of(storage.Provider.String())
+		}
+		res.URI = storage.URI
+		res.URL = storage.URL
+	}
+	if bytes != nil {
+		res.Bytes = gptr.Of(int64(*bytes))
+	}
+	return res
 }
 
 func datasetKeyFromItem(item *entity.ItemResult) string {
@@ -254,15 +304,7 @@ func parseReportedStandardEvalOutput(item *entity.ItemResult, opt standardEvalOu
 }
 
 func parseStandardEvalOutputFields(fields map[string]*entity.Content) (standardEvalOutputJSON, bool) {
-	if len(fields) == 0 {
-		return standardEvalOutputJSON{}, false
-	}
-	_, hasSource := fields["source"]
-	_, hasRounds := fields["rounds"]
-	_, hasOutput := fields["output"]
-	_, hasEval := fields["eval"]
-	_, hasAgent := fields["agent"]
-	if !(hasSource && hasRounds && hasOutput && (hasEval || hasAgent)) {
+	if !looksLikeStandardEvalOutputFields(fields) {
 		return standardEvalOutputJSON{}, false
 	}
 
@@ -275,6 +317,18 @@ func parseStandardEvalOutputFields(fields map[string]*entity.Content) (standardE
 		Eval:   contentValue(fields["eval"]),
 		Extra:  contentValue(fields["extra"]),
 	}, true
+}
+
+func looksLikeStandardEvalOutputFields(fields map[string]*entity.Content) bool {
+	if len(fields) == 0 {
+		return false
+	}
+	_, hasSource := fields["source"]
+	_, hasRounds := fields["rounds"]
+	_, hasOutput := fields["output"]
+	_, hasEval := fields["eval"]
+	_, hasAgent := fields["agent"]
+	return hasSource && hasRounds && hasOutput && (hasEval || hasAgent)
 }
 
 func contentValue(content *entity.Content) any {

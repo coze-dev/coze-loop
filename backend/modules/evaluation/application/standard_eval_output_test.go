@@ -53,7 +53,12 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 			assert.Equal(t, exptID, *param.BaseExptID)
 			assert.False(t, param.UseAccelerator)
 			assert.Equal(t, []int64{itemID}, param.ItemIDs)
-			assert.Equal(t, standardEvalOutputFieldKeys, param.LoadEvalTargetOutputFieldKeys)
+			assert.Empty(t, param.LoadEvalTargetOutputFieldKeys)
+			assert.True(t, param.FullTrajectory)
+			require.NotNil(t, param.LoadEvaluatorFullContent)
+			assert.True(t, *param.LoadEvaluatorFullContent)
+			require.NotNil(t, param.LoadEvalTargetFullContent)
+			assert.True(t, *param.LoadEvalTargetFullContent)
 			return makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targetRecordID), nil
 		},
 	)
@@ -136,7 +141,12 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 		func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
 			assert.Equal(t, entity.NewPage(2, 10), param.Page)
 			assert.True(t, param.UseAccelerator)
-			assert.Equal(t, standardEvalOutputFieldKeys, param.LoadEvalTargetOutputFieldKeys)
+			assert.Empty(t, param.LoadEvalTargetOutputFieldKeys)
+			assert.True(t, param.FullTrajectory)
+			require.NotNil(t, param.LoadEvaluatorFullContent)
+			assert.True(t, *param.LoadEvaluatorFullContent)
+			require.NotNil(t, param.LoadEvalTargetFullContent)
+			assert.True(t, *param.LoadEvalTargetFullContent)
 			return makeStandardEvalOutputReportResult(2, 3, 4, 5, 6), nil
 		},
 	)
