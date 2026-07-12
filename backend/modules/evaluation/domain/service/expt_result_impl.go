@@ -652,6 +652,46 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 	if baselineExptID != nil {
 		baseExptID = *baselineExptID
 	}
+	if len(param.ItemIDs) > 0 {
+		turnResultDAOs, totalTurn, err = e.ExptTurnResultRepo.ListTurnResultByItemIDs(ctx, spaceID, baseExptID, param.ItemIDs, entity.Page{}, gcond.If(expt.ExptType == entity.ExptType_Online, true, false))
+		if err != nil {
+			return nil, nil, 0, err
+		}
+		if len(turnResultDAOs) == 0 {
+			return nil, nil, 0, nil
+		}
+		itemResults, err := e.ExptItemResultRepo.BatchGet(ctx, spaceID, baseExptID, param.ItemIDs)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+		itemID2ItemRunState = make(map[int64]entity.ItemRunState, len(itemResults))
+		itemID2ItemIdx := make(map[int64]int32, len(itemResults))
+		for _, item := range itemResults {
+			if item == nil {
+				continue
+			}
+			itemID2ItemRunState[item.ItemID] = item.Status
+			itemID2ItemIdx[item.ItemID] = item.ItemIdx
+		}
+		itemOrder := make(map[int64]int, len(param.ItemIDs))
+		for i, itemID := range param.ItemIDs {
+			if _, ok := itemOrder[itemID]; !ok {
+				itemOrder[itemID] = i
+			}
+		}
+		sort.SliceStable(turnResultDAOs, func(i, j int) bool {
+			if oi, okI := itemOrder[turnResultDAOs[i].ItemID]; okI {
+				if oj, okJ := itemOrder[turnResultDAOs[j].ItemID]; okJ && oi != oj {
+					return oi < oj
+				}
+			}
+			if itemID2ItemIdx[turnResultDAOs[i].ItemID] != itemID2ItemIdx[turnResultDAOs[j].ItemID] {
+				return itemID2ItemIdx[turnResultDAOs[i].ItemID] < itemID2ItemIdx[turnResultDAOs[j].ItemID]
+			}
+			return turnResultDAOs[i].TurnID < turnResultDAOs[j].TurnID
+		})
+		return turnResultDAOs, itemID2ItemRunState, totalTurn, nil
+	}
 	if param.UseAccelerator {
 		var filterAccelerator *entity.ExptTurnResultFilterAccelerator
 		if len(param.FilterAccelerators) != 0 && param.FilterAccelerators[baseExptID] != nil {

@@ -51,10 +51,8 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 			assert.Equal(t, []int64{exptID}, param.ExptIDs)
 			require.NotNil(t, param.BaseExptID)
 			assert.Equal(t, exptID, *param.BaseExptID)
-			assert.True(t, param.UseAccelerator)
-			require.NotNil(t, param.FilterAccelerators[exptID])
-			require.Len(t, param.FilterAccelerators[exptID].ItemIDs, 1)
-			assert.Equal(t, "IN", param.FilterAccelerators[exptID].ItemIDs[0].Op)
+			assert.False(t, param.UseAccelerator)
+			assert.Equal(t, []int64{itemID}, param.ItemIDs)
 			return makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targetRecordID), nil
 		},
 	)
@@ -62,27 +60,26 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	resp, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{
 		WorkspaceID: workspaceID,
 		ExptID:      exptID,
-		ExptRunID:   exptRunID,
 		ItemIds:     []int64{itemID},
-		IncludeRaw:  gptr.Of(true),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.Len(t, resp.Items, 1)
 	got := resp.Items[0]
 	assert.Equal(t, exptID, got.ExptID)
-	assert.Equal(t, exptRunID, got.ExptRunID)
 	assert.Equal(t, itemID, got.ItemID)
-	require.NotNil(t, got.RawJSON)
+	assert.Equal(t, "dataset-1", got.DatasetKey)
 	require.NotNil(t, got.Output)
 	require.NotNil(t, got.Eval)
+	assert.Equal(t, exptpb.StandardEvalOutputContentStorage_Inline, got.Output.GetStorage())
+	assert.Equal(t, "application/json", got.Output.GetContentType())
 
 	var output map[string]any
-	require.NoError(t, json.Unmarshal([]byte(got.GetOutput()), &output))
+	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
 	assert.Contains(t, output, "turns")
 
 	var eval map[string]any
-	require.NoError(t, json.Unmarshal([]byte(got.GetEval()), &eval))
+	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
 	assert.Contains(t, eval, "turns")
 }
 
@@ -101,40 +98,11 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_APIKeyBypass(t 
 	resp, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{
 		WorkspaceID: 1,
 		ExptID:      2,
-		ExptRunID:   3,
 		ItemIds:     []int64{4},
 		APIKey:      gptr.Of("test-key"),
 	})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
-}
-
-func TestExperimentApplication_MGetExperimentStandardEvalOutputs_Sections(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
-	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc}
-
-	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(makeStandardEvalOutputReportResult(2, 3, 4, 5, 6), nil)
-
-	resp, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{
-		WorkspaceID: 1,
-		ExptID:      2,
-		ExptRunID:   3,
-		ItemIds:     []int64{4},
-		Sections:    []string{"output", "eval"},
-	})
-	require.NoError(t, err)
-	require.Len(t, resp.Items, 1)
-	assert.Nil(t, resp.Items[0].Source)
-	assert.Nil(t, resp.Items[0].Detail)
-	assert.Nil(t, resp.Items[0].Rounds)
-	assert.NotNil(t, resp.Items[0].Output)
-	assert.NotNil(t, resp.Items[0].Eval)
-	assert.Nil(t, resp.Items[0].RawJSON)
 }
 
 func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
@@ -149,6 +117,7 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
 			assert.Equal(t, entity.NewPage(2, 10), param.Page)
+			assert.True(t, param.UseAccelerator)
 			return makeStandardEvalOutputReportResult(2, 3, 4, 5, 6), nil
 		},
 	)
@@ -156,7 +125,6 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 	resp, err := app.ListExperimentStandardEvalOutputs(context.Background(), &exptpb.ListExperimentStandardEvalOutputsRequest{
 		WorkspaceID: 1,
 		ExptID:      2,
-		ExptRunID:   3,
 		PageNumber:  gptr.Of(int32(2)),
 		PageSize:    gptr.Of(int32(10)),
 	})
@@ -174,12 +142,12 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_Error(t *testin
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc}
 
-	_, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{WorkspaceID: 1, ExptID: 2, ExptRunID: 3})
+	_, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{WorkspaceID: 1, ExptID: 2})
 	require.Error(t, err)
 
 	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
-	_, err = app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{WorkspaceID: 1, ExptID: 2, ExptRunID: 3, ItemIds: []int64{4}})
+	_, err = app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{WorkspaceID: 1, ExptID: 2, ItemIds: []int64{4}})
 	require.Error(t, err)
 }
 
@@ -195,6 +163,7 @@ func makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targe
 		ItemResults: []*entity.ItemResult{{
 			ItemID:    itemID,
 			ItemIndex: gptr.Of(turnIndex),
+			Ext:       map[string]string{"dataset_key": "dataset-1", "item_key": "case-1"},
 			SystemInfo: &entity.ItemSystemInfo{
 				RunState: entity.ItemRunState_Success,
 			},
@@ -256,7 +225,7 @@ func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutput(t *testing.
 	reported := `{"detail_id":"sandbox-detail","source":"fornax","rounds":[{"round_no":1}],"agent":{"agent_name":"codex"},"output":{"detail":{"file_diff":[]}},"eval":{"score":1},"extra":{}}`
 	item := &entity.ItemResult{
 		ItemID: 10,
-		Ext:    map[string]string{"item_key": "case-10"},
+		Ext:    map[string]string{"dataset_key": "dataset-1", "item_key": "case-10"},
 		TurnResults: []*entity.TurnResult{{ExperimentResults: []*entity.ExperimentResult{{
 			ExperimentID: 20,
 			Payload: &entity.ExperimentTurnPayload{
@@ -271,14 +240,24 @@ func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutput(t *testing.
 		}}}},
 	}
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20, ExptRunID: 30, IncludeRaw: true})
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	assert.Equal(t, "case-10", got.GetItemKey())
-	assert.Equal(t, "sandbox-detail", got.GetDetailID())
+	assert.Equal(t, "dataset-1", got.GetDatasetKey())
 	require.NotNil(t, got.Source)
-	assert.Equal(t, `"fornax"`, got.GetSource())
+	assert.Equal(t, `"fornax"`, got.GetSource().GetText())
 	require.NotNil(t, got.Agent)
-	assert.Contains(t, got.GetAgent(), "codex")
-	require.NotNil(t, got.RawJSON)
-	assert.Contains(t, got.GetRawJSON(), "sandbox-detail")
+	assert.Contains(t, got.GetAgent().GetText(), "codex")
+}
+
+func TestBuildItemStandardEvalOutput_DoesNotMisclassifyOrdinaryJSONActualOutput(t *testing.T) {
+	textType := entity.ContentTypeText
+	reported := `{"output":"ordinary json"}`
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	item.TurnResults[0].ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyActualOutput] = &entity.Content{ContentType: &textType, Text: &reported}
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	require.NotNil(t, got.Output)
+	assert.Contains(t, got.Output.GetText(), "output_fields")
 }

@@ -303,6 +303,9 @@ func (p *BatchGetExperimentResultResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *StandardEvalOutputContent) IsValid() error {
+	return nil
+}
 func (p *MGetExperimentStandardEvalOutputsRequest) IsValid() error {
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
@@ -320,6 +323,41 @@ func (p *ListExperimentStandardEvalOutputsRequest) IsValid() error {
 	return nil
 }
 func (p *ItemStandardEvalOutput) IsValid() error {
+	if p.Source != nil {
+		if err := p.Source.IsValid(); err != nil {
+			return fmt.Errorf("field Source not valid, %w", err)
+		}
+	}
+	if p.Detail != nil {
+		if err := p.Detail.IsValid(); err != nil {
+			return fmt.Errorf("field Detail not valid, %w", err)
+		}
+	}
+	if p.Rounds != nil {
+		if err := p.Rounds.IsValid(); err != nil {
+			return fmt.Errorf("field Rounds not valid, %w", err)
+		}
+	}
+	if p.Agent != nil {
+		if err := p.Agent.IsValid(); err != nil {
+			return fmt.Errorf("field Agent not valid, %w", err)
+		}
+	}
+	if p.Output != nil {
+		if err := p.Output.IsValid(); err != nil {
+			return fmt.Errorf("field Output not valid, %w", err)
+		}
+	}
+	if p.Eval != nil {
+		if err := p.Eval.IsValid(); err != nil {
+			return fmt.Errorf("field Eval not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *MGetExperimentStandardEvalOutputsResponse) IsValid() error {

@@ -383,9 +383,11 @@ type ExptTurnResultListCursor struct {
 }
 
 type MGetExperimentResultParam struct {
-	SpaceID            int64
-	ExptIDs            []int64
-	BaseExptID         *int64
+	SpaceID    int64
+	ExptIDs    []int64
+	BaseExptID *int64
+	// ItemIDs 为精确 item 查询场景使用（如标准输出 MGet），直接走 RDS item_id IN，避免依赖 CK accelerator。
+	ItemIDs            []int64
 	Filters            map[int64]*ExptTurnResultFilter
 	FilterAccelerators map[int64]*ExptTurnResultFilterAccelerator
 	UseAccelerator     bool

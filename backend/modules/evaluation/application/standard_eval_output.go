@@ -20,6 +20,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
+const standardEvalOutputContentTypeJSON = "application/json"
+
 func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
 	if req == nil || len(req.GetItemIds()) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is empty"))
@@ -32,14 +34,8 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 		SpaceID:        req.GetWorkspaceID(),
 		ExptIDs:        []int64{req.GetExptID()},
 		BaseExptID:     gptr.Of(req.GetExptID()),
-		Page:           entity.NewPage(1, maxInt(len(req.GetItemIds()), 1)),
-		UseAccelerator: true,
-		FullTrajectory: req.GetFullTrajectory(),
-		FilterAccelerators: map[int64]*entity.ExptTurnResultFilterAccelerator{
-			req.GetExptID(): {
-				ItemIDs: []*entity.FieldFilter{{Op: "IN", Values: int64sToAnys(req.GetItemIds())}},
-			},
-		},
+		ItemIDs:        req.GetItemIds(),
+		UseAccelerator: false,
 	}
 
 	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
@@ -47,21 +43,13 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 		return nil, err
 	}
 
-	items, err := buildItemStandardEvalOutputs(experimentReportItemResults(result), standardEvalOutputBuildOptions{
-		ExptID:     req.GetExptID(),
-		ExptRunID:  req.GetExptRunID(),
-		Sections:   req.GetSections(),
-		IncludeRaw: req.GetIncludeRaw(),
-	})
+	items, err := buildItemStandardEvalOutputs(experimentReportItemResults(result), standardEvalOutputBuildOptions{ExptID: req.GetExptID()})
 	if err != nil {
 		return nil, err
 	}
 	sortStandardItemsByRequestedItemIDs(items, req.GetItemIds())
 
-	return &expt.MGetExperimentStandardEvalOutputsResponse{
-		Items:    items,
-		BaseResp: base.NewBaseResp(),
-	}, nil
+	return &expt.MGetExperimentStandardEvalOutputsResponse{Items: items, BaseResp: base.NewBaseResp()}, nil
 }
 
 func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest) (*expt.ListExperimentStandardEvalOutputsResponse, error) {
@@ -78,7 +66,6 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 		BaseExptID:     gptr.Of(req.GetExptID()),
 		Page:           entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())),
 		UseAccelerator: true,
-		FullTrajectory: req.GetFullTrajectory(),
 	}
 
 	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
@@ -86,21 +73,12 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 		return nil, err
 	}
 
-	items, err := buildItemStandardEvalOutputs(experimentReportItemResults(result), standardEvalOutputBuildOptions{
-		ExptID:     req.GetExptID(),
-		ExptRunID:  req.GetExptRunID(),
-		Sections:   req.GetSections(),
-		IncludeRaw: req.GetIncludeRaw(),
-	})
+	items, err := buildItemStandardEvalOutputs(experimentReportItemResults(result), standardEvalOutputBuildOptions{ExptID: req.GetExptID()})
 	if err != nil {
 		return nil, err
 	}
 
-	return &expt.ListExperimentStandardEvalOutputsResponse{
-		Items:    items,
-		Total:    gptr.Of(result.Total),
-		BaseResp: base.NewBaseResp(),
-	}, nil
+	return &expt.ListExperimentStandardEvalOutputsResponse{Items: items, Total: gptr.Of(result.Total), BaseResp: base.NewBaseResp()}, nil
 }
 
 func (e *experimentApplication) authStandardEvalOutput(ctx context.Context, workspaceID int64, apiKey string) error {
@@ -112,14 +90,6 @@ func (e *experimentApplication) authStandardEvalOutput(ctx context.Context, work
 		SpaceID:       workspaceID,
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
-}
-
-func int64sToAnys(vals []int64) []any {
-	res := make([]any, 0, len(vals))
-	for _, v := range vals {
-		res = append(res, v)
-	}
-	return res
 }
 
 func sortStandardItemsByRequestedItemIDs(items []*expt.ItemStandardEvalOutput, itemIDs []int64) {
@@ -149,22 +119,16 @@ func experimentReportItemResults(r *entity.MGetExperimentReportResult) []*entity
 	return r.ItemResults
 }
 
-type standardEvalOutputBuildOptions struct {
-	ExptID     int64
-	ExptRunID  int64
-	Sections   []string
-	IncludeRaw bool
-}
+type standardEvalOutputBuildOptions struct{ ExptID int64 }
 
 type standardEvalOutputJSON struct {
-	DetailID string `json:"detail_id,omitempty"`
-	Source   any    `json:"source,omitempty"`
-	Detail   any    `json:"detail,omitempty"`
-	Rounds   any    `json:"rounds,omitempty"`
-	Agent    any    `json:"agent,omitempty"`
-	Output   any    `json:"output,omitempty"`
-	Eval     any    `json:"eval,omitempty"`
-	Extra    any    `json:"extra,omitempty"`
+	Source any `json:"source,omitempty"`
+	Detail any `json:"detail,omitempty"`
+	Rounds any `json:"rounds,omitempty"`
+	Agent  any `json:"agent,omitempty"`
+	Output any `json:"output,omitempty"`
+	Eval   any `json:"eval,omitempty"`
+	Extra  any `json:"extra,omitempty"`
 }
 
 func buildItemStandardEvalOutputs(itemResults []*entity.ItemResult, opt standardEvalOutputBuildOptions) ([]*expt.ItemStandardEvalOutput, error) {
@@ -184,100 +148,80 @@ func buildItemStandardEvalOutputs(itemResults []*entity.ItemResult, opt standard
 
 func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (*expt.ItemStandardEvalOutput, error) {
 	std := buildStandardEvalOutputJSON(item, opt)
-	raw, err := json.MarshalString(std)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &expt.ItemStandardEvalOutput{
-		ExptID:    opt.ExptID,
-		ExptRunID: opt.ExptRunID,
-		ItemID:    item.ItemID,
-		DetailID:  gptr.Of(std.DetailID),
-	}
+	res := &expt.ItemStandardEvalOutput{ExptID: opt.ExptID, ItemID: item.ItemID, DatasetKey: datasetKeyFromItem(item)}
 	if item != nil && item.Ext != nil && item.Ext["item_key"] != "" {
 		res.ItemKey = gptr.Of(item.Ext["item_key"])
 	}
-	if opt.IncludeRaw {
-		res.RawJSON = gptr.Of(raw)
-	}
 
-	sections := sectionSet(opt.Sections)
-	setJSON := func(name string, val any, setter func(string)) error {
-		if len(sections) > 0 && !sections[name] {
-			return nil
-		}
-		s, err := json.MarshalString(val)
-		if err != nil {
-			return err
-		}
-		setter(s)
-		return nil
-	}
-	if err := setJSON("source", std.Source, func(v string) { res.Source = gptr.Of(v) }); err != nil {
+	var err error
+	if res.Source, err = inlineJSONContent(std.Source); err != nil {
 		return nil, err
 	}
-	if err := setJSON("detail", std.Detail, func(v string) { res.Detail = gptr.Of(v) }); err != nil {
+	if res.Detail, err = inlineJSONContent(std.Detail); err != nil {
 		return nil, err
 	}
-	if err := setJSON("rounds", std.Rounds, func(v string) { res.Rounds = gptr.Of(v) }); err != nil {
+	if res.Rounds, err = inlineJSONContent(std.Rounds); err != nil {
 		return nil, err
 	}
-	if err := setJSON("agent", std.Agent, func(v string) { res.Agent = gptr.Of(v) }); err != nil {
+	if res.Agent, err = inlineJSONContent(std.Agent); err != nil {
 		return nil, err
 	}
-	if err := setJSON("output", std.Output, func(v string) { res.Output = gptr.Of(v) }); err != nil {
+	if res.Output, err = inlineJSONContent(std.Output); err != nil {
 		return nil, err
 	}
-	if err := setJSON("eval", std.Eval, func(v string) { res.Eval = gptr.Of(v) }); err != nil {
+	if res.Eval, err = inlineJSONContent(std.Eval); err != nil {
 		return nil, err
 	}
-	if err := setJSON("extra", std.Extra, func(v string) { res.Extra = gptr.Of(v) }); err != nil {
+	if res.Extra, err = inlineJSONContent(std.Extra); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func sectionSet(sections []string) map[string]bool {
-	if len(sections) == 0 {
-		return nil
+func inlineJSONContent(val any) (*expt.StandardEvalOutputContent, error) {
+	text, err := json.MarshalString(val)
+	if err != nil {
+		return nil, err
 	}
-	res := make(map[string]bool, len(sections))
-	for _, s := range sections {
-		res[s] = true
+	return &expt.StandardEvalOutputContent{
+		ContentType: gptr.Of(standardEvalOutputContentTypeJSON),
+		Text:        gptr.Of(text),
+		Storage:     expt.StandardEvalOutputContentStoragePtr(expt.StandardEvalOutputContentStorage_Inline),
+		Bytes:       gptr.Of(int64(len(text))),
+	}, nil
+}
+
+func datasetKeyFromItem(item *entity.ItemResult) string {
+	if item == nil || item.Ext == nil {
+		return ""
 	}
-	return res
+	return item.Ext["dataset_key"]
 }
 
 func buildStandardEvalOutputJSON(item *entity.ItemResult, opt standardEvalOutputBuildOptions) standardEvalOutputJSON {
 	if std, ok := parseReportedStandardEvalOutput(item, opt); ok {
 		return std
 	}
-	turns := standardTurns(item, opt.ExptID, opt.ExptRunID)
 	return standardEvalOutputJSON{
-		DetailID: strconv.FormatInt(opt.ExptRunID, 10) + "|" + strconv.FormatInt(item.ItemID, 10),
-		Source: map[string]any{
-			"type":        "evaluation",
-			"expt_id":     opt.ExptID,
-			"expt_run_id": opt.ExptRunID,
-			"item_id":     item.ItemID,
-		},
-		Detail: map[string]any{
-			"item_id":     item.ItemID,
-			"item_index":  item.ItemIndex,
-			"system_info": item.SystemInfo,
-			"turn_count":  len(turns),
-		},
-		Rounds: turns,
-		Agent:  standardAgent(item, opt.ExptID, opt.ExptRunID),
-		Output: standardOutput(item, opt.ExptID, opt.ExptRunID),
-		Eval:   standardEval(item, opt.ExptID, opt.ExptRunID),
+		Source: map[string]any{"type": "evaluation", "expt_id": opt.ExptID, "item_id": item.ItemID, "dataset_key": datasetKeyFromItem(item), "item_key": itemKeyFromItem(item)},
+		Detail: map[string]any{"item_id": item.ItemID, "item_key": itemKeyFromItem(item), "item_index": item.ItemIndex, "system_info": item.SystemInfo, "turn_count": len(standardTurns(item, opt.ExptID))},
+		Rounds: standardTurns(item, opt.ExptID),
+		Agent:  standardAgent(item, opt.ExptID),
+		Output: standardOutput(item, opt.ExptID),
+		Eval:   standardEval(item, opt.ExptID),
 		Extra:  standardExtra(item),
 	}
 }
 
+func itemKeyFromItem(item *entity.ItemResult) string {
+	if item == nil || item.Ext == nil {
+		return ""
+	}
+	return item.Ext["item_key"]
+}
+
 func parseReportedStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (standardEvalOutputJSON, bool) {
-	for _, payload := range standardPayloads(item, opt.ExptID, opt.ExptRunID) {
+	for _, payload := range standardPayloads(item, opt.ExptID) {
 		if payload == nil || payload.TargetOutput == nil || payload.TargetOutput.EvalTargetRecord == nil || payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData == nil {
 			continue
 		}
@@ -287,26 +231,10 @@ func parseReportedStandardEvalOutput(item *entity.ItemResult, opt standardEvalOu
 			continue
 		}
 		parsed := map[string]any{}
-		if err := json.Unmarshal([]byte(actualOutput.GetText()), &parsed); err != nil {
+		if err := json.Unmarshal([]byte(actualOutput.GetText()), &parsed); err != nil || !looksLikeStandardEvalOutput(parsed) {
 			continue
 		}
-		if !looksLikeStandardEvalOutput(parsed) {
-			continue
-		}
-		std := standardEvalOutputJSON{
-			DetailID: stringFromAny(parsed["detail_id"]),
-			Source:   parsed["source"],
-			Detail:   parsed["detail"],
-			Rounds:   parsed["rounds"],
-			Agent:    parsed["agent"],
-			Output:   parsed["output"],
-			Eval:     parsed["eval"],
-			Extra:    parsed["extra"],
-		}
-		if std.DetailID == "" {
-			std.DetailID = strconv.FormatInt(opt.ExptRunID, 10) + "|" + strconv.FormatInt(item.ItemID, 10)
-		}
-		return std, true
+		return standardEvalOutputJSON{Source: parsed["source"], Detail: parsed["detail"], Rounds: parsed["rounds"], Agent: parsed["agent"], Output: parsed["output"], Eval: parsed["eval"], Extra: parsed["extra"]}, true
 	}
 	return standardEvalOutputJSON{}, false
 }
@@ -316,109 +244,66 @@ func looksLikeStandardEvalOutput(parsed map[string]any) bool {
 		return false
 	}
 	_, hasDetailID := parsed["detail_id"]
+	_, hasSource := parsed["source"]
 	_, hasRounds := parsed["rounds"]
 	_, hasOutput := parsed["output"]
 	_, hasEval := parsed["eval"]
 	_, hasAgent := parsed["agent"]
-	return hasDetailID || hasRounds || hasOutput || hasEval || hasAgent
+	// 收窄识别条件，避免普通 JSON actual_output={"output":"..."} 被误判。
+	return hasDetailID && hasSource && hasRounds && hasOutput && (hasEval || hasAgent)
 }
 
-func stringFromAny(v any) string {
-	s, _ := v.(string)
-	return s
-}
-
-func standardTurns(item *entity.ItemResult, exptID, exptRunID int64) []map[string]any {
+func standardTurns(item *entity.ItemResult, exptID int64) []map[string]any {
 	rounds := make([]map[string]any, 0)
-	for _, turnResult := range item.TurnResults {
-		if turnResult == nil {
-			continue
-		}
-		for _, er := range turnResult.ExperimentResults {
-			if er == nil || er.ExperimentID != exptID || er.Payload == nil {
-				continue
-			}
-			if !payloadBelongsToRun(er.Payload, exptRunID) {
-				continue
-			}
-			rounds = append(rounds, map[string]any{
-				"turn_id":    er.Payload.TurnID,
-				"turn_index": turnResult.TurnIndex,
-				"kind":       "eval_set_turn",
-				"eval_set":   er.Payload.EvalSet,
-			})
-		}
+	for _, payload := range standardPayloads(item, exptID) {
+		rounds = append(rounds, map[string]any{"turn_id": payload.TurnID, "kind": "eval_set_turn", "eval_set": payload.EvalSet})
 	}
 	return rounds
 }
 
-func standardAgent(item *entity.ItemResult, exptID, exptRunID int64) map[string]any {
-	agent := map[string]any{"runs": []any{}}
+func standardAgent(item *entity.ItemResult, exptID int64) map[string]any {
 	runs := make([]any, 0)
-	for _, payload := range standardPayloads(item, exptID, exptRunID) {
+	for _, payload := range standardPayloads(item, exptID) {
 		tr := payload.TargetOutput
 		if tr == nil || tr.EvalTargetRecord == nil {
 			continue
 		}
 		rec := tr.EvalTargetRecord
-		runs = append(runs, map[string]any{
-			"target_record_id":  rec.ID,
-			"target_id":         rec.TargetID,
-			"target_version_id": rec.TargetVersionID,
-			"status":            rec.Status,
-			"trace_id":          rec.TraceID,
-			"log_id":            rec.LogID,
-			"runtime_param":     runtimeParamFromTargetRecord(rec),
-		})
+		runs = append(runs, map[string]any{"target_record_id": rec.ID, "target_id": rec.TargetID, "target_version_id": rec.TargetVersionID, "experiment_run_id": rec.ExperimentRunID, "status": rec.Status, "trace_id": rec.TraceID, "log_id": rec.LogID, "runtime_param": runtimeParamFromTargetRecord(rec)})
 	}
-	agent["runs"] = runs
-	return agent
+	return map[string]any{"runs": runs}
 }
 
-func standardOutput(item *entity.ItemResult, exptID, exptRunID int64) map[string]any {
-	output := map[string]any{"turns": map[string]any{}}
+func standardOutput(item *entity.ItemResult, exptID int64) map[string]any {
 	turns := map[string]any{}
-	for _, payload := range standardPayloads(item, exptID, exptRunID) {
+	for _, payload := range standardPayloads(item, exptID) {
 		tr := payload.TargetOutput
 		if tr == nil || tr.EvalTargetRecord == nil || tr.EvalTargetRecord.EvalTargetOutputData == nil {
 			continue
 		}
 		data := tr.EvalTargetRecord.EvalTargetOutputData
-		turns[strconv.FormatInt(payload.TurnID, 10)] = map[string]any{
-			"target_record_id":  tr.EvalTargetRecord.ID,
-			"output_fields":     data.OutputFields,
-			"ext":               data.Ext,
-			"usage":             data.EvalTargetUsage,
-			"error":             data.EvalTargetRunError,
-			"time_consuming_ms": data.TimeConsumingMS,
-		}
+		turns[strconv.FormatInt(payload.TurnID, 10)] = map[string]any{"target_record_id": tr.EvalTargetRecord.ID, "output_fields": data.OutputFields, "ext": data.Ext, "usage": data.EvalTargetUsage, "error": data.EvalTargetRunError, "time_consuming_ms": data.TimeConsumingMS}
 	}
-	output["turns"] = turns
-	return output
+	return map[string]any{"turns": turns}
 }
 
-func standardEval(item *entity.ItemResult, exptID, exptRunID int64) map[string]any {
-	eval := map[string]any{"turns": map[string]any{}}
+func standardEval(item *entity.ItemResult, exptID int64) map[string]any {
 	turns := map[string]any{}
-	for _, payload := range standardPayloads(item, exptID, exptRunID) {
+	for _, payload := range standardPayloads(item, exptID) {
 		eo := payload.EvaluatorOutput
 		if eo == nil {
 			continue
 		}
 		records := map[string]*entity.EvaluatorRecord{}
 		for key, record := range eo.EvaluatorRecords {
-			if record == nil || record.ExperimentRunID != exptRunID {
+			if record == nil {
 				continue
 			}
 			records[strconv.FormatInt(key, 10)] = record
 		}
-		turns[strconv.FormatInt(payload.TurnID, 10)] = map[string]any{
-			"weighted_score":    eo.WeightedScore,
-			"evaluator_records": records,
-		}
+		turns[strconv.FormatInt(payload.TurnID, 10)] = map[string]any{"weighted_score": eo.WeightedScore, "evaluator_records": records}
 	}
-	eval["turns"] = turns
-	return eval
+	return map[string]any{"turns": turns}
 }
 
 func standardExtra(item *entity.ItemResult) map[string]any {
@@ -431,20 +316,13 @@ func standardExtra(item *entity.ItemResult) map[string]any {
 			if er == nil || er.Payload == nil {
 				continue
 			}
-			turns[strconv.FormatInt(er.Payload.TurnID, 10)] = map[string]any{
-				"system_info": er.Payload.SystemInfo,
-				"annotations": er.Payload.AnnotateResult,
-				"analysis":    er.Payload.AnalysisRecord,
-			}
+			turns[strconv.FormatInt(er.Payload.TurnID, 10)] = map[string]any{"system_info": er.Payload.SystemInfo, "annotations": er.Payload.AnnotateResult, "analysis": er.Payload.AnalysisRecord}
 		}
 	}
-	return map[string]any{
-		"item_ext": item.Ext,
-		"turns":    turns,
-	}
+	return map[string]any{"item_ext": item.Ext, "turns": turns}
 }
 
-func standardPayloads(item *entity.ItemResult, exptID, exptRunID int64) []*entity.ExperimentTurnPayload {
+func standardPayloads(item *entity.ItemResult, exptID int64) []*entity.ExperimentTurnPayload {
 	payloads := make([]*entity.ExperimentTurnPayload, 0)
 	for _, turnResult := range item.TurnResults {
 		if turnResult == nil {
@@ -454,48 +332,18 @@ func standardPayloads(item *entity.ItemResult, exptID, exptRunID int64) []*entit
 			if er == nil || er.ExperimentID != exptID || er.Payload == nil {
 				continue
 			}
-			if !payloadBelongsToRun(er.Payload, exptRunID) {
-				continue
-			}
 			payloads = append(payloads, er.Payload)
 		}
 	}
 	return payloads
 }
 
-func payloadBelongsToRun(payload *entity.ExperimentTurnPayload, exptRunID int64) bool {
-	if payload == nil {
-		return false
-	}
-	if payload.TargetOutput != nil && payload.TargetOutput.EvalTargetRecord != nil {
-		return payload.TargetOutput.EvalTargetRecord.ExperimentRunID == exptRunID
-	}
-	if payload.EvaluatorOutput != nil {
-		for _, record := range payload.EvaluatorOutput.EvaluatorRecords {
-			if record != nil && record.ExperimentRunID == exptRunID {
-				return true
-			}
-		}
-	}
-	return exptRunID == 0
-}
-
 func runtimeParamFromTargetRecord(record *entity.EvalTargetRecord) map[string]string {
-	if record == nil || record.EvalTargetInputData == nil {
-		return nil
-	}
-	if record.EvalTargetInputData.Ext == nil {
+	if record == nil || record.EvalTargetInputData == nil || record.EvalTargetInputData.Ext == nil {
 		return nil
 	}
 	if v, ok := record.EvalTargetInputData.Ext[consts.TargetExecuteExtRuntimeParamKey]; ok {
 		return map[string]string{consts.TargetExecuteExtRuntimeParamKey: v}
 	}
 	return nil
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
