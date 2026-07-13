@@ -164,6 +164,21 @@ func (mr *MockIEvaluationSetServiceMockRecorder) ListEvaluationSets(ctx, param a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluationSets", reflect.TypeOf((*MockIEvaluationSetService)(nil).ListEvaluationSets), ctx, param)
 }
 
+// CountEvaluationSets mocks base method.
+func (m *MockIEvaluationSetService) CountEvaluationSets(ctx context.Context, spaceID int64) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountEvaluationSets", ctx, spaceID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountEvaluationSets indicates an expected call of CountEvaluationSets.
+func (mr *MockIEvaluationSetServiceMockRecorder) CountEvaluationSets(ctx, spaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountEvaluationSets", reflect.TypeOf((*MockIEvaluationSetService)(nil).CountEvaluationSets), ctx, spaceID)
+}
+
 // ParseImportSourceFile mocks base method.
 func (m *MockIEvaluationSetService) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
 	m.ctrl.T.Helper()

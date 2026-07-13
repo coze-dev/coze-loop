@@ -115,6 +115,10 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 	})
 }
 
+func (d *EvaluationSetServiceImpl) CountEvaluationSets(ctx context.Context, spaceID int64) (total int64, err error) {
+	return d.datasetRPCAdapter.CountDatasets(ctx, spaceID)
+}
+
 func (d *EvaluationSetServiceImpl) ImportEvaluationSet(ctx context.Context, param *entity.ImportEvaluationSetParam) (jobID int64, err error) {
 	if param == nil {
 		return 0, errorx.NewByCode(errno.CommonInternalErrorCode)

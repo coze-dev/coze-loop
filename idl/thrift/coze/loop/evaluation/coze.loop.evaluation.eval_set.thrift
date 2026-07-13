@@ -402,6 +402,18 @@ struct ValidateEvaluationSetMultiPartDataResponse {
     255: optional base.BaseResp baseResp
 }
 
+struct CountEvaluationSetsRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+
+    255: optional base.Base Base
+}
+
+struct CountEvaluationSetsResponse {
+    1: optional i64 total (api.js_conv="true", go.tag='json:"total"'),
+
+    255: base.BaseResp BaseResp
+}
+
 service EvaluationSetService {
     // 基本信息管理
     CreateEvaluationSetResponse CreateEvaluationSet(1: CreateEvaluationSetRequest req) (
@@ -418,6 +430,9 @@ service EvaluationSetService {
     )
     ListEvaluationSetsResponse ListEvaluationSets(1: ListEvaluationSetsRequest req) (
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/list", api.op_type = 'list', api.tag = 'volc-agentkit,open'
+    )
+    CountEvaluationSetsResponse CountEvaluationSets(1: CountEvaluationSetsRequest req) (
+        api.category="evaluation_set", api.get = "/api/evaluation/v1/evaluation_sets/count", api.op_type = 'query', api.tag = 'volc-agentkit,open'
     )
     CreateEvaluationSetWithImportResponse CreateEvaluationSetWithImport(1: CreateEvaluationSetWithImportRequest req) (
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/create_with_import", api.op_type = 'create', api.tag = 'volc-agentkit'
