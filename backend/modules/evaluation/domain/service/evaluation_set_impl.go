@@ -115,6 +115,16 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 	})
 }
 
+func (d *EvaluationSetServiceImpl) CountEvaluationSets(ctx context.Context, param *entity.CountEvaluationSetsParam) (total *int64, err error) {
+	if param == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode)
+	}
+	// 依赖数据集服务，按空间维度计数（Category=Evaluation，软删除自动排除，不受列表筛选影响）
+	return d.datasetRPCAdapter.CountDatasets(ctx, &rpc.CountDatasetsParam{
+		SpaceID: param.SpaceID,
+	})
+}
+
 func (d *EvaluationSetServiceImpl) ImportEvaluationSet(ctx context.Context, param *entity.ImportEvaluationSetParam) (jobID int64, err error) {
 	if param == nil {
 		return 0, errorx.NewByCode(errno.CommonInternalErrorCode)

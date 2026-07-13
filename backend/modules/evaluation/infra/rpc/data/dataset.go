@@ -211,6 +211,27 @@ func (a *DatasetRPCAdapter) ListDatasets(ctx context.Context, param *rpc.ListDat
 	return convert2EvaluationSets(ctx, resp.Datasets), resp.Total, resp.NextPageToken, nil
 }
 
+// CountDatasets 统计空间下评测集(Category=Evaluation)全量非软删除数量。
+// 复用底层 ListDatasets RPC 的 total（page_size=1 仅取计数，不拉取行数据），
+// 刻意不传 name/creators/ids，保证计数为空间全量、不受列表筛选影响；软删除由底层自动排除。
+func (a *DatasetRPCAdapter) CountDatasets(ctx context.Context, param *rpc.CountDatasetsParam) (total *int64, err error) {
+	resp, err := a.client.ListDatasets(ctx, &datasetdto.ListDatasetsRequest{
+		WorkspaceID: param.SpaceID,
+		PageSize:    gptr.Of(int32(1)),
+		Category:    domain_dataset.DatasetCategoryPtr(domain_dataset.DatasetCategory_Evaluation),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, errorx.NewByCode(errno.CommonRPCErrorCode)
+	}
+	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
+		return nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
+	}
+	return resp.Total, nil
+}
+
 func (a *DatasetRPCAdapter) CreateDatasetVersion(ctx context.Context, spaceID, evaluationSetID int64, version string, desc *string) (id int64, err error) {
 	resp, err := a.client.CreateDatasetVersion(ctx, &datasetdto.CreateDatasetVersionRequest{
 		WorkspaceID: &spaceID,

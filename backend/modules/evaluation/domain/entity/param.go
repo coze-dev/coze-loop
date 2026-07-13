@@ -47,6 +47,12 @@ type ListEvaluationSetsParam struct {
 	OrderBys         []*OrderBy
 }
 
+// CountEvaluationSetsParam 空间维度评测集计数入参，仅按 SpaceID 统计空间全量非软删除评测集，
+// 不含 name/creators/分页等列表筛选字段。
+type CountEvaluationSetsParam struct {
+	SpaceID int64
+}
+
 type ListEvaluationSetItemsParam struct {
 	SpaceID         int64
 	EvaluationSetID int64

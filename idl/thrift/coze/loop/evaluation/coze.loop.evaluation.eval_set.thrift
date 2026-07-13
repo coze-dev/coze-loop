@@ -138,6 +138,18 @@ struct ListEvaluationSetsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct CountEvaluationSetsRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+
+    255: optional base.Base Base
+}
+
+struct CountEvaluationSetsResponse {
+    1: optional i64 total (api.js_conv="true", go.tag='json:"total"'), // 空间下全部非软删除评测集总数，不受列表 name/creator 筛选影响
+
+    255: base.BaseResp BaseResp
+}
+
 struct CreateEvaluationSetVersionRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path = "evaluation_set_id" , api.js_conv="true", go.tag='json:"evaluation_set_id"'),
@@ -418,6 +430,9 @@ service EvaluationSetService {
     )
     ListEvaluationSetsResponse ListEvaluationSets(1: ListEvaluationSetsRequest req) (
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/list", api.op_type = 'list', api.tag = 'volc-agentkit,open'
+    )
+    CountEvaluationSetsResponse CountEvaluationSets(1: CountEvaluationSetsRequest req) (
+        api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/count", api.op_type = 'query', api.tag = 'volc-agentkit,open'
     )
     CreateEvaluationSetWithImportResponse CreateEvaluationSetWithImport(1: CreateEvaluationSetWithImportRequest req) (
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/create_with_import", api.op_type = 'create', api.tag = 'volc-agentkit'
