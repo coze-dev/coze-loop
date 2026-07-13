@@ -564,7 +564,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		}
 	}
 
-	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, itemID2ItemRunState, e.fileProvider, e.scoreCalculator)
+	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, nil, nil, itemID2ItemRunState, e.fileProvider, e.scoreCalculator)
 
 	// 写回 item 级别 logid 到 payload.SystemInfo，供 BatchGetExperimentResult 返回给业务方
 	for _, item := range payloadBuilder.ItemResults {
@@ -1189,6 +1189,8 @@ type PayloadBuilder struct {
 	ExptAnnotateRepo   repo.IExptAnnotateRepo
 
 	EvaluationSetItemService                    EvaluationSetItemService
+	EvaluationSetVersionService                 EvaluationSetVersionService
+	EvaluationSetService                        IEvaluationSetService
 	EvalTargetService                           IEvalTargetService
 	EvaluatorRecordService                      EvaluatorRecordService
 	AnalysisService                             IEvaluationAnalysisService
@@ -1216,6 +1218,8 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 	evalTargetService IEvalTargetService,
 	evaluatorRecordService EvaluatorRecordService,
 	evaluationSetItemService EvaluationSetItemService,
+	evaluationSetVersionService EvaluationSetVersionService,
+	evaluationSetService IEvaluationSetService,
 	analysisService IEvaluationAnalysisService,
 	exptTurnResultFilterKeyMappingEvaluatorMap map[string]*entity.ExptTurnResultFilterKeyMapping,
 	exptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping,
@@ -1224,17 +1228,19 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 	scoreCalculator IEvaluatorScoreCalculator,
 ) *PayloadBuilder {
 	builder := &PayloadBuilder{
-		BaselineExptID:           baselineExptID,
-		SpaceID:                  param.SpaceID,
-		ExptIDs:                  param.ExptIDs,
-		BaseExptTurnResultDO:     baselineTurnResults,
-		BaseExptItemResultDO:     baselineItemResults,
-		ExperimentRepo:           experimentRepo,
-		ExptTurnResultRepo:       exptTurnResultRepo,
-		EvaluationSetItemService: evaluationSetItemService,
-		EvalTargetService:        evalTargetService,
-		EvaluatorRecordService:   evaluatorRecordService,
-		AnalysisService:          analysisService,
+		BaselineExptID:              baselineExptID,
+		SpaceID:                     param.SpaceID,
+		ExptIDs:                     param.ExptIDs,
+		BaseExptTurnResultDO:        baselineTurnResults,
+		BaseExptItemResultDO:        baselineItemResults,
+		ExperimentRepo:              experimentRepo,
+		ExptTurnResultRepo:          exptTurnResultRepo,
+		EvaluationSetItemService:    evaluationSetItemService,
+		EvaluationSetVersionService: evaluationSetVersionService,
+		EvaluationSetService:        evaluationSetService,
+		EvalTargetService:           evalTargetService,
+		EvaluatorRecordService:      evaluatorRecordService,
+		AnalysisService:             analysisService,
 		ExptTurnResultFilterKeyMappingEvaluatorMap:  exptTurnResultFilterKeyMappingEvaluatorMap,
 		ExptTurnResultFilterKeyMappingAnnotationMap: exptTurnResultFilterKeyMappingAnnotationMap,
 		ExptAnnotateRepo:              exptAnnotateRepo,
@@ -1348,6 +1354,7 @@ type ExptResultBuilder struct {
 	turnResultID2EvaluatorVersionID2Result map[int64]map[int64]*entity.EvaluatorRecord // turn_result_id -> evaluator_version_id -> result
 	turnResultID2TargetOutput              map[int64]*entity.TurnTargetOutput
 	itemIDTurnID2Turn                      map[int64]map[int64]*entity.TurnEvalSet
+	evalSetID2DatasetKey                   map[int64]string
 	turnResultID2ScoreCorrected            map[int64]bool
 	turnResultID2TagKeyID2AnnotateRecord   map[int64]map[int64]*entity.AnnotateRecord // turn_result_id -> tag_key_id -> annotate_record
 	itemIDTurnID2TrajectoryAnalysis        map[int64]map[int64]*entity.AnalysisRecord
@@ -1359,11 +1366,13 @@ type ExptResultBuilder struct {
 	ExptTurnResultRepo repo.IExptTurnResultRepo
 	ExptAnnotateRepo   repo.IExptAnnotateRepo
 
-	evaluationSetItemService EvaluationSetItemService
-	evalTargetService        IEvalTargetService
-	evaluatorRecordService   EvaluatorRecordService
-	analysisService          IEvaluationAnalysisService
-	fileProvider             rpc.IFileProvider
+	evaluationSetItemService    EvaluationSetItemService
+	evaluationSetVersionService EvaluationSetVersionService
+	evaluationSetService        IEvaluationSetService
+	evalTargetService           IEvalTargetService
+	evaluatorRecordService      EvaluatorRecordService
+	analysisService             IEvaluationAnalysisService
+	fileProvider                rpc.IFileProvider
 
 	// 控制是否保留 trajectory 字段
 	FullTrajectory bool
@@ -1395,6 +1404,8 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 			evalTargetService:             b.EvalTargetService,
 			evaluatorRecordService:        b.EvaluatorRecordService,
 			evaluationSetItemService:      b.EvaluationSetItemService,
+			evaluationSetVersionService:   b.EvaluationSetVersionService,
+			evaluationSetService:          b.EvaluationSetService,
 			ExptAnnotateRepo:              b.ExptAnnotateRepo,
 			analysisService:               b.AnalysisService,
 			FullTrajectory:                b.FullTrajectory,
@@ -1476,6 +1487,8 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 		evalTargetService:             b.EvalTargetService,
 		evaluatorRecordService:        b.EvaluatorRecordService,
 		evaluationSetItemService:      b.EvaluationSetItemService,
+		evaluationSetVersionService:   b.EvaluationSetVersionService,
+		evaluationSetService:          b.EvaluationSetService,
 		turnResultDO:                  b.BaseExptTurnResultDO,
 		ExptAnnotateRepo:              b.ExptAnnotateRepo,
 		FullTrajectory:                b.FullTrajectory,
@@ -2042,6 +2055,12 @@ func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 		pairs = []evalSetVersionPair{{EvalSetID: e.exptDO.EvalSetID, EvalSetVersionID: e.exptDO.EvalSetVersionID}}
 	}
 
+	datasetKeyByEvalSetID, err := e.buildDatasetKeyByEvalSetID(ctx, pairs)
+	if err != nil {
+		return err
+	}
+	e.evalSetID2DatasetKey = datasetKeyByEvalSetID
+
 	itemIDTurnID2Turn := make(map[int64]map[int64]*entity.TurnEvalSet) // item_id -> turn_id -> turn
 	for _, p := range pairs {
 		param := &entity.BatchGetEvaluationSetItemsParam{
@@ -2064,9 +2083,11 @@ func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 					itemIDTurnID2Turn[item.ItemID] = make(map[int64]*entity.TurnEvalSet)
 				}
 				turnEvalSet := &entity.TurnEvalSet{
-					Turn:      turn,
-					ItemID:    item.ItemID,
-					EvalSetID: p.EvalSetID, // 该 item 真正归属的集
+					Turn:       turn,
+					ItemID:     item.ItemID,
+					EvalSetID:  p.EvalSetID, // 该 item 真正归属的集
+					DatasetKey: datasetKeyByEvalSetID[p.EvalSetID],
+					ItemKey:    item.ItemKey,
 				}
 				itemIDTurnID2Turn[item.ItemID][turn.ID] = turnEvalSet
 			}
@@ -2076,6 +2097,64 @@ func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 	e.itemIDTurnID2Turn = itemIDTurnID2Turn
 
 	return nil
+}
+
+func (e *ExptResultBuilder) buildDatasetKeyByEvalSetID(ctx context.Context, pairs []evalSetVersionPair) (map[int64]string, error) {
+	datasetKeyByEvalSetID := make(map[int64]string, len(pairs))
+	if e.exptDO != nil {
+		if e.exptDO.EvalSet != nil && e.exptDO.EvalSet.ID > 0 && e.exptDO.EvalSet.DatasetKey != "" {
+			datasetKeyByEvalSetID[e.exptDO.EvalSet.ID] = e.exptDO.EvalSet.DatasetKey
+		}
+		for _, detail := range e.exptDO.EvalSetDetails {
+			if detail == nil || detail.EvalSetID == 0 || detail.DatasetKey == "" {
+				continue
+			}
+			datasetKeyByEvalSetID[detail.EvalSetID] = detail.DatasetKey
+		}
+	}
+
+	versionIDSet := make(map[int64]struct{})
+	draftIDSet := make(map[int64]struct{})
+	for _, p := range pairs {
+		if p.EvalSetID == 0 || datasetKeyByEvalSetID[p.EvalSetID] != "" {
+			continue
+		}
+		if p.EvalSetVersionID == 0 || p.EvalSetVersionID == p.EvalSetID {
+			draftIDSet[p.EvalSetID] = struct{}{}
+		} else {
+			versionIDSet[p.EvalSetVersionID] = struct{}{}
+		}
+	}
+
+	if len(versionIDSet) > 0 && e.evaluationSetVersionService != nil {
+		versionIDs := maps.ToSlice(versionIDSet, func(k int64, _ struct{}) int64 { return k })
+		sets, err := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(e.SpaceID), versionIDs, gptr.Of(true))
+		if err != nil {
+			return nil, err
+		}
+		for _, elem := range sets {
+			if elem == nil || elem.EvaluationSet == nil || elem.EvaluationSet.ID == 0 || elem.EvaluationSet.DatasetKey == "" {
+				continue
+			}
+			datasetKeyByEvalSetID[elem.EvaluationSet.ID] = elem.EvaluationSet.DatasetKey
+		}
+	}
+
+	if len(draftIDSet) > 0 && e.evaluationSetService != nil {
+		setIDs := maps.ToSlice(draftIDSet, func(k int64, _ struct{}) int64 { return k })
+		sets, err := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(e.SpaceID), setIDs, gptr.Of(false))
+		if err != nil {
+			return nil, err
+		}
+		for _, set := range sets {
+			if set == nil || set.ID == 0 || set.DatasetKey == "" {
+				continue
+			}
+			datasetKeyByEvalSetID[set.ID] = set.DatasetKey
+		}
+	}
+
+	return datasetKeyByEvalSetID, nil
 }
 
 func (e *ExptResultBuilder) getTurnEvalSet(ctx context.Context, itemID, turnID int64) *entity.TurnEvalSet {
@@ -2582,7 +2661,7 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 		ExptIDs: []int64{exptID},
 	}
 	payloadBuilder := NewPayloadBuilder(ctx, param, exptID, allTurnResults, itemResults, e.ExperimentRepo,
-		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
+		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
 
 	exptTurnResultFilters, err := payloadBuilder.BuildTurnResultFilter(ctx)
 	if err != nil {
@@ -2854,7 +2933,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 			ExptIDs: []int64{exptID},
 		}
 		payloadBuilder := NewPayloadBuilder(ctx, param, exptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo,
-			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
+			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
 		itemResults, err := payloadBuilder.BuildItemResults(ctx)
 		if err != nil {
 			return err

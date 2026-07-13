@@ -4107,6 +4107,8 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
+				nil,
 				tt.itemID2ItemRunState,
 				nil,
 				nil,
@@ -6814,9 +6816,11 @@ func TestExptResultBuilder_getTurnEvalSet(t *testing.T) {
 
 	t.Run("normal case", func(t *testing.T) {
 		expected := &entity.TurnEvalSet{
-			Turn:      &entity.Turn{ID: 10},
-			ItemID:    1,
-			EvalSetID: 100,
+			Turn:       &entity.Turn{ID: 10},
+			ItemID:     1,
+			EvalSetID:  100,
+			DatasetKey: "dataset-100",
+			ItemKey:    "item-1",
 		}
 		b := &ExptResultBuilder{
 			itemIDTurnID2Turn: map[int64]map[int64]*entity.TurnEvalSet{
@@ -7924,6 +7928,11 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 			},
 		}
 
+		mockSetVerSvc := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+		mockSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(int64(7)), []int64{101}, gptr.Of(true)).Return([]*entity.BatchGetEvaluationSetVersionsResult{
+			{Version: &entity.EvaluationSetVersion{ID: 101}, EvaluationSet: &entity.EvaluationSet{ID: 100, DatasetKey: "dataset-100"}},
+		}, nil)
+
 		mockItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
 				assert.Equal(t, int64(100), p.EvaluationSetID)
@@ -7931,24 +7940,29 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 				assert.Equal(t, int64(101), *p.VersionID)
 				assert.Equal(t, []int64{11, 12}, p.ItemIDs)
 				return []*entity.EvaluationSetItem{
-					{ItemID: 11, Turns: []*entity.Turn{{ID: 1}}},
+					{ItemID: 11, ItemKey: "case-11", Turns: []*entity.Turn{{ID: 1}}},
 				}, nil
 			}).Times(1)
+		builder.evaluationSetVersionService = mockSetVerSvc
 
 		err := builder.buildEvalSet(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, int64(100), builder.itemIDTurnID2Turn[11][1].EvalSetID)
+		assert.Equal(t, "dataset-100", builder.itemIDTurnID2Turn[11][1].DatasetKey)
+		assert.Equal(t, "case-11", builder.itemIDTurnID2Turn[11][1].ItemKey)
 	})
 
 	t.Run("MultiSetConfig: 按集分别拉取再合并, 各 item 带自身集 tag", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockItemSvc := svcMocks.NewMockEvaluationSetItemService(ctrl)
+		mockSetVerSvc := svcMocks.NewMockEvaluationSetVersionService(ctrl)
 
 		builder := &ExptResultBuilder{
-			SpaceID:                  7,
-			ItemIDs:                  []int64{11, 22},
-			evaluationSetItemService: mockItemSvc,
+			SpaceID:                     7,
+			ItemIDs:                     []int64{11, 22},
+			evaluationSetItemService:    mockItemSvc,
+			evaluationSetVersionService: mockSetVerSvc,
 			exptDO: &entity.Experiment{
 				EvalSetID:         100,
 				EvalSetVersionID:  101,
@@ -7962,15 +7976,24 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 			},
 		}
 
+		mockSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(int64(7)), gomock.Any(), gptr.Of(true)).DoAndReturn(
+			func(_ context.Context, _ *int64, versionIDs []int64, _ *bool) ([]*entity.BatchGetEvaluationSetVersionsResult, error) {
+				assert.ElementsMatch(t, []int64{101, 201}, versionIDs)
+				return []*entity.BatchGetEvaluationSetVersionsResult{
+					{Version: &entity.EvaluationSetVersion{ID: 101}, EvaluationSet: &entity.EvaluationSet{ID: 100, DatasetKey: "dataset-100"}},
+					{Version: &entity.EvaluationSetVersion{ID: 201}, EvaluationSet: &entity.EvaluationSet{ID: 200, DatasetKey: "dataset-200"}},
+				}, nil
+			}).Times(1)
+
 		// set1: 返回 item 11 (整份 ItemIDs 传入, set2 的 22 不属于本集 -> 不返回)
 		mockItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
 				assert.Equal(t, []int64{11, 22}, p.ItemIDs)
 				switch p.EvaluationSetID {
 				case 100:
-					return []*entity.EvaluationSetItem{{ItemID: 11, Turns: []*entity.Turn{{ID: 1}}}}, nil
+					return []*entity.EvaluationSetItem{{ItemID: 11, ItemKey: "case-11", Turns: []*entity.Turn{{ID: 1}}}}, nil
 				case 200:
-					return []*entity.EvaluationSetItem{{ItemID: 22, Turns: []*entity.Turn{{ID: 1}}}}, nil
+					return []*entity.EvaluationSetItem{{ItemID: 22, ItemKey: "case-22", Turns: []*entity.Turn{{ID: 1}}}}, nil
 				}
 				return nil, nil
 			}).Times(2)
@@ -7980,5 +8003,9 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 		// item 11 归属 set1, item 22 归属 set2 —— 两者都进了 map 且 tag 正确
 		assert.Equal(t, int64(100), builder.itemIDTurnID2Turn[11][1].EvalSetID)
 		assert.Equal(t, int64(200), builder.itemIDTurnID2Turn[22][1].EvalSetID)
+		assert.Equal(t, "dataset-100", builder.itemIDTurnID2Turn[11][1].DatasetKey)
+		assert.Equal(t, "dataset-200", builder.itemIDTurnID2Turn[22][1].DatasetKey)
+		assert.Equal(t, "case-11", builder.itemIDTurnID2Turn[11][1].ItemKey)
+		assert.Equal(t, "case-22", builder.itemIDTurnID2Turn[22][1].ItemKey)
 	})
 }

@@ -156,8 +156,8 @@ func buildItemStandardEvalOutputs(result *entity.MGetExperimentReportResult, opt
 
 func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (*expt.ItemStandardEvalOutput, error) {
 	res := newItemStandardEvalOutput(item, opt)
-	if item != nil && item.Ext != nil && item.Ext["item_key"] != "" {
-		res.ItemKey = gptr.Of(item.Ext["item_key"])
+	if itemKey := itemKeyFromItem(item); itemKey != "" {
+		res.ItemKey = gptr.Of(itemKey)
 	}
 	if !isItemStandardEvalOutputContentReady(item) {
 		return res, nil
@@ -199,8 +199,8 @@ func buildReportedItemStandardEvalOutput(item *entity.ItemResult, opt standardEv
 			continue
 		}
 		res := newItemStandardEvalOutput(item, opt)
-		if item != nil && item.Ext != nil && item.Ext["item_key"] != "" {
-			res.ItemKey = gptr.Of(item.Ext["item_key"])
+		if itemKey := itemKeyFromItem(item); itemKey != "" {
+			res.ItemKey = gptr.Of(itemKey)
 		}
 		res.Detail = contentToStandardEvalOutputContent(fields["detail"])
 		res.Rounds = contentToStandardEvalOutputContent(fields["rounds"])
@@ -272,10 +272,19 @@ func objectStorageToStandardFullContent(storage *entity.ObjectStorage, bytes *in
 }
 
 func datasetKeyFromItem(item *entity.ItemResult) string {
-	if item == nil || item.Ext == nil {
+	if item == nil {
 		return ""
 	}
-	return item.Ext["dataset_key"]
+	if item.Ext != nil && item.Ext["dataset_key"] != "" {
+		return item.Ext["dataset_key"]
+	}
+	for _, payload := range standardPayloads(item, 0) {
+		if payload == nil || payload.EvalSet == nil || payload.EvalSet.DatasetKey == "" {
+			continue
+		}
+		return payload.EvalSet.DatasetKey
+	}
+	return ""
 }
 
 func buildStandardEvalOutputJSON(item *entity.ItemResult, opt standardEvalOutputBuildOptions) standardEvalOutputJSON {
@@ -294,10 +303,19 @@ func buildStandardEvalOutputJSON(item *entity.ItemResult, opt standardEvalOutput
 }
 
 func itemKeyFromItem(item *entity.ItemResult) string {
-	if item == nil || item.Ext == nil {
+	if item == nil {
 		return ""
 	}
-	return item.Ext["item_key"]
+	if item.Ext != nil && item.Ext["item_key"] != "" {
+		return item.Ext["item_key"]
+	}
+	for _, payload := range standardPayloads(item, 0) {
+		if payload == nil || payload.EvalSet == nil || payload.EvalSet.ItemKey == "" {
+			continue
+		}
+		return payload.EvalSet.ItemKey
+	}
+	return ""
 }
 
 func parseReportedStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (standardEvalOutputJSON, bool) {
@@ -473,12 +491,15 @@ func standardExtra(item *entity.ItemResult) map[string]any {
 
 func standardPayloads(item *entity.ItemResult, exptID int64) []*entity.ExperimentTurnPayload {
 	payloads := make([]*entity.ExperimentTurnPayload, 0)
+	if item == nil {
+		return payloads
+	}
 	for _, turnResult := range item.TurnResults {
 		if turnResult == nil {
 			continue
 		}
 		for _, er := range turnResult.ExperimentResults {
-			if er == nil || er.ExperimentID != exptID || er.Payload == nil {
+			if er == nil || (exptID != 0 && er.ExperimentID != exptID) || er.Payload == nil {
 				continue
 			}
 			payloads = append(payloads, er.Payload)

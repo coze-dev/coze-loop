@@ -231,8 +231,10 @@ func makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targe
 					Payload: &entity.ExperimentTurnPayload{
 						TurnID: turnID,
 						EvalSet: &entity.TurnEvalSet{
-							ItemID:    itemID,
-							EvalSetID: 100,
+							ItemID:     itemID,
+							EvalSetID:  100,
+							DatasetKey: "dataset-from-data",
+							ItemKey:    "case-from-data",
 							Turn: &entity.Turn{ID: turnID, ItemID: itemID, FieldDataList: []*entity.FieldData{{
 								Key: "question", Name: "Question", Content: &entity.Content{ContentType: &textType, Text: &question},
 							}}},
@@ -274,6 +276,38 @@ func makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targe
 			}},
 		}},
 	}
+}
+
+func TestBuildItemStandardEvalOutput_FillsKeysFromEvalSetWhenExtMissing(t *testing.T) {
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	item.Ext = nil
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	assert.Equal(t, "dataset-from-data", got.GetDatasetKey())
+	assert.Equal(t, "case-from-data", got.GetItemKey())
+
+	var eval map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
+	taskConfig, ok := eval["task_config"].(map[string]any)
+	require.True(t, ok)
+	items, ok := taskConfig["items"].([]any)
+	require.True(t, ok)
+	require.Len(t, items, 1)
+	entry, ok := items[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "dataset-from-data", entry["dataset_key"])
+	assert.Equal(t, "case-from-data", entry["item_key"])
+}
+
+func TestBuildItemStandardEvalOutput_ExtKeysTakePrecedence(t *testing.T) {
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	item.Ext = map[string]string{"dataset_key": "dataset-from-ext", "item_key": "case-from-ext"}
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	assert.Equal(t, "dataset-from-ext", got.GetDatasetKey())
+	assert.Equal(t, "case-from-ext", got.GetItemKey())
 }
 
 func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutput(t *testing.T) {
