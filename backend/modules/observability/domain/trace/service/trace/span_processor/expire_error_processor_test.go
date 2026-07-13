@@ -76,7 +76,7 @@ func TestExpireErrorProcessor_Transform(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "transform failed when benefit check returns error",
+			name: "transform returns spans when benefit check returns error",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				benefitMock := benefitmock.NewMockIBenefitService(ctrl)
 				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("benefit error"))
@@ -91,8 +91,27 @@ func TestExpireErrorProcessor_Transform(t *testing.T) {
 				ctx:   context.Background(),
 				spans: loop_span.SpanList{},
 			},
-			want:    nil,
-			wantErr: true,
+			want:    loop_span.SpanList{},
+			wantErr: false,
+		},
+		{
+			name: "transform returns spans when benefit check returns nil response",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				benefitMock := benefitmock.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(nil, nil)
+				return fields{
+					platformType: loop_span.PlatformCozeLoop,
+					queryEndTime: time.Now().UnixMilli(),
+					workspaceId:  1,
+					benefitSvc:   benefitMock,
+				}
+			},
+			args: args{
+				ctx:   context.Background(),
+				spans: loop_span.SpanList{},
+			},
+			want:    loop_span.SpanList{},
+			wantErr: false,
 		},
 		{
 			name: "transform failed when query time expired",
