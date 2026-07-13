@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 
+	componentwebhook "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -16,16 +17,27 @@ import (
 )
 
 type ExptLifecycleEventHandlerImpl struct {
-	exptRepo         repo.IExperimentRepo
-	notifyRPCAdapter rpc.INotifyRPCAdapter
-	userProvider     rpc.IUserProvider
+	exptRepo          repo.IExperimentRepo
+	notifyRPCAdapter  rpc.INotifyRPCAdapter
+	userProvider      rpc.IUserProvider
+	webhookDispatcher componentwebhook.IWebhookDispatcher
 }
 
-func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider) ExptLifecycleEventHandler {
+// NewExptLifecycleEventHandler extends the 3-arg signature to 4 args so the
+// commercial wire graph can inject a real dispatcher (nil-safe: a nil
+// dispatcher makes the webhook path a no-op and leaves the feishu path
+// untouched).
+func NewExptLifecycleEventHandler(
+	exptRepo repo.IExperimentRepo,
+	notifyRPCAdapter rpc.INotifyRPCAdapter,
+	userProvider rpc.IUserProvider,
+	webhookDispatcher componentwebhook.IWebhookDispatcher,
+) ExptLifecycleEventHandler {
 	return &ExptLifecycleEventHandlerImpl{
-		exptRepo:         exptRepo,
-		notifyRPCAdapter: notifyRPCAdapter,
-		userProvider:     userProvider,
+		exptRepo:          exptRepo,
+		notifyRPCAdapter:  notifyRPCAdapter,
+		userProvider:      userProvider,
+		webhookDispatcher: webhookDispatcher,
 	}
 }
 
@@ -37,9 +49,41 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 
 	switch event.ToStatus {
 	case entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
-		return h.sendNotifyCard(ctx, event, expt)
+		if err := h.sendNotifyCard(ctx, event, expt); err != nil {
+			logs.CtxWarn(ctx, "expt %d feishu notify failed, err=%v", expt.ID, err)
+		}
+		h.dispatchWebhook(ctx, event, expt)
+		return nil
 	default:
 		return nil
+	}
+}
+
+func (h *ExptLifecycleEventHandlerImpl) dispatchWebhook(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
+	if h.webhookDispatcher == nil {
+		return
+	}
+	req := &componentwebhook.DispatchRequest{
+		SpaceID:    event.SpaceID,
+		Experiment: expt,
+		Event:      lifecycleStatusToWebhookEvent(event.ToStatus),
+		NotifyConf: expt.NotificationConf,
+	}
+	if err := h.webhookDispatcher.Dispatch(ctx, req); err != nil {
+		logs.CtxWarn(ctx, "expt %d webhook dispatch failed, err=%v", expt.ID, err)
+	}
+}
+
+func lifecycleStatusToWebhookEvent(status entity.ExptStatus) string {
+	switch status {
+	case entity.ExptStatus_Success:
+		return entity.WebhookDeliveryEventSucceeded
+	case entity.ExptStatus_Failed:
+		return entity.WebhookDeliveryEventFailed
+	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
+		return entity.WebhookDeliveryEventTerminated
+	default:
+		return entity.WebhookDeliveryEventStarted
 	}
 }
 
