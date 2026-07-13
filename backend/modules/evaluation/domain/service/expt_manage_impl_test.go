@@ -60,6 +60,7 @@ func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
 		publisher:                   eventsMocks.NewMockExptEventPublisher(ctrl),
 		audit:                       auditMocks.NewMockIAuditService(ctrl),
 		mtr:                         metricsMocks.NewMockExptMetric(ctrl),
+		sandboxAgentMtr:             metricsMocks.NewMockSandboxAgentMetrics(ctrl),
 		idgenerator:                 idgenMocks.NewMockIIDGenerator(ctrl),
 		lwt:                         lwtMocks.NewMockILatestWriteTracker(ctrl),
 		evaluationSetVersionService: svcMocks.NewMockEvaluationSetVersionService(ctrl),
@@ -1538,6 +1539,7 @@ func TestNewExptManager(t *testing.T) {
 	mockTemplateManager := svcMocks.NewMockIExptTemplateManager(ctrl)
 	mockNotify := mocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUser := mocks.NewMockIUserProvider(ctrl)
+	mockSandboxAgentMetric := metricsMocks.NewMockSandboxAgentMetrics(ctrl)
 	mgr := NewExptManager(
 		mockExptResultService,
 		mockExptRepo,
@@ -1554,6 +1556,7 @@ func TestNewExptManager(t *testing.T) {
 		mockAudit,
 		mockIDGen,
 		mockMetric,
+		mockSandboxAgentMetric,
 		mockLWT,
 		mockEvaluationSetVersionService,
 		mockEvaluationSetService,

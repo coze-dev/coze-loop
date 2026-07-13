@@ -35,12 +35,13 @@ import (
 )
 
 type EvalTargetServiceImpl struct {
-	idgen             idgen.IIDGenerator
-	metric            metrics.EvalTargetMetrics
-	evalTargetRepo    repo.IEvalTargetRepo
-	typedOperators    map[entity.EvalTargetType]ISourceEvalTargetOperateService
-	trajectoryAdapter rpc.ITrajectoryAdapter
-	configer          component.IConfiger
+	idgen               idgen.IIDGenerator
+	metric              metrics.EvalTargetMetrics
+	sandboxAgentMetric  metrics.SandboxAgentMetrics
+	evalTargetRepo      repo.IEvalTargetRepo
+	typedOperators      map[entity.EvalTargetType]ISourceEvalTargetOperateService
+	trajectoryAdapter   rpc.ITrajectoryAdapter
+	configer            component.IConfiger
 
 	// SandboxAgent 评测对象单行执行完成后用于销毁沙箱执行
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
@@ -52,6 +53,7 @@ const evalTargetRecordPersistTimeout = 5 * time.Second
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
 	metric metrics.EvalTargetMetrics,
+	sandboxAgentMetric metrics.SandboxAgentMetrics,
 	typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
 	configer component.IConfiger,
@@ -62,6 +64,7 @@ func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 		evalTargetRepo:          evalTargetRepo,
 		idgen:                   idgen,
 		metric:                  metric,
+		sandboxAgentMetric:      sandboxAgentMetric,
 		typedOperators:          typedOperators,
 		trajectoryAdapter:       trajectoryAdapter,
 		configer:                configer,
@@ -531,6 +534,17 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 
 	logs.CtxInfo(ctx, "AsyncExecute with invoke_id %v, callee: %v, target_id: %v, target_version_id: %v", invokeID, callee, targetID, targetVersionID)
 	outputData.Ext = ext
+
+	// SandboxAgent 稳定性打点：invoke_started（评测开始执行时）
+	if target.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+		e.sandboxAgentMetric.EmitInvokeStarted(metrics.SandboxAgentTags{
+			SpaceID:         spaceID,
+			ExperimentID:    gptr.Indirect(param.ExperimentID),
+			ExperimentRunID: gptr.Indirect(param.ExperimentRunID),
+			ItemID:          param.ItemID,
+			InvokeID:        invokeID,
+		})
+	}
 	userID := session.UserIDInCtxOrEmpty(ctx)
 	record = &entity.EvalTargetRecord{
 		ID:                   invokeID,

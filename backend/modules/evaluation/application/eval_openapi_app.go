@@ -69,6 +69,7 @@ type EvalOpenAPIApplication struct {
 	exptTemplateManager     service.IExptTemplateManager
 	configer                component.IConfiger
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
+	sandboxAgentMetric      metrics.SandboxAgentMetrics
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -89,6 +90,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	exptTemplateManager service.IExptTemplateManager,
 	configer component.IConfiger,
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
+	sandboxAgentMetric metrics.SandboxAgentMetrics,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -110,6 +112,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		exptTemplateManager:         exptTemplateManager,
 		configer:                    configer,
 		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
+		sandboxAgentMetric:          sandboxAgentMetric,
 	}
 }
 
@@ -908,6 +911,30 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	if actx == nil {
 		logs.CtxWarn(ctx, "report target record, actx missing, invoke_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
 		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
+	}
+
+	// SandboxAgent 稳定性打点：invoke_finished + invoke_duration
+	// AsyncUnixMS 是 asyncExecuteTarget 里 invoke_started 的时刻
+	if actx.Callee == "sandbox_agent" {
+		invokeStart := time.UnixMilli(actx.AsyncUnixMS)
+		invokeTags := metrics.SandboxAgentTags{
+			SpaceID:  req.GetWorkspaceID(),
+			InvokeID: req.GetInvokeID(),
+			Success:  req.GetStatus() == spi.InvokeEvalTargetStatus_SUCCESS,
+		}
+		if actx.Event != nil {
+			invokeTags.ExperimentID = actx.Event.ExptID
+			invokeTags.ExperimentRunID = actx.Event.ExptRunID
+			invokeTags.ItemID = actx.Event.EvalSetItemID
+		}
+		if invokeTags.Success {
+			invokeTags.ErrorType = ""
+		} else {
+			invokeTags.ErrorType = metrics.SandboxAgentErrorTypeUnknown
+		}
+		defer func() {
+			e.sandboxAgentMetric.EmitInvokeFinished(invokeTags, invokeStart)
+		}()
 	}
 
 	// 调试场景（actx.Event == nil）：无论成功失败都 best-effort 销毁沙箱执行

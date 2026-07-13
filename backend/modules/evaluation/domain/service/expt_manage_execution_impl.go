@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -678,6 +679,24 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	}
 
 	e.mtr.EmitExptExecResult(spaceID, int64(got.ExptType), int64(status), gptr.Indirect(got.StartAt))
+
+	// SandboxAgent 稳定性打点：experiment_finished + experiment_duration
+	if got.TargetType == entity.EvalTargetTypeSandboxAgent && got.StartAt != nil {
+		e.sandboxAgentMtr.EmitExperimentFinished(metrics.SandboxAgentTags{
+			SpaceID:          spaceID,
+			ExperimentID:     exptID,
+			ExperimentRunID:  gptr.Indirect(exptRunID),
+			DatasetID:        got.EvalSetID,
+			DatasetVersionID: got.EvalSetVersionID,
+			Success:          status == entity.ExptStatus_Success,
+			ErrorType: func() string {
+				if status == entity.ExptStatus_Success {
+					return ""
+				}
+				return metrics.SandboxAgentErrorTypeUnknown
+			}(),
+		}, *got.StartAt)
+	}
 	logs.CtxInfo(ctx, "[ExptEval] CompleteExpt success, expt_id: %v, status: %v, stats: %v", exptID, status, json.Jsonify(stats))
 
 	return nil
@@ -1094,6 +1113,17 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 	}
 
 	defer e.mtr.EmitExptExecRun(spaceID, int64(mode))
+
+	// SandboxAgent 稳定性打点：experiment_started（沙箱agent评测实验开始）
+	if expt, gerr := e.exptRepo.GetByID(ctx, exptID, spaceID); gerr == nil && expt != nil && expt.TargetType == entity.EvalTargetTypeSandboxAgent {
+		e.sandboxAgentMtr.EmitExperimentStarted(metrics.SandboxAgentTags{
+			SpaceID:          spaceID,
+			ExperimentID:     exptID,
+			ExperimentRunID:  exptRunID,
+			DatasetID:        expt.EvalSetID,
+			DatasetVersionID: expt.EvalSetVersionID,
+		})
+	}
 
 	rl := &entity.ExptRunLog{
 		ID:        exptRunID,

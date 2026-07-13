@@ -2273,6 +2273,7 @@ func TestEvalTargetServiceImpl_BatchGetRecordByIDs_LoadRecordOutputFields_LoadRe
 		repo,
 		idgenmocks.NewMockIIDGenerator(ctrl),
 		metricsmocks.NewMockEvalTargetMetrics(ctrl),
+		metricsmocks.NewMockSandboxAgentMetrics(ctrl),
 		map[entity.EvalTargetType]ISourceEvalTargetOperateService{},
 		trajectorymocks.NewMockITrajectoryAdapter(ctrl),
 		componentmocks.NewMockIConfiger(ctrl),

@@ -52,6 +52,7 @@ func NewExptManager(
 	audit audit.IAuditService,
 	idgen idgen.IIDGenerator,
 	metric metrics.ExptMetric,
+	sandboxAgentMetric metrics.SandboxAgentMetrics,
 	lwt platestwrite.ILatestWriteTracker,
 	evaluationSetVersionService EvaluationSetVersionService,
 	evaluationSetService IEvaluationSetService,
@@ -81,6 +82,7 @@ func NewExptManager(
 		publisher:                   publisher,
 		audit:                       audit,
 		mtr:                         metric,
+		sandboxAgentMtr:             sandboxAgentMetric,
 		idgenerator:                 idgen,
 		lwt:                         lwt,
 		evaluationSetVersionService: evaluationSetVersionService,
@@ -114,6 +116,7 @@ type ExptMangerImpl struct {
 	configer                    component.IConfiger
 	audit                       audit.IAuditService
 	mtr                         metrics.ExptMetric
+	sandboxAgentMtr             metrics.SandboxAgentMetrics
 	idgenerator                 idgen.IIDGenerator
 	lwt                         platestwrite.ILatestWriteTracker
 	evaluationSetVersionService EvaluationSetVersionService
