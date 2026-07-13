@@ -169,6 +169,11 @@ type Experiment struct {
 
 	Visibility Visibility // 实验模板可见性，默认为空，可见
 	ThreadID   *string    // 关联的智能评测会话ID
+
+	// NotificationConf carries per-experiment channel routing (webhook + feishu)
+	// used by the lifecycle event handler on terminal transitions. Nil ⇒ fall
+	// back to DefaultExptNotificationConf.
+	NotificationConf *ExptNotificationConf
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
