@@ -155,14 +155,17 @@ func buildItemStandardEvalOutputs(result *entity.MGetExperimentReportResult, opt
 }
 
 func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (*expt.ItemStandardEvalOutput, error) {
-	if out, ok := buildReportedItemStandardEvalOutput(item, opt); ok {
-		return out, nil
-	}
-	std := buildStandardEvalOutputJSON(item, opt)
 	res := newItemStandardEvalOutput(item, opt)
 	if item != nil && item.Ext != nil && item.Ext["item_key"] != "" {
 		res.ItemKey = gptr.Of(item.Ext["item_key"])
 	}
+	if !isItemStandardEvalOutputContentReady(item) {
+		return res, nil
+	}
+	if out, ok := buildReportedItemStandardEvalOutput(item, opt); ok {
+		return out, nil
+	}
+	std := buildStandardEvalOutputJSON(item, opt)
 
 	var err error
 	if res.Detail, err = inlineJSONContent(std.Detail); err != nil {
@@ -208,6 +211,10 @@ func buildReportedItemStandardEvalOutput(item *entity.ItemResult, opt standardEv
 		return res, true
 	}
 	return nil, false
+}
+
+func isItemStandardEvalOutputContentReady(item *entity.ItemResult) bool {
+	return item != nil && item.SystemInfo != nil && item.SystemInfo.RunState == entity.ItemRunState_Success
 }
 
 func newItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) *expt.ItemStandardEvalOutput {

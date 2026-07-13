@@ -84,6 +84,40 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	assert.Contains(t, eval, "rounds")
 }
 
+func TestBuildItemStandardEvalOutput_ProcessingOnlyReturnsMetadata(t *testing.T) {
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	item.SystemInfo.RunState = entity.ItemRunState_Processing
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	assert.Equal(t, int64(20), got.GetExptID())
+	assert.Equal(t, int64(10), got.GetItemID())
+	assert.Equal(t, "dataset-1", got.GetDatasetKey())
+	assert.Equal(t, "case-1", got.GetItemKey())
+	assert.Equal(t, exptdomain.ItemRunState_Processing, got.GetStatus())
+	assert.Nil(t, got.Detail)
+	assert.Nil(t, got.Rounds)
+	assert.Nil(t, got.Agent)
+	assert.Nil(t, got.Output)
+	assert.Nil(t, got.Eval)
+	assert.Nil(t, got.Extra)
+}
+
+func TestBuildItemStandardEvalOutput_FailOnlyReturnsMetadata(t *testing.T) {
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	item.SystemInfo.RunState = entity.ItemRunState_Fail
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	assert.Equal(t, exptdomain.ItemRunState_Fail, got.GetStatus())
+	assert.Nil(t, got.Detail)
+	assert.Nil(t, got.Rounds)
+	assert.Nil(t, got.Agent)
+	assert.Nil(t, got.Output)
+	assert.Nil(t, got.Eval)
+	assert.Nil(t, got.Extra)
+}
+
 func TestExperimentApplication_MGetExperimentStandardEvalOutputs_ItemIDsLimit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -248,6 +282,9 @@ func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutput(t *testing.
 	item := &entity.ItemResult{
 		ItemID: 10,
 		Ext:    map[string]string{"dataset_key": "dataset-1", "item_key": "case-10"},
+		SystemInfo: &entity.ItemSystemInfo{
+			RunState: entity.ItemRunState_Success,
+		},
 		TurnResults: []*entity.TurnResult{{ExperimentResults: []*entity.ExperimentResult{{
 			ExperimentID: 20,
 			Payload: &entity.ExperimentTurnPayload{
@@ -281,6 +318,9 @@ func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutputFields(t *te
 	item := &entity.ItemResult{
 		ItemID: 10,
 		Ext:    map[string]string{"dataset_key": "dataset-1", "item_key": "case-10"},
+		SystemInfo: &entity.ItemSystemInfo{
+			RunState: entity.ItemRunState_Success,
+		},
 		TurnResults: []*entity.TurnResult{{ExperimentResults: []*entity.ExperimentResult{{
 			ExperimentID: 20,
 			Payload: &entity.ExperimentTurnPayload{
