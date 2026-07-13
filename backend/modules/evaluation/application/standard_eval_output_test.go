@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	exptdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
@@ -59,6 +60,8 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 		ItemIds:     []int64{itemID},
 	})
 	require.NoError(t, err)
+	require.Len(t, resp.GetItems(), 1)
+	assert.Equal(t, exptdomain.ItemRunState_Success, resp.GetItems()[0].GetStatus())
 	require.NotNil(t, resp)
 	require.Len(t, resp.Items, 1)
 	got := resp.Items[0]

@@ -16816,6 +16816,7 @@ type ItemStandardEvalOutput struct {
 	ItemID     int64                      `thrift:"item_id,2,required" frugal:"2,required,i64" json:"item_id" form:"item_id,required" query:"item_id,required"`
 	DatasetKey string                     `thrift:"dataset_key,3,required" frugal:"3,required,string" json:"dataset_key" form:"dataset_key,required" query:"dataset_key,required"`
 	ItemKey    *string                    `thrift:"item_key,4,optional" frugal:"4,optional,string" json:"item_key" form:"item_key" query:"item_key"`
+	Status     *expt.ItemRunState         `thrift:"status,5,optional" frugal:"5,optional,ItemRunState" json:"status" form:"status" query:"status"`
 	Detail     *StandardEvalOutputContent `thrift:"detail,11,optional" frugal:"11,optional,StandardEvalOutputContent" json:"detail" form:"detail" query:"detail"`
 	Rounds     *StandardEvalOutputContent `thrift:"rounds,12,optional" frugal:"12,optional,StandardEvalOutputContent" json:"rounds" form:"rounds" query:"rounds"`
 	Agent      *StandardEvalOutputContent `thrift:"agent,13,optional" frugal:"13,optional,StandardEvalOutputContent" json:"agent" form:"agent" query:"agent"`
@@ -16862,6 +16863,18 @@ func (p *ItemStandardEvalOutput) GetItemKey() (v string) {
 		return ItemStandardEvalOutput_ItemKey_DEFAULT
 	}
 	return *p.ItemKey
+}
+
+var ItemStandardEvalOutput_Status_DEFAULT expt.ItemRunState
+
+func (p *ItemStandardEvalOutput) GetStatus() (v expt.ItemRunState) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatus() {
+		return ItemStandardEvalOutput_Status_DEFAULT
+	}
+	return *p.Status
 }
 
 var ItemStandardEvalOutput_Detail_DEFAULT *StandardEvalOutputContent
@@ -16947,6 +16960,9 @@ func (p *ItemStandardEvalOutput) SetDatasetKey(val string) {
 func (p *ItemStandardEvalOutput) SetItemKey(val *string) {
 	p.ItemKey = val
 }
+func (p *ItemStandardEvalOutput) SetStatus(val *expt.ItemRunState) {
+	p.Status = val
+}
 func (p *ItemStandardEvalOutput) SetDetail(val *StandardEvalOutputContent) {
 	p.Detail = val
 }
@@ -16971,6 +16987,7 @@ var fieldIDToName_ItemStandardEvalOutput = map[int16]string{
 	2:  "item_id",
 	3:  "dataset_key",
 	4:  "item_key",
+	5:  "status",
 	11: "detail",
 	12: "rounds",
 	13: "agent",
@@ -16981,6 +16998,10 @@ var fieldIDToName_ItemStandardEvalOutput = map[int16]string{
 
 func (p *ItemStandardEvalOutput) IsSetItemKey() bool {
 	return p.ItemKey != nil
+}
+
+func (p *ItemStandardEvalOutput) IsSetStatus() bool {
+	return p.Status != nil
 }
 
 func (p *ItemStandardEvalOutput) IsSetDetail() bool {
@@ -17058,6 +17079,14 @@ func (p *ItemStandardEvalOutput) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17200,6 +17229,18 @@ func (p *ItemStandardEvalOutput) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemKey = _field
 	return nil
 }
+func (p *ItemStandardEvalOutput) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *expt.ItemRunState
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := expt.ItemRunState(v)
+		_field = &tmp
+	}
+	p.Status = _field
+	return nil
+}
 func (p *ItemStandardEvalOutput) ReadField11(iprot thrift.TProtocol) error {
 	_field := NewStandardEvalOutputContent()
 	if err := _field.Read(iprot); err != nil {
@@ -17269,6 +17310,10 @@ func (p *ItemStandardEvalOutput) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField11(oprot); err != nil {
@@ -17378,6 +17423,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ItemStandardEvalOutput) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.I32, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.Status)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 func (p *ItemStandardEvalOutput) writeField11(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDetail() {
@@ -17514,6 +17577,9 @@ func (p *ItemStandardEvalOutput) DeepEqual(ano *ItemStandardEvalOutput) bool {
 	if !p.Field4DeepEqual(ano.ItemKey) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.Status) {
+		return false
+	}
 	if !p.Field11DeepEqual(ano.Detail) {
 		return false
 	}
@@ -17564,6 +17630,18 @@ func (p *ItemStandardEvalOutput) Field4DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ItemKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ItemStandardEvalOutput) Field5DeepEqual(src *expt.ItemRunState) bool {
+
+	if p.Status == src {
+		return true
+	} else if p.Status == nil || src == nil {
+		return false
+	}
+	if *p.Status != *src {
 		return false
 	}
 	return true

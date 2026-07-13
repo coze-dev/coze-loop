@@ -360,6 +360,7 @@ struct ItemStandardEvalOutput {
     2: required i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id"')
     3: required string dataset_key (go.tag = 'json:"dataset_key"')
     4: optional string item_key (go.tag = 'json:"item_key"')
+    5: optional expt.ItemRunState status (go.tag = 'json:"status"')
 
     11: optional StandardEvalOutputContent detail (go.tag = 'json:"detail"')
     12: optional StandardEvalOutputContent rounds (go.tag = 'json:"rounds"')

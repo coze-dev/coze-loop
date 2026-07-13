@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+	exptdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -158,7 +159,7 @@ func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutput
 		return out, nil
 	}
 	std := buildStandardEvalOutputJSON(item, opt)
-	res := &expt.ItemStandardEvalOutput{ExptID: opt.ExptID, ItemID: item.ItemID, DatasetKey: datasetKeyFromItem(item)}
+	res := newItemStandardEvalOutput(item, opt)
 	if item != nil && item.Ext != nil && item.Ext["item_key"] != "" {
 		res.ItemKey = gptr.Of(item.Ext["item_key"])
 	}
@@ -194,7 +195,7 @@ func buildReportedItemStandardEvalOutput(item *entity.ItemResult, opt standardEv
 		if !looksLikeStandardEvalOutputFields(fields) {
 			continue
 		}
-		res := &expt.ItemStandardEvalOutput{ExptID: opt.ExptID, ItemID: item.ItemID, DatasetKey: datasetKeyFromItem(item)}
+		res := newItemStandardEvalOutput(item, opt)
 		if item != nil && item.Ext != nil && item.Ext["item_key"] != "" {
 			res.ItemKey = gptr.Of(item.Ext["item_key"])
 		}
@@ -207,6 +208,19 @@ func buildReportedItemStandardEvalOutput(item *entity.ItemResult, opt standardEv
 		return res, true
 	}
 	return nil, false
+}
+
+func newItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) *expt.ItemStandardEvalOutput {
+	res := &expt.ItemStandardEvalOutput{ExptID: opt.ExptID, DatasetKey: datasetKeyFromItem(item)}
+	if item == nil {
+		return res
+	}
+	res.ItemID = item.ItemID
+	if item.SystemInfo != nil {
+		status := exptdomain.ItemRunState(item.SystemInfo.RunState)
+		res.Status = &status
+	}
+	return res
 }
 
 func inlineJSONContent(val any) (*expt.StandardEvalOutputContent, error) {
