@@ -24,7 +24,6 @@ import (
 type MockIDatasetAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockIDatasetAPIMockRecorder
-	isgomock struct{}
 }
 
 // MockIDatasetAPIMockRecorder is the mock recorder for MockIDatasetAPI.
@@ -45,39 +44,39 @@ func (m *MockIDatasetAPI) EXPECT() *MockIDatasetAPIMockRecorder {
 }
 
 // ArchiveAndCreateItem mocks base method.
-func (m *MockIDatasetAPI) ArchiveAndCreateItem(ctx context.Context, ds *service.DatasetWithSchema, oldID int64, item *entity.Item) error {
+func (m *MockIDatasetAPI) ArchiveAndCreateItem(arg0 context.Context, arg1 *service.DatasetWithSchema, arg2 int64, arg3 *entity.Item) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ArchiveAndCreateItem", ctx, ds, oldID, item)
+	ret := m.ctrl.Call(m, "ArchiveAndCreateItem", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ArchiveAndCreateItem indicates an expected call of ArchiveAndCreateItem.
-func (mr *MockIDatasetAPIMockRecorder) ArchiveAndCreateItem(ctx, ds, oldID, item any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) ArchiveAndCreateItem(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArchiveAndCreateItem", reflect.TypeOf((*MockIDatasetAPI)(nil).ArchiveAndCreateItem), ctx, ds, oldID, item)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArchiveAndCreateItem", reflect.TypeOf((*MockIDatasetAPI)(nil).ArchiveAndCreateItem), arg0, arg1, arg2, arg3)
 }
 
 // BatchCreateItems mocks base method.
-func (m *MockIDatasetAPI) BatchCreateItems(ctx context.Context, ds *service.DatasetWithSchema, items []*service.IndexedItem, opt *service.MAddItemOpt) ([]*service.IndexedItem, error) {
+func (m *MockIDatasetAPI) BatchCreateItems(arg0 context.Context, arg1 *service.DatasetWithSchema, arg2 []*service.IndexedItem, arg3 *service.MAddItemOpt) ([]*service.IndexedItem, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchCreateItems", ctx, ds, items, opt)
+	ret := m.ctrl.Call(m, "BatchCreateItems", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*service.IndexedItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchCreateItems indicates an expected call of BatchCreateItems.
-func (mr *MockIDatasetAPIMockRecorder) BatchCreateItems(ctx, ds, items, opt any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) BatchCreateItems(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchCreateItems", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchCreateItems), ctx, ds, items, opt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchCreateItems", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchCreateItems), arg0, arg1, arg2, arg3)
 }
 
 // BatchDeleteItems mocks base method.
-func (m *MockIDatasetAPI) BatchDeleteItems(ctx context.Context, ds *service.DatasetWithSchema, items ...*entity.Item) error {
+func (m *MockIDatasetAPI) BatchDeleteItems(arg0 context.Context, arg1 *service.DatasetWithSchema, arg2 ...*entity.Item) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, ds}
-	for _, a := range items {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BatchDeleteItems", varargs...)
@@ -86,221 +85,236 @@ func (m *MockIDatasetAPI) BatchDeleteItems(ctx context.Context, ds *service.Data
 }
 
 // BatchDeleteItems indicates an expected call of BatchDeleteItems.
-func (mr *MockIDatasetAPIMockRecorder) BatchDeleteItems(ctx, ds any, items ...any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) BatchDeleteItems(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, ds}, items...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchDeleteItems", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchDeleteItems), varargs...)
 }
 
 // BatchGetDataset mocks base method.
-func (m *MockIDatasetAPI) BatchGetDataset(ctx context.Context, spaceID int64, ids []int64) ([]*service.DatasetWithSchema, error) {
+func (m *MockIDatasetAPI) BatchGetDataset(arg0 context.Context, arg1 int64, arg2 []int64) ([]*service.DatasetWithSchema, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetDataset", ctx, spaceID, ids)
+	ret := m.ctrl.Call(m, "BatchGetDataset", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]*service.DatasetWithSchema)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetDataset indicates an expected call of BatchGetDataset.
-func (mr *MockIDatasetAPIMockRecorder) BatchGetDataset(ctx, spaceID, ids any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) BatchGetDataset(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchGetDataset), ctx, spaceID, ids)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchGetDataset), arg0, arg1, arg2)
 }
 
 // BatchGetDatasetWithOpt mocks base method.
-func (m *MockIDatasetAPI) BatchGetDatasetWithOpt(ctx context.Context, spaceID int64, ids []int64, opt *service.GetOpt) ([]*service.DatasetWithSchema, error) {
+func (m *MockIDatasetAPI) BatchGetDatasetWithOpt(arg0 context.Context, arg1 int64, arg2 []int64, arg3 *service.GetOpt) ([]*service.DatasetWithSchema, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetDatasetWithOpt", ctx, spaceID, ids, opt)
+	ret := m.ctrl.Call(m, "BatchGetDatasetWithOpt", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*service.DatasetWithSchema)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetDatasetWithOpt indicates an expected call of BatchGetDatasetWithOpt.
-func (mr *MockIDatasetAPIMockRecorder) BatchGetDatasetWithOpt(ctx, spaceID, ids, opt any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) BatchGetDatasetWithOpt(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetDatasetWithOpt", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchGetDatasetWithOpt), ctx, spaceID, ids, opt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetDatasetWithOpt", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchGetDatasetWithOpt), arg0, arg1, arg2, arg3)
 }
 
 // BatchGetItems mocks base method.
-func (m *MockIDatasetAPI) BatchGetItems(ctx context.Context, spaceID, datasetID int64, itemIDs []int64) ([]*entity.Item, error) {
+func (m *MockIDatasetAPI) BatchGetItems(arg0 context.Context, arg1, arg2 int64, arg3 []int64) ([]*entity.Item, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetItems", ctx, spaceID, datasetID, itemIDs)
+	ret := m.ctrl.Call(m, "BatchGetItems", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*entity.Item)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetItems indicates an expected call of BatchGetItems.
-func (mr *MockIDatasetAPIMockRecorder) BatchGetItems(ctx, spaceID, datasetID, itemIDs any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) BatchGetItems(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetItems", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchGetItems), ctx, spaceID, datasetID, itemIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetItems", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchGetItems), arg0, arg1, arg2, arg3)
 }
 
 // BatchGetVersionedDatasetsWithOpt mocks base method.
-func (m *MockIDatasetAPI) BatchGetVersionedDatasetsWithOpt(ctx context.Context, spaceID int64, versionIDs []int64, opt *service.GetOpt) ([]*service.VersionedDatasetWithSchema, error) {
+func (m *MockIDatasetAPI) BatchGetVersionedDatasetsWithOpt(arg0 context.Context, arg1 int64, arg2 []int64, arg3 *service.GetOpt) ([]*service.VersionedDatasetWithSchema, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetVersionedDatasetsWithOpt", ctx, spaceID, versionIDs, opt)
+	ret := m.ctrl.Call(m, "BatchGetVersionedDatasetsWithOpt", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*service.VersionedDatasetWithSchema)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetVersionedDatasetsWithOpt indicates an expected call of BatchGetVersionedDatasetsWithOpt.
-func (mr *MockIDatasetAPIMockRecorder) BatchGetVersionedDatasetsWithOpt(ctx, spaceID, versionIDs, opt any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) BatchGetVersionedDatasetsWithOpt(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetVersionedDatasetsWithOpt", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchGetVersionedDatasetsWithOpt), ctx, spaceID, versionIDs, opt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetVersionedDatasetsWithOpt", reflect.TypeOf((*MockIDatasetAPI)(nil).BatchGetVersionedDatasetsWithOpt), arg0, arg1, arg2, arg3)
 }
 
 // ClearDataset mocks base method.
-func (m *MockIDatasetAPI) ClearDataset(ctx context.Context, ds *service.DatasetWithSchema) error {
+func (m *MockIDatasetAPI) ClearDataset(arg0 context.Context, arg1 *service.DatasetWithSchema) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClearDataset", ctx, ds)
+	ret := m.ctrl.Call(m, "ClearDataset", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ClearDataset indicates an expected call of ClearDataset.
-func (mr *MockIDatasetAPIMockRecorder) ClearDataset(ctx, ds any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) ClearDataset(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).ClearDataset), ctx, ds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).ClearDataset), arg0, arg1)
+}
+
+// CountDatasets mocks base method.
+func (m *MockIDatasetAPI) CountDatasets(arg0 context.Context, arg1 *service.SearchDatasetsParam) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountDatasets", arg0, arg1)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountDatasets indicates an expected call of CountDatasets.
+func (mr *MockIDatasetAPIMockRecorder) CountDatasets(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDatasets", reflect.TypeOf((*MockIDatasetAPI)(nil).CountDatasets), arg0, arg1)
 }
 
 // CreateDataset mocks base method.
-func (m *MockIDatasetAPI) CreateDataset(ctx context.Context, dataset *entity.Dataset, fields []*entity.FieldSchema) error {
+func (m *MockIDatasetAPI) CreateDataset(arg0 context.Context, arg1 *entity.Dataset, arg2 []*entity.FieldSchema) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateDataset", ctx, dataset, fields)
+	ret := m.ctrl.Call(m, "CreateDataset", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateDataset indicates an expected call of CreateDataset.
-func (mr *MockIDatasetAPIMockRecorder) CreateDataset(ctx, dataset, fields any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) CreateDataset(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).CreateDataset), ctx, dataset, fields)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).CreateDataset), arg0, arg1, arg2)
 }
 
 // CreateIOJob mocks base method.
-func (m *MockIDatasetAPI) CreateIOJob(ctx context.Context, job *entity.IOJob) error {
+func (m *MockIDatasetAPI) CreateIOJob(arg0 context.Context, arg1 *entity.IOJob) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateIOJob", ctx, job)
+	ret := m.ctrl.Call(m, "CreateIOJob", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateIOJob indicates an expected call of CreateIOJob.
-func (mr *MockIDatasetAPIMockRecorder) CreateIOJob(ctx, job any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) CreateIOJob(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateIOJob", reflect.TypeOf((*MockIDatasetAPI)(nil).CreateIOJob), ctx, job)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateIOJob", reflect.TypeOf((*MockIDatasetAPI)(nil).CreateIOJob), arg0, arg1)
 }
 
 // CreateVersion mocks base method.
-func (m *MockIDatasetAPI) CreateVersion(ctx context.Context, ds *service.DatasetWithSchema, version *entity.DatasetVersion) error {
+func (m *MockIDatasetAPI) CreateVersion(arg0 context.Context, arg1 *service.DatasetWithSchema, arg2 *entity.DatasetVersion) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateVersion", ctx, ds, version)
+	ret := m.ctrl.Call(m, "CreateVersion", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateVersion indicates an expected call of CreateVersion.
-func (mr *MockIDatasetAPIMockRecorder) CreateVersion(ctx, ds, version any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) CreateVersion(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVersion", reflect.TypeOf((*MockIDatasetAPI)(nil).CreateVersion), ctx, ds, version)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVersion", reflect.TypeOf((*MockIDatasetAPI)(nil).CreateVersion), arg0, arg1, arg2)
 }
 
 // DeleteDataset mocks base method.
-func (m *MockIDatasetAPI) DeleteDataset(ctx context.Context, spaceID, id int64) error {
+func (m *MockIDatasetAPI) DeleteDataset(arg0 context.Context, arg1, arg2 int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteDataset", ctx, spaceID, id)
+	ret := m.ctrl.Call(m, "DeleteDataset", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteDataset indicates an expected call of DeleteDataset.
-func (mr *MockIDatasetAPIMockRecorder) DeleteDataset(ctx, spaceID, id any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) DeleteDataset(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).DeleteDataset), ctx, spaceID, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).DeleteDataset), arg0, arg1, arg2)
 }
 
 // GetDataset mocks base method.
-func (m *MockIDatasetAPI) GetDataset(ctx context.Context, spaceID, id int64) (*service.DatasetWithSchema, error) {
+func (m *MockIDatasetAPI) GetDataset(arg0 context.Context, arg1, arg2 int64) (*service.DatasetWithSchema, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDataset", ctx, spaceID, id)
+	ret := m.ctrl.Call(m, "GetDataset", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*service.DatasetWithSchema)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetDataset indicates an expected call of GetDataset.
-func (mr *MockIDatasetAPIMockRecorder) GetDataset(ctx, spaceID, id any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) GetDataset(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).GetDataset), ctx, spaceID, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).GetDataset), arg0, arg1, arg2)
 }
 
 // GetDatasetWithOpt mocks base method.
-func (m *MockIDatasetAPI) GetDatasetWithOpt(ctx context.Context, spaceID, id int64, opt *service.GetOpt) (*service.DatasetWithSchema, error) {
+func (m *MockIDatasetAPI) GetDatasetWithOpt(arg0 context.Context, arg1, arg2 int64, arg3 *service.GetOpt) (*service.DatasetWithSchema, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDatasetWithOpt", ctx, spaceID, id, opt)
+	ret := m.ctrl.Call(m, "GetDatasetWithOpt", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*service.DatasetWithSchema)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetDatasetWithOpt indicates an expected call of GetDatasetWithOpt.
-func (mr *MockIDatasetAPIMockRecorder) GetDatasetWithOpt(ctx, spaceID, id, opt any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) GetDatasetWithOpt(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatasetWithOpt", reflect.TypeOf((*MockIDatasetAPI)(nil).GetDatasetWithOpt), ctx, spaceID, id, opt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatasetWithOpt", reflect.TypeOf((*MockIDatasetAPI)(nil).GetDatasetWithOpt), arg0, arg1, arg2, arg3)
 }
 
 // GetIOJob mocks base method.
-func (m *MockIDatasetAPI) GetIOJob(ctx context.Context, jobID int64) (*entity.IOJob, error) {
+func (m *MockIDatasetAPI) GetIOJob(arg0 context.Context, arg1 int64) (*entity.IOJob, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIOJob", ctx, jobID)
+	ret := m.ctrl.Call(m, "GetIOJob", arg0, arg1)
 	ret0, _ := ret[0].(*entity.IOJob)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetIOJob indicates an expected call of GetIOJob.
-func (mr *MockIDatasetAPIMockRecorder) GetIOJob(ctx, jobID any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) GetIOJob(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIOJob", reflect.TypeOf((*MockIDatasetAPI)(nil).GetIOJob), ctx, jobID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIOJob", reflect.TypeOf((*MockIDatasetAPI)(nil).GetIOJob), arg0, arg1)
 }
 
 // GetItem mocks base method.
-func (m *MockIDatasetAPI) GetItem(ctx context.Context, spaceID, datasetID, itemID int64) (*entity.Item, error) {
+func (m *MockIDatasetAPI) GetItem(arg0 context.Context, arg1, arg2, arg3 int64) (*entity.Item, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetItem", ctx, spaceID, datasetID, itemID)
+	ret := m.ctrl.Call(m, "GetItem", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*entity.Item)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetItem indicates an expected call of GetItem.
-func (mr *MockIDatasetAPIMockRecorder) GetItem(ctx, spaceID, datasetID, itemID any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) GetItem(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItem", reflect.TypeOf((*MockIDatasetAPI)(nil).GetItem), ctx, spaceID, datasetID, itemID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItem", reflect.TypeOf((*MockIDatasetAPI)(nil).GetItem), arg0, arg1, arg2, arg3)
 }
 
 // GetOrSetItemCountOfVersion mocks base method.
-func (m *MockIDatasetAPI) GetOrSetItemCountOfVersion(ctx context.Context, version *entity.DatasetVersion) (int64, error) {
+func (m *MockIDatasetAPI) GetOrSetItemCountOfVersion(arg0 context.Context, arg1 *entity.DatasetVersion) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOrSetItemCountOfVersion", ctx, version)
+	ret := m.ctrl.Call(m, "GetOrSetItemCountOfVersion", arg0, arg1)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetOrSetItemCountOfVersion indicates an expected call of GetOrSetItemCountOfVersion.
-func (mr *MockIDatasetAPIMockRecorder) GetOrSetItemCountOfVersion(ctx, version any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) GetOrSetItemCountOfVersion(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrSetItemCountOfVersion", reflect.TypeOf((*MockIDatasetAPI)(nil).GetOrSetItemCountOfVersion), ctx, version)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrSetItemCountOfVersion", reflect.TypeOf((*MockIDatasetAPI)(nil).GetOrSetItemCountOfVersion), arg0, arg1)
 }
 
 // GetVersionWithOpt mocks base method.
-func (m *MockIDatasetAPI) GetVersionWithOpt(ctx context.Context, spaceID, versionID int64, opt *service.GetOpt) (*entity.DatasetVersion, *service.DatasetWithSchema, error) {
+func (m *MockIDatasetAPI) GetVersionWithOpt(arg0 context.Context, arg1, arg2 int64, arg3 *service.GetOpt) (*entity.DatasetVersion, *service.DatasetWithSchema, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetVersionWithOpt", ctx, spaceID, versionID, opt)
+	ret := m.ctrl.Call(m, "GetVersionWithOpt", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*entity.DatasetVersion)
 	ret1, _ := ret[1].(*service.DatasetWithSchema)
 	ret2, _ := ret[2].(error)
@@ -308,16 +322,16 @@ func (m *MockIDatasetAPI) GetVersionWithOpt(ctx context.Context, spaceID, versio
 }
 
 // GetVersionWithOpt indicates an expected call of GetVersionWithOpt.
-func (mr *MockIDatasetAPIMockRecorder) GetVersionWithOpt(ctx, spaceID, versionID, opt any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) GetVersionWithOpt(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersionWithOpt", reflect.TypeOf((*MockIDatasetAPI)(nil).GetVersionWithOpt), ctx, spaceID, versionID, opt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersionWithOpt", reflect.TypeOf((*MockIDatasetAPI)(nil).GetVersionWithOpt), arg0, arg1, arg2, arg3)
 }
 
 // LoadItemData mocks base method.
-func (m *MockIDatasetAPI) LoadItemData(ctx context.Context, items ...*entity.Item) error {
+func (m *MockIDatasetAPI) LoadItemData(arg0 context.Context, arg1 ...*entity.Item) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx}
-	for _, a := range items {
+	varargs := []any{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "LoadItemData", varargs...)
@@ -326,123 +340,123 @@ func (m *MockIDatasetAPI) LoadItemData(ctx context.Context, items ...*entity.Ite
 }
 
 // LoadItemData indicates an expected call of LoadItemData.
-func (mr *MockIDatasetAPIMockRecorder) LoadItemData(ctx any, items ...any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) LoadItemData(arg0 any, arg1 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx}, items...)
+	varargs := append([]any{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadItemData", reflect.TypeOf((*MockIDatasetAPI)(nil).LoadItemData), varargs...)
 }
 
 // RunIOJob mocks base method.
-func (m *MockIDatasetAPI) RunIOJob(ctx context.Context, msg *entity.JobRunMessage) error {
+func (m *MockIDatasetAPI) RunIOJob(arg0 context.Context, arg1 *entity.JobRunMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunIOJob", ctx, msg)
+	ret := m.ctrl.Call(m, "RunIOJob", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RunIOJob indicates an expected call of RunIOJob.
-func (mr *MockIDatasetAPIMockRecorder) RunIOJob(ctx, msg any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) RunIOJob(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunIOJob", reflect.TypeOf((*MockIDatasetAPI)(nil).RunIOJob), ctx, msg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunIOJob", reflect.TypeOf((*MockIDatasetAPI)(nil).RunIOJob), arg0, arg1)
 }
 
 // RunSnapshotItemJob mocks base method.
-func (m *MockIDatasetAPI) RunSnapshotItemJob(ctx context.Context, msg *entity.JobRunMessage) error {
+func (m *MockIDatasetAPI) RunSnapshotItemJob(arg0 context.Context, arg1 *entity.JobRunMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunSnapshotItemJob", ctx, msg)
+	ret := m.ctrl.Call(m, "RunSnapshotItemJob", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RunSnapshotItemJob indicates an expected call of RunSnapshotItemJob.
-func (mr *MockIDatasetAPIMockRecorder) RunSnapshotItemJob(ctx, msg any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) RunSnapshotItemJob(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunSnapshotItemJob", reflect.TypeOf((*MockIDatasetAPI)(nil).RunSnapshotItemJob), ctx, msg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunSnapshotItemJob", reflect.TypeOf((*MockIDatasetAPI)(nil).RunSnapshotItemJob), arg0, arg1)
 }
 
 // SearchDataset mocks base method.
-func (m *MockIDatasetAPI) SearchDataset(ctx context.Context, req *service.SearchDatasetsParam) (*service.SearchDatasetsResults, error) {
+func (m *MockIDatasetAPI) SearchDataset(arg0 context.Context, arg1 *service.SearchDatasetsParam) (*service.SearchDatasetsResults, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SearchDataset", ctx, req)
+	ret := m.ctrl.Call(m, "SearchDataset", arg0, arg1)
 	ret0, _ := ret[0].(*service.SearchDatasetsResults)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SearchDataset indicates an expected call of SearchDataset.
-func (mr *MockIDatasetAPIMockRecorder) SearchDataset(ctx, req any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) SearchDataset(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).SearchDataset), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).SearchDataset), arg0, arg1)
 }
 
 // StatFile mocks base method.
-func (m *MockIDatasetAPI) StatFile(ctx context.Context, provider entity0.Provider, path string) (fs.FileInfo, error) {
+func (m *MockIDatasetAPI) StatFile(arg0 context.Context, arg1 entity0.Provider, arg2 string) (fs.FileInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StatFile", ctx, provider, path)
+	ret := m.ctrl.Call(m, "StatFile", arg0, arg1, arg2)
 	ret0, _ := ret[0].(fs.FileInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StatFile indicates an expected call of StatFile.
-func (mr *MockIDatasetAPIMockRecorder) StatFile(ctx, provider, path any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) StatFile(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatFile", reflect.TypeOf((*MockIDatasetAPI)(nil).StatFile), ctx, provider, path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatFile", reflect.TypeOf((*MockIDatasetAPI)(nil).StatFile), arg0, arg1, arg2)
 }
 
 // UpdateDataset mocks base method.
-func (m *MockIDatasetAPI) UpdateDataset(ctx context.Context, param *service.UpdateDatasetParam) error {
+func (m *MockIDatasetAPI) UpdateDataset(arg0 context.Context, arg1 *service.UpdateDatasetParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateDataset", ctx, param)
+	ret := m.ctrl.Call(m, "UpdateDataset", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateDataset indicates an expected call of UpdateDataset.
-func (mr *MockIDatasetAPIMockRecorder) UpdateDataset(ctx, param any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) UpdateDataset(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).UpdateDataset), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDataset", reflect.TypeOf((*MockIDatasetAPI)(nil).UpdateDataset), arg0, arg1)
 }
 
 // UpdateItem mocks base method.
-func (m *MockIDatasetAPI) UpdateItem(ctx context.Context, ds *service.DatasetWithSchema, item *entity.Item) error {
+func (m *MockIDatasetAPI) UpdateItem(arg0 context.Context, arg1 *service.DatasetWithSchema, arg2 *entity.Item) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateItem", ctx, ds, item)
+	ret := m.ctrl.Call(m, "UpdateItem", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateItem indicates an expected call of UpdateItem.
-func (mr *MockIDatasetAPIMockRecorder) UpdateItem(ctx, ds, item any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) UpdateItem(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItem", reflect.TypeOf((*MockIDatasetAPI)(nil).UpdateItem), ctx, ds, item)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItem", reflect.TypeOf((*MockIDatasetAPI)(nil).UpdateItem), arg0, arg1, arg2)
 }
 
 // UpdateSchema mocks base method.
-func (m *MockIDatasetAPI) UpdateSchema(ctx context.Context, ds *entity.Dataset, fields []*entity.FieldSchema, updatedBy string) error {
+func (m *MockIDatasetAPI) UpdateSchema(arg0 context.Context, arg1 *entity.Dataset, arg2 []*entity.FieldSchema, arg3 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateSchema", ctx, ds, fields, updatedBy)
+	ret := m.ctrl.Call(m, "UpdateSchema", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateSchema indicates an expected call of UpdateSchema.
-func (mr *MockIDatasetAPIMockRecorder) UpdateSchema(ctx, ds, fields, updatedBy any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) UpdateSchema(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSchema", reflect.TypeOf((*MockIDatasetAPI)(nil).UpdateSchema), ctx, ds, fields, updatedBy)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSchema", reflect.TypeOf((*MockIDatasetAPI)(nil).UpdateSchema), arg0, arg1, arg2, arg3)
 }
 
 // ValidateDatasetItems mocks base method.
-func (m *MockIDatasetAPI) ValidateDatasetItems(ctx context.Context, param *service.ValidateDatasetItemsParam) (*service.ValidateDatasetItemsResult, error) {
+func (m *MockIDatasetAPI) ValidateDatasetItems(arg0 context.Context, arg1 *service.ValidateDatasetItemsParam) (*service.ValidateDatasetItemsResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateDatasetItems", ctx, param)
+	ret := m.ctrl.Call(m, "ValidateDatasetItems", arg0, arg1)
 	ret0, _ := ret[0].(*service.ValidateDatasetItemsResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ValidateDatasetItems indicates an expected call of ValidateDatasetItems.
-func (mr *MockIDatasetAPIMockRecorder) ValidateDatasetItems(ctx, param any) *gomock.Call {
+func (mr *MockIDatasetAPIMockRecorder) ValidateDatasetItems(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateDatasetItems", reflect.TypeOf((*MockIDatasetAPI)(nil).ValidateDatasetItems), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateDatasetItems", reflect.TypeOf((*MockIDatasetAPI)(nil).ValidateDatasetItems), arg0, arg1)
 }

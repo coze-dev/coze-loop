@@ -38,6 +38,8 @@ type IDatasetService interface {
 	GetDatasetWithOpt(ctx context.Context, spaceID, id int64, opt *GetOpt) (*DatasetWithSchema, error)
 	BatchGetDatasetWithOpt(ctx context.Context, spaceID int64, ids []int64, opt *GetOpt) ([]*DatasetWithSchema, error)
 	SearchDataset(ctx context.Context, req *SearchDatasetsParam) (*SearchDatasetsResults, error)
+	// CountDatasets 仅按 space + category 统计数据集数量(不复用 SearchDataset 的分页/明细能力)
+	CountDatasets(ctx context.Context, req *SearchDatasetsParam) (int64, error)
 }
 
 type ISchemaService interface {

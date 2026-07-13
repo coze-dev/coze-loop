@@ -239,6 +239,29 @@ func (h *DatasetApplicationImpl) ListDatasets(ctx context.Context, req *dataset.
 	return resp, nil
 }
 
+// CountDatasets 统计空间下数据集数量(仅 space + category 过滤，不复用 List 的分页/明细)
+func (h *DatasetApplicationImpl) CountDatasets(ctx context.Context, req *dataset.CountDatasetsRequest) (resp *dataset.CountDatasetsResponse, err error) {
+	// 鉴权
+	err = h.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(rpc.CozeActionListLoopEvaluationSet), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	total, err := h.svc.CountDatasets(ctx, &service.SearchDatasetsParam{
+		SpaceID:  req.GetWorkspaceID(),
+		Category: convertor.ConvertCategoryDTO2DO(gptr.Indirect(req.Category)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &dataset.CountDatasetsResponse{
+		Total: gptr.Of(total),
+	}, nil
+}
+
 func (h *DatasetApplicationImpl) GetDataset(ctx context.Context, req *dataset.GetDatasetRequest) (resp *dataset.GetDatasetResponse, err error) {
 	// 鉴权
 	err = h.authByDatasetID(ctx, req.GetWorkspaceID(), req.GetDatasetID(), rpc.CommonActionRead)

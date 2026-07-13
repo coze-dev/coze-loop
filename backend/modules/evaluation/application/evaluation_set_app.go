@@ -383,6 +383,31 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 	}, nil
 }
 
+// GetEvaluationSetsCount 统计空间下评测集总数(不复用 ListEvaluationSets，委托 data 模块 CountDatasets)
+func (e *EvaluationSetApplicationImpl) GetEvaluationSetsCount(ctx context.Context, req *eval_set.GetEvaluationSetsCountRequest) (resp *eval_set.GetEvaluationSetsCountResponse, err error) {
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	// 鉴权(复用评测集列表的 workspace 鉴权链路)
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	// domain调用
+	total, err := e.evaluationSetService.CountEvaluationSets(ctx, req.WorkspaceID)
+	if err != nil {
+		return nil, err
+	}
+	return &eval_set.GetEvaluationSetsCountResponse{
+		Total: gptr.Of(total),
+	}, nil
+}
+
 func (e *EvaluationSetApplicationImpl) BatchCreateEvaluationSetItems(ctx context.Context, req *eval_set.BatchCreateEvaluationSetItemsRequest) (resp *eval_set.BatchCreateEvaluationSetItemsResponse, err error) {
 	// 参数校验
 	if req == nil {

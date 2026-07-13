@@ -152,6 +152,19 @@ func (s *DatasetServiceImpl) SearchDataset(ctx context.Context, req *SearchDatas
 	return res, nil
 }
 
+func (s *DatasetServiceImpl) CountDatasets(ctx context.Context, req *SearchDatasetsParam) (int64, error) {
+	// 仅按 space + category 统计，不带 name/creator/分页等列表过滤条件
+	param := &repo.ListDatasetsParams{
+		SpaceID:  req.SpaceID,
+		Category: req.Category,
+	}
+	total, err := s.repo.CountDatasets(ctx, param)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
 func (s *DatasetServiceImpl) buildSearchDatasetParam(req *SearchDatasetsParam) *repo.ListDatasetsParams {
 	pg := pagination.New(
 		repo.DatasetOrderBy(gptr.Indirect(req.OrderBy.Field)),
