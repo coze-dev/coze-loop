@@ -173,6 +173,29 @@ func (l *LocalExperimentService) UpdateExperiment(ctx context.Context, req *expt
 	return result.GetSuccess(), nil
 }
 
+// UpdateExptRunConf
+// UpdateExptRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）
+func (l *LocalExperimentService) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest, callOptions ...callopt.Option) (*expt.UpdateExptRunConfResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceUpdateExptRunConfArgs)
+		result := out.(*expt.ExperimentServiceUpdateExptRunConfResult)
+		resp, err := l.impl.UpdateExptRunConf(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceUpdateExptRunConfArgs{Req: req}
+	result := &expt.ExperimentServiceUpdateExptRunConfResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateExptRunConf")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) DeleteExperiment(ctx context.Context, req *expt.DeleteExperimentRequest, callOptions ...callopt.Option) (*expt.DeleteExperimentResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*expt.ExperimentServiceDeleteExperimentArgs)

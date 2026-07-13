@@ -175,6 +175,21 @@ func (mr *MockEvaluatorServiceMockRecorder) CreateSkippedEvaluatorRecord(arg0, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSkippedEvaluatorRecord", reflect.TypeOf((*MockEvaluatorService)(nil).CreateSkippedEvaluatorRecord), arg0, arg1)
 }
 
+// CreateEvaluatorRunFailRecord mocks base method.
+func (m *MockEvaluatorService) CreateEvaluatorRunFailRecord(ctx context.Context, request *entity.RunEvaluatorRequest, runErr error) (*entity.EvaluatorRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateEvaluatorRunFailRecord", ctx, request, runErr)
+	ret0, _ := ret[0].(*entity.EvaluatorRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateEvaluatorRunFailRecord indicates an expected call of CreateEvaluatorRunFailRecord.
+func (mr *MockEvaluatorServiceMockRecorder) CreateEvaluatorRunFailRecord(ctx, request, runErr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluatorRunFailRecord", reflect.TypeOf((*MockEvaluatorService)(nil).CreateEvaluatorRunFailRecord), ctx, request, runErr)
+}
+
 // DebugEvaluator mocks base method.
 func (m *MockEvaluatorService) DebugEvaluator(arg0 context.Context, arg1 *entity.Evaluator, arg2 *entity.EvaluatorInputData, arg3 *entity.EvaluatorRunConfig, arg4 int64) (*entity.EvaluatorOutputData, error) {
 	m.ctrl.T.Helper()

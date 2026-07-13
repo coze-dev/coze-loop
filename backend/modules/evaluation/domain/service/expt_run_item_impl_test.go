@@ -445,7 +445,7 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 	})
 
 	t.Run("正常流程", func(t *testing.T) {
-		turnResultLog := &entity.ExptTurnResultRunLog{ID: 1, TurnID: 1}
+		turnResultLog := &entity.ExptTurnResultRunLog{ID: 1, TurnID: 1, ErrMsg: "old error"}
 		etec := &entity.ExptTurnEvalCtx{
 			Turn: &entity.Turn{ID: 1},
 			ExptItemEvalCtx: &entity.ExptItemEvalCtx{
@@ -459,9 +459,50 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 			TargetResult:     &entity.EvalTargetRecord{ID: 10},
 			EvaluatorResults: []*entity.EvaluatorRecord{{ID: 100, EvaluatorVersionID: 1}},
 		}
-		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, logs []*entity.ExptTurnResultRunLog) error {
+			require.Len(t, logs, 1)
+			assert.Equal(t, entity.TurnRunState_Success, logs[0].Status)
+			assert.Empty(t, logs[0].ErrMsg)
+			return nil
+		})
 		err := executor.storeTurnRunResult(context.Background(), etec, result)
 		assert.NoError(t, err)
+	})
+
+	t.Run("缺少评估器结果时落失败状态", func(t *testing.T) {
+		turnResultLog := &entity.ExptTurnResultRunLog{ID: 1, TurnID: 1}
+		etec := &entity.ExptTurnEvalCtx{
+			Turn: &entity.Turn{ID: 1},
+			ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+				Expt: &entity.Experiment{
+					ID:      1,
+					SpaceID: 2,
+					Evaluators: []*entity.Evaluator{
+						{EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1}},
+						{EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 2}},
+					},
+					EvalConf: &entity.EvaluationConfiguration{ConnectorConf: entity.Connector{EvaluatorsConf: &entity.EvaluatorsConf{}}},
+				},
+				Event:               &entity.ExptItemEvalEvent{ExptRunID: 3},
+				EvalSetItem:         &entity.EvaluationSetItem{ItemID: 2},
+				ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{1: turnResultLog}},
+			},
+		}
+		result := &entity.ExptTurnRunResult{
+			TargetResult:     &entity.EvalTargetRecord{ID: 10},
+			EvaluatorResults: []*entity.EvaluatorRecord{{ID: 100, EvaluatorVersionID: 1}},
+		}
+		mockConfiger.EXPECT().GetErrCtrl(gomock.Any()).Return(entity.DefaultExptErrCtrl())
+		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, logs []*entity.ExptTurnResultRunLog) error {
+			require.Len(t, logs, 1)
+			assert.Equal(t, entity.TurnRunState_Fail, logs[0].Status)
+			assert.Contains(t, logs[0].ErrMsg, "evaluator result missing")
+			return nil
+		})
+
+		err := executor.storeTurnRunResult(context.Background(), etec, result)
+		assert.NoError(t, err)
+		assert.Error(t, result.GetEvalErr())
 	})
 
 	t.Run("ctx取消后仍落turn失败状态", func(t *testing.T) {

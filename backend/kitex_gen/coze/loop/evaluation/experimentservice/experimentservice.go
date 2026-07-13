@@ -63,6 +63,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UpdateExptRunConf": kitex.NewMethodInfo(
+		updateExptRunConfHandler,
+		newExperimentServiceUpdateExptRunConfArgs,
+		newExperimentServiceUpdateExptRunConfResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"DeleteExperiment": kitex.NewMethodInfo(
 		deleteExperimentHandler,
 		newExperimentServiceDeleteExperimentArgs,
@@ -486,6 +493,25 @@ func newExperimentServiceUpdateExperimentArgs() interface{} {
 
 func newExperimentServiceUpdateExperimentResult() interface{} {
 	return expt.NewExperimentServiceUpdateExperimentResult()
+}
+
+func updateExptRunConfHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceUpdateExptRunConfArgs)
+	realResult := result.(*expt.ExperimentServiceUpdateExptRunConfResult)
+	success, err := handler.(expt.ExperimentService).UpdateExptRunConf(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceUpdateExptRunConfArgs() interface{} {
+	return expt.NewExperimentServiceUpdateExptRunConfArgs()
+}
+
+func newExperimentServiceUpdateExptRunConfResult() interface{} {
+	return expt.NewExperimentServiceUpdateExptRunConfResult()
 }
 
 func deleteExperimentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1268,6 +1294,16 @@ func (p *kClient) UpdateExperiment(ctx context.Context, req *expt.UpdateExperime
 	_args.Req = req
 	var _result expt.ExperimentServiceUpdateExperimentResult
 	if err = p.c.Call(ctx, "UpdateExperiment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest) (r *expt.UpdateExptRunConfResponse, err error) {
+	var _args expt.ExperimentServiceUpdateExptRunConfArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceUpdateExptRunConfResult
+	if err = p.c.Call(ctx, "UpdateExptRunConf", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

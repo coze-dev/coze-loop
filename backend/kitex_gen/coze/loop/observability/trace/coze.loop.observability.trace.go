@@ -2722,12 +2722,13 @@ func (p *TraceAdvanceInfo) Field2DeepEqual(src *TokenCost) bool {
 }
 
 type GetTraceRequest struct {
-	WorkspaceID int64  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
-	TraceID     string `thrift:"trace_id,2,required" frugal:"2,required,string" json:"trace_id,required" path:"trace_id,required"`
+	WorkspaceID int64   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
+	TraceID     *string `thrift:"trace_id,2,optional" frugal:"2,optional,string" json:"trace_id,omitempty" path:"trace_id"`
 	// ms
 	StartTime int64 `thrift:"start_time,3,required" frugal:"3,required,i64" json:"start_time" query:"start_time,required" `
 	// ms
 	EndTime      int64                `thrift:"end_time,4,required" frugal:"4,required,i64" json:"end_time" query:"end_time,required" `
+	Logid        *string              `thrift:"logid,5,optional" frugal:"5,optional,string" json:"logid,omitempty" query:"logid"`
 	PlatformType *common.PlatformType `thrift:"platform_type,8,optional" frugal:"8,optional,string" json:"platform_type,omitempty" query:"platform_type"`
 	SpanIds      []string             `thrift:"span_ids,9,optional" frugal:"9,optional,list<string>" json:"span_ids,omitempty" query:"span_ids"`
 	Filters      *filter.FilterFields `thrift:"filters,10,optional" frugal:"10,optional,filter.FilterFields" json:"filters,omitempty" query:"filters"`
@@ -2750,11 +2751,16 @@ func (p *GetTraceRequest) GetWorkspaceID() (v int64) {
 	return
 }
 
+var GetTraceRequest_TraceID_DEFAULT string
+
 func (p *GetTraceRequest) GetTraceID() (v string) {
-	if p != nil {
-		return p.TraceID
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetTraceID() {
+		return GetTraceRequest_TraceID_DEFAULT
+	}
+	return *p.TraceID
 }
 
 func (p *GetTraceRequest) GetStartTime() (v int64) {
@@ -2769,6 +2775,18 @@ func (p *GetTraceRequest) GetEndTime() (v int64) {
 		return p.EndTime
 	}
 	return
+}
+
+var GetTraceRequest_Logid_DEFAULT string
+
+func (p *GetTraceRequest) GetLogid() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLogid() {
+		return GetTraceRequest_Logid_DEFAULT
+	}
+	return *p.Logid
 }
 
 var GetTraceRequest_PlatformType_DEFAULT common.PlatformType
@@ -2845,7 +2863,7 @@ func (p *GetTraceRequest) GetBase() (v *base.Base) {
 func (p *GetTraceRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *GetTraceRequest) SetTraceID(val string) {
+func (p *GetTraceRequest) SetTraceID(val *string) {
 	p.TraceID = val
 }
 func (p *GetTraceRequest) SetStartTime(val int64) {
@@ -2853,6 +2871,9 @@ func (p *GetTraceRequest) SetStartTime(val int64) {
 }
 func (p *GetTraceRequest) SetEndTime(val int64) {
 	p.EndTime = val
+}
+func (p *GetTraceRequest) SetLogid(val *string) {
+	p.Logid = val
 }
 func (p *GetTraceRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
@@ -2878,12 +2899,21 @@ var fieldIDToName_GetTraceRequest = map[int16]string{
 	2:   "trace_id",
 	3:   "start_time",
 	4:   "end_time",
+	5:   "logid",
 	8:   "platform_type",
 	9:   "span_ids",
 	10:  "filters",
 	11:  "page_size",
 	12:  "page_token",
 	255: "Base",
+}
+
+func (p *GetTraceRequest) IsSetTraceID() bool {
+	return p.TraceID != nil
+}
+
+func (p *GetTraceRequest) IsSetLogid() bool {
+	return p.Logid != nil
 }
 
 func (p *GetTraceRequest) IsSetPlatformType() bool {
@@ -2914,7 +2944,6 @@ func (p *GetTraceRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetTraceID bool = false
 	var issetStartTime bool = false
 	var issetEndTime bool = false
 
@@ -2946,7 +2975,6 @@ func (p *GetTraceRequest) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetTraceID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -2965,6 +2993,14 @@ func (p *GetTraceRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetEndTime = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -3034,11 +3070,6 @@ func (p *GetTraceRequest) Read(iprot thrift.TProtocol) (err error) {
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetTraceID {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
 	if !issetStartTime {
 		fieldId = 3
 		goto RequiredFieldNotSetError
@@ -3079,11 +3110,11 @@ func (p *GetTraceRequest) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *GetTraceRequest) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field string
+	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.TraceID = _field
 	return nil
@@ -3108,6 +3139,17 @@ func (p *GetTraceRequest) ReadField4(iprot thrift.TProtocol) error {
 		_field = v
 	}
 	p.EndTime = _field
+	return nil
+}
+func (p *GetTraceRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Logid = _field
 	return nil
 }
 func (p *GetTraceRequest) ReadField8(iprot thrift.TProtocol) error {
@@ -3205,6 +3247,10 @@ func (p *GetTraceRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 4
 			goto WriteFieldError
 		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
 			goto WriteFieldError
@@ -3264,14 +3310,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *GetTraceRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.TraceID); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetTraceID() {
+		if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -3310,6 +3358,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *GetTraceRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLogid() {
+		if err = oprot.WriteFieldBegin("logid", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Logid); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 func (p *GetTraceRequest) writeField8(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPlatformType() {
@@ -3454,6 +3520,9 @@ func (p *GetTraceRequest) DeepEqual(ano *GetTraceRequest) bool {
 	if !p.Field4DeepEqual(ano.EndTime) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.Logid) {
+		return false
+	}
 	if !p.Field8DeepEqual(ano.PlatformType) {
 		return false
 	}
@@ -3482,9 +3551,14 @@ func (p *GetTraceRequest) Field1DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *GetTraceRequest) Field2DeepEqual(src string) bool {
+func (p *GetTraceRequest) Field2DeepEqual(src *string) bool {
 
-	if strings.Compare(p.TraceID, src) != 0 {
+	if p.TraceID == src {
+		return true
+	} else if p.TraceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceID, *src) != 0 {
 		return false
 	}
 	return true
@@ -3499,6 +3573,18 @@ func (p *GetTraceRequest) Field3DeepEqual(src int64) bool {
 func (p *GetTraceRequest) Field4DeepEqual(src int64) bool {
 
 	if p.EndTime != src {
+		return false
+	}
+	return true
+}
+func (p *GetTraceRequest) Field5DeepEqual(src *string) bool {
+
+	if p.Logid == src {
+		return true
+	} else if p.Logid == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Logid, *src) != 0 {
 		return false
 	}
 	return true
@@ -7394,9 +7480,10 @@ func (p *GetTracesMetaInfoRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type GetTracesMetaInfoResponse struct {
-	FieldMetas  map[string]*FieldMeta `thrift:"field_metas,1,required" frugal:"1,required,map<string:FieldMeta>" form:"field_metas,required" json:"field_metas,required" query:"field_metas,required"`
-	KeySpanType []string              `thrift:"key_span_type,2,optional" frugal:"2,optional,list<string>" form:"key_span_type" json:"key_span_type,omitempty" query:"key_span_type"`
-	BaseResp    *base.BaseResp        `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	FieldMetas        map[string]*FieldMeta `thrift:"field_metas,1,required" frugal:"1,required,map<string:FieldMeta>" form:"field_metas,required" json:"field_metas,required" query:"field_metas,required"`
+	KeySpanType       []string              `thrift:"key_span_type,2,optional" frugal:"2,optional,list<string>" form:"key_span_type" json:"key_span_type,omitempty" query:"key_span_type"`
+	TraceDefaultRange *string               `thrift:"trace_default_range,3,optional" frugal:"3,optional,string" form:"trace_default_range" json:"trace_default_range,omitempty" query:"trace_default_range"`
+	BaseResp          *base.BaseResp        `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewGetTracesMetaInfoResponse() *GetTracesMetaInfoResponse {
@@ -7425,6 +7512,18 @@ func (p *GetTracesMetaInfoResponse) GetKeySpanType() (v []string) {
 	return p.KeySpanType
 }
 
+var GetTracesMetaInfoResponse_TraceDefaultRange_DEFAULT string
+
+func (p *GetTracesMetaInfoResponse) GetTraceDefaultRange() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceDefaultRange() {
+		return GetTracesMetaInfoResponse_TraceDefaultRange_DEFAULT
+	}
+	return *p.TraceDefaultRange
+}
+
 var GetTracesMetaInfoResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *GetTracesMetaInfoResponse) GetBaseResp() (v *base.BaseResp) {
@@ -7442,6 +7541,9 @@ func (p *GetTracesMetaInfoResponse) SetFieldMetas(val map[string]*FieldMeta) {
 func (p *GetTracesMetaInfoResponse) SetKeySpanType(val []string) {
 	p.KeySpanType = val
 }
+func (p *GetTracesMetaInfoResponse) SetTraceDefaultRange(val *string) {
+	p.TraceDefaultRange = val
+}
 func (p *GetTracesMetaInfoResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -7449,11 +7551,16 @@ func (p *GetTracesMetaInfoResponse) SetBaseResp(val *base.BaseResp) {
 var fieldIDToName_GetTracesMetaInfoResponse = map[int16]string{
 	1:   "field_metas",
 	2:   "key_span_type",
+	3:   "trace_default_range",
 	255: "BaseResp",
 }
 
 func (p *GetTracesMetaInfoResponse) IsSetKeySpanType() bool {
 	return p.KeySpanType != nil
+}
+
+func (p *GetTracesMetaInfoResponse) IsSetTraceDefaultRange() bool {
+	return p.TraceDefaultRange != nil
 }
 
 func (p *GetTracesMetaInfoResponse) IsSetBaseResp() bool {
@@ -7491,6 +7598,14 @@ func (p *GetTracesMetaInfoResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7591,6 +7706,17 @@ func (p *GetTracesMetaInfoResponse) ReadField2(iprot thrift.TProtocol) error {
 	p.KeySpanType = _field
 	return nil
 }
+func (p *GetTracesMetaInfoResponse) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceDefaultRange = _field
+	return nil
+}
 func (p *GetTracesMetaInfoResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -7612,6 +7738,10 @@ func (p *GetTracesMetaInfoResponse) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -7689,6 +7819,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *GetTracesMetaInfoResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceDefaultRange() {
+		if err = oprot.WriteFieldBegin("trace_default_range", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceDefaultRange); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 func (p *GetTracesMetaInfoResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
@@ -7728,6 +7876,9 @@ func (p *GetTracesMetaInfoResponse) DeepEqual(ano *GetTracesMetaInfoResponse) bo
 	if !p.Field2DeepEqual(ano.KeySpanType) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.TraceDefaultRange) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -7757,6 +7908,18 @@ func (p *GetTracesMetaInfoResponse) Field2DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *GetTracesMetaInfoResponse) Field3DeepEqual(src *string) bool {
+
+	if p.TraceDefaultRange == src {
+		return true
+	} else if p.TraceDefaultRange == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceDefaultRange, *src) != 0 {
+		return false
 	}
 	return true
 }

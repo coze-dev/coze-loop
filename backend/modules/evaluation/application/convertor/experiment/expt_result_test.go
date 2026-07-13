@@ -410,3 +410,72 @@ func TestExportRecordDO2DTO(t *testing.T) {
 		assert.Equal(t, from.EndAt.Unix(), *got.EndTime)
 	})
 }
+
+func TestItemResultsDO2DTOs(t *testing.T) {
+	t.Parallel()
+
+	from := []*entity.ItemResult{
+		{
+			ItemID: 1,
+			TurnResults: []*entity.TurnResult{
+				{
+					TurnID:    10,
+					TurnIndex: gptr.Of(int64(0)),
+					ExperimentResults: []*entity.ExperimentResult{
+						{
+							ExperimentID: 100,
+							Payload: &entity.ExperimentTurnPayload{
+								TurnID: 10,
+							},
+						},
+					},
+				},
+			},
+			SystemInfo: &entity.ItemSystemInfo{
+				RunState: 1,
+				LogID:    gptr.Of("log-1"),
+			},
+			ItemIndex: gptr.Of(int64(0)),
+			Ext:       map[string]string{"k": "v"},
+		},
+		{
+			ItemID:    2,
+			ItemIndex: gptr.Of(int64(1)),
+		},
+	}
+
+	got := ItemResultsDO2DTOs(from)
+	assert.Len(t, got, 2)
+	assert.Equal(t, int64(1), got[0].ItemID)
+	assert.Len(t, got[0].TurnResults, 1)
+	assert.Equal(t, int64(10), got[0].TurnResults[0].TurnID)
+	assert.Equal(t, "v", got[0].Ext["k"])
+	assert.Equal(t, int64(2), got[1].ItemID)
+}
+
+func TestTurnEvaluatorOutputDO2DTO_WithRecords(t *testing.T) {
+	t.Parallel()
+
+	score := 0.85
+	from := &entity.TurnEvaluatorOutput{
+		EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+			1: {ID: 100, EvaluatorVersionID: 1},
+		},
+		WeightedScore: &score,
+	}
+
+	got := TurnEvaluatorOutputDO2DTO(from)
+	assert.NotNil(t, got)
+	assert.Len(t, got.EvaluatorRecords, 1)
+	assert.NotNil(t, got.EvaluatorRecords[1])
+	assert.Equal(t, &score, got.WeightedScore)
+}
+
+func TestConvRetryMode(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, entity.EvaluationModeFailRetry, ConvRetryMode(domain_expt.ExptRetryMode_RetryFailure))
+	assert.Equal(t, entity.EvaluationModeRetryAll, ConvRetryMode(domain_expt.ExptRetryMode_RetryAll))
+	assert.Equal(t, entity.EvaluationModeRetryItems, ConvRetryMode(domain_expt.ExptRetryMode_RetryTargetItems))
+	assert.Equal(t, entity.EvaluationModeUnknown, ConvRetryMode(domain_expt.ExptRetryMode(999)))
+}

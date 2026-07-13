@@ -5915,6 +5915,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				InvokeID:    gptr.Of(invokeID),
 				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_FAILED),
 				Output: &spi.InvokeEvaluatorOutputData{
+					EvaluatorUsage:    &spi.InvokeEvaluatorUsage{InputTokens: gptr.Of(int64(105119)), OutputTokens: gptr.Of(int64(1938))},
 					EvaluatorRunError: &spi.InvokeEvaluatorRunError{Code: gptr.Of(int32(123)), Message: gptr.Of("m")},
 				},
 			},
@@ -5925,7 +5926,14 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					AsyncUnixMS:        time.Now().UnixMilli() - 10,
 					EvaluatorVersionID: 9,
 				}, nil)
-				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
+				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *entity.ReportEvaluatorRecordParam) error {
+					assert.Equal(t, entity.EvaluatorRunStatusFail, param.Status)
+					if assert.NotNil(t, param.OutputData) && assert.NotNil(t, param.OutputData.EvaluatorUsage) {
+						assert.Equal(t, int64(105119), param.OutputData.EvaluatorUsage.InputTokens)
+						assert.Equal(t, int64(1938), param.OutputData.EvaluatorUsage.OutputTokens)
+					}
+					return nil
+				})
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Not(gomock.Nil()), gomock.Any()).Return(errors.New("pub failed"))
 			},
 			wantErr: -1,
@@ -5983,7 +5991,8 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 						}
 						assert.True(t, ev.AsyncEvaluatorReportTrigger)
 						return nil
-					})
+					},
+				)
 			},
 		},
 	}
@@ -7142,6 +7151,392 @@ func TestMapOpenAPIExptRetryMode(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_fillExtraOutputURLs(t *testing.T) {
+	t.Parallel()
+
+	// helper to build an itemResults slice carrying a single record with the given uri.
+	buildItemResults := func(uri *string) []*entity.ItemResult {
+		return []*entity.ItemResult{
+			{
+				ItemID: 1,
+				TurnResults: []*entity.TurnResult{
+					{
+						TurnID: 1,
+						ExperimentResults: []*entity.ExperimentResult{
+							{
+								ExperimentID: 1,
+								Payload: &entity.ExperimentTurnPayload{
+									EvaluatorOutput: &entity.TurnEvaluatorOutput{
+										EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+											10: {
+												ID: 10,
+												EvaluatorOutputData: &entity.EvaluatorOutputData{
+													ExtraOutput: &entity.EvaluatorExtraOutputContent{
+														URI: uri,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name        string
+		fileNil     bool
+		itemResults []*entity.ItemResult
+		setup       func(fp *rpcmocks.MockIFileProvider)
+		wantErr     bool
+		// assert mutates expectations on the itemResults after the call
+		assert func(t *testing.T, itemResults []*entity.ItemResult)
+	}{
+		{
+			name:        "fileProvider nil - returns nil without mutation",
+			fileNil:     true,
+			itemResults: buildItemResults(gptr.Of("u/1")),
+			setup:       func(_ *rpcmocks.MockIFileProvider) {},
+			wantErr:     false,
+			assert: func(t *testing.T, itemResults []*entity.ItemResult) {
+				rec := itemResults[0].TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[10]
+				assert.Nil(t, rec.EvaluatorOutputData.ExtraOutput.URL)
+			},
+		},
+		{
+			name:    "no uris collected - returns nil, MGetFileURL not called",
+			fileNil: false,
+			// empty uri + a payload with nil EvaluatorOutput + nil record branches
+			itemResults: []*entity.ItemResult{
+				{
+					TurnResults: []*entity.TurnResult{
+						{
+							ExperimentResults: []*entity.ExperimentResult{
+								{Payload: nil},
+								{Payload: &entity.ExperimentTurnPayload{EvaluatorOutput: nil}},
+								{
+									Payload: &entity.ExperimentTurnPayload{
+										EvaluatorOutput: &entity.TurnEvaluatorOutput{
+											EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+												1: nil,
+												2: {EvaluatorOutputData: nil},
+												3: {EvaluatorOutputData: &entity.EvaluatorOutputData{ExtraOutput: nil}},
+												4: {EvaluatorOutputData: &entity.EvaluatorOutputData{ExtraOutput: &entity.EvaluatorExtraOutputContent{URI: nil}}},
+												5: {EvaluatorOutputData: &entity.EvaluatorOutputData{ExtraOutput: &entity.EvaluatorExtraOutputContent{URI: gptr.Of("")}}},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			setup:   func(_ *rpcmocks.MockIFileProvider) {},
+			wantErr: false,
+			assert:  func(_ *testing.T, _ []*entity.ItemResult) {},
+		},
+		{
+			name:        "MGetFileURL returns error - error propagated",
+			fileNil:     false,
+			itemResults: buildItemResults(gptr.Of("u/err")),
+			setup: func(fp *rpcmocks.MockIFileProvider) {
+				fp.EXPECT().MGetFileURL(gomock.Any(), []string{"u/err"}).Return(nil, errors.New("mget failed"))
+			},
+			wantErr: true,
+			assert: func(t *testing.T, itemResults []*entity.ItemResult) {
+				rec := itemResults[0].TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[10]
+				assert.Nil(t, rec.EvaluatorOutputData.ExtraOutput.URL)
+			},
+		},
+		{
+			name:        "success - signed URL written back",
+			fileNil:     false,
+			itemResults: buildItemResults(gptr.Of("u/ok")),
+			setup: func(fp *rpcmocks.MockIFileProvider) {
+				fp.EXPECT().MGetFileURL(gomock.Any(), []string{"u/ok"}).Return(map[string]string{"u/ok": "https://signed/u/ok"}, nil)
+			},
+			wantErr: false,
+			assert: func(t *testing.T, itemResults []*entity.ItemResult) {
+				rec := itemResults[0].TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[10]
+				if assert.NotNil(t, rec.EvaluatorOutputData.ExtraOutput.URL) {
+					assert.Equal(t, "https://signed/u/ok", *rec.EvaluatorOutputData.ExtraOutput.URL)
+				}
+			},
+		},
+		{
+			name:        "success - uri missing in urlMap leaves URL nil",
+			fileNil:     false,
+			itemResults: buildItemResults(gptr.Of("u/miss")),
+			setup: func(fp *rpcmocks.MockIFileProvider) {
+				fp.EXPECT().MGetFileURL(gomock.Any(), []string{"u/miss"}).Return(map[string]string{"u/other": "https://signed/other"}, nil)
+			},
+			wantErr: false,
+			assert: func(t *testing.T, itemResults []*entity.ItemResult) {
+				rec := itemResults[0].TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[10]
+				assert.Nil(t, rec.EvaluatorOutputData.ExtraOutput.URL)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			app := &EvalOpenAPIApplication{}
+			if !tc.fileNil {
+				fp := rpcmocks.NewMockIFileProvider(ctrl)
+				tc.setup(fp)
+				app.fileProvider = fp
+			}
+
+			err := app.fillExtraOutputURLs(context.Background(), tc.itemResults)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			tc.assert(t, tc.itemResults)
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_ListExperimentResultOApi_PopulatedResult(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	resultSvc := servicemocks.NewMockExptResultService(ctrl)
+	fp := rpcmocks.NewMockIFileProvider(ctrl)
+	metric := &fakeOpenAPIMetric{}
+
+	app := &EvalOpenAPIApplication{
+		auth:         auth,
+		resultSvc:    resultSvc,
+		fileProvider: fp,
+		metric:       metric,
+	}
+
+	// itemResults carrying records that exercise the logging loop (nil outputData branch +
+	// extra-output branch) and feed fillExtraOutputURLs with a real provider.
+	itemResults := []*entity.ItemResult{
+		{
+			ItemID: 7,
+			TurnResults: []*entity.TurnResult{
+				{
+					TurnID: 1,
+					ExperimentResults: []*entity.ExperimentResult{
+						{Payload: nil},
+						{Payload: &entity.ExperimentTurnPayload{EvaluatorOutput: nil}},
+						{
+							Payload: &entity.ExperimentTurnPayload{
+								EvaluatorOutput: &entity.TurnEvaluatorOutput{
+									EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+										1: nil,
+										2: {EvaluatorOutputData: nil},
+										3: {
+											EvaluatorVersionID: 99,
+											EvaluatorOutputData: &entity.EvaluatorOutputData{
+												ExtraOutput: &entity.EvaluatorExtraOutputContent{URI: gptr.Of("k1")},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(&entity.MGetExperimentReportResult{
+		Total:       1,
+		ItemResults: itemResults,
+		ExptColumnsEvalTarget: []*entity.ExptColumnEvalTarget{
+			{ExptID: 100, Columns: []*entity.ColumnEvalTarget{{Name: "out"}}},
+		},
+	}, nil)
+	fp.EXPECT().MGetFileURL(gomock.Any(), []string{"k1"}).Return(map[string]string{"k1": "https://signed/k1"}, nil)
+
+	resp, err := app.ListExperimentResultOApi(context.Background(), &openapi.ListExperimentResultOApiRequest{
+		WorkspaceID:  gptr.Of(int64(1)),
+		ExperimentID: gptr.Of(int64(100)),
+		PageNum:      gptr.Of(int32(1)),
+		PageSize:     gptr.Of(int32(20)),
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	assert.Equal(t, int64(1), *resp.Data.Total)
+	assert.NotNil(t, resp.Data.ColumnEvalTargets)
+	// URL signed back into the record
+	url := itemResults[0].TurnResults[0].ExperimentResults[2].Payload.EvaluatorOutput.EvaluatorRecords[3].EvaluatorOutputData.ExtraOutput.URL
+	if assert.NotNil(t, url) {
+		assert.Equal(t, "https://signed/k1", *url)
+	}
+}
+
+func TestEvalOpenAPIApplication_UpdateExptRunConfOApi(t *testing.T) {
+	const (
+		wsID    = int64(123)
+		exptID  = int64(456)
+		userID  = "789"
+		maxCncr = 200
+	)
+	execConf := &entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{MaxItemConcurNum: maxCncr}}
+	detail := &entity.Experiment{ID: exptID, SpaceID: wsID, Status: entity.ExptStatus_Processing, CreatedBy: userID}
+
+	tests := []struct {
+		name    string
+		req     *openapi.UpdateExptRunConfOApiRequest
+		setup   func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger)
+		wantErr bool
+	}{
+		{
+			name: "正常改并发度+重试",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10)), ItemRetryNum: gptr.Of(int32(3))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				cfg.EXPECT().GetExptExecConf(gomock.Any(), wsID).Return(execConf).AnyTimes()
+				mgr.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, p *entity.UpdateRunConfParam) error {
+						assert.Equal(t, 10, gptr.Indirect(p.ItemConcurNum))
+						assert.Equal(t, 3, gptr.Indirect(p.ItemRetryNum))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度=0 不改，重试=0 落库",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(0)), ItemRetryNum: gptr.Of(int32(0))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, p *entity.UpdateRunConfParam) error {
+						assert.Nil(t, p.ItemConcurNum)
+						assert.NotNil(t, p.ItemRetryNum)
+						assert.Equal(t, 0, gptr.Indirect(p.ItemRetryNum))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度超上限拒绝",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(maxCncr + 1))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				cfg.EXPECT().GetExptExecConf(gomock.Any(), wsID).Return(execConf).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "重试越界拒绝",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemRetryNum: gptr.Of(int32(entity.MaxItemRetryNum + 1))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "workspace_id 缺失拒绝",
+			req:  &openapi.UpdateExptRunConfOApiRequest{ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				// 参数校验在最前，不应触达 GetDetail
+			},
+			wantErr: true,
+		},
+		{
+			name: "req 为 nil 拒绝",
+			req:  nil,
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				// 顶部 nil 校验，不应触达任何依赖
+			},
+			wantErr: true,
+		},
+		{
+			name: "并发度<0 拒绝",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(-1))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "GetDetail 返回错误早退",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(nil, errors.New("not found"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "鉴权失败早退",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("forbidden"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "domain UpdateRunConf 返回错误透传",
+			req:  &openapi.UpdateExptRunConfOApiRequest{WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(10))},
+			setup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, cfg *configermocks.MockIConfiger) {
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(detail, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				cfg.EXPECT().GetExptExecConf(gomock.Any(), wsID).Return(execConf).AnyTimes()
+				mgr.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).Return(errors.New("domain fail"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mgr := servicemocks.NewMockIExptManager(ctrl)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			cfg := configermocks.NewMockIConfiger(ctrl)
+			app := &EvalOpenAPIApplication{
+				auth:     auth,
+				manager:  mgr,
+				configer: cfg,
+				metric:   &fakeOpenAPIMetric{},
+			}
+			tc.setup(mgr, auth, cfg)
+
+			_, err := app.UpdateExptRunConfOApi(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

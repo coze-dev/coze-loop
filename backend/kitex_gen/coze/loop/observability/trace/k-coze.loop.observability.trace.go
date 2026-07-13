@@ -2059,7 +2059,6 @@ func (p *GetTraceRequest) FastRead(buf []byte) (int, error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetTraceID bool = false
 	var issetStartTime bool = false
 	var issetEndTime bool = false
 	for {
@@ -2094,7 +2093,6 @@ func (p *GetTraceRequest) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetTraceID = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -2125,6 +2123,20 @@ func (p *GetTraceRequest) FastRead(buf []byte) (int, error) {
 					goto ReadFieldError
 				}
 				issetEndTime = true
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -2230,11 +2242,6 @@ func (p *GetTraceRequest) FastRead(buf []byte) (int, error) {
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetTraceID {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
 	if !issetStartTime {
 		fieldId = 3
 		goto RequiredFieldNotSetError
@@ -2272,12 +2279,12 @@ func (p *GetTraceRequest) FastReadField1(buf []byte) (int, error) {
 func (p *GetTraceRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field string
+	var _field *string
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.TraceID = _field
 	return offset, nil
@@ -2308,6 +2315,20 @@ func (p *GetTraceRequest) FastReadField4(buf []byte) (int, error) {
 		_field = v
 	}
 	p.EndTime = _field
+	return offset, nil
+}
+
+func (p *GetTraceRequest) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Logid = _field
 	return offset, nil
 }
 
@@ -2413,6 +2434,7 @@ func (p *GetTraceRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
@@ -2430,6 +2452,7 @@ func (p *GetTraceRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field8Length()
 		l += p.field9Length()
 		l += p.field10Length()
@@ -2450,8 +2473,10 @@ func (p *GetTraceRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int
 
 func (p *GetTraceRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.TraceID)
+	if p.IsSetTraceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TraceID)
+	}
 	return offset
 }
 
@@ -2466,6 +2491,15 @@ func (p *GetTraceRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
 	offset += thrift.Binary.WriteI64(buf[offset:], p.EndTime)
+	return offset
+}
+
+func (p *GetTraceRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLogid() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Logid)
+	}
 	return offset
 }
 
@@ -2539,8 +2573,10 @@ func (p *GetTraceRequest) field1Length() int {
 
 func (p *GetTraceRequest) field2Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.StringLengthNocopy(p.TraceID)
+	if p.IsSetTraceID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.TraceID)
+	}
 	return l
 }
 
@@ -2555,6 +2591,15 @@ func (p *GetTraceRequest) field4Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.I64Length()
+	return l
+}
+
+func (p *GetTraceRequest) field5Length() int {
+	l := 0
+	if p.IsSetLogid() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Logid)
+	}
 	return l
 }
 
@@ -2624,13 +2669,25 @@ func (p *GetTraceRequest) DeepCopy(s interface{}) error {
 
 	p.WorkspaceID = src.WorkspaceID
 
-	if src.TraceID != "" {
-		p.TraceID = kutils.StringDeepCopy(src.TraceID)
+	if src.TraceID != nil {
+		var tmp string
+		if *src.TraceID != "" {
+			tmp = kutils.StringDeepCopy(*src.TraceID)
+		}
+		p.TraceID = &tmp
 	}
 
 	p.StartTime = src.StartTime
 
 	p.EndTime = src.EndTime
+
+	if src.Logid != nil {
+		var tmp string
+		if *src.Logid != "" {
+			tmp = kutils.StringDeepCopy(*src.Logid)
+		}
+		p.Logid = &tmp
+	}
 
 	if src.PlatformType != nil {
 		tmp := *src.PlatformType
@@ -5567,6 +5624,20 @@ func (p *GetTracesMetaInfoResponse) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -5662,6 +5733,20 @@ func (p *GetTracesMetaInfoResponse) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetTracesMetaInfoResponse) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TraceDefaultRange = _field
+	return offset, nil
+}
+
 func (p *GetTracesMetaInfoResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -5683,6 +5768,7 @@ func (p *GetTracesMetaInfoResponse) FastWriteNocopy(buf []byte, w thrift.NocopyW
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -5694,6 +5780,7 @@ func (p *GetTracesMetaInfoResponse) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -5731,6 +5818,15 @@ func (p *GetTracesMetaInfoResponse) fastWriteField2(buf []byte, w thrift.NocopyW
 	return offset
 }
 
+func (p *GetTracesMetaInfoResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTraceDefaultRange() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TraceDefaultRange)
+	}
+	return offset
+}
+
 func (p *GetTracesMetaInfoResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBaseResp() {
@@ -5762,6 +5858,15 @@ func (p *GetTracesMetaInfoResponse) field2Length() int {
 			_ = v
 			l += thrift.Binary.StringLengthNocopy(v)
 		}
+	}
+	return l
+}
+
+func (p *GetTracesMetaInfoResponse) field3Length() int {
+	l := 0
+	if p.IsSetTraceDefaultRange() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.TraceDefaultRange)
 	}
 	return l
 }
@@ -5810,6 +5915,14 @@ func (p *GetTracesMetaInfoResponse) DeepCopy(s interface{}) error {
 			}
 			p.KeySpanType = append(p.KeySpanType, _elem)
 		}
+	}
+
+	if src.TraceDefaultRange != nil {
+		var tmp string
+		if *src.TraceDefaultRange != "" {
+			tmp = kutils.StringDeepCopy(*src.TraceDefaultRange)
+		}
+		p.TraceDefaultRange = &tmp
 	}
 
 	var _baseResp *base.BaseResp

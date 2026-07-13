@@ -533,6 +533,13 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 		return nil, err
 	}
 
+	validExptIDs := make([]int64, 0, len(expts))
+	for _, expt := range expts {
+		if expt.SpaceID == spaceID {
+			validExptIDs = append(validExptIDs, expt.ID)
+		}
+	}
+
 	versionedTargetIDMap := gslice.ToMap(expts, func(t *entity.Experiment) (int64, entity.VersionedTargetID) {
 		return t.ID, entity.VersionedTargetID{
 			TargetID:  t.TargetID,
@@ -540,7 +547,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 		}
 	})
 
-	aggrResults, err := e.exptAggrResultRepo.BatchGetExptAggrResultByExperimentIDs(ctx, exptIDs)
+	aggrResults, err := e.exptAggrResultRepo.BatchGetExptAggrResultByExperimentIDs(ctx, validExptIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -554,7 +561,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 		expt2AggrResults[aggrResult.ExperimentID] = append(expt2AggrResults[aggrResult.ExperimentID], aggrResult)
 	}
 
-	evaluatorRef, err := e.experimentRepo.GetEvaluatorRefByExptIDs(ctx, exptIDs, spaceID)
+	evaluatorRef, err := e.experimentRepo.GetEvaluatorRefByExptIDs(ctx, validExptIDs, spaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -574,7 +581,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 		return nil, err
 	}
 
-	tagInfoMap, err := e.batchGetTagInfoByExperimentIDs(ctx, spaceID, exptIDs)
+	tagInfoMap, err := e.batchGetTagInfoByExperimentIDs(ctx, spaceID, validExptIDs)
 	if err != nil {
 		return nil, err
 	}

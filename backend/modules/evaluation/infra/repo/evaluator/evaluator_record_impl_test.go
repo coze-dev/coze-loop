@@ -106,6 +106,10 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetExptTurnScoreHookConf(ctx contex
 	return nil, false
 }
 
+func (f *fakeEvaluatorRecordStorageConfiger) GetStandardEvalOutputAPIKey(ctx context.Context) string {
+	return ""
+}
+
 func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -197,7 +201,7 @@ func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 
 		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
-		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err")).Times(3)
 		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
 		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeEvaluatorRecordStorageConfiger{cfg: cfg})
 
@@ -323,7 +327,7 @@ func TestEvaluatorRecordRepoImpl_CorrectEvaluatorRecord(t *testing.T) {
 		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 
 		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
-		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err")).Times(3)
 		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
 		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeEvaluatorRecordStorageConfiger{cfg: cfg})
 

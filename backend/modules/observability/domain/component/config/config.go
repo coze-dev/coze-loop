@@ -106,6 +106,11 @@ type QueryTraceRateLimitConfig struct {
 	SpaceMaxQPS   map[string]int `mapstructure:"space_max_qps" json:"space_max_qps"`
 }
 
+type AnnotationRateLimitConfig struct {
+	DefaultMaxQPS int            `mapstructure:"default_max_qps" json:"default_max_qps"`
+	SpaceMaxQPS   map[string]int `mapstructure:"space_max_qps" json:"space_max_qps"`
+}
+
 type ConsumerListening struct {
 	IsEnabled  bool     `json:"is_enabled"`
 	Clusters   []string `json:"clusters"`
@@ -149,6 +154,8 @@ type BackfillConfig struct {
 	CkQueryLimit SpaceAwareParam[int] `mapstructure:"ck_query_limit" json:"ck_query_limit"`
 	// BatchDispatchGray 批量分发灰度配置
 	BatchDispatchGray *BatchGrayConfig `mapstructure:"batch_dispatch_gray" json:"batch_dispatch_gray"`
+	// TrajectoryMaxBytes 单次 GetTrajectories 中 ListSpansRepeat 的内存上限（字节），0 表示不限制
+	TrajectoryMaxBytes SpaceAwareParam[int64] `mapstructure:"trajectory_max_bytes" json:"trajectory_max_bytes"`
 }
 
 // GetDispatchBatchSize 获取指定 workspace 的分发批大小
@@ -164,6 +171,11 @@ func (c *BackfillConfig) GetDispatchIntervalMs(workspaceID int64) int {
 // GetCkQueryLimit 获取指定 workspace 的 CK 查询页大小
 func (c *BackfillConfig) GetCkQueryLimit(workspaceID int64) int {
 	return c.CkQueryLimit.Get(workspaceID)
+}
+
+// GetTrajectoryMaxBytes 获取指定 workspace 的 trajectory 内存上限
+func (c *BackfillConfig) GetTrajectoryMaxBytes(workspaceID int64) int64 {
+	return c.TrajectoryMaxBytes.Get(workspaceID)
 }
 
 // BatchGrayConfig 批量处理灰度开关配置
@@ -233,6 +245,7 @@ type ITraceConfig interface {
 	GetDefaultTraceTenant(ctx context.Context) string
 	GetAnnotationSourceCfg(ctx context.Context) (*AnnotationSourceConfig, error)
 	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
+	GetAnnotationMaxQPS(ctx context.Context, key string) (int, error)
 	GetKeySpanTypes(ctx context.Context) map[string][]string
 	GetBackfillMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 	GetConsumerListening(ctx context.Context) (*ConsumerListening, error)
@@ -243,6 +256,7 @@ type ITraceConfig interface {
 	GetReflowInsertConfig(ctx context.Context) *ReflowInsertConfig
 	GetSearchTraceTreeMaxSpanLimit(ctx context.Context, workspaceID int64) int32
 	GetTrajectoryMetadataConfig(ctx context.Context) *TrajectoryMetadataConfig
+	GetTraceTimeRangeConfig(ctx context.Context) map[string]string
 
 	conf.IConfigLoader
 }

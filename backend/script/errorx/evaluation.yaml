@@ -124,6 +124,12 @@ error_code:
     description: experiment is completing, please try later
     no_affect_stability: true
 
+  - name: ExperimentNameInvalidFormat
+    code: 4017
+    message: experiment name format is invalid
+    description: experiment name format is invalid
+    no_affect_stability: true
+
   - name: ContentTypeNotSupported
     code: 5000
     message: content type is not supported
@@ -488,4 +494,10 @@ error_code:
     code: 5068
     message: agent evaluator run failed
     description: the agent evaluator run failed, check if the configuration is correct
+    no_affect_stability: true
+
+  - name: AsyncEvaluatorZombieTimeout
+    code: 5069
+    message: 'async evaluator terminated: experiment item exceeded zombie timeout'
+    description: the async evaluator was terminated because the experiment item exceeded the zombie timeout before the result was reported
     no_affect_stability: true

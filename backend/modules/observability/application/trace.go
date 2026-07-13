@@ -302,8 +302,8 @@ func (t *TraceApplication) validateGetTraceReq(ctx context.Context, req *trace.G
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
 	} else if req.GetWorkspaceID() <= 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
-	} else if req.GetTraceID() == "" {
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+	} else if req.GetTraceID() == "" && req.GetLogid() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("at least need trace_id or logid"))
 	}
 	v := utils.DateValidator{
 		Start:        req.GetStartTime(),
@@ -323,6 +323,7 @@ func (t *TraceApplication) buildGetTraceSvcReq(req *trace.GetTraceRequest) (*ser
 	ret := &service.GetTraceReq{
 		WorkspaceID: req.GetWorkspaceID(),
 		TraceID:     req.GetTraceID(),
+		LogID:       req.GetLogid(),
 		StartTime:   req.GetStartTime(),
 		EndTime:     req.GetEndTime(),
 		SpanIDs:     req.GetSpanIds(),
@@ -611,10 +612,15 @@ func (t *TraceApplication) GetTracesMetaInfo(ctx context.Context, req *trace.Get
 		}
 		fMeta[k].FilterTypes = fTypes
 	}
-	return &trace.GetTracesMetaInfoResponse{
+	resp := &trace.GetTracesMetaInfoResponse{
 		FieldMetas:  fMeta,
 		KeySpanType: sResp.KeySpanTypeList,
-	}, nil
+	}
+	if sResp.TraceDefaultRange != "" {
+		resp.TraceDefaultRange = &sResp.TraceDefaultRange
+	}
+	logs.CtxInfo(ctx, "GetTracesMetaInfo application resp.TraceDefaultRange=%v", resp.TraceDefaultRange)
+	return resp, nil
 }
 
 func (t *TraceApplication) buildGetTracesMetaInfoReq(req *trace.GetTracesMetaInfoRequest) *service.GetTracesMetaInfoReq {

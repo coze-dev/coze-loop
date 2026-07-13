@@ -10,6 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
@@ -58,7 +59,7 @@ func (d *exptTemplateEvaluatorRefDAOImpl) GetByTemplateIDs(ctx context.Context, 
 	}
 	results, err := q.Where(ref.ExptTemplateID.In(templateIDs...)).Find()
 	if err != nil {
-		return nil, errorx.Wrapf(err, "get expt_template_evaluator_ref by template_ids fail, template_ids: %v", templateIDs)
+		return nil, errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
 	}
 	return results, nil
 }

@@ -25,6 +25,7 @@ const (
 	traceMaxDurationDay                = "trace_max_duration_day"
 	annotationSourceCfgKey             = "annotation_source_cfg"
 	queryTraceRateLimitCfgKey          = "query_trace_rate_limit_config"
+	annotationRateLimitCfgKey          = "annotation_rate_limit_config"
 	keySpanTypeCfgKey                  = "key_span_type"
 	backfillMqProducerCfgKey           = "backfill_mq_producer_config"
 	consumerListeningCfgKey            = "consumer_listening"
@@ -34,6 +35,7 @@ const (
 	reflowInsertCfgKey                 = "reflow_insert_config"
 	searchTraceTreeMaxSpanLimitCfgKey  = "search_trace_tree_max_span_limit"
 	trajectoryMetadataCfgKey           = "trajectory_metadata_config"
+	traceTimeRangeCfgKey               = "trace_time_range"
 
 	defaultBackfillDispatchBatchSize   = 10
 	defaultBackfillDispatchIntervalMs  = 1000
@@ -186,6 +188,17 @@ func (t *TraceConfigCenter) GetQueryMaxQPS(ctx context.Context, key string) (int
 	return qpsConfig.DefaultMaxQPS, nil
 }
 
+func (t *TraceConfigCenter) GetAnnotationMaxQPS(ctx context.Context, key string) (int, error) {
+	qpsConfig := new(config.AnnotationRateLimitConfig)
+	if err := t.UnmarshalKey(ctx, annotationRateLimitCfgKey, &qpsConfig); err != nil {
+		return 0, err
+	}
+	if qps, ok := qpsConfig.SpaceMaxQPS[key]; ok {
+		return qps, nil
+	}
+	return qpsConfig.DefaultMaxQPS, nil
+}
+
 func (t *TraceConfigCenter) GetKeySpanTypes(ctx context.Context) map[string][]string {
 	keyColumns := make(map[string][]string)
 	if err := t.UnmarshalKey(ctx, keySpanTypeCfgKey, &keyColumns); err != nil {
@@ -294,4 +307,12 @@ func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {
 	logs.Info("default trace ingest tenant is %s", tenant)
 	ret.traceDefaultTenant = tenant
 	return ret
+}
+
+func (t *TraceConfigCenter) GetTraceTimeRangeConfig(ctx context.Context) map[string]string {
+	cfg := make(map[string]string)
+	if err := t.UnmarshalKey(ctx, traceTimeRangeCfgKey, &cfg); err != nil {
+		return nil
+	}
+	return cfg
 }

@@ -65,3 +65,52 @@ func TestRetryWithMaxTimes(t *testing.T) {
 		assert.Equal(t, 4, count)
 	})
 }
+
+func TestRetryWithMaxTimesAndInterval(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("succeeds after retries within max", func(t *testing.T) {
+		attempts := 0
+		err := RetryWithMaxTimesAndInterval(ctx, 2, 10*time.Millisecond, func() error {
+			attempts++
+			if attempts < 3 {
+				return fmt.Errorf("transient err")
+			}
+			return nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, 3, attempts) // 1 initial + 2 retries
+	})
+
+	t.Run("fails after exhausting max retries", func(t *testing.T) {
+		attempts := 0
+		err := RetryWithMaxTimesAndInterval(ctx, 2, 10*time.Millisecond, func() error {
+			attempts++
+			return fmt.Errorf("always err")
+		})
+		assert.Error(t, err)
+		assert.Equal(t, 3, attempts) // 1 initial + 2 retries, then give up
+	})
+
+	t.Run("succeeds on first try, no retry", func(t *testing.T) {
+		attempts := 0
+		err := RetryWithMaxTimesAndInterval(ctx, 3, 10*time.Millisecond, func() error {
+			attempts++
+			return nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, 1, attempts)
+	})
+
+	t.Run("respects the fixed interval between attempts", func(t *testing.T) {
+		start := time.Now()
+		attempts := 0
+		_ = RetryWithMaxTimesAndInterval(ctx, 2, 50*time.Millisecond, func() error {
+			attempts++
+			return fmt.Errorf("err")
+		})
+		// 2 retries × ~50ms 固定间隔,总耗时应 >= 80ms(留裕度)
+		assert.GreaterOrEqual(t, time.Since(start), 80*time.Millisecond)
+		assert.Equal(t, 3, attempts)
+	})
+}

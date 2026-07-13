@@ -1258,6 +1258,137 @@ func TestEvalTargetServiceImpl_ExtractTrajectory_EmptyTraceID(t *testing.T) {
 	assert.Nil(t, res)
 }
 
+// TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer 验证抽取 trajectory 时下界额外向前预留 1 分钟 buffer;
+// startTimeMS 为 nil 时保持 nil 不做偏移。
+func TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	const spaceID = int64(1)
+	const bufferMS = int64(60 * 1000)
+
+	tests := []struct {
+		name    string
+		in      *int64
+		wantOut *int64
+	}{
+		{name: "有下界时减去 1 分钟 buffer", in: gptr.Of(int64(5_000_000)), wantOut: gptr.Of(int64(5_000_000) - bufferMS)},
+		{name: "下界为 nil 时保持 nil", in: nil, wantOut: nil},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			adapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+			adapter.EXPECT().
+				ListTrajectory(gomock.Any(), spaceID, []string{"trace-x"}, gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ int64, _ []string, got *int64) ([]*entity.Trajectory, error) {
+					if tt.wantOut == nil {
+						assert.Nil(t, got)
+					} else {
+						require.NotNil(t, got)
+						assert.Equal(t, *tt.wantOut, *got)
+					}
+					return nil, nil
+				})
+			svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter}
+			_, err := svc.ExtractTrajectory(ctx, spaceID, "trace-x", tt.in)
+			require.NoError(t, err)
+		})
+	}
+}
+
+// TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime 验证抽取 trajectory 的时间下界选取:
+// 优先使用 param.AsyncUnixMS(请求发起时间),仅当其为 0 时才回退到 record.BaseInfo.CreatedAt(record 保存时间)。
+func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryStartTime(t *testing.T) {
+	// do not run in parallel: involves time.Sleep for the async trajectory goroutine
+	ctx := context.Background()
+	spaceID := int64(1)
+
+	const createdAtMS = int64(2_000_000) // record 保存时间(偏晚)
+	const asyncUnixMS = int64(1_000_000) // 请求发起时间(更早)
+	const bufferMS = int64(60 * 1000)    // ExtractTrajectory 额外预留的 1 分钟 buffer
+
+	tests := []struct {
+		name          string
+		asyncUnixMS   int64
+		wantStartTime int64
+	}{
+		{name: "AsyncUnixMS 优先作为下界", asyncUnixMS: asyncUnixMS, wantStartTime: asyncUnixMS - bufferMS},
+		{name: "AsyncUnixMS 为0时回退 CreatedAt", asyncUnixMS: 0, wantStartTime: createdAtMS - bufferMS},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := repomocks.NewMockIEvalTargetRepo(ctrl)
+			configer := componentmocks.NewMockIConfiger(ctrl)
+			trajectoryAdapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+
+			record := &entity.EvalTargetRecord{
+				ID:                   10,
+				SpaceID:              spaceID,
+				Status:               gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+				EvalTargetOutputData: &entity.EvalTargetOutputData{},
+				TraceID:              "trace-id-1",
+				BaseInfo:             &entity.BaseInfo{CreatedAt: gptr.Of(createdAtMS)},
+			}
+
+			param := &entity.ReportTargetRecordParam{
+				SpaceID:     spaceID,
+				RecordID:    record.ID,
+				Status:      entity.EvalTargetRunStatusSuccess,
+				OutputData:  &entity.EvalTargetOutputData{},
+				AsyncUnixMS: tt.asyncUnixMS,
+			}
+
+			repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+			repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+			configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).AnyTimes()
+			configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{
+				SpaceExtractIntervalSecond: map[int64]int64{spaceID: 1},
+			})
+
+			gotStartCh := make(chan int64, 1)
+			trajectoryAdapter.EXPECT().
+				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ int64, _ []string, startMS *int64) ([]*entity.Trajectory, error) {
+					var v int64
+					if startMS != nil {
+						v = *startMS
+					}
+					select {
+					case gotStartCh <- v:
+					default:
+					}
+					return []*entity.Trajectory{{ID: gptr.Of("traj")}}, nil
+				})
+
+			svc := &EvalTargetServiceImpl{
+				evalTargetRepo:    repo,
+				trajectoryAdapter: trajectoryAdapter,
+				configer:          configer,
+			}
+
+			err := svc.ReportInvokeRecords(ctx, param)
+			require.NoError(t, err)
+
+			// 等异步抽取 goroutine(sleep 1s interval)完成
+			time.Sleep(1200 * time.Millisecond)
+			select {
+			case got := <-gotStartCh:
+				assert.Equal(t, tt.wantStartTime, got, "trajectory 抽取时间下界不符合预期")
+			default:
+				t.Fatal("ListTrajectory was not called")
+			}
+		})
+	}
+}
+
 func TestEvalTargetServiceImpl_ValidateRuntimeParam(t *testing.T) {
 	t.Parallel()
 

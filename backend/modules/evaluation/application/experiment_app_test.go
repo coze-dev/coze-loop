@@ -207,7 +207,8 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 						// 10001 (initial) + 10101 (resolved) + 20200 (resolved)
 						assert.ElementsMatch(t, []int64{10001, 10101, 20200}, param.EvaluatorVersionIds)
 						return validExpt, nil
-					})
+					},
+				)
 			},
 			postCheck: func(t *testing.T, req *exptpb.CreateExperimentRequest) {
 				assert.Equal(t, []int64{10001, 10101, 20200}, req.EvaluatorVersionIds)
@@ -1991,6 +1992,30 @@ func TestExperimentApplication_UpdateExperiment(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "workspace mismatch with experiment space",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      validExptID,
+				WorkspaceID: validWorkspaceID,
+				Name:        gptr.Of("updated_experiment"),
+				Desc:        gptr.Of("updated description"),
+			},
+			mockSetup: func() {
+				mismatchedExpt := &entity.Experiment{
+					ID:        validExptID,
+					SpaceID:   validWorkspaceID + 1,
+					Name:      "test_experiment_other_space",
+					Status:    entity.ExptStatus_Pending,
+					CreatedBy: validUserID,
+				}
+				// 返回归属于其他 workspace 的实验，应在写库前被越权校验拦截
+				mockManager.EXPECT().
+					Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).
+					Return(mismatchedExpt, nil)
+				// 不应再调用 Update：mockManager.Update 未设置 EXPECT，被调用即失败
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -3039,7 +3064,8 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 
 				// 异步终止运行失败：允许后台调用
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(
-					errorx.NewByCode(errno.CommonInternalErrorCode)).AnyTimes()
+					errorx.NewByCode(errno.CommonInternalErrorCode),
+				).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{BaseResp: base.NewBaseResp()},
 			wantErr:  false,
@@ -3071,7 +3097,8 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				// 异步终止
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, gomock.Any(), validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
-					errorx.NewByCode(errno.CommonInternalErrorCode)).AnyTimes()
+					errorx.NewByCode(errno.CommonInternalErrorCode),
+				).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{BaseResp: base.NewBaseResp()},
 			wantErr:  false,
@@ -4213,7 +4240,8 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 								},
 							},
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 
 			wantResp: &exptpb.BatchGetExperimentAggrResultResponse{
@@ -7655,6 +7683,323 @@ func TestExperimentApplication_SubmitExptFromTemplate(t *testing.T) {
 						assert.Equal(t, tc.wantErr, statusErr.Code())
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestExperimentApplication_UpdateExperiment_MoreBranches(t *testing.T) {
+	workspaceID := int64(123)
+	exptID := int64(456)
+	userID := "789"
+
+	baseExpt := func() *entity.Experiment {
+		return &entity.Experiment{
+			ID:        exptID,
+			SpaceID:   workspaceID,
+			Name:      "orig_name",
+			Status:    entity.ExptStatus_Pending,
+			CreatedBy: userID,
+		}
+	}
+
+	tests := []struct {
+		name      string
+		req       *exptpb.UpdateExperimentRequest
+		mockSetup func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, ui *userinfomocks.MockUserInfoService)
+		wantErr   bool
+	}{
+		{
+			name: "manager.Get error",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("n"),
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, _ *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(nil, errors.New("get failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "CheckName error",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("new_name"),
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, _ *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				mgr.EXPECT().CheckName(gomock.Any(), "new_name", workspaceID, gomock.Any()).Return(false, errors.New("check failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid notification_conf",
+			req: func() *exptpb.UpdateExperimentRequest {
+				return &exptpb.UpdateExperimentRequest{
+					ExptID:      exptID,
+					WorkspaceID: workspaceID,
+					Name:        gptr.Of("orig_name"), // same name -> skip CheckName
+					NotificationConf: &expt.ExptNotificationConf{
+						Filter: &expt.Filters{
+							FilterConditions: []*expt.FilterCondition{
+								{
+									Operator: expt.FilterOperatorType(999), // invalid -> conversion error
+									Value:    "v",
+								},
+							},
+						},
+					},
+				}
+			}(),
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "manager.Update error",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("orig_name"),
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("update failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "GetDetail error",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("orig_name"),
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, _ *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(nil, errors.New("detail failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "success with notification_conf",
+			req: &exptpb.UpdateExperimentRequest{
+				ExptID:      exptID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of("orig_name"),
+				NotificationConf: &expt.ExptNotificationConf{
+					Webhook: &expt.WebhookNotificationConf{
+						Enable: true,
+						Urls:   gptr.Of("https://hook"),
+					},
+				},
+			},
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, ui *userinfomocks.MockUserInfoService) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, updated *entity.Experiment, _ *entity.Session) error {
+						assert.NotNil(t, updated.NotificationConf)
+						return nil
+					},
+				)
+				mgr.EXPECT().GetDetail(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(baseExpt(), nil)
+				ui.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mgr := servicemocks.NewMockIExptManager(ctrl)
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			ui := userinfomocks.NewMockUserInfoService(ctrl)
+
+			app := &experimentApplication{
+				manager:         mgr,
+				auth:            auth,
+				userInfoService: ui,
+			}
+
+			tc.mockSetup(mgr, auth, ui)
+
+			resp, err := app.UpdateExperiment(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+
+	const (
+		validWorkspaceID = int64(123)
+		validExptID      = int64(456)
+		validUserID      = "789"
+		maxItemConcurNum = 200
+	)
+	execConf := &entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{MaxItemConcurNum: maxItemConcurNum}}
+	baseExpt := &entity.Experiment{ID: validExptID, SpaceID: validWorkspaceID, Status: entity.ExptStatus_Processing, CreatedBy: validUserID}
+
+	tests := []struct {
+		name      string
+		req       *exptpb.UpdateExptRunConfRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "并发度>0 正常传给 domain",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.UpdateRunConfParam) error {
+						assert.Equal(t, validExptID, param.ExptID)
+						assert.Equal(t, validWorkspaceID, param.SpaceID)
+						assert.Equal(t, 10, gptr.Indirect(param.ItemConcurNum)) // 传了 *10
+						assert.Nil(t, param.ItemRetryNum)                       // 未传
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度=0 视为不修改（传 nil）",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(0)), ItemRetryNum: gptr.Of(int32(3))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.UpdateRunConfParam) error {
+						assert.Nil(t, param.ItemConcurNum) // 0 → 不修改
+						assert.Equal(t, 3, gptr.Indirect(param.ItemRetryNum))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "重试=0 显式落库（传 *0）",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemRetryNum: gptr.Of(int32(0))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.UpdateRunConfParam) error {
+						assert.Nil(t, param.ItemConcurNum)
+						assert.NotNil(t, param.ItemRetryNum) // IsSet → 传指针
+						assert.Equal(t, 0, gptr.Indirect(param.ItemRetryNum))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度<0 拒绝",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(-1))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				// 不应调用 UpdateRunConf
+			},
+			wantErr: true,
+		},
+		{
+			name: "并发度超上限拒绝",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(maxItemConcurNum + 1))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "重试超上限拒绝",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemRetryNum: gptr.Of(int32(entity.MaxItemRetryNum + 1))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "越权拒绝（space 不匹配）",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mismatch := &entity.Experiment{ID: validExptID, SpaceID: validWorkspaceID + 1, Status: entity.ExptStatus_Processing, CreatedBy: validUserID}
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(mismatch, nil)
+				// 不应调用鉴权 / UpdateRunConf
+			},
+			wantErr: true,
+		},
+		{
+			name: "manager.Get 返回错误早退",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(nil, errors.New("db err"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "鉴权失败早退",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("forbidden"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "domain UpdateRunConf 返回错误透传",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).Return(errors.New("domain fail"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &experimentApplication{
+				manager:  mockManager,
+				auth:     mockAuth,
+				configer: mockConfiger,
+			}
+			tt.mockSetup()
+			_, err := app.UpdateExptRunConf(context.Background(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

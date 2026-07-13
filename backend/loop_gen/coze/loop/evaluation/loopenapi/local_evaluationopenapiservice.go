@@ -553,6 +553,29 @@ func (l *LocalEvaluationOpenAPIService) GetExperimentsOApi(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+// UpdateExptRunConfOApi
+// UpdateExptRunConfOApi 修改进行中实验的运行配置（并发度 / Item 重试次数）
+func (l *LocalEvaluationOpenAPIService) UpdateExptRunConfOApi(ctx context.Context, req *openapi.UpdateExptRunConfOApiRequest, callOptions ...callopt.Option) (*openapi.UpdateExptRunConfOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceUpdateExptRunConfOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceUpdateExptRunConfOApiResult)
+		resp, err := l.impl.UpdateExptRunConfOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceUpdateExptRunConfOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceUpdateExptRunConfOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateExptRunConfOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ListExperimentsOApi
 // 查询评测实验列表
 func (l *LocalEvaluationOpenAPIService) ListExperimentsOApi(ctx context.Context, req *openapi.ListExperimentsOApiRequest, callOptions ...callopt.Option) (*openapi.ListExperimentsOApiResponse, error) {

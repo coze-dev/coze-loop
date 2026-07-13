@@ -31,6 +31,8 @@ type EvaluatorService interface {
 	DeleteEvaluator(ctx context.Context, evaluatorIDs []int64, userID string) error
 	// RunEvaluator evaluator_version 运行
 	RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error)
+	// CreateEvaluatorRunFailRecord creates a failed evaluator record for a run attempt that failed before a normal record was persisted.
+	CreateEvaluatorRunFailRecord(ctx context.Context, request *entity.RunEvaluatorRequest, runErr error) (*entity.EvaluatorRecord, error)
 	// ShouldInterceptEvaluator 判断评估器是否应劫持本次评估，劫持时创建记录并返回
 	ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (record *entity.EvaluatorRecord, intercepted bool, err error)
 	// CreateSkippedEvaluatorRecord 行级 filter 不命中时, 不实际跑评估, 落一条 Status=Skipped 的占位 record

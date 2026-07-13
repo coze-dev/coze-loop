@@ -154,6 +154,12 @@ struct EvaluatorOutputData {
     3: optional EvaluatorRunError evaluator_run_error
     4: optional i64 time_consuming_ms (api.js_conv = 'true', go.tag = 'json:"time_consuming_ms"')
     11: optional string stdout
+    12: optional EvaluatorExtraOutputContent extra_output
+}
+
+struct EvaluatorExtraOutputContent {
+    1: optional string output_type
+    2: optional string url
 }
 
 // 评估器输入数据

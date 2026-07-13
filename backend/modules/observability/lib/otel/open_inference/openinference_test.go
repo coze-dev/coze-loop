@@ -100,8 +100,8 @@ func TestConvertToModelInput(t *testing.T) {
 							},
 							map[string]interface{}{
 								"message_content": map[string]interface{}{
-									"type": "image",
-									"image": map[string]interface{}{
+									"type":      "image",
+									"image_url": map[string]interface{}{
 										"url": "https://example.com/image.jpg",
 									},
 								},
@@ -138,6 +138,7 @@ func TestConvertToModelInput(t *testing.T) {
 						"tool_calls": []interface{}{
 							map[string]interface{}{
 								"tool_call": map[string]interface{}{
+									"id": "call_123",
 									"function": map[string]interface{}{
 										"name":      "get_weather",
 										"arguments": `{"location": "New York"}`,
@@ -155,6 +156,7 @@ func TestConvertToModelInput(t *testing.T) {
 						"tool_calls": []interface{}{
 							map[string]interface{}{
 								"type": "function",
+								"id":   "call_123",
 								"function": map[string]interface{}{
 									"name":      "get_weather",
 									"arguments": `{"location": "New York"}`,
@@ -181,8 +183,91 @@ func TestConvertToModelInput(t *testing.T) {
 					"other_field": "value",
 				},
 			},
-			expected: map[string]interface{}{"messages": []interface{}{}},
-			wantErr:  false,
+			expected: map[string]interface{}{"messages": []interface{}{
+				map[string]interface{}{"role": nil},
+			}},
+			wantErr: false,
+		},
+		{
+			name: "multiple tool_call_responses in one message are split",
+			input: []interface{}{
+				map[string]interface{}{
+					"message": map[string]interface{}{
+						"role": "assistant",
+						"contents": []interface{}{
+							map[string]interface{}{
+								"message_content": map[string]interface{}{
+									"type":      "tool_call",
+									"id":        "call_1",
+									"name":      "func_a",
+									"arguments": `{"x":1}`,
+								},
+							},
+							map[string]interface{}{
+								"message_content": map[string]interface{}{
+									"type":      "tool_call",
+									"id":        "call_2",
+									"name":      "func_b",
+									"arguments": `{"y":2}`,
+								},
+							},
+						},
+					},
+				},
+				map[string]interface{}{
+					"message": map[string]interface{}{
+						"role": "tool",
+						"parts": []interface{}{
+							map[string]interface{}{
+								"type":     "tool_call_response",
+								"id":       "call_1",
+								"response": "result_a",
+							},
+							map[string]interface{}{
+								"type":     "tool_call_response",
+								"id":       "call_2",
+								"response": "result_b",
+							},
+						},
+					},
+				},
+			},
+			expected: map[string]interface{}{
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role": "assistant",
+						"tool_calls": []interface{}{
+							map[string]interface{}{
+								"type": "function",
+								"id":   "call_1",
+								"function": map[string]interface{}{
+									"name":      "func_a",
+									"arguments": `{"x":1}`,
+								},
+							},
+							map[string]interface{}{
+								"type": "function",
+								"id":   "call_2",
+								"function": map[string]interface{}{
+									"name":      "func_b",
+									"arguments": `{"y":2}`,
+								},
+							},
+						},
+					},
+					map[string]interface{}{
+						"role":         "tool",
+						"content":      "result_a",
+						"tool_call_id": "call_1",
+					},
+					map[string]interface{}{
+						"role":         "tool",
+						"content":      "result_b",
+						"tool_call_id": "call_2",
+					},
+				},
+			},
+			wantErr: false,
 		},
 	}
 
@@ -296,8 +381,10 @@ func TestConvertToModelOutput(t *testing.T) {
 					"other_field": "value",
 				},
 			},
-			expected: map[string]interface{}{"choices": []interface{}{}},
-			wantErr:  false,
+			expected: map[string]interface{}{"choices": []interface{}{
+				map[string]interface{}{"message": map[string]interface{}{"role": nil}},
+			}},
+			wantErr: false,
 		},
 	}
 
@@ -563,7 +650,7 @@ func TestConvertModelMsg(t *testing.T) {
 	tests := []struct {
 		name     string
 		msg      map[string]interface{}
-		expected map[string]interface{}
+		expected []map[string]interface{}
 	}{
 		{
 			name: "basic message with role and content",
@@ -571,9 +658,11 @@ func TestConvertModelMsg(t *testing.T) {
 				"role":    "user",
 				"content": "Hello, world!",
 			},
-			expected: map[string]interface{}{
-				"role":    "user",
-				"content": "Hello, world!",
+			expected: []map[string]interface{}{
+				{
+					"role":    "user",
+					"content": "Hello, world!",
+				},
 			},
 		},
 		{
@@ -581,8 +670,10 @@ func TestConvertModelMsg(t *testing.T) {
 			msg: map[string]interface{}{
 				"role": "assistant",
 			},
-			expected: map[string]interface{}{
-				"role": "assistant",
+			expected: []map[string]interface{}{
+				{
+					"role": "assistant",
+				},
 			},
 		},
 		{
@@ -598,24 +689,26 @@ func TestConvertModelMsg(t *testing.T) {
 					},
 					map[string]interface{}{
 						"message_content": map[string]interface{}{
-							"type": "image",
-							"image": map[string]interface{}{
+							"type":      "image",
+							"image_url": map[string]interface{}{
 								"url": "https://example.com/image.jpg",
 							},
 						},
 					},
 				},
 			},
-			expected: map[string]interface{}{
-				"role": "user",
-				"parts": []interface{}{
-					map[string]interface{}{
-						"type": "text",
-						"text": "Hello",
-					},
-					map[string]interface{}{
-						"type":      "image_url",
-						"image_url": map[string]interface{}{"url": "https://example.com/image.jpg"},
+			expected: []map[string]interface{}{
+				{
+					"role": "user",
+					"parts": []interface{}{
+						map[string]interface{}{
+							"type": "text",
+							"text": "Hello",
+						},
+						map[string]interface{}{
+							"type":      "image_url",
+							"image_url": map[string]interface{}{"url": "https://example.com/image.jpg"},
+						},
 					},
 				},
 			},
@@ -626,8 +719,10 @@ func TestConvertModelMsg(t *testing.T) {
 				"role":     "user",
 				"contents": []interface{}{},
 			},
-			expected: map[string]interface{}{
-				"role": "user",
+			expected: []map[string]interface{}{
+				{
+					"role": "user",
+				},
 			},
 		},
 		{
@@ -637,6 +732,7 @@ func TestConvertModelMsg(t *testing.T) {
 				"tool_calls": []interface{}{
 					map[string]interface{}{
 						"tool_call": map[string]interface{}{
+							"id": "call_123",
 							"function": map[string]interface{}{
 								"name":      "get_weather",
 								"arguments": `{"location": "New York"}`,
@@ -645,14 +741,17 @@ func TestConvertModelMsg(t *testing.T) {
 					},
 				},
 			},
-			expected: map[string]interface{}{
-				"role": "assistant",
-				"tool_calls": []interface{}{
-					map[string]interface{}{
-						"type": "function",
-						"function": map[string]interface{}{
-							"name":      "get_weather",
-							"arguments": `{"location": "New York"}`,
+			expected: []map[string]interface{}{
+				{
+					"role": "assistant",
+					"tool_calls": []interface{}{
+						map[string]interface{}{
+							"type": "function",
+							"id":   "call_123",
+							"function": map[string]interface{}{
+								"name":      "get_weather",
+								"arguments": `{"location": "New York"}`,
+							},
 						},
 					},
 				},
@@ -664,8 +763,10 @@ func TestConvertModelMsg(t *testing.T) {
 				"role":       "assistant",
 				"tool_calls": []interface{}{},
 			},
-			expected: map[string]interface{}{
-				"role": "assistant",
+			expected: []map[string]interface{}{
+				{
+					"role": "assistant",
+				},
 			},
 		},
 		{
@@ -674,8 +775,10 @@ func TestConvertModelMsg(t *testing.T) {
 				"role":    "user",
 				"content": 123, // not a string
 			},
-			expected: map[string]interface{}{
-				"role": "user",
+			expected: []map[string]interface{}{
+				{
+					"role": "user",
+				},
 			},
 		},
 		{
@@ -684,8 +787,10 @@ func TestConvertModelMsg(t *testing.T) {
 				"role":     "user",
 				"contents": "not a slice",
 			},
-			expected: map[string]interface{}{
-				"role": "user",
+			expected: []map[string]interface{}{
+				{
+					"role": "user",
+				},
 			},
 		},
 		{
@@ -694,8 +799,100 @@ func TestConvertModelMsg(t *testing.T) {
 				"role":       "assistant",
 				"tool_calls": "not a slice",
 			},
-			expected: map[string]interface{}{
-				"role": "assistant",
+			expected: []map[string]interface{}{
+				{
+					"role": "assistant",
+				},
+			},
+		},
+		{
+			name: "single tool_call_response",
+			msg: map[string]interface{}{
+				"role": "tool",
+				"parts": []interface{}{
+					map[string]interface{}{
+						"type":     "tool_call_response",
+						"id":       "call_001",
+						"response": "result_1",
+					},
+				},
+			},
+			expected: []map[string]interface{}{
+				{
+					"role":         "tool",
+					"content":      "result_1",
+					"tool_call_id": "call_001",
+				},
+			},
+		},
+		{
+			name: "multiple tool_call_responses split into separate messages",
+			msg: map[string]interface{}{
+				"role": "tool",
+				"parts": []interface{}{
+					map[string]interface{}{
+						"type":     "tool_call_response",
+						"id":       "call_001",
+						"response": "result_1",
+					},
+					map[string]interface{}{
+						"type":     "tool_call_response",
+						"id":       "call_002",
+						"response": "result_2",
+					},
+				},
+			},
+			expected: []map[string]interface{}{
+				{
+					"role":         "tool",
+					"content":      "result_1",
+					"tool_call_id": "call_001",
+				},
+				{
+					"role":         "tool",
+					"content":      "result_2",
+					"tool_call_id": "call_002",
+				},
+			},
+		},
+		{
+			name: "three tool_call_responses split into separate messages",
+			msg: map[string]interface{}{
+				"role": "tool",
+				"parts": []interface{}{
+					map[string]interface{}{
+						"type":     "tool_call_response",
+						"id":       "call_A",
+						"response": "res_A",
+					},
+					map[string]interface{}{
+						"type":     "tool_call_response",
+						"id":       "call_B",
+						"response": "res_B",
+					},
+					map[string]interface{}{
+						"type":   "tool_call_response",
+						"id":     "call_C",
+						"result": "res_C",
+					},
+				},
+			},
+			expected: []map[string]interface{}{
+				{
+					"role":         "tool",
+					"content":      "res_A",
+					"tool_call_id": "call_A",
+				},
+				{
+					"role":         "tool",
+					"content":      "res_B",
+					"tool_call_id": "call_B",
+				},
+				{
+					"role":         "tool",
+					"content":      "res_C",
+					"tool_call_id": "call_C",
+				},
 			},
 		},
 	}

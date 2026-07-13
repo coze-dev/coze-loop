@@ -69,6 +69,7 @@ type EvalOpenAPIApplication struct {
 	exptTemplateManager     service.IExptTemplateManager
 	configer                component.IConfiger
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
+	fileProvider            rpc.IFileProvider
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -89,6 +90,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	exptTemplateManager service.IExptTemplateManager,
 	configer component.IConfiger,
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
+	fileProvider rpc.IFileProvider,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -110,6 +112,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		exptTemplateManager:         exptTemplateManager,
 		configer:                    configer,
 		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
+		fileProvider:                fileProvider,
 	}
 }
 
@@ -938,6 +941,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		Status:                  target.ToTargetRunStatsDO(req.GetStatus()),
 		Session:                 actx.Session,
 		EnableExtractTrajectory: actx.EnableExtractTrajectory,
+		AsyncUnixMS:             actx.AsyncUnixMS,
 	}); err != nil {
 		return nil, err
 	}
@@ -1160,6 +1164,13 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 				*req.EvalTargetParam.EvalTargetType, experiment_convertor.SupportedOpenAPIEvalTargetTypesString())
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(msg))
 		}
+	}
+
+	// Long-connection eval targets (custom_agent / a2a_agent / custom_rpc_server) require
+	// cluster/env to resolve a live client at run time. Validate up front so a missing value
+	// fails with a clear param error here instead of an opaque RPC error during experiment run.
+	if err := experiment_convertor.ValidateOpenAPIEvalTargetClusterEnv(req.EvalTargetParam); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
 
 	createEvalTargetParam, err := experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam)
@@ -1403,6 +1414,28 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, item := range result.ItemResults {
+		for _, turn := range item.TurnResults {
+			for _, exptResult := range turn.ExperimentResults {
+				if exptResult.Payload == nil || exptResult.Payload.EvaluatorOutput == nil {
+					continue
+				}
+				for _, record := range exptResult.Payload.EvaluatorOutput.EvaluatorRecords {
+					if record == nil || record.EvaluatorOutputData == nil {
+						logs.CtxInfo(ctx, "[ListExperimentResultOApi] record or outputData is nil, itemID=%v", item.ItemID)
+						continue
+					}
+					logs.CtxInfo(ctx, "[ListExperimentResultOApi] before fillExtraOutputURLs: itemID=%v, evaluatorVersionID=%v, hasStdout=%v, hasExtraOutput=%v, extraOutput=%v",
+						item.ItemID, record.EvaluatorVersionID, record.EvaluatorOutputData.Stdout != "", record.EvaluatorOutputData.ExtraOutput != nil, json.Jsonify(record.EvaluatorOutputData.ExtraOutput))
+				}
+			}
+		}
+	}
+
+	if err := e.fillExtraOutputURLs(ctx, result.ItemResults); err != nil {
+		logs.CtxError(ctx, "[ListExperimentResultOApi] fillExtraOutputURLs fail, err: %v", err)
 	}
 
 	res := &openapi.ListExperimentResultOApiResponse{
@@ -2922,4 +2955,120 @@ func (e *EvalOpenAPIApplication) GetEvaluationSetItemVersionOApi(ctx context.Con
 			Version: evaluation_set.OpenAPIItemVersionDO2DTO(version),
 		},
 	}, nil
+}
+
+// UpdateExptRunConfOApi 通过 OpenAPI 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// 仅对 Pending / Processing 状态的实验生效；校验规则与前端接口共用（兜住直连链路）。
+func (e *EvalOpenAPIApplication) UpdateExptRunConfOApi(ctx context.Context, req *openapi.UpdateExptRunConfOApiRequest) (r *openapi.UpdateExptRunConfOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if !req.IsSetWorkspaceID() || req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	session := entity.NewSession(ctx)
+	do, err := e.manager.GetDetail(ctx, req.GetExperimentID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 鉴权：Edit 权限 + 归属校验
+	if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(do.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	}); err != nil {
+		return nil, err
+	}
+
+	// 解析并校验两个可变字段（0 值语义不对称：ItemConcurNum 用 >0，ItemRetryNum 用 IsSet）。
+	var itemConcurNum, itemRetryNum *int
+	if req.IsSetItemConcurNum() {
+		v := int(req.GetItemConcurNum())
+		if v < 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item concurrent num must not be negative"))
+		}
+		if v > 0 {
+			maxItemConcurNum := e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).GetExptItemEvalConf().GetMaxItemConcurNum()
+			if v > maxItemConcurNum {
+				return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("item concurrent num must not be greater than %d", maxItemConcurNum)))
+			}
+			itemConcurNum = gptr.Of(v)
+		}
+	}
+	if req.IsSetItemRetryNum() {
+		v := int(req.GetItemRetryNum())
+		if !entity.ValidateItemRetryNum(gptr.Of(v)) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("item retry num must be in range [0, %d]", entity.MaxItemRetryNum)))
+		}
+		itemRetryNum = gptr.Of(v)
+	}
+
+	if err = e.manager.UpdateRunConf(ctx, &entity.UpdateRunConfParam{
+		ExptID:        req.GetExperimentID(),
+		SpaceID:       req.GetWorkspaceID(),
+		ItemConcurNum: itemConcurNum,
+		ItemRetryNum:  itemRetryNum,
+		Session:       session,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &openapi.UpdateExptRunConfOApiResponse{}, nil
+}
+
+func (e *EvalOpenAPIApplication) fillExtraOutputURLs(ctx context.Context, itemResults []*entity.ItemResult) error {
+	if e.fileProvider == nil {
+		logs.CtxWarn(ctx, "[fillExtraOutputURLs] fileProvider is nil, skip")
+		return nil
+	}
+	uris := make([]string, 0)
+	for _, item := range itemResults {
+		for _, turn := range item.TurnResults {
+			for _, exptResult := range turn.ExperimentResults {
+				if exptResult.Payload == nil || exptResult.Payload.EvaluatorOutput == nil {
+					continue
+				}
+				for _, record := range exptResult.Payload.EvaluatorOutput.EvaluatorRecords {
+					if record != nil && record.EvaluatorOutputData != nil && record.EvaluatorOutputData.ExtraOutput != nil && record.EvaluatorOutputData.ExtraOutput.URI != nil && *record.EvaluatorOutputData.ExtraOutput.URI != "" {
+						uris = append(uris, *record.EvaluatorOutputData.ExtraOutput.URI)
+					}
+				}
+			}
+		}
+	}
+	logs.CtxInfo(ctx, "[fillExtraOutputURLs] collected %d uris: %v", len(uris), uris)
+	if len(uris) == 0 {
+		return nil
+	}
+	urlMap, err := e.fileProvider.MGetFileURL(ctx, uris)
+	if err != nil {
+		return err
+	}
+	for _, item := range itemResults {
+		for _, turn := range item.TurnResults {
+			for _, exptResult := range turn.ExperimentResults {
+				if exptResult.Payload == nil || exptResult.Payload.EvaluatorOutput == nil {
+					continue
+				}
+				for _, record := range exptResult.Payload.EvaluatorOutput.EvaluatorRecords {
+					if record != nil && record.EvaluatorOutputData != nil && record.EvaluatorOutputData.ExtraOutput != nil && record.EvaluatorOutputData.ExtraOutput.URI != nil {
+						uri := *record.EvaluatorOutputData.ExtraOutput.URI
+						if url, ok := urlMap[uri]; ok {
+							record.EvaluatorOutputData.ExtraOutput.URL = &url
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
 }

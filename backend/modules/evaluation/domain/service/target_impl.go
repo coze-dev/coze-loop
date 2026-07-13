@@ -49,6 +49,10 @@ type EvalTargetServiceImpl struct {
 
 const evalTargetRecordPersistTimeout = 5 * time.Second
 
+// trajectoryStartTimeBufferMS 抽取 trajectory 时，时间下界额外向前预留的 buffer(1 分钟)，
+// 用于吸收请求发起时间与实际 span 上报时间之间可能的时钟/延迟误差，避免漏掉最早的 span。
+const trajectoryStartTimeBufferMS = int64(60 * 1000)
+
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
 	metric metrics.EvalTargetMetrics,
@@ -452,6 +456,11 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error) {
 	if len(traceID) == 0 {
 		return nil, errorx.New("ExtractTrajectory with null traceID")
+	}
+	// 时间下界默认向前多减 1 分钟 buffer:防御请求发起时间与实际 span 时间之间可能存在的时钟/上报误差,
+	// 避免因下界略偏晚而漏掉最早的 span 导致轨迹拉不全。trace 查询按 traceID 精确匹配,放宽下界不会引入无关数据。
+	if startTimeMS != nil {
+		startTimeMS = gptr.Of(*startTimeMS - trajectoryStartTimeBufferMS)
 	}
 	trajectories, err := e.trajectoryAdapter.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
 	if err != nil {
@@ -870,7 +879,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 
 	recordTrajectory := func() error {
 		var sms *int64
-		if record.BaseInfo != nil {
+		// 优先用「请求发起时间」作为抽取 trajectory 的时间下界;它比 record.BaseInfo.CreatedAt(异步返回后才 stamp)
+		// 更早,避免漏掉请求发起到返回之间的 span。为 0(未透传)时回退到 CreatedAt,保持向前兼容。
+		if param.AsyncUnixMS > 0 {
+			sms = gptr.Of(param.AsyncUnixMS)
+		} else if record.BaseInfo != nil {
 			sms = record.BaseInfo.CreatedAt
 		}
 		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, sms)

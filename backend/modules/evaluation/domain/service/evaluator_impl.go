@@ -894,6 +894,68 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 	return recordDO, nil
 }
 
+// CreateEvaluatorRunFailRecord creates a failed evaluator record for an evaluator run attempt that failed
+// before RunEvaluator/AsyncRunEvaluator could persist its normal record. This keeps experiment turn results
+// complete and preserves the original evaluator-level failure reason for users.
+func (e *EvaluatorServiceImpl) CreateEvaluatorRunFailRecord(ctx context.Context, request *entity.RunEvaluatorRequest, runErr error) (*entity.EvaluatorRecord, error) {
+	if request == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("run evaluator request is nil"))
+	}
+	if runErr == nil {
+		runErr = errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("evaluator run failed"))
+	}
+
+	recordID, err := e.idgen.GenID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	code := int32(errno.CommonInternalErrorCode)
+	statusErr, isStatusErr := errorx.FromStatusError(runErr)
+	if isStatusErr && statusErr.Code() > 0 {
+		code = statusErr.Code()
+	}
+	errMsg := errorx.ErrorWithoutStack(runErr)
+	if e.cConfiger != nil && (!isStatusErr || statusErr.Code() != errno.CustomRPCEvaluatorRunFailedCode) {
+		if converted := e.cConfiger.GetErrCtrl(ctx).ConvertErrMsg(errMsg); converted != "" {
+			errMsg = converted
+		}
+	}
+
+	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+	now := time.Now().UnixMilli()
+	recordDO := &entity.EvaluatorRecord{
+		ID:                 recordID,
+		SpaceID:            request.SpaceID,
+		ExperimentID:       request.ExperimentID,
+		ExperimentRunID:    request.ExperimentRunID,
+		ItemID:             request.ItemID,
+		TurnID:             request.TurnID,
+		EvaluatorVersionID: request.EvaluatorVersionID,
+		LogID:              logs.GetLogID(ctx),
+		EvaluatorInputData: request.InputData,
+		EvaluatorOutputData: &entity.EvaluatorOutputData{
+			EvaluatorRunError: &entity.EvaluatorRunError{
+				Code:    code,
+				Message: errMsg,
+			},
+		},
+		Status: entity.EvaluatorRunStatusFail,
+		Ext:    request.Ext,
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{UserID: gptr.Of(userIDInContext)},
+			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(userIDInContext)},
+			CreatedAt: gptr.Of(now),
+			UpdatedAt: gptr.Of(now),
+		},
+	}
+
+	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
+		return nil, err
+	}
+	return recordDO, nil
+}
+
 // AsyncRunEvaluator Agent evaluator_version 异步运行
 func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)

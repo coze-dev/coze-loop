@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"errors"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -21,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 // mock DenyReason implementation
@@ -468,7 +471,23 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 			name: "AsyncRunEvaluator error",
 			mockSetup: func() {
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), true)
-				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("async run error"))
+				runErr := errors.New("async run error")
+				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(nil, runErr)
+				mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), runErr).Return(&entity.EvaluatorRecord{
+					ID:                 303,
+					EvaluatorVersionID: 101,
+					Status:             entity.EvaluatorRunStatusFail,
+				}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "AsyncRunEvaluator error and failed record creation error",
+			mockSetup: func() {
+				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), true)
+				runErr := errors.New("async run error")
+				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(nil, runErr)
+				mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), runErr).Return(nil, errors.New("create failed record error"))
 			},
 			wantErr: true,
 		},
@@ -477,7 +496,8 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 			mockSetup: func() {
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), true)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{
-					ID: 202,
+					ID:                 202,
+					EvaluatorVersionID: 101,
 				}, nil)
 				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("set ctx error"))
 			},
@@ -487,12 +507,24 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var recordMap sync.Map
 			tt.mockSetup()
 			err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &collector)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+			}
+			switch tt.name {
+			case "AsyncRunEvaluator error":
+				val, ok := recordMap.Load(int64(101))
+				require.True(t, ok)
+				record, ok := val.(*entity.EvaluatorRecord)
+				require.True(t, ok)
+				assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+			case "AsyncRunEvaluator error and failed record creation error":
+				_, ok := recordMap.Load(int64(101))
+				assert.False(t, ok)
 			}
 		})
 	}
@@ -1467,7 +1499,17 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
 				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
-				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("run evaluator failed"))
+				runErr := errors.New("run evaluator failed")
+				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(nil, runErr)
+				mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), runErr).Return(&entity.EvaluatorRecord{
+					ID:                 999,
+					EvaluatorVersionID: 1,
+					Status:             entity.EvaluatorRunStatusFail,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorRunError: &entity.EvaluatorRunError{
+						Code:    int32(errno.CommonInternalErrorCode),
+						Message: "run evaluator failed",
+					}},
+				}, nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
 			etec: &entity.ExptTurnEvalCtx{
@@ -3053,7 +3095,6 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_EdgeCases(t *testing.T) {
 }
 
 func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
-	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -3111,7 +3152,9 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
 					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					Event:       &entity.ExptItemEvalEvent{ExptID: 10, ExptRunID: 20, SpaceID: 2},
 					Expt: &entity.Experiment{
+						SpaceID: 2,
 						Evaluators: []*entity.Evaluator{
 							{ID: 1, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 999}}, // Non-existent evaluator
 						},
@@ -3143,7 +3186,9 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
 					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					Event:       &entity.ExptItemEvalEvent{ExptID: 10, ExptRunID: 20, SpaceID: 2},
 					Expt: &entity.Experiment{
+						SpaceID: 2,
 						Evaluators: []*entity.Evaluator{
 							{ID: 1, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1}},
 						},
@@ -3154,6 +3199,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 									EvaluatorConf: []*entity.EvaluatorConf{
 										{
 											EvaluatorVersionID: 1,
+											RunConf:            &entity.EvaluatorRunConfig{},
 											IngressConf: &entity.EvaluatorIngressConf{
 												EvalSetAdapter: &entity.FieldAdapter{
 													FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "[invalid_json_path"}},
@@ -3183,7 +3229,6 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			tt.prepare()
 			// Check if targetResult is nil to avoid panic
 			if tt.target != nil && tt.target.EvalTargetOutputData == nil {
@@ -3288,6 +3333,15 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 				}
 				return &entity.EvaluatorRecord{ID: 2, Status: entity.EvaluatorRunStatusSuccess}, nil
 			}).AnyTimes()
+		mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest, runErr error) (*entity.EvaluatorRecord, error) {
+				return &entity.EvaluatorRecord{
+					ID:                  100 + req.EvaluatorVersionID,
+					EvaluatorVersionID:  req.EvaluatorVersionID,
+					Status:              entity.EvaluatorRunStatusFail,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorRunError: &entity.EvaluatorRunError{Code: int32(errno.CommonInternalErrorCode), Message: runErr.Error()}},
+				}, nil
+			}).AnyTimes()
 
 		records, err := service.callEvaluators(context.Background(), []int64{1, 2}, newEtec(), mockTargetResult, []*entity.Message{})
 
@@ -3321,6 +3375,15 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 					return nil, errors.New(err1Msg)
 				}
 				return nil, errors.New(err2Msg)
+			}).AnyTimes()
+		mockEvaluatorService.EXPECT().CreateEvaluatorRunFailRecord(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest, runErr error) (*entity.EvaluatorRecord, error) {
+				return &entity.EvaluatorRecord{
+					ID:                  100 + req.EvaluatorVersionID,
+					EvaluatorVersionID:  req.EvaluatorVersionID,
+					Status:              entity.EvaluatorRunStatusFail,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorRunError: &entity.EvaluatorRunError{Code: int32(errno.CommonInternalErrorCode), Message: runErr.Error()}},
+				}, nil
 			}).AnyTimes()
 
 		_, err := service.callEvaluators(context.Background(), []int64{1, 2}, newEtec(), mockTargetResult, []*entity.Message{})
@@ -4718,4 +4781,92 @@ func TestBuildEvalSetItemMeta_FallbackToExperimentTopLevel(t *testing.T) {
 	assert.Equal(t, "primary-set", got.EvalSetName)
 	assert.Equal(t, "primary-v1", got.EvalSetVersion)
 	assert.Equal(t, "1", got.ItemID)
+}
+// TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak 在真实泄漏点 callEvaluators 直接验证:
+// 当 evaluator conf 缺失导致中途提前 return(跳过 pool.ExecAll)时,协程池仍被释放,不泄漏 goroutine。
+// 修复前(NewPool 后无 defer pool.Release()),每次调用会泄漏底层 ants pool 的 2 个常驻协程(purge/ticktock),
+// 此测试会因协程数持续增长而失败;修复后应保持平稳。
+func TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// evalTargetService 在提前 return 前不会被调用到(OutputFields 无 omitted 大字段),这里可留空 mock。
+	// benefitService 在 callEvaluators 之前的权益校验会被调用,mock 成功放行。
+	mockBenefit := benefitmocks.NewMockIBenefitService(ctrl)
+	mockBenefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).
+		Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).AnyTimes()
+	service := &DefaultExptTurnEvaluationImpl{
+		evalTargetService: svcmocks.NewMockIEvalTargetService(ctrl),
+		benefitService:    mockBenefit,
+		metric:            metricsmocks.NewMockExptMetric(ctrl),
+	}
+
+	target := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{
+				"field1": {Text: gptr.Of("v")},
+			},
+		},
+	}
+
+	// 构造一个会触发 "evaluator conf not found" 提前 return 的 etec:
+	// Expt.Evaluators 里有 versionID=1 的 evaluator,但 EvaluatorsConf.EvaluatorConf 为空 → GetEvaluatorConf(1)=nil。
+	newEtec := func() *entity.ExptTurnEvalCtx {
+		return &entity.ExptTurnEvalCtx{
+			ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+				EvalSetItem: &entity.EvaluationSetItem{ID: 1, ItemID: 2},
+				Event: &entity.ExptItemEvalEvent{
+					Session: &entity.Session{UserID: "u"},
+					ExptID:  1,
+					SpaceID: 2,
+				},
+				Expt: &entity.Experiment{
+					ID:      1,
+					SpaceID: 2,
+					Evaluators: []*entity.Evaluator{
+						{
+							ID:                     1,
+							EvaluatorType:          entity.EvaluatorTypePrompt,
+							PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+						},
+					},
+					EvalConf: &entity.EvaluationConfiguration{
+						ItemConcurNum: gptr.Of(1),
+						ConnectorConf: entity.Connector{
+							EvaluatorsConf: &entity.EvaluatorsConf{
+								EvaluatorConcurNum: gptr.Of(1),
+								// 故意不放 versionID=1 的 conf → 触发 :433 提前 return
+								EvaluatorConf: []*entity.EvaluatorConf{},
+							},
+						},
+					},
+				},
+			},
+			ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			Turn:              &entity.Turn{FieldDataList: []*entity.FieldData{}},
+		}
+	}
+
+	// 先跑一次预热(确保触发的是提前 return 路径),并让运行时协程稳定。
+	if _, err := service.CallEvaluators(context.Background(), newEtec(), target); err == nil {
+		t.Fatalf("expected evaluator-conf-not-found error to hit the early-return path")
+	}
+	time.Sleep(200 * time.Millisecond)
+	runtime.GC()
+	before := runtime.NumGoroutine()
+
+	const N = 50
+	for i := 0; i < N; i++ {
+		_, err := service.CallEvaluators(context.Background(), newEtec(), target)
+		assert.Error(t, err) // 每次都走 conf-not-found 提前 return
+	}
+
+	// 等底层 ants pool 的常驻协程随 Release 退出。
+	time.Sleep(500 * time.Millisecond)
+	runtime.GC()
+	after := runtime.NumGoroutine()
+
+	// 修复前:N 次泄漏 ≈ 2N=100 个常驻协程;修复后应基本持平,留少量裕度。
+	assert.Less(t, after-before, 20,
+		"goroutine leak in callEvaluators early-return path: before=%d after=%d (delta=%d)", before, after, after-before)
 }

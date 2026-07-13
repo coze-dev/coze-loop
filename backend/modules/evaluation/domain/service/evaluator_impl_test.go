@@ -4392,3 +4392,159 @@ func TestEvaluatorServiceImpl_CreateSkippedEvaluatorRecord(t *testing.T) {
 		assert.Nil(t, got)
 	})
 }
+
+func TestEvaluatorServiceImpl_CreateEvaluatorRunFailRecord(t *testing.T) {
+	tests := []struct {
+		name        string
+		runErr      error
+		setupConfig func(*componentMocks.MockIConfiger)
+		wantCode    int32
+		wantMsg     string
+	}{
+		{
+			name:   "status error uses code and strips stack",
+			runErr: errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit")),
+			setupConfig: func(mockConfiger *componentMocks.MockIConfiger) {
+				mockConfiger.EXPECT().GetErrCtrl(gomock.Any()).Return(entity.DefaultExptErrCtrl())
+			},
+			wantCode: int32(errno.EvaluatorQPSLimitCode),
+			wantMsg:  "evaluator throttled",
+		},
+		{
+			name:   "config conversion overrides non custom rpc message",
+			runErr: errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("raw evaluator failure")),
+			setupConfig: func(mockConfiger *componentMocks.MockIConfiger) {
+				mockConfiger.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{
+					ResultErrConverts: []*entity.ResultErrConvert{
+						{MatchedText: "raw evaluator failure", ToErrMsg: "converted evaluator failure"},
+					},
+				})
+			},
+			wantCode: int32(errno.CommonInternalErrorCode),
+			wantMsg:  "converted evaluator failure",
+		},
+		{
+			name:     "custom rpc error skips config conversion and strips stack",
+			runErr:   errorx.NewByCode(errno.CustomRPCEvaluatorRunFailedCode, errorx.WithExtraMsg("custom rpc failed")),
+			wantCode: int32(errno.CustomRPCEvaluatorRunFailedCode),
+			wantMsg:  "custom rpc failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+			mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+
+			s := &EvaluatorServiceImpl{
+				idgen:               mockIDGen,
+				evaluatorRecordRepo: mockEvaluatorRecordRepo,
+				cConfiger:           mockConfiger,
+			}
+
+			req := &entity.RunEvaluatorRequest{
+				SpaceID:            1,
+				EvaluatorVersionID: 2,
+				InputData:          &entity.EvaluatorInputData{},
+				ExperimentID:       3,
+				ExperimentRunID:    4,
+				ItemID:             5,
+				TurnID:             6,
+				Ext:                map[string]string{"k": "v"},
+			}
+
+			if tt.setupConfig != nil {
+				tt.setupConfig(mockConfiger)
+			}
+			mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(100), nil)
+			mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(ctx context.Context, record *entity.EvaluatorRecord) error {
+					require.NotNil(t, record)
+					assert.Equal(t, int64(100), record.ID)
+					assert.Equal(t, req.SpaceID, record.SpaceID)
+					assert.Equal(t, req.EvaluatorVersionID, record.EvaluatorVersionID)
+					assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+					require.NotNil(t, record.EvaluatorOutputData)
+					require.NotNil(t, record.EvaluatorOutputData.EvaluatorRunError)
+					assert.Equal(t, tt.wantCode, record.EvaluatorOutputData.EvaluatorRunError.Code)
+					assert.Contains(t, record.EvaluatorOutputData.EvaluatorRunError.Message, tt.wantMsg)
+					assert.NotContains(t, record.EvaluatorOutputData.EvaluatorRunError.Message, "stack=")
+					return nil
+				},
+			)
+
+			record, err := s.CreateEvaluatorRunFailRecord(context.Background(), req, tt.runErr)
+			require.NoError(t, err)
+			require.NotNil(t, record)
+			assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_CreateEvaluatorRunFailRecord_Errors(t *testing.T) {
+	t.Run("nil request returns error", func(t *testing.T) {
+		s := &EvaluatorServiceImpl{}
+		record, err := s.CreateEvaluatorRunFailRecord(context.Background(), nil, errors.New("run failed"))
+		assert.Error(t, err)
+		assert.Nil(t, record)
+	})
+
+	t.Run("id generation error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+		s := &EvaluatorServiceImpl{idgen: mockIDGen}
+
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(0), errors.New("idgen failed"))
+
+		record, err := s.CreateEvaluatorRunFailRecord(context.Background(), &entity.RunEvaluatorRequest{EvaluatorVersionID: 1}, errors.New("run failed"))
+		assert.Error(t, err)
+		assert.Nil(t, record)
+	})
+
+	t.Run("nil run error uses default failure", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+		mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		s := &EvaluatorServiceImpl{idgen: mockIDGen, evaluatorRecordRepo: mockEvaluatorRecordRepo}
+
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(100), nil)
+		mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, record *entity.EvaluatorRecord) error {
+				require.NotNil(t, record)
+				require.NotNil(t, record.EvaluatorOutputData)
+				require.NotNil(t, record.EvaluatorOutputData.EvaluatorRunError)
+				assert.Equal(t, int32(errno.CommonInternalErrorCode), record.EvaluatorOutputData.EvaluatorRunError.Code)
+				assert.Contains(t, record.EvaluatorOutputData.EvaluatorRunError.Message, "evaluator run failed")
+				return nil
+			},
+		)
+
+		record, err := s.CreateEvaluatorRunFailRecord(context.Background(), &entity.RunEvaluatorRequest{EvaluatorVersionID: 1}, nil)
+		require.NoError(t, err)
+		require.NotNil(t, record)
+	})
+
+	t.Run("create record error bubbles up", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+		mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		s := &EvaluatorServiceImpl{idgen: mockIDGen, evaluatorRecordRepo: mockEvaluatorRecordRepo}
+
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(100), nil)
+		mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(errors.New("create record failed"))
+
+		record, err := s.CreateEvaluatorRunFailRecord(context.Background(), &entity.RunEvaluatorRequest{EvaluatorVersionID: 1}, errors.New("run failed"))
+		assert.Error(t, err)
+		assert.Nil(t, record)
+	})
+}

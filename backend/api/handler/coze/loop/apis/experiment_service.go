@@ -358,3 +358,9 @@ func GetExperimentIDsByGroup(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// UpdateExptRunConf .
+// @router /api/evaluation/v1/experiments/:expt_id/run_conf [PATCH]
+func UpdateExptRunConf(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.UpdateExptRunConf)
+}

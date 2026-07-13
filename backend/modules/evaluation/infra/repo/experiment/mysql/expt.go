@@ -340,7 +340,10 @@ func (d *exptDAOImpl) GetByName(ctx context.Context, name string, spaceID int64)
 		Where(expt.Name.Eq(name)).
 		First()
 	if err != nil {
-		return nil, errorx.Wrapf(err, "get expt with name %s fail", name)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		return nil, errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
 	}
 	return found, nil
 }
