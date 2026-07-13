@@ -26,7 +26,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
+	componentwebhook "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -76,6 +79,15 @@ type experimentApplication struct {
 
 	// 实验模板管理服务
 	templateManager service.IExptTemplateManager
+
+	// Webhook 通知子系统句柄 —— dispatcher 由 lifecycleEventHandler 内部持有；
+	// 这里保留 sender / repo / publisher / configer 用于后续接口层直接查询
+	// delivery 记录或触发同步测试用例，符合 commercial wire_gen 的注入契约。
+	webhookSender                 componentwebhook.IWebhookSender
+	webhookDeliveryRepo           repo.IWebhookDeliveryRepo
+	webhookDeliveryEventPublisher events.WebhookDeliveryEventPublisher
+	webhookConfiger               component.IWebhookConfiger
+	experimentRepo                repo.IExperimentRepo
 }
 
 func NewExperimentApplication(
@@ -98,27 +110,37 @@ func NewExperimentApplication(
 	templateManager service.IExptTemplateManager,
 	fileProvider rpc.IFileProvider,
 	lifecycleEventHandler service.ExptLifecycleEventHandler,
+	webhookSender componentwebhook.IWebhookSender,
+	webhookDeliveryRepo repo.IWebhookDeliveryRepo,
+	webhookDeliveryEventPublisher events.WebhookDeliveryEventPublisher,
+	webhookConfiger component.IWebhookConfiger,
+	experimentRepo repo.IExperimentRepo,
 ) IExperimentApplication {
 	return &experimentApplication{
-		resultSvc:                   resultSvc,
-		manager:                     manager,
-		idgen:                       idgen,
-		configer:                    configer,
-		ExptAggrResultService:       aggResultSvc,
-		ExptSchedulerEvent:          scheduler,
-		ExptItemEvalEvent:           recordEval,
-		auth:                        auth,
-		userInfoService:             userInfoService,
-		evalTargetService:           evalTargetService,
-		evaluationSetItemService:    evaluationSetItemService,
-		annotateService:             annotateService,
-		tagRPCAdapter:               tagRPCAdapter,
-		IExptResultExportService:    exptResultExportService,
-		IExptInsightAnalysisService: exptInsightAnalysisService,
-		ExptLifecycleEventHandler:   lifecycleEventHandler,
-		evaluatorService:            evaluatorService,
-		templateManager:             templateManager,
-		fileProvider:                fileProvider,
+		resultSvc:                     resultSvc,
+		manager:                       manager,
+		idgen:                         idgen,
+		configer:                      configer,
+		ExptAggrResultService:         aggResultSvc,
+		ExptSchedulerEvent:            scheduler,
+		ExptItemEvalEvent:             recordEval,
+		auth:                          auth,
+		userInfoService:               userInfoService,
+		evalTargetService:             evalTargetService,
+		evaluationSetItemService:      evaluationSetItemService,
+		annotateService:               annotateService,
+		tagRPCAdapter:                 tagRPCAdapter,
+		IExptResultExportService:      exptResultExportService,
+		IExptInsightAnalysisService:   exptInsightAnalysisService,
+		ExptLifecycleEventHandler:     lifecycleEventHandler,
+		evaluatorService:              evaluatorService,
+		templateManager:               templateManager,
+		fileProvider:                  fileProvider,
+		webhookSender:                 webhookSender,
+		webhookDeliveryRepo:           webhookDeliveryRepo,
+		webhookDeliveryEventPublisher: webhookDeliveryEventPublisher,
+		webhookConfiger:               webhookConfiger,
+		experimentRepo:                experimentRepo,
 	}
 }
 
