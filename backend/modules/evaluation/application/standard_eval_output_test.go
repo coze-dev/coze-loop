@@ -25,7 +25,8 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
-	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc}
+	mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc}
 
 	const (
 		workspaceID    int64 = 1
@@ -35,6 +36,8 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 		turnID         int64 = 5
 		targetRecordID int64 = 6
 	)
+
+	mockTargetSvc.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: workspaceID, SourceTargetID: "src-200"}, nil)
 
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
@@ -82,6 +85,12 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	assert.Contains(t, eval, "task_config")
 	assert.Contains(t, eval, "detail")
 	assert.Contains(t, eval, "rounds")
+
+	require.NotNil(t, got.Agent)
+	var agent map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetAgent().GetText()), &agent))
+	assert.Equal(t, "src-200", agent["source_target_id"])
+	assert.EqualValues(t, 200, agent["target_id"])
 }
 
 func TestBuildItemStandardEvalOutput_ProcessingOnlyReturnsMetadata(t *testing.T) {
@@ -145,7 +154,9 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_APIKeyBypass(t 
 	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(makeStandardEvalOutputReportResult(2, 3, 4, 5, 6), nil)
-	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc}
+	mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+	mockTargetSvc.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: 1, SourceTargetID: "src-200"}, nil)
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc}
 
 	resp, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{
 		WorkspaceID: 1,
@@ -163,7 +174,9 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
-	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc}
+	mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+	mockTargetSvc.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: 1, SourceTargetID: "src-200"}, nil)
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc}
 
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {

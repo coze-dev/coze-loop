@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 const maxStandardEvalOutputMGetItemIDs = 100
@@ -49,7 +50,10 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 		return nil, err
 	}
 
-	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{ExptID: req.GetExptID()})
+	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{
+		ExptID:                   req.GetExptID(),
+		SourceTargetIDByTargetID: e.resolveSourceTargetIDs(ctx, req.GetWorkspaceID(), result),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +86,10 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 		return nil, err
 	}
 
-	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{ExptID: req.GetExptID()})
+	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{
+		ExptID:                   req.GetExptID(),
+		SourceTargetIDByTargetID: e.resolveSourceTargetIDs(ctx, req.GetWorkspaceID(), result),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +129,58 @@ func experimentReportItemResults(r *entity.MGetExperimentReportResult) []*entity
 	return r.ItemResults
 }
 
+// resolveSourceTargetIDs 收集结果中 distinct 的 eval_target_id(=EvalTargetRecord.TargetID)，
+// 反查 EvalTarget 得到 target 级恒定的 SourceTargetID(与 version 无关)。
+// GetEvalTarget 的 DAO 仅按主键 id 查、不带 space 过滤，这里对返回做 SpaceID 校验，
+// 防跨空间越权返回；查询失败 / 跨空间 / 空串均降级为不填，不阻断主链路。
+func (e *experimentApplication) resolveSourceTargetIDs(ctx context.Context, spaceID int64, result *entity.MGetExperimentReportResult) map[int64]string {
+	out := map[int64]string{}
+	if result == nil {
+		return out
+	}
+	for _, item := range experimentReportItemResults(result) {
+		if item == nil {
+			continue
+		}
+		for _, turnResult := range item.TurnResults {
+			if turnResult == nil {
+				continue
+			}
+			for _, er := range turnResult.ExperimentResults {
+				if er == nil || er.Payload == nil || er.Payload.TargetOutput == nil || er.Payload.TargetOutput.EvalTargetRecord == nil {
+					continue
+				}
+				targetID := er.Payload.TargetOutput.EvalTargetRecord.TargetID
+				if targetID == 0 {
+					continue
+				}
+				if _, ok := out[targetID]; ok {
+					continue
+				}
+				target, err := e.evalTargetService.GetEvalTarget(ctx, targetID)
+				if err != nil {
+					logs.CtxWarn(ctx, "resolveSourceTargetIDs GetEvalTarget failed, target_id=%d, err=%v", targetID, err)
+					out[targetID] = ""
+					continue
+				}
+				if target == nil || target.SpaceID != spaceID {
+					logs.CtxWarn(ctx, "resolveSourceTargetIDs space mismatch or nil, target_id=%d, want_space=%d", targetID, spaceID)
+					out[targetID] = ""
+					continue
+				}
+				out[targetID] = target.SourceTargetID
+			}
+		}
+	}
+	return out
+}
+
 type standardEvalOutputBuildOptions struct {
 	ExptID               int64
 	EvaluatorByVersionID map[int64]*entity.ColumnEvaluator
+	// SourceTargetIDByTargetID: eval_target_id(=EvalTargetRecord.TargetID) -> 业务侧原始对象 ID。
+	// 由 application 层反查 EvalTarget 预先解析，纯函数 builder 只读；缺失时对应 source_target_id 留空。
+	SourceTargetIDByTargetID map[int64]string
 }
 
 type standardEvalOutputJSON struct {
@@ -295,7 +351,7 @@ func buildStandardEvalOutputJSON(item *entity.ItemResult, opt standardEvalOutput
 		Source: map[string]any{"type": "evaluation", "expt_id": opt.ExptID, "item_id": item.ItemID, "dataset_key": datasetKeyFromItem(item), "item_key": itemKeyFromItem(item)},
 		Detail: map[string]any{"item_id": item.ItemID, "item_key": itemKeyFromItem(item), "item_index": item.ItemIndex, "system_info": item.SystemInfo, "turn_count": len(standardTurns(item, opt.ExptID))},
 		Rounds: standardTurns(item, opt.ExptID),
-		Agent:  standardAgent(item, opt.ExptID),
+		Agent:  standardAgent(item, opt.ExptID, opt),
 		Output: standardOutput(item, opt.ExptID),
 		Eval:   standardEval(item, opt.ExptID, opt),
 		Extra:  standardExtra(item),
@@ -416,7 +472,7 @@ func standardTurns(item *entity.ItemResult, exptID int64) []map[string]any {
 	return rounds
 }
 
-func standardAgent(item *entity.ItemResult, exptID int64) map[string]any {
+func standardAgent(item *entity.ItemResult, exptID int64, opt standardEvalOutputBuildOptions) map[string]any {
 	var first *entity.EvalTargetRecord
 	runs := make([]any, 0)
 	for _, payload := range standardPayloads(item, exptID) {
@@ -440,8 +496,11 @@ func standardAgent(item *entity.ItemResult, exptID int64) map[string]any {
 		"context_window":    stringFromRuntimeParam(runtimeParam, "context_window", "context_window_size", "main_context_window_size"),
 		"target_id":         firstTargetID(first),
 		"target_version_id": firstTargetVersionID(first),
-		"runtime_param":     runtimeParam,
-		"runs":              runs,
+		// source_target_id 为业务侧原始对象 ID（如 promptID / sandbox agent 外部标识），
+		// 需按 target_id 反查 EvalTarget 得到；未解析到时留空。
+		"source_target_id": opt.SourceTargetIDByTargetID[firstTargetID(first)],
+		"runtime_param":    runtimeParam,
+		"runs":             runs,
 	}
 }
 
