@@ -10,4 +10,5 @@ import (
 var MQProducerSet = wire.NewSet(
 	NewExptEventPublisher,
 	NewEvaluatorEventPublisher,
+	NewWebhookDeliveryEventPublisher,
 )

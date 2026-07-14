@@ -25,11 +25,15 @@ import (
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
+	domaincomponent "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	configermocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
+	domainwebhook "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	domainevents "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
+	domainrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
@@ -2392,6 +2396,20 @@ func (f *fakeExperimentApp) SubmitExperiment(ctx context.Context, req *exptpb.Su
 		return f.submitResp, f.submitErr
 	}
 	return &exptpb.SubmitExperimentResponse{}, nil
+}
+
+// WebhookDeliveryComponents keeps the fake conforming to the interface; the
+// openapi tests never touch the retry state machine so all nil is fine.
+func (f *fakeExperimentApp) WebhookDeliveryComponents() (
+	domainwebhook.IWebhookSender,
+	domainrepo.IWebhookDeliveryRepo,
+	domainevents.WebhookDeliveryEventPublisher,
+	domaincomponent.IWebhookConfiger,
+	domainrepo.IExperimentRepo,
+	service.ExptResultService,
+	service.ExptAggrResultService,
+) {
+	return nil, nil, nil, nil, nil, nil, nil
 }
 
 func (f *fakeExperimentApp) ListExperiments(_ context.Context, _ *exptpb.ListExperimentsRequest) (*exptpb.ListExperimentsResponse, error) {

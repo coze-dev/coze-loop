@@ -18,14 +18,24 @@ func NewConsumerWorkers(
 	loader conf.IConfigLoader,
 	exptApp application.IExperimentApplication,
 ) ([]mq.IConsumerWorker, error) {
-	return []mq.IConsumerWorker{
+	workers := []mq.IConsumerWorker{
 		NewExptSchedulerEventConsumer(NewExptSchedulerConsumer(exptApp), loader),
 		NewExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
 		NewExptAggrCalculateEventConsumer(NewAggrCalculateConsumer(exptApp), loader),
 		NewExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
 		NewExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
 		NewExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp), loader),
-	}, nil
+	}
+	sender, deliveryRepo, publisher, configer, exptRepo, resultSvc, aggrResultSvc := exptApp.WebhookDeliveryComponents()
+	// The retry state-machine only lights up when every dep is available.
+	// Callers wiring OSS without the webhook module (or during rollout) can
+	// leave any of them nil and skip the consumer entirely — the delivery
+	// dispatcher is a no-op in that mode anyway.
+	if sender != nil && deliveryRepo != nil && publisher != nil && configer != nil {
+		handler := NewWebhookDeliveryConsumer(sender, deliveryRepo, publisher, configer, exptRepo, resultSvc, aggrResultSvc)
+		workers = append(workers, NewWebhookDeliveryEventConsumer(handler, loader))
+	}
+	return workers, nil
 }
 
 func NewExptSchedulerEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {

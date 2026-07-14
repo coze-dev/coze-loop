@@ -51,6 +51,20 @@ type IExperimentApplication interface {
 	service.IExptResultExportService
 	service.IExptInsightAnalysisService
 	service.ExptLifecycleEventHandler
+	// WebhookDeliveryComponents exposes the subsystem handles the
+	// `evaluation_webhook_delivery` consumer needs so the OSS + commercial
+	// `newConsumerWorkers` wiring can build the retry state-machine handler
+	// without re-plumbing internal fields. Order matches
+	// `consumer.NewWebhookDeliveryConsumer(...)`.
+	WebhookDeliveryComponents() (
+		componentwebhook.IWebhookSender,
+		repo.IWebhookDeliveryRepo,
+		events.WebhookDeliveryEventPublisher,
+		component.IWebhookConfiger,
+		repo.IExperimentRepo,
+		service.ExptResultService,
+		service.ExptAggrResultService,
+	)
 }
 
 type experimentApplication struct {
@@ -142,6 +156,22 @@ func NewExperimentApplication(
 		webhookConfiger:               webhookConfiger,
 		experimentRepo:                experimentRepo,
 	}
+}
+
+// WebhookDeliveryComponents returns the seven inputs
+// `consumer.NewWebhookDeliveryConsumer` expects. See interface docstring for
+// ordering. When any dep is nil the returned tuple mirrors that so callers can
+// short-circuit (e.g. OSS boot with the webhook module disabled).
+func (e *experimentApplication) WebhookDeliveryComponents() (
+	componentwebhook.IWebhookSender,
+	repo.IWebhookDeliveryRepo,
+	events.WebhookDeliveryEventPublisher,
+	component.IWebhookConfiger,
+	repo.IExperimentRepo,
+	service.ExptResultService,
+	service.ExptAggrResultService,
+) {
+	return e.webhookSender, e.webhookDeliveryRepo, e.webhookDeliveryEventPublisher, e.webhookConfiger, e.experimentRepo, e.resultSvc, e.ExptAggrResultService
 }
 
 func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (r *expt.CreateExperimentResponse, err error) {
