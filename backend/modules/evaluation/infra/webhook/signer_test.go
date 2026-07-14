@@ -5,6 +5,8 @@ package webhook
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestSign_Golden pins the HMAC-SHA256 contract:
@@ -16,38 +18,27 @@ func TestSign_Golden(t *testing.T) {
 	body := []byte(`{"delivery_id":"d-01","event":"succeeded"}`)
 
 	got := Sign(secret, ts, body)
-	// Recomputed offline once — this is the golden.
-	const want = "sha256=1ed7dc2f091cdae7fd8c5d5c66c3e5f01f0ae4e17f8a1e42ce23b8b1a34a3ac2"
-	if got == want {
-		// Some environments recompute; sanity-check length + prefix in the
-		// asymmetric case so the test still catches real regressions.
-	}
-	if len(got) != len("sha256=")+64 {
-		t.Fatalf("unexpected signature length: got=%d", len(got))
-	}
-	if got[:7] != "sha256=" {
-		t.Fatalf("missing sha256= prefix: got=%s", got)
-	}
+	// Recomputed via:
+	//   printf '1720000000\n{"delivery_id":"d-01","event":"succeeded"}' \
+	//     | openssl dgst -sha256 -hmac 'test-secret'
+	const want = "sha256=7b1b2ebb7e6f9aaecf61c3e79182272cf79ab18d511796c51edd1330d63a767b"
+	require.Equal(t, want, got, "HMAC golden mismatch — signer contract regressed")
 
-	// Body-mutation must change the signature.
+	// Body-mutation must change the signature (NEG-01 unit protection).
 	mut := append([]byte(nil), body...)
 	mut[0] = '['
-	if Sign(secret, ts, mut) == got {
-		t.Fatal("mutating body did not change signature")
-	}
+	mutSig := Sign(secret, ts, mut)
+	require.NotEqual(t, got, mutSig, "mutating body did not change signature")
 
 	// Timestamp-mutation must change the signature.
-	if Sign(secret, "1720000001", body) == got {
-		t.Fatal("mutating timestamp did not change signature")
-	}
+	tsSig := Sign(secret, "1720000001", body)
+	require.NotEqual(t, got, tsSig, "mutating timestamp did not change signature")
 
 	// Body with newline / 中文 / emoji still signs deterministically.
 	unicodeBody := []byte("body\n中文测试😀")
 	sig1 := Sign(secret, ts, unicodeBody)
 	sig2 := Sign(secret, ts, unicodeBody)
-	if sig1 != sig2 {
-		t.Fatalf("unicode body signature is not deterministic: %s vs %s", sig1, sig2)
-	}
+	require.Equal(t, sig1, sig2, "unicode body signature is not deterministic")
 }
 
 func TestSignWithAlgorithm_UnknownAlgorithm(t *testing.T) {
