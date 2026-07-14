@@ -552,6 +552,10 @@ struct SubmitExperimentOApiRequest {
 
     100: optional map<string, string> ext (api.body = 'ext')
 
+    // 实验分组 key: 显式传入时服务端校验全局(跨 space)唯一, 撞车拒绝创建; 缺省则以实验 ID 兜底。
+    // 与内部 Submit 的 experiment_group_key 对齐, application 层直接指针透传给 CreateExperiment。
+    101: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag = 'json:"experiment_group_key"')
+
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
 }

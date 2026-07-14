@@ -1096,6 +1096,8 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		Ext:                     req.GetExt(),
 		// ★ 透传分流依据: OpenAPI 字符串枚举 → kitex enum, 供下游平台层统一以 source_type 分流。
 		EvalSetSourceType: gptr.Of(srcType),
+		// ★ 透传实验分组 key: 与内部 Submit(experiment_app.go) 对齐, 下游 CreateExperiment 校验全局唯一。
+		ExperimentGroupKey: req.ExperimentGroupKey,
 	}
 
 	if isNewPath {

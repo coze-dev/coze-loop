@@ -2053,6 +2053,29 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 			},
 		},
 		{
+			name: "success with experiment group key",
+			buildReq: func() *openapi.SubmitExperimentOApiRequest {
+				req := buildBaseReq()
+				req.ExperimentGroupKey = gptr.Of("oapi-gk-transparent")
+				return req
+			},
+			setup: func(req *openapi.SubmitExperimentOApiRequest, auth *rpcmocks.MockIAuthProvider, manager *servicemocks.MockIExptManager, versionSvc *servicemocks.MockEvaluationSetVersionService, evaluatorSvc *servicemocks.MockEvaluatorService, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				manager.EXPECT().CheckName(gomock.Any(), req.GetName(), req.GetWorkspaceID(), gomock.AssignableToTypeOf(&entity.Session{})).Return(true, nil)
+				versionSvc.EXPECT().ListEvaluationSetVersions(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetVersionsParam{})).Return([]*entity.EvaluationSetVersion{{ID: evaluatorVersionID}}, nil, nil, nil)
+				evaluator := &entity.Evaluator{
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+						ID:          evaluatorVersionID,
+						EvaluatorID: evaluatorID,
+						Version:     "1.0",
+					},
+				}
+				evaluatorSvc.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluatorVersionRequest{})).Return([]*entity.Evaluator{evaluator}, int64(1), nil)
+				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(int64(8892))}}
+			},
+		},
+		{
 			name:     "check name error",
 			buildReq: buildBaseReq,
 			setup: func(req *openapi.SubmitExperimentOApiRequest, auth *rpcmocks.MockIAuthProvider, manager *servicemocks.MockIExptManager, _ *servicemocks.MockEvaluationSetVersionService, _ *servicemocks.MockEvaluatorService, _ *fakeExperimentApp) {
@@ -2146,6 +2169,8 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 					assert.Equal(t, workspaceID, fakeApp.lastReq.GetWorkspaceID())
 					assert.Len(t, fakeApp.lastReq.EvaluatorVersionIds, 1)
 					assert.Equal(t, evaluatorVersionID, fakeApp.lastReq.EvaluatorVersionIds[0])
+					// experiment_group_key 透传: 显式传入时应原样透传给内部 SubmitExperimentRequest。
+					assert.Equal(t, req.ExperimentGroupKey, fakeApp.lastReq.ExperimentGroupKey)
 				}
 			}
 

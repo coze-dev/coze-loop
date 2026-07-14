@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS `experiment`
     KEY `idx_space_end_at` (`space_id`, `end_at`),
     KEY `idx_source_type_source_id` (`source_type`, `source_id`),
     KEY `idx_space_expt_template_id_delete_at` (`space_id`, `expt_template_id`, `deleted_at`),
-    KEY `idx_space_trigger_type_delete_at` (`space_id`, `trigger_type`, `deleted_at`)
+    KEY `idx_space_trigger_type_delete_at` (`space_id`, `trigger_type`, `deleted_at`),
+    KEY `idx_experiment_group_key_deleted_at` (`experiment_group_key`, `deleted_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='experiment';

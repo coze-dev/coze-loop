@@ -21,3 +21,6 @@ ALTER TABLE `experiment` ADD COLUMN `offline_expt_analysis_status` int unsigned 
 ALTER TABLE `experiment` ADD COLUMN `notification_conf` blob COMMENT '通知配置，json格式存储webhook/飞书通知配置';
 
 ALTER TABLE `experiment` ADD COLUMN `experiment_group_key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '实验分组key，默认实验ID' AFTER `name`;
+
+ALTER TABLE `experiment`
+    ADD INDEX `idx_experiment_group_key_deleted_at` (`experiment_group_key`, `deleted_at`);
