@@ -818,6 +818,34 @@ func (p *OpenAPIExptEvaluatorConf) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 40:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField40(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 41:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField41(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -954,6 +982,32 @@ func (p *OpenAPIExptEvaluatorConf) FastReadField30(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *OpenAPIExptEvaluatorConf) FastReadField40(buf []byte) (int, error) {
+	offset := 0
+	_field := filter.NewFilter()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Filter = _field
+	return offset, nil
+}
+
+func (p *OpenAPIExptEvaluatorConf) FastReadField41(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.FilterMode = _field
+	return offset, nil
+}
+
 func (p *OpenAPIExptEvaluatorConf) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -963,11 +1017,13 @@ func (p *OpenAPIExptEvaluatorConf) FastWriteNocopy(buf []byte, w thrift.NocopyWr
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField30(buf[offset:], w)
+		offset += p.fastWriteField41(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
+		offset += p.fastWriteField40(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -983,6 +1039,8 @@ func (p *OpenAPIExptEvaluatorConf) BLength() int {
 		l += p.field11Length()
 		l += p.field20Length()
 		l += p.field30Length()
+		l += p.field40Length()
+		l += p.field41Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1065,6 +1123,24 @@ func (p *OpenAPIExptEvaluatorConf) fastWriteField30(buf []byte, w thrift.NocopyW
 	return offset
 }
 
+func (p *OpenAPIExptEvaluatorConf) fastWriteField40(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilter() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 40)
+		offset += p.Filter.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *OpenAPIExptEvaluatorConf) fastWriteField41(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilterMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 41)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.FilterMode)
+	}
+	return offset
+}
+
 func (p *OpenAPIExptEvaluatorConf) field1Length() int {
 	l := 0
 	if p.IsSetEvaluatorID() {
@@ -1132,6 +1208,24 @@ func (p *OpenAPIExptEvaluatorConf) field30Length() int {
 	if p.IsSetScoreWeight() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.DoubleLength()
+	}
+	return l
+}
+
+func (p *OpenAPIExptEvaluatorConf) field40Length() int {
+	l := 0
+	if p.IsSetFilter() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Filter.BLength()
+	}
+	return l
+}
+
+func (p *OpenAPIExptEvaluatorConf) field41Length() int {
+	l := 0
+	if p.IsSetFilterMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -1205,6 +1299,20 @@ func (p *OpenAPIExptEvaluatorConf) DeepCopy(s interface{}) error {
 	if src.ScoreWeight != nil {
 		tmp := *src.ScoreWeight
 		p.ScoreWeight = &tmp
+	}
+
+	var _filter *filter.Filter
+	if src.Filter != nil {
+		_filter = &filter.Filter{}
+		if err := _filter.DeepCopy(src.Filter); err != nil {
+			return err
+		}
+	}
+	p.Filter = _filter
+
+	if src.FilterMode != nil {
+		tmp := *src.FilterMode
+		p.FilterMode = &tmp
 	}
 
 	return nil

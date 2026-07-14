@@ -648,3 +648,78 @@ func TestOpenAPIEvalSetConfigsDTO2Domain_ItemFilter(t *testing.T) {
 	// 第二集: 不传 item_filter → nil (全集语义)。
 	assert.Nil(t, dos[1].ItemFilter)
 }
+
+// TestOpenAPIEvalSetConfigsDTO2Domain_EvaluatorFilter 验证 OpenAPI evaluator 级 filter/filter_mode
+// (行级过滤: 命中才执行本 binding) 被原样透传到内部 domain ExptEvaluatorConf
+// (与内部 ExptEvaluatorConf.filter/filter_mode 同型)。
+func TestOpenAPIEvalSetConfigsDTO2Domain_EvaluatorFilter(t *testing.T) {
+	t.Parallel()
+
+	evalFilter := &domain_filter.Filter{
+		QueryAndOr: gptr.Of(domain_filter.QueryRelation("and")),
+		FilterFields: []*domain_filter.FilterField{
+			{
+				FieldName: "tag_key",
+				FieldType: domain_filter.FieldType("tag"),
+				QueryType: gptr.Of(domain_filter.QueryType("eq")),
+				Values:    []string{"hard"},
+			},
+		},
+	}
+	confs := []*openapiExperiment.OpenAPIEvalSetConfig{
+		{
+			EvalSetID:      gptr.Of(int64(100)),
+			EvalSetVersion: gptr.Of("v1.0.0"),
+			EvaluatorConfs: []*openapiExperiment.OpenAPIExptEvaluatorConf{
+				{
+					// 带 filter + filter_mode=1 (Include)
+					EvaluatorID: gptr.Of(int64(11)),
+					Version:     gptr.Of("e-v1"),
+					Filter:      evalFilter,
+					FilterMode:  gptr.Of(int32(1)),
+				},
+				{
+					// 带 filter_mode=2 (Exclude), 不带 filter
+					EvaluatorID: gptr.Of(int64(12)),
+					Version:     gptr.Of("e-v2"),
+					FilterMode:  gptr.Of(int32(2)),
+				},
+				{
+					// 缺省: 不带 filter / filter_mode → Filter nil, FilterMode 0
+					EvaluatorID: gptr.Of(int64(13)),
+					Version:     gptr.Of("e-v3"),
+				},
+			},
+		},
+	}
+	evalSetVersionIDMap := map[int64]int64{100: 1001}
+	evaluatorVersionIDMap := map[string]int64{
+		"11_e-v1": 111,
+		"12_e-v2": 122,
+		"13_e-v3": 133,
+	}
+
+	dos := OpenAPIEvalSetConfigsDTO2Domain(confs, evalSetVersionIDMap, evaluatorVersionIDMap)
+	assert.Len(t, dos, 1)
+	assert.Len(t, dos[0].EvaluatorConfs, 3)
+
+	ec0 := dos[0].EvaluatorConfs[0]
+	// filter 原指针透传, 字段保真; filter_mode=1
+	assert.Same(t, evalFilter, ec0.Filter)
+	assert.Len(t, ec0.Filter.FilterFields, 1)
+	assert.Equal(t, "tag_key", ec0.Filter.FilterFields[0].FieldName)
+	assert.Equal(t, "eq", string(ec0.Filter.FilterFields[0].GetQueryType()))
+	assert.Equal(t, int32(1), ec0.GetFilterMode())
+	assert.Equal(t, int64(111), ec0.GetEvaluatorVersionID())
+
+	ec1 := dos[0].EvaluatorConfs[1]
+	// 无 filter → nil; filter_mode=2 透传
+	assert.Nil(t, ec1.Filter)
+	assert.Equal(t, int32(2), ec1.GetFilterMode())
+
+	ec2 := dos[0].EvaluatorConfs[2]
+	// 缺省: filter nil, filter_mode 默认 0
+	assert.Nil(t, ec2.Filter)
+	assert.False(t, ec2.IsSetFilterMode())
+	assert.Equal(t, int32(0), ec2.GetFilterMode())
+}

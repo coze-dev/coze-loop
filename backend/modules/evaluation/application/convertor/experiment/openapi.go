@@ -1765,9 +1765,15 @@ func OpenAPIEvalSetConfigsDTO2Domain(
 				EvaluatorVersionID: evaluatorVersionIDMap[fmt.Sprintf("%d_%s", ec.GetEvaluatorID(), ec.GetVersion())],
 				RuntimeParam:       OpenAPIRuntimeParamDTO2Domain(ec.RuntimeParam),
 				ScoreWeight:        ec.ScoreWeight,
+				FilterMode:         ec.FilterMode,
 			}
 			if ec.Alias != nil {
 				evConf.Alias = ec.Alias
+			}
+			// filter 与内部 ExptEvaluatorConf.filter 同型 (data_filter.Filter), 直接透传;
+			// 白名单校验由内部 SubmitExperiment 的 validateFilter/ValidateEvalSetConfigs 统一兜底。
+			if ec.IsSetFilter() {
+				evConf.Filter = ec.GetFilter()
 			}
 			for _, fm := range ec.GetFromEvalSet() {
 				if fm != nil {

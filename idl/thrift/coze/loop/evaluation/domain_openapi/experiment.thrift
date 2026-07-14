@@ -96,6 +96,8 @@ struct OpenAPIExptEvaluatorConf {
     11: optional list<FieldMapping> from_target      // target 输出 → evaluator 输入
     20: optional common.RuntimeParam runtime_param   // alias 多实例核心动机: 同 version 不同参数
     30: optional double score_weight                 // enable_weighted_score 开启时参与加权
+    40: optional data_filter.Filter filter           // 行级过滤: 命中才执行本 binding (与内部 ExptEvaluatorConf.filter 同型)
+    41: optional i32 filter_mode                      // 0 None / 1 Include / 2 Exclude
 }
 
 // per-set target 运行配置 (版本字符串风格); 本期 len<=1

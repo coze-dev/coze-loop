@@ -36,6 +36,11 @@ func (p *OpenAPIExptEvaluatorConf) IsValid() error {
 			return fmt.Errorf("field RuntimeParam not valid, %w", err)
 		}
 	}
+	if p.Filter != nil {
+		if err := p.Filter.IsValid(); err != nil {
+			return fmt.Errorf("field Filter not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *OpenAPIExptTargetConf) IsValid() error {

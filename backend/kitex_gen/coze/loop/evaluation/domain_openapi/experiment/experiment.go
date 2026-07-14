@@ -1196,6 +1196,10 @@ type OpenAPIExptEvaluatorConf struct {
 	RuntimeParam *common.RuntimeParam `thrift:"runtime_param,20,optional" frugal:"20,optional,common.RuntimeParam" form:"runtime_param" json:"runtime_param,omitempty" query:"runtime_param"`
 	// enable_weighted_score 开启时参与加权
 	ScoreWeight *float64 `thrift:"score_weight,30,optional" frugal:"30,optional,double" form:"score_weight" json:"score_weight,omitempty" query:"score_weight"`
+	// 行级过滤: 命中才执行本 binding (与内部 ExptEvaluatorConf.filter 同型)
+	Filter *filter.Filter `thrift:"filter,40,optional" frugal:"40,optional,filter.Filter" form:"filter" json:"filter,omitempty" query:"filter"`
+	// 0 None / 1 Include / 2 Exclude
+	FilterMode *int32 `thrift:"filter_mode,41,optional" frugal:"41,optional,i32" form:"filter_mode" json:"filter_mode,omitempty" query:"filter_mode"`
 }
 
 func NewOpenAPIExptEvaluatorConf() *OpenAPIExptEvaluatorConf {
@@ -1288,6 +1292,30 @@ func (p *OpenAPIExptEvaluatorConf) GetScoreWeight() (v float64) {
 	}
 	return *p.ScoreWeight
 }
+
+var OpenAPIExptEvaluatorConf_Filter_DEFAULT *filter.Filter
+
+func (p *OpenAPIExptEvaluatorConf) GetFilter() (v *filter.Filter) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilter() {
+		return OpenAPIExptEvaluatorConf_Filter_DEFAULT
+	}
+	return p.Filter
+}
+
+var OpenAPIExptEvaluatorConf_FilterMode_DEFAULT int32
+
+func (p *OpenAPIExptEvaluatorConf) GetFilterMode() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilterMode() {
+		return OpenAPIExptEvaluatorConf_FilterMode_DEFAULT
+	}
+	return *p.FilterMode
+}
 func (p *OpenAPIExptEvaluatorConf) SetEvaluatorID(val *int64) {
 	p.EvaluatorID = val
 }
@@ -1309,6 +1337,12 @@ func (p *OpenAPIExptEvaluatorConf) SetRuntimeParam(val *common.RuntimeParam) {
 func (p *OpenAPIExptEvaluatorConf) SetScoreWeight(val *float64) {
 	p.ScoreWeight = val
 }
+func (p *OpenAPIExptEvaluatorConf) SetFilter(val *filter.Filter) {
+	p.Filter = val
+}
+func (p *OpenAPIExptEvaluatorConf) SetFilterMode(val *int32) {
+	p.FilterMode = val
+}
 
 var fieldIDToName_OpenAPIExptEvaluatorConf = map[int16]string{
 	1:  "evaluator_id",
@@ -1318,6 +1352,8 @@ var fieldIDToName_OpenAPIExptEvaluatorConf = map[int16]string{
 	11: "from_target",
 	20: "runtime_param",
 	30: "score_weight",
+	40: "filter",
+	41: "filter_mode",
 }
 
 func (p *OpenAPIExptEvaluatorConf) IsSetEvaluatorID() bool {
@@ -1346,6 +1382,14 @@ func (p *OpenAPIExptEvaluatorConf) IsSetRuntimeParam() bool {
 
 func (p *OpenAPIExptEvaluatorConf) IsSetScoreWeight() bool {
 	return p.ScoreWeight != nil
+}
+
+func (p *OpenAPIExptEvaluatorConf) IsSetFilter() bool {
+	return p.Filter != nil
+}
+
+func (p *OpenAPIExptEvaluatorConf) IsSetFilterMode() bool {
+	return p.FilterMode != nil
 }
 
 func (p *OpenAPIExptEvaluatorConf) Read(iprot thrift.TProtocol) (err error) {
@@ -1417,6 +1461,22 @@ func (p *OpenAPIExptEvaluatorConf) Read(iprot thrift.TProtocol) (err error) {
 		case 30:
 			if fieldTypeId == thrift.DOUBLE {
 				if err = p.ReadField30(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 40:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField40(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 41:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField41(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1549,6 +1609,25 @@ func (p *OpenAPIExptEvaluatorConf) ReadField30(iprot thrift.TProtocol) error {
 	p.ScoreWeight = _field
 	return nil
 }
+func (p *OpenAPIExptEvaluatorConf) ReadField40(iprot thrift.TProtocol) error {
+	_field := filter.NewFilter()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Filter = _field
+	return nil
+}
+func (p *OpenAPIExptEvaluatorConf) ReadField41(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FilterMode = _field
+	return nil
+}
 
 func (p *OpenAPIExptEvaluatorConf) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1582,6 +1661,14 @@ func (p *OpenAPIExptEvaluatorConf) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField30(oprot); err != nil {
 			fieldId = 30
+			goto WriteFieldError
+		}
+		if err = p.writeField40(oprot); err != nil {
+			fieldId = 40
+			goto WriteFieldError
+		}
+		if err = p.writeField41(oprot); err != nil {
+			fieldId = 41
 			goto WriteFieldError
 		}
 	}
@@ -1744,6 +1831,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
+func (p *OpenAPIExptEvaluatorConf) writeField40(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilter() {
+		if err = oprot.WriteFieldBegin("filter", thrift.STRUCT, 40); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Filter.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
+}
+func (p *OpenAPIExptEvaluatorConf) writeField41(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilterMode() {
+		if err = oprot.WriteFieldBegin("filter_mode", thrift.I32, 41); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.FilterMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
+}
 
 func (p *OpenAPIExptEvaluatorConf) String() string {
 	if p == nil {
@@ -1778,6 +1901,12 @@ func (p *OpenAPIExptEvaluatorConf) DeepEqual(ano *OpenAPIExptEvaluatorConf) bool
 		return false
 	}
 	if !p.Field30DeepEqual(ano.ScoreWeight) {
+		return false
+	}
+	if !p.Field40DeepEqual(ano.Filter) {
+		return false
+	}
+	if !p.Field41DeepEqual(ano.FilterMode) {
 		return false
 	}
 	return true
@@ -1860,6 +1989,25 @@ func (p *OpenAPIExptEvaluatorConf) Field30DeepEqual(src *float64) bool {
 		return false
 	}
 	if *p.ScoreWeight != *src {
+		return false
+	}
+	return true
+}
+func (p *OpenAPIExptEvaluatorConf) Field40DeepEqual(src *filter.Filter) bool {
+
+	if !p.Filter.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *OpenAPIExptEvaluatorConf) Field41DeepEqual(src *int32) bool {
+
+	if p.FilterMode == src {
+		return true
+	} else if p.FilterMode == nil || src == nil {
+		return false
+	}
+	if *p.FilterMode != *src {
 		return false
 	}
 	return true
