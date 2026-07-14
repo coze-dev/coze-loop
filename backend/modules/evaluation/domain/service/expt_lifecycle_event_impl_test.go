@@ -229,6 +229,108 @@ func TestHandleLifecycleEvent(t *testing.T) {
 	})
 }
 
+func TestFeishuGate(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("feishu.enable=false skips SendMessageCard", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		expt := &entity.Experiment{
+			ID:        1,
+			SpaceID:   100,
+			Name:      "gated",
+			Status:    entity.ExptStatus_Success,
+			CreatedBy: "user1",
+			NotificationConf: &entity.ExptNotificationConf{
+				FeishuNotification: &entity.FeishuNotificationConf{Enable: false},
+			},
+		}
+		event := &entity.ExptLifecycleEvent{ExptID: 1, SpaceID: 100, ToStatus: entity.ExptStatus_Success}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+		// No user lookup, no card send.
+
+		err := handler.HandleLifecycleEvent(ctx, event)
+		assert.NoError(t, err)
+	})
+
+	t.Run("feishu nil falls back to DefaultFeishuNotification (enabled)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		expt := &entity.Experiment{
+			ID:        2,
+			SpaceID:   200,
+			Status:    entity.ExptStatus_Success,
+			CreatedBy: "user2",
+			NotificationConf: &entity.ExptNotificationConf{
+				FeishuNotification: nil,
+			},
+		}
+		event := &entity.ExptLifecycleEvent{ExptID: 2, SpaceID: 200, ToStatus: entity.ExptStatus_Success}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(2), int64(200)).Return(expt, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user2"}).Return([]*entity.UserInfo{
+			{Email: gptr.Of("user2@example.com")},
+		}, nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user2@example.com", gomock.Any(), gomock.Any()).Return(nil)
+
+		err := handler.HandleLifecycleEvent(ctx, event)
+		assert.NoError(t, err)
+	})
+
+	t.Run("filter miss skips SendMessageCard even when feishu enabled", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		expt := &entity.Experiment{
+			ID:        3,
+			SpaceID:   300,
+			Status:    entity.ExptStatus_Success,
+			CreatedBy: "user3",
+			NotificationConf: &entity.ExptNotificationConf{
+				Filter: &entity.ExptNotificationFilter{
+					Field:    entity.ExptNotificationFieldTypeExptStatus,
+					Operator: entity.ExptNotificationOperatorIN,
+					Values:   []string{entity.WebhookDeliveryEventFailed},
+				},
+				FeishuNotification: &entity.FeishuNotificationConf{Enable: true},
+			},
+		}
+		event := &entity.ExptLifecycleEvent{ExptID: 3, SpaceID: 300, ToStatus: entity.ExptStatus_Success}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(3), int64(300)).Return(expt, nil)
+		// filter values=[failed] but event=succeeded → skip feishu, no user/card mocks.
+
+		err := handler.HandleLifecycleEvent(ctx, event)
+		assert.NoError(t, err)
+	})
+
+	t.Run("nil NotificationConf preserves pre-webhook behaviour (feishu sent)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		expt := &entity.Experiment{
+			ID:               4,
+			SpaceID:          400,
+			Status:           entity.ExptStatus_Success,
+			CreatedBy:        "user4",
+			NotificationConf: nil,
+		}
+		event := &entity.ExptLifecycleEvent{ExptID: 4, SpaceID: 400, ToStatus: entity.ExptStatus_Success}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(4), int64(400)).Return(expt, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user4"}).Return([]*entity.UserInfo{
+			{Email: gptr.Of("user4@example.com")},
+		}, nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user4@example.com", gomock.Any(), gomock.Any()).Return(nil)
+
+		err := handler.HandleLifecycleEvent(ctx, event)
+		assert.NoError(t, err)
+	})
+}
+
 func TestSendNotifyCard(t *testing.T) {
 	ctx := context.Background()
 

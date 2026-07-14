@@ -49,14 +49,38 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 
 	switch event.ToStatus {
 	case entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
-		if err := h.sendNotifyCard(ctx, event, expt); err != nil {
-			logs.CtxWarn(ctx, "expt %d feishu notify failed, err=%v", expt.ID, err)
+		if h.shouldSendFeishu(event, expt) {
+			if err := h.sendNotifyCard(ctx, event, expt); err != nil {
+				logs.CtxWarn(ctx, "expt %d feishu notify failed, err=%v", expt.ID, err)
+			}
 		}
 		h.dispatchWebhook(ctx, event, expt)
 		return nil
 	default:
 		return nil
 	}
+}
+
+// shouldSendFeishu gates the feishu channel on
+// (1) the shared filter, if configured, and
+// (2) `FeishuNotification.Enable` (nil → DefaultFeishuNotification, which is
+// enabled to preserve pre-webhook behaviour).
+func (h *ExptLifecycleEventHandlerImpl) shouldSendFeishu(event *entity.ExptLifecycleEvent, expt *entity.Experiment) bool {
+	conf := expt.NotificationConf
+	if conf == nil {
+		return entity.DefaultFeishuNotification().Enable
+	}
+	if conf.Filter != nil {
+		evt := lifecycleStatusToWebhookEvent(event.ToStatus)
+		if !conf.Filter.Match(evt) {
+			return false
+		}
+	}
+	feishu := conf.FeishuNotification
+	if feishu == nil {
+		feishu = entity.DefaultFeishuNotification()
+	}
+	return feishu.Enable
 }
 
 func (h *ExptLifecycleEventHandlerImpl) dispatchWebhook(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {

@@ -66,7 +66,47 @@ type ExptNotificationConf struct {
 // feishu enabled, webhook disabled.
 func DefaultExptNotificationConf() *ExptNotificationConf {
 	return &ExptNotificationConf{
-		Webhook:            &WebhookNotificationConf{Enable: false},
-		FeishuNotification: &FeishuNotificationConf{Enable: true},
+		Webhook:            DefaultWebhookNotification(),
+		FeishuNotification: DefaultFeishuNotification(),
 	}
+}
+
+// DefaultWebhookNotification returns the default per-channel webhook conf
+// (disabled). Callers should fall back to this when
+// ExptNotificationConf.Webhook is nil.
+func DefaultWebhookNotification() *WebhookNotificationConf {
+	return &WebhookNotificationConf{Enable: false}
+}
+
+// DefaultFeishuNotification returns the default per-channel feishu conf
+// (enabled, matching pre-webhook behaviour). Callers should fall back to this
+// when ExptNotificationConf.FeishuNotification is nil.
+func DefaultFeishuNotification() *FeishuNotificationConf {
+	return &FeishuNotificationConf{Enable: true}
+}
+
+// Match reports whether the given lifecycle event string passes this filter.
+// Empty / nil filter returns true (default-notify behaviour); a filter with
+// no Values never matches to avoid accidental all-through routing.
+func (f *ExptNotificationFilter) Match(event string) bool {
+	if f == nil {
+		return true
+	}
+	if f.Field != ExptNotificationFieldTypeExptStatus {
+		return true
+	}
+	if len(f.Values) == 0 {
+		return false
+	}
+	present := false
+	for _, v := range f.Values {
+		if v == event || v == EventToStatusAlias(event) {
+			present = true
+			break
+		}
+	}
+	if f.Operator == ExptNotificationOperatorNOTIN {
+		return !present
+	}
+	return present
 }
