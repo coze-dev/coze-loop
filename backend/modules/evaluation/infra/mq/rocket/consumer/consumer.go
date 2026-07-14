@@ -10,8 +10,14 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+	componentwebhook "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/webhook"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func NewConsumerWorkers(
@@ -26,16 +32,48 @@ func NewConsumerWorkers(
 		NewExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
 		NewExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp), loader),
 	}
-	sender, deliveryRepo, publisher, configer, exptRepo, resultSvc, aggrResultSvc := exptApp.WebhookDeliveryComponents()
-	// The retry state-machine only lights up when every dep is available.
-	// Callers wiring OSS without the webhook module (or during rollout) can
-	// leave any of them nil and skip the consumer entirely — the delivery
-	// dispatcher is a no-op in that mode anyway.
-	if sender != nil && deliveryRepo != nil && publisher != nil && configer != nil {
-		handler := NewWebhookDeliveryConsumer(sender, deliveryRepo, publisher, configer, exptRepo, resultSvc, aggrResultSvc)
-		workers = append(workers, NewWebhookDeliveryEventConsumer(handler, loader))
-	}
+	workers = append(workers, buildWebhookDeliveryConsumer(loader, exptApp))
 	return workers, nil
+}
+
+// buildWebhookDeliveryConsumer selects between a real WebhookDeliveryConsumer
+// worker and NewNilWebhookDeliveryEventConsumer. Kept thin so
+// webhookDeliveryConsumerFrom holds the actual decision logic and can be
+// covered by unit tests without a full application.IExperimentApplication fake.
+func buildWebhookDeliveryConsumer(loader conf.IConfigLoader, exptApp application.IExperimentApplication) mq.IConsumerWorker {
+	sender, deliveryRepo, publisher, configer, exptRepo, resultSvc, aggrResultSvc := exptApp.WebhookDeliveryComponents()
+	return webhookDeliveryConsumerFrom(loader, sender, deliveryRepo, publisher, configer, exptRepo, resultSvc, aggrResultSvc)
+}
+
+// webhookDeliveryConsumerFrom decides whether to wire a real webhook_delivery
+// consumer or a disabled stub. The stub keeps registry.StartAll happy (its
+// ConsumerCfg returns IsEnabled=false so no subscribe is attempted) which
+// unblocks pod readiness both during rollout (some deps nil, mirrors the E-I-03
+// provideNilWebhookDispatcher rollback on commercial) and after ops flips
+// WebhookGlobalConf.DisableConsumer for a topic-provisioning outage.
+func webhookDeliveryConsumerFrom(
+	loader conf.IConfigLoader,
+	sender componentwebhook.IWebhookSender,
+	deliveryRepo repo.IWebhookDeliveryRepo,
+	publisher events.WebhookDeliveryEventPublisher,
+	configer component.IWebhookConfiger,
+	exptRepo repo.IExperimentRepo,
+	resultSvc service.ExptResultService,
+	aggrResultSvc service.ExptAggrResultService,
+) mq.IConsumerWorker {
+	if sender == nil || deliveryRepo == nil || publisher == nil || configer == nil {
+		logs.CtxWarn(context.Background(),
+			"webhook_delivery_consumer_dep_missing_skip_start sender=%t deliveryRepo=%t publisher=%t configer=%t",
+			sender != nil, deliveryRepo != nil, publisher != nil, configer != nil)
+		return NewNilWebhookDeliveryEventConsumer()
+	}
+	if g := configer.GetWebhookConf(context.Background()); g != nil && g.DisableConsumer {
+		logs.CtxWarn(context.Background(),
+			"webhook_delivery_consumer_disabled_by_conf skip_start=true")
+		return NewNilWebhookDeliveryEventConsumer()
+	}
+	handler := NewWebhookDeliveryConsumer(sender, deliveryRepo, publisher, configer, exptRepo, resultSvc, aggrResultSvc)
+	return NewWebhookDeliveryEventConsumer(handler, loader)
 }
 
 func NewExptSchedulerEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {

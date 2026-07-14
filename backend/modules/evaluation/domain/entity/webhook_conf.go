@@ -12,10 +12,14 @@ package entity
 type WebhookGlobalConf struct {
 	Enabled bool `mapstructure:"enabled" json:"enabled"`
 	DryRun  bool `mapstructure:"dry_run" json:"dry_run"`
+	// DisableConsumer skips subscribing the webhook_delivery consumer at boot.
+	// Ops flips this on when the RocketMQ topic has not been provisioned yet
+	// so the pod passes readiness while retries are held. Defaults to false.
+	DisableConsumer bool `mapstructure:"disable_consumer" json:"disable_consumer"`
 }
 
 func DefaultWebhookGlobalConf() *WebhookGlobalConf {
-	return &WebhookGlobalConf{Enabled: true, DryRun: false}
+	return &WebhookGlobalConf{Enabled: true, DryRun: false, DisableConsumer: false}
 }
 
 // WebhookRetryConf controls send timeout and retry backoff cadence.
