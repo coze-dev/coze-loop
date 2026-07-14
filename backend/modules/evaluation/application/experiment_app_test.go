@@ -877,7 +877,7 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "sandbox agent init failure does not block submit main path",
+			name: "sandbox agent init failure blocks submit",
 			req: &exptpb.SubmitExperimentRequest{
 				WorkspaceID: validWorkspaceID,
 				Name:        gptr.Of("sandbox_experiment"),
@@ -902,22 +902,11 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 					Concurrency: int32(1),
 					WorkspaceID: validWorkspaceID,
 				}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
-				mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
-				mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, gomock.Any(), validWorkspaceID, gomock.Any(), &entity.Session{UserID: "789", AppID: 0}).Return(nil)
-				mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), &entity.Session{UserID: "789", AppID: 0}, gomock.Any(), gomock.Any()).Return(nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
-			wantResp: &exptpb.SubmitExperimentResponse{
-				Experiment: &expt.Experiment{
-					ID:     gptr.Of(validExptID),
-					Name:   gptr.Of("sandbox_experiment"),
-					Desc:   gptr.Of("test description"),
-					Status: gptr.Of(expt.ExptStatus_Pending),
-				},
-				RunID:    gptr.Of(validRunID),
-				BaseResp: base.NewBaseResp(),
-			},
-			wantErr: false,
+			wantResp: nil,
+			wantErr:  true,
+			wantCode: 0,
 		},
 		{
 			name: "parameter validation failed - CreateEvalTargetParam is empty",
@@ -7008,7 +6997,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 		assert.Equal(t, validRunID, resp.GetRunID())
 	})
 
-	t.Run("SandboxAgent re-init failure does not block retry main path", func(t *testing.T) {
+	t.Run("SandboxAgent re-init failure blocks retry", func(t *testing.T) {
 		sandboxExpt := *baseExpt
 		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
 		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
@@ -7018,16 +7007,12 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 			Concurrency: int32(entity.DefaultSubmitItemConcurNum),
 			WorkspaceID: validWorkspaceID,
 		}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
-		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
-		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
-		mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-		resp, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
 			WorkspaceID: gptr.Of(validWorkspaceID),
 			ExptID:      gptr.Of(validExptID),
 		})
-		assert.NoError(t, err)
-		assert.Equal(t, validRunID, resp.GetRunID())
+		assert.Error(t, err)
 	})
 
 	t.Run("RetryItems mode - already retried", func(t *testing.T) {

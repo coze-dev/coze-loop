@@ -550,15 +550,15 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	// SandboxAgent 评测对象：在 RunExperiment 前尽力初始化沙箱任务，Concurrency 沿用实验并发度（ItemConcurNum）。
-	// 注意：SandboxSchedulerService 是 agent_studio 侧的下游服务面，部分部署分支可能尚未注册该服务，RPC 可能慢失败/卡到超时。
-	// 因此 Init 必须异步 best-effort，不能阻断 SubmitExperiment 主链路；否则 SandboxAgent 新建实验会在入口直接失败。
-	// 后续 agent_studio 补齐 SandboxSchedulerService 后，这里仍会尽力 Init，失败时保留 warn 便于排查。
+	// SandboxAgent 评测对象：在 RunExperiment 前同步初始化沙箱任务，Concurrency 沿用实验并发度（ItemConcurNum）。
+	// Init 失败即视为启动实验失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
 	if e.sandboxSchedulerAdapter != nil &&
 		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
 		exptID := cresp.GetExperiment().GetID()
 		concurrency := req.GetItemConcurNum()
-		e.initSandboxTaskAsync(ctx, "submit experiment", exptID, concurrency, req.GetWorkspaceID())
+		if err := e.initSandboxTask(ctx, "submit experiment", exptID, concurrency, req.GetWorkspaceID()); err != nil {
+			return nil, err
+		}
 	}
 
 	// 将 item_ids 编码到 ext 中，通过 MQ 事件传递给调度器
@@ -1442,14 +1442,14 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
-	// SandboxAgent 评测对象：重试前重新初始化沙箱任务
+	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
-	// 但 Init 依赖 agent_studio 已注册 SandboxSchedulerService；下游服务面未补齐时，RPC 可能慢失败/卡到超时。
-	// 因此这里也异步 best-effort，只记录 warn，不阻断 RetryExperiment 入口。
-	// 这样可以先保障用户可提交/可触发 retry，真正的沙箱执行能力由后续 SandboxSchedulerService 部署补齐。
+	// Init 失败即视为重试失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
 	if e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
 		concurrency := int32(gptr.Indirect(entity.NormalizeSubmitItemConcurNum(got.EvalConf.ItemConcurNum)))
-		e.initSandboxTaskAsync(ctx, "retry experiment", req.GetExptID(), concurrency, req.GetWorkspaceID())
+		if err := e.initSandboxTask(ctx, "retry experiment", req.GetExptID(), concurrency, req.GetWorkspaceID()); err != nil {
+			return nil, err
+		}
 	}
 
 	switch runMode {
@@ -1483,25 +1483,23 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 	}, nil
 }
 
-func (e *experimentApplication) initSandboxTaskAsync(ctx context.Context, scene string, exptID int64, concurrency int32, workspaceID int64) {
+func (e *experimentApplication) initSandboxTask(ctx context.Context, scene string, exptID int64, concurrency int32, workspaceID int64) error {
 	if e == nil || e.sandboxSchedulerAdapter == nil {
-		return
+		return nil
 	}
 
-	// Detach from request cancellation but keep trace/log values; bound the best-effort RPC to avoid leaking goroutines.
-	initCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), sandboxSchedulerInitTimeout)
-	goroutine.Go(initCtx, func() {
-		defer cancel()
-		if _, initErr := e.sandboxSchedulerAdapter.Init(initCtx, &rpc.SandboxInitRequest{
-			TaskID:      strconv.FormatInt(exptID, 10),
-			Concurrency: concurrency,
-			WorkspaceID: workspaceID,
-		}); initErr != nil {
-			logs.CtxWarn(initCtx, "init sandbox task fail, continue %s, expt_id=%d, workspace_id=%d, err=%v", scene, exptID, workspaceID, initErr)
-			return
-		}
-		logs.CtxInfo(initCtx, "init sandbox task success, scene=%s, expt_id=%d, workspace_id=%d", scene, exptID, workspaceID)
-	})
+	initCtx, cancel := context.WithTimeout(ctx, sandboxSchedulerInitTimeout)
+	defer cancel()
+	if _, initErr := e.sandboxSchedulerAdapter.Init(initCtx, &rpc.SandboxInitRequest{
+		TaskID:      strconv.FormatInt(exptID, 10),
+		Concurrency: concurrency,
+		WorkspaceID: workspaceID,
+	}); initErr != nil {
+		logs.CtxWarn(initCtx, "init sandbox task fail, scene=%s, expt_id=%d, workspace_id=%d, err=%v", scene, exptID, workspaceID, initErr)
+		return errorx.Wrapf(initErr, "init sandbox task fail, scene=%s, expt_id=%d", scene, exptID)
+	}
+	logs.CtxInfo(initCtx, "init sandbox task success, scene=%s, expt_id=%d, workspace_id=%d", scene, exptID, workspaceID)
+	return nil
 }
 
 // isSandboxAgentExperiment 判定实验的评测对象是否为 SandboxAgent。
