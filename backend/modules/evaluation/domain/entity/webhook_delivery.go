@@ -8,6 +8,7 @@ import "time"
 // WebhookDelivery status enum (T1.1)
 const (
 	WebhookDeliveryStatusPending     = "pending"
+	WebhookDeliveryStatusDryRun      = "dry_run"
 	WebhookDeliveryStatusRetrying    = "retrying"
 	WebhookDeliveryStatusSucceeded   = "succeeded"
 	WebhookDeliveryStatusFailed      = "failed"
@@ -49,7 +50,7 @@ type WebhookDelivery struct {
 // IsFinal returns true if the delivery has reached a terminal status.
 func (d *WebhookDelivery) IsFinal() bool {
 	switch d.Status {
-	case WebhookDeliveryStatusSucceeded, WebhookDeliveryStatusFinalFailed, WebhookDeliveryStatusRateLimited:
+	case WebhookDeliveryStatusSucceeded, WebhookDeliveryStatusFinalFailed, WebhookDeliveryStatusRateLimited, WebhookDeliveryStatusDryRun:
 		return true
 	default:
 		return false

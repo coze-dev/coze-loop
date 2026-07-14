@@ -91,8 +91,10 @@ func (d *webhookDispatcher) dispatchOne(ctx context.Context, req *DispatchReques
 	now := time.Now()
 	initialStatus := entity.WebhookDeliveryStatusPending
 	if dryRun {
-		// dry_run keeps the audit row but never enqueues.
-		initialStatus = entity.WebhookDeliveryStatusPending
+		// dry_run keeps an audit row but never enqueues; use a dedicated
+		// status so consumers / observers can distinguish a real pending
+		// delivery from a dry-run one (E-I-02 assertion).
+		initialStatus = entity.WebhookDeliveryStatusDryRun
 	}
 
 	delivery := &entity.WebhookDelivery{
