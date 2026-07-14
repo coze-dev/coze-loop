@@ -33,6 +33,9 @@ const (
 const (
 	FieldAdapterBuiltinFieldNameRuntimeParam = "builtin_runtime_param"
 	TargetExecuteExtRuntimeParamKey          = "builtin_runtime_param"
+	// FieldAdapterBuiltinFieldNameAgentBuddySkillTOSKeys 执行期透传 EvalConf.SkillTOSKeys 用的 Ext key。
+	// 值须与商业版 consts.ExtKeyAgentBuddySkillTOSKeys 逐字一致，供商业版 buildSkillsConfig 命中 TOS 现签复用。
+	FieldAdapterBuiltinFieldNameAgentBuddySkillTOSKeys = "agent_buddy_skill_tos_keys"
 )
 
 const (

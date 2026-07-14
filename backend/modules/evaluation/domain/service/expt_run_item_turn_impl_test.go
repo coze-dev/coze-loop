@@ -310,7 +310,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_Agent(t *testing.
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2434,7 +2434,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -3536,7 +3536,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, nil, nil)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, nil, nil, nil)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)
@@ -4182,7 +4182,8 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 						EvalTargetOutputData: &entity.EvalTargetOutputData{
 							OutputFields: map[string]*entity.Content{"output": content1},
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 			turn: &entity.Turn{
 				ID:        1,
@@ -4201,14 +4202,16 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 			prepare: func() {
 				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), gomock.Any())
 				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(
-					&entity.FieldData{Name: "context", Content: content2}, nil).Times(2)
+					&entity.FieldData{Name: "context", Content: content2}, nil,
+				).Times(2)
 				mockEvalTargetService.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvalTargetRecord{
 						ID: 2,
 						EvalTargetOutputData: &entity.EvalTargetOutputData{
 							OutputFields: map[string]*entity.Content{"output": content1},
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 			turn: &entity.Turn{
 				ID:        2,
@@ -4227,7 +4230,8 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 			prepare: func() {
 				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), gomock.Any())
 				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(
-					nil, errors.New("fetch error"))
+					nil, errors.New("fetch error"),
+				)
 			},
 			turn: &entity.Turn{
 				ID:        3,

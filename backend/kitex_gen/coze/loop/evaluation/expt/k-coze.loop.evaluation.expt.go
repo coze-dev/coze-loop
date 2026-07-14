@@ -2534,6 +2534,20 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 48:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField48(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 50:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField50(buf[offset:])
@@ -3050,6 +3064,20 @@ func (p *SubmitExperimentRequest) FastReadField47(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentRequest) FastReadField48(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.XJwtToken = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentRequest) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 
@@ -3214,6 +3242,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField32(buf[offset:], w)
 		offset += p.fastWriteField33(buf[offset:], w)
 		offset += p.fastWriteField40(buf[offset:], w)
+		offset += p.fastWriteField48(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField51(buf[offset:], w)
 		offset += p.fastWriteField60(buf[offset:], w)
@@ -3255,6 +3284,7 @@ func (p *SubmitExperimentRequest) BLength() int {
 		l += p.field45Length()
 		l += p.field46Length()
 		l += p.field47Length()
+		l += p.field48Length()
 		l += p.field50Length()
 		l += p.field51Length()
 		l += p.field60Length()
@@ -3508,6 +3538,15 @@ func (p *SubmitExperimentRequest) fastWriteField47(buf []byte, w thrift.NocopyWr
 	if p.IsSetEnableExtractTrajectory() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 47)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentRequest) fastWriteField48(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetXJwtToken() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 48)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.XJwtToken)
 	}
 	return offset
 }
@@ -3832,6 +3871,15 @@ func (p *SubmitExperimentRequest) field47Length() int {
 	return l
 }
 
+func (p *SubmitExperimentRequest) field48Length() int {
+	l := 0
+	if p.IsSetXJwtToken() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.XJwtToken)
+	}
+	return l
+}
+
 func (p *SubmitExperimentRequest) field50Length() int {
 	l := 0
 	if p.IsSetTriggerType() {
@@ -4083,6 +4131,14 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 	if src.EnableExtractTrajectory != nil {
 		tmp := *src.EnableExtractTrajectory
 		p.EnableExtractTrajectory = &tmp
+	}
+
+	if src.XJwtToken != nil {
+		var tmp string
+		if *src.XJwtToken != "" {
+			tmp = kutils.StringDeepCopy(*src.XJwtToken)
+		}
+		p.XJwtToken = &tmp
 	}
 
 	if src.TriggerType != nil {

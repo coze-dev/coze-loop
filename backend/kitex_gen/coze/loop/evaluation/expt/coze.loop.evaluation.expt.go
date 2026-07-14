@@ -2937,10 +2937,12 @@ type SubmitExperimentRequest struct {
 	ExptTemplateID      *int64 `thrift:"expt_template_id,42,optional" frugal:"42,optional,i64" json:"expt_template_id" form:"expt_template_id" `
 	ItemRetryNum        *int32 `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
 	// 试运行行数
-	TrialRunItemCount       *int64                `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
-	EnableExtractTrajectory *bool                 `thrift:"enable_extract_trajectory,47,optional" frugal:"47,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
-	TriggerType             *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
-	TimeRange               *expt.TaskTimeRange   `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
+	TrialRunItemCount       *int64 `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
+	EnableExtractTrajectory *bool  `thrift:"enable_extract_trajectory,47,optional" frugal:"47,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
+	// 提交实验时前端透传的发起人 user JWT，用于预下载 agent_buddy skill 入 TOS
+	XJwtToken   *string               `thrift:"x_jwt_token,48,optional" frugal:"48,optional,string" header:"X-Jwt-Token" json:"x_jwt_token,omitempty"`
+	TriggerType *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
+	TimeRange   *expt.TaskTimeRange   `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
 	// 智能评测相关
 	ThreadID *string `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
 	// 指定执行的评测集条目ID列表
@@ -3254,6 +3256,18 @@ func (p *SubmitExperimentRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var SubmitExperimentRequest_XJwtToken_DEFAULT string
+
+func (p *SubmitExperimentRequest) GetXJwtToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetXJwtToken() {
+		return SubmitExperimentRequest_XJwtToken_DEFAULT
+	}
+	return *p.XJwtToken
+}
+
 var SubmitExperimentRequest_TriggerType_DEFAULT expt.ExptTriggerType
 
 func (p *SubmitExperimentRequest) GetTriggerType() (v expt.ExptTriggerType) {
@@ -3424,6 +3438,9 @@ func (p *SubmitExperimentRequest) SetTrialRunItemCount(val *int64) {
 func (p *SubmitExperimentRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *SubmitExperimentRequest) SetXJwtToken(val *string) {
+	p.XJwtToken = val
+}
 func (p *SubmitExperimentRequest) SetTriggerType(val *expt.ExptTriggerType) {
 	p.TriggerType = val
 }
@@ -3475,6 +3492,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	45:  "item_retry_num",
 	46:  "trial_run_item_count",
 	47:  "enable_extract_trajectory",
+	48:  "x_jwt_token",
 	50:  "trigger_type",
 	51:  "time_range",
 	60:  "thread_id",
@@ -3579,6 +3597,10 @@ func (p *SubmitExperimentRequest) IsSetTrialRunItemCount() bool {
 
 func (p *SubmitExperimentRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetXJwtToken() bool {
+	return p.XJwtToken != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetTriggerType() bool {
@@ -3828,6 +3850,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 47:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField47(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 48:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField48(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4236,6 +4266,17 @@ func (p *SubmitExperimentRequest) ReadField47(iprot thrift.TProtocol) error {
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField48(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.XJwtToken = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField50(iprot thrift.TProtocol) error {
 
 	var _field *expt.ExptTriggerType
@@ -4447,6 +4488,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField47(oprot); err != nil {
 			fieldId = 47
+			goto WriteFieldError
+		}
+		if err = p.writeField48(oprot); err != nil {
+			fieldId = 48
 			goto WriteFieldError
 		}
 		if err = p.writeField50(oprot); err != nil {
@@ -4971,6 +5016,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 47 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField48(oprot thrift.TProtocol) (err error) {
+	if p.IsSetXJwtToken() {
+		if err = oprot.WriteFieldBegin("x_jwt_token", thrift.STRING, 48); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.XJwtToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 48 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 48 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField50(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTriggerType() {
 		if err = oprot.WriteFieldBegin("trigger_type", thrift.STRING, 50); err != nil {
@@ -5222,6 +5285,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field47DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field48DeepEqual(ano.XJwtToken) {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.TriggerType) {
@@ -5530,6 +5596,18 @@ func (p *SubmitExperimentRequest) Field47DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field48DeepEqual(src *string) bool {
+
+	if p.XJwtToken == src {
+		return true
+	} else if p.XJwtToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.XJwtToken, *src) != 0 {
 		return false
 	}
 	return true
