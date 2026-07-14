@@ -277,6 +277,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		TurnID:          etec.Turn.ID,
 		LogID:           logs.GetLogID(ctx),
 		ItemMeta:        buildEvalSetItemMeta(etec),
+		ExptGroupKey:    etec.Expt.ExperimentGroupKey,
 	}
 	if etec.Expt.EvalConf != nil {
 		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory
@@ -1244,6 +1245,7 @@ func buildEvalSetItemMeta(etec *entity.ExptTurnEvalCtx) *entity.EvalSetItemMeta 
 	}
 	if evalSet := findEvalSetForItemMeta(etec.Expt, evalSetID, evalSetVersionID); evalSet != nil {
 		meta.EvalSetName = evalSet.Name
+		meta.DatasetKey = evalSet.DatasetKey
 		if evalSet.EvaluationSetVersion != nil {
 			meta.EvalSetVersion = evalSet.EvaluationSetVersion.Version
 		}

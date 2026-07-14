@@ -161,6 +161,8 @@ type ExecuteTargetCtx struct {
 	LogID string
 	// ItemMeta 评测集/条目元数据, 供评测对象透传给外部执行侧。
 	ItemMeta *EvalSetItemMeta
+	// ExptGroupKey 实验分组 key (实验级属性), 供评测对象透传给外部执行侧。
+	ExptGroupKey string
 }
 
 type TargetTrajectoryConf struct {

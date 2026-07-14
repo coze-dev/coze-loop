@@ -218,6 +218,9 @@ type ExecuteEvalTargetParam struct {
 	LogID string
 	// ItemMeta 评测集/条目元数据快照 (评测集 id/名称/版本, item id/key/version 等), 供评测对象透传给外部执行侧。
 	ItemMeta *EvalSetItemMeta
+	// ExptGroupKey 实验分组 key (Experiment.ExperimentGroupKey, 默认为实验 id 字符串),
+	// 属实验级属性, 供评测对象 (如 SandboxAgent) 透传给外部执行侧。
+	ExptGroupKey string
 }
 
 // EvalSetItemMeta 承载评测集与 item 层面的元数据快照, 用于评测对象 (如 SandboxAgent) 透传给外部执行侧。
@@ -226,6 +229,8 @@ type ExecuteEvalTargetParam struct {
 type EvalSetItemMeta struct {
 	EvalSetID        string `json:"eval_set_id,omitempty"`
 	EvalSetName      string `json:"eval_set_name,omitempty"`
+	// DatasetKey 评测集业务 key (EvaluationSet.DatasetKey), 供评测对象透传给外部执行侧。
+	DatasetKey       string `json:"dataset_key,omitempty"`
 	EvalSetVersionID string `json:"eval_set_version_id,omitempty"`
 	EvalSetVersion   string `json:"eval_set_version,omitempty"`
 	ItemID           string `json:"item_id,omitempty"`
