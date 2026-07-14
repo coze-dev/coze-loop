@@ -1,0 +1,23 @@
+backend/modules/evaluation/domain/component/item_complete_publisher.go
+  s_5ea0ae637e7ebd::t_8c0ada149e6143 13
+backend/modules/evaluation/domain/service/expt_run_item_impl.go
+  s_5ea0ae637e7ebd::t_643c120203624a 391-392
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1e242756c3fcaa5c858c1c1fe1e2de075f56baf8",
+  "prompts": {},
+  "sessions": {
+    "s_5ea0ae637e7ebd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_5ea0ae637e7ebd",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
