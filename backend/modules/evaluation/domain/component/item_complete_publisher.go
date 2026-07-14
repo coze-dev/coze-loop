@@ -10,6 +10,7 @@ import "context"
 type ItemCompleteEvent struct {
 	EvalTargetWorkspaceID string `json:"eval_target_workspace_id"` // 评测对象所在空间
 	EvalTargetID          string `json:"eval_target_id"`           // 评测对象 ID（应用注册的 ID）
+	SourceTargetID        string `json:"source_target_id"`         // 评测对象对应的业务侧原始对象 ID（EvalTarget.SourceTargetID），为空则空
 	ExptWorkspaceID       string `json:"expt_workspace_id"`        // 实验发起的空间
 	ExptID                string `json:"expt_id"`                  // 实验 ID
 	ExptRunID             string `json:"expt_run_id"`              // 实验单次执行的 ID

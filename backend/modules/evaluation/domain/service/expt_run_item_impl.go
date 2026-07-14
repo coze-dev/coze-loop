@@ -388,6 +388,8 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 		ev.EvalTargetID = strconv.FormatInt(expt.TargetID, 10)
 		if expt.Target != nil {
 			ev.EvalTargetWorkspaceID = strconv.FormatInt(expt.Target.SpaceID, 10)
+			// source_target_id: 业务侧原始对象 ID，加载详情时经 EvalTargetPO2DO 已回填，直接透传。
+			ev.SourceTargetID = expt.Target.SourceTargetID
 		}
 		// experiment_group_key: 关联同组实验，默认为实验 ID。
 		// PO→DO 转换已保证非空（空则填实验 ID），此处直接透传。
