@@ -44,6 +44,8 @@ type IExptDAO interface {
 	MGetByID(ctx context.Context, ids []int64) ([]*model.Experiment, error)
 
 	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error)
+
+	ExistGroupKey(ctx context.Context, groupKey string) (bool, error)
 }
 
 func NewExptDAO(db db.Provider) IExptDAO {
@@ -413,4 +415,22 @@ func (d *exptDAOImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, group
 		return nil, errorx.Wrapf(err, "mysql get experiment ids by group key fail, space_id: %v, group_key: %v", spaceID, groupKey)
 	}
 	return ids, nil
+}
+
+// ExistGroupKey 全局(不限 space)判断 group key 是否已被占用。
+func (d *exptDAOImpl) ExistGroupKey(ctx context.Context, groupKey string) (bool, error) {
+	expt := d.query.Experiment
+	q := expt.WithContext(ctx)
+	if contexts.CtxWriteDB(ctx) {
+		q = q.WriteDB()
+	}
+
+	cnt, err := q.Where(
+		expt.ExperimentGroupKey.Eq(groupKey),
+		expt.DeletedAt.IsNull(),
+	).Limit(1).Count()
+	if err != nil {
+		return false, errorx.Wrapf(err, "mysql exist experiment group key fail, group_key: %v", groupKey)
+	}
+	return cnt > 0, nil
 }

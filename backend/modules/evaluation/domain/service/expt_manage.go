@@ -18,6 +18,8 @@ type IExptManager interface {
 // IExptConfigManager 实验配置管理接口（负责实验元数据的增删改查）
 type IExptConfigManager interface {
 	CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error)
+	// CheckGroupKey 校验 group key 是否全局(跨 space)唯一, pass=true 表示未被占用可用。
+	CheckGroupKey(ctx context.Context, groupKey string, session *entity.Session) (bool, error)
 
 	CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error)
 

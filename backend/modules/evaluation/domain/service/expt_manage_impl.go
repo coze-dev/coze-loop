@@ -391,6 +391,15 @@ func (e *ExptMangerImpl) CheckName(ctx context.Context, name string, spaceID int
 	return !exist, nil
 }
 
+// CheckGroupKey 校验 group key 是否全局(跨 space)唯一。pass=true 表示未被占用、可以使用。
+func (e *ExptMangerImpl) CheckGroupKey(ctx context.Context, groupKey string, session *entity.Session) (pass bool, err error) {
+	exist, err := e.exptRepo.ExistGroupKey(ctx, groupKey)
+	if err != nil {
+		return false, err
+	}
+	return !exist, nil
+}
+
 func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) error {
 	logs.CtxInfo(ctx, "batch delete expts, expt_ids: %v", exptIDs)
 
@@ -1025,7 +1034,17 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	}
 	experimentGroupKey := strings.TrimSpace(req.ExperimentGroupKey)
 	if experimentGroupKey == "" {
+		// 未显式传入: 默认用新实验 ID 作为 group key, 天然全局唯一, 无需校验。
 		experimentGroupKey = strconv.FormatInt(ids[0], 10)
+	} else {
+		// 显式传入: 校验 group key 全局(跨 space)唯一, 已被占用则拒绝创建。
+		pass, err := e.CheckGroupKey(ctx, experimentGroupKey, session)
+		if err != nil {
+			return nil, err
+		}
+		if !pass {
+			return nil, errorx.NewByCode(errno.ExperimentGroupKeyExistedCode, errorx.WithExtraMsg(fmt.Sprintf("group_key %s", experimentGroupKey)))
+		}
 	}
 	do := &entity.Experiment{
 		ID:                  ids[0],

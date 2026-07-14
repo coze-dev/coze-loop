@@ -130,6 +130,12 @@ error_code:
     description: experiment name format is invalid
     no_affect_stability: true
 
+  - name: ExperimentGroupKeyExisted
+    code: 4018
+    message: experiment group key already exists
+    description: experiment group key already exists
+    no_affect_stability: true
+
   - name: ContentTypeNotSupported
     code: 5000
     message: content type is not supported
@@ -500,4 +506,16 @@ error_code:
     code: 5069
     message: 'async evaluator terminated: experiment item exceeded zombie timeout'
     description: the async evaluator was terminated because the experiment item exceeded the zombie timeout before the result was reported
+    no_affect_stability: true
+
+  - name: AsyncEvalTargetZombieTimeout
+    code: 5070
+    message: "async eval target terminated: experiment item exceeded zombie timeout"
+    description: the async eval target was terminated because the experiment item exceeded the zombie timeout before the result was reported
+    no_affect_stability: true
+
+  - name: AsyncEvalTargetTerminated
+    code: 5071
+    message: "async eval target terminated: experiment cancelled"
+    description: the async eval target was terminated because the experiment was manually cancelled
     no_affect_stability: true

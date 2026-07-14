@@ -69,6 +69,21 @@ func (mr *MockIExperimentRepoMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockIExperimentRepo)(nil).Delete), arg0, arg1, arg2)
 }
 
+// ExistGroupKey mocks base method.
+func (m *MockIExperimentRepo) ExistGroupKey(arg0 context.Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExistGroupKey", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExistGroupKey indicates an expected call of ExistGroupKey.
+func (mr *MockIExperimentRepoMockRecorder) ExistGroupKey(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistGroupKey", reflect.TypeOf((*MockIExperimentRepo)(nil).ExistGroupKey), arg0, arg1)
+}
+
 // GetByID mocks base method.
 func (m *MockIExperimentRepo) GetByID(arg0 context.Context, arg1, arg2 int64) (*entity.Experiment, error) {
 	m.ctrl.T.Helper()
@@ -100,21 +115,6 @@ func (mr *MockIExperimentRepoMockRecorder) GetByName(arg0, arg1, arg2 any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockIExperimentRepo)(nil).GetByName), arg0, arg1, arg2)
 }
 
-// GetIDsByGroupKey mocks base method.
-func (m *MockIExperimentRepo) GetIDsByGroupKey(arg0 context.Context, arg1 int64, arg2 string) ([]int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIDsByGroupKey", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetIDsByGroupKey indicates an expected call of GetIDsByGroupKey.
-func (mr *MockIExperimentRepoMockRecorder) GetIDsByGroupKey(arg0, arg1, arg2 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIDsByGroupKey", reflect.TypeOf((*MockIExperimentRepo)(nil).GetIDsByGroupKey), arg0, arg1, arg2)
-}
-
 // GetEvaluatorRefByExptIDs mocks base method.
 func (m *MockIExperimentRepo) GetEvaluatorRefByExptIDs(arg0 context.Context, arg1 []int64, arg2 int64) ([]*entity.ExptEvaluatorRef, error) {
 	m.ctrl.T.Helper()
@@ -128,6 +128,21 @@ func (m *MockIExperimentRepo) GetEvaluatorRefByExptIDs(arg0 context.Context, arg
 func (mr *MockIExperimentRepoMockRecorder) GetEvaluatorRefByExptIDs(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorRefByExptIDs", reflect.TypeOf((*MockIExperimentRepo)(nil).GetEvaluatorRefByExptIDs), arg0, arg1, arg2)
+}
+
+// GetIDsByGroupKey mocks base method.
+func (m *MockIExperimentRepo) GetIDsByGroupKey(arg0 context.Context, arg1 int64, arg2 string) ([]int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIDsByGroupKey", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIDsByGroupKey indicates an expected call of GetIDsByGroupKey.
+func (mr *MockIExperimentRepoMockRecorder) GetIDsByGroupKey(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIDsByGroupKey", reflect.TypeOf((*MockIExperimentRepo)(nil).GetIDsByGroupKey), arg0, arg1, arg2)
 }
 
 // List mocks base method.
