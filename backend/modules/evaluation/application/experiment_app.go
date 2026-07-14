@@ -175,6 +175,9 @@ func (e *experimentApplication) WebhookDeliveryComponents() (
 }
 
 func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (r *expt.CreateExperimentResponse, err error) {
+	if err := validateNotificationConf(req.GetNotificationConf()); err != nil {
+		return nil, err
+	}
 	session := entity.NewSession(ctx)
 	if req.Session != nil && req.Session.UserID != nil {
 		session = &entity.Session{
@@ -225,6 +228,9 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 }
 
 func (e *experimentApplication) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest) (r *expt.CreateExperimentTemplateResponse, err error) {
+	if err := validateNotificationConf(req.GetNotificationConf()); err != nil {
+		return nil, err
+	}
 	session := entity.NewSession(ctx)
 	if req.Session != nil && req.Session.UserID != nil {
 		session = &entity.Session{
@@ -301,6 +307,9 @@ func (e *experimentApplication) BatchGetExperimentTemplate(ctx context.Context, 
 }
 
 func (e *experimentApplication) UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest) (r *expt.UpdateExperimentTemplateResponse, err error) {
+	if err := validateNotificationConf(req.GetNotificationConf()); err != nil {
+		return nil, err
+	}
 	session := entity.NewSession(ctx)
 
 	// 从顶层字段提取 template_id 和 workspace_id
@@ -518,6 +527,9 @@ func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req
 
 func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.SubmitExperimentRequest) (r *expt.SubmitExperimentResponse, err error) {
 	logs.CtxInfo(ctx, "SubmitExperiment req: %v", json.Jsonify(req))
+	if err := validateNotificationConf(req.GetNotificationConf()); err != nil {
+		return nil, err
+	}
 	if hasDuplicates(req.EvaluatorVersionIds) {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
 	}
@@ -1097,6 +1109,9 @@ func (e *experimentApplication) ListExperimentStats(ctx context.Context, req *ex
 }
 
 func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.UpdateExperimentRequest) (r *expt.UpdateExperimentResponse, err error) {
+	if err := validateNotificationConf(req.GetNotificationConf()); err != nil {
+		return nil, err
+	}
 	session := entity.NewSession(ctx)
 
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
