@@ -37,12 +37,51 @@ type WebhookDeliveryEventConsumer struct {
 	conf.IConfigLoader
 }
 
+// webhookDeliveryTopicMissingMarker is the log/metric marker emitted when the
+// RMQ config for the webhook_delivery consumer is missing or invalid. The
+// registry short-circuits via cfg.IsEnabled=false so the pod boots to
+// readiness even before ops provisions the topic. Grep for this string in
+// TCE logs to confirm the graceful-degrade path fired.
+const webhookDeliveryTopicMissingMarker = "webhook_delivery_consumer_topic_missing_skip_start"
+
+// ConsumerCfg loads the webhook delivery RMQ config. When the config key is
+// entirely absent or the resulting cfg is not Valid() (topic / addr /
+// consumer_group empty — the exact scenario we saw on boe before topic
+// provisioning), it degrades gracefully by returning an explicitly disabled
+// ConsumerConfig plus a warning log. Genuine loader errors still propagate so
+// yaml parse failures / auth failures do not silently vanish.
 func (c *WebhookDeliveryEventConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
 	rmqCfg := &rocket.RMQConf{}
 	if err := c.UnmarshalKey(ctx, rocket.WebhookDeliveryEventRMQKey, rmqCfg); err != nil {
 		return nil, err
 	}
+	if !rmqCfg.Valid() {
+		logs.CtxWarn(ctx, "%s key=%s addr=%q topic=%q consumer_group=%q",
+			webhookDeliveryTopicMissingMarker,
+			rocket.WebhookDeliveryEventRMQKey,
+			rmqCfg.Addr, rmqCfg.Topic, rmqCfg.ConsumerGroup)
+		return &mq.ConsumerConfig{IsEnabled: gptr.Of(false)}, nil
+	}
 	return gptr.Of(rmqCfg.ToConsumerCfg()), nil
+}
+
+// NewNilWebhookDeliveryEventConsumer returns a rollback stub that satisfies
+// mq.IConsumerWorker but declares itself disabled so registry.StartAll skips
+// subscribe entirely. Mirrors the provideNilWebhookDispatcher pattern from
+// commercial wire (E-I-03 rollback). Callers reach for this when a webhook
+// dep is unavailable at boot or WebhookGlobalConf.DisableConsumer is set.
+func NewNilWebhookDeliveryEventConsumer() mq.IConsumerWorker {
+	return &nilWebhookDeliveryEventConsumer{}
+}
+
+type nilWebhookDeliveryEventConsumer struct{}
+
+func (n *nilWebhookDeliveryEventConsumer) ConsumerCfg(_ context.Context) (*mq.ConsumerConfig, error) {
+	return &mq.ConsumerConfig{IsEnabled: gptr.Of(false)}, nil
+}
+
+func (n *nilWebhookDeliveryEventConsumer) HandleMessage(_ context.Context, _ *mq.MessageExt) error {
+	return nil
 }
 
 // NewWebhookDeliveryConsumer wires the retry state-machine handler. Signature
