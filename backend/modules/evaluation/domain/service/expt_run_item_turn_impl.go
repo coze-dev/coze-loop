@@ -890,7 +890,7 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 
 	ts := time.Now()
 
-	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, &entity.AsyncRunEvaluatorRequest{
+	asyncReq := &entity.AsyncRunEvaluatorRequest{
 		SpaceID:            etec.Event.SpaceID,
 		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
 		InputData:          inputData,
@@ -900,8 +900,25 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 		TurnID:             etec.Turn.ID,
 		Ext:                etec.Ext,
 		EvaluatorRunConf:   ec.RunConf,
-	})
+	}
+	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, asyncReq)
 	if err != nil {
+		if e.evaluatorService != nil {
+			failReq := &entity.RunEvaluatorRequest{
+				SpaceID:            asyncReq.SpaceID,
+				EvaluatorVersionID: asyncReq.EvaluatorVersionID,
+				InputData:          asyncReq.InputData,
+				ExperimentID:       asyncReq.ExperimentID,
+				ExperimentRunID:    asyncReq.ExperimentRunID,
+				ItemID:             asyncReq.ItemID,
+				TurnID:             asyncReq.TurnID,
+				Ext:                asyncReq.Ext,
+				EvaluatorRunConf:   asyncReq.EvaluatorRunConf,
+			}
+			if failedRecord, createErr := e.evaluatorService.CreateEvaluatorRunFailRecord(ctx, failReq, err); createErr == nil && failedRecord != nil {
+				collector.store(failedRecord)
+			}
+		}
 		return err
 	}
 

@@ -979,6 +979,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+				mockEvaluationSetService.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSet{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
@@ -1002,6 +1003,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					},
 				}, "2025-01-01", nil).AnyTimes()
 				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{}, nil, nil).AnyTimes()
+				mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, nil).AnyTimes()
 				mockExptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil).AnyTimes()
@@ -1126,11 +1128,13 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 						},
 					},
 				}, nil).AnyTimes()
+				mockEvaluationSetService.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSet{}, nil).AnyTimes()
 				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{
 					EvaluationSetSchema: &entity.EvaluationSetSchema{
 						FieldSchemas: []*entity.FieldSchema{},
 					},
 				}, nil, nil).AnyTimes()
+				mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
 						ItemID: 1,
@@ -1483,6 +1487,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+				mockEvaluationSetService.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSet{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
@@ -1506,6 +1511,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					},
 				}, "2025-01-01", nil).AnyTimes()
 				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{}, nil, nil).AnyTimes()
+				mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, nil).AnyTimes()
 				mockExptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil).AnyTimes()
@@ -1634,6 +1640,7 @@ func TestExptResultServiceImpl_MGetExperimentResult_FillsProcessingTargetRecordF
 	mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), spaceID, expt.EvalSetVersionID, gptr.Of(true)).Return(&entity.EvaluationSetVersion{
 		EvaluationSetSchema: &entity.EvaluationSetSchema{},
 	}, nil, nil).Times(1)
+	mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
 	mockExptTurnResultRepo.EXPECT().
 		ListTurnResult(gomock.Any(), spaceID, exptID, gomock.Nil(), entity.Page{}, false).
 		Return([]*entity.ExptTurnResult{{

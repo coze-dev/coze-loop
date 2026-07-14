@@ -507,7 +507,7 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var recordMap sync.Map
+			collector = evalRecordCollector{}
 			tt.mockSetup()
 			err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &collector)
 			if tt.wantErr {
@@ -517,14 +517,12 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 			}
 			switch tt.name {
 			case "AsyncRunEvaluator error":
-				val, ok := recordMap.Load(int64(101))
-				require.True(t, ok)
-				record, ok := val.(*entity.EvaluatorRecord)
-				require.True(t, ok)
+				require.Len(t, collector.records, 1)
+				record := collector.records[0]
 				assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+				assert.Equal(t, int64(101), record.EvaluatorVersionID)
 			case "AsyncRunEvaluator error and failed record creation error":
-				_, ok := recordMap.Load(int64(101))
-				assert.False(t, ok)
+				assert.Empty(t, collector.records)
 			}
 		})
 	}
@@ -3347,9 +3345,18 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 
 		// The failure of the first evaluator should be returned.
 		assert.Error(t, err)
-		// The second evaluator still runs successfully; its result should be collected into the slice.
-		assert.Len(t, records, 1)
-		assert.Equal(t, int64(2), records[0].ID)
+		// Both evaluators contribute a record: the failed evaluator has a fail record created,
+		// and the successful evaluator's record is stored directly. Order is non-deterministic
+		// because pool.ExecAll runs them concurrently — index records by ID.
+		require.Len(t, records, 2)
+		byID := make(map[int64]*entity.EvaluatorRecord, len(records))
+		for _, r := range records {
+			byID[r.ID] = r
+		}
+		require.Contains(t, byID, int64(2))
+		require.Contains(t, byID, int64(101))
+		assert.Equal(t, entity.EvaluatorRunStatusSuccess, byID[2].Status)
+		assert.Equal(t, entity.EvaluatorRunStatusFail, byID[101].Status)
 	})
 
 	t.Run("multiple evaluators fail and all errors are aggregated", func(t *testing.T) {

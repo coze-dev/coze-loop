@@ -438,6 +438,7 @@ func TestEvaluationSetConversions(t *testing.T) {
 		ItemCount:           ptr[int64](3),
 		LatestVersion:       ptr("latest"),
 		IsChangeUncommitted: ptr(true),
+		DatasetKey:          ptr(""),
 		CurrentVersion: &openapi_eval_set.EvaluationSetVersion{
 			ID:          ptr[int64](10),
 			Version:     ptr("v1"),

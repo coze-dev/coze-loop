@@ -118,6 +118,7 @@ func TestEvaluationSetDO2DTO_Simple(t *testing.T) {
 				Status:            gptr.Of(dataset.DatasetStatus(0)),
 				ItemCount:         gptr.Of(int64(0)),
 				ChangeUncommitted: gptr.Of(false),
+				DatasetKey:        gptr.Of(""),
 				LatestVersion:     gptr.Of(""),
 				NextVersionNum:    gptr.Of(int64(0)),
 			},

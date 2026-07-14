@@ -1945,7 +1945,7 @@ func TestConvertCreateReq(t *testing.T) {
 
 			if got.ExptConf != nil {
 				// Verify ExptConf conversion happened (delegated to ConvertToEntity)
-				assert.Equal(t, ptr.ConvIntPtr[int32, int](tt.cer.ItemConcurNum), got.ExptConf.ItemConcurNum)
+				assert.Equal(t, entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](tt.cer.ItemConcurNum)), got.ExptConf.ItemConcurNum)
 			}
 		})
 	}

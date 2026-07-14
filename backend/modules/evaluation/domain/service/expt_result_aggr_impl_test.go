@@ -659,7 +659,7 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockEvaluatorService *svcMocks.MockEvaluatorService,
 				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
 			) {
-				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{3}).Return([]*entity.Experiment{{ID: 3, TargetID: 10, TargetVersionID: 20}}, nil)
+				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{3}).Return([]*entity.Experiment{{ID: 3, SpaceID: 100, TargetID: 10, TargetVersionID: 20}}, nil)
 
 				aggrResult := &entity.AggregateResult{
 					AggregatorResults: []*entity.AggregatorResult{

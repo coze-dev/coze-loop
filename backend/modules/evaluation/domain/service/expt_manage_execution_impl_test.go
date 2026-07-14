@@ -1654,6 +1654,13 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					}, int64(789), gomock.Any()).
 					Return(nil)
 
+				// Mock MGetItemTurnRunLogs for sandbox destroy on cancelled items (best-effort)
+				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+					EXPECT().
+					MGetItemTurnRunLogs(ctx, int64(123), int64(456), gomock.Any(), int64(789)).
+					Return([]*entity.ExptTurnResultRunLog{}, nil).
+					AnyTimes()
+
 				// Mock UpsertExptTurnResultFilter after terminateItemTurns
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().
