@@ -352,7 +352,7 @@ struct StandardEvalOutputContent {
 
 struct MGetExperimentStandardEvalOutputsRequest {
     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    2: required i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
 
     10: required list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"', vt.min_size = "1", vt.max_size = "100")
 
@@ -363,7 +363,7 @@ struct MGetExperimentStandardEvalOutputsRequest {
 
 struct ListExperimentStandardEvalOutputsRequest {
     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    2: required i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
 
     20: optional i32 page_number (api.query = 'page_number', go.tag = 'json:"page_number"')
     21: optional i32 page_size (api.query = 'page_size', go.tag = 'json:"page_size"')
@@ -988,13 +988,9 @@ service ExperimentService {
         api.post = "/api/evaluation/v1/experiments/results/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
-    MGetExperimentStandardEvalOutputsResponse MGetExperimentStandardEvalOutputs(1: MGetExperimentStandardEvalOutputsRequest req) (
-        api.post = "/api/evaluation/v1/experiments/:expt_id/standard_eval_outputs/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
-    )
+    MGetExperimentStandardEvalOutputsResponse MGetExperimentStandardEvalOutputs(1: MGetExperimentStandardEvalOutputsRequest req)
 
-    ListExperimentStandardEvalOutputsResponse ListExperimentStandardEvalOutputs(1: ListExperimentStandardEvalOutputsRequest req) (
-        api.post = "/api/evaluation/v1/experiments/:expt_id/standard_eval_outputs/list", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
-    )
+    ListExperimentStandardEvalOutputsResponse ListExperimentStandardEvalOutputs(1: ListExperimentStandardEvalOutputsRequest req)
 
     CalculateExperimentAggrResultResponse CalculateExperimentAggrResult(1: CalculateExperimentAggrResultRequest req) (
         api.post = "/api/evaluation/v1/experiments/:expt_id/aggr_results", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
