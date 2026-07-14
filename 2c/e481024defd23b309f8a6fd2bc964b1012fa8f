@@ -1,0 +1,31 @@
+backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment/experiment.go
+  s_5b7af7bad85e96::t_431668575a1677 1199-1202,1295-1318,1340-1345,1355-1356,1387-1394,1469-1484,1612-1630,1666-1673,1834-1869,1906-1911,1996-2014
+backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment/experiment_validator.go
+  s_5b7af7bad85e96::t_e538e0021cef13 39-43
+backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment/k-experiment.go
+  s_5b7af7bad85e96::t_10f9b869cd960b 821-848,985-1010,1020,1026,1042-1043,1126-1143,1215-1232,1304-1317
+backend/modules/evaluation/application/convertor/experiment/openapi.go
+  s_5b7af7bad85e96::t_8a57576875a48a 1768,1773-1777
+backend/modules/evaluation/application/convertor/experiment/openapi_new_fields_test.go
+  s_5b7af7bad85e96::t_678482f22e201d 651-725
+idl/thrift/coze/loop/evaluation/domain_openapi/experiment.thrift
+  s_5b7af7bad85e96::t_f800353afce0d8 99-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2ce481024defd23b309f8a6fd2bc964b1012fa8f",
+  "prompts": {},
+  "sessions": {
+    "s_5b7af7bad85e96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_5b7af7bad85e96",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
