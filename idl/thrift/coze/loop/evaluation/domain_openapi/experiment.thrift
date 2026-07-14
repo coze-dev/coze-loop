@@ -170,6 +170,9 @@ struct Experiment {
     // 离线实验分析状态
     61: optional OfflineExptAnalysisStatus offline_expt_analysis_status
 
+    // 通知配置
+    70: optional ExptNotificationConf notification_conf
+
     100: optional common.BaseInfo base_info
 }
 
@@ -300,6 +303,9 @@ struct ExptTemplate {
     4: optional ExptScoreWeight score_weight_config (go.tag = 'json:"score_weight_config"')
     5: optional bool enable_extract_trajectory
 
+    // 通知配置
+    10: optional ExptNotificationConf notification_conf
+
     100: optional common.BaseInfo base_info
 }
 
@@ -400,6 +406,30 @@ struct KeywordSearch {
 struct Filters {
     1: optional list<FilterCondition> filter_conditions
     2: optional FilterLogicOp logic_op
+}
+
+// ===============================
+// 通知配置相关结构定义
+// ===============================
+
+// 通知配置（公共触发条件 + 各渠道独立开关/参数）
+struct ExptNotificationConf {
+    // 公共触发条件（统一，前端只需配一份 filter）
+    1: optional Filters filter
+    // Webhook 渠道配置
+    10: optional WebhookNotificationConf webhook
+    // 飞书渠道配置
+    11: optional FeishuNotificationConf feishu_notification
+}
+
+struct WebhookNotificationConf {
+    1: optional bool enable
+    2: optional string urls             // Webhook URL 列表，多个用逗号分隔
+}
+
+struct FeishuNotificationConf {
+    1: optional bool enable
+    2: optional string user_id          // 通知目标用户 ID（为空时默认用实验创建者）
 }
 
 // 实验模板筛选器（对应 domain/expt ExperimentTemplateFilter）
