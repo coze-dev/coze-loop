@@ -567,16 +567,6 @@ func standardPayloads(item *entity.ItemResult, exptID int64) []*entity.Experimen
 	return payloads
 }
 
-func runtimeParamFromTargetRecord(record *entity.EvalTargetRecord) map[string]string {
-	if record == nil || record.EvalTargetInputData == nil || record.EvalTargetInputData.Ext == nil {
-		return nil
-	}
-	if v, ok := record.EvalTargetInputData.Ext[consts.TargetExecuteExtRuntimeParamKey]; ok {
-		return map[string]string{consts.TargetExecuteExtRuntimeParamKey: v}
-	}
-	return nil
-}
-
 func standardRoundID(payload *entity.ExperimentTurnPayload) string {
 	if payload == nil {
 		return "round_0"

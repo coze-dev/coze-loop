@@ -21,10 +21,10 @@ func (ExptEvaluatorRefConverter) DO2PO(refs []*entity.ExptEvaluatorRef) []*model
 			ID:                 ref.ID,
 			SpaceID:            ref.SpaceID,
 			ExptID:             ref.ExptID,
-			EvalSetID:          ref.EvalSetID,          // ★
+			EvalSetID:          ref.EvalSetID, // ★
 			EvaluatorID:        ref.EvaluatorID,
 			EvaluatorVersionID: ref.EvaluatorVersionID,
-			Alias_:             ref.Alias,               // ★ gorm_gen 将 alias 生成为 Alias_
+			Alias_:             ref.Alias, // ★ gorm_gen 将 alias 生成为 Alias_
 		}
 		if ref.Filter != nil {
 			filter := ref.Filter
@@ -46,10 +46,10 @@ func (ExptEvaluatorRefConverter) PO2DO(refs []*model.ExptEvaluatorRef) []*entity
 			ID:                 ref.ID,
 			SpaceID:            ref.SpaceID,
 			ExptID:             ref.ExptID,
-			EvalSetID:          ref.EvalSetID,          // ★
+			EvalSetID:          ref.EvalSetID, // ★
 			EvaluatorID:        ref.EvaluatorID,
 			EvaluatorVersionID: ref.EvaluatorVersionID,
-			Alias:              ref.Alias_,              // ★
+			Alias:              ref.Alias_, // ★
 		}
 		if ref.Filter != nil {
 			e.Filter = *ref.Filter

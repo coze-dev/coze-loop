@@ -645,7 +645,7 @@ func TestExptMangerImpl_CreateExpt_OnlineSourceTargetVersionInjection(t *testing
 			mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
 				EXPECT().
 				CreateEvalTarget(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ int64, _ string, ver string, _ entity.EvalTargetType, _ ...entity.Option) (int64, int64, error) {
+				DoAndReturn(func(_ context.Context, _ int64, _, ver string, _ entity.EvalTargetType, _ ...entity.Option) (int64, int64, error) {
 					createCalled = true
 					gotVersion = ver
 					return int64(100), int64(101), nil

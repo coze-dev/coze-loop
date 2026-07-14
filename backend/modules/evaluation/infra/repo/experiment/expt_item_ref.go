@@ -33,7 +33,7 @@ func (r *ExptItemRefRepoImpl) BatchCreate(ctx context.Context, items []*entity.E
 	return r.dao.BatchCreateNX(ctx, pos)
 }
 
-func (r *ExptItemRefRepoImpl) ListByExptID(ctx context.Context, spaceID, exptID int64, cursor, limit int64) ([]*entity.ExptItemRef, int64, error) {
+func (r *ExptItemRefRepoImpl) ListByExptID(ctx context.Context, spaceID, exptID, cursor, limit int64) ([]*entity.ExptItemRef, int64, error) {
 	pos, nextCursor, err := r.dao.ListByExptID(ctx, spaceID, exptID, cursor, limit)
 	if err != nil {
 		return nil, 0, err

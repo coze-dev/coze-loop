@@ -507,8 +507,6 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDatasetItem(ctx, spaceID, ev
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDatasetItem", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).UpdateDatasetItem), ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions, tags)
 }
 
-
-
 // UpdateDatasetItemVersion mocks base method.
 func (m *MockIDatasetRPCAdapter) UpdateDatasetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, status, description, itemVersion *string) error {
 	m.ctrl.T.Helper()

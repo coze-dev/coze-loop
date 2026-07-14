@@ -17,7 +17,7 @@ import (
 const (
 	// filter 白名单
 	maxFilterFields = 10 // 单个 filter 的 filter_fields 数量上限
-	maxAliasLen     = 64  // alias 长度上限 (对齐 expt_evaluator_ref.alias VARCHAR(64))
+	maxAliasLen     = 64 // alias 长度上限 (对齐 expt_evaluator_ref.alias VARCHAR(64))
 )
 
 var (

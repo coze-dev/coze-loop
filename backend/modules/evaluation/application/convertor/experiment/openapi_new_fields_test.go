@@ -495,10 +495,14 @@ func TestOpenAPIExptDO2DTO_EvalSetConfigsEcho(t *testing.T) {
 			},
 			// eval_set version_id → version 字符串反查源
 			EvalSetDetails: []*entity.ExptEvalSetDetail{
-				{EvalSetID: 100, EvalSetVersionID: 1000, IsPrimary: true, ItemCount: 4,
-					EvalSet: &entity.EvaluationSet{ID: 100, EvaluationSetVersion: &entity.EvaluationSetVersion{Version: "0.0.1"}}},
-				{EvalSetID: 200, EvalSetVersionID: 2000, IsPrimary: false, ItemCount: 3,
-					EvalSet: &entity.EvaluationSet{ID: 200, EvaluationSetVersion: &entity.EvaluationSetVersion{Version: "0.0.2"}}},
+				{
+					EvalSetID: 100, EvalSetVersionID: 1000, IsPrimary: true, ItemCount: 4,
+					EvalSet: &entity.EvaluationSet{ID: 100, EvaluationSetVersion: &entity.EvaluationSetVersion{Version: "0.0.1"}},
+				},
+				{
+					EvalSetID: 200, EvalSetVersionID: 2000, IsPrimary: false, ItemCount: 3,
+					EvalSet: &entity.EvaluationSet{ID: 200, EvaluationSetVersion: &entity.EvaluationSetVersion{Version: "0.0.2"}},
+				},
 			},
 			EvalConf: &entity.EvaluationConfiguration{
 				EvalSetConfigs: []*entity.EvalSetConfig{
@@ -538,8 +542,8 @@ func TestOpenAPIExptDO2DTO_EvalSetConfigsEcho(t *testing.T) {
 			assert.Equal(t, "0.0.1", c0.GetEvalSetVersion()) // set version_id 1000 反查
 			if assert.NotNil(t, c0.ItemFilter) && assert.Len(t, c0.ItemFilter.FilterFields, 1) {
 				assert.Equal(t, "item_id", c0.ItemFilter.FilterFields[0].FieldName)
-				assert.Equal(t, "long", string(c0.ItemFilter.FilterFields[0].FieldType))
-				assert.Equal(t, "in", string(c0.ItemFilter.FilterFields[0].GetQueryType()))
+				assert.Equal(t, "long", c0.ItemFilter.FilterFields[0].FieldType)
+				assert.Equal(t, "in", c0.ItemFilter.FilterFields[0].GetQueryType())
 				assert.Equal(t, []string{"1", "2", "3"}, c0.ItemFilter.FilterFields[0].Values)
 			}
 			if assert.Len(t, c0.EvaluatorConfs, 1) {
@@ -562,8 +566,8 @@ func TestOpenAPIExptDO2DTO_EvalSetConfigsEcho(t *testing.T) {
 			assert.Equal(t, "0.0.2", c1.GetEvalSetVersion())
 			if assert.NotNil(t, c1.ItemFilter) && assert.Len(t, c1.ItemFilter.FilterFields, 1) {
 				assert.Equal(t, "category", c1.ItemFilter.FilterFields[0].FieldName)
-				assert.Equal(t, "tag", string(c1.ItemFilter.FilterFields[0].FieldType))
-				assert.Equal(t, "eq", string(c1.ItemFilter.FilterFields[0].GetQueryType()))
+				assert.Equal(t, "tag", c1.ItemFilter.FilterFields[0].FieldType)
+				assert.Equal(t, "eq", c1.ItemFilter.FilterFields[0].GetQueryType())
 			}
 		}
 	})
@@ -637,8 +641,8 @@ func TestOpenAPIEvalSetConfigsDTO2Domain_ItemFilter(t *testing.T) {
 	assert.Equal(t, int64(1001), dos[0].GetEvalSetVersionID())
 	assert.Len(t, dos[0].ItemFilter.FilterFields, 1)
 	assert.Equal(t, "item_id", dos[0].ItemFilter.FilterFields[0].FieldName)
-	assert.Equal(t, "long", string(dos[0].ItemFilter.FilterFields[0].FieldType))
-	assert.Equal(t, "in", string(dos[0].ItemFilter.FilterFields[0].GetQueryType()))
+	assert.Equal(t, "long", dos[0].ItemFilter.FilterFields[0].FieldType)
+	assert.Equal(t, "in", dos[0].ItemFilter.FilterFields[0].GetQueryType())
 	assert.Equal(t, []string{"1", "2"}, dos[0].ItemFilter.FilterFields[0].Values)
 
 	// 第二集: 不传 item_filter → nil (全集语义)。

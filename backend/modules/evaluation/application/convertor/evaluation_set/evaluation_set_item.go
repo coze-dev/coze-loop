@@ -131,10 +131,10 @@ func resourceTagDTO2DOs(dtos []*eval_set.ResourceTag) []*entity.ResourceTag {
 			TagKeyID: dto.GetTagKeyID(),
 		}
 		if dto.ContentType != nil {
-			tag.ContentType = string(*dto.ContentType)
+			tag.ContentType = *dto.ContentType
 		}
 		if dto.Status != nil {
-			tag.Status = string(*dto.Status)
+			tag.Status = *dto.Status
 		}
 		result = append(result, tag)
 	}

@@ -734,7 +734,7 @@ func convertExptFilterDOToDTO(do *entity.ExptItemFilter) *domain_filter.Filter {
 	}
 	out := &domain_filter.Filter{}
 	if len(do.QueryAndOr) > 0 {
-		out.QueryAndOr = gptr.Of(domain_filter.QueryRelation(do.QueryAndOr))
+		out.QueryAndOr = gptr.Of(do.QueryAndOr)
 	}
 	for _, ff := range do.FilterFields {
 		if ff == nil {
@@ -742,11 +742,11 @@ func convertExptFilterDOToDTO(do *entity.ExptItemFilter) *domain_filter.Filter {
 		}
 		field := &domain_filter.FilterField{
 			FieldName: ff.FieldName,
-			FieldType: domain_filter.FieldType(ff.FieldType),
+			FieldType: ff.FieldType,
 			Values:    ff.Values,
 		}
 		if len(ff.QueryType) > 0 {
-			field.QueryType = gptr.Of(domain_filter.QueryType(ff.QueryType))
+			field.QueryType = gptr.Of(ff.QueryType)
 		}
 		out.FilterFields = append(out.FilterFields, field)
 	}
@@ -1148,7 +1148,7 @@ func convertExptFilterDTOToDO(dto *domain_filter.Filter) *entity.ExptItemFilter 
 		return nil
 	}
 	do := &entity.ExptItemFilter{
-		QueryAndOr: string(dto.GetQueryAndOr()),
+		QueryAndOr: dto.GetQueryAndOr(),
 	}
 	for _, ff := range dto.FilterFields {
 		if ff == nil {
@@ -1156,9 +1156,9 @@ func convertExptFilterDTOToDO(dto *domain_filter.Filter) *entity.ExptItemFilter 
 		}
 		do.FilterFields = append(do.FilterFields, &entity.ExptItemFilterField{
 			FieldName: ff.GetFieldName(),
-			FieldType: string(ff.GetFieldType()),
+			FieldType: ff.GetFieldType(),
 			Values:    ff.Values,
-			QueryType: string(ff.GetQueryType()),
+			QueryType: ff.GetQueryType(),
 		})
 	}
 	return do

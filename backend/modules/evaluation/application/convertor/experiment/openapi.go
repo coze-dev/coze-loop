@@ -222,7 +222,7 @@ func openapiSandboxAgentDTO2Domain(dtoObj *openapiEvalTarget.SandboxAgent) *doma
 		Image:         dtoObj.Image,
 	}
 	if dtoObj.Type != nil {
-		t := domaindoEvalTarget.SandboxAgentType(*dtoObj.Type)
+		t := *dtoObj.Type
 		res.Type = &t
 	}
 	return res

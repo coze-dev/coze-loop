@@ -37,8 +37,10 @@ func TestToExptDTO_MultiSetReadView_GetPath(t *testing.T) {
 					EvaluatorConfs: []*entity.ExptEvaluatorConf{
 						// 同 version 两实例: 默认实例 (alias=='') 应被选中投影
 						{EvaluatorID: 2, EvaluatorVersionID: 201, Alias: "judge_B", ScoreWeight: gptr.Of(0.9)},
-						{EvaluatorID: 2, EvaluatorVersionID: 201, Alias: "", ScoreWeight: &weightA,
-							FromEvalSet: []*entity.FieldConf{{FieldName: "input", FromField: "question"}}},
+						{
+							EvaluatorID: 2, EvaluatorVersionID: 201, Alias: "", ScoreWeight: &weightA,
+							FromEvalSet: []*entity.FieldConf{{FieldName: "input", FromField: "question"}},
+						},
 					},
 				},
 			},
@@ -47,8 +49,10 @@ func TestToExptDTO_MultiSetReadView_GetPath(t *testing.T) {
 		TotalItemCount: 42,
 		EvalSetDetails: []*entity.ExptEvalSetDetail{
 			{EvalSetID: 10, EvalSetVersionID: 110, IsPrimary: false, ItemCount: 12, DatasetKey: "dataset-10"},
-			{EvalSetID: 20, EvalSetVersionID: 220, IsPrimary: true, ItemCount: 30,
-				DatasetKey: "dataset-20", EvalSet: &entity.EvaluationSet{ID: 20, Name: "primary-set"}},
+			{
+				EvalSetID: 20, EvalSetVersionID: 220, IsPrimary: true, ItemCount: 30,
+				DatasetKey: "dataset-20", EvalSet: &entity.EvaluationSet{ID: 20, Name: "primary-set"},
+			},
 		},
 	}
 

@@ -11,9 +11,10 @@ import (
 )
 
 // FilterMode 语义 (per ItemEvaluatorConf.FilterMode):
-//   0 None    - 不过滤, 直接跑
-//   1 Include - filter 命中才跑
-//   2 Exclude - filter 命中不跑
+//
+//	0 None    - 不过滤, 直接跑
+//	1 Include - filter 命中才跑
+//	2 Exclude - filter 命中不跑
 const (
 	filterModeNone    int32 = 0
 	filterModeInclude int32 = 1
@@ -195,4 +196,3 @@ func matchByQueryType(queryType, actual string, values []string) bool {
 		return true
 	}
 }
-

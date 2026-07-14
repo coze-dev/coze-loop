@@ -11,7 +11,6 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
-	data_tag "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	app_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
@@ -114,11 +113,11 @@ func ResourceTagDO2DTO(do *entity.ResourceTag) *eval_set.ResourceTag {
 		dto.TagKeyID = gptr.Of(do.TagKeyID)
 	}
 	if do.ContentType != "" {
-		contentType := data_tag.TagContentType(do.ContentType)
+		contentType := do.ContentType
 		dto.ContentType = &contentType
 	}
 	if do.Status != "" {
-		status := data_tag.TagStatus(do.Status)
+		status := do.Status
 		dto.Status = &status
 	}
 	return dto

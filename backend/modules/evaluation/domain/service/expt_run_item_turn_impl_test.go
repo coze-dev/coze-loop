@@ -4789,6 +4789,7 @@ func TestBuildEvalSetItemMeta_FallbackToExperimentTopLevel(t *testing.T) {
 	assert.Equal(t, "primary-v1", got.EvalSetVersion)
 	assert.Equal(t, "1", got.ItemID)
 }
+
 // TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak 在真实泄漏点 callEvaluators 直接验证:
 // 当 evaluator conf 缺失导致中途提前 return(跳过 pool.ExecAll)时,协程池仍被释放,不泄漏 goroutine。
 // 修复前(NewPool 后无 defer pool.Release()),每次调用会泄漏底层 ants pool 的 2 个常驻协程(purge/ticktock),

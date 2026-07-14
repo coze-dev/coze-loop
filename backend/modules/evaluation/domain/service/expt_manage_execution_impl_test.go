@@ -3350,7 +3350,7 @@ func TestExptMangerImpl_RecordExptData(t *testing.T) {
 		mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).
 			EXPECT().
 			UpdateByExptID(ctx, int64(123), int64(789), gomock.Any()).
-			Do(func(_ context.Context, _ int64, _ int64, stats *entity.ExptStats) {
+			Do(func(_ context.Context, _, _ int64, stats *entity.ExptStats) {
 				assert.Equal(t, int32(3), stats.SuccessItemCnt)
 				assert.Equal(t, int32(1), stats.PendingItemCnt)
 				assert.Equal(t, int32(0), stats.FailItemCnt)

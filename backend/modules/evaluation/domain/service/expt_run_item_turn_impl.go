@@ -861,22 +861,6 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluatorWithAlias(
 	return nil
 }
 
-func (e *DefaultExptTurnEvaluationImpl) createAndStoreFailedEvaluatorRecord(ctx context.Context, req *entity.RunEvaluatorRequest, runErr error, recordMap *sync.Map) {
-	if e == nil || e.evaluatorService == nil || req == nil || recordMap == nil {
-		return
-	}
-	failedRecord, createErr := e.evaluatorService.CreateEvaluatorRunFailRecord(ctx, req, runErr)
-	if createErr != nil {
-		logs.CtxError(ctx, "[CallEvaluators] create failed evaluator record fail, evaluator_version_id: %v, origin_err: %v, create_err: %v", req.EvaluatorVersionID, runErr, createErr)
-		return
-	}
-	if failedRecord == nil {
-		logs.CtxWarn(ctx, "[CallEvaluators] create failed evaluator record got nil, evaluator_version_id: %v, origin_err: %v", req.EvaluatorVersionID, runErr)
-		return
-	}
-	recordMap.Store(req.EvaluatorVersionID, failedRecord)
-}
-
 func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 	ctx context.Context,
 	ev *entity.Evaluator,
@@ -1235,8 +1219,8 @@ func buildEvalSetItemMeta(etec *entity.ExptTurnEvalCtx) *entity.EvalSetItemMeta 
 			meta.ItemVersion = *etec.EvalSetItem.ItemVersion
 		}
 	}
-	if etec.ExptItemEvalCtx != nil && etec.ExptItemEvalCtx.EvalSetVersionID != 0 {
-		evalSetVersionID = etec.ExptItemEvalCtx.EvalSetVersionID
+	if etec.ExptItemEvalCtx != nil && etec.EvalSetVersionID != 0 {
+		evalSetVersionID = etec.EvalSetVersionID
 	}
 	if etec.Expt != nil {
 		if evalSetID == 0 {

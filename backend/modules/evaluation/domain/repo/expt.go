@@ -173,7 +173,7 @@ type IExptItemRefRepo interface {
 	// BatchCreate 分页批量写入 expt_item_ref (幂等: UNIQUE(space_id,expt_id,item_id))
 	BatchCreate(ctx context.Context, items []*entity.ExptItemRef) error
 	// ListByExptID 分页扫描实验的所有 item ref (调度时用)
-	ListByExptID(ctx context.Context, spaceID, exptID int64, cursor, limit int64) ([]*entity.ExptItemRef, int64, error)
+	ListByExptID(ctx context.Context, spaceID, exptID, cursor, limit int64) ([]*entity.ExptItemRef, int64, error)
 	// GetByExptIDAndItemID 按 (expt_id, item_id) 精确查询单行 (单行执行读配置用)
 	GetByExptIDAndItemID(ctx context.Context, spaceID, exptID, itemID int64) (*entity.ExptItemRef, error)
 	// MGetByExptIDAndItemIDs 按 (expt_id, item_ids) 批量查询 (retry 时读 item_config 用)

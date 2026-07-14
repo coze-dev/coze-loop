@@ -206,5 +206,3 @@ type EvaluationItemVersionRef struct {
 	ItemVersionID *int64
 	ItemVersion   *string
 }
-
-

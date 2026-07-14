@@ -36,8 +36,8 @@ func ParseEvaluatorScoreFieldKey(fk string) (versionID int64, alias string, err 
 			return 0, "", err
 		}
 		alias = fk[i+1:]
-		return
+		return versionID, alias, err
 	}
 	versionID, err = strconv.ParseInt(fk, 10, 64)
-	return
+	return versionID, alias, err
 }

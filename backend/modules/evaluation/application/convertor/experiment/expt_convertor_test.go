@@ -465,7 +465,7 @@ func TestConvertEvalSetConfigs_FilterReuseAndTargetConf(t *testing.T) {
 	b := back[0]
 	assert.NotNil(t, b.ItemFilter)
 	assert.Equal(t, "item_id", b.ItemFilter.FilterFields[0].FieldName)
-	assert.Equal(t, "in", string(b.ItemFilter.FilterFields[0].GetQueryType()))
+	assert.Equal(t, "in", b.ItemFilter.FilterFields[0].GetQueryType())
 	assert.Len(t, b.TargetConfs, 1)
 	assert.Equal(t, int64(7), b.TargetConfs[0].GetTargetID())
 	assert.Equal(t, `{"temperature":0.5}`, b.TargetConfs[0].GetRuntimeParam().GetJSONValue())

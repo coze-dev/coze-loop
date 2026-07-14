@@ -679,9 +679,9 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 					Return([]*entity.ExptEvaluatorRef{{EvaluatorVersionID: 1, EvaluatorID: 1}}, nil)
 
 				evaluator := &entity.Evaluator{
-					ID:            1,
-					Name:          "test evaluator",
-					EvaluatorType: entity.EvaluatorTypePrompt,
+					ID:                     1,
+					Name:                   "test evaluator",
+					EvaluatorType:          entity.EvaluatorTypePrompt,
 					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1, Version: "1.0"},
 				}
 				mockEvaluatorService.EXPECT().
@@ -1406,14 +1406,14 @@ func TestGetTopNOptions(t *testing.T) {
 
 func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 	tests := []struct {
-		name                                string
-		spaceID                             int64
-		exptID                              int64
+		name                                 string
+		spaceID                              int64
+		exptID                               int64
 		evaluatorInstanceKey2AggregatorGroup map[string]*AggregatorGroup
-		tmag                                *targetMtrAggrGroup
-		existedAggrResults                  []*entity.ExptAggrResult
-		setup                               func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo)
-		wantErr                             bool
+		tmag                                 *targetMtrAggrGroup
+		existedAggrResults                   []*entity.ExptAggrResult
+		setup                                func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo)
+		wantErr                              bool
 	}{
 		{
 			name:    "Create new aggregation results",

@@ -18,7 +18,7 @@ import (
 //go:generate  mockgen -destination=mocks/expt_item_ref.go  -package mocks . IExptItemRefDAO
 type IExptItemRefDAO interface {
 	BatchCreateNX(ctx context.Context, items []*model.ExptItemRef, opts ...db.Option) error
-	ListByExptID(ctx context.Context, spaceID, exptID int64, cursor, limit int64, opts ...db.Option) ([]*model.ExptItemRef, int64, error)
+	ListByExptID(ctx context.Context, spaceID, exptID, cursor, limit int64, opts ...db.Option) ([]*model.ExptItemRef, int64, error)
 	GetByExptIDAndItemID(ctx context.Context, spaceID, exptID, itemID int64, opts ...db.Option) (*model.ExptItemRef, error)
 	MGetByExptIDAndItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptItemRef, error)
 	CountByEvalSetGrouped(ctx context.Context, spaceID int64, exptIDs []int64, opts ...db.Option) ([]*ExptItemRefEvalSetCount, error)
@@ -55,7 +55,7 @@ func (dao *exptItemRefDAOImpl) BatchCreateNX(ctx context.Context, items []*model
 	return nil
 }
 
-func (dao *exptItemRefDAOImpl) ListByExptID(ctx context.Context, spaceID, exptID int64, cursor, limit int64, opts ...db.Option) ([]*model.ExptItemRef, int64, error) {
+func (dao *exptItemRefDAOImpl) ListByExptID(ctx context.Context, spaceID, exptID, cursor, limit int64, opts ...db.Option) ([]*model.ExptItemRef, int64, error) {
 	dbConn := dao.provider.NewSession(ctx, opts...)
 	q := query.Use(dbConn).ExptItemRef
 	do := q.WithContext(ctx).

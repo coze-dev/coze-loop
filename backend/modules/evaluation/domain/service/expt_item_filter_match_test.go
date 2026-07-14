@@ -118,7 +118,7 @@ func TestMatchExptItemFilter_AndLogic_OneMiss(t *testing.T) {
 func TestMatchExptItemFilter_OrLogic_AnyMatch(t *testing.T) {
 	turn := &entity.Turn{
 		FieldDataList: []*entity.FieldData{
-			{Name: "lang", Content: &entity.Content{Text: gptr.Of("en")}}, // 不命中
+			{Name: "lang", Content: &entity.Content{Text: gptr.Of("en")}},    // 不命中
 			{Name: "topic", Content: &entity.Content{Text: gptr.Of("math")}}, // 命中
 		},
 	}
