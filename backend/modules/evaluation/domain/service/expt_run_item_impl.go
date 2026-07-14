@@ -22,7 +22,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -315,13 +314,42 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		etec.ExptTurnRunResult.TargetResult = targetRecord
 	}
 
-	if erids := existTurnRunResult.EvaluatorResultIds; erids != nil && len(erids.EvalVerIDToResID) > 0 {
-		// evaluatorRecords, err := e.EvalCall.BatchGetEvaluatorRecord(ctx, spaceID, maps.ToSlice(erids.EvalVerIDToResID, func(k int64, v int64) int64 { return v }))
-		evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, maps.ToSlice(erids.EvalVerIDToResID, func(k, v int64) int64 { return v }), false, false)
-		if err != nil {
-			return nil, err
+	if erids := existTurnRunResult.EvaluatorResultIds; erids != nil {
+		// 新格式 (Registered/Inline) 与老格式 (EvalVerIDToResID) 都要覆盖: 存储侧 storeTurnRunResult
+		// 只写 Registered, 若此处仅读老 map, 异步上报重触发会读到空 evaluator 结果, 校验时误判为"评估器结果缺失"。
+		recordIDs := make([]int64, 0)
+		seen := make(map[int64]struct{})
+		addID := func(id int64) {
+			if id <= 0 {
+				return
+			}
+			if _, ok := seen[id]; ok {
+				return
+			}
+			seen[id] = struct{}{}
+			recordIDs = append(recordIDs, id)
 		}
-		etec.ExptTurnRunResult.EvaluatorResults = evaluatorRecords
+		for _, r := range erids.Registered {
+			if r != nil {
+				addID(r.RecordID)
+			}
+		}
+		for _, r := range erids.Inline {
+			if r != nil {
+				addID(r.RecordID)
+			}
+		}
+		for _, id := range erids.EvalVerIDToResID {
+			addID(id)
+		}
+
+		if len(recordIDs) > 0 {
+			evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, recordIDs, false, false)
+			if err != nil {
+				return nil, err
+			}
+			etec.ExptTurnRunResult.EvaluatorResults = evaluatorRecords
+		}
 	}
 
 	return etec, nil

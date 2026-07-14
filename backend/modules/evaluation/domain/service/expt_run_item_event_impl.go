@@ -27,7 +27,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -573,24 +572,94 @@ func failRetrySelectTurnRunLogRefs(
 }
 
 func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRecordService, tr *entity.ExptTurnResult) *entity.EvaluatorResults {
-	if evalRecord == nil || tr.EvaluatorResults == nil || len(tr.EvaluatorResults.EvalVerIDToResID) == 0 {
+	if evalRecord == nil || tr.EvaluatorResults == nil {
 		return nil
 	}
-	ids := maps.ToSlice(tr.EvaluatorResults.EvalVerIDToResID, func(_, resID int64) int64 { return resID })
+	erids := tr.EvaluatorResults
+
+	// 新格式 (Registered/Inline) 与老格式 (EvalVerIDToResID) 都要覆盖: 失败重试时若只识别老 map,
+	// 新实验类型下会把已成功的 Registered/Inline 记录当作"缺失", 触发全部评估器重跑。
+	ids := make([]int64, 0)
+	seen := make(map[int64]struct{})
+	addID := func(id int64) {
+		if id <= 0 {
+			return
+		}
+		if _, ok := seen[id]; ok {
+			return
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	for _, r := range erids.Registered {
+		if r != nil {
+			addID(r.RecordID)
+		}
+	}
+	for _, r := range erids.Inline {
+		if r != nil {
+			addID(r.RecordID)
+		}
+	}
+	for _, id := range erids.EvalVerIDToResID {
+		addID(id)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
 	records, err := evalRecord.BatchGetEvaluatorRecord(ctx, ids, false, false)
 	if err != nil || len(records) == 0 {
 		return nil
 	}
-	m := make(map[int64]int64)
+	successIDs := make(map[int64]struct{}, len(records))
+	successVerID2RecID := make(map[int64]int64)
 	for _, rec := range records {
-		if rec != nil && rec.Status == entity.EvaluatorRunStatusSuccess {
-			m[rec.EvaluatorVersionID] = rec.ID
+		if rec == nil || rec.Status != entity.EvaluatorRunStatusSuccess {
+			continue
 		}
+		successIDs[rec.ID] = struct{}{}
+		successVerID2RecID[rec.EvaluatorVersionID] = rec.ID
 	}
-	if len(m) == 0 {
+	if len(successIDs) == 0 {
 		return nil
 	}
-	return &entity.EvaluatorResults{EvalVerIDToResID: m}
+
+	// 保持原格式回填, 保留 (VersionID, Alias) / InlineKey 元数据; 老数据兜底走 EvalVerIDToResID。
+	out := &entity.EvaluatorResults{}
+	for _, r := range erids.Registered {
+		if r == nil {
+			continue
+		}
+		if _, ok := successIDs[r.RecordID]; !ok {
+			continue
+		}
+		out.Registered = append(out.Registered, &entity.RegisteredEvalResult{
+			VersionID: r.VersionID,
+			Alias:     r.Alias,
+			RecordID:  r.RecordID,
+		})
+	}
+	for _, r := range erids.Inline {
+		if r == nil {
+			continue
+		}
+		if _, ok := successIDs[r.RecordID]; !ok {
+			continue
+		}
+		out.Inline = append(out.Inline, &entity.InlineEvalResult{
+			InlineKey: r.InlineKey,
+			RecordID:  r.RecordID,
+		})
+	}
+	// 老格式: 无 Registered/Inline 信息时按 versionID→recordID 兜底
+	if len(out.Registered) == 0 && len(out.Inline) == 0 && len(erids.EvalVerIDToResID) > 0 {
+		out.EvalVerIDToResID = successVerID2RecID
+	}
+	if len(out.Registered) == 0 && len(out.Inline) == 0 && len(out.EvalVerIDToResID) == 0 {
+		return nil
+	}
+	return out
 }
 
 type ExptRecordEvalModeFailRetry struct {
