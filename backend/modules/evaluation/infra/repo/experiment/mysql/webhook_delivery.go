@@ -71,9 +71,27 @@ func (d *webhookDeliveryDAO) Create(ctx context.Context, po *WebhookDeliveryPO, 
 	return nil
 }
 
+// updateColumns lists the mutable columns a delivery attempt can rewrite. It
+// is pinned to a whitelist so `.Select(...).Updates(po)` overwrites zero
+// values (e.g. clearing `last_error` and `last_response_code` on the retry
+// that finally succeeds). Immutable columns — delivery_id / space_id /
+// experiment_id / event / url / payload / internal_source / created_at — are
+// intentionally excluded.
+var updateColumns = []string{
+	"status",
+	"attempt_count",
+	"first_sent_at",
+	"last_sent_at",
+	"last_response_code",
+	"last_error",
+	"updated_at",
+}
+
 func (d *webhookDeliveryDAO) Update(ctx context.Context, po *WebhookDeliveryPO, opts ...db.Option) error {
 	if err := d.session(ctx, opts...).
+		Model(&WebhookDeliveryPO{}).
 		Where("delivery_id = ?", po.DeliveryID).
+		Select(updateColumns).
 		Updates(po).Error; err != nil {
 		return errorx.Wrapf(err, "update webhook_delivery fail")
 	}
