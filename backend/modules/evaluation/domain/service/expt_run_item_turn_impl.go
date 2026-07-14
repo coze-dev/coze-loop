@@ -667,6 +667,12 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 		if ferr != nil {
 			logs.CtxWarn(ctx, "[CallEvaluators] filter match error, version_id: %d, alias: %s, err: %v — default RUN", versionID, alias, ferr)
 		}
+		// filter 判定诊断日志: 带 filter 的 conf 都打一条 (run/skip + item.Tags + filter values),
+		// 用于定位"tag filter 全裁"是 item.Tags 未加载还是 values 口径不符。
+		if icConf.FilterMode != filterModeNone && icConf.Filter != nil && len(icConf.Filter.FilterFields) > 0 {
+			logs.CtxInfo(ctx, "[CallEvaluators][FILTERDBG] decision run=%v version_id=%d alias=%s %s",
+				run, versionID, alias, FilterDecisionDebug(icConf.Filter, icConf.FilterMode, item, turn))
+		}
 		if !run {
 			logs.CtxInfo(ctx, "[CallEvaluators] skip evaluator by filter, version_id: %d, alias: %s, filter_mode: %d", versionID, alias, icConf.FilterMode)
 			// 落一条 Status=Skipped 的占位 record (带真实 ID), 供 GUI/数仓展示"已跳过";

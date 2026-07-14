@@ -130,6 +130,51 @@ func matchTagField(ff *entity.ExptItemFilterField, item *entity.EvaluationSetIte
 	}
 }
 
+// FilterDecisionDebug 生成一条紧凑的 filter 判定诊断串, 供调用方 log。
+// 覆盖排障关键信息: filter_mode / query_and_or / 每个 filter_field (name/type/query/values)
+// 以及 item 侧实际可见的 tag 集合与 turn 字段名 —— 定位"tag filter 全裁"是 item.Tags 没加载
+// (owned_tags 为空) 还是 values 口径对不上 (owned_tags 有值但没交集)。
+func FilterDecisionDebug(filter *entity.ExptItemFilter, filterMode int32, item *entity.EvaluationSetItem, turn *entity.Turn) string {
+	var b strings.Builder
+	b.WriteString("filter_mode=")
+	b.WriteString(strconv.FormatInt(int64(filterMode), 10))
+	if item != nil {
+		b.WriteString(" item_id=")
+		b.WriteString(strconv.FormatInt(item.ItemID, 10))
+	}
+	// item 侧持有的 tag 名 (回归定位核心: 若这里为空而 filter 是 tag/include, 就是全裁的直接原因)
+	ownedTags := make([]string, 0)
+	if item != nil {
+		for _, t := range item.Tags {
+			if t != nil {
+				ownedTags = append(ownedTags, t.TagName)
+			}
+		}
+	}
+	b.WriteString(" owned_tags=[")
+	b.WriteString(strings.Join(ownedTags, ","))
+	b.WriteString("]")
+	if filter != nil {
+		b.WriteString(" query_and_or=")
+		b.WriteString(filter.QueryAndOr)
+		for _, ff := range filter.FilterFields {
+			if ff == nil {
+				continue
+			}
+			b.WriteString(" field{name=")
+			b.WriteString(ff.FieldName)
+			b.WriteString(",type=")
+			b.WriteString(ff.FieldType)
+			b.WriteString(",query=")
+			b.WriteString(ff.QueryType)
+			b.WriteString(",values=[")
+			b.WriteString(strings.Join(ff.Values, ","))
+			b.WriteString("]}")
+		}
+	}
+	return b.String()
+}
+
 // matchMissingField 字段不存在时的语义: equal/in 不命中 (false); not_equal/not_in 取反命中 (true)。
 func matchMissingField(queryType string) bool {
 	switch strings.ToLower(queryType) {
