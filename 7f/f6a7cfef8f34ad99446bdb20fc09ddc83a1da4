@@ -1,0 +1,39 @@
+backend/modules/evaluation/domain/repo/expt.go
+  s_87380c31c497f2::t_8f5de240e74f77 26-27
+backend/modules/evaluation/domain/repo/mocks/expt.go
+  s_87380c31c497f2::t_851b6ae71811de 72-86,118-119,121-122,127-128,130,133-134,136-137,142-143,145
+backend/modules/evaluation/domain/service/expt_manage.go
+  s_87380c31c497f2::t_50910676dc2e82 21-22
+backend/modules/evaluation/domain/service/expt_manage_impl.go
+  s_87380c31c497f2::t_da634ebb956906 393-401,1036,1038-1046
+backend/modules/evaluation/domain/service/mocks/expt_manage.go
+  s_87380c31c497f2::t_79dc29467c4496 43-57,59,61,68,70,74,76-77,86,88,93,95,102,104,108,110-111,120,122,127,129-130,139,141,146,148,155,157,161,163,169,171,175,177,184,186,190,192,198,200,204,206,213,215,218-219,221-226,231-232,234-235,238-239,241-242,247-248,250,254,256,263,265,269,271,275,277,281,283,289,291,295,297,305,307,311,313,321,323,327,329,335,337,341,343,351,353,357,359,365,367,371,373,379,381,385,387,394,396,400,402,409,411,415,417,423,425,429,431,437,439,443,445,451,453,457,459,465,467,471,473,479,481,485,487,493,495
+backend/modules/evaluation/infra/repo/experiment/expt_repo_impl.go
+  s_87380c31c497f2::t_6988108697e09e 197-200
+backend/modules/evaluation/infra/repo/experiment/mysql/expt.go
+  s_87380c31c497f2::t_aba088a0640c7f 47-48,416-433
+backend/modules/evaluation/infra/repo/experiment/mysql/mocks/expt.go
+  s_87380c31c497f2::t_4cd7d78bd92788 45,47,53,55,59,61,67,69-84,88,90,97,99,103,105,112,114,118,120,127,129,133,135,143,145,149,151,157,159,163,165,172,174,178,180,186,188,192,194,200,202
+backend/modules/evaluation/pkg/errno/evaluation.go
+  s_87380c31c497f2::t_8ea13a82ade5a0 135-138,580-585
+backend/script/errorx/evaluation.yaml
+  s_87380c31c497f2::t_462bb68118f17c 127-132,497-514
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7ff6a7cfef8f34ad99446bdb20fc09ddc83a1da4",
+  "prompts": {},
+  "sessions": {
+    "s_87380c31c497f2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a28a7cb465bcfdbcb",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
