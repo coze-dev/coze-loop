@@ -29,7 +29,8 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
-	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc}
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc, manager: mockManager}
 
 	const (
 		workspaceID    int64 = 1
@@ -40,6 +41,7 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 		targetRecordID int64 = 6
 	)
 
+	mockManager.EXPECT().GetDetail(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(makeStandardEvalOutputExpt(exptID, workspaceID), nil)
 	mockTargetSvc.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: workspaceID, SourceTargetID: "src-200"}, nil)
 
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -71,9 +73,9 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	require.NotNil(t, resp)
 	require.Len(t, resp.Items, 1)
 	got := resp.Items[0]
-	assert.Equal(t, exptID, got.ExptID)
-	assert.Equal(t, itemID, got.ItemID)
-	assert.Equal(t, "dataset-1", got.DatasetKey)
+	assert.Equal(t, exptID, got.GetExptID())
+	assert.Equal(t, itemID, got.GetItemID())
+	assert.Equal(t, "dataset-1", got.GetDatasetKey())
 	require.NotNil(t, got.Output)
 	require.NotNil(t, got.Eval)
 	assert.False(t, got.Output.GetContentOmitted())
@@ -94,6 +96,18 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(got.GetAgent().GetText()), &agent))
 	assert.Equal(t, "src-200", agent["source_target_id"])
 	assert.EqualValues(t, 200, agent["target_id"])
+
+	// MQ 元信息顶层字段（与 item-complete MQ 对齐）。
+	assert.Equal(t, workspaceID, got.GetExptWorkspaceID())
+	assert.Equal(t, exptRunID, got.GetExptRunID())
+	assert.Equal(t, "group-key-1", got.GetExperimentGroupKey())
+	assert.Equal(t, int64(200), got.GetEvalTargetID())
+	assert.Equal(t, workspaceID, got.GetEvalTargetWorkspaceID())
+	assert.Equal(t, "src-200", got.GetSourceTargetID())
+	assert.Equal(t, int64(100), got.GetDatasetID())
+	assert.Equal(t, workspaceID, got.GetDatasetWorkspaceID())
+	assert.Equal(t, int64(1001), got.GetDatasetVersionID())
+	assert.Equal(t, "1.2.0", got.GetDatasetVersionName())
 }
 
 func TestBuildItemStandardEvalOutput_ProcessingOnlyReturnsMetadata(t *testing.T) {
@@ -159,7 +173,9 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_APIKeyBypass(t 
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(makeStandardEvalOutputReportResult(2, 3, 4, 5, 6), nil)
 	mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
 	mockTargetSvc.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: 1, SourceTargetID: "src-200"}, nil)
-	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc}
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+	mockManager.EXPECT().GetDetail(gomock.Any(), int64(2), int64(1), gomock.Any()).Return(makeStandardEvalOutputExpt(2, 1), nil)
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc, manager: mockManager}
 
 	resp, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{
 		WorkspaceID: 1,
@@ -179,7 +195,9 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
 	mockTargetSvc.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: 1, SourceTargetID: "src-200"}, nil)
-	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc}
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+	mockManager.EXPECT().GetDetail(gomock.Any(), int64(2), int64(1), gomock.Any()).Return(makeStandardEvalOutputExpt(2, 1), nil)
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc, manager: mockManager}
 
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
@@ -205,6 +223,36 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 	require.Len(t, resp.Items, 1)
 	require.NotNil(t, resp.Total)
 	assert.Equal(t, int64(1), *resp.Total)
+}
+
+func TestExperimentApplication_ListExperimentStandardEvalOutputs_OnlyItemIDs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
+	// 精简模式：只调 GetItemIDListByExptID（参数顺序 exptID, spaceID），不走重的 MGetExperimentResult。
+	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Times(0)
+	mockResultSvc.EXPECT().GetItemIDListByExptID(gomock.Any(), int64(2), int64(1)).Return([]int64{11, 22, 33}, nil)
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc}
+
+	resp, err := app.ListExperimentStandardEvalOutputs(context.Background(), &exptpb.ListExperimentStandardEvalOutputsRequest{
+		WorkspaceID: 1,
+		ExptID:      2,
+		OnlyItemIds: gptr.Of(true),
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.GetItems(), 3)
+	gotIDs := make([]int64, 0, len(resp.GetItems()))
+	for _, it := range resp.GetItems() {
+		assert.Equal(t, int64(2), it.GetExptID())
+		// 精简模式仅填 item_id，其余内容块 / dataset_key 均为空。
+		assert.Empty(t, it.GetDatasetKey())
+		assert.Nil(t, it.Detail)
+		gotIDs = append(gotIDs, it.GetItemID())
+	}
+	assert.Equal(t, []int64{11, 22, 33}, gotIDs)
+	assert.Equal(t, int64(3), resp.GetTotal())
 }
 
 func TestExperimentApplication_MGetExperimentStandardEvalOutputs_Error(t *testing.T) {
@@ -291,6 +339,29 @@ func makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targe
 				}},
 			}},
 		}},
+	}
+}
+
+// makeStandardEvalOutputExpt 构造标准输出 MQ 元信息测试用的实验详情，
+// 主评测集 id=100（与 makeStandardEvalOutputReportResult 的 payload EvalSetID 对齐），target id=200。
+func makeStandardEvalOutputExpt(exptID, spaceID int64) *entity.Experiment {
+	return &entity.Experiment{
+		ID:                 exptID,
+		SpaceID:            spaceID,
+		LatestRunID:        3,
+		ExperimentGroupKey: "group-key-1",
+		TargetID:           200,
+		EvalSetID:          100,
+		EvalSetSourceType:  entity.ExptEvalSetSourceType_SingleSet,
+		Target:             &entity.EvalTarget{ID: 200, SpaceID: spaceID, SourceTargetID: "src-200"},
+		EvalSet: &entity.EvaluationSet{
+			ID:      100,
+			SpaceID: spaceID,
+			EvaluationSetVersion: &entity.EvaluationSetVersion{
+				ID:      1001,
+				Version: "1.2.0",
+			},
+		},
 	}
 }
 

@@ -374,17 +374,33 @@ struct ListExperimentStandardEvalOutputsRequest {
     20: optional i32 page_number (api.query = 'page_number', go.tag = 'json:"page_number"')
     21: optional i32 page_size (api.query = 'page_size', go.tag = 'json:"page_size"')
 
+    // only_item_ids 为 true 时走精简查询：items 每项仅填 item_id（不加载轨迹 / evaluator / eval_target
+    // 大对象、也不查 dataset_key 等），用于 MQ 回调补齐前先枚举实验下所有 item，省性能。
+    30: optional bool only_item_ids (api.body = 'only_item_ids', go.tag = 'json:"only_item_ids"')
+
     40: optional string api_key (api.body = 'api_key', go.tag = 'json:"api_key"')
 
     255: optional base.Base Base
 }
 
 struct ItemStandardEvalOutput {
-    1: required i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    2: required i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id"')
-    3: required string dataset_key (go.tag = 'json:"dataset_key"')
+    1: optional i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    2: optional i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id"')
+    3: optional string dataset_key (go.tag = 'json:"dataset_key"')
     4: optional string item_key (go.tag = 'json:"item_key"')
     5: optional expt.ItemRunState status (go.tag = 'json:"status"')
+
+    // MQ 元信息：与 item-complete(success) MQ 消息体对齐，供回调补齐时携带。
+    6:  optional i64 eval_target_workspace_id (api.js_conv = 'true', go.tag = 'json:"eval_target_workspace_id"')
+    7:  optional i64 eval_target_id (api.js_conv = 'true', go.tag = 'json:"eval_target_id"')
+    8:  optional string source_target_id (go.tag = 'json:"source_target_id"')
+    9:  optional i64 expt_workspace_id (api.js_conv = 'true', go.tag = 'json:"expt_workspace_id"')
+    10: optional i64 expt_run_id (api.js_conv = 'true', go.tag = 'json:"expt_run_id"')
+    17: optional i64 dataset_workspace_id (api.js_conv = 'true', go.tag = 'json:"dataset_workspace_id"')
+    18: optional i64 dataset_id (api.js_conv = 'true', go.tag = 'json:"dataset_id"')
+    19: optional i64 dataset_version_id (api.js_conv = 'true', go.tag = 'json:"dataset_version_id"')
+    20: optional string dataset_version_name (go.tag = 'json:"dataset_version_name"')
+    21: optional string experiment_group_key (go.tag = 'json:"experiment_group_key"')
 
     11: optional StandardEvalOutputContent detail (go.tag = 'json:"detail"')
     12: optional StandardEvalOutputContent rounds (go.tag = 'json:"rounds"')

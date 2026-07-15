@@ -22,7 +22,6 @@ import (
 type MockExptResultService struct {
 	ctrl     *gomock.Controller
 	recorder *MockExptResultServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockExptResultServiceMockRecorder is the mock recorder for MockExptResultService.
@@ -43,199 +42,213 @@ func (m *MockExptResultService) EXPECT() *MockExptResultServiceMockRecorder {
 }
 
 // CalculateStats mocks base method.
-func (m *MockExptResultService) CalculateStats(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.ExptCalculateStats, error) {
+func (m *MockExptResultService) CalculateStats(arg0 context.Context, arg1, arg2 int64, arg3 *entity.Session) (*entity.ExptCalculateStats, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CalculateStats", ctx, exptID, spaceID, session)
+	ret := m.ctrl.Call(m, "CalculateStats", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*entity.ExptCalculateStats)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CalculateStats indicates an expected call of CalculateStats.
-func (mr *MockExptResultServiceMockRecorder) CalculateStats(ctx, exptID, spaceID, session any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) CalculateStats(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateStats", reflect.TypeOf((*MockExptResultService)(nil).CalculateStats), ctx, exptID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateStats", reflect.TypeOf((*MockExptResultService)(nil).CalculateStats), arg0, arg1, arg2, arg3)
 }
 
 // CompareExptTurnResultFilters mocks base method.
-func (m *MockExptResultService) CompareExptTurnResultFilters(ctx context.Context, spaceID, exptID int64, itemIDs []int64, retryTimes int32) error {
+func (m *MockExptResultService) CompareExptTurnResultFilters(arg0 context.Context, arg1, arg2 int64, arg3 []int64, arg4 int32) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CompareExptTurnResultFilters", ctx, spaceID, exptID, itemIDs, retryTimes)
+	ret := m.ctrl.Call(m, "CompareExptTurnResultFilters", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CompareExptTurnResultFilters indicates an expected call of CompareExptTurnResultFilters.
-func (mr *MockExptResultServiceMockRecorder) CompareExptTurnResultFilters(ctx, spaceID, exptID, itemIDs, retryTimes any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) CompareExptTurnResultFilters(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareExptTurnResultFilters", reflect.TypeOf((*MockExptResultService)(nil).CompareExptTurnResultFilters), ctx, spaceID, exptID, itemIDs, retryTimes)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareExptTurnResultFilters", reflect.TypeOf((*MockExptResultService)(nil).CompareExptTurnResultFilters), arg0, arg1, arg2, arg3, arg4)
 }
 
 // CreateStats mocks base method.
-func (m *MockExptResultService) CreateStats(ctx context.Context, exptStats *entity.ExptStats, session *entity.Session) error {
+func (m *MockExptResultService) CreateStats(arg0 context.Context, arg1 *entity.ExptStats, arg2 *entity.Session) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateStats", ctx, exptStats, session)
+	ret := m.ctrl.Call(m, "CreateStats", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateStats indicates an expected call of CreateStats.
-func (mr *MockExptResultServiceMockRecorder) CreateStats(ctx, exptStats, session any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) CreateStats(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateStats", reflect.TypeOf((*MockExptResultService)(nil).CreateStats), ctx, exptStats, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateStats", reflect.TypeOf((*MockExptResultService)(nil).CreateStats), arg0, arg1, arg2)
 }
 
 // GetExptItemTurnResults mocks base method.
-func (m *MockExptResultService) GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error) {
+func (m *MockExptResultService) GetExptItemTurnResults(arg0 context.Context, arg1, arg2, arg3 int64, arg4 *entity.Session) ([]*entity.ExptTurnResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptItemTurnResults", ctx, exptID, itemID, spaceID, session)
+	ret := m.ctrl.Call(m, "GetExptItemTurnResults", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].([]*entity.ExptTurnResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetExptItemTurnResults indicates an expected call of GetExptItemTurnResults.
-func (mr *MockExptResultServiceMockRecorder) GetExptItemTurnResults(ctx, exptID, itemID, spaceID, session any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) GetExptItemTurnResults(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptItemTurnResults", reflect.TypeOf((*MockExptResultService)(nil).GetExptItemTurnResults), ctx, exptID, itemID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptItemTurnResults", reflect.TypeOf((*MockExptResultService)(nil).GetExptItemTurnResults), arg0, arg1, arg2, arg3, arg4)
 }
 
 // GetIncompleteTurns mocks base method.
-func (m *MockExptResultService) GetIncompleteTurns(ctx context.Context, exptID, spaceID int64, session *entity.Session) ([]*entity.ItemTurnID, error) {
+func (m *MockExptResultService) GetIncompleteTurns(arg0 context.Context, arg1, arg2 int64, arg3 *entity.Session) ([]*entity.ItemTurnID, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIncompleteTurns", ctx, exptID, spaceID, session)
+	ret := m.ctrl.Call(m, "GetIncompleteTurns", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*entity.ItemTurnID)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetIncompleteTurns indicates an expected call of GetIncompleteTurns.
-func (mr *MockExptResultServiceMockRecorder) GetIncompleteTurns(ctx, exptID, spaceID, session any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) GetIncompleteTurns(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncompleteTurns", reflect.TypeOf((*MockExptResultService)(nil).GetIncompleteTurns), ctx, exptID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncompleteTurns", reflect.TypeOf((*MockExptResultService)(nil).GetIncompleteTurns), arg0, arg1, arg2, arg3)
+}
+
+// GetItemIDListByExptID mocks base method.
+func (m *MockExptResultService) GetItemIDListByExptID(arg0 context.Context, arg1, arg2 int64) ([]int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetItemIDListByExptID", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetItemIDListByExptID indicates an expected call of GetItemIDListByExptID.
+func (mr *MockExptResultServiceMockRecorder) GetItemIDListByExptID(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemIDListByExptID", reflect.TypeOf((*MockExptResultService)(nil).GetItemIDListByExptID), arg0, arg1, arg2)
 }
 
 // GetStats mocks base method.
-func (m *MockExptResultService) GetStats(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.ExptStats, error) {
+func (m *MockExptResultService) GetStats(arg0 context.Context, arg1, arg2 int64, arg3 *entity.Session) (*entity.ExptStats, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStats", ctx, exptID, spaceID, session)
+	ret := m.ctrl.Call(m, "GetStats", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*entity.ExptStats)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetStats indicates an expected call of GetStats.
-func (mr *MockExptResultServiceMockRecorder) GetStats(ctx, exptID, spaceID, session any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) GetStats(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStats", reflect.TypeOf((*MockExptResultService)(nil).GetStats), ctx, exptID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStats", reflect.TypeOf((*MockExptResultService)(nil).GetStats), arg0, arg1, arg2, arg3)
 }
 
 // InsertExptTurnResultFilterKeyMappings mocks base method.
-func (m *MockExptResultService) InsertExptTurnResultFilterKeyMappings(ctx context.Context, mappings []*entity.ExptTurnResultFilterKeyMapping) error {
+func (m *MockExptResultService) InsertExptTurnResultFilterKeyMappings(arg0 context.Context, arg1 []*entity.ExptTurnResultFilterKeyMapping) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertExptTurnResultFilterKeyMappings", ctx, mappings)
+	ret := m.ctrl.Call(m, "InsertExptTurnResultFilterKeyMappings", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InsertExptTurnResultFilterKeyMappings indicates an expected call of InsertExptTurnResultFilterKeyMappings.
-func (mr *MockExptResultServiceMockRecorder) InsertExptTurnResultFilterKeyMappings(ctx, mappings any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) InsertExptTurnResultFilterKeyMappings(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertExptTurnResultFilterKeyMappings", reflect.TypeOf((*MockExptResultService)(nil).InsertExptTurnResultFilterKeyMappings), ctx, mappings)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertExptTurnResultFilterKeyMappings", reflect.TypeOf((*MockExptResultService)(nil).InsertExptTurnResultFilterKeyMappings), arg0, arg1)
 }
 
 // MGetExperimentResult mocks base method.
-func (m *MockExptResultService) MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
+func (m *MockExptResultService) MGetExperimentResult(arg0 context.Context, arg1 *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MGetExperimentResult", ctx, param)
+	ret := m.ctrl.Call(m, "MGetExperimentResult", arg0, arg1)
 	ret0, _ := ret[0].(*entity.MGetExperimentReportResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MGetExperimentResult indicates an expected call of MGetExperimentResult.
-func (mr *MockExptResultServiceMockRecorder) MGetExperimentResult(ctx, param any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) MGetExperimentResult(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetExperimentResult", reflect.TypeOf((*MockExptResultService)(nil).MGetExperimentResult), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetExperimentResult", reflect.TypeOf((*MockExptResultService)(nil).MGetExperimentResult), arg0, arg1)
 }
 
 // MGetStats mocks base method.
-func (m *MockExptResultService) MGetStats(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.ExptStats, error) {
+func (m *MockExptResultService) MGetStats(arg0 context.Context, arg1 []int64, arg2 int64, arg3 *entity.Session) ([]*entity.ExptStats, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MGetStats", ctx, exptIDs, spaceID, session)
+	ret := m.ctrl.Call(m, "MGetStats", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*entity.ExptStats)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MGetStats indicates an expected call of MGetStats.
-func (mr *MockExptResultServiceMockRecorder) MGetStats(ctx, exptIDs, spaceID, session any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) MGetStats(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetStats", reflect.TypeOf((*MockExptResultService)(nil).MGetStats), ctx, exptIDs, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetStats", reflect.TypeOf((*MockExptResultService)(nil).MGetStats), arg0, arg1, arg2, arg3)
 }
 
 // ManualUpsertExptTurnResultFilter mocks base method.
-func (m *MockExptResultService) ManualUpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, itemIDs []int64) error {
+func (m *MockExptResultService) ManualUpsertExptTurnResultFilter(arg0 context.Context, arg1, arg2 int64, arg3 []int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ManualUpsertExptTurnResultFilter", ctx, spaceID, exptID, itemIDs)
+	ret := m.ctrl.Call(m, "ManualUpsertExptTurnResultFilter", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ManualUpsertExptTurnResultFilter indicates an expected call of ManualUpsertExptTurnResultFilter.
-func (mr *MockExptResultServiceMockRecorder) ManualUpsertExptTurnResultFilter(ctx, spaceID, exptID, itemIDs any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) ManualUpsertExptTurnResultFilter(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManualUpsertExptTurnResultFilter", reflect.TypeOf((*MockExptResultService)(nil).ManualUpsertExptTurnResultFilter), ctx, spaceID, exptID, itemIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManualUpsertExptTurnResultFilter", reflect.TypeOf((*MockExptResultService)(nil).ManualUpsertExptTurnResultFilter), arg0, arg1, arg2, arg3)
 }
 
 // RecalculateWeightedScore mocks base method.
-func (m *MockExptResultService) RecalculateWeightedScore(ctx context.Context, spaceID, exptID, itemID, turnID int64) error {
+func (m *MockExptResultService) RecalculateWeightedScore(arg0 context.Context, arg1, arg2, arg3, arg4 int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecalculateWeightedScore", ctx, spaceID, exptID, itemID, turnID)
+	ret := m.ctrl.Call(m, "RecalculateWeightedScore", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RecalculateWeightedScore indicates an expected call of RecalculateWeightedScore.
-func (mr *MockExptResultServiceMockRecorder) RecalculateWeightedScore(ctx, spaceID, exptID, itemID, turnID any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) RecalculateWeightedScore(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecalculateWeightedScore", reflect.TypeOf((*MockExptResultService)(nil).RecalculateWeightedScore), ctx, spaceID, exptID, itemID, turnID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecalculateWeightedScore", reflect.TypeOf((*MockExptResultService)(nil).RecalculateWeightedScore), arg0, arg1, arg2, arg3, arg4)
 }
 
 // RecordItemRunLogs mocks base method.
-func (m *MockExptResultService) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error) {
+func (m *MockExptResultService) RecordItemRunLogs(arg0 context.Context, arg1, arg2, arg3, arg4 int64, arg5 *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordItemRunLogs", ctx, exptID, exptRunID, itemID, spaceID, expt)
+	ret := m.ctrl.Call(m, "RecordItemRunLogs", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].([]*entity.ExptTurnEvaluatorResultRef)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RecordItemRunLogs indicates an expected call of RecordItemRunLogs.
-func (mr *MockExptResultServiceMockRecorder) RecordItemRunLogs(ctx, exptID, exptRunID, itemID, spaceID, expt any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) RecordItemRunLogs(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordItemRunLogs", reflect.TypeOf((*MockExptResultService)(nil).RecordItemRunLogs), ctx, exptID, exptRunID, itemID, spaceID, expt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordItemRunLogs", reflect.TypeOf((*MockExptResultService)(nil).RecordItemRunLogs), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // UpsertExptTurnResultFilter mocks base method.
-func (m *MockExptResultService) UpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, itemID []int64) error {
+func (m *MockExptResultService) UpsertExptTurnResultFilter(arg0 context.Context, arg1, arg2 int64, arg3 []int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpsertExptTurnResultFilter", ctx, spaceID, exptID, itemID)
+	ret := m.ctrl.Call(m, "UpsertExptTurnResultFilter", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpsertExptTurnResultFilter indicates an expected call of UpsertExptTurnResultFilter.
-func (mr *MockExptResultServiceMockRecorder) UpsertExptTurnResultFilter(ctx, spaceID, exptID, itemID any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) UpsertExptTurnResultFilter(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertExptTurnResultFilter", reflect.TypeOf((*MockExptResultService)(nil).UpsertExptTurnResultFilter), ctx, spaceID, exptID, itemID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertExptTurnResultFilter", reflect.TypeOf((*MockExptResultService)(nil).UpsertExptTurnResultFilter), arg0, arg1, arg2, arg3)
 }
 
 // MockExptAggrResultService is a mock of ExptAggrResultService interface.
 type MockExptAggrResultService struct {
 	ctrl     *gomock.Controller
 	recorder *MockExptAggrResultServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockExptAggrResultServiceMockRecorder is the mock recorder for MockExptAggrResultService.
@@ -256,86 +269,86 @@ func (m *MockExptAggrResultService) EXPECT() *MockExptAggrResultServiceMockRecor
 }
 
 // BatchGetExptAggrResultByExperimentIDs mocks base method.
-func (m *MockExptAggrResultService) BatchGetExptAggrResultByExperimentIDs(ctx context.Context, spaceID int64, experimentIDs []int64) ([]*entity.ExptAggregateResult, error) {
+func (m *MockExptAggrResultService) BatchGetExptAggrResultByExperimentIDs(arg0 context.Context, arg1 int64, arg2 []int64) ([]*entity.ExptAggregateResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetExptAggrResultByExperimentIDs", ctx, spaceID, experimentIDs)
+	ret := m.ctrl.Call(m, "BatchGetExptAggrResultByExperimentIDs", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]*entity.ExptAggregateResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetExptAggrResultByExperimentIDs indicates an expected call of BatchGetExptAggrResultByExperimentIDs.
-func (mr *MockExptAggrResultServiceMockRecorder) BatchGetExptAggrResultByExperimentIDs(ctx, spaceID, experimentIDs any) *gomock.Call {
+func (mr *MockExptAggrResultServiceMockRecorder) BatchGetExptAggrResultByExperimentIDs(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetExptAggrResultByExperimentIDs", reflect.TypeOf((*MockExptAggrResultService)(nil).BatchGetExptAggrResultByExperimentIDs), ctx, spaceID, experimentIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetExptAggrResultByExperimentIDs", reflect.TypeOf((*MockExptAggrResultService)(nil).BatchGetExptAggrResultByExperimentIDs), arg0, arg1, arg2)
 }
 
 // CreateAnnotationAggrResult mocks base method.
-func (m *MockExptAggrResultService) CreateAnnotationAggrResult(ctx context.Context, param *entity.CreateSpecificFieldAggrResultParam) error {
+func (m *MockExptAggrResultService) CreateAnnotationAggrResult(arg0 context.Context, arg1 *entity.CreateSpecificFieldAggrResultParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAnnotationAggrResult", ctx, param)
+	ret := m.ctrl.Call(m, "CreateAnnotationAggrResult", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAnnotationAggrResult indicates an expected call of CreateAnnotationAggrResult.
-func (mr *MockExptAggrResultServiceMockRecorder) CreateAnnotationAggrResult(ctx, param any) *gomock.Call {
+func (mr *MockExptAggrResultServiceMockRecorder) CreateAnnotationAggrResult(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnnotationAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).CreateAnnotationAggrResult), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnnotationAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).CreateAnnotationAggrResult), arg0, arg1)
 }
 
 // CreateExptAggrResult mocks base method.
-func (m *MockExptAggrResultService) CreateExptAggrResult(ctx context.Context, spaceID, experimentID int64) error {
+func (m *MockExptAggrResultService) CreateExptAggrResult(arg0 context.Context, arg1, arg2 int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateExptAggrResult", ctx, spaceID, experimentID)
+	ret := m.ctrl.Call(m, "CreateExptAggrResult", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateExptAggrResult indicates an expected call of CreateExptAggrResult.
-func (mr *MockExptAggrResultServiceMockRecorder) CreateExptAggrResult(ctx, spaceID, experimentID any) *gomock.Call {
+func (mr *MockExptAggrResultServiceMockRecorder) CreateExptAggrResult(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExptAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).CreateExptAggrResult), ctx, spaceID, experimentID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExptAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).CreateExptAggrResult), arg0, arg1, arg2)
 }
 
 // PublishExptAggrResultEvent mocks base method.
-func (m *MockExptAggrResultService) PublishExptAggrResultEvent(ctx context.Context, event *entity.AggrCalculateEvent, duration *time.Duration) error {
+func (m *MockExptAggrResultService) PublishExptAggrResultEvent(arg0 context.Context, arg1 *entity.AggrCalculateEvent, arg2 *time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublishExptAggrResultEvent", ctx, event, duration)
+	ret := m.ctrl.Call(m, "PublishExptAggrResultEvent", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PublishExptAggrResultEvent indicates an expected call of PublishExptAggrResultEvent.
-func (mr *MockExptAggrResultServiceMockRecorder) PublishExptAggrResultEvent(ctx, event, duration any) *gomock.Call {
+func (mr *MockExptAggrResultServiceMockRecorder) PublishExptAggrResultEvent(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptAggrResultEvent", reflect.TypeOf((*MockExptAggrResultService)(nil).PublishExptAggrResultEvent), ctx, event, duration)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptAggrResultEvent", reflect.TypeOf((*MockExptAggrResultService)(nil).PublishExptAggrResultEvent), arg0, arg1, arg2)
 }
 
 // UpdateAnnotationAggrResult mocks base method.
-func (m *MockExptAggrResultService) UpdateAnnotationAggrResult(ctx context.Context, param *entity.UpdateExptAggrResultParam) error {
+func (m *MockExptAggrResultService) UpdateAnnotationAggrResult(arg0 context.Context, arg1 *entity.UpdateExptAggrResultParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAnnotationAggrResult", ctx, param)
+	ret := m.ctrl.Call(m, "UpdateAnnotationAggrResult", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateAnnotationAggrResult indicates an expected call of UpdateAnnotationAggrResult.
-func (mr *MockExptAggrResultServiceMockRecorder) UpdateAnnotationAggrResult(ctx, param any) *gomock.Call {
+func (mr *MockExptAggrResultServiceMockRecorder) UpdateAnnotationAggrResult(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAnnotationAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).UpdateAnnotationAggrResult), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAnnotationAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).UpdateAnnotationAggrResult), arg0, arg1)
 }
 
 // UpdateExptAggrResult mocks base method.
-func (m *MockExptAggrResultService) UpdateExptAggrResult(ctx context.Context, param *entity.UpdateExptAggrResultParam) error {
+func (m *MockExptAggrResultService) UpdateExptAggrResult(arg0 context.Context, arg1 *entity.UpdateExptAggrResultParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateExptAggrResult", ctx, param)
+	ret := m.ctrl.Call(m, "UpdateExptAggrResult", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateExptAggrResult indicates an expected call of UpdateExptAggrResult.
-func (mr *MockExptAggrResultServiceMockRecorder) UpdateExptAggrResult(ctx, param any) *gomock.Call {
+func (mr *MockExptAggrResultServiceMockRecorder) UpdateExptAggrResult(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).UpdateExptAggrResult), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).UpdateExptAggrResult), arg0, arg1)
 }

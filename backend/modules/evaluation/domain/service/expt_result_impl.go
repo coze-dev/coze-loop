@@ -358,6 +358,11 @@ func resolveLoadEvalTargetFullContent(param *entity.MGetExperimentResultParam) b
 	return param.ExportFullContent
 }
 
+func (e ExptResultServiceImpl) GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) ([]int64, error) {
+	// 注意入参顺序：repo 方法签名为 (ctx, exptID, spaceID)，此处按名对齐透传。
+	return e.ExptItemResultRepo.GetItemIDListByExptID(ctx, exptID, spaceID)
+}
+
 func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (res *entity.MGetExperimentReportResult, err error) {
 	var (
 		spaceID        = param.SpaceID

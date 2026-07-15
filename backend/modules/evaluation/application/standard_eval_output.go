@@ -53,6 +53,7 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{
 		ExptID:                   req.GetExptID(),
 		SourceTargetIDByTargetID: e.resolveSourceTargetIDs(ctx, req.GetWorkspaceID(), result),
+		MQMeta:                   e.resolveStandardEvalOutputMQMeta(ctx, req.GetWorkspaceID(), req.GetExptID()),
 	})
 	if err != nil {
 		return nil, err
@@ -68,6 +69,23 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 	}
 	if err := e.authStandardEvalOutput(ctx, req.GetWorkspaceID(), req.GetAPIKey()); err != nil {
 		return nil, err
+	}
+
+	// only_item_ids: 精简查询，items 每项仅填 item_id（单表单列 GROUP BY，不加载轨迹/评测大对象）。
+	if req.GetOnlyItemIds() {
+		itemIDs, err := e.resultSvc.GetItemIDListByExptID(ctx, req.GetExptID(), req.GetWorkspaceID())
+		if err != nil {
+			return nil, err
+		}
+		items := make([]*expt.ItemStandardEvalOutput, 0, len(itemIDs))
+		for _, id := range itemIDs {
+			items = append(items, &expt.ItemStandardEvalOutput{ExptID: gptr.Of(req.GetExptID()), ItemID: gptr.Of(id)})
+		}
+		return &expt.ListExperimentStandardEvalOutputsResponse{
+			Items:    items,
+			Total:    gptr.Of(int64(len(items))),
+			BaseResp: base.NewBaseResp(),
+		}, nil
 	}
 
 	param := &entity.MGetExperimentResultParam{
@@ -89,6 +107,7 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{
 		ExptID:                   req.GetExptID(),
 		SourceTargetIDByTargetID: e.resolveSourceTargetIDs(ctx, req.GetWorkspaceID(), result),
+		MQMeta:                   e.resolveStandardEvalOutputMQMeta(ctx, req.GetWorkspaceID(), req.GetExptID()),
 	})
 	if err != nil {
 		return nil, err
@@ -175,12 +194,75 @@ func (e *experimentApplication) resolveSourceTargetIDs(ctx context.Context, spac
 	return out
 }
 
+// resolveStandardEvalOutputMQMeta 加载实验详情，抽取实验级 MQ 元信息（与 buildItemCompleteEvent 对齐）。
+// 加载失败时返回 nil、降级为不填 MQ 字段，不阻断标准输出主链路。
+func (e *experimentApplication) resolveStandardEvalOutputMQMeta(ctx context.Context, spaceID, exptID int64) *standardEvalOutputMQMeta {
+	session := entity.NewSession(ctx)
+	expt, err := e.manager.GetDetail(ctx, exptID, spaceID, session)
+	if err != nil || expt == nil {
+		logs.CtxWarn(ctx, "resolveStandardEvalOutputMQMeta GetDetail failed, expt_id=%d, space_id=%d, err=%v", exptID, spaceID, err)
+		return nil
+	}
+	meta := &standardEvalOutputMQMeta{
+		ExptWorkspaceID:    expt.SpaceID,
+		ExptRunID:          expt.LatestRunID,
+		ExperimentGroupKey: expt.ExperimentGroupKey,
+		EvalTargetID:       expt.TargetID,
+		PrimaryEvalSetID:   expt.EvalSetID,
+		EvalSetByID:        map[int64]*entity.EvaluationSet{},
+	}
+	if expt.Target != nil {
+		meta.EvalTargetWorkspaceID = expt.Target.SpaceID
+		meta.SourceTargetID = expt.Target.SourceTargetID
+	}
+	// 归属集详情：多评测集从 EvalSetDetails 收集，单评测集/老实验用主集 EvalSet。
+	// dataset_workspace_id 取任一集的 SpaceID（同空间场景与 expt.SpaceID 一致）。
+	for _, d := range expt.EvalSetDetails {
+		if d != nil && d.EvalSet != nil {
+			meta.EvalSetByID[d.EvalSetID] = d.EvalSet
+			if meta.DatasetWorkspaceID == 0 {
+				meta.DatasetWorkspaceID = d.EvalSet.SpaceID
+			}
+		}
+	}
+	if expt.EvalSet != nil {
+		meta.EvalSetByID[expt.EvalSet.ID] = expt.EvalSet
+		if meta.DatasetWorkspaceID == 0 {
+			meta.DatasetWorkspaceID = expt.EvalSet.SpaceID
+		}
+	}
+	if meta.DatasetWorkspaceID == 0 {
+		meta.DatasetWorkspaceID = expt.SpaceID
+	}
+	return meta
+}
+
 type standardEvalOutputBuildOptions struct {
 	ExptID               int64
 	EvaluatorByVersionID map[int64]*entity.ColumnEvaluator
 	// SourceTargetIDByTargetID: eval_target_id(=EvalTargetRecord.TargetID) -> 业务侧原始对象 ID。
 	// 由 application 层反查 EvalTarget 预先解析，纯函数 builder 只读；缺失时对应 source_target_id 留空。
 	SourceTargetIDByTargetID map[int64]string
+	// MQMeta: 实验级 MQ 元信息（同实验所有 item 相同），由 application 层加载 Experiment 详情预先解析，
+	// 与 item-complete(success) MQ 消息体对齐；nil 时对应 MQ 字段留空、不阻断主链路。
+	MQMeta *standardEvalOutputMQMeta
+}
+
+// standardEvalOutputMQMeta 承载实验级 MQ 元信息，取值与 buildItemCompleteEvent 对齐。
+// dataset_version_id / dataset_version_name / dataset_key 按 item 归属集分流（多评测集），
+// 故 per-item 部分放在 builder 里从 payload 取，此处仅承载实验级恒定字段。
+type standardEvalOutputMQMeta struct {
+	ExptWorkspaceID       int64
+	ExptRunID             int64
+	ExperimentGroupKey    string
+	EvalTargetID          int64
+	EvalTargetWorkspaceID int64
+	SourceTargetID        string
+	DatasetWorkspaceID    int64
+	// EvalSetByID: 归属集 id -> EvaluationSet（含 version），用于按 item 的 dataset_id 分流取版本信息。
+	EvalSetByID map[int64]*entity.EvaluationSet
+	// PrimaryEvalSetID: 主集 id（单评测集/老实验回退用）。
+	PrimaryEvalSetID int64
 }
 
 type standardEvalOutputJSON struct {
@@ -274,16 +356,137 @@ func isItemStandardEvalOutputContentReady(item *entity.ItemResult) bool {
 }
 
 func newItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) *expt.ItemStandardEvalOutput {
-	res := &expt.ItemStandardEvalOutput{ExptID: opt.ExptID, DatasetKey: datasetKeyFromItem(item)}
-	if item == nil {
-		return res
+	res := &expt.ItemStandardEvalOutput{ExptID: gptr.Of(opt.ExptID)}
+	if dk := datasetKeyFromItem(item); dk != "" {
+		res.DatasetKey = gptr.Of(dk)
 	}
-	res.ItemID = item.ItemID
-	if item.SystemInfo != nil {
-		status := exptdomain.ItemRunState(item.SystemInfo.RunState)
-		res.Status = &status
+	if item != nil {
+		res.ItemID = gptr.Of(item.ItemID)
+		if item.SystemInfo != nil {
+			status := exptdomain.ItemRunState(item.SystemInfo.RunState)
+			res.Status = &status
+		}
 	}
+	fillStandardEvalOutputMQMeta(res, item, opt)
 	return res
+}
+
+// fillStandardEvalOutputMQMeta 把实验级 + item 级 MQ 元信息平铺到顶层字段（与 item-complete MQ 对齐）。
+// meta 为 nil（详情加载失败）时跳过实验级字段，item 级字段仍尽力从 payload 填充。
+func fillStandardEvalOutputMQMeta(res *expt.ItemStandardEvalOutput, item *entity.ItemResult, opt standardEvalOutputBuildOptions) {
+	meta := opt.MQMeta
+	if meta != nil {
+		if meta.ExptWorkspaceID != 0 {
+			res.ExptWorkspaceID = gptr.Of(meta.ExptWorkspaceID)
+		}
+		if meta.ExptRunID != 0 {
+			res.ExptRunID = gptr.Of(meta.ExptRunID)
+		}
+		if meta.ExperimentGroupKey != "" {
+			res.ExperimentGroupKey = gptr.Of(meta.ExperimentGroupKey)
+		}
+		if meta.EvalTargetID != 0 {
+			res.EvalTargetID = gptr.Of(meta.EvalTargetID)
+		}
+		if meta.EvalTargetWorkspaceID != 0 {
+			res.EvalTargetWorkspaceID = gptr.Of(meta.EvalTargetWorkspaceID)
+		}
+		if meta.DatasetWorkspaceID != 0 {
+			res.DatasetWorkspaceID = gptr.Of(meta.DatasetWorkspaceID)
+		}
+	}
+
+	// source_target_id: 优先用按 target_id 反查的结果（resolveSourceTargetIDs），回退实验级 target。
+	if item != nil {
+		if targetID := firstTargetIDFromItem(item, opt.ExptID); targetID != 0 {
+			res.EvalTargetID = gptr.Of(targetID)
+			if v, ok := opt.SourceTargetIDByTargetID[targetID]; ok && v != "" {
+				res.SourceTargetID = gptr.Of(v)
+			}
+		}
+	}
+	if res.SourceTargetID == nil && meta != nil && meta.SourceTargetID != "" {
+		res.SourceTargetID = gptr.Of(meta.SourceTargetID)
+	}
+
+	// expt_run_id: 若详情未给出（未跑），回退用 item payload 里的 EvalTargetRecord.ExperimentRunID。
+	if res.ExptRunID == nil {
+		if runID := firstExperimentRunIDFromItem(item, opt.ExptID); runID != 0 {
+			res.ExptRunID = gptr.Of(runID)
+		}
+	}
+
+	// dataset_id / dataset_version_id / dataset_version_name: 按 item 归属集分流。
+	datasetID := datasetIDFromItem(item, opt.ExptID)
+	if datasetID != 0 {
+		res.DatasetID = gptr.Of(datasetID)
+	}
+	if meta != nil {
+		es := meta.evalSetForItem(datasetID)
+		if es != nil {
+			if res.DatasetID == nil && es.ID != 0 {
+				res.DatasetID = gptr.Of(es.ID)
+			}
+			if ver := es.EvaluationSetVersion; ver != nil {
+				if ver.ID != 0 {
+					res.DatasetVersionID = gptr.Of(ver.ID)
+				}
+				if ver.Version != "" {
+					res.DatasetVersionName = gptr.Of(ver.Version)
+				}
+			}
+		}
+	}
+}
+
+// evalSetForItem 按 item 的 dataset_id 找归属集；命中不到时回退主集（单评测集/老实验）。
+func (m *standardEvalOutputMQMeta) evalSetForItem(datasetID int64) *entity.EvaluationSet {
+	if m == nil {
+		return nil
+	}
+	if datasetID != 0 {
+		if es, ok := m.EvalSetByID[datasetID]; ok {
+			return es
+		}
+		// 多评测集里没命中归属集：不误用主集，返回 nil 避免张冠李戴。
+		if len(m.EvalSetByID) > 1 {
+			return nil
+		}
+	}
+	if m.PrimaryEvalSetID != 0 {
+		return m.EvalSetByID[m.PrimaryEvalSetID]
+	}
+	return nil
+}
+
+// datasetIDFromItem 从 item payload 的 EvalSet 取归属集 id。
+func datasetIDFromItem(item *entity.ItemResult, exptID int64) int64 {
+	for _, payload := range standardPayloads(item, exptID) {
+		if payload != nil && payload.EvalSet != nil && payload.EvalSet.EvalSetID != 0 {
+			return payload.EvalSet.EvalSetID
+		}
+	}
+	return 0
+}
+
+// firstTargetIDFromItem 取 item 首个 payload 的 EvalTargetRecord.TargetID。
+func firstTargetIDFromItem(item *entity.ItemResult, exptID int64) int64 {
+	for _, payload := range standardPayloads(item, exptID) {
+		if payload != nil && payload.TargetOutput != nil && payload.TargetOutput.EvalTargetRecord != nil {
+			return payload.TargetOutput.EvalTargetRecord.TargetID
+		}
+	}
+	return 0
+}
+
+// firstExperimentRunIDFromItem 取 item 首个 payload 的 EvalTargetRecord.ExperimentRunID。
+func firstExperimentRunIDFromItem(item *entity.ItemResult, exptID int64) int64 {
+	for _, payload := range standardPayloads(item, exptID) {
+		if payload != nil && payload.TargetOutput != nil && payload.TargetOutput.EvalTargetRecord != nil {
+			return payload.TargetOutput.EvalTargetRecord.ExperimentRunID
+		}
+	}
+	return 0
 }
 
 func inlineJSONContent(val any) (*expt.StandardEvalOutputContent, error) {
