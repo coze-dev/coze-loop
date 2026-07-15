@@ -708,7 +708,7 @@ func TestOpenAPIEvalSetConfigsDTO2Domain_EvaluatorFilter(t *testing.T) {
 	assert.Same(t, evalFilter, ec0.Filter)
 	assert.Len(t, ec0.Filter.FilterFields, 1)
 	assert.Equal(t, "tag_key", ec0.Filter.FilterFields[0].FieldName)
-	assert.Equal(t, "eq", string(ec0.Filter.FilterFields[0].GetQueryType()))
+	assert.Equal(t, "eq", ec0.Filter.FilterFields[0].GetQueryType())
 	assert.Equal(t, int32(1), ec0.GetFilterMode())
 	assert.Equal(t, int64(111), ec0.GetEvaluatorVersionID())
 

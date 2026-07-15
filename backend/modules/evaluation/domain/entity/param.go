@@ -227,8 +227,8 @@ type ExecuteEvalTargetParam struct {
 // id 字段统一使用 string, 避免 JSON 序列化后被 JS 等消费方按 number 解析导致精度丢失。
 // 字段可能为空 (旧数据集无 item 版本、调试场景无实验等), 使用方需容忍缺省值。
 type EvalSetItemMeta struct {
-	EvalSetID        string `json:"eval_set_id,omitempty"`
-	EvalSetName      string `json:"eval_set_name,omitempty"`
+	EvalSetID   string `json:"eval_set_id,omitempty"`
+	EvalSetName string `json:"eval_set_name,omitempty"`
 	// DatasetKey 评测集业务 key (EvaluationSet.DatasetKey), 供评测对象透传给外部执行侧。
 	DatasetKey       string `json:"dataset_key,omitempty"`
 	EvalSetVersionID string `json:"eval_set_version_id,omitempty"`
