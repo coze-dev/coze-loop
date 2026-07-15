@@ -1,0 +1,27 @@
+backend/modules/evaluation/domain/entity/param.go
+  s_e71b235ce402cc::t_ed03477d479c4d 221-223,232-233
+backend/modules/evaluation/domain/entity/target_record.go
+  s_e71b235ce402cc::t_d89811ab5cdc3e 164-165
+backend/modules/evaluation/domain/service/expt_run_item_turn_impl.go
+  s_e71b235ce402cc::t_b12e912ebd3ca5 280,1248
+backend/modules/evaluation/domain/service/target_impl.go
+  s_e71b235ce402cc::t_9b37827c2514f7 532
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "589a00695e44942abadeea0ab5287b84abdd9f1f",
+  "prompts": {},
+  "sessions": {
+    "s_e71b235ce402cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_e71b235ce402cc",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
