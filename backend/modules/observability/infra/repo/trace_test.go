@@ -2022,3 +2022,239 @@ func TestTraceRepoImpl_GetTrace_AnnotationUsesSpanTimeRange(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 }
+
+func TestTraceRepoImpl_GetTrace_ParallelAnnotationQuery(t *testing.T) {
+	t.Run("parallel query spans and annotations when spanIDs provided", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		spansDaoMock := daomock.NewMockISpansDao(ctrl)
+		spansDaoMock.EXPECT().Get(gomock.Any(), gomock.Any()).Return([]*dao.Span{
+			{SpanID: "span1", TraceID: "trace1", StartTime: 1000},
+			{SpanID: "span2", TraceID: "trace1", StartTime: 2000},
+		}, nil)
+		annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+		annoDaoMock.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, param *dao.ListAnnotationsParam) ([]*dao.Annotation, error) {
+				assert.ElementsMatch(t, []string{"span1", "span2"}, param.SpanIDs)
+				assert.Equal(t, int64(1000000), param.StartTime)
+				assert.Equal(t, int64(100000000), param.EndTime)
+				return []*dao.Annotation{
+					{ID: "anno1", SpanID: "span1", TraceID: "trace1"},
+					{ID: "anno2", SpanID: "span2", TraceID: "trace1"},
+				}, nil
+			})
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"test": {
+					loop_span.TTL3d: {
+						SpanTable: "spans",
+						AnnoTable: "annotations",
+					},
+				},
+			},
+			TenantsSupportAnnotation: map[string]bool{
+				"test": true,
+			},
+		}, nil)
+
+		r, err := NewTraceRepoImpl(
+			traceConfigMock,
+			&mockStorageProvider{},
+			nil, nil, nil, nil,
+			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+		)
+		assert.NoError(t, err)
+		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
+			TraceID: "trace1",
+			Tenants: []string{"test"},
+			SpanIDs: []string{"span1", "span2"},
+			Limit:   1000,
+			StartAt: 1000,
+			EndAt:   100000,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, got)
+		assert.Len(t, got.Spans, 2)
+		assert.Len(t, got.Spans[0].Annotations, 1)
+		assert.Equal(t, "anno1", got.Spans[0].Annotations[0].ID)
+		assert.Len(t, got.Spans[1].Annotations, 1)
+		assert.Equal(t, "anno2", got.Spans[1].Annotations[0].ID)
+	})
+
+	t.Run("parallel query with span dao error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		spansDaoMock := daomock.NewMockISpansDao(ctrl)
+		spansDaoMock.EXPECT().Get(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+		annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+		annoDaoMock.EXPECT().List(gomock.Any(), gomock.Any()).Return([]*dao.Annotation{}, nil).AnyTimes()
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"test": {
+					loop_span.TTL3d: {
+						SpanTable: "spans",
+						AnnoTable: "annotations",
+					},
+				},
+			},
+			TenantsSupportAnnotation: map[string]bool{
+				"test": true,
+			},
+		}, nil)
+
+		r, err := NewTraceRepoImpl(
+			traceConfigMock,
+			&mockStorageProvider{},
+			nil, nil, nil, nil,
+			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+		)
+		assert.NoError(t, err)
+		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
+			TraceID: "trace1",
+			Tenants: []string{"test"},
+			SpanIDs: []string{"span1"},
+			Limit:   1000,
+			StartAt: 1000,
+			EndAt:   100000,
+		})
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("parallel query with annotation dao error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		spansDaoMock := daomock.NewMockISpansDao(ctrl)
+		spansDaoMock.EXPECT().Get(gomock.Any(), gomock.Any()).Return([]*dao.Span{
+			{SpanID: "span1", TraceID: "trace1"},
+		}, nil).AnyTimes()
+		annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+		annoDaoMock.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"test": {
+					loop_span.TTL3d: {
+						SpanTable: "spans",
+						AnnoTable: "annotations",
+					},
+				},
+			},
+			TenantsSupportAnnotation: map[string]bool{
+				"test": true,
+			},
+		}, nil)
+
+		r, err := NewTraceRepoImpl(
+			traceConfigMock,
+			&mockStorageProvider{},
+			nil, nil, nil, nil,
+			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+		)
+		assert.NoError(t, err)
+		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
+			TraceID: "trace1",
+			Tenants: []string{"test"},
+			SpanIDs: []string{"span1"},
+			Limit:   1000,
+			StartAt: 1000,
+			EndAt:   100000,
+		})
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("parallel query with empty spans result skips annotation attachment", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		spansDaoMock := daomock.NewMockISpansDao(ctrl)
+		spansDaoMock.EXPECT().Get(gomock.Any(), gomock.Any()).Return([]*dao.Span{}, nil)
+		annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+		annoDaoMock.EXPECT().List(gomock.Any(), gomock.Any()).Return([]*dao.Annotation{
+			{ID: "anno1", SpanID: "span1"},
+		}, nil)
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"test": {
+					loop_span.TTL3d: {
+						SpanTable: "spans",
+						AnnoTable: "annotations",
+					},
+				},
+			},
+			TenantsSupportAnnotation: map[string]bool{
+				"test": true,
+			},
+		}, nil)
+
+		r, err := NewTraceRepoImpl(
+			traceConfigMock,
+			&mockStorageProvider{},
+			nil, nil, nil, nil,
+			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+		)
+		assert.NoError(t, err)
+		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
+			TraceID: "trace1",
+			Tenants: []string{"test"},
+			SpanIDs: []string{"span1"},
+			Limit:   1000,
+			StartAt: 1000,
+			EndAt:   100000,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, got)
+		assert.Empty(t, got.Spans)
+	})
+
+	t.Run("no parallel when NotQueryAnnotation is true", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		spansDaoMock := daomock.NewMockISpansDao(ctrl)
+		spansDaoMock.EXPECT().Get(gomock.Any(), gomock.Any()).Return([]*dao.Span{
+			{SpanID: "span1", TraceID: "trace1"},
+		}, nil)
+		annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"test": {
+					loop_span.TTL3d: {
+						SpanTable: "spans",
+						AnnoTable: "annotations",
+					},
+				},
+			},
+			TenantsSupportAnnotation: map[string]bool{
+				"test": true,
+			},
+		}, nil)
+
+		r, err := NewTraceRepoImpl(
+			traceConfigMock,
+			&mockStorageProvider{},
+			nil, nil, nil, nil,
+			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+		)
+		assert.NoError(t, err)
+		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
+			TraceID:            "trace1",
+			Tenants:            []string{"test"},
+			SpanIDs:            []string{"span1"},
+			NotQueryAnnotation: true,
+			Limit:              1000,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, got)
+		assert.Len(t, got.Spans, 1)
+		assert.Nil(t, got.Spans[0].Annotations)
+	})
+}
