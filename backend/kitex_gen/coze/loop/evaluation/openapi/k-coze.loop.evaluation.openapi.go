@@ -18125,6 +18125,20 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 102:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField102(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -18450,6 +18464,20 @@ func (p *SubmitExperimentOApiRequest) FastReadField101(buf []byte) (int, error) 
 	return offset, nil
 }
 
+func (p *SubmitExperimentOApiRequest) FastReadField102(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.RefGroupExperimentID = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -18485,6 +18513,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField45(buf[offset:], w)
 		offset += p.fastWriteField46(buf[offset:], w)
+		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -18525,6 +18554,7 @@ func (p *SubmitExperimentOApiRequest) BLength() int {
 		l += p.field50Length()
 		l += p.field100Length()
 		l += p.field101Length()
+		l += p.field102Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -18710,6 +18740,15 @@ func (p *SubmitExperimentOApiRequest) fastWriteField101(buf []byte, w thrift.Noc
 	if p.IsSetExperimentGroupKey() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 101)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ExperimentGroupKey)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField102(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRefGroupExperimentID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 102)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.RefGroupExperimentID)
 	}
 	return offset
 }
@@ -18903,6 +18942,15 @@ func (p *SubmitExperimentOApiRequest) field101Length() int {
 	return l
 }
 
+func (p *SubmitExperimentOApiRequest) field102Length() int {
+	l := 0
+	if p.IsSetRefGroupExperimentID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *SubmitExperimentOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -19081,6 +19129,11 @@ func (p *SubmitExperimentOApiRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.ExperimentGroupKey)
 		}
 		p.ExperimentGroupKey = &tmp
+	}
+
+	if src.RefGroupExperimentID != nil {
+		tmp := *src.RefGroupExperimentID
+		p.RefGroupExperimentID = &tmp
 	}
 
 	var _extra *extra.Extra

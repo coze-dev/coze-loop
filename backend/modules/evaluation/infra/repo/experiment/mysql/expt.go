@@ -45,7 +45,7 @@ type IExptDAO interface {
 
 	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error)
 
-	ExistGroupKey(ctx context.Context, groupKey string) (bool, error)
+	ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error)
 }
 
 func NewExptDAO(db db.Provider) IExptDAO {
@@ -417,8 +417,9 @@ func (d *exptDAOImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, group
 	return ids, nil
 }
 
-// ExistGroupKey 全局(不限 space)判断 group key 是否已被占用。
-func (d *exptDAOImpl) ExistGroupKey(ctx context.Context, groupKey string) (bool, error) {
+// ExistGroupKey 判断 group key 是否已被“其它空间”占用（跨空间隔离）。
+// 同一空间内允许多个实验共享同一 group key，故排除 spaceID 本身；命中其它空间即视为冲突。
+func (d *exptDAOImpl) ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error) {
 	expt := d.query.Experiment
 	q := expt.WithContext(ctx)
 	if contexts.CtxWriteDB(ctx) {
@@ -427,6 +428,7 @@ func (d *exptDAOImpl) ExistGroupKey(ctx context.Context, groupKey string) (bool,
 
 	cnt, err := q.Where(
 		expt.ExperimentGroupKey.Eq(groupKey),
+		expt.SpaceID.Neq(spaceID),
 		expt.DeletedAt.IsNull(),
 	).Limit(1).Count()
 	if err != nil {

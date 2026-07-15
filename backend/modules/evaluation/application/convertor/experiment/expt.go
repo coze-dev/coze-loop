@@ -838,6 +838,7 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		Name:                  cer.GetName(),
 		Desc:                  cer.GetDesc(),
 		ExperimentGroupKey:    strings.TrimSpace(cer.GetExperimentGroupKey()),
+		RefGroupExperimentID:  cer.GetRefGroupExperimentID(),
 		EvalSetID:             cer.GetEvalSetID(),
 		TargetID:              cer.TargetID,
 		CreateEvalTargetParam: CreateEvalTargetParamDTO2DO(cer.GetCreateEvalTargetParam()),

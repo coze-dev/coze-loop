@@ -360,6 +360,7 @@ type CreateExptParam struct {
 	Name                  string                   `json:"name"`
 	Desc                  string                   `json:"desc"`
 	ExperimentGroupKey    string                   `json:"experiment_group_key,omitempty"`
+	RefGroupExperimentID  int64                    `json:"ref_group_experiment_id,omitempty"`
 	EvalSetID             int64                    `json:"eval_set_id"`
 	TargetID              *int64                   `json:"target_id,omitempty"`
 	CreateEvalTargetParam *CreateEvalTargetParam   `json:"create_eval_target_param,omitempty"`

@@ -67,6 +67,8 @@ type CreateExperimentRequest struct {
 	EvalSetSourceType *expt.ExptEvalSetSourceType `thrift:"eval_set_source_type,71,optional" frugal:"71,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
 	// 实验分组 key；不填时后端默认为实验 id
 	ExperimentGroupKey *string `thrift:"experiment_group_key,90,optional" frugal:"90,optional,string" json:"experiment_group_key" form:"experiment_group_key" `
+	// 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Ext              map[string]string          `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
@@ -448,6 +450,18 @@ func (p *CreateExperimentRequest) GetExperimentGroupKey() (v string) {
 	return *p.ExperimentGroupKey
 }
 
+var CreateExperimentRequest_RefGroupExperimentID_DEFAULT int64
+
+func (p *CreateExperimentRequest) GetRefGroupExperimentID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRefGroupExperimentID() {
+		return CreateExperimentRequest_RefGroupExperimentID_DEFAULT
+	}
+	return *p.RefGroupExperimentID
+}
+
 var CreateExperimentRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
 
 func (p *CreateExperimentRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
@@ -588,6 +602,9 @@ func (p *CreateExperimentRequest) SetEvalSetSourceType(val *expt.ExptEvalSetSour
 func (p *CreateExperimentRequest) SetExperimentGroupKey(val *string) {
 	p.ExperimentGroupKey = val
 }
+func (p *CreateExperimentRequest) SetRefGroupExperimentID(val *int64) {
+	p.RefGroupExperimentID = val
+}
 func (p *CreateExperimentRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
 	p.NotificationConf = val
 }
@@ -633,6 +650,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	70:  "eval_set_configs",
 	71:  "eval_set_source_type",
 	90:  "experiment_group_key",
+	91:  "ref_group_experiment_id",
 	110: "notification_conf",
 	100: "ext",
 	200: "session",
@@ -757,6 +775,10 @@ func (p *CreateExperimentRequest) IsSetEvalSetSourceType() bool {
 
 func (p *CreateExperimentRequest) IsSetExperimentGroupKey() bool {
 	return p.ExperimentGroupKey != nil
+}
+
+func (p *CreateExperimentRequest) IsSetRefGroupExperimentID() bool {
+	return p.RefGroupExperimentID != nil
 }
 
 func (p *CreateExperimentRequest) IsSetNotificationConf() bool {
@@ -1038,6 +1060,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 90:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField90(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 91:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField91(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1511,6 +1541,17 @@ func (p *CreateExperimentRequest) ReadField90(iprot thrift.TProtocol) error {
 	p.ExperimentGroupKey = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField91(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RefGroupExperimentID = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField110(iprot thrift.TProtocol) error {
 	_field := expt.NewExptNotificationConf()
 	if err := _field.Read(iprot); err != nil {
@@ -1693,6 +1734,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField90(oprot); err != nil {
 			fieldId = 90
+			goto WriteFieldError
+		}
+		if err = p.writeField91(oprot); err != nil {
+			fieldId = 91
 			goto WriteFieldError
 		}
 		if err = p.writeField110(oprot); err != nil {
@@ -2328,6 +2373,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField91(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRefGroupExperimentID() {
+		if err = oprot.WriteFieldBegin("ref_group_experiment_id", thrift.I64, 91); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RefGroupExperimentID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 91 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 91 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField110(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNotificationConf() {
 		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 110); err != nil {
@@ -2517,6 +2580,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field90DeepEqual(ano.ExperimentGroupKey) {
+		return false
+	}
+	if !p.Field91DeepEqual(ano.RefGroupExperimentID) {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.NotificationConf) {
@@ -2891,6 +2957,18 @@ func (p *CreateExperimentRequest) Field90DeepEqual(src *string) bool {
 	}
 	return true
 }
+func (p *CreateExperimentRequest) Field91DeepEqual(src *int64) bool {
+
+	if p.RefGroupExperimentID == src {
+		return true
+	} else if p.RefGroupExperimentID == nil || src == nil {
+		return false
+	}
+	if *p.RefGroupExperimentID != *src {
+		return false
+	}
+	return true
+}
 func (p *CreateExperimentRequest) Field110DeepEqual(src *expt.ExptNotificationConf) bool {
 
 	if !p.NotificationConf.DeepEqual(src) {
@@ -3211,6 +3289,8 @@ type SubmitExperimentRequest struct {
 	Ext               map[string]string           `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	// 实验分组 key；不填时后端默认为实验 id
 	ExperimentGroupKey *string `thrift:"experiment_group_key,90,optional" frugal:"90,optional,string" json:"experiment_group_key" form:"experiment_group_key" `
+	// 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Session          *common.Session            `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
@@ -3615,6 +3695,18 @@ func (p *SubmitExperimentRequest) GetExperimentGroupKey() (v string) {
 	return *p.ExperimentGroupKey
 }
 
+var SubmitExperimentRequest_RefGroupExperimentID_DEFAULT int64
+
+func (p *SubmitExperimentRequest) GetRefGroupExperimentID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRefGroupExperimentID() {
+		return SubmitExperimentRequest_RefGroupExperimentID_DEFAULT
+	}
+	return *p.RefGroupExperimentID
+}
+
 var SubmitExperimentRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
 
 func (p *SubmitExperimentRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
@@ -3749,6 +3841,9 @@ func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 func (p *SubmitExperimentRequest) SetExperimentGroupKey(val *string) {
 	p.ExperimentGroupKey = val
 }
+func (p *SubmitExperimentRequest) SetRefGroupExperimentID(val *int64) {
+	p.RefGroupExperimentID = val
+}
 func (p *SubmitExperimentRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
 	p.NotificationConf = val
 }
@@ -3793,6 +3888,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	76:  "eval_set_source_type",
 	100: "ext",
 	90:  "experiment_group_key",
+	91:  "ref_group_experiment_id",
 	110: "notification_conf",
 	200: "session",
 	255: "Base",
@@ -3924,6 +4020,10 @@ func (p *SubmitExperimentRequest) IsSetExt() bool {
 
 func (p *SubmitExperimentRequest) IsSetExperimentGroupKey() bool {
 	return p.ExperimentGroupKey != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetRefGroupExperimentID() bool {
+	return p.RefGroupExperimentID != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetNotificationConf() bool {
@@ -4217,6 +4317,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 90:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField90(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 91:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField91(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4713,6 +4821,17 @@ func (p *SubmitExperimentRequest) ReadField90(iprot thrift.TProtocol) error {
 	p.ExperimentGroupKey = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField91(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RefGroupExperimentID = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField110(iprot thrift.TProtocol) error {
 	_field := expt.NewExptNotificationConf()
 	if err := _field.Read(iprot); err != nil {
@@ -4874,6 +4993,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField90(oprot); err != nil {
 			fieldId = 90
+			goto WriteFieldError
+		}
+		if err = p.writeField91(oprot); err != nil {
+			fieldId = 91
 			goto WriteFieldError
 		}
 		if err = p.writeField110(oprot); err != nil {
@@ -5549,6 +5672,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField91(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRefGroupExperimentID() {
+		if err = oprot.WriteFieldBegin("ref_group_experiment_id", thrift.I64, 91); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RefGroupExperimentID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 91 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 91 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField110(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNotificationConf() {
 		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 110); err != nil {
@@ -5715,6 +5856,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field90DeepEqual(ano.ExperimentGroupKey) {
+		return false
+	}
+	if !p.Field91DeepEqual(ano.RefGroupExperimentID) {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.NotificationConf) {
@@ -6102,6 +6246,18 @@ func (p *SubmitExperimentRequest) Field90DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ExperimentGroupKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field91DeepEqual(src *int64) bool {
+
+	if p.RefGroupExperimentID == src {
+		return true
+	} else if p.RefGroupExperimentID == nil || src == nil {
+		return false
+	}
+	if *p.RefGroupExperimentID != *src {
 		return false
 	}
 	return true
@@ -16430,7 +16586,7 @@ func (p *StandardEvalOutputContent) Field3DeepEqual(src *StandardEvalOutputFullC
 
 type MGetExperimentStandardEvalOutputsRequest struct {
 	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ExptID      int64      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	ExptID      int64      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" form:"expt_id,required" query:"expt_id,required"`
 	ItemIds     []int64    `thrift:"item_ids,10,required" frugal:"10,required,list<i64>" json:"item_ids" form:"item_ids,required" `
 	APIKey      *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -16911,7 +17067,7 @@ func (p *MGetExperimentStandardEvalOutputsRequest) Field255DeepEqual(src *base.B
 
 type ListExperimentStandardEvalOutputsRequest struct {
 	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ExptID      int64      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	ExptID      int64      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" form:"expt_id,required" query:"expt_id,required"`
 	PageNumber  *int32     `thrift:"page_number,20,optional" frugal:"20,optional,i32" json:"page_number" query:"page_number" `
 	PageSize    *int32     `thrift:"page_size,21,optional" frugal:"21,optional,i32" json:"page_size" query:"page_size" `
 	APIKey      *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `

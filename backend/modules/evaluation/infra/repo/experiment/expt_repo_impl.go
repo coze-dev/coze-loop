@@ -194,8 +194,8 @@ func (e *exptRepoImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, grou
 	return e.exptDAO.GetIDsByGroupKey(ctx, spaceID, groupKey)
 }
 
-func (e *exptRepoImpl) ExistGroupKey(ctx context.Context, groupKey string) (bool, error) {
-	return e.exptDAO.ExistGroupKey(ctx, groupKey)
+func (e *exptRepoImpl) ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error) {
+	return e.exptDAO.ExistGroupKey(ctx, groupKey, spaceID)
 }
 
 func (e *exptRepoImpl) GetEvaluatorRefByExptIDs(ctx context.Context, exptIDs []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error) {

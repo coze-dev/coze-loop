@@ -538,8 +538,9 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		// 分流唯一以 eval_set_source_type 为准 (== MultiSetConfig 走新路径), configs 仅作权威源数据。
 		EvalSetConfigs:     req.EvalSetConfigs,
 		EvalSetSourceType:  req.EvalSetSourceType,
-		ExperimentGroupKey: req.ExperimentGroupKey,
-		NotificationConf:   req.NotificationConf,
+		ExperimentGroupKey:   req.ExperimentGroupKey,
+		RefGroupExperimentID: req.RefGroupExperimentID,
+		NotificationConf:     req.NotificationConf,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())

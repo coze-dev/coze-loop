@@ -132,8 +132,14 @@ error_code:
 
   - name: ExperimentGroupKeyExisted
     code: 4018
-    message: experiment group key already exists
-    description: experiment group key already exists
+    message: experiment group key already exists, please use another one
+    description: experiment group key already exists, please use another one
+    no_affect_stability: true
+
+  - name: RefGroupExperimentInvalid
+    code: 4019
+    message: ref group experiment id is not a valid experiment in current space
+    description: ref group experiment id is not a valid experiment in current space
     no_affect_stability: true
 
   - name: ContentTypeNotSupported

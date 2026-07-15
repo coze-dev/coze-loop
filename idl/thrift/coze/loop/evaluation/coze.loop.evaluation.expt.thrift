@@ -54,6 +54,9 @@ struct CreateExperimentRequest {
     // 实验分组 key；不填时后端默认为实验 id
     90: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag='json:"experiment_group_key"')
 
+    // 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+    91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
+
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
@@ -121,6 +124,9 @@ struct SubmitExperimentRequest {
 
     // 实验分组 key；不填时后端默认为实验 id
     90: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag='json:"experiment_group_key"')
+
+    // 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+    91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
 
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')

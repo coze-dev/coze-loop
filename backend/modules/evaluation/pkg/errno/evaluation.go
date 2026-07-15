@@ -136,9 +136,13 @@ const (
 	experimentNameInvalidFormatMessage           = "experiment name format is invalid"
 	experimentNameInvalidFormatNoAffectStability = true
 
-	ExperimentGroupKeyExistedCode              = 601204018 // experiment group key already exists
-	experimentGroupKeyExistedMessage           = "experiment group key already exists"
+	ExperimentGroupKeyExistedCode              = 601204018 // experiment group key already exists, please use another one
+	experimentGroupKeyExistedMessage           = "experiment group key already exists, please use another one"
 	experimentGroupKeyExistedNoAffectStability = true
+
+	RefGroupExperimentInvalidCode              = 601204019 // ref group experiment id is not a valid experiment in current space
+	refGroupExperimentInvalidMessage           = "ref group experiment id is not a valid experiment in current space"
+	refGroupExperimentInvalidNoAffectStability = true
 
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
@@ -591,6 +595,12 @@ func init() {
 		ExperimentGroupKeyExistedCode,
 		experimentGroupKeyExistedMessage,
 		code.WithAffectStability(!experimentGroupKeyExistedNoAffectStability),
+	)
+
+	code.Register(
+		RefGroupExperimentInvalidCode,
+		refGroupExperimentInvalidMessage,
+		code.WithAffectStability(!refGroupExperimentInvalidNoAffectStability),
 	)
 
 	code.Register(

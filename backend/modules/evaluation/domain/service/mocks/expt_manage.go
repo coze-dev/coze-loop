@@ -41,18 +41,18 @@ func (m *MockIExptManager) EXPECT() *MockIExptManagerMockRecorder {
 }
 
 // CheckGroupKey mocks base method.
-func (m *MockIExptManager) CheckGroupKey(arg0 context.Context, arg1 string, arg2 *entity.Session) (bool, error) {
+func (m *MockIExptManager) CheckGroupKey(arg0 context.Context, arg1 string, arg2 int64, arg3 *entity.Session) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckGroupKey", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "CheckGroupKey", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CheckGroupKey indicates an expected call of CheckGroupKey.
-func (mr *MockIExptManagerMockRecorder) CheckGroupKey(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockIExptManagerMockRecorder) CheckGroupKey(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckGroupKey", reflect.TypeOf((*MockIExptManager)(nil).CheckGroupKey), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckGroupKey", reflect.TypeOf((*MockIExptManager)(nil).CheckGroupKey), arg0, arg1, arg2, arg3)
 }
 
 // CheckName mocks base method.
@@ -496,15 +496,15 @@ func (mr *MockIExptManagerMockRecorder) Update(arg0, arg1, arg2 any) *gomock.Cal
 }
 
 // UpdateRunConf mocks base method.
-func (m *MockIExptManager) UpdateRunConf(ctx context.Context, param *entity.UpdateRunConfParam) error {
+func (m *MockIExptManager) UpdateRunConf(arg0 context.Context, arg1 *entity.UpdateRunConfParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateRunConf", ctx, param)
+	ret := m.ctrl.Call(m, "UpdateRunConf", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateRunConf indicates an expected call of UpdateRunConf.
-func (mr *MockIExptManagerMockRecorder) UpdateRunConf(ctx, param any) *gomock.Call {
+func (mr *MockIExptManagerMockRecorder) UpdateRunConf(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRunConf", reflect.TypeOf((*MockIExptManager)(nil).UpdateRunConf), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRunConf", reflect.TypeOf((*MockIExptManager)(nil).UpdateRunConf), arg0, arg1)
 }

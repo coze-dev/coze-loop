@@ -492,6 +492,20 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 91:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField91(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 110:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField110(buf[offset:])
@@ -1067,6 +1081,20 @@ func (p *CreateExperimentRequest) FastReadField90(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateExperimentRequest) FastReadField91(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.RefGroupExperimentID = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentRequest) FastReadField110(buf []byte) (int, error) {
 	offset := 0
 	_field := expt.NewExptNotificationConf()
@@ -1155,6 +1183,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField45(buf[offset:], w)
 		offset += p.fastWriteField46(buf[offset:], w)
 		offset += p.fastWriteField47(buf[offset:], w)
+		offset += p.fastWriteField91(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
@@ -1216,6 +1245,7 @@ func (p *CreateExperimentRequest) BLength() int {
 		l += p.field70Length()
 		l += p.field71Length()
 		l += p.field90Length()
+		l += p.field91Length()
 		l += p.field110Length()
 		l += p.field100Length()
 		l += p.field200Length()
@@ -1534,6 +1564,15 @@ func (p *CreateExperimentRequest) fastWriteField90(buf []byte, w thrift.NocopyWr
 	if p.IsSetExperimentGroupKey() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 90)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ExperimentGroupKey)
+	}
+	return offset
+}
+
+func (p *CreateExperimentRequest) fastWriteField91(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRefGroupExperimentID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 91)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.RefGroupExperimentID)
 	}
 	return offset
 }
@@ -1875,6 +1914,15 @@ func (p *CreateExperimentRequest) field90Length() int {
 	return l
 }
 
+func (p *CreateExperimentRequest) field91Length() int {
+	l := 0
+	if p.IsSetRefGroupExperimentID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *CreateExperimentRequest) field110Length() int {
 	l := 0
 	if p.IsSetNotificationConf() {
@@ -2142,6 +2190,11 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.ExperimentGroupKey)
 		}
 		p.ExperimentGroupKey = &tmp
+	}
+
+	if src.RefGroupExperimentID != nil {
+		tmp := *src.RefGroupExperimentID
+		p.RefGroupExperimentID = &tmp
 	}
 
 	var _notificationConf *expt.ExptNotificationConf
@@ -2842,6 +2895,20 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 91:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField91(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 110:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField110(buf[offset:])
@@ -3439,6 +3506,20 @@ func (p *SubmitExperimentRequest) FastReadField90(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentRequest) FastReadField91(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.RefGroupExperimentID = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentRequest) FastReadField110(buf []byte) (int, error) {
 	offset := 0
 	_field := expt.NewExptNotificationConf()
@@ -3495,6 +3576,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField45(buf[offset:], w)
 		offset += p.fastWriteField46(buf[offset:], w)
 		offset += p.fastWriteField47(buf[offset:], w)
+		offset += p.fastWriteField91(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
@@ -3559,6 +3641,7 @@ func (p *SubmitExperimentRequest) BLength() int {
 		l += p.field76Length()
 		l += p.field100Length()
 		l += p.field90Length()
+		l += p.field91Length()
 		l += p.field110Length()
 		l += p.field200Length()
 		l += p.field255Length()
@@ -3901,6 +3984,15 @@ func (p *SubmitExperimentRequest) fastWriteField90(buf []byte, w thrift.NocopyWr
 	if p.IsSetExperimentGroupKey() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 90)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ExperimentGroupKey)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentRequest) fastWriteField91(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRefGroupExperimentID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 91)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.RefGroupExperimentID)
 	}
 	return offset
 }
@@ -4249,6 +4341,15 @@ func (p *SubmitExperimentRequest) field90Length() int {
 	return l
 }
 
+func (p *SubmitExperimentRequest) field91Length() int {
+	l := 0
+	if p.IsSetRefGroupExperimentID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *SubmitExperimentRequest) field110Length() int {
 	l := 0
 	if p.IsSetNotificationConf() {
@@ -4523,6 +4624,11 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.ExperimentGroupKey)
 		}
 		p.ExperimentGroupKey = &tmp
+	}
+
+	if src.RefGroupExperimentID != nil {
+		tmp := *src.RefGroupExperimentID
+		p.RefGroupExperimentID = &tmp
 	}
 
 	var _notificationConf *expt.ExptNotificationConf

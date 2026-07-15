@@ -23,8 +23,8 @@ type IExperimentRepo interface {
 	MGetBasicByID(ctx context.Context, ids []int64) ([]*entity.Experiment, error)
 	GetByName(ctx context.Context, name string, spaceID int64) (*entity.Experiment, bool, error)
 	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error)
-	// ExistGroupKey 全局(跨 space)判断 group key 是否已存在, 用于创建实验时校验 group key 全局唯一。
-	ExistGroupKey(ctx context.Context, groupKey string) (bool, error)
+	// ExistGroupKey 判断 group key 是否已被“其它空间”占用（跨空间隔离）, 用于创建实验时校验。
+	ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error)
 	GetEvaluatorRefByExptIDs(ctx context.Context, exptID []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error)
 }
 
