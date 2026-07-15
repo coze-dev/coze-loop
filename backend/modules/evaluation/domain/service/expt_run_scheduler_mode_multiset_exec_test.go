@@ -319,7 +319,9 @@ func TestExptSubmitExec_exptStartMultiSet_MultipleSets(t *testing.T) {
 	}
 }
 
-// item_id 点选 item_filter: 走 BatchGetEvaluationSetItems (不走 List), 只落命中的 item。
+// item_id 点选 item_filter: 走 List 全集 + 内存 include 过滤, 只落命中的 item。
+// item_id in (点选): List 全集拉回后内存过滤只保留白名单, version 由下游从 snapshot 回填。
+// (不再走 BatchGet by-version-queries: versioned committed 版本下那条会因 ref 缺 item_version_id 报 601100201)
 func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -333,21 +335,15 @@ func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter(t *testing.T) {
 			return nil
 		}).AnyTimes()
 
-	// 点选只选 item_id=2,7 → 必须走 BatchGet 且 query 只带这两个 id; List 不应被调用
-	var batchQueried []int64
-	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
-			assert.Empty(t, p.ItemIDs)
-			for _, q := range p.ItemVersionQueries {
-				batchQueried = append(batchQueried, q.ItemID)
-			}
-			return []*entity.EvaluationSetItem{
-				{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
-				{ItemID: 7, Turns: []*entity.Turn{{ID: 77}}},
-			}, nil
-		}).Times(1)
-	// List 绝不应被调用 (点选路径)
-	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
+	// 点选 item_id=2,7 → List 拉回 2,5,7, 落库应只剩 2,7; BatchGet 不应被调用
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return(
+		[]*entity.EvaluationSetItem{
+			{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
+			{ItemID: 5, Turns: []*entity.Turn{{ID: 55}}},
+			{ItemID: 7, Turns: []*entity.Turn{{ID: 77}}},
+		}, ptr.Of(int64(3)), nil, nil, nil).Times(1)
+	// BatchGet 绝不应被调用 (点选已降级走 List)
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
 
 	expt := &entity.Experiment{
 		ID:      1,
@@ -370,7 +366,6 @@ func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter(t *testing.T) {
 	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
 	assert.NoError(t, err)
 
-	assert.ElementsMatch(t, []int64{2, 7}, batchQueried)
 	assert.Len(t, captured, 2)
 	assert.ElementsMatch(t, []int64{2, 7}, []int64{captured[0].ItemID, captured[1].ItemID})
 }

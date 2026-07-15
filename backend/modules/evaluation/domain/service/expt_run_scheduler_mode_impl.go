@@ -2277,9 +2277,15 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 		}
 
 		// 解析 set 级 item_filter:
-		//   - item_id 点选 → BatchGet 的 ItemVersionQueries
+		//   - item_id 点选 (in/eq/not_in/not_eq) → 统一走 List 全集分页 + 内存过滤 (include 白名单 / exclude 黑名单)
 		//   - 普通列 → 下游 Filter (commercial 走 ml_flow 服务端裁剪; 开源版无字段降级全量)
 		//   - tag → 下游 TagFilter (同上)
+		//
+		// item_id 点选为何不走 BatchGet by-version-queries:
+		//   versioned_item + committed 版本下, BatchGet 侧 handleByItemVersionQueries 强制每个 ref 带 item_version_id,
+		//   而首次扫描只有用户点选的 item_id、拿不到 item 级版本 → 报 601100201。
+		//   List 路径由下游从 snapshot 解析并回填 item_version_id, 故点选降级走 List + 内存 include 过滤即可拿到版本。
+		//   TODO: 下游 List 暴露候选 item_id (candidateItemIDs) 入参后, 改服务端 item_id IN 下推, 省整集遍历。
 		includeIDs, excludeIDs, _, ferr := extractItemIDFilter(setConf.ItemFilter)
 		if ferr != nil {
 			return ferr
@@ -2290,43 +2296,12 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 		for _, id := range excludeIDs {
 			excludeSet[id] = struct{}{}
 		}
-
-		if len(includeIDs) > 0 {
-			// item_id 点选 (in/eq): 直接按这批 item_id BatchGet, 分 100 一批; 顺带过滤掉 exclude
-			for _, chunk := range gslice.Chunk(includeIDs, int(pageSize)) {
-				queries := make([]*entity.EvaluationItemVersionRef, 0, len(chunk))
-				for _, id := range chunk {
-					if _, ex := excludeSet[id]; ex {
-						continue
-					}
-					queries = append(queries, &entity.EvaluationItemVersionRef{ItemID: id})
-				}
-				if len(queries) == 0 {
-					continue
-				}
-				var items []*entity.EvaluationSetItem
-				if err := backoff.RetryThreeSeconds(ctx, func() error {
-					var retryErr error
-					items, retryErr = e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
-						SpaceID:            event.SpaceID,
-						EvaluationSetID:    setConf.EvalSetID,
-						VersionID:          setReadVersionID,
-						ItemVersionQueries: queries,
-						Filter:             nFilter,
-						TagFilter:          tFilter,
-					})
-					return retryErr
-				}); err != nil {
-					return err
-				}
-				if err := persistBatch(items); err != nil {
-					return err
-				}
-			}
-			continue
+		includeSet := make(map[int64]struct{}, len(includeIDs))
+		for _, id := range includeIDs {
+			includeSet[id] = struct{}{}
 		}
 
-		// 无 item_id 点选 (无 filter / 普通列 / tag): List 分页, Filter/TagFilter 下传服务端裁剪, exclude 在内存过滤
+		// item_id 点选/排除 + 普通列/tag: List 分页, Filter/TagFilter 下传服务端裁剪, item_id 在内存过滤
 		var pageToken *string
 		pageTotalCnt := 0
 		for loop := 0; loop < 10000; loop++ {
@@ -2353,12 +2328,20 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			}
 
 			pageTotalCnt += len(items)
-			// item_id not_in/not_eq 排除: 逐页内存剔 (每页 pageSize, 非全集进内存, excludeSet 只存 id)。
-			// 下游既无 not_in 专用字段、也无 item_id 作通用 filter 的约定, 暂只能内存排除;
-			// 代价是纯 not_in 仍要分页遍历整集。TODO: 下游就绪后改服务端排除省整集遍历。
-			if len(excludeSet) > 0 {
+			// item_id 点选/排除内存过滤 (每页 pageSize 逐页处理, 非全集进内存, set 只存 id):
+			//   - include (in/eq): 只保留白名单内的 item_id
+			//   - exclude (not_in/not_eq): 剔除黑名单内的 item_id
+			// item 级版本由下游 List 从 snapshot 回填 (persistBatch 从 item.ItemVersionID 写库), 故此路径无 601100201 风险。
+			// 下游既无 item_id 候选/排除专用字段, 暂只能内存过滤; 代价是点选/排除仍要分页遍历整集。
+			// TODO: 下游 List 就绪 candidateItemIDs 后改服务端 item_id IN/NOT IN 下推, 省整集遍历。
+			if len(includeSet) > 0 || len(excludeSet) > 0 {
 				kept := items[:0]
 				for _, it := range items {
+					if len(includeSet) > 0 {
+						if _, in := includeSet[it.ItemID]; !in {
+							continue
+						}
+					}
 					if _, ex := excludeSet[it.ItemID]; ex {
 						continue
 					}
