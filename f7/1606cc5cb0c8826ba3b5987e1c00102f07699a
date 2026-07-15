@@ -1,0 +1,59 @@
+backend/kitex_gen/coze/loop/evaluation/expt/coze.loop.evaluation.expt.go
+  s_f2059b62d9e676::t_2aaeadac6311df 70-71,453-464,605-607,653,780-783,1068-1075,1544-1554,1739-1742,2376-2393,2585-2587,2960-2971,3292-3293,3698-3709,3844-3846,3891,4025-4028,4325-4332,4824-4834,4998-5001,5675-5692,5861-5863,6253-6264,16589,17070
+backend/kitex_gen/coze/loop/evaluation/expt/k-coze.loop.evaluation.expt.go
+  s_f2059b62d9e676::t_c9c294cadde381 495-508,1084-1097,1186,1248,1571-1579,1917-1925,2195-2199,2898-2911,3509-3522,3579,3644,3991-3999,4344-4352,4629-4633
+backend/kitex_gen/coze/loop/evaluation/openapi/coze.loop.evaluation.openapi.go
+  s_f2059b62d9e676::t_ab9537132f208c 24897,24899-24903,25117-25128,25203-25205,25231,25304-25307,25470-25477,25749-25759,25851-25854,26222-26239,26342-26344,26537-26548
+backend/kitex_gen/coze/loop/evaluation/openapi/k-coze.loop.evaluation.openapi.go
+  s_f2059b62d9e676::t_ebe125d6b1f68d 18128-18141,18467-18480,18516,18557,18747-18755,18945-18953,19134-19138
+backend/modules/evaluation/application/convertor/experiment/expt.go
+  s_f2059b62d9e676::t_0da2f25ab3d72a 841
+backend/modules/evaluation/application/eval_openapi_app.go
+  s_f2059b62d9e676::t_52df05dae7e41f 1099,1101-1102
+backend/modules/evaluation/application/experiment_app.go
+  s_f2059b62d9e676::t_787fa63e289b97 541-543
+backend/modules/evaluation/domain/entity/param.go
+  s_f2059b62d9e676::t_71991b3429e59f 363
+backend/modules/evaluation/domain/repo/expt.go
+  s_f2059b62d9e676::t_aaf2102898990a 26-27
+backend/modules/evaluation/domain/repo/mocks/expt.go
+  s_f2059b62d9e676::t_f6f5202a3bc4bf 73,75,82,84
+backend/modules/evaluation/domain/service/expt_manage.go
+  s_f2059b62d9e676::t_218391ec9dc7c0 21-22
+backend/modules/evaluation/domain/service/expt_manage_impl.go
+  s_f2059b62d9e676::t_e402cf34741fa6 394-397,1037-1047,1050-1051
+backend/modules/evaluation/domain/service/mocks/expt_manage.go
+  s_f2059b62d9e676::t_84dbbb5ea342dd 44,46,53,55,499,501,507,509
+backend/modules/evaluation/infra/repo/experiment/expt_repo_impl.go
+  s_f2059b62d9e676::t_fa52d2af209706 197-198
+backend/modules/evaluation/infra/repo/experiment/mysql/expt.go
+  s_f2059b62d9e676::t_2bc1e972bb64b6 48,420-422,431
+backend/modules/evaluation/infra/repo/experiment/mysql/mocks/expt.go
+  s_f2059b62d9e676::t_f1dbaf0f50a038 73,75,82,84
+backend/modules/evaluation/pkg/errno/evaluation.go
+  s_f2059b62d9e676::t_928dcbcad14da4 139-140,143-146,600-605
+backend/script/errorx/evaluation.yaml
+  s_f2059b62d9e676::t_9af6bda2252e36 135-142
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.expt.thrift
+  s_f2059b62d9e676::t_111bb8a1019a51 57-59,128-130
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.openapi.thrift
+  s_f2059b62d9e676::t_39a77c5a7f36a1 555,559-561
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f71606cc5cb0c8826ba3b5987e1c00102f07699a",
+  "prompts": {},
+  "sessions": {
+    "s_f2059b62d9e676": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_f2059b62d9e676",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
