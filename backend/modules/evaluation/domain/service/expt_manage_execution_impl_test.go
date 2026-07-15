@@ -2316,7 +2316,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 			setup: func(t *testing.T) {
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
 					EXPECT().
-					GetItemIDListByExptID(ctx, int64(100), int64(1)).
+					GetItemIDListByExptID(ctx, int64(1), int64(100)).
 					Return([]int64{}, nil)
 
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
@@ -2441,7 +2441,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 			setup: func(t *testing.T) {
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
 					EXPECT().
-					GetItemIDListByExptID(ctx, int64(100), int64(1)).
+					GetItemIDListByExptID(ctx, int64(1), int64(100)).
 					Return([]int64{}, nil)
 
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).

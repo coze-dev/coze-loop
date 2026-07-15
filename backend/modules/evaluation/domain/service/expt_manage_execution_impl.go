@@ -807,7 +807,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		itemCnt = 0
 		total   = int64(0)
 	)
-	existItemIDList, err := e.itemResultRepo.GetItemIDListByExptID(ctx, invokeExptReq.SpaceID, invokeExptReq.ExptID)
+	existItemIDList, err := e.itemResultRepo.GetItemIDListByExptID(ctx, invokeExptReq.ExptID, invokeExptReq.SpaceID)
 	if err != nil {
 		return err
 	}
