@@ -14,6 +14,7 @@ import (
 	exptdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -117,8 +118,12 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 }
 
 func (e *experimentApplication) authStandardEvalOutput(ctx context.Context, workspaceID int64, apiKey string) error {
-	// TODO: standard eval output 鉴权临时移除（BOE 自测阶段直接放行），后续恢复 api_key 校验。
-	return nil
+	// 走空间级读权限校验；外部 caller（如 stone.cozeloop.eval_analysis_platform）通过 auth_whitelist 放行。
+	return e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(workspaceID, 10),
+		SpaceID:       workspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
 }
 
 func sortStandardItemsByRequestedItemIDs(items []*expt.ItemStandardEvalOutput, itemIDs []int64) {

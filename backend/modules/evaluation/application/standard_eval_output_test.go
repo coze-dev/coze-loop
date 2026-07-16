@@ -42,6 +42,7 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	)
 
 	mockManager.EXPECT().GetDetail(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(makeStandardEvalOutputExpt(exptID, workspaceID), nil)
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 	mockTargetSvc.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: workspaceID, SourceTargetID: "src-200"}, nil)
 
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -162,13 +163,13 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_ItemIDsLimit(t 
 	require.Error(t, err)
 }
 
-func TestExperimentApplication_MGetExperimentStandardEvalOutputs_APIKeyBypass(t *testing.T) {
+func TestExperimentApplication_MGetExperimentStandardEvalOutputs_Auth(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// 鉴权已临时移除，无论是否带 api_key 都不再触发 Authorization / configer 校验。
+	// 已恢复真鉴权：走 e.auth.Authorization（外部 caller 由 auth_whitelist 放行）。
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(makeStandardEvalOutputReportResult(2, 3, 4, 5, 6), nil)
 	mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
@@ -192,6 +193,7 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
 	mockTargetSvc.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: 1, SourceTargetID: "src-200"}, nil)
@@ -230,6 +232,7 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs_OnlyItemIDs(t *
 	defer ctrl.Finish()
 
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	// 精简模式：只调 GetItemIDListByExptID（参数顺序 exptID, spaceID），不走重的 MGetExperimentResult。
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Times(0)
@@ -266,6 +269,7 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_Error(t *testin
 	_, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{WorkspaceID: 1, ExptID: 2})
 	require.Error(t, err)
 
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
 	_, err = app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{WorkspaceID: 1, ExptID: 2, ItemIds: []int64{4}})
 	require.Error(t, err)
