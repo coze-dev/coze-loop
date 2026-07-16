@@ -396,18 +396,19 @@ struct ItemStandardEvalOutput {
     8:  optional string source_target_id (go.tag = 'json:"source_target_id"')
     9:  optional i64 expt_workspace_id (api.js_conv = 'true', go.tag = 'json:"expt_workspace_id"')
     10: optional i64 expt_run_id (api.js_conv = 'true', go.tag = 'json:"expt_run_id"')
-    17: optional i64 dataset_workspace_id (api.js_conv = 'true', go.tag = 'json:"dataset_workspace_id"')
-    18: optional i64 dataset_id (api.js_conv = 'true', go.tag = 'json:"dataset_id"')
-    19: optional i64 dataset_version_id (api.js_conv = 'true', go.tag = 'json:"dataset_version_id"')
-    20: optional string dataset_version_name (go.tag = 'json:"dataset_version_name"')
-    21: optional string experiment_group_key (go.tag = 'json:"experiment_group_key"')
+    11: optional i64 dataset_workspace_id (api.js_conv = 'true', go.tag = 'json:"dataset_workspace_id"')
+    12: optional i64 dataset_id (api.js_conv = 'true', go.tag = 'json:"dataset_id"')
+    13: optional i64 dataset_version_id (api.js_conv = 'true', go.tag = 'json:"dataset_version_id"')
+    14: optional string dataset_version_name (go.tag = 'json:"dataset_version_name"')
+    15: optional string experiment_group_key (go.tag = 'json:"experiment_group_key"')
 
-    11: optional StandardEvalOutputContent detail (go.tag = 'json:"detail"')
-    12: optional StandardEvalOutputContent rounds (go.tag = 'json:"rounds"')
-    13: optional StandardEvalOutputContent agent (go.tag = 'json:"agent"')
-    14: optional StandardEvalOutputContent output (go.tag = 'json:"output"')
-    15: optional StandardEvalOutputContent eval (go.tag = 'json:"eval"')
-    16: optional StandardEvalOutputContent extra (go.tag = 'json:"extra"')
+    // 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
+    30: optional StandardEvalOutputContent detail (go.tag = 'json:"detail"')
+    31: optional StandardEvalOutputContent rounds (go.tag = 'json:"rounds"')
+    32: optional StandardEvalOutputContent agent (go.tag = 'json:"agent"')
+    33: optional StandardEvalOutputContent output (go.tag = 'json:"output"')
+    34: optional StandardEvalOutputContent eval (go.tag = 'json:"eval"')
+    35: optional StandardEvalOutputContent extra (go.tag = 'json:"extra"')
 }
 
 struct MGetExperimentStandardEvalOutputsResponse {
