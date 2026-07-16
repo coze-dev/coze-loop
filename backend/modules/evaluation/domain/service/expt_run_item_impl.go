@@ -228,7 +228,21 @@ func (e *ExptItemEvalCtxExecutor) validateEvaluatorResultsComplete(etec *entity.
 	if etec == nil || etec.Expt == nil || result == nil || result.AsyncAbort {
 		return nil
 	}
-	if etec.Expt.EvalConf == nil || etec.Expt.EvalConf.ConnectorConf.EvaluatorsConf == nil || len(etec.Expt.Evaluators) == 0 {
+	if etec.Expt.EvalConf == nil || etec.Expt.EvalConf.ConnectorConf.EvaluatorsConf == nil {
+		return nil
+	}
+
+	// ★ 新实验类型 (MultiSetConfig): 期望集必须取本评测集自己绑定的 ItemConfig.EvaluatorConfs,
+	//   绝不能用 expt.Evaluators (那是所有评测集 evaluator 的并集): 否则 set1 的 item 会被要求
+	//   也有 set2 evaluator 的结果、反之亦然, 双向 missing -> turn 全 fail。与执行侧 CallEvaluators
+	//   / callEvaluatorsByItemConfig 同口径 (按 (versionID, alias) 双键 + Skipped 占位视为已满足)。
+	//   本评测集未配 evaluator (ItemConfig nil / EvaluatorConfs 空) -> 期望 0 个, 合法, 直接放行。
+	if etec.Expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		return e.validateEvaluatorResultsCompleteByItemConfig(etec, result)
+	}
+
+	// 老实验 (SingleSet, ItemConfig 恒 nil): 期望集为实验级 expt.Evaluators, 按 versionID 单键匹配。
+	if len(etec.Expt.Evaluators) == 0 {
 		return nil
 	}
 
@@ -251,6 +265,46 @@ func (e *ExptItemEvalCtxExecutor) validateEvaluatorResultsComplete(etec *entity.
 	}
 
 	return errno.NewEvaluatorResultErr(fmt.Sprintf("evaluator result missing, evaluator_version_ids: %s", strings.Join(missing, ",")))
+}
+
+// validateEvaluatorResultsCompleteByItemConfig 校验 MultiSetConfig 实验的单行评估器结果完整性:
+// 期望集 = etec.ItemConfig.EvaluatorConfs (本评测集绑定的 (versionID, alias) 列表)。
+//   - ItemConfig nil / EvaluatorConfs 空: 本集没配评估器, 期望 0 个, 合法, 直接放行。
+//   - 命中判定按 (versionID, alias) 双键 (对齐 callEvaluatorsByItemConfig 的落库口径)。
+//   - Status=Skipped(4) 的占位 record 视为"已满足": filter 不命中的合法跳过, 不能判 missing。
+func (e *ExptItemEvalCtxExecutor) validateEvaluatorResultsCompleteByItemConfig(etec *entity.ExptTurnEvalCtx, result *entity.ExptTurnRunResult) error {
+	if etec.ItemConfig == nil || len(etec.ItemConfig.EvaluatorConfs) == 0 {
+		return nil
+	}
+
+	missing := make([]string, 0)
+	for _, icConf := range etec.ItemConfig.EvaluatorConfs {
+		if icConf == nil {
+			continue
+		}
+		evaluatorVersionID := icConf.EvaluatorVersionID
+		if evaluatorVersionID == 0 {
+			continue
+		}
+		// 命中判定按 (versionID, alias) 双键; Skipped 占位 record 也视为已满足 (filter 合法跳过)。
+		record := result.GetEvaluatorRecordByVerAlias(evaluatorVersionID, icConf.Alias)
+		if record == nil || record.ID == 0 {
+			missing = append(missing, formatEvaluatorVerAlias(evaluatorVersionID, icConf.Alias))
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+
+	return errno.NewEvaluatorResultErr(fmt.Sprintf("evaluator result missing, evaluator_version_ids: %s", strings.Join(missing, ",")))
+}
+
+// formatEvaluatorVerAlias 拼 (versionID, alias) 便于 missing 诊断; alias 为空退化为纯 versionID。
+func formatEvaluatorVerAlias(versionID int64, alias string) string {
+	if alias == "" {
+		return strconv.FormatInt(versionID, 10)
+	}
+	return strconv.FormatInt(versionID, 10) + ":" + alias
 }
 
 func (e *ExptItemEvalCtxExecutor) SetItemRunProcessing(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, session *entity.Session) error {
