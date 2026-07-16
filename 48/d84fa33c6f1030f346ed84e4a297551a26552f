@@ -1,0 +1,29 @@
+backend/kitex_gen/coze/loop/evaluation/expt/coze.loop.evaluation.expt.go
+  s_621b8d9ffefb37::t_a6e99f5bc58de8 17073,17075-17077,17125,17127,17131-17132,17134,17172-17173,17187,17200-17201,17382,17526-17527,17530,17606,17658,17660,17663
+backend/kitex_gen/coze/loop/evaluation/expt/k-coze.loop.evaluation.expt.go
+  s_621b8d9ffefb37::t_183d01537a0bb4 12728,12826,12828,12885,12930-12932
+backend/modules/evaluation/application/standard_eval_output.go
+  s_621b8d9ffefb37::t_b41cec5c3a042a 75-76
+backend/modules/evaluation/application/standard_eval_output_test.go
+  s_621b8d9ffefb37::t_093a5fc4f6e267 245
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.expt.thrift
+  s_621b8d9ffefb37::t_655d30a82d5467 377,379
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "48d84fa33c6f1030f346ed84e4a297551a26552f",
+  "prompts": {},
+  "sessions": {
+    "s_621b8d9ffefb37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_621b8d9ffefb37",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
