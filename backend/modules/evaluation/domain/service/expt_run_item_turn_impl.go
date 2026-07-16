@@ -434,7 +434,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext)
+		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext, expt.EvalConf)
 		if err != nil {
 			return nil, err
 		}
@@ -571,7 +571,7 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 }
 
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, spaceID int64, evaluatorType entity.EvaluatorType,
-	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content, inputSchemas []*entity.ArgsSchema, ext map[string]string,
+	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content, inputSchemas []*entity.ArgsSchema, ext map[string]string, evalConf *entity.EvaluationConfiguration,
 ) (*entity.EvaluatorInputData, error) {
 	var targetFieldConfs []*entity.FieldConf
 	if ec.IngressConf != nil && ec.IngressConf.TargetAdapter != nil {
@@ -651,7 +651,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 		}
 	}
 
-	res.Ext = e.buildEvaluatorInputDataExt(ext, ec.RunConf)
+	res.Ext = e.buildEvaluatorInputDataExt(ext, ec.RunConf, evalConf)
 	return res, nil
 }
 
@@ -802,13 +802,22 @@ func (e *DefaultExptTurnEvaluationImpl) getContentByJsonPath(content *entity.Con
 	}, nil
 }
 
-func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[string]string, runConf *entity.EvaluatorRunConfig) map[string]string {
+func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[string]string, runConf *entity.EvaluatorRunConfig, evalConf *entity.EvaluationConfiguration) map[string]string {
 	builtExt := gmap.Clone(ext)
 	if builtExt == nil {
 		builtExt = make(map[string]string)
 	}
 	if runConf != nil && runConf.EvaluatorRuntimeParam != nil && runConf.EvaluatorRuntimeParam.JSONValue != nil && len(*runConf.EvaluatorRuntimeParam.JSONValue) > 0 {
 		builtExt[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = *runConf.EvaluatorRuntimeParam.JSONValue
+	}
+
+	// 仿 RuntimeParam 透传惯例：把本实验 EvalConf.SkillTOSKeys 序列化写进执行期 Ext 口袋，
+	// 供执行期商业版 buildSkillsConfig 命中 skill 的 TOS 现签复用（执行期链路拿不到 exptID/EvalConf）。
+	// 为空则不写，避免污染 Ext、保持向后兼容。
+	if evalConf != nil && len(evalConf.SkillTOSKeys) > 0 {
+		if b, err := json.Marshal(evalConf.SkillTOSKeys); err == nil {
+			builtExt[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys] = string(b)
+		}
 	}
 
 	return builtExt

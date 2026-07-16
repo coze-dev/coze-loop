@@ -263,6 +263,8 @@ type EvaluationConfiguration struct {
 	TimeRange               *TaskTimeRangeDO `json:"time_range,omitempty"`
 	EnableExtractTrajectory *bool
 	Ext                     map[string]string
+	// SkillTOSKeys skill 入库 TOS 后的 tos_key 快照；key="{skill_id}:{version}"，value=tos_key。
+	SkillTOSKeys map[string]string `json:"agent_buddy_skill_tos_keys,omitempty"`
 }
 
 // MaxItemRetryNum 数据行 Item 最大重试次数的上界（创建侧与更新侧共用）。
