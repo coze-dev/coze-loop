@@ -4386,3 +4386,62 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak(t *testing
 	assert.Less(t, after-before, 20,
 		"goroutine leak in callEvaluators early-return path: before=%d after=%d (delta=%d)", before, after, after-before)
 }
+
+func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputDataExt(t *testing.T) {
+	t.Parallel()
+
+	service := &DefaultExptTurnEvaluationImpl{}
+
+	t.Run("nil ext and nil runConf and nil evalConf", func(t *testing.T) {
+		got := service.buildEvaluatorInputDataExt(nil, nil, nil)
+		assert.NotNil(t, got)
+		assert.Empty(t, got)
+	})
+
+	t.Run("existing ext passed through", func(t *testing.T) {
+		ext := map[string]string{"key1": "val1"}
+		got := service.buildEvaluatorInputDataExt(ext, nil, nil)
+		assert.Equal(t, "val1", got["key1"])
+	})
+
+	t.Run("runConf runtime param written to ext", func(t *testing.T) {
+		jsonVal := `{"temperature":0.5}`
+		runConf := &entity.EvaluatorRunConfig{
+			EvaluatorRuntimeParam: &entity.RuntimeParam{
+				JSONValue: &jsonVal,
+			},
+		}
+		got := service.buildEvaluatorInputDataExt(nil, runConf, nil)
+		assert.Equal(t, jsonVal, got[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	})
+
+	t.Run("evalConf with SkillTOSKeys serialized to ext", func(t *testing.T) {
+		evalConf := &entity.EvaluationConfiguration{
+			SkillTOSKeys: map[string]string{
+				"skill1:v1": "tos-key-abc",
+				"skill2:v2": "tos-key-def",
+			},
+		}
+		got := service.buildEvaluatorInputDataExt(nil, nil, evalConf)
+		raw := got[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys]
+		assert.NotEmpty(t, raw)
+		assert.Contains(t, raw, "skill1:v1")
+		assert.Contains(t, raw, "tos-key-abc")
+	})
+
+	t.Run("evalConf with empty SkillTOSKeys does not write ext key", func(t *testing.T) {
+		evalConf := &entity.EvaluationConfiguration{
+			SkillTOSKeys: map[string]string{},
+		}
+		got := service.buildEvaluatorInputDataExt(nil, nil, evalConf)
+		_, exists := got[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys]
+		assert.False(t, exists)
+	})
+
+	t.Run("evalConf with nil SkillTOSKeys does not write ext key", func(t *testing.T) {
+		evalConf := &entity.EvaluationConfiguration{}
+		got := service.buildEvaluatorInputDataExt(nil, nil, evalConf)
+		_, exists := got[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys]
+		assert.False(t, exists)
+	})
+}
