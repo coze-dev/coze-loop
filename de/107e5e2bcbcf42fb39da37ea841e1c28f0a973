@@ -1,0 +1,23 @@
+backend/modules/evaluation/application/standard_eval_output.go
+  s_d8c9749d5cc4af::t_3b86b710cec48a 17,121-126
+backend/modules/evaluation/application/standard_eval_output_test.go
+  s_d8c9749d5cc4af::t_4d68a94bf5781c 45,166,170,172,196,235,272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "de107e5e2bcbcf42fb39da37ea841e1c28f0a973",
+  "prompts": {},
+  "sessions": {
+    "s_d8c9749d5cc4af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_d8c9749d5cc4af",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
