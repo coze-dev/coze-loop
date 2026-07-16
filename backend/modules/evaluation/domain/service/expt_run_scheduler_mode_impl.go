@@ -5,7 +5,10 @@ package service
 
 import (
 	"context"
+	"crypto/sha1"
 	"fmt"
+	"sort"
+	"strconv"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -1305,6 +1308,22 @@ func makeStartIdemKey(event *entity.ExptScheduleEvent) string {
 	return fmt.Sprintf("expt_start:%v%v", event.ExptID, event.ExptRunID)
 }
 
+// makeRetryItemsStartIdemKey 为 RetryItems 模式生成 idem key。
+// RetryItems 允许同一个 expt_run_id 上反复追加不同 item，因此 key 必须把
+// ExecEvalSetItemIDs 纳入指纹，否则前一次 retry 写下的 key 会让后续 retry
+// 在 ExptStart 短路返回，跳过 resetEvalItems。MQ 重投递场景下 itemIDs 完全
+// 一致 → 指纹相同 → 仍然能正确去重。
+func makeRetryItemsStartIdemKey(event *entity.ExptScheduleEvent) string {
+	ids := append([]int64(nil), event.ExecEvalSetItemIDs...)
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	h := sha1.New()
+	for _, id := range ids {
+		_, _ = h.Write(strconv.AppendInt(nil, id, 10))
+		_, _ = h.Write([]byte{','})
+	}
+	return fmt.Sprintf("expt_start:%v%v:%x", event.ExptID, event.ExptRunID, h.Sum(nil))
+}
+
 func makeEndIdemKey(event *entity.ExptScheduleEvent) string {
 	return fmt.Sprintf("expt_end:%v%v", event.ExptID, event.ExptRunID)
 }
@@ -1600,7 +1619,7 @@ func (e *ExptRetryItemsExec) Mode() entity.ExptRunMode {
 }
 
 func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
-	idemKey := makeStartIdemKey(event)
+	idemKey := makeRetryItemsStartIdemKey(event)
 	exist, err := e.idem.Exist(ctx, idemKey)
 	if err != nil {
 		return err
