@@ -812,11 +812,11 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[strin
 	}
 
 	// 仿 RuntimeParam 透传惯例：把本实验 EvalConf.SkillTOSKeys 序列化写进执行期 Ext 口袋，
-	// 供执行期商业版 buildSkillsConfig 命中 AgentBuddy skill 的 TOS 现签复用（执行期链路拿不到 exptID/EvalConf）。
+	// 供执行期商业版 buildSkillsConfig 命中 skill 的 TOS 现签复用（执行期链路拿不到 exptID/EvalConf）。
 	// 为空则不写，避免污染 Ext、保持向后兼容。
 	if evalConf != nil && len(evalConf.SkillTOSKeys) > 0 {
 		if b, err := json.Marshal(evalConf.SkillTOSKeys); err == nil {
-			builtExt[consts.FieldAdapterBuiltinFieldNameAgentBuddySkillTOSKeys] = string(b)
+			builtExt[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys] = string(b)
 		}
 	}
 

@@ -19,6 +19,6 @@ func NewNoopSkillPreloader() rpc.ISkillPreloader {
 	return &noopSkillPreloader{}
 }
 
-func (n *noopSkillPreloader) PreloadAgentBuddySkills(ctx context.Context, exptID int64, spaceID int64, skillConfigs []*entity.SkillConfig, userJWT string) error {
+func (n *noopSkillPreloader) PreloadSkills(ctx context.Context, exptID int64, spaceID int64, skillConfigs []*entity.SkillConfig, userJWT string) error {
 	return nil
 }

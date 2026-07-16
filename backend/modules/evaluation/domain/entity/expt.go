@@ -263,7 +263,7 @@ type EvaluationConfiguration struct {
 	TimeRange               *TaskTimeRangeDO `json:"time_range,omitempty"`
 	EnableExtractTrajectory *bool
 	Ext                     map[string]string
-	// SkillTOSKeys AgentBuddy skill 入库 TOS 后的 tos_key 快照；key="{skill_id}:{version}"，value=tos_key。
+	// SkillTOSKeys skill 入库 TOS 后的 tos_key 快照；key="{skill_id}:{version}"，value=tos_key。
 	SkillTOSKeys map[string]string `json:"agent_buddy_skill_tos_keys,omitempty"`
 }
 
