@@ -1372,6 +1372,37 @@ func TestExptFailRetryExec_ExptEnd(t *testing.T) {
 	}
 }
 
+// TestExptFailRetryExec_ExptEnd_RescanGuard 覆盖终止前重扫护栏：
+// 即便本 tick 传入的 toSubmit/incomplete 均为 0(僵尸被清后的误判场景)，
+// 只要 DB 里仍有 Queueing/Processing 的 item，ExptEnd 必须返回 nextTick=true 且不结束实验。
+func TestExptFailRetryExec_ExptEnd_RescanGuard(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	f := &exptFailRetryExecFields{
+		manager:            svcmocks.NewMockIExptManager(ctrl),
+		exptItemResultRepo: mock_repo.NewMockIExptItemResultRepo(ctrl),
+		idem:               idemmocks.NewMockIdempotentService(ctrl),
+		configer:           configmocks.NewMockIConfiger(ctrl),
+		publisher:          eventmocks.NewMockExptEventPublisher(ctrl),
+	}
+	// 重扫命中一个仍在处理的 item：护栏应保持 tick，不得走 exptEnd(不允许调用 idem.Exist/CompleteRun/CompleteExpt)。
+	f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{{ItemID: 1001, Status: int32(entity.ItemRunState_Processing)}}, int64(1), nil)
+
+	e := &ExptFailRetryExec{
+		manager:            f.manager,
+		exptItemResultRepo: f.exptItemResultRepo,
+		idem:               f.idem,
+		configer:           f.configer,
+		publisher:          f.publisher,
+	}
+	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptRunMode: 1, Session: &entity.Session{UserID: "u1"}}
+	nextTick, err := e.ExptEnd(context.Background(), event, &entity.Experiment{}, 0, 0)
+	assert.NoError(t, err)
+	assert.True(t, nextTick, "still has processing item -> must keep ticking, not terminate")
+}
+
 func TestExptAppendExec_Mode(t *testing.T) {
 	type fields struct {
 		manager            *svcmocks.MockIExptManager
@@ -4042,6 +4073,38 @@ func TestExptRetryAllExec_ExptEnd(t *testing.T) {
 	}
 }
 
+// TestExptRetryAllExec_ExptEnd_RescanGuard 覆盖终止前重扫护栏：
+// 即便本 tick 传入的 toSubmit/incomplete 均为 0(僵尸被清后的误判场景)，
+// 只要 DB 里仍有 Queueing/Processing 的 item，ExptEnd 必须返回 nextTick=true 且不结束实验。
+func TestExptRetryAllExec_ExptEnd_RescanGuard(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	f := buildRetryAllExecFields(ctrl)
+	// 重扫命中一个仍在排队的 item：护栏应保持 tick，不得走 exptEnd(不允许调用 idem.Exist/CompleteRun/CompleteExpt)。
+	f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{{ItemID: 1001, Status: int32(entity.ItemRunState_Queueing)}}, int64(1), nil)
+
+	e := &ExptRetryAllExec{
+		manager:                  f.manager,
+		exptItemResultRepo:       f.exptItemResultRepo,
+		exptStatsRepo:            f.exptStatsRepo,
+		exptTurnResultRepo:       f.exptTurnResultRepo,
+		idgenerator:              f.idgenerator,
+		evaluationSetItemService: f.evaluationSetItemService,
+		exptRepo:                 f.exptRepo,
+		idem:                     f.idem,
+		configer:                 f.configer,
+		publisher:                f.publisher,
+		evaluatorRecordService:   f.evaluatorRecordService,
+		templateManager:          f.templateManager,
+	}
+	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptRunMode: 1, Session: &entity.Session{UserID: "u1"}}
+	nextTick, err := e.ExptEnd(context.Background(), event, &entity.Experiment{}, 0, 0)
+	assert.NoError(t, err)
+	assert.True(t, nextTick, "still has queueing item -> must keep ticking, not terminate")
+}
+
 func TestExptRetryAllExec_NextTick(t *testing.T) {
 	testUserID := "test_user_id_123"
 
@@ -4891,6 +4954,54 @@ func TestExptRetryItemsExec_ExptEnd(t *testing.T) {
 			assert.Equal(t, tt.wantNextTick, nextTick)
 		})
 	}
+}
+
+// TestExptRetryItemsExec_ExptEnd_RescanGuard 覆盖终止前重扫护栏：
+// RetryItems 模式在过完 Lock + run log item 归属校验后，仍需以 DB 真实状态重扫一次。
+// 即便本 tick 传入的 toSubmit/incomplete 均为 0，只要 DB 里仍有 Queueing/Processing 的 item，
+// ExptEnd 必须返回 nextTick=true 且不结束实验(不允许调用 exptEnd 内的 idem.Exist/CompleteRun/CompleteExpt)。
+func TestExptRetryItemsExec_ExptEnd_RescanGuard(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	testUserID := "test_user_id_123"
+	f := buildRetryItemsExecFields(ctrl)
+	event := &entity.ExptScheduleEvent{
+		ExptID:             1,
+		ExptRunID:          2,
+		SpaceID:            3,
+		ExptRunMode:        entity.EvaluationModeRetryItems,
+		Session:            &entity.Session{UserID: testUserID},
+		ExecEvalSetItemIDs: []int64{1},
+	}
+	// 走完前置：抢锁成功 → run log 全部 item 均在本轮重试范围内 → 进入重扫 → 解锁。
+	f.manager.EXPECT().LockCompletingRun(gomock.Any(), event.ExptID, event.ExptRunID, event.SpaceID, event.Session).Return(nil).Times(1)
+	f.exptRunLogRepo.EXPECT().Get(gomock.Any(), event.ExptID, event.ExptRunID).Return(&entity.ExptRunLog{
+		ItemIds: []entity.ExptRunLogItems{{ItemIDs: []int64{1}}},
+	}, nil).Times(1)
+	f.manager.EXPECT().UnlockCompletingRun(gomock.Any(), event.ExptID, event.ExptRunID, event.SpaceID, event.Session).Return(nil).Times(1)
+	// 重扫命中一个仍在排队的 item：护栏应保持 tick，不得走 exptEnd。
+	f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{{ItemID: 1001, Status: int32(entity.ItemRunState_Queueing)}}, int64(1), nil)
+
+	e := &ExptRetryItemsExec{
+		manager:                  f.manager,
+		exptItemResultRepo:       f.exptItemResultRepo,
+		exptStatsRepo:            f.exptStatsRepo,
+		exptTurnResultRepo:       f.exptTurnResultRepo,
+		idgenerator:              f.idgenerator,
+		evaluationSetItemService: f.evaluationSetItemService,
+		exptRepo:                 f.exptRepo,
+		idem:                     f.idem,
+		configer:                 f.configer,
+		publisher:                f.publisher,
+		evaluatorRecordService:   f.evaluatorRecordService,
+		templateManager:          f.templateManager,
+		exptRunLogRepo:           f.exptRunLogRepo,
+	}
+	nextTick, err := e.ExptEnd(session.WithCtxUser(context.Background(), &session.User{ID: testUserID}), event, buildMockExpt(), 0, 0)
+	assert.NoError(t, err)
+	assert.True(t, nextTick, "still has queueing item -> must keep ticking, not terminate")
 }
 
 func TestExptRetryItemsExec_ScheduleStart(t *testing.T) {
