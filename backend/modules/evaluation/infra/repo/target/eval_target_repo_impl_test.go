@@ -2045,10 +2045,6 @@ func (f *fakeRecordStorageConfiger) GetExptTurnScoreHookConf(ctx context.Context
 	return nil, false
 }
 
-func (f *fakeRecordStorageConfiger) GetStandardEvalOutputAPIKey(ctx context.Context) string {
-	return ""
-}
-
 func TestEvalTargetRepoImpl_SaveEvalTargetRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

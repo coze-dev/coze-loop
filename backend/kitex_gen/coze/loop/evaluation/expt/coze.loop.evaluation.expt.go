@@ -16588,7 +16588,6 @@ type MGetExperimentStandardEvalOutputsRequest struct {
 	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	ExptID      int64      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" form:"expt_id,required" query:"expt_id,required"`
 	ItemIds     []int64    `thrift:"item_ids,10,required" frugal:"10,required,list<i64>" json:"item_ids" form:"item_ids,required" `
-	APIKey      *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -16620,18 +16619,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) GetItemIds() (v []int64) {
 	return
 }
 
-var MGetExperimentStandardEvalOutputsRequest_APIKey_DEFAULT string
-
-func (p *MGetExperimentStandardEvalOutputsRequest) GetAPIKey() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetAPIKey() {
-		return MGetExperimentStandardEvalOutputsRequest_APIKey_DEFAULT
-	}
-	return *p.APIKey
-}
-
 var MGetExperimentStandardEvalOutputsRequest_Base_DEFAULT *base.Base
 
 func (p *MGetExperimentStandardEvalOutputsRequest) GetBase() (v *base.Base) {
@@ -16652,9 +16639,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) SetExptID(val int64) {
 func (p *MGetExperimentStandardEvalOutputsRequest) SetItemIds(val []int64) {
 	p.ItemIds = val
 }
-func (p *MGetExperimentStandardEvalOutputsRequest) SetAPIKey(val *string) {
-	p.APIKey = val
-}
 func (p *MGetExperimentStandardEvalOutputsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -16663,12 +16647,7 @@ var fieldIDToName_MGetExperimentStandardEvalOutputsRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "expt_id",
 	10:  "item_ids",
-	40:  "api_key",
 	255: "Base",
-}
-
-func (p *MGetExperimentStandardEvalOutputsRequest) IsSetAPIKey() bool {
-	return p.APIKey != nil
 }
 
 func (p *MGetExperimentStandardEvalOutputsRequest) IsSetBase() bool {
@@ -16720,14 +16699,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) Read(iprot thrift.TProtocol) 
 					goto ReadFieldError
 				}
 				issetItemIds = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 40:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField40(iprot); err != nil {
-					goto ReadFieldError
-				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -16829,17 +16800,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) ReadField10(iprot thrift.TPro
 	p.ItemIds = _field
 	return nil
 }
-func (p *MGetExperimentStandardEvalOutputsRequest) ReadField40(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.APIKey = _field
-	return nil
-}
 func (p *MGetExperimentStandardEvalOutputsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -16865,10 +16825,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) Write(oprot thrift.TProtocol)
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
-			goto WriteFieldError
-		}
-		if err = p.writeField40(oprot); err != nil {
-			fieldId = 40
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -16949,24 +16905,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
-func (p *MGetExperimentStandardEvalOutputsRequest) writeField40(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAPIKey() {
-		if err = oprot.WriteFieldBegin("api_key", thrift.STRING, 40); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.APIKey); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
-}
 func (p *MGetExperimentStandardEvalOutputsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -17009,9 +16947,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) DeepEqual(ano *MGetExperiment
 	if !p.Field10DeepEqual(ano.ItemIds) {
 		return false
 	}
-	if !p.Field40DeepEqual(ano.APIKey) {
-		return false
-	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -17045,18 +16980,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) Field10DeepEqual(src []int64)
 	}
 	return true
 }
-func (p *MGetExperimentStandardEvalOutputsRequest) Field40DeepEqual(src *string) bool {
-
-	if p.APIKey == src {
-		return true
-	} else if p.APIKey == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.APIKey, *src) != 0 {
-		return false
-	}
-	return true
-}
 func (p *MGetExperimentStandardEvalOutputsRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
@@ -17073,7 +16996,6 @@ type ListExperimentStandardEvalOutputsRequest struct {
 	// item_id_only 为 true 时走精简查询：items 每项仅填 item_id（不加载轨迹 / evaluator / eval_target
 	// 大对象、也不查 dataset_key 等），用于 MQ 回调补齐前先枚举实验下所有 item，省性能。
 	ItemIDOnly *bool      `thrift:"item_id_only,30,optional" frugal:"30,optional,bool" json:"item_id_only" form:"item_id_only" `
-	APIKey     *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `
 	Base       *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -17134,18 +17056,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) GetItemIDOnly() (v bool) {
 	return *p.ItemIDOnly
 }
 
-var ListExperimentStandardEvalOutputsRequest_APIKey_DEFAULT string
-
-func (p *ListExperimentStandardEvalOutputsRequest) GetAPIKey() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetAPIKey() {
-		return ListExperimentStandardEvalOutputsRequest_APIKey_DEFAULT
-	}
-	return *p.APIKey
-}
-
 var ListExperimentStandardEvalOutputsRequest_Base_DEFAULT *base.Base
 
 func (p *ListExperimentStandardEvalOutputsRequest) GetBase() (v *base.Base) {
@@ -17172,9 +17082,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) SetPageSize(val *int32) {
 func (p *ListExperimentStandardEvalOutputsRequest) SetItemIDOnly(val *bool) {
 	p.ItemIDOnly = val
 }
-func (p *ListExperimentStandardEvalOutputsRequest) SetAPIKey(val *string) {
-	p.APIKey = val
-}
 func (p *ListExperimentStandardEvalOutputsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -17185,7 +17092,6 @@ var fieldIDToName_ListExperimentStandardEvalOutputsRequest = map[int16]string{
 	20:  "page_number",
 	21:  "page_size",
 	30:  "item_id_only",
-	40:  "api_key",
 	255: "Base",
 }
 
@@ -17199,10 +17105,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) IsSetPageSize() bool {
 
 func (p *ListExperimentStandardEvalOutputsRequest) IsSetItemIDOnly() bool {
 	return p.ItemIDOnly != nil
-}
-
-func (p *ListExperimentStandardEvalOutputsRequest) IsSetAPIKey() bool {
-	return p.APIKey != nil
 }
 
 func (p *ListExperimentStandardEvalOutputsRequest) IsSetBase() bool {
@@ -17266,14 +17168,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) Read(iprot thrift.TProtocol) 
 		case 30:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField30(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 40:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField40(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17382,17 +17276,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) ReadField30(iprot thrift.TPro
 	p.ItemIDOnly = _field
 	return nil
 }
-func (p *ListExperimentStandardEvalOutputsRequest) ReadField40(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.APIKey = _field
-	return nil
-}
 func (p *ListExperimentStandardEvalOutputsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -17426,10 +17309,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) Write(oprot thrift.TProtocol)
 		}
 		if err = p.writeField30(oprot); err != nil {
 			fieldId = 30
-			goto WriteFieldError
-		}
-		if err = p.writeField40(oprot); err != nil {
-			fieldId = 40
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -17540,24 +17419,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
-func (p *ListExperimentStandardEvalOutputsRequest) writeField40(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAPIKey() {
-		if err = oprot.WriteFieldBegin("api_key", thrift.STRING, 40); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.APIKey); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
-}
 func (p *ListExperimentStandardEvalOutputsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -17604,9 +17465,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) DeepEqual(ano *ListExperiment
 		return false
 	}
 	if !p.Field30DeepEqual(ano.ItemIDOnly) {
-		return false
-	}
-	if !p.Field40DeepEqual(ano.APIKey) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -17661,18 +17519,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) Field30DeepEqual(src *bool) b
 		return false
 	}
 	if *p.ItemIDOnly != *src {
-		return false
-	}
-	return true
-}
-func (p *ListExperimentStandardEvalOutputsRequest) Field40DeepEqual(src *string) bool {
-
-	if p.APIKey == src {
-		return true
-	} else if p.APIKey == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.APIKey, *src) != 0 {
 		return false
 	}
 	return true

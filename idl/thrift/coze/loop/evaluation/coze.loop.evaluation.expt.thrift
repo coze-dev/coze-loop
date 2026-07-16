@@ -362,8 +362,6 @@ struct MGetExperimentStandardEvalOutputsRequest {
 
     10: required list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"', vt.min_size = "1", vt.max_size = "100")
 
-    40: optional string api_key (api.body = 'api_key', go.tag = 'json:"api_key"')
-
     255: optional base.Base Base
 }
 
@@ -377,8 +375,6 @@ struct ListExperimentStandardEvalOutputsRequest {
     // item_id_only 为 true 时走精简查询：items 每项仅填 item_id（不加载轨迹 / evaluator / eval_target
     // 大对象、也不查 dataset_key 等），用于 MQ 回调补齐前先枚举实验下所有 item，省性能。
     30: optional bool item_id_only (api.body = 'item_id_only', go.tag = 'json:"item_id_only"')
-
-    40: optional string api_key (api.body = 'api_key', go.tag = 'json:"api_key"')
 
     255: optional base.Base Base
 }

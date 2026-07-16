@@ -31,7 +31,7 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 	if len(req.GetItemIds()) > maxStandardEvalOutputMGetItemIDs {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids exceeds maximum of 100"))
 	}
-	if err := e.authStandardEvalOutput(ctx, req.GetWorkspaceID(), req.GetAPIKey()); err != nil {
+	if err := e.authStandardEvalOutput(ctx, req.GetWorkspaceID()); err != nil {
 		return nil, err
 	}
 
@@ -68,7 +68,7 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if err := e.authStandardEvalOutput(ctx, req.GetWorkspaceID(), req.GetAPIKey()); err != nil {
+	if err := e.authStandardEvalOutput(ctx, req.GetWorkspaceID()); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +117,7 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 	return &expt.ListExperimentStandardEvalOutputsResponse{Items: items, Total: gptr.Of(result.Total), BaseResp: base.NewBaseResp()}, nil
 }
 
-func (e *experimentApplication) authStandardEvalOutput(ctx context.Context, workspaceID int64, apiKey string) error {
+func (e *experimentApplication) authStandardEvalOutput(ctx context.Context, workspaceID int64) error {
 	// 走空间级读权限校验；外部 caller（如 stone.cozeloop.eval_analysis_platform）通过 auth_whitelist 放行。
 	return e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(workspaceID, 10),

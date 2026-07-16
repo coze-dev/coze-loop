@@ -225,20 +225,6 @@ func (mr *MockIConfigerMockRecorder) GetSchedulerAbortCtrl(ctx any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulerAbortCtrl", reflect.TypeOf((*MockIConfiger)(nil).GetSchedulerAbortCtrl), ctx)
 }
 
-// GetStandardEvalOutputAPIKey mocks base method.
-func (m *MockIConfiger) GetStandardEvalOutputAPIKey(ctx context.Context) string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStandardEvalOutputAPIKey", ctx)
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetStandardEvalOutputAPIKey indicates an expected call of GetStandardEvalOutputAPIKey.
-func (mr *MockIConfigerMockRecorder) GetStandardEvalOutputAPIKey(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStandardEvalOutputAPIKey", reflect.TypeOf((*MockIConfiger)(nil).GetStandardEvalOutputAPIKey), ctx)
-}
-
 // GetTargetTrajectoryConf mocks base method.
 func (m *MockIConfiger) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf {
 	m.ctrl.T.Helper()

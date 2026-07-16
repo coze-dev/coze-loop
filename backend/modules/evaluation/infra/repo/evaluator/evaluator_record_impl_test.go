@@ -106,10 +106,6 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetExptTurnScoreHookConf(ctx contex
 	return nil, false
 }
 
-func (f *fakeEvaluatorRecordStorageConfiger) GetStandardEvalOutputAPIKey(ctx context.Context) string {
-	return ""
-}
-
 func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

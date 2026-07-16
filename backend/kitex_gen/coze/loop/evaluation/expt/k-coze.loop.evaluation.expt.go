@@ -12215,20 +12215,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) FastRead(buf []byte) (int, er
 					goto SkipFieldError
 				}
 			}
-		case 40:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField40(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -12329,20 +12315,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) FastReadField10(buf []byte) (
 	return offset, nil
 }
 
-func (p *MGetExperimentStandardEvalOutputsRequest) FastReadField40(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.APIKey = _field
-	return offset, nil
-}
-
 func (p *MGetExperimentStandardEvalOutputsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -12365,7 +12337,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) FastWriteNocopy(buf []byte, w
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
-		offset += p.fastWriteField40(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -12378,7 +12349,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field10Length()
-		l += p.field40Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -12410,15 +12380,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) fastWriteField10(buf []byte, 
 		offset += thrift.Binary.WriteI64(buf[offset:], v)
 	}
 	thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
-	return offset
-}
-
-func (p *MGetExperimentStandardEvalOutputsRequest) fastWriteField40(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetAPIKey() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 40)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.APIKey)
-	}
 	return offset
 }
 
@@ -12454,15 +12415,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) field10Length() int {
 	return l
 }
 
-func (p *MGetExperimentStandardEvalOutputsRequest) field40Length() int {
-	l := 0
-	if p.IsSetAPIKey() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.APIKey)
-	}
-	return l
-}
-
 func (p *MGetExperimentStandardEvalOutputsRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -12489,14 +12441,6 @@ func (p *MGetExperimentStandardEvalOutputsRequest) DeepCopy(s interface{}) error
 			_elem = elem
 			p.ItemIds = append(p.ItemIds, _elem)
 		}
-	}
-
-	if src.APIKey != nil {
-		var tmp string
-		if *src.APIKey != "" {
-			tmp = kutils.StringDeepCopy(*src.APIKey)
-		}
-		p.APIKey = &tmp
 	}
 
 	var _base *base.Base
@@ -12591,20 +12535,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) FastRead(buf []byte) (int, er
 		case 30:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField30(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 40:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField40(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -12729,20 +12659,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) FastReadField30(buf []byte) (
 	return offset, nil
 }
 
-func (p *ListExperimentStandardEvalOutputsRequest) FastReadField40(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.APIKey = _field
-	return offset, nil
-}
-
 func (p *ListExperimentStandardEvalOutputsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -12767,7 +12683,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) FastWriteNocopy(buf []byte, w
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField30(buf[offset:], w)
-		offset += p.fastWriteField40(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -12782,7 +12697,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) BLength() int {
 		l += p.field20Length()
 		l += p.field21Length()
 		l += p.field30Length()
-		l += p.field40Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -12826,15 +12740,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) fastWriteField30(buf []byte, 
 	if p.IsSetItemIDOnly() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 30)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.ItemIDOnly)
-	}
-	return offset
-}
-
-func (p *ListExperimentStandardEvalOutputsRequest) fastWriteField40(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetAPIKey() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 40)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.APIKey)
 	}
 	return offset
 }
@@ -12889,15 +12794,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) field30Length() int {
 	return l
 }
 
-func (p *ListExperimentStandardEvalOutputsRequest) field40Length() int {
-	l := 0
-	if p.IsSetAPIKey() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.APIKey)
-	}
-	return l
-}
-
 func (p *ListExperimentStandardEvalOutputsRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -12930,14 +12826,6 @@ func (p *ListExperimentStandardEvalOutputsRequest) DeepCopy(s interface{}) error
 	if src.ItemIDOnly != nil {
 		tmp := *src.ItemIDOnly
 		p.ItemIDOnly = &tmp
-	}
-
-	if src.APIKey != nil {
-		var tmp string
-		if *src.APIKey != "" {
-			tmp = kutils.StringDeepCopy(*src.APIKey)
-		}
-		p.APIKey = &tmp
 	}
 
 	var _base *base.Base

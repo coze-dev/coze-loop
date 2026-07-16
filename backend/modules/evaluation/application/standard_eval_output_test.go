@@ -182,7 +182,6 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_Auth(t *testing
 		WorkspaceID: 1,
 		ExptID:      2,
 		ItemIds:     []int64{4},
-		APIKey:      gptr.Of("test-key"),
 	})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
