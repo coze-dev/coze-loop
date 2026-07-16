@@ -12725,7 +12725,7 @@ func (p *ListExperimentStandardEvalOutputsRequest) FastReadField30(buf []byte) (
 		offset += l
 		_field = &v
 	}
-	p.OnlyItemIds = _field
+	p.ItemIDOnly = _field
 	return offset, nil
 }
 
@@ -12823,9 +12823,9 @@ func (p *ListExperimentStandardEvalOutputsRequest) fastWriteField21(buf []byte, 
 
 func (p *ListExperimentStandardEvalOutputsRequest) fastWriteField30(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetOnlyItemIds() {
+	if p.IsSetItemIDOnly() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 30)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.OnlyItemIds)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.ItemIDOnly)
 	}
 	return offset
 }
@@ -12882,7 +12882,7 @@ func (p *ListExperimentStandardEvalOutputsRequest) field21Length() int {
 
 func (p *ListExperimentStandardEvalOutputsRequest) field30Length() int {
 	l := 0
-	if p.IsSetOnlyItemIds() {
+	if p.IsSetItemIDOnly() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
 	}
@@ -12927,9 +12927,9 @@ func (p *ListExperimentStandardEvalOutputsRequest) DeepCopy(s interface{}) error
 		p.PageSize = &tmp
 	}
 
-	if src.OnlyItemIds != nil {
-		tmp := *src.OnlyItemIds
-		p.OnlyItemIds = &tmp
+	if src.ItemIDOnly != nil {
+		tmp := *src.ItemIDOnly
+		p.ItemIDOnly = &tmp
 	}
 
 	if src.APIKey != nil {

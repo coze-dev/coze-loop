@@ -374,9 +374,9 @@ struct ListExperimentStandardEvalOutputsRequest {
     20: optional i32 page_number (api.query = 'page_number', go.tag = 'json:"page_number"')
     21: optional i32 page_size (api.query = 'page_size', go.tag = 'json:"page_size"')
 
-    // only_item_ids 为 true 时走精简查询：items 每项仅填 item_id（不加载轨迹 / evaluator / eval_target
+    // item_id_only 为 true 时走精简查询：items 每项仅填 item_id（不加载轨迹 / evaluator / eval_target
     // 大对象、也不查 dataset_key 等），用于 MQ 回调补齐前先枚举实验下所有 item，省性能。
-    30: optional bool only_item_ids (api.body = 'only_item_ids', go.tag = 'json:"only_item_ids"')
+    30: optional bool item_id_only (api.body = 'item_id_only', go.tag = 'json:"item_id_only"')
 
     40: optional string api_key (api.body = 'api_key', go.tag = 'json:"api_key"')
 

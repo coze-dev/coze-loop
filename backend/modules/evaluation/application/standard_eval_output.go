@@ -72,8 +72,8 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 		return nil, err
 	}
 
-	// only_item_ids: 精简查询，items 每项仅填 item_id（单表单列 GROUP BY，不加载轨迹/评测大对象）。
-	if req.GetOnlyItemIds() {
+	// item_id_only: 精简查询，items 每项仅填 item_id（单表单列 GROUP BY，不加载轨迹/评测大对象）。
+	if req.GetItemIDOnly() {
 		itemIDs, err := e.resultSvc.GetItemIDListByExptID(ctx, req.GetExptID(), req.GetWorkspaceID())
 		if err != nil {
 			return nil, err

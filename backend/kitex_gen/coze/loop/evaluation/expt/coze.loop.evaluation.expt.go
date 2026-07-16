@@ -17070,11 +17070,11 @@ type ListExperimentStandardEvalOutputsRequest struct {
 	ExptID      int64  `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" form:"expt_id,required" query:"expt_id,required"`
 	PageNumber  *int32 `thrift:"page_number,20,optional" frugal:"20,optional,i32" json:"page_number" query:"page_number" `
 	PageSize    *int32 `thrift:"page_size,21,optional" frugal:"21,optional,i32" json:"page_size" query:"page_size" `
-	// only_item_ids 为 true 时走精简查询：items 每项仅填 item_id（不加载轨迹 / evaluator / eval_target
+	// item_id_only 为 true 时走精简查询：items 每项仅填 item_id（不加载轨迹 / evaluator / eval_target
 	// 大对象、也不查 dataset_key 等），用于 MQ 回调补齐前先枚举实验下所有 item，省性能。
-	OnlyItemIds *bool      `thrift:"only_item_ids,30,optional" frugal:"30,optional,bool" json:"only_item_ids" form:"only_item_ids" `
-	APIKey      *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `
-	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ItemIDOnly *bool      `thrift:"item_id_only,30,optional" frugal:"30,optional,bool" json:"item_id_only" form:"item_id_only" `
+	APIKey     *string    `thrift:"api_key,40,optional" frugal:"40,optional,string" json:"api_key" form:"api_key" `
+	Base       *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListExperimentStandardEvalOutputsRequest() *ListExperimentStandardEvalOutputsRequest {
@@ -17122,16 +17122,16 @@ func (p *ListExperimentStandardEvalOutputsRequest) GetPageSize() (v int32) {
 	return *p.PageSize
 }
 
-var ListExperimentStandardEvalOutputsRequest_OnlyItemIds_DEFAULT bool
+var ListExperimentStandardEvalOutputsRequest_ItemIDOnly_DEFAULT bool
 
-func (p *ListExperimentStandardEvalOutputsRequest) GetOnlyItemIds() (v bool) {
+func (p *ListExperimentStandardEvalOutputsRequest) GetItemIDOnly() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetOnlyItemIds() {
-		return ListExperimentStandardEvalOutputsRequest_OnlyItemIds_DEFAULT
+	if !p.IsSetItemIDOnly() {
+		return ListExperimentStandardEvalOutputsRequest_ItemIDOnly_DEFAULT
 	}
-	return *p.OnlyItemIds
+	return *p.ItemIDOnly
 }
 
 var ListExperimentStandardEvalOutputsRequest_APIKey_DEFAULT string
@@ -17169,8 +17169,8 @@ func (p *ListExperimentStandardEvalOutputsRequest) SetPageNumber(val *int32) {
 func (p *ListExperimentStandardEvalOutputsRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
-func (p *ListExperimentStandardEvalOutputsRequest) SetOnlyItemIds(val *bool) {
-	p.OnlyItemIds = val
+func (p *ListExperimentStandardEvalOutputsRequest) SetItemIDOnly(val *bool) {
+	p.ItemIDOnly = val
 }
 func (p *ListExperimentStandardEvalOutputsRequest) SetAPIKey(val *string) {
 	p.APIKey = val
@@ -17184,7 +17184,7 @@ var fieldIDToName_ListExperimentStandardEvalOutputsRequest = map[int16]string{
 	2:   "expt_id",
 	20:  "page_number",
 	21:  "page_size",
-	30:  "only_item_ids",
+	30:  "item_id_only",
 	40:  "api_key",
 	255: "Base",
 }
@@ -17197,8 +17197,8 @@ func (p *ListExperimentStandardEvalOutputsRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
 }
 
-func (p *ListExperimentStandardEvalOutputsRequest) IsSetOnlyItemIds() bool {
-	return p.OnlyItemIds != nil
+func (p *ListExperimentStandardEvalOutputsRequest) IsSetItemIDOnly() bool {
+	return p.ItemIDOnly != nil
 }
 
 func (p *ListExperimentStandardEvalOutputsRequest) IsSetAPIKey() bool {
@@ -17379,7 +17379,7 @@ func (p *ListExperimentStandardEvalOutputsRequest) ReadField30(iprot thrift.TPro
 	} else {
 		_field = &v
 	}
-	p.OnlyItemIds = _field
+	p.ItemIDOnly = _field
 	return nil
 }
 func (p *ListExperimentStandardEvalOutputsRequest) ReadField40(iprot thrift.TProtocol) error {
@@ -17523,11 +17523,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
 func (p *ListExperimentStandardEvalOutputsRequest) writeField30(oprot thrift.TProtocol) (err error) {
-	if p.IsSetOnlyItemIds() {
-		if err = oprot.WriteFieldBegin("only_item_ids", thrift.BOOL, 30); err != nil {
+	if p.IsSetItemIDOnly() {
+		if err = oprot.WriteFieldBegin("item_id_only", thrift.BOOL, 30); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.OnlyItemIds); err != nil {
+		if err := oprot.WriteBool(*p.ItemIDOnly); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -17603,7 +17603,7 @@ func (p *ListExperimentStandardEvalOutputsRequest) DeepEqual(ano *ListExperiment
 	if !p.Field21DeepEqual(ano.PageSize) {
 		return false
 	}
-	if !p.Field30DeepEqual(ano.OnlyItemIds) {
+	if !p.Field30DeepEqual(ano.ItemIDOnly) {
 		return false
 	}
 	if !p.Field40DeepEqual(ano.APIKey) {
@@ -17655,12 +17655,12 @@ func (p *ListExperimentStandardEvalOutputsRequest) Field21DeepEqual(src *int32) 
 }
 func (p *ListExperimentStandardEvalOutputsRequest) Field30DeepEqual(src *bool) bool {
 
-	if p.OnlyItemIds == src {
+	if p.ItemIDOnly == src {
 		return true
-	} else if p.OnlyItemIds == nil || src == nil {
+	} else if p.ItemIDOnly == nil || src == nil {
 		return false
 	}
-	if *p.OnlyItemIds != *src {
+	if *p.ItemIDOnly != *src {
 		return false
 	}
 	return true

@@ -242,7 +242,7 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs_OnlyItemIDs(t *
 	resp, err := app.ListExperimentStandardEvalOutputs(context.Background(), &exptpb.ListExperimentStandardEvalOutputsRequest{
 		WorkspaceID: 1,
 		ExptID:      2,
-		OnlyItemIds: gptr.Of(true),
+		ItemIDOnly:  gptr.Of(true),
 	})
 	require.NoError(t, err)
 	require.Len(t, resp.GetItems(), 3)
