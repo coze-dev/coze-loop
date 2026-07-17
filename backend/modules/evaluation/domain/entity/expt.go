@@ -322,6 +322,9 @@ type EvaluationConfiguration struct {
 	// ★ 新增: 多评测集配置 (MultiSetConfig 路径权威源)
 	// 创建期序列化进 experiment.eval_conf; 调度期反序列化读取
 	EvalSetConfigs []*EvalSetConfig `json:"eval_set_configs,omitempty"`
+
+	// SkillTOSKeys skill 入库 TOS 后的 tos_key 快照；key="{skill_id}:{version}"，value=tos_key。
+	SkillTOSKeys map[string]string `json:"agent_buddy_skill_tos_keys,omitempty"`
 }
 
 // DefaultSubmitItemConcurNum 提交评测实验时，未传或非正数时的兜底并发度。

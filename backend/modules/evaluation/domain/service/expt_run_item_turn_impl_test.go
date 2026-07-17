@@ -310,7 +310,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_Agent(t *testing.
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2431,7 +2431,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -3542,7 +3542,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, nil, nil)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, nil, nil, nil)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)
@@ -4287,7 +4287,8 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 						EvalTargetOutputData: &entity.EvalTargetOutputData{
 							OutputFields: map[string]*entity.Content{"output": content1},
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 			turn: &entity.Turn{
 				ID:        1,
@@ -4306,14 +4307,16 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 			prepare: func() {
 				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), gomock.Any())
 				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(
-					&entity.FieldData{Name: "context", Content: content2}, nil).Times(2)
+					&entity.FieldData{Name: "context", Content: content2}, nil,
+				).Times(2)
 				mockEvalTargetService.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvalTargetRecord{
 						ID: 2,
 						EvalTargetOutputData: &entity.EvalTargetOutputData{
 							OutputFields: map[string]*entity.Content{"output": content1},
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 			turn: &entity.Turn{
 				ID:        2,
@@ -4332,7 +4335,8 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 			prepare: func() {
 				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), gomock.Any())
 				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(
-					nil, errors.New("fetch error"))
+					nil, errors.New("fetch error"),
+				)
 			},
 			turn: &entity.Turn{
 				ID:        3,
@@ -4877,4 +4881,63 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak(t *testing
 	// 修复前:N 次泄漏 ≈ 2N=100 个常驻协程;修复后应基本持平,留少量裕度。
 	assert.Less(t, after-before, 20,
 		"goroutine leak in callEvaluators early-return path: before=%d after=%d (delta=%d)", before, after, after-before)
+}
+
+func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputDataExt(t *testing.T) {
+	t.Parallel()
+
+	service := &DefaultExptTurnEvaluationImpl{}
+
+	t.Run("nil ext and nil runConf and nil evalConf", func(t *testing.T) {
+		got := service.buildEvaluatorInputDataExt(nil, nil, nil)
+		assert.NotNil(t, got)
+		assert.Empty(t, got)
+	})
+
+	t.Run("existing ext passed through", func(t *testing.T) {
+		ext := map[string]string{"key1": "val1"}
+		got := service.buildEvaluatorInputDataExt(ext, nil, nil)
+		assert.Equal(t, "val1", got["key1"])
+	})
+
+	t.Run("runConf runtime param written to ext", func(t *testing.T) {
+		jsonVal := `{"temperature":0.5}`
+		runConf := &entity.EvaluatorRunConfig{
+			EvaluatorRuntimeParam: &entity.RuntimeParam{
+				JSONValue: &jsonVal,
+			},
+		}
+		got := service.buildEvaluatorInputDataExt(nil, runConf, nil)
+		assert.Equal(t, jsonVal, got[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	})
+
+	t.Run("evalConf with SkillTOSKeys serialized to ext", func(t *testing.T) {
+		evalConf := &entity.EvaluationConfiguration{
+			SkillTOSKeys: map[string]string{
+				"skill1:v1": "tos-key-abc",
+				"skill2:v2": "tos-key-def",
+			},
+		}
+		got := service.buildEvaluatorInputDataExt(nil, nil, evalConf)
+		raw := got[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys]
+		assert.NotEmpty(t, raw)
+		assert.Contains(t, raw, "skill1:v1")
+		assert.Contains(t, raw, "tos-key-abc")
+	})
+
+	t.Run("evalConf with empty SkillTOSKeys does not write ext key", func(t *testing.T) {
+		evalConf := &entity.EvaluationConfiguration{
+			SkillTOSKeys: map[string]string{},
+		}
+		got := service.buildEvaluatorInputDataExt(nil, nil, evalConf)
+		_, exists := got[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys]
+		assert.False(t, exists)
+	})
+
+	t.Run("evalConf with nil SkillTOSKeys does not write ext key", func(t *testing.T) {
+		evalConf := &entity.EvaluationConfiguration{}
+		got := service.buildEvaluatorInputDataExt(nil, nil, evalConf)
+		_, exists := got[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys]
+		assert.False(t, exists)
+	})
 }

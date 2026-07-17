@@ -9,4 +9,5 @@ import (
 
 var ExptScheduleRPCSet = wire.NewSet(
 	NewNoopExptScheduleAdapter,
+	NewNoopSkillPreloader,
 )
