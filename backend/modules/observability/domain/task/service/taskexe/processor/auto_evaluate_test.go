@@ -355,6 +355,18 @@ func (f *fakeExperimentClient) UpdateExptRunConf(ctx context.Context, req *expt.
 	return nil, nil
 }
 
+func (f *fakeExperimentClient) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest, callOptions ...callopt.Option) (*expt.GetExperimentIDsByGroupResponse, error) {
+	return nil, nil
+}
+
+func (f *fakeExperimentClient) ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (*expt.ListExperimentStandardEvalOutputsResponse, error) {
+	return nil, nil
+}
+
+func (f *fakeExperimentClient) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
+	return nil, nil
+}
+
 // 使用真实 EvaluationProvider 注入 Processor，验证三种路径：BizStatus、非 BizStatus 包装、成功返回条数
 func TestAutoEvaluateProcessor_Invoke_WithEvaluationProvider_BizStatusPassthrough(t *testing.T) {
 	t.Parallel()

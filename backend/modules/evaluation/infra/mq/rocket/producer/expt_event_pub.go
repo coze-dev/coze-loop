@@ -175,11 +175,11 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 	return e.batchSendWithTagAndKeys(ctx, pk, "", events, duration, nil)
 }
 
-func (e *exptEventPublisher) batchSendWithTag(ctx context.Context, pk string, tag string, events []any, duration *time.Duration) error {
+func (e *exptEventPublisher) batchSendWithTag(ctx context.Context, pk, tag string, events []any, duration *time.Duration) error {
 	return e.batchSendWithTagAndKeys(ctx, pk, tag, events, duration, nil)
 }
 
-func (e *exptEventPublisher) batchSendWithTagAndKeys(ctx context.Context, pk string, tag string, events []any, duration *time.Duration, keys []string) error {
+func (e *exptEventPublisher) batchSendWithTagAndKeys(ctx context.Context, pk, tag string, events []any, duration *time.Duration, keys []string) error {
 	p, ok := e.producers[pk]
 	if !ok {
 		return fmt.Errorf("rmq producer not found %v", pk)

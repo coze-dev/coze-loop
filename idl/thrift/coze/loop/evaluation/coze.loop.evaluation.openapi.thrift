@@ -20,6 +20,9 @@ struct CreateEvaluationSetOApiRequest {
     2: optional string name (api.body = "name", vt.min_size = "1", vt.max_size = "255")
     3: optional string description (api.body = "description", vt.max_size = "2048")
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema (api.body = "evaluation_set_schema")
+    5: optional eval_set.EvaluationSetType type (api.body = "type", vt.max_size = "128")
+    6: optional list<eval_set.ResourceTagRef> tags (api.body = "tags", vt.elem.skip = "false")
+    7: optional string dataset_key (api.body = "dataset_key", vt.max_size = "255")  // 数据集业务唯一键，创建后不可变
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -65,6 +68,7 @@ struct UpdateEvaluationSetOApiRequest {
 
     3: optional string name (api.body = "name", vt.min_size = "1", vt.max_size = "255"),
     4: optional string description (api.body = "description", vt.max_size = "2048"),
+    5: optional list<eval_set.ResourceTagRef> tags (api.body = "tags", vt.elem.skip = "false"),
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -107,6 +111,9 @@ struct ListEvaluationSetsOApiRequest {
     2: optional string name (api.query = "name")
     3: optional list<string> creators (api.query = "creators")
     4: optional list<i64> evaluation_set_ids (api.query = "evaluation_set_ids", api.js_conv = "true", go.tag = 'json:"evaluation_set_ids"'),
+    5: optional list<string> tag_names (api.query = "tag_names", vt.max_size = "50", vt.elem.min_size = "1", vt.elem.max_size = "128")
+    6: optional eval_set.TagFilterRelation tag_filter_relation (api.query = "tag_filter_relation")
+    7: optional list<string> dataset_keys (api.query = "dataset_keys", vt.max_size = "255")  // 按 dataset_key 精确匹配
 
     100: optional string page_token (api.query = "page_token")
     101: optional i32 page_size (api.query = "page_size", vt.gt = "0", vt.le = "200")
@@ -214,6 +221,7 @@ struct BatchUpdateEvaluationSetItemsOApiRequest {
     2: optional i64 evaluation_set_id (api.path = 'evaluation_set_id', api.js_conv = "true", go.tag = 'json:"evaluation_set_id"')
     3: optional list<eval_set.EvaluationSetItem> items (api.body = "items", vt.min_size = '1', vt.max_size = '100')
     4: optional bool is_skip_invalid_items (api.body = "is_skip_invalid_items")
+    5: optional list<eval_set.FieldWriteOption> field_write_options (api.body = "field_write_options")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -230,6 +238,54 @@ struct BatchUpdateEvaluationSetItemsOApiResponse {
 struct BatchUpdateEvaluationSetItemsOpenAPIData {
     1: optional list<eval_set.DatasetItemOutput> itemOutputs
     2: optional list<eval_set.ItemErrorGroup> errors
+}
+
+struct ListEvaluationSetItemVersionsOApiRequest {
+    1: optional i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 evaluation_set_id (api.path = 'evaluation_set_id', api.js_conv = "true", go.tag = 'json:"evaluation_set_id"')
+    3: optional i64 item_id (api.path = 'item_id', api.js_conv = "true", go.tag = 'json:"item_id"')
+    100: optional i32 page_number (api.query = "page_number")
+    101: optional i32 page_size (api.query = "page_size")
+    102: optional string page_token (api.query = "page_token")
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ListEvaluationSetItemVersionsOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional ListEvaluationSetItemVersionsOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListEvaluationSetItemVersionsOpenAPIData {
+    1: optional list<eval_set.EvaluationItemVersion> versions
+    100: optional i64 total (api.js_conv = "true", go.tag = 'json:"total"')
+    101: optional string next_page_token
+}
+
+struct GetEvaluationSetItemVersionOApiRequest {
+    1: optional i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 evaluation_set_id (api.path = 'evaluation_set_id', api.js_conv = "true", go.tag = 'json:"evaluation_set_id"')
+    3: optional i64 item_id (api.path = 'item_id', api.js_conv = "true", go.tag = 'json:"item_id"')
+    4: optional i64 item_version_id (api.path = 'item_version_id', api.js_conv = "true", go.tag = 'json:"item_version_id"')
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct GetEvaluationSetItemVersionOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional GetEvaluationSetItemVersionOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct GetEvaluationSetItemVersionOpenAPIData {
+    1: optional eval_set.EvaluationItemVersion version
 }
 
 // 1.7 批量删除评测集数据
@@ -255,9 +311,12 @@ struct ListEvaluationSetVersionItemsOApiRequest {
     1: optional i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv = "true", go.tag = 'json:"evaluation_set_id"')
     3: optional i64 version_id (api.query = "version_id", api.js_conv = "true", go.tag = 'json:"version_id"')
+    4: optional list<string> tag_names (api.query = "tag_names", vt.max_size = "50", vt.elem.min_size = "1", vt.elem.max_size = "128")
+    5: optional eval_set.TagFilterRelation tag_filter_relation (api.query = "tag_filter_relation")
 
     100: optional string page_token (api.query = "page_token")
     101: optional i32 page_size (api.query = "page_size", vt.gt = "0", vt.le = "200")
+    201: optional string filter (api.query = "filter")
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -363,6 +422,56 @@ struct GetEvalTargetOutputFieldContentOpenAPIData {
     1: optional map<string, common.Content> field_contents (go.tag = 'json:"field_contents"')
 }
 
+// 异步调试评测对象
+struct AsyncDebugEvalTargetOApiRequest {
+    1: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional eval_target.EvalTargetType eval_target_type (api.body = "eval_target_type")    // 评测对象类型
+
+    10: optional string param (api.body = "param")    // 执行参数：如果 eval_target_type=custom_rpc_server，则传 spi request json 序列化结果
+    11: optional common.RuntimeParam target_runtime_param (api.body = "target_runtime_param")    // 动态参数
+    12: optional string env (api.body = "env")    // 环境
+
+    50: optional eval_target.CustomRPCServer custom_rpc_server (api.body = "custom_rpc_server")    // 如果 eval_target_type=custom_rpc_server，需要传入自定义服务相关信息
+    51: optional eval_target.SandboxAgent sandbox_agent (api.body = "sandbox_agent")    // 如果 eval_target_type=sandbox_agent，需要传入 SandboxAgent 相关信息
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct AsyncDebugEvalTargetOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional AsyncDebugEvalTargetOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct AsyncDebugEvalTargetOpenAPIData {
+    1: optional i64 invoke_id (api.js_conv = "true", go.tag = 'json:"invoke_id"')
+    2: optional string callee (go.tag = 'json:"callee"')
+}
+
+// 获取评测对象记录
+struct GetEvalTargetRecordOApiRequest {
+    1: required i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: required i64 eval_target_record_id (api.path = "eval_target_record_id", api.js_conv = "true", go.tag = 'json:"eval_target_record_id"')
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct GetEvalTargetRecordOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional GetEvalTargetRecordOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct GetEvalTargetRecordOpenAPIData {
+    1: optional eval_target.EvalTargetRecord eval_target_record (go.tag = 'json:"eval_target_record"')
+}
+
 struct ImportEvaluationSetOpenAPIData {
     1: optional i64 job_id (api.js_conv = "true", go.tag = 'json:"job_id"')
 }
@@ -423,6 +532,14 @@ struct SubmitExperimentOApiRequest {
     7: optional experiment.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     8: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
 
+    // item-centric 多评测集配置 (新建模路径). 仅当 eval_set_source_type == multi_set_config 时生效,
+    // handler 把版本字符串解析成内部 version_id 后构建内部 eval_set_configs.
+    9: optional list<experiment.OpenAPIEvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
+    // ★ 新路径分流依据 (唯一开关): 仅 == multi_set_config 走 item-centric 多评测集路径; 缺省/single_set 走老单评测集路径。
+    // 与 eval_set_configs 须一致: == multi_set_config 要求 configs 非空; != 要求 configs 为空, 否则 handler 硬校验报错。
+    // 用字符串枚举 experiment.ExptEvalSetSourceType (与读/List 接口统一); 该枚举定义在已 include 的 domain_openapi/experiment.thrift, 不引入 domain/expt.thrift 故无符号冲突。
+    10: optional experiment.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
+
     // 运行信息
     20: optional i32 item_concur_num (api.body = 'item_concur_num')
     22: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
@@ -434,6 +551,13 @@ struct SubmitExperimentOApiRequest {
     50: optional experiment.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     100: optional map<string, string> ext (api.body = 'ext')
+
+    // 实验分组 key: 显式传入时服务端校验跨 space 隔离(不允许其它空间已占用该 key), 撞车拒绝创建; 缺省则以实验 ID 兜底。同一空间内允许多个实验共享同一 group key。
+    // 与内部 Submit 的 experiment_group_key 对齐, application 层直接指针透传给 CreateExperiment。
+    101: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag = 'json:"experiment_group_key"')
+
+    // 引用分组实验 id: 填写时校验其为当前空间内的实验 id, 通过后本实验的 group key 复用该引用实验的 group key(归入同一分组); 优先级高于 experiment_group_key。
+    102: optional i64 ref_group_experiment_id (api.js_conv = "true", api.body = 'ref_group_experiment_id', go.tag = 'json:"ref_group_experiment_id"')
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -461,6 +585,7 @@ struct SubmitExperimentEvalTargetParam {
     8: optional string env  // 有环境限制需要填充这个字段
     9: optional string cluster // type=10时需填写，自定义智能体所属集群
     10: optional eval_target.AgentConnection agent_connection // type=10时需填写，自定义智能体连接信息
+    11: optional eval_target.SandboxAgent sandbox_agent // type=17(sandbox_agent)时需填写，SandboxAgent 评测对象配置
 }
 
 
@@ -1202,6 +1327,10 @@ service EvaluationOpenAPIService {
     BatchDeleteEvaluationSetItemsOApiResponse BatchDeleteEvaluationSetItemsOApi(1: BatchDeleteEvaluationSetItemsOApiRequest req) (api.category = "openapi", api.delete = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
     // 查询评测集特定版本数据
     ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
+    // 查询评测集 Item 内容版本列表
+    ListEvaluationSetItemVersionsOApiResponse ListEvaluationSetItemVersionsOApi(1: ListEvaluationSetItemVersionsOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/versions")
+    // 查询评测集 Item 指定内容版本
+    GetEvaluationSetItemVersionOApiResponse GetEvaluationSetItemVersionOApi(1: GetEvaluationSetItemVersionOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/versions/:item_version_id")
     // 查询评测集某个filed值，用于获取超长文本的内容
     GetEvaluationItemFieldOApiResponse GetEvaluationItemFieldOApi(1: GetEvaluationItemFieldOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/field")
     // 导入评测集
@@ -1215,6 +1344,10 @@ service EvaluationOpenAPIService {
     ReportEvalTargetInvokeResultResponse ReportEvalTargetInvokeResult(1: ReportEvalTargetInvokeResultRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/result")
     // 按需查询评测对象输出中大对象的完整内容
     GetEvalTargetOutputFieldContentOApiResponse GetEvalTargetOutputFieldContentOApi(1: GetEvalTargetOutputFieldContentOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/eval_target_records/output_fields")
+    // 异步调试评测对象
+    AsyncDebugEvalTargetOApiResponse AsyncDebugEvalTargetOApi(1: AsyncDebugEvalTargetOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/async_debug")
+    // 获取评测对象记录
+    GetEvalTargetRecordOApiResponse GetEvalTargetRecordOApi(1: GetEvalTargetRecordOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/eval_target_records/:eval_target_record_id")
 
     // 评测实验接口
     // 创建评测实验

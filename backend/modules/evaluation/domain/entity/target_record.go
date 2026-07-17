@@ -25,6 +25,8 @@ type EvalTargetRecord struct {
 	ExperimentRunID int64
 	// 评测集数据项ID
 	ItemID int64
+	// ★ item 自身版本号; 0=旧数据/无版本; 从 expt_item_ref 同步
+	ItemVersionID int64
 	// 评测集数据项轮次ID
 	TurnID int64
 	// 链路ID
@@ -155,6 +157,12 @@ type ExecuteTargetCtx struct {
 	// 评测集数据项轮次ID
 	TurnID                  int64
 	EnableExtractTrajectory *bool
+	// LogID 当前请求的 log id, 供评测对象透传给外部执行侧 (如 SandboxAgent 沙箱)。
+	LogID string
+	// ItemMeta 评测集/条目元数据, 供评测对象透传给外部执行侧。
+	ItemMeta *EvalSetItemMeta
+	// ExptGroupKey 实验分组 key (实验级属性), 供评测对象透传给外部执行侧。
+	ExptGroupKey string
 }
 
 type TargetTrajectoryConf struct {

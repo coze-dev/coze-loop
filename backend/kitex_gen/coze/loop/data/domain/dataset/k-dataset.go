@@ -505,6 +505,20 @@ func (p *Dataset) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 23:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField23(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField100(buf[offset:])
@@ -863,6 +877,20 @@ func (p *Dataset) FastReadField22(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Dataset) FastReadField23(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.DatasetKey = _field
+	return offset, nil
+}
+
 func (p *Dataset) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -975,6 +1003,7 @@ func (p *Dataset) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField18(buf[offset:], w)
 		offset += p.fastWriteField19(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
+		offset += p.fastWriteField23(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 	}
@@ -1002,6 +1031,7 @@ func (p *Dataset) BLength() int {
 		l += p.field20Length()
 		l += p.field21Length()
 		l += p.field22Length()
+		l += p.field23Length()
 		l += p.field100Length()
 		l += p.field101Length()
 		l += p.field102Length()
@@ -1156,6 +1186,15 @@ func (p *Dataset) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetItemCount() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 22)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.ItemCount)
+	}
+	return offset
+}
+
+func (p *Dataset) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDatasetKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 23)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.DatasetKey)
 	}
 	return offset
 }
@@ -1361,6 +1400,15 @@ func (p *Dataset) field22Length() int {
 	return l
 }
 
+func (p *Dataset) field23Length() int {
+	l := 0
+	if p.IsSetDatasetKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.DatasetKey)
+	}
+	return l
+}
+
 func (p *Dataset) field100Length() int {
 	l := 0
 	if p.IsSetCreatedBy() {
@@ -1519,6 +1567,14 @@ func (p *Dataset) DeepCopy(s interface{}) error {
 	if src.ItemCount != nil {
 		tmp := *src.ItemCount
 		p.ItemCount = &tmp
+	}
+
+	if src.DatasetKey != nil {
+		var tmp string
+		if *src.DatasetKey != "" {
+			tmp = kutils.StringDeepCopy(*src.DatasetKey)
+		}
+		p.DatasetKey = &tmp
 	}
 
 	if src.CreatedBy != nil {
@@ -8327,6 +8383,20 @@ func (p *FieldWriteOption) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -8385,6 +8455,20 @@ func (p *FieldWriteOption) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *FieldWriteOption) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *MultiModalStoreStrategy
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MessageListStoreStrategy = _field
+	return offset, nil
+}
+
 func (p *FieldWriteOption) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -8395,6 +8479,7 @@ func (p *FieldWriteOption) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -8406,6 +8491,7 @@ func (p *FieldWriteOption) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -8438,6 +8524,15 @@ func (p *FieldWriteOption) fastWriteField4(buf []byte, w thrift.NocopyWriter) in
 	return offset
 }
 
+func (p *FieldWriteOption) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMessageListStoreStrategy() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.MessageListStoreStrategy)
+	}
+	return offset
+}
+
 func (p *FieldWriteOption) field1Length() int {
 	l := 0
 	if p.IsSetFieldName() {
@@ -8461,6 +8556,15 @@ func (p *FieldWriteOption) field4Length() int {
 	if p.IsSetMultiModalStoreOpt() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.MultiModalStoreOpt.BLength()
+	}
+	return l
+}
+
+func (p *FieldWriteOption) field5Length() int {
+	l := 0
+	if p.IsSetMessageListStoreStrategy() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.MessageListStoreStrategy)
 	}
 	return l
 }
@@ -8495,6 +8599,11 @@ func (p *FieldWriteOption) DeepCopy(s interface{}) error {
 		}
 	}
 	p.MultiModalStoreOpt = _multiModalStoreOpt
+
+	if src.MessageListStoreStrategy != nil {
+		tmp := *src.MessageListStoreStrategy
+		p.MessageListStoreStrategy = &tmp
+	}
 
 	return nil
 }

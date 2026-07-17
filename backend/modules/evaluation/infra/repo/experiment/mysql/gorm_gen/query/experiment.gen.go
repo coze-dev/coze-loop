@@ -31,6 +31,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.SpaceID = field.NewInt64(tableName, "space_id")
 	_experiment.CreatedBy = field.NewString(tableName, "created_by")
 	_experiment.Name = field.NewString(tableName, "name")
+	_experiment.ExperimentGroupKey = field.NewString(tableName, "experiment_group_key")
 	_experiment.Description = field.NewString(tableName, "description")
 	_experiment.EvalSetVersionID = field.NewInt64(tableName, "eval_set_version_id")
 	_experiment.TargetType = field.NewInt64(tableName, "target_type")
@@ -46,6 +47,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.LatestRunID = field.NewInt64(tableName, "latest_run_id")
 	_experiment.TargetID = field.NewInt64(tableName, "target_id")
 	_experiment.EvalSetID = field.NewInt64(tableName, "eval_set_id")
+	_experiment.EvalSetSourceType = field.NewInt32(tableName, "eval_set_source_type")
 	_experiment.ExptTemplateID = field.NewInt64(tableName, "expt_template_id")
 	_experiment.CreditCost = field.NewInt32(tableName, "credit_cost")
 	_experiment.SourceType = field.NewInt32(tableName, "source_type")
@@ -73,6 +75,7 @@ type experiment struct {
 	SpaceID                   field.Int64  // 空间 id
 	CreatedBy                 field.String // 创建者 id
 	Name                      field.String // 实验名称
+	ExperimentGroupKey        field.String // 实验分组key，默认实验ID
 	Description               field.String // 实验描述
 	EvalSetVersionID          field.Int64  // 评测集版本 id
 	TargetType                field.Int64  // 评估对象类型
@@ -88,6 +91,7 @@ type experiment struct {
 	LatestRunID               field.Int64  // 最后运行id
 	TargetID                  field.Int64  // 评估对象 id
 	EvalSetID                 field.Int64  // 评测集 id
+	EvalSetSourceType         field.Int32  // 评测集来源模式: 1=SingleSet(老,单评测集) / 2=MultiSetConfig(新,多评测集+配置,权威源 eval_conf)
 	ExptTemplateID            field.Int64  // 实验模板 id
 	CreditCost                field.Int32  // 权益消耗模式
 	SourceType                field.Int32  // 实验来源类型，评测:1,自动化任务:2...
@@ -120,6 +124,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.SpaceID = field.NewInt64(table, "space_id")
 	e.CreatedBy = field.NewString(table, "created_by")
 	e.Name = field.NewString(table, "name")
+	e.ExperimentGroupKey = field.NewString(table, "experiment_group_key")
 	e.Description = field.NewString(table, "description")
 	e.EvalSetVersionID = field.NewInt64(table, "eval_set_version_id")
 	e.TargetType = field.NewInt64(table, "target_type")
@@ -135,6 +140,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.LatestRunID = field.NewInt64(table, "latest_run_id")
 	e.TargetID = field.NewInt64(table, "target_id")
 	e.EvalSetID = field.NewInt64(table, "eval_set_id")
+	e.EvalSetSourceType = field.NewInt32(table, "eval_set_source_type")
 	e.ExptTemplateID = field.NewInt64(table, "expt_template_id")
 	e.CreditCost = field.NewInt32(table, "credit_cost")
 	e.SourceType = field.NewInt32(table, "source_type")
@@ -173,11 +179,12 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 31)
+	e.fieldMap = make(map[string]field.Expr, 32)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
 	e.fieldMap["name"] = e.Name
+	e.fieldMap["experiment_group_key"] = e.ExperimentGroupKey
 	e.fieldMap["description"] = e.Description
 	e.fieldMap["eval_set_version_id"] = e.EvalSetVersionID
 	e.fieldMap["target_type"] = e.TargetType
@@ -193,6 +200,7 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["latest_run_id"] = e.LatestRunID
 	e.fieldMap["target_id"] = e.TargetID
 	e.fieldMap["eval_set_id"] = e.EvalSetID
+	e.fieldMap["eval_set_source_type"] = e.EvalSetSourceType
 	e.fieldMap["expt_template_id"] = e.ExptTemplateID
 	e.fieldMap["credit_cost"] = e.CreditCost
 	e.fieldMap["source_type"] = e.SourceType

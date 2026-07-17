@@ -862,6 +862,66 @@ func (mr *MockClientMockRecorder) UpdateExptRunConf(ctx, req any, callOptions ..
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptRunConf", reflect.TypeOf((*MockClient)(nil).UpdateExptRunConf), varargs...)
 }
 
+// GetExperimentIDsByGroup mocks base method.
+func (m *MockClient) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest, callOptions ...callopt.Option) (*expt.GetExperimentIDsByGroupResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range callOptions {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetExperimentIDsByGroup", varargs...)
+	ret0, _ := ret[0].(*expt.GetExperimentIDsByGroupResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExperimentIDsByGroup indicates an expected call of GetExperimentIDsByGroup.
+func (mr *MockClientMockRecorder) GetExperimentIDsByGroup(ctx, req any, callOptions ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, callOptions...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExperimentIDsByGroup", reflect.TypeOf((*MockClient)(nil).GetExperimentIDsByGroup), varargs...)
+}
+
+// ListExperimentStandardEvalOutputs mocks base method.
+func (m *MockClient) ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (*expt.ListExperimentStandardEvalOutputsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range callOptions {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExperimentStandardEvalOutputs", varargs...)
+	ret0, _ := ret[0].(*expt.ListExperimentStandardEvalOutputsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExperimentStandardEvalOutputs indicates an expected call of ListExperimentStandardEvalOutputs.
+func (mr *MockClientMockRecorder) ListExperimentStandardEvalOutputs(ctx, req any, callOptions ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, callOptions...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExperimentStandardEvalOutputs", reflect.TypeOf((*MockClient)(nil).ListExperimentStandardEvalOutputs), varargs...)
+}
+
+// MGetExperimentStandardEvalOutputs mocks base method.
+func (m *MockClient) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range callOptions {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "MGetExperimentStandardEvalOutputs", varargs...)
+	ret0, _ := ret[0].(*expt.MGetExperimentStandardEvalOutputsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MGetExperimentStandardEvalOutputs indicates an expected call of MGetExperimentStandardEvalOutputs.
+func (mr *MockClientMockRecorder) MGetExperimentStandardEvalOutputs(ctx, req any, callOptions ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, callOptions...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetExperimentStandardEvalOutputs", reflect.TypeOf((*MockClient)(nil).MGetExperimentStandardEvalOutputs), varargs...)
+}
+
 // UpsertExptTurnResultFilter mocks base method.
 func (m *MockClient) UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest, callOptions ...callopt.Option) (*expt.UpsertExptTurnResultFilterResponse, error) {
 	m.ctrl.T.Helper()

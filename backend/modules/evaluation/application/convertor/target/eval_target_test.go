@@ -1076,3 +1076,228 @@ func TestEvalTargetVersionDO2DTO_CustomAgent(t *testing.T) {
 	assert.NotNil(t, result.EvalTargetContent.CustomAgent.AgentConnection)
 	assert.Equal(t, "192.168.1.1", gptr.Indirect(result.EvalTargetContent.CustomAgent.AgentConnection.IP))
 }
+
+func TestEvalTargetVersionDO2DTO_SandboxAgent(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with SandboxAgent payload", func(t *testing.T) {
+		t.Parallel()
+		targetVersionDO := &do.EvalTargetVersion{
+			ID:                  1,
+			SpaceID:             2,
+			TargetID:            3,
+			SourceTargetVersion: "v1.0",
+			EvalTargetType:      do.EvalTargetTypeSandboxAgent,
+			SandboxAgent: &do.SandboxAgent{
+				Name:          "sbx",
+				Type:          do.SandboxAgentTypeSingleRunCLI,
+				ModelName:     "gpt-x",
+				AgentSetupCmd: "setup.sh",
+				AgentRunCmd:   "run.sh",
+				Image:         "image:tag",
+				Envs: []*do.SandboxEnvVar{
+					{Key: "K1", Value: "V1"},
+				},
+			},
+		}
+
+		result := EvalTargetVersionDO2DTO(targetVersionDO)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalTargetContent)
+		assert.NotNil(t, result.EvalTargetContent.InputSchemas)
+		assert.NotNil(t, result.EvalTargetContent.OutputSchemas)
+		if assert.NotNil(t, result.EvalTargetContent.SandboxAgent) {
+			assert.Equal(t, "sbx", gptr.Indirect(result.EvalTargetContent.SandboxAgent.Name))
+			assert.Equal(t, string(do.SandboxAgentTypeSingleRunCLI), gptr.Indirect(result.EvalTargetContent.SandboxAgent.Type))
+			assert.Equal(t, "gpt-x", gptr.Indirect(result.EvalTargetContent.SandboxAgent.ModelName))
+			assert.Equal(t, "setup.sh", gptr.Indirect(result.EvalTargetContent.SandboxAgent.AgentSetupCmd))
+			assert.Equal(t, "run.sh", gptr.Indirect(result.EvalTargetContent.SandboxAgent.AgentRunCmd))
+			assert.Equal(t, "image:tag", gptr.Indirect(result.EvalTargetContent.SandboxAgent.Image))
+			if assert.Len(t, result.EvalTargetContent.SandboxAgent.Envs, 1) {
+				assert.Equal(t, "K1", gptr.Indirect(result.EvalTargetContent.SandboxAgent.Envs[0].Key))
+				assert.Equal(t, "V1", gptr.Indirect(result.EvalTargetContent.SandboxAgent.Envs[0].Value))
+			}
+		}
+	})
+
+	t.Run("nil SandboxAgent leaves content stub only", func(t *testing.T) {
+		t.Parallel()
+		targetVersionDO := &do.EvalTargetVersion{
+			EvalTargetType: do.EvalTargetTypeSandboxAgent,
+			SandboxAgent:   nil,
+		}
+
+		result := EvalTargetVersionDO2DTO(targetVersionDO)
+		assert.NotNil(t, result)
+		if assert.NotNil(t, result.EvalTargetContent) {
+			assert.Nil(t, result.EvalTargetContent.SandboxAgent)
+			assert.NotNil(t, result.EvalTargetContent.InputSchemas)
+			assert.NotNil(t, result.EvalTargetContent.OutputSchemas)
+		}
+	})
+}
+
+func TestSandboxAgentDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input returns nil", func(t *testing.T) {
+		t.Parallel()
+		assert.Nil(t, SandboxAgentDTO2DO(nil))
+	})
+
+	t.Run("full fields", func(t *testing.T) {
+		t.Parallel()
+		typ := dto.SandboxAgentType(do.SandboxAgentTypeSingleRunCLI)
+		in := &dto.SandboxAgent{
+			Name:          gptr.Of("sbx"),
+			Type:          &typ,
+			ModelName:     gptr.Of("gpt-x"),
+			AgentSetupCmd: gptr.Of("setup.sh"),
+			AgentRunCmd:   gptr.Of("run.sh"),
+			Image:         gptr.Of("image:tag"),
+			Envs: []*dto.SandboxEnvVar{
+				{Key: gptr.Of("K1"), Value: gptr.Of("V1")},
+			},
+		}
+
+		got := SandboxAgentDTO2DO(in)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, "sbx", got.Name)
+			assert.Equal(t, do.SandboxAgentTypeSingleRunCLI, got.Type)
+			assert.Equal(t, "gpt-x", got.ModelName)
+			assert.Equal(t, "setup.sh", got.AgentSetupCmd)
+			assert.Equal(t, "run.sh", got.AgentRunCmd)
+			assert.Equal(t, "image:tag", got.Image)
+			if assert.Len(t, got.Envs, 1) {
+				assert.Equal(t, "K1", got.Envs[0].Key)
+				assert.Equal(t, "V1", got.Envs[0].Value)
+			}
+		}
+	})
+
+	t.Run("nil pointer fields fall back to zero values", func(t *testing.T) {
+		t.Parallel()
+		got := SandboxAgentDTO2DO(&dto.SandboxAgent{})
+		if assert.NotNil(t, got) {
+			assert.Empty(t, got.Name)
+			assert.Equal(t, do.SandboxAgentType(""), got.Type)
+			assert.Empty(t, got.ModelName)
+			assert.Empty(t, got.AgentSetupCmd)
+			assert.Empty(t, got.AgentRunCmd)
+			assert.Empty(t, got.Image)
+			assert.Nil(t, got.Envs)
+		}
+	})
+}
+
+func TestSandboxAgentDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input returns nil", func(t *testing.T) {
+		t.Parallel()
+		assert.Nil(t, SandboxAgentDO2DTO(nil))
+	})
+
+	t.Run("full fields", func(t *testing.T) {
+		t.Parallel()
+		in := &do.SandboxAgent{
+			Name:          "sbx",
+			Type:          do.SandboxAgentTypeSingleRunCLI,
+			ModelName:     "gpt-x",
+			AgentSetupCmd: "setup.sh",
+			AgentRunCmd:   "run.sh",
+			Image:         "image:tag",
+			Envs: []*do.SandboxEnvVar{
+				{Key: "K1", Value: "V1"},
+			},
+		}
+
+		got := SandboxAgentDO2DTO(in)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, "sbx", gptr.Indirect(got.Name))
+			assert.Equal(t, string(do.SandboxAgentTypeSingleRunCLI), gptr.Indirect(got.Type))
+			assert.Equal(t, "gpt-x", gptr.Indirect(got.ModelName))
+			assert.Equal(t, "setup.sh", gptr.Indirect(got.AgentSetupCmd))
+			assert.Equal(t, "run.sh", gptr.Indirect(got.AgentRunCmd))
+			assert.Equal(t, "image:tag", gptr.Indirect(got.Image))
+			if assert.Len(t, got.Envs, 1) {
+				assert.Equal(t, "K1", gptr.Indirect(got.Envs[0].Key))
+				assert.Equal(t, "V1", gptr.Indirect(got.Envs[0].Value))
+			}
+		}
+	})
+
+	t.Run("zero-value input still yields non-nil pointer fields", func(t *testing.T) {
+		t.Parallel()
+		got := SandboxAgentDO2DTO(&do.SandboxAgent{})
+		if assert.NotNil(t, got) {
+			assert.Equal(t, "", gptr.Indirect(got.Name))
+			assert.Equal(t, "", gptr.Indirect(got.Type))
+			assert.Nil(t, got.Envs)
+		}
+	})
+}
+
+func TestSandboxEnvVarsDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input returns nil", func(t *testing.T) {
+		t.Parallel()
+		assert.Nil(t, SandboxEnvVarsDTO2DO(nil))
+	})
+
+	t.Run("empty slice returns empty non-nil slice", func(t *testing.T) {
+		t.Parallel()
+		got := SandboxEnvVarsDTO2DO([]*dto.SandboxEnvVar{})
+		assert.NotNil(t, got)
+		assert.Empty(t, got)
+	})
+
+	t.Run("nil entries are skipped and pointer fields deref safely", func(t *testing.T) {
+		t.Parallel()
+		got := SandboxEnvVarsDTO2DO([]*dto.SandboxEnvVar{
+			nil,
+			{Key: gptr.Of("K1"), Value: gptr.Of("V1")},
+			{}, // nil pointers → zero-value strings
+			nil,
+		})
+		if assert.Len(t, got, 2) {
+			assert.Equal(t, "K1", got[0].Key)
+			assert.Equal(t, "V1", got[0].Value)
+			assert.Empty(t, got[1].Key)
+			assert.Empty(t, got[1].Value)
+		}
+	})
+}
+
+func TestSandboxEnvVarsDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input returns nil", func(t *testing.T) {
+		t.Parallel()
+		assert.Nil(t, SandboxEnvVarsDO2DTO(nil))
+	})
+
+	t.Run("empty slice returns empty non-nil slice", func(t *testing.T) {
+		t.Parallel()
+		got := SandboxEnvVarsDO2DTO([]*do.SandboxEnvVar{})
+		assert.NotNil(t, got)
+		assert.Empty(t, got)
+	})
+
+	t.Run("nil entries are skipped", func(t *testing.T) {
+		t.Parallel()
+		got := SandboxEnvVarsDO2DTO([]*do.SandboxEnvVar{
+			nil,
+			{Key: "K1", Value: "V1"},
+			{Key: "K2", Value: "V2"},
+			nil,
+		})
+		if assert.Len(t, got, 2) {
+			assert.Equal(t, "K1", gptr.Indirect(got[0].Key))
+			assert.Equal(t, "V1", gptr.Indirect(got[0].Value))
+			assert.Equal(t, "K2", gptr.Indirect(got[1].Key))
+			assert.Equal(t, "V2", gptr.Indirect(got[1].Value))
+		}
+	})
+}

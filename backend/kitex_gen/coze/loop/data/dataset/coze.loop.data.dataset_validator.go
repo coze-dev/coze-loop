@@ -57,6 +57,11 @@ func (p *CreateDatasetRequest) IsValid() error {
 			}
 		}
 	}
+	if p.DatasetKey != nil {
+		if len(*p.DatasetKey) > int(255) {
+			return fmt.Errorf("field DatasetKey max_len rule failed, current value: %d", len(*p.DatasetKey))
+		}
+	}
 	if p.SecurityLevel != nil {
 		if p.SecurityLevel.String() == "<UNSET>" {
 			return fmt.Errorf("field SecurityLevel defined_only rule failed")
@@ -212,6 +217,9 @@ func (p *ListDatasetsRequest) IsValid() error {
 		if len(*p.Name) > int(255) {
 			return fmt.Errorf("field Name max_len rule failed, current value: %d", len(*p.Name))
 		}
+	}
+	if len(p.DatasetKeys) > int(255) {
+		return fmt.Errorf("field DatasetKeys MaxLen rule failed, current value: %v", p.DatasetKeys)
 	}
 	if p.PageNumber != nil {
 		if *p.PageNumber <= int32(0) {
@@ -810,6 +818,16 @@ func (p *ListDatasetItemsRequest) IsValid() error {
 			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
 		}
 	}
+	if p.Filter != nil {
+		if err := p.Filter.IsValid(); err != nil {
+			return fmt.Errorf("field Filter not valid, %w", err)
+		}
+	}
+	if p.TagFilter != nil {
+		if err := p.TagFilter.IsValid(); err != nil {
+			return fmt.Errorf("field TagFilter not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -849,6 +867,16 @@ func (p *ListDatasetItemsByVersionRequest) IsValid() error {
 		}
 		if *p.PageSize > int32(200) {
 			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.Filter != nil {
+		if err := p.Filter.IsValid(); err != nil {
+			return fmt.Errorf("field Filter not valid, %w", err)
+		}
+	}
+	if p.TagFilter != nil {
+		if err := p.TagFilter.IsValid(); err != nil {
+			return fmt.Errorf("field TagFilter not valid, %w", err)
 		}
 	}
 	if p.Base != nil {

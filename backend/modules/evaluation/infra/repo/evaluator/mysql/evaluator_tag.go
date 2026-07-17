@@ -405,7 +405,7 @@ func (dao *EvaluatorTagDAOImpl) querySourceIDsForConditionOnce(ctx context.Conte
 	return ids, nil
 }
 
-func (dao *EvaluatorTagDAOImpl) sourceIDsForNameLike(ctx context.Context, tagType int32, langType string, keyword string, restrictTo []int64, opts ...db.Option) ([]int64, error) {
+func (dao *EvaluatorTagDAOImpl) sourceIDsForNameLike(ctx context.Context, tagType int32, langType, keyword string, restrictTo []int64, opts ...db.Option) ([]int64, error) {
 	kw := "%" + keyword + "%"
 	if restrictTo != nil {
 		if len(restrictTo) == 0 {
@@ -428,7 +428,7 @@ func (dao *EvaluatorTagDAOImpl) sourceIDsForNameLike(ctx context.Context, tagTyp
 	return mapKeysToSlice(set), nil
 }
 
-func (dao *EvaluatorTagDAOImpl) sourceIDsForNameLikeOnce(ctx context.Context, tagType int32, langType string, keywordPattern string, restrictTo []int64, opts ...db.Option) ([]int64, error) {
+func (dao *EvaluatorTagDAOImpl) sourceIDsForNameLikeOnce(ctx context.Context, tagType int32, langType, keywordPattern string, restrictTo []int64, opts ...db.Option) ([]int64, error) {
 	dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
 	q := dbsession.WithContext(ctx).
 		Table(model.TableNameEvaluatorTag).

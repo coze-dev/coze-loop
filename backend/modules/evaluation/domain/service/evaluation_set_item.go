@@ -12,11 +12,18 @@ import (
 //go:generate mockgen -destination=mocks/evaluation_set_item.go -package=mocks . EvaluationSetItemService
 type EvaluationSetItemService interface {
 	BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (idMap map[int64]int64, errors []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
-	UpdateEvaluationSetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption) (err error)
+	UpdateEvaluationSetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption, tags []*entity.ResourceTagRef) (err error)
 	BatchUpdateEvaluationSetItems(ctx context.Context, param *entity.BatchUpdateEvaluationSetItemsParam) (errors []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
 	BatchDeleteEvaluationSetItems(ctx context.Context, spaceID, evaluationSetID int64, itemIDs []int64) (err error)
 	ListEvaluationSetItems(ctx context.Context, param *entity.ListEvaluationSetItemsParam) (items []*entity.EvaluationSetItem, total, filterTotal *int64, nextPageToken *string, err error)
 	BatchGetEvaluationSetItems(ctx context.Context, param *entity.BatchGetEvaluationSetItemsParam) (items []*entity.EvaluationSetItem, err error)
 	ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetEvaluationSetItemField(ctx context.Context, param *entity.GetEvaluationSetItemFieldParam) (fieldData *entity.FieldData, err error)
+
+	GetEvaluationSetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error)
+	ListEvaluationSetItemDefs(ctx context.Context, param *entity.ListEvaluationSetItemDefsParam) ([]*entity.EvaluationSetItemDef, *int64, *string, error)
+	ListEvaluationSetItemVersions(ctx context.Context, param *entity.ListEvaluationSetItemVersionsParam) ([]*entity.EvaluationSetItemVersion, *int64, *string, error)
+	GetEvaluationSetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, itemVersion *string) (*entity.EvaluationSetItemVersion, error)
+	UpdateEvaluationSetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, status, description, itemVersion *string) error
+	BatchAddExistEvaluationSetItems(ctx context.Context, param *entity.BatchAddExistEvaluationSetItemsParam) (*entity.BatchAddExistEvaluationSetItemsResult, error)
 }

@@ -108,6 +108,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 				tt.benefitService,
 				tt.evalAsyncRepo,
 				tt.evalSetItemSvc,
+				nil,
 			)
 			assert.NotNil(t, inst)
 		})
@@ -365,15 +366,15 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 
 	t.Run("正常流程", func(t *testing.T) {
 		mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4}
-		err := executor.CompleteItemRun(context.Background(), event, nil)
+		eiec := &entity.ExptItemEvalCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4}}
+		err := executor.CompleteItemRun(context.Background(), eiec, nil)
 		assert.NoError(t, err)
 	})
 
 	t.Run("UpdateItemRunLog返回错误", func(t *testing.T) {
 		mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mock updateitemrunlog error"))
-		event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4}
-		err := executor.CompleteItemRun(context.Background(), event, nil)
+		eiec := &entity.ExptItemEvalCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4}}
+		err := executor.CompleteItemRun(context.Background(), eiec, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "mock updateitemrunlog error")
 	})
@@ -390,8 +391,8 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 				return nil
 			})
 
-		event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4, RetryTimes: 1}
-		err := executor.CompleteItemRun(ctx, event, errors.New("target timeout"))
+		eiec := &entity.ExptItemEvalCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4, RetryTimes: 1}}
+		err := executor.CompleteItemRun(ctx, eiec, errors.New("target timeout"))
 		assert.NoError(t, err)
 	})
 }
@@ -456,7 +457,7 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		}
 		result := &entity.ExptTurnRunResult{
 			TargetResult:     &entity.EvalTargetRecord{ID: 10},
-			EvaluatorResults: map[int64]*entity.EvaluatorRecord{1: {ID: 100, EvaluatorVersionID: 1}},
+			EvaluatorResults: []*entity.EvaluatorRecord{{ID: 100, EvaluatorVersionID: 1}},
 		}
 		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, logs []*entity.ExptTurnResultRunLog) error {
 			require.Len(t, logs, 1)
@@ -489,7 +490,7 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		}
 		result := &entity.ExptTurnRunResult{
 			TargetResult:     &entity.EvalTargetRecord{ID: 10},
-			EvaluatorResults: map[int64]*entity.EvaluatorRecord{1: {ID: 100, EvaluatorVersionID: 1}},
+			EvaluatorResults: []*entity.EvaluatorRecord{{ID: 100, EvaluatorVersionID: 1}},
 		}
 		mockConfiger.EXPECT().GetErrCtrl(gomock.Any()).Return(entity.DefaultExptErrCtrl())
 		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, logs []*entity.ExptTurnResultRunLog) error {

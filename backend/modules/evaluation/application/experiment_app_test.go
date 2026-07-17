@@ -370,6 +370,34 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 			wantErr:  true,
 			wantCode: 0, // Don't expect specific error code since it's a fmt.Errorf
 		},
+		{
+			// ★ 硬校验: source_type=MultiSetConfig 但 eval_set_configs 为空 → InvalidParam
+			name: "source type multi without configs",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID:       validWorkspaceID,
+				Name:              gptr.Of("test_experiment"),
+				EvalSetSourceType: gptr.Of(expt.ExptEvalSetSourceType_MultiSetConfig),
+			},
+			mockSetup: func() {}, // 校验在任何 mock 调用前早失败
+			wantResp:  nil,
+			wantErr:   true,
+			wantCode:  errno.CommonInvalidParamCode,
+		},
+		{
+			// ★ 硬校验: 带 eval_set_configs 但 source_type 缺省(非 MultiSetConfig) → InvalidParam
+			name: "configs without source type multi",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				Name:        gptr.Of("test_experiment"),
+				EvalSetConfigs: []*expt.EvalSetConfig{
+					{EvalSetID: 111, EvalSetVersionID: 222},
+				},
+			},
+			mockSetup: func() {}, // 校验在任何 mock 调用前早失败
+			wantResp:  nil,
+			wantErr:   true,
+			wantCode:  errno.CommonInvalidParamCode,
+		},
 	}
 
 	for _, tt := range tests {
@@ -741,6 +769,7 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockScheduler := servicemocks.NewMockExptSchedulerEvent(ctrl)
 	mockIDGen := idgenmock.NewMockIIDGenerator(ctrl)
+	mockSandboxScheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
 	// Test data
 	// 测试数据
 	validWorkspaceID := int64(123)
@@ -848,6 +877,38 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "sandbox agent init failure blocks submit",
+			req: &exptpb.SubmitExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				Name:        gptr.Of("sandbox_experiment"),
+				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_SandboxAgent),
+				},
+				Session: &common.Session{
+					UserID: gptr.Of(int64(789)),
+				},
+				ItemConcurNum:      gptr.Of(int32(1)),
+				TargetFieldMapping: &expt.TargetFieldMapping{},
+			},
+			mockSetup: func() {
+				sandboxExpt := *validExpt
+				sandboxExpt.Name = "sandbox_experiment"
+				sandboxExpt.Target = &entity.EvalTarget{
+					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				}
+				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), &entity.Session{UserID: "789", AppID: 0}).Return(&sandboxExpt, nil)
+				mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
+					TaskID:      strconv.FormatInt(validExptID, 10),
+					Concurrency: int32(1),
+					WorkspaceID: validWorkspaceID,
+				}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			wantResp: nil,
+			wantErr:  true,
+			wantCode: 0,
+		},
+		{
 			name: "parameter validation failed - CreateEvalTargetParam is empty",
 			req: &exptpb.SubmitExperimentRequest{
 				WorkspaceID: validWorkspaceID,
@@ -875,11 +936,12 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 			// Create object under test
 			// 创建被测试对象
 			app := &experimentApplication{
-				manager:            mockManager,
-				resultSvc:          mockResultSvc,
-				auth:               mockAuth,
-				ExptSchedulerEvent: mockScheduler,
-				idgen:              mockIDGen,
+				manager:                 mockManager,
+				resultSvc:               mockResultSvc,
+				auth:                    mockAuth,
+				ExptSchedulerEvent:      mockScheduler,
+				idgen:                   mockIDGen,
+				sandboxSchedulerAdapter: mockSandboxScheduler,
 			}
 			// Execute test
 			gotResp, err := app.SubmitExperiment(context.Background(), tt.req)
@@ -2806,6 +2868,7 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil, // templateManager
 				nil, // fileProvider
 				nil, // lifecycleEventHandler
+				nil, // sandboxSchedulerAdapter
 			)
 
 			// 执行测试
@@ -3057,6 +3120,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // templateManager
 				nil, // fileProvider
 				nil, // lifecycleEventHandler
+				nil, // sandboxSchedulerAdapter
 			)
 
 			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
@@ -3160,6 +3224,7 @@ func TestExperimentApplication_CreateExperimentTemplate(t *testing.T) {
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
+		nil,                 // sandboxSchedulerAdapter
 	)
 
 	resp, err := app.CreateExperimentTemplate(context.Background(), req)
@@ -3262,6 +3327,7 @@ func TestExperimentApplication_BatchGetExperimentTemplate(t *testing.T) {
 				mockTemplateManager, // templateManager
 				nil,                 // fileProvider
 				nil,                 // lifecycleEventHandler
+				nil,                 // sandboxSchedulerAdapter
 			)
 			resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
 			if tt.wantErr {
@@ -3306,6 +3372,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
 		assert.Error(t, err)
@@ -3376,6 +3443,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		resp, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.NoError(t, err)
@@ -3414,6 +3482,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
 		assert.Error(t, err)
@@ -3481,6 +3550,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
 		assert.NoError(t, err)
@@ -3531,6 +3601,7 @@ func TestExperimentApplication_DeleteExperimentTemplate(t *testing.T) {
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
+		nil,                 // sandboxSchedulerAdapter
 	)
 	resp, err := app.DeleteExperimentTemplate(context.Background(), req)
 	assert.NoError(t, err)
@@ -3603,6 +3674,7 @@ func TestExperimentApplication_ListExperimentTemplates(t *testing.T) {
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
+		nil,                 // sandboxSchedulerAdapter
 	)
 	resp, err := app.ListExperimentTemplates(context.Background(), req)
 	assert.NoError(t, err)
@@ -3646,6 +3718,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3674,6 +3747,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3705,6 +3779,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3738,6 +3813,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		// 这个测试主要验证 FilterOption 不为 nil 时会调用 Convert
 		// 具体的转换逻辑在 filter convertor 的测试中覆盖
@@ -4121,8 +4197,8 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 					[]*entity.ExptAggregateResult{
 						{
 							ExperimentID: validExptID,
-							EvaluatorResults: map[int64]*entity.EvaluatorAggregateResult{
-								validEvaluatorVersionID: {
+							EvaluatorResults: map[string]*entity.EvaluatorAggregateResult{
+								entity.EncodeEvaluatorInstanceKey(validEvaluatorVersionID, ""): {
 									EvaluatorVersionID: validEvaluatorVersionID,
 									AggregatorResults: []*entity.AggregatorResult{
 										{
@@ -6873,6 +6949,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	mockManager := servicemocks.NewMockIExptManager(ctrl)
 	mockIDGen := idgenmock.NewMockIIDGenerator(ctrl)
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockSandboxScheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
 
 	validWorkspaceID := int64(123)
 	validExptID := int64(456)
@@ -6890,6 +6967,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	app := NewExperimentApplication(
 		nil, nil, mockManager, nil, nil, mockIDGen, nil, mockAuth,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		mockSandboxScheduler,
 	)
 
 	t.Run("auth fails", func(t *testing.T) {
@@ -6917,6 +6995,24 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, validRunID, resp.GetRunID())
+	})
+
+	t.Run("SandboxAgent re-init failure blocks retry", func(t *testing.T) {
+		sandboxExpt := *baseExpt
+		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
+			TaskID:      strconv.FormatInt(validExptID, 10),
+			Concurrency: int32(entity.DefaultSubmitItemConcurNum),
+			WorkspaceID: validWorkspaceID,
+		}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+		})
+		assert.Error(t, err)
 	})
 
 	t.Run("RetryItems mode - already retried", func(t *testing.T) {
@@ -7021,6 +7117,7 @@ func TestExperimentApplication_ListExperimentTemplates_MoreBranches(t *testing.T
 	app := NewExperimentApplication(
 		nil, nil, nil, nil, nil, nil, nil,
 		mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+		nil,
 		nil,
 	)
 

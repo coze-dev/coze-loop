@@ -79,6 +79,9 @@ func EvalTargetVersionDTO2DO(targetVersionDTO *dto.EvalTargetVersion) (targetVer
 		if targetVersionDTO.GetEvalTargetContent().GetCustomAgent() != nil {
 			targetVersionDO.CustomAgent = CustomAgentDTO2DO(targetVersionDTO.GetEvalTargetContent().GetCustomAgent())
 		}
+		if targetVersionDTO.GetEvalTargetContent().GetSandboxAgent() != nil {
+			targetVersionDO.SandboxAgent = SandboxAgentDTO2DO(targetVersionDTO.GetEvalTargetContent().GetSandboxAgent())
+		}
 		targetVersionDO.CustomRPCServer = CustomRPCServerDTO2DO(targetVersionDTO.GetEvalTargetContent().GetCustomRPCServer())
 		targetVersionDO.RuntimeParamDemo = gptr.Of(targetVersionDTO.GetEvalTargetContent().GetRuntimeParamJSONDemo())
 	}
@@ -233,6 +236,14 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 		}
 		if targetVersionDO.CustomAgent != nil {
 			targetVersionDTO.EvalTargetContent.CustomAgent = CustomAgentDO2DTO(targetVersionDO.CustomAgent)
+		}
+	case do.EvalTargetTypeSandboxAgent:
+		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
+			InputSchemas:  make([]*commondto.ArgsSchema, 0),
+			OutputSchemas: make([]*commondto.ArgsSchema, 0),
+		}
+		if targetVersionDO.SandboxAgent != nil {
+			targetVersionDTO.EvalTargetContent.SandboxAgent = SandboxAgentDO2DTO(targetVersionDO.SandboxAgent)
 		}
 	default:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
@@ -588,4 +599,68 @@ func AgentImplDO2DTO(doObj *do.AgentImpl) *dto.AgentImpl {
 		Framework: gptr.Of(doObj.Framework),
 		Kind:      gptr.Of(doObj.Kind),
 	}
+}
+
+func SandboxAgentDTO2DO(dtoObj *dto.SandboxAgent) *do.SandboxAgent {
+	if dtoObj == nil {
+		return nil
+	}
+	return &do.SandboxAgent{
+		Name:          gptr.Indirect(dtoObj.Name),
+		Type:          do.SandboxAgentType(gptr.Indirect(dtoObj.Type)),
+		ModelName:     gptr.Indirect(dtoObj.ModelName),
+		AgentSetupCmd: gptr.Indirect(dtoObj.AgentSetupCmd),
+		AgentRunCmd:   gptr.Indirect(dtoObj.AgentRunCmd),
+		Envs:          SandboxEnvVarsDTO2DO(dtoObj.Envs),
+		Image:         gptr.Indirect(dtoObj.Image),
+	}
+}
+
+func SandboxAgentDO2DTO(doObj *do.SandboxAgent) *dto.SandboxAgent {
+	if doObj == nil {
+		return nil
+	}
+	return &dto.SandboxAgent{
+		Name:          gptr.Of(doObj.Name),
+		Type:          gptr.Of(dto.SandboxAgentType(doObj.Type)),
+		ModelName:     gptr.Of(doObj.ModelName),
+		AgentSetupCmd: gptr.Of(doObj.AgentSetupCmd),
+		AgentRunCmd:   gptr.Of(doObj.AgentRunCmd),
+		Envs:          SandboxEnvVarsDO2DTO(doObj.Envs),
+		Image:         gptr.Of(doObj.Image),
+	}
+}
+
+func SandboxEnvVarsDTO2DO(dtoObjs []*dto.SandboxEnvVar) []*do.SandboxEnvVar {
+	if dtoObjs == nil {
+		return nil
+	}
+	res := make([]*do.SandboxEnvVar, 0, len(dtoObjs))
+	for _, e := range dtoObjs {
+		if e == nil {
+			continue
+		}
+		res = append(res, &do.SandboxEnvVar{
+			Key:   gptr.Indirect(e.Key),
+			Value: gptr.Indirect(e.Value),
+		})
+	}
+	return res
+}
+
+func SandboxEnvVarsDO2DTO(doObjs []*do.SandboxEnvVar) []*dto.SandboxEnvVar {
+	if doObjs == nil {
+		return nil
+	}
+	res := make([]*dto.SandboxEnvVar, 0, len(doObjs))
+	for _, e := range doObjs {
+		if e == nil {
+			continue
+		}
+		res = append(res, &dto.SandboxEnvVar{
+			Key:   gptr.Of(e.Key),
+			Value: gptr.Of(e.Value),
+		})
+	}
+	return res
 }

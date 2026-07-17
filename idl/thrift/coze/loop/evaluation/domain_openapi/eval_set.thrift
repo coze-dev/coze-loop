@@ -2,6 +2,26 @@ namespace go coze.loop.evaluation.domain_openapi.eval_set
 
 include "common.thrift"
 
+typedef string TagFilterRelation(ts.enum="true")
+const TagFilterRelation TagFilterRelation_And = "and"
+const TagFilterRelation TagFilterRelation_Or = "or"
+
+struct ResourceTagRef {
+    1: required string tag_name (vt.min_size = "1", vt.max_size = "128")
+}
+
+struct ResourceTag {
+    1: required string tag_name
+    2: optional i64 tag_key_id (api.js_conv="true", go.tag='json:"tag_key_id"')
+    3: optional string content_type
+    4: optional string status
+}
+
+struct TagFilter {
+    1: required list<string> tag_names (vt.min_size = "1", vt.max_size = "50", vt.elem.min_size = "1", vt.elem.max_size = "128")
+    2: optional TagFilterRelation relation
+}
+
 // 评测集状态
 typedef string EvaluationSetStatus(ts.enum="true")
 const EvaluationSetStatus EvaluationSetStatus_Active = "active"
@@ -20,6 +40,7 @@ const SchemaKey SchemaKey_Integer = "integer"
 const SchemaKey SchemaKey_Float = "float"
 const SchemaKey SchemaKey_Bool = "bool"
 const SchemaKey SchemaKey_Trajectory = "trajectory"
+const SchemaKey SchemaKey_MessageList = "message_list"
 
 // 字段Schema
 struct FieldSchema {
@@ -59,8 +80,11 @@ struct EvaluationSet {
     5: optional i64 item_count
     6: optional string latest_version
     7: optional bool is_change_uncommitted
+    8: optional EvaluationSetType type
+    9: optional string dataset_key                     // 数据集业务唯一键，创建后不可变
 
     20: optional EvaluationSetVersion current_version
+    21: optional list<ResourceTag> tags
 
     100: optional common.BaseInfo base_info
 }
@@ -82,6 +106,21 @@ struct EvaluationSetItem {
     1: optional i64 id (api.js_conv="true", go.tag = 'json:"id"')
     2: optional string item_key
     3: optional list<Turn> turns
+    20: optional i64 item_version_id (api.js_conv="true", go.tag = 'json:"item_version_id"')
+    21: optional string item_version
+    24: optional list<ResourceTag> tags
+    100: optional common.BaseInfo base_info
+}
+
+
+struct EvaluationItemVersion {
+    1: optional i64 item_version_id (api.js_conv="true", go.tag = 'json:"item_version_id"')
+    2: optional i64 item_id (api.js_conv="true", go.tag = 'json:"item_id"')
+    3: optional string version
+    4: optional i64 version_num (api.js_conv="true", go.tag = 'json:"version_num"')
+    5: optional string description
+    6: optional list<Turn> turns
+    7: optional string status
     100: optional common.BaseInfo base_info
 }
 
@@ -112,11 +151,17 @@ struct DatasetItemOutput {
     2: optional string item_key
     3: optional i64 item_id (api.js_conv="true", go.tag = 'json:"item_id"')
     4: optional bool is_new_item                   // 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
+    20: optional i64 item_version_id (api.js_conv="true", go.tag = 'json:"item_version_id"')
+    21: optional string item_version
 }
 
 typedef string MultiModalStoreStrategy(ts.enum="true")
 const MultiModalStoreStrategy MultiModalStoreStrategy_Passthrough = "passthrough" // 保留用户的外链
 const MultiModalStoreStrategy MultiModalStoreStrategy_Store = "store"             // 转存用户的 url 到平台内
+
+typedef string EvaluationSetType(ts.enum="true")
+const EvaluationSetType EvaluationSetType_Default = "default"
+const EvaluationSetType EvaluationSetType_VersionedItem = "versioned_item"
 
 struct MultiModalStoreOption {
     1: optional MultiModalStoreStrategy multi_modal_store_strategy
@@ -127,4 +172,5 @@ struct FieldWriteOption {
     2: optional string fieldKey
     3: optional common.ContentType modality_type // 手动标记的当前列，仅 image/video/audio 等多模态类型有效
     4: optional MultiModalStoreOption multi_modal_store_opt
+    5: optional MultiModalStoreStrategy message_list_store_strategy  // MessageList 多模态资源存储策略
 }

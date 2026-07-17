@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	trajectorymocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
@@ -2406,6 +2407,8 @@ func TestEvalTargetServiceImpl_BatchGetRecordByIDs_LoadRecordOutputFields_LoadRe
 		map[entity.EvalTargetType]ISourceEvalTargetOperateService{},
 		trajectorymocks.NewMockITrajectoryAdapter(ctrl),
 		componentmocks.NewMockIConfiger(ctrl),
+		nil, // sandboxSchedulerAdapter
+		nil, // exptRunLogRepo
 	)
 
 	t.Run("BatchGetRecordByIDs_spaceID_zero", func(t *testing.T) {
@@ -2476,4 +2479,244 @@ func TestEvalTargetServiceImpl_GetRecordByRunItemTurn(t *testing.T) {
 	record, err := svc.GetRecordByRunItemTurn(context.Background(), 1, 2, 3, 4)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedRecord, record)
+}
+
+// TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox 验证主流程:
+// - 空 recordIDs / 取记录失败 / 取版本失败 → 提前返回, 不写 Save
+// - 非 AsyncInvoking / 非 SandboxAgent 类型 → 跳过, 不写 Save
+// - SandboxAgent + AsyncInvoking → 写 Fail 状态, 触发销毁(best-effort)
+func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing.T) {
+	t.Run("空 recordIDs 直接返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo}
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, nil, 100, "msg")
+		// 无任何 mock 期望
+	})
+
+	t.Run("List 失败时安静返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return(nil, errors.New("db error"))
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg")
+	})
+
+	t.Run("无 versionID 提前返回, 不调 BatchGetEvalTargetVersion", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo}
+
+		// 所有 record 的 TargetVersionID 都是 0
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 0}}, nil)
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg")
+	})
+
+	t.Run("BatchGetEvalTargetVersion 失败安静返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return(nil, errors.New("db error"))
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg")
+	})
+
+	t.Run("非 SandboxAgent 类型不写 Save", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo}
+
+		records := []*entity.EvalTargetRecord{{
+			ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+		}}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).Return(records, nil)
+		// 返回非 SandboxAgent 类型 → 整个 sandboxVersionIDs 为空 → 提前返回
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeCozeBot,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20},
+			}}, nil)
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg")
+	})
+
+	t.Run("SandboxAgent + AsyncInvoking 落 Fail 状态并销毁", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		mockRunLog := repomocks.NewMockIExptRunLogRepo(ctrl)
+		svc := &EvalTargetServiceImpl{
+			evalTargetRepo:          mockRepo,
+			sandboxSchedulerAdapter: mockSched,
+			exptRunLogRepo:          mockRunLog,
+		}
+
+		records := []*entity.EvalTargetRecord{
+			{ // SandboxAgent + AsyncInvoking → 处理
+				ID: 10, TargetVersionID: 20, SpaceID: 1,
+				ExperimentRunID: 50, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			},
+			{ // SandboxAgent 但 Status != AsyncInvoking → 跳过
+				ID: 11, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusSuccess),
+			},
+		}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10, 11}).Return(records, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+
+		// 仅 record 10 走 SaveEvalTargetRecord, 落 Fail 状态 + RunError
+		var saved *entity.EvalTargetRecord
+		mockRepo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Nil()).
+			DoAndReturn(func(_ context.Context, r *entity.EvalTargetRecord, _ *bool) error {
+				saved = r
+				return nil
+			}).Times(1)
+
+		// resolveSandboxTaskIDByRunID → Get(0, 50)
+		mockRunLog.EXPECT().Get(gomock.Any(), int64(0), int64(50)).Return(&entity.ExptRunLog{ExptID: 999}, nil).Times(1)
+
+		// 异步 Destroy: 用 channel 阻塞确保 goroutine 已被调用
+		destroyDone := make(chan struct{})
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				assert.Equal(t, "999", req.TaskID)
+				assert.Equal(t, rpc.SandboxDestroyTypeExecute, req.DestroyType)
+				assert.Equal(t, []string{"10"}, req.ExecuteIDs)
+				assert.Equal(t, int64(1), req.WorkspaceID)
+				close(destroyDone)
+				return &rpc.SandboxDestroyResponse{}, nil
+			}).Times(1)
+
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10, 11}, 100, "msg")
+
+		select {
+		case <-destroyDone:
+		case <-time.After(2 * time.Second):
+			t.Fatal("destroy goroutine timeout")
+		}
+
+		assert.NotNil(t, saved)
+		assert.Equal(t, int64(10), saved.ID)
+		assert.Equal(t, entity.EvalTargetRunStatusFail, gptr.Indirect(saved.Status))
+		assert.NotNil(t, saved.EvalTargetOutputData)
+		assert.NotNil(t, saved.EvalTargetOutputData.EvalTargetRunError)
+		assert.Equal(t, int32(100), saved.EvalTargetOutputData.EvalTargetRunError.Code)
+		assert.Equal(t, "msg", saved.EvalTargetOutputData.EvalTargetRunError.Message)
+	})
+}
+
+// TestEvalTargetServiceImpl_resolveSandboxTaskIDByRunID 覆盖私有方法的分支
+func TestEvalTargetServiceImpl_resolveSandboxTaskIDByRunID(t *testing.T) {
+	t.Run("无 repo / runID <= 0 → 空字符串", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := &EvalTargetServiceImpl{}
+		assert.Equal(t, "", svc.resolveSandboxTaskIDByRunID(context.Background(), 1))
+		mockRunLog := repomocks.NewMockIExptRunLogRepo(ctrl)
+		svc.exptRunLogRepo = mockRunLog
+		assert.Equal(t, "", svc.resolveSandboxTaskIDByRunID(context.Background(), 0))
+	})
+	t.Run("Get 失败 → 空字符串", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRunLog := repomocks.NewMockIExptRunLogRepo(ctrl)
+		svc := &EvalTargetServiceImpl{exptRunLogRepo: mockRunLog}
+		mockRunLog.EXPECT().Get(gomock.Any(), int64(0), int64(1)).Return(nil, errors.New("db"))
+		assert.Equal(t, "", svc.resolveSandboxTaskIDByRunID(context.Background(), 1))
+	})
+	t.Run("Get 返回 nil log 或 ExptID<=0 → 空字符串", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRunLog := repomocks.NewMockIExptRunLogRepo(ctrl)
+		svc := &EvalTargetServiceImpl{exptRunLogRepo: mockRunLog}
+		mockRunLog.EXPECT().Get(gomock.Any(), int64(0), int64(1)).Return(nil, nil)
+		assert.Equal(t, "", svc.resolveSandboxTaskIDByRunID(context.Background(), 1))
+		mockRunLog.EXPECT().Get(gomock.Any(), int64(0), int64(2)).Return(&entity.ExptRunLog{ExptID: 0}, nil)
+		assert.Equal(t, "", svc.resolveSandboxTaskIDByRunID(context.Background(), 2))
+	})
+	t.Run("Get 成功 → 返回 ExptID 字符串", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRunLog := repomocks.NewMockIExptRunLogRepo(ctrl)
+		svc := &EvalTargetServiceImpl{exptRunLogRepo: mockRunLog}
+		mockRunLog.EXPECT().Get(gomock.Any(), int64(0), int64(7)).Return(&entity.ExptRunLog{ExptID: 12345}, nil)
+		assert.Equal(t, "12345", svc.resolveSandboxTaskIDByRunID(context.Background(), 7))
+	})
+}
+
+// TestEvalTargetServiceImpl_destroySandboxExecuteIfNeeded 覆盖 ReportInvokeRecords 调用的私有 hook
+func TestEvalTargetServiceImpl_destroySandboxExecuteIfNeeded(t *testing.T) {
+	t.Run("nil scheduler 或 nil record 直接返回", func(t *testing.T) {
+		svc := &EvalTargetServiceImpl{}
+		svc.destroySandboxExecuteIfNeeded(context.Background(), nil)
+		svc.destroySandboxExecuteIfNeeded(context.Background(), &entity.EvalTargetRecord{ID: 1})
+	})
+
+	t.Run("GetEvalTargetVersion 失败 silent return", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo, sandboxSchedulerAdapter: mockSched}
+		mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(2)).Return(nil, errors.New("err"))
+		svc.destroySandboxExecuteIfNeeded(context.Background(), &entity.EvalTargetRecord{ID: 10, SpaceID: 1, TargetVersionID: 2})
+	})
+
+	t.Run("非 SandboxAgent 不触发销毁", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo, sandboxSchedulerAdapter: mockSched}
+		mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(2)).
+			Return(&entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeCozeBot}, nil)
+		svc.destroySandboxExecuteIfNeeded(context.Background(), &entity.EvalTargetRecord{ID: 10, SpaceID: 1, TargetVersionID: 2})
+	})
+
+	t.Run("SandboxAgent 触发 Destroy", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		mockRunLog := repomocks.NewMockIExptRunLogRepo(ctrl)
+		svc := &EvalTargetServiceImpl{
+			evalTargetRepo:          mockRepo,
+			sandboxSchedulerAdapter: mockSched,
+			exptRunLogRepo:          mockRunLog,
+		}
+
+		mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(2)).
+			Return(&entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeSandboxAgent}, nil)
+		mockRunLog.EXPECT().Get(gomock.Any(), int64(0), int64(50)).Return(&entity.ExptRunLog{ExptID: 999}, nil)
+
+		destroyDone := make(chan struct{})
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				assert.Equal(t, "999", req.TaskID)
+				assert.Equal(t, []string{"10"}, req.ExecuteIDs)
+				close(destroyDone)
+				return &rpc.SandboxDestroyResponse{}, nil
+			})
+
+		svc.destroySandboxExecuteIfNeeded(context.Background(), &entity.EvalTargetRecord{ID: 10, SpaceID: 1, TargetVersionID: 2, ExperimentRunID: 50})
+		select {
+		case <-destroyDone:
+		case <-time.After(2 * time.Second):
+			t.Fatal("destroy goroutine timeout")
+		}
+	})
 }

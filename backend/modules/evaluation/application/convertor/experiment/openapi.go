@@ -153,6 +153,10 @@ func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalT
 		result.AgentConnection = openapiAgentConnectionDTO2Domain(param.AgentConnection)
 	}
 
+	if param.SandboxAgent != nil {
+		result.SandboxAgent = openapiSandboxAgentDTO2Domain(param.SandboxAgent)
+	}
+
 	return result, nil
 }
 
@@ -193,6 +197,35 @@ func openapiAgentImplDTO2Domain(dtoObj *openapiEvalTarget.AgentImpl) *domaindoEv
 		Framework: dtoObj.Framework,
 		Kind:      dtoObj.Kind,
 	}
+}
+
+func openapiSandboxAgentDTO2Domain(dtoObj *openapiEvalTarget.SandboxAgent) *domaindoEvalTarget.SandboxAgent {
+	if dtoObj == nil {
+		return nil
+	}
+	envs := make([]*domaindoEvalTarget.SandboxEnvVar, 0, len(dtoObj.Envs))
+	for _, e := range dtoObj.Envs {
+		if e == nil {
+			continue
+		}
+		envs = append(envs, &domaindoEvalTarget.SandboxEnvVar{
+			Key:   e.Key,
+			Value: e.Value,
+		})
+	}
+	res := &domaindoEvalTarget.SandboxAgent{
+		Name:          dtoObj.Name,
+		ModelName:     dtoObj.ModelName,
+		AgentSetupCmd: dtoObj.AgentSetupCmd,
+		AgentRunCmd:   dtoObj.AgentRunCmd,
+		Envs:          envs,
+		Image:         dtoObj.Image,
+	}
+	if dtoObj.Type != nil {
+		t := *dtoObj.Type
+		res.Type = &t
+	}
+	return res
 }
 
 func ParseOpenAPIEvaluatorVersions(versions []string) ([]int64, error) {
@@ -300,6 +333,8 @@ func mapOpenAPIEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (dom
 		return domaindoEvalTarget.EvalTargetType_A2AAgent, nil
 	case openapiEvalTarget.EvalTargetTypeCustomAgent:
 		return domaindoEvalTarget.EvalTargetType_CustomAgent, nil
+	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
+		return domaindoEvalTarget.EvalTargetType_SandboxAgent, nil
 	default:
 		return 0, fmt.Errorf("unsupported eval target type: %s. supported: [%s]", openapiType, supportedOpenAPIEvalTargetTypesString())
 	}
@@ -340,6 +375,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 		ID:                    dto.ID,
 		Name:                  dto.Name,
 		Description:           dto.Desc,
+		ExperimentGroupKey:    dto.ExperimentGroupKey,
 		ItemConcurNum:         dto.ItemConcurNum,
 		ItemRetryNum:          dto.ItemRetryNum,
 		TargetFieldMapping:    DomainTargetFieldMappingDTO2OpenAPI(dto.TargetFieldMapping),
@@ -357,7 +393,51 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.ExptTemplateMeta = DomainExptTemplateMetaDTO2OpenAPI(dto.ExptTemplateMeta)
 	result.OfflineExptAnalysisStatus = mapOfflineExptAnalysisStatusDTO2OpenAPI(dto.OfflineExptAnalysisStatus)
 	result.NotificationConf = domainNotificationConfToOpenAPI(dto.NotificationConf)
+
+	// ★ 多评测集读视图 (与 domain 110~114 对应)。
+	// 注: eval_set_details[].EvalSet 详情与 version-string 风格的 eval_set_configs 全量回显本期不在 OpenAPI 侧映射
+	// (OpenAPI 存量消费方均为老字段读取方, 见技术方案 §5); 这里只透出无歧义的来源模式/计数/per-set id 视图。
+	result.EvalSetSourceType = mapEvalSetSourceTypeDTO2OpenAPI(dto.EvalSetSourceType)
+	result.EvaluatorsConcurNum = dto.EvaluatorsConcurNum
+	result.TotalItemCount = dto.TotalItemCount
+	result.EvalSetDetails = DomainEvalSetDetailsDTO2OpenAPI(dto.EvalSetDetails)
 	return result
+}
+
+// mapEvalSetSourceTypeDTO2OpenAPI 将 domain ExptEvalSetSourceType 映射为 openapi 字符串枚举。
+func mapEvalSetSourceTypeDTO2OpenAPI(s *domainExpt.ExptEvalSetSourceType) *openapiExperiment.ExptEvalSetSourceType {
+	if s == nil {
+		return nil
+	}
+	var v openapiExperiment.ExptEvalSetSourceType
+	switch *s {
+	case domainExpt.ExptEvalSetSourceType_MultiSetConfig:
+		v = openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig
+	default:
+		v = openapiExperiment.ExptEvalSetSourceTypeSingleSet
+	}
+	return &v
+}
+
+// DomainEvalSetDetailsDTO2OpenAPI 将 domain ExptEvalSetDetail 列表映射为 openapi 版本 (不含 EvalSet 详情)。
+func DomainEvalSetDetailsDTO2OpenAPI(dtos []*domainExpt.ExptEvalSetDetail) []*openapiExperiment.ExptEvalSetDetail {
+	if len(dtos) == 0 {
+		return nil
+	}
+	out := make([]*openapiExperiment.ExptEvalSetDetail, 0, len(dtos))
+	for _, d := range dtos {
+		if d == nil {
+			continue
+		}
+		out = append(out, &openapiExperiment.ExptEvalSetDetail{
+			EvalSetID:        d.EvalSetID,
+			EvalSetVersionID: d.EvalSetVersionID,
+			IsPrimary:        d.IsPrimary,
+			ItemCount:        d.ItemCount,
+			DatasetKey:       d.DatasetKey,
+		})
+	}
+	return out
 }
 
 // DomainEvaluatorIDVersionListDTO2OpenAPI 将 domain.evaluator.EvaluatorIDVersionItem 列表映射为 openapi 版本。
@@ -600,9 +680,10 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	}
 
 	result := &openapiExperiment.Experiment{
-		ID:        gptr.Of(experiment.ID),
-		Name:      gptr.Of(experiment.Name),
-		ExptStats: openAPIExperimentStatsDO2DTO(experiment.Stats),
+		ID:                 gptr.Of(experiment.ID),
+		Name:               gptr.Of(experiment.Name),
+		ExperimentGroupKey: gptr.Of(experiment.ExperimentGroupKey),
+		ExptStats:          openAPIExperimentStatsDO2DTO(experiment.Stats),
 		BaseInfo: &openapiCommon.BaseInfo{
 			CreatedBy: &openapiCommon.UserInfo{
 				UserID: gptr.Of(experiment.CreatedBy),
@@ -674,7 +755,153 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 
 	result.NotificationConf = entityNotificationConfToOpenAPI(experiment.NotificationConf)
 
+	// item-centric 多评测集字段回填 (110/111/112/113/114): 与 DomainExperimentDTO2OpenAPI / ToExptDTO 等价, 但走 entity 直转,
+	// 供 GetExperimentsOApi 单实验 Get 使用 (其上游 manager.GetDetail 已 enrichEvalSetDetails 填好 EvalSetDetails/TotalItemCount)。
+	result.EvalSetSourceType = mapEvalSetSourceTypeDO2OpenAPI(experiment.EvalSetSourceType)
+	result.EvalSetDetails = entityEvalSetDetailsDO2OpenAPI(experiment.EvalSetDetails)
+	// total_item_count + eval_set_configs(111, 含 item_filter) 仅 MultiSetConfig 回显 (对齐 ToExptDTO/batch_get; SingleSet 旧实验不回显)
+	if experiment.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		result.TotalItemCount = gptr.Of(experiment.TotalItemCount)
+		result.EvalSetConfigs = convertEvalSetConfigsDO2OpenAPI(experiment)
+	}
+	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
+		result.EvaluatorsConcurNum = gptr.Of(int32(*experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum))
+	}
+
 	return result
+}
+
+// convertEvalSetConfigsDO2OpenAPI 将内部 entity.EvalSetConfig 回显为 OpenAPI 版 (version-string 风格)，
+// 供 GetExperimentsOApi 等 OpenAPI 读路径用，仅 MultiSetConfig 实验调用。
+// version_id → version 字符串从读对象上已加载的数据反查 (零额外 RPC)：
+//   - evaluator: experiment.Evaluators (GetEvaluatorVersionID/GetVersion)
+//   - eval_set:  experiment.EvalSetDetails[].EvalSet.EvaluationSetVersion.Version
+//
+// item_filter 与内部同型 (data_filter.Filter)，直接复用 convertExptFilterDOToDTO 透传。
+// runtime_param (map[string]string) 本期不回显：OApi 用 JSONValue，map→JSON 转换有损且非典型场景，需要时再补。
+func convertEvalSetConfigsDO2OpenAPI(experiment *entity.Experiment) []*openapiExperiment.OpenAPIEvalSetConfig {
+	if experiment == nil || experiment.EvalConf == nil || len(experiment.EvalConf.EvalSetConfigs) == 0 {
+		return nil
+	}
+
+	// version_id → version 字符串反查表 (从已加载数据构建)
+	evVerIDToStr := make(map[int64]string, len(experiment.Evaluators))
+	for _, ev := range experiment.Evaluators {
+		if ev == nil {
+			continue
+		}
+		if vid := ev.GetEvaluatorVersionID(); vid != 0 {
+			evVerIDToStr[vid] = ev.GetVersion()
+		}
+	}
+	setVerIDToStr := make(map[int64]string, len(experiment.EvalSetDetails))
+	for _, d := range experiment.EvalSetDetails {
+		if d == nil || d.EvalSet == nil || d.EvalSet.EvaluationSetVersion == nil {
+			continue
+		}
+		setVerIDToStr[d.EvalSetVersionID] = d.EvalSet.EvaluationSetVersion.Version
+	}
+
+	out := make([]*openapiExperiment.OpenAPIEvalSetConfig, 0, len(experiment.EvalConf.EvalSetConfigs))
+	for _, sc := range experiment.EvalConf.EvalSetConfigs {
+		if sc == nil {
+			continue
+		}
+		oc := &openapiExperiment.OpenAPIEvalSetConfig{
+			EvalSetID: gptr.Of(sc.EvalSetID),
+		}
+		if v := setVerIDToStr[sc.EvalSetVersionID]; v != "" {
+			oc.EvalSetVersion = gptr.Of(v)
+		}
+		if sc.ItemFilter != nil {
+			oc.ItemFilter = convertExptFilterDOToDTO(sc.ItemFilter)
+		}
+		for _, ec := range sc.EvaluatorConfs {
+			if ec == nil {
+				continue
+			}
+			oec := &openapiExperiment.OpenAPIExptEvaluatorConf{
+				EvaluatorID: gptr.Of(ec.EvaluatorID),
+				ScoreWeight: ec.ScoreWeight,
+				FromEvalSet: fieldConfsToOpenAPIFieldMapping(ec.FromEvalSet),
+				FromTarget:  fieldConfsToOpenAPIFieldMapping(ec.FromTarget),
+			}
+			if v := evVerIDToStr[ec.EvaluatorVersionID]; v != "" {
+				oec.Version = gptr.Of(v)
+			}
+			if ec.Alias != "" {
+				oec.Alias = gptr.Of(ec.Alias)
+			}
+			oc.EvaluatorConfs = append(oc.EvaluatorConfs, oec)
+		}
+		for _, tc := range sc.TargetConfs {
+			if tc == nil {
+				continue
+			}
+			otc := &openapiExperiment.OpenAPIExptTargetConf{}
+			if len(tc.FieldMapping) > 0 {
+				otc.FieldMapping = &openapiExperiment.TargetFieldMapping{
+					FromEvalSet: fieldConfsToOpenAPIFieldMapping(tc.FieldMapping),
+				}
+			}
+			oc.TargetConfs = append(oc.TargetConfs, otc)
+		}
+		out = append(out, oc)
+	}
+	return out
+}
+
+// fieldConfsToOpenAPIFieldMapping 将 domain entity.FieldConf 列表回显为 OpenAPI FieldMapping。
+func fieldConfsToOpenAPIFieldMapping(fcs []*entity.FieldConf) []*openapiExperiment.FieldMapping {
+	if len(fcs) == 0 {
+		return nil
+	}
+	out := make([]*openapiExperiment.FieldMapping, 0, len(fcs))
+	for _, fc := range fcs {
+		if fc == nil {
+			continue
+		}
+		out = append(out, &openapiExperiment.FieldMapping{
+			FieldName:     gptr.Of(fc.FieldName),
+			FromFieldName: gptr.Of(fc.FromField),
+		})
+	}
+	return out
+}
+
+// mapEvalSetSourceTypeDO2OpenAPI 将 entity ExptEvalSetSourceType (值) 映射为 openapi 字符串枚举。
+// 与 mapEvalSetSourceTypeDTO2OpenAPI 行为一致 (非 MultiSetConfig 一律视为 single_set)。
+func mapEvalSetSourceTypeDO2OpenAPI(s entity.ExptEvalSetSourceType) *openapiExperiment.ExptEvalSetSourceType {
+	var v openapiExperiment.ExptEvalSetSourceType
+	switch s {
+	case entity.ExptEvalSetSourceType_MultiSetConfig:
+		v = openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig
+	default:
+		v = openapiExperiment.ExptEvalSetSourceTypeSingleSet
+	}
+	return &v
+}
+
+// entityEvalSetDetailsDO2OpenAPI 将 entity ExptEvalSetDetail 列表映射为 openapi 版本 (不含 EvalSet 详情, 与 List 路径一致)。
+func entityEvalSetDetailsDO2OpenAPI(details []*entity.ExptEvalSetDetail) []*openapiExperiment.ExptEvalSetDetail {
+	if len(details) == 0 {
+		return nil
+	}
+	out := make([]*openapiExperiment.ExptEvalSetDetail, 0, len(details))
+	for _, d := range details {
+		if d == nil {
+			continue
+		}
+		out = append(out, &openapiExperiment.ExptEvalSetDetail{
+			EvalSetID:        gptr.Of(d.EvalSetID),
+			EvalSetVersionID: gptr.Of(d.EvalSetVersionID),
+			IsPrimary:        gptr.Of(d.IsPrimary),
+			ItemCount:        gptr.Of(d.ItemCount),
+			DatasetKey:       gptr.Of(d.DatasetKey),
+		})
+	}
+	return out
 }
 
 // buildOpenAPIEvaluatorIDVersionListFromExperiment 基于 entity.Experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf
@@ -1136,6 +1363,10 @@ func openAPIEvaluatorRecordDO2DTO(record *entity.EvaluatorRecord) *openapiEvalua
 	return res
 }
 
+func OpenAPITargetRecordDO2DTO(record *entity.EvalTargetRecord) *openapiEvalTarget.EvalTargetRecord {
+	return openAPITargetRecordDO2DTO(record)
+}
+
 func openAPITargetRecordDO2DTO(record *entity.EvalTargetRecord) *openapiEvalTarget.EvalTargetRecord {
 	if record == nil {
 		return nil
@@ -1494,6 +1725,84 @@ func OpenAPIEvaluatorParamDTO2Domain(dto *openapi.SubmitExperimentEvaluatorParam
 	}
 }
 
+// OpenAPIEvalSetConfigsDTO2Domain 把 OpenAPI 的 item-centric 多评测集配置 (版本字符串风格)
+// 转换为内部 domain expt.EvalSetConfig (version_id 风格)。
+// 版本字符串 → version_id 的解析依赖 service 调用, 由 handler 预先完成并通过两个 map 传入:
+//   - evalSetVersionIDMap: eval_set_id -> eval_set_version_id
+//   - evaluatorVersionIDMap: "{evaluator_id}_{version}" -> evaluator_version_id
+//
+// required 字段 (EvalSetID/EvalSetVersionID, EvaluatorID/EvaluatorVersionID) 必须落上;
+// item_filter 与内部同型 (data_filter.Filter) 直接透传;
+// 其余结构性校验 (set 去重 / (version,alias) 唯一 / target_confs len<=1 / alias 字符集 / item_filter 白名单)
+// 由内部 SubmitExperiment 的 ValidateEvalSetConfigs 统一兜底, 此处不重复。
+func OpenAPIEvalSetConfigsDTO2Domain(
+	confs []*openapiExperiment.OpenAPIEvalSetConfig,
+	evalSetVersionIDMap map[int64]int64,
+	evaluatorVersionIDMap map[string]int64,
+) []*domainExpt.EvalSetConfig {
+	if len(confs) == 0 {
+		return nil
+	}
+	dos := make([]*domainExpt.EvalSetConfig, 0, len(confs))
+	for _, conf := range confs {
+		if conf == nil {
+			continue
+		}
+		do := &domainExpt.EvalSetConfig{
+			EvalSetID:        conf.GetEvalSetID(),
+			EvalSetVersionID: evalSetVersionIDMap[conf.GetEvalSetID()],
+			// item_filter 与内部 EvalSetConfig.item_filter 同型 (data_filter.Filter), 直接透传;
+			// 白名单/存在性等结构校验由内部 SubmitExperiment 的 ValidateEvalSetConfigs 统一兜底。
+			ItemFilter: conf.GetItemFilter(),
+		}
+		// evaluator_confs
+		for _, ec := range conf.GetEvaluatorConfs() {
+			if ec == nil {
+				continue
+			}
+			evConf := &domainExpt.ExptEvaluatorConf{
+				EvaluatorID:        ec.GetEvaluatorID(),
+				EvaluatorVersionID: evaluatorVersionIDMap[fmt.Sprintf("%d_%s", ec.GetEvaluatorID(), ec.GetVersion())],
+				RuntimeParam:       OpenAPIRuntimeParamDTO2Domain(ec.RuntimeParam),
+				ScoreWeight:        ec.ScoreWeight,
+				FilterMode:         ec.FilterMode,
+			}
+			if ec.Alias != nil {
+				evConf.Alias = ec.Alias
+			}
+			// filter 与内部 ExptEvaluatorConf.filter 同型 (data_filter.Filter), 直接透传;
+			// 白名单校验由内部 SubmitExperiment 的 validateFilter/ValidateEvalSetConfigs 统一兜底。
+			if ec.IsSetFilter() {
+				evConf.Filter = ec.GetFilter()
+			}
+			for _, fm := range ec.GetFromEvalSet() {
+				if fm != nil {
+					evConf.FromEvalSet = append(evConf.FromEvalSet, &domainExpt.FieldMapping{FieldName: fm.FieldName, FromFieldName: fm.FromFieldName})
+				}
+			}
+			for _, fm := range ec.GetFromTarget() {
+				if fm != nil {
+					evConf.FromTarget = append(evConf.FromTarget, &domainExpt.FieldMapping{FieldName: fm.FieldName, FromFieldName: fm.FromFieldName})
+				}
+			}
+			do.EvaluatorConfs = append(do.EvaluatorConfs, evConf)
+		}
+		// target_confs (本期 len<=1; target_id/version 继承顶层, 此处只带字段映射与 runtime_param)
+		for _, tc := range conf.GetTargetConfs() {
+			if tc == nil {
+				continue
+			}
+			tConf := &domainExpt.ExptTargetConf{
+				FieldMapping: OpenAPITargetFieldMappingDTO2Domain(tc.FieldMapping),
+				RuntimeParam: OpenAPIRuntimeParamDTO2Domain(tc.RuntimeParam),
+			}
+			do.TargetConfs = append(do.TargetConfs, tConf)
+		}
+		dos = append(dos, do)
+	}
+	return dos
+}
+
 func OpenAPIEvaluatorRunConfigDTO2Domain(dto *openapiEvaluator.EvaluatorRunConfig) *domainEvaluator.EvaluatorRunConfig {
 	if dto == nil {
 		return nil
@@ -1568,6 +1877,10 @@ func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion, typ ent
 		if versionDO.CustomRPCServer != nil {
 			contentDTO.CustomRPCServer = OpenAPICustomRPCServerDO2DTO(versionDO.CustomRPCServer)
 		}
+	case entity.EvalTargetTypeSandboxAgent:
+		if versionDO.SandboxAgent != nil {
+			contentDTO.SandboxAgent = OpenAPISandboxAgentDO2DTO(versionDO.SandboxAgent)
+		}
 	}
 
 	versionDTO.EvalTargetContent = contentDTO
@@ -1604,6 +1917,8 @@ func convertEntityEvalTargetTypeToOpenAPI(typ entity.EvalTargetType) openapiEval
 		return openapiEvalTarget.EvalTargetTypeVolcengineAgent
 	case entity.EvalTargetTypeCustomRPCServer:
 		return openapiEvalTarget.EvalTargetTypeCustomRPCServer
+	case entity.EvalTargetTypeSandboxAgent:
+		return openapiEvalTarget.EvalTargetTypeSandboxAgent
 	default:
 		return ""
 	}
@@ -1655,6 +1970,106 @@ func OpenAPICustomEvalTargetDO2DTO(do *entity.CustomEvalTarget) *openapiEvalTarg
 		Name:      do.Name,
 		AvatarURL: do.AvatarURL,
 		Ext:       do.Ext,
+	}
+}
+
+func OpenAPICustomRPCServerDTO2DO(dto *openapiEvalTarget.CustomRPCServer) *entity.CustomRPCServer {
+	if dto == nil {
+		return nil
+	}
+	regions := make([]entity.Region, 0, len(dto.Regions))
+	regions = append(regions, dto.Regions...)
+	return &entity.CustomRPCServer{
+		ID:                  gptr.Indirect(dto.ID),
+		Name:                gptr.Indirect(dto.Name),
+		Description:         gptr.Indirect(dto.Description),
+		ServerName:          gptr.Indirect(dto.ServerName),
+		AccessProtocol:      gptr.Indirect(dto.AccessProtocol),
+		Regions:             regions,
+		Cluster:             gptr.Indirect(dto.Cluster),
+		InvokeHTTPInfo:      openAPIHTTPInfoDTO2DO(dto.InvokeHTTPInfo),
+		AsyncInvokeHTTPInfo: openAPIHTTPInfoDTO2DO(dto.AsyncInvokeHTTPInfo),
+		NeedSearchTarget:    dto.NeedSearchTarget,
+		SearchHTTPInfo:      openAPIHTTPInfoDTO2DO(dto.SearchHTTPInfo),
+		CustomEvalTarget:    openAPICustomEvalTargetDTO2DO(dto.CustomEvalTarget),
+		IsAsync:             dto.IsAsync,
+		ExecRegion:          gptr.Indirect(dto.ExecRegion),
+		ExecEnv:             dto.ExecEnv,
+		Timeout:             dto.Timeout,
+		AsyncTimeout:        dto.AsyncTimeout,
+		Ext:                 dto.Ext,
+	}
+}
+
+func openAPIHTTPInfoDTO2DO(dto *openapiEvalTarget.HTTPInfo) *entity.HTTPInfo {
+	if dto == nil {
+		return nil
+	}
+	return &entity.HTTPInfo{
+		Method: gptr.Indirect(dto.Method),
+		Path:   gptr.Indirect(dto.Path),
+	}
+}
+
+func openAPICustomEvalTargetDTO2DO(dto *openapiEvalTarget.CustomEvalTarget) *entity.CustomEvalTarget {
+	if dto == nil {
+		return nil
+	}
+	return &entity.CustomEvalTarget{
+		ID:        dto.ID,
+		Name:      dto.Name,
+		AvatarURL: dto.AvatarURL,
+		Ext:       dto.Ext,
+	}
+}
+
+func OpenAPISandboxAgentDO2DTO(do *entity.SandboxAgent) *openapiEvalTarget.SandboxAgent {
+	if do == nil {
+		return nil
+	}
+	envs := make([]*openapiEvalTarget.SandboxEnvVar, 0, len(do.Envs))
+	for _, e := range do.Envs {
+		if e == nil {
+			continue
+		}
+		envs = append(envs, &openapiEvalTarget.SandboxEnvVar{
+			Key:   gptr.Of(e.Key),
+			Value: gptr.Of(e.Value),
+		})
+	}
+	return &openapiEvalTarget.SandboxAgent{
+		Name:          gptr.Of(do.Name),
+		Type:          gptr.Of(openapiEvalTarget.SandboxAgentType(do.Type)),
+		ModelName:     gptr.Of(do.ModelName),
+		AgentSetupCmd: gptr.Of(do.AgentSetupCmd),
+		AgentRunCmd:   gptr.Of(do.AgentRunCmd),
+		Envs:          envs,
+		Image:         gptr.Of(do.Image),
+	}
+}
+
+func OpenAPISandboxAgentDTO2DO(dto *openapiEvalTarget.SandboxAgent) *entity.SandboxAgent {
+	if dto == nil {
+		return nil
+	}
+	envs := make([]*entity.SandboxEnvVar, 0, len(dto.Envs))
+	for _, e := range dto.Envs {
+		if e == nil {
+			continue
+		}
+		envs = append(envs, &entity.SandboxEnvVar{
+			Key:   e.GetKey(),
+			Value: e.GetValue(),
+		})
+	}
+	return &entity.SandboxAgent{
+		Name:          dto.GetName(),
+		Type:          entity.SandboxAgentType(dto.GetType()),
+		ModelName:     dto.GetModelName(),
+		AgentSetupCmd: dto.GetAgentSetupCmd(),
+		AgentRunCmd:   dto.GetAgentRunCmd(),
+		Envs:          envs,
+		Image:         dto.GetImage(),
 	}
 }
 
@@ -2477,7 +2892,9 @@ func OpenAPIExperimentFilterOptionDTO2Domain(opt *openapiExperiment.ExperimentFi
 	}
 	hasFuzzy := opt.IsSetFuzzyName() && strings.TrimSpace(opt.GetFuzzyName()) != ""
 	hasFilters := domainFilters != nil && len(domainFilters.FilterConditions) > 0
-	if !hasFuzzy && !hasFilters {
+	srcTypes := openAPIEvalSetSourceTypesDTO2Domain(opt.GetEvalSetSourceTypes())
+	hasSrcTypes := len(srcTypes) > 0
+	if !hasFuzzy && !hasFilters && !hasSrcTypes {
 		return nil, nil
 	}
 	out := domainExpt.NewExptFilterOption()
@@ -2487,7 +2904,38 @@ func OpenAPIExperimentFilterOptionDTO2Domain(opt *openapiExperiment.ExperimentFi
 	if hasFilters {
 		out.SetFilters(domainFilters)
 	}
+	if hasSrcTypes {
+		// eval_set_source_types 与 fuzzy_name 同级 (不走 filters): 透传调用方意图; 未传则内部默认排除 multi_set_config。
+		out.SetEvalSetSourceTypes(srcTypes)
+	}
 	return out, nil
+}
+
+// openAPIEvalSetSourceTypesDTO2Domain 将 OpenAPI 字符串枚举数组转为内部 int 枚举数组。
+// 未知/空字符串跳过 (容错); single_set→1, multi_set_config→2。
+func openAPIEvalSetSourceTypesDTO2Domain(in []openapiExperiment.ExptEvalSetSourceType) []domainExpt.ExptEvalSetSourceType {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]domainExpt.ExptEvalSetSourceType, 0, len(in))
+	for _, s := range in {
+		switch s {
+		case openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig:
+			out = append(out, domainExpt.ExptEvalSetSourceType_MultiSetConfig)
+		case openapiExperiment.ExptEvalSetSourceTypeSingleSet:
+			out = append(out, domainExpt.ExptEvalSetSourceType_SingleSet)
+		}
+	}
+	return out
+}
+
+// OpenAPIEvalSetSourceTypeDTO2Domain 将创建接口的 OpenAPI 字符串枚举 (单值) 转为内部 int 枚举。
+// multi_set_config→2 (新路径); single_set/空/未知→1 (老单评测集路径), 与创建接口「缺省/single_set 走老路径」语义一致。
+func OpenAPIEvalSetSourceTypeDTO2Domain(s *openapiExperiment.ExptEvalSetSourceType) domainExpt.ExptEvalSetSourceType {
+	if s != nil && *s == openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig {
+		return domainExpt.ExptEvalSetSourceType_MultiSetConfig
+	}
+	return domainExpt.ExptEvalSetSourceType_SingleSet
 }
 
 // OpenAPIKeywordSearchDTO2Domain 将 OpenAPI 的 KeywordSearch 转为 domain/expt.KeywordSearch，供实验结果模糊搜索。
@@ -2738,6 +3186,10 @@ func OpenAPICreateEvalTargetParamDTO2DomainV2(param *openapi.SubmitExperimentEva
 
 	if param.AgentConnection != nil {
 		res.AgentConnection = openapiAgentConnectionDTO2DO(param.AgentConnection)
+	}
+
+	if param.SandboxAgent != nil {
+		res.SandboxAgent = OpenAPISandboxAgentDTO2DO(param.SandboxAgent)
 	}
 
 	return res

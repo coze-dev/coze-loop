@@ -192,6 +192,55 @@ func TestTargetConf_Valid_WebAgent(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// TestExperiment_AsyncCallTarget_SandboxAgent 验证 SandboxAgent 评测对象走异步分支:
+// EvalTargetType 为 SandboxAgent 或 SandboxAgent 配置非空时, AsyncCallTarget 应返回 true。
+func TestExperiment_AsyncCallTarget_SandboxAgent(t *testing.T) {
+	tests := []struct {
+		name     string
+		expt     *Experiment
+		expected bool
+	}{
+		{
+			name: "EvalTargetType 为 SandboxAgent 返回 true",
+			expt: &Experiment{
+				Target: &EvalTarget{
+					EvalTargetVersion: &EvalTargetVersion{
+						EvalTargetType: EvalTargetTypeSandboxAgent,
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "SandboxAgent 字段非空但类型不一致也返回 true",
+			expt: &Experiment{
+				Target: &EvalTarget{
+					EvalTargetVersion: &EvalTargetVersion{
+						SandboxAgent: &SandboxAgent{Name: "s"},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "非 SandboxAgent 且 SandboxAgent 字段为 nil 返回 false",
+			expt: &Experiment{
+				Target: &EvalTarget{
+					EvalTargetVersion: &EvalTargetVersion{
+						EvalTargetType: EvalTargetTypeCozeBot,
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.expt.AsyncCallTarget())
+		})
+	}
+}
+
 func TestVisibility_Hidden(t *testing.T) {
 	assert.Equal(t, Visibility(1), Visibility_Hidden)
 }

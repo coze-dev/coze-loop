@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS `expt_turn_result_run_log`
     `expt_id`              bigint unsigned NOT NULL COMMENT '实验 id',
     `expt_run_id`          bigint unsigned NOT NULL COMMENT '实验运行 id',
     `item_id`              bigint unsigned NOT NULL COMMENT 'item_id',
+    `item_version_id`      bigint unsigned NOT NULL DEFAULT '0' COMMENT 'item 自身版本号; 0=旧数据/无版本概念; 真值源 expt_item_ref',
     `turn_id`              bigint unsigned NOT NULL DEFAULT '0' COMMENT 'turn_id',
     `status`               int unsigned    NOT NULL DEFAULT '0' COMMENT '状态',
     `trace_id`             bigint unsigned NOT NULL DEFAULT '0' COMMENT 'trace_id',

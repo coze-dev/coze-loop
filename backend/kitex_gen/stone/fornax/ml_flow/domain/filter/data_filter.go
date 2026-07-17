@@ -54,6 +54,10 @@ const (
 	FieldTypeTag = "tag"
 
 	FieldTypeInteger = "integer"
+
+	TagFilterRelationAnd = "and"
+
+	TagFilterRelationOr = "or"
 )
 
 type QueryType = string
@@ -61,6 +65,8 @@ type QueryType = string
 type QueryRelation = string
 
 type FieldType = string
+
+type TagFilterRelation = string
 
 type FilterField struct {
 	FieldName  string         `thrift:"field_name,1,required" frugal:"1,required,string" form:"field_name,required" json:"field_name,required" query:"field_name,required"`
@@ -2425,6 +2431,282 @@ func (p *FieldMetaInfoData) Field1DeepEqual(src map[string]*FieldMeta) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+
+type TagFilter struct {
+	TagNames []string           `thrift:"tag_names,1,required" frugal:"1,required,list<string>" form:"tag_names,required" json:"tag_names,required" query:"tag_names,required"`
+	Relation *TagFilterRelation `thrift:"relation,2,optional" frugal:"2,optional,string" form:"relation" json:"relation,omitempty" query:"relation"`
+}
+
+func NewTagFilter() *TagFilter {
+	return &TagFilter{}
+}
+
+func (p *TagFilter) InitDefault() {
+}
+
+func (p *TagFilter) GetTagNames() (v []string) {
+	if p != nil {
+		return p.TagNames
+	}
+	return
+}
+
+var TagFilter_Relation_DEFAULT TagFilterRelation
+
+func (p *TagFilter) GetRelation() (v TagFilterRelation) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRelation() {
+		return TagFilter_Relation_DEFAULT
+	}
+	return *p.Relation
+}
+func (p *TagFilter) SetTagNames(val []string) {
+	p.TagNames = val
+}
+func (p *TagFilter) SetRelation(val *TagFilterRelation) {
+	p.Relation = val
+}
+
+var fieldIDToName_TagFilter = map[int16]string{
+	1: "tag_names",
+	2: "relation",
+}
+
+func (p *TagFilter) IsSetRelation() bool {
+	return p.Relation != nil
+}
+
+func (p *TagFilter) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetTagNames bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetTagNames = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetTagNames {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TagFilter[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TagFilter[fieldId]))
+}
+
+func (p *TagFilter) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TagNames = _field
+	return nil
+}
+func (p *TagFilter) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *TagFilterRelation
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Relation = _field
+	return nil
+}
+
+func (p *TagFilter) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TagFilter"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TagFilter) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("tag_names", thrift.LIST, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.TagNames)); err != nil {
+		return err
+	}
+	for _, v := range p.TagNames {
+		if err := oprot.WriteString(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TagFilter) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRelation() {
+		if err = oprot.WriteFieldBegin("relation", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Relation); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TagFilter) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TagFilter(%+v)", *p)
+
+}
+
+func (p *TagFilter) DeepEqual(ano *TagFilter) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TagNames) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Relation) {
+		return false
+	}
+	return true
+}
+
+func (p *TagFilter) Field1DeepEqual(src []string) bool {
+
+	if len(p.TagNames) != len(src) {
+		return false
+	}
+	for i, v := range p.TagNames {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *TagFilter) Field2DeepEqual(src *TagFilterRelation) bool {
+
+	if p.Relation == src {
+		return true
+	} else if p.Relation == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Relation, *src) != 0 {
+		return false
 	}
 	return true
 }

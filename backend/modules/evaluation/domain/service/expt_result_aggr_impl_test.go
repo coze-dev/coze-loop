@@ -465,8 +465,9 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			want: []*entity.ExptAggregateResult{
 				{
 					ExperimentID: 1,
-					EvaluatorResults: map[int64]*entity.EvaluatorAggregateResult{
-						1: {
+					// 旧数据: field_key 为纯数字 "1", alias 解析为空串, instanceKey 退化为裸 versionID "1"。
+					EvaluatorResults: map[string]*entity.EvaluatorAggregateResult{
+						"1": {
 							EvaluatorVersionID: 1,
 							EvaluatorID:        1,
 							AggregatorResults: []*entity.AggregatorResult{
@@ -576,7 +577,7 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			want: []*entity.ExptAggregateResult{
 				{
 					ExperimentID:      1,
-					EvaluatorResults:  map[int64]*entity.EvaluatorAggregateResult{},
+					EvaluatorResults:  map[string]*entity.EvaluatorAggregateResult{},
 					AnnotationResults: map[int64]*entity.AnnotationAggregateResult{},
 					TargetResults: &entity.EvalTargetMtrAggrResult{
 						TargetID:        10,
@@ -628,7 +629,7 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 			want: []*entity.ExptAggregateResult{
 				{
 					ExperimentID:      2,
-					EvaluatorResults:  map[int64]*entity.EvaluatorAggregateResult{},
+					EvaluatorResults:  map[string]*entity.EvaluatorAggregateResult{},
 					AnnotationResults: map[int64]*entity.AnnotationAggregateResult{},
 					TargetResults: &entity.EvalTargetMtrAggrResult{
 						TargetID:        10,
@@ -646,6 +647,78 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 							{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.8)}},
 						},
 					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			// 同 versionID 多 alias: field_key "1" (default, 退化裸 versionID) 与 "1:judge_b" 应各成一条, 不撞 key。
+			name:    "Same version multi alias not collide",
+			spaceID: 100,
+			exptIDs: []int64{3},
+			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockExperimentRepo *repoMocks.MockIExperimentRepo, mockEvaluatorService *svcMocks.MockEvaluatorService,
+				mockTagRPCAdapter *rpcmocks.MockITagRPCAdapter, mockAnnotateRepo *repoMocks.MockIExptAnnotateRepo,
+			) {
+				mockExperimentRepo.EXPECT().MGetBasicByID(gomock.Any(), []int64{3}).Return([]*entity.Experiment{{ID: 3, SpaceID: 100, TargetID: 10, TargetVersionID: 20}}, nil)
+
+				aggrResult := &entity.AggregateResult{
+					AggregatorResults: []*entity.AggregatorResult{
+						{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.8)}},
+					},
+				}
+				aggrResultBytes, _ := json.Marshal(aggrResult)
+				mockExptAggrResultRepo.EXPECT().
+					BatchGetExptAggrResultByExperimentIDs(gomock.Any(), []int64{3}).
+					Return([]*entity.ExptAggrResult{
+						{ExperimentID: 3, FieldType: int32(entity.FieldType_EvaluatorScore), FieldKey: "1", AggrResult: aggrResultBytes, UpdateAt: gptr.Of(time.Unix(1000, 0))},
+						{ExperimentID: 3, FieldType: int32(entity.FieldType_EvaluatorScore), FieldKey: "1:judge_b", AggrResult: aggrResultBytes, UpdateAt: gptr.Of(time.Unix(1000, 0))},
+					}, nil)
+
+				mockExperimentRepo.EXPECT().
+					GetEvaluatorRefByExptIDs(gomock.Any(), []int64{3}, int64(100)).
+					Return([]*entity.ExptEvaluatorRef{{EvaluatorVersionID: 1, EvaluatorID: 1}}, nil)
+
+				evaluator := &entity.Evaluator{
+					ID:                     1,
+					Name:                   "test evaluator",
+					EvaluatorType:          entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1, Version: "1.0"},
+				}
+				mockEvaluatorService.EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), []int64{1}, true).
+					Return([]*entity.Evaluator{evaluator}, nil)
+
+				mockTagRPCAdapter.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[int64]*entity.TagInfo{}, nil)
+				mockAnnotateRepo.EXPECT().BatchGetExptTurnAnnotateRecordRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnAnnotateRecordRef{}, nil)
+			},
+			want: []*entity.ExptAggregateResult{
+				{
+					ExperimentID: 3,
+					// 两个实例 key: "1" (default, alias="") + "1:judge_b" (alias="judge_b"), 不再撞 key。
+					EvaluatorResults: map[string]*entity.EvaluatorAggregateResult{
+						"1": {
+							EvaluatorVersionID: 1,
+							EvaluatorID:        1,
+							AggregatorResults:  []*entity.AggregatorResult{{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.8)}}},
+							Name:               gptr.Of("test evaluator"),
+							Version:            gptr.Of("1.0"),
+							Alias:              "",
+						},
+						"1:judge_b": {
+							EvaluatorVersionID: 1,
+							EvaluatorID:        1,
+							AggregatorResults:  []*entity.AggregatorResult{{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.8)}}},
+							Name:               gptr.Of("test evaluator"),
+							Version:            gptr.Of("1.0"),
+							Alias:              "judge_b",
+						},
+					},
+					AnnotationResults: map[int64]*entity.AnnotationAggregateResult{},
+					TargetResults: &entity.EvalTargetMtrAggrResult{
+						TargetID:        10,
+						TargetVersionID: 20,
+					},
+					UpdateTime: gptr.Of(time.Unix(1000, 0)),
 				},
 			},
 			wantErr: false,
@@ -1333,21 +1406,21 @@ func TestGetTopNOptions(t *testing.T) {
 
 func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 	tests := []struct {
-		name                               string
-		spaceID                            int64
-		exptID                             int64
-		evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup
-		tmag                               *targetMtrAggrGroup
-		existedAggrResults                 []*entity.ExptAggrResult
-		setup                              func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo)
-		wantErr                            bool
+		name                                 string
+		spaceID                              int64
+		exptID                               int64
+		evaluatorInstanceKey2AggregatorGroup map[string]*AggregatorGroup
+		tmag                                 *targetMtrAggrGroup
+		existedAggrResults                   []*entity.ExptAggrResult
+		setup                                func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo)
+		wantErr                              bool
 	}{
 		{
 			name:    "Create new aggregation results",
 			spaceID: 100,
 			exptID:  1,
-			evaluatorVersionID2AggregatorGroup: map[int64]*AggregatorGroup{
-				1: func() *AggregatorGroup {
+			evaluatorInstanceKey2AggregatorGroup: map[string]*AggregatorGroup{
+				"1": func() *AggregatorGroup {
 					ag := NewAggregatorGroup()
 					ag.Append(0.8)
 					return ag
@@ -1378,8 +1451,8 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 			name:    "Update existing aggregation results",
 			spaceID: 100,
 			exptID:  1,
-			evaluatorVersionID2AggregatorGroup: map[int64]*AggregatorGroup{
-				1: func() *AggregatorGroup {
+			evaluatorInstanceKey2AggregatorGroup: map[string]*AggregatorGroup{
+				"1": func() *AggregatorGroup {
 					ag := NewAggregatorGroup()
 					ag.Append(0.9)
 					return ag
@@ -1420,8 +1493,8 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 			name:    "Skip update when aggregation results are identical",
 			spaceID: 100,
 			exptID:  1,
-			evaluatorVersionID2AggregatorGroup: map[int64]*AggregatorGroup{
-				1: func() *AggregatorGroup {
+			evaluatorInstanceKey2AggregatorGroup: map[string]*AggregatorGroup{
+				"1": func() *AggregatorGroup {
 					ag := NewAggregatorGroup()
 					ag.Append(0.8)
 					return ag
@@ -1482,7 +1555,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 
 			tt.setup(mockExptAggrResultRepo)
 
-			err := svc.CreateOrUpdateExptAggrResult(context.Background(), tt.spaceID, tt.exptID, tt.evaluatorVersionID2AggregatorGroup, tt.tmag, tt.existedAggrResults)
+			err := svc.CreateOrUpdateExptAggrResult(context.Background(), tt.spaceID, tt.exptID, tt.evaluatorInstanceKey2AggregatorGroup, tt.tmag, tt.existedAggrResults)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -2837,6 +2910,9 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 	mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	// createWeightedScoreAggrResult 内部会查 expt 做 MultiSetConfig 分流判断
+	mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return((*entity.Experiment)(nil), nil).AnyTimes()
 
 	svc := &ExptAggrResultServiceImpl{
 		exptAggrResultRepo: mockExptAggrResultRepo,
@@ -2849,8 +2925,8 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 	experimentID := int64(1)
 
 	t.Run("实验启用加权得分，创建加权得分聚合结果", func(t *testing.T) {
-		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
-			1: func() *AggregatorGroup {
+		evaluatorInstanceKey2AggregatorGroup := map[string]*AggregatorGroup{
+			"1": func() *AggregatorGroup {
 				ag := NewAggregatorGroup()
 				ag.Append(0.8)
 				return ag
@@ -2898,13 +2974,13 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 				return nil
 			})
 
-		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorInstanceKey2AggregatorGroup, tmag, existedAggrResults)
 		assert.NoError(t, err)
 	})
 
 	t.Run("实验未启用配置权重仍创建行级汇总分聚合", func(t *testing.T) {
-		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
-			1: func() *AggregatorGroup {
+		evaluatorInstanceKey2AggregatorGroup := map[string]*AggregatorGroup{
+			"1": func() *AggregatorGroup {
 				ag := NewAggregatorGroup()
 				ag.Append(0.8)
 				return ag
@@ -2944,13 +3020,13 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 				return nil
 			})
 
-		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorInstanceKey2AggregatorGroup, tmag, existedAggrResults)
 		assert.NoError(t, err)
 	})
 
 	t.Run("createWeightedScoreAggrResult返回错误，返回错误", func(t *testing.T) {
-		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
-			1: func() *AggregatorGroup {
+		evaluatorInstanceKey2AggregatorGroup := map[string]*AggregatorGroup{
+			"1": func() *AggregatorGroup {
 				ag := NewAggregatorGroup()
 				ag.Append(0.8)
 				return ag
@@ -2976,7 +3052,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 			).
 			Return(nil, int64(0), errors.New("scan error"))
 
-		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorInstanceKey2AggregatorGroup, tmag, existedAggrResults)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "scan error")
 	})
@@ -2988,9 +3064,14 @@ func TestExptAggrResultServiceImpl_createWeightedScoreAggrResult(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	// MultiSetConfig 分流: 返回 nil expt → 不进 guard, 走原逻辑
+	mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return((*entity.Experiment)(nil), nil).AnyTimes()
 
 	svc := &ExptAggrResultServiceImpl{
 		exptTurnResultRepo: mockExptTurnResultRepo,
+		experimentRepo:     mockExperimentRepo,
 	}
 
 	ctx := context.Background()
@@ -3119,12 +3200,17 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	// UpdateExptAggrResult / createWeightedScoreAggrResult 都会查 expt 做 MultiSetConfig 分流
+	mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return((*entity.Experiment)(nil), nil).AnyTimes()
 
 	svc := &ExptAggrResultServiceImpl{
 		exptAggrResultRepo:     mockExptAggrResultRepo,
 		exptTurnResultRepo:     mockExptTurnResultRepo,
 		evaluatorRecordService: mockEvaluatorRecordService,
 		metric:                 mockMetric,
+		experimentRepo:         mockExperimentRepo,
 	}
 
 	ctx := context.Background()

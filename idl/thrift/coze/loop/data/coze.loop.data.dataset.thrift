@@ -3,6 +3,7 @@ namespace go coze.loop.data.dataset
 include "../../../base.thrift"
 include "domain/dataset.thrift"
 include "domain/dataset_job.thrift"
+include "domain/data_filter.thrift"
 
 struct CreateDatasetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', vt.gt = "0")
@@ -12,6 +13,7 @@ struct CreateDatasetRequest {
     5: optional dataset.DatasetCategory category (vt.defined_only = "true")
     6: optional string biz_category (vt.max_size = "128")
     7: optional list<dataset.FieldSchema> fields (vt.min_size = "1", vt.elem.skip = "false")
+    8: optional string dataset_key (vt.max_size = "255")  // 数据集业务唯一键，创建后不可变
     15: optional dataset.SecurityLevel security_level (vt.defined_only = "true")
     16: optional dataset.DatasetVisibility visibility (vt.defined_only = "true")
     17: optional dataset.DatasetSpec spec
@@ -77,6 +79,7 @@ struct ListDatasetsRequest {
     4: optional string name (vt.max_size = "255")                                    // 支持模糊搜索
     5: optional list<string> created_bys
     6: optional list<string> biz_categorys
+    7: optional list<string> dataset_keys (vt.max_size = "255")                      // 按 dataset_key 精确匹配
 
     /* pagination */
     100: optional i32 page_number (vt.gt = "0")
@@ -344,6 +347,10 @@ struct ListDatasetItemsRequest {
     102: optional string page_token                                                          // 与 page 同时提供时，优先使用 cursor
     103: optional list<dataset.OrderBy> order_bys
 
+    /* filter */
+    200: optional data_filter.Filter filter
+    211: optional data_filter.TagFilter tag_filter
+
     255: optional base.Base Base
 }
 
@@ -368,6 +375,10 @@ struct ListDatasetItemsByVersionRequest {
     101: optional i32 page_size (vt.gt = "0", vt.le = "200")                              // 分页大小(0, 200]，默认为 20
     102: optional string page_token                                                          // 与 page 同时提供时，优先使用 cursor
     103: optional list<dataset.OrderBy> order_bys
+
+    /* filter */
+    200: optional data_filter.Filter filter
+    211: optional data_filter.TagFilter tag_filter
 
     255: optional base.Base Base
 }

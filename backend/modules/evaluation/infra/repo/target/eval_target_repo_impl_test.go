@@ -2041,6 +2041,10 @@ func (f *fakeRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx co
 	return nil
 }
 
+func (f *fakeRecordStorageConfiger) GetExptMultiSetWhiteList(ctx context.Context) *entity.ExptMultiSetWhiteList {
+	return nil
+}
+
 func (f *fakeRecordStorageConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	return nil, false
 }

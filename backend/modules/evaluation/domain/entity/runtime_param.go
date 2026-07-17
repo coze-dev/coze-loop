@@ -77,3 +77,35 @@ func (d *DummyRuntimeParam) GetJSONDemo() string {
 func (d *DummyRuntimeParam) GetJSONValue() string {
 	return "{}"
 }
+
+// NewGenericJSONRuntimeParam 返回不预设字段的通用 JSON 运行时参数实现。
+// 适用于评测对象的运行时参数由前端自定义（或由下游解析）但仍需做 JSON 合法性校验的场景。
+func NewGenericJSONRuntimeParam() *GenericJSONRuntimeParam {
+	return &GenericJSONRuntimeParam{}
+}
+
+type GenericJSONRuntimeParam struct {
+	raw string
+}
+
+func (g *GenericJSONRuntimeParam) ParseFromJSON(val string) (IRuntimeParam, error) {
+	if len(val) == 0 {
+		return &GenericJSONRuntimeParam{}, nil
+	}
+	var v map[string]any
+	if err := js_conv.GetUnmarshaler()([]byte(val), &v); err != nil {
+		return nil, errorx.Wrapf(err, "GenericJSONRuntimeParam json unmarshal fail")
+	}
+	return &GenericJSONRuntimeParam{raw: val}, nil
+}
+
+func (g *GenericJSONRuntimeParam) GetJSONDemo() string {
+	return "{}"
+}
+
+func (g *GenericJSONRuntimeParam) GetJSONValue() string {
+	if len(g.raw) == 0 {
+		return "{}"
+	}
+	return g.raw
+}

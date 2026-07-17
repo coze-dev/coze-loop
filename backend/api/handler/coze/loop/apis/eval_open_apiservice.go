@@ -9,10 +9,8 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
-	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 )
 
 var localEvalOpenAPIClient evalopenapiservice.Client
@@ -248,17 +246,7 @@ func SubmitExptFromTemplateOApi(ctx context.Context, c *app.RequestContext) {
 // ReportEvaluatorInvokeResult .
 // @router /v1/loop/evaluation/evaluators/result [POST]
 func ReportEvaluatorInvokeResult(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.ReportEvaluatorInvokeResultRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.ReportEvaluatorInvokeResultResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ReportEvaluatorInvokeResult_)
 }
 
 // ImportEvaluationSetOApi .
@@ -301,6 +289,30 @@ func ExportExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
 // @router /v1/loop/evaluation/experiments/:experiment_id/export_records/:export_id [GET]
 func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentResultExportRecordOApi)
+}
+
+// ListEvaluationSetItemVersionsOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/versions [GET]
+func ListEvaluationSetItemVersionsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetItemVersionsOApi)
+}
+
+// GetEvaluationSetItemVersionOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/versions/:item_version_id [GET]
+func GetEvaluationSetItemVersionOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvaluationSetItemVersionOApi)
+}
+
+// AsyncDebugEvalTargetOApi .
+// @router /v1/loop/eval_targets/async_debug [POST]
+func AsyncDebugEvalTargetOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.AsyncDebugEvalTargetOApi)
+}
+
+// GetEvalTargetRecordOApi .
+// @router /v1/loop/evaluation/eval_target_records/:eval_target_record_id [GET]
+func GetEvalTargetRecordOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvalTargetRecordOApi)
 }
 
 // UpdateExptRunConfOApi .

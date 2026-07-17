@@ -1654,6 +1654,13 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					}, int64(789), gomock.Any()).
 					Return(nil)
 
+				// Mock MGetItemTurnRunLogs for sandbox destroy on cancelled items (best-effort)
+				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+					EXPECT().
+					MGetItemTurnRunLogs(ctx, int64(123), int64(456), gomock.Any(), int64(789)).
+					Return([]*entity.ExptTurnResultRunLog{}, nil).
+					AnyTimes()
+
 				// Mock UpsertExptTurnResultFilter after terminateItemTurns
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().
@@ -2309,7 +2316,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 			setup: func(t *testing.T) {
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
 					EXPECT().
-					GetItemIDListByExptID(ctx, int64(100), int64(1)).
+					GetItemIDListByExptID(ctx, int64(1), int64(100)).
 					Return([]int64{}, nil)
 
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
@@ -2434,7 +2441,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 			setup: func(t *testing.T) {
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
 					EXPECT().
-					GetItemIDListByExptID(ctx, int64(100), int64(1)).
+					GetItemIDListByExptID(ctx, int64(1), int64(100)).
 					Return([]int64{}, nil)
 
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
@@ -3343,7 +3350,7 @@ func TestExptMangerImpl_RecordExptData(t *testing.T) {
 		mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).
 			EXPECT().
 			UpdateByExptID(ctx, int64(123), int64(789), gomock.Any()).
-			Do(func(_ context.Context, _ int64, _ int64, stats *entity.ExptStats) {
+			Do(func(_ context.Context, _, _ int64, stats *entity.ExptStats) {
 				assert.Equal(t, int32(3), stats.SuccessItemCnt)
 				assert.Equal(t, int32(1), stats.PendingItemCnt)
 				assert.Equal(t, int32(0), stats.FailItemCnt)

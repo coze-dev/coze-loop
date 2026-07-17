@@ -155,3 +155,82 @@ func TestNewDummyRuntimeParam(t *testing.T) {
 	assert.NotNil(t, param)
 	assert.IsType(t, &DummyRuntimeParam{}, param)
 }
+
+func TestNewGenericJSONRuntimeParam(t *testing.T) {
+	param := NewGenericJSONRuntimeParam()
+	assert.NotNil(t, param)
+	assert.IsType(t, &GenericJSONRuntimeParam{}, param)
+}
+
+func TestGenericJSONRuntimeParam_GetJSONDemo(t *testing.T) {
+	param := &GenericJSONRuntimeParam{}
+	assert.Equal(t, "{}", param.GetJSONDemo())
+}
+
+func TestGenericJSONRuntimeParam_GetJSONValue(t *testing.T) {
+	t.Run("空 raw 返回 {}", func(t *testing.T) {
+		param := &GenericJSONRuntimeParam{}
+		assert.Equal(t, "{}", param.GetJSONValue())
+	})
+
+	t.Run("有 raw 时原样返回", func(t *testing.T) {
+		param := &GenericJSONRuntimeParam{raw: `{"model":"x","top_p":0.9}`}
+		assert.Equal(t, `{"model":"x","top_p":0.9}`, param.GetJSONValue())
+	})
+}
+
+func TestGenericJSONRuntimeParam_ParseFromJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		jsonStr string
+		wantErr bool
+		wantRaw string
+	}{
+		{
+			name:    "空字符串返回空 GenericJSONRuntimeParam",
+			jsonStr: "",
+			wantErr: false,
+			wantRaw: "",
+		},
+		{
+			name:    "合法 JSON 原样保留到 raw",
+			jsonStr: `{"k":"v"}`,
+			wantErr: false,
+			wantRaw: `{"k":"v"}`,
+		},
+		{
+			name:    "合法空对象",
+			jsonStr: `{}`,
+			wantErr: false,
+			wantRaw: `{}`,
+		},
+		{
+			name:    "非法 JSON 返回错误",
+			jsonStr: "not_a_json",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := &GenericJSONRuntimeParam{}
+			res, err := g.ParseFromJSON(tt.jsonStr)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, res)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, res)
+			gp, ok := res.(*GenericJSONRuntimeParam)
+			assert.True(t, ok)
+			assert.Equal(t, tt.wantRaw, gp.raw)
+			// GetJSONValue 与 raw 行为一致
+			if tt.wantRaw == "" {
+				assert.Equal(t, "{}", gp.GetJSONValue())
+			} else {
+				assert.Equal(t, tt.wantRaw, gp.GetJSONValue())
+			}
+		})
+	}
+}

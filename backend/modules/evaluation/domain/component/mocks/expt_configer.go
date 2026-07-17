@@ -168,6 +168,20 @@ func (mr *MockIConfigerMockRecorder) GetExptTemplateUpdateEvalSetWhiteList(ctx a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTemplateUpdateEvalSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptTemplateUpdateEvalSetWhiteList), ctx)
 }
 
+// GetExptMultiSetWhiteList mocks base method.
+func (m *MockIConfiger) GetExptMultiSetWhiteList(ctx context.Context) *entity.ExptMultiSetWhiteList {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExptMultiSetWhiteList", ctx)
+	ret0, _ := ret[0].(*entity.ExptMultiSetWhiteList)
+	return ret0
+}
+
+// GetExptMultiSetWhiteList indicates an expected call of GetExptMultiSetWhiteList.
+func (mr *MockIConfigerMockRecorder) GetExptMultiSetWhiteList(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptMultiSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptMultiSetWhiteList), ctx)
+}
+
 // GetExptTurnResultFilterBmqProducerCfg mocks base method.
 func (m *MockIConfiger) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg {
 	m.ctrl.T.Helper()
