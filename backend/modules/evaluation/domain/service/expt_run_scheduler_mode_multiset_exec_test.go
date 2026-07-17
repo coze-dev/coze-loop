@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -580,4 +581,418 @@ func TestExtractTagFilter(t *testing.T) {
 		assert.NotNil(t, out)
 		assert.Equal(t, entity.TagFilterRelationAnd, out.Relation)
 	})
+}
+
+// findItemIDField 从下发到 List 的 Filter 里取 item_id 字段 (无则 nil)。
+func findItemIDField(filter *entity.Filter) *entity.FilterField {
+	if filter == nil {
+		return nil
+	}
+	for _, f := range filter.FilterFields {
+		if f.FieldName == "item_id" {
+			return f
+		}
+	}
+	return nil
+}
+
+// genItemIDStrings 生成 [start, start+n) 的字符串 item_id 列表。
+func genItemIDStrings(start, n int) []string {
+	out := make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		out = append(out, strconv.Itoa(start+i))
+	}
+	return out
+}
+
+// item_id in 超限 (>1000) 回退内存过滤: item_id 不进下发 Filter (此处无普通列 → Filter 为 nil),
+// List 返回全集逐页, 内存 include 筛选后落库结果 = 全集 ∩ 白名单。BatchGet 不应被调用。
+func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter_OverLimit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exec, setItemSvc, itemRefRepo := newExptStartMultiSetTestExec(ctrl)
+
+	var captured []*entity.ExptItemRef
+	itemRefRepo.EXPECT().BatchCreate(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, refs []*entity.ExptItemRef) error {
+			captured = append(captured, refs...)
+			return nil
+		}).AnyTimes()
+
+	// include 白名单 1001 个 (id 1..1001) → 超限 → 回退内存过滤
+	includeValues := genItemIDStrings(1, 1001)
+
+	// List 返回全集里含白名单命中的一部分 (id 5,7) + 白名单外的 (id 99999) → 内存过滤后只留 5,7
+	var listFilter *entity.Filter
+	var listFilterCaptured bool
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
+			listFilter = p.Filter
+			listFilterCaptured = true
+			return []*entity.EvaluationSetItem{
+				{ItemID: 5, Turns: []*entity.Turn{{ID: 55}}},
+				{ItemID: 7, Turns: []*entity.Turn{{ID: 77}}},
+				{ItemID: 99999, Turns: []*entity.Turn{{ID: 999990}}}, // 白名单外, 内存过滤剔除
+			}, ptr.Of(int64(3)), nil, nil, nil
+		}).Times(1)
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
+
+	expt := &entity.Experiment{
+		ID:      1,
+		SpaceID: 3,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				{
+					EvalSetID:        10,
+					EvalSetVersionID: 100,
+					ItemFilter: &entity.ExptItemFilter{
+						FilterFields: []*entity.ExptItemFilterField{
+							{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: includeValues},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: "u1"})
+	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
+	assert.NoError(t, err)
+
+	// 回退内存过滤: item_id 不进 Filter; 此处无普通列 → Filter 应为 nil
+	assert.True(t, listFilterCaptured)
+	assert.Nil(t, listFilter, "over-limit include should fall back to in-memory filter, no downstream Filter")
+	assert.Nil(t, findItemIDField(listFilter), "item_id must not be pushed into Filter when over limit")
+
+	// 落库 = 全集 ∩ 白名单 = {5,7}, 白名单外的 99999 被内存过滤剔除
+	assert.Len(t, captured, 2)
+	assert.ElementsMatch(t, []int64{5, 7}, []int64{captured[0].ItemID, captured[1].ItemID})
+}
+
+// item_id not_in 超限 (>1000) 回退内存过滤: item_id 不进 Filter, List 全集逐页,
+// 内存 exclude 剔除黑名单, 落库 = 全集 \ 黑名单。
+func TestExptSubmitExec_exptStartMultiSet_ItemIDExclude_OverLimit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exec, setItemSvc, itemRefRepo := newExptStartMultiSetTestExec(ctrl)
+
+	var captured []*entity.ExptItemRef
+	itemRefRepo.EXPECT().BatchCreate(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, refs []*entity.ExptItemRef) error {
+			captured = append(captured, refs...)
+			return nil
+		}).AnyTimes()
+
+	// exclude 黑名单 1001 个: id 100..1100 (含 List 里会命中的 200) → 超限 → 回退内存过滤
+	excludeValues := genItemIDStrings(100, 1001)
+
+	var listFilter *entity.Filter
+	var listFilterCaptured bool
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
+			listFilter = p.Filter
+			listFilterCaptured = true
+			return []*entity.EvaluationSetItem{
+				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},   // 不在黑名单 → 保留
+				{ItemID: 200, Turns: []*entity.Turn{{ID: 200}}}, // 在黑名单 [100,1100] → 剔除
+				{ItemID: 3, Turns: []*entity.Turn{{ID: 33}}},   // 不在黑名单 → 保留
+			}, ptr.Of(int64(3)), nil, nil, nil
+		}).Times(1)
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
+
+	expt := &entity.Experiment{
+		ID:      1,
+		SpaceID: 3,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				{
+					EvalSetID:        10,
+					EvalSetVersionID: 100,
+					ItemFilter: &entity.ExptItemFilter{
+						FilterFields: []*entity.ExptItemFilterField{
+							{FieldName: "item_id", FieldType: "long", QueryType: "not_in", Values: excludeValues},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: "u1"})
+	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
+	assert.NoError(t, err)
+
+	assert.True(t, listFilterCaptured)
+	assert.Nil(t, listFilter, "over-limit exclude should fall back to in-memory filter, no downstream Filter")
+	assert.Nil(t, findItemIDField(listFilter), "item_id must not be pushed into Filter when over limit")
+
+	// 落库 = 全集 \ 黑名单 = {1,3}, 200 被内存过滤剔除
+	assert.Len(t, captured, 2)
+	assert.ElementsMatch(t, []int64{1, 3}, []int64{captured[0].ItemID, captured[1].ItemID})
+}
+
+// in + not_in 混合 (常规量): extractItemIDFilter 把 in 归 include、not_in 归 exclude,
+// 两者各 ≤1000 → 都下推; extractNormalColumnFilter(keepItemID=true) 保留所有 item_id 字段,
+// 故下发 Filter 含 2 个 item_id 字段 (in 与 not_in 各一条)。
+func TestExptSubmitExec_exptStartMultiSet_ItemIDInAndNotIn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exec, setItemSvc, itemRefRepo := newExptStartMultiSetTestExec(ctrl)
+
+	var captured []*entity.ExptItemRef
+	itemRefRepo.EXPECT().BatchCreate(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, refs []*entity.ExptItemRef) error {
+			captured = append(captured, refs...)
+			return nil
+		}).AnyTimes()
+
+	var listFilter *entity.Filter
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
+			listFilter = p.Filter
+			// 下游服务端过滤后 (in {1,2,3} minus not_in {2}) → 回 1,3
+			return []*entity.EvaluationSetItem{
+				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
+				{ItemID: 3, Turns: []*entity.Turn{{ID: 33}}},
+			}, ptr.Of(int64(2)), nil, nil, nil
+		}).Times(1)
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
+
+	expt := &entity.Experiment{
+		ID:      1,
+		SpaceID: 3,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				{
+					EvalSetID:        10,
+					EvalSetVersionID: 100,
+					ItemFilter: &entity.ExptItemFilter{
+						FilterFields: []*entity.ExptItemFilterField{
+							{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"1", "2", "3"}},
+							{FieldName: "item_id", FieldType: "long", QueryType: "not_in", Values: []string{"2"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: "u1"})
+	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
+	assert.NoError(t, err)
+
+	// 常规量 → 下推: Filter 含两条 item_id 字段 (in 与 not_in), 无内存过滤
+	assert.NotNil(t, listFilter)
+	var inField, notInField *entity.FilterField
+	itemIDFieldCnt := 0
+	for _, f := range listFilter.FilterFields {
+		if f.FieldName != "item_id" {
+			continue
+		}
+		itemIDFieldCnt++
+		switch ptr.From(f.QueryType) {
+		case "in":
+			inField = f
+		case "not_in":
+			notInField = f
+		}
+	}
+	assert.Equal(t, 2, itemIDFieldCnt, "both in and not_in item_id fields should be pushed into Filter")
+	assert.NotNil(t, inField)
+	assert.ElementsMatch(t, []string{"1", "2", "3"}, inField.Values)
+	assert.NotNil(t, notInField)
+	assert.ElementsMatch(t, []string{"2"}, notInField.Values)
+
+	assert.Len(t, captured, 2)
+	assert.ElementsMatch(t, []int64{1, 3}, []int64{captured[0].ItemID, captured[1].ItemID})
+}
+
+// item_id + 普通列 + tag 三者混合 (常规量下推): 下发 Filter 含 item_id + 普通列 (2 字段),
+// tag 走 TagFilter 不在 Filter 里。
+func TestExptSubmitExec_exptStartMultiSet_ItemIDNormalTagMixed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exec, setItemSvc, itemRefRepo := newExptStartMultiSetTestExec(ctrl)
+
+	var captured []*entity.ExptItemRef
+	itemRefRepo.EXPECT().BatchCreate(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, refs []*entity.ExptItemRef) error {
+			captured = append(captured, refs...)
+			return nil
+		}).AnyTimes()
+
+	var listFilter *entity.Filter
+	var listTagFilter *entity.TagFilter
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
+			listFilter = p.Filter
+			listTagFilter = p.TagFilter
+			return []*entity.EvaluationSetItem{
+				{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
+			}, ptr.Of(int64(1)), nil, nil, nil
+		}).Times(1)
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
+
+	expt := &entity.Experiment{
+		ID:      1,
+		SpaceID: 3,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				{
+					EvalSetID:        10,
+					EvalSetVersionID: 100,
+					ItemFilter: &entity.ExptItemFilter{
+						QueryAndOr: "and",
+						FilterFields: []*entity.ExptItemFilterField{
+							{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"2"}},
+							{FieldName: "category", FieldType: "string", QueryType: "match", Values: []string{"math"}},
+							{FieldName: "lang", FieldType: "tag", QueryType: "in", Values: []string{"zh"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: "u1"})
+	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
+	assert.NoError(t, err)
+
+	// Filter 含 item_id + category (2 字段), 不含 tag
+	assert.NotNil(t, listFilter)
+	assert.Len(t, listFilter.FilterFields, 2)
+	names := make([]string, 0, 2)
+	for _, f := range listFilter.FilterFields {
+		names = append(names, f.FieldName)
+	}
+	assert.Contains(t, names, "item_id")
+	assert.Contains(t, names, "category")
+	assert.NotContains(t, names, "lang")
+
+	// tag 走独立 TagFilter
+	assert.NotNil(t, listTagFilter)
+	assert.ElementsMatch(t, []string{"zh"}, listTagFilter.TagNames)
+
+	assert.Len(t, captured, 1)
+	assert.Equal(t, int64(2), captured[0].ItemID)
+}
+
+// 边界: 正好 1000 个 item_id (=上限) 应下推 (阈值是 ≤ 不是 <): item_id 进 Filter, 无内存过滤。
+func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter_AtLimit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exec, setItemSvc, itemRefRepo := newExptStartMultiSetTestExec(ctrl)
+
+	var captured []*entity.ExptItemRef
+	itemRefRepo.EXPECT().BatchCreate(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, refs []*entity.ExptItemRef) error {
+			captured = append(captured, refs...)
+			return nil
+		}).AnyTimes()
+
+	// 正好 1000 个 (id 1..1000) → 不超限 → 下推
+	includeValues := genItemIDStrings(1, 1000)
+
+	var listFilter *entity.Filter
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
+			listFilter = p.Filter
+			// 服务端过滤后回子集 (模拟命中 2 个)
+			return []*entity.EvaluationSetItem{
+				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
+				{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
+			}, ptr.Of(int64(2)), nil, nil, nil
+		}).Times(1)
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
+
+	expt := &entity.Experiment{
+		ID:      1,
+		SpaceID: 3,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				{
+					EvalSetID:        10,
+					EvalSetVersionID: 100,
+					ItemFilter: &entity.ExptItemFilter{
+						FilterFields: []*entity.ExptItemFilterField{
+							{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: includeValues},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: "u1"})
+	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
+	assert.NoError(t, err)
+
+	// 1000 = 上限 → 下推: item_id 进 Filter (阈值 ≤ 边界)
+	itemIDField := findItemIDField(listFilter)
+	assert.NotNil(t, itemIDField, "exactly 1000 item_id (at limit) should still be pushed into Filter")
+	assert.Equal(t, "in", ptr.From(itemIDField.QueryType))
+	assert.Len(t, itemIDField.Values, 1000)
+
+	assert.Len(t, captured, 2)
+}
+
+// 边界: 1001 个 item_id (刚超上限) 应回退内存过滤 (item_id 不进 Filter)。
+// 与 AtLimit 成对, 坐实阈值边界在 1000/1001 之间。
+func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter_JustOverLimit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exec, setItemSvc, itemRefRepo := newExptStartMultiSetTestExec(ctrl)
+
+	var captured []*entity.ExptItemRef
+	itemRefRepo.EXPECT().BatchCreate(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, refs []*entity.ExptItemRef) error {
+			captured = append(captured, refs...)
+			return nil
+		}).AnyTimes()
+
+	// 1001 个 (id 1..1001) → 超限 → 回退内存过滤
+	includeValues := genItemIDStrings(1, 1001)
+
+	var listFilter *entity.Filter
+	var listFilterCaptured bool
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
+			listFilter = p.Filter
+			listFilterCaptured = true
+			return []*entity.EvaluationSetItem{
+				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}}, // 白名单内 → 保留
+				{ItemID: 5000, Turns: []*entity.Turn{{ID: 5000}}}, // 白名单外 → 内存剔除
+			}, ptr.Of(int64(2)), nil, nil, nil
+		}).Times(1)
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
+
+	expt := &entity.Experiment{
+		ID:      1,
+		SpaceID: 3,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				{
+					EvalSetID:        10,
+					EvalSetVersionID: 100,
+					ItemFilter: &entity.ExptItemFilter{
+						FilterFields: []*entity.ExptItemFilterField{
+							{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: includeValues},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: "u1"})
+	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
+	assert.NoError(t, err)
+
+	// 1001 > 上限 → 回退: item_id 不进 Filter (无普通列 → Filter nil)
+	assert.True(t, listFilterCaptured)
+	assert.Nil(t, findItemIDField(listFilter), "1001 item_id (just over limit) must NOT be pushed into Filter")
+
+	// 内存过滤: 白名单外的 5000 被剔除, 只留 1
+	assert.Len(t, captured, 1)
+	assert.Equal(t, int64(1), captured[0].ItemID)
 }
