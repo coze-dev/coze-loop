@@ -2277,31 +2277,40 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 		}
 
 		// 解析 set 级 item_filter:
-		//   - item_id 点选 (in/eq/not_in/not_eq) → 统一走 List 全集分页 + 内存过滤 (include 白名单 / exclude 黑名单)
+		//   - item_id 点选 (in/eq/not_in/not_eq) → 下游 Filter 已支持 item_id 顶层列 (itemIDOp),
+		//     常规量 (include/exclude 各 ≤ maxItemIDFilterInList) 直接进 Filter 走服务端 item_id IN/NOT IN 精准过滤 (不拉全集);
+		//     超限则回退内存过滤 (List 全集 + include/exclude 逐页筛, in/not_in 通用, not_in 无法分批故统一回退)。
 		//   - 普通列 → 下游 Filter (commercial 走 ml_flow 服务端裁剪; 开源版无字段降级全量)
 		//   - tag → 下游 TagFilter (同上)
 		//
-		// item_id 点选为何不走 BatchGet by-version-queries:
-		//   versioned_item + committed 版本下, BatchGet 侧 handleByItemVersionQueries 强制每个 ref 带 item_version_id,
-		//   而首次扫描只有用户点选的 item_id、拿不到 item 级版本 → 报 601100201。
-		//   List 路径由下游从 snapshot 解析并回填 item_version_id, 故点选降级走 List + 内存 include 过滤即可拿到版本。
-		//   TODO: 下游 List 暴露候选 item_id (candidateItemIDs) 入参后, 改服务端 item_id IN 下推, 省整集遍历。
+		// 版本: item 级 item_version_id 由下游 List 从 snapshot 回填 (persistBatch 从 item.ItemVersionID 写库),
+		//   两条路径 (服务端 filter / 内存过滤) 都走 List, 均无 601100201 风险。
 		includeIDs, excludeIDs, _, ferr := extractItemIDFilter(setConf.ItemFilter)
 		if ferr != nil {
 			return ferr
 		}
-		nFilter := extractNormalColumnFilter(setConf.ItemFilter)
 		tFilter := extractTagFilter(setConf.ItemFilter)
-		excludeSet := make(map[int64]struct{}, len(excludeIDs))
-		for _, id := range excludeIDs {
-			excludeSet[id] = struct{}{}
-		}
-		includeSet := make(map[int64]struct{}, len(includeIDs))
-		for _, id := range includeIDs {
-			includeSet[id] = struct{}{}
+
+		// item_id 点选/排除是否下推到 Filter 服务端过滤: include/exclude 各自不超过下游单字段上限。
+		pushItemIDToFilter := len(includeIDs) <= maxItemIDFilterInList && len(excludeIDs) <= maxItemIDFilterInList
+		// nFilter 含 item_id 当且仅当下推; 否则 item_id 走内存过滤, nFilter 只带普通列。
+		nFilter := extractNormalColumnFilter(setConf.ItemFilter, pushItemIDToFilter)
+
+		// 超限回退内存过滤时才建 set; 下推场景 set 为空、跳过内存过滤。
+		excludeSet := make(map[int64]struct{})
+		includeSet := make(map[int64]struct{})
+		if !pushItemIDToFilter {
+			logs.CtxWarn(ctx, "exptStartMultiSet item_id filter over limit, fallback to in-memory filter, expt_id=%d, set_id=%d, include=%d, exclude=%d, limit=%d",
+				event.ExptID, setConf.EvalSetID, len(includeIDs), len(excludeIDs), maxItemIDFilterInList)
+			for _, id := range excludeIDs {
+				excludeSet[id] = struct{}{}
+			}
+			for _, id := range includeIDs {
+				includeSet[id] = struct{}{}
+			}
 		}
 
-		// item_id 点选/排除 + 普通列/tag: List 分页, Filter/TagFilter 下传服务端裁剪, item_id 在内存过滤
+		// List 分页: Filter (含普通列, 常规量下含 item_id) / TagFilter 下传服务端裁剪; 超限时 item_id 在内存过滤
 		var pageToken *string
 		pageTotalCnt := 0
 		for loop := 0; loop < 10000; loop++ {
@@ -2328,12 +2337,9 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			}
 
 			pageTotalCnt += len(items)
-			// item_id 点选/排除内存过滤 (每页 pageSize 逐页处理, 非全集进内存, set 只存 id):
+			// 超限回退: item_id 点选/排除逐页内存过滤 (常规量已进 Filter 服务端过滤, 此处 set 为空跳过):
 			//   - include (in/eq): 只保留白名单内的 item_id
 			//   - exclude (not_in/not_eq): 剔除黑名单内的 item_id
-			// item 级版本由下游 List 从 snapshot 回填 (persistBatch 从 item.ItemVersionID 写库), 故此路径无 601100201 风险。
-			// 下游既无 item_id 候选/排除专用字段, 暂只能内存过滤; 代价是点选/排除仍要分页遍历整集。
-			// TODO: 下游 List 就绪 candidateItemIDs 后改服务端 item_id IN/NOT IN 下推, 省整集遍历。
 			if len(includeSet) > 0 || len(excludeSet) > 0 {
 				kept := items[:0]
 				for _, it := range items {
@@ -2429,6 +2435,11 @@ func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig) *entity.ExptItemC
 	return cfg
 }
 
+// maxItemIDFilterInList 是下游 Filter 单个 item_id 顶层列 IN/NOT IN 列表的最大长度
+// (对齐 fornax mlflow filter_helper.MaxItemIDFilterListSize)。include/exclude 各自超过此值时,
+// 不下推 Filter, 回退内存过滤 (List 全集逐页筛; not_in 无法分批, 故 in/not_in 统一按此阈值回退)。
+const maxItemIDFilterInList = 1000
+
 // extractItemIDFilter 从 set 级 ItemFilter 解析 item_id 点选条件。
 // 仅处理 field_name=item_id, field_type=long: in/eq → include; not_in/not_eq → exclude。
 // tag 圈选 (field_type=tag) 本期不在此消费 (执行侧裁剪未接, 见 tech debt), 返回 hasTagFilter=true 供上层 warn。
@@ -2466,11 +2477,13 @@ func extractItemIDFilter(f *entity.ExptItemFilter) (includeIDs, excludeIDs []int
 	return includeIDs, excludeIDs, hasTagFilter, nil
 }
 
-// extractNormalColumnFilter 从 set 级 ItemFilter 抽出普通业务列条件 (非 item_id、非 tag),
-// 组成下游 entity.Filter (= data_filter.Filter)。无普通列字段时返回 nil。
-//
+// extractNormalColumnFilter 从 set 级 ItemFilter 抽出下发给下游 Filter 的字段 (非 tag)。
+//   - keepItemID=false: 跳过 item_id (item_id 走内存过滤, 超限回退路径)。
+//   - keepItemID=true : 保留 item_id (下游 Filter 已支持 item_id 顶层列 itemIDOp, 常规量下推服务端过滤)。
+// tag 始终跳过 (走 extractTagFilter → TagFilter)。
+// 组成下游 entity.Filter (= data_filter.Filter)。无字段时返回 nil。
 // 下游 commercial adapter 透传给 ml_flow 做服务端裁剪; 开源版下游无 filter 字段会丢弃 (降级全量)。
-func extractNormalColumnFilter(f *entity.ExptItemFilter) *entity.Filter {
+func extractNormalColumnFilter(f *entity.ExptItemFilter, keepItemID bool) *entity.Filter {
 	if f == nil || len(f.FilterFields) == 0 {
 		return nil
 	}
@@ -2479,7 +2492,10 @@ func extractNormalColumnFilter(f *entity.ExptItemFilter) *entity.Filter {
 		if ff == nil {
 			continue
 		}
-		if ff.FieldType == "tag" || ff.FieldName == "item_id" {
+		if ff.FieldType == "tag" {
+			continue
+		}
+		if ff.FieldName == "item_id" && !keepItemID {
 			continue
 		}
 		field := &entity.FilterField{

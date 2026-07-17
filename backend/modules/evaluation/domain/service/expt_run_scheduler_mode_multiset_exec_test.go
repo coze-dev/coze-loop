@@ -319,9 +319,8 @@ func TestExptSubmitExec_exptStartMultiSet_MultipleSets(t *testing.T) {
 	}
 }
 
-// item_id 点选 item_filter: 走 List 全集 + 内存 include 过滤, 只落命中的 item。
-// item_id in (点选): List 全集拉回后内存过滤只保留白名单, version 由下游从 snapshot 回填。
-// (不再走 BatchGet by-version-queries: versioned committed 版本下那条会因 ref 缺 item_version_id 报 601100201)
+// item_id in (点选, 常规量 ≤1000): item_id 进下游 Filter 走服务端 item_id IN 精准过滤;
+// List 只返回命中的 item, 无内存过滤; version 由下游从 snapshot 回填。BatchGet 不再被调用。
 func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -335,14 +334,17 @@ func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter(t *testing.T) {
 			return nil
 		}).AnyTimes()
 
-	// 点选 item_id=2,7 → List 拉回 2,5,7, 落库应只剩 2,7; BatchGet 不应被调用
-	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return(
-		[]*entity.EvaluationSetItem{
-			{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
-			{ItemID: 5, Turns: []*entity.Turn{{ID: 55}}},
-			{ItemID: 7, Turns: []*entity.Turn{{ID: 77}}},
-		}, ptr.Of(int64(3)), nil, nil, nil).Times(1)
-	// BatchGet 绝不应被调用 (点选已降级走 List)
+	// 点选 item_id=2,7 → item_id 进 Filter 下发, 下游服务端过滤后只回 2,7; BatchGet 不应被调用
+	var listFilter *entity.Filter
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
+			listFilter = p.Filter
+			return []*entity.EvaluationSetItem{
+				{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
+				{ItemID: 7, Turns: []*entity.Turn{{ID: 77}}},
+			}, ptr.Of(int64(2)), nil, nil, nil
+		}).Times(1)
+	// BatchGet 绝不应被调用 (点选走 List + 服务端 filter)
 	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
 
 	expt := &entity.Experiment{
@@ -366,11 +368,24 @@ func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter(t *testing.T) {
 	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
 	assert.NoError(t, err)
 
+	// item_id 被下推进 Filter (常规量), 而非内存过滤
+	assert.NotNil(t, listFilter)
+	var itemIDField *entity.FilterField
+	for _, f := range listFilter.FilterFields {
+		if f.FieldName == "item_id" {
+			itemIDField = f
+		}
+	}
+	assert.NotNil(t, itemIDField, "item_id should be pushed into downstream Filter")
+	assert.Equal(t, "in", ptr.From(itemIDField.QueryType))
+	assert.ElementsMatch(t, []string{"2", "7"}, itemIDField.Values)
+
 	assert.Len(t, captured, 2)
 	assert.ElementsMatch(t, []int64{2, 7}, []int64{captured[0].ItemID, captured[1].ItemID})
 }
 
-// item_id not_in (排除): List 全集拉回后内存过滤掉 exclude。
+// item_id not_in (排除, 常规量 ≤1000): item_id 进下游 Filter 走服务端 item_id NOT IN 精准排除;
+// List 只返回排除后的 item, 无内存过滤。
 func TestExptSubmitExec_exptStartMultiSet_ItemIDExclude(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -384,13 +399,16 @@ func TestExptSubmitExec_exptStartMultiSet_ItemIDExclude(t *testing.T) {
 			return nil
 		}).AnyTimes()
 
-	// 排除 item_id=2 → List 拉回 1,2,3, 落库应只剩 1,3
-	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return(
-		[]*entity.EvaluationSetItem{
-			{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
-			{ItemID: 2, Turns: []*entity.Turn{{ID: 22}}},
-			{ItemID: 3, Turns: []*entity.Turn{{ID: 33}}},
-		}, ptr.Of(int64(3)), nil, nil, nil).Times(1)
+	// 排除 item_id=2 → item_id not_in 进 Filter, 下游服务端排除后回 1,3
+	var listFilter *entity.Filter
+	setItemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, p *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
+			listFilter = p.Filter
+			return []*entity.EvaluationSetItem{
+				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},
+				{ItemID: 3, Turns: []*entity.Turn{{ID: 33}}},
+			}, ptr.Of(int64(2)), nil, nil, nil
+		}).Times(1)
 	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
 
 	expt := &entity.Experiment{
@@ -413,6 +431,17 @@ func TestExptSubmitExec_exptStartMultiSet_ItemIDExclude(t *testing.T) {
 	ctx := session.WithCtxUser(context.Background(), &session.User{ID: "u1"})
 	err := exec.exptStartMultiSet(ctx, &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Session: &entity.Session{UserID: "u1"}}, expt)
 	assert.NoError(t, err)
+
+	// item_id not_in 被下推进 Filter
+	assert.NotNil(t, listFilter)
+	var itemIDField *entity.FilterField
+	for _, f := range listFilter.FilterFields {
+		if f.FieldName == "item_id" {
+			itemIDField = f
+		}
+	}
+	assert.NotNil(t, itemIDField, "item_id should be pushed into downstream Filter")
+	assert.Equal(t, "not_in", ptr.From(itemIDField.QueryType))
 
 	assert.Len(t, captured, 2)
 	assert.ElementsMatch(t, []int64{1, 3}, []int64{captured[0].ItemID, captured[1].ItemID})
@@ -472,16 +501,16 @@ func TestExtractItemIDFilter(t *testing.T) {
 
 func TestExtractNormalColumnFilter(t *testing.T) {
 	t.Run("nil / 无普通列 -> nil", func(t *testing.T) {
-		assert.Nil(t, extractNormalColumnFilter(nil))
-		// 只有 item_id + tag, 无普通列
+		assert.Nil(t, extractNormalColumnFilter(nil, false))
+		// 只有 item_id + tag, 无普通列; keepItemID=false 跳过 item_id
 		f := &entity.ExptItemFilter{FilterFields: []*entity.ExptItemFilterField{
 			{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"1"}},
 			{FieldName: "lang", FieldType: "tag", QueryType: "in", Values: []string{"zh"}},
 		}}
-		assert.Nil(t, extractNormalColumnFilter(f))
+		assert.Nil(t, extractNormalColumnFilter(f, false))
 	})
 
-	t.Run("混合 -> 只抽普通列, 跳过 item_id/tag", func(t *testing.T) {
+	t.Run("keepItemID=false: 混合 -> 只抽普通列, 跳过 item_id/tag", func(t *testing.T) {
 		f := &entity.ExptItemFilter{
 			QueryAndOr: "and",
 			FilterFields: []*entity.ExptItemFilterField{
@@ -491,13 +520,32 @@ func TestExtractNormalColumnFilter(t *testing.T) {
 				{FieldName: "difficulty", FieldType: "integer", QueryType: "not_eq", Values: []string{"5"}},
 			},
 		}
-		out := extractNormalColumnFilter(f)
+		out := extractNormalColumnFilter(f, false)
 		assert.NotNil(t, out)
 		assert.Len(t, out.FilterFields, 2)
 		assert.Equal(t, "and", ptr.From(out.QueryAndOr))
 		assert.Equal(t, "category", out.FilterFields[0].FieldName)
 		assert.Equal(t, "match", ptr.From(out.FilterFields[0].QueryType))
 		assert.Equal(t, "difficulty", out.FilterFields[1].FieldName)
+	})
+
+	t.Run("keepItemID=true: item_id 保留进 Filter, tag 仍跳过", func(t *testing.T) {
+		f := &entity.ExptItemFilter{
+			QueryAndOr: "and",
+			FilterFields: []*entity.ExptItemFilterField{
+				{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"1", "2"}},
+				{FieldName: "lang", FieldType: "tag", QueryType: "in", Values: []string{"zh"}},
+				{FieldName: "category", FieldType: "string", QueryType: "match", Values: []string{"math"}},
+			},
+		}
+		out := extractNormalColumnFilter(f, true)
+		assert.NotNil(t, out)
+		// item_id + category 保留, tag(lang) 跳过
+		assert.Len(t, out.FilterFields, 2)
+		names := []string{out.FilterFields[0].FieldName, out.FilterFields[1].FieldName}
+		assert.Contains(t, names, "item_id")
+		assert.Contains(t, names, "category")
+		assert.NotContains(t, names, "lang")
 	})
 }
 
