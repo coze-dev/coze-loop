@@ -149,6 +149,13 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs is only allowed when eval_set_source_type=MultiSetConfig"))
 	}
 
+	// 多评测集 (MultiSetConfig) 空间灰度校验: 仅白名单空间可创建, 非白名单直接拦截报错。
+	// 白名单经 TCC 动态下发 (key=expt_multi_set_white_list), 默认空 = 全部禁止, allow_all=true 为全量开关。
+	if isMulti && !e.configer.GetExptMultiSetWhiteList(ctx).IsSpaceAllowed(req.GetWorkspaceID()) {
+		return nil, errorx.NewByCode(errno.ExptMultiSetSpaceNotAllowedCode,
+			errorx.WithExtraMsg(fmt.Sprintf("space %d is not allowed to create multi-set experiments", req.GetWorkspaceID())))
+	}
+
 	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）、runconfig 和 score weight
 	evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, err := e.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
 	if err != nil {

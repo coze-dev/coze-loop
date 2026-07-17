@@ -6,6 +6,7 @@ package entity
 import (
 	"fmt"
 	"regexp"
+	"slices"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -166,4 +167,29 @@ func validateAlias(alias, path string) error {
 
 func invalidParam(msg string) error {
 	return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(msg))
+}
+
+// ExptMultiSetWhiteList 多评测集 (MultiSetConfig) 实验创建的空间灰度白名单。
+// 通过 TCC 动态配置下发，非白名单空间创建 multi-set 实验时直接拦截报错。
+// 默认空实例 = 全部禁止 (最安全的灰度默认); AllowAll=true 为全量开关，命中即全部放行。
+type ExptMultiSetWhiteList struct {
+	SpaceIDs []int64 `json:"space_ids" mapstructure:"space_ids"`
+	AllowAll bool    `json:"allow_all" mapstructure:"allow_all"`
+}
+
+// DefaultExptMultiSetWhiteList 默认白名单：空 SpaceIDs + AllowAll=false，即全部禁止。
+func DefaultExptMultiSetWhiteList() *ExptMultiSetWhiteList {
+	return &ExptMultiSetWhiteList{}
+}
+
+// IsSpaceAllowed 判断 spaceID 是否允许创建 multi-set 实验。
+// nil 白名单视为禁止；AllowAll=true 时全部放行；否则命中 SpaceIDs 才放行。
+func (w *ExptMultiSetWhiteList) IsSpaceAllowed(spaceID int64) bool {
+	if w == nil {
+		return false
+	}
+	if w.AllowAll {
+		return true
+	}
+	return slices.Contains(w.SpaceIDs, spaceID)
 }

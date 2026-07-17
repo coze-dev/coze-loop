@@ -34,6 +34,7 @@ type IConfiger interface {
 	GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl
 	GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf
 	GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList
+	GetExptMultiSetWhiteList(ctx context.Context) *entity.ExptMultiSetWhiteList
 	GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool)
 	// BuildEvalExt 构造评测记录（EvaluatorRecord/EvalTargetRecord/ExptTurnResultRunLog）落库时的 ext 扩展字段。
 	// turn 为评测集中的轮次数据（部分调用点不可用时为 nil），spaceID 为空间 id。默认空实现返回 nil。

@@ -395,6 +395,10 @@ const (
 	AsyncEvalTargetTerminatedCode              = 601205071 // the async eval target was terminated because the experiment was manually cancelled
 	asyncEvalTargetTerminatedMessage           = "async eval target terminated: experiment cancelled"
 	asyncEvalTargetTerminatedNoAffectStability = true
+
+	ExptMultiSetSpaceNotAllowedCode              = 601205072 // the space is not in the gray-release whitelist for multi-set experiments
+	exptMultiSetSpaceNotAllowedMessage           = "the space is not allowed to create multi-set experiments"
+	exptMultiSetSpaceNotAllowedNoAffectStability = true
 )
 
 func init() {
@@ -979,6 +983,12 @@ func init() {
 		AsyncEvalTargetTerminatedCode,
 		asyncEvalTargetTerminatedMessage,
 		code.WithAffectStability(!asyncEvalTargetTerminatedNoAffectStability),
+	)
+
+	code.Register(
+		ExptMultiSetSpaceNotAllowedCode,
+		exptMultiSetSpaceNotAllowedMessage,
+		code.WithAffectStability(!exptMultiSetSpaceNotAllowedNoAffectStability),
 	)
 
 }
