@@ -2480,6 +2480,7 @@ func extractItemIDFilter(f *entity.ExptItemFilter) (includeIDs, excludeIDs []int
 // extractNormalColumnFilter 从 set 级 ItemFilter 抽出下发给下游 Filter 的字段 (非 tag)。
 //   - keepItemID=false: 跳过 item_id (item_id 走内存过滤, 超限回退路径)。
 //   - keepItemID=true : 保留 item_id (下游 Filter 已支持 item_id 顶层列 itemIDOp, 常规量下推服务端过滤)。
+//
 // tag 始终跳过 (走 extractTagFilter → TagFilter)。
 // 组成下游 entity.Filter (= data_filter.Filter)。无字段时返回 nil。
 // 下游 commercial adapter 透传给 ml_flow 做服务端裁剪; 开源版下游无 filter 字段会丢弃 (降级全量)。

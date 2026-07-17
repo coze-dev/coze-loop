@@ -694,9 +694,9 @@ func TestExptSubmitExec_exptStartMultiSet_ItemIDExclude_OverLimit(t *testing.T) 
 			listFilter = p.Filter
 			listFilterCaptured = true
 			return []*entity.EvaluationSetItem{
-				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},   // 不在黑名单 → 保留
+				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},    // 不在黑名单 → 保留
 				{ItemID: 200, Turns: []*entity.Turn{{ID: 200}}}, // 在黑名单 [100,1100] → 剔除
-				{ItemID: 3, Turns: []*entity.Turn{{ID: 33}}},   // 不在黑名单 → 保留
+				{ItemID: 3, Turns: []*entity.Turn{{ID: 33}}},    // 不在黑名单 → 保留
 			}, ptr.Of(int64(3)), nil, nil, nil
 		}).Times(1)
 	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)
@@ -961,7 +961,7 @@ func TestExptSubmitExec_exptStartMultiSet_ItemIDFilter_JustOverLimit(t *testing.
 			listFilter = p.Filter
 			listFilterCaptured = true
 			return []*entity.EvaluationSetItem{
-				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}}, // 白名单内 → 保留
+				{ItemID: 1, Turns: []*entity.Turn{{ID: 11}}},      // 白名单内 → 保留
 				{ItemID: 5000, Turns: []*entity.Turn{{ID: 5000}}}, // 白名单外 → 内存剔除
 			}, ptr.Of(int64(2)), nil, nil, nil
 		}).Times(1)
