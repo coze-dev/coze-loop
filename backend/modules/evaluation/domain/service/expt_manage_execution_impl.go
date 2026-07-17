@@ -25,7 +25,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -336,16 +335,13 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 }
 
 func (e *ExptMangerImpl) sendNotifyCard(ctx context.Context, expt *entity.Experiment) error {
-	userInfos, err := e.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
-	if err != nil {
-		return err
-	}
-	if len(userInfos) != 1 || userInfos[0] == nil || len(gptr.Indirect(userInfos[0].Email)) == 0 {
-		logs.CtxWarn(ctx, "expt %v notify card without target email", expt.ID)
+	receiveID, receiveIDType := resolveNotifyTarget(ctx, e.userProvider, expt)
+	if receiveID == "" {
+		logs.CtxWarn(ctx, "expt %v notify card without target", expt.ID)
 		return nil
 	}
 	cardID, param := buildExptNotifyParam(expt, expt.Status)
-	return e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), cardID, param)
+	return e.notifyRPCAdapter.SendMessageCard(ctx, receiveID, receiveIDType, cardID, param)
 }
 
 func buildExptNotifyParam(expt *entity.Experiment, toStatus entity.ExptStatus) (string, map[string]string) {

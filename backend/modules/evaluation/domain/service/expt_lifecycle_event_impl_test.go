@@ -99,7 +99,7 @@ func TestHandleLifecycleEvent(t *testing.T) {
 		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user1"}).Return([]*entity.UserInfo{
 			{Email: gptr.Of("user1@example.com")},
 		}, nil)
-		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@example.com", gomock.Any(), gomock.Any()).Return(nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@example.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.HandleLifecycleEvent(ctx, event)
 		assert.NoError(t, err)
@@ -126,7 +126,7 @@ func TestHandleLifecycleEvent(t *testing.T) {
 		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user2"}).Return([]*entity.UserInfo{
 			{Email: gptr.Of("user2@example.com")},
 		}, nil)
-		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user2@example.com", gomock.Any(), gomock.Any()).Return(nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user2@example.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.HandleLifecycleEvent(ctx, event)
 		assert.NoError(t, err)
@@ -153,7 +153,7 @@ func TestHandleLifecycleEvent(t *testing.T) {
 		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user3"}).Return([]*entity.UserInfo{
 			{Email: gptr.Of("user3@example.com")},
 		}, nil)
-		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user3@example.com", gomock.Any(), gomock.Any()).Return(nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user3@example.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.HandleLifecycleEvent(ctx, event)
 		assert.NoError(t, err)
@@ -180,7 +180,7 @@ func TestHandleLifecycleEvent(t *testing.T) {
 		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user4"}).Return([]*entity.UserInfo{
 			{Email: gptr.Of("user4@example.com")},
 		}, nil)
-		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user4@example.com", gomock.Any(), gomock.Any()).Return(nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user4@example.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.HandleLifecycleEvent(ctx, event)
 		assert.NoError(t, err)
@@ -232,10 +232,10 @@ func TestHandleLifecycleEvent(t *testing.T) {
 func TestSendNotifyCard(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("event ToStatus does not match expt Status, returns nil", func(t *testing.T) {
+	t.Run("empty CreatedBy and no feishu user_id, returns nil without lookup", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		handler, mocks := newTestLifecycleEventHandler(ctrl)
+		handler, _ := newTestLifecycleEventHandler(ctrl)
 
 		event := &entity.ExptLifecycleEvent{
 			ToStatus: entity.ExptStatus_Success,
@@ -243,13 +243,13 @@ func TestSendNotifyCard(t *testing.T) {
 		expt := &entity.Experiment{
 			Status: entity.ExptStatus_Failed,
 		}
-		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{""}).Return([]*entity.UserInfo{}, nil)
+		// resolveNotifyTarget short-circuits on empty target: MGetUserInfo 不应被调用
 
 		err := handler.sendNotifyCard(ctx, event, expt)
 		assert.NoError(t, err)
 	})
 
-	t.Run("MGetUserInfo returns error", func(t *testing.T) {
+	t.Run("MGetUserInfo returns error, swallowed and returns nil", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		handler, mocks := newTestLifecycleEventHandler(ctrl)
@@ -264,7 +264,7 @@ func TestSendNotifyCard(t *testing.T) {
 		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user1"}).Return(nil, errors.New("user provider error"))
 
 		err := handler.sendNotifyCard(ctx, event, expt)
-		assert.EqualError(t, err, "user provider error")
+		assert.NoError(t, err)
 	})
 
 	t.Run("MGetUserInfo returns empty list, returns nil", func(t *testing.T) {
@@ -343,7 +343,7 @@ func TestSendNotifyCard(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("MGetUserInfo returns multiple users, returns nil", func(t *testing.T) {
+	t.Run("MGetUserInfo returns multiple users, sends to first", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		handler, mocks := newTestLifecycleEventHandler(ctrl)
@@ -359,6 +359,7 @@ func TestSendNotifyCard(t *testing.T) {
 			{Email: gptr.Of("user1@example.com")},
 			{Email: gptr.Of("user2@example.com")},
 		}, nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@example.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.sendNotifyCard(ctx, event, expt)
 		assert.NoError(t, err)
@@ -384,7 +385,7 @@ func TestSendNotifyCard(t *testing.T) {
 		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user1"}).Return([]*entity.UserInfo{
 			{Email: gptr.Of("user1@example.com")},
 		}, nil)
-		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@example.com", gomock.Any(), gomock.Any()).Return(errors.New("send error"))
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@example.com", "email", gomock.Any(), gomock.Any()).Return(errors.New("send error"))
 
 		err := handler.sendNotifyCard(ctx, event, expt)
 		assert.EqualError(t, err, "send error")
@@ -411,7 +412,7 @@ func TestSendNotifyCard(t *testing.T) {
 		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user1"}).Return([]*entity.UserInfo{
 			{Email: gptr.Of("user1@example.com")},
 		}, nil)
-		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@example.com", gomock.Any(), gomock.Any()).Return(nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@example.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.sendNotifyCard(ctx, event, expt)
 		assert.NoError(t, err)
@@ -450,7 +451,7 @@ func TestHandleFeishuNotification_WithNotificationConf_BitsUT(t *testing.T) {
 		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user1"}).Return([]*entity.UserInfo{
 			{Email: gptr.Of("user1@test.com")},
 		}, nil)
-		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@test.com", gomock.Any(), gomock.Any()).Return(nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@test.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.HandleLifecycleEvent(ctx, event)
 		assert.NoError(t, err)
@@ -537,7 +538,7 @@ func TestHandleFeishuNotification_LegacyNoConf_BitsUT(t *testing.T) {
 		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user1"}).Return([]*entity.UserInfo{
 			{Email: gptr.Of("user1@test.com")},
 		}, nil)
-		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@test.com", gomock.Any(), gomock.Any()).Return(nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@test.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.HandleLifecycleEvent(ctx, event)
 		assert.NoError(t, err)

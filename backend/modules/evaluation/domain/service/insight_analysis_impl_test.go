@@ -269,7 +269,7 @@ func TestExptInsightAnalysisServiceImpl_notifyAnalysisComplete_Parallel(t *testi
 		ctx := context.Background()
 		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).Return(&entity.Experiment{Name: "expt"}, nil)
 		mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"u"}).Return([]*entity.UserInfo{{Email: ptr.Of("u@c.com")}}, nil)
-		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), "u@c.com", gomock.Any(), gomock.Any()).Return(nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), "u@c.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 		assert.NoError(t, service.notifyAnalysisComplete(ctx, "u", 1, 2))
 	})
 	// GetByID 错误
@@ -644,7 +644,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_AlreadyHasReport_Check
 	// notifyAnalysisComplete
 	mocks.exptRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(&entity.Experiment{Name: "expt"}, nil)
 	mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"user1"}).Return([]*entity.UserInfo{{Email: ptr.Of("u@c.com")}}, nil)
-	mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), "u@c.com", gomock.Any(), gomock.Any()).Return(nil)
+	mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), "u@c.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 	// UpdateAnalysisRecord -> Success
 	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
@@ -870,7 +870,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus_StatusSucce
 	mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(100)).Return("content", []*entity.InsightAnalysisReportIndex{{ID: "1", Title: "t"}}, entity.ReportStatus_Success, nil)
 	mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).Return(&entity.Experiment{Name: "expt"}, nil)
 	mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"user1"}).Return([]*entity.UserInfo{{Email: ptr.Of("u@c.com")}}, nil)
-	mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), "u@c.com", gomock.Any(), gomock.Any()).Return(nil)
+	mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), "u@c.com", "email", gomock.Any(), gomock.Any()).Return(nil)
 	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
 			assert.Equal(t, entity.InsightAnalysisStatus_Success, rec.Status)

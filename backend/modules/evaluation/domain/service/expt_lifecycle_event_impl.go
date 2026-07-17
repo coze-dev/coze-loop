@@ -7,12 +7,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/bytedance/gg/gptr"
-
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -98,14 +95,11 @@ func (h *ExptLifecycleEventHandlerImpl) dispatchWebhook(ctx context.Context, eve
 }
 
 func (h *ExptLifecycleEventHandlerImpl) sendNotifyCard(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) error {
-	userInfos, err := h.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
-	if err != nil {
-		return err
-	}
-	if len(userInfos) != 1 || userInfos[0] == nil || len(gptr.Indirect(userInfos[0].Email)) == 0 {
-		logs.CtxWarn(ctx, "expt %v notify card without target email", expt.ID)
+	receiveID, receiveIDType := resolveNotifyTarget(ctx, h.userProvider, expt)
+	if receiveID == "" {
+		logs.CtxWarn(ctx, "expt %v notify card without target", expt.ID)
 		return nil
 	}
 	cardID, param := buildExptNotifyParam(expt, event.ToStatus)
-	return h.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), cardID, param)
+	return h.notifyRPCAdapter.SendMessageCard(ctx, receiveID, receiveIDType, cardID, param)
 }
