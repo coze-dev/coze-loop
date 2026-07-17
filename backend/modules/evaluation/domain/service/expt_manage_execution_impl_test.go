@@ -105,7 +105,7 @@ func TestExptMangerImpl_Run(t *testing.T) {
 				mgr.userProvider.(*mocks.MockIUserProvider).
 					EXPECT().
 					MGetUserInfo(gomock.Any(), gomock.Any()).
-					Return([]*entity.UserInfo{}, nil)
+					Return([]*entity.UserInfo{}, nil).AnyTimes()
 			},
 			wantErr: false,
 		},
@@ -3292,7 +3292,7 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 		mgr.userProvider.(*mocks.MockIUserProvider).
 			EXPECT().
 			MGetUserInfo(gomock.Any(), gomock.Any()).
-			Return([]*entity.UserInfo{}, nil)
+			Return([]*entity.UserInfo{}, nil).AnyTimes()
 
 		err := mgr.Run(ctx, 123, 456, 789, 0, session, entity.EvaluationModeSubmit, nil)
 		assert.NoError(t, err)
