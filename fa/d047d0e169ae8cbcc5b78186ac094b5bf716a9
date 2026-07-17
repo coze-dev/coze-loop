@@ -1,0 +1,23 @@
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl.go
+  s_9202c3179d7bcb::t_8e8efbef137ad7 2483
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_multiset_exec_test.go
+  s_9202c3179d7bcb::t_d9a609ed6acdad 697,699,964
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fad047d0e169ae8cbcc5b78186ac094b5bf716a9",
+  "prompts": {},
+  "sessions": {
+    "s_9202c3179d7bcb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_9202c3179d7bcb",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
