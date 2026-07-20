@@ -1809,9 +1809,11 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
+		auth:              mockAuth,
 		evalTargetService: mockEvalTargetService,
 	}
 
@@ -1854,8 +1856,27 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 				CustomRPCServer: customRPC,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(workspaceID, 10),
+					SpaceID:       workspaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
 				mockEvalTargetService.EXPECT().DebugTarget(gomock.Any(), gomock.Any()).Return(record, nil)
 			},
+		},
+		{
+			name: "permission denied",
+			req: &evaltargetapi.DebugEvalTargetRequest{
+				WorkspaceID:     &workspaceID,
+				EvalTargetType:  &targetType,
+				Param:           gptr.Of(string(paramBytes)),
+				CustomRPCServer: customRPC,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
 		},
 		{
 			name: "invalid json",
@@ -1864,7 +1885,9 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 				EvalTargetType: &targetType,
 				Param:          gptr.Of("{"),
 			},
-			mockSetup:   func() {},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
 			wantErr:     true,
 			wantErrCode: errno.CommonInvalidParamCode,
 		},
@@ -1878,6 +1901,7 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 				CustomRPCServer:    customRPC,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvalTargetService.EXPECT().DebugTarget(gomock.Any(), gomock.Any()).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
@@ -1891,8 +1915,10 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType(0)),
 				Param:          gptr.Of(string(paramBytes)),
 			},
-			mockSetup: func() {},
-			wantErr:   true,
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
 		},
 	}
 
