@@ -3090,8 +3090,8 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 				}
 
 				mockEvaluatorService.EXPECT().
-					BatchGetEvaluator(gomock.Any(), spaceID, []int64{evaluatorID}, false).
-					Return([]*entity.Evaluator{evaluator}, nil).
+					GetEvaluator(gomock.Any(), spaceID, evaluatorID, false).
+					Return(evaluator, nil).
 					Times(1)
 
 				mockAuth.EXPECT().
@@ -5682,11 +5682,12 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorDraft_CustomRPC(t *testing.T) {
 				},
 			}
 
-			// Mock 获取评估器信息
+			// Mock 获取评估器信息（服务端真实类型 = CustomRPC，与请求类型一致，写门禁按服务端类型触发）
 			evaluatorDO := &entity.Evaluator{
-				ID:      evaluatorID,
-				SpaceID: tt.spaceID,
-				Name:    "测试评估器",
+				ID:            evaluatorID,
+				SpaceID:       tt.spaceID,
+				Name:          "测试评估器",
+				EvaluatorType: entity.EvaluatorTypeCustomRPC,
 			}
 
 			mockEvaluatorService.EXPECT().
@@ -5846,6 +5847,109 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorDraft_Agent(t *testing.T) {
 				assert.NotNil(t, resp)
 				assert.NotNil(t, resp.Evaluator)
 			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_UpdateEvaluatorDraft_TypeConfusion 覆盖类型混淆修复：
+// 写门禁与落库均按服务端真实类型；请求声明类型与服务端不一致时被类型一致性校验拦截；
+// 请求未设类型(0)时门禁仍按服务端真实类型触发（不能被声明为其他类型绕过）。
+func TestEvaluatorHandlerImpl_UpdateEvaluatorDraft_TypeConfusion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		configer:         mockConfiger,
+		userInfoService:  mockUserInfoService,
+	}
+
+	ctx := context.Background()
+	workspaceID := int64(123456)
+	evaluatorID := int64(789)
+
+	tests := []struct {
+		name        string
+		reqType     evaluatordto.EvaluatorType
+		serverType  entity.EvaluatorType
+		mockSetup   func()
+		wantErrCode int32
+	}{
+		{
+			// 攻击：声明 Prompt 想绕过 CustomRPC 门禁，但服务端真实为 CustomRPC。
+			// 类型一致性校验(①)在门禁前拦截，返回 CommonInvalidParamCode，不触达 configer/更新。
+			name:       "declared_prompt_but_server_customrpc_rejected",
+			reqType:    evaluatordto.EvaluatorType_Prompt,
+			serverType: entity.EvaluatorTypeCustomRPC,
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			// 未设类型(0)：跳过一致性校验(①)，写门禁(②)按服务端真实 CustomRPC 触发，空间不在 allowlist → 拒绝。
+			name:       "unset_type_server_customrpc_gate_denies",
+			reqType:    0,
+			serverType: entity.EvaluatorTypeCustomRPC,
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).Return([]string{})
+				mockConfiger.EXPECT().
+					CheckCustomRPCEvaluatorWritable(gomock.Any(), strconv.FormatInt(workspaceID, 10), []string{}).
+					Return(false, nil)
+			},
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			// 未设类型(0)：写门禁(②)按服务端真实 Agent 触发，Agent 恒拒 → 拒绝。
+			name:       "unset_type_server_agent_gate_denies",
+			reqType:    0,
+			serverType: entity.EvaluatorTypeAgent,
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().CheckAgentEvaluatorWritable(gomock.Any()).Return(false, nil)
+			},
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			evaluatorDO := &entity.Evaluator{
+				ID:            evaluatorID,
+				SpaceID:       workspaceID,
+				Name:          "测试评估器",
+				EvaluatorType: tt.serverType,
+			}
+			mockEvaluatorService.EXPECT().
+				GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+				Return(evaluatorDO, nil)
+			tt.mockSetup()
+
+			request := &evaluatorservice.UpdateEvaluatorDraftRequest{
+				WorkspaceID:   workspaceID,
+				EvaluatorID:   evaluatorID,
+				EvaluatorType: tt.reqType,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+						ServiceName:    gptr.Of("test.psm.service"),
+						AccessProtocol: evaluatordto.EvaluatorAccessProtocolRPC,
+					},
+				},
+			}
+
+			resp, err := app.UpdateEvaluatorDraft(ctx, request)
+			assert.Error(t, err)
+			if statusErr, ok := errorx.FromStatusError(err); ok {
+				assert.Equal(t, tt.wantErrCode, statusErr.Code())
+			}
+			assert.Nil(t, resp)
 		})
 	}
 }
@@ -7135,8 +7239,8 @@ func TestEvaluatorHandlerImpl_DeleteEvaluator_Comprehensive(t *testing.T) {
 				EvaluatorID: &evaluatorID,
 			},
 			mockSetup: func() {
-				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
-					Return([]*entity.Evaluator{evaluatorDO}, nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(evaluatorDO, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvaluatorService.EXPECT().DeleteEvaluator(gomock.Any(), []int64{evaluatorID}, gomock.Any()).Return(nil)
 			},
@@ -7149,7 +7253,7 @@ func TestEvaluatorHandlerImpl_DeleteEvaluator_Comprehensive(t *testing.T) {
 				EvaluatorID: &evaluatorID,
 			},
 			mockSetup: func() {
-				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
 					Return(nil, errors.New("db error"))
 			},
 			wantErr: true,
@@ -7161,8 +7265,8 @@ func TestEvaluatorHandlerImpl_DeleteEvaluator_Comprehensive(t *testing.T) {
 				EvaluatorID: &evaluatorID,
 			},
 			mockSetup: func() {
-				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
-					Return([]*entity.Evaluator{evaluatorDO}, nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(evaluatorDO, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("auth failed"))
 			},
 			wantErr: true,
@@ -7174,8 +7278,8 @@ func TestEvaluatorHandlerImpl_DeleteEvaluator_Comprehensive(t *testing.T) {
 				EvaluatorID: &evaluatorID,
 			},
 			mockSetup: func() {
-				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
-					Return([]*entity.Evaluator{evaluatorDO}, nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(evaluatorDO, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvaluatorService.EXPECT().DeleteEvaluator(gomock.Any(), []int64{evaluatorID}, gomock.Any()).
 					Return(errors.New("delete error"))
@@ -7183,17 +7287,31 @@ func TestEvaluatorHandlerImpl_DeleteEvaluator_Comprehensive(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "evaluator_not_found_skip_delete",
+			// 修复后：查不到（GetEvaluator 返回 nil）必须返回 NotExist 并拒绝删除，
+			// 不再跳过鉴权直接删（不设 Authorization / DeleteEvaluator 期望，gomock 严格模式会拦住误调用）。
+			name: "evaluator_not_found_reject",
 			req: &evaluatorservice.DeleteEvaluatorRequest{
 				WorkspaceID: workspaceID,
 				EvaluatorID: &evaluatorID,
 			},
 			mockSetup: func() {
-				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
-					Return([]*entity.Evaluator{nil}, nil)
-				mockEvaluatorService.EXPECT().DeleteEvaluator(gomock.Any(), []int64{evaluatorID}, gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
 			},
-			wantErr: false,
+			wantErr: true,
+		},
+		{
+			// 跨空间 id：GetEvaluator 因 SpaceID 不匹配返回 nil，同样拒绝、不删（不越权删他人资源）。
+			name: "cross_space_rejected",
+			req: &evaluatorservice.DeleteEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+			},
+			wantErr: true,
 		},
 	}
 

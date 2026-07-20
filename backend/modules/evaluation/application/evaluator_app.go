@@ -17,7 +17,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/bytedance/gg/gptr"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -510,13 +509,21 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 	if err != nil {
 		return nil, err
 	}
-	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
+	// 落库按服务端真实类型进行（见下方 ConvertEvaluatorDTO2DO），故写门禁也必须基于服务端真实类型，
+	// 而非客户端传入的 request.GetEvaluatorType()，否则可声明 Prompt 绕过 CustomRPC/Agent 写门禁，
+	// 却仍按真实类型把请求体内容写入（类型混淆）。
+	serverEvaluatorType := evaluatordto.EvaluatorType(evaluatorDO.EvaluatorType)
+	// 类型一致性校验：请求显式声明了类型（非未设 0）却与服务端对象不一致时，直接拒绝。
+	if request.GetEvaluatorType() != 0 && request.GetEvaluatorType() != serverEvaluatorType {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator type mismatch"))
+	}
+	if serverEvaluatorType == evaluatordto.EvaluatorType_CustomRPC {
 		err = e.authCustomRPCEvaluatorContentWritable(ctx, evaluatorDO.SpaceID)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_Agent {
+	if serverEvaluatorType == evaluatordto.EvaluatorType_Agent {
 		err = e.authAgentEvaluatorContentWritable(ctx)
 		if err != nil {
 			return nil, err
@@ -541,32 +548,21 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 
 // DeleteEvaluator 删除 evaluator_version
 func (e *EvaluatorHandlerImpl) DeleteEvaluator(ctx context.Context, request *evaluatorservice.DeleteEvaluatorRequest) (resp *evaluatorservice.DeleteEvaluatorResponse, err error) {
-	// 鉴权
-	evaluatorDOS, err := e.evaluatorService.BatchGetEvaluator(ctx, request.GetWorkspaceID(), []int64{request.GetEvaluatorID()}, false)
+	// 鉴权：用带空间校验的 GetEvaluator（跨空间 id 返回 nil），对齐 UpdateEvaluator/UpdateEvaluatorDraft。
+	// 不再用无空间过滤的 BatchGetEvaluator + errgroup：原实现在结果为空时会跳过鉴权直接删除。
+	evaluatorDO, err := e.evaluatorService.GetEvaluator(ctx, request.GetWorkspaceID(), request.GetEvaluatorID(), false)
 	if err != nil {
 		return nil, err
 	}
-	g, gCtx := errgroup.WithContext(ctx)
-	for _, evaluatorDO := range evaluatorDOS {
-		if evaluatorDO == nil {
-			continue
-		}
-		curEvaluator := evaluatorDO
-		g.Go(func() error {
-			defer func() {
-				if r := recover(); r != nil {
-					logs.CtxError(ctx, "goroutine panic: %v", r)
-				}
-			}()
-			return e.auth.Authorization(gCtx, &rpc.AuthorizationParam{
-				ObjectID:      strconv.FormatInt(curEvaluator.ID, 10),
-				SpaceID:       curEvaluator.SpaceID,
-				ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-			})
-		})
-
+	if evaluatorDO == nil {
+		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
-	if err = g.Wait(); err != nil {
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
+		SpaceID:       evaluatorDO.SpaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+	})
+	if err != nil {
 		return nil, err
 	}
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
