@@ -707,14 +707,15 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 }
 
 func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, request *eval_target.AsyncDebugEvalTargetRequest) (r *eval_target.AsyncDebugEvalTargetResponse, err error) {
-	// err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-	//	ObjectID:      strconv.FormatInt(request.GetWorkspaceID(), 10),
-	//	SpaceID:       request.GetWorkspaceID(),
-	//	ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	// })
-	// if err != nil {
-	//	return nil, err
-	// }
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.GetWorkspaceID(), 10),
+		SpaceID:       request.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	startTime := time.Now()
 	userID := session.UserIDInCtxOrEmpty(ctx)

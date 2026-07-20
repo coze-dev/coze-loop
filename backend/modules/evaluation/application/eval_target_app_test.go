@@ -1953,8 +1953,10 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 
 	app := &EvalTargetApplicationImpl{
+		auth:              mockAuth,
 		evalTargetService: mockEvalTargetService,
 		evalAsyncRepo:     mockEvalAsyncRepo,
 	}
@@ -1998,9 +2000,28 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 				CustomRPCServer: customRPC,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(workspaceID, 10),
+					SpaceID:       workspaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionDebugEvalTarget), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
 				mockEvalTargetService.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).Return(record, "callee", nil)
 				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(record.ID, 10), gomock.Any()).Return(nil)
 			},
+		},
+		{
+			name: "permission denied",
+			req: &evaltargetapi.AsyncDebugEvalTargetRequest{
+				WorkspaceID:     &workspaceID,
+				EvalTargetType:  &targetType,
+				Param:           gptr.Of(string(paramBytes)),
+				CustomRPCServer: customRPC,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
 		},
 		{
 			name: "invalid json",
@@ -2009,7 +2030,9 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 				EvalTargetType: &targetType,
 				Param:          gptr.Of("{"),
 			},
-			mockSetup:   func() {},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
 			wantErr:     true,
 			wantErrCode: errno.CommonInvalidParamCode,
 		},
@@ -2023,6 +2046,7 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 				CustomRPCServer:    customRPC,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvalTargetService.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).
 					Return(nil, "", errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
@@ -2039,6 +2063,7 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 				CustomRPCServer:    customRPC,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvalTargetService.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).Return(record, "callee", nil)
 				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(record.ID, 10), gomock.Any()).
 					Return(errorx.NewByCode(errno.CommonInternalErrorCode))
@@ -2053,8 +2078,10 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType(0)),
 				Param:          gptr.Of(string(paramBytes)),
 			},
-			mockSetup: func() {},
-			wantErr:   true,
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
 		},
 	}
 
