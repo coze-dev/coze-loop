@@ -18566,9 +18566,11 @@ type ReportEvalTargetInvokeResultRequest struct {
 	// set output if status=SUCCESS
 	Usage *spi.InvokeEvalTargetUsage `thrift:"usage,11,optional" frugal:"11,optional,spi.InvokeEvalTargetUsage" form:"usage" json:"usage,omitempty" query:"usage"`
 	// set error_message if status=FAILED
-	ErrorMessage *string      `thrift:"error_message,20,optional" frugal:"20,optional,string" form:"error_message" json:"error_message,omitempty" query:"error_message"`
-	Extra        *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base         *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ErrorMessage *string `thrift:"error_message,20,optional" frugal:"20,optional,string" form:"error_message" json:"error_message,omitempty" query:"error_message"`
+	// set error_code if status=FAILED，用于错误分类看板（0/未设置回退到平台默认错误码）
+	ErrorCode *int32       `thrift:"error_code,21,optional" frugal:"21,optional,i32" form:"error_code" json:"error_code,omitempty" query:"error_code"`
+	Extra     *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base      *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewReportEvalTargetInvokeResultRequest() *ReportEvalTargetInvokeResultRequest {
@@ -18662,6 +18664,18 @@ func (p *ReportEvalTargetInvokeResultRequest) GetErrorMessage() (v string) {
 	return *p.ErrorMessage
 }
 
+var ReportEvalTargetInvokeResultRequest_ErrorCode_DEFAULT int32
+
+func (p *ReportEvalTargetInvokeResultRequest) GetErrorCode() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetErrorCode() {
+		return ReportEvalTargetInvokeResultRequest_ErrorCode_DEFAULT
+	}
+	return *p.ErrorCode
+}
+
 var ReportEvalTargetInvokeResultRequest_Extra_DEFAULT *extra.Extra
 
 func (p *ReportEvalTargetInvokeResultRequest) GetExtra() (v *extra.Extra) {
@@ -18706,6 +18720,9 @@ func (p *ReportEvalTargetInvokeResultRequest) SetUsage(val *spi.InvokeEvalTarget
 func (p *ReportEvalTargetInvokeResultRequest) SetErrorMessage(val *string) {
 	p.ErrorMessage = val
 }
+func (p *ReportEvalTargetInvokeResultRequest) SetErrorCode(val *int32) {
+	p.ErrorCode = val
+}
 func (p *ReportEvalTargetInvokeResultRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -18721,6 +18738,7 @@ var fieldIDToName_ReportEvalTargetInvokeResultRequest = map[int16]string{
 	10:  "output",
 	11:  "usage",
 	20:  "error_message",
+	21:  "error_code",
 	254: "extra",
 	255: "Base",
 }
@@ -18751,6 +18769,10 @@ func (p *ReportEvalTargetInvokeResultRequest) IsSetUsage() bool {
 
 func (p *ReportEvalTargetInvokeResultRequest) IsSetErrorMessage() bool {
 	return p.ErrorMessage != nil
+}
+
+func (p *ReportEvalTargetInvokeResultRequest) IsSetErrorCode() bool {
+	return p.ErrorCode != nil
 }
 
 func (p *ReportEvalTargetInvokeResultRequest) IsSetExtra() bool {
@@ -18830,6 +18852,14 @@ func (p *ReportEvalTargetInvokeResultRequest) Read(iprot thrift.TProtocol) (err 
 		case 20:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField21(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18952,6 +18982,17 @@ func (p *ReportEvalTargetInvokeResultRequest) ReadField20(iprot thrift.TProtocol
 	p.ErrorMessage = _field
 	return nil
 }
+func (p *ReportEvalTargetInvokeResultRequest) ReadField21(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ErrorCode = _field
+	return nil
+}
 func (p *ReportEvalTargetInvokeResultRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -19001,6 +19042,10 @@ func (p *ReportEvalTargetInvokeResultRequest) Write(oprot thrift.TProtocol) (err
 		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -19155,6 +19200,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
 }
+func (p *ReportEvalTargetInvokeResultRequest) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErrorCode() {
+		if err = oprot.WriteFieldBegin("error_code", thrift.I32, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ErrorCode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
 func (p *ReportEvalTargetInvokeResultRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -19225,6 +19288,9 @@ func (p *ReportEvalTargetInvokeResultRequest) DeepEqual(ano *ReportEvalTargetInv
 		return false
 	}
 	if !p.Field20DeepEqual(ano.ErrorMessage) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.ErrorCode) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -19306,6 +19372,18 @@ func (p *ReportEvalTargetInvokeResultRequest) Field20DeepEqual(src *string) bool
 		return false
 	}
 	if strings.Compare(*p.ErrorMessage, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetInvokeResultRequest) Field21DeepEqual(src *int32) bool {
+
+	if p.ErrorCode == src {
+		return true
+	} else if p.ErrorCode == nil || src == nil {
+		return false
+	}
+	if *p.ErrorCode != *src {
 		return false
 	}
 	return true

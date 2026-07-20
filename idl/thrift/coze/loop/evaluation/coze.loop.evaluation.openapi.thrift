@@ -390,6 +390,8 @@ struct ReportEvalTargetInvokeResultRequest {
     11: optional coze.loop.evaluation.spi.InvokeEvalTargetUsage usage
     // set error_message if status=FAILED
     20: optional string error_message
+    // set error_code if status=FAILED，用于错误分类看板（0/未设置回退到平台默认错误码）
+    21: optional i32 error_code
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base

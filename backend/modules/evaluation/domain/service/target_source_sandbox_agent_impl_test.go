@@ -22,7 +22,7 @@ func newSandboxAgentSvc(t *testing.T) (*SandboxAgentSourceEvalTargetServiceImpl,
 	ctrl := gomock.NewController(t)
 	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockSched := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
-	svc := NewSandboxAgentSourceEvalTargetServiceImpl(mockIdgen, mockSched).(*SandboxAgentSourceEvalTargetServiceImpl)
+	svc := NewSandboxAgentSourceEvalTargetServiceImpl(mockIdgen, mockSched, nil).(*SandboxAgentSourceEvalTargetServiceImpl)
 	return svc, mockIdgen, mockSched, ctrl
 }
 
