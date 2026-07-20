@@ -43,6 +43,7 @@ import (
 	evaluationsetmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluation_set"
 	experimentmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
 	openapimetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
+	sandboxagentmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/sandbox_agent"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	agentrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent"
 	foundationrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
@@ -69,6 +70,7 @@ var (
 		// Infrastructure Sets
 		experimentmetrics.ExperimentMetricsSet,
 		evaltargetmetrics.EvalTargetMetricsSet,
+		sandboxagentmetrics.SandboxAgentMetricsSet,
 		infrahttp.NewHTTPClient,
 		foundationrpc.FoundationRPCSet,
 		tagrpc.TagRPCSet,
@@ -98,6 +100,7 @@ var (
 		experimentrepo.ExperimentRepoSet,
 		experimentmetrics.ExperimentMetricsSet,
 		evaltargetmetrics.EvalTargetMetricsSet,
+		sandboxagentmetrics.SandboxAgentMetricsSet,
 		evalconf.NewConfiger,
 		flagSet,
 		storage.StorageSet,
@@ -119,6 +122,7 @@ var (
 		domainservice.TargetDomainServiceSet,
 		// Infrastructure Sets
 		evaltargetmetrics.EvalTargetMetricsSet,
+		sandboxagentmetrics.SandboxAgentMetricsSet,
 		foundationrpc.FoundationRPCSet,
 		experimentrepo.ExperimentRepoSet,
 		flagSet,

@@ -373,6 +373,8 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 		evalTargetUsage.TotalTokens = evalTargetUsage.InputTokens + evalTargetUsage.OutputTokens
 	}
 
+	steps := ToInvokeStepsDO(output.GetSteps())
+
 	switch req.GetStatus() {
 	case spi.InvokeEvalTargetStatus_SUCCESS:
 		return &entity.EvalTargetOutputData{
@@ -380,14 +382,21 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 			Ext:                output.Ext,
 			EvalTargetUsage:    evalTargetUsage,
 			EvalTargetRunError: nil,
+			Steps:              steps,
 		}
 
 	case spi.InvokeEvalTargetStatus_FAILED:
 		errorMessage := req.GetErrorMessage()
+		errorCode := req.GetErrorCode()
 		var evalTargetRunError *entity.EvalTargetRunError
-		if errorMessage != "" {
+		if errorMessage != "" || errorCode != 0 {
+			code := errorCode
+			if code == 0 {
+				// 未显式指定错误码时回退到平台默认错误码，兼容存量调用方。
+				code = errno.CustomEvalTargetInvokeFailCode
+			}
 			evalTargetRunError = &entity.EvalTargetRunError{
-				Code:    errno.CustomEvalTargetInvokeFailCode,
+				Code:    code,
 				Message: errorMessage,
 			}
 		}
@@ -400,9 +409,35 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 			OutputFields:       outputFields,
 			EvalTargetUsage:    evalTargetUsage,
 			EvalTargetRunError: evalTargetRunError,
+			Steps:              steps,
 		}
 
 	default:
 		return nil
 	}
+}
+
+func ToInvokeStepsDO(steps []*spi.EvalTargetStep) []*entity.EvalTargetStep {
+	if len(steps) == 0 {
+		return nil
+	}
+	result := make([]*entity.EvalTargetStep, 0, len(steps))
+	for _, s := range steps {
+		if s == nil {
+			continue
+		}
+		result = append(result, &entity.EvalTargetStep{
+			StepName:     s.GetStepName(),
+			TurnIndex:    s.GetTurnIndex(),
+			StepIndex:    s.GetStepIndex(),
+			StartTimeMS:  s.GetStartTimeMs(),
+			EndTimeMS:    s.GetEndTimeMs(),
+			DurationMS:   s.GetDurationMs(),
+			Success:      s.GetSuccess(),
+			ErrorCode:    s.GetErrorCode(),
+			ErrorMessage: s.GetErrorMessage(),
+			Ext:          s.GetExt(),
+		})
+	}
+	return result
 }

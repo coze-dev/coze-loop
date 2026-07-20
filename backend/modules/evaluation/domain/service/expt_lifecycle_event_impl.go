@@ -6,7 +6,9 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"time"
 
+	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -14,18 +16,20 @@ import (
 )
 
 type ExptLifecycleEventHandlerImpl struct {
-	exptRepo          repo.IExperimentRepo
-	notifyRPCAdapter  rpc.INotifyRPCAdapter
-	userProvider      rpc.IUserProvider
-	webhookDispatcher IWebhookDispatcher
+	exptRepo            repo.IExperimentRepo
+	notifyRPCAdapter    rpc.INotifyRPCAdapter
+	userProvider        rpc.IUserProvider
+	webhookDispatcher   IWebhookDispatcher
+	sandboxAgentMetrics mtr.SandboxAgentMetrics
 }
 
-func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider, webhookDispatcher IWebhookDispatcher) ExptLifecycleEventHandler {
+func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider, webhookDispatcher IWebhookDispatcher, sandboxAgentMetrics mtr.SandboxAgentMetrics) ExptLifecycleEventHandler {
 	return &ExptLifecycleEventHandlerImpl{
-		exptRepo:          exptRepo,
-		notifyRPCAdapter:  notifyRPCAdapter,
-		userProvider:      userProvider,
-		webhookDispatcher: webhookDispatcher,
+		exptRepo:            exptRepo,
+		notifyRPCAdapter:    notifyRPCAdapter,
+		userProvider:        userProvider,
+		webhookDispatcher:   webhookDispatcher,
+		sandboxAgentMetrics: sandboxAgentMetrics,
 	}
 }
 
@@ -36,6 +40,9 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 		return err
 	}
 
+	// Sandbox agent 评测实验的稳定性打点（experiment_started / experiment_finished / experiment_duration）
+	h.emitSandboxAgentExperimentMetric(ctx, event, expt)
+
 	// Feishu notification
 	h.handleFeishuNotification(ctx, event, expt)
 
@@ -44,6 +51,69 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 
 	return nil
 }
+
+// emitSandboxAgentExperimentMetric 仅对沙箱 agent 类型的实验打生命周期指标。
+// 说明:
+//   - experiment_started: ToStatus == Processing 时上报
+//   - experiment_finished + experiment_duration: 终态 (Success/Failed/Terminated/SystemTerminated) 时上报
+//   - duration 使用 expt.StartAt / expt.EndAt 计算; 若字段缺失, 由实现层容忍为 0
+func (h *ExptLifecycleEventHandlerImpl) emitSandboxAgentExperimentMetric(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
+	if h == nil || h.sandboxAgentMetrics == nil || expt == nil {
+		return
+	}
+	if !isSandboxAgentExperiment(expt) {
+		return
+	}
+	tags := mtr.SandboxAgentExperimentTags{
+		ExperimentID:   expt.ID,
+		DatasetID:      expt.EvalSetID,
+		DatasetVersion: expt.EvalSetVersionID,
+	}
+	switch {
+	case event.ToStatus == entity.ExptStatus_Processing:
+		h.sandboxAgentMetrics.EmitExperimentStarted(tags)
+	case entity.IsExptFinished(event.ToStatus):
+		var startAt, endAt time.Time
+		if expt.StartAt != nil {
+			startAt = *expt.StartAt
+		}
+		if expt.EndAt != nil {
+			endAt = *expt.EndAt
+		}
+		if endAt.IsZero() {
+			endAt = time.Now()
+		}
+		h.sandboxAgentMetrics.EmitExperimentFinished(tags, statusToErr(event.ToStatus), startAt, endAt)
+	}
+}
+
+// isSandboxAgentExperiment 判断实验是否属于沙箱 agent 类型。
+// 优先看 Target.EvalTargetVersion.EvalTargetType, 兼容部分历史记录仅落 SandboxAgent 指针的场景。
+func isSandboxAgentExperiment(expt *entity.Experiment) bool {
+	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
+		return false
+	}
+	if expt.Target.EvalTargetVersion.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+		return true
+	}
+	return expt.Target.EvalTargetVersion.SandboxAgent != nil
+}
+
+// statusToErr 将终态状态映射为一个"错误标记"error, 供 metrics 侧判定 success/error_type;
+// 终态非 Success 视为 error, 但不携带具体分类 (由业务侧 invoke 级错误码承载)。
+func statusToErr(status entity.ExptStatus) error {
+	if status == entity.ExptStatus_Success {
+		return nil
+	}
+	return errExptTerminatedWithFailure
+}
+
+// errExptTerminatedWithFailure 表征实验以非成功状态终结, 仅用于 metrics 打点分类。
+var errExptTerminatedWithFailure = &exptFailureError{}
+
+type exptFailureError struct{}
+
+func (e *exptFailureError) Error() string { return "experiment terminated with non-success status" }
 
 func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
 	logs.CtxInfo(ctx, "feishu_notification: enter, expt_id: %d, to_status: %v, has_notification_conf: %v",

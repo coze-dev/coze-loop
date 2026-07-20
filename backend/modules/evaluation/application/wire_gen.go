@@ -40,6 +40,7 @@ import (
 	evaluator2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
 	metrics2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/sandbox_agent"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	mysql2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
@@ -133,7 +134,8 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(pms, pes)
 	sandboxSchedulerAdapter := agent_studio.NewSandboxSchedulerAdapter()
-	v2 := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter)
+	sandboxAgentMetrics := sandbox_agent.NewSandboxAgentMetrics(meter)
+	v2 := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter, sandboxAgentMetrics)
 	iExptRunLogDAO := mysql.NewExptRunLogDAO(db2)
 	iExptRunLogRepo := experiment.NewExptRunLogRepo(iExptRunLogDAO)
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v2, trajectoryAdapter, componentIConfiger, sandboxSchedulerAdapter, iExptRunLogRepo)
@@ -185,7 +187,7 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iExptInsightAnalysisService := service.NewInsightAnalysisService(iExptInsightAnalysisRecordRepo, exptEventPublisher, objectStorage, iAgentAdapter, iExptResultExportService, iNotifyRPCAdapter, iUserProvider, iExperimentRepo, iEvalTargetRepo)
 	noopWebhookSecretProvider := service.NewNoopWebhookSecretProvider()
 	webhookDispatcher := service.NewWebhookDispatcher(exptEventPublisher, noopWebhookSecretProvider, iExptStatsRepo)
-	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher)
+	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher, sandboxAgentMetrics)
 	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, componentIConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, serviceEvaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler, sandboxSchedulerAdapter)
 	return iExperimentApplication, nil
 }
@@ -260,7 +262,8 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(promptClient, pec)
 	sandboxSchedulerAdapter := agent_studio.NewSandboxSchedulerAdapter()
-	v2 := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter)
+	sandboxAgentMetrics := sandbox_agent.NewSandboxAgentMetrics(meter)
+	v2 := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter, sandboxAgentMetrics)
 	iTrajectoryAdapter := trajectory.NewAdapter(tracerFactory)
 	iExptRunLogDAO := mysql.NewExptRunLogDAO(db2)
 	iExptRunLogRepo := experiment.NewExptRunLogRepo(iExptRunLogDAO)
@@ -307,7 +310,8 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(client, executeClient)
 	sandboxSchedulerAdapter := agent_studio.NewSandboxSchedulerAdapter()
-	v := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter)
+	sandboxAgentMetrics := sandbox_agent.NewSandboxAgentMetrics(meter)
+	v := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter, sandboxAgentMetrics)
 	iExptRunLogDAO := mysql.NewExptRunLogDAO(db2)
 	iExptRunLogRepo := experiment.NewExptRunLogRepo(iExptRunLogDAO)
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v, trajectoryAdapter, iConfiger, sandboxSchedulerAdapter, iExptRunLogRepo)
@@ -337,7 +341,8 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(client, executeClient)
 	sandboxSchedulerAdapter := agent_studio.NewSandboxSchedulerAdapter()
-	v := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter)
+	sandboxAgentMetrics := sandbox_agent.NewSandboxAgentMetrics(meter)
+	v := service.NewSourceTargetOperators(iPromptRPCAdapter, idgen2, sandboxSchedulerAdapter, sandboxAgentMetrics)
 	iExptRunLogDAO := mysql.NewExptRunLogDAO(db2)
 	iExptRunLogRepo := experiment.NewExptRunLogRepo(iExptRunLogDAO)
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v, trajectoryAdapter, iConfiger, sandboxSchedulerAdapter, iExptRunLogRepo)
@@ -433,9 +438,9 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iExptInsightAnalysisService := service.NewInsightAnalysisService(iExptInsightAnalysisRecordRepo, exptEventPublisher, objectStorage, iAgentAdapter, iExptResultExportService, iNotifyRPCAdapter, iUserProvider, iExperimentRepo, iEvalTargetRepo)
 	noopWebhookSecretProvider := service.NewNoopWebhookSecretProvider()
 	webhookDispatcher := service.NewWebhookDispatcher(exptEventPublisher, noopWebhookSecretProvider, iExptStatsRepo)
-	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher)
+	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher, sandboxAgentMetrics)
 	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler, sandboxSchedulerAdapter)
-	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, sandboxSchedulerAdapter, iFileProvider)
+	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, sandboxAgentMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, sandboxSchedulerAdapter, iFileProvider)
 	return evalOpenAPIService, nil
 }
 
@@ -445,12 +450,12 @@ var (
 	flagSet = wire.NewSet(platestwrite.NewLatestWriteTracker)
 
 	experimentSet = wire.NewSet(
-		NewExperimentApplication, service.ExperimentDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.EvaluatorDomainServiceSet, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, agent.AgentRPCSet, notify.NotifyRPCSet, userinfo.NewUserInfoServiceImpl, NewLock,
+		NewExperimentApplication, service.ExperimentDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.EvaluatorDomainServiceSet, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, sandbox_agent.SandboxAgentMetricsSet, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, agent.AgentRPCSet, notify.NotifyRPCSet, userinfo.NewUserInfoServiceImpl, NewLock,
 		flagSet, service.NewDefaultURLProcessor, storage.StorageSet,
 	)
 
 	evaluatorSet = wire.NewSet(
-		NewEvaluatorHandlerImpl, service.EvaluatorDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.NewExptResultService, service.NewEvaluationAnalysisService, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, trajectory.TrajectoryRPCSet, userinfo.NewUserInfoServiceImpl, experiment.ExperimentRepoSet, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, conf2.NewConfiger, flagSet, storage.StorageSet,
+		NewEvaluatorHandlerImpl, service.EvaluatorDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.NewExptResultService, service.NewEvaluationAnalysisService, http.NewHTTPClient, foundation.FoundationRPCSet, tag.TagRPCSet, trajectory.TrajectoryRPCSet, userinfo.NewUserInfoServiceImpl, experiment.ExperimentRepoSet, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, sandbox_agent.SandboxAgentMetricsSet, conf2.NewConfiger, flagSet, storage.StorageSet,
 	)
 
 	evaluationSetSet = wire.NewSet(
@@ -458,7 +463,7 @@ var (
 	)
 
 	evalTargetSet = wire.NewSet(
-		NewEvalTargetHandlerImpl, service.TargetDomainServiceSet, metrics3.EvalTargetMetricsSet, foundation.FoundationRPCSet, experiment.ExperimentRepoSet, flagSet, storage.StorageSet,
+		NewEvalTargetHandlerImpl, service.TargetDomainServiceSet, metrics3.EvalTargetMetricsSet, sandbox_agent.SandboxAgentMetricsSet, foundation.FoundationRPCSet, experiment.ExperimentRepoSet, flagSet, storage.StorageSet,
 	)
 
 	evalOpenAPISet = wire.NewSet(

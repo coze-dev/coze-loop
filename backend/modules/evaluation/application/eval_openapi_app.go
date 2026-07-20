@@ -59,6 +59,7 @@ type EvalOpenAPIApplication struct {
 	evaluationSetItemService    service.EvaluationSetItemService
 	evaluationSetSchemaService  service.EvaluationSetSchemaService
 	metric                      metrics.OpenAPIEvaluationMetrics
+	sandboxAgentMetric          metrics.SandboxAgentMetrics
 	userInfoService             userinfo.UserInfoService
 	experimentApp               IExperimentApplication
 	manager                     service.IExptManager
@@ -80,6 +81,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluationSetItemService service.EvaluationSetItemService,
 	evaluationSetSchemaService service.EvaluationSetSchemaService,
 	metric metrics.OpenAPIEvaluationMetrics,
+	sandboxAgentMetric metrics.SandboxAgentMetrics,
 	userInfoService userinfo.UserInfoService,
 	experimentApp IExperimentApplication,
 	manager service.IExptManager,
@@ -102,6 +104,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		evaluationSetItemService:    evaluationSetItemService,
 		evaluationSetSchemaService:  evaluationSetSchemaService,
 		metric:                      metric,
+		sandboxAgentMetric:          sandboxAgentMetric,
 		userInfoService:             userInfoService,
 		experimentApp:               experimentApp,
 		manager:                     manager,
@@ -946,6 +949,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		return nil, err
 	}
 
+	// 回调侧打点：evaluation_target_sandbox_agent.invoke_finished / invoke_duration
+	// 用 AsyncCtx.AsyncUnixMS 与当前时间差计算端到端异步耗时。仅对沙箱 agent 目标上报的调用生效。
+	e.emitSandboxAgentInvokeFinished(req, actx)
+
 	if actx.Event != nil {
 		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*35),
 			func(event *entity.ExptItemEvalEvent) {
@@ -956,6 +963,45 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	return &openapi.ReportEvalTargetInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
+// emitSandboxAgentInvokeFinished 组装 tags 并上报 invoke_finished / invoke_duration.
+// - Callee=="sandbox_agent" 是沙箱 agent 上报回调时的稳定标识, 用来跟其他 target 上报路径区分.
+// - 错误分类根据 req.Status + req.ErrorCode 决定, 遵循 classifier 表.
+// - submitTime 来自 AsyncCtx.AsyncUnixMS (提交侧写入), 未落时长度回退为 0.
+func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(req *openapi.ReportEvalTargetInvokeResultRequest, actx *entity.EvalAsyncCtx) {
+	if e == nil || e.sandboxAgentMetric == nil || req == nil {
+		return
+	}
+	if req.GetCallee() != "sandbox_agent" {
+		return
+	}
+	tags := metrics.SandboxAgentInvokeTags{
+		InvokeID: strconv.FormatInt(req.GetInvokeID(), 10),
+	}
+	if actx != nil && actx.Event != nil {
+		tags.ExperimentID = actx.Event.ExptID
+		tags.ItemID = actx.Event.EvalSetItemID
+	}
+	var submitTime time.Time
+	if actx != nil && actx.AsyncUnixMS > 0 {
+		submitTime = time.UnixMilli(actx.AsyncUnixMS)
+	}
+	var reportErr error
+	if req.GetStatus() == spi.InvokeEvalTargetStatus_FAILED {
+		reportErr = errSandboxAgentInvokeFailed
+	}
+	e.sandboxAgentMetric.EmitInvokeFinished(tags, reportErr, req.GetErrorCode(), submitTime)
+}
+
+// errSandboxAgentInvokeFailed 一个标记 error, 让 metrics classifier 走 non-success 分支;
+// 具体分类由 errorCode 承载, 不需要真实业务 error 内容.
+var errSandboxAgentInvokeFailed = &sandboxAgentInvokeFailure{}
+
+type sandboxAgentInvokeFailure struct{}
+
+func (e *sandboxAgentInvokeFailure) Error() string {
+	return "sandbox agent invoke reported failed"
 }
 
 func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {

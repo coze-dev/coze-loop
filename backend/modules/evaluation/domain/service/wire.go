@@ -122,9 +122,9 @@ func NewEvaluatorSourceServices(
 }
 
 // NewSourceTargetOperators 创建源目标操作器映射
-func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter, idgen idgen.IIDGenerator, sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
+func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter, idgen idgen.IIDGenerator, sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter, sandboxAgentMetrics mtr.SandboxAgentMetrics) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
 	return map[entity.EvalTargetType]ISourceEvalTargetOperateService{
 		entity.EvalTargetTypeLoopPrompt:   NewPromptSourceEvalTargetServiceImpl(adapter),
-		entity.EvalTargetTypeSandboxAgent: NewSandboxAgentSourceEvalTargetServiceImpl(idgen, sandboxSchedulerAdapter),
+		entity.EvalTargetTypeSandboxAgent: NewSandboxAgentSourceEvalTargetServiceImpl(idgen, sandboxSchedulerAdapter, sandboxAgentMetrics),
 	}
 }
