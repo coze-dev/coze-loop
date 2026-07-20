@@ -1,0 +1,23 @@
+backend/modules/evaluation/application/evaluator_app.go
+  s_490822e50ae2e7::t_0503f271e4219d 512-520,526,551-553,557-558,560-565
+backend/modules/evaluation/application/evaluator_app_test.go
+  s_490822e50ae2e7::t_ecc4c5f160dad9 3093-3094,5685,5687-5690,5854-5956,7242-7243,7256,7268-7269,7281-7282,7290-7292,7298-7299,7301-7314
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c3f3cb0754e6cd9b88bf18b3c425dde66bbb6ccb",
+  "prompts": {},
+  "sessions": {
+    "s_490822e50ae2e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_490822e50ae2e7",
+        "model": "unknown"
+      },
+      "human_author": "liuzihan.23 <liuzihan.23@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
