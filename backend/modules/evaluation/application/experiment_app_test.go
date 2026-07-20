@@ -3408,15 +3408,24 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			BaseInfo: existing.BaseInfo,
 		}
 
-		// 先 Get 做权限用
+		// 先 Get 拿 owner + 存在性
 		mockTemplateManager.EXPECT().
 			Get(gomock.Any(), templateID, workspaceID, gomock.Any()).
 			Return(existing, nil)
 
-		// 使用 Authorization 做空间级模板读权限校验
+		// 对象级 edit 权限校验
 		mockAuth.EXPECT().
-			Authorization(gomock.Any(), gomock.Any()).
-			Return(nil)
+			AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, param *rpc.AuthorizationWithoutSPIParam) error {
+				assert.Equal(t, strconv.FormatInt(templateID, 10), param.ObjectID)
+				assert.Equal(t, workspaceID, param.SpaceID)
+				assert.Equal(t, workspaceID, param.ResourceSpaceID)
+				assert.Equal(t, "u1", *param.OwnerID)
+				assert.Equal(t, 1, len(param.ActionObjects))
+				assert.Equal(t, "edit", *param.ActionObjects[0].Action)
+				assert.Equal(t, rpc.AuthEntityType_EvaluationExptTemplate, *param.ActionObjects[0].EntityType)
+				return nil
+			})
 
 		mockTemplateManager.EXPECT().
 			Update(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -3448,6 +3457,64 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 		resp, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.NoError(t, err)
 		assert.Equal(t, "new_name", resp.GetExperimentTemplate().GetMeta().GetName())
+	})
+
+	t.Run("no edit permission rejected", func(t *testing.T) {
+		req := &exptpb.UpdateExperimentTemplateRequest{
+			WorkspaceID: workspaceID,
+			TemplateID:  templateID,
+			Meta: &expt.ExptTemplateMeta{
+				Name: gptr.Of("new_name"),
+			},
+		}
+
+		existing := &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				ID:          templateID,
+				WorkspaceID: workspaceID,
+				Name:        "old_name",
+			},
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{UserID: gptr.Of("u1")},
+			},
+		}
+
+		// Get 正常返回他人模板
+		mockTemplateManager.EXPECT().
+			Get(gomock.Any(), templateID, workspaceID, gomock.Any()).
+			Return(existing, nil)
+
+		// 对象级 edit 校验失败：仅有 list/read 权限的用户被拒绝
+		mockAuth.EXPECT().
+			AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+			Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+
+		// Update 绝不应被调用（gomock 未声明即禁止调用）
+
+		app := NewExperimentApplication(
+			nil,                 // aggResultSvc
+			nil,                 // resultSvc
+			nil,                 // manager
+			nil,                 // scheduler
+			nil,                 // recordEval
+			nil,                 // idgen
+			nil,                 // configer
+			mockAuth,            // auth
+			mockUserInfo,        // userInfoService
+			nil,                 // evalTargetService
+			nil,                 // evaluationSetItemService
+			nil,                 // annotateService
+			nil,                 // tagRPCAdapter
+			nil,                 // exptResultExportService
+			nil,                 // exptInsightAnalysisService
+			nil,                 // evaluatorService
+			mockTemplateManager, // templateManager
+			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
+		)
+		_, err := app.UpdateExperimentTemplate(context.Background(), req)
+		assert.Error(t, err)
 	})
 }
 
