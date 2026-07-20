@@ -260,22 +260,24 @@ func (e *experimentApplication) UpdateExperimentTemplate(ctx context.Context, re
 
 	logs.CtxInfo(ctx, "UpdateExperimentTemplate template_id: %d, workspace_id: %d", templateID, workspaceID)
 
-	// 权限校验，与 ListExperimentTemplates 一致：空间级 listLoopExptTemplate
-	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(workspaceID, 10),
-		SpaceID:       workspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	}); err != nil {
-		return nil, err
-	}
-
-	// 获取现有模板用于业务逻辑
+	// 先获取现有模板：拿 owner + 存在性（Get 已按 workspaceID 过滤，跨空间返回 not-found）
 	got, err := e.templateManager.Get(ctx, templateID, workspaceID, session)
 	if err != nil {
 		return nil, err
 	}
 	if got == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("template not found"))
+	}
+
+	// 对象级 edit 权限校验：仅模板 owner / 具备 edit 权限者可修改，防止同空间低权限用户越权改他人模板
+	if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(templateID, 10),
+		SpaceID:         workspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExptTemplate)}},
+		OwnerID:         gptr.Of(got.GetCreatedBy()),
+		ResourceSpaceID: workspaceID,
+	}); err != nil {
+		return nil, err
 	}
 
 	// 转换请求参数
