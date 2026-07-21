@@ -64,26 +64,8 @@ enum InvokeEvalTargetStatus {
 struct InvokeEvalTargetOutput {
     1: optional Content actual_output
     2: optional map<string, Content> ext_output // 额外输出，用户可自定义评测对象的输出字段和结构
-    3: optional list<EvalTargetStep> steps      // 评测对象执行过程中的 step 明细，供离线看板/多轮场景使用
 
     20: optional map<string, string> ext     // 扩展字段，用户如果想返回一些额外信息可以塞在这个字段
-}
-
-// EvalTargetStep 描述评测对象一次执行内部的 step 明细
-// - 单轮场景下 turn_index 通常为 0
-// - 多轮场景下按 (turn_index, step_index) 排序还原执行时间线
-struct EvalTargetStep {
-    1: optional string step_name
-    2: optional i32 turn_index
-    3: optional i32 step_index
-    4: optional i64 start_time_ms
-    5: optional i64 end_time_ms
-    6: optional i64 duration_ms
-    7: optional bool success
-    8: optional i32 error_code
-    9: optional string error_message
-
-    20: optional map<string, string> ext
 }
 
 struct Content {

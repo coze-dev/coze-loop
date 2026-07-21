@@ -103,24 +103,6 @@ type EvalTargetOutputData struct {
 	EvalTargetRunError *EvalTargetRunError
 	// 运行耗时
 	TimeConsumingMS *int64
-	// Steps 评测对象内部执行的 step 明细，供离线数仓抽取和多轮扩展使用。
-	// 数据由评测对象（如沙箱 agent）通过 ReportEvalTargetInvokeResult 回写时携带。
-	Steps []*EvalTargetStep
-}
-
-// EvalTargetStep 描述评测对象一次执行内部的 step 明细。
-// 单轮场景下 TurnIndex 通常为 0；多轮场景按 (TurnIndex, StepIndex) 排序还原时间线。
-type EvalTargetStep struct {
-	StepName     string
-	TurnIndex    int32
-	StepIndex    int32
-	StartTimeMS  int64
-	EndTimeMS    int64
-	DurationMS   int64
-	Success      bool
-	ErrorCode    int32
-	ErrorMessage string
-	Ext          map[string]string
 }
 
 type EvalTargetUsage struct {

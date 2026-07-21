@@ -1004,6 +1004,59 @@ func (e *sandboxAgentInvokeFailure) Error() string {
 	return "sandbox agent invoke reported failed"
 }
 
+// errSandboxAgentStepFailed 与 invoke 版本同源, 用于 step_finished 事件错误分类.
+var errSandboxAgentStepFailed = &sandboxAgentStepFailure{}
+
+type sandboxAgentStepFailure struct{}
+
+func (e *sandboxAgentStepFailure) Error() string {
+	return "sandbox agent step reported failed"
+}
+
+// ReportEvalTargetStepMetric 接收沙箱内部编排流程的 step 打点事件, 落到
+// evaluation_target_sandbox_agent.step_started / step_finished / step_duration.
+//
+// 关键设计:
+//   - 全部 tag 由沙箱侧直接透传, 服务端不做 asyncCtx 反查 (Redis 少一次调用);
+//   - 单接口 + event_type 区分 STARTED / FINISHED, FINISHED 携带 duration_ms + success + error_code;
+//   - metrics 打点为 best-effort, 参数缺失/metric 组件缺失时静默丢弃, 不返回 error 影响沙箱执行。
+func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context, req *openapi.ReportEvalTargetStepMetricRequest) (r *openapi.ReportEvalTargetStepMetricResponse, err error) {
+	if req == nil {
+		return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
+	}
+	logs.CtxInfo(ctx, "ReportEvalTargetStepMetric receive req: %v", json.Jsonify(req))
+
+	if e.sandboxAgentMetric == nil {
+		// 未注入 metrics 组件时直接返回, 不影响沙箱侧调用。
+		return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
+	}
+
+	tags := metrics.SandboxAgentStepTags{
+		ExperimentID:   req.GetExperimentID(),
+		ItemID:         req.GetItemID(),
+		InvokeID:       strconv.FormatInt(req.GetInvokeID(), 10),
+		DatasetID:      req.GetDatasetID(),
+		DatasetVersion: req.GetDatasetVersionID(),
+		StepName:       req.GetStepName(),
+	}
+
+	switch req.GetEventType() {
+	case openapi.EvalTargetStepEventType_STARTED:
+		e.sandboxAgentMetric.EmitStepStarted(tags)
+	case openapi.EvalTargetStepEventType_FINISHED:
+		var stepErr error
+		if !req.GetSuccess() {
+			stepErr = errSandboxAgentStepFailed
+		}
+		e.sandboxAgentMetric.EmitStepFinished(tags, stepErr, req.GetErrorCode(), req.GetDurationMs())
+	default:
+		logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: unknown event_type=%v, invoke_id=%d, step_name=%s",
+			req.GetEventType(), req.GetInvokeID(), req.GetStepName())
+	}
+
+	return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
 func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
