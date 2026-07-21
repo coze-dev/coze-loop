@@ -41,6 +41,9 @@ const (
 	tagDatasetID       = "dataset_id"
 	tagDatasetVersion  = "dataset_version"
 	tagStepName        = "step_name"
+	tagTargetID        = "target_id"
+	tagItemKey         = "item_key"
+	tagDatasetKey      = "dataset_key"
 	tagSuccess         = "success"
 	tagErrorType       = "error_type"
 
@@ -56,6 +59,9 @@ func metricTagNames() []string {
 		tagDatasetID,
 		tagDatasetVersion,
 		tagStepName,
+		tagTargetID,
+		tagItemKey,
+		tagDatasetKey,
 		tagSuccess,
 		tagErrorType,
 	}
@@ -160,6 +166,9 @@ func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, suc
 		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
 		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
 		{Name: tagStepName, Value: tagValuePlaceholder},
+		{Name: tagTargetID, Value: tagValuePlaceholder},
+		{Name: tagItemKey, Value: tagValuePlaceholder},
+		{Name: tagDatasetKey, Value: tagValuePlaceholder},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
 	}
@@ -173,6 +182,9 @@ func (m *metricsImpl) buildExperimentTags(t eval_metrics.SandboxAgentExperimentT
 		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
 		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
 		{Name: tagStepName, Value: tagValuePlaceholder},
+		{Name: tagTargetID, Value: tagValuePlaceholder},
+		{Name: tagItemKey, Value: tagValuePlaceholder},
+		{Name: tagDatasetKey, Value: tagValuePlaceholder},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
 	}
@@ -186,6 +198,9 @@ func (m *metricsImpl) buildStepTags(t eval_metrics.SandboxAgentStepTags, success
 		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
 		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
 		{Name: tagStepName, Value: stringTag(t.StepName)},
+		{Name: tagTargetID, Value: int64Tag(t.TargetID)},
+		{Name: tagItemKey, Value: stringTag(t.ItemKey)},
+		{Name: tagDatasetKey, Value: stringTag(t.DatasetKey)},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
 	}
