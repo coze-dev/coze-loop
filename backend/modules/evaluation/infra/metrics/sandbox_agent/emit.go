@@ -15,6 +15,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	eval_metrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 const (
@@ -76,14 +77,17 @@ var (
 func NewSandboxAgentMetrics(meter metrics.Meter) eval_metrics.SandboxAgentMetrics {
 	once.Do(func() {
 		if meter == nil {
+			logs.Warn("[sandbox_agent_metrics] init: meter is nil, fallback to no-op")
 			impl = &noopMetrics{}
 			return
 		}
 		m, err := meter.NewMetric(metricName, []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, metricTagNames())
 		if err != nil || m == nil {
+			logs.Warn("[sandbox_agent_metrics] init: NewMetric failed, fallback to no-op, err=%v, metric=%v", err, m)
 			impl = &noopMetrics{}
 			return
 		}
+		logs.Info("[sandbox_agent_metrics] init: ok, metric=%s", metricName)
 		impl = &metricsImpl{metric: m}
 	})
 	return impl
