@@ -1,0 +1,73 @@
+backend/kitex_gen/coze/loop/evaluation/domain/eval_target/eval_target.go
+  s_d57b70e17922d9::t_68786b6e37180f 10707-10709,10802-10813,10835-10837,10847,10878-10881,10956-10963,11082-11092,11128-11131,11284-11301,11338-11340,11429-11440
+backend/kitex_gen/coze/loop/evaluation/domain/eval_target/k-eval_target.go
+  s_d57b70e17922d9::t_dec0ed63af5112 7529-7542,7670-7683,7691,7714,7790-7798,7866-7874,7941-7945
+backend/kitex_gen/coze/loop/evaluation/domain/expt/expt.go
+  s_d57b70e17922d9::t_c714d6ca5cff80 1192-1194,1372-1383,1833-1835,1953,2031-2034,2273-2280,2701-2711,3208-3211,3550-3567,4302-4304,4533-4544
+backend/kitex_gen/coze/loop/evaluation/domain/expt/k-expt.go
+  s_d57b70e17922d9::t_74961aeb58b5d0 203-216,867-880,1453,1513,1644-1652,2108-2116,2528-2532
+backend/kitex_gen/coze/loop/evaluation/expt/coze.loop.evaluation.expt.go
+  s_d57b70e17922d9::t_d98eff1274929f 68-69,3200,3215-3216,8353-8355,8377-8388,8403-8405,8412,8420-8423,8454-8461,8522-8544,8564-8567,8616-8641,8676-8678,8698-8710,17573-17576,17773-17796,17913-17918,17954-17955,18024-18031,18194-18209,18453-18474,18590-18597,18910-18945,19114-19119,19321-19344
+backend/kitex_gen/coze/loop/evaluation/expt/k-coze.loop.evaluation.expt.go
+  s_d57b70e17922d9::t_15827b509a836b 6214-6227,6284-6308,6329,6340,6363-6378,6397-6409,6432-6446,13099-13126,13441-13468,13557-13558,13594-13595,13742-13759,13949-13966,14117-14126
+backend/kitex_gen/coze/loop/evaluation/openapi/coze.loop.evaluation.openapi.go
+  s_d57b70e17922d9::t_32fab68563ba17 24897-24898
+backend/modules/evaluation/application/convertor/experiment/expt.go
+  s_d57b70e17922d9::t_d03695594a6cd9 388-390
+backend/modules/evaluation/application/convertor/target/eval_target.go
+  s_d57b70e17922d9::t_691bb98cbc51ca 609-616,625-632
+backend/modules/evaluation/application/eval_openapi_app.go
+  s_d57b70e17922d9::t_5f8d8ea837d635 1099
+backend/modules/evaluation/application/eval_openapi_app_test.go
+  s_d57b70e17922d9::t_6e96a785dc9670 2056,2059,2172-2173
+backend/modules/evaluation/application/standard_eval_output.go
+  s_d57b70e17922d9::t_922f51c5a71dc8 223-225,270-271,378-380,410-412
+backend/modules/evaluation/domain/component/item_complete_publisher.go
+  s_d57b70e17922d9::t_ebb5cc706e60c8 25-27
+backend/modules/evaluation/domain/entity/expt.go
+  s_d57b70e17922d9::t_776f0c80955291 188-191
+backend/modules/evaluation/domain/entity/expt_result.go
+  s_d57b70e17922d9::t_c252efa7df79e1 236-237,795-796
+backend/modules/evaluation/domain/entity/target_builtin_sandbox_agent.go
+  s_d57b70e17922d9::t_33400b00e3a8e4 27-29
+backend/modules/evaluation/domain/service/expt_manage_impl.go
+  s_d57b70e17922d9::t_c7a0e1ac9a195e 1036-1037,1039,1041
+backend/modules/evaluation/domain/service/expt_result_impl.go
+  s_d57b70e17922d9::t_099443958eb16b 1321,1326
+backend/modules/evaluation/domain/service/expt_run_item_impl.go
+  s_d57b70e17922d9::t_bbc2c285b3240a 475-478
+backend/modules/evaluation/infra/repo/experiment/expt_repo_impl.go
+  s_d57b70e17922d9::t_fd42e7f496f20c 132-140
+backend/modules/evaluation/infra/repo/experiment/expt_repo_impl_test.go
+  s_d57b70e17922d9::t_150350710b4691 289,343,349-358,370,385-386
+backend/modules/evaluation/infra/repo/experiment/mysql/convert/expt.go
+  s_d57b70e17922d9::t_685376f0254f29 128
+backend/modules/evaluation/infra/repo/experiment/mysql/convert/expt_result.go
+  s_d57b70e17922d9::t_8aa96e9c1a6198 46
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.expt.thrift
+  s_d57b70e17922d9::t_ab9e32a0891603 54-55,124-125,183,398-399
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.openapi.thrift
+  s_d57b70e17922d9::t_821222df871fae 555-556
+idl/thrift/coze/loop/evaluation/domain/eval_target.thrift
+  s_d57b70e17922d9::t_28d553071839fe 303-306
+idl/thrift/coze/loop/evaluation/domain/expt.thrift
+  s_d57b70e17922d9::t_097c046b3d8dff 72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9e750a29863c2436bb4990f7fa891425c1777bf1",
+  "prompts": {},
+  "sessions": {
+    "s_d57b70e17922d9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7d4a845a-f977-4589-ac8a-af1a3eb8b5a4",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
