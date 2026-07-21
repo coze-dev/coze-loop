@@ -143,6 +143,7 @@ struct FieldMeta {
     2: required list<filter.QueryType> filter_types
     3: optional filter.FieldOptions field_options
     4: optional bool support_customizable_option
+    5: optional bool is_system
 }
 
 struct GetTracesMetaInfoRequest {
