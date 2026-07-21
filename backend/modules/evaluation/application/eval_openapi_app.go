@@ -951,7 +951,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 
 	// 回调侧打点：evaluation_target_sandbox_agent.invoke_finished / invoke_duration
 	// 用 AsyncCtx.AsyncUnixMS 与当前时间差计算端到端异步耗时。仅对沙箱 agent 目标上报的调用生效。
-	e.emitSandboxAgentInvokeFinished(req, actx)
+	e.emitSandboxAgentInvokeFinished(ctx, req, actx)
 
 	if actx.Event != nil {
 		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*35),
@@ -969,11 +969,15 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 // - Callee=="sandbox_agent" 是沙箱 agent 上报回调时的稳定标识, 用来跟其他 target 上报路径区分.
 // - 错误分类根据 req.Status + req.ErrorCode 决定, 遵循 classifier 表.
 // - submitTime 来自 AsyncCtx.AsyncUnixMS (提交侧写入), 未落时长度回退为 0.
-func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(req *openapi.ReportEvalTargetInvokeResultRequest, actx *entity.EvalAsyncCtx) {
+func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, actx *entity.EvalAsyncCtx) {
 	if e == nil || e.sandboxAgentMetric == nil || req == nil {
+		logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, metric_nil=%v, req_nil=%v",
+			e == nil || e.sandboxAgentMetric == nil, req == nil)
 		return
 	}
 	if req.GetCallee() != "sandbox_agent" {
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, callee=%q (expect sandbox_agent), invoke_id=%d",
+			req.GetCallee(), req.GetInvokeID())
 		return
 	}
 	tags := metrics.SandboxAgentInvokeTags{
@@ -991,6 +995,8 @@ func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(req *openapi.Rep
 	if req.GetStatus() == spi.InvokeEvalTargetStatus_FAILED {
 		reportErr = errSandboxAgentInvokeFailed
 	}
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit invoke_finished, invoke_id=%d, expt_id=%d, item_id=%d, status=%v, err_code=%d, submit_ms=%d",
+		req.GetInvokeID(), tags.ExperimentID, tags.ItemID, req.GetStatus(), req.GetErrorCode(), submitTime.UnixMilli())
 	e.sandboxAgentMetric.EmitInvokeFinished(tags, reportErr, req.GetErrorCode(), submitTime)
 }
 
@@ -1058,12 +1064,16 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 
 	switch req.GetEventType() {
 	case openapi.EvalTargetStepEventType_STARTED:
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit step_started, invoke_id=%d, step_name=%s, expt_id=%d, item_id=%d",
+			req.GetInvokeID(), req.GetStepName(), tags.ExperimentID, tags.ItemID)
 		e.sandboxAgentMetric.EmitStepStarted(tags)
 	case openapi.EvalTargetStepEventType_FINISHED:
 		var stepErr error
 		if !req.GetSuccess() {
 			stepErr = errSandboxAgentStepFailed
 		}
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit step_finished, invoke_id=%d, step_name=%s, success=%v, err_code=%d, duration_ms=%d",
+			req.GetInvokeID(), req.GetStepName(), req.GetSuccess(), req.GetErrorCode(), req.GetDurationMs())
 		e.sandboxAgentMetric.EmitStepFinished(tags, stepErr, req.GetErrorCode(), req.GetDurationMs())
 	default:
 		logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: unknown event_type=%v, invoke_id=%d, step_name=%s",

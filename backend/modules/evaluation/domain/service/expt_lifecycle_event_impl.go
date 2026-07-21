@@ -59,9 +59,13 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 //   - duration 使用 expt.StartAt / expt.EndAt 计算; 若字段缺失, 由实现层容忍为 0
 func (h *ExptLifecycleEventHandlerImpl) emitSandboxAgentExperimentMetric(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
 	if h == nil || h.sandboxAgentMetrics == nil || expt == nil {
+		logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitExperimentMetric skipped, handler_nil=%v, metrics_nil=%v, expt_nil=%v",
+			h == nil, h == nil || h.sandboxAgentMetrics == nil, expt == nil)
 		return
 	}
 	if !isSandboxAgentExperiment(expt) {
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitExperimentMetric skipped, not sandbox agent expt, expt_id=%d, to_status=%v",
+			expt.ID, event.ToStatus)
 		return
 	}
 	tags := mtr.SandboxAgentExperimentTags{
@@ -71,6 +75,8 @@ func (h *ExptLifecycleEventHandlerImpl) emitSandboxAgentExperimentMetric(ctx con
 	}
 	switch {
 	case event.ToStatus == entity.ExptStatus_Processing:
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_started, expt_id=%d, dataset_id=%d, dataset_version=%d",
+			tags.ExperimentID, tags.DatasetID, tags.DatasetVersion)
 		h.sandboxAgentMetrics.EmitExperimentStarted(tags)
 	case entity.IsExptFinished(event.ToStatus):
 		var startAt, endAt time.Time
@@ -83,7 +89,12 @@ func (h *ExptLifecycleEventHandlerImpl) emitSandboxAgentExperimentMetric(ctx con
 		if endAt.IsZero() {
 			endAt = time.Now()
 		}
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_finished, expt_id=%d, to_status=%v, start_at=%v, end_at=%v",
+			tags.ExperimentID, event.ToStatus, startAt.UnixMilli(), endAt.UnixMilli())
 		h.sandboxAgentMetrics.EmitExperimentFinished(tags, statusToErr(event.ToStatus), startAt, endAt)
+	default:
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitExperimentMetric no-op, expt_id=%d, to_status=%v (not Processing / terminal)",
+			expt.ID, event.ToStatus)
 	}
 }
 
