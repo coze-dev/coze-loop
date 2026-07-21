@@ -16,7 +16,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func NewSandboxAgentSourceEvalTargetServiceImpl(idgen idgen.IIDGenerator, sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter, sandboxAgentMetrics metricscomp.SandboxAgentMetrics) ISourceEvalTargetOperateService {
@@ -58,16 +57,14 @@ func (t *SandboxAgentSourceEvalTargetServiceImpl) AsyncExecute(ctx context.Conte
 	if err != nil {
 		return 0, "", nil, err
 	}
-	t.emitInvokeStarted(ctx, invokeID, param)
+	t.emitInvokeStarted(invokeID, param)
 	return invokeID, "sandbox_agent", nil, nil
 }
 
 // emitInvokeStarted 提交侧打点：evaluation_target_sandbox_agent.invoke_started
 // 触发时机：invokeID 生成成功后立即上报，代表"评测开始执行"。
-func (t *SandboxAgentSourceEvalTargetServiceImpl) emitInvokeStarted(ctx context.Context, invokeID int64, param *entity.ExecuteEvalTargetParam) {
+func (t *SandboxAgentSourceEvalTargetServiceImpl) emitInvokeStarted(invokeID int64, param *entity.ExecuteEvalTargetParam) {
 	if t.sandboxAgentMetrics == nil || param == nil {
-		logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitInvokeStarted skipped, metrics_nil=%v, param_nil=%v",
-			t.sandboxAgentMetrics == nil, param == nil)
 		return
 	}
 	tags := metricscomp.SandboxAgentInvokeTags{
@@ -81,8 +78,6 @@ func (t *SandboxAgentSourceEvalTargetServiceImpl) emitInvokeStarted(ctx context.
 	if param.EvalSetItemID != nil {
 		tags.ItemID = *param.EvalSetItemID
 	}
-	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit invoke_started, invoke_id=%d, expt_id=%d, item_id=%d, dataset_id=%d",
-		invokeID, tags.ExperimentID, tags.ItemID, tags.DatasetID)
 	t.sandboxAgentMetrics.EmitInvokeStarted(tags)
 }
 
