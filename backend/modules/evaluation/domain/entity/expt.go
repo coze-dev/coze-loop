@@ -185,8 +185,10 @@ type Experiment struct {
 
 	CreditCost CreditCost
 
-	StartAt *time.Time
-	EndAt   *time.Time
+	// CreatedAt 实验创建时间，来源 experiment.created_at 列（DB 非空，PO2DO 透传）。
+	CreatedAt *time.Time
+	StartAt   *time.Time
+	EndAt     *time.Time
 
 	ExptType     ExptType
 	MaxAliveTime int64

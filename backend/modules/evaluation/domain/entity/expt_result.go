@@ -233,6 +233,8 @@ type ExptItemResult struct {
 	ItemIdx       int32
 	LogID         string
 	Ext           map[string]string
+	// UpdatedAt item 结果最后更新时间，来源 expt_item_result.updated_at；item 到终态时即执行结束时间。
+	UpdatedAt *time.Time
 }
 
 type ExptItemResultRunLog struct {
@@ -790,6 +792,8 @@ type ItemSystemInfo struct {
 	RunState ItemRunState
 	LogID    *string
 	Error    *RunError
+	// EndTime item 执行结束时间，来源 expt_item_result.updated_at（item 到终态时最后一次更新）。
+	EndTime *time.Time
 }
 
 type RunError struct {

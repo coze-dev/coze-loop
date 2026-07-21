@@ -1033,28 +1033,16 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if triggerType == "" {
 		triggerType = "manual"
 	}
-	experimentGroupKey := strings.TrimSpace(req.ExperimentGroupKey)
+	// 实验分组 key：默认用新实验 ID；填写 ref_group_experiment_id 时复用被引用实验的 group key（归入同一分组）。
+	experimentGroupKey := strconv.FormatInt(ids[0], 10)
 	if req.RefGroupExperimentID > 0 {
-		// 引用某实验分组: 校验引用 id 是「当前空间」内的实验, 通过后复用其 group key(归入同一分组, 无需跨空间校验)。
-		// 优先级高于 experiment_group_key: 命中 ref 时忽略用户显式传入的 group key。
+		// 引用某实验分组：校验引用 id 是「当前空间」内的实验，通过后复用其 group key（归入同一分组）。
 		refExpt, err := e.exptRepo.GetByID(ctx, req.RefGroupExperimentID, req.WorkspaceID)
-		if err != nil || refExpt == nil {
+		if err != nil || refExpt == nil || refExpt.SpaceID != req.WorkspaceID {
 			return nil, errorx.NewByCode(errno.RefGroupExperimentInvalidCode,
 				errorx.WithExtraMsg(fmt.Sprintf("ref_group_experiment_id %d", req.RefGroupExperimentID)))
 		}
 		experimentGroupKey = refExpt.ExperimentGroupKey
-	} else if experimentGroupKey == "" {
-		// 未显式传入: 默认用新实验 ID 作为 group key, 天然不会与其它空间冲突, 无需校验。
-		experimentGroupKey = strconv.FormatInt(ids[0], 10)
-	} else {
-		// 显式传入: 校验跨空间隔离(不允许其它空间已占用该 key); 同空间内允许多实验共享。撞车拒绝创建。
-		pass, err := e.CheckGroupKey(ctx, experimentGroupKey, req.WorkspaceID, session)
-		if err != nil {
-			return nil, err
-		}
-		if !pass {
-			return nil, errorx.NewByCode(errno.ExperimentGroupKeyExistedCode, errorx.WithExtraMsg(fmt.Sprintf("group_key %s", experimentGroupKey)))
-		}
 	}
 	do := &entity.Experiment{
 		ID:                  ids[0],

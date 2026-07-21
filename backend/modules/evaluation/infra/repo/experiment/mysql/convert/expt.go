@@ -125,6 +125,7 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		OfflineExptAnalysisStatus: entity.OfflineExptAnalysisStatus(expt.OfflineExptAnalysisStatus),
 		LatestRunID:               expt.LatestRunID,
 		CreditCost:                entity.CreditCost(expt.CreditCost),
+		CreatedAt:                 gptr.Of(expt.CreatedAt),
 		StartAt:                   expt.StartAt,
 		EndAt:                     expt.EndAt,
 		SourceType:                entity.SourceType(expt.SourceType),

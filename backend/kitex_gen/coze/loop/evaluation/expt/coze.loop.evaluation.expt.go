@@ -65,9 +65,8 @@ type CreateExperimentRequest struct {
 	// ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
 	// 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
 	EvalSetSourceType *expt.ExptEvalSetSourceType `thrift:"eval_set_source_type,71,optional" frugal:"71,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
-	// 实验分组 key；不填时后端默认为实验 id
-	ExperimentGroupKey *string `thrift:"experiment_group_key,90,optional" frugal:"90,optional,string" json:"experiment_group_key" form:"experiment_group_key" `
-	// 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+	// 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
+	// 引用分组实验 id：填写时校验其为当前空间内的实验 id
 	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
@@ -438,18 +437,6 @@ func (p *CreateExperimentRequest) GetEvalSetSourceType() (v expt.ExptEvalSetSour
 	return *p.EvalSetSourceType
 }
 
-var CreateExperimentRequest_ExperimentGroupKey_DEFAULT string
-
-func (p *CreateExperimentRequest) GetExperimentGroupKey() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetExperimentGroupKey() {
-		return CreateExperimentRequest_ExperimentGroupKey_DEFAULT
-	}
-	return *p.ExperimentGroupKey
-}
-
 var CreateExperimentRequest_RefGroupExperimentID_DEFAULT int64
 
 func (p *CreateExperimentRequest) GetRefGroupExperimentID() (v int64) {
@@ -599,9 +586,6 @@ func (p *CreateExperimentRequest) SetEvalSetConfigs(val []*expt.EvalSetConfig) {
 func (p *CreateExperimentRequest) SetEvalSetSourceType(val *expt.ExptEvalSetSourceType) {
 	p.EvalSetSourceType = val
 }
-func (p *CreateExperimentRequest) SetExperimentGroupKey(val *string) {
-	p.ExperimentGroupKey = val
-}
 func (p *CreateExperimentRequest) SetRefGroupExperimentID(val *int64) {
 	p.RefGroupExperimentID = val
 }
@@ -649,7 +633,6 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	50:  "trigger_type",
 	70:  "eval_set_configs",
 	71:  "eval_set_source_type",
-	90:  "experiment_group_key",
 	91:  "ref_group_experiment_id",
 	110: "notification_conf",
 	100: "ext",
@@ -771,10 +754,6 @@ func (p *CreateExperimentRequest) IsSetEvalSetConfigs() bool {
 
 func (p *CreateExperimentRequest) IsSetEvalSetSourceType() bool {
 	return p.EvalSetSourceType != nil
-}
-
-func (p *CreateExperimentRequest) IsSetExperimentGroupKey() bool {
-	return p.ExperimentGroupKey != nil
 }
 
 func (p *CreateExperimentRequest) IsSetRefGroupExperimentID() bool {
@@ -1052,14 +1031,6 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 71:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField71(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 90:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField90(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1530,17 +1501,6 @@ func (p *CreateExperimentRequest) ReadField71(iprot thrift.TProtocol) error {
 	p.EvalSetSourceType = _field
 	return nil
 }
-func (p *CreateExperimentRequest) ReadField90(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ExperimentGroupKey = _field
-	return nil
-}
 func (p *CreateExperimentRequest) ReadField91(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -1730,10 +1690,6 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField71(oprot); err != nil {
 			fieldId = 71
-			goto WriteFieldError
-		}
-		if err = p.writeField90(oprot); err != nil {
-			fieldId = 90
 			goto WriteFieldError
 		}
 		if err = p.writeField91(oprot); err != nil {
@@ -2355,24 +2311,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 71 end error: ", p), err)
 }
-func (p *CreateExperimentRequest) writeField90(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExperimentGroupKey() {
-		if err = oprot.WriteFieldBegin("experiment_group_key", thrift.STRING, 90); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ExperimentGroupKey); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 90 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
-}
 func (p *CreateExperimentRequest) writeField91(oprot thrift.TProtocol) (err error) {
 	if p.IsSetRefGroupExperimentID() {
 		if err = oprot.WriteFieldBegin("ref_group_experiment_id", thrift.I64, 91); err != nil {
@@ -2577,9 +2515,6 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field71DeepEqual(ano.EvalSetSourceType) {
-		return false
-	}
-	if !p.Field90DeepEqual(ano.ExperimentGroupKey) {
 		return false
 	}
 	if !p.Field91DeepEqual(ano.RefGroupExperimentID) {
@@ -2945,18 +2880,6 @@ func (p *CreateExperimentRequest) Field71DeepEqual(src *expt.ExptEvalSetSourceTy
 	}
 	return true
 }
-func (p *CreateExperimentRequest) Field90DeepEqual(src *string) bool {
-
-	if p.ExperimentGroupKey == src {
-		return true
-	} else if p.ExperimentGroupKey == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ExperimentGroupKey, *src) != 0 {
-		return false
-	}
-	return true
-}
 func (p *CreateExperimentRequest) Field91DeepEqual(src *int64) bool {
 
 	if p.RefGroupExperimentID == src {
@@ -3289,9 +3212,8 @@ type SubmitExperimentRequest struct {
 	// 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
 	EvalSetSourceType *expt.ExptEvalSetSourceType `thrift:"eval_set_source_type,76,optional" frugal:"76,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
 	Ext               map[string]string           `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	// 实验分组 key；不填时后端默认为实验 id
-	ExperimentGroupKey *string `thrift:"experiment_group_key,90,optional" frugal:"90,optional,string" json:"experiment_group_key" form:"experiment_group_key" `
-	// 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+	// 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
+	// 引用分组实验 id：填写时校验其为当前空间内的实验 id
 	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
@@ -3697,18 +3619,6 @@ func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
 	return p.Ext
 }
 
-var SubmitExperimentRequest_ExperimentGroupKey_DEFAULT string
-
-func (p *SubmitExperimentRequest) GetExperimentGroupKey() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetExperimentGroupKey() {
-		return SubmitExperimentRequest_ExperimentGroupKey_DEFAULT
-	}
-	return *p.ExperimentGroupKey
-}
-
 var SubmitExperimentRequest_RefGroupExperimentID_DEFAULT int64
 
 func (p *SubmitExperimentRequest) GetRefGroupExperimentID() (v int64) {
@@ -3855,9 +3765,6 @@ func (p *SubmitExperimentRequest) SetEvalSetSourceType(val *expt.ExptEvalSetSour
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
-func (p *SubmitExperimentRequest) SetExperimentGroupKey(val *string) {
-	p.ExperimentGroupKey = val
-}
 func (p *SubmitExperimentRequest) SetRefGroupExperimentID(val *int64) {
 	p.RefGroupExperimentID = val
 }
@@ -3905,7 +3812,6 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	75:  "eval_set_configs",
 	76:  "eval_set_source_type",
 	100: "ext",
-	90:  "experiment_group_key",
 	91:  "ref_group_experiment_id",
 	110: "notification_conf",
 	200: "session",
@@ -4038,10 +3944,6 @@ func (p *SubmitExperimentRequest) IsSetEvalSetSourceType() bool {
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
 	return p.Ext != nil
-}
-
-func (p *SubmitExperimentRequest) IsSetExperimentGroupKey() bool {
-	return p.ExperimentGroupKey != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetRefGroupExperimentID() bool {
@@ -4339,14 +4241,6 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 90:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField90(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4851,17 +4745,6 @@ func (p *SubmitExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	p.Ext = _field
 	return nil
 }
-func (p *SubmitExperimentRequest) ReadField90(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ExperimentGroupKey = _field
-	return nil
-}
 func (p *SubmitExperimentRequest) ReadField91(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -5034,10 +4917,6 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
-			goto WriteFieldError
-		}
-		if err = p.writeField90(oprot); err != nil {
-			fieldId = 90
 			goto WriteFieldError
 		}
 		if err = p.writeField91(oprot); err != nil {
@@ -5717,24 +5596,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
-func (p *SubmitExperimentRequest) writeField90(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExperimentGroupKey() {
-		if err = oprot.WriteFieldBegin("experiment_group_key", thrift.STRING, 90); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ExperimentGroupKey); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 90 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
-}
 func (p *SubmitExperimentRequest) writeField91(oprot thrift.TProtocol) (err error) {
 	if p.IsSetRefGroupExperimentID() {
 		if err = oprot.WriteFieldBegin("ref_group_experiment_id", thrift.I64, 91); err != nil {
@@ -5919,9 +5780,6 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
-		return false
-	}
-	if !p.Field90DeepEqual(ano.ExperimentGroupKey) {
 		return false
 	}
 	if !p.Field91DeepEqual(ano.RefGroupExperimentID) {
@@ -6313,18 +6171,6 @@ func (p *SubmitExperimentRequest) Field100DeepEqual(src map[string]string) bool 
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
-	}
-	return true
-}
-func (p *SubmitExperimentRequest) Field90DeepEqual(src *string) bool {
-
-	if p.ExperimentGroupKey == src {
-		return true
-	} else if p.ExperimentGroupKey == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ExperimentGroupKey, *src) != 0 {
-		return false
 	}
 	return true
 }
@@ -8504,8 +8350,9 @@ func (p *GetExperimentIDsByGroupRequest) Field255DeepEqual(src *base.Base) bool 
 }
 
 type GetExperimentIDsByGroupResponse struct {
-	ExptIds  []int64        `thrift:"expt_ids,1,optional" frugal:"1,optional,list<i64>" json:"expt_ids" form:"expt_ids" `
-	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExptIds     []int64            `thrift:"expt_ids,1,optional" frugal:"1,optional,list<i64>" json:"expt_ids" form:"expt_ids" `
+	Experiments []*expt.Experiment `thrift:"experiments,2,optional" frugal:"2,optional,list<expt.Experiment>" json:"experiments" form:"experiments" `
+	BaseResp    *base.BaseResp     `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewGetExperimentIDsByGroupResponse() *GetExperimentIDsByGroupResponse {
@@ -8527,6 +8374,18 @@ func (p *GetExperimentIDsByGroupResponse) GetExptIds() (v []int64) {
 	return p.ExptIds
 }
 
+var GetExperimentIDsByGroupResponse_Experiments_DEFAULT []*expt.Experiment
+
+func (p *GetExperimentIDsByGroupResponse) GetExperiments() (v []*expt.Experiment) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperiments() {
+		return GetExperimentIDsByGroupResponse_Experiments_DEFAULT
+	}
+	return p.Experiments
+}
+
 var GetExperimentIDsByGroupResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *GetExperimentIDsByGroupResponse) GetBaseResp() (v *base.BaseResp) {
@@ -8541,17 +8400,25 @@ func (p *GetExperimentIDsByGroupResponse) GetBaseResp() (v *base.BaseResp) {
 func (p *GetExperimentIDsByGroupResponse) SetExptIds(val []int64) {
 	p.ExptIds = val
 }
+func (p *GetExperimentIDsByGroupResponse) SetExperiments(val []*expt.Experiment) {
+	p.Experiments = val
+}
 func (p *GetExperimentIDsByGroupResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_GetExperimentIDsByGroupResponse = map[int16]string{
 	1:   "expt_ids",
+	2:   "experiments",
 	255: "BaseResp",
 }
 
 func (p *GetExperimentIDsByGroupResponse) IsSetExptIds() bool {
 	return p.ExptIds != nil
+}
+
+func (p *GetExperimentIDsByGroupResponse) IsSetExperiments() bool {
+	return p.Experiments != nil
 }
 
 func (p *GetExperimentIDsByGroupResponse) IsSetBaseResp() bool {
@@ -8579,6 +8446,14 @@ func (p *GetExperimentIDsByGroupResponse) Read(iprot thrift.TProtocol) (err erro
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8644,6 +8519,29 @@ func (p *GetExperimentIDsByGroupResponse) ReadField1(iprot thrift.TProtocol) err
 	p.ExptIds = _field
 	return nil
 }
+func (p *GetExperimentIDsByGroupResponse) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*expt.Experiment, 0, size)
+	values := make([]expt.Experiment, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Experiments = _field
+	return nil
+}
 func (p *GetExperimentIDsByGroupResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -8661,6 +8559,10 @@ func (p *GetExperimentIDsByGroupResponse) Write(oprot thrift.TProtocol) (err err
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -8711,6 +8613,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *GetExperimentIDsByGroupResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperiments() {
+		if err = oprot.WriteFieldBegin("experiments", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Experiments)); err != nil {
+			return err
+		}
+		for _, v := range p.Experiments {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *GetExperimentIDsByGroupResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -8745,6 +8673,9 @@ func (p *GetExperimentIDsByGroupResponse) DeepEqual(ano *GetExperimentIDsByGroup
 	if !p.Field1DeepEqual(ano.ExptIds) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.Experiments) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -8759,6 +8690,19 @@ func (p *GetExperimentIDsByGroupResponse) Field1DeepEqual(src []int64) bool {
 	for i, v := range p.ExptIds {
 		_src := src[i]
 		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *GetExperimentIDsByGroupResponse) Field2DeepEqual(src []*expt.Experiment) bool {
+
+	if len(p.Experiments) != len(src) {
+		return false
+	}
+	for i, v := range p.Experiments {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
 			return false
 		}
 	}
@@ -17626,6 +17570,10 @@ type ItemStandardEvalOutput struct {
 	DatasetVersionID      *int64  `thrift:"dataset_version_id,13,optional" frugal:"13,optional,i64" json:"dataset_version_id" form:"dataset_version_id" query:"dataset_version_id"`
 	DatasetVersionName    *string `thrift:"dataset_version_name,14,optional" frugal:"14,optional,string" json:"dataset_version_name" form:"dataset_version_name" query:"dataset_version_name"`
 	ExperimentGroupKey    *string `thrift:"experiment_group_key,15,optional" frugal:"15,optional,string" json:"experiment_group_key" form:"experiment_group_key" query:"experiment_group_key"`
+	// 实验创建时间（秒），来源 experiment.created_at
+	ExperimentCreateTime *int64 `thrift:"experiment_create_time,16,optional" frugal:"16,optional,i64" json:"experiment_create_time" form:"experiment_create_time" query:"experiment_create_time"`
+	// item 执行结束时间（秒），来源 expt_item_result.updated_at
+	ItemEndTime *int64 `thrift:"item_end_time,17,optional" frugal:"17,optional,i64" json:"item_end_time" form:"item_end_time" query:"item_end_time"`
 	// 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
 	Detail *StandardEvalOutputContent `thrift:"detail,30,optional" frugal:"30,optional,StandardEvalOutputContent" json:"detail" form:"detail" query:"detail"`
 	Rounds *StandardEvalOutputContent `thrift:"rounds,31,optional" frugal:"31,optional,StandardEvalOutputContent" json:"rounds" form:"rounds" query:"rounds"`
@@ -17822,6 +17770,30 @@ func (p *ItemStandardEvalOutput) GetExperimentGroupKey() (v string) {
 	return *p.ExperimentGroupKey
 }
 
+var ItemStandardEvalOutput_ExperimentCreateTime_DEFAULT int64
+
+func (p *ItemStandardEvalOutput) GetExperimentCreateTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperimentCreateTime() {
+		return ItemStandardEvalOutput_ExperimentCreateTime_DEFAULT
+	}
+	return *p.ExperimentCreateTime
+}
+
+var ItemStandardEvalOutput_ItemEndTime_DEFAULT int64
+
+func (p *ItemStandardEvalOutput) GetItemEndTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemEndTime() {
+		return ItemStandardEvalOutput_ItemEndTime_DEFAULT
+	}
+	return *p.ItemEndTime
+}
+
 var ItemStandardEvalOutput_Detail_DEFAULT *StandardEvalOutputContent
 
 func (p *ItemStandardEvalOutput) GetDetail() (v *StandardEvalOutputContent) {
@@ -17938,6 +17910,12 @@ func (p *ItemStandardEvalOutput) SetDatasetVersionName(val *string) {
 func (p *ItemStandardEvalOutput) SetExperimentGroupKey(val *string) {
 	p.ExperimentGroupKey = val
 }
+func (p *ItemStandardEvalOutput) SetExperimentCreateTime(val *int64) {
+	p.ExperimentCreateTime = val
+}
+func (p *ItemStandardEvalOutput) SetItemEndTime(val *int64) {
+	p.ItemEndTime = val
+}
 func (p *ItemStandardEvalOutput) SetDetail(val *StandardEvalOutputContent) {
 	p.Detail = val
 }
@@ -17973,6 +17951,8 @@ var fieldIDToName_ItemStandardEvalOutput = map[int16]string{
 	13: "dataset_version_id",
 	14: "dataset_version_name",
 	15: "experiment_group_key",
+	16: "experiment_create_time",
+	17: "item_end_time",
 	30: "detail",
 	31: "rounds",
 	32: "agent",
@@ -18039,6 +18019,14 @@ func (p *ItemStandardEvalOutput) IsSetDatasetVersionName() bool {
 
 func (p *ItemStandardEvalOutput) IsSetExperimentGroupKey() bool {
 	return p.ExperimentGroupKey != nil
+}
+
+func (p *ItemStandardEvalOutput) IsSetExperimentCreateTime() bool {
+	return p.ExperimentCreateTime != nil
+}
+
+func (p *ItemStandardEvalOutput) IsSetItemEndTime() bool {
+	return p.ItemEndTime != nil
 }
 
 func (p *ItemStandardEvalOutput) IsSetDetail() bool {
@@ -18198,6 +18186,22 @@ func (p *ItemStandardEvalOutput) Read(iprot thrift.TProtocol) (err error) {
 		case 15:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 16:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18446,6 +18450,28 @@ func (p *ItemStandardEvalOutput) ReadField15(iprot thrift.TProtocol) error {
 	p.ExperimentGroupKey = _field
 	return nil
 }
+func (p *ItemStandardEvalOutput) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExperimentCreateTime = _field
+	return nil
+}
+func (p *ItemStandardEvalOutput) ReadField17(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemEndTime = _field
+	return nil
+}
 func (p *ItemStandardEvalOutput) ReadField30(iprot thrift.TProtocol) error {
 	_field := NewStandardEvalOutputContent()
 	if err := _field.Read(iprot); err != nil {
@@ -18559,6 +18585,14 @@ func (p *ItemStandardEvalOutput) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
 			goto WriteFieldError
 		}
 		if err = p.writeField30(oprot); err != nil {
@@ -18873,6 +18907,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
+func (p *ItemStandardEvalOutput) writeField16(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperimentCreateTime() {
+		if err = oprot.WriteFieldBegin("experiment_create_time", thrift.I64, 16); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExperimentCreateTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+func (p *ItemStandardEvalOutput) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemEndTime() {
+		if err = oprot.WriteFieldBegin("item_end_time", thrift.I64, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ItemEndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
 func (p *ItemStandardEvalOutput) writeField30(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDetail() {
 		if err = oprot.WriteFieldBegin("detail", thrift.STRUCT, 30); err != nil {
@@ -19039,6 +19109,12 @@ func (p *ItemStandardEvalOutput) DeepEqual(ano *ItemStandardEvalOutput) bool {
 		return false
 	}
 	if !p.Field15DeepEqual(ano.ExperimentGroupKey) {
+		return false
+	}
+	if !p.Field16DeepEqual(ano.ExperimentCreateTime) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.ItemEndTime) {
 		return false
 	}
 	if !p.Field30DeepEqual(ano.Detail) {
@@ -19238,6 +19314,30 @@ func (p *ItemStandardEvalOutput) Field15DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ExperimentGroupKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ItemStandardEvalOutput) Field16DeepEqual(src *int64) bool {
+
+	if p.ExperimentCreateTime == src {
+		return true
+	} else if p.ExperimentCreateTime == nil || src == nil {
+		return false
+	}
+	if *p.ExperimentCreateTime != *src {
+		return false
+	}
+	return true
+}
+func (p *ItemStandardEvalOutput) Field17DeepEqual(src *int64) bool {
+
+	if p.ItemEndTime == src {
+		return true
+	} else if p.ItemEndTime == nil || src == nil {
+		return false
+	}
+	if *p.ItemEndTime != *src {
 		return false
 	}
 	return true

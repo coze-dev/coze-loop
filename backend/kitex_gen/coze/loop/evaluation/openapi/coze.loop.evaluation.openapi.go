@@ -24894,10 +24894,8 @@ type SubmitExperimentOApiRequest struct {
 	// 通知配置
 	NotificationConf *experiment.ExptNotificationConf `thrift:"notification_conf,50,optional" frugal:"50,optional,experiment.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Ext              map[string]string                `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	// 实验分组 key: 显式传入时服务端校验跨 space 隔离(不允许其它空间已占用该 key), 撞车拒绝创建; 缺省则以实验 ID 兜底。同一空间内允许多个实验共享同一 group key。
-	// 与内部 Submit 的 experiment_group_key 对齐, application 层直接指针透传给 CreateExperiment。
-	ExperimentGroupKey *string `thrift:"experiment_group_key,101,optional" frugal:"101,optional,string" json:"experiment_group_key" form:"experiment_group_key" `
-	// 引用分组实验 id: 填写时校验其为当前空间内的实验 id, 通过后本实验的 group key 复用该引用实验的 group key(归入同一分组); 优先级高于 experiment_group_key。
+	// 实验分组 key 默认以实验 ID 兜底；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）。
+	// 引用分组实验 id: 填写时校验其为当前空间内的实验 id。
 	RefGroupExperimentID *int64       `thrift:"ref_group_experiment_id,102,optional" frugal:"102,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
 	Extra                *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base                 *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -25102,18 +25100,6 @@ func (p *SubmitExperimentOApiRequest) GetExt() (v map[string]string) {
 	return p.Ext
 }
 
-var SubmitExperimentOApiRequest_ExperimentGroupKey_DEFAULT string
-
-func (p *SubmitExperimentOApiRequest) GetExperimentGroupKey() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetExperimentGroupKey() {
-		return SubmitExperimentOApiRequest_ExperimentGroupKey_DEFAULT
-	}
-	return *p.ExperimentGroupKey
-}
-
 var SubmitExperimentOApiRequest_RefGroupExperimentID_DEFAULT int64
 
 func (p *SubmitExperimentOApiRequest) GetRefGroupExperimentID() (v int64) {
@@ -25197,9 +25183,6 @@ func (p *SubmitExperimentOApiRequest) SetNotificationConf(val *experiment.ExptNo
 func (p *SubmitExperimentOApiRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
-func (p *SubmitExperimentOApiRequest) SetExperimentGroupKey(val *string) {
-	p.ExperimentGroupKey = val
-}
 func (p *SubmitExperimentOApiRequest) SetRefGroupExperimentID(val *int64) {
 	p.RefGroupExperimentID = val
 }
@@ -25227,7 +25210,6 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	46:  "enable_extract_trajectory",
 	50:  "notification_conf",
 	100: "ext",
-	101: "experiment_group_key",
 	102: "ref_group_experiment_id",
 	254: "extra",
 	255: "Base",
@@ -25295,10 +25277,6 @@ func (p *SubmitExperimentOApiRequest) IsSetNotificationConf() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetExt() bool {
 	return p.Ext != nil
-}
-
-func (p *SubmitExperimentOApiRequest) IsSetExperimentGroupKey() bool {
-	return p.ExperimentGroupKey != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetRefGroupExperimentID() bool {
@@ -25454,14 +25432,6 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 101:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -25735,17 +25705,6 @@ func (p *SubmitExperimentOApiRequest) ReadField100(iprot thrift.TProtocol) error
 	p.Ext = _field
 	return nil
 }
-func (p *SubmitExperimentOApiRequest) ReadField101(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ExperimentGroupKey = _field
-	return nil
-}
 func (p *SubmitExperimentOApiRequest) ReadField102(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -25842,10 +25801,6 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
-			goto WriteFieldError
-		}
-		if err = p.writeField101(oprot); err != nil {
-			fieldId = 101
 			goto WriteFieldError
 		}
 		if err = p.writeField102(oprot); err != nil {
@@ -26201,24 +26156,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
-func (p *SubmitExperimentOApiRequest) writeField101(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExperimentGroupKey() {
-		if err = oprot.WriteFieldBegin("experiment_group_key", thrift.STRING, 101); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ExperimentGroupKey); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
-}
 func (p *SubmitExperimentOApiRequest) writeField102(oprot thrift.TProtocol) (err error) {
 	if p.IsSetRefGroupExperimentID() {
 		if err = oprot.WriteFieldBegin("ref_group_experiment_id", thrift.I64, 102); err != nil {
@@ -26334,9 +26271,6 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
-		return false
-	}
-	if !p.Field101DeepEqual(ano.ExperimentGroupKey) {
 		return false
 	}
 	if !p.Field102DeepEqual(ano.RefGroupExperimentID) {
@@ -26519,18 +26453,6 @@ func (p *SubmitExperimentOApiRequest) Field100DeepEqual(src map[string]string) b
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
-	}
-	return true
-}
-func (p *SubmitExperimentOApiRequest) Field101DeepEqual(src *string) bool {
-
-	if p.ExperimentGroupKey == src {
-		return true
-	} else if p.ExperimentGroupKey == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ExperimentGroupKey, *src) != 0 {
-		return false
 	}
 	return true
 }

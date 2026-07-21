@@ -10704,6 +10704,9 @@ type SandboxAgent struct {
 	Envs []*SandboxEnvVar `thrift:"envs,7,optional" frugal:"7,optional,list<SandboxEnvVar>" form:"envs" json:"envs,omitempty" query:"envs"`
 	// 沙箱镜像
 	Image *string `thrift:"image,8,optional" frugal:"8,optional,string" form:"image" json:"image,omitempty" query:"image"`
+	// 是否开启分析：由创建评测对象时从 application.usages 反查（含 "analysis"）固化，
+	// 控制 item-complete MQ 是否发送（与 TCC 空间白名单 AND）
+	EnableAnalysis *bool `thrift:"enable_analysis,9,optional" frugal:"9,optional,bool" form:"enable_analysis" json:"enable_analysis,omitempty" query:"enable_analysis"`
 }
 
 func NewSandboxAgent() *SandboxAgent {
@@ -10796,6 +10799,18 @@ func (p *SandboxAgent) GetImage() (v string) {
 	}
 	return *p.Image
 }
+
+var SandboxAgent_EnableAnalysis_DEFAULT bool
+
+func (p *SandboxAgent) GetEnableAnalysis() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnableAnalysis() {
+		return SandboxAgent_EnableAnalysis_DEFAULT
+	}
+	return *p.EnableAnalysis
+}
 func (p *SandboxAgent) SetName(val *string) {
 	p.Name = val
 }
@@ -10817,6 +10832,9 @@ func (p *SandboxAgent) SetEnvs(val []*SandboxEnvVar) {
 func (p *SandboxAgent) SetImage(val *string) {
 	p.Image = val
 }
+func (p *SandboxAgent) SetEnableAnalysis(val *bool) {
+	p.EnableAnalysis = val
+}
 
 var fieldIDToName_SandboxAgent = map[int16]string{
 	1: "name",
@@ -10826,6 +10844,7 @@ var fieldIDToName_SandboxAgent = map[int16]string{
 	6: "agent_run_cmd",
 	7: "envs",
 	8: "image",
+	9: "enable_analysis",
 }
 
 func (p *SandboxAgent) IsSetName() bool {
@@ -10854,6 +10873,10 @@ func (p *SandboxAgent) IsSetEnvs() bool {
 
 func (p *SandboxAgent) IsSetImage() bool {
 	return p.Image != nil
+}
+
+func (p *SandboxAgent) IsSetEnableAnalysis() bool {
+	return p.EnableAnalysis != nil
 }
 
 func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
@@ -10925,6 +10948,14 @@ func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11048,6 +11079,17 @@ func (p *SandboxAgent) ReadField8(iprot thrift.TProtocol) error {
 	p.Image = _field
 	return nil
 }
+func (p *SandboxAgent) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EnableAnalysis = _field
+	return nil
+}
 
 func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -11081,6 +11123,10 @@ func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -11235,6 +11281,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *SandboxAgent) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableAnalysis() {
+		if err = oprot.WriteFieldBegin("enable_analysis", thrift.BOOL, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableAnalysis); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
 
 func (p *SandboxAgent) String() string {
 	if p == nil {
@@ -11269,6 +11333,9 @@ func (p *SandboxAgent) DeepEqual(ano *SandboxAgent) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.Image) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.EnableAnalysis) {
 		return false
 	}
 	return true
@@ -11355,6 +11422,18 @@ func (p *SandboxAgent) Field8DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Image, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxAgent) Field9DeepEqual(src *bool) bool {
+
+	if p.EnableAnalysis == src {
+		return true
+	} else if p.EnableAnalysis == nil || src == nil {
+		return false
+	}
+	if *p.EnableAnalysis != *src {
 		return false
 	}
 	return true

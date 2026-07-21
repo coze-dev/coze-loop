@@ -286,7 +286,7 @@ func TestExptRepoImpl_GetByID(t *testing.T) {
 		{
 			name: "success",
 			mockSetup: func() {
-				mockExptDAO.EXPECT().MGetByID(gomock.Any(), []int64{1}).Return([]*model.Experiment{{ID: 1}}, nil)
+				mockExptDAO.EXPECT().MGetByID(gomock.Any(), []int64{1}).Return([]*model.Experiment{{ID: 1, SpaceID: 1}}, nil)
 				mockRefDAO.EXPECT().MGetByExptID(gomock.Any(), []int64{1}, int64(1)).Return([]*model.ExptEvaluatorRef{{ExptID: 1}}, nil)
 			},
 			wantErr: false,
@@ -340,11 +340,21 @@ func TestExptRepoImpl_MGetByID(t *testing.T) {
 		{
 			name: "success",
 			mockSetup: func() {
-				mockExptDAO.EXPECT().MGetByID(gomock.Any(), []int64{1, 2}).Return([]*model.Experiment{{ID: 1}, {ID: 2}}, nil)
+				mockExptDAO.EXPECT().MGetByID(gomock.Any(), []int64{1, 2}).Return([]*model.Experiment{{ID: 1, SpaceID: 1}, {ID: 2, SpaceID: 1}}, nil)
 				mockRefDAO.EXPECT().MGetByExptID(gomock.Any(), []int64{1, 2}, int64(1)).Return([]*model.ExptEvaluatorRef{{ExptID: 1}, {ExptID: 2}}, nil)
 			},
 			wantErr: false,
 			wantLen: 2,
+		},
+		{
+			name: "filter_cross_space",
+			mockSetup: func() {
+				// 主键命中但 space 不匹配的行应被兜底过滤，防跨空间越权读取。
+				mockExptDAO.EXPECT().MGetByID(gomock.Any(), []int64{7, 8}).Return([]*model.Experiment{{ID: 7, SpaceID: 1}, {ID: 8, SpaceID: 2}}, nil)
+				mockRefDAO.EXPECT().MGetByExptID(gomock.Any(), []int64{7}, int64(1)).Return([]*model.ExptEvaluatorRef{{ExptID: 7}}, nil)
+			},
+			wantErr: false,
+			wantLen: 1,
 		},
 		{
 			name: "fail_mget",
@@ -357,7 +367,7 @@ func TestExptRepoImpl_MGetByID(t *testing.T) {
 		{
 			name: "fail_ref",
 			mockSetup: func() {
-				mockExptDAO.EXPECT().MGetByID(gomock.Any(), []int64{5, 6}).Return([]*model.Experiment{{ID: 5}, {ID: 6}}, nil)
+				mockExptDAO.EXPECT().MGetByID(gomock.Any(), []int64{5, 6}).Return([]*model.Experiment{{ID: 5, SpaceID: 1}, {ID: 6, SpaceID: 1}}, nil)
 				mockRefDAO.EXPECT().MGetByExptID(gomock.Any(), []int64{5, 6}, int64(1)).Return(nil, errors.New("ref error"))
 			},
 			wantErr: true,
@@ -372,6 +382,8 @@ func TestExptRepoImpl_MGetByID(t *testing.T) {
 			switch tt.name {
 			case "success":
 				ids = []int64{1, 2}
+			case "filter_cross_space":
+				ids = []int64{7, 8}
 			case "fail_mget":
 				ids = []int64{3, 4}
 			default:

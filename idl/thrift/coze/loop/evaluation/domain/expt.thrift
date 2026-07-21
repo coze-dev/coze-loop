@@ -69,6 +69,7 @@ struct Experiment {
     8: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"')
     9: optional i32 item_concur_num
     10: optional Visibility visibility  // 实验可见性，默认为空，可见
+    11: optional i64 create_time (api.js_conv='true', go.tag='json:"create_time"')  // 实验创建时间（秒），来源 experiment.created_at
 
     21: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
     22: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')

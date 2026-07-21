@@ -51,10 +51,8 @@ struct CreateExperimentRequest {
     // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
     71: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
 
-    // 实验分组 key；不填时后端默认为实验 id
-    90: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag='json:"experiment_group_key"')
-
-    // 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+    // 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
+    // 引用分组实验 id：填写时校验其为当前空间内的实验 id
     91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
 
     // 通知配置
@@ -123,10 +121,8 @@ struct SubmitExperimentRequest {
 
     100: optional map<string, string> ext (api.body = 'ext')
 
-    // 实验分组 key；不填时后端默认为实验 id
-    90: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag='json:"experiment_group_key"')
-
-    // 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+    // 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
+    // 引用分组实验 id：填写时校验其为当前空间内的实验 id
     91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
 
     // 通知配置
@@ -184,6 +180,7 @@ struct GetExperimentIDsByGroupRequest {
 
 struct GetExperimentIDsByGroupResponse {
     1: optional list<i64> expt_ids (api.body = 'expt_ids', api.js_conv = 'true', go.tag = 'json:"expt_ids"')
+    2: optional list<expt.Experiment> experiments (api.body = 'experiments', go.tag = 'json:"experiments"')
 
     255: base.BaseResp BaseResp
 }
@@ -398,6 +395,8 @@ struct ItemStandardEvalOutput {
     13: optional i64 dataset_version_id (api.js_conv = 'true', go.tag = 'json:"dataset_version_id"')
     14: optional string dataset_version_name (go.tag = 'json:"dataset_version_name"')
     15: optional string experiment_group_key (go.tag = 'json:"experiment_group_key"')
+    16: optional i64 experiment_create_time (api.js_conv = 'true', go.tag = 'json:"experiment_create_time"')  // 实验创建时间（秒），来源 experiment.created_at
+    17: optional i64 item_end_time (api.js_conv = 'true', go.tag = 'json:"item_end_time"')  // item 执行结束时间（秒），来源 expt_item_result.updated_at
 
     // 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
     30: optional StandardEvalOutputContent detail (go.tag = 'json:"detail"')
