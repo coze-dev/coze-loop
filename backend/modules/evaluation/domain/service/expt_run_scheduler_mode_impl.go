@@ -719,8 +719,16 @@ func (e *ExptSubmitExec) ScanEvalItems(ctx context.Context, event *entity.ExptSc
 
 func (e *ExptSubmitExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		pending, err := base.hasPendingAfterRescan(ctx, event)
+		if err != nil {
+			return false, err
+		}
+		if pending {
+			return true, nil
+		}
 		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt)
+		return false, base.exptEnd(ctx, event, expt)
 	}
 	return true, nil
 }
@@ -936,8 +944,16 @@ func (e *ExptFailRetryExec) ScanEvalItems(ctx context.Context, event *entity.Exp
 
 func (e *ExptFailRetryExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		pending, err := base.hasPendingAfterRescan(ctx, event)
+		if err != nil {
+			return false, err
+		}
+		if pending {
+			return true, nil
+		}
 		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt)
+		return false, base.exptEnd(ctx, event, expt)
 	}
 	return true, nil
 }
@@ -1276,6 +1292,28 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 		logs.CtxError(ctx, "ExptSchedulerImpl set end idem key fail, err: %v", err)
 	}
 	return nil
+}
+
+// hasPendingAfterRescan 终止前以 DB 真实状态为准重扫一次，判断是否还有待处理的 item。
+// 背景：本 tick 传入的 toSubmit/incomplete 计数是在 handleZombies 清理僵尸之前算出来的。
+// 当并发度被 Processing 僵尸占满时，scanToSubmit 会因空闲名额为 0 而跳过、不去捞 Queueing item;
+// 随后僵尸被置 Fail 移出 incomplete，导致离线模式 ExptEnd 看到 toSubmit==0 && incomplete==0 而误判完成，
+// 把仍在 Queueing 的 item 永久遗漏。此处对齐在线(Append)模式"终止前重扫、不信旧计数"的做法。
+// 直接查 DB 是否仍有 Queueing/Processing 的 item(不受并发名额门控影响)，limit 1 即可，
+// 仅在准备收工这条冷路径触发，成本可控。
+func (e *exptBaseExec) hasPendingAfterRescan(ctx context.Context, event *entity.ExptScheduleEvent) (bool, error) {
+	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
+		Status: []entity.ItemRunState{entity.ItemRunState_Queueing, entity.ItemRunState_Processing},
+	}, 0, 1, event.SpaceID)
+	if err != nil {
+		return false, err
+	}
+	if len(rls) > 0 {
+		logs.CtxInfo(ctx, "[ExptEval] rescan before end found pending item, keep ticking, expt_id: %v, expt_run_id: %v, item_id: %v, status: %v",
+			event.ExptID, event.ExptRunID, rls[0].ItemID, rls[0].Status)
+		return true, nil
+	}
+	return false, nil
 }
 
 func (e *exptBaseExec) publishResult(ctx context.Context, turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef, event *entity.ExptScheduleEvent) error {
@@ -1702,8 +1740,16 @@ func (e *ExptRetryAllExec) ScanEvalItems(ctx context.Context, event *entity.Expt
 
 func (e *ExptRetryAllExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 {
+		base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+		pending, err := base.hasPendingAfterRescan(ctx, event)
+		if err != nil {
+			return false, err
+		}
+		if pending {
+			return true, nil
+		}
 		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt)
+		return false, base.exptEnd(ctx, event, expt)
 	}
 	return true, nil
 }
@@ -2117,7 +2163,16 @@ func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptSche
 		}
 	}
 
-	if err := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt); err != nil {
+	base := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService)
+	pending, err := base.hasPendingAfterRescan(ctx, event)
+	if err != nil {
+		return false, err
+	}
+	if pending {
+		return true, nil
+	}
+
+	if err := base.exptEnd(ctx, event, expt); err != nil {
 		return false, err
 	}
 	return false, nil
