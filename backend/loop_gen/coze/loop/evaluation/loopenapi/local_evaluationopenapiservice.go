@@ -437,6 +437,29 @@ func (l *LocalEvaluationOpenAPIService) ReportEvalTargetInvokeResult_(ctx contex
 	return result.GetSuccess(), nil
 }
 
+// ReportEvalTargetStepMetric
+// 沙箱内部 step 打点上报接口：沙箱侧在 step 开始/结束时调用，服务端转成 evaluation_target_sandbox_agent.step_* 指标
+func (l *LocalEvaluationOpenAPIService) ReportEvalTargetStepMetric(ctx context.Context, req *openapi.ReportEvalTargetStepMetricRequest, callOptions ...callopt.Option) (*openapi.ReportEvalTargetStepMetricResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricResult)
+		resp, err := l.impl.ReportEvalTargetStepMetric(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricResult{}
+	ctx = l.injectRPCInfo(ctx, "ReportEvalTargetStepMetric")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // GetEvalTargetOutputFieldContentOApi
 // 按需查询评测对象输出中大对象的完整内容
 func (l *LocalEvaluationOpenAPIService) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest, callOptions ...callopt.Option) (*openapi.GetEvalTargetOutputFieldContentOApiResponse, error) {

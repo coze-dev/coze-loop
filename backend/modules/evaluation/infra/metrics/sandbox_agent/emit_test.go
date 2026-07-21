@@ -206,4 +206,79 @@ func TestNoopWhenMeterNil(t *testing.T) {
 	empty.EmitInvokeFinished(eval_metrics.SandboxAgentInvokeTags{}, nil, 0, time.Now())
 	empty.EmitExperimentStarted(eval_metrics.SandboxAgentExperimentTags{})
 	empty.EmitExperimentFinished(eval_metrics.SandboxAgentExperimentTags{}, nil, time.Now(), time.Now())
+	empty.EmitStepStarted(eval_metrics.SandboxAgentStepTags{})
+	empty.EmitStepFinished(eval_metrics.SandboxAgentStepTags{}, nil, 0, 0)
 }
+
+func TestEmitStepStarted(t *testing.T) {
+	impl, fm := newFakeImpl(t)
+	impl.EmitStepStarted(eval_metrics.SandboxAgentStepTags{
+		ExperimentID: 1, ItemID: 2, InvokeID: "3", DatasetID: 4, DatasetVersion: 5, StepName: "plan",
+	})
+	if len(fm.records) != 1 {
+		t.Fatalf("want 1 record, got %d", len(fm.records))
+	}
+	rec := fm.records[0]
+	if rec.tags["step_name"] != "plan" || rec.tags["item_id"] != "2" || rec.tags["invoke_id"] != "3" {
+		t.Fatalf("step tags wrong: %+v", rec.tags)
+	}
+	if rec.tags["success"] != "-" || rec.tags["error_type"] != "-" {
+		t.Fatalf("started should not carry success/error_type, got %+v", rec.tags)
+	}
+	if rec.values[0].suffix != "step_started" || rec.values[0].mType != metrics.MetricTypeCounter {
+		t.Fatalf("value wrong: %+v", rec.values[0])
+	}
+}
+
+func TestEmitStepFinished_Success(t *testing.T) {
+	impl, fm := newFakeImpl(t)
+	impl.EmitStepFinished(eval_metrics.SandboxAgentStepTags{StepName: "act"}, nil, 0, 750)
+	if len(fm.records) != 1 {
+		t.Fatalf("want 1 record")
+	}
+	rec := fm.records[0]
+	if rec.tags["success"] != "true" || rec.tags["error_type"] != "-" {
+		t.Fatalf("finished success tags wrong: %+v", rec.tags)
+	}
+	var counterSeen, timerSeen bool
+	for _, v := range rec.values {
+		switch v.suffix {
+		case "step_finished":
+			counterSeen = v.mType == metrics.MetricTypeCounter && v.v == 1
+		case "step_duration":
+			timerSeen = v.mType == metrics.MetricTypeTimer && v.v == 750
+		}
+	}
+	if !counterSeen || !timerSeen {
+		t.Fatalf("expected counter+timer, got %+v", rec.values)
+	}
+}
+
+func TestEmitStepFinished_EngineeringFailure(t *testing.T) {
+	impl, fm := newFakeImpl(t)
+	impl.EmitStepFinished(
+		eval_metrics.SandboxAgentStepTags{StepName: "call_model"},
+		&noopMetricsErr{},
+		601200701,
+		1000,
+	)
+	rec := fm.records[0]
+	if rec.tags["success"] != "false" || rec.tags["error_type"] != "engineering" {
+		t.Fatalf("tags wrong: %+v", rec.tags)
+	}
+}
+
+func TestEmitStepFinished_NegativeDurationClamped(t *testing.T) {
+	impl, fm := newFakeImpl(t)
+	impl.EmitStepFinished(eval_metrics.SandboxAgentStepTags{}, nil, 0, -1)
+	for _, v := range fm.records[0].values {
+		if v.suffix == "step_duration" && v.v != 0 {
+			t.Fatalf("negative duration should clamp to 0, got %d", v.v)
+		}
+	}
+}
+
+// noopMetricsErr 用于 step finished 失败路径测试.
+type noopMetricsErr struct{}
+
+func (n *noopMetricsErr) Error() string { return "boom" }

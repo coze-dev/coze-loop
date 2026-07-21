@@ -140,6 +140,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ReportEvalTargetStepMetric": kitex.NewMethodInfo(
+		reportEvalTargetStepMetricHandler,
+		newEvaluationOpenAPIServiceReportEvalTargetStepMetricArgs,
+		newEvaluationOpenAPIServiceReportEvalTargetStepMetricResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"GetEvalTargetOutputFieldContentOApi": kitex.NewMethodInfo(
 		getEvalTargetOutputFieldContentOApiHandler,
 		newEvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs,
@@ -744,6 +751,25 @@ func newEvaluationOpenAPIServiceReportEvalTargetInvokeResultArgs() interface{} {
 
 func newEvaluationOpenAPIServiceReportEvalTargetInvokeResultResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceReportEvalTargetInvokeResultResult()
+}
+
+func reportEvalTargetStepMetricHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ReportEvalTargetStepMetric(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceReportEvalTargetStepMetricArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceReportEvalTargetStepMetricArgs()
+}
+
+func newEvaluationOpenAPIServiceReportEvalTargetStepMetricResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceReportEvalTargetStepMetricResult()
 }
 
 func getEvalTargetOutputFieldContentOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1560,6 +1586,16 @@ func (p *kClient) ReportEvalTargetInvokeResult_(ctx context.Context, req *openap
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceReportEvalTargetInvokeResultResult
 	if err = p.c.Call(ctx, "ReportEvalTargetInvokeResult", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ReportEvalTargetStepMetric(ctx context.Context, req *openapi.ReportEvalTargetStepMetricRequest) (r *openapi.ReportEvalTargetStepMetricResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricResult
+	if err = p.c.Call(ctx, "ReportEvalTargetStepMetric", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

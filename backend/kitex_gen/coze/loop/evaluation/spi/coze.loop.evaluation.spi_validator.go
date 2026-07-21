@@ -87,9 +87,6 @@ func (p *InvokeEvalTargetOutput) IsValid() error {
 	}
 	return nil
 }
-func (p *EvalTargetStep) IsValid() error {
-	return nil
-}
 func (p *Content) IsValid() error {
 	if p.Image != nil {
 		if err := p.Image.IsValid(); err != nil {

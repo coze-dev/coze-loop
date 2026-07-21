@@ -28,6 +28,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	datafilter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	configermocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -1819,6 +1821,103 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEvalOpenAPIApplication_ReportEvalTargetStepMetric(t *testing.T) {
+	t.Parallel()
+
+	build := func(t *testing.T) (*EvalOpenAPIApplication, *metricsmocks.MockSandboxAgentMetrics, *gomock.Controller) {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		return app, mock, ctrl
+	}
+
+	t.Run("nil_req_returns_ok", func(t *testing.T) {
+		app, _, ctrl := build(t)
+		defer ctrl.Finish()
+		resp, err := app.ReportEvalTargetStepMetric(context.Background(), nil)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	t.Run("nil_metric_returns_ok", func(t *testing.T) {
+		app := &EvalOpenAPIApplication{}
+		resp, err := app.ReportEvalTargetStepMetric(context.Background(), &openapi.ReportEvalTargetStepMetricRequest{})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	t.Run("started_event_emits_step_started_with_tags", func(t *testing.T) {
+		app, mock, ctrl := build(t)
+		defer ctrl.Finish()
+		started := openapi.EvalTargetStepEventType_STARTED
+		req := &openapi.ReportEvalTargetStepMetricRequest{
+			WorkspaceID:      gptr.Of(int64(1)),
+			InvokeID:         gptr.Of(int64(999)),
+			EventType:        &started,
+			StepName:         gptr.Of("plan"),
+			ExperimentID:     gptr.Of(int64(100)),
+			ItemID:           gptr.Of(int64(200)),
+			DatasetID:        gptr.Of(int64(300)),
+			DatasetVersionID: gptr.Of(int64(400)),
+		}
+		mock.EXPECT().EmitStepStarted(gomock.Any()).Do(func(tags metrics.SandboxAgentStepTags) {
+			assert.Equal(t, int64(100), tags.ExperimentID)
+			assert.Equal(t, int64(200), tags.ItemID)
+			assert.Equal(t, "999", tags.InvokeID)
+			assert.Equal(t, int64(300), tags.DatasetID)
+			assert.Equal(t, int64(400), tags.DatasetVersion)
+			assert.Equal(t, "plan", tags.StepName)
+		})
+		resp, err := app.ReportEvalTargetStepMetric(context.Background(), req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	t.Run("finished_success_event_emits_no_error", func(t *testing.T) {
+		app, mock, ctrl := build(t)
+		defer ctrl.Finish()
+		finished := openapi.EvalTargetStepEventType_FINISHED
+		req := &openapi.ReportEvalTargetStepMetricRequest{
+			InvokeID:   gptr.Of(int64(1)),
+			EventType:  &finished,
+			StepName:   gptr.Of("act"),
+			Success:    gptr.Of(true),
+			DurationMs: gptr.Of(int64(1500)),
+		}
+		mock.EXPECT().EmitStepFinished(gomock.Any(), nil, int32(0), int64(1500))
+		_, err := app.ReportEvalTargetStepMetric(context.Background(), req)
+		require.NoError(t, err)
+	})
+
+	t.Run("finished_failure_event_passes_marker_error_and_code", func(t *testing.T) {
+		app, mock, ctrl := build(t)
+		defer ctrl.Finish()
+		finished := openapi.EvalTargetStepEventType_FINISHED
+		req := &openapi.ReportEvalTargetStepMetricRequest{
+			InvokeID:   gptr.Of(int64(2)),
+			EventType:  &finished,
+			StepName:   gptr.Of("act"),
+			Success:    gptr.Of(false),
+			DurationMs: gptr.Of(int64(800)),
+			ErrorCode:  gptr.Of(int32(601200701)),
+		}
+		mock.EXPECT().EmitStepFinished(gomock.Any(), gomock.Not(gomock.Nil()), int32(601200701), int64(800))
+		_, err := app.ReportEvalTargetStepMetric(context.Background(), req)
+		require.NoError(t, err)
+	})
+
+	t.Run("unknown_event_type_does_not_emit", func(t *testing.T) {
+		app, _, ctrl := build(t)
+		defer ctrl.Finish()
+		// 未设置 EventType 走 UNKNOWN 分支, mock 未 EXPECT 任何调用即为断言不 emit
+		_, err := app.ReportEvalTargetStepMetric(context.Background(), &openapi.ReportEvalTargetStepMetricRequest{
+			InvokeID: gptr.Of(int64(3)),
+		})
+		require.NoError(t, err)
+	})
 }
 
 func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {

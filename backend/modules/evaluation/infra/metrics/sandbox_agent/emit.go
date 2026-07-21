@@ -30,11 +30,17 @@ const (
 	suffixExperimentFinished = "experiment_finished"
 	suffixExperimentDuration = "experiment_duration"
 
+	// step suffixes — 沙箱内部编排流程 step，来源 openapi ReportEvalTargetStepMetric
+	suffixStepStarted  = "step_started"
+	suffixStepFinished = "step_finished"
+	suffixStepDuration = "step_duration"
+
 	tagExperimentID    = "experiment_id"
 	tagItemID          = "item_id"
 	tagInvokeID        = "invoke_id"
 	tagDatasetID       = "dataset_id"
 	tagDatasetVersion  = "dataset_version"
+	tagStepName        = "step_name"
 	tagSuccess         = "success"
 	tagErrorType       = "error_type"
 
@@ -49,6 +55,7 @@ func metricTagNames() []string {
 		tagInvokeID,
 		tagDatasetID,
 		tagDatasetVersion,
+		tagStepName,
 		tagSuccess,
 		tagErrorType,
 	}
@@ -123,6 +130,28 @@ func (m *metricsImpl) EmitExperimentFinished(tags eval_metrics.SandboxAgentExper
 		metrics.Timer(durMS, metrics.WithSuffix(suffixExperimentDuration)))
 }
 
+func (m *metricsImpl) EmitStepStarted(tags eval_metrics.SandboxAgentStepTags) {
+	if m == nil || m.metric == nil {
+		return
+	}
+	m.metric.Emit(m.buildStepTags(tags, "", ""),
+		metrics.Counter(1, metrics.WithSuffix(suffixStepStarted)))
+}
+
+func (m *metricsImpl) EmitStepFinished(tags eval_metrics.SandboxAgentStepTags, err error, errCode int32, durationMS int64) {
+	if m == nil || m.metric == nil {
+		return
+	}
+	success := successTag(err, errCode)
+	errType := ClassifyErrorType(err, errCode)
+	if durationMS < 0 {
+		durationMS = 0
+	}
+	m.metric.Emit(m.buildStepTags(tags, success, errType),
+		metrics.Counter(1, metrics.WithSuffix(suffixStepFinished)),
+		metrics.Timer(durationMS, metrics.WithSuffix(suffixStepDuration)))
+}
+
 func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, success, errType string) []metrics.T {
 	return []metrics.T{
 		{Name: tagExperimentID, Value: int64Tag(t.ExperimentID)},
@@ -130,6 +159,7 @@ func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, suc
 		{Name: tagInvokeID, Value: stringTag(t.InvokeID)},
 		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
 		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
+		{Name: tagStepName, Value: tagValuePlaceholder},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
 	}
@@ -142,6 +172,20 @@ func (m *metricsImpl) buildExperimentTags(t eval_metrics.SandboxAgentExperimentT
 		{Name: tagInvokeID, Value: tagValuePlaceholder},
 		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
 		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
+		{Name: tagStepName, Value: tagValuePlaceholder},
+		{Name: tagSuccess, Value: fallback(success)},
+		{Name: tagErrorType, Value: fallback(errType)},
+	}
+}
+
+func (m *metricsImpl) buildStepTags(t eval_metrics.SandboxAgentStepTags, success, errType string) []metrics.T {
+	return []metrics.T{
+		{Name: tagExperimentID, Value: int64Tag(t.ExperimentID)},
+		{Name: tagItemID, Value: int64Tag(t.ItemID)},
+		{Name: tagInvokeID, Value: stringTag(t.InvokeID)},
+		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
+		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
+		{Name: tagStepName, Value: stringTag(t.StepName)},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
 	}
@@ -194,3 +238,5 @@ func (n *noopMetrics) EmitInvokeStarted(_ eval_metrics.SandboxAgentInvokeTags)  
 func (n *noopMetrics) EmitInvokeFinished(_ eval_metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time)     {}
 func (n *noopMetrics) EmitExperimentStarted(_ eval_metrics.SandboxAgentExperimentTags)                             {}
 func (n *noopMetrics) EmitExperimentFinished(_ eval_metrics.SandboxAgentExperimentTags, _ error, _, _ time.Time)   {}
+func (n *noopMetrics) EmitStepStarted(_ eval_metrics.SandboxAgentStepTags)                                         {}
+func (n *noopMetrics) EmitStepFinished(_ eval_metrics.SandboxAgentStepTags, _ error, _ int32, _ int64)             {}

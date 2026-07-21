@@ -401,6 +401,43 @@ struct ReportEvalTargetInvokeResultResponse {
     255: base.BaseResp BaseResp
 }
 
+// 沙箱 agent 内部 step 打点事件类型
+// 沙箱在编排每个 step 的开始/结束时刻分别调用一次上报接口
+enum EvalTargetStepEventType {
+    UNKNOWN = 0
+    STARTED = 1
+    FINISHED = 2
+}
+
+// ReportEvalTargetStepMetricRequest 沙箱内部 step 打点上报请求
+// 服务端收到后将 event 转换成 evaluation_target_sandbox_agent.step_* 指标
+// 全部 tag 由沙箱侧直接透传，服务端不做 asyncCtx 反查
+struct ReportEvalTargetStepMetricRequest {
+    1: optional i64 workspace_id (api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 invoke_id (api.js_conv = "true", go.tag = 'json:"invoke_id"')
+    3: optional EvalTargetStepEventType event_type
+    4: optional string step_name
+    // 上下文 tag（沙箱侧直接透传）
+    10: optional i64 experiment_id (api.js_conv = "true", go.tag = 'json:"experiment_id"')
+    11: optional i64 item_id (api.js_conv = "true", go.tag = 'json:"item_id"')
+    12: optional i64 dataset_id (api.js_conv = "true", go.tag = 'json:"dataset_id"')
+    13: optional i64 dataset_version_id (api.js_conv = "true", go.tag = 'json:"dataset_version_id"')
+    14: optional i32 turn_index
+    15: optional i32 step_index
+    // 仅 FINISHED 事件携带
+    20: optional i64 duration_ms
+    21: optional bool success
+    22: optional i32 error_code
+    23: optional string error_message
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ReportEvalTargetStepMetricResponse {
+    255: base.BaseResp BaseResp
+}
+
 // 按需查询评测对象输出中大对象的完整内容
 struct GetEvalTargetOutputFieldContentOApiRequest {
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = "true", go.tag = 'json:"workspace_id"')
@@ -1344,6 +1381,8 @@ service EvaluationOpenAPIService {
 
     // 评测目标调用结果上报接口
     ReportEvalTargetInvokeResultResponse ReportEvalTargetInvokeResult(1: ReportEvalTargetInvokeResultRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/result")
+    // 沙箱内部 step 打点上报接口：沙箱侧在 step 开始/结束时调用，服务端转成 evaluation_target_sandbox_agent.step_* 指标
+    ReportEvalTargetStepMetricResponse ReportEvalTargetStepMetric(1: ReportEvalTargetStepMetricRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/step_metric")
     // 按需查询评测对象输出中大对象的完整内容
     GetEvalTargetOutputFieldContentOApiResponse GetEvalTargetOutputFieldContentOApi(1: GetEvalTargetOutputFieldContentOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/eval_target_records/output_fields")
     // 异步调试评测对象
