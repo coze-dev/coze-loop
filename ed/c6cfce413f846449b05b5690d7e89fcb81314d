@@ -1,0 +1,21 @@
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_multiset_exec_test.go
+  s_44c7dcc4637a47::t_03b92eb757481a 8,585-998
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "edc6cfce413f846449b05b5690d7e89fcb81314d",
+  "prompts": {},
+  "sessions": {
+    "s_44c7dcc4637a47": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afc5dfb31f3815357",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

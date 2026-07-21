@@ -1,0 +1,113 @@
+backend/modules/observability/infra/repo/trace_test.go
+  s_ec3ea0496d81f8::t_3452b27e72b274 2025-2042,2045-2260 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a56f529a02d2b0c3ef41077","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[2025,2042]},{"Range":[2045,2260]}]}]}
+  s_ec3ea0496d81f8::t_eb4a89065b77af 2043-2044 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a56f576a02d2b0c3ef41080","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[2043,2044]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6963f52cd32703ce952d1a5b63c8ce84b1e7bb8c",
+  "prompts": {},
+  "sessions": {
+    "s_ec3ea0496d81f8": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a55d6d69d2c05345e65e31c",
+        "model": "c_o_new_thinking__dev"
+      },
+      "human_author": "cuichen <cuichen.cuichen@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/observability/infra/repo/trace_test.go": [
+      {
+        "hash": "s_ec3ea0496d81f8::t_3452b27e72b274",
+        "line_ranges": [
+          {
+            "Range": [
+              2025,
+              2042
+            ]
+          },
+          {
+            "Range": [
+              2045,
+              2260
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a56f529a02d2b0c3ef41077",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  2025,
+                  2042
+                ]
+              },
+              {
+                "Range": [
+                  2045,
+                  2260
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_ec3ea0496d81f8::t_eb4a89065b77af",
+        "line_ranges": [
+          {
+            "Range": [
+              2043,
+              2044
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a56f576a02d2b0c3ef41080",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  2043,
+                  2044
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_ec3ea0496d81f8": {
+      "tool": "trae",
+      "conversation_id": "6a55d6d69d2c05345e65e31c",
+      "session_id": "6a55d6d69d2c05345e65e31c",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_ec3ea0496d81f8::t_3452b27e72b274": {
+      "tool": "trae",
+      "conversation_id": "6a55d6d69d2c05345e65e31c",
+      "session_id": "6a55d6d69d2c05345e65e31c",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_ec3ea0496d81f8::t_eb4a89065b77af": {
+      "tool": "trae",
+      "conversation_id": "6a55d6d69d2c05345e65e31c",
+      "session_id": "6a55d6d69d2c05345e65e31c",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
