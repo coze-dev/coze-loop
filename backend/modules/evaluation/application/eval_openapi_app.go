@@ -1017,9 +1017,11 @@ func (e *sandboxAgentStepFailure) Error() string {
 // evaluation_target_sandbox_agent.step_started / step_finished / step_duration.
 //
 // 关键设计:
-//   - 全部 tag 由沙箱侧直接透传, 服务端不做 asyncCtx 反查 (Redis 少一次调用);
+//   - 沙箱请求只需要传 invoke_id (+ step_name + event_type + FINISHED 的 duration/success/error_code);
+//     experiment_id / item_id / dataset_id / dataset_version_id / target_id / item_key / dataset_key
+//     全部由服务端通过 asyncCtx (Redis) 反查, 减少沙箱侧维护上下文的心智负担;
 //   - 单接口 + event_type 区分 STARTED / FINISHED, FINISHED 携带 duration_ms + success + error_code;
-//   - metrics 打点为 best-effort, 参数缺失/metric 组件缺失时静默丢弃, 不返回 error 影响沙箱执行。
+//   - metrics 打点为 best-effort, actx 缺失/metric 组件缺失时静默丢弃, 不返回 error 影响沙箱执行。
 func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context, req *openapi.ReportEvalTargetStepMetricRequest) (r *openapi.ReportEvalTargetStepMetricResponse, err error) {
 	if req == nil {
 		return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
@@ -1031,13 +1033,27 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 		return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
 	}
 
+	// 反查 asyncCtx 拿全部 tag; 拿不到时 tag 会走占位符, 但仍然上报以便看板不遗漏事件。
 	tags := metrics.SandboxAgentStepTags{
-		ExperimentID:   req.GetExperimentID(),
-		ItemID:         req.GetItemID(),
-		InvokeID:       strconv.FormatInt(req.GetInvokeID(), 10),
-		DatasetID:      req.GetDatasetID(),
-		DatasetVersion: req.GetDatasetVersionID(),
-		StepName:       req.GetStepName(),
+		InvokeID: strconv.FormatInt(req.GetInvokeID(), 10),
+		StepName: req.GetStepName(),
+	}
+	if req.GetInvokeID() != 0 {
+		actx, ctxErr := e.asyncRepo.GetEvalAsyncCtx(ctx, strconv.FormatInt(req.GetInvokeID(), 10))
+		if ctxErr != nil {
+			// asyncCtx 反查失败不阻塞打点, 上报仅缺失 tag; 打个 warn 便于排障。
+			logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: GetEvalAsyncCtx failed, invoke_id=%d, err=%v", req.GetInvokeID(), ctxErr)
+		} else if actx != nil {
+			if actx.Event != nil {
+				tags.ExperimentID = actx.Event.ExptID
+				tags.ItemID = actx.Event.EvalSetItemID
+			}
+			tags.DatasetID = actx.DatasetID
+			tags.DatasetVersion = actx.DatasetVersionID
+			tags.TargetID = actx.TargetID
+			tags.ItemKey = actx.ItemKey
+			tags.DatasetKey = actx.DatasetKey
+		}
 	}
 
 	switch req.GetEventType() {

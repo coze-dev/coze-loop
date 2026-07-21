@@ -214,6 +214,7 @@ func TestEmitStepStarted(t *testing.T) {
 	impl, fm := newFakeImpl(t)
 	impl.EmitStepStarted(eval_metrics.SandboxAgentStepTags{
 		ExperimentID: 1, ItemID: 2, InvokeID: "3", DatasetID: 4, DatasetVersion: 5, StepName: "plan",
+		TargetID: 6, ItemKey: "item-key", DatasetKey: "ds-key",
 	})
 	if len(fm.records) != 1 {
 		t.Fatalf("want 1 record, got %d", len(fm.records))
@@ -221,6 +222,9 @@ func TestEmitStepStarted(t *testing.T) {
 	rec := fm.records[0]
 	if rec.tags["step_name"] != "plan" || rec.tags["item_id"] != "2" || rec.tags["invoke_id"] != "3" {
 		t.Fatalf("step tags wrong: %+v", rec.tags)
+	}
+	if rec.tags["target_id"] != "6" || rec.tags["item_key"] != "item-key" || rec.tags["dataset_key"] != "ds-key" {
+		t.Fatalf("new step tags wrong: %+v", rec.tags)
 	}
 	if rec.tags["success"] != "-" || rec.tags["error_type"] != "-" {
 		t.Fatalf("started should not carry success/error_type, got %+v", rec.tags)

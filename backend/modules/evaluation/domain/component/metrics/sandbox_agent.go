@@ -24,6 +24,7 @@ type SandboxAgentExperimentTags struct {
 
 // SandboxAgentStepTags 沙箱内部 step 事件的 tag 集合。
 // step_name 是可枚举维度，其它 tag 与 invoke 复用同一命名。
+// item_key / dataset_key / target_id 是 step 上报独有的反查 tag。
 type SandboxAgentStepTags struct {
 	ExperimentID   int64
 	ItemID         int64
@@ -31,6 +32,9 @@ type SandboxAgentStepTags struct {
 	DatasetID      int64
 	DatasetVersion int64
 	StepName       string
+	TargetID       int64
+	ItemKey        string
+	DatasetKey     string
 }
 
 //go:generate mockgen -destination=mocks/sandbox_agent.go -package=mocks . SandboxAgentMetrics

@@ -305,11 +305,46 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		Session:                 etec.Event.Session,
 		Callee:                  callee,
 		EnableExtractTrajectory: etc.EnableExtractTrajectory,
+		TargetID:                pickTargetID(etec),
+		DatasetID:               pickDatasetID(etec),
+		DatasetVersionID:        etec.EvalSetVersionID,
+		ItemKey:                 pickItemKey(etec),
+		DatasetKey:              pickDatasetKey(etec),
 	}); err != nil {
 		return nil, err
 	}
 
 	return targetRecord, nil
+}
+
+// pickTargetID / pickDatasetID / pickItemKey / pickDatasetKey 尽量宽松地从 etec 中提取字段, 缺失时返回零值。
+// 这些字段仅用于沙箱 step 上报 tag 反查, 缺失时上报侧走占位符, 不会 panic。
+func pickTargetID(etec *entity.ExptTurnEvalCtx) int64 {
+	if etec == nil || etec.Expt == nil || etec.Expt.Target == nil {
+		return 0
+	}
+	return etec.Expt.Target.ID
+}
+
+func pickDatasetID(etec *entity.ExptTurnEvalCtx) int64 {
+	if etec == nil || etec.Expt == nil {
+		return 0
+	}
+	return etec.Expt.EvalSetID
+}
+
+func pickItemKey(etec *entity.ExptTurnEvalCtx) string {
+	if etec == nil || etec.EvalSetItem == nil {
+		return ""
+	}
+	return etec.EvalSetItem.ItemKey
+}
+
+func pickDatasetKey(etec *entity.ExptTurnEvalCtx) string {
+	if etec == nil || etec.Expt == nil || etec.Expt.EvalSet == nil {
+		return ""
+	}
+	return etec.Expt.EvalSet.DatasetKey
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) ([]*entity.EvaluatorRecord, error) {

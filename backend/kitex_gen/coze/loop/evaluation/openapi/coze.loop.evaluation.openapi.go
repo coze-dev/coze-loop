@@ -19626,20 +19626,13 @@ func (p *ReportEvalTargetInvokeResultResponse) Field255DeepEqual(src *base.BaseR
 }
 
 // ReportEvalTargetStepMetricRequest 沙箱内部 step 打点上报请求
-// 服务端收到后将 event 转换成 evaluation_target_sandbox_agent.step_* 指标
-// 全部 tag 由沙箱侧直接透传，服务端不做 asyncCtx 反查
+// 沙箱只需要传 invoke_id, 服务端通过 asyncCtx 反查 experiment_id / item_id /
+// dataset_id / dataset_version_id / target_id / item_key / dataset_key 等 tag
 type ReportEvalTargetStepMetricRequest struct {
 	WorkspaceID *int64                   `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	InvokeID    *int64                   `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" json:"invoke_id" form:"invoke_id" query:"invoke_id"`
 	EventType   *EvalTargetStepEventType `thrift:"event_type,3,optional" frugal:"3,optional,EvalTargetStepEventType" form:"event_type" json:"event_type,omitempty" query:"event_type"`
 	StepName    *string                  `thrift:"step_name,4,optional" frugal:"4,optional,string" form:"step_name" json:"step_name,omitempty" query:"step_name"`
-	// 上下文 tag（沙箱侧直接透传）
-	ExperimentID     *int64 `thrift:"experiment_id,10,optional" frugal:"10,optional,i64" json:"experiment_id" form:"experiment_id" query:"experiment_id"`
-	ItemID           *int64 `thrift:"item_id,11,optional" frugal:"11,optional,i64" json:"item_id" form:"item_id" query:"item_id"`
-	DatasetID        *int64 `thrift:"dataset_id,12,optional" frugal:"12,optional,i64" json:"dataset_id" form:"dataset_id" query:"dataset_id"`
-	DatasetVersionID *int64 `thrift:"dataset_version_id,13,optional" frugal:"13,optional,i64" json:"dataset_version_id" form:"dataset_version_id" query:"dataset_version_id"`
-	TurnIndex        *int32 `thrift:"turn_index,14,optional" frugal:"14,optional,i32" form:"turn_index" json:"turn_index,omitempty" query:"turn_index"`
-	StepIndex        *int32 `thrift:"step_index,15,optional" frugal:"15,optional,i32" form:"step_index" json:"step_index,omitempty" query:"step_index"`
 	// 仅 FINISHED 事件携带
 	DurationMs   *int64       `thrift:"duration_ms,20,optional" frugal:"20,optional,i64" form:"duration_ms" json:"duration_ms,omitempty" query:"duration_ms"`
 	Success      *bool        `thrift:"success,21,optional" frugal:"21,optional,bool" form:"success" json:"success,omitempty" query:"success"`
@@ -19702,78 +19695,6 @@ func (p *ReportEvalTargetStepMetricRequest) GetStepName() (v string) {
 		return ReportEvalTargetStepMetricRequest_StepName_DEFAULT
 	}
 	return *p.StepName
-}
-
-var ReportEvalTargetStepMetricRequest_ExperimentID_DEFAULT int64
-
-func (p *ReportEvalTargetStepMetricRequest) GetExperimentID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetExperimentID() {
-		return ReportEvalTargetStepMetricRequest_ExperimentID_DEFAULT
-	}
-	return *p.ExperimentID
-}
-
-var ReportEvalTargetStepMetricRequest_ItemID_DEFAULT int64
-
-func (p *ReportEvalTargetStepMetricRequest) GetItemID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetItemID() {
-		return ReportEvalTargetStepMetricRequest_ItemID_DEFAULT
-	}
-	return *p.ItemID
-}
-
-var ReportEvalTargetStepMetricRequest_DatasetID_DEFAULT int64
-
-func (p *ReportEvalTargetStepMetricRequest) GetDatasetID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetDatasetID() {
-		return ReportEvalTargetStepMetricRequest_DatasetID_DEFAULT
-	}
-	return *p.DatasetID
-}
-
-var ReportEvalTargetStepMetricRequest_DatasetVersionID_DEFAULT int64
-
-func (p *ReportEvalTargetStepMetricRequest) GetDatasetVersionID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetDatasetVersionID() {
-		return ReportEvalTargetStepMetricRequest_DatasetVersionID_DEFAULT
-	}
-	return *p.DatasetVersionID
-}
-
-var ReportEvalTargetStepMetricRequest_TurnIndex_DEFAULT int32
-
-func (p *ReportEvalTargetStepMetricRequest) GetTurnIndex() (v int32) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTurnIndex() {
-		return ReportEvalTargetStepMetricRequest_TurnIndex_DEFAULT
-	}
-	return *p.TurnIndex
-}
-
-var ReportEvalTargetStepMetricRequest_StepIndex_DEFAULT int32
-
-func (p *ReportEvalTargetStepMetricRequest) GetStepIndex() (v int32) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetStepIndex() {
-		return ReportEvalTargetStepMetricRequest_StepIndex_DEFAULT
-	}
-	return *p.StepIndex
 }
 
 var ReportEvalTargetStepMetricRequest_DurationMs_DEFAULT int64
@@ -19859,24 +19780,6 @@ func (p *ReportEvalTargetStepMetricRequest) SetEventType(val *EvalTargetStepEven
 func (p *ReportEvalTargetStepMetricRequest) SetStepName(val *string) {
 	p.StepName = val
 }
-func (p *ReportEvalTargetStepMetricRequest) SetExperimentID(val *int64) {
-	p.ExperimentID = val
-}
-func (p *ReportEvalTargetStepMetricRequest) SetItemID(val *int64) {
-	p.ItemID = val
-}
-func (p *ReportEvalTargetStepMetricRequest) SetDatasetID(val *int64) {
-	p.DatasetID = val
-}
-func (p *ReportEvalTargetStepMetricRequest) SetDatasetVersionID(val *int64) {
-	p.DatasetVersionID = val
-}
-func (p *ReportEvalTargetStepMetricRequest) SetTurnIndex(val *int32) {
-	p.TurnIndex = val
-}
-func (p *ReportEvalTargetStepMetricRequest) SetStepIndex(val *int32) {
-	p.StepIndex = val
-}
 func (p *ReportEvalTargetStepMetricRequest) SetDurationMs(val *int64) {
 	p.DurationMs = val
 }
@@ -19901,12 +19804,6 @@ var fieldIDToName_ReportEvalTargetStepMetricRequest = map[int16]string{
 	2:   "invoke_id",
 	3:   "event_type",
 	4:   "step_name",
-	10:  "experiment_id",
-	11:  "item_id",
-	12:  "dataset_id",
-	13:  "dataset_version_id",
-	14:  "turn_index",
-	15:  "step_index",
 	20:  "duration_ms",
 	21:  "success",
 	22:  "error_code",
@@ -19929,30 +19826,6 @@ func (p *ReportEvalTargetStepMetricRequest) IsSetEventType() bool {
 
 func (p *ReportEvalTargetStepMetricRequest) IsSetStepName() bool {
 	return p.StepName != nil
-}
-
-func (p *ReportEvalTargetStepMetricRequest) IsSetExperimentID() bool {
-	return p.ExperimentID != nil
-}
-
-func (p *ReportEvalTargetStepMetricRequest) IsSetItemID() bool {
-	return p.ItemID != nil
-}
-
-func (p *ReportEvalTargetStepMetricRequest) IsSetDatasetID() bool {
-	return p.DatasetID != nil
-}
-
-func (p *ReportEvalTargetStepMetricRequest) IsSetDatasetVersionID() bool {
-	return p.DatasetVersionID != nil
-}
-
-func (p *ReportEvalTargetStepMetricRequest) IsSetTurnIndex() bool {
-	return p.TurnIndex != nil
-}
-
-func (p *ReportEvalTargetStepMetricRequest) IsSetStepIndex() bool {
-	return p.StepIndex != nil
 }
 
 func (p *ReportEvalTargetStepMetricRequest) IsSetDurationMs() bool {
@@ -20024,54 +19897,6 @@ func (p *ReportEvalTargetStepMetricRequest) Read(iprot thrift.TProtocol) (err er
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 10:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField10(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 11:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField11(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 12:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField12(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 13:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField13(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 14:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField14(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 15:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -20199,72 +20024,6 @@ func (p *ReportEvalTargetStepMetricRequest) ReadField4(iprot thrift.TProtocol) e
 	p.StepName = _field
 	return nil
 }
-func (p *ReportEvalTargetStepMetricRequest) ReadField10(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ExperimentID = _field
-	return nil
-}
-func (p *ReportEvalTargetStepMetricRequest) ReadField11(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ItemID = _field
-	return nil
-}
-func (p *ReportEvalTargetStepMetricRequest) ReadField12(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.DatasetID = _field
-	return nil
-}
-func (p *ReportEvalTargetStepMetricRequest) ReadField13(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.DatasetVersionID = _field
-	return nil
-}
-func (p *ReportEvalTargetStepMetricRequest) ReadField14(iprot thrift.TProtocol) error {
-
-	var _field *int32
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.TurnIndex = _field
-	return nil
-}
-func (p *ReportEvalTargetStepMetricRequest) ReadField15(iprot thrift.TProtocol) error {
-
-	var _field *int32
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.StepIndex = _field
-	return nil
-}
 func (p *ReportEvalTargetStepMetricRequest) ReadField20(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -20346,30 +20105,6 @@ func (p *ReportEvalTargetStepMetricRequest) Write(oprot thrift.TProtocol) (err e
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField10(oprot); err != nil {
-			fieldId = 10
-			goto WriteFieldError
-		}
-		if err = p.writeField11(oprot); err != nil {
-			fieldId = 11
-			goto WriteFieldError
-		}
-		if err = p.writeField12(oprot); err != nil {
-			fieldId = 12
-			goto WriteFieldError
-		}
-		if err = p.writeField13(oprot); err != nil {
-			fieldId = 13
-			goto WriteFieldError
-		}
-		if err = p.writeField14(oprot); err != nil {
-			fieldId = 14
-			goto WriteFieldError
-		}
-		if err = p.writeField15(oprot); err != nil {
-			fieldId = 15
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -20485,114 +20220,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-func (p *ReportEvalTargetStepMetricRequest) writeField10(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExperimentID() {
-		if err = oprot.WriteFieldBegin("experiment_id", thrift.I64, 10); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.ExperimentID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
-}
-func (p *ReportEvalTargetStepMetricRequest) writeField11(oprot thrift.TProtocol) (err error) {
-	if p.IsSetItemID() {
-		if err = oprot.WriteFieldBegin("item_id", thrift.I64, 11); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.ItemID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
-}
-func (p *ReportEvalTargetStepMetricRequest) writeField12(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDatasetID() {
-		if err = oprot.WriteFieldBegin("dataset_id", thrift.I64, 12); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.DatasetID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
-}
-func (p *ReportEvalTargetStepMetricRequest) writeField13(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDatasetVersionID() {
-		if err = oprot.WriteFieldBegin("dataset_version_id", thrift.I64, 13); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.DatasetVersionID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
-}
-func (p *ReportEvalTargetStepMetricRequest) writeField14(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTurnIndex() {
-		if err = oprot.WriteFieldBegin("turn_index", thrift.I32, 14); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI32(*p.TurnIndex); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
-}
-func (p *ReportEvalTargetStepMetricRequest) writeField15(oprot thrift.TProtocol) (err error) {
-	if p.IsSetStepIndex() {
-		if err = oprot.WriteFieldBegin("step_index", thrift.I32, 15); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI32(*p.StepIndex); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
 func (p *ReportEvalTargetStepMetricRequest) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDurationMs() {
@@ -20729,24 +20356,6 @@ func (p *ReportEvalTargetStepMetricRequest) DeepEqual(ano *ReportEvalTargetStepM
 	if !p.Field4DeepEqual(ano.StepName) {
 		return false
 	}
-	if !p.Field10DeepEqual(ano.ExperimentID) {
-		return false
-	}
-	if !p.Field11DeepEqual(ano.ItemID) {
-		return false
-	}
-	if !p.Field12DeepEqual(ano.DatasetID) {
-		return false
-	}
-	if !p.Field13DeepEqual(ano.DatasetVersionID) {
-		return false
-	}
-	if !p.Field14DeepEqual(ano.TurnIndex) {
-		return false
-	}
-	if !p.Field15DeepEqual(ano.StepIndex) {
-		return false
-	}
 	if !p.Field20DeepEqual(ano.DurationMs) {
 		return false
 	}
@@ -20812,78 +20421,6 @@ func (p *ReportEvalTargetStepMetricRequest) Field4DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.StepName, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *ReportEvalTargetStepMetricRequest) Field10DeepEqual(src *int64) bool {
-
-	if p.ExperimentID == src {
-		return true
-	} else if p.ExperimentID == nil || src == nil {
-		return false
-	}
-	if *p.ExperimentID != *src {
-		return false
-	}
-	return true
-}
-func (p *ReportEvalTargetStepMetricRequest) Field11DeepEqual(src *int64) bool {
-
-	if p.ItemID == src {
-		return true
-	} else if p.ItemID == nil || src == nil {
-		return false
-	}
-	if *p.ItemID != *src {
-		return false
-	}
-	return true
-}
-func (p *ReportEvalTargetStepMetricRequest) Field12DeepEqual(src *int64) bool {
-
-	if p.DatasetID == src {
-		return true
-	} else if p.DatasetID == nil || src == nil {
-		return false
-	}
-	if *p.DatasetID != *src {
-		return false
-	}
-	return true
-}
-func (p *ReportEvalTargetStepMetricRequest) Field13DeepEqual(src *int64) bool {
-
-	if p.DatasetVersionID == src {
-		return true
-	} else if p.DatasetVersionID == nil || src == nil {
-		return false
-	}
-	if *p.DatasetVersionID != *src {
-		return false
-	}
-	return true
-}
-func (p *ReportEvalTargetStepMetricRequest) Field14DeepEqual(src *int32) bool {
-
-	if p.TurnIndex == src {
-		return true
-	} else if p.TurnIndex == nil || src == nil {
-		return false
-	}
-	if *p.TurnIndex != *src {
-		return false
-	}
-	return true
-}
-func (p *ReportEvalTargetStepMetricRequest) Field15DeepEqual(src *int32) bool {
-
-	if p.StepIndex == src {
-		return true
-	} else if p.StepIndex == nil || src == nil {
-		return false
-	}
-	if *p.StepIndex != *src {
 		return false
 	}
 	return true

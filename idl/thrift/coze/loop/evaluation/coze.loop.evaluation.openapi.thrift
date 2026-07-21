@@ -410,20 +410,13 @@ enum EvalTargetStepEventType {
 }
 
 // ReportEvalTargetStepMetricRequest 沙箱内部 step 打点上报请求
-// 服务端收到后将 event 转换成 evaluation_target_sandbox_agent.step_* 指标
-// 全部 tag 由沙箱侧直接透传，服务端不做 asyncCtx 反查
+// 沙箱只需要传 invoke_id, 服务端通过 asyncCtx 反查 experiment_id / item_id /
+// dataset_id / dataset_version_id / target_id / item_key / dataset_key 等 tag
 struct ReportEvalTargetStepMetricRequest {
     1: optional i64 workspace_id (api.js_conv = "true", go.tag = 'json:"workspace_id"')
     2: optional i64 invoke_id (api.js_conv = "true", go.tag = 'json:"invoke_id"')
     3: optional EvalTargetStepEventType event_type
     4: optional string step_name
-    // 上下文 tag（沙箱侧直接透传）
-    10: optional i64 experiment_id (api.js_conv = "true", go.tag = 'json:"experiment_id"')
-    11: optional i64 item_id (api.js_conv = "true", go.tag = 'json:"item_id"')
-    12: optional i64 dataset_id (api.js_conv = "true", go.tag = 'json:"dataset_id"')
-    13: optional i64 dataset_version_id (api.js_conv = "true", go.tag = 'json:"dataset_version_id"')
-    14: optional i32 turn_index
-    15: optional i32 step_index
     // 仅 FINISHED 事件携带
     20: optional i64 duration_ms
     21: optional bool success
