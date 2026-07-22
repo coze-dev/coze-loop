@@ -72,6 +72,12 @@ func NewCKFromConfig(cfg *Config) (Provider, error) {
 		opt.Protocol = std_ck.Native
 	}
 	ckSqlDB := std_ck.OpenDB(opt)
+	if cfg.MaxOpenConns > 0 {
+		ckSqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	}
+	if cfg.MaxIdleConns > 0 {
+		ckSqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	}
 	ckDb, err := gorm.Open(clickhouse.New(clickhouse.Config{Conn: ckSqlDB}))
 	if err != nil {
 		return nil, err
