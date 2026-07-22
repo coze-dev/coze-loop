@@ -40,8 +40,9 @@ type SearchDatasetsParam struct {
 	DatasetIDs []int64
 	Category   entity.DatasetCategory
 	// 支持模糊搜索
-	Name       *string
-	CreatedBys []string
+	Name        *string
+	Description *string
+	CreatedBys  []string
 	/* pagination */
 	Page *int32
 	// 分页大小(0, 200]，默认为 20

@@ -3808,7 +3808,9 @@ type ListDatasetsRequest struct {
 	DatasetIds  []int64                  `thrift:"dataset_ids,2,optional" frugal:"2,optional,list<i64>" json:"dataset_ids" form:"dataset_ids" query:"dataset_ids"`
 	Category    *dataset.DatasetCategory `thrift:"category,3,optional" frugal:"3,optional,DatasetCategory" form:"category" json:"category,omitempty" query:"category"`
 	// 支持模糊搜索
-	Name         *string  `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Name *string `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// 支持模糊搜索
+	Description  *string  `thrift:"description,8,optional" frugal:"8,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	CreatedBys   []string `thrift:"created_bys,5,optional" frugal:"5,optional,list<string>" form:"created_bys" json:"created_bys,omitempty" query:"created_bys"`
 	BizCategorys []string `thrift:"biz_categorys,6,optional" frugal:"6,optional,list<string>" form:"biz_categorys" json:"biz_categorys,omitempty" query:"biz_categorys"`
 	// 按 dataset_key 精确匹配
@@ -3871,6 +3873,18 @@ func (p *ListDatasetsRequest) GetName() (v string) {
 		return ListDatasetsRequest_Name_DEFAULT
 	}
 	return *p.Name
+}
+
+var ListDatasetsRequest_Description_DEFAULT string
+
+func (p *ListDatasetsRequest) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return ListDatasetsRequest_Description_DEFAULT
+	}
+	return *p.Description
 }
 
 var ListDatasetsRequest_CreatedBys_DEFAULT []string
@@ -3980,6 +3994,9 @@ func (p *ListDatasetsRequest) SetCategory(val *dataset.DatasetCategory) {
 func (p *ListDatasetsRequest) SetName(val *string) {
 	p.Name = val
 }
+func (p *ListDatasetsRequest) SetDescription(val *string) {
+	p.Description = val
+}
 func (p *ListDatasetsRequest) SetCreatedBys(val []string) {
 	p.CreatedBys = val
 }
@@ -4010,6 +4027,7 @@ var fieldIDToName_ListDatasetsRequest = map[int16]string{
 	2:   "dataset_ids",
 	3:   "category",
 	4:   "name",
+	8:   "description",
 	5:   "created_bys",
 	6:   "biz_categorys",
 	7:   "dataset_keys",
@@ -4030,6 +4048,10 @@ func (p *ListDatasetsRequest) IsSetCategory() bool {
 
 func (p *ListDatasetsRequest) IsSetName() bool {
 	return p.Name != nil
+}
+
+func (p *ListDatasetsRequest) IsSetDescription() bool {
+	return p.Description != nil
 }
 
 func (p *ListDatasetsRequest) IsSetCreatedBys() bool {
@@ -4111,6 +4133,14 @@ func (p *ListDatasetsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4272,6 +4302,17 @@ func (p *ListDatasetsRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.Name = _field
 	return nil
 }
+func (p *ListDatasetsRequest) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
 func (p *ListDatasetsRequest) ReadField5(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -4428,6 +4469,10 @@ func (p *ListDatasetsRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 4
 			goto WriteFieldError
 		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
 			goto WriteFieldError
@@ -4555,6 +4600,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ListDatasetsRequest) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 func (p *ListDatasetsRequest) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCreatedBys() {
@@ -4759,6 +4822,9 @@ func (p *ListDatasetsRequest) DeepEqual(ano *ListDatasetsRequest) bool {
 	if !p.Field4DeepEqual(ano.Name) {
 		return false
 	}
+	if !p.Field8DeepEqual(ano.Description) {
+		return false
+	}
 	if !p.Field5DeepEqual(ano.CreatedBys) {
 		return false
 	}
@@ -4826,6 +4892,18 @@ func (p *ListDatasetsRequest) Field4DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListDatasetsRequest) Field8DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
 		return false
 	}
 	return true

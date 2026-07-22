@@ -193,6 +193,7 @@ func (a *DatasetRPCAdapter) ListDatasets(ctx context.Context, param *rpc.ListDat
 		WorkspaceID: param.SpaceID,
 		DatasetIds:  param.EvaluationSetIDs,
 		Name:        param.Name,
+		Description: param.Description,
 		CreatedBys:  param.Creators,
 		PageNumber:  param.PageNumber,
 		PageSize:    param.PageSize,

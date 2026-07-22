@@ -200,6 +200,7 @@ func (h *DatasetApplicationImpl) ListDatasets(ctx context.Context, req *dataset.
 		DatasetIDs:   req.DatasetIds,
 		Category:     convertor.ConvertCategoryDTO2DO(gptr.Indirect(req.Category)),
 		Name:         req.Name,
+		Description:  req.Description,
 		CreatedBys:   req.CreatedBys,
 		Page:         req.PageNumber,
 		PageSize:     req.PageSize,

@@ -111,6 +111,7 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 		SpaceID:          param.SpaceID,
 		EvaluationSetIDs: param.EvaluationSetIDs,
 		Name:             param.Name,
+		Description:      param.Description,
 		Creators:         param.Creators,
 		PageNumber:       param.PageNumber,
 		PageSize:         param.PageSize,

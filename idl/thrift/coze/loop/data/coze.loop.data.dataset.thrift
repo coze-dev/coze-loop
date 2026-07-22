@@ -77,6 +77,7 @@ struct ListDatasetsRequest {
     2: optional list<i64> dataset_ids (api.js_conv="true", go.tag='json:"dataset_ids"')
     3: optional dataset.DatasetCategory category
     4: optional string name (vt.max_size = "255")                                    // 支持模糊搜索
+    8: optional string description (vt.max_size = "255")                             // 支持模糊搜索
     5: optional list<string> created_bys
     6: optional list<string> biz_categorys
     7: optional list<string> dataset_keys (vt.max_size = "255")                      // 按 dataset_key 精确匹配

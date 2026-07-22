@@ -128,6 +128,7 @@ struct ListEvaluationSetsRequest {
     5: optional eval_set.EvaluationSetType type (vt.max_size = "128"), // 按评测集类型过滤
     6: optional list<string> dataset_keys (vt.max_size = "255"), // 按 dataset_key 精确匹配
     7: optional eval_set.TagFilter tag_filter,          // 系统资源标签过滤
+    8: optional string description (vt.max_size = "100"), // 支持模糊搜索
 
     100: optional i32 page_number (vt.gt = "0"),
     101: optional i32 page_size (vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20

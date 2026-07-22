@@ -218,6 +218,11 @@ func (p *ListDatasetsRequest) IsValid() error {
 			return fmt.Errorf("field Name max_len rule failed, current value: %d", len(*p.Name))
 		}
 	}
+	if p.Description != nil {
+		if len(*p.Description) > int(255) {
+			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
+		}
+	}
 	if len(p.DatasetKeys) > int(255) {
 		return fmt.Errorf("field DatasetKeys MaxLen rule failed, current value: %v", p.DatasetKeys)
 	}

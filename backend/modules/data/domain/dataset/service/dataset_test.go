@@ -655,6 +655,57 @@ func TestDatasetServiceImpl_SearchDataset(t *testing.T) {
 	}
 }
 
+func TestDatasetServiceImpl_buildSearchDatasetParam_DescriptionLike(t *testing.T) {
+	service := &DatasetServiceImpl{}
+
+	tests := []struct {
+		name                string
+		req                 *SearchDatasetsParam
+		wantNameLike        string
+		wantDescriptionLike string
+	}{
+		{
+			name: "description provided is passed through as DescriptionLike",
+			req: &SearchDatasetsParam{
+				SpaceID:     1,
+				Name:        gptr.Of("foo"),
+				Description: gptr.Of("bar"),
+				OrderBy:     &OrderBy{},
+			},
+			wantNameLike:        "foo",
+			wantDescriptionLike: "bar",
+		},
+		{
+			name: "description nil yields empty DescriptionLike (no condition)",
+			req: &SearchDatasetsParam{
+				SpaceID: 1,
+				Name:    gptr.Of("foo"),
+				OrderBy: &OrderBy{},
+			},
+			wantNameLike:        "foo",
+			wantDescriptionLike: "",
+		},
+		{
+			name: "description empty string yields empty DescriptionLike",
+			req: &SearchDatasetsParam{
+				SpaceID:     1,
+				Description: gptr.Of(""),
+				OrderBy:     &OrderBy{},
+			},
+			wantNameLike:        "",
+			wantDescriptionLike: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := service.buildSearchDatasetParam(tt.req)
+			assert.Equal(t, tt.wantNameLike, got.NameLike)
+			assert.Equal(t, tt.wantDescriptionLike, got.DescriptionLike)
+		})
+	}
+}
+
 func TestDatasetServiceImpl_GetDataset(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
