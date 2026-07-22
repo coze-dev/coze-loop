@@ -50,7 +50,7 @@ func TestNewExptLifecycleEventHandler(t *testing.T) {
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
 
-	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider, nil, nil)
+	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider, nil)
 	assert.NotNil(t, handler)
 
 	impl, ok := handler.(*ExptLifecycleEventHandlerImpl)
