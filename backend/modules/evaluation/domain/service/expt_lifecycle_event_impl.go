@@ -37,6 +37,8 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 	logs.CtxInfo(ctx, "HandleLifecycleEvent: received event, expt_id: %d, space_id: %d, to_status: %s", event.ExptID, event.SpaceID, event.ToStatus)
 	expt, err := h.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 	if err != nil {
+		logs.CtxError(ctx, "HandleLifecycleEvent: GetByID failed, expt_id=%d, space_id=%d, to_status=%v, err=%v",
+			event.ExptID, event.SpaceID, event.ToStatus, err)
 		return err
 	}
 
