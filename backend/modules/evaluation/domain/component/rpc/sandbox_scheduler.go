@@ -101,11 +101,31 @@ type SandboxRunRequest struct {
 	TaskID      string
 	Param       map[string]string
 	WorkspaceID int64
+	// StartCmd 覆盖沙箱容器启动后执行的默认命令；仅在租户开启 start_cmd 能力时生效。
+	StartCmd string
+	// Env 会与租户策略注入的环境变量合并；同名 key 以调用方为准（含 FORNAX_* 前缀）。
+	Env map[string]string
+	// Sync 为 true 时同步等待 session 创建完成，返回 SessionID；默认异步返回。
+	Sync bool
+	// Files 在 session 创建后、StartCmd 执行前写入容器内的文件。
+	Files []*SandboxFileWrite
+}
+
+// SandboxFileWrite 单个待写入沙箱容器的文件。
+type SandboxFileWrite struct {
+	// Path 容器内绝对路径。
+	Path string
+	// Content UTF-8 文本；IsBase64=true 时按 base64 解码后写入。
+	Content string
+	// IsBase64 表示 Content 是 base64 编码的二进制内容。
+	IsBase64 bool
 }
 
 // SandboxRunResponse 提交一次执行响应。
 type SandboxRunResponse struct {
 	ExecuteID string
+	// SessionID 仅在 SandboxRunRequest.Sync=true 时返回；异步模式下 session 未创建，值为空。
+	SessionID string
 }
 
 // SandboxGetRequest 查询执行请求。
