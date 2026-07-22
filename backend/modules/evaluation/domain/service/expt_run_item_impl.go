@@ -493,6 +493,8 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 		// experiment_group_key: 关联同组实验，默认为实验 ID。
 		// PO→DO 转换已保证非空（空则填实验 ID），此处直接透传。
 		ev.ExperimentGroupKey = expt.ExperimentGroupKey
+		// created_by: 实验创建人 userID，实验级恒定，内存已加载零额外 IO。
+		ev.CreatedBy = expt.CreatedBy
 	}
 
 	var datasetID int64

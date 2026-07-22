@@ -25,6 +25,8 @@ type ItemCompleteEvent struct {
 	// EnableAnalysis 评测对象是否开启分析，来源 eval_target 的 SandboxAgent.EnableAnalysis。
 	// 商业化侧 producer 据此与 TCC 空间白名单 AND，决定是否发送本事件。
 	EnableAnalysis bool `json:"enable_analysis"`
+	// CreatedBy 实验创建人 userID，来源 experiment.created_by（实验级恒定）。
+	CreatedBy string `json:"created_by"`
 }
 
 type IItemCompletePublisher interface {
