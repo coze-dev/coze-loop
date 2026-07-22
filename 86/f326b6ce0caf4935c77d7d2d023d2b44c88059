@@ -1,0 +1,23 @@
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl.go
+  s_e1f0ab7ddacb82::t_d2aaf26176df8f 2280-2282,2286-2287,2293-2310,2313,2340,2438-2442,2480-2484,2486,2495-2498
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_multiset_exec_test.go
+  s_e1f0ab7ddacb82::t_0baf0d92c0d494 322-323,337-347,371-382,387-388,402-411,435-445,504-505,510,513,523,531-549
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "86f326b6ce0caf4935c77d7d2d023d2b44c88059",
+  "prompts": {},
+  "sessions": {
+    "s_e1f0ab7ddacb82": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_e1f0ab7ddacb82",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
