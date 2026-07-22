@@ -1549,6 +1549,47 @@ func (e *EvalOpenAPIApplication) RetryExperimentOApi(ctx context.Context, req *o
 	}, nil
 }
 
+func (e *EvalOpenAPIApplication) KillExperimentOApi(ctx context.Context, req *openapi.KillExperimentOApiRequest) (r *openapi.KillExperimentOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	if req.GetExperimentID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_id is required"))
+	}
+
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	// OpenAPI 入口显式鉴权，对齐 RetryExperimentOApi。内部 KillExperiment 对
+	// maintainer 用户会跳过鉴权（运维快捷路径），对外 OpenAPI 面不应享受该豁免，
+	// 故在 wrapper 层强制校验实验的 Run 权限。
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// KillExperiment 内部再做状态校验（仅 Processing 可终止）。
+	if _, err = e.experimentApp.KillExperiment(ctx, &exptpb.KillExperimentRequest{
+		WorkspaceID: req.WorkspaceID,
+		ExptID:      req.ExperimentID,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &openapi.KillExperimentOApiResponse{}, nil
+}
+
 func mapOpenAPIExptRetryMode(mode experiment.ExptRetryMode) (domain_expt.ExptRetryMode, error) {
 	switch mode {
 	case experiment.ExptRetryModeRetryAll:

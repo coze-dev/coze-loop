@@ -668,6 +668,29 @@ func (l *LocalEvaluationOpenAPIService) RetryExperimentOApi(ctx context.Context,
 	return result.GetSuccess(), nil
 }
 
+// KillExperimentOApi
+// 终止实验
+func (l *LocalEvaluationOpenAPIService) KillExperimentOApi(ctx context.Context, req *openapi.KillExperimentOApiRequest, callOptions ...callopt.Option) (*openapi.KillExperimentOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceKillExperimentOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceKillExperimentOApiResult)
+		resp, err := l.impl.KillExperimentOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceKillExperimentOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceKillExperimentOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "KillExperimentOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ExportExperimentResultOApi
 // 导出实验报告
 func (l *LocalEvaluationOpenAPIService) ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest, callOptions ...callopt.Option) (*openapi.ExportExperimentResultOApiResponse, error) {

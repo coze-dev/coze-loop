@@ -210,6 +210,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"KillExperimentOApi": kitex.NewMethodInfo(
+		killExperimentOApiHandler,
+		newEvaluationOpenAPIServiceKillExperimentOApiArgs,
+		newEvaluationOpenAPIServiceKillExperimentOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ExportExperimentResultOApi": kitex.NewMethodInfo(
 		exportExperimentResultOApiHandler,
 		newEvaluationOpenAPIServiceExportExperimentResultOApiArgs,
@@ -936,6 +943,25 @@ func newEvaluationOpenAPIServiceRetryExperimentOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceRetryExperimentOApiResult()
 }
 
+func killExperimentOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceKillExperimentOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceKillExperimentOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).KillExperimentOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceKillExperimentOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceKillExperimentOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceKillExperimentOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceKillExperimentOApiResult()
+}
+
 func exportExperimentResultOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.EvaluationOpenAPIServiceExportExperimentResultOApiArgs)
 	realResult := result.(*openapi.EvaluationOpenAPIServiceExportExperimentResultOApiResult)
@@ -1660,6 +1686,16 @@ func (p *kClient) RetryExperimentOApi(ctx context.Context, req *openapi.RetryExp
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceRetryExperimentOApiResult
 	if err = p.c.Call(ctx, "RetryExperimentOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) KillExperimentOApi(ctx context.Context, req *openapi.KillExperimentOApiRequest) (r *openapi.KillExperimentOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceKillExperimentOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceKillExperimentOApiResult
+	if err = p.c.Call(ctx, "KillExperimentOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

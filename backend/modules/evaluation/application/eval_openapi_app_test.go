@@ -2682,6 +2682,10 @@ type fakeExperimentApp struct {
 	retryErr     error
 	lastRetryReq *exptpb.RetryExperimentRequest
 
+	killResp    *exptpb.KillExperimentResponse
+	killErr     error
+	lastKillReq *exptpb.KillExperimentRequest
+
 	exportResp    *exptpb.ExportExptResultResponse
 	exportErr     error
 	lastExportReq *exptpb.ExportExptResultRequest
@@ -2715,6 +2719,14 @@ func (f *fakeExperimentApp) RetryExperiment(_ context.Context, req *exptpb.Retry
 		return f.retryResp, f.retryErr
 	}
 	return &exptpb.RetryExperimentResponse{}, nil
+}
+
+func (f *fakeExperimentApp) KillExperiment(_ context.Context, req *exptpb.KillExperimentRequest) (*exptpb.KillExperimentResponse, error) {
+	f.lastKillReq = req
+	if f.killResp != nil || f.killErr != nil {
+		return f.killResp, f.killErr
+	}
+	return &exptpb.KillExperimentResponse{}, nil
 }
 
 func (f *fakeExperimentApp) ExportExptResult_(_ context.Context, req *exptpb.ExportExptResultRequest) (*exptpb.ExportExptResultResponse, error) {
@@ -7139,6 +7151,134 @@ func TestEvalOpenAPIApplication_RetryExperimentOApi(t *testing.T) {
 				if assert.NotNil(t, fakeApp.lastRetryReq) {
 					assert.Equal(t, workspaceID, fakeApp.lastRetryReq.GetWorkspaceID())
 					assert.Equal(t, experimentID, fakeApp.lastRetryReq.GetExptID())
+				}
+			}
+
+			if req != nil {
+				assert.True(t, metric.called)
+				assert.Equal(t, req.GetWorkspaceID(), metric.spaceID)
+			}
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_KillExperimentOApi(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(91001)
+	experimentID := int64(91002)
+
+	buildBaseReq := func() *openapi.KillExperimentOApiRequest {
+		return &openapi.KillExperimentOApiRequest{
+			WorkspaceID:  gptr.Of(workspaceID),
+			ExperimentID: gptr.Of(experimentID),
+		}
+	}
+
+	tests := []struct {
+		name     string
+		buildReq func() *openapi.KillExperimentOApiRequest
+		setup    func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp)
+		wantErr  int32
+	}{
+		{
+			name:     "nil request",
+			buildReq: func() *openapi.KillExperimentOApiRequest { return nil },
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid experiment_id",
+			buildReq: func() *openapi.KillExperimentOApiRequest {
+				req := buildBaseReq()
+				req.ExperimentID = gptr.Of(int64(0))
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid workspace_id",
+			buildReq: func() *openapi.KillExperimentOApiRequest {
+				req := buildBaseReq()
+				req.WorkspaceID = gptr.Of(int64(0))
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name:     "auth failed",
+			buildReq: buildBaseReq,
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name:     "kill experiment error",
+			buildReq: buildBaseReq,
+			setup: func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				fakeApp.killErr = errors.New("kill failed")
+			},
+			wantErr: -1,
+		},
+		{
+			name:     "success",
+			buildReq: buildBaseReq,
+			setup: func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				fakeApp.killResp = &exptpb.KillExperimentResponse{}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			metric := &fakeOpenAPIMetric{}
+			fakeApp := &fakeExperimentApp{}
+
+			app := &EvalOpenAPIApplication{
+				auth:          auth,
+				experimentApp: fakeApp,
+				metric:        metric,
+			}
+
+			req := tc.buildReq()
+			if tc.setup != nil {
+				tc.setup(auth, fakeApp)
+			}
+
+			resp, err := app.KillExperimentOApi(context.Background(), req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				if assert.NotNil(t, fakeApp.lastKillReq) {
+					assert.Equal(t, workspaceID, fakeApp.lastKillReq.GetWorkspaceID())
+					assert.Equal(t, experimentID, fakeApp.lastKillReq.GetExptID())
 				}
 			}
 
