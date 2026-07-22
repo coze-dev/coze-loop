@@ -437,7 +437,20 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 
 	// 仅 item 评测成功才推送 item-complete；失败不发（下游只消费成功行）。
 	if evalErr == nil && e.itemCompletePublisher != nil {
-		if err := e.itemCompletePublisher.PublishItemComplete(ctx, buildItemCompleteEvent(eiec)); err != nil {
+		completeEvent := buildItemCompleteEvent(eiec)
+		// 记录 enable_analysis 的固化取值与来源链路：下游 gate 依赖此值，
+		// 便于排查"评测对象已开分析但 item-complete 未发"（EnableAnalysis 固化断点）。
+		var hasTarget, hasVersion, hasSandbox bool
+		if expt := eiec.Expt; expt != nil && expt.Target != nil {
+			hasTarget = true
+			if ver := expt.Target.EvalTargetVersion; ver != nil {
+				hasVersion = true
+				hasSandbox = ver.SandboxAgent != nil
+			}
+		}
+		logs.CtxInfo(ctx, "[ExptTurnEval] item complete enable_analysis resolved, expt_id: %v, item_id: %v, enable_analysis: %v, has_target: %v, has_version: %v, has_sandbox_agent: %v",
+			event.ExptID, event.EvalSetItemID, completeEvent.EnableAnalysis, hasTarget, hasVersion, hasSandbox)
+		if err := e.itemCompletePublisher.PublishItemComplete(ctx, completeEvent); err != nil {
 			logs.CtxWarn(ctx, "[ExptTurnEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, event.EvalSetItemID, err)
 		}
 	}
