@@ -13124,6 +13124,20 @@ func (p *ItemStandardEvalOutput) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 18:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField18(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 30:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField30(buf[offset:])
@@ -13466,6 +13480,20 @@ func (p *ItemStandardEvalOutput) FastReadField17(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ItemStandardEvalOutput) FastReadField18(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.CreatedBy = _field
+	return offset, nil
+}
+
 func (p *ItemStandardEvalOutput) FastReadField30(buf []byte) (int, error) {
 	offset := 0
 	_field := NewStandardEvalOutputContent()
@@ -13562,6 +13590,7 @@ func (p *ItemStandardEvalOutput) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField15(buf[offset:], w)
+		offset += p.fastWriteField18(buf[offset:], w)
 		offset += p.fastWriteField30(buf[offset:], w)
 		offset += p.fastWriteField31(buf[offset:], w)
 		offset += p.fastWriteField32(buf[offset:], w)
@@ -13593,6 +13622,7 @@ func (p *ItemStandardEvalOutput) BLength() int {
 		l += p.field15Length()
 		l += p.field16Length()
 		l += p.field17Length()
+		l += p.field18Length()
 		l += p.field30Length()
 		l += p.field31Length()
 		l += p.field32Length()
@@ -13753,6 +13783,15 @@ func (p *ItemStandardEvalOutput) fastWriteField17(buf []byte, w thrift.NocopyWri
 	if p.IsSetItemEndTime() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 17)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.ItemEndTime)
+	}
+	return offset
+}
+
+func (p *ItemStandardEvalOutput) fastWriteField18(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCreatedBy() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 18)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.CreatedBy)
 	}
 	return offset
 }
@@ -13964,6 +14003,15 @@ func (p *ItemStandardEvalOutput) field17Length() int {
 	return l
 }
 
+func (p *ItemStandardEvalOutput) field18Length() int {
+	l := 0
+	if p.IsSetCreatedBy() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.CreatedBy)
+	}
+	return l
+}
+
 func (p *ItemStandardEvalOutput) field30Length() int {
 	l := 0
 	if p.IsSetDetail() {
@@ -14122,6 +14170,14 @@ func (p *ItemStandardEvalOutput) DeepCopy(s interface{}) error {
 	if src.ItemEndTime != nil {
 		tmp := *src.ItemEndTime
 		p.ItemEndTime = &tmp
+	}
+
+	if src.CreatedBy != nil {
+		var tmp string
+		if *src.CreatedBy != "" {
+			tmp = kutils.StringDeepCopy(*src.CreatedBy)
+		}
+		p.CreatedBy = &tmp
 	}
 
 	var _detail *StandardEvalOutputContent

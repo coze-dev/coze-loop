@@ -397,6 +397,7 @@ struct ItemStandardEvalOutput {
     15: optional string experiment_group_key (go.tag = 'json:"experiment_group_key"')
     16: optional i64 experiment_create_time (api.js_conv = 'true', go.tag = 'json:"experiment_create_time"')  // 实验创建时间（秒），来源 experiment.created_at
     17: optional i64 item_end_time (api.js_conv = 'true', go.tag = 'json:"item_end_time"')  // item 执行结束时间（秒），来源 expt_item_result.updated_at
+    18: optional string created_by (go.tag = 'json:"created_by"')  // 实验创建人 userID，来源 experiment.created_by（实验级恒定）
 
     // 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
     30: optional StandardEvalOutputContent detail (go.tag = 'json:"detail"')

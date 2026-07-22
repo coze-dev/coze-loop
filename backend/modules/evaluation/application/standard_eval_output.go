@@ -223,6 +223,7 @@ func (e *experimentApplication) resolveStandardEvalOutputMQMeta(ctx context.Cont
 	if expt.CreatedAt != nil {
 		meta.ExptCreateTime = expt.CreatedAt.Unix()
 	}
+	meta.ExptCreatedBy = expt.CreatedBy
 	// 归属集详情：多评测集从 EvalSetDetails 收集，单评测集/老实验用主集 EvalSet。
 	// dataset_workspace_id 取任一集的 SpaceID（同空间场景与 expt.SpaceID 一致）。
 	for _, d := range expt.EvalSetDetails {
@@ -269,6 +270,8 @@ type standardEvalOutputMQMeta struct {
 	DatasetWorkspaceID    int64
 	// ExptCreateTime: 实验创建时间（秒），来源 experiment.created_at。
 	ExptCreateTime int64
+	// ExptCreatedBy: 实验创建人 userID，来源 experiment.created_by（实验级恒定）。
+	ExptCreatedBy string
 	// EvalSetByID: 归属集 id -> EvaluationSet（含 version），用于按 item 的 dataset_id 分流取版本信息。
 	EvalSetByID map[int64]*entity.EvaluationSet
 	// PrimaryEvalSetID: 主集 id（单评测集/老实验回退用）。
@@ -409,6 +412,9 @@ func fillStandardEvalOutputMQMeta(res *expt.ItemStandardEvalOutput, item *entity
 		}
 		if meta.ExptCreateTime != 0 {
 			res.ExperimentCreateTime = gptr.Of(meta.ExptCreateTime)
+		}
+		if meta.ExptCreatedBy != "" {
+			res.CreatedBy = gptr.Of(meta.ExptCreatedBy)
 		}
 	}
 

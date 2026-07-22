@@ -17574,6 +17574,8 @@ type ItemStandardEvalOutput struct {
 	ExperimentCreateTime *int64 `thrift:"experiment_create_time,16,optional" frugal:"16,optional,i64" json:"experiment_create_time" form:"experiment_create_time" query:"experiment_create_time"`
 	// item 执行结束时间（秒），来源 expt_item_result.updated_at
 	ItemEndTime *int64 `thrift:"item_end_time,17,optional" frugal:"17,optional,i64" json:"item_end_time" form:"item_end_time" query:"item_end_time"`
+	// 实验创建人 userID，来源 experiment.created_by（实验级恒定）
+	CreatedBy *string `thrift:"created_by,18,optional" frugal:"18,optional,string" json:"created_by" form:"created_by" query:"created_by"`
 	// 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
 	Detail *StandardEvalOutputContent `thrift:"detail,30,optional" frugal:"30,optional,StandardEvalOutputContent" json:"detail" form:"detail" query:"detail"`
 	Rounds *StandardEvalOutputContent `thrift:"rounds,31,optional" frugal:"31,optional,StandardEvalOutputContent" json:"rounds" form:"rounds" query:"rounds"`
@@ -17794,6 +17796,18 @@ func (p *ItemStandardEvalOutput) GetItemEndTime() (v int64) {
 	return *p.ItemEndTime
 }
 
+var ItemStandardEvalOutput_CreatedBy_DEFAULT string
+
+func (p *ItemStandardEvalOutput) GetCreatedBy() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCreatedBy() {
+		return ItemStandardEvalOutput_CreatedBy_DEFAULT
+	}
+	return *p.CreatedBy
+}
+
 var ItemStandardEvalOutput_Detail_DEFAULT *StandardEvalOutputContent
 
 func (p *ItemStandardEvalOutput) GetDetail() (v *StandardEvalOutputContent) {
@@ -17916,6 +17930,9 @@ func (p *ItemStandardEvalOutput) SetExperimentCreateTime(val *int64) {
 func (p *ItemStandardEvalOutput) SetItemEndTime(val *int64) {
 	p.ItemEndTime = val
 }
+func (p *ItemStandardEvalOutput) SetCreatedBy(val *string) {
+	p.CreatedBy = val
+}
 func (p *ItemStandardEvalOutput) SetDetail(val *StandardEvalOutputContent) {
 	p.Detail = val
 }
@@ -17953,6 +17970,7 @@ var fieldIDToName_ItemStandardEvalOutput = map[int16]string{
 	15: "experiment_group_key",
 	16: "experiment_create_time",
 	17: "item_end_time",
+	18: "created_by",
 	30: "detail",
 	31: "rounds",
 	32: "agent",
@@ -18027,6 +18045,10 @@ func (p *ItemStandardEvalOutput) IsSetExperimentCreateTime() bool {
 
 func (p *ItemStandardEvalOutput) IsSetItemEndTime() bool {
 	return p.ItemEndTime != nil
+}
+
+func (p *ItemStandardEvalOutput) IsSetCreatedBy() bool {
+	return p.CreatedBy != nil
 }
 
 func (p *ItemStandardEvalOutput) IsSetDetail() bool {
@@ -18202,6 +18224,14 @@ func (p *ItemStandardEvalOutput) Read(iprot thrift.TProtocol) (err error) {
 		case 17:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField17(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 18:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField18(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18472,6 +18502,17 @@ func (p *ItemStandardEvalOutput) ReadField17(iprot thrift.TProtocol) error {
 	p.ItemEndTime = _field
 	return nil
 }
+func (p *ItemStandardEvalOutput) ReadField18(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CreatedBy = _field
+	return nil
+}
 func (p *ItemStandardEvalOutput) ReadField30(iprot thrift.TProtocol) error {
 	_field := NewStandardEvalOutputContent()
 	if err := _field.Read(iprot); err != nil {
@@ -18593,6 +18634,10 @@ func (p *ItemStandardEvalOutput) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField17(oprot); err != nil {
 			fieldId = 17
+			goto WriteFieldError
+		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
 			goto WriteFieldError
 		}
 		if err = p.writeField30(oprot); err != nil {
@@ -18943,6 +18988,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
 }
+func (p *ItemStandardEvalOutput) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCreatedBy() {
+		if err = oprot.WriteFieldBegin("created_by", thrift.STRING, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CreatedBy); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
 func (p *ItemStandardEvalOutput) writeField30(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDetail() {
 		if err = oprot.WriteFieldBegin("detail", thrift.STRUCT, 30); err != nil {
@@ -19115,6 +19178,9 @@ func (p *ItemStandardEvalOutput) DeepEqual(ano *ItemStandardEvalOutput) bool {
 		return false
 	}
 	if !p.Field17DeepEqual(ano.ItemEndTime) {
+		return false
+	}
+	if !p.Field18DeepEqual(ano.CreatedBy) {
 		return false
 	}
 	if !p.Field30DeepEqual(ano.Detail) {
@@ -19338,6 +19404,18 @@ func (p *ItemStandardEvalOutput) Field17DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ItemEndTime != *src {
+		return false
+	}
+	return true
+}
+func (p *ItemStandardEvalOutput) Field18DeepEqual(src *string) bool {
+
+	if p.CreatedBy == src {
+		return true
+	} else if p.CreatedBy == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CreatedBy, *src) != 0 {
 		return false
 	}
 	return true
