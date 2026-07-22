@@ -42,8 +42,10 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 		return err
 	}
 
-	// Sandbox agent 评测实验的稳定性打点（experiment_started / experiment_finished / experiment_duration）
-	h.emitSandboxAgentExperimentMetric(ctx, event, expt)
+	// 注意: 沙箱 agent 的 experiment_started / experiment_finished 打点已从此处迁出。
+	// 现在打在 SubmitExperiment (application/experiment_app.go) 和 CompleteExpt
+	// (domain/service/expt_manage_execution_impl.go) 里, 走同步路径以避免 rocket MQ
+	// consumer group 竞争导致灰度实例采集不到。此处仅保留飞书通知 + Webhook 分发。
 
 	// Feishu notification
 	h.handleFeishuNotification(ctx, event, expt)
