@@ -693,11 +693,29 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 
 // emitSandboxAgentExperimentFinished 判断实验是否为沙箱 agent 类型, 是则上报 experiment_finished / experiment_duration。
 // startAt 取 expt.StartAt (若空则 duration 为 0); endAt 采用 CompleteExpt 本次写入的 EndAt 值。
+//
+// 关键: exptRepo.GetByID 返回的 entity.Experiment 只带主表数据, Target 字段是 nil
+// (Target 需要额外从 evalTargetService 查出来)。所以判断 isSandboxAgentExperiment
+// 之前需要先 fallback 补查一次 target, 否则会静默跳过。
 func (e *ExptMangerImpl) emitSandboxAgentExperimentFinished(ctx context.Context, expt *entity.Experiment, status entity.ExptStatus, endAt time.Time) {
 	if e.sandboxAgentMetrics == nil || expt == nil {
+		logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitExperimentFinished skipped, metrics_nil=%v, expt_nil=%v",
+			e.sandboxAgentMetrics == nil, expt == nil)
 		return
 	}
+	// fallback 补查 target: GetByID 不返回 Target, 但 isSandboxAgentExperiment 依赖 Target
+	if expt.Target == nil && expt.TargetVersionID != 0 && e.evalTargetService != nil {
+		target, err := e.evalTargetService.GetEvalTargetVersion(ctx, expt.SpaceID, expt.TargetVersionID, false)
+		if err != nil {
+			logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitExperimentFinished GetEvalTargetVersion failed, expt_id=%d, target_version_id=%d, err=%v",
+				expt.ID, expt.TargetVersionID, err)
+		} else if target != nil {
+			expt.Target = target
+		}
+	}
 	if !isSandboxAgentExperiment(expt) {
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitExperimentFinished skipped, not sandbox agent expt, expt_id=%d, target_nil=%v",
+			expt.ID, expt.Target == nil)
 		return
 	}
 	tags := metrics.SandboxAgentExperimentTags{
