@@ -201,10 +201,10 @@ func (m *metricsImpl) buildStepTags(t eval_metrics.SandboxAgentStepTags, success
 		{Name: tagInvokeID, Value: stringTag(t.InvokeID)},
 		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
 		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
-		{Name: tagStepName, Value: stringTag(t.StepName)},
+		{Name: tagStepName, Value: sanitizeTagValue(t.StepName)},
 		{Name: tagTargetID, Value: int64Tag(t.TargetID)},
-		{Name: tagItemKey, Value: stringTag(t.ItemKey)},
-		{Name: tagDatasetKey, Value: stringTag(t.DatasetKey)},
+		{Name: tagItemKey, Value: sanitizeTagValue(t.ItemKey)},
+		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
 	}
@@ -222,6 +222,33 @@ func stringTag(v string) string {
 		return tagValuePlaceholder
 	}
 	return v
+}
+
+// sanitizeTagValue 把外部输入 (用户自定义 key、沙箱侧上报字段) 规整到 metrics 平台允许字符集
+// a-zA-Z0-9._-/:%。违规字符 (含中文/空格/换行) 统一替换为 '_'，空串返回占位符 '-'。
+// 用于 tag value 里源自平台外的字段: step_name / item_key / dataset_key。
+// invoke_id 是我们自己 strconv.FormatInt 出来的纯数字, 不需要经过 sanitize。
+func sanitizeTagValue(v string) string {
+	if v == "" {
+		return tagValuePlaceholder
+	}
+	b := make([]byte, 0, len(v))
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		switch {
+		case c >= 'a' && c <= 'z',
+			c >= 'A' && c <= 'Z',
+			c >= '0' && c <= '9',
+			c == '.', c == '_', c == '-', c == '/', c == ':', c == '%':
+			b = append(b, c)
+		default:
+			b = append(b, '_')
+		}
+	}
+	if len(b) == 0 {
+		return tagValuePlaceholder
+	}
+	return string(b)
 }
 
 func fallback(v string) string {
