@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -678,9 +679,42 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	}
 
 	e.mtr.EmitExptExecResult(spaceID, int64(got.ExptType), int64(status), gptr.Indirect(got.StartAt))
+
+	// SandboxAgent 稳定性打点: experiment_finished + experiment_duration
+	// 从 lifecycle event 迁移到这里的原因: lifecycle event 走 rocket MQ, 灰度实例常常
+	// 因为 consumer group 竞争消费不到消息, 打点缺失。改到 CompleteExpt 同步路径,
+	// 语义上表示"实验实际结束时刻", 与看板终态口径对齐。
+	e.emitSandboxAgentExperimentFinished(ctx, got, status, gptr.Indirect(exptDo.EndAt))
+
 	logs.CtxInfo(ctx, "[ExptEval] CompleteExpt success, expt_id: %v, status: %v, stats: %v", exptID, status, json.Jsonify(stats))
 
 	return nil
+}
+
+// emitSandboxAgentExperimentFinished 判断实验是否为沙箱 agent 类型, 是则上报 experiment_finished / experiment_duration。
+// startAt 取 expt.StartAt (若空则 duration 为 0); endAt 采用 CompleteExpt 本次写入的 EndAt 值。
+func (e *ExptMangerImpl) emitSandboxAgentExperimentFinished(ctx context.Context, expt *entity.Experiment, status entity.ExptStatus, endAt time.Time) {
+	if e.sandboxAgentMetrics == nil || expt == nil {
+		return
+	}
+	if !isSandboxAgentExperiment(expt) {
+		return
+	}
+	tags := metrics.SandboxAgentExperimentTags{
+		ExperimentID:   expt.ID,
+		DatasetID:      expt.EvalSetID,
+		DatasetVersion: expt.EvalSetVersionID,
+	}
+	var startAt time.Time
+	if expt.StartAt != nil {
+		startAt = *expt.StartAt
+	}
+	if endAt.IsZero() {
+		endAt = time.Now()
+	}
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_finished, expt_id=%d, status=%v, start_at=%d, end_at=%d",
+		tags.ExperimentID, status, startAt.UnixMilli(), endAt.UnixMilli())
+	e.sandboxAgentMetrics.EmitExperimentFinished(tags, statusToErr(status), startAt, endAt)
 }
 
 // notifyWorkflowPipelineOnExptFinished 评测实验进入终态时，source_type=workflow 则回调 Pipeline 节点完成；首参传实验 ID（ExperimentID）

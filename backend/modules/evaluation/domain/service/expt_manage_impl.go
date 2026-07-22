@@ -64,6 +64,7 @@ func NewExptManager(
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
 	pipelineListAdapter rpc.IPipelineListAdapter,
+	sandboxAgentMetrics metrics.SandboxAgentMetrics,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -94,6 +95,7 @@ func NewExptManager(
 		notifyRPCAdapter:            notifyRPCAdapter,
 		userProvider:                userProvider,
 		pipelineListAdapter:         pipelineListAdapter,
+		sandboxAgentMetrics:         sandboxAgentMetrics,
 	}
 }
 
@@ -126,6 +128,9 @@ type ExptMangerImpl struct {
 	notifyRPCAdapter            rpc.INotifyRPCAdapter
 	userProvider                rpc.IUserProvider
 	pipelineListAdapter         rpc.IPipelineListAdapter
+
+	// 沙箱 agent 稳定性打点，CompleteExpt 里上报 experiment_finished / experiment_duration
+	sandboxAgentMetrics metrics.SandboxAgentMetrics
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
