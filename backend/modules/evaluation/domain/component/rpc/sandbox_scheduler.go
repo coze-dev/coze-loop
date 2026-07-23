@@ -48,6 +48,21 @@ const (
 	SandboxDestroyTypeExecute SandboxDestroyType = 1
 )
 
+// SandboxTenant 沙箱租户，与 stone.cozeloop.agent_studio 的 sandbox_scheduler.Tenant 枚举保持数值一致。
+// 决定容器 start_cmd / env 注入 / case-file 等能力开关，Init 时下发，一个 task 只能配置一次。
+type SandboxTenant int32
+
+const (
+	// SandboxTenantDefault = FornaxTraeEval，兼容单沙箱链路的默认租户。
+	SandboxTenantDefault SandboxTenant = 0
+	// SandboxTenantGeneralAgent 通用 agent 场景。
+	SandboxTenantGeneralAgent SandboxTenant = 1
+	// SandboxTenantLabelingAnalysis 标注 / 分析场景。
+	SandboxTenantLabelingAnalysis SandboxTenant = 2
+	// SandboxTenantFornaxTraeEvalDualSandbox = FornaxTraeEvalDoubleSandbox，双沙箱模式。
+	SandboxTenantFornaxTraeEvalDualSandbox SandboxTenant = 3
+)
+
 // ---------- Domain ----------
 
 // SandboxExecuteError 单次执行错误信息。
@@ -88,6 +103,9 @@ type SandboxInitRequest struct {
 	Concurrency int32
 	Metadata    map[string]string
 	WorkspaceID int64
+	// Tenant 沙箱租户；未显式设置（值为 SandboxTenantDefault）时沿用调度侧默认租户 FornaxTraeEval。
+	// 双沙箱模式的评测对象必须传 SandboxTenantFornaxTraeEvalDualSandbox。
+	Tenant SandboxTenant
 }
 
 // SandboxInitResponse 初始化任务响应。
