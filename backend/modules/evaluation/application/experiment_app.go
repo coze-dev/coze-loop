@@ -560,13 +560,16 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	// SandboxAgent 评测对象：在 RunExperiment 前同步初始化沙箱任务，Concurrency 沿用实验并发度（ItemConcurNum）。
+	// SandboxAgent 评测对象：在 RunExperiment 前同步初始化沙箱任务。
+	// Concurrency 沿用实验并发度（ItemConcurNum）且做 NormalizeSubmitItemConcurNum 兜底；
+	// 双沙箱模式一次评测占用 2 个沙箱 execute，Init 上限放大 2 倍。
 	// Init 失败即视为启动实验失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
 	if e.sandboxSchedulerAdapter != nil &&
 		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
 		exptID := cresp.GetExperiment().GetID()
-		concurrency := req.GetItemConcurNum()
-		if err := e.initSandboxTask(ctx, "submit experiment", exptID, concurrency, req.GetWorkspaceID(), sandboxTenantForExperimentDTO(cresp.GetExperiment())); err != nil {
+		tenant := sandboxTenantForExperimentDTO(cresp.GetExperiment())
+		concurrency := sandboxInitConcurrency(ptr.ConvIntPtr[int32, int](req.ItemConcurNum), tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox)
+		if err := e.initSandboxTask(ctx, "submit experiment", exptID, concurrency, req.GetWorkspaceID(), tenant); err != nil {
 			return nil, err
 		}
 	}
@@ -1454,10 +1457,12 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
+	// 与 Submit 保持一致：并发度先归一化，再按双沙箱模式放大 2 倍。
 	// Init 失败即视为重试失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
 	if e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
-		concurrency := int32(gptr.Indirect(entity.NormalizeSubmitItemConcurNum(got.EvalConf.ItemConcurNum)))
-		if err := e.initSandboxTask(ctx, "retry experiment", req.GetExptID(), concurrency, req.GetWorkspaceID(), sandboxTenantForExperimentEntity(got)); err != nil {
+		tenant := sandboxTenantForExperimentEntity(got)
+		concurrency := sandboxInitConcurrency(got.EvalConf.ItemConcurNum, tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox)
+		if err := e.initSandboxTask(ctx, "retry experiment", req.GetExptID(), concurrency, req.GetWorkspaceID(), tenant); err != nil {
 			return nil, err
 		}
 	}
@@ -1527,6 +1532,20 @@ func isSandboxAgentExperiment(expt *entity.Experiment) bool {
 		return true
 	}
 	return false
+}
+
+// sandboxInitConcurrency 计算 SandboxAgent 评测对象 Init 时下发的 Concurrency：
+//  1. 先用 NormalizeSubmitItemConcurNum 兜底 nil/<=0 → DefaultSubmitItemConcurNum；
+//  2. 双沙箱模式一次评测占用 2 个沙箱 execute，需要额外放大到 2 倍上限，否则调度侧任务并发度不够。
+//
+// 入参 itemConcurNum 允许来自 SubmitRequest.ItemConcurNum(int32) 或 EvalConf.ItemConcurNum(*int)，
+// 调用方自行转成 *int 后传入。
+func sandboxInitConcurrency(itemConcurNum *int, dual bool) int32 {
+	normalized := gptr.Indirect(entity.NormalizeSubmitItemConcurNum(itemConcurNum))
+	if dual {
+		return int32(normalized * 2)
+	}
+	return int32(normalized)
 }
 
 // sandboxTenantForExperimentEntity 从 entity 层实验推导出 Init 所需的沙箱租户。
