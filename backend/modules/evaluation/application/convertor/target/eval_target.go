@@ -621,16 +621,21 @@ func SandboxAgentDO2DTO(doObj *do.SandboxAgent) *dto.SandboxAgent {
 	if doObj == nil {
 		return nil
 	}
-	return &dto.SandboxAgent{
-		Name:             gptr.Of(doObj.Name),
-		Type:             gptr.Of(dto.SandboxAgentType(doObj.Type)),
-		ModelName:        gptr.Of(doObj.ModelName),
-		AgentSetupCmd:    gptr.Of(doObj.AgentSetupCmd),
-		AgentRunCmd:      gptr.Of(doObj.AgentRunCmd),
-		Envs:             SandboxEnvVarsDO2DTO(doObj.Envs),
-		Image:            gptr.Of(doObj.Image),
-		SandboxCountMode: gptr.Of(dto.SandboxCountMode(doObj.SandboxCountMode)),
+	res := &dto.SandboxAgent{
+		Name:          gptr.Of(doObj.Name),
+		Type:          gptr.Of(dto.SandboxAgentType(doObj.Type)),
+		ModelName:     gptr.Of(doObj.ModelName),
+		AgentSetupCmd: gptr.Of(doObj.AgentSetupCmd),
+		AgentRunCmd:   gptr.Of(doObj.AgentRunCmd),
+		Envs:          SandboxEnvVarsDO2DTO(doObj.Envs),
+		Image:         gptr.Of(doObj.Image),
 	}
+	// 历史记录里没有 SandboxCountMode 字段，entity 为空串；此时保持 DTO 为 nil，
+	// 保留旧的 wire 语义（消费者 IsSet 为 false），避免误让老客户端认为该字段被显式设置为 ""。
+	if doObj.SandboxCountMode != "" {
+		res.SandboxCountMode = gptr.Of(dto.SandboxCountMode(doObj.SandboxCountMode))
+	}
+	return res
 }
 
 func SandboxEnvVarsDTO2DO(dtoObjs []*dto.SandboxEnvVar) []*do.SandboxEnvVar {
