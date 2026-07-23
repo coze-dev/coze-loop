@@ -2041,16 +2041,21 @@ func OpenAPISandboxAgentDO2DTO(do *entity.SandboxAgent) *openapiEvalTarget.Sandb
 			Value: gptr.Of(e.Value),
 		})
 	}
-	return &openapiEvalTarget.SandboxAgent{
-		Name:             gptr.Of(do.Name),
-		Type:             gptr.Of(openapiEvalTarget.SandboxAgentType(do.Type)),
-		ModelName:        gptr.Of(do.ModelName),
-		AgentSetupCmd:    gptr.Of(do.AgentSetupCmd),
-		AgentRunCmd:      gptr.Of(do.AgentRunCmd),
-		Envs:             envs,
-		Image:            gptr.Of(do.Image),
-		SandboxCountMode: gptr.Of(openapiEvalTarget.SandboxCountMode(do.SandboxCountMode)),
+	res := &openapiEvalTarget.SandboxAgent{
+		Name:          gptr.Of(do.Name),
+		Type:          gptr.Of(openapiEvalTarget.SandboxAgentType(do.Type)),
+		ModelName:     gptr.Of(do.ModelName),
+		AgentSetupCmd: gptr.Of(do.AgentSetupCmd),
+		AgentRunCmd:   gptr.Of(do.AgentRunCmd),
+		Envs:          envs,
+		Image:         gptr.Of(do.Image),
 	}
+	// 历史记录里没有 SandboxCountMode 字段，entity 为空串；此时 DTO 保持 nil，
+	// 与旧 wire 契约一致，避免消费者 IsSet 误判。
+	if do.SandboxCountMode != "" {
+		res.SandboxCountMode = gptr.Of(openapiEvalTarget.SandboxCountMode(do.SandboxCountMode))
+	}
+	return res
 }
 
 func OpenAPISandboxAgentDTO2DO(dto *openapiEvalTarget.SandboxAgent) *entity.SandboxAgent {
