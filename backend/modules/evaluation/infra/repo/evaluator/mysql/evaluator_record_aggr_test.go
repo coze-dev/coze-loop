@@ -5,10 +5,12 @@ package mysql
 
 import (
 	"context"
+	"database/sql/driver"
 	"errors"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"gorm.io/driver/mysql"
@@ -80,4 +82,53 @@ func TestBatchGetEvaluatorRecordForAggr_DAOError(t *testing.T) {
 	got, err := dao.BatchGetEvaluatorRecordForAggr(context.Background(), []int64{1})
 	assert.Error(t, err)
 	assert.Nil(t, got)
+}
+
+// TestUpdateEvaluatorRecordResult_ScoreNullability 锁定"无分数写 NULL、有分数写值"的不变量。
+// GORM map-Updates 的列顺序不固定, 故用 AnyArg 占位, 只对 score 位用自定义匹配器断言 NULL vs 具体值——
+// 这是聚合窄查询 score IS NOT NULL 能过滤掉"幽灵 0 分"的写入侧前提。
+func TestUpdateEvaluatorRecordResult_ScoreNullability(t *testing.T) {
+	cases := []struct {
+		name     string
+		score    *float64
+		wantNull bool
+	}{
+		{name: "nil score 写 NULL", score: nil, wantNull: true},
+		{name: "有分数写具体值", score: gptr.Of(4.5), wantNull: false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			dao, mock, cleanup := newAggrTestDAO(t, ctrl)
+			defer cleanup()
+
+			// GORM 生成的 SET 列序为 output_data, score, status, updated_at, 末尾 WHERE id;
+			// 只对 score 位用自定义匹配器断言 NULL/具体值, 其余用 AnyArg。
+			scoreMatcher := scoreArg{wantNull: c.wantNull, wantVal: c.score}
+			mock.ExpectBegin()
+			mock.ExpectExec("UPDATE `evaluator_record` SET").
+				WithArgs(sqlmock.AnyArg(), scoreMatcher, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+				WillReturnResult(sqlmock.NewResult(0, 1))
+			mock.ExpectCommit()
+
+			err := dao.UpdateEvaluatorRecordResult(context.Background(), 7, int8(entity.EvaluatorRunStatusFail), c.score, "{}")
+			assert.NoError(t, err)
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+// scoreArg 是 sqlmock 自定义参数匹配器: 断言 score 绑定值是否为 NULL(nil)。
+type scoreArg struct {
+	wantNull bool
+	wantVal  *float64
+}
+
+func (s scoreArg) Match(v driver.Value) bool {
+	if s.wantNull {
+		return v == nil
+	}
+	f, ok := v.(float64)
+	return ok && s.wantVal != nil && f == *s.wantVal
 }

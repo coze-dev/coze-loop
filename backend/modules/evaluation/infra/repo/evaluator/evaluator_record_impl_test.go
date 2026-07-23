@@ -589,7 +589,7 @@ func TestEvaluatorRecordRepoImpl_UpdateEvaluatorRecordResult(t *testing.T) {
 		recordID          int64
 		status            entity.EvaluatorRunStatus
 		outputData        *entity.EvaluatorOutputData
-		wantScore         float64
+		wantScore         *float64
 		wantOutputDataStr string
 		daoErr            error
 	}{
@@ -598,7 +598,7 @@ func TestEvaluatorRecordRepoImpl_UpdateEvaluatorRecordResult(t *testing.T) {
 			recordID:          1,
 			status:            entity.EvaluatorRunStatusSuccess,
 			outputData:        nil,
-			wantScore:         0,
+			wantScore:         nil,
 			wantOutputDataStr: "",
 		},
 		{
@@ -608,7 +608,7 @@ func TestEvaluatorRecordRepoImpl_UpdateEvaluatorRecordResult(t *testing.T) {
 			outputData: &entity.EvaluatorOutputData{
 				EvaluatorResult: nil,
 			},
-			wantScore:         0,
+			wantScore:         nil,
 			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{EvaluatorResult: nil}),
 		},
 		{
@@ -623,7 +623,7 @@ func TestEvaluatorRecordRepoImpl_UpdateEvaluatorRecordResult(t *testing.T) {
 					},
 				},
 			},
-			wantScore: 0,
+			wantScore: nil,
 			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{
 				EvaluatorResult: &entity.EvaluatorResult{
 					Score: nil,
@@ -642,7 +642,7 @@ func TestEvaluatorRecordRepoImpl_UpdateEvaluatorRecordResult(t *testing.T) {
 					Score: gptr.Of(float64(1.25)),
 				},
 			},
-			wantScore: 1.25,
+			wantScore: gptr.Of(float64(1.25)),
 			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{
 				EvaluatorResult: &entity.EvaluatorResult{
 					Score: gptr.Of(float64(1.25)),
@@ -658,7 +658,7 @@ func TestEvaluatorRecordRepoImpl_UpdateEvaluatorRecordResult(t *testing.T) {
 					Score: gptr.Of(float64(3)),
 				},
 			},
-			wantScore: 3,
+			wantScore: gptr.Of(float64(3)),
 			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{
 				EvaluatorResult: &entity.EvaluatorResult{
 					Score: gptr.Of(float64(3)),

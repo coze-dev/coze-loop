@@ -159,9 +159,11 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecordForAggr(ctx context.Con
 }
 
 func (r *EvaluatorRecordRepoImpl) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error {
-	var score float64
+	// 只有拿到有效分数才写具体值; 无分数(失败/未产出)时传 nil, 让 DAO 写 NULL 而非 0,
+	// 保证 score 列语义诚实: 有值=有分, NULL=无分。聚合窄查询依赖此不变量做 score IS NOT NULL 过滤。
+	var score *float64
 	if outputData != nil && outputData.EvaluatorResult != nil && outputData.EvaluatorResult.Score != nil {
-		score = *outputData.EvaluatorResult.Score
+		score = outputData.EvaluatorResult.Score
 	}
 
 	var outputDataStr string
