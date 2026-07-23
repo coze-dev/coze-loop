@@ -320,3 +320,9 @@ func GetEvalTargetRecordOApi(ctx context.Context, c *app.RequestContext) {
 func UpdateExptRunConfOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateExptRunConfOApi)
 }
+
+// KillExperimentOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/kill [POST]
+func KillExperimentOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.KillExperimentOApi)
+}

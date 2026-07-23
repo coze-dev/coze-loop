@@ -569,6 +569,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiments0.GET("/:experiment_id", append(_experiment_idMw(handler), apis.GetExperimentsOApi)...)
 				_experiment_id := _experiments0.Group("/:experiment_id", _experiment_idMw(handler)...)
 				_experiment_id.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
+				_experiment_id.POST("/kill", append(_killexperimentoapiMw(handler), apis.KillExperimentOApi)...)
 				_experiment_id.POST("/results", append(_results1Mw(handler), apis.ListExperimentResultOApi)...)
 				_results1 := _experiment_id.Group("/results", _results1Mw(handler)...)
 				_results1.POST("/export", append(_exportexperimentresultoapiMw(handler), apis.ExportExperimentResultOApi)...)

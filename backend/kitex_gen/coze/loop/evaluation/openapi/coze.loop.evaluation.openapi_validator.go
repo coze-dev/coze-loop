@@ -1076,6 +1076,22 @@ func (p *RetryExperimentOApiResponse) IsValid() error {
 func (p *RetryExperimentOpenAPIData) IsValid() error {
 	return nil
 }
+func (p *KillExperimentOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *KillExperimentOApiResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ExportExperimentResultOApiRequest) IsValid() error {
 	if p.ExportColumns != nil {
 		if err := p.ExportColumns.IsValid(); err != nil {

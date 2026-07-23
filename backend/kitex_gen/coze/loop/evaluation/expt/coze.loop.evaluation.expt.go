@@ -3274,7 +3274,7 @@ type SubmitExperimentRequest struct {
 	// 试运行行数
 	TrialRunItemCount       *int64 `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
 	EnableExtractTrajectory *bool  `thrift:"enable_extract_trajectory,47,optional" frugal:"47,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
-	// 提交实验时前端透传的发起人 user JWT，用于预下载 agent_buddy skill 入 TOS
+	// 提交实验时前端透传的发起人 user JWT，用于预下载 skill 入 TOS
 	XJwtToken   *string               `thrift:"x_jwt_token,48,optional" frugal:"48,optional,string" header:"X-Jwt-Token" json:"x_jwt_token,omitempty"`
 	TriggerType *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
 	TimeRange   *expt.TaskTimeRange   `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
