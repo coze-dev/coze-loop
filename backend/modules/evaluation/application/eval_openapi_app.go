@@ -2762,10 +2762,16 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 		}, nil
 	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
 		if e.sandboxSchedulerAdapter != nil {
+			tenant := rpc.SandboxTenantDefault
+			if agent := req.GetSandboxAgent(); agent != nil &&
+				entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) == entity.SandboxCountModeDual {
+				tenant = rpc.SandboxTenantFornaxTraeEvalDualSandbox
+			}
 			if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
 				TaskID:      "sandbox_debug",
 				Concurrency: 50,
 				WorkspaceID: req.GetWorkspaceID(),
+				Tenant:      tenant,
 			}); initErr != nil {
 				return nil, errorx.Wrapf(initErr, "init sandbox debug task fail")
 			}

@@ -27,6 +27,14 @@ func ResolveSandboxCountMode(mode SandboxCountMode) SandboxCountMode {
 	return SandboxCountModeSingle
 }
 
+// IsDualSandbox 判断 SandboxAgent 是否处于双沙箱模式；nil / 未填字段一律按 Single 处理。
+func (a *SandboxAgent) IsDualSandbox() bool {
+	if a == nil {
+		return false
+	}
+	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeDual
+}
+
 type SandboxEnvVar struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
