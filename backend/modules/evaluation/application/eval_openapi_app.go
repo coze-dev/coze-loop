@@ -966,7 +966,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 }
 
 // emitSandboxAgentInvokeFinished 组装 tags 并上报 invoke_finished / invoke_duration.
-// - Callee=="sandbox_agent" 是沙箱 agent 上报回调时的稳定标识, 用来跟其他 target 上报路径区分.
+// - Callee 是沙箱 agent 回调时的稳定标识, 用来跟其他 target 上报路径区分.
+//   沙箱侧实际填入的值为 "fornax.sandbox.pipeline" (跟 commercial AsyncExecute
+//   返回给 backend 存 asyncCtx 的 "sandbox_agent" 不是一回事: 这里比对的是
+//   沙箱回调 request 里的 callee, 沙箱侧独立填写)。
 // - 错误分类根据 req.Status + req.ErrorCode 决定, 遵循 classifier 表.
 // - submitTime 来自 AsyncCtx.AsyncUnixMS (提交侧写入), 未落时长度回退为 0.
 func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, actx *entity.EvalAsyncCtx) {
@@ -975,9 +978,9 @@ func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Cont
 			e == nil || e.sandboxAgentMetric == nil, req == nil)
 		return
 	}
-	if req.GetCallee() != "sandbox_agent" {
-		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, callee=%q (expect sandbox_agent), invoke_id=%d",
-			req.GetCallee(), req.GetInvokeID())
+	if req.GetCallee() != sandboxAgentInvokeCallee {
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, callee=%q (expect %s), invoke_id=%d",
+			req.GetCallee(), sandboxAgentInvokeCallee, req.GetInvokeID())
 		return
 	}
 	tags := metrics.SandboxAgentInvokeTags{
@@ -1003,6 +1006,12 @@ func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Cont
 // errSandboxAgentInvokeFailed 一个标记 error, 让 metrics classifier 走 non-success 分支;
 // 具体分类由 errorCode 承载, 不需要真实业务 error 内容.
 var errSandboxAgentInvokeFailed = &sandboxAgentInvokeFailure{}
+
+// sandboxAgentInvokeCallee 沙箱侧回调 backend 时 request.callee 的固定值。
+// 用来区分是不是"沙箱 agent"路径的回调 (跟其他 target 类型的 openapi 上报区分)。
+// 注意: 这个值跟 commercial AsyncExecute 返回给 backend 存 asyncCtx 的 "sandbox_agent"
+// 不是同一个字符串, 那个是 backend 内部使用, 这个是沙箱侧独立填充的。
+const sandboxAgentInvokeCallee = "fornax.sandbox.pipeline"
 
 type sandboxAgentInvokeFailure struct{}
 
