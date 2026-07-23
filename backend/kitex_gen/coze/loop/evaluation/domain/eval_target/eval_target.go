@@ -37,6 +37,10 @@ const (
 	HTTPMethodPost = "post"
 
 	SandboxAgentTypeSingleRunCLI = "single_run_cli"
+
+	SandboxCountModeSingle = "single"
+
+	SandboxCountModeDual = "dual"
 )
 
 type EvalTargetType int64
@@ -375,6 +379,9 @@ type HTTPMethod = string
 
 // 沙箱 Agent 子类型，内置路由标识，路由到对应的执行流水线
 type SandboxAgentType = string
+
+// 单/双沙箱模式；未填 / 未识别一律按 Single 处理。
+type SandboxCountMode = string
 
 type EvalTarget struct {
 	// 基本信息
@@ -10707,6 +10714,8 @@ type SandboxAgent struct {
 	// 是否开启分析：由创建评测对象时从 application.usages 反查（含 "analysis"）固化，
 	// 控制 item-complete MQ 是否发送（与 TCC 空间白名单 AND）
 	EnableAnalysis *bool `thrift:"enable_analysis,9,optional" frugal:"9,optional,bool" form:"enable_analysis" json:"enable_analysis,omitempty" query:"enable_analysis"`
+	// 单/双沙箱模式；空值按 Single 处理
+	SandboxCountMode *SandboxCountMode `thrift:"sandbox_count_mode,10,optional" frugal:"10,optional,string" form:"sandbox_count_mode" json:"sandbox_count_mode,omitempty" query:"sandbox_count_mode"`
 }
 
 func NewSandboxAgent() *SandboxAgent {
@@ -10811,6 +10820,18 @@ func (p *SandboxAgent) GetEnableAnalysis() (v bool) {
 	}
 	return *p.EnableAnalysis
 }
+
+var SandboxAgent_SandboxCountMode_DEFAULT SandboxCountMode
+
+func (p *SandboxAgent) GetSandboxCountMode() (v SandboxCountMode) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSandboxCountMode() {
+		return SandboxAgent_SandboxCountMode_DEFAULT
+	}
+	return *p.SandboxCountMode
+}
 func (p *SandboxAgent) SetName(val *string) {
 	p.Name = val
 }
@@ -10835,6 +10856,9 @@ func (p *SandboxAgent) SetImage(val *string) {
 func (p *SandboxAgent) SetEnableAnalysis(val *bool) {
 	p.EnableAnalysis = val
 }
+func (p *SandboxAgent) SetSandboxCountMode(val *SandboxCountMode) {
+	p.SandboxCountMode = val
+}
 
 var fieldIDToName_SandboxAgent = map[int16]string{
 	1: "name",
@@ -10844,7 +10868,8 @@ var fieldIDToName_SandboxAgent = map[int16]string{
 	6: "agent_run_cmd",
 	7: "envs",
 	8: "image",
-	9: "enable_analysis",
+	9:  "enable_analysis",
+	10: "sandbox_count_mode",
 }
 
 func (p *SandboxAgent) IsSetName() bool {
@@ -10877,6 +10902,10 @@ func (p *SandboxAgent) IsSetImage() bool {
 
 func (p *SandboxAgent) IsSetEnableAnalysis() bool {
 	return p.EnableAnalysis != nil
+}
+
+func (p *SandboxAgent) IsSetSandboxCountMode() bool {
+	return p.SandboxCountMode != nil
 }
 
 func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
@@ -10956,6 +10985,14 @@ func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11090,6 +11127,17 @@ func (p *SandboxAgent) ReadField9(iprot thrift.TProtocol) error {
 	p.EnableAnalysis = _field
 	return nil
 }
+func (p *SandboxAgent) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *SandboxCountMode
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SandboxCountMode = _field
+	return nil
+}
 
 func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -11127,6 +11175,10 @@ func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -11299,6 +11351,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
+func (p *SandboxAgent) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSandboxCountMode() {
+		if err = oprot.WriteFieldBegin("sandbox_count_mode", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SandboxCountMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 
 func (p *SandboxAgent) String() string {
 	if p == nil {
@@ -11336,6 +11406,9 @@ func (p *SandboxAgent) DeepEqual(ano *SandboxAgent) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.EnableAnalysis) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.SandboxCountMode) {
 		return false
 	}
 	return true
@@ -11434,6 +11507,18 @@ func (p *SandboxAgent) Field9DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableAnalysis != *src {
+		return false
+	}
+	return true
+}
+func (p *SandboxAgent) Field10DeepEqual(src *SandboxCountMode) bool {
+
+	if p.SandboxCountMode == src {
+		return true
+	} else if p.SandboxCountMode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SandboxCountMode, *src) != 0 {
 		return false
 	}
 	return true

@@ -7540,6 +7540,20 @@ func (p *SandboxAgent) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -7681,6 +7695,20 @@ func (p *SandboxAgent) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SandboxAgent) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *SandboxCountMode
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SandboxCountMode = _field
+	return offset, nil
+}
+
 func (p *SandboxAgent) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -7696,6 +7724,7 @@ func (p *SandboxAgent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -7712,6 +7741,7 @@ func (p *SandboxAgent) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -7796,6 +7826,15 @@ func (p *SandboxAgent) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *SandboxAgent) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSandboxCountMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 10)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SandboxCountMode)
+	}
+	return offset
+}
+
 func (p *SandboxAgent) field1Length() int {
 	l := 0
 	if p.IsSetName() {
@@ -7872,6 +7911,15 @@ func (p *SandboxAgent) field9Length() int {
 	return l
 }
 
+func (p *SandboxAgent) field10Length() int {
+	l := 0
+	if p.IsSetSandboxCountMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SandboxCountMode)
+	}
+	return l
+}
+
 func (p *SandboxAgent) DeepCopy(s interface{}) error {
 	src, ok := s.(*SandboxAgent)
 	if !ok {
@@ -7941,6 +7989,11 @@ func (p *SandboxAgent) DeepCopy(s interface{}) error {
 	if src.EnableAnalysis != nil {
 		tmp := *src.EnableAnalysis
 		p.EnableAnalysis = &tmp
+	}
+
+	if src.SandboxCountMode != nil {
+		tmp := *src.SandboxCountMode
+		p.SandboxCountMode = &tmp
 	}
 
 	return nil

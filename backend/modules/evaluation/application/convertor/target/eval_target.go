@@ -606,14 +606,15 @@ func SandboxAgentDTO2DO(dtoObj *dto.SandboxAgent) *do.SandboxAgent {
 		return nil
 	}
 	return &do.SandboxAgent{
-		Name:           gptr.Indirect(dtoObj.Name),
-		Type:           do.SandboxAgentType(gptr.Indirect(dtoObj.Type)),
-		ModelName:      gptr.Indirect(dtoObj.ModelName),
-		AgentSetupCmd:  gptr.Indirect(dtoObj.AgentSetupCmd),
-		AgentRunCmd:    gptr.Indirect(dtoObj.AgentRunCmd),
-		Envs:           SandboxEnvVarsDTO2DO(dtoObj.Envs),
-		Image:          gptr.Indirect(dtoObj.Image),
-		EnableAnalysis: gptr.Indirect(dtoObj.EnableAnalysis),
+		Name:             gptr.Indirect(dtoObj.Name),
+		Type:             do.SandboxAgentType(gptr.Indirect(dtoObj.Type)),
+		ModelName:        gptr.Indirect(dtoObj.ModelName),
+		AgentSetupCmd:    gptr.Indirect(dtoObj.AgentSetupCmd),
+		AgentRunCmd:      gptr.Indirect(dtoObj.AgentRunCmd),
+		Envs:             SandboxEnvVarsDTO2DO(dtoObj.Envs),
+		Image:            gptr.Indirect(dtoObj.Image),
+		EnableAnalysis:   gptr.Indirect(dtoObj.EnableAnalysis),
+		SandboxCountMode: do.SandboxCountMode(gptr.Indirect(dtoObj.SandboxCountMode)),
 	}
 }
 
@@ -622,14 +623,15 @@ func SandboxAgentDO2DTO(doObj *do.SandboxAgent) *dto.SandboxAgent {
 		return nil
 	}
 	return &dto.SandboxAgent{
-		Name:           gptr.Of(doObj.Name),
-		Type:           gptr.Of(dto.SandboxAgentType(doObj.Type)),
-		ModelName:      gptr.Of(doObj.ModelName),
-		AgentSetupCmd:  gptr.Of(doObj.AgentSetupCmd),
-		AgentRunCmd:    gptr.Of(doObj.AgentRunCmd),
-		Envs:           SandboxEnvVarsDO2DTO(doObj.Envs),
-		Image:          gptr.Of(doObj.Image),
-		EnableAnalysis: gptr.Of(doObj.EnableAnalysis),
+		Name:             gptr.Of(doObj.Name),
+		Type:             gptr.Of(dto.SandboxAgentType(doObj.Type)),
+		ModelName:        gptr.Of(doObj.ModelName),
+		AgentSetupCmd:    gptr.Of(doObj.AgentSetupCmd),
+		AgentRunCmd:      gptr.Of(doObj.AgentRunCmd),
+		Envs:             SandboxEnvVarsDO2DTO(doObj.Envs),
+		Image:            gptr.Of(doObj.Image),
+		EnableAnalysis:   gptr.Of(doObj.EnableAnalysis),
+		SandboxCountMode: gptr.Of(dto.SandboxCountMode(doObj.SandboxCountMode)),
 	}
 }
 
