@@ -34,4 +34,6 @@ type Config struct {
 	Debug             bool              `yaml:"debug"`
 	HttpHeaders       map[string]string `yaml:"http_headers"`
 	Settings          map[string]any    `yaml:"setting"`
+	MaxOpenConns      int               `yaml:"maxOpenConns"`
+	MaxIdleConns      int               `yaml:"maxIdleConns"`
 }
