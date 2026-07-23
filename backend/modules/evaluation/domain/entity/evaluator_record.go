@@ -88,6 +88,16 @@ type EvaluatorRunError struct {
 	Message string `json:"message,omitempty"`
 }
 
+// EvaluatorRecordAggr 聚合专用的轻量 evaluator_record 视图, 只含聚合所需字段 (id/score/status),
+// 用于绕过 input_data/output_data/ext 三个 mediumblob 的查询与反序列化 (见 DAO BatchGetEvaluatorRecordForAggr)。
+// score 列在写入侧已按 "有 Correction 取 Correction.Score, 否则取 EvaluatorResult.Score" 落库
+// (见 convertor.ConvertEvaluatorRecordDO2PO), 与旧的内存聚合取分逻辑一致。
+type EvaluatorRecordAggr struct {
+	ID     int64
+	Score  *float64
+	Status EvaluatorRunStatus
+}
+
 type EvaluatorRunStatus int64
 
 const (

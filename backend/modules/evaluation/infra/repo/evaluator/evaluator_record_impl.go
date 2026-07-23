@@ -126,6 +126,38 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, e
 	return evaluatorRecords, nil
 }
 
+// BatchGetEvaluatorRecordForAggr 聚合专用窄查询: 分批 (batchSize=50) SELECT id, score, status,
+// 绕过 input_data/output_data/ext 三个 mediumblob 的查询与反序列化, 只返回 status=Success 且 score 非 NULL 的行。
+// 无 TOS 加载、无 ConvertPO2DO 大字段展开, 是评估聚合链路避免大字段全量反序列化 OOM 的核心路径。
+func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecordForAggr(ctx context.Context, evaluatorRecordIDs []int64) ([]*entity.EvaluatorRecordAggr, error) {
+	const batchSize = 50
+	totalIDs := len(evaluatorRecordIDs)
+	if totalIDs == 0 {
+		return []*entity.EvaluatorRecordAggr{}, nil
+	}
+
+	aggrRecords := make([]*entity.EvaluatorRecordAggr, 0, totalIDs)
+	for start := 0; start < totalIDs; start += batchSize {
+		end := start + batchSize
+		if end > totalIDs {
+			end = totalIDs
+		}
+
+		batchIDs := evaluatorRecordIDs[start:end]
+		pos, err := r.evaluatorRecordDao.BatchGetEvaluatorRecordForAggr(ctx, batchIDs)
+		if err != nil {
+			return nil, err
+		}
+		for _, po := range pos {
+			if aggr := convertor.ConvertEvaluatorRecordPO2AggrDO(po); aggr != nil {
+				aggrRecords = append(aggrRecords, aggr)
+			}
+		}
+	}
+
+	return aggrRecords, nil
+}
+
 func (r *EvaluatorRecordRepoImpl) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error {
 	var score float64
 	if outputData != nil && outputData.EvaluatorResult != nil && outputData.EvaluatorResult.Score != nil {

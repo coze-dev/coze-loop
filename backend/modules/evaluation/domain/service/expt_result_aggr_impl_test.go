@@ -55,15 +55,12 @@ func TestExptAggrResultServiceImpl_CreateExptAggrResult(t *testing.T) {
 
 				// Mock BatchGetEvaluatorRecord
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
-					Return([]*entity.EvaluatorRecord{
+					BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
+					Return([]*entity.EvaluatorRecordAggr{
 						{
-							ID: 1,
-							EvaluatorOutputData: &entity.EvaluatorOutputData{
-								EvaluatorResult: &entity.EvaluatorResult{
-									Score: gptr.Of(0.8),
-								},
-							},
+							ID:     1,
+							Status: entity.EvaluatorRunStatusSuccess,
+							Score:  gptr.Of(0.8),
 						},
 					}, nil)
 
@@ -240,15 +237,12 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult(t *testing.T) {
 
 				// Mock BatchGetEvaluatorRecord
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
-					Return([]*entity.EvaluatorRecord{
+					BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
+					Return([]*entity.EvaluatorRecordAggr{
 						{
-							ID: 1,
-							EvaluatorOutputData: &entity.EvaluatorOutputData{
-								EvaluatorResult: &entity.EvaluatorResult{
-									Score: gptr.Of(0.8),
-								},
-							},
+							ID:     1,
+							Status: entity.EvaluatorRunStatusSuccess,
+							Score:  gptr.Of(0.8),
 						},
 					}, nil)
 
@@ -3243,15 +3237,12 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 
 		// Mock BatchGetEvaluatorRecord
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
-			Return([]*entity.EvaluatorRecord{
+			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
+			Return([]*entity.EvaluatorRecordAggr{
 				{
-					ID: 1,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: gptr.Of(0.8),
-						},
-					},
+					ID:     1,
+					Status: entity.EvaluatorRunStatusSuccess,
+					Score:  gptr.Of(0.8),
 				},
 			}, nil)
 
@@ -3317,15 +3308,12 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 
 		// Mock BatchGetEvaluatorRecord
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
-			Return([]*entity.EvaluatorRecord{
+			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
+			Return([]*entity.EvaluatorRecordAggr{
 				{
-					ID: 1,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: gptr.Of(0.8),
-						},
-					},
+					ID:     1,
+					Status: entity.EvaluatorRunStatusSuccess,
+					Score:  gptr.Of(0.8),
 				},
 			}, nil)
 
@@ -3401,15 +3389,12 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 
 		// Mock BatchGetEvaluatorRecord
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
-			Return([]*entity.EvaluatorRecord{
+			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
+			Return([]*entity.EvaluatorRecordAggr{
 				{
-					ID: 1,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: gptr.Of(0.8),
-						},
-					},
+					ID:     1,
+					Status: entity.EvaluatorRunStatusSuccess,
+					Score:  gptr.Of(0.8),
 				},
 			}, nil)
 
@@ -3462,15 +3447,12 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 
 		// Mock BatchGetEvaluatorRecord
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
-			Return([]*entity.EvaluatorRecord{
+			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
+			Return([]*entity.EvaluatorRecordAggr{
 				{
-					ID: 1,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: gptr.Of(0.8),
-						},
-					},
+					ID:     1,
+					Status: entity.EvaluatorRunStatusSuccess,
+					Score:  gptr.Of(0.8),
 				},
 			}, nil)
 

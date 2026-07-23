@@ -50,17 +50,17 @@ func TestCreateExptAggrResult_MultiSetConfig_ComputesEvaluatorGroupByAlias(t *te
 			{EvaluatorVersionID: 100, EvaluatorResultID: 12, Alias: "judge_B"},
 		}, nil)
 	mockEvaluatorRecordService.EXPECT().
-		BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return([]*entity.EvaluatorRecord{
+		BatchGetEvaluatorRecordForAggr(gomock.Any(), gomock.Any()).
+		Return([]*entity.EvaluatorRecordAggr{
 			{
-				ID:                  11,
-				Status:              entity.EvaluatorRunStatusSuccess,
-				EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.8)}},
+				ID:     11,
+				Status: entity.EvaluatorRunStatusSuccess,
+				Score:  gptr.Of(0.8),
 			},
 			{
-				ID:                  12,
-				Status:              entity.EvaluatorRunStatusSuccess,
-				EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.4)}},
+				ID:     12,
+				Status: entity.EvaluatorRunStatusSuccess,
+				Score:  gptr.Of(0.4),
 			},
 		}, nil)
 
@@ -183,21 +183,17 @@ func TestComputeEvaluatorAggrGroup_FiltersSkippedRecord(t *testing.T) {
 		}, nil)
 
 	mockEvaluatorRecordService.EXPECT().
-		BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return([]*entity.EvaluatorRecord{
+		BatchGetEvaluatorRecordForAggr(gomock.Any(), gomock.Any()).
+		Return([]*entity.EvaluatorRecordAggr{
 			{
 				ID:     11,
 				Status: entity.EvaluatorRunStatusSuccess,
-				EvaluatorOutputData: &entity.EvaluatorOutputData{
-					EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.8)},
-				},
+				Score:  gptr.Of(0.8),
 			},
 			{
 				ID:     12,
-				Status: entity.EvaluatorRunStatusSkipped, // ★ 应被过滤
-				EvaluatorOutputData: &entity.EvaluatorOutputData{
-					EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.2)},
-				},
+				Status: entity.EvaluatorRunStatusSkipped, // ★ 应被过滤 (Go 侧 status!=Success 兜底; 线上由 SQL 侧 status=Success 过滤)
+				Score:  gptr.Of(0.2),
 			},
 		}, nil)
 
@@ -222,6 +218,50 @@ func TestComputeEvaluatorAggrGroup_FiltersSkippedRecord(t *testing.T) {
 	assert.InDelta(t, 0.8, average, 1e-9)
 }
 
+// computeEvaluatorAggrGroup 对 score 为 nil 的 record 做兜底跳过 —
+// 窄查询虽已在 SQL 侧过滤 score IS NOT NULL, Go 侧仍保留 score==nil 跳过, 防 SQL 被放宽。
+func TestComputeEvaluatorAggrGroup_SkipsNilScore(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+
+	mockExptTurnResultRepo.EXPECT().
+		GetTurnEvaluatorResultRefByExptID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptTurnEvaluatorResultRef{
+			{EvaluatorVersionID: 100, EvaluatorResultID: 11},
+			{EvaluatorVersionID: 100, EvaluatorResultID: 12},
+		}, nil)
+
+	mockEvaluatorRecordService.EXPECT().
+		BatchGetEvaluatorRecordForAggr(gomock.Any(), gomock.Any()).
+		Return([]*entity.EvaluatorRecordAggr{
+			{ID: 11, Status: entity.EvaluatorRunStatusSuccess, Score: gptr.Of(1.0)},
+			{ID: 12, Status: entity.EvaluatorRunStatusSuccess, Score: nil}, // ★ score nil 应被跳过, 不当 0 分算
+		}, nil)
+
+	svc := &ExptAggrResultServiceImpl{
+		exptTurnResultRepo:     mockExptTurnResultRepo,
+		evaluatorRecordService: mockEvaluatorRecordService,
+	}
+
+	group, err := svc.computeEvaluatorAggrGroup(context.Background(), int64(100), int64(1))
+	assert.NoError(t, err)
+	assert.Contains(t, group, "100")
+
+	aggrResult := group["100"].Result()
+	var average float64
+	for _, r := range aggrResult.AggregatorResults {
+		if r.AggregatorType == entity.Average {
+			average = r.GetScore()
+			break
+		}
+	}
+	// 只有 1.0 计入 (nil 被跳过); 若 nil 被误当 0, average 会变成 0.5。
+	assert.InDelta(t, 1.0, average, 1e-9)
+}
+
 // computeEvaluatorAggrGroup 按 (version_id, alias) 分桶 —
 // 同 version 多 alias 不再撞 key, 各自独立成桶。
 func TestComputeEvaluatorAggrGroup_BucketsByAlias(t *testing.T) {
@@ -239,17 +279,17 @@ func TestComputeEvaluatorAggrGroup_BucketsByAlias(t *testing.T) {
 		}, nil)
 
 	mockEvaluatorRecordService.EXPECT().
-		BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return([]*entity.EvaluatorRecord{
+		BatchGetEvaluatorRecordForAggr(gomock.Any(), gomock.Any()).
+		Return([]*entity.EvaluatorRecordAggr{
 			{
-				ID:                  11,
-				Status:              entity.EvaluatorRunStatusSuccess,
-				EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.8)}},
+				ID:     11,
+				Status: entity.EvaluatorRunStatusSuccess,
+				Score:  gptr.Of(0.8),
 			},
 			{
-				ID:                  12,
-				Status:              entity.EvaluatorRunStatusSuccess,
-				EvaluatorOutputData: &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.4)}},
+				ID:     12,
+				Status: entity.EvaluatorRunStatusSuccess,
+				Score:  gptr.Of(0.4),
 			},
 		}, nil)
 

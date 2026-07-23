@@ -72,21 +72,6 @@ func NewExptAggrResultService(
 	}
 }
 
-// effectiveEvaluatorResultScoreForAggr 返回用于实验聚合统计的分数：Correction.Score 优先（非 nil 时），否则原始 Score。
-// 与 expt_result_impl.calculateWeightedScore、CorrectEvaluatorRecord 语义一致。
-func effectiveEvaluatorResultScoreForAggr(res *entity.EvaluatorResult) (float64, bool) {
-	if res == nil {
-		return 0, false
-	}
-	if res.Correction != nil && res.Correction.Score != nil {
-		return *res.Correction.Score, true
-	}
-	if res.Score != nil {
-		return *res.Score, true
-	}
-	return 0, false
-}
-
 func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, spaceID, experimentID int64) (err error) {
 	now := time.Now().Unix()
 	defer func() { e.metric.EmitCalculateExptAggrResult(spaceID, int64(entity.CreateAllFields), err != nil, now) }()
@@ -146,14 +131,14 @@ func (e *ExptAggrResultServiceImpl) computeEvaluatorAggrGroup(ctx context.Contex
 		evaluatorInstanceKey2ResultIDs[instanceKey] = append(evaluatorInstanceKey2ResultIDs[instanceKey], turnEvaluatorResultRef.EvaluatorResultID)
 	}
 
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecordForAggr(ctx, evaluatorResultIDs)
 	if err != nil {
 		return nil, err
 	}
-	recordMap := make(map[int64]*entity.EvaluatorRecord)
+	// 窄查询已在 SQL 侧过滤 status=Success 且 score 非 NULL, 这里再按 status/score 兜底 (防御 SQL 被放宽), 与内存聚合 contributing 集一致。
+	recordMap := make(map[int64]*entity.EvaluatorRecordAggr)
 	for _, record := range evaluatorRecords {
-		// ★ Skipped 过滤: filter 不命中产的占位 record 不计入聚合
-		if record == nil || record.Status == entity.EvaluatorRunStatusSkipped {
+		if record == nil || record.Status != entity.EvaluatorRunStatusSuccess || record.Score == nil {
 			continue
 		}
 		recordMap[record.ID] = record
@@ -164,17 +149,10 @@ func (e *ExptAggrResultServiceImpl) computeEvaluatorAggrGroup(ctx context.Contex
 		evaluatorInstanceKey2AggregatorGroup[instanceKey] = aggregatorGroup
 		for _, resultID := range resultIDs {
 			evalResult, ok := recordMap[resultID]
-			if !ok || evalResult == nil {
+			if !ok || evalResult == nil || evalResult.Score == nil {
 				continue
 			}
-			if evalResult.EvaluatorOutputData == nil {
-				continue
-			}
-			score, hasScore := effectiveEvaluatorResultScoreForAggr(evalResult.EvaluatorOutputData.EvaluatorResult)
-			if !hasScore {
-				continue
-			}
-			aggregatorGroup.Append(score)
+			aggregatorGroup.Append(*evalResult.Score)
 		}
 	}
 	return evaluatorInstanceKey2AggregatorGroup, nil
@@ -431,15 +409,14 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 		evaluatorResultIDs = append(evaluatorResultIDs, turnEvaluatorResultRef.EvaluatorResultID)
 	}
 
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
-	// evalResults, err := e.evalCall.BatchGetEvaluatorRecord(ctx, spaceID, evaluatorResultIDs)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecordForAggr(ctx, evaluatorResultIDs)
 	if err != nil {
 		return err
 	}
-	recordMap := make(map[int64]*entity.EvaluatorRecord)
+	// 窄查询已在 SQL 侧过滤 status=Success 且 score 非 NULL, 这里再按 status/score 兜底 (防御 SQL 被放宽)。
+	recordMap := make(map[int64]*entity.EvaluatorRecordAggr)
 	for _, record := range evaluatorRecords {
-		// ★ Skipped 过滤: filter 不命中产的占位 record 不计入聚合
-		if record == nil || record.Status == entity.EvaluatorRunStatusSkipped {
+		if record == nil || record.Status != entity.EvaluatorRunStatusSuccess || record.Score == nil {
 			continue
 		}
 		recordMap[record.ID] = record
@@ -447,14 +424,10 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 
 	aggregatorGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
 	for _, evalResult := range recordMap {
-		if evalResult.EvaluatorOutputData == nil {
+		if evalResult.Score == nil {
 			continue
 		}
-		score, ok := effectiveEvaluatorResultScoreForAggr(evalResult.EvaluatorOutputData.EvaluatorResult)
-		if !ok {
-			continue
-		}
-		aggregatorGroup.Append(score)
+		aggregatorGroup.Append(*evalResult.Score)
 	}
 
 	return e.updateExptAggrResult(ctx, param, evaluatorVersionID, aggregatorGroup, version)

@@ -77,6 +77,9 @@ type EvaluatorRecordService interface {
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool) (*entity.EvaluatorRecord, error)
 	// BatchGetEvaluatorRecord 按 id 批量查询 evaluator_version 运行结果，withFullContent 为 true 时从 TOS 加载完整内容
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error)
+	// BatchGetEvaluatorRecordForAggr 聚合专用窄查询：只取 id/score/status，绕过大字段反序列化，
+	// 只返回 status=Success 且 score 非 NULL 的行。不做 PackUserInfo（聚合用不上）。
+	BatchGetEvaluatorRecordForAggr(ctx context.Context, evaluatorRecordIDs []int64) ([]*entity.EvaluatorRecordAggr, error)
 }
 
 //type ListEvaluatorRequest struct {

@@ -154,3 +154,17 @@ func ConvertEvaluatorRecordPO2DO(po *model.EvaluatorRecord) (*entity.EvaluatorRe
 
 	return do, nil
 }
+
+// ConvertEvaluatorRecordPO2AggrDO 聚合专用转换: 只映射 id/score/status, 不触碰
+// input_data/output_data/ext 三个 mediumblob, 因此无任何 json.Unmarshal 开销。
+// 配合 SELECT id, score, status 的窄查询使用, 是评估聚合链路避免大字段全量反序列化 OOM 的关键。
+func ConvertEvaluatorRecordPO2AggrDO(po *model.EvaluatorRecord) *entity.EvaluatorRecordAggr {
+	if po == nil {
+		return nil
+	}
+	return &entity.EvaluatorRecordAggr{
+		ID:     po.ID,
+		Score:  po.Score,
+		Status: entity.EvaluatorRunStatus(po.Status),
+	}
+}
