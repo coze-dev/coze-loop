@@ -966,10 +966,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 }
 
 // emitSandboxAgentInvokeFinished 组装 tags 并上报 invoke_finished / invoke_duration.
-// - Callee 是沙箱 agent 回调时的稳定标识, 用来跟其他 target 上报路径区分.
-//   沙箱侧实际填入的值为 "fornax.sandbox.pipeline" (跟 commercial AsyncExecute
-//   返回给 backend 存 asyncCtx 的 "sandbox_agent" 不是一回事: 这里比对的是
-//   沙箱回调 request 里的 callee, 沙箱侧独立填写)。
+// - 只对沙箱 agent 路径的回调打点。判断依据是 asyncCtx.Callee (backend 提交侧写入,
+//   来自 commercial SandboxAgentSourceEvalTargetServiceImpl.AsyncExecute 返回的
+//   evaluation target 类型标识)。**不用** req.GetCallee (那是沙箱侧回调时独立填的,
+//   值是 "fornax.sandbox.pipeline", 不能作为 backend 侧类型判断的稳定依据)。
 // - 错误分类根据 req.Status + req.ErrorCode 决定, 遵循 classifier 表.
 // - submitTime 来自 AsyncCtx.AsyncUnixMS (提交侧写入), 未落时长度回退为 0.
 func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, actx *entity.EvalAsyncCtx) {
@@ -978,9 +978,13 @@ func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Cont
 			e == nil || e.sandboxAgentMetric == nil, req == nil)
 		return
 	}
-	if req.GetCallee() != sandboxAgentInvokeCallee {
-		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, callee=%q (expect %s), invoke_id=%d",
-			req.GetCallee(), sandboxAgentInvokeCallee, req.GetInvokeID())
+	if actx == nil || actx.Callee != sandboxAgentAsyncCallee {
+		actxCallee := ""
+		if actx != nil {
+			actxCallee = actx.Callee
+		}
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, actx_nil=%v, actx.callee=%q (expect %s), invoke_id=%d",
+			actx == nil, actxCallee, sandboxAgentAsyncCallee, req.GetInvokeID())
 		return
 	}
 	tags := metrics.SandboxAgentInvokeTags{
@@ -1007,11 +1011,12 @@ func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Cont
 // 具体分类由 errorCode 承载, 不需要真实业务 error 内容.
 var errSandboxAgentInvokeFailed = &sandboxAgentInvokeFailure{}
 
-// sandboxAgentInvokeCallee 沙箱侧回调 backend 时 request.callee 的固定值。
-// 用来区分是不是"沙箱 agent"路径的回调 (跟其他 target 类型的 openapi 上报区分)。
-// 注意: 这个值跟 commercial AsyncExecute 返回给 backend 存 asyncCtx 的 "sandbox_agent"
-// 不是同一个字符串, 那个是 backend 内部使用, 这个是沙箱侧独立填充的。
-const sandboxAgentInvokeCallee = "fornax.sandbox.pipeline"
+// sandboxAgentAsyncCallee 沙箱 agent target 在提交时写入 asyncCtx.Callee 的固定值,
+// 来自 commercial SandboxAgentSourceEvalTargetServiceImpl.AsyncExecute 的第二个返回值。
+// 这是 backend 内部记录的"评测对象类型"标识, 用来判断当前回调是否属于沙箱 agent 路径。
+// 注意: 这个值 != 沙箱侧回调 request.callee (那个是 "fornax.sandbox.pipeline",
+// 由沙箱侧独立填写, 不可靠)。
+const sandboxAgentAsyncCallee = "sandbox_agent"
 
 type sandboxAgentInvokeFailure struct{}
 
