@@ -22,7 +22,6 @@ import (
 type MockEvaluatorRecordDAO struct {
 	ctrl     *gomock.Controller
 	recorder *MockEvaluatorRecordDAOMockRecorder
-	isgomock struct{}
 }
 
 // MockEvaluatorRecordDAOMockRecorder is the mock recorder for MockEvaluatorRecordDAO.
@@ -43,10 +42,10 @@ func (m *MockEvaluatorRecordDAO) EXPECT() *MockEvaluatorRecordDAOMockRecorder {
 }
 
 // BatchGetEvaluatorRecord mocks base method.
-func (m *MockEvaluatorRecordDAO) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorRecord, error) {
+func (m *MockEvaluatorRecordDAO) BatchGetEvaluatorRecord(arg0 context.Context, arg1 []int64, arg2 bool, arg3 ...db.Option) ([]*model.EvaluatorRecord, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, evaluatorRecordIDs, includeDeleted}
-	for _, a := range opts {
+	varargs := []any{arg0, arg1, arg2}
+	for _, a := range arg3 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BatchGetEvaluatorRecord", varargs...)
@@ -56,17 +55,37 @@ func (m *MockEvaluatorRecordDAO) BatchGetEvaluatorRecord(ctx context.Context, ev
 }
 
 // BatchGetEvaluatorRecord indicates an expected call of BatchGetEvaluatorRecord.
-func (mr *MockEvaluatorRecordDAOMockRecorder) BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorRecordDAOMockRecorder) BatchGetEvaluatorRecord(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, evaluatorRecordIDs, includeDeleted}, opts...)
+	varargs := append([]any{arg0, arg1, arg2}, arg3...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorRecord", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).BatchGetEvaluatorRecord), varargs...)
 }
 
-// CreateEvaluatorRecord mocks base method.
-func (m *MockEvaluatorRecordDAO) CreateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error {
+// BatchGetEvaluatorRecordForAggr mocks base method.
+func (m *MockEvaluatorRecordDAO) BatchGetEvaluatorRecordForAggr(arg0 context.Context, arg1 []int64, arg2 ...db.Option) ([]*model.EvaluatorRecord, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, evaluatorRecord}
-	for _, a := range opts {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "BatchGetEvaluatorRecordForAggr", varargs...)
+	ret0, _ := ret[0].([]*model.EvaluatorRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetEvaluatorRecordForAggr indicates an expected call of BatchGetEvaluatorRecordForAggr.
+func (mr *MockEvaluatorRecordDAOMockRecorder) BatchGetEvaluatorRecordForAggr(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorRecordForAggr", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).BatchGetEvaluatorRecordForAggr), varargs...)
+}
+
+// CreateEvaluatorRecord mocks base method.
+func (m *MockEvaluatorRecordDAO) CreateEvaluatorRecord(arg0 context.Context, arg1 *model.EvaluatorRecord, arg2 ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CreateEvaluatorRecord", varargs...)
@@ -75,17 +94,17 @@ func (m *MockEvaluatorRecordDAO) CreateEvaluatorRecord(ctx context.Context, eval
 }
 
 // CreateEvaluatorRecord indicates an expected call of CreateEvaluatorRecord.
-func (mr *MockEvaluatorRecordDAOMockRecorder) CreateEvaluatorRecord(ctx, evaluatorRecord any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorRecordDAOMockRecorder) CreateEvaluatorRecord(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, evaluatorRecord}, opts...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluatorRecord", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).CreateEvaluatorRecord), varargs...)
 }
 
 // GetEvaluatorRecord mocks base method.
-func (m *MockEvaluatorRecordDAO) GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...db.Option) (*model.EvaluatorRecord, error) {
+func (m *MockEvaluatorRecordDAO) GetEvaluatorRecord(arg0 context.Context, arg1 int64, arg2 bool, arg3 ...db.Option) (*model.EvaluatorRecord, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, evaluatorRecordID, includeDeleted}
-	for _, a := range opts {
+	varargs := []any{arg0, arg1, arg2}
+	for _, a := range arg3 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetEvaluatorRecord", varargs...)
@@ -95,17 +114,17 @@ func (m *MockEvaluatorRecordDAO) GetEvaluatorRecord(ctx context.Context, evaluat
 }
 
 // GetEvaluatorRecord indicates an expected call of GetEvaluatorRecord.
-func (mr *MockEvaluatorRecordDAOMockRecorder) GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorRecordDAOMockRecorder) GetEvaluatorRecord(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, evaluatorRecordID, includeDeleted}, opts...)
+	varargs := append([]any{arg0, arg1, arg2}, arg3...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorRecord", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).GetEvaluatorRecord), varargs...)
 }
 
 // UpdateEvaluatorRecord mocks base method.
-func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error {
+func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecord(arg0 context.Context, arg1 *model.EvaluatorRecord, arg2 ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, evaluatorRecord}
-	for _, a := range opts {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "UpdateEvaluatorRecord", varargs...)
@@ -114,17 +133,17 @@ func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecord(ctx context.Context, eval
 }
 
 // UpdateEvaluatorRecord indicates an expected call of UpdateEvaluatorRecord.
-func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecord(ctx, evaluatorRecord any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecord(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, evaluatorRecord}, opts...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecord", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).UpdateEvaluatorRecord), varargs...)
 }
 
 // UpdateEvaluatorRecordResult mocks base method.
-func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score float64, outputData string, opts ...db.Option) error {
+func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecordResult(arg0 context.Context, arg1 int64, arg2 int8, arg3 float64, arg4 string, arg5 ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, recordID, status, score, outputData}
-	for _, a := range opts {
+	varargs := []any{arg0, arg1, arg2, arg3, arg4}
+	for _, a := range arg5 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "UpdateEvaluatorRecordResult", varargs...)
@@ -133,8 +152,8 @@ func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecordResult(ctx context.Context
 }
 
 // UpdateEvaluatorRecordResult indicates an expected call of UpdateEvaluatorRecordResult.
-func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecordResult(ctx, recordID, status, score, outputData any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecordResult(arg0, arg1, arg2, arg3, arg4 any, arg5 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, recordID, status, score, outputData}, opts...)
+	varargs := append([]any{arg0, arg1, arg2, arg3, arg4}, arg5...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecordResult", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).UpdateEvaluatorRecordResult), varargs...)
 }

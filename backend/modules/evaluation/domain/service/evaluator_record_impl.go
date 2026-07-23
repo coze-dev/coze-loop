@@ -234,3 +234,8 @@ func (s *EvaluatorRecordServiceImpl) BatchGetEvaluatorRecord(ctx context.Context
 	s.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDO2UserInfoDomainCarrier(records))
 	return records, nil
 }
+
+// BatchGetEvaluatorRecordForAggr 聚合专用窄查询: 直透 repo, 不做 PackUserInfo (聚合只用 score/status, 用不到用户信息)。
+func (s *EvaluatorRecordServiceImpl) BatchGetEvaluatorRecordForAggr(ctx context.Context, evaluatorRecordIDs []int64) ([]*entity.EvaluatorRecordAggr, error) {
+	return s.evaluatorRecordRepo.BatchGetEvaluatorRecordForAggr(ctx, evaluatorRecordIDs)
+}
