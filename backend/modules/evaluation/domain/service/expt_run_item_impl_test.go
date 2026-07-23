@@ -810,3 +810,87 @@ func Test_buildExptTurnEvalCtx_BuildEvalExtMerge(t *testing.T) {
 		})
 	}
 }
+
+func Test_buildItemCompleteEvent(t *testing.T) {
+	tests := []struct {
+		name               string
+		eiec               *entity.ExptItemEvalCtx
+		wantCreatedBy      string
+		wantEnableAnalysis bool
+	}{
+		{
+			name: "sandbox agent analysis enabled -> created_by + enable_analysis both set",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_abc",
+					TargetID:  9,
+					Target: &entity.EvalTarget{
+						SpaceID: 1,
+						EvalTargetVersion: &entity.EvalTargetVersion{
+							SandboxAgent: &entity.SandboxAgent{EnableAnalysis: true},
+						},
+					},
+				},
+			},
+			wantCreatedBy:      "user_abc",
+			wantEnableAnalysis: true,
+		},
+		{
+			name: "sandbox agent analysis disabled -> created_by set, enable_analysis false",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_def",
+					Target: &entity.EvalTarget{
+						SpaceID:           1,
+						EvalTargetVersion: &entity.EvalTargetVersion{SandboxAgent: &entity.SandboxAgent{EnableAnalysis: false}},
+					},
+				},
+			},
+			wantCreatedBy:      "user_def",
+			wantEnableAnalysis: false,
+		},
+		{
+			name: "nil sandbox agent -> enable_analysis false, no panic",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_ghi",
+					Target:    &entity.EvalTarget{SpaceID: 1, EvalTargetVersion: &entity.EvalTargetVersion{}},
+				},
+			},
+			wantCreatedBy:      "user_ghi",
+			wantEnableAnalysis: false,
+		},
+		{
+			name: "nil target version -> enable_analysis false, no panic",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt:  &entity.Experiment{CreatedBy: "user_jkl", Target: &entity.EvalTarget{SpaceID: 1}},
+			},
+			wantCreatedBy:      "user_jkl",
+			wantEnableAnalysis: false,
+		},
+		{
+			name: "nil target -> enable_analysis false, created_by still set, no panic",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt:  &entity.Experiment{CreatedBy: "user_mno"},
+			},
+			wantCreatedBy:      "user_mno",
+			wantEnableAnalysis: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ev := buildItemCompleteEvent(tt.eiec)
+			assert.NotNil(t, ev)
+			assert.Equal(t, tt.wantCreatedBy, ev.CreatedBy)
+			assert.Equal(t, tt.wantEnableAnalysis, ev.EnableAnalysis)
+			// 基础字段恒填充
+			assert.Equal(t, "100", ev.ExptID)
+			assert.Equal(t, "300", ev.ItemID)
+		})
+	}
+}

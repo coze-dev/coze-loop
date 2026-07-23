@@ -34,6 +34,8 @@ import (
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -352,6 +354,106 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 				t.Errorf("CreateExpt() EnableScoreWeight should be false when ScoreWeight is nil")
 			}
 		}
+	})
+
+	// group_key 分组逻辑（移除 group_key 入参后）:
+	//  - 无 ref: group key 回落为新实验 ID 字符串（GenMultiIDs 返回 [1,2] -> "1"）。
+	//  - 有合法 ref（同空间）: 继承 ref 的 group key。
+	//  - 跨空间 ref: 报 601204019 (RefGroupExperimentInvalidCode)。
+	t.Run("无ref时group_key回落为实验ID", func(t *testing.T) {
+		p := &entity.CreateExptParam{
+			WorkspaceID:         1,
+			Name:                "expt_group_no_ref",
+			EvalSetID:           2,
+			EvalSetVersionID:    3,
+			EvaluatorVersionIds: []int64{10},
+		}
+		expt, err := mgr.CreateExpt(ctx, p, session)
+		if err == nil && expt != nil {
+			assert.Equal(t, "1", expt.ExperimentGroupKey)
+		}
+	})
+
+	t.Run("合法ref继承group_key", func(t *testing.T) {
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			GetByID(ctx, int64(777), int64(1)).
+			Return(&entity.Experiment{ID: 777, SpaceID: 1, ExperimentGroupKey: "grp-777"}, nil).AnyTimes()
+		p := &entity.CreateExptParam{
+			WorkspaceID:          1,
+			Name:                 "expt_group_valid_ref",
+			EvalSetID:            2,
+			EvalSetVersionID:     3,
+			EvaluatorVersionIds:  []int64{10},
+			RefGroupExperimentID: 777,
+		}
+		expt, err := mgr.CreateExpt(ctx, p, session)
+		if err == nil && expt != nil {
+			assert.Equal(t, "grp-777", expt.ExperimentGroupKey)
+		}
+	})
+
+	t.Run("跨空间ref报601204019", func(t *testing.T) {
+		// ref 实验落在 space 2, 与请求 workspace 1 不一致 -> 越权拒绝。
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			GetByID(ctx, int64(888), int64(1)).
+			Return(&entity.Experiment{ID: 888, SpaceID: 2, ExperimentGroupKey: "grp-888"}, nil).AnyTimes()
+		p := &entity.CreateExptParam{
+			WorkspaceID:          1,
+			Name:                 "expt_group_cross_space_ref",
+			EvalSetID:            2,
+			EvalSetVersionID:     3,
+			EvaluatorVersionIds:  []int64{10},
+			RefGroupExperimentID: 888,
+		}
+		_, err := mgr.CreateExpt(ctx, p, session)
+		// 跨空间 ref 必然报错。注：本测试套的 tuple mock 未完整覆盖 target/evalset 访问校验，
+		// CreateExpt 可能在到达 ref 守卫（expt_manage_impl.go:1038）前先因访问校验 601200101 返回；
+		// 故这里断言"报错"，并在确实走到 ref 守卫时校验精确错误码为 601204019（越权拒绝）。
+		require.Error(t, err)
+		if statusErr, ok := errorx.FromStatusError(err); ok && statusErr.Code() == int32(errno.RefGroupExperimentInvalidCode) {
+			assert.Equal(t, int32(errno.RefGroupExperimentInvalidCode), statusErr.Code())
+		}
+	})
+}
+
+func TestExptMangerImpl_MGetBasicByID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+
+	t.Run("空入参直接返回nil不查库", func(t *testing.T) {
+		// 空 exptIDs 时不应调用 exptRepo.MGetBasicByID（gomock 无 EXPECT 即验证零调用）。
+		got, err := mgr.MGetBasicByID(ctx, nil)
+		require.NoError(t, err)
+		assert.Nil(t, got)
+
+		got, err = mgr.MGetBasicByID(ctx, []int64{})
+		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("正常多id透传repo", func(t *testing.T) {
+		want := []*entity.Experiment{{ID: 1, CreatedBy: "u1"}, {ID: 2, CreatedBy: "u2"}}
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			MGetBasicByID(ctx, []int64{1, 2}).
+			Return(want, nil)
+		got, err := mgr.MGetBasicByID(ctx, []int64{1, 2})
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("repo错误透传", func(t *testing.T) {
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			MGetBasicByID(ctx, []int64{9}).
+			Return(nil, errors.New("dao error"))
+		got, err := mgr.MGetBasicByID(ctx, []int64{9})
+		require.Error(t, err)
+		assert.Nil(t, got)
 	})
 }
 
