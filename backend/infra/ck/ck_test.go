@@ -24,7 +24,7 @@ func TestNewCKFromConfig_ConnPoolSettings(t *testing.T) {
 		}
 		opt := buildOptions(cfg)
 		db := std_ck.OpenDB(opt)
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		if cfg.MaxOpenConns > 0 {
 			db.SetMaxOpenConns(cfg.MaxOpenConns)
@@ -48,7 +48,7 @@ func TestNewCKFromConfig_ConnPoolSettings(t *testing.T) {
 		}
 		opt := buildOptions(cfg)
 		db := std_ck.OpenDB(opt)
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		if cfg.MaxOpenConns > 0 {
 			db.SetMaxOpenConns(cfg.MaxOpenConns)
@@ -71,7 +71,7 @@ func TestNewCKFromConfig_ConnPoolSettings(t *testing.T) {
 		}
 		opt := buildOptions(cfg)
 		db := std_ck.OpenDB(opt)
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		if cfg.MaxOpenConns > 0 {
 			db.SetMaxOpenConns(cfg.MaxOpenConns)
@@ -94,7 +94,7 @@ func TestNewCKFromConfig_ConnPoolSettings(t *testing.T) {
 		}
 		opt := buildOptions(cfg)
 		db := std_ck.OpenDB(opt)
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		if cfg.MaxOpenConns > 0 {
 			db.SetMaxOpenConns(cfg.MaxOpenConns)
