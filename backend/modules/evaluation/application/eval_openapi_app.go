@@ -990,9 +990,16 @@ func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Cont
 	tags := metrics.SandboxAgentInvokeTags{
 		InvokeID: strconv.FormatInt(req.GetInvokeID(), 10),
 	}
-	if actx != nil && actx.Event != nil {
-		tags.ExperimentID = actx.Event.ExptID
-		tags.ItemID = actx.Event.EvalSetItemID
+	if actx != nil {
+		if actx.Event != nil {
+			tags.ExperimentID = actx.Event.ExptID
+			tags.ItemID = actx.Event.EvalSetItemID
+		}
+		tags.DatasetID = actx.DatasetID
+		tags.DatasetVersion = actx.DatasetVersionID
+		tags.TargetID = actx.TargetID
+		tags.ItemKey = actx.ItemKey
+		tags.DatasetKey = actx.DatasetKey
 	}
 	var submitTime time.Time
 	if actx != nil && actx.AsyncUnixMS > 0 {

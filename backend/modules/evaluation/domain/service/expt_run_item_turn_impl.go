@@ -327,7 +327,13 @@ func pickTargetID(etec *entity.ExptTurnEvalCtx) int64 {
 }
 
 func pickDatasetID(etec *entity.ExptTurnEvalCtx) int64 {
-	if etec == nil || etec.Expt == nil {
+	if etec == nil {
+		return 0
+	}
+	if etec.EvalSetItem != nil && etec.EvalSetItem.EvaluationSetID != 0 {
+		return etec.EvalSetItem.EvaluationSetID
+	}
+	if etec.Expt == nil {
 		return 0
 	}
 	return etec.Expt.EvalSetID
@@ -340,11 +346,25 @@ func pickItemKey(etec *entity.ExptTurnEvalCtx) string {
 	return etec.EvalSetItem.ItemKey
 }
 
+// pickDatasetKey 解析当前 item 归属评测集的 dataset_key。
+// MultiSetConfig 下 item 可能归属非主集, 因此优先按 (evalSetID, evalSetVersionID) 从
+// expt.EvalSetDetails 反查, 命中不到再回落 expt.EvalSet (兼容 SingleSet 主集)。
+// 与 buildEvalSetItemMeta 保持同一寻源逻辑, 避免看板 dataset_key 缺失。
 func pickDatasetKey(etec *entity.ExptTurnEvalCtx) string {
-	if etec == nil || etec.Expt == nil || etec.Expt.EvalSet == nil {
+	if etec == nil || etec.Expt == nil {
 		return ""
 	}
-	return etec.Expt.EvalSet.DatasetKey
+	evalSetID := pickDatasetID(etec)
+	var evalSetVersionID int64
+	if etec.EvalSetVersionID != 0 {
+		evalSetVersionID = etec.EvalSetVersionID
+	} else {
+		evalSetVersionID = etec.Expt.EvalSetVersionID
+	}
+	if evalSet := findEvalSetForItemMeta(etec.Expt, evalSetID, evalSetVersionID); evalSet != nil {
+		return evalSet.DatasetKey
+	}
+	return ""
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) ([]*entity.EvaluatorRecord, error) {
