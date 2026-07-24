@@ -212,3 +212,68 @@ func TestOpenAPICreateEvalTargetParamDTO2DomainV2_SandboxAgent(t *testing.T) {
 	assert.Equal(t, "a", res.SandboxAgent.Name)
 	assert.Equal(t, "m", res.SandboxAgent.ModelName)
 }
+
+// TestOpenAPISandboxAgentDTO2Domain_SandboxCountMode 验证 openapi DTO -> domain DTO 时
+// sandbox_count_mode 的透传：nil 保持 nil；非 nil 拷贝到新指针，避免与入参共享内存。
+func TestOpenAPISandboxAgentDTO2Domain_SandboxCountMode(t *testing.T) {
+	t.Run("nil mode -> nil", func(t *testing.T) {
+		param := &openapi.SubmitExperimentEvalTargetParam{
+			SandboxAgent: &openapiEvalTarget.SandboxAgent{Name: gptr.Of("a")},
+		}
+		res, err := OpenAPICreateEvalTargetParamDTO2Domain(param)
+		assert.NoError(t, err)
+		assert.NotNil(t, res.SandboxAgent)
+		assert.Nil(t, res.SandboxAgent.SandboxCountMode)
+	})
+
+	t.Run("dual mode copied to a fresh pointer", func(t *testing.T) {
+		mode := openapiEvalTarget.SandboxCountMode(openapiEvalTarget.SandboxCountModeDual)
+		param := &openapi.SubmitExperimentEvalTargetParam{
+			SandboxAgent: &openapiEvalTarget.SandboxAgent{
+				Name:             gptr.Of("a"),
+				SandboxCountMode: &mode,
+			},
+		}
+		res, err := OpenAPICreateEvalTargetParamDTO2Domain(param)
+		assert.NoError(t, err)
+		assert.NotNil(t, res.SandboxAgent)
+		if assert.NotNil(t, res.SandboxAgent.SandboxCountMode) {
+			assert.Equal(t, domaindoEvalTarget.SandboxCountModeDual, *res.SandboxAgent.SandboxCountMode)
+		}
+	})
+}
+
+// TestOpenAPISandboxAgentDO2DTO_SandboxCountMode 验证 entity -> DTO 转换时对 SandboxCountMode 的空值保留：
+// 空串保持 DTO nil（老 wire 契约，IsSet=false）；非空转成新指针。
+func TestOpenAPISandboxAgentDO2DTO_SandboxCountMode(t *testing.T) {
+	t.Run("empty mode preserves nil pointer on DTO", func(t *testing.T) {
+		do := &entity.SandboxAgent{Name: "a"}
+		got := OpenAPISandboxAgentDO2DTO(do)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.SandboxCountMode)
+	})
+
+	t.Run("dual mode round-tripped as pointer", func(t *testing.T) {
+		do := &entity.SandboxAgent{Name: "a", SandboxCountMode: entity.SandboxCountModeDual}
+		got := OpenAPISandboxAgentDO2DTO(do)
+		if assert.NotNil(t, got) && assert.NotNil(t, got.SandboxCountMode) {
+			assert.Equal(t, openapiEvalTarget.SandboxCountModeDual, *got.SandboxCountMode)
+		}
+	})
+
+	t.Run("DTO -> DO passes empty mode through as empty string", func(t *testing.T) {
+		got := OpenAPISandboxAgentDTO2DO(&openapiEvalTarget.SandboxAgent{Name: gptr.Of("a")})
+		assert.NotNil(t, got)
+		assert.Equal(t, entity.SandboxCountMode(""), got.SandboxCountMode)
+	})
+
+	t.Run("DTO -> DO passes dual mode through", func(t *testing.T) {
+		mode := openapiEvalTarget.SandboxCountMode(openapiEvalTarget.SandboxCountModeDual)
+		got := OpenAPISandboxAgentDTO2DO(&openapiEvalTarget.SandboxAgent{
+			Name:             gptr.Of("a"),
+			SandboxCountMode: &mode,
+		})
+		assert.NotNil(t, got)
+		assert.Equal(t, entity.SandboxCountModeDual, got.SandboxCountMode)
+	})
+}

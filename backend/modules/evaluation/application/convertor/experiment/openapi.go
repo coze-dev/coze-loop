@@ -226,7 +226,7 @@ func openapiSandboxAgentDTO2Domain(dtoObj *openapiEvalTarget.SandboxAgent) *doma
 		res.Type = &t
 	}
 	if dtoObj.SandboxCountMode != nil {
-		mode := domaindoEvalTarget.SandboxCountMode(*dtoObj.SandboxCountMode)
+		mode := *dtoObj.SandboxCountMode
 		res.SandboxCountMode = &mode
 	}
 	return res
