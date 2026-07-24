@@ -378,7 +378,9 @@ func newItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBu
 		if item.SystemInfo != nil {
 			status := exptdomain.ItemRunState(item.SystemInfo.RunState)
 			res.Status = &status
-			if item.SystemInfo.EndTime != nil {
+			// ItemEndTime 来源 expt_item_result.updated_at，表示当前/latest run 终态同步到主结果表的时间，
+			// 不代表精确的执行结束时刻；非终态不输出。
+			if entity.IsItemRunFinished(item.SystemInfo.RunState) && item.SystemInfo.EndTime != nil {
 				res.ItemEndTime = gptr.Of(item.SystemInfo.EndTime.Unix())
 			}
 		}

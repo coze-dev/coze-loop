@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -143,6 +144,41 @@ func TestBuildItemStandardEvalOutput_FailOnlyReturnsMetadata(t *testing.T) {
 	assert.Nil(t, got.Output)
 	assert.Nil(t, got.Eval)
 	assert.Nil(t, got.Extra)
+}
+
+func TestBuildItemStandardEvalOutput_ItemEndTime(t *testing.T) {
+	endTime := time.Unix(1_700_000_000, 0)
+	tests := []struct {
+		name            string
+		runState        entity.ItemRunState
+		endTime         *time.Time
+		wantItemEndTime bool
+	}{
+		{name: "unknown does not fill", runState: entity.ItemRunState_Unknown, endTime: &endTime},
+		{name: "queueing does not fill", runState: entity.ItemRunState_Queueing, endTime: &endTime},
+		{name: "processing does not fill", runState: entity.ItemRunState_Processing, endTime: &endTime},
+		{name: "success fills", runState: entity.ItemRunState_Success, endTime: &endTime, wantItemEndTime: true},
+		{name: "fail fills", runState: entity.ItemRunState_Fail, endTime: &endTime, wantItemEndTime: true},
+		{name: "terminal fills", runState: entity.ItemRunState_Terminal, endTime: &endTime, wantItemEndTime: true},
+		{name: "nil end time does not fill", runState: entity.ItemRunState_Success},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+			item.SystemInfo.RunState = tt.runState
+			item.SystemInfo.EndTime = tt.endTime
+
+			got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+			require.NoError(t, err)
+			if !tt.wantItemEndTime {
+				assert.Nil(t, got.ItemEndTime)
+				return
+			}
+			require.NotNil(t, got.ItemEndTime)
+			assert.Equal(t, endTime.Unix(), got.GetItemEndTime())
+		})
+	}
 }
 
 func TestExperimentApplication_MGetExperimentStandardEvalOutputs_ItemIDsLimit(t *testing.T) {
