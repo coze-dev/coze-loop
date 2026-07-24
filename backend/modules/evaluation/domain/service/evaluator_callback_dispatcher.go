@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -76,8 +77,13 @@ func (d *EvaluatorCallbackDispatcher) Dispatch(ctx context.Context, spaceID int6
 	return nil
 }
 
-func (d *EvaluatorCallbackDispatcher) doPost(ctx context.Context, url string, body []byte, timestamp, nonce, signature string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+func (d *EvaluatorCallbackDispatcher) doPost(ctx context.Context, turl string, body []byte, timestamp, nonce, signature string) error {
+	u, err := url.Parse(turl)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("invalid callback_url")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, turl, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}

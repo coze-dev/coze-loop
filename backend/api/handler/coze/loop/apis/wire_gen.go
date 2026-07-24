@@ -220,7 +220,9 @@ var (
 	)
 )
 
-// provideTaskClient converts a function factory to taskservice.Client
+// provideTaskClient wraps the factory in a lazy taskservice.Client so the
+// underlying client is resolved on first use rather than during init, breaking
+// the EvaluationHandler <-> ObservabilityHandler initialization cycle.
 func provideTaskClient(factory func() taskservice.Client) taskservice.Client {
-	return factory()
+	return newLazyTaskClient(factory)
 }
