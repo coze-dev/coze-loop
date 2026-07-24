@@ -236,6 +236,9 @@ func FilterFieldDTO2DO(field *filter.FilterField) *loop_span.FilterField {
 	if field.IsCustom != nil {
 		fField.IsCustom = *field.IsCustom
 	}
+	if field.IsSystem != nil {
+		fField.IsSystem = *field.IsSystem
+	}
 	return fField
 }
 
@@ -342,6 +345,9 @@ func FilterFieldDO2DTO(field *loop_span.FilterField) *filter.FilterField {
 	}
 	if field.IsCustom {
 		fField.IsCustom = ptr.Of(field.IsCustom)
+	}
+	if field.IsSystem {
+		fField.IsSystem = ptr.Of(field.IsSystem)
 	}
 	return fField
 }

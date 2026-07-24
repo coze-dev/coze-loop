@@ -77,6 +77,7 @@ type FieldMeta struct {
 	FilterTypes   []loop_span.QueryTypeEnum `mapstructure:"filter_types" json:"filter_types"`
 	FieldOptions  *loop_span.FieldOptions   `mapstructure:"field_options" json:"field_options"`
 	SupportCustom bool                      `mapstructure:"support_custom" json:"support_custom"`
+	IsSystem      bool                      `mapstructure:"is_system" json:"is_system"`
 }
 
 type TraceAttrTosCfg struct {

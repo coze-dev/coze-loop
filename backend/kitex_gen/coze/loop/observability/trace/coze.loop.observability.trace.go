@@ -6666,6 +6666,7 @@ type FieldMeta struct {
 	FilterTypes               []filter.QueryType   `thrift:"filter_types,2,required" frugal:"2,required,list<string>" form:"filter_types,required" json:"filter_types,required" query:"filter_types,required"`
 	FieldOptions              *filter.FieldOptions `thrift:"field_options,3,optional" frugal:"3,optional,filter.FieldOptions" form:"field_options" json:"field_options,omitempty" query:"field_options"`
 	SupportCustomizableOption *bool                `thrift:"support_customizable_option,4,optional" frugal:"4,optional,bool" form:"support_customizable_option" json:"support_customizable_option,omitempty" query:"support_customizable_option"`
+	IsSystem                  *bool                `thrift:"is_system,5,optional" frugal:"5,optional,bool" form:"is_system" json:"is_system,omitempty" query:"is_system"`
 }
 
 func NewFieldMeta() *FieldMeta {
@@ -6724,12 +6725,16 @@ func (p *FieldMeta) SetFieldOptions(val *filter.FieldOptions) {
 func (p *FieldMeta) SetSupportCustomizableOption(val *bool) {
 	p.SupportCustomizableOption = val
 }
+func (p *FieldMeta) SetIsSystem(val *bool) {
+	p.IsSystem = val
+}
 
 var fieldIDToName_FieldMeta = map[int16]string{
 	1: "value_type",
 	2: "filter_types",
 	3: "field_options",
 	4: "support_customizable_option",
+	5: "is_system",
 }
 
 func (p *FieldMeta) IsSetFieldOptions() bool {
@@ -6738,6 +6743,22 @@ func (p *FieldMeta) IsSetFieldOptions() bool {
 
 func (p *FieldMeta) IsSetSupportCustomizableOption() bool {
 	return p.SupportCustomizableOption != nil
+}
+
+func (p *FieldMeta) IsSetIsSystem() bool {
+	return p.IsSystem != nil
+}
+
+var FieldMeta_IsSystem_DEFAULT bool
+
+func (p *FieldMeta) GetIsSystem() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsSystem() {
+		return FieldMeta_IsSystem_DEFAULT
+	}
+	return *p.IsSystem
 }
 
 func (p *FieldMeta) Read(iprot thrift.TProtocol) (err error) {

@@ -51,6 +51,7 @@ struct FilterField {
     6: optional FilterFields sub_filter
     7: optional bool is_custom
     8: optional map<string, string> extra_info
+    9: optional bool is_system
 }
 
 struct FieldOptions {
