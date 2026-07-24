@@ -161,7 +161,7 @@ func InitExperimentApplication(
 	benefitSvc benefit.IBenefitService,
 	ckDb ck.Provider,
 	tagClient tagservice.Client,
-	taskClient taskservice.Client,
+	taskClientFactory func() taskservice.Client,
 	objectStorage fileserver.ObjectStorage,
 	batchObjectStorage fileserver.BatchObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
@@ -260,7 +260,7 @@ func InitEvalOpenAPIApplication(
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
 	fileClient fileservice.Client,
-	taskClient taskservice.Client,
+	taskClientFactory func() taskservice.Client,
 	scheduleAdapter rpc.IExptScheduleAdapter,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(

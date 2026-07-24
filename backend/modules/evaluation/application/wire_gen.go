@@ -71,7 +71,7 @@ import (
 
 // Injectors from wire.go:
 
-func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, auditClient audit.IAuditService, meter metrics.Meter, authClient authservice.Client, evalSetService evaluation.EvaluationSetService, evaluatorService evaluation.EvaluatorService, targetService evaluation.EvalTargetService, uc userservice.Client, pms promptmanageservice.Client, pes promptexecuteservice.Client, sds datasetservice.Client, limiterFactory limiter.IRateLimiterFactory, llmcli llmruntimeservice.Client, benefitSvc benefit.IBenefitService, ckDb ck.Provider, tagClient tagservice.Client, taskClient taskservice.Client, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (IExperimentApplication, error) {
+func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, auditClient audit.IAuditService, meter metrics.Meter, authClient authservice.Client, evalSetService evaluation.EvaluationSetService, evaluatorService evaluation.EvaluatorService, targetService evaluation.EvalTargetService, uc userservice.Client, pms promptmanageservice.Client, pes promptexecuteservice.Client, sds datasetservice.Client, limiterFactory limiter.IRateLimiterFactory, llmcli llmruntimeservice.Client, benefitSvc benefit.IBenefitService, ckDb ck.Provider, tagClient tagservice.Client, taskClientFactory func() taskservice.Client, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (IExperimentApplication, error) {
 	exptTurnResultDAO := mysql.NewExptTurnResultDAO(db2)
 	iExptTurnEvaluatorResultRefDAO := mysql.NewExptTurnEvaluatorResultRefDAO(db2)
 	iExptTurnResultRepo := experiment.NewExptTurnResultRepo(idgen2, exptTurnResultDAO, iExptTurnEvaluatorResultRefDAO)
@@ -160,7 +160,7 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iExptTemplateDAO := mysql.NewExptTemplateDAO(db2)
 	iExptTemplateEvaluatorRefDAO := mysql.NewExptTemplateEvaluatorRefDAO(db2)
 	iExptTemplateRepo := experiment.NewExptTemplateRepo(iExptTemplateDAO, iExptTemplateEvaluatorRefDAO, idgen2)
-	iTaskRPCAdapter := task.NewTaskRPCAdapter(taskClient)
+	iTaskRPCAdapter := task.NewTaskRPCAdapter(taskClientFactory)
 	pipelineListAdapter := pipeline.NewPipelineListAdapter()
 	iExptTemplateManager := service.NewExptTemplateManager(iExptTemplateRepo, idgen2, serviceEvaluatorService, iEvalTargetService, iEvaluationSetService, evaluationSetVersionService, iLatestWriteTracker, iTaskRPCAdapter, pipelineListAdapter, iExperimentRepo, scheduleAdapter, componentIConfiger)
 	iNotifyRPCAdapter := notify.NewNotifyRPCAdapter()
@@ -317,7 +317,7 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService, nil
 }
 
-func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClient taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (evaluation.EvalOpenAPIService, error) {
+func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClientFactory func() taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (evaluation.EvalOpenAPIService, error) {
 	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
 	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
@@ -411,7 +411,7 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iExptTemplateDAO := mysql.NewExptTemplateDAO(db2)
 	iExptTemplateEvaluatorRefDAO := mysql.NewExptTemplateEvaluatorRefDAO(db2)
 	iExptTemplateRepo := experiment.NewExptTemplateRepo(iExptTemplateDAO, iExptTemplateEvaluatorRefDAO, idgen2)
-	iTaskRPCAdapter := task.NewTaskRPCAdapter(taskClient)
+	iTaskRPCAdapter := task.NewTaskRPCAdapter(taskClientFactory)
 	pipelineListAdapter := pipeline.NewPipelineListAdapter()
 	iExptTemplateManager := service.NewExptTemplateManager(iExptTemplateRepo, idgen2, evaluatorService, iEvalTargetService, iEvaluationSetService, evaluationSetVersionService, iLatestWriteTracker, iTaskRPCAdapter, pipelineListAdapter, iExperimentRepo, scheduleAdapter, iConfiger)
 	iNotifyRPCAdapter := notify.NewNotifyRPCAdapter()

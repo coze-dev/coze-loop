@@ -139,13 +139,12 @@ func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 d
 	if err != nil {
 		return nil, err
 	}
-	taskserviceClient := provideTaskClient(taskClientFactory)
 	iExptScheduleAdapter := schedule.NewNoopExptScheduleAdapter()
-	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, taskserviceClient, objectStorage, batchObjectStorage, plainLimiterFactory, iTrajectoryAdapter, fileClient, iExptScheduleAdapter)
+	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, taskClientFactory, objectStorage, batchObjectStorage, plainLimiterFactory, iTrajectoryAdapter, fileClient, iExptScheduleAdapter)
 	if err != nil {
 		return nil, err
 	}
-	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, batchObjectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter, fileClient, taskserviceClient, iExptScheduleAdapter)
+	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, batchObjectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter, fileClient, taskClientFactory, iExptScheduleAdapter)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +209,7 @@ var (
 		NewPromptHandler, application2.InitPromptManageApplication, application2.InitToolManageApplication, application2.InitPromptDebugApplication, application2.InitPromptExecuteApplication, application2.InitPromptOpenAPIApplication,
 	)
 	evaluationSet = wire.NewSet(
-		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, schedule.ExptScheduleRPCSet, trajectory.TrajectoryRPCSet, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication, application4.InitEvalOpenAPIApplication, provideTaskClient,
+		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, schedule.ExptScheduleRPCSet, trajectory.TrajectoryRPCSet, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication, application4.InitEvalOpenAPIApplication,
 	)
 	dataSet = wire.NewSet(
 		NewDataHandler, application5.InitDatasetApplication, application5.InitTagApplication, foundation.NewAuthRPCProvider, conf2.NewConfigerFactory,
@@ -219,10 +218,3 @@ var (
 		NewObservabilityHandler, application6.InitTraceApplication, application6.InitTraceIngestionApplication, application6.InitOpenAPIApplication, application6.InitTaskApplication, application6.InitMetricApplication, task.NewNoopTaskHookProvider,
 	)
 )
-
-// provideTaskClient wraps the factory in a lazy taskservice.Client so the
-// underlying client is resolved on first use rather than during init, breaking
-// the EvaluationHandler <-> ObservabilityHandler initialization cycle.
-func provideTaskClient(factory func() taskservice.Client) taskservice.Client {
-	return newLazyTaskClient(factory)
-}
