@@ -237,7 +237,7 @@ func NewObservabilityHandler(
 
 func bindLocalCallClient[T, K any](svc T, cli any, provider func(t T, mds ...endpoint.Middleware) K) {
 	v := reflect.ValueOf(cli)
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Pointer {
 		panic("cli must be a pointer")
 	}
 	c := provider(svc, defaultKiteXMiddlewares()...)
@@ -272,7 +272,7 @@ func invokeAndRender[T, K any](
 
 		var req T
 		typ := reflect.TypeOf(req)
-		if typ.Kind() != reflect.Ptr || typ.Elem().Kind() != reflect.Struct {
+		if typ.Kind() != reflect.Pointer || typ.Elem().Kind() != reflect.Struct {
 			return nil, kerrors.NewBizStatusError(errno.CommonInternalErrorCode, "callable must be KiteX service method, found invalid request")
 		}
 		ins := reflect.New(typ.Elem()).Interface().(T)

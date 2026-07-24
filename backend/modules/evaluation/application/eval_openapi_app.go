@@ -12,7 +12,6 @@ import (
 
 	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
-	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	usersession "github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
@@ -2862,7 +2861,7 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 	}
 
 	asyncStart := time.Now()
-	userID := session.UserIDInCtxOrEmpty(ctx)
+	userID := usersession.UserIDInCtxOrEmpty(ctx)
 	inputFields := make(map[string]*spi.Content)
 	if err := json.Unmarshal([]byte(req.GetParam()), &inputFields); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
