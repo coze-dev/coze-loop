@@ -4,6 +4,8 @@
 package convert
 
 import (
+	"strconv"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/samber/lo"
 
@@ -31,6 +33,7 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		SpaceID:                   experiment.SpaceID,
 		CreatedBy:                 experiment.CreatedBy,
 		Name:                      experiment.Name,
+		ExperimentGroupKey:        experiment.ExperimentGroupKey,
 		Description:               experiment.Description,
 		EvalSetVersionID:          experiment.EvalSetVersionID,
 		EvalSetID:                 experiment.EvalSetID,
@@ -51,6 +54,7 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		Visibility:                int32(experiment.Visibility),
 		ThreadID:                  experiment.ThreadID,
 		TriggerType:               experiment.TriggerType,
+		EvalSetSourceType:         int32(experiment.EvalSetSourceType), // ★
 	}
 
 	if experiment.MaxAliveTime != 0 {
@@ -97,12 +101,18 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		})
 	}
 
+	experimentGroupKey := expt.ExperimentGroupKey
+	if experimentGroupKey == "" {
+		experimentGroupKey = strconv.FormatInt(expt.ID, 10)
+	}
+
 	res := &entity.Experiment{
 		ID:                        expt.ID,
 		SpaceID:                   expt.SpaceID,
 		CreatedBy:                 expt.CreatedBy,
 		Name:                      expt.Name,
 		Description:               expt.Description,
+		ExperimentGroupKey:        experimentGroupKey,
 		EvalSetVersionID:          expt.EvalSetVersionID,
 		EvalSetID:                 expt.EvalSetID,
 		TargetVersionID:           expt.TargetVersionID,
@@ -125,6 +135,7 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		ThreadID:                  expt.ThreadID,
 		TrialRunItemCount:         gptr.Indirect(expt.TrialRunItemCount),
 		TriggerType:               expt.TriggerType,
+		EvalSetSourceType:         entity.ExptEvalSetSourceType(expt.EvalSetSourceType), // ★
 	}
 
 	// 反序列化 notification_conf

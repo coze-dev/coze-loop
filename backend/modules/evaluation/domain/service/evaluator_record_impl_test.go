@@ -657,3 +657,33 @@ func TestEvaluatorRecordServiceImpl_recalculateWeightedScoreForTurn(t *testing.T
 		assert.NoError(t, err)
 	})
 }
+
+func TestEvaluatorRecordServiceImpl_BatchGetEvaluatorRecordForAggr(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorRecordRepo := repo_mocks.NewMockIEvaluatorRecordRepo(ctrl)
+	s := &EvaluatorRecordServiceImpl{evaluatorRecordRepo: mockEvaluatorRecordRepo}
+	ctx := context.Background()
+
+	t.Run("直透 repo, 不做 PackUserInfo", func(t *testing.T) {
+		sc := 5.0
+		want := []*entity.EvaluatorRecordAggr{{ID: 1, Score: &sc, Status: entity.EvaluatorRunStatusSuccess}}
+		mockEvaluatorRecordRepo.EXPECT().
+			BatchGetEvaluatorRecordForAggr(ctx, []int64{1}).
+			Return(want, nil)
+		// 不设置 userInfoService: 若 service 误调 PackUserInfo 会 nil panic, 反证聚合路径不碰用户信息。
+		got, err := s.BatchGetEvaluatorRecordForAggr(ctx, []int64{1})
+		assert.NoError(t, err)
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("repo 报错向上抛", func(t *testing.T) {
+		mockEvaluatorRecordRepo.EXPECT().
+			BatchGetEvaluatorRecordForAggr(ctx, []int64{2}).
+			Return(nil, errors.New("repo err"))
+		got, err := s.BatchGetEvaluatorRecordForAggr(ctx, []int64{2})
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+}

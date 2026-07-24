@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `space_id`            bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '空间 id',
     `created_by`          varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NOT NULL DEFAULT '' COMMENT '创建者 id',
     `name`                varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NOT NULL DEFAULT '' COMMENT '实验名称',
+    `experiment_group_key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '实验分组key，默认实验ID',
     `description`         varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '实验描述',
     `eval_set_version_id` bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评测集版本 id',
     `target_type`         bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评估对象类型',
@@ -19,17 +20,18 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `latest_run_id`       bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '最后运行id',
     `target_id`           bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评估对象 id',
     `eval_set_id`         bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评测集 id',
+    `eval_set_source_type` int unsigned                                                  NOT NULL DEFAULT '1' COMMENT '评测集来源模式: 1=SingleSet(老,单评测集) / 2=MultiSetConfig(新,多评测集+配置,权威源 eval_conf)',
     `expt_template_id`    bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '实验模板 id',
     `credit_cost`         int                                                            NOT NULL DEFAULT '0' COMMENT '权益消耗模式',
     `source_type`         int unsigned                                                   NOT NULL DEFAULT '1' COMMENT '实验来源类型，评测:1,自动化任务:2...',
     `source_id`           varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NOT NULL DEFAULT '0' COMMENT '实验来源id',
     `expt_type`           int unsigned                                                   NOT NULL DEFAULT '1' COMMENT '实验类型，offline:1,online:2...',
     `max_alive_time`      bigint unsigned                                                         DEFAULT NULL COMMENT '最大存活时间',
-    `trigger_type`        varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci       NOT NULL DEFAULT 'manual' COMMENT '实验触发方式：manual/openapi/schedule',
-    `visibility` int unsigned NOT NULL DEFAULT '0' COMMENT '可见性，默认0-可见，1-隐藏',
-    `thread_id` varchar(255) DEFAULT NULL COMMENT '智能生成会话ID',
-    `trial_run_item_count`      bigint unsigned                                                         DEFAULT NULL COMMENT '试运行行数',
-    `offline_expt_analysis_status` int unsigned                                             NOT NULL DEFAULT '0' COMMENT '离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)',
+    `trigger_type`        varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci   NOT NULL DEFAULT 'manual' COMMENT '实验触发方式：manual/openapi/schedule',
+    `visibility`          int unsigned                                                   NOT NULL DEFAULT '0' COMMENT '可见性，默认0-可见，1-隐藏',
+    `thread_id`           varchar(255)                                                            DEFAULT NULL COMMENT '智能生成会话ID',
+    `trial_run_item_count`      bigint unsigned                                                   DEFAULT NULL COMMENT '试运行行数',
+    `offline_expt_analysis_status` int unsigned                                         NOT NULL DEFAULT '0' COMMENT '离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)',
     `notification_conf`         blob COMMENT '通知配置，json格式存储webhook/飞书通知配置',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_item_idx` (`space_id`, `name`, `deleted_at`),
@@ -43,7 +45,8 @@ CREATE TABLE IF NOT EXISTS `experiment`
     KEY `idx_space_end_at` (`space_id`, `end_at`),
     KEY `idx_source_type_source_id` (`source_type`, `source_id`),
     KEY `idx_space_expt_template_id_delete_at` (`space_id`, `expt_template_id`, `deleted_at`),
-    KEY `idx_space_trigger_type_delete_at` (`space_id`, `trigger_type`, `deleted_at`)
+    KEY `idx_space_trigger_type_delete_at` (`space_id`, `trigger_type`, `deleted_at`),
+    KEY `idx_experiment_group_key_deleted_at` (`experiment_group_key`, `deleted_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='experiment';

@@ -18,10 +18,16 @@ type IExptManager interface {
 // IExptConfigManager 实验配置管理接口（负责实验元数据的增删改查）
 type IExptConfigManager interface {
 	CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error)
+	// CheckGroupKey 校验 group key 是否可在当前空间使用（跨空间隔离）, pass=true 表示未被其它空间占用可用。
+	CheckGroupKey(ctx context.Context, groupKey string, spaceID int64, session *entity.Session) (bool, error)
 
 	CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error)
 
 	Update(ctx context.Context, expt *entity.Experiment, session *entity.Session) error
+	// UpdateRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+	// param 中 ItemConcurNum / ItemRetryNum 为 nil 表示该字段不修改；非 nil 则覆盖对应值。
+	// 仅允许对 Pending / Processing 状态的实验修改，采用 read-modify-write 整个 EvalConf 后只写 eval_conf 单列。
+	UpdateRunConf(ctx context.Context, param *entity.UpdateRunConfParam) error
 	Delete(ctx context.Context, exptID, spaceID int64, session *entity.Session) error
 	MDelete(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) error
 
@@ -32,6 +38,7 @@ type IExptConfigManager interface {
 
 	Get(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error)
 	MGet(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error)
+	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, session *entity.Session) ([]int64, error)
 
 	Clone(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error)
 

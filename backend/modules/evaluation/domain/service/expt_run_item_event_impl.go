@@ -27,7 +27,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -39,6 +38,7 @@ type ExptItemEventEvalServiceImpl struct {
 	exptTurnResultRepo       repo.IExptTurnResultRepo
 	exptStatsRepo            repo.IExptStatsRepo
 	experimentRepo           repo.IExperimentRepo
+	exptItemRefRepo          repo.IExptItemRefRepo // ★ 新实验类型 (MultiSetConfig) 读 item_config 用
 	configer                 component.IConfiger
 	quotaRepo                repo.QuotaRepo
 	mutex                    lock.ILocker
@@ -53,6 +53,7 @@ type ExptItemEventEvalServiceImpl struct {
 	idgen                    idgen.IIDGenerator
 	benefitService           benefit.IBenefitService
 	evalAsyncRepo            repo.IEvalAsyncRepo
+	itemCompletePublisher    component.IItemCompletePublisher
 }
 
 func NewExptRecordEvalService(
@@ -63,6 +64,7 @@ func NewExptRecordEvalService(
 	exptTurnResultRepo repo.IExptTurnResultRepo,
 	exptStatsRepo repo.IExptStatsRepo,
 	experimentRepo repo.IExperimentRepo,
+	exptItemRefRepo repo.IExptItemRefRepo,
 	quotaRepo repo.QuotaRepo,
 	mutex lock.ILocker,
 	idem idem.IdempotentService,
@@ -76,6 +78,7 @@ func NewExptRecordEvalService(
 	idgen idgen.IIDGenerator,
 	benefitService benefit.IBenefitService,
 	evalAsyncRepo repo.IEvalAsyncRepo,
+	itemCompletePublisher component.IItemCompletePublisher,
 ) ExptItemEvalEvent {
 	i := &ExptItemEventEvalServiceImpl{
 		manager:                  manager,
@@ -84,6 +87,7 @@ func NewExptRecordEvalService(
 		exptTurnResultRepo:       exptTurnResultRepo,
 		exptStatsRepo:            exptStatsRepo,
 		experimentRepo:           experimentRepo,
+		exptItemRefRepo:          exptItemRefRepo,
 		configer:                 configer,
 		quotaRepo:                quotaRepo,
 		mutex:                    mutex,
@@ -98,6 +102,7 @@ func NewExptRecordEvalService(
 		idgen:                    idgen,
 		benefitService:           benefitService,
 		evalAsyncRepo:            evalAsyncRepo,
+		itemCompletePublisher:    itemCompletePublisher,
 	}
 
 	i.endpoints = RecordEvalChain(
@@ -272,7 +277,7 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		return err
 	}
 
-	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evaluationSetItemService).
+	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evaluationSetItemService, e.itemCompletePublisher).
 		Eval(ctx, eiec); err != nil {
 		return err
 	}
@@ -294,16 +299,76 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 		return nil, err
 	}
 
+	// 默认用实验级主集 (老实验 / SingleSet); MultiSetConfig 下面按 item 归属集覆盖。
 	evalSetID := exptDetail.EvalSet.EvaluationSetVersion.EvaluationSetID
 	evalSetVerID := exptDetail.EvalSet.EvaluationSetVersion.ID
 
+	// ★ 新实验类型 (MultiSetConfig): 先读 expt_item_ref。
+	// 一行 ref 同时承载两件事:
+	//   ① 单行执行的唯一配置源 item_config;
+	//   ② 该 item 真正归属的 (eval_set_id, eval_set_version_id) —— 多评测集下各 item 归属不同集,
+	//      绝不能用实验级主集去捞 item, 否则非主集 item 捞不到 (len=0) 直接报错卡死, 永远停在 incomplete。
+	// 老实验类型: ItemConfig 留 nil, 执行侧 fallback 到 expt 级 EvaluatorsConf 老路径; 集 id/version 用主集。
+	// ⚠️ 读失败不能静默降级: exptStartMultiSet 对每个入队 item 都会写非 nil ItemConfig(空评估器集也写
+	//    &entity.ExptItemConfig{}), 所以 MultiSetConfig 实验里读到 refErr / ref==nil / ItemConfig==nil,
+	//    只可能是"读失败"(DB 抖动 / ref 未写全 / item_config 反序列化失败 / 列 NULL), 绝不可能是"合法空集"。
+	//    此时必须报错触发重试, 否则 CallEvaluators 会把 nil ItemConfig 当成"合法空集"跑 0 个评估器并把 turn
+	//    标成 Success —— 本该有评估器的正常集被静默漏评还显示成功 (fail-silent 数据正确性缺陷)。
+	//    区分口径: ref!=nil && ItemConfig!=nil 才是可信配置; EvaluatorConfs 空由执行侧判为"真空集跑 0 个"。
+	var itemConfig *entity.ExptItemConfig
+	var itemVersionID *int64 // 新数据集 item 级版本; nil=老数据集(无 item 版本)
+	if exptDetail.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && e.exptItemRefRepo != nil {
+		ref, refErr := e.exptItemRefRepo.GetByExptIDAndItemID(ctx, event.SpaceID, event.ExptID, event.EvalSetItemID)
+		if refErr != nil {
+			logs.CtxError(ctx, "BuildExptRecordEvalCtx GetByExptIDAndItemID fail, expt_id: %v, item_id: %v, err: %v",
+				event.ExptID, event.EvalSetItemID, refErr)
+			return nil, errorx.Wrapf(refErr, "get expt_item_ref fail, expt_id: %v, item_id: %v", event.ExptID, event.EvalSetItemID)
+		}
+		if ref == nil || ref.ItemConfig == nil {
+			// 正常调度必已写非 nil ItemConfig; 走到这里是 ref 未写全或 item_config 读空 —— 报错重试, 不静默漏评。
+			logs.CtxError(ctx, "BuildExptRecordEvalCtx expt_item_ref missing item_config, expt_id: %v, item_id: %v, ref_nil: %v",
+				event.ExptID, event.EvalSetItemID, ref == nil)
+			return nil, errorx.NewByCode(errno.CommonInternalErrorCode,
+				errorx.WithExtraMsg(fmt.Sprintf("expt_item_ref missing item_config, expt_id: %v, item_id: %v", event.ExptID, event.EvalSetItemID)))
+		}
+		itemConfig = ref.ItemConfig
+		if ref.EvalSetID > 0 {
+			evalSetID = ref.EvalSetID
+			// 该 item 真正归属集的版本以 ref 为准 (含草稿: ref.EvalSetVersionID==0 → 走下面 live 分支)。
+			// 不能再用实验级主集版本兜底, 否则非主集 item 会被错误地按主集版本查询。
+			evalSetVerID = ref.EvalSetVersionID
+		}
+		if ref.ItemVersionID > 0 {
+			itemVersionID = gptr.Of(ref.ItemVersionID)
+		}
+	}
+
+	// 老链路 (SingleSet) 或 ref 未命中时 itemVersionID 仍为 nil。
+	// item 版本在 ExptStart 已落进 expt_item_result_run_log, 这里读回 (供版本评测集按 item 版本取数);
+	// 无版本评测集 run_log.ItemVersionID==0 → 保持 nil, 按集版本定位, 行为不变。
+	if itemVersionID == nil {
+		if runLog, rlErr := e.exptItemResultRepo.GetItemRunLog(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID); rlErr != nil {
+			logs.CtxWarn(ctx, "BuildExptRecordEvalCtx GetItemRunLog for item version fail, expt_id: %v, item_id: %v, err: %v",
+				event.ExptID, event.EvalSetItemID, rlErr)
+		} else if runLog != nil && runLog.ItemVersionID > 0 {
+			itemVersionID = gptr.Of(runLog.ItemVersionID)
+		}
+	}
+
+	// 统一走 ItemVersionQueries: 每个 query 必带 ItemID; 新数据集额外带 ItemVersionID, 老数据集 versionID 留空。
+	// 集级 VersionID 仍透传, 供老数据集(versionID 留空)按集版本定位。
 	batchGetEvaluationSetItemsParam := &entity.BatchGetEvaluationSetItemsParam{
 		SpaceID:         event.SpaceID,
 		EvaluationSetID: evalSetID,
 		VersionID:       gptr.Of(evalSetVerID),
-		ItemIDs:         []int64{event.EvalSetItemID},
+		ItemVersionQueries: []*entity.EvaluationItemVersionRef{
+			{ItemID: event.EvalSetItemID, ItemVersionID: itemVersionID},
+		},
 	}
-	if evalSetID == evalSetVerID {
+	// 草稿哨兵: evalSetVerID==0 (ref 落 0 的草稿) 或 evalSetID==evalSetVerID (提交侧占位哨兵)
+	// → 不锁版本, 读侧走 live (BatchGetEvaluationSetItems VersionID=nil 读当前 dataset_item 草稿)。
+	// committed (真实 version_id) 维持 ByVersion 冻结快照不变。
+	if evalSetVerID == 0 || evalSetID == evalSetVerID {
 		batchGetEvaluationSetItemsParam.VersionID = nil
 	}
 	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, batchGetEvaluationSetItemsParam)
@@ -313,6 +378,15 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 
 	if len(items) != 1 {
 		return nil, fmt.Errorf("BatchGetEvaluationSetItems with invalid item result, eval_set_id: %v, eval_set_ver_id: %v, item_id: %v, got items len: %v", evalSetID, evalSetVerID, event.EvalSetItemID, len(items))
+	}
+	// DataSet 读侧在部分路径不会回填集/条目版本元信息。执行上下文已根据
+	// expt_item_ref / run_log 解析出 per-item 归属, 在这里补齐给下游 ItemMeta 使用,
+	// 避免 MultiSetConfig 非主集 item 又回退到实验顶层主集。
+	if items[0].EvaluationSetID == 0 {
+		items[0].EvaluationSetID = evalSetID
+	}
+	if items[0].ItemVersionID == nil && itemVersionID != nil {
+		items[0].ItemVersionID = itemVersionID
 	}
 
 	existResult, err := e.GetExistExptRecordEvalResult(ctx, event)
@@ -325,6 +399,8 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 		Expt:                exptDetail,
 		EvalSetItem:         items[0],
 		ExistItemEvalResult: existResult,
+		ItemConfig:          itemConfig,
+		EvalSetVersionID:    evalSetVerID, // per-item 归属集版本 (多评测集非主集也正确)
 	}, nil
 }
 
@@ -496,24 +572,94 @@ func failRetrySelectTurnRunLogRefs(
 }
 
 func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRecordService, tr *entity.ExptTurnResult) *entity.EvaluatorResults {
-	if evalRecord == nil || tr.EvaluatorResults == nil || len(tr.EvaluatorResults.EvalVerIDToResID) == 0 {
+	if evalRecord == nil || tr.EvaluatorResults == nil {
 		return nil
 	}
-	ids := maps.ToSlice(tr.EvaluatorResults.EvalVerIDToResID, func(_, resID int64) int64 { return resID })
+	erids := tr.EvaluatorResults
+
+	// 新格式 (Registered/Inline) 与老格式 (EvalVerIDToResID) 都要覆盖: 失败重试时若只识别老 map,
+	// 新实验类型下会把已成功的 Registered/Inline 记录当作"缺失", 触发全部评估器重跑。
+	ids := make([]int64, 0)
+	seen := make(map[int64]struct{})
+	addID := func(id int64) {
+		if id <= 0 {
+			return
+		}
+		if _, ok := seen[id]; ok {
+			return
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	for _, r := range erids.Registered {
+		if r != nil {
+			addID(r.RecordID)
+		}
+	}
+	for _, r := range erids.Inline {
+		if r != nil {
+			addID(r.RecordID)
+		}
+	}
+	for _, id := range erids.EvalVerIDToResID {
+		addID(id)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
 	records, err := evalRecord.BatchGetEvaluatorRecord(ctx, ids, false, false)
 	if err != nil || len(records) == 0 {
 		return nil
 	}
-	m := make(map[int64]int64)
+	successIDs := make(map[int64]struct{}, len(records))
+	successVerID2RecID := make(map[int64]int64)
 	for _, rec := range records {
-		if rec != nil && rec.Status == entity.EvaluatorRunStatusSuccess {
-			m[rec.EvaluatorVersionID] = rec.ID
+		if rec == nil || rec.Status != entity.EvaluatorRunStatusSuccess {
+			continue
 		}
+		successIDs[rec.ID] = struct{}{}
+		successVerID2RecID[rec.EvaluatorVersionID] = rec.ID
 	}
-	if len(m) == 0 {
+	if len(successIDs) == 0 {
 		return nil
 	}
-	return &entity.EvaluatorResults{EvalVerIDToResID: m}
+
+	// 保持原格式回填, 保留 (VersionID, Alias) / InlineKey 元数据; 老数据兜底走 EvalVerIDToResID。
+	out := &entity.EvaluatorResults{}
+	for _, r := range erids.Registered {
+		if r == nil {
+			continue
+		}
+		if _, ok := successIDs[r.RecordID]; !ok {
+			continue
+		}
+		out.Registered = append(out.Registered, &entity.RegisteredEvalResult{
+			VersionID: r.VersionID,
+			Alias:     r.Alias,
+			RecordID:  r.RecordID,
+		})
+	}
+	for _, r := range erids.Inline {
+		if r == nil {
+			continue
+		}
+		if _, ok := successIDs[r.RecordID]; !ok {
+			continue
+		}
+		out.Inline = append(out.Inline, &entity.InlineEvalResult{
+			InlineKey: r.InlineKey,
+			RecordID:  r.RecordID,
+		})
+	}
+	// 老格式: 无 Registered/Inline 信息时按 versionID→recordID 兜底
+	if len(out.Registered) == 0 && len(out.Inline) == 0 && len(erids.EvalVerIDToResID) > 0 {
+		out.EvalVerIDToResID = successVerID2RecID
+	}
+	if len(out.Registered) == 0 && len(out.Inline) == 0 && len(out.EvalVerIDToResID) == 0 {
+		return nil
+	}
+	return out
 }
 
 type ExptRecordEvalModeFailRetry struct {

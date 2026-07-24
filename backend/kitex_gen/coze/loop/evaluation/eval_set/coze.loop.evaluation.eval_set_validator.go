@@ -45,6 +45,24 @@ func (p *CreateEvaluationSetRequest) IsValid() error {
 			return fmt.Errorf("field BizCategory max_len rule failed, current value: %d", len(*p.BizCategory))
 		}
 	}
+	for i := 0; i < len(p.Tags); i++ {
+		_elem := p.Tags[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
+	if p.DatasetKey != nil {
+		if len(*p.DatasetKey) > int(255) {
+			return fmt.Errorf("field DatasetKey max_len rule failed, current value: %d", len(*p.DatasetKey))
+		}
+	}
+	if p.Type != nil {
+		if len(*p.Type) > int(128) {
+			return fmt.Errorf("field Type max_len rule failed, current value: %d", len(*p.Type))
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -115,6 +133,11 @@ func (p *CreateEvaluationSetWithImportRequest) IsValid() error {
 			return fmt.Errorf("field Option not valid, %w", err)
 		}
 	}
+	if p.Type != nil {
+		if len(*p.Type) > int(128) {
+			return fmt.Errorf("field Type max_len rule failed, current value: %d", len(*p.Type))
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -174,6 +197,14 @@ func (p *UpdateEvaluationSetRequest) IsValid() error {
 			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
 		}
 	}
+	for i := 0; i < len(p.Tags); i++ {
+		_elem := p.Tags[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -230,6 +261,19 @@ func (p *ListEvaluationSetsRequest) IsValid() error {
 	if p.Name != nil {
 		if len(*p.Name) > int(100) {
 			return fmt.Errorf("field Name max_len rule failed, current value: %d", len(*p.Name))
+		}
+	}
+	if p.Type != nil {
+		if len(*p.Type) > int(128) {
+			return fmt.Errorf("field Type max_len rule failed, current value: %d", len(*p.Type))
+		}
+	}
+	if len(p.DatasetKeys) > int(255) {
+		return fmt.Errorf("field DatasetKeys MaxLen rule failed, current value: %v", p.DatasetKeys)
+	}
+	if p.TagFilter != nil {
+		if err := p.TagFilter.IsValid(); err != nil {
+			return fmt.Errorf("field TagFilter not valid, %w", err)
 		}
 	}
 	if p.PageNumber != nil {
@@ -423,12 +467,35 @@ func (p *BatchCreateEvaluationSetItemsResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateEvaluationSetItemRequest) IsValid() error {
-	for i := 0; i < len(p.FieldWriteOptions); i++ {
-		_elem := p.FieldWriteOptions[i]
+	for i := 0; i < len(p.Tags); i++ {
+		_elem := p.Tags[i]
 		if _elem != nil {
 			if err := _elem.IsValid(); err != nil {
 				return fmt.Errorf("field _elem not valid, %w", err)
 			}
+		}
+	}
+	for i := 0; i < len(p.FieldWriteOptions); i++ {
+		_elem1 := p.FieldWriteOptions[i]
+		if _elem1 != nil {
+			if err := _elem1.IsValid(); err != nil {
+				return fmt.Errorf("field _elem1 not valid, %w", err)
+			}
+		}
+	}
+	if p.ItemVersion != nil {
+		if len(*p.ItemVersion) > int(64) {
+			return fmt.Errorf("field ItemVersion max_len rule failed, current value: %d", len(*p.ItemVersion))
+		}
+	}
+	if p.ItemVersionDescription != nil {
+		if len(*p.ItemVersionDescription) > int(2048) {
+			return fmt.Errorf("field ItemVersionDescription max_len rule failed, current value: %d", len(*p.ItemVersionDescription))
+		}
+	}
+	if p.ItemVersionStatus != nil {
+		if len(*p.ItemVersionStatus) > int(64) {
+			return fmt.Errorf("field ItemVersionStatus max_len rule failed, current value: %d", len(*p.ItemVersionStatus))
 		}
 	}
 	if p.Base != nil {
@@ -484,6 +551,11 @@ func (p *ListEvaluationSetItemsRequest) IsValid() error {
 			return fmt.Errorf("field Filter not valid, %w", err)
 		}
 	}
+	if p.TagFilter != nil {
+		if err := p.TagFilter.IsValid(); err != nil {
+			return fmt.Errorf("field TagFilter not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -521,6 +593,27 @@ func (p *GetEvaluationSetItemResponse) IsValid() error {
 	return nil
 }
 func (p *BatchGetEvaluationSetItemsRequest) IsValid() error {
+	if len(p.ItemVersionQueries) > int(100) {
+		return fmt.Errorf("field ItemVersionQueries MaxLen rule failed, current value: %v", p.ItemVersionQueries)
+	}
+	for i := 0; i < len(p.ItemVersionQueries); i++ {
+		_elem := p.ItemVersionQueries[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
+	if p.Filter != nil {
+		if err := p.Filter.IsValid(); err != nil {
+			return fmt.Errorf("field Filter not valid, %w", err)
+		}
+	}
+	if p.TagFilter != nil {
+		if err := p.TagFilter.IsValid(); err != nil {
+			return fmt.Errorf("field TagFilter not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -529,6 +622,154 @@ func (p *BatchGetEvaluationSetItemsRequest) IsValid() error {
 	return nil
 }
 func (p *BatchGetEvaluationSetItemsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchAddExistEvaluationSetItemsRequest) IsValid() error {
+	if len(p.Items) < int(1) {
+		return fmt.Errorf("field Items MinLen rule failed, current value: %v", p.Items)
+	}
+	if len(p.Items) > int(100) {
+		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
+	}
+	for i := 0; i < len(p.Items); i++ {
+		_elem := p.Items[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluationItemVersionRef) IsValid() error {
+	if p.ItemVersion != nil {
+		if len(*p.ItemVersion) > int(64) {
+			return fmt.Errorf("field ItemVersion max_len rule failed, current value: %d", len(*p.ItemVersion))
+		}
+	}
+	return nil
+}
+func (p *BatchAddExistEvaluationSetItemsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemDefRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemDefResponse) IsValid() error {
+	if p.ItemDef != nil {
+		if err := p.ItemDef.IsValid(); err != nil {
+			return fmt.Errorf("field ItemDef not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetItemDefsRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetItemDefsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetItemVersionsRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetItemVersionsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemVersionRequest) IsValid() error {
+	if p.ItemVersion != nil {
+		if len(*p.ItemVersion) > int(64) {
+			return fmt.Errorf("field ItemVersion max_len rule failed, current value: %d", len(*p.ItemVersion))
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemVersionResponse) IsValid() error {
+	if p.Version != nil {
+		if err := p.Version.IsValid(); err != nil {
+			return fmt.Errorf("field Version not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateEvaluationSetItemVersionRequest) IsValid() error {
+	if p.Status != nil {
+		if len(*p.Status) > int(64) {
+			return fmt.Errorf("field Status max_len rule failed, current value: %d", len(*p.Status))
+		}
+	}
+	if p.Description != nil {
+		if len(*p.Description) > int(2048) {
+			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
+		}
+	}
+	if p.ItemVersion != nil {
+		if len(*p.ItemVersion) > int(64) {
+			return fmt.Errorf("field ItemVersion max_len rule failed, current value: %d", len(*p.ItemVersion))
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateEvaluationSetItemVersionResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"errors"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -309,7 +310,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_Agent(t *testing.
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -370,7 +371,7 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent(t *testing.T) {
 	inputData := &entity.EvaluatorInputData{
 		InputFields: map[string]*entity.Content{},
 	}
-	var recordMap sync.Map
+	var collector evalRecordCollector
 
 	mockEvaluatorRecord := &entity.EvaluatorRecord{
 		ID:     202,
@@ -407,14 +408,12 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent(t *testing.T) {
 		},
 	)
 
-	baseRunReq := &entity.RunEvaluatorRequest{SpaceID: 1, EvaluatorVersionID: 101, InputData: inputData, ExperimentID: 2, ExperimentRunID: 3, ItemID: 4, TurnID: 5, Ext: etec.Ext, EvaluatorRunConf: ec.RunConf}
-	err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, baseRunReq, &recordMap)
+	err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &collector)
 	assert.NoError(t, err)
 
-	// verify recordMap
-	val, ok := recordMap.Load(int64(101))
-	assert.True(t, ok)
-	assert.Equal(t, mockEvaluatorRecord, val)
+	// verify collector has the record
+	assert.Len(t, collector.records, 1)
+	assert.Equal(t, mockEvaluatorRecord, collector.records[0])
 }
 
 func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testing.T) {
@@ -461,6 +460,8 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 	inputData := &entity.EvaluatorInputData{
 		InputFields: map[string]*entity.Content{},
 	}
+	var collector evalRecordCollector
+
 	tests := []struct {
 		name      string
 		mockSetup func()
@@ -506,10 +507,9 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var recordMap sync.Map
+			collector = evalRecordCollector{}
 			tt.mockSetup()
-			baseRunReq := &entity.RunEvaluatorRequest{SpaceID: 1, EvaluatorVersionID: 101, InputData: inputData, ExperimentID: 2, ExperimentRunID: 3, ItemID: 4, TurnID: 5, Ext: etec.Ext, EvaluatorRunConf: ec.RunConf}
-			err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, baseRunReq, &recordMap)
+			err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &collector)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -517,14 +517,12 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent_Errors(t *testin
 			}
 			switch tt.name {
 			case "AsyncRunEvaluator error":
-				val, ok := recordMap.Load(int64(101))
-				require.True(t, ok)
-				record, ok := val.(*entity.EvaluatorRecord)
-				require.True(t, ok)
+				require.Len(t, collector.records, 1)
+				record := collector.records[0]
 				assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+				assert.Equal(t, int64(101), record.EvaluatorVersionID)
 			case "AsyncRunEvaluator error and failed record creation error":
-				_, ok := recordMap.Load(int64(101))
-				assert.False(t, ok)
+				assert.Empty(t, collector.records)
 			}
 		})
 	}
@@ -2433,7 +2431,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2851,8 +2849,8 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_EdgeCases(t *testing.T) {
 					Event: &entity.ExptItemEvalEvent{}, // Event required: CallEvaluators uses Event.IgnoreExistedTargetResult()
 				},
 				ExptTurnRunResult: &entity.ExptTurnRunResult{
-					EvaluatorResults: map[int64]*entity.EvaluatorRecord{
-						1: {ID: 1, Status: entity.EvaluatorRunStatusSuccess},
+					EvaluatorResults: []*entity.EvaluatorRecord{
+						{ID: 1, EvaluatorVersionID: 1, Status: entity.EvaluatorRunStatusSuccess},
 					},
 				},
 			},
@@ -3347,9 +3345,18 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_ExecAll(t *testing.T) {
 
 		// The failure of the first evaluator should be returned.
 		assert.Error(t, err)
-		// The second evaluator still runs successfully; its result should be collected into recordMap.
-		assert.NotNil(t, records[2])
-		assert.Equal(t, int64(2), records[2].ID)
+		// Both evaluators contribute a record: the failed evaluator has a fail record created,
+		// and the successful evaluator's record is stored directly. Order is non-deterministic
+		// because pool.ExecAll runs them concurrently — index records by ID.
+		require.Len(t, records, 2)
+		byID := make(map[int64]*entity.EvaluatorRecord, len(records))
+		for _, r := range records {
+			byID[r.ID] = r
+		}
+		require.Contains(t, byID, int64(2))
+		require.Contains(t, byID, int64(101))
+		assert.Equal(t, entity.EvaluatorRunStatusSuccess, byID[2].Status)
+		assert.Equal(t, entity.EvaluatorRunStatusFail, byID[101].Status)
 	})
 
 	t.Run("multiple evaluators fail and all errors are aggregated", func(t *testing.T) {
@@ -3535,7 +3542,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, nil, nil)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, nil, nil, nil)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)
@@ -3794,24 +3801,36 @@ func TestDefaultExptTurnEvaluationImpl_CheckBenefit_EdgeCases(t *testing.T) {
 func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T) {
 	t.Parallel()
 
+	// helper to find record by versionID in result slice
+	findRecord := func(records []*entity.EvaluatorRecord, vID int64) *entity.EvaluatorRecord {
+		for _, r := range records {
+			if r != nil && r.EvaluatorVersionID == vID {
+				return r
+			}
+		}
+		return nil
+	}
+
 	tests := []struct {
 		name           string
 		service        func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl
-		input          map[int64]*entity.EvaluatorRecord
+		input          []*entity.EvaluatorRecord
 		wantErr        bool
-		validateResult func(t *testing.T, result map[int64]*entity.EvaluatorRecord)
+		validateResult func(t *testing.T, result []*entity.EvaluatorRecord)
 	}{
 		{
 			name: "nil evaluatorRecordService - skip refresh",
 			service: func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl {
 				return &DefaultExptTurnEvaluationImpl{}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, result[101].Status)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				r := findRecord(result, 101)
+				assert.NotNil(t, r)
+				assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, r.Status)
 			},
 		},
 		{
@@ -3820,28 +3839,29 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				mockRecordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
-				102: {ID: 202, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusFail},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
+				{ID: 202, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusFail},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusSuccess, result[101].Status)
-				assert.Equal(t, entity.EvaluatorRunStatusFail, result[102].Status)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				assert.Equal(t, entity.EvaluatorRunStatusSuccess, findRecord(result, 101).Status)
+				assert.Equal(t, entity.EvaluatorRunStatusFail, findRecord(result, 102).Status)
 			},
 		},
 		{
-			name: "nil record in map - skip",
+			name: "nil record in slice - skip",
 			service: func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl {
 				mockRecordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: nil,
+			input: []*entity.EvaluatorRecord{
+				nil,
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Nil(t, result[101])
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				assert.Len(t, result, 1)
+				assert.Nil(t, result[0])
 			},
 		},
 		{
@@ -3853,13 +3873,14 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusSuccess, result[101].Status)
-				assert.Equal(t, int64(201), result[101].ID)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				r := findRecord(result, 101)
+				assert.Equal(t, entity.EvaluatorRunStatusSuccess, r.Status)
+				assert.Equal(t, int64(201), r.ID)
 			},
 		},
 		{
@@ -3871,12 +3892,12 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, result[101].Status)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, findRecord(result, 101).Status)
 			},
 		},
 		{
@@ -3886,8 +3907,8 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				mockRecordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(201), false).Return(nil, errors.New("db error"))
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: true,
 		},
@@ -3900,27 +3921,27 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 				)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input: map[int64]*entity.EvaluatorRecord{
-				101: {ID: 301, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
-				102: {ID: 302, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			input: []*entity.EvaluatorRecord{
+				{ID: 301, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
+				{ID: 302, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusAsyncInvoking},
 			},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
-				assert.Equal(t, entity.EvaluatorRunStatusSuccess, result[101].Status)
-				assert.Equal(t, int64(301), result[101].ID)
-				assert.Equal(t, entity.EvaluatorRunStatusSuccess, result[102].Status)
-				assert.Equal(t, int64(302), result[102].ID)
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
+				assert.Equal(t, entity.EvaluatorRunStatusSuccess, findRecord(result, 101).Status)
+				assert.Equal(t, int64(301), findRecord(result, 101).ID)
+				assert.Equal(t, entity.EvaluatorRunStatusSuccess, findRecord(result, 102).Status)
+				assert.Equal(t, int64(302), findRecord(result, 102).ID)
 			},
 		},
 		{
-			name: "empty map - no-op",
+			name: "empty slice - no-op",
 			service: func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl {
 				mockRecordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
 				return &DefaultExptTurnEvaluationImpl{evaluatorRecordService: mockRecordSvc}
 			},
-			input:   map[int64]*entity.EvaluatorRecord{},
+			input:   []*entity.EvaluatorRecord{},
 			wantErr: false,
-			validateResult: func(t *testing.T, result map[int64]*entity.EvaluatorRecord) {
+			validateResult: func(t *testing.T, result []*entity.EvaluatorRecord) {
 				assert.Empty(t, result)
 			},
 		},
@@ -3942,6 +3963,91 @@ func TestDefaultExptTurnEvaluationImpl_refreshAsyncEvaluatorRecords(t *testing.T
 			if tt.validateResult != nil {
 				tt.validateResult(t, result)
 			}
+		})
+	}
+}
+
+// TestDefaultExptTurnEvaluationImpl_CallEvaluators_MultiSetEmptyEvaluator 回归:
+// 多评测集实验 (MultiSetConfig) 里某个评测集未配置评估器时, 该集 item 应跑 0 个评估器,
+// 绝不能回退到实验级 expt.Evaluators (所有集评估器的并集)。
+// bug: CallEvaluators:325 老守卫 `len(ItemConfig.EvaluatorConfs) > 0` 为 false 时会 fallthrough
+// 到 expt.Evaluators 老路径, 导致"没配评估器的集"被误跑全部评估器。
+func TestDefaultExptTurnEvaluationImpl_CallEvaluators_MultiSetEmptyEvaluator(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:            mockMetric,
+		evaluatorService:  mockEvaluatorService,
+		benefitService:    mockBenefitService,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	// 关键: 显式给 expt.Evaluators 塞一个评估器 + 非 nil EvaluatorsConf。
+	// 若 fallthrough 到老路径, 就会尝试跑它 (进而调 CheckBenefit / RunEvaluator);
+	// 本用例不给 mock 任何这类调用, 一旦发生 gomock 会因 unexpected call 直接 fail。
+	newMultiSetExpt := func() *entity.Experiment {
+		return &entity.Experiment{
+			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			Evaluators: []*entity.Evaluator{
+				{
+					ID:                     99,
+					EvaluatorType:          entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 99},
+				},
+			},
+			EvalConf: &entity.EvaluationConfiguration{
+				ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{
+						EvaluatorConf: []*entity.EvaluatorConf{{EvaluatorVersionID: 99}},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name string
+		etec *entity.ExptTurnEvalCtx
+	}{
+		{
+			name: "MultiSetConfig set with empty EvaluatorConfs -> run zero evaluators",
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Expt:        newMultiSetExpt(),
+					Event:       &entity.ExptItemEvalEvent{ExptID: 1, SpaceID: 2},
+					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					ItemConfig:  &entity.ExptItemConfig{EvaluatorConfs: nil}, // 本集没配评估器
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+		},
+		{
+			name: "MultiSetConfig set with nil ItemConfig -> run zero evaluators (no fallthrough)",
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Expt:        newMultiSetExpt(),
+					Event:       &entity.ExptItemEvalEvent{ExptID: 1, SpaceID: 2},
+					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					ItemConfig:  nil,
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := service.CallEvaluators(context.Background(), tt.etec, &entity.EvalTargetRecord{})
+			assert.NoError(t, err)
+			assert.Empty(t, result) // 跑了 0 个评估器
 		})
 	}
 }
@@ -4004,7 +4110,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 		prepare        func(ctrl *gomock.Controller) *DefaultExptTurnEvaluationImpl
 		etec           func() *entity.ExptTurnEvalCtx
 		wantErr        bool
-		validateResult func(t *testing.T, results map[int64]*entity.EvaluatorRecord)
+		validateResult func(t *testing.T, results []*entity.EvaluatorRecord)
 	}{
 		{
 			name: "async evaluator refreshed to success after sync evaluator completes",
@@ -4038,7 +4144,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 			},
 			etec:    baseEtec,
 			wantErr: false,
-			validateResult: func(t *testing.T, results map[int64]*entity.EvaluatorRecord) {
+			validateResult: func(t *testing.T, results []*entity.EvaluatorRecord) {
 				assert.Len(t, results, 1)
 				for _, record := range results {
 					assert.Equal(t, entity.EvaluatorRunStatusSuccess, record.Status)
@@ -4077,7 +4183,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 			},
 			etec:    baseEtec,
 			wantErr: false,
-			validateResult: func(t *testing.T, results map[int64]*entity.EvaluatorRecord) {
+			validateResult: func(t *testing.T, results []*entity.EvaluatorRecord) {
 				assert.Len(t, results, 1)
 				for _, record := range results {
 					assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
@@ -4181,7 +4287,8 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 						EvalTargetOutputData: &entity.EvalTargetOutputData{
 							OutputFields: map[string]*entity.Content{"output": content1},
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 			turn: &entity.Turn{
 				ID:        1,
@@ -4200,14 +4307,16 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 			prepare: func() {
 				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), gomock.Any())
 				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(
-					&entity.FieldData{Name: "context", Content: content2}, nil).Times(2)
+					&entity.FieldData{Name: "context", Content: content2}, nil,
+				).Times(2)
 				mockEvalTargetService.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvalTargetRecord{
 						ID: 2,
 						EvalTargetOutputData: &entity.EvalTargetOutputData{
 							OutputFields: map[string]*entity.Content{"output": content1},
 						},
-					}, nil)
+					}, nil,
+				)
 			},
 			turn: &entity.Turn{
 				ID:        2,
@@ -4226,7 +4335,8 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 			prepare: func() {
 				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), gomock.Any())
 				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(
-					nil, errors.New("fetch error"))
+					nil, errors.New("fetch error"),
+				)
 			},
 			turn: &entity.Turn{
 				ID:        3,
@@ -4291,4 +4401,543 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *test
 			}
 		})
 	}
+}
+
+// TestBuildAliasRunConf 覆盖 per-alias 动态参数合成的全部边界。
+func TestBuildAliasRunConf(t *testing.T) {
+	staticEnv := gptr.Of("prod")
+	staticRunConf := &entity.EvaluatorRunConfig{Env: staticEnv}
+
+	tests := []struct {
+		name          string
+		dynamicParam  map[string]string
+		staticRunConf *entity.EvaluatorRunConfig
+		wantNil       bool
+		wantJSONValue string
+		wantEnv       *string
+	}{
+		{name: "nil dynamic param → nil", dynamicParam: nil, staticRunConf: staticRunConf, wantNil: true},
+		{name: "empty dynamic param → nil", dynamicParam: map[string]string{}, staticRunConf: staticRunConf, wantNil: true},
+		{name: "missing key → nil", dynamicParam: map[string]string{"other": "x"}, staticRunConf: staticRunConf, wantNil: true},
+		{name: "empty value → nil", dynamicParam: map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: ""}, staticRunConf: staticRunConf, wantNil: true},
+		{
+			name:          "valid value inherits static env",
+			dynamicParam:  map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"model":"A"}`},
+			staticRunConf: staticRunConf,
+			wantNil:       false,
+			wantJSONValue: `{"model":"A"}`,
+			wantEnv:       staticEnv,
+		},
+		{
+			name:          "valid value with nil static run conf → env nil",
+			dynamicParam:  map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"model":"B"}`},
+			staticRunConf: nil,
+			wantNil:       false,
+			wantJSONValue: `{"model":"B"}`,
+			wantEnv:       nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildAliasRunConf(tt.dynamicParam, tt.staticRunConf)
+			if tt.wantNil {
+				assert.Nil(t, got)
+				return
+			}
+			assert.NotNil(t, got)
+			assert.NotNil(t, got.EvaluatorRuntimeParam)
+			assert.NotNil(t, got.EvaluatorRuntimeParam.JSONValue)
+			assert.Equal(t, tt.wantJSONValue, *got.EvaluatorRuntimeParam.JSONValue)
+			assert.Equal(t, tt.wantEnv, got.Env)
+		})
+	}
+}
+
+// TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_DynamicParam 验证新实验类型下:
+// 同 versionID 的多个 alias 各自携带独立 runtime_param (inputData.Ext + EvaluatorRunConf 互不污染);
+// 无 DynamicParam 的 alias 回退静态 ec.RunConf。
+func TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_DynamicParam(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:            mockMetric,
+		evaluatorService:  mockEvaluatorService,
+		benefitService:    mockBenefitService,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	mockContent := &entity.Content{Text: gptr.Of("value1")}
+	target := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{"field1": mockContent},
+		},
+	}
+
+	// 静态 per-version RunConf: alias_C (无动态参数) 应回退到它
+	staticRunConf := &entity.EvaluatorRunConfig{
+		Env:                   gptr.Of("prod"),
+		EvaluatorRuntimeParam: &entity.RuntimeParam{JSONValue: gptr.Of(`{"model":"static"}`)},
+	}
+
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetItem: &entity.EvaluationSetItem{ID: 1, ItemID: 2},
+			Event: &entity.ExptItemEvalEvent{
+				Session: &entity.Session{UserID: "test_user"},
+				ExptID:  1,
+				SpaceID: 2,
+			},
+			Expt: &entity.Experiment{
+				ID:                1,
+				SpaceID:           2,
+				EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, // 新实验类型: 走 ItemConfig 驱动路径
+				Evaluators: []*entity.Evaluator{
+					{
+						ID:                     1,
+						EvaluatorType:          entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					ItemConcurNum: gptr.Of(1),
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EvaluatorConcurNum: gptr.Of(1),
+							EvaluatorConf: []*entity.EvaluatorConf{
+								{
+									EvaluatorVersionID: 1,
+									RunConf:            staticRunConf,
+									IngressConf: &entity.EvaluatorIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+										},
+										TargetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			// 新实验类型: ItemConfig 驱动 alias 多实例
+			ItemConfig: &entity.ExptItemConfig{
+				EvaluatorConfs: []*entity.ItemEvaluatorConf{
+					{EvaluatorVersionID: 1, Alias: "A", DynamicParam: map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"model":"A"}`}},
+					{EvaluatorVersionID: 1, Alias: "B", DynamicParam: map[string]string{consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"model":"B"}`}},
+					{EvaluatorVersionID: 1, Alias: "C"}, // 无 DynamicParam → 回退静态
+				},
+			},
+		},
+		ExptTurnRunResult: &entity.ExptTurnRunResult{},
+		Turn: &entity.Turn{
+			FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}},
+		},
+	}
+
+	mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+	mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(3)
+	mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any()).Times(3)
+
+	// 按 alias 捕获每次 RunEvaluator 请求, 断言 per-alias runtime_param 与 ext 隔离。
+	var mu sync.Mutex
+	byAlias := make(map[string]*entity.RunEvaluatorRequest)
+	mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			mu.Lock()
+			byAlias[req.Alias] = req
+			mu.Unlock()
+			return &entity.EvaluatorRecord{ID: 1, Alias: req.Alias, Status: entity.EvaluatorRunStatusSuccess}, nil
+		}).Times(3)
+
+	records, err := service.CallEvaluators(context.Background(), etec, target)
+	assert.NoError(t, err)
+	assert.Len(t, records, 3)
+
+	reqA := byAlias["A"]
+	reqB := byAlias["B"]
+	reqC := byAlias["C"]
+	assert.NotNil(t, reqA)
+	assert.NotNil(t, reqB)
+	assert.NotNil(t, reqC)
+
+	// alias_A / alias_B: 各自动态 runtime_param, 互不污染
+	assert.NotNil(t, reqA.EvaluatorRunConf)
+	assert.Equal(t, `{"model":"A"}`, *reqA.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue)
+	assert.Equal(t, `{"model":"A"}`, reqA.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	assert.NotNil(t, reqB.EvaluatorRunConf)
+	assert.Equal(t, `{"model":"B"}`, *reqB.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue)
+	assert.Equal(t, `{"model":"B"}`, reqB.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	// Env 继承静态
+	assert.Equal(t, "prod", *reqA.EvaluatorRunConf.Env)
+
+	// alias_C: 回退静态 RunConf
+	assert.NotNil(t, reqC.EvaluatorRunConf)
+	assert.Equal(t, `{"model":"static"}`, *reqC.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue)
+	assert.Equal(t, `{"model":"static"}`, reqC.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+}
+
+// TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_FilterSkipped 验证:
+// filter 不命中的 alias 实例 → 不调 RunEvaluator, 而是调 CreateSkippedEvaluatorRecord 落占位 record;
+// 命中的 alias 实例正常 RunEvaluator。返回的 records 同时含 Success 与 Skipped 两条。
+func TestDefaultExptTurnEvaluationImpl_callEvaluatorsByItemConfig_FilterSkipped(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:            mockMetric,
+		evaluatorService:  mockEvaluatorService,
+		benefitService:    mockBenefitService,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	mockContent := &entity.Content{Text: gptr.Of("value1")}
+	target := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{"field1": mockContent},
+		},
+	}
+
+	staticRunConf := &entity.EvaluatorRunConfig{Env: gptr.Of("prod")}
+
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetItem: &entity.EvaluationSetItem{ID: 1, ItemID: 2},
+			Event: &entity.ExptItemEvalEvent{
+				Session: &entity.Session{UserID: "test_user"},
+				ExptID:  1,
+				SpaceID: 2,
+			},
+			Expt: &entity.Experiment{
+				ID:                1,
+				SpaceID:           2,
+				EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig, // 新实验类型: 走 ItemConfig 驱动路径
+				Evaluators: []*entity.Evaluator{
+					{
+						ID:                     1,
+						EvaluatorType:          entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					ItemConcurNum: gptr.Of(1),
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EvaluatorConcurNum: gptr.Of(1),
+							EvaluatorConf: []*entity.EvaluatorConf{
+								{
+									EvaluatorVersionID: 1,
+									RunConf:            staticRunConf,
+									IngressConf: &entity.EvaluatorIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+										},
+										TargetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			// default: 无 filter → 跑; judge_b: Include filter 命中不到 → Skipped
+			ItemConfig: &entity.ExptItemConfig{
+				EvaluatorConfs: []*entity.ItemEvaluatorConf{
+					{EvaluatorVersionID: 1, Alias: "default"},
+					{
+						EvaluatorVersionID: 1,
+						Alias:              "judge_b",
+						FilterMode:         1, // Include
+						Filter: &entity.ExptItemFilter{
+							QueryAndOr: "and",
+							FilterFields: []*entity.ExptItemFilterField{
+								{FieldName: "item_id", FieldType: "long", QueryType: "in", Values: []string{"999999"}},
+							},
+						},
+					},
+				},
+			},
+		},
+		ExptTurnRunResult: &entity.ExptTurnRunResult{},
+		Turn: &entity.Turn{
+			FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}},
+		},
+	}
+
+	// default 命中 → 走真实链路
+	mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+	mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(1)
+	mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any()).Times(1)
+	mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			return &entity.EvaluatorRecord{ID: 100, Alias: req.Alias, Status: entity.EvaluatorRunStatusSuccess}, nil
+		}).Times(1)
+
+	// judge_b filter 不命中 → 只调 CreateSkippedEvaluatorRecord, 不调 RunEvaluator
+	var skippedReq *entity.RunEvaluatorRequest
+	mockEvaluatorService.EXPECT().CreateSkippedEvaluatorRecord(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			skippedReq = req
+			return &entity.EvaluatorRecord{ID: 200, Alias: req.Alias, Status: entity.EvaluatorRunStatusSkipped}, nil
+		}).Times(1)
+
+	records, err := service.CallEvaluators(context.Background(), etec, target)
+	assert.NoError(t, err)
+	assert.Len(t, records, 2)
+
+	// 占位 record 落库参数正确
+	assert.NotNil(t, skippedReq)
+	assert.Equal(t, "judge_b", skippedReq.Alias)
+	assert.Equal(t, int64(1), skippedReq.EvaluatorVersionID)
+	assert.Equal(t, entity.EvaluatorRecordSourceTypeBuiltin, skippedReq.SourceType)
+
+	// 返回 records 含 Success(default) + Skipped(judge_b)
+	byAlias := make(map[string]*entity.EvaluatorRecord, 2)
+	for _, r := range records {
+		byAlias[r.Alias] = r
+	}
+	assert.Equal(t, entity.EvaluatorRunStatusSuccess, byAlias["default"].Status)
+	assert.Equal(t, entity.EvaluatorRunStatusSkipped, byAlias["judge_b"].Status)
+	assert.Equal(t, int64(200), byAlias["judge_b"].ID)
+}
+
+func TestBuildEvalSetItemMeta_UsesPerItemEvalSetForMultiSet(t *testing.T) {
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetVersionID: 200,
+			EvalSetItem: &entity.EvaluationSetItem{
+				EvaluationSetID: 20,
+				ItemID:          2000,
+				ItemKey:         "item-a",
+				ItemVersionID:   gptr.Of(int64(20000)),
+				ItemVersion:     gptr.Of("item-v2"),
+			},
+			Expt: &entity.Experiment{
+				EvalSetID:        10,
+				EvalSetVersionID: 100,
+				EvalSet: &entity.EvaluationSet{
+					ID:   10,
+					Name: "primary-set",
+					EvaluationSetVersion: &entity.EvaluationSetVersion{
+						ID:      100,
+						Version: "primary-v1",
+					},
+				},
+				EvalSetDetails: []*entity.ExptEvalSetDetail{
+					{
+						EvalSetID:        20,
+						EvalSetVersionID: 200,
+						EvalSet: &entity.EvaluationSet{
+							ID:   20,
+							Name: "non-primary-set",
+							EvaluationSetVersion: &entity.EvaluationSetVersion{
+								ID:      200,
+								Version: "non-primary-v2",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got := buildEvalSetItemMeta(etec)
+	assert.Equal(t, "20", got.EvalSetID)
+	assert.Equal(t, "200", got.EvalSetVersionID)
+	assert.Equal(t, "non-primary-set", got.EvalSetName)
+	assert.Equal(t, "non-primary-v2", got.EvalSetVersion)
+	assert.Equal(t, "2000", got.ItemID)
+	assert.Equal(t, "item-a", got.ItemKey)
+	assert.Equal(t, "20000", got.ItemVersionID)
+	assert.Equal(t, "item-v2", got.ItemVersion)
+}
+
+func TestBuildEvalSetItemMeta_FallbackToExperimentTopLevel(t *testing.T) {
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+			Expt: &entity.Experiment{
+				EvalSetID:        10,
+				EvalSetVersionID: 100,
+				EvalSet: &entity.EvaluationSet{
+					ID:   10,
+					Name: "primary-set",
+					EvaluationSetVersion: &entity.EvaluationSetVersion{
+						ID:      100,
+						Version: "primary-v1",
+					},
+				},
+			},
+		},
+	}
+
+	got := buildEvalSetItemMeta(etec)
+	assert.Equal(t, "10", got.EvalSetID)
+	assert.Equal(t, "100", got.EvalSetVersionID)
+	assert.Equal(t, "primary-set", got.EvalSetName)
+	assert.Equal(t, "primary-v1", got.EvalSetVersion)
+	assert.Equal(t, "1", got.ItemID)
+}
+
+// TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak 在真实泄漏点 callEvaluators 直接验证:
+// 当 evaluator conf 缺失导致中途提前 return(跳过 pool.ExecAll)时,协程池仍被释放,不泄漏 goroutine。
+// 修复前(NewPool 后无 defer pool.Release()),每次调用会泄漏底层 ants pool 的 2 个常驻协程(purge/ticktock),
+// 此测试会因协程数持续增长而失败;修复后应保持平稳。
+func TestDefaultExptTurnEvaluationImpl_CallEvaluators_NoGoroutineLeak(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// evalTargetService 在提前 return 前不会被调用到(OutputFields 无 omitted 大字段),这里可留空 mock。
+	// benefitService 在 callEvaluators 之前的权益校验会被调用,mock 成功放行。
+	mockBenefit := benefitmocks.NewMockIBenefitService(ctrl)
+	mockBenefit.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).
+		Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).AnyTimes()
+	service := &DefaultExptTurnEvaluationImpl{
+		evalTargetService: svcmocks.NewMockIEvalTargetService(ctrl),
+		benefitService:    mockBenefit,
+		metric:            metricsmocks.NewMockExptMetric(ctrl),
+	}
+
+	target := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{
+				"field1": {Text: gptr.Of("v")},
+			},
+		},
+	}
+
+	// 构造一个会触发 "evaluator conf not found" 提前 return 的 etec:
+	// Expt.Evaluators 里有 versionID=1 的 evaluator,但 EvaluatorsConf.EvaluatorConf 为空 → GetEvaluatorConf(1)=nil。
+	newEtec := func() *entity.ExptTurnEvalCtx {
+		return &entity.ExptTurnEvalCtx{
+			ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+				EvalSetItem: &entity.EvaluationSetItem{ID: 1, ItemID: 2},
+				Event: &entity.ExptItemEvalEvent{
+					Session: &entity.Session{UserID: "u"},
+					ExptID:  1,
+					SpaceID: 2,
+				},
+				Expt: &entity.Experiment{
+					ID:      1,
+					SpaceID: 2,
+					Evaluators: []*entity.Evaluator{
+						{
+							ID:                     1,
+							EvaluatorType:          entity.EvaluatorTypePrompt,
+							PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+						},
+					},
+					EvalConf: &entity.EvaluationConfiguration{
+						ItemConcurNum: gptr.Of(1),
+						ConnectorConf: entity.Connector{
+							EvaluatorsConf: &entity.EvaluatorsConf{
+								EvaluatorConcurNum: gptr.Of(1),
+								// 故意不放 versionID=1 的 conf → 触发 :433 提前 return
+								EvaluatorConf: []*entity.EvaluatorConf{},
+							},
+						},
+					},
+				},
+			},
+			ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			Turn:              &entity.Turn{FieldDataList: []*entity.FieldData{}},
+		}
+	}
+
+	// 先跑一次预热(确保触发的是提前 return 路径),并让运行时协程稳定。
+	if _, err := service.CallEvaluators(context.Background(), newEtec(), target); err == nil {
+		t.Fatalf("expected evaluator-conf-not-found error to hit the early-return path")
+	}
+	time.Sleep(200 * time.Millisecond)
+	runtime.GC()
+	before := runtime.NumGoroutine()
+
+	const N = 50
+	for i := 0; i < N; i++ {
+		_, err := service.CallEvaluators(context.Background(), newEtec(), target)
+		assert.Error(t, err) // 每次都走 conf-not-found 提前 return
+	}
+
+	// 等底层 ants pool 的常驻协程随 Release 退出。
+	time.Sleep(500 * time.Millisecond)
+	runtime.GC()
+	after := runtime.NumGoroutine()
+
+	// 修复前:N 次泄漏 ≈ 2N=100 个常驻协程;修复后应基本持平,留少量裕度。
+	assert.Less(t, after-before, 20,
+		"goroutine leak in callEvaluators early-return path: before=%d after=%d (delta=%d)", before, after, after-before)
+}
+
+func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputDataExt(t *testing.T) {
+	t.Parallel()
+
+	service := &DefaultExptTurnEvaluationImpl{}
+
+	t.Run("nil ext and nil runConf and nil evalConf", func(t *testing.T) {
+		got := service.buildEvaluatorInputDataExt(nil, nil, nil)
+		assert.NotNil(t, got)
+		assert.Empty(t, got)
+	})
+
+	t.Run("existing ext passed through", func(t *testing.T) {
+		ext := map[string]string{"key1": "val1"}
+		got := service.buildEvaluatorInputDataExt(ext, nil, nil)
+		assert.Equal(t, "val1", got["key1"])
+	})
+
+	t.Run("runConf runtime param written to ext", func(t *testing.T) {
+		jsonVal := `{"temperature":0.5}`
+		runConf := &entity.EvaluatorRunConfig{
+			EvaluatorRuntimeParam: &entity.RuntimeParam{
+				JSONValue: &jsonVal,
+			},
+		}
+		got := service.buildEvaluatorInputDataExt(nil, runConf, nil)
+		assert.Equal(t, jsonVal, got[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	})
+
+	t.Run("evalConf with SkillTOSKeys serialized to ext", func(t *testing.T) {
+		evalConf := &entity.EvaluationConfiguration{
+			SkillTOSKeys: map[string]string{
+				"skill1:v1": "tos-key-abc",
+				"skill2:v2": "tos-key-def",
+			},
+		}
+		got := service.buildEvaluatorInputDataExt(nil, nil, evalConf)
+		raw := got[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys]
+		assert.NotEmpty(t, raw)
+		assert.Contains(t, raw, "skill1:v1")
+		assert.Contains(t, raw, "tos-key-abc")
+	})
+
+	t.Run("evalConf with empty SkillTOSKeys does not write ext key", func(t *testing.T) {
+		evalConf := &entity.EvaluationConfiguration{
+			SkillTOSKeys: map[string]string{},
+		}
+		got := service.buildEvaluatorInputDataExt(nil, nil, evalConf)
+		_, exists := got[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys]
+		assert.False(t, exists)
+	})
+
+	t.Run("evalConf with nil SkillTOSKeys does not write ext key", func(t *testing.T) {
+		evalConf := &entity.EvaluationConfiguration{}
+		got := service.buildEvaluatorInputDataExt(nil, nil, evalConf)
+		_, exists := got[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys]
+		assert.False(t, exists)
+	})
 }

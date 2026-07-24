@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
@@ -76,7 +77,12 @@ type experimentApplication struct {
 
 	// 实验模板管理服务
 	templateManager service.IExptTemplateManager
+
+	// 沙箱调度 RPC 适配器，用于 SandboxAgent 评测对象提交实验时初始化沙箱任务
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 }
+
+const sandboxSchedulerInitTimeout = 5 * time.Second
 
 func NewExperimentApplication(
 	aggResultSvc service.ExptAggrResultService,
@@ -98,6 +104,7 @@ func NewExperimentApplication(
 	templateManager service.IExptTemplateManager,
 	fileProvider rpc.IFileProvider,
 	lifecycleEventHandler service.ExptLifecycleEventHandler,
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -119,6 +126,7 @@ func NewExperimentApplication(
 		evaluatorService:            evaluatorService,
 		templateManager:             templateManager,
 		fileProvider:                fileProvider,
+		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
 	}
 }
 
@@ -130,6 +138,23 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 		}
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
+
+	// ★ 唯一分流硬校验: eval_set_source_type 与 eval_set_configs 必须一致 (所有入口最终汇入此处)。
+	isMulti := req.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig
+	hasConfigs := len(req.GetEvalSetConfigs()) > 0
+	if isMulti && !hasConfigs {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_source_type=MultiSetConfig requires non-empty eval_set_configs"))
+	}
+	if !isMulti && hasConfigs {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs is only allowed when eval_set_source_type=MultiSetConfig"))
+	}
+
+	// 多评测集 (MultiSetConfig) 空间灰度校验: 仅白名单空间可创建, 非白名单直接拦截报错。
+	// 白名单经 TCC 动态下发 (key=expt_multi_set_white_list), 默认空 = 全部禁止, allow_all=true 为全量开关。
+	if isMulti && !e.configer.GetExptMultiSetWhiteList(ctx).IsSpaceAllowed(req.GetWorkspaceID()) {
+		return nil, errorx.NewByCode(errno.ExptMultiSetSpaceNotAllowedCode,
+			errorx.WithExtraMsg(fmt.Sprintf("space %d is not allowed to create multi-set experiments", req.GetWorkspaceID())))
+	}
 
 	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）、runconfig 和 score weight
 	evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, err := e.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
@@ -260,22 +285,24 @@ func (e *experimentApplication) UpdateExperimentTemplate(ctx context.Context, re
 
 	logs.CtxInfo(ctx, "UpdateExperimentTemplate template_id: %d, workspace_id: %d", templateID, workspaceID)
 
-	// 权限校验，与 ListExperimentTemplates 一致：空间级 listLoopExptTemplate
-	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(workspaceID, 10),
-		SpaceID:       workspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	}); err != nil {
-		return nil, err
-	}
-
-	// 获取现有模板用于业务逻辑
+	// 先获取现有模板：拿 owner + 存在性（Get 已按 workspaceID 过滤，跨空间返回 not-found）
 	got, err := e.templateManager.Get(ctx, templateID, workspaceID, session)
 	if err != nil {
 		return nil, err
 	}
 	if got == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("template not found"))
+	}
+
+	// 对象级 edit 权限校验：仅模板 owner / 具备 edit 权限者可修改，防止同空间低权限用户越权改他人模板
+	if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(templateID, 10),
+		SpaceID:         workspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExptTemplate)}},
+		OwnerID:         gptr.Of(got.GetCreatedBy()),
+		ResourceSpaceID: workspaceID,
+	}); err != nil {
+		return nil, err
 	}
 
 	// 转换请求参数
@@ -516,7 +543,13 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.Ext,
-		NotificationConf:        req.NotificationConf,
+		// ★ 新路径透传: Submit 的 eval_set_configs (75 号) 与 Create 同构，
+		// 分流唯一以 eval_set_source_type 为准 (== MultiSetConfig 走新路径), configs 仅作权威源数据。
+		EvalSetConfigs:       req.EvalSetConfigs,
+		EvalSetSourceType:    req.EvalSetSourceType,
+		ExperimentGroupKey:   req.ExperimentGroupKey,
+		RefGroupExperimentID: req.RefGroupExperimentID,
+		NotificationConf:     req.NotificationConf,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -525,6 +558,17 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err
+	}
+
+	// SandboxAgent 评测对象：在 RunExperiment 前同步初始化沙箱任务，Concurrency 沿用实验并发度（ItemConcurNum）。
+	// Init 失败即视为启动实验失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
+	if e.sandboxSchedulerAdapter != nil &&
+		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
+		exptID := cresp.GetExperiment().GetID()
+		concurrency := req.GetItemConcurNum()
+		if err := e.initSandboxTask(ctx, "submit experiment", exptID, concurrency, req.GetWorkspaceID()); err != nil {
+			return nil, err
+		}
 	}
 
 	// 将 item_ids 编码到 ext 中，通过 MQ 事件传递给调度器
@@ -636,6 +680,13 @@ func (e *experimentApplication) validateEvaluatorVersionsBelongToWorkspace(ctx c
 
 func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
 	workspaceID := req.GetWorkspaceID()
+
+	// ★ 新路径 (MultiSetConfig): evaluator 身份/运行时/权重均收敛进 eval_set_configs[].evaluator_confs，
+	// 这里只需把所有 (evaluator_version_id) 抽出去重，供下游 getExptTupleByID 拉详情做空间归属校验。
+	// runConfig / score_weight 不再从老平铺字段映射（新路径权威源是 EvaluatorConf 自身的 RuntimeParam/ScoreWeight）。
+	if req.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig {
+		return e.resolveEvaluatorVersionIDsFromEvalSetConfigs(ctx, req)
+	}
 
 	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
 	// 对于直接传入的 evaluator_version_id，需要校验是否属于当前空间（预置评估器除外）
@@ -788,6 +839,44 @@ func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx cont
 	}
 
 	return evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, nil
+}
+
+// resolveEvaluatorVersionIDsFromEvalSetConfigs 新路径 (MultiSetConfig) 的 evaluator 版本解析。
+// 遍历 eval_set_configs[].evaluator_confs 收集去重后的 evaluator_version_id，并做空间归属校验。
+// runConfig / score_weight 在新路径下随 EvaluatorConf 落入 eval_conf，无需在此映射，返回空 map 占位。
+func (e *experimentApplication) resolveEvaluatorVersionIDsFromEvalSetConfigs(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
+	workspaceID := req.GetWorkspaceID()
+
+	seen := make(map[int64]struct{})
+	evalVersionIDs := make([]int64, 0)
+	for _, sc := range req.GetEvalSetConfigs() {
+		if sc == nil {
+			continue
+		}
+		for _, ec := range sc.GetEvaluatorConfs() {
+			if ec == nil {
+				continue
+			}
+			verID := ec.GetEvaluatorVersionID()
+			if verID == 0 {
+				continue
+			}
+			if _, ok := seen[verID]; ok {
+				continue
+			}
+			seen[verID] = struct{}{}
+			evalVersionIDs = append(evalVersionIDs, verID)
+		}
+	}
+
+	// 空间归属校验（预置评估器除外，复用老路径同款规则）
+	if len(evalVersionIDs) > 0 && workspaceID > 0 {
+		if err := e.validateEvaluatorVersionsBelongToWorkspace(ctx, evalVersionIDs, workspaceID); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	return evalVersionIDs, make(map[int64]*evaluatordto.EvaluatorRunConfig), make(map[int64]float64), nil
 }
 
 func (e *experimentApplication) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest) (r *expt.CheckExperimentNameResponse, err error) {
@@ -971,6 +1060,31 @@ func (e *experimentApplication) BatchGetExperiments(ctx context.Context, req *ex
 	}, nil
 }
 
+func (e *experimentApplication) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest) (r *expt.GetExperimentIDsByGroupResponse, err error) {
+	session := entity.NewSession(ctx)
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	groupKey := strings.TrimSpace(req.GetExperimentGroupKey())
+	if groupKey == "" {
+		return &expt.GetExperimentIDsByGroupResponse{BaseResp: base.NewBaseResp()}, nil
+	}
+	exptIDs, err := e.manager.GetIDsByGroupKey(ctx, req.GetWorkspaceID(), groupKey, session)
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.GetExperimentIDsByGroupResponse{
+		ExptIds:  exptIDs,
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
 func (e *experimentApplication) ListExperiments(ctx context.Context, req *expt.ListExperimentsRequest) (r *expt.ListExperimentsResponse, err error) {
 	session := entity.NewSession(ctx)
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
@@ -1107,6 +1221,76 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 	return &expt.UpdateExperimentResponse{
 		Experiment: experiment.ToExptDTO(resp),
 		BaseResp:   base.NewBaseResp(),
+	}, nil
+}
+
+// UpdateExptRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// 仅对 Pending / Processing 状态的实验生效；改的是整数值，跳过内容审核。
+func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest) (r *expt.UpdateExptRunConfResponse, err error) {
+	session := entity.NewSession(ctx)
+
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 水平越权校验：仅当实验确实归属当前 workspace 时才允许更新。
+	if got.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("expt %d not found in space %d", req.GetExptID(), req.GetWorkspaceID())))
+	}
+
+	if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	}); err != nil {
+		return nil, err
+	}
+
+	// 解析并校验两个可变字段，得到用于 RMW 的指针（nil = 不修改）。
+	// 注意 0 值语义不对称：ItemConcurNum 的 0 表示"不修改"；ItemRetryNum 的 0 是合法值"不重试"。
+	var itemConcurNum, itemRetryNum *int
+
+	// ItemConcurNum：nil 或 0 = 不修改；<0 拒绝；(0, MaxItemConcurNum] 接受；越上界拒绝。
+	if req.IsSetItemConcurNum() {
+		v := int(req.GetItemConcurNum())
+		if v < 0 {
+			return nil, errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("item concurrent num must not be negative"))
+		}
+		if v > 0 {
+			maxItemConcurNum := e.configer.GetExptExecConf(ctx, req.GetWorkspaceID()).GetExptItemEvalConf().GetMaxItemConcurNum()
+			if v > maxItemConcurNum {
+				return nil, errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item concurrent num must not be greater than %d", maxItemConcurNum)))
+			}
+			itemConcurNum = gptr.Of(v)
+		}
+		// v == 0 时保持 itemConcurNum = nil，即不修改
+	}
+
+	// ItemRetryNum：nil = 不修改；[0, MaxItemRetryNum] 接受（0 = 显式不重试）；越界拒绝。
+	// 用 IsSet 判定而非 >0，避免把"改成不重试(0)"误当"不修改"。
+	if req.IsSetItemRetryNum() {
+		v := int(req.GetItemRetryNum())
+		if !entity.ValidateItemRetryNum(gptr.Of(v)) {
+			return nil, errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item retry num must be in range [0, %d]", entity.MaxItemRetryNum)))
+		}
+		itemRetryNum = gptr.Of(v)
+	}
+
+	if err = e.manager.UpdateRunConf(ctx, &entity.UpdateRunConfParam{
+		ExptID:        req.GetExptID(),
+		SpaceID:       req.GetWorkspaceID(),
+		ItemConcurNum: itemConcurNum,
+		ItemRetryNum:  itemRetryNum,
+		Session:       session,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &expt.UpdateExptRunConfResponse{
+		BaseResp: base.NewBaseResp(),
 	}, nil
 }
 
@@ -1268,6 +1452,16 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
+	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
+	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
+	// Init 失败即视为重试失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
+	if e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
+		concurrency := int32(gptr.Indirect(entity.NormalizeSubmitItemConcurNum(got.EvalConf.ItemConcurNum)))
+		if err := e.initSandboxTask(ctx, "retry experiment", req.GetExptID(), concurrency, req.GetWorkspaceID()); err != nil {
+			return nil, err
+		}
+	}
+
 	switch runMode {
 	case entity.EvaluationModeRetryItems:
 		rid, retried, err := e.manager.LogRetryItemsRun(ctx, req.GetExptID(), runMode, req.GetWorkspaceID(), req.GetItemIds(), session)
@@ -1297,6 +1491,41 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		RunID:    gptr.Of(runID),
 		BaseResp: base.NewBaseResp(),
 	}, nil
+}
+
+func (e *experimentApplication) initSandboxTask(ctx context.Context, scene string, exptID int64, concurrency int32, workspaceID int64) error {
+	if e == nil || e.sandboxSchedulerAdapter == nil {
+		return nil
+	}
+
+	initCtx, cancel := context.WithTimeout(ctx, sandboxSchedulerInitTimeout)
+	defer cancel()
+	if _, initErr := e.sandboxSchedulerAdapter.Init(initCtx, &rpc.SandboxInitRequest{
+		TaskID:      strconv.FormatInt(exptID, 10),
+		Concurrency: concurrency,
+		WorkspaceID: workspaceID,
+	}); initErr != nil {
+		logs.CtxWarn(initCtx, "init sandbox task fail, scene=%s, expt_id=%d, workspace_id=%d, err=%v", scene, exptID, workspaceID, initErr)
+		return errorx.Wrapf(initErr, "init sandbox task fail, scene=%s, expt_id=%d", scene, exptID)
+	}
+	logs.CtxInfo(initCtx, "init sandbox task success, scene=%s, expt_id=%d, workspace_id=%d", scene, exptID, workspaceID)
+	return nil
+}
+
+// isSandboxAgentExperiment 判定实验的评测对象是否为 SandboxAgent。
+// 顶层 TargetType 与 Target.EvalTargetVersion.EvalTargetType 双兜底，兼容不同读路径填充口径。
+func isSandboxAgentExperiment(expt *entity.Experiment) bool {
+	if expt == nil {
+		return false
+	}
+	if expt.TargetType == entity.EvalTargetTypeSandboxAgent {
+		return true
+	}
+	if expt.Target != nil && expt.Target.EvalTargetVersion != nil &&
+		expt.Target.EvalTargetVersion.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+		return true
+	}
+	return false
 }
 
 func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.KillExperimentRequest) (r *expt.KillExperimentResponse, err error) {
@@ -1845,6 +2074,12 @@ func (e *experimentApplication) ExportExptResult_(ctx context.Context, req *expt
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
+	}
+
+	// MultiSetConfig 实验关联多个评测集、列不一致，导出单个 CSV 会混乱，产品决定不支持。
+	// 在入口处按类型直接拒绝，不再发起导出 MQ 事件。
+	if got.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("该类型实验暂不支持导出（多评测集列不一致）"))
 	}
 
 	if !e.configer.GetExptExportWhiteList(ctx).IsUserIDInWhiteList(session.UserID) {

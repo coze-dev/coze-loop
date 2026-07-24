@@ -330,3 +330,27 @@ func CheckExperimentTemplateName(ctx context.Context, c *app.RequestContext) {
 func SubmitExptFromTemplate(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localExptSvc.SubmitExptFromTemplate)
 }
+
+// ListExperimentStandardEvalOutputs .
+// @router /api/evaluation/v1/experiments/:expt_id/runs/:expt_run_id/standard_eval_outputs/list [POST]
+func ListExperimentStandardEvalOutputs(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.ListExperimentStandardEvalOutputs)
+}
+
+// MGetExperimentStandardEvalOutputs .
+// @router /api/evaluation/v1/experiments/:expt_id/runs/:expt_run_id/standard_eval_outputs/batch_get [POST]
+func MGetExperimentStandardEvalOutputs(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.MGetExperimentStandardEvalOutputs)
+}
+
+// GetExperimentIDsByGroup .
+// @router /api/evaluation/v1/experiments/group_ids/batch_get [POST]
+func GetExperimentIDsByGroup(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.GetExperimentIDsByGroup)
+}
+
+// UpdateExptRunConf .
+// @router /api/evaluation/v1/experiments/:expt_id/run_conf [PATCH]
+func UpdateExptRunConf(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.UpdateExptRunConf)
+}

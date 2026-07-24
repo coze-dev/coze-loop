@@ -24,6 +24,7 @@ struct CreateEvalTargetParam {
     9: optional string operation_instruction // type=8时需填写，评测对象操作说明
     10: optional string cluster // type=10时需填写，自定义智能体所属集群
     11: optional eval_target.AgentConnection agent_connection // type=10时需填写，自定义智能体连接信息
+    12: optional eval_target.SandboxAgent sandbox_agent // type=17(SandboxAgent)时需填写，SandboxAgent 评测对象配置
 }
 
 struct CreateEvalTargetResponse {

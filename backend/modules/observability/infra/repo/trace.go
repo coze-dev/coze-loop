@@ -34,6 +34,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 	"github.com/samber/lo"
+	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm/utils"
 )
 
@@ -296,12 +297,22 @@ func (t *TraceRepoImpl) ListSpansRepeat(ctx context.Context, req *repo.ListSpans
 
 	clonedReq := *req
 	totalSpans := loop_span.SpanList{}
+	var totalBytes int64
 
 	for {
 		resp, err := t.ListSpans(ctx, &clonedReq)
 		if err != nil {
 			return nil, err
 		}
+
+		if req.MaxBytes > 0 {
+			pageBytes := int64(loop_span.SizeofSpans(resp.Spans))
+			if totalBytes+pageBytes > req.MaxBytes {
+				return nil, repo.ErrMaxBytesExceeded
+			}
+			totalBytes += pageBytes
+		}
+
 		totalSpans = append(totalSpans, resp.Spans...)
 		if !resp.HasMore || resp.PageToken == "" {
 			break
@@ -374,32 +385,79 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 	}
 	st := time.Now()
 	queryLimit := req.Limit + 1
-	spans, err := spanDao.Get(ctx, &dao.QueryParam{
-		QueryType:        dao.QueryTypeGetTrace,
-		Tables:           tableCfg.SpanTables,
-		AnnoTableMap:     tableCfg.AnnoTableMap,
-		StartTime:        time_util.MillSec2MicroSec(req.StartAt),
-		EndTime:          time_util.MillSec2MicroSec(req.EndAt),
-		Filters:          filter,
-		Limit:            queryLimit,
-		OrderByStartTime: req.DescByStartTime,
-		OmitColumns:      req.OmitColumns,
-		SelectColumns:    req.SelectColumns,
-		Extra:            spanStorage.StorageConfig,
-	})
-	if err != nil {
-		return nil, err
+
+	canParallelAnno := tableCfg.NeedQueryAnno && !req.NotQueryAnnotation && len(req.SpanIDs) > 0
+	var spans []*dao.Span
+	var annotations []*dao.Annotation
+
+	if canParallelAnno {
+		g, gCtx := errgroup.WithContext(ctx)
+		g.Go(func() error {
+			var err error
+			spans, err = spanDao.Get(gCtx, &dao.QueryParam{
+				QueryType:        dao.QueryTypeGetTrace,
+				Tables:           tableCfg.SpanTables,
+				AnnoTableMap:     tableCfg.AnnoTableMap,
+				StartTime:        time_util.MillSec2MicroSec(req.StartAt),
+				EndTime:          time_util.MillSec2MicroSec(req.EndAt),
+				Filters:          filter,
+				Limit:            queryLimit,
+				OrderByStartTime: req.DescByStartTime,
+				OmitColumns:      req.OmitColumns,
+				SelectColumns:    req.SelectColumns,
+				Extra:            spanStorage.StorageConfig,
+			})
+			return err
+		})
+		g.Go(func() error {
+			var err error
+			annotations, err = annoDao.List(gCtx, &dao.ListAnnotationsParam{
+				Tables:    tableCfg.AnnoTables,
+				SpanIDs:   req.SpanIDs,
+				StartTime: time_util.MillSec2MicroSec(req.StartAt),
+				EndTime:   time_util.MillSec2MicroSec(req.EndAt),
+				Limit:     int32(min(len(req.SpanIDs)*100, 10000)),
+				Extra:     spanStorage.StorageConfig,
+			})
+			return err
+		})
+		if err := g.Wait(); err != nil {
+			return nil, err
+		}
+	} else {
+		var err error
+		spans, err = spanDao.Get(ctx, &dao.QueryParam{
+			QueryType:        dao.QueryTypeGetTrace,
+			Tables:           tableCfg.SpanTables,
+			AnnoTableMap:     tableCfg.AnnoTableMap,
+			StartTime:        time_util.MillSec2MicroSec(req.StartAt),
+			EndTime:          time_util.MillSec2MicroSec(req.EndAt),
+			Filters:          filter,
+			Limit:            queryLimit,
+			OrderByStartTime: req.DescByStartTime,
+			OmitColumns:      req.OmitColumns,
+			SelectColumns:    req.SelectColumns,
+			Extra:            spanStorage.StorageConfig,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	logs.CtxInfo(ctx, "get trace %s successfully, spans count %d, cost %v",
 		req.TraceID, len(spans), time.Since(st))
 	spanDOList := converter.SpanListPO2DO(spans)
-	if tableCfg.NeedQueryAnno && !req.NotQueryAnnotation && len(spans) > 0 {
+	if canParallelAnno && len(spans) > 0 {
+		logs.CtxInfo(ctx, "get annotations successfully (parallel), annotations count %d, cost %v", len(annotations), time.Since(st))
+		annoDOList := converter.AnnotationListPO2DO(annotations)
+		spanDOList.SetAnnotations(annoDOList.Uniq())
+	} else if tableCfg.NeedQueryAnno && !req.NotQueryAnnotation && len(spans) > 0 {
 		spanIDs := lo.UniqMap(spans, func(item *dao.Span, _ int) string {
 			return item.SpanID
 		})
 		annoStartTime, annoEndTime := spanTimeRange(spans)
-		st = time.Now()
-		annotations, err := annoDao.List(ctx, &dao.ListAnnotationsParam{
+		stAnno := time.Now()
+		annos, err := annoDao.List(ctx, &dao.ListAnnotationsParam{
 			Tables:    tableCfg.AnnoTables,
 			SpanIDs:   spanIDs,
 			StartTime: annoStartTime,
@@ -410,8 +468,8 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		if err != nil {
 			return nil, err
 		}
-		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
-		annoDOList := converter.AnnotationListPO2DO(annotations)
+		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annos), time.Since(stAnno))
+		annoDOList := converter.AnnotationListPO2DO(annos)
 		spanDOList.SetAnnotations(annoDOList.Uniq())
 	}
 	result := &repo.GetTraceResult{

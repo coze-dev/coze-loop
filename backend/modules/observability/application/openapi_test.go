@@ -263,9 +263,12 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 					}
 					return ""
 				}).AnyTimes()
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 				return fields{
@@ -356,9 +359,12 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -433,9 +439,12 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -510,9 +519,12 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -548,9 +560,12 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -587,9 +602,12 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 					Return(nil, assert.AnError)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -628,9 +646,12 @@ func TestOpenAPIApplication_CreateAnnotation(t *testing.T) {
 				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -729,9 +750,12 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 					}
 					return ""
 				}).AnyTimes()
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 				return fields{
@@ -767,9 +791,12 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -804,9 +831,12 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 					Return(nil, assert.AnError)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -843,9 +873,12 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 				}, nil)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -1674,9 +1707,12 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -1717,9 +1753,12 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -1833,9 +1872,12 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -1876,9 +1918,12 @@ func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -1962,9 +2007,12 @@ func TestOpenAPIApplication_DeleteAnnotation_AdditionalScenarios(t *testing.T) {
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -2003,9 +2051,12 @@ func TestOpenAPIApplication_DeleteAnnotation_AdditionalScenarios(t *testing.T) {
 				workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
 				workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("123").AnyTimes()
 				workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("").AnyTimes()
+				rateLimiterInner := limitermocks.NewMockIRateLimiter(ctrl)
+				rateLimiterInner.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil).AnyTimes()
 				rateLimiterMock := limitermocks.NewMockIRateLimiterFactory(ctrl)
-				rateLimiterMock.EXPECT().NewRateLimiter().Return(limitermocks.NewMockIRateLimiter(ctrl)).AnyTimes()
+				rateLimiterMock.EXPECT().NewRateLimiter().Return(rateLimiterInner).AnyTimes()
 				traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), gomock.Any()).Return(100, nil).AnyTimes()
 				metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 				return fields{
 					traceService: traceServiceMock,
@@ -3360,6 +3411,124 @@ func TestOpenAPIApplication_AllowByKey(t *testing.T) {
 		result := app.AllowByKey(context.Background(), "test_key")
 		assert.True(t, result) // Defaults to allowing requests when an error occurs.
 	})
+}
+
+func TestOpenAPIApplication_AllowAnnotationByKey(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("allow annotation - success", func(t *testing.T) {
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+
+		traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "test_key").Return(10, nil)
+		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:test_key", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+
+		app := &OpenAPIApplication{
+			traceConfig: traceConfigMock,
+			rateLimiter: rateLimiterMock,
+		}
+
+		result := app.AllowAnnotationByKey(context.Background(), "test_key")
+		assert.True(t, result)
+	})
+
+	t.Run("allow annotation - rate limited", func(t *testing.T) {
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+
+		traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "test_key").Return(10, nil)
+		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:test_key", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
+
+		app := &OpenAPIApplication{
+			traceConfig: traceConfigMock,
+			rateLimiter: rateLimiterMock,
+		}
+
+		result := app.AllowAnnotationByKey(context.Background(), "test_key")
+		assert.False(t, result)
+	})
+
+	t.Run("allow annotation - config error", func(t *testing.T) {
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+
+		traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "test_key").Return(0, assert.AnError)
+
+		app := &OpenAPIApplication{
+			traceConfig: traceConfigMock,
+			rateLimiter: rateLimiterMock,
+		}
+
+		result := app.AllowAnnotationByKey(context.Background(), "test_key")
+		assert.True(t, result)
+	})
+
+	t.Run("allow annotation - rate limiter error", func(t *testing.T) {
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+
+		traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "test_key").Return(10, nil)
+		rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:test_key", 1, gomock.Any()).Return(nil, assert.AnError)
+
+		app := &OpenAPIApplication{
+			traceConfig: traceConfigMock,
+			rateLimiter: rateLimiterMock,
+		}
+
+		result := app.AllowAnnotationByKey(context.Background(), "test_key")
+		assert.True(t, result)
+	})
+}
+
+func TestOpenAPIApplication_CreateAnnotation_RateLimited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "1").Return(10, nil)
+
+	rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+	rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:1", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
+
+	app := &OpenAPIApplication{
+		traceConfig: traceConfigMock,
+		rateLimiter: rateLimiterMock,
+	}
+
+	resp, err := app.CreateAnnotation(context.Background(), &openapi.CreateAnnotationRequest{
+		WorkspaceID:         1,
+		AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeString)),
+		AnnotationValue:     "test",
+		Base:                &base.Base{Caller: "test"},
+	})
+	assert.Nil(t, resp)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "qps limit exceeded")
+}
+
+func TestOpenAPIApplication_DeleteAnnotation_RateLimited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetAnnotationMaxQPS(gomock.Any(), "1").Return(10, nil)
+
+	rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+	rateLimiterMock.EXPECT().AllowN(gomock.Any(), "annotation:1", 1, gomock.Any()).Return(&limiter.Result{Allowed: false}, nil)
+
+	app := &OpenAPIApplication{
+		traceConfig: traceConfigMock,
+		rateLimiter: rateLimiterMock,
+	}
+
+	resp, err := app.DeleteAnnotation(context.Background(), &openapi.DeleteAnnotationRequest{
+		WorkspaceID: 1,
+		Base:        &base.Base{Caller: "test"},
+	})
+	assert.Nil(t, resp)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "qps limit exceeded")
 }
 
 // 补充辅助函数测试

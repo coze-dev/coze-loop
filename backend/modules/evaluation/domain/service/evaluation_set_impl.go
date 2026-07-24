@@ -43,6 +43,9 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, para
 		EvaluationSetItems: param.EvaluationSetSchema,
 		BizCategory:        param.BizCategory,
 		Session:            param.Session,
+		DatasetType:        param.DatasetType,
+		Tags:               param.Tags,
+		DatasetKey:         param.DatasetKey,
 	})
 }
 
@@ -61,6 +64,7 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Con
 		FieldMappings:      param.FieldMappings,
 		Session:            param.Session,
 		Option:             param.Option,
+		DatasetType:        param.DatasetType,
 	})
 }
 
@@ -80,7 +84,7 @@ func (d *EvaluationSetServiceImpl) UpdateEvaluationSet(ctx context.Context, para
 		return errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 	// 依赖数据集服务
-	return d.datasetRPCAdapter.UpdateDataset(ctx, param.SpaceID, param.EvaluationSetID, param.Name, param.Description)
+	return d.datasetRPCAdapter.UpdateDataset(ctx, param.SpaceID, param.EvaluationSetID, param.Name, param.Description, param.Tags)
 }
 
 func (d *EvaluationSetServiceImpl) DeleteEvaluationSet(ctx context.Context, spaceID, evaluationSetID int64) (err error) {
@@ -112,6 +116,8 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 		PageSize:         param.PageSize,
 		PageToken:        param.PageToken,
 		OrderBys:         param.OrderBys,
+		TagFilter:        param.TagFilter,
+		DatasetKeys:      param.DatasetKeys,
 	})
 }
 

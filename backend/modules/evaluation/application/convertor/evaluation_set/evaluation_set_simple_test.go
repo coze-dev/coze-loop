@@ -118,6 +118,7 @@ func TestEvaluationSetDO2DTO_Simple(t *testing.T) {
 				Status:            gptr.Of(dataset.DatasetStatus(0)),
 				ItemCount:         gptr.Of(int64(0)),
 				ChangeUncommitted: gptr.Of(false),
+				DatasetKey:        gptr.Of(""),
 				LatestVersion:     gptr.Of(""),
 				NextVersionNum:    gptr.Of(int64(0)),
 			},
@@ -442,4 +443,47 @@ func TestUploadAttachmentDetailDO2DTO(t *testing.T) {
 			assert.Equal(t, tt.expected, UploadAttachmentDetailDO2DTO(tt.input))
 		})
 	}
+}
+
+func TestTagFilterDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	got, err := TagFilterDTO2DO(nil)
+	assert.NoError(t, err)
+	assert.Nil(t, got)
+
+	got, err = TagFilterDTO2DO(&eval_set.TagFilter{
+		TagNames: []string{" beta ", "alpha", "alpha"},
+	})
+	assert.NoError(t, err)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, []string{"alpha", "beta"}, got.TagNames)
+		assert.Equal(t, entity.TagFilterRelationOr, got.Relation)
+	}
+
+	relation := eval_set.TagFilterRelationAnd
+	got, err = TagFilterDTO2DO(&eval_set.TagFilter{
+		TagNames: []string{"alpha"},
+		Relation: &relation,
+	})
+	assert.NoError(t, err)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, entity.TagFilterRelationAnd, got.Relation)
+	}
+
+	got, err = TagFilterDTO2DO(&eval_set.TagFilter{})
+	assert.Nil(t, got)
+	assert.ErrorContains(t, err, "tag_filter.tag_names is required")
+
+	got, err = TagFilterDTO2DO(&eval_set.TagFilter{TagNames: []string{"  "}})
+	assert.Nil(t, got)
+	assert.ErrorContains(t, err, "tag_name is required")
+
+	invalidRelation := eval_set.TagFilterRelation("xor")
+	got, err = TagFilterDTO2DO(&eval_set.TagFilter{
+		TagNames: []string{"alpha"},
+		Relation: &invalidRelation,
+	})
+	assert.Nil(t, got)
+	assert.ErrorContains(t, err, "tag_filter.relation must be or or and")
 }

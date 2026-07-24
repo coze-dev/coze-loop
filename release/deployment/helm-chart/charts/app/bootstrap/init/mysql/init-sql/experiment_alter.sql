@@ -19,3 +19,11 @@ ALTER TABLE `experiment` ADD COLUMN `trial_run_item_count` bigint unsigned DEFAU
 ALTER TABLE `experiment` ADD COLUMN `offline_expt_analysis_status` int unsigned NOT NULL DEFAULT '0' COMMENT '离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)';
 
 ALTER TABLE `experiment` ADD COLUMN `notification_conf` blob COMMENT '通知配置，json格式存储webhook/飞书通知配置';
+
+ALTER TABLE `experiment` ADD COLUMN `experiment_group_key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '实验分组key，默认实验ID' AFTER `name`;
+
+ALTER TABLE `experiment`
+    ADD INDEX `idx_experiment_group_key_deleted_at` (`experiment_group_key`, `deleted_at`);
+
+ALTER TABLE `experiment`
+    ADD COLUMN `eval_set_source_type` int unsigned NOT NULL DEFAULT '1' COMMENT '评测集来源模式: 1=SingleSet(老,单评测集) / 2=MultiSetConfig(新,多评测集+配置,权威源 eval_conf)' AFTER `eval_set_id`;

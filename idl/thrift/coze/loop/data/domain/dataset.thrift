@@ -76,6 +76,7 @@ enum SchemaKey {
     Message = 5
     SingleChoice = 6 // 单选
     Trajectory = 7  // 轨迹
+    MessageList = 8 // 多轮对话
 }
 
 struct DatasetFeatures {
@@ -103,6 +104,7 @@ struct Dataset {
     20: optional string latest_version                 // 最新的版本号
     21: optional i64 next_version_num (api.js_conv="true", go.tag='json:"next_version_num"')                   // 下一个的版本号
     22: optional i64 item_count (api.js_conv="true", go.tag='json:"item_count"')    // 数据条数
+    23: optional string dataset_key                   // 数据集业务唯一键，创建后不可变
 
     /* 通用信息 */
     100: optional string created_by
@@ -312,6 +314,7 @@ struct FieldWriteOption {
     1: optional string field_name, // 写入时设置 field name 即可，自动根据草稿态的 schema 填充下方的 field key
     2: optional string field_key,
     4: optional MultiModalStoreOption multi_modal_store_opt,
+    5: optional MultiModalStoreStrategy message_list_store_strategy, // MessageList 多模态资源存储策略
 }
 
 struct MultiModalStoreOption {

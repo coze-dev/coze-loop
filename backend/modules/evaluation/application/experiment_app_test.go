@@ -370,6 +370,34 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 			wantErr:  true,
 			wantCode: 0, // Don't expect specific error code since it's a fmt.Errorf
 		},
+		{
+			// ★ 硬校验: source_type=MultiSetConfig 但 eval_set_configs 为空 → InvalidParam
+			name: "source type multi without configs",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID:       validWorkspaceID,
+				Name:              gptr.Of("test_experiment"),
+				EvalSetSourceType: gptr.Of(expt.ExptEvalSetSourceType_MultiSetConfig),
+			},
+			mockSetup: func() {}, // 校验在任何 mock 调用前早失败
+			wantResp:  nil,
+			wantErr:   true,
+			wantCode:  errno.CommonInvalidParamCode,
+		},
+		{
+			// ★ 硬校验: 带 eval_set_configs 但 source_type 缺省(非 MultiSetConfig) → InvalidParam
+			name: "configs without source type multi",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				Name:        gptr.Of("test_experiment"),
+				EvalSetConfigs: []*expt.EvalSetConfig{
+					{EvalSetID: 111, EvalSetVersionID: 222},
+				},
+			},
+			mockSetup: func() {}, // 校验在任何 mock 调用前早失败
+			wantResp:  nil,
+			wantErr:   true,
+			wantCode:  errno.CommonInvalidParamCode,
+		},
 	}
 
 	for _, tt := range tests {
@@ -741,6 +769,7 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockScheduler := servicemocks.NewMockExptSchedulerEvent(ctrl)
 	mockIDGen := idgenmock.NewMockIIDGenerator(ctrl)
+	mockSandboxScheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
 	// Test data
 	// 测试数据
 	validWorkspaceID := int64(123)
@@ -848,6 +877,38 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "sandbox agent init failure blocks submit",
+			req: &exptpb.SubmitExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				Name:        gptr.Of("sandbox_experiment"),
+				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_SandboxAgent),
+				},
+				Session: &common.Session{
+					UserID: gptr.Of(int64(789)),
+				},
+				ItemConcurNum:      gptr.Of(int32(1)),
+				TargetFieldMapping: &expt.TargetFieldMapping{},
+			},
+			mockSetup: func() {
+				sandboxExpt := *validExpt
+				sandboxExpt.Name = "sandbox_experiment"
+				sandboxExpt.Target = &entity.EvalTarget{
+					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				}
+				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), &entity.Session{UserID: "789", AppID: 0}).Return(&sandboxExpt, nil)
+				mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
+					TaskID:      strconv.FormatInt(validExptID, 10),
+					Concurrency: int32(1),
+					WorkspaceID: validWorkspaceID,
+				}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			wantResp: nil,
+			wantErr:  true,
+			wantCode: 0,
+		},
+		{
 			name: "parameter validation failed - CreateEvalTargetParam is empty",
 			req: &exptpb.SubmitExperimentRequest{
 				WorkspaceID: validWorkspaceID,
@@ -875,11 +936,12 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 			// Create object under test
 			// 创建被测试对象
 			app := &experimentApplication{
-				manager:            mockManager,
-				resultSvc:          mockResultSvc,
-				auth:               mockAuth,
-				ExptSchedulerEvent: mockScheduler,
-				idgen:              mockIDGen,
+				manager:                 mockManager,
+				resultSvc:               mockResultSvc,
+				auth:                    mockAuth,
+				ExptSchedulerEvent:      mockScheduler,
+				idgen:                   mockIDGen,
+				sandboxSchedulerAdapter: mockSandboxScheduler,
 			}
 			// Execute test
 			gotResp, err := app.SubmitExperiment(context.Background(), tt.req)
@@ -2806,6 +2868,7 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil, // templateManager
 				nil, // fileProvider
 				nil, // lifecycleEventHandler
+				nil, // sandboxSchedulerAdapter
 			)
 
 			// 执行测试
@@ -3057,6 +3120,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // templateManager
 				nil, // fileProvider
 				nil, // lifecycleEventHandler
+				nil, // sandboxSchedulerAdapter
 			)
 
 			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
@@ -3160,6 +3224,7 @@ func TestExperimentApplication_CreateExperimentTemplate(t *testing.T) {
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
+		nil,                 // sandboxSchedulerAdapter
 	)
 
 	resp, err := app.CreateExperimentTemplate(context.Background(), req)
@@ -3262,6 +3327,7 @@ func TestExperimentApplication_BatchGetExperimentTemplate(t *testing.T) {
 				mockTemplateManager, // templateManager
 				nil,                 // fileProvider
 				nil,                 // lifecycleEventHandler
+				nil,                 // sandboxSchedulerAdapter
 			)
 			resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
 			if tt.wantErr {
@@ -3306,6 +3372,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
 		assert.Error(t, err)
@@ -3341,15 +3408,24 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			BaseInfo: existing.BaseInfo,
 		}
 
-		// 先 Get 做权限用
+		// 先 Get 拿 owner + 存在性
 		mockTemplateManager.EXPECT().
 			Get(gomock.Any(), templateID, workspaceID, gomock.Any()).
 			Return(existing, nil)
 
-		// 使用 Authorization 做空间级模板读权限校验
+		// 对象级 edit 权限校验
 		mockAuth.EXPECT().
-			Authorization(gomock.Any(), gomock.Any()).
-			Return(nil)
+			AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, param *rpc.AuthorizationWithoutSPIParam) error {
+				assert.Equal(t, strconv.FormatInt(templateID, 10), param.ObjectID)
+				assert.Equal(t, workspaceID, param.SpaceID)
+				assert.Equal(t, workspaceID, param.ResourceSpaceID)
+				assert.Equal(t, "u1", *param.OwnerID)
+				assert.Equal(t, 1, len(param.ActionObjects))
+				assert.Equal(t, "edit", *param.ActionObjects[0].Action)
+				assert.Equal(t, rpc.AuthEntityType_EvaluationExptTemplate, *param.ActionObjects[0].EntityType)
+				return nil
+			})
 
 		mockTemplateManager.EXPECT().
 			Update(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -3376,10 +3452,69 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		resp, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.NoError(t, err)
 		assert.Equal(t, "new_name", resp.GetExperimentTemplate().GetMeta().GetName())
+	})
+
+	t.Run("no edit permission rejected", func(t *testing.T) {
+		req := &exptpb.UpdateExperimentTemplateRequest{
+			WorkspaceID: workspaceID,
+			TemplateID:  templateID,
+			Meta: &expt.ExptTemplateMeta{
+				Name: gptr.Of("new_name"),
+			},
+		}
+
+		existing := &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				ID:          templateID,
+				WorkspaceID: workspaceID,
+				Name:        "old_name",
+			},
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{UserID: gptr.Of("u1")},
+			},
+		}
+
+		// Get 正常返回他人模板
+		mockTemplateManager.EXPECT().
+			Get(gomock.Any(), templateID, workspaceID, gomock.Any()).
+			Return(existing, nil)
+
+		// 对象级 edit 校验失败：仅有 list/read 权限的用户被拒绝
+		mockAuth.EXPECT().
+			AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+			Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+
+		// Update 绝不应被调用（gomock 未声明即禁止调用）
+
+		app := NewExperimentApplication(
+			nil,                 // aggResultSvc
+			nil,                 // resultSvc
+			nil,                 // manager
+			nil,                 // scheduler
+			nil,                 // recordEval
+			nil,                 // idgen
+			nil,                 // configer
+			mockAuth,            // auth
+			mockUserInfo,        // userInfoService
+			nil,                 // evalTargetService
+			nil,                 // evaluationSetItemService
+			nil,                 // annotateService
+			nil,                 // tagRPCAdapter
+			nil,                 // exptResultExportService
+			nil,                 // exptInsightAnalysisService
+			nil,                 // evaluatorService
+			mockTemplateManager, // templateManager
+			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
+		)
+		_, err := app.UpdateExperimentTemplate(context.Background(), req)
+		assert.Error(t, err)
 	})
 }
 
@@ -3414,6 +3549,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
 		assert.Error(t, err)
@@ -3481,6 +3617,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
+			nil,                 // sandboxSchedulerAdapter
 		)
 		resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
 		assert.NoError(t, err)
@@ -3531,6 +3668,7 @@ func TestExperimentApplication_DeleteExperimentTemplate(t *testing.T) {
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
+		nil,                 // sandboxSchedulerAdapter
 	)
 	resp, err := app.DeleteExperimentTemplate(context.Background(), req)
 	assert.NoError(t, err)
@@ -3603,6 +3741,7 @@ func TestExperimentApplication_ListExperimentTemplates(t *testing.T) {
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
+		nil,                 // sandboxSchedulerAdapter
 	)
 	resp, err := app.ListExperimentTemplates(context.Background(), req)
 	assert.NoError(t, err)
@@ -3646,6 +3785,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3674,6 +3814,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3705,6 +3846,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3738,6 +3880,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
+			nil, // sandboxSchedulerAdapter
 		)
 		// 这个测试主要验证 FilterOption 不为 nil 时会调用 Convert
 		// 具体的转换逻辑在 filter convertor 的测试中覆盖
@@ -4121,8 +4264,8 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 					[]*entity.ExptAggregateResult{
 						{
 							ExperimentID: validExptID,
-							EvaluatorResults: map[int64]*entity.EvaluatorAggregateResult{
-								validEvaluatorVersionID: {
+							EvaluatorResults: map[string]*entity.EvaluatorAggregateResult{
+								entity.EncodeEvaluatorInstanceKey(validEvaluatorVersionID, ""): {
 									EvaluatorVersionID: validEvaluatorVersionID,
 									AggregatorResults: []*entity.AggregatorResult{
 										{
@@ -6873,6 +7016,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	mockManager := servicemocks.NewMockIExptManager(ctrl)
 	mockIDGen := idgenmock.NewMockIIDGenerator(ctrl)
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockSandboxScheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
 
 	validWorkspaceID := int64(123)
 	validExptID := int64(456)
@@ -6890,6 +7034,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	app := NewExperimentApplication(
 		nil, nil, mockManager, nil, nil, mockIDGen, nil, mockAuth,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		mockSandboxScheduler,
 	)
 
 	t.Run("auth fails", func(t *testing.T) {
@@ -6917,6 +7062,24 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, validRunID, resp.GetRunID())
+	})
+
+	t.Run("SandboxAgent re-init failure blocks retry", func(t *testing.T) {
+		sandboxExpt := *baseExpt
+		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
+			TaskID:      strconv.FormatInt(validExptID, 10),
+			Concurrency: int32(entity.DefaultSubmitItemConcurNum),
+			WorkspaceID: validWorkspaceID,
+		}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+		})
+		assert.Error(t, err)
 	})
 
 	t.Run("RetryItems mode - already retried", func(t *testing.T) {
@@ -7021,6 +7184,7 @@ func TestExperimentApplication_ListExperimentTemplates_MoreBranches(t *testing.T
 	app := NewExperimentApplication(
 		nil, nil, nil, nil, nil, nil, nil,
 		mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+		nil,
 		nil,
 	)
 
@@ -7729,6 +7893,165 @@ func TestExperimentApplication_UpdateExperiment_MoreBranches(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+
+	const (
+		validWorkspaceID = int64(123)
+		validExptID      = int64(456)
+		validUserID      = "789"
+		maxItemConcurNum = 200
+	)
+	execConf := &entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{MaxItemConcurNum: maxItemConcurNum}}
+	baseExpt := &entity.Experiment{ID: validExptID, SpaceID: validWorkspaceID, Status: entity.ExptStatus_Processing, CreatedBy: validUserID}
+
+	tests := []struct {
+		name      string
+		req       *exptpb.UpdateExptRunConfRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "并发度>0 正常传给 domain",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.UpdateRunConfParam) error {
+						assert.Equal(t, validExptID, param.ExptID)
+						assert.Equal(t, validWorkspaceID, param.SpaceID)
+						assert.Equal(t, 10, gptr.Indirect(param.ItemConcurNum)) // 传了 *10
+						assert.Nil(t, param.ItemRetryNum)                       // 未传
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度=0 视为不修改（传 nil）",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(0)), ItemRetryNum: gptr.Of(int32(3))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.UpdateRunConfParam) error {
+						assert.Nil(t, param.ItemConcurNum) // 0 → 不修改
+						assert.Equal(t, 3, gptr.Indirect(param.ItemRetryNum))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "重试=0 显式落库（传 *0）",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemRetryNum: gptr.Of(int32(0))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.UpdateRunConfParam) error {
+						assert.Nil(t, param.ItemConcurNum)
+						assert.NotNil(t, param.ItemRetryNum) // IsSet → 传指针
+						assert.Equal(t, 0, gptr.Indirect(param.ItemRetryNum))
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "并发度<0 拒绝",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(-1))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				// 不应调用 UpdateRunConf
+			},
+			wantErr: true,
+		},
+		{
+			name: "并发度超上限拒绝",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(maxItemConcurNum + 1))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "重试超上限拒绝",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemRetryNum: gptr.Of(int32(entity.MaxItemRetryNum + 1))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "越权拒绝（space 不匹配）",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mismatch := &entity.Experiment{ID: validExptID, SpaceID: validWorkspaceID + 1, Status: entity.ExptStatus_Processing, CreatedBy: validUserID}
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(mismatch, nil)
+				// 不应调用鉴权 / UpdateRunConf
+			},
+			wantErr: true,
+		},
+		{
+			name: "manager.Get 返回错误早退",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(nil, errors.New("db err"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "鉴权失败早退",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("forbidden"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "domain UpdateRunConf 返回错误透传",
+			req:  &exptpb.UpdateExptRunConfRequest{ExptID: validExptID, WorkspaceID: validWorkspaceID, ItemConcurNum: gptr.Of(int32(10))},
+			mockSetup: func() {
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).Return(baseExpt, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), validWorkspaceID).Return(execConf).AnyTimes()
+				mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).Return(errors.New("domain fail"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &experimentApplication{
+				manager:  mockManager,
+				auth:     mockAuth,
+				configer: mockConfiger,
+			}
+			tt.mockSetup()
+			_, err := app.UpdateExptRunConf(context.Background(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

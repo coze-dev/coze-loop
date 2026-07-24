@@ -10,237 +10,271 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 
+	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-func TestExptAggregateResultDOToDTO(t *testing.T) {
-	t.Run("nil input", func(t *testing.T) {
-		assert.Nil(t, ExptAggregateResultDOToDTO(nil))
-	})
-
-	t.Run("full input", func(t *testing.T) {
-		updateTime := time.Unix(1000, 0)
-		data := &entity.ExptAggregateResult{
-			ExperimentID: 100,
-			Status:       1,
-			UpdateTime:   &updateTime,
-			EvaluatorResults: map[int64]*entity.EvaluatorAggregateResult{
-				10: {
-					EvaluatorVersionID: 10,
-					AggregatorResults: []*entity.AggregatorResult{
-						{AggregatorType: entity.Average, Data: &entity.AggregateData{Value: gptr.Of(0.95)}},
-					},
-					Name:    gptr.Of("eval1"),
-					Version: gptr.Of("v1"),
-				},
-			},
-			AnnotationResults: map[int64]*entity.AnnotationAggregateResult{
-				20: {
-					TagKeyID: 20,
-					AggregatorResults: []*entity.AggregatorResult{
-						{AggregatorType: entity.Sum, Data: &entity.AggregateData{Value: gptr.Of(5.0)}},
-					},
-					Name: gptr.Of("tag1"),
-				},
-			},
-			WeightedResults: []*entity.AggregatorResult{
-				{AggregatorType: entity.Average, Data: &entity.AggregateData{Value: gptr.Of(0.88)}},
-			},
-		}
-
-		dto := ExptAggregateResultDOToDTO(data)
-		assert.NotNil(t, dto)
-		assert.Equal(t, int64(100), dto.ExperimentID)
-		assert.Equal(t, int64(1000), *dto.UpdateTime)
-		assert.Len(t, dto.EvaluatorResults, 1)
-		assert.NotNil(t, dto.EvaluatorResults[10])
-		assert.Len(t, dto.AnnotationResults, 1)
-		assert.NotNil(t, dto.AnnotationResults[20])
-		assert.Len(t, dto.WeightedResults, 1)
-	})
-
-	t.Run("without update time", func(t *testing.T) {
-		data := &entity.ExptAggregateResult{
-			ExperimentID:      200,
-			EvaluatorResults:  map[int64]*entity.EvaluatorAggregateResult{},
-			AnnotationResults: map[int64]*entity.AnnotationAggregateResult{},
-		}
-		dto := ExptAggregateResultDOToDTO(data)
-		assert.NotNil(t, dto)
-		assert.Nil(t, dto.UpdateTime)
-	})
-}
-
-func TestEvaluatorResultsDOToDTO(t *testing.T) {
-	t.Run("nil input", func(t *testing.T) {
-		assert.Nil(t, EvaluatorResultsDOToDTO(nil))
-	})
-
-	t.Run("normal input", func(t *testing.T) {
-		result := &entity.EvaluatorAggregateResult{
-			EvaluatorVersionID: 10,
-			AggregatorResults: []*entity.AggregatorResult{
-				{AggregatorType: entity.Average, Data: &entity.AggregateData{Value: gptr.Of(0.5)}},
-			},
-			Name:    gptr.Of("eval"),
-			Version: gptr.Of("v1"),
-		}
-		dto := EvaluatorResultsDOToDTO(result)
-		assert.NotNil(t, dto)
-		assert.Equal(t, int64(10), dto.EvaluatorVersionID)
-		assert.Equal(t, "eval", *dto.Name)
-		assert.Equal(t, "v1", *dto.Version)
-		assert.Len(t, dto.AggregatorResults, 1)
-	})
-}
-
-func TestAnnotationResultDOToDTO(t *testing.T) {
-	t.Run("nil input", func(t *testing.T) {
-		assert.Nil(t, AnnotationResultDOToDTO(nil))
-	})
-
-	t.Run("normal input", func(t *testing.T) {
-		result := &entity.AnnotationAggregateResult{
-			TagKeyID: 20,
-			AggregatorResults: []*entity.AggregatorResult{
-				{AggregatorType: entity.Sum, Data: &entity.AggregateData{Value: gptr.Of(3.0)}},
-			},
-			Name: gptr.Of("tag"),
-		}
-		dto := AnnotationResultDOToDTO(result)
-		assert.NotNil(t, dto)
-		assert.Equal(t, int64(20), dto.TagKeyID)
-		assert.Equal(t, "tag", *dto.Name)
-	})
-}
-
-func TestAggregatorResultDOsToDTOs(t *testing.T) {
-	t.Run("nil input", func(t *testing.T) {
-		assert.Nil(t, AggregatorResultDOsToDTOs(nil))
-	})
-
-	t.Run("empty input", func(t *testing.T) {
-		assert.Nil(t, AggregatorResultDOsToDTOs([]*entity.AggregatorResult{}))
-	})
-
-	t.Run("normal input", func(t *testing.T) {
-		results := []*entity.AggregatorResult{
-			{AggregatorType: entity.Average, Data: &entity.AggregateData{Value: gptr.Of(1.0)}},
-			nil,
-		}
-		dtos := AggregatorResultDOsToDTOs(results)
-		assert.Len(t, dtos, 2)
-		assert.NotNil(t, dtos[0])
-		assert.Nil(t, dtos[1])
-	})
-}
-
-func TestAggregatorResultDOToDTO(t *testing.T) {
-	t.Run("nil input", func(t *testing.T) {
-		assert.Nil(t, AggregatorResultDOToDTO(nil))
-	})
-
-	t.Run("normal input", func(t *testing.T) {
-		result := &entity.AggregatorResult{
-			AggregatorType: entity.Average,
-			Data:           &entity.AggregateData{Value: gptr.Of(0.75)},
-		}
-		dto := AggregatorResultDOToDTO(result)
-		assert.NotNil(t, dto)
-		assert.Equal(t, 0.75, *dto.Data.Value)
-	})
-}
-
 func TestAggregateDataDOToDTO(t *testing.T) {
-	t.Run("nil input", func(t *testing.T) {
-		assert.Nil(t, AggregateDataDOToDTO(nil))
-	})
+	t.Parallel()
 
-	t.Run("with value only", func(t *testing.T) {
-		data := &entity.AggregateData{
-			Value: gptr.Of(0.123456),
-		}
-		dto := AggregateDataDOToDTO(data)
-		assert.NotNil(t, dto)
-		assert.Equal(t, 0.12, *dto.Value)
-	})
+	assert.Nil(t, AggregateDataDOToDTO(nil))
 
-	t.Run("with score distribution", func(t *testing.T) {
-		data := &entity.AggregateData{
-			ScoreDistribution: &entity.ScoreDistributionData{
-				ScoreDistributionItems: []*entity.ScoreDistributionItem{
-					{Score: "1.0", Count: 5, Percentage: 0.5},
-					nil,
-					{Score: "2.0", Count: 5, Percentage: 0.5},
+	tests := []struct {
+		name   string
+		input  *entity.AggregateData
+		verify func(t *testing.T, got *domain_expt.AggregateData)
+	}{
+		{
+			name: "value rounded to two decimals",
+			input: &entity.AggregateData{
+				DataType: entity.Double,
+				Value:    gptr.Of(0.12345),
+			},
+			verify: func(t *testing.T, got *domain_expt.AggregateData) {
+				assert.Equal(t, domain_expt.DataType(entity.Double), got.DataType)
+				if assert.NotNil(t, got.Value) {
+					assert.Equal(t, 0.12, *got.Value)
+				}
+			},
+		},
+		{
+			name: "value nil left nil",
+			input: &entity.AggregateData{
+				DataType: entity.Double,
+			},
+			verify: func(t *testing.T, got *domain_expt.AggregateData) {
+				assert.Nil(t, got.Value)
+			},
+		},
+		{
+			name: "score distribution converted",
+			input: &entity.AggregateData{
+				DataType: entity.ScoreDistribution,
+				ScoreDistribution: &entity.ScoreDistributionData{
+					ScoreDistributionItems: []*entity.ScoreDistributionItem{
+						{Score: "1", Count: 3, Percentage: 0.3},
+						nil,
+						{Score: "2", Count: 7, Percentage: 0.7},
+					},
 				},
 			},
-		}
-		dto := AggregateDataDOToDTO(data)
-		assert.NotNil(t, dto)
-		assert.NotNil(t, dto.ScoreDistribution)
-		assert.Len(t, dto.ScoreDistribution.ScoreDistributionItems, 2)
-	})
-
-	t.Run("with option distribution", func(t *testing.T) {
-		data := &entity.AggregateData{
-			OptionDistribution: &entity.OptionDistributionData{
-				OptionDistributionItems: []*entity.OptionDistributionItem{
-					{Option: "A", Count: 3, Percentage: 0.3},
-					nil,
-					{Option: "B", Count: 7, Percentage: 0.7},
+			verify: func(t *testing.T, got *domain_expt.AggregateData) {
+				if assert.NotNil(t, got.ScoreDistribution) {
+					assert.Len(t, got.ScoreDistribution.ScoreDistributionItems, 2)
+					assert.Equal(t, "1", got.ScoreDistribution.ScoreDistributionItems[0].Score)
+					assert.Equal(t, int64(7), got.ScoreDistribution.ScoreDistributionItems[1].Count)
+				}
+				assert.Nil(t, got.OptionDistribution)
+			},
+		},
+		{
+			name: "option distribution converted",
+			input: &entity.AggregateData{
+				DataType: entity.OptionDistribution,
+				OptionDistribution: &entity.OptionDistributionData{
+					OptionDistributionItems: []*entity.OptionDistributionItem{
+						{Option: "A", Count: 1, Percentage: 0.5},
+						{Option: "B", Count: 1, Percentage: 0.5},
+					},
 				},
 			},
-		}
-		dto := AggregateDataDOToDTO(data)
-		assert.NotNil(t, dto)
-		assert.NotNil(t, dto.OptionDistribution)
-		assert.Len(t, dto.OptionDistribution.OptionDistributionItems, 2)
-	})
+			verify: func(t *testing.T, got *domain_expt.AggregateData) {
+				if assert.NotNil(t, got.OptionDistribution) {
+					assert.Len(t, got.OptionDistribution.OptionDistributionItems, 2)
+				}
+				assert.Nil(t, got.ScoreDistribution)
+			},
+		},
+	}
 
-	t.Run("nil value", func(t *testing.T) {
-		data := &entity.AggregateData{}
-		dto := AggregateDataDOToDTO(data)
-		assert.NotNil(t, dto)
-		assert.Nil(t, dto.Value)
-	})
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := AggregateDataDOToDTO(tt.input)
+			if assert.NotNil(t, got) {
+				tt.verify(t, got)
+			}
+		})
+	}
 }
 
 func TestScoreDistributionItemsDOToDTO(t *testing.T) {
-	t.Run("nil input", func(t *testing.T) {
-		assert.Nil(t, ScoreDistributionItemsDOToDTO(nil))
-	})
+	t.Parallel()
 
-	t.Run("empty input", func(t *testing.T) {
-		assert.Nil(t, ScoreDistributionItemsDOToDTO([]*entity.ScoreDistributionItem{}))
-	})
+	assert.Nil(t, ScoreDistributionItemsDOToDTO(nil))
+	assert.Nil(t, ScoreDistributionItemsDOToDTO([]*entity.ScoreDistributionItem{}))
 
-	t.Run("normal input with nil", func(t *testing.T) {
-		items := []*entity.ScoreDistributionItem{
-			{Score: "1.0", Count: 10, Percentage: 0.5},
-			nil,
-		}
-		dtos := ScoreDistributionItemsDOToDTO(items)
-		assert.Len(t, dtos, 1)
-		assert.Equal(t, "1.0", dtos[0].Score)
+	got := ScoreDistributionItemsDOToDTO([]*entity.ScoreDistributionItem{
+		nil,
+		{Score: "1", Count: 2, Percentage: 0.5},
 	})
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, "1", got[0].Score)
+		assert.Equal(t, int64(2), got[0].Count)
+		assert.Equal(t, 0.5, got[0].Percentage)
+	}
 }
 
 func TestOptionDistributionItemsDOToDTO(t *testing.T) {
-	t.Run("nil input", func(t *testing.T) {
-		assert.Nil(t, OptionDistributionItemsDOToDTO(nil))
-	})
+	t.Parallel()
 
-	t.Run("empty input", func(t *testing.T) {
-		assert.Nil(t, OptionDistributionItemsDOToDTO([]*entity.OptionDistributionItem{}))
-	})
+	assert.Nil(t, OptionDistributionItemsDOToDTO(nil))
+	assert.Nil(t, OptionDistributionItemsDOToDTO([]*entity.OptionDistributionItem{}))
 
-	t.Run("normal input with nil", func(t *testing.T) {
-		items := []*entity.OptionDistributionItem{
-			{Option: "yes", Count: 5, Percentage: 0.5},
-			nil,
+	got := OptionDistributionItemsDOToDTO([]*entity.OptionDistributionItem{
+		nil,
+		{Option: "A", Count: 4, Percentage: 0.4},
+	})
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, "A", got[0].Option)
+		assert.Equal(t, int64(4), got[0].Count)
+		assert.Equal(t, 0.4, got[0].Percentage)
+	}
+}
+
+func TestAggregatorResultDOToDTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, AggregatorResultDOToDTO(nil))
+
+	got := AggregatorResultDOToDTO(&entity.AggregatorResult{
+		AggregatorType: entity.Average,
+		Data:           &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(1.129)},
+	})
+	if assert.NotNil(t, got) {
+		assert.Equal(t, domain_expt.AggregatorType(entity.Average), got.AggregatorType)
+		if assert.NotNil(t, got.Data) {
+			assert.Equal(t, 1.13, *got.Data.Value) // rounded to 2 decimals
 		}
-		dtos := OptionDistributionItemsDOToDTO(items)
-		assert.Len(t, dtos, 1)
-		assert.Equal(t, "yes", dtos[0].Option)
+	}
+
+	got = AggregatorResultDOToDTO(&entity.AggregatorResult{AggregatorType: entity.Sum})
+	if assert.NotNil(t, got) {
+		assert.Nil(t, got.Data)
+	}
+}
+
+func TestAggregatorResultDOsToDTOs(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, AggregatorResultDOsToDTOs(nil))
+	assert.Nil(t, AggregatorResultDOsToDTOs([]*entity.AggregatorResult{}))
+
+	in := []*entity.AggregatorResult{
+		{AggregatorType: entity.Average, Data: &entity.AggregateData{Value: gptr.Of(1.0)}},
+		{AggregatorType: entity.Max, Data: &entity.AggregateData{Value: gptr.Of(2.0)}},
+	}
+	got := AggregatorResultDOsToDTOs(in)
+	assert.Len(t, got, 2)
+}
+
+func TestEvaluatorResultsDOToDTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, EvaluatorResultsDOToDTO(nil))
+
+	got := EvaluatorResultsDOToDTO(&entity.EvaluatorAggregateResult{
+		EvaluatorVersionID: 42,
+		Name:               gptr.Of("acc"),
+		Version:            gptr.Of("v1"),
+		Alias:              "judge_b",
+		AggregatorResults: []*entity.AggregatorResult{
+			{AggregatorType: entity.Average, Data: &entity.AggregateData{Value: gptr.Of(0.9)}},
+		},
 	})
+	if assert.NotNil(t, got) {
+		assert.Equal(t, int64(42), got.EvaluatorVersionID)
+		assert.Equal(t, "acc", *got.Name)
+		assert.Equal(t, "v1", *got.Version)
+		if assert.NotNil(t, got.Alias) {
+			assert.Equal(t, "judge_b", *got.Alias)
+		}
+		assert.Len(t, got.AggregatorResults, 1)
+	}
+
+	// empty alias should still marshal (empty string pointer)
+	got = EvaluatorResultsDOToDTO(&entity.EvaluatorAggregateResult{EvaluatorVersionID: 1})
+	if assert.NotNil(t, got) && assert.NotNil(t, got.Alias) {
+		assert.Equal(t, "", *got.Alias)
+	}
+}
+
+func TestAnnotationResultDOToDTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, AnnotationResultDOToDTO(nil))
+
+	got := AnnotationResultDOToDTO(&entity.AnnotationAggregateResult{
+		TagKeyID: 7,
+		Name:     gptr.Of("quality"),
+		AggregatorResults: []*entity.AggregatorResult{
+			{AggregatorType: entity.Average, Data: &entity.AggregateData{Value: gptr.Of(0.5)}},
+		},
+	})
+	if assert.NotNil(t, got) {
+		assert.Equal(t, int64(7), got.TagKeyID)
+		assert.Equal(t, "quality", *got.Name)
+		assert.Len(t, got.AggregatorResults, 1)
+	}
+}
+
+func TestExptAggregateResultDOToDTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, ExptAggregateResultDOToDTO(nil))
+
+	ts := time.Unix(1_700_000_000, 0)
+	do := &entity.ExptAggregateResult{
+		ExperimentID: 123,
+		Status:       1,
+		UpdateTime:   &ts,
+		EvaluatorResults: map[string]*entity.EvaluatorAggregateResult{
+			// same versionID, different alias — thrift map keyed by versionID drops one; test intentionally uses different versionIDs to keep both.
+			"11":             {EvaluatorVersionID: 11, Alias: "default"},
+			"12:judge_alias": {EvaluatorVersionID: 12, Alias: "judge_alias"},
+		},
+		AnnotationResults: map[int64]*entity.AnnotationAggregateResult{
+			99: {TagKeyID: 99, Name: gptr.Of("tag")},
+		},
+		TargetResults: &entity.EvalTargetMtrAggrResult{TargetID: 55},
+		WeightedResults: []*entity.AggregatorResult{
+			{AggregatorType: entity.Average, Data: &entity.AggregateData{Value: gptr.Of(0.8)}},
+		},
+	}
+
+	got := ExptAggregateResultDOToDTO(do)
+	if !assert.NotNil(t, got) {
+		return
+	}
+	assert.Equal(t, int64(123), got.ExperimentID)
+	assert.Len(t, got.EvaluatorResults, 2)
+	assert.Contains(t, got.EvaluatorResults, int64(11))
+	assert.Contains(t, got.EvaluatorResults, int64(12))
+	assert.Len(t, got.AnnotationResults, 1)
+	assert.Contains(t, got.AnnotationResults, int64(99))
+	if assert.NotNil(t, got.EvalTargetAggrResult_) {
+		assert.Equal(t, int64(55), *got.EvalTargetAggrResult_.TargetID)
+	}
+	if assert.NotNil(t, got.UpdateTime) {
+		assert.Equal(t, ts.Unix(), *got.UpdateTime)
+	}
+	assert.Len(t, got.WeightedResults, 1)
+	if assert.NotNil(t, got.Status) {
+		assert.Equal(t, domain_expt.ExptAggregateCalculateStatus(1), *got.Status)
+	}
+}
+
+func TestExptAggregateResultDOToDTO_NoOptionalFields(t *testing.T) {
+	t.Parallel()
+
+	got := ExptAggregateResultDOToDTO(&entity.ExptAggregateResult{ExperimentID: 1})
+	if !assert.NotNil(t, got) {
+		return
+	}
+	assert.Nil(t, got.UpdateTime)
+	assert.Empty(t, got.WeightedResults)
+	assert.Empty(t, got.EvaluatorResults)
+	assert.Empty(t, got.AnnotationResults)
+	assert.Nil(t, got.EvalTargetAggrResult_)
 }

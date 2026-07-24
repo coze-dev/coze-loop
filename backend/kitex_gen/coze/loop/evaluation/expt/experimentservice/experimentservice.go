@@ -41,6 +41,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetExperimentIDsByGroup": kitex.NewMethodInfo(
+		getExperimentIDsByGroupHandler,
+		newExperimentServiceGetExperimentIDsByGroupArgs,
+		newExperimentServiceGetExperimentIDsByGroupResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListExperiments": kitex.NewMethodInfo(
 		listExperimentsHandler,
 		newExperimentServiceListExperimentsArgs,
@@ -52,6 +59,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		updateExperimentHandler,
 		newExperimentServiceUpdateExperimentArgs,
 		newExperimentServiceUpdateExperimentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateExptRunConf": kitex.NewMethodInfo(
+		updateExptRunConfHandler,
+		newExperimentServiceUpdateExptRunConfArgs,
+		newExperimentServiceUpdateExptRunConfResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -101,6 +115,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		batchGetExperimentResult_Handler,
 		newExperimentServiceBatchGetExperimentResultArgs,
 		newExperimentServiceBatchGetExperimentResultResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"MGetExperimentStandardEvalOutputs": kitex.NewMethodInfo(
+		mGetExperimentStandardEvalOutputsHandler,
+		newExperimentServiceMGetExperimentStandardEvalOutputsArgs,
+		newExperimentServiceMGetExperimentStandardEvalOutputsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListExperimentStandardEvalOutputs": kitex.NewMethodInfo(
+		listExperimentStandardEvalOutputsHandler,
+		newExperimentServiceListExperimentStandardEvalOutputsArgs,
+		newExperimentServiceListExperimentStandardEvalOutputsResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -409,6 +437,25 @@ func newExperimentServiceBatchGetExperimentsResult() interface{} {
 	return expt.NewExperimentServiceBatchGetExperimentsResult()
 }
 
+func getExperimentIDsByGroupHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceGetExperimentIDsByGroupArgs)
+	realResult := result.(*expt.ExperimentServiceGetExperimentIDsByGroupResult)
+	success, err := handler.(expt.ExperimentService).GetExperimentIDsByGroup(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceGetExperimentIDsByGroupArgs() interface{} {
+	return expt.NewExperimentServiceGetExperimentIDsByGroupArgs()
+}
+
+func newExperimentServiceGetExperimentIDsByGroupResult() interface{} {
+	return expt.NewExperimentServiceGetExperimentIDsByGroupResult()
+}
+
 func listExperimentsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*expt.ExperimentServiceListExperimentsArgs)
 	realResult := result.(*expt.ExperimentServiceListExperimentsResult)
@@ -445,6 +492,25 @@ func newExperimentServiceUpdateExperimentArgs() interface{} {
 
 func newExperimentServiceUpdateExperimentResult() interface{} {
 	return expt.NewExperimentServiceUpdateExperimentResult()
+}
+
+func updateExptRunConfHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceUpdateExptRunConfArgs)
+	realResult := result.(*expt.ExperimentServiceUpdateExptRunConfResult)
+	success, err := handler.(expt.ExperimentService).UpdateExptRunConf(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceUpdateExptRunConfArgs() interface{} {
+	return expt.NewExperimentServiceUpdateExptRunConfArgs()
+}
+
+func newExperimentServiceUpdateExptRunConfResult() interface{} {
+	return expt.NewExperimentServiceUpdateExptRunConfResult()
 }
 
 func deleteExperimentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -578,6 +644,44 @@ func newExperimentServiceBatchGetExperimentResultArgs() interface{} {
 
 func newExperimentServiceBatchGetExperimentResultResult() interface{} {
 	return expt.NewExperimentServiceBatchGetExperimentResultResult()
+}
+
+func mGetExperimentStandardEvalOutputsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceMGetExperimentStandardEvalOutputsArgs)
+	realResult := result.(*expt.ExperimentServiceMGetExperimentStandardEvalOutputsResult)
+	success, err := handler.(expt.ExperimentService).MGetExperimentStandardEvalOutputs(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceMGetExperimentStandardEvalOutputsArgs() interface{} {
+	return expt.NewExperimentServiceMGetExperimentStandardEvalOutputsArgs()
+}
+
+func newExperimentServiceMGetExperimentStandardEvalOutputsResult() interface{} {
+	return expt.NewExperimentServiceMGetExperimentStandardEvalOutputsResult()
+}
+
+func listExperimentStandardEvalOutputsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceListExperimentStandardEvalOutputsArgs)
+	realResult := result.(*expt.ExperimentServiceListExperimentStandardEvalOutputsResult)
+	success, err := handler.(expt.ExperimentService).ListExperimentStandardEvalOutputs(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceListExperimentStandardEvalOutputsArgs() interface{} {
+	return expt.NewExperimentServiceListExperimentStandardEvalOutputsArgs()
+}
+
+func newExperimentServiceListExperimentStandardEvalOutputsResult() interface{} {
+	return expt.NewExperimentServiceListExperimentStandardEvalOutputsResult()
 }
 
 func calculateExperimentAggrResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1164,6 +1268,16 @@ func (p *kClient) BatchGetExperiments(ctx context.Context, req *expt.BatchGetExp
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest) (r *expt.GetExperimentIDsByGroupResponse, err error) {
+	var _args expt.ExperimentServiceGetExperimentIDsByGroupArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceGetExperimentIDsByGroupResult
+	if err = p.c.Call(ctx, "GetExperimentIDsByGroup", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) ListExperiments(ctx context.Context, req *expt.ListExperimentsRequest) (r *expt.ListExperimentsResponse, err error) {
 	var _args expt.ExperimentServiceListExperimentsArgs
 	_args.Req = req
@@ -1179,6 +1293,16 @@ func (p *kClient) UpdateExperiment(ctx context.Context, req *expt.UpdateExperime
 	_args.Req = req
 	var _result expt.ExperimentServiceUpdateExperimentResult
 	if err = p.c.Call(ctx, "UpdateExperiment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest) (r *expt.UpdateExptRunConfResponse, err error) {
+	var _args expt.ExperimentServiceUpdateExptRunConfArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceUpdateExptRunConfResult
+	if err = p.c.Call(ctx, "UpdateExptRunConf", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -1249,6 +1373,26 @@ func (p *kClient) BatchGetExperimentResult_(ctx context.Context, req *expt.Batch
 	_args.Req = req
 	var _result expt.ExperimentServiceBatchGetExperimentResultResult
 	if err = p.c.Call(ctx, "BatchGetExperimentResult", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest) (r *expt.MGetExperimentStandardEvalOutputsResponse, err error) {
+	var _args expt.ExperimentServiceMGetExperimentStandardEvalOutputsArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceMGetExperimentStandardEvalOutputsResult
+	if err = p.c.Call(ctx, "MGetExperimentStandardEvalOutputs", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest) (r *expt.ListExperimentStandardEvalOutputsResponse, err error) {
+	var _args expt.ExperimentServiceListExperimentStandardEvalOutputsArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceListExperimentStandardEvalOutputsResult
+	if err = p.c.Call(ctx, "ListExperimentStandardEvalOutputs", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

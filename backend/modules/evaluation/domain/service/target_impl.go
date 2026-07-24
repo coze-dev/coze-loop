@@ -41,9 +41,17 @@ type EvalTargetServiceImpl struct {
 	typedOperators    map[entity.EvalTargetType]ISourceEvalTargetOperateService
 	trajectoryAdapter rpc.ITrajectoryAdapter
 	configer          component.IConfiger
+
+	// SandboxAgent 评测对象单行执行完成后用于销毁沙箱执行
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
+	exptRunLogRepo          repo.IExptRunLogRepo
 }
 
 const evalTargetRecordPersistTimeout = 5 * time.Second
+
+// trajectoryStartTimeBufferMS 抽取 trajectory 时，时间下界额外向前预留的 buffer(1 分钟)，
+// 用于吸收请求发起时间与实际 span 上报时间之间可能的时钟/延迟误差，避免漏掉最早的 span。
+const trajectoryStartTimeBufferMS = int64(60 * 1000)
 
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
@@ -51,14 +59,18 @@ func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
 	configer component.IConfiger,
+	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
+	exptRunLogRepo repo.IExptRunLogRepo,
 ) IEvalTargetService {
 	singletonEvalTargetService := &EvalTargetServiceImpl{
-		evalTargetRepo:    evalTargetRepo,
-		idgen:             idgen,
-		metric:            metric,
-		typedOperators:    typedOperators,
-		trajectoryAdapter: trajectoryAdapter,
-		configer:          configer,
+		evalTargetRepo:          evalTargetRepo,
+		idgen:                   idgen,
+		metric:                  metric,
+		typedOperators:          typedOperators,
+		trajectoryAdapter:       trajectoryAdapter,
+		configer:                configer,
+		sandboxSchedulerAdapter: sandboxSchedulerAdapter,
+		exptRunLogRepo:          exptRunLogRepo,
 	}
 	return singletonEvalTargetService
 }
@@ -445,6 +457,11 @@ func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID i
 	if len(traceID) == 0 {
 		return nil, errorx.New("ExtractTrajectory with null traceID")
 	}
+	// 时间下界默认向前多减 1 分钟 buffer:防御请求发起时间与实际 span 时间之间可能存在的时钟/上报误差,
+	// 避免因下界略偏晚而漏掉最早的 span 导致轨迹拉不全。trace 查询按 traceID 精确匹配,放宽下界不会引入无关数据。
+	if startTimeMS != nil {
+		startTimeMS = gptr.Of(*startTimeMS - trajectoryStartTimeBufferMS)
+	}
 	trajectories, err := e.trajectoryAdapter.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
 	if err != nil {
 		return nil, err
@@ -510,6 +527,9 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		EvalTarget:          target,
 		EvalSetItemID:       gptr.Of(param.ItemID),
 		EvalSetTurnID:       gptr.Of(param.TurnID),
+		LogID:               param.LogID,
+		ItemMeta:            param.ItemMeta,
+		ExptGroupKey:        param.ExptGroupKey,
 	})
 	if execErr != nil {
 		// If an asynchronous call fails, return immediately without logging the error or propagating the exception.
@@ -684,6 +704,138 @@ func (e *EvalTargetServiceImpl) LoadRecordFullData(ctx context.Context, record *
 	return e.evalTargetRepo.LoadEvalTargetRecordFullData(ctx, record)
 }
 
+// destroySandboxExecuteIfNeeded 在 SandboxAgent 评测对象单行执行完成后销毁该次沙箱执行。
+// 仅做 best-effort：任何步骤失败仅记录日志，不阻断上层调用。
+func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Context, record *entity.EvalTargetRecord) {
+	if e.sandboxSchedulerAdapter == nil || record == nil {
+		return
+	}
+	// 仅 SandboxAgent 评测对象需要销毁沙箱执行
+	targetVersion, err := e.evalTargetRepo.GetEvalTargetVersion(ctx, record.SpaceID, record.TargetVersionID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] get eval target version fail, space_id=%d, version_id=%d, err=%v",
+			record.SpaceID, record.TargetVersionID, err)
+		return
+	}
+	if targetVersion == nil || targetVersion.EvalTargetType != entity.EvalTargetTypeSandboxAgent {
+		return
+	}
+
+	taskID := e.resolveSandboxTaskIDByRunID(ctx, record.ExperimentRunID)
+	e.destroySandboxExecute(ctx, taskID, record.SpaceID, record.ID)
+}
+
+// resolveSandboxTaskIDByRunID 通过 ExperimentRunID 反查 ExptID 作为 sandbox TaskID。
+func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context, experimentRunID int64) string {
+	if e.exptRunLogRepo == nil || experimentRunID <= 0 {
+		return ""
+	}
+	runLog, err := e.exptRunLogRepo.Get(ctx, 0, experimentRunID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] get expt_run_log fail, expt_run_id=%d, err=%v", experimentRunID, err)
+		return ""
+	}
+	if runLog == nil || runLog.ExptID <= 0 {
+		return ""
+	}
+	return strconv.FormatInt(runLog.ExptID, 10)
+}
+
+// destroySandboxExecute 异步 best-effort 销毁单个 sandbox execute。
+func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID, executeID int64) {
+	if e.sandboxSchedulerAdapter == nil {
+		return
+	}
+	goroutine.Go(ctx, func() {
+		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
+			TaskID:      taskID,
+			DestroyType: rpc.SandboxDestroyTypeExecute,
+			ExecuteIDs:  []string{strconv.FormatInt(executeID, 10)},
+			WorkspaceID: spaceID,
+		}); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_id=%d, err=%v",
+				taskID, executeID, err)
+		}
+	})
+}
+
+// TerminateAsyncRecordsAndDestroySandbox 把仍处于 AsyncInvoking 状态的 SandboxAgent EvalTargetRecord 置为 Fail，
+// 并以 best-effort 方式触发沙箱 Execute 销毁。非 SandboxAgent / 非 AsyncInvoking 的 record 会被忽略。
+func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string) {
+	if len(recordIDs) == 0 {
+		return
+	}
+	records, err := e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] batch get eval target records fail, space_id=%d, err=%v", spaceID, err)
+		return
+	}
+
+	versionIDSet := make(map[int64]struct{})
+	for _, r := range records {
+		if r == nil || r.TargetVersionID <= 0 {
+			continue
+		}
+		versionIDSet[r.TargetVersionID] = struct{}{}
+	}
+	if len(versionIDSet) == 0 {
+		return
+	}
+	versionIDs := make([]int64, 0, len(versionIDSet))
+	for id := range versionIDSet {
+		versionIDs = append(versionIDs, id)
+	}
+	versions, err := e.evalTargetRepo.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] batch get eval target versions fail, space_id=%d, err=%v", spaceID, err)
+		return
+	}
+	sandboxVersionIDs := make(map[int64]struct{})
+	for _, v := range versions {
+		if v == nil || v.EvalTargetVersion == nil {
+			continue
+		}
+		if v.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+			sandboxVersionIDs[v.EvalTargetVersion.ID] = struct{}{}
+		}
+	}
+	if len(sandboxVersionIDs) == 0 {
+		return
+	}
+
+	failOutput := &entity.EvalTargetOutputData{
+		EvalTargetRunError: &entity.EvalTargetRunError{
+			Code:    errCode,
+			Message: errMessage,
+		},
+	}
+
+	taskIDCache := make(map[int64]string)
+	for _, r := range records {
+		if r == nil {
+			continue
+		}
+		if _, ok := sandboxVersionIDs[r.TargetVersionID]; !ok {
+			continue
+		}
+		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+			continue
+		}
+		r.Status = gptr.Of(entity.EvalTargetRunStatusFail)
+		r.EvalTargetOutputData = failOutput
+		if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, r, nil); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] save terminated target record fail, record_id=%d, err=%v", r.ID, err)
+		}
+
+		taskID, ok := taskIDCache[r.ExperimentRunID]
+		if !ok {
+			taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
+			taskIDCache[r.ExperimentRunID] = taskID
+		}
+		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID)
+	}
+}
+
 func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *entity.ReportTargetRecordParam) error {
 	record, err := e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID)
 	if err != nil {
@@ -717,6 +869,9 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		return err
 	}
 
+	// SandboxAgent 评测对象单行执行完成后，best-effort 销毁沙箱执行（仅告警不阻断）
+	e.destroySandboxExecuteIfNeeded(ctx, record)
+
 	// traceID, err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session)
 	// if err != nil {
 	//	logs.CtxError(ctx, "emitTargetTrace fail, target_id: %v, target_version_id: %v, record_id: %v, err: %v",
@@ -725,7 +880,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 
 	recordTrajectory := func() error {
 		var sms *int64
-		if record.BaseInfo != nil {
+		// 优先用「请求发起时间」作为抽取 trajectory 的时间下界;它比 record.BaseInfo.CreatedAt(异步返回后才 stamp)
+		// 更早,避免漏掉请求发起到返回之间的 span。为 0(未透传)时回退到 CreatedAt,保持向前兼容。
+		if param.AsyncUnixMS > 0 {
+			sms = gptr.Of(param.AsyncUnixMS)
+		} else if record.BaseInfo != nil {
 			sms = record.BaseInfo.CreatedAt
 		}
 		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, sms)

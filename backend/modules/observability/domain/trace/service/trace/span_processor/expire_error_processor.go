@@ -32,10 +32,10 @@ func (c *ExpireErrorProcessor) Transform(ctx context.Context, spans loop_span.Sp
 	})
 	if err != nil {
 		logs.CtxWarn(ctx, "fail to check trace benefit, %v", err)
-		return nil, errorx.WrapByCode(err, obErrorx.ExpiredTraceErrorCode)
+		return spans, nil
 	} else if res == nil {
 		logs.CtxWarn(ctx, "fail to get trace benefit, got nil response")
-		return nil, errorx.NewByCode(obErrorx.ExpiredTraceErrorCode)
+		return spans, nil
 	}
 	earliestTime := time.Now().UnixMilli() - (24 * time.Duration(res.StorageDuration) * time.Hour).Milliseconds()
 	if c.queryEndTime < earliestTime {

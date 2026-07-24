@@ -132,6 +132,18 @@ const (
 	experimentIsCompletingMessage           = "experiment is completing, please try later"
 	experimentIsCompletingNoAffectStability = true
 
+	ExperimentNameInvalidFormatCode              = 601204017 // experiment name format is invalid
+	experimentNameInvalidFormatMessage           = "experiment name format is invalid"
+	experimentNameInvalidFormatNoAffectStability = true
+
+	ExperimentGroupKeyExistedCode              = 601204018 // experiment group key already exists, please use another one
+	experimentGroupKeyExistedMessage           = "experiment group key already exists, please use another one"
+	experimentGroupKeyExistedNoAffectStability = true
+
+	RefGroupExperimentInvalidCode              = 601204019 // ref group experiment id is not a valid experiment in current space
+	refGroupExperimentInvalidMessage           = "ref group experiment id is not a valid experiment in current space"
+	refGroupExperimentInvalidNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -375,6 +387,18 @@ const (
 	AsyncEvaluatorZombieTimeoutCode              = 601205069 // the async evaluator was terminated because the experiment item exceeded the zombie timeout before the result was reported
 	asyncEvaluatorZombieTimeoutMessage           = "async evaluator terminated: experiment item exceeded zombie timeout"
 	asyncEvaluatorZombieTimeoutNoAffectStability = true
+
+	AsyncEvalTargetZombieTimeoutCode              = 601205070 // the async eval target was terminated because the experiment item exceeded the zombie timeout before the result was reported
+	asyncEvalTargetZombieTimeoutMessage           = "async eval target terminated: experiment item exceeded zombie timeout"
+	asyncEvalTargetZombieTimeoutNoAffectStability = true
+
+	AsyncEvalTargetTerminatedCode              = 601205071 // the async eval target was terminated because the experiment was manually cancelled
+	asyncEvalTargetTerminatedMessage           = "async eval target terminated: experiment cancelled"
+	asyncEvalTargetTerminatedNoAffectStability = true
+
+	ExptMultiSetSpaceNotAllowedCode              = 601205072 // the space is not in the gray-release whitelist for multi-set experiments
+	exptMultiSetSpaceNotAllowedMessage           = "the space is not allowed to create multi-set experiments"
+	exptMultiSetSpaceNotAllowedNoAffectStability = true
 )
 
 func init() {
@@ -563,6 +587,24 @@ func init() {
 		ExperimentIsCompletingCode,
 		experimentIsCompletingMessage,
 		code.WithAffectStability(!experimentIsCompletingNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentNameInvalidFormatCode,
+		experimentNameInvalidFormatMessage,
+		code.WithAffectStability(!experimentNameInvalidFormatNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentGroupKeyExistedCode,
+		experimentGroupKeyExistedMessage,
+		code.WithAffectStability(!experimentGroupKeyExistedNoAffectStability),
+	)
+
+	code.Register(
+		RefGroupExperimentInvalidCode,
+		refGroupExperimentInvalidMessage,
+		code.WithAffectStability(!refGroupExperimentInvalidNoAffectStability),
 	)
 
 	code.Register(
@@ -929,6 +971,24 @@ func init() {
 		AsyncEvaluatorZombieTimeoutCode,
 		asyncEvaluatorZombieTimeoutMessage,
 		code.WithAffectStability(!asyncEvaluatorZombieTimeoutNoAffectStability),
+	)
+
+	code.Register(
+		AsyncEvalTargetZombieTimeoutCode,
+		asyncEvalTargetZombieTimeoutMessage,
+		code.WithAffectStability(!asyncEvalTargetZombieTimeoutNoAffectStability),
+	)
+
+	code.Register(
+		AsyncEvalTargetTerminatedCode,
+		asyncEvalTargetTerminatedMessage,
+		code.WithAffectStability(!asyncEvalTargetTerminatedNoAffectStability),
+	)
+
+	code.Register(
+		ExptMultiSetSpaceNotAllowedCode,
+		exptMultiSetSpaceNotAllowedMessage,
+		code.WithAffectStability(!exptMultiSetSpaceNotAllowedNoAffectStability),
 	)
 
 }

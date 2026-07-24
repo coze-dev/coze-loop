@@ -1543,3 +1543,21 @@ func TestToSchemaKey_AllBranches(t *testing.T) {
 	assert.Equal(t, gptr.Of(entity.SchemaKey_Trajectory), toSchemaKey(gptr.Of(dataset.SchemaKey_Trajectory)))
 	assert.Nil(t, toSchemaKey(gptr.Of(dataset.SchemaKey(999))))
 }
+
+func TestConvert2DatasetTagFilter(t *testing.T) {
+	t.Parallel()
+
+	// nil -> nil
+	assert.Nil(t, convert2DatasetTagFilter(nil))
+
+	// 默认 relation 为 Or
+	or := convert2DatasetTagFilter(&entity.TagFilter{TagNames: []string{"zh", "en"}})
+	assert.NotNil(t, or)
+	assert.Equal(t, []string{"zh", "en"}, or.TagNames)
+	assert.Equal(t, "or", gptr.Indirect(or.Relation))
+
+	// relation=and 映射为 And
+	and := convert2DatasetTagFilter(&entity.TagFilter{TagNames: []string{"hard"}, Relation: entity.TagFilterRelationAnd})
+	assert.NotNil(t, and)
+	assert.Equal(t, "and", gptr.Indirect(and.Relation))
+}

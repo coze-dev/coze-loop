@@ -1403,18 +1403,12 @@ func TestExptTemplateManagerImpl_Update_NameCheck(t *testing.T) {
 		}
 
 		mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
-		// 当 GetByName 返回错误时，CheckName 返回 (false, err)
-		// Update 方法先检查 !pass，所以会返回名称已存在的错误，而不是原始错误
-		// 这是当前实现的行为：先检查 !pass，再检查 err
+		// CheckName 内部 GetByName 报错时返回 (false, err)；Update 先判 err，原始错误应原样冒泡
 		mockRepo.EXPECT().GetByName(ctx, "tpl-new", spaceID, gomock.Any()).Return(nil, false, errors.New("db error"))
 
 		_, err := mgr.Update(ctx, param, session)
 		assert.Error(t, err)
-		// 当前实现中，当 GetByName 返回错误时，CheckName 返回 (false, err)
-		// Update 方法先检查 !pass，所以会返回名称已存在的错误
-		code, _, ok := errno.ParseStatusError(err)
-		assert.True(t, ok)
-		assert.Equal(t, errno.ExperimentNameExistedCode, int(code))
+		assert.Contains(t, err.Error(), "db error")
 	})
 
 	t.Run("名称未改变，跳过检查", func(t *testing.T) {

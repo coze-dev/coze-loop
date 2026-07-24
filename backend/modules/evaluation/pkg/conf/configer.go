@@ -101,6 +101,11 @@ func (c *configer) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) (w
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil, w, entity.DefaultExptTemplateUpdateEvalSetWhiteList())
 }
 
+func (c *configer) GetExptMultiSetWhiteList(ctx context.Context) (w *entity.ExptMultiSetWhiteList) {
+	const key = "expt_multi_set_white_list"
+	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil, w, entity.DefaultExptMultiSetWhiteList())
+}
+
 func (c *configer) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	return nil, false
 }

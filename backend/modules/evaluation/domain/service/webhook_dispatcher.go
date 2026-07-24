@@ -121,16 +121,18 @@ func (d *WebhookDispatcher) Dispatch(ctx context.Context, event *entity.ExptLife
 
 	// 逐个调用 Webhook URL
 	for _, url := range urls {
-		if err := d.doPost(ctx, url, payloadBytes, timestamp, nonce, signature); err != nil {
+		if err := d.doPost(ctx, url, payloadBytes, timestamp, nonce, signature, webhook.Environment, webhook.Lane); err != nil {
 			logs.CtxError(ctx, "webhook_dispatcher: post failed, url: %v, expt_id: %v, err: %v", url, expt.ID, err)
 			// 发布重试事件
 			retryEvent := &entity.WebhookRetryEvent{
-				ExptID:     expt.ID,
-				SpaceID:    expt.SpaceID,
-				DeliveryID: deliveryID,
-				WebhookURL: url,
-				Payload:    payloadStr,
-				AttemptNum: 1,
+				ExptID:      expt.ID,
+				SpaceID:     expt.SpaceID,
+				DeliveryID:  deliveryID,
+				WebhookURL:  url,
+				Payload:     payloadStr,
+				AttemptNum:  1,
+				Environment: webhook.Environment,
+				Lane:        webhook.Lane,
 			}
 			retryDuration := 1 * time.Minute
 			if pubErr := d.publisher.PublishExptWebhookNotifyEvent(ctx, retryEvent, &retryDuration); pubErr != nil {
@@ -142,7 +144,7 @@ func (d *WebhookDispatcher) Dispatch(ctx context.Context, event *entity.ExptLife
 	return nil
 }
 
-func (d *WebhookDispatcher) doPost(ctx context.Context, url string, body []byte, timestamp, nonce, signature string) error {
+func (d *WebhookDispatcher) doPost(ctx context.Context, url string, body []byte, timestamp, nonce, signature string, env *entity.WebhookEnvironment, lane *string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -152,6 +154,11 @@ func (d *WebhookDispatcher) doPost(ctx context.Context, url string, body []byte,
 	req.Header.Set("X-CozeLoop-Timestamp", timestamp)
 	req.Header.Set("X-CozeLoop-Nonce", nonce)
 	req.Header.Set("X-CozeLoop-Signature", signature)
+
+	// 按环境附加泳道路由 header（在安全 header 之后，key 不冲突，不覆盖安全 header）
+	for k, v := range BuildLaneHeaders(env, lane) {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := d.httpClient.Do(req)
 	if err != nil {
@@ -164,6 +171,43 @@ func (d *WebhookDispatcher) doPost(ctx context.Context, url string, body []byte,
 		return fmt.Errorf("webhook returned non-2xx status: %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// BuildLaneHeaders 根据 webhook 目标环境与泳道名计算需附加的路由 header。
+// 首发（webhook_dispatcher）与重试（webhook_retry consumer）两处共用同一实现。
+//
+// 规则（design D3）：
+//   - PPE：{"x-tt-env": <lane>, "x-use-ppe": "1"}
+//   - BOE：{"x-tt-env": <lane>}
+//   - Prod / 未设置（nil）：无（返回 nil）
+//
+// 防御：env 为 PPE/BOE 但 lane 为 nil / 空 / trim 后为空时，保守降级为不产出
+// x-tt-env（返回空 map），避免发出空泳道头把请求打偏，且不 panic。
+func BuildLaneHeaders(env *entity.WebhookEnvironment, lane *string) map[string]string {
+	// Prod 或未设置：不加任何路由 header
+	if env == nil || *env == entity.WebhookEnvironment_Prod {
+		return nil
+	}
+
+	switch *env {
+	case entity.WebhookEnvironment_PPE, entity.WebhookEnvironment_BOE:
+		// 防御：lane 缺失或空白 -> 保守降级，不产出 x-tt-env
+		if lane == nil {
+			return map[string]string{}
+		}
+		laneVal := strings.TrimSpace(*lane)
+		if laneVal == "" {
+			return map[string]string{}
+		}
+		headers := map[string]string{"x-tt-env": laneVal}
+		if *env == entity.WebhookEnvironment_PPE {
+			headers["x-use-ppe"] = "1"
+		}
+		return headers
+	default:
+		// 未知环境值：保守不加路由 header
+		return nil
+	}
 }
 
 // ComputeHMACSHA256 计算 HMAC-SHA256 签名（hex 编码），供 webhook 与 evaluator 回调复用

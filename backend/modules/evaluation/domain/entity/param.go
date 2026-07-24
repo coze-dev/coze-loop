@@ -14,6 +14,9 @@ type CreateEvaluationSetParam struct {
 	EvaluationSetSchema *EvaluationSetSchema
 	BizCategory         *BizCategory
 	Session             *Session
+	DatasetType         *string
+	Tags                []*ResourceTagRef
+	DatasetKey          *string
 }
 
 type CreateEvaluationSetWithImportParam struct {
@@ -27,6 +30,7 @@ type CreateEvaluationSetWithImportParam struct {
 	FieldMappings       []*FieldMapping
 	Session             *Session
 	Option              *DatasetIOJobOption
+	DatasetType         *string
 }
 
 type UpdateEvaluationSetParam struct {
@@ -34,6 +38,7 @@ type UpdateEvaluationSetParam struct {
 	EvaluationSetID int64
 	Name            *string
 	Description     *string
+	Tags            []*ResourceTagRef
 }
 
 type ListEvaluationSetsParam struct {
@@ -45,6 +50,8 @@ type ListEvaluationSetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*OrderBy
+	TagFilter        *TagFilter
+	DatasetKeys      []string
 }
 
 type ListEvaluationSetItemsParam struct {
@@ -57,16 +64,20 @@ type ListEvaluationSetItemsParam struct {
 	OrderBys        []*OrderBy
 	ItemIDsNotIn    []int64
 	Filter          *Filter
+	TagFilter       *TagFilter
 }
 type BatchGetEvaluationSetItemsParam struct {
-	SpaceID         int64
-	EvaluationSetID int64
-	ItemIDs         []int64
-	VersionID       *int64
-	PageNumber      *int32
-	PageSize        *int32
-	PageToken       *string
-	OrderBys        []*OrderBy
+	SpaceID            int64
+	EvaluationSetID    int64
+	ItemIDs            []int64
+	ItemVersionQueries []*EvaluationItemVersionRef
+	VersionID          *int64
+	PageNumber         *int32
+	PageSize           *int32
+	PageToken          *string
+	OrderBys           []*OrderBy
+	Filter             *Filter
+	TagFilter          *TagFilter
 }
 
 type GetEvaluationSetItemFieldParam struct {
@@ -98,7 +109,8 @@ type BatchUpdateEvaluationSetItemsParam struct {
 	EvaluationSetID int64
 	Items           []*EvaluationSetItem
 	// items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
-	SkipInvalidItems *bool
+	SkipInvalidItems  *bool
+	FieldWriteOptions []*FieldWriteOption
 }
 
 type CreateEvaluationSetVersionParam struct {
@@ -134,6 +146,7 @@ type Opt struct {
 	OperationInstruction *string
 	Cluster              *string
 	AgentConnection      *AgentConnection
+	SandboxAgent         *SandboxAgent
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -184,6 +197,12 @@ func WithAgentConnection(agentConnection *AgentConnection) Option {
 	}
 }
 
+func WithSandboxAgent(sandboxAgent *SandboxAgent) Option {
+	return func(option *Opt) {
+		option.SandboxAgent = sandboxAgent
+	}
+}
+
 type ExecuteEvalTargetParam struct {
 	ExptID              int64
 	TargetID            int64
@@ -195,6 +214,29 @@ type ExecuteEvalTargetParam struct {
 	EvalTarget          *EvalTarget // 透传，各个评测对象如需额外信息可以从这里消费
 	EvalSetItemID       *int64
 	EvalSetTurnID       *int64
+	// LogID 当前调用链的 log id, 供评测对象 (如 SandboxAgent) 透传到外部执行侧做端到端定位。
+	LogID string
+	// ItemMeta 评测集/条目元数据快照 (评测集 id/名称/版本, item id/key/version 等), 供评测对象透传给外部执行侧。
+	ItemMeta *EvalSetItemMeta
+	// ExptGroupKey 实验分组 key (Experiment.ExperimentGroupKey, 默认为实验 id 字符串),
+	// 属实验级属性, 供评测对象 (如 SandboxAgent) 透传给外部执行侧。
+	ExptGroupKey string
+}
+
+// EvalSetItemMeta 承载评测集与 item 层面的元数据快照, 用于评测对象 (如 SandboxAgent) 透传给外部执行侧。
+// id 字段统一使用 string, 避免 JSON 序列化后被 JS 等消费方按 number 解析导致精度丢失。
+// 字段可能为空 (旧数据集无 item 版本、调试场景无实验等), 使用方需容忍缺省值。
+type EvalSetItemMeta struct {
+	EvalSetID   string `json:"eval_set_id,omitempty"`
+	EvalSetName string `json:"eval_set_name,omitempty"`
+	// DatasetKey 评测集业务 key (EvaluationSet.DatasetKey), 供评测对象透传给外部执行侧。
+	DatasetKey       string `json:"dataset_key,omitempty"`
+	EvalSetVersionID string `json:"eval_set_version_id,omitempty"`
+	EvalSetVersion   string `json:"eval_set_version,omitempty"`
+	ItemID           string `json:"item_id,omitempty"`
+	ItemKey          string `json:"item_key,omitempty"`
+	ItemVersionID    string `json:"item_version_id,omitempty"`
+	ItemVersion      string `json:"item_version,omitempty"`
 }
 
 type ListEvaluatorRequest struct {
@@ -242,6 +284,10 @@ type RunEvaluatorRequest struct {
 	Ext                map[string]string   `json:"ext,omitempty"`
 	DisableTracing     bool                `json:"disable_tracing,omitempty"`
 	EvaluatorRunConf   *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
+	// ★ alias 多实例: 同 evaluator_version 不同 alias 区分实例; 空串=默认实例
+	Alias string `json:"alias,omitempty"`
+	// ★ Builtin (含别名) / Inline 来源标记; 0/默认按 Builtin 处理
+	SourceType EvaluatorRecordSourceType `json:"source_type,omitempty"`
 }
 
 type AsyncRunEvaluatorRequest struct {
@@ -255,6 +301,9 @@ type AsyncRunEvaluatorRequest struct {
 	TurnID             int64               `json:"turn_id,omitempty"`
 	Ext                map[string]string   `json:"ext,omitempty"`
 	EvaluatorRunConf   *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
+	// ★ alias 多实例: 同步与 RunEvaluatorRequest
+	Alias      string                    `json:"alias,omitempty"`
+	SourceType EvaluatorRecordSourceType `json:"source_type,omitempty"`
 }
 
 type AsyncRunEvaluatorResponse struct {
@@ -293,6 +342,16 @@ type ReportEvaluatorRecordParam struct {
 	Status     EvaluatorRunStatus   `json:"status"`
 }
 
+// UpdateRunConfParam 修改进行中实验运行配置的参数。
+// ItemConcurNum / ItemRetryNum 为 nil 表示该字段不修改。
+type UpdateRunConfParam struct {
+	ExptID        int64
+	SpaceID       int64
+	ItemConcurNum *int
+	ItemRetryNum  *int
+	Session       *Session
+}
+
 type CreateExptParam struct {
 	WorkspaceID           int64                    `json:"workspace_id"`
 	EvalSetVersionID      int64                    `json:"eval_set_version_id"`
@@ -300,6 +359,8 @@ type CreateExptParam struct {
 	EvaluatorVersionIds   []int64                  `json:"evaluator_version_ids"`
 	Name                  string                   `json:"name"`
 	Desc                  string                   `json:"desc"`
+	ExperimentGroupKey    string                   `json:"experiment_group_key,omitempty"`
+	RefGroupExperimentID  int64                    `json:"ref_group_experiment_id,omitempty"`
 	EvalSetID             int64                    `json:"eval_set_id"`
 	TargetID              *int64                   `json:"target_id,omitempty"`
 	CreateEvalTargetParam *CreateEvalTargetParam   `json:"create_eval_target_param,omitempty"`
@@ -314,7 +375,11 @@ type CreateExptParam struct {
 	ItemRetryNum          *int                     `json:"item_retry_num,omitempty"`
 	TrialRunItemCount     int64                    `json:"trial_run_item_count"`
 	TriggerType           string                   `json:"trigger_type,omitempty"`
-	NotificationConf      *ExptNotificationConf    `json:"notification_conf,omitempty"`
+	// ★ 新增: 多评测集配置 (MultiSetConfig 新路径权威源)
+	EvalSetConfigs []*EvalSetConfig `json:"eval_set_configs,omitempty"`
+	// ★ 新增: 分流依据 (== MultiSetConfig 走新路径), 由 request 透传, 不再从 len(EvalSetConfigs) 派生
+	EvalSetSourceType ExptEvalSetSourceType `json:"eval_set_source_type"`
+	NotificationConf  *ExptNotificationConf `json:"notification_conf,omitempty"`
 }
 
 type ExptRunCheckOption struct {
@@ -457,6 +522,10 @@ type ReportTargetRecordParam struct {
 
 	Session                 *Session
 	EnableExtractTrajectory *bool
+	// AsyncUnixMS 异步评测对象「请求发起」的时间(unix ms),即提交异步调用之前的时刻。
+	// 用作抽取 trajectory 的时间下界:record.BaseInfo.CreatedAt 是异步返回后才 stamp 的,偏晚会漏掉
+	// 请求发起到返回之间的 span。为 0 时回退到 record.BaseInfo.CreatedAt。
+	AsyncUnixMS int64
 }
 
 type DebugTargetParam struct {
@@ -546,4 +615,36 @@ type ListEvaluatorTemplateResponse struct {
 	PageSize   int32                `json:"page_size"`   // 分页大小
 	PageNum    int32                `json:"page_num"`    // 页码
 	TotalPages int32                `json:"total_pages"` // 总页数
+}
+
+type ListEvaluationSetItemDefsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*OrderBy
+}
+
+type ListEvaluationSetItemVersionsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	ItemID          int64
+	PageNumber      *int32
+	PageSize        *int32
+	PageToken       *string
+	OrderBys        []*OrderBy
+}
+
+type BatchAddExistEvaluationSetItemsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	Items           []*EvaluationItemVersionRef
+	AllowPartialAdd *bool
+}
+
+type BatchAddExistEvaluationSetItemsResult struct {
+	SuccessCount *int32
+	FailedCount  *int32
+	FailedItems  []*EvaluationItemVersionRef
 }

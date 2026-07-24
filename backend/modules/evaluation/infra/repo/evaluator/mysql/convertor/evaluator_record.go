@@ -24,7 +24,12 @@ func ConvertEvaluatorRecordDO2PO(do *entity.EvaluatorRecord) *model.EvaluatorRec
 		ExperimentID:       gptr.Of(do.ExperimentID),
 		ExperimentRunID:    do.ExperimentRunID,
 		ItemID:             do.ItemID,
+		ItemVersionID:      do.ItemVersionID, // ★
 		EvaluatorVersionID: do.EvaluatorVersionID,
+		SourceType:         int32(do.SourceType), // ★
+		InlineKey:          do.InlineKey,         // ★
+		Alias_:             do.Alias,             // ★ gorm_gen 将 alias 生成为 Alias_
+		TargetRecordID:     do.TargetRecordID,    // ★
 		TurnID:             do.TurnID,
 		LogID:              gptr.Of(do.LogID),
 		TraceID:            do.TraceID,
@@ -98,7 +103,12 @@ func ConvertEvaluatorRecordPO2DO(po *model.EvaluatorRecord) (*entity.EvaluatorRe
 	}
 	do.ExperimentRunID = po.ExperimentRunID
 	do.ItemID = po.ItemID
+	do.ItemVersionID = po.ItemVersionID // ★
 	do.EvaluatorVersionID = po.EvaluatorVersionID
+	do.SourceType = entity.EvaluatorRecordSourceType(po.SourceType) // ★
+	do.InlineKey = po.InlineKey                                     // ★
+	do.Alias = po.Alias_                                            // ★
+	do.TargetRecordID = po.TargetRecordID                           // ★
 	do.TraceID = po.TraceID
 	if po.LogID != nil {
 		do.LogID = *po.LogID
@@ -143,4 +153,18 @@ func ConvertEvaluatorRecordPO2DO(po *model.EvaluatorRecord) (*entity.EvaluatorRe
 	}
 
 	return do, nil
+}
+
+// ConvertEvaluatorRecordPO2AggrDO 聚合专用转换: 只映射 id/score/status, 不触碰
+// input_data/output_data/ext 三个 mediumblob, 因此无任何 json.Unmarshal 开销。
+// 配合 SELECT id, score, status 的窄查询使用, 是评估聚合链路避免大字段全量反序列化 OOM 的关键。
+func ConvertEvaluatorRecordPO2AggrDO(po *model.EvaluatorRecord) *entity.EvaluatorRecordAggr {
+	if po == nil {
+		return nil
+	}
+	return &entity.EvaluatorRecordAggr{
+		ID:     po.ID,
+		Score:  po.Score,
+		Status: entity.EvaluatorRunStatus(po.Status),
+	}
 }

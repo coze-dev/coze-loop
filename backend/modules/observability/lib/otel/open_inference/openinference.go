@@ -46,8 +46,10 @@ func ConvertToModelInput(input interface{}) (interface{}, error) {
 			msg = msgSurface // maybe no message key, it has been a raw message
 		}
 
-		modelMsg := convertModelMsg(msg)
-		messages = append(messages, modelMsg)
+		modelMsgs := convertModelMsg(msg)
+		for _, m := range modelMsgs {
+			messages = append(messages, m)
+		}
 	}
 
 	modelInput := map[string]interface{}{
@@ -57,7 +59,7 @@ func ConvertToModelInput(input interface{}) (interface{}, error) {
 	return modelInput, nil
 }
 
-func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
+func convertModelMsg(msg map[string]interface{}) []map[string]interface{} {
 	modelMsg := map[string]interface{}{
 		"role": msg["role"],
 	}
@@ -79,6 +81,9 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 			break
 		}
 	}
+
+	var toolCallResponses []map[string]interface{}
+
 	if len(contents) > 0 {
 		parts := make([]interface{}, 0, len(contents))
 		toolCalls := make([]interface{}, 0)
@@ -129,8 +134,10 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 					if toolCallResult == nil {
 						toolCallResult, _ = mcContent["result"]
 					}
-					modelMsg["content"] = toolCallResult
-					modelMsg["tool_call_id"] = toolCallId
+					toolCallResponses = append(toolCallResponses, map[string]interface{}{
+						"content":      toolCallResult,
+						"tool_call_id": toolCallId,
+					})
 					part = nil
 				default:
 				}
@@ -181,7 +188,25 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 		}
 	}
 
-	return modelMsg
+	// When multiple tool_call_responses exist in a single message, split into
+	// separate messages (OpenAI format requires one tool response per message).
+	if len(toolCallResponses) > 1 {
+		result := make([]map[string]interface{}, 0, len(toolCallResponses))
+		for _, tcr := range toolCallResponses {
+			result = append(result, map[string]interface{}{
+				"role":         msg["role"],
+				"content":      tcr["content"],
+				"tool_call_id": tcr["tool_call_id"],
+			})
+		}
+		return result
+	}
+	if len(toolCallResponses) == 1 {
+		modelMsg["content"] = toolCallResponses[0]["content"]
+		modelMsg["tool_call_id"] = toolCallResponses[0]["tool_call_id"]
+	}
+
+	return []map[string]interface{}{modelMsg}
 }
 
 func ConvertToModelOutput(input interface{}) (interface{}, error) {
@@ -204,12 +229,13 @@ func ConvertToModelOutput(input interface{}) (interface{}, error) {
 			msg = surface // maybe no message key, it has been a raw message
 		}
 
-		modelMsg := convertModelMsg(msg)
-		choice := map[string]interface{}{
-			"message": modelMsg,
+		modelMsgs := convertModelMsg(msg)
+		for _, modelMsg := range modelMsgs {
+			choice := map[string]interface{}{
+				"message": modelMsg,
+			}
+			choices = append(choices, choice)
 		}
-
-		choices = append(choices, choice)
 	}
 
 	modelOutput := map[string]interface{}{

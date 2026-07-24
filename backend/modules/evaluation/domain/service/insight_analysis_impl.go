@@ -319,7 +319,7 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 	}
 
 	userInfo := userInfos[0]
-	err = e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfo.Email), consts.InsightAnalysisNotifyCardID, map[string]string{
+	err = e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfo.Email), receiveIDTypeEmail, consts.InsightAnalysisNotifyCardID, map[string]string{
 		"expt_name": expt.Name,
 		"space_id":  strconv.FormatInt(spaceID, 10),
 		"expt_id":   strconv.FormatInt(exptID, 10),

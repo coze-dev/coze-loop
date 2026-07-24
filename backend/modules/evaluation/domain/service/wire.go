@@ -6,6 +6,7 @@ package service
 import (
 	"github.com/google/wire"
 
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
@@ -15,6 +16,7 @@ import (
 	evaluatorrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	targetrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent_studio"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/pipeline"
@@ -48,7 +50,13 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	wire.Bind(new(IWebhookSecretProvider), new(*NoopWebhookSecretProvider)),
 	// Repo Sets
 	experimentrepo.ExperimentRepoSet,
+	// Open-source has no BMQ impl; commercial overrides via its own ProducerSet
+	ProvideNilItemCompletePublisher,
 )
+
+func ProvideNilItemCompletePublisher() component.IItemCompletePublisher {
+	return nil
+}
 
 // EvaluatorDomainServiceSet 提供所有 Evaluator 相关的 Domain Service
 var EvaluatorDomainServiceSet = wire.NewSet(
@@ -84,6 +92,8 @@ var TargetDomainServiceSet = wire.NewSet(
 	NewSourceTargetOperators,
 	// Infrastructure Sets
 	prompt.PromptRPCSet,
+	agent_studio.AgentStudioRPCSet,
+	wire.Bind(new(rpc.ISandboxSchedulerAdapter), new(*agent_studio.SandboxSchedulerAdapter)),
 	// Repo Sets
 	targetrepo.TargetRepoSet,
 )
@@ -112,8 +122,9 @@ func NewEvaluatorSourceServices(
 }
 
 // NewSourceTargetOperators 创建源目标操作器映射
-func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
+func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter, idgen idgen.IIDGenerator, sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
 	return map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-		entity.EvalTargetTypeLoopPrompt: NewPromptSourceEvalTargetServiceImpl(adapter),
+		entity.EvalTargetTypeLoopPrompt:   NewPromptSourceEvalTargetServiceImpl(adapter),
+		entity.EvalTargetTypeSandboxAgent: NewSandboxAgentSourceEvalTargetServiceImpl(idgen, sandboxSchedulerAdapter),
 	}
 }

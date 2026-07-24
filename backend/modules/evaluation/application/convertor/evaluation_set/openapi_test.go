@@ -4,6 +4,8 @@
 package evaluation_set
 
 import (
+	"encoding/json"
+	"net/url"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
@@ -12,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapi_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
+	datafilter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
@@ -253,6 +256,120 @@ func TestOrderByConversions(t *testing.T) {
 	assert.Nil(t, OrderByDTO2DOs(nil))
 }
 
+func TestOpenAPIResourceTagConversions(t *testing.T) {
+	t.Parallel()
+
+	tagKeyID := int64(123)
+	contentType := "option"
+	status := "active"
+
+	refDTO := &openapi_eval_set.ResourceTagRef{TagName: "tag-a"}
+	expectedRefDO := &entity.ResourceTagRef{TagName: "tag-a"}
+	assert.Equal(t, expectedRefDO, OpenAPIResourceTagRefDTO2DO(refDTO))
+	assert.Equal(t, []*entity.ResourceTagRef{expectedRefDO}, OpenAPIResourceTagRefDTO2DOs([]*openapi_eval_set.ResourceTagRef{refDTO}))
+	assert.Nil(t, OpenAPIResourceTagRefDTO2DO(nil))
+	assert.Nil(t, OpenAPIResourceTagRefDTO2DOs(nil))
+
+	tagDTO := &openapi_eval_set.ResourceTag{
+		TagName:     "tag-a",
+		TagKeyID:    &tagKeyID,
+		ContentType: &contentType,
+		Status:      &status,
+	}
+	expectedDO := &entity.ResourceTag{
+		TagName:     "tag-a",
+		TagKeyID:    tagKeyID,
+		ContentType: contentType,
+		Status:      status,
+	}
+	assert.Equal(t, expectedDO, OpenAPIResourceTagDTO2DO(tagDTO))
+	assert.Equal(t, []*entity.ResourceTag{expectedDO}, OpenAPIResourceTagDTO2DOs([]*openapi_eval_set.ResourceTag{tagDTO}))
+	assert.Nil(t, OpenAPIResourceTagDTO2DO(nil))
+	assert.Nil(t, OpenAPIResourceTagDTO2DOs(nil))
+
+	assert.Equal(t, tagDTO, OpenAPIResourceTagDO2DTO(expectedDO))
+	assert.Equal(t, []*openapi_eval_set.ResourceTag{tagDTO}, OpenAPIResourceTagDO2DTOs([]*entity.ResourceTag{expectedDO}))
+	assert.Nil(t, OpenAPIResourceTagDO2DTO(nil))
+	assert.Nil(t, OpenAPIResourceTagDO2DTOs(nil))
+}
+
+func TestOpenAPITagFilterConversions(t *testing.T) {
+	t.Parallel()
+
+	got, err := OpenAPITagFilterQueryDTO2DO(nil, nil)
+	assert.NoError(t, err)
+	assert.Nil(t, got)
+
+	relation := openapi_eval_set.TagFilterRelation(openapi_eval_set.TagFilterRelationAnd)
+	got, err = OpenAPITagFilterQueryDTO2DO([]string{" beta ", "alpha", "alpha"}, &relation)
+	assert.NoError(t, err)
+	assert.Equal(t, &entity.TagFilter{
+		TagNames: []string{"alpha", "beta"},
+		Relation: entity.TagFilterRelationAnd,
+	}, got)
+
+	got, err = OpenAPITagFilterDTO2DO(&openapi_eval_set.TagFilter{TagNames: []string{"tag-a"}})
+	assert.NoError(t, err)
+	assert.Equal(t, &entity.TagFilter{
+		TagNames: []string{"tag-a"},
+		Relation: entity.TagFilterRelationOr,
+	}, got)
+
+	got, err = OpenAPITagFilterDTO2DO(&openapi_eval_set.TagFilter{})
+	assert.Error(t, err)
+	assert.Nil(t, got)
+
+	got, err = OpenAPITagFilterQueryDTO2DO([]string{" "}, nil)
+	assert.Error(t, err)
+	assert.Nil(t, got)
+
+	invalidRelation := openapi_eval_set.TagFilterRelation("xor")
+	got, err = OpenAPITagFilterQueryDTO2DO([]string{"tag-a"}, &invalidRelation)
+	assert.Error(t, err)
+	assert.Nil(t, got)
+}
+
+func TestOpenAPIFilterQueryDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	queryRelation := datafilter.QueryRelation(datafilter.QueryRelationAnd)
+	queryType := datafilter.QueryType(datafilter.QueryTypeGte)
+	expected := &entity.Filter{
+		QueryAndOr: &queryRelation,
+		FilterFields: []*entity.FilterField{
+			{
+				FieldName: "score",
+				FieldType: datafilter.FieldTypeDouble,
+				Values:    []string{"0.8"},
+				QueryType: &queryType,
+			},
+		},
+	}
+
+	got, err := OpenAPIFilterQueryDTO2DO(nil)
+	assert.NoError(t, err)
+	assert.Nil(t, got)
+
+	got, err = OpenAPIFilterQueryDTO2DO(gptr.Of(" "))
+	assert.NoError(t, err)
+	assert.Nil(t, got)
+
+	rawFilter, err := json.Marshal(expected)
+	assert.NoError(t, err)
+	got, err = OpenAPIFilterQueryDTO2DO(gptr.Of(string(rawFilter)))
+	assert.NoError(t, err)
+	assert.Equal(t, expected, got)
+
+	encodedFilter := url.QueryEscape(string(rawFilter))
+	got, err = OpenAPIFilterQueryDTO2DO(&encodedFilter)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, got)
+
+	got, err = OpenAPIFilterQueryDTO2DO(gptr.Of("{bad-json"))
+	assert.Error(t, err)
+	assert.Nil(t, got)
+}
+
 func TestEvaluationSetConversions(t *testing.T) {
 	t.Parallel()
 
@@ -264,6 +381,9 @@ func TestEvaluationSetConversions(t *testing.T) {
 	updater := "updater"
 	innerCreator := "inner_creator"
 	innerUpdater := "inner_updater"
+	tagKeyID := int64(12)
+	tagContentType := "option"
+	tagStatus := "active"
 
 	versionDO := &entity.EvaluationSetVersion{
 		ID:          10,
@@ -304,6 +424,9 @@ func TestEvaluationSetConversions(t *testing.T) {
 			CreatedBy: &entity.UserInfo{Name: &creator},
 			UpdatedBy: &entity.UserInfo{Name: &updater},
 		},
+		Tags: []*entity.ResourceTag{
+			{TagName: "tag-a", TagKeyID: tagKeyID, ContentType: tagContentType, Status: tagStatus},
+		},
 	}
 
 	result := OpenAPIEvaluationSetDO2DTO(do)
@@ -315,6 +438,7 @@ func TestEvaluationSetConversions(t *testing.T) {
 		ItemCount:           ptr[int64](3),
 		LatestVersion:       ptr("latest"),
 		IsChangeUncommitted: ptr(true),
+		DatasetKey:          ptr(""),
 		CurrentVersion: &openapi_eval_set.EvaluationSetVersion{
 			ID:          ptr[int64](10),
 			Version:     ptr("v1"),
@@ -343,6 +467,9 @@ func TestEvaluationSetConversions(t *testing.T) {
 			UpdatedBy: &common.UserInfo{Name: &updater},
 			CreatedAt: &createdAt,
 			UpdatedAt: &updatedAt,
+		},
+		Tags: []*openapi_eval_set.ResourceTag{
+			{TagName: "tag-a", TagKeyID: &tagKeyID, ContentType: &tagContentType, Status: &tagStatus},
 		},
 	}
 	assert.Equal(t, expected, result)
@@ -442,6 +569,9 @@ func TestOpenAPIItemConversions(t *testing.T) {
 		ID:      ptr[int64](2),
 		ItemKey: ptr("key"),
 		Turns:   []*openapi_eval_set.Turn{turnDTO},
+		Tags: []*openapi_eval_set.ResourceTag{
+			{TagName: "tag-a", TagKeyID: ptr[int64](10), ContentType: ptr("option"), Status: ptr("active")},
+		},
 	}
 
 	do := OpenAPIItemDTO2DO(evalSetID, itemDTO)
@@ -488,6 +618,9 @@ func TestOpenAPIItemConversions(t *testing.T) {
 				ItemID:    2,
 				EvalSetID: evalSetID,
 			},
+		},
+		Tags: []*entity.ResourceTag{
+			{TagName: "tag-a", TagKeyID: 10, ContentType: "option", Status: "active"},
 		},
 	}
 	assert.Equal(t, expectedDO, do)
@@ -561,6 +694,9 @@ func TestOpenAPIItemDOToDTOConversions(t *testing.T) {
 			},
 		},
 		BaseInfo: &entity.BaseInfo{},
+		Tags: []*entity.ResourceTag{
+			{TagName: "tag-b", TagKeyID: 20, ContentType: "option", Status: "active"},
+		},
 	}
 
 	result := OpenAPIItemDO2DTO(do)
@@ -595,6 +731,9 @@ func TestOpenAPIItemDOToDTOConversions(t *testing.T) {
 			},
 		},
 		BaseInfo: &common.BaseInfo{},
+		Tags: []*openapi_eval_set.ResourceTag{
+			{TagName: "tag-b", TagKeyID: ptr[int64](20), ContentType: ptr("option"), Status: ptr("active")},
+		},
 	}
 	assert.Equal(t, expected, result)
 	assert.Nil(t, OpenAPIItemDO2DTO(nil))

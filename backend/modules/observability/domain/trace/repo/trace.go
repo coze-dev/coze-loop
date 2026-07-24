@@ -5,10 +5,13 @@ package repo
 
 import (
 	"context"
+	"errors"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
+
+var ErrMaxBytesExceeded = errors.New("ListSpansRepeat: max bytes exceeded")
 
 type GetTraceParam struct {
 	WorkSpaceID        string
@@ -46,6 +49,7 @@ type ListSpansParam struct {
 	NotQueryAnnotation bool
 	OmitColumns        []string // omit specific columns
 	SelectColumns      []string // select specific columns, default select all columns
+	MaxBytes           int64    // max total bytes for ListSpansRepeat, 0 means no limit
 }
 
 type ListSpansResult struct {

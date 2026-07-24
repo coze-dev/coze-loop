@@ -50,6 +50,7 @@ func (a *DatasetRPCAdapter) CreateDataset(ctx context.Context, param *rpc.Create
 		Features: &domain_dataset.DatasetFeatures{
 			EditSchema: gptr.Of(true),
 		},
+		DatasetKey: param.DatasetKey,
 	})
 	if err != nil {
 		return 0, err
@@ -115,7 +116,7 @@ func (a *DatasetRPCAdapter) ValidateMultiPartData(ctx context.Context, spaceID i
 	return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("ValidateMultiPartData not implemented"))
 }
 
-func (a *DatasetRPCAdapter) UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error) {
+func (a *DatasetRPCAdapter) UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string, tags []*entity.ResourceTagRef) (err error) {
 	resp, err := a.client.UpdateDataset(ctx, &datasetdto.UpdateDatasetRequest{
 		WorkspaceID: &spaceID,
 		DatasetID:   evaluationSetID,
@@ -198,6 +199,7 @@ func (a *DatasetRPCAdapter) ListDatasets(ctx context.Context, param *rpc.ListDat
 		PageToken:   param.PageToken,
 		OrderBys:    convert2DatasetOrderBys(ctx, param.OrderBys),
 		Category:    domain_dataset.DatasetCategoryPtr(domain_dataset.DatasetCategory_Evaluation),
+		DatasetKeys: param.DatasetKeys,
 	})
 	if err != nil {
 		return nil, nil, nil, err
@@ -362,7 +364,7 @@ func (a *DatasetRPCAdapter) BatchUpdateDatasetItems(ctx context.Context, param *
 	return nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("BatchUpdateDatasetItems not implemented"))
 }
 
-func (a *DatasetRPCAdapter) UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption) (err error) {
+func (a *DatasetRPCAdapter) UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption, tags []*entity.ResourceTagRef) (err error) {
 	data, err := convert2DatasetData(ctx, turns)
 	if err != nil {
 		return err
@@ -412,6 +414,8 @@ func (a *DatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.Lis
 		PageSize:    param.PageSize,
 		PageToken:   param.PageToken,
 		OrderBys:    convert2DatasetOrderBys(ctx, param.OrderBys),
+		Filter:      param.Filter, // entity.Filter 即 filter.Filter 别名, 直传
+		TagFilter:   convert2DatasetTagFilter(param.TagFilter),
 		// todo
 		// ItemIDsNotIn: param.ItemIDsNotIn,
 	})
@@ -436,6 +440,8 @@ func (a *DatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param
 		PageSize:    param.PageSize,
 		PageToken:   param.PageToken,
 		OrderBys:    convert2DatasetOrderBys(ctx, param.OrderBys),
+		Filter:      param.Filter, // entity.Filter 即 filter.Filter 别名, 直传
+		TagFilter:   convert2DatasetTagFilter(param.TagFilter),
 	})
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -499,5 +505,29 @@ func (a *DatasetRPCAdapter) QueryItemSnapshotMappings(ctx context.Context, req *
 }
 
 func (a *DatasetRPCAdapter) GetDatasetItemField(ctx context.Context, param *rpc.GetDatasetItemFieldParam) (fieldData *entity.FieldData, err error) {
+	return nil, nil
+}
+
+func (a *DatasetRPCAdapter) GetDatasetItemDef(ctx context.Context, spaceID, evaluationSetID, itemID int64) (*entity.EvaluationSetItemDef, error) {
+	return nil, nil
+}
+
+func (a *DatasetRPCAdapter) ListDatasetItemDefs(ctx context.Context, param *rpc.ListDatasetItemDefsParam) ([]*entity.EvaluationSetItemDef, *int64, *string, error) {
+	return nil, nil, nil, nil
+}
+
+func (a *DatasetRPCAdapter) ListDatasetItemVersions(ctx context.Context, param *rpc.ListDatasetItemVersionsParam) ([]*entity.EvaluationSetItemVersion, *int64, *string, error) {
+	return nil, nil, nil, nil
+}
+
+func (a *DatasetRPCAdapter) GetDatasetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, itemVersion *string) (*entity.EvaluationSetItemVersion, error) {
+	return nil, nil
+}
+
+func (a *DatasetRPCAdapter) UpdateDatasetItemVersion(ctx context.Context, spaceID, evaluationSetID, itemID int64, itemVersionID *int64, status, description, itemVersion *string) error {
+	return nil
+}
+
+func (a *DatasetRPCAdapter) BatchAddExistDatasetItems(ctx context.Context, param *rpc.BatchAddExistDatasetItemsParam) (*entity.BatchAddExistEvaluationSetItemsResult, error) {
 	return nil, nil
 }

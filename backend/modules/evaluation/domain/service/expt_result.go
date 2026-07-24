@@ -13,6 +13,9 @@ import (
 //go:generate  mockgen -destination  ./mocks/expt_result.go  --package mocks . ExptResultService,ExptAggrResultService
 type ExptResultService interface {
 	MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error)
+	// GetItemIDListByExptID 精简查询：仅返回实验下 distinct 的 item_id 列表（单表单列 GROUP BY，不加载轨迹/评测大对象），
+	// 用于标准输出精简读（only_item_ids）等只需枚举 item 的场景。
+	GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) ([]int64, error)
 	// RecordItemRunLogs sync results from run_log table to result table.
 	RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error)
 	GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error)

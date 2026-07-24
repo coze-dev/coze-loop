@@ -357,7 +357,7 @@ func TestExptTurnRunResult_AbortWithTargetResult(t *testing.T) {
 func TestExptTurnRunResult_AbortWithEvaluatorResults(t *testing.T) {
 	tests := []struct {
 		name          string
-		evaluatorRes  map[int64]*EvaluatorRecord
+		evaluatorRes  []*EvaluatorRecord
 		expectedAbort bool
 		expectedAsync bool
 	}{
@@ -369,27 +369,27 @@ func TestExptTurnRunResult_AbortWithEvaluatorResults(t *testing.T) {
 		},
 		{
 			name: "全部成功不中止",
-			evaluatorRes: map[int64]*EvaluatorRecord{
-				1: {ID: 100, EvaluatorVersionID: 1, Status: EvaluatorRunStatusSuccess},
-				2: {ID: 200, EvaluatorVersionID: 2, Status: EvaluatorRunStatusSuccess},
+			evaluatorRes: []*EvaluatorRecord{
+				{ID: 100, EvaluatorVersionID: 1, Status: EvaluatorRunStatusSuccess},
+				{ID: 200, EvaluatorVersionID: 2, Status: EvaluatorRunStatusSuccess},
 			},
 			expectedAbort: false,
 			expectedAsync: false,
 		},
 		{
 			name: "存在 AsyncInvoking 中止并标记 AsyncAbort",
-			evaluatorRes: map[int64]*EvaluatorRecord{
-				1: {ID: 100, EvaluatorVersionID: 1, Status: EvaluatorRunStatusSuccess},
-				2: {ID: 200, EvaluatorVersionID: 2, Status: EvaluatorRunStatusAsyncInvoking},
+			evaluatorRes: []*EvaluatorRecord{
+				{ID: 100, EvaluatorVersionID: 1, Status: EvaluatorRunStatusSuccess},
+				{ID: 200, EvaluatorVersionID: 2, Status: EvaluatorRunStatusAsyncInvoking},
 			},
 			expectedAbort: true,
 			expectedAsync: true,
 		},
 		{
 			name: "包含 nil record 不影响判断",
-			evaluatorRes: map[int64]*EvaluatorRecord{
-				1: nil,
-				2: {ID: 200, EvaluatorVersionID: 2, Status: EvaluatorRunStatusAsyncInvoking},
+			evaluatorRes: []*EvaluatorRecord{
+				nil,
+				{ID: 200, EvaluatorVersionID: 2, Status: EvaluatorRunStatusAsyncInvoking},
 			},
 			expectedAbort: true,
 			expectedAsync: true,
@@ -481,8 +481,8 @@ func TestExptTurnRunResult_SetTargetResult(t *testing.T) {
 func TestExptTurnRunResult_SetEvaluatorResults(t *testing.T) {
 	tests := []struct {
 		name             string
-		evaluatorResults map[int64]*EvaluatorRecord
-		expected         map[int64]*EvaluatorRecord
+		evaluatorResults []*EvaluatorRecord
+		expected         []*EvaluatorRecord
 	}{
 		{
 			name:             "设置nil EvaluatorResults",
@@ -491,13 +491,13 @@ func TestExptTurnRunResult_SetEvaluatorResults(t *testing.T) {
 		},
 		{
 			name: "设置非nil EvaluatorResults",
-			evaluatorResults: map[int64]*EvaluatorRecord{
-				1: {ID: 100, EvaluatorVersionID: 1},
-				2: {ID: 200, EvaluatorVersionID: 2},
+			evaluatorResults: []*EvaluatorRecord{
+				{ID: 100, EvaluatorVersionID: 1},
+				{ID: 200, EvaluatorVersionID: 2},
 			},
-			expected: map[int64]*EvaluatorRecord{
-				1: {ID: 100, EvaluatorVersionID: 1},
-				2: {ID: 200, EvaluatorVersionID: 2},
+			expected: []*EvaluatorRecord{
+				{ID: 100, EvaluatorVersionID: 1},
+				{ID: 200, EvaluatorVersionID: 2},
 			},
 		},
 	}
@@ -536,9 +536,9 @@ func TestExptTurnRunResult_GetEvaluatorRecord(t *testing.T) {
 			expected:           nil,
 		},
 		{
-			name: "EvaluatorResults为空map",
+			name: "EvaluatorResults为空slice",
 			turnRunResult: &ExptTurnRunResult{
-				EvaluatorResults: map[int64]*EvaluatorRecord{},
+				EvaluatorResults: []*EvaluatorRecord{},
 			},
 			evaluatorVersionID: 1,
 			expected:           nil,
@@ -546,9 +546,9 @@ func TestExptTurnRunResult_GetEvaluatorRecord(t *testing.T) {
 		{
 			name: "找到对应的EvaluatorRecord",
 			turnRunResult: &ExptTurnRunResult{
-				EvaluatorResults: map[int64]*EvaluatorRecord{
-					1: {ID: 100, EvaluatorVersionID: 1},
-					2: {ID: 200, EvaluatorVersionID: 2},
+				EvaluatorResults: []*EvaluatorRecord{
+					{ID: 100, EvaluatorVersionID: 1},
+					{ID: 200, EvaluatorVersionID: 2},
 				},
 			},
 			evaluatorVersionID: 1,
@@ -557,9 +557,9 @@ func TestExptTurnRunResult_GetEvaluatorRecord(t *testing.T) {
 		{
 			name: "找不到对应的EvaluatorRecord",
 			turnRunResult: &ExptTurnRunResult{
-				EvaluatorResults: map[int64]*EvaluatorRecord{
-					1: {ID: 100, EvaluatorVersionID: 1},
-					2: {ID: 200, EvaluatorVersionID: 2},
+				EvaluatorResults: []*EvaluatorRecord{
+					{ID: 100, EvaluatorVersionID: 1},
+					{ID: 200, EvaluatorVersionID: 2},
 				},
 			},
 			evaluatorVersionID: 3,

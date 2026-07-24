@@ -102,6 +102,10 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteLi
 	return nil
 }
 
+func (f *fakeEvaluatorRecordStorageConfiger) GetExptMultiSetWhiteList(ctx context.Context) *entity.ExptMultiSetWhiteList {
+	return nil
+}
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	return nil, false
 }
@@ -197,7 +201,7 @@ func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 
 		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
-		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err")).Times(3)
 		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
 		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeEvaluatorRecordStorageConfiger{cfg: cfg})
 
@@ -323,7 +327,7 @@ func TestEvaluatorRecordRepoImpl_CorrectEvaluatorRecord(t *testing.T) {
 		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 
 		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
-		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err")).Times(3)
 		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
 		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeEvaluatorRecordStorageConfiger{cfg: cfg})
 
@@ -1064,4 +1068,69 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_ConvertError(t *testing
 	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{1}, false, false)
 	assert.Error(t, err)
 	assert.Nil(t, result)
+}
+
+func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecordForAggr(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	repo := &EvaluatorRecordRepoImpl{evaluatorRecordDao: mockEvaluatorRecordDAO}
+
+	t.Run("空 ids 直接返回空, 不打 DAO", func(t *testing.T) {
+		got, err := repo.BatchGetEvaluatorRecordForAggr(context.Background(), nil)
+		assert.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("正常映射 PO->AggrDO(只取 id/score/status)", func(t *testing.T) {
+		s := 4.0
+		mockEvaluatorRecordDAO.EXPECT().
+			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1, 2}).
+			Return([]*model.EvaluatorRecord{
+				{ID: 1, Score: &s, Status: int32(entity.EvaluatorRunStatusSuccess)},
+				{ID: 2, Score: &s, Status: int32(entity.EvaluatorRunStatusSuccess)},
+			}, nil)
+
+		got, err := repo.BatchGetEvaluatorRecordForAggr(context.Background(), []int64{1, 2})
+		assert.NoError(t, err)
+		assert.Len(t, got, 2)
+		assert.Equal(t, int64(1), got[0].ID)
+		assert.Equal(t, 4.0, *got[0].Score)
+		assert.Equal(t, entity.EvaluatorRunStatusSuccess, got[0].Status)
+	})
+
+	t.Run("超过 batchSize=50 时分批调用 DAO", func(t *testing.T) {
+		ids := make([]int64, 0, 120)
+		for i := int64(1); i <= 120; i++ {
+			ids = append(ids, i)
+		}
+		s := 5.0
+		// 120 条应分 3 批 (50/50/20), 每批各回 1 条即可验证聚合拼接。
+		gomock.InOrder(
+			mockEvaluatorRecordDAO.EXPECT().
+				BatchGetEvaluatorRecordForAggr(gomock.Any(), gomock.Len(50)).
+				Return([]*model.EvaluatorRecord{{ID: 1, Score: &s, Status: int32(entity.EvaluatorRunStatusSuccess)}}, nil),
+			mockEvaluatorRecordDAO.EXPECT().
+				BatchGetEvaluatorRecordForAggr(gomock.Any(), gomock.Len(50)).
+				Return([]*model.EvaluatorRecord{{ID: 2, Score: &s, Status: int32(entity.EvaluatorRunStatusSuccess)}}, nil),
+			mockEvaluatorRecordDAO.EXPECT().
+				BatchGetEvaluatorRecordForAggr(gomock.Any(), gomock.Len(20)).
+				Return([]*model.EvaluatorRecord{{ID: 3, Score: &s, Status: int32(entity.EvaluatorRunStatusSuccess)}}, nil),
+		)
+
+		got, err := repo.BatchGetEvaluatorRecordForAggr(context.Background(), ids)
+		assert.NoError(t, err)
+		assert.Len(t, got, 3)
+	})
+
+	t.Run("DAO 报错向上抛", func(t *testing.T) {
+		mockEvaluatorRecordDAO.EXPECT().
+			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{9}).
+			Return(nil, errors.New("dao err"))
+
+		got, err := repo.BatchGetEvaluatorRecordForAggr(context.Background(), []int64{9})
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
 }

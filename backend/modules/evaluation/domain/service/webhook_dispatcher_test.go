@@ -348,6 +348,45 @@ func TestWebhookDispatcher_Dispatch_BitsUT(t *testing.T) {
 		err := d.Dispatch(context.Background(), event, expt)
 		assert.NoError(t, err)
 	})
+
+	t.Run("ppe conf -> request carries x-tt-env + x-use-ppe (end-to-end)", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		var capturedHeaders http.Header
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			capturedHeaders = r.Header.Clone()
+			w.WriteHeader(200)
+		}))
+		defer server.Close()
+
+		ppe := entity.WebhookEnvironment_PPE
+		d := NewWebhookDispatcher(mocks.NewMockExptEventPublisher(ctrl), NewNoopWebhookSecretProvider(), nil)
+		expt := &entity.Experiment{
+			ID: 42, SpaceID: 100, Name: "ppe-lane-test",
+			NotificationConf: &entity.ExptNotificationConf{
+				Webhook: &entity.WebhookNotificationConf{
+					Enable:      true,
+					Urls:        gptr.Of(server.URL),
+					Environment: &ppe,
+					Lane:        gptr.Of("ppe_lane_e2e"),
+				},
+			},
+		}
+		event := &entity.ExptLifecycleEvent{
+			ExptID: 42, SpaceID: 100, ExptRunID: gptr.Of(int64(7)),
+			FromStatus: entity.ExptStatus_Processing, ToStatus: entity.ExptStatus_Success,
+			IdempotentKey: "expt_42_7_3_11",
+		}
+
+		err := d.Dispatch(context.Background(), event, expt)
+		assert.NoError(t, err)
+		// 端到端：真实 HTTP 请求带上了泳道路由 header，且未破坏既有安全 header
+		assert.Equal(t, "ppe_lane_e2e", capturedHeaders.Get("x-tt-env"))
+		assert.Equal(t, "1", capturedHeaders.Get("x-use-ppe"))
+		assert.NotEmpty(t, capturedHeaders.Get("X-CozeLoop-Signature"))
+	})
 }
 
 func TestMapExptStatusToEventType_BitsUT(t *testing.T) {
@@ -369,4 +408,57 @@ func TestMapExptStatusToEventType_BitsUT(t *testing.T) {
 			assert.Equal(t, c.expected, mapExptStatusToEventType(c.status))
 		})
 	}
+}
+
+func TestBuildLaneHeaders_BitsUT(t *testing.T) {
+	t.Parallel()
+
+	ppe := entity.WebhookEnvironment_PPE
+	boe := entity.WebhookEnvironment_BOE
+	prod := entity.WebhookEnvironment_Prod
+
+	t.Run("ppe with lane -> x-tt-env + x-use-ppe", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&ppe, gptr.Of("ppe_lane_1"))
+		assert.Equal(t, "ppe_lane_1", h["x-tt-env"])
+		assert.Equal(t, "1", h["x-use-ppe"])
+		assert.Len(t, h, 2)
+	})
+
+	t.Run("boe with lane -> x-tt-env only", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&boe, gptr.Of("boe_lane_2"))
+		assert.Equal(t, "boe_lane_2", h["x-tt-env"])
+		_, hasPPE := h["x-use-ppe"]
+		assert.False(t, hasPPE)
+		assert.Len(t, h, 1)
+	})
+
+	t.Run("prod -> no routing header", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&prod, gptr.Of("ignored_lane"))
+		assert.Empty(t, h)
+	})
+
+	t.Run("nil env (未设置/历史数据) -> no routing header, no panic", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(nil, gptr.Of("some_lane"))
+		assert.Empty(t, h)
+	})
+
+	t.Run("ppe but lane nil -> defensive downgrade, no x-tt-env, no panic", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&ppe, nil)
+		_, has := h["x-tt-env"]
+		assert.False(t, has)
+		assert.Empty(t, h)
+	})
+
+	t.Run("ppe but lane empty/whitespace -> defensive downgrade", func(t *testing.T) {
+		t.Parallel()
+		h := BuildLaneHeaders(&ppe, gptr.Of("   "))
+		_, has := h["x-tt-env"]
+		assert.False(t, has)
+		assert.Empty(t, h)
+	})
 }

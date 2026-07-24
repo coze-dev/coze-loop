@@ -45,6 +45,17 @@ struct CreateExperimentRequest {
 
     50: optional expt.ExptTriggerType trigger_type
 
+    // ★ 多评测集配置 (item-centric 新路径权威源); 仅当 eval_set_source_type == MultiSetConfig(2) 时生效
+    70: optional list<expt.EvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
+    // ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
+    // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
+    71: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
+
+    // 实验分组 key；不填时后端默认为实验 id
+    90: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag='json:"experiment_group_key"')
+
+    // 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+    91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
 
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
@@ -92,6 +103,7 @@ struct SubmitExperimentRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
     47: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
+    48: optional string x_jwt_token (api.header='X-Jwt-Token') // 提交实验时前端透传的发起人 user JWT，用于预下载 skill 入 TOS
 
     50: optional expt.ExptTriggerType trigger_type
     51: optional expt.TaskTimeRange time_range (api.body = 'time_range')
@@ -102,10 +114,23 @@ struct SubmitExperimentRequest {
     // 指定执行的评测集条目ID列表
     70: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
 
-    // 通知配置
-    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
+    // ★ 多评测集配置 (item-centric 新路径权威源); 仅当 eval_set_source_type == MultiSetConfig(2) 时生效
+    // 注: 70 号已被 item_ids 占用, 取 75
+    75: optional list<expt.EvalSetConfig> eval_set_configs (api.body = 'eval_set_configs')
+    // ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
+    // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
+    76: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
 
     100: optional map<string, string> ext (api.body = 'ext')
+
+    // 实验分组 key；不填时后端默认为实验 id
+    90: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag='json:"experiment_group_key"')
+
+    // 引用分组实验 id：填写时校验其为当前空间内的实验 id，通过后本实验的 group key 复用该引用实验的 group key（归入同一分组）；优先级高于 experiment_group_key
+    91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
+
+    // 通知配置
+    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     200: optional common.Session session
 
@@ -150,6 +175,19 @@ struct BatchGetExperimentsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct GetExperimentIDsByGroupRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required string experiment_group_key (api.body = 'experiment_group_key', go.tag = 'json:"experiment_group_key"')
+
+    255: optional base.Base Base
+}
+
+struct GetExperimentIDsByGroupResponse {
+    1: optional list<i64> expt_ids (api.body = 'expt_ids', api.js_conv = 'true', go.tag = 'json:"expt_ids"')
+
+    255: base.BaseResp BaseResp
+}
+
 struct UpdateExperimentRequest {
     1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
@@ -165,6 +203,24 @@ struct UpdateExperimentRequest {
 struct UpdateExperimentResponse {
     1: optional expt.Experiment experiment (api.body = 'experiment')
 
+    255: base.BaseResp BaseResp
+}
+
+// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// 仅对处于 Pending / Processing 状态的实验生效。
+struct UpdateExptRunConfRequest {
+    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
+
+    // 评测项并发度：不传或 0 表示不修改；范围 (0, MaxItemConcurNum]
+    3: optional i32 item_concur_num (api.body='item_concur_num')
+    // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
+    4: optional i32 item_retry_num (api.body='item_retry_num')
+
+    255: optional base.Base Base
+}
+
+struct UpdateExptRunConfResponse {
     255: base.BaseResp BaseResp
 }
 
@@ -283,6 +339,84 @@ struct BatchGetExperimentResultResponse {
     10: optional list<expt.ItemResult> item_results (api.body = "item_results")
 
     20: optional i64 total (api.body = "total", go.tag = 'json:"total"')
+
+    255: base.BaseResp BaseResp
+}
+
+struct StandardEvalOutputFullContent {
+    1: optional string provider (go.tag = 'json:"provider"')
+    2: optional string uri (go.tag = 'json:"uri"')
+    3: optional string url (go.tag = 'json:"url"')
+    4: optional i64 bytes (go.tag = 'json:"bytes"')
+    5: optional string sha256 (go.tag = 'json:"sha256"')
+}
+
+struct StandardEvalOutputContent {
+    1: optional string text (go.tag = 'json:"text"')
+    2: optional bool content_omitted (go.tag = 'json:"content_omitted"')
+    3: optional StandardEvalOutputFullContent full_content (go.tag = 'json:"full_content"')
+}
+
+struct MGetExperimentStandardEvalOutputsRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
+
+    10: required list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"', vt.min_size = "1", vt.max_size = "100")
+
+    255: optional base.Base Base
+}
+
+struct ListExperimentStandardEvalOutputsRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
+
+    20: optional i32 page_number (api.query = 'page_number', go.tag = 'json:"page_number"')
+    21: optional i32 page_size (api.query = 'page_size', go.tag = 'json:"page_size"')
+
+    // item_id_only 为 true 时走精简查询：items 每项仅填 item_id（不加载轨迹 / evaluator / eval_target
+    // 大对象、也不查 dataset_key 等），用于 MQ 回调补齐前先枚举实验下所有 item，省性能。
+    30: optional bool item_id_only (api.body = 'item_id_only', go.tag = 'json:"item_id_only"')
+
+    255: optional base.Base Base
+}
+
+struct ItemStandardEvalOutput {
+    1: optional i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    2: optional i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id"')
+    3: optional string dataset_key (go.tag = 'json:"dataset_key"')
+    4: optional string item_key (go.tag = 'json:"item_key"')
+    5: optional expt.ItemRunState status (go.tag = 'json:"status"')
+
+    // MQ 元信息：与 item-complete(success) MQ 消息体对齐，供回调补齐时携带。
+    6:  optional i64 eval_target_workspace_id (api.js_conv = 'true', go.tag = 'json:"eval_target_workspace_id"')
+    7:  optional i64 eval_target_id (api.js_conv = 'true', go.tag = 'json:"eval_target_id"')
+    8:  optional string source_target_id (go.tag = 'json:"source_target_id"')
+    9:  optional i64 expt_workspace_id (api.js_conv = 'true', go.tag = 'json:"expt_workspace_id"')
+    10: optional i64 expt_run_id (api.js_conv = 'true', go.tag = 'json:"expt_run_id"')
+    11: optional i64 dataset_workspace_id (api.js_conv = 'true', go.tag = 'json:"dataset_workspace_id"')
+    12: optional i64 dataset_id (api.js_conv = 'true', go.tag = 'json:"dataset_id"')
+    13: optional i64 dataset_version_id (api.js_conv = 'true', go.tag = 'json:"dataset_version_id"')
+    14: optional string dataset_version_name (go.tag = 'json:"dataset_version_name"')
+    15: optional string experiment_group_key (go.tag = 'json:"experiment_group_key"')
+
+    // 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
+    30: optional StandardEvalOutputContent detail (go.tag = 'json:"detail"')
+    31: optional StandardEvalOutputContent rounds (go.tag = 'json:"rounds"')
+    32: optional StandardEvalOutputContent agent (go.tag = 'json:"agent"')
+    33: optional StandardEvalOutputContent output (go.tag = 'json:"output"')
+    34: optional StandardEvalOutputContent eval (go.tag = 'json:"eval"')
+    35: optional StandardEvalOutputContent extra (go.tag = 'json:"extra"')
+}
+
+struct MGetExperimentStandardEvalOutputsResponse {
+    1: optional list<ItemStandardEvalOutput> items (api.body = 'items')
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListExperimentStandardEvalOutputsResponse {
+    1: optional list<ItemStandardEvalOutput> items (api.body = 'items')
+    2: optional i64 total (api.body = 'total', go.tag = 'json:"total"')
 
     255: base.BaseResp BaseResp
 }
@@ -829,12 +963,21 @@ service ExperimentService {
         api.post = '/api/evaluation/v1/experiments/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
+    GetExperimentIDsByGroupResponse GetExperimentIDsByGroup(1: GetExperimentIDsByGroupRequest req) (
+        api.post = '/api/evaluation/v1/experiments/group_ids/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
+    )
+
     ListExperimentsResponse ListExperiments(1: ListExperimentsRequest req) (
         api.post = '/api/evaluation/v1/experiments/list', api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'experiment'
     )
 
     UpdateExperimentResponse UpdateExperiment(1: UpdateExperimentRequest req) (
         api.patch = '/api/evaluation/v1/experiments/:expt_id', api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
+
+    // UpdateExptRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）
+    UpdateExptRunConfResponse UpdateExptRunConf(1: UpdateExptRunConfRequest req) (
+        api.patch = '/api/evaluation/v1/experiments/:expt_id/run_conf', api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
     )
 
     DeleteExperimentResponse DeleteExperiment(1: DeleteExperimentRequest req) (
@@ -864,6 +1007,10 @@ service ExperimentService {
     BatchGetExperimentResultResponse BatchGetExperimentResult(1: BatchGetExperimentResultRequest req) (
         api.post = "/api/evaluation/v1/experiments/results/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
+
+    MGetExperimentStandardEvalOutputsResponse MGetExperimentStandardEvalOutputs(1: MGetExperimentStandardEvalOutputsRequest req)
+
+    ListExperimentStandardEvalOutputsResponse ListExperimentStandardEvalOutputs(1: ListExperimentStandardEvalOutputsRequest req)
 
     CalculateExperimentAggrResultResponse CalculateExperimentAggrResult(1: CalculateExperimentAggrResultRequest req) (
         api.post = "/api/evaluation/v1/experiments/:expt_id/aggr_results", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
@@ -933,4 +1080,3 @@ service ExperimentService {
     )
     SubmitExptFromTemplateResponse SubmitExptFromTemplate(1: SubmitExptFromTemplateRequest req)
 }
-

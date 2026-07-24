@@ -909,6 +909,87 @@ func TestTraceConfigCenter_GetQueryMaxQPS(t *testing.T) {
 	}
 }
 
+func TestTraceConfigCenter_GetAnnotationMaxQPS(t *testing.T) {
+	type fields struct {
+		configLoader *confmocks.MockIConfigLoader
+	}
+	type args struct {
+		ctx context.Context
+		key string
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         int
+		wantErr      bool
+	}{
+		{
+			name: "get annotation max qps with specific key",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), annotationRateLimitCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(**config.AnnotationRateLimitConfig)
+						*cfg = &config.AnnotationRateLimitConfig{
+							SpaceMaxQPS:   map[string]int{"space1": 20},
+							DefaultMaxQPS: 10,
+						}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			args:    args{ctx: context.Background(), key: "space1"},
+			want:    20,
+			wantErr: false,
+		},
+		{
+			name: "get annotation max qps with default value",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), annotationRateLimitCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(**config.AnnotationRateLimitConfig)
+						*cfg = &config.AnnotationRateLimitConfig{
+							SpaceMaxQPS:   map[string]int{"space1": 20},
+							DefaultMaxQPS: 10,
+						}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			args:    args{ctx: context.Background(), key: "space2"},
+			want:    10,
+			wantErr: false,
+		},
+		{
+			name: "unmarshal key failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), annotationRateLimitCfgKey, gomock.Any()).
+					Return(fmt.Errorf("unmarshal error"))
+				return fields{configLoader: mockLoader}
+			},
+			args:    args{ctx: context.Background(), key: "space1"},
+			want:    0,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			f := tt.fieldsGetter(ctrl)
+			tr := &TraceConfigCenter{
+				IConfigLoader: f.configLoader,
+			}
+			got, err := tr.GetAnnotationMaxQPS(tt.args.ctx, tt.args.key)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestTraceConfigCenter_GetKeySpanTypes(t *testing.T) {
 	type fields struct {
 		configLoader *confmocks.MockIConfigLoader
@@ -1124,6 +1205,60 @@ func TestTraceConfigCenter_GetSearchTraceTreeMaxSpanLimit(t *testing.T) {
 				IConfigLoader: f.configLoader,
 			}
 			got := tr.GetSearchTraceTreeMaxSpanLimit(tt.args.ctx, tt.args.workspaceID)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTraceConfigCenter_GetTraceTimeRangeConfig(t *testing.T) {
+	type fields struct {
+		configLoader *confmocks.MockIConfigLoader
+	}
+	type args struct {
+		ctx context.Context
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         map[string]string
+	}{
+		{
+			name: "get trace time range config successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), traceTimeRangeCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(*map[string]string)
+						*cfg = map[string]string{"12345": "1h", "67890": "24h"}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			args: args{ctx: context.Background()},
+			want: map[string]string{"12345": "1h", "67890": "24h"},
+		},
+		{
+			name: "unmarshal key failed, return nil",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), traceTimeRangeCfgKey, gomock.Any()).
+					Return(fmt.Errorf("unmarshal error"))
+				return fields{configLoader: mockLoader}
+			},
+			args: args{ctx: context.Background()},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			f := tt.fieldsGetter(ctrl)
+			tr := &TraceConfigCenter{
+				IConfigLoader: f.configLoader,
+			}
+			got := tr.GetTraceTimeRangeConfig(tt.args.ctx)
 			assert.Equal(t, tt.want, got)
 		})
 	}

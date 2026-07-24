@@ -190,6 +190,14 @@ func (e *exptRepoImpl) GetByName(ctx context.Context, name string, spaceID int64
 	return do, true, nil
 }
 
+func (e *exptRepoImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error) {
+	return e.exptDAO.GetIDsByGroupKey(ctx, spaceID, groupKey)
+}
+
+func (e *exptRepoImpl) ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error) {
+	return e.exptDAO.ExistGroupKey(ctx, groupKey, spaceID)
+}
+
 func (e *exptRepoImpl) GetEvaluatorRefByExptIDs(ctx context.Context, exptIDs []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error) {
 	pos, err := e.exptEvaluatorRefDAO.MGetByExptID(ctx, exptIDs, spaceID)
 	if err != nil {

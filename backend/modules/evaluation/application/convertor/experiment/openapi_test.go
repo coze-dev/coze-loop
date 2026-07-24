@@ -240,6 +240,42 @@ func TestDomainExperimentDTO2OpenAPI(t *testing.T) {
 	assert.Nil(t, DomainExperimentDTO2OpenAPI(nil))
 }
 
+// TestDomainExperimentDTO2OpenAPI_MultiSetReadView 验证多评测集读视图 (110~114) 映射到 OpenAPI。
+func TestDomainExperimentDTO2OpenAPI_MultiSetReadView(t *testing.T) {
+	t.Parallel()
+
+	srcType := domainExpt.ExptEvalSetSourceType_MultiSetConfig
+	domainExperiment := &domainExpt.Experiment{
+		ID:                  gptr.Of(int64(1)),
+		EvalSetSourceType:   &srcType,
+		EvaluatorsConcurNum: gptr.Of(int32(4)),
+		TotalItemCount:      gptr.Of(int64(42)),
+		EvalSetDetails: []*domainExpt.ExptEvalSetDetail{
+			{EvalSetID: gptr.Of(int64(10)), EvalSetVersionID: gptr.Of(int64(110)), IsPrimary: gptr.Of(false), ItemCount: gptr.Of(int32(12))},
+			{EvalSetID: gptr.Of(int64(20)), EvalSetVersionID: gptr.Of(int64(220)), IsPrimary: gptr.Of(true), ItemCount: gptr.Of(int32(30))},
+		},
+	}
+
+	converted := DomainExperimentDTO2OpenAPI(domainExperiment)
+	if assert.NotNil(t, converted) {
+		assert.Equal(t, openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig, converted.GetEvalSetSourceType())
+		assert.Equal(t, int32(4), converted.GetEvaluatorsConcurNum())
+		assert.Equal(t, int64(42), converted.GetTotalItemCount())
+		if assert.Len(t, converted.EvalSetDetails, 2) {
+			assert.Equal(t, int64(10), converted.EvalSetDetails[0].GetEvalSetID())
+			assert.Equal(t, int32(12), converted.EvalSetDetails[0].GetItemCount())
+			assert.False(t, converted.EvalSetDetails[0].GetIsPrimary())
+			assert.True(t, converted.EvalSetDetails[1].GetIsPrimary())
+		}
+	}
+
+	// SingleSet: source_type 映射为 single_set, 新字段缺省
+	single := domainExpt.ExptEvalSetSourceType_SingleSet
+	out := DomainExperimentDTO2OpenAPI(&domainExpt.Experiment{ID: gptr.Of(int64(2)), EvalSetSourceType: &single})
+	assert.Equal(t, openapiExperiment.ExptEvalSetSourceTypeSingleSet, out.GetEvalSetSourceType())
+	assert.Empty(t, out.EvalSetDetails)
+}
+
 func TestOpenAPIAggregatorResultsDO2DTOs(t *testing.T) {
 	t.Parallel()
 
@@ -2584,6 +2620,45 @@ func TestOpenAPIExperimentFilterOptionDTO2Domain(t *testing.T) {
 		require.NotNil(t, got.GetFilters())
 	})
 
+	t.Run("eval_set_source_types only — 不被判空返回 nil, 透传内部枚举", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			EvalSetSourceTypes: []openapiExperiment.ExptEvalSetSourceType{
+				openapiExperiment.ExptEvalSetSourceTypeSingleSet,
+				openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig,
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got, "仅传 eval_set_source_types 时不应判空返回 nil")
+		assert.Equal(t, []domainExpt.ExptEvalSetSourceType{
+			domainExpt.ExptEvalSetSourceType_SingleSet,
+			domainExpt.ExptEvalSetSourceType_MultiSetConfig,
+		}, got.GetEvalSetSourceTypes())
+	})
+
+	t.Run("eval_set_source_types 与 fuzzy 组合", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			FuzzyName: gptr.Of("abc"),
+			EvalSetSourceTypes: []openapiExperiment.ExptEvalSetSourceType{
+				openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig,
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "abc", got.GetFuzzyName())
+		assert.Equal(t, []domainExpt.ExptEvalSetSourceType{domainExpt.ExptEvalSetSourceType_MultiSetConfig}, got.GetEvalSetSourceTypes())
+	})
+
+	t.Run("未知 source_type 跳过", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			EvalSetSourceTypes: []openapiExperiment.ExptEvalSetSourceType{
+				openapiExperiment.ExptEvalSetSourceType("bogus"),
+			},
+		})
+		assert.NoError(t, err)
+		// 全部跳过后无有效 source_types, 且无 fuzzy/filters → 整体判空返回 nil
+		assert.Nil(t, got)
+	})
+
 	t.Run("invalid filter returns error", func(t *testing.T) {
 		logicAnd := openapiExperiment.FilterLogicOpAnd
 		badType := openapiExperiment.FilterFieldType("unknown_bad")
@@ -3829,4 +3904,60 @@ func TestDomainFilterLogicOpToOpenAPI(t *testing.T) {
 	assert.Equal(t, "and", domainFilterLogicOpToOpenAPI(domainExpt.FilterLogicOp_And))
 	assert.Equal(t, "or", domainFilterLogicOpToOpenAPI(domainExpt.FilterLogicOp_Or))
 	assert.Equal(t, "999", domainFilterLogicOpToOpenAPI(domainExpt.FilterLogicOp(999)))
+}
+
+func TestValidateOpenAPIEvalTargetClusterEnv(t *testing.T) {
+	tp := func(v openapiEvalTarget.EvalTargetType) *openapiEvalTarget.EvalTargetType { return &v }
+	tests := []struct {
+		name    string
+		param   *openapi.SubmitExperimentEvalTargetParam
+		wantErr string // 空=期望无错; 否则 err 应包含该子串
+	}{
+		{name: "nil param", param: nil},
+		{name: "nil type", param: &openapi.SubmitExperimentEvalTargetParam{}},
+		{
+			name:  "non long-connection type skipped (coze_loop_prompt)",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCozeLoopPrompt)},
+		},
+		{
+			name:    "custom_agent missing cluster",
+			param:   &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), Env: gptr.Of("cn")},
+			wantErr: "cluster is required",
+		},
+		{
+			name:    "custom_agent missing env",
+			param:   &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), Cluster: gptr.Of("default")},
+			wantErr: "env is required",
+		},
+		{
+			name:  "custom_agent both present",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), Cluster: gptr.Of("default"), Env: gptr.Of("cn")},
+		},
+		{
+			// direct-connect (AgentConnection) exempts cluster/env — must not require them.
+			name:  "custom_agent with AgentConnection exempts cluster/env",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomAgent), AgentConnection: &openapiEvalTarget.AgentConnection{}},
+		},
+		{
+			// a2a_agent is intentionally not validated for now → no error even without cluster/env.
+			name:  "a2a_agent not validated",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeA2Agent)},
+		},
+		{
+			// custom_rpc_server is intentionally not validated for now → no error even without env.
+			name:  "custom_rpc_server not validated",
+			param: &openapi.SubmitExperimentEvalTargetParam{EvalTargetType: tp(openapiEvalTarget.EvalTargetTypeCustomRPCServer)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateOpenAPIEvalTargetClusterEnv(tt.param)
+			if tt.wantErr == "" {
+				assert.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+			}
+		})
+	}
 }

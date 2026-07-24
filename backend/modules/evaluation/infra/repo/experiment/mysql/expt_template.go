@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
@@ -79,7 +80,7 @@ func (d *exptTemplateDAOImpl) GetByName(ctx context.Context, name string, spaceI
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		return nil, errorx.Wrapf(err, "get expt_template by name fail, name: %v, space_id: %v, expt_type: %v", name, spaceID, exptType)
+		return nil, errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
 	}
 	return result, nil
 }

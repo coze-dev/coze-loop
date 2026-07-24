@@ -15,6 +15,6 @@ func NewNotifyRPCAdapter() rpc.INotifyRPCAdapter {
 	return NotifyRPCAdapter{}
 }
 
-func (n NotifyRPCAdapter) SendMessageCard(ctx context.Context, userID, cardID string, param map[string]string) error {
+func (n NotifyRPCAdapter) SendMessageCard(ctx context.Context, receiveID, receiveIDType, cardID string, param map[string]string) error {
 	return nil
 }

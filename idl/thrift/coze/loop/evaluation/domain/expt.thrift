@@ -6,6 +6,10 @@ include "evaluator.thrift"
 include "eval_set.thrift"
 include "../../data/domain/tag.thrift"
 include "../../data/domain/dataset.thrift"
+
+// data 侧 filter 重命名为 data_filter.thrift, 别名 data_filter, 与下方 observability filter 区分
+// (二者 basename 若同名, BAM 解析器无法消歧; 重命名后 data_filter.Filter 无歧义)
+include "../../data/domain/data_filter.thrift"
 include "../../observability/domain/filter.thrift"
 include "../../observability/domain/task.thrift"
 
@@ -102,12 +106,27 @@ struct Experiment {
     70: optional ExptTriggerType trigger_type
     71: optional ExptSource expt_source
 
+    // 实验分组 key；不填时后端默认为实验 id
+    90: optional string experiment_group_key
+
     // 通知配置
     80: optional ExptNotificationConf notification_conf
 
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+
+    // ★ 新增段位 110~119: 多评测集读视图
+    // 读接口分流开关: SingleSet=1(老实验) / MultiSetConfig=2(新实验); 直读 experiment 表同名列
+    110: optional ExptEvalSetSourceType eval_set_source_type
+    // 权威配置回显: 从 experiment.eval_conf 反序列化, 与 Create 入参同构
+    111: optional list<EvalSetConfig> eval_set_configs
+    // enrichment: per-set 评测集详情 + item 数 (Get 全填; List 只填 id/count)
+    112: optional list<ExptEvalSetDetail> eval_set_details
+    // 补齐回显缺口: DTO 平铺调度字段独缺此项
+    113: optional i32 evaluators_concur_num
+    // 实验绑定 item 总数; 首跑前可能缺省
+    114: optional i64 total_item_count (api.js_conv='true', go.tag='json:"total_item_count"')
 }
 
 // 实验模板基础信息
@@ -262,9 +281,17 @@ struct ExptNotificationConf {
     11: optional FeishuNotificationConf feishu_notification
 }
 
+enum WebhookEnvironment {
+    Prod = 1   // 默认，不加任何路由 header
+    PPE  = 2
+    BOE  = 3
+}
+
 struct WebhookNotificationConf {
     1: required bool enable
     2: optional string urls             // Webhook URL 列表，多个用逗号分隔
+    3: optional WebhookEnvironment environment  // 缺省 => Prod（向后兼容）
+    4: optional string lane                     // ppe/boe 泳道名；prod 时忽略
 }
 
 struct FeishuNotificationConf {
@@ -274,6 +301,9 @@ struct FeishuNotificationConf {
 
 struct ExptFilterOption {
     1: optional string fuzzy_name
+    // 评测集来源模式筛选: 不传 = 默认仅返回 SingleSet(老实验), 排除 MultiSetConfig(新实验);
+    // 显式传 (含 MultiSetConfig) 才返回新实验。与 fuzzy_name 同级, 不走 filters。
+    2: optional list<ExptEvalSetSourceType> eval_set_source_types
     10: optional Filters filters
 }
 
@@ -582,6 +612,9 @@ struct EvaluatorAggregateResult {
     2: optional list<AggregatorResult> aggregator_results
     3: optional string name
     4: optional string version
+    // alias 多实例别名 (default/judge_b 等); 同 version 多实例时区分, 老数据为空串。
+    // 注意: evaluator_results 为 map<i64> 时同 version 多 alias 会撞 key 只保留一个, 要拿全部 alias 走 list 出口。
+    5: optional string alias
 }
 
 // 人工标注项粒度聚合结果
@@ -759,3 +792,75 @@ const FeedbackActionType FeedbackActionType_Create_Comment = "Create_Comment"
 const FeedbackActionType FeedbackActionType_Update_Comment = "Update_Comment"
 const FeedbackActionType FeedbackActionType_Delete_Comment = "Delete_Comment"
 
+// =====================================================================================
+// ★ item-centric 实验改版新增定义 (2026-06)
+// =====================================================================================
+
+// 实验评测集来源模式: 读接口和创建接口的分流依据
+enum ExptEvalSetSourceType {
+    SingleSet = 1      // 老实验: 单评测集, 配置在平铺老字段
+    MultiSetConfig = 2 // 新实验: 多评测集+配置, 权威源 eval_conf.eval_set_configs
+}
+
+// 说明: item 圈选 / evaluator 行级过滤复用 data/domain/data_filter.thrift 的 Filter/FilterField
+// (别名 data_filter, 与 observability filter 区分以便 BAM/thriftgo 无歧义解析)
+// 用法: 全集 = 不传; 点选 = item_id in [...]; 条件圈选 = tag 条件
+// 校验白名单(应用层): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
+
+// per-set target 运行配置; 本期 len<=1, alias 恒空 (多 target 实例预留口子)
+struct ExptTargetConf {
+    1: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
+    2: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
+    3: optional eval_target.EvalTargetType target_type
+
+    10: optional TargetFieldMapping field_mapping    // 本评测集字段 → target 输入
+
+    20: optional common.RuntimeParam runtime_param
+
+    30: optional string alias                        // 多实例标识, 本期恒空串
+
+    100: optional map<string, string> ext
+}
+
+// per-set 的一个 evaluator binding
+struct ExptEvaluatorConf {
+    1: required i64 evaluator_id (api.js_conv='true', go.tag='json:"evaluator_id"')
+    2: required i64 evaluator_version_id (api.js_conv='true', go.tag='json:"evaluator_version_id"')
+    3: optional evaluator.EvaluatorType evaluator_type
+    4: optional string alias                         // 多实例区分(judge_A/judge_B); 缺省 '' 默认实例
+
+    10: optional list<FieldMapping> from_eval_set    // 评测集字段 → evaluator 输入
+    11: optional list<FieldMapping> from_target      // target 输出 → evaluator 输入
+
+    20: optional data_filter.Filter filter           // 行级过滤: 命中才执行本 binding (复用 data data_filter.Filter)
+    21: optional i32 filter_mode                     // 0 None / 1 Include / 2 Exclude
+
+    30: optional common.RuntimeParam runtime_param   // alias 多实例核心动机: 同 version 不同参数
+
+    40: optional double score_weight                 // enable_weighted_score 开启时参与加权
+
+    100: optional map<string, string> ext
+}
+
+// 一个评测集 + 该集的完整配置包
+struct EvalSetConfig {
+    1: required i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
+    2: required i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"') // 版本锁定, 不允许滚动 latest
+
+    10: optional data_filter.Filter item_filter       // 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter)
+
+    20: optional list<ExptTargetConf> target_confs   // 本期 len<=1; 不传=继承 request 顶层 target
+    30: optional list<ExptEvaluatorConf> evaluator_confs // (evaluator_version_id, alias) 在 set 内唯一
+
+    100: optional map<string, string> ext
+}
+
+// per-set 运行期增量信息 (纯读模型, 不进 Create 入参)
+struct ExptEvalSetDetail {
+    1: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
+    2: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
+    3: optional bool is_primary                       // 主集(封面), 与 experiment.eval_set_id 列一致
+    4: optional i32 item_count                        // 该 set 选入实验的 item 数; 来源 expt_item_ref, 首跑前不填
+    5: optional eval_set.EvaluationSet eval_set       // Get 填充详情; List 不填
+    6: optional string dataset_key                    // 评测集业务唯一键; 便于 GetExperiment 直接展示/定位
+}

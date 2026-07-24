@@ -35,6 +35,9 @@ type EvaluatorService interface {
 	CreateEvaluatorRunFailRecord(ctx context.Context, request *entity.RunEvaluatorRequest, runErr error) (*entity.EvaluatorRecord, error)
 	// ShouldInterceptEvaluator 判断评估器是否应劫持本次评估，劫持时创建记录并返回
 	ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (record *entity.EvaluatorRecord, intercepted bool, err error)
+	// CreateSkippedEvaluatorRecord 行级 filter 不命中时, 不实际跑评估, 落一条 Status=Skipped 的占位 record
+	// (供 GUI / 数仓展示"已跳过")。仅写状态骨架, 不带 input/output 数据。
+	CreateSkippedEvaluatorRecord(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// AsyncRunEvaluator Agent evaluator_version 异步运行
 	AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// DebugEvaluator 调试 evaluator_version；新增 exptSpaceID 作为实验空间ID
@@ -74,6 +77,9 @@ type EvaluatorRecordService interface {
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool) (*entity.EvaluatorRecord, error)
 	// BatchGetEvaluatorRecord 按 id 批量查询 evaluator_version 运行结果，withFullContent 为 true 时从 TOS 加载完整内容
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error)
+	// BatchGetEvaluatorRecordForAggr 聚合专用窄查询：只取 id/score/status，绕过大字段反序列化，
+	// 只返回 status=Success 且 score 非 NULL 的行。不做 PackUserInfo（聚合用不上）。
+	BatchGetEvaluatorRecordForAggr(ctx context.Context, evaluatorRecordIDs []int64) ([]*entity.EvaluatorRecordAggr, error)
 }
 
 //type ListEvaluatorRequest struct {

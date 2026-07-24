@@ -226,7 +226,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 				}
 			}
 			return fields, nil
-		case entity.EvalTargetTypeCustomAgent, entity.EvalTargetTypeA2AAgent:
+		case entity.EvalTargetTypeCustomAgent, entity.EvalTargetTypeA2AAgent, entity.EvalTargetTypeSandboxAgent:
 			fields, err := e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
 			if err != nil {
 				return nil, err
@@ -275,6 +275,9 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		ExperimentRunID: gptr.Of(etec.Event.ExptRunID),
 		ItemID:          etec.EvalSetItem.ItemID,
 		TurnID:          etec.Turn.ID,
+		LogID:           logs.GetLogID(ctx),
+		ItemMeta:        buildEvalSetItemMeta(etec),
+		ExptGroupKey:    etec.Expt.ExperimentGroupKey,
 	}
 	if etec.Expt.EvalConf != nil {
 		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory
@@ -309,9 +312,9 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	return targetRecord, nil
 }
 
-func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) (map[int64]*entity.EvaluatorRecord, error) {
+func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) ([]*entity.EvaluatorRecord, error) {
 	if e.skipEvaluatorNode(etec.Expt) {
-		return make(map[int64]*entity.EvaluatorRecord), nil
+		return nil, nil
 	}
 
 	if etec.Event.AsyncEvaluatorReportTrigger {
@@ -319,21 +322,36 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		return etec.ExptTurnRunResult.EvaluatorResults, nil
 	}
 
+	// ★ 新实验类型 (MultiSetConfig): 一律按本评测集自己绑定的 ItemConfig.EvaluatorConfs 执行。
+	//   - 按 conf 跑 alias 多实例 (即使 (versionID) 相同, alias 不同也跑两次); filter 不命中 → 写 Skipped 占位 record。
+	//   - 若本评测集未配置评估器 (EvaluatorConfs 为空), 应跑 0 个评估器, 绝不能回退到实验级 expt.Evaluators
+	//     (那是所有评测集评估器的并集); 否则"没配评估器的集"会被误跑全部评估器。
+	//   区分依据: EvalSetSourceType == MultiSetConfig。老实验 (SingleSet, ItemConfig 恒 nil) 才走下方 expt.Evaluators 老路径。
+	if etec.Expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
+		if etec.ItemConfig == nil || len(etec.ItemConfig.EvaluatorConfs) == 0 {
+			logs.CtxInfo(ctx, "[ExptTurnEval] MultiSetConfig eval set has no evaluator conf, skip evaluation. expt_id: %d, item_id: %d", etec.Event.ExptID, etec.EvalSetItem.ItemID)
+			return nil, nil
+		}
+		return e.callEvaluatorsByItemConfig(ctx, etec, targetResult)
+	}
+
 	expt := etec.Expt
-	evaluatorResults := make(map[int64]*entity.EvaluatorRecord)
+	evaluatorResults := make([]*entity.EvaluatorRecord, 0, len(expt.Evaluators))
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))
 
 	for _, evaluatorVersion := range expt.Evaluators {
-		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
+		versionID := evaluatorVersion.GetEvaluatorVersionID()
+
+		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(versionID)
 
 		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
-			evaluatorResults[evaluatorVersion.GetEvaluatorVersionID()] = existResult
+			evaluatorResults = append(evaluatorResults, existResult)
 			continue
 		} else {
 			logs.CtxInfo(ctx, "[ExptTurnEval] Ignore existed evaluator result: %v", json.Jsonify(existResult))
 		}
 
-		pendingEvaluatorVersionIDs = append(pendingEvaluatorVersionIDs, evaluatorVersion.GetEvaluatorVersionID())
+		pendingEvaluatorVersionIDs = append(pendingEvaluatorVersionIDs, versionID)
 	}
 
 	logs.CtxInfo(ctx, "CallEvaluators with pending evaluator version ids: %v", pendingEvaluatorVersionIDs)
@@ -347,9 +365,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	}
 
 	runEvalRes, evalErr := e.callEvaluators(ctx, pendingEvaluatorVersionIDs, etec, targetResult, etec.History)
-	for evID, result := range runEvalRes {
-		evaluatorResults[evID] = result
-	}
+	evaluatorResults = append(evaluatorResults, runEvalRes...)
 
 	if evalErr == nil {
 		evaluatorResults, evalErr = e.refreshAsyncEvaluatorRecords(ctx, evaluatorResults)
@@ -358,11 +374,11 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	return evaluatorResults, evalErr
 }
 
-func (e *DefaultExptTurnEvaluationImpl) refreshAsyncEvaluatorRecords(ctx context.Context, evaluatorResults map[int64]*entity.EvaluatorRecord) (map[int64]*entity.EvaluatorRecord, error) {
+func (e *DefaultExptTurnEvaluationImpl) refreshAsyncEvaluatorRecords(ctx context.Context, evaluatorResults []*entity.EvaluatorRecord) ([]*entity.EvaluatorRecord, error) {
 	if e.evaluatorRecordService == nil {
 		return evaluatorResults, nil
 	}
-	for evID, record := range evaluatorResults {
+	for i, record := range evaluatorResults {
 		if record == nil || record.Status != entity.EvaluatorRunStatusAsyncInvoking {
 			continue
 		}
@@ -372,17 +388,32 @@ func (e *DefaultExptTurnEvaluationImpl) refreshAsyncEvaluatorRecords(ctx context
 		}
 		if updatedRecord != nil {
 			logs.CtxInfo(ctx, "[ExptTurnEval] refreshed async evaluator record, record_id: %v, old_status: %v, new_status: %v", record.ID, record.Status, updatedRecord.Status)
-			evaluatorResults[evID] = updatedRecord
+			evaluatorResults[i] = updatedRecord
 		}
 	}
 	return evaluatorResults, nil
 }
 
+// evalRecordCollector 线程安全地收集评估结果，替代 sync.Map 的 int64 key，支持 alias 多实例同 versionID 场景。
+type evalRecordCollector struct {
+	mu      sync.Mutex
+	records []*entity.EvaluatorRecord
+}
+
+func (c *evalRecordCollector) store(r *entity.EvaluatorRecord) {
+	if r == nil {
+		return
+	}
+	c.mu.Lock()
+	c.records = append(c.records, r)
+	c.mu.Unlock()
+}
+
 func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, execEvaluatorVersionIDs []int64, etec *entity.ExptTurnEvalCtx,
 	targetResult *entity.EvalTargetRecord, history []*entity.Message,
-) (map[int64]*entity.EvaluatorRecord, error) {
+) ([]*entity.EvaluatorRecord, error) {
 	var (
-		recordMap      sync.Map
+		collector      evalRecordCollector
 		item           = etec.EvalSetItem
 		expt           = etec.Expt
 		turn           = etec.Turn
@@ -395,7 +426,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	}
 
 	execEvalVerIDMap := gslice.ToMap(execEvaluatorVersionIDs, func(t int64) (int64, bool) { return t, true })
-	targetFields := targetResult.EvalTargetOutputData.OutputFields
+	var targetFields map[string]*entity.Content
+	if targetResult.EvalTargetOutputData != nil {
+		targetFields = targetResult.EvalTargetOutputData.OutputFields
+	}
 
 	// 评估器需要完整的 target_output，从 TOS 加载被裁剪的大字段
 	if targetResult.EvalTargetOutputData != nil && targetResult.EvalTargetOutputData.OutputFields != nil {
@@ -416,6 +450,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	if err != nil {
 		return nil, err
 	}
+	// 立即绑定释放到 pool 生命周期:即使下方循环中途提前 return(如 conf 为 nil / buildEvaluatorInputData 失败)
+	// 跳过了 ExecAll,也能释放底层 ants pool 及其常驻协程(purge / ticktock),避免 goroutine 泄漏。
+	// Release 幂等,与 ExecAll 内部的释放不冲突。
+	defer pool.Release()
 
 	for idx := range expt.Evaluators {
 		ev := expt.Evaluators[idx]
@@ -430,7 +468,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext)
+		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext, expt.EvalConf)
 		if err != nil {
 			return nil, err
 		}
@@ -455,9 +493,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		}); interceptErr != nil {
 			logs.CtxWarn(ctx, "[CallEvaluators] ShouldInterceptEvaluator failed, evaluator_version_id: %d, err: %v", evForCapture.GetEvaluatorVersionID(), interceptErr)
 		} else if intercepted {
-			if evaluatorRecord != nil {
-				recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
-			}
+			collector.store(evaluatorRecord)
 			continue
 		}
 
@@ -476,7 +512,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 
 		if evForCapture.IsAsync() {
 			pool.Add(func() error {
-				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, baseRunReq, &recordMap)
+				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, &collector)
 			})
 		} else {
 			pool.Add(func() error {
@@ -484,57 +520,323 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 				defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
 				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, baseRunReq)
 				if err != nil {
-					e.createAndStoreFailedEvaluatorRecord(ctx, baseRunReq, err, &recordMap)
+					if e.evaluatorService != nil {
+						if failedRecord, createErr := e.evaluatorService.CreateEvaluatorRunFailRecord(ctx, baseRunReq, err); createErr == nil && failedRecord != nil {
+							collector.store(failedRecord)
+						}
+					}
 					return err
 				}
 
-				recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
+				collector.store(evaluatorRecord)
 				return nil
 			})
 		}
 	}
 
 	err = pool.ExecAll(ctx)
-	records := make(map[int64]*entity.EvaluatorRecord, len(expt.Evaluators))
-	recordMap.Range(func(key, value interface{}) bool {
-		record, _ := value.(*entity.EvaluatorRecord)
-		records[key.(int64)] = record
-		return true
-	})
-
-	return records, err
+	return collector.records, err
 }
 
-func (e *DefaultExptTurnEvaluationImpl) createAndStoreFailedEvaluatorRecord(ctx context.Context, req *entity.RunEvaluatorRequest, runErr error, recordMap *sync.Map) {
-	if e == nil || e.evaluatorService == nil || req == nil || recordMap == nil {
-		return
+// buildAliasRunConf 由 per-alias DynamicParam 合成运行时配置 (动态参数执行):
+// DynamicParam 仅覆盖 runtime_param (固定 key consts.FieldAdapterBuiltinFieldNameRuntimeParam),
+// Env 继承静态 staticRunConf 的 Env。返回 nil 表示无 per-alias 覆盖, 调用方应回退 staticRunConf。
+func buildAliasRunConf(dynamicParam map[string]string, staticRunConf *entity.EvaluatorRunConfig) *entity.EvaluatorRunConfig {
+	if len(dynamicParam) == 0 {
+		return nil
 	}
-	failedRecord, createErr := e.evaluatorService.CreateEvaluatorRunFailRecord(ctx, req, runErr)
-	if createErr != nil {
-		logs.CtxError(ctx, "[CallEvaluators] create failed evaluator record fail, evaluator_version_id: %v, origin_err: %v, create_err: %v", req.EvaluatorVersionID, runErr, createErr)
-		return
+	v, ok := dynamicParam[consts.FieldAdapterBuiltinFieldNameRuntimeParam]
+	if !ok || len(v) == 0 {
+		return nil
 	}
-	if failedRecord == nil {
-		logs.CtxWarn(ctx, "[CallEvaluators] create failed evaluator record got nil, evaluator_version_id: %v, origin_err: %v", req.EvaluatorVersionID, runErr)
-		return
+	var env *string
+	if staticRunConf != nil {
+		env = staticRunConf.Env
 	}
-	recordMap.Store(req.EvaluatorVersionID, failedRecord)
+	val := v
+	return &entity.EvaluatorRunConfig{
+		Env:                   env,
+		EvaluatorRuntimeParam: &entity.RuntimeParam{JSONValue: &val},
+	}
 }
 
-func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
+// callEvaluatorsByItemConfig 新实验类型 (MultiSetConfig) 的执行入口:
+// 按 ItemConfig.EvaluatorConfs 遍历, 每个 conf = 一个独立实例 (alias 多实例).
+// - existResult 复用按 (versionID, alias) 双键判定
+// - filter 不命中 → 写 Skipped 占位 record
+// - 命中 → CheckBenefit 后 RunEvaluator (带 alias, per-alias 动态 runtime_param)
+//
+// 老路径 (ItemConfig nil / EvaluatorConfs 空) 由 CallEvaluators 入口分流, 不进入此分支。
+func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
+	ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord,
+) ([]*entity.EvaluatorRecord, error) {
+	var (
+		collector      evalRecordCollector
+		item           = etec.EvalSetItem
+		expt           = etec.Expt
+		turn           = etec.Turn
+		spaceID        = expt.SpaceID
+		evaluatorsConf = expt.EvalConf.ConnectorConf.EvaluatorsConf
+	)
+
+	if err := evaluatorsConf.Valid(ctx); err != nil {
+		return nil, err
+	}
+
+	// 按 versionID 建一个 Evaluator 索引, 用于 ItemConfig 循环里复用 (type/inputSchema 等元数据)。
+	evByVer := make(map[int64]*entity.Evaluator, len(expt.Evaluators))
+	for _, ev := range expt.Evaluators {
+		if ev != nil {
+			evByVer[ev.GetEvaluatorVersionID()] = ev
+		}
+	}
+
+	// 大字段 (target_output) 预加载: 行级只需一次, 在调度前完成
+	var targetFields map[string]*entity.Content
+	if targetResult.EvalTargetOutputData != nil {
+		targetFields = targetResult.EvalTargetOutputData.OutputFields
+	}
+	if targetResult.EvalTargetOutputData != nil && targetResult.EvalTargetOutputData.OutputFields != nil {
+		omitKeys := make([]string, 0)
+		for k, c := range targetResult.EvalTargetOutputData.OutputFields {
+			if c != nil && c.IsContentOmitted() {
+				omitKeys = append(omitKeys, k)
+			}
+		}
+		if len(omitKeys) > 0 {
+			if err := e.evalTargetService.LoadRecordOutputFields(ctx, targetResult, omitKeys); err != nil {
+				logs.CtxWarn(ctx, "[CallEvaluators] LoadRecordOutputFields fail, err: %v", err)
+			}
+		}
+	}
+
+	// 先扫一遍, 把每个 conf 的处理结果分到三类: reuse / skipped(写占位) / pending(实际跑)
+	type pendingTask struct {
+		versionID int64
+		alias     string
+		evaluator *entity.Evaluator
+		runConf   *entity.EvaluatorRunConfig // per-alias effectiveRunConf (动态参数 / 回退静态)
+		inputData *entity.EvaluatorInputData
+	}
+	var pending []pendingTask
+	hasPending := false
+
+	// 行级 filter 需要按字段内容判定 (普通列 match/eq 等)。评测集大字段在拉取阶段可能被裁剪
+	// (Content.IsContentOmitted()=true, text 截断), 直接拿截断文本匹配会漏判 (命中项被误跳)。
+	// 故在进入 filter 守卫前, 若存在带 filter 的 conf, 先把 turn 上被裁剪的字段补全为完整内容,
+	// 与 evaluator 取字段路径 (buildEvalSetFields) 同口径。
+	needFilterMatch := false
+	for _, ic := range etec.ItemConfig.EvaluatorConfs {
+		if ic != nil && ic.FilterMode != filterModeNone && ic.Filter != nil && len(ic.Filter.FilterFields) > 0 {
+			needFilterMatch = true
+			break
+		}
+	}
+	if needFilterMatch && turn != nil {
+		for _, fd := range turn.FieldDataList {
+			if fd == nil || fd.Content == nil || !fd.Content.IsContentOmitted() {
+				continue
+			}
+			req := &entity.GetEvaluationSetItemFieldParam{
+				SpaceID:         spaceID,
+				EvaluationSetID: turn.EvalSetID,
+				ItemPK:          turn.ItemID,
+				FieldName:       fd.Name,
+				FieldKey:        gptr.Of(fd.Key),
+				TurnID:          gptr.Of(turn.ID),
+			}
+			full, ferr := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, req)
+			if ferr != nil {
+				logs.CtxWarn(ctx, "[CallEvaluators] hydrate omitted field for filter failed, field: %s, err: %v", fd.Name, ferr)
+				continue
+			}
+			if full != nil && full.Content != nil {
+				fd.Content = full.Content
+			}
+		}
+	}
+
+	for _, icConf := range etec.ItemConfig.EvaluatorConfs {
+		if icConf == nil {
+			continue
+		}
+		versionID := icConf.EvaluatorVersionID
+		alias := icConf.Alias
+
+		// 1) filter 守卫: 不命中 → 直接占位 Skipped record
+		run, ferr := ShouldRunByFilter(icConf.Filter, icConf.FilterMode, item, turn)
+		if ferr != nil {
+			logs.CtxWarn(ctx, "[CallEvaluators] filter match error, version_id: %d, alias: %s, err: %v — default RUN", versionID, alias, ferr)
+		}
+		// filter 判定诊断日志: 带 filter 的 conf 都打一条 (run/skip + item.Tags + filter values),
+		// 用于定位"tag filter 全裁"是 item.Tags 未加载还是 values 口径不符。
+		if icConf.FilterMode != filterModeNone && icConf.Filter != nil && len(icConf.Filter.FilterFields) > 0 {
+			logs.CtxInfo(ctx, "[CallEvaluators][FILTERDBG] decision run=%v version_id=%d alias=%s %s",
+				run, versionID, alias, FilterDecisionDebug(icConf.Filter, icConf.FilterMode, item, turn))
+		}
+		if !run {
+			logs.CtxInfo(ctx, "[CallEvaluators] skip evaluator by filter, version_id: %d, alias: %s, filter_mode: %d", versionID, alias, icConf.FilterMode)
+			// 落一条 Status=Skipped 的占位 record (带真实 ID), 供 GUI/数仓展示"已跳过";
+			// ref 表行由 storeTurnRunResult -> NewTurnEvaluatorResultRefs 从 Registered 数组自动跟上。
+			skippedRecord, serr := e.evaluatorService.CreateSkippedEvaluatorRecord(ctx, &entity.RunEvaluatorRequest{
+				SpaceID:            spaceID,
+				ExperimentID:       etec.Event.ExptID,
+				ExperimentRunID:    etec.Event.ExptRunID,
+				ItemID:             item.ItemID,
+				TurnID:             turn.ID,
+				EvaluatorVersionID: versionID,
+				Alias:              alias,
+				SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
+			})
+			if serr != nil {
+				return nil, serr
+			}
+			collector.store(skippedRecord)
+			continue
+		}
+
+		// 2) 已有成功 record 复用 (按 (versionID, alias) 双键)
+		existResult := etec.ExptTurnRunResult.GetEvaluatorRecordByVerAlias(versionID, alias)
+		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil &&
+			(existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
+			collector.store(existResult)
+			continue
+		} else if existResult != nil {
+			logs.CtxInfo(ctx, "[ExptTurnEval] Ignore existed evaluator result: %v", json.Jsonify(existResult))
+		}
+
+		ev := evByVer[versionID]
+		if ev == nil {
+			return nil, fmt.Errorf("expt evaluator not found, evaluator_version_id: %d", versionID)
+		}
+		ec := evaluatorsConf.GetEvaluatorConf(versionID)
+		if ec == nil {
+			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
+		}
+
+		// per-alias 动态参数: 用 icConf.DynamicParam 合成 RunConf 覆盖静态 ec.RunConf;
+		// 无有效动态参数 (aliasRunConf == nil) 时回退静态。浅拷贝 ec 替换 RunConf,
+		// 使 buildEvaluatorInputData 内的 runtime_param 注入 (inputData.Ext) 也走 per-alias 配置。
+		aliasRunConf := buildAliasRunConf(icConf.DynamicParam, ec.RunConf)
+		ecForBuild := ec
+		effectiveRunConf := ec.RunConf
+		if aliasRunConf != nil {
+			shallow := *ec
+			shallow.RunConf = aliasRunConf
+			ecForBuild = &shallow
+			effectiveRunConf = aliasRunConf
+		}
+
+		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ecForBuild, turn, targetFields, ev.GetInputSchemas(), etec.Ext, expt.EvalConf)
+		if err != nil {
+			return nil, err
+		}
+
+		pending = append(pending, pendingTask{
+			versionID: versionID, alias: alias, evaluator: ev, runConf: effectiveRunConf, inputData: inputData,
+		})
+		hasPending = true
+	}
+
+	if !hasPending {
+		return collector.records, nil
+	}
+
+	if err := e.CheckBenefit(ctx, etec.Event.ExptID, etec.Event.SpaceID, etec.Expt.CreditCost == entity.CreditCostFree, etec.Event.Session); err != nil {
+		return nil, err
+	}
+
+	pool, err := goroutine.NewPool(evaluatorsConf.GetEvaluatorConcurNum())
+	if err != nil {
+		return nil, err
+	}
+
+	for idx := range pending {
+		t := pending[idx]
+		evForCapture := t.evaluator
+		runConfForCapture := t.runConf // per-alias 动态参数 RunConf (或回退的静态 RunConf)
+		aliasForCapture := t.alias
+		versionIDForCapture := t.versionID
+		// 深拷贝 inputData: 避免多实例并发执行时大字段裁剪互相污染
+		inputDataForCapture := deepCopyEvaluatorInputData(t.inputData)
+
+		// 评估器劫持: 跟老路径保持一致, 拦截就 collector.store 跳过实际调用
+		if evaluatorRecord, intercepted, interceptErr := e.evaluatorService.ShouldInterceptEvaluator(ctx, &entity.RunEvaluatorRequest{
+			SpaceID:            spaceID,
+			EvaluatorVersionID: versionIDForCapture,
+			InputData:          inputDataForCapture,
+			ExperimentID:       etec.Event.ExptID,
+			ExperimentRunID:    etec.Event.ExptRunID,
+			ItemID:             item.ItemID,
+			TurnID:             turn.ID,
+			Ext:                etec.Ext,
+			Alias:              aliasForCapture,
+			SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
+		}); interceptErr != nil {
+			logs.CtxWarn(ctx, "[CallEvaluators] ShouldInterceptEvaluator failed, evaluator_version_id: %d, alias: %s, err: %v", versionIDForCapture, aliasForCapture, interceptErr)
+		} else if intercepted {
+			// 即便拦截器没主动写 alias, 这里补一手, 保证占位 record 不丢标
+			if evaluatorRecord != nil && evaluatorRecord.Alias == "" {
+				evaluatorRecord.Alias = aliasForCapture
+			}
+			collector.store(evaluatorRecord)
+			continue
+		}
+
+		if evForCapture.IsAsync() {
+			pool.Add(func() error {
+				return e.asyncCallEvaluatorWithAlias(ctx, evForCapture, runConfForCapture, aliasForCapture, etec, inputDataForCapture, &collector)
+			})
+			continue
+		}
+
+		pool.Add(func() error {
+			var err error
+			defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
+			evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
+				SpaceID:            spaceID,
+				Name:               "",
+				EvaluatorVersionID: versionIDForCapture,
+				InputData:          inputDataForCapture,
+				ExperimentID:       etec.Event.ExptID,
+				ExperimentRunID:    etec.Event.ExptRunID,
+				ItemID:             item.ItemID,
+				TurnID:             turn.ID,
+				Ext:                etec.Ext,
+				EvaluatorRunConf:   runConfForCapture,
+				Alias:              aliasForCapture,
+				SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
+			})
+			if err != nil {
+				return err
+			}
+			collector.store(evaluatorRecord)
+			return nil
+		})
+	}
+
+	if err := pool.Exec(ctx); err != nil {
+		return collector.records, err
+	}
+	return e.refreshAsyncEvaluatorRecords(ctx, collector.records)
+}
+
+// asyncCallEvaluatorWithAlias 与 asyncCallEvaluator 对应, 但额外把 alias 透传给 AsyncRunEvaluator.
+// alias 多实例场景下不能复用老 asyncCallEvaluator (它丢 alias)。
+// runConf 为 per-alias 动态参数 RunConf (无动态参数时由调用方回退为静态 ec.RunConf)。
+func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluatorWithAlias(
 	ctx context.Context,
 	ev *entity.Evaluator,
-	ec *entity.EvaluatorConf,
+	runConf *entity.EvaluatorRunConfig,
+	alias string,
 	etec *entity.ExptTurnEvalCtx,
 	inputData *entity.EvaluatorInputData,
-	baseRunReq *entity.RunEvaluatorRequest,
-	recordMap *sync.Map,
+	collector *evalRecordCollector,
 ) error {
 	var err error
 	defer func() { e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil) }()
 
 	ts := time.Now()
-
 	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, &entity.AsyncRunEvaluatorRequest{
 		SpaceID:            etec.Event.SpaceID,
 		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
@@ -544,10 +846,70 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 		ItemID:             etec.EvalSetItem.ItemID,
 		TurnID:             etec.Turn.ID,
 		Ext:                etec.Ext,
-		EvaluatorRunConf:   ec.RunConf,
+		EvaluatorRunConf:   runConf,
+		Alias:              alias,
+		SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
 	})
 	if err != nil {
-		e.createAndStoreFailedEvaluatorRecord(ctx, baseRunReq, err, recordMap)
+		return err
+	}
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", evaluatorRecord.ID)
+	if err = e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		Event:              etec.Event,
+		RecordID:           evaluatorRecord.ID,
+		AsyncUnixMS:        ts.UnixMilli(),
+		Session:            etec.Event.Session,
+		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+	}); err != nil {
+		return err
+	}
+	collector.store(evaluatorRecord)
+	return nil
+}
+
+func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
+	ctx context.Context,
+	ev *entity.Evaluator,
+	ec *entity.EvaluatorConf,
+	etec *entity.ExptTurnEvalCtx,
+	inputData *entity.EvaluatorInputData,
+	collector *evalRecordCollector,
+) error {
+	var err error
+	defer func() { e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil) }()
+
+	ts := time.Now()
+
+	asyncReq := &entity.AsyncRunEvaluatorRequest{
+		SpaceID:            etec.Event.SpaceID,
+		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+		InputData:          inputData,
+		ExperimentID:       etec.Event.ExptID,
+		ExperimentRunID:    etec.Event.ExptRunID,
+		ItemID:             etec.EvalSetItem.ItemID,
+		TurnID:             etec.Turn.ID,
+		Ext:                etec.Ext,
+		EvaluatorRunConf:   ec.RunConf,
+	}
+	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, asyncReq)
+	if err != nil {
+		if e.evaluatorService != nil {
+			failReq := &entity.RunEvaluatorRequest{
+				SpaceID:            asyncReq.SpaceID,
+				EvaluatorVersionID: asyncReq.EvaluatorVersionID,
+				InputData:          asyncReq.InputData,
+				ExperimentID:       asyncReq.ExperimentID,
+				ExperimentRunID:    asyncReq.ExperimentRunID,
+				ItemID:             asyncReq.ItemID,
+				TurnID:             asyncReq.TurnID,
+				Ext:                asyncReq.Ext,
+				EvaluatorRunConf:   asyncReq.EvaluatorRunConf,
+			}
+			if failedRecord, createErr := e.evaluatorService.CreateEvaluatorRunFailRecord(ctx, failReq, err); createErr == nil && failedRecord != nil {
+				collector.store(failedRecord)
+			}
+		}
 		return err
 	}
 
@@ -562,12 +924,12 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 		return err
 	}
 
-	recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
+	collector.store(evaluatorRecord)
 	return nil
 }
 
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, spaceID int64, evaluatorType entity.EvaluatorType,
-	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content, inputSchemas []*entity.ArgsSchema, ext map[string]string,
+	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content, inputSchemas []*entity.ArgsSchema, ext map[string]string, evalConf *entity.EvaluationConfiguration,
 ) (*entity.EvaluatorInputData, error) {
 	var targetFieldConfs []*entity.FieldConf
 	if ec.IngressConf != nil && ec.IngressConf.TargetAdapter != nil {
@@ -647,7 +1009,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 		}
 	}
 
-	res.Ext = e.buildEvaluatorInputDataExt(ext, ec.RunConf)
+	res.Ext = e.buildEvaluatorInputDataExt(ext, ec.RunConf, evalConf)
 	return res, nil
 }
 
@@ -798,13 +1160,22 @@ func (e *DefaultExptTurnEvaluationImpl) getContentByJsonPath(content *entity.Con
 	}, nil
 }
 
-func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[string]string, runConf *entity.EvaluatorRunConfig) map[string]string {
+func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[string]string, runConf *entity.EvaluatorRunConfig, evalConf *entity.EvaluationConfiguration) map[string]string {
 	builtExt := gmap.Clone(ext)
 	if builtExt == nil {
 		builtExt = make(map[string]string)
 	}
 	if runConf != nil && runConf.EvaluatorRuntimeParam != nil && runConf.EvaluatorRuntimeParam.JSONValue != nil && len(*runConf.EvaluatorRuntimeParam.JSONValue) > 0 {
 		builtExt[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = *runConf.EvaluatorRuntimeParam.JSONValue
+	}
+
+	// 仿 RuntimeParam 透传惯例：把本实验 EvalConf.SkillTOSKeys 序列化写进执行期 Ext 口袋，
+	// 供执行期商业版 buildSkillsConfig 命中 skill 的 TOS 现签复用（执行期链路拿不到 exptID/EvalConf）。
+	// 为空则不写，避免污染 Ext、保持向后兼容。
+	if evalConf != nil && len(evalConf.SkillTOSKeys) > 0 {
+		if b, err := json.Marshal(evalConf.SkillTOSKeys); err == nil {
+			builtExt[consts.FieldAdapterBuiltinFieldNameSkillTOSKeys] = string(b)
+		}
 	}
 
 	return builtExt
@@ -840,4 +1211,71 @@ func (e *DefaultExptTurnEvaluationImpl) getAllEvalSetFields(ctx context.Context,
 		result[field.Name] = content
 	}
 	return result, nil
+}
+
+// buildEvalSetItemMeta 从 ExptTurnEvalCtx 中提取评测集/条目元数据, 供评测对象 (SandboxAgent 等)
+// 透传给外部执行侧。id 统一转成字符串, 避免 JSON 消费方按 number 解析导致精度丢失。
+// 任意字段缺失时对应位置留空, 不返回错误。
+func buildEvalSetItemMeta(etec *entity.ExptTurnEvalCtx) *entity.EvalSetItemMeta {
+	if etec == nil {
+		return nil
+	}
+	meta := &entity.EvalSetItemMeta{}
+	var evalSetID, evalSetVersionID int64
+	if etec.EvalSetItem != nil {
+		evalSetID = etec.EvalSetItem.EvaluationSetID
+		if etec.EvalSetItem.ItemID != 0 {
+			meta.ItemID = strconv.FormatInt(etec.EvalSetItem.ItemID, 10)
+		}
+		meta.ItemKey = etec.EvalSetItem.ItemKey
+		if etec.EvalSetItem.ItemVersionID != nil && *etec.EvalSetItem.ItemVersionID != 0 {
+			meta.ItemVersionID = strconv.FormatInt(*etec.EvalSetItem.ItemVersionID, 10)
+		}
+		if etec.EvalSetItem.ItemVersion != nil {
+			meta.ItemVersion = *etec.EvalSetItem.ItemVersion
+		}
+	}
+	if etec.ExptItemEvalCtx != nil && etec.EvalSetVersionID != 0 {
+		evalSetVersionID = etec.EvalSetVersionID
+	}
+	if etec.Expt != nil {
+		if evalSetID == 0 {
+			evalSetID = etec.Expt.EvalSetID
+		}
+		if evalSetVersionID == 0 {
+			evalSetVersionID = etec.Expt.EvalSetVersionID
+		}
+	}
+	if evalSetID != 0 {
+		meta.EvalSetID = strconv.FormatInt(evalSetID, 10)
+	}
+	if evalSetVersionID != 0 {
+		meta.EvalSetVersionID = strconv.FormatInt(evalSetVersionID, 10)
+	}
+	if evalSet := findEvalSetForItemMeta(etec.Expt, evalSetID, evalSetVersionID); evalSet != nil {
+		meta.EvalSetName = evalSet.Name
+		meta.DatasetKey = evalSet.DatasetKey
+		if evalSet.EvaluationSetVersion != nil {
+			meta.EvalSetVersion = evalSet.EvaluationSetVersion.Version
+		}
+	}
+	return meta
+}
+
+func findEvalSetForItemMeta(expt *entity.Experiment, evalSetID, evalSetVersionID int64) *entity.EvaluationSet {
+	if expt == nil {
+		return nil
+	}
+	for _, detail := range expt.EvalSetDetails {
+		if detail == nil || detail.EvalSet == nil || detail.EvalSetID != evalSetID {
+			continue
+		}
+		if evalSetVersionID == 0 || detail.EvalSetVersionID == evalSetVersionID {
+			return detail.EvalSet
+		}
+	}
+	if expt.EvalSet != nil && (evalSetID == 0 || expt.EvalSet.ID == evalSetID) {
+		return expt.EvalSet
+	}
+	return nil
 }

@@ -139,3 +139,39 @@ func GetEvaluationItemField(ctx context.Context, c *app.RequestContext) {
 func ValidateEvaluationSetMultiPartData(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalSetSvc.ValidateEvaluationSetMultiPartData)
 }
+
+// BatchAddExistEvaluationSetItems .
+// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_add_exist [POST]
+func BatchAddExistEvaluationSetItems(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.BatchAddExistEvaluationSetItems)
+}
+
+// GetEvaluationSetItemDef .
+// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/item_defs/:item_id [GET]
+func GetEvaluationSetItemDef(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.GetEvaluationSetItemDef)
+}
+
+// ListEvaluationSetItemDefs .
+// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/item_defs/list [POST]
+func ListEvaluationSetItemDefs(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.ListEvaluationSetItemDefs)
+}
+
+// ListEvaluationSetItemVersions .
+// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/versions/list [POST]
+func ListEvaluationSetItemVersions(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.ListEvaluationSetItemVersions)
+}
+
+// GetEvaluationSetItemVersion .
+// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/versions/:item_version_id [GET]
+func GetEvaluationSetItemVersion(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.GetEvaluationSetItemVersion)
+}
+
+// UpdateEvaluationSetItemVersion .
+// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/versions/:item_version_id [PATCH]
+func UpdateEvaluationSetItemVersion(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.UpdateEvaluationSetItemVersion)
+}

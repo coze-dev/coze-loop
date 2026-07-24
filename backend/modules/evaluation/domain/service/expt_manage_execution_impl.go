@@ -25,7 +25,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -99,6 +98,10 @@ func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment,
 	}
 	if gptr.Indirect(expt.EvalConf.ItemConcurNum) > e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetMaxItemConcurNum() {
 		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item concurrent num must not be greater than %d", e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetMaxItemConcurNum())))
+	}
+	// Item 最大重试次数须落在 [0, MaxItemRetryNum]（补齐 OSS 原无上界的缺口，与更新侧共用规则）
+	if !entity.ValidateItemRetryNum(expt.EvalConf.ItemRetryNum) {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item retry num must be in range [0, %d]", entity.MaxItemRetryNum)))
 	}
 
 	return nil
@@ -332,16 +335,13 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 }
 
 func (e *ExptMangerImpl) sendNotifyCard(ctx context.Context, expt *entity.Experiment) error {
-	userInfos, err := e.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
-	if err != nil {
-		return err
-	}
-	if len(userInfos) != 1 || userInfos[0] == nil || len(gptr.Indirect(userInfos[0].Email)) == 0 {
-		logs.CtxWarn(ctx, "expt %v notify card without target email", expt.ID)
+	receiveID, receiveIDType := resolveNotifyTarget(ctx, e.userProvider, expt)
+	if receiveID == "" {
+		logs.CtxWarn(ctx, "expt %v notify card without target", expt.ID)
 		return nil
 	}
 	cardID, param := buildExptNotifyParam(expt, expt.Status)
-	return e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), cardID, param)
+	return e.notifyRPCAdapter.SendMessageCard(ctx, receiveID, receiveIDType, cardID, param)
 }
 
 func buildExptNotifyParam(expt *entity.Experiment, toStatus entity.ExptStatus) (string, map[string]string) {
@@ -618,6 +618,8 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 				if err := e.exptResultService.UpsertExptTurnResultFilter(ctx, spaceID, exptID, terminatedItemIDs); err != nil {
 					logs.CtxWarn(ctx, "UpsertExptTurnResultFilter fail after terminateItemTurns, expt_id: %v, err: %v", exptID, err)
 				}
+				// SandboxAgent 评测对象：被取消的 turn 关联的 EvalTargetRecord 走 best-effort 销毁
+				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, exptID, exptRunID, terminatedItemIDs)
 			}
 		default:
 		}
@@ -754,6 +756,40 @@ func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, i
 	return nil
 }
 
+// terminateSandboxExecutesForCancelledItems 在实验被取消时，针对 SandboxAgent 评测对象的未完成 turn 触发沙箱销毁。
+// best-effort：失败仅记录日志。
+func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.Context, spaceID, exptID int64, exptRunID *int64, terminatedItemIDs []int64) {
+	if e.evalTargetService == nil || exptRunID == nil || *exptRunID <= 0 || len(terminatedItemIDs) == 0 {
+		return
+	}
+	turnRunLogs, err := e.turnResultRepo.MGetItemTurnRunLogs(ctx, exptID, *exptRunID, terminatedItemIDs, spaceID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] MGetItemTurnRunLogs fail on cancel, expt_id=%d, expt_run_id=%d, err=%v", exptID, *exptRunID, err)
+		return
+	}
+	recordIDSet := make(map[int64]struct{})
+	for _, rl := range turnRunLogs {
+		if rl == nil || rl.TargetResultID <= 0 {
+			continue
+		}
+		recordIDSet[rl.TargetResultID] = struct{}{}
+	}
+	if len(recordIDSet) == 0 {
+		return
+	}
+	recordIDs := make([]int64, 0, len(recordIDSet))
+	for id := range recordIDSet {
+		recordIDs = append(recordIDs, id)
+	}
+	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
+		ctx,
+		spaceID,
+		recordIDs,
+		int32(errno.AsyncEvalTargetTerminatedCode),
+		"async eval target terminated: experiment cancelled",
+	)
+}
+
 func (e *ExptMangerImpl) Kill(ctx context.Context, exptID int64, exptRunID *int64, spaceID int64, msg string, session *entity.Session) error {
 	return e.CompleteExpt(ctx, exptID, exptRunID, spaceID, session, entity.WithStatus(entity.ExptStatus_Terminated), entity.WithStatusMessage(msg))
 }
@@ -767,7 +803,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		itemCnt = 0
 		total   = int64(0)
 	)
-	existItemIDList, err := e.itemResultRepo.GetItemIDListByExptID(ctx, invokeExptReq.SpaceID, invokeExptReq.ExptID)
+	existItemIDList, err := e.itemResultRepo.GetItemIDListByExptID(ctx, invokeExptReq.ExptID, invokeExptReq.SpaceID)
 	if err != nil {
 		return err
 	}

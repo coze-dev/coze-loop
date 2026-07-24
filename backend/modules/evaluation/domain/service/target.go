@@ -33,6 +33,10 @@ type IEvalTargetService interface {
 	// LoadRecordFullData 从 TOS 加载 record 中所有被省略的大对象完整内容（用于导出等需要完整字段的场景）
 	LoadRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error
 	ReportInvokeRecords(ctx context.Context, recordID2Params *entity.ReportTargetRecordParam) error
+	// TerminateAsyncRecordsAndDestroySandbox 把仍处于 AsyncInvoking 状态的 SandboxAgent EvalTargetRecord 置为 Fail，
+	// 并以 best-effort 方式触发沙箱 Execute 销毁。非 SandboxAgent / 非 AsyncInvoking 的 record 会被忽略。
+	// errCode 用于写入 EvalTargetRunError，区分 zombie timeout / 手动取消等场景。
+	TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string)
 	ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error
 	GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error)
 	ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error)
