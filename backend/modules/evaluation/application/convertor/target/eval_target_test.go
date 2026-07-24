@@ -1238,6 +1238,53 @@ func TestSandboxAgentDO2DTO(t *testing.T) {
 	})
 }
 
+// TestSandboxAgentDO2DTO_SandboxCountMode 校验 entity 空 SandboxCountMode 时 DTO 保持 nil，
+// 与旧 wire 契约一致（消费者 IsSet=false），非空时以指针形式透传。
+func TestSandboxAgentDO2DTO_SandboxCountMode(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty mode keeps DTO pointer nil", func(t *testing.T) {
+		t.Parallel()
+		got := SandboxAgentDO2DTO(&do.SandboxAgent{Name: "a"})
+		if assert.NotNil(t, got) {
+			assert.Nil(t, got.SandboxCountMode)
+		}
+	})
+
+	t.Run("dual mode passes through as pointer", func(t *testing.T) {
+		t.Parallel()
+		got := SandboxAgentDO2DTO(&do.SandboxAgent{
+			Name:             "a",
+			SandboxCountMode: do.SandboxCountModeDual,
+		})
+		if assert.NotNil(t, got) && assert.NotNil(t, got.SandboxCountMode) {
+			assert.Equal(t, dto.SandboxCountModeDual, *got.SandboxCountMode)
+		}
+	})
+}
+
+// TestSandboxAgentDTO2DO_SandboxCountMode DTO 侧的 nil 指针会 Indirect 成空串，非 nil 值原样落到 entity。
+func TestSandboxAgentDTO2DO_SandboxCountMode(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil pointer -> empty entity mode", func(t *testing.T) {
+		t.Parallel()
+		got := SandboxAgentDTO2DO(&dto.SandboxAgent{Name: gptr.Of("a")})
+		if assert.NotNil(t, got) {
+			assert.Equal(t, do.SandboxCountMode(""), got.SandboxCountMode)
+		}
+	})
+
+	t.Run("dual value copied to entity", func(t *testing.T) {
+		t.Parallel()
+		mode := dto.SandboxCountMode(dto.SandboxCountModeDual)
+		got := SandboxAgentDTO2DO(&dto.SandboxAgent{Name: gptr.Of("a"), SandboxCountMode: &mode})
+		if assert.NotNil(t, got) {
+			assert.Equal(t, do.SandboxCountModeDual, got.SandboxCountMode)
+		}
+	})
+}
+
 func TestSandboxEnvVarsDTO2DO(t *testing.T) {
 	t.Parallel()
 
