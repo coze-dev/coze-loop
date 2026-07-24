@@ -140,7 +140,7 @@ func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecord(arg0, arg1 a
 }
 
 // UpdateEvaluatorRecordResult mocks base method.
-func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecordResult(arg0 context.Context, arg1 int64, arg2 int8, arg3 float64, arg4 string, arg5 ...db.Option) error {
+func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecordResult(arg0 context.Context, arg1 int64, arg2 int8, arg3 *float64, arg4 string, arg5 ...db.Option) error {
 	m.ctrl.T.Helper()
 	varargs := []any{arg0, arg1, arg2, arg3, arg4}
 	for _, a := range arg5 {
