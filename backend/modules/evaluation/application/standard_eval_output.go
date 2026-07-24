@@ -220,6 +220,10 @@ func (e *experimentApplication) resolveStandardEvalOutputMQMeta(ctx context.Cont
 		meta.EvalTargetWorkspaceID = expt.Target.SpaceID
 		meta.SourceTargetID = expt.Target.SourceTargetID
 	}
+	if expt.CreatedAt != nil {
+		meta.ExptCreateTime = expt.CreatedAt.Unix()
+	}
+	meta.ExptCreatedBy = expt.CreatedBy
 	// 归属集详情：多评测集从 EvalSetDetails 收集，单评测集/老实验用主集 EvalSet。
 	// dataset_workspace_id 取任一集的 SpaceID（同空间场景与 expt.SpaceID 一致）。
 	for _, d := range expt.EvalSetDetails {
@@ -264,6 +268,10 @@ type standardEvalOutputMQMeta struct {
 	EvalTargetWorkspaceID int64
 	SourceTargetID        string
 	DatasetWorkspaceID    int64
+	// ExptCreateTime: 实验创建时间（秒），来源 experiment.created_at。
+	ExptCreateTime int64
+	// ExptCreatedBy: 实验创建人 userID，来源 experiment.created_by（实验级恒定）。
+	ExptCreatedBy string
 	// EvalSetByID: 归属集 id -> EvaluationSet（含 version），用于按 item 的 dataset_id 分流取版本信息。
 	EvalSetByID map[int64]*entity.EvaluationSet
 	// PrimaryEvalSetID: 主集 id（单评测集/老实验回退用）。
@@ -370,6 +378,11 @@ func newItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBu
 		if item.SystemInfo != nil {
 			status := exptdomain.ItemRunState(item.SystemInfo.RunState)
 			res.Status = &status
+			// ItemEndTime 来源 expt_item_result.updated_at，表示当前/latest run 终态同步到主结果表的时间，
+			// 不代表精确的执行结束时刻；非终态不输出。
+			if entity.IsItemRunFinished(item.SystemInfo.RunState) && item.SystemInfo.EndTime != nil {
+				res.ItemEndTime = gptr.Of(item.SystemInfo.EndTime.Unix())
+			}
 		}
 	}
 	fillStandardEvalOutputMQMeta(res, item, opt)
@@ -398,6 +411,12 @@ func fillStandardEvalOutputMQMeta(res *expt.ItemStandardEvalOutput, item *entity
 		}
 		if meta.DatasetWorkspaceID != 0 {
 			res.DatasetWorkspaceID = gptr.Of(meta.DatasetWorkspaceID)
+		}
+		if meta.ExptCreateTime != 0 {
+			res.ExperimentCreateTime = gptr.Of(meta.ExptCreateTime)
+		}
+		if meta.ExptCreatedBy != "" {
+			res.CreatedBy = gptr.Of(meta.ExptCreatedBy)
 		}
 	}
 

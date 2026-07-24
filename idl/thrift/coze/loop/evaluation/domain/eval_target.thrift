@@ -300,6 +300,10 @@ struct SandboxAgent {
 
     // 沙箱镜像
     8: optional string image
+
+    // 是否开启分析：由创建评测对象时从 application.usages 反查（含 "analysis"）固化，
+    // 控制 item-complete MQ 是否发送（与 TCC 空间白名单 AND）
+    9: optional bool enable_analysis
 }
 
 struct AgentConnection {

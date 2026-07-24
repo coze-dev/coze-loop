@@ -39,6 +39,9 @@ type IExptConfigManager interface {
 	Get(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error)
 	MGet(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error)
 	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, session *entity.Session) ([]int64, error)
+	// MGetBasicByID 仅查 experiment 单表（不 join eval_set/target/evaluator 等），返回基础字段。
+	// 用于只需实验基础信息（如 create_time）、无需完整详情的场景，避免 MGetDetail 的多表查询与用户 RPC。
+	MGetBasicByID(ctx context.Context, exptIDs []int64) ([]*entity.Experiment, error)
 
 	Clone(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error)
 

@@ -1189,7 +1189,9 @@ type Experiment struct {
 	EndTime       *int64      `thrift:"end_time,8,optional" frugal:"8,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
 	ItemConcurNum *int32      `thrift:"item_concur_num,9,optional" frugal:"9,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
 	// 实验可见性，默认为空，可见
-	Visibility            *Visibility              `thrift:"visibility,10,optional" frugal:"10,optional,string" form:"visibility" json:"visibility,omitempty" query:"visibility"`
+	Visibility *Visibility `thrift:"visibility,10,optional" frugal:"10,optional,string" form:"visibility" json:"visibility,omitempty" query:"visibility"`
+	// 实验创建时间（秒），来源 experiment.created_at
+	CreateTime            *int64                   `thrift:"create_time,11,optional" frugal:"11,optional,i64" json:"create_time" form:"create_time" query:"create_time"`
 	EvalSetVersionID      *int64                   `thrift:"eval_set_version_id,21,optional" frugal:"21,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" query:"eval_set_version_id"`
 	TargetVersionID       *int64                   `thrift:"target_version_id,22,optional" frugal:"22,optional,i64" json:"target_version_id" form:"target_version_id" query:"target_version_id"`
 	EvaluatorVersionIds   []int64                  `thrift:"evaluator_version_ids,23,optional" frugal:"23,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" query:"evaluator_version_ids"`
@@ -1365,6 +1367,18 @@ func (p *Experiment) GetVisibility() (v Visibility) {
 		return Experiment_Visibility_DEFAULT
 	}
 	return *p.Visibility
+}
+
+var Experiment_CreateTime_DEFAULT int64
+
+func (p *Experiment) GetCreateTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCreateTime() {
+		return Experiment_CreateTime_DEFAULT
+	}
+	return *p.CreateTime
 }
 
 var Experiment_EvalSetVersionID_DEFAULT int64
@@ -1816,6 +1830,9 @@ func (p *Experiment) SetItemConcurNum(val *int32) {
 func (p *Experiment) SetVisibility(val *Visibility) {
 	p.Visibility = val
 }
+func (p *Experiment) SetCreateTime(val *int64) {
+	p.CreateTime = val
+}
 func (p *Experiment) SetEvalSetVersionID(val *int64) {
 	p.EvalSetVersionID = val
 }
@@ -1933,6 +1950,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	8:   "end_time",
 	9:   "item_concur_num",
 	10:  "visibility",
+	11:  "create_time",
 	21:  "eval_set_version_id",
 	22:  "target_version_id",
 	23:  "evaluator_version_ids",
@@ -2008,6 +2026,10 @@ func (p *Experiment) IsSetItemConcurNum() bool {
 
 func (p *Experiment) IsSetVisibility() bool {
 	return p.Visibility != nil
+}
+
+func (p *Experiment) IsSetCreateTime() bool {
+	return p.CreateTime != nil
 }
 
 func (p *Experiment) IsSetEvalSetVersionID() bool {
@@ -2243,6 +2265,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2666,6 +2696,17 @@ func (p *Experiment) ReadField10(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.Visibility = _field
+	return nil
+}
+func (p *Experiment) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CreateTime = _field
 	return nil
 }
 func (p *Experiment) ReadField21(iprot thrift.TProtocol) error {
@@ -3164,6 +3205,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 10
 			goto WriteFieldError
 		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
 			goto WriteFieldError
@@ -3501,6 +3546,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *Experiment) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCreateTime() {
+		if err = oprot.WriteFieldBegin("create_time", thrift.I64, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CreateTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 func (p *Experiment) writeField21(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvalSetVersionID() {
@@ -4236,6 +4299,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 	if !p.Field10DeepEqual(ano.Visibility) {
 		return false
 	}
+	if !p.Field11DeepEqual(ano.CreateTime) {
+		return false
+	}
 	if !p.Field21DeepEqual(ano.EvalSetVersionID) {
 		return false
 	}
@@ -4460,6 +4526,18 @@ func (p *Experiment) Field10DeepEqual(src *Visibility) bool {
 		return false
 	}
 	if strings.Compare(*p.Visibility, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field11DeepEqual(src *int64) bool {
+
+	if p.CreateTime == src {
+		return true
+	} else if p.CreateTime == nil || src == nil {
+		return false
+	}
+	if *p.CreateTime != *src {
 		return false
 	}
 	return true

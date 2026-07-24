@@ -34,6 +34,8 @@ import (
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -352,6 +354,189 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 				t.Errorf("CreateExpt() EnableScoreWeight should be false when ScoreWeight is nil")
 			}
 		}
+	})
+}
+
+func TestExptMangerImpl_CreateExpt_GroupKey(t *testing.T) {
+	const (
+		workspaceID   int64 = 1
+		evalSetID     int64 = 2
+		evalSetVerID  int64 = 3
+		newExptID     int64 = 101
+		newExptStatID int64 = 102
+		refExptID     int64 = 777
+	)
+
+	setup := func(t *testing.T, expectCreate bool) (*ExptMangerImpl, context.Context, *entity.Session, *entity.CreateExptParam) {
+		t.Helper()
+
+		ctrl := gomock.NewController(t)
+		mgr := newTestExptManager(ctrl)
+		ctx := context.Background()
+		session := &entity.Session{UserID: "creator"}
+		param := &entity.CreateExptParam{
+			WorkspaceID:      workspaceID,
+			Name:             "group_key_test",
+			EvalSetID:        evalSetID,
+			EvalSetVersionID: evalSetVerID,
+			ExptType:         entity.ExptType_Online,
+			ExptConf:         &entity.EvaluationConfiguration{},
+		}
+
+		version := &entity.EvaluationSetVersion{ID: evalSetVerID}
+		mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
+			EXPECT().
+			GetEvaluationSetVersion(ctx, workspaceID, evalSetVerID, gptr.Of(true)).
+			Return(version, &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}, nil)
+		mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+			EXPECT().
+			GenMultiIDs(ctx, 2).
+			Return([]int64{newExptID, newExptStatID}, nil)
+
+		if expectCreate {
+			mgr.audit.(*auditMocks.MockIAuditService).
+				EXPECT().
+				Audit(ctx, gomock.Any()).
+				Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+			mgr.exptResultService.(*svcMocks.MockExptResultService).
+				EXPECT().
+				CreateStats(ctx, gomock.Any(), session).
+				Return(nil)
+			mgr.exptResultService.(*svcMocks.MockExptResultService).
+				EXPECT().
+				InsertExptTurnResultFilterKeyMappings(ctx, gomock.Any()).
+				Return(nil)
+			mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+				EXPECT().
+				GetByName(ctx, param.Name, workspaceID).
+				Return(nil, false, nil)
+			mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+				EXPECT().
+				Create(ctx, gomock.Any(), gomock.Any()).
+				Return(nil)
+			mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
+				EXPECT().
+				SetWriteFlag(ctx, platestwrite.ResourceTypeExperiment, newExptID)
+		}
+
+		return mgr, ctx, session, param
+	}
+
+	requireRefGroupError := func(t *testing.T, err error) {
+		t.Helper()
+		require.Error(t, err)
+		statusErr, ok := errorx.FromStatusError(err)
+		require.True(t, ok, "expected status error, got %T: %v", err, err)
+		require.Equal(t, int32(errno.RefGroupExperimentInvalidCode), statusErr.Code())
+	}
+
+	t.Run("no ref defaults group key to new experiment ID", func(t *testing.T) {
+		mgr, ctx, session, param := setup(t, true)
+
+		expt, err := mgr.CreateExpt(ctx, param, session)
+		require.NoError(t, err)
+		require.NotNil(t, expt)
+		require.Equal(t, "101", expt.ExperimentGroupKey)
+	})
+
+	t.Run("same-space ref inherits group key", func(t *testing.T) {
+		mgr, ctx, session, param := setup(t, true)
+		param.RefGroupExperimentID = refExptID
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			GetByID(ctx, refExptID, workspaceID).
+			Return(&entity.Experiment{
+				ID:                 refExptID,
+				SpaceID:            workspaceID,
+				ExperimentGroupKey: "inherited-group",
+			}, nil)
+
+		expt, err := mgr.CreateExpt(ctx, param, session)
+		require.NoError(t, err)
+		require.NotNil(t, expt)
+		require.Equal(t, "inherited-group", expt.ExperimentGroupKey)
+	})
+
+	t.Run("ref lookup error returns exact invalid-ref code", func(t *testing.T) {
+		mgr, ctx, session, param := setup(t, false)
+		param.RefGroupExperimentID = refExptID
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			GetByID(ctx, refExptID, workspaceID).
+			Return(nil, errors.New("repo error"))
+
+		expt, err := mgr.CreateExpt(ctx, param, session)
+		require.Nil(t, expt)
+		requireRefGroupError(t, err)
+	})
+
+	t.Run("nil ref returns exact invalid-ref code", func(t *testing.T) {
+		mgr, ctx, session, param := setup(t, false)
+		param.RefGroupExperimentID = refExptID
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			GetByID(ctx, refExptID, workspaceID).
+			Return(nil, nil)
+
+		expt, err := mgr.CreateExpt(ctx, param, session)
+		require.Nil(t, expt)
+		requireRefGroupError(t, err)
+	})
+
+	t.Run("cross-space ref returns exact invalid-ref code", func(t *testing.T) {
+		mgr, ctx, session, param := setup(t, false)
+		param.RefGroupExperimentID = refExptID
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			GetByID(ctx, refExptID, workspaceID).
+			Return(&entity.Experiment{
+				ID:                 refExptID,
+				SpaceID:            workspaceID + 1,
+				ExperimentGroupKey: "other-space-group",
+			}, nil)
+
+		expt, err := mgr.CreateExpt(ctx, param, session)
+		require.Nil(t, expt)
+		requireRefGroupError(t, err)
+	})
+}
+
+func TestExptMangerImpl_MGetBasicByID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+
+	t.Run("空入参直接返回nil不查库", func(t *testing.T) {
+		// 空 exptIDs 时不应调用 exptRepo.MGetBasicByID（gomock 无 EXPECT 即验证零调用）。
+		got, err := mgr.MGetBasicByID(ctx, nil)
+		require.NoError(t, err)
+		assert.Nil(t, got)
+
+		got, err = mgr.MGetBasicByID(ctx, []int64{})
+		require.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("正常多id透传repo", func(t *testing.T) {
+		want := []*entity.Experiment{{ID: 1, CreatedBy: "u1"}, {ID: 2, CreatedBy: "u2"}}
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			MGetBasicByID(ctx, []int64{1, 2}).
+			Return(want, nil)
+		got, err := mgr.MGetBasicByID(ctx, []int64{1, 2})
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("repo错误透传", func(t *testing.T) {
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			MGetBasicByID(ctx, []int64{9}).
+			Return(nil, errors.New("dao error"))
+		got, err := mgr.MGetBasicByID(ctx, []int64{9})
+		require.Error(t, err)
+		assert.Nil(t, got)
 	})
 }
 

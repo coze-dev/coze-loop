@@ -547,7 +547,6 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		// 分流唯一以 eval_set_source_type 为准 (== MultiSetConfig 走新路径), configs 仅作权威源数据。
 		EvalSetConfigs:       req.EvalSetConfigs,
 		EvalSetSourceType:    req.EvalSetSourceType,
-		ExperimentGroupKey:   req.ExperimentGroupKey,
 		RefGroupExperimentID: req.RefGroupExperimentID,
 		NotificationConf:     req.NotificationConf,
 	}
@@ -1079,9 +1078,21 @@ func (e *experimentApplication) GetExperimentIDsByGroup(ctx context.Context, req
 		return nil, err
 	}
 
+	// 反查实验基础信息（仅查 experiment 单表，不 join eval_set/target/evaluator，也不发用户 RPC），
+	// 携带 create_time 等基础字段返回；空列表跳过，避免无谓查询。
+	var exptDTOs []*domain_expt.Experiment
+	if len(exptIDs) > 0 {
+		expts, err := e.manager.MGetBasicByID(ctx, exptIDs)
+		if err != nil {
+			return nil, err
+		}
+		exptDTOs = experiment.ToExptDTOs(expts)
+	}
+
 	return &expt.GetExperimentIDsByGroupResponse{
-		ExptIds:  exptIDs,
-		BaseResp: base.NewBaseResp(),
+		ExptIds:     exptIDs,
+		Experiments: exptDTOs,
+		BaseResp:    base.NewBaseResp(),
 	}, nil
 }
 

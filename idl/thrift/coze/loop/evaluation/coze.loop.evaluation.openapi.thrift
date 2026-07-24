@@ -552,11 +552,8 @@ struct SubmitExperimentOApiRequest {
 
     100: optional map<string, string> ext (api.body = 'ext')
 
-    // 实验分组 key: 显式传入时服务端校验跨 space 隔离(不允许其它空间已占用该 key), 撞车拒绝创建; 缺省则以实验 ID 兜底。同一空间内允许多个实验共享同一 group key。
-    // 与内部 Submit 的 experiment_group_key 对齐, application 层直接指针透传给 CreateExperiment。
-    101: optional string experiment_group_key (api.body = 'experiment_group_key', go.tag = 'json:"experiment_group_key"')
-
-    // 引用分组实验 id: 填写时校验其为当前空间内的实验 id, 通过后本实验的 group key 复用该引用实验的 group key(归入同一分组); 优先级高于 experiment_group_key。
+    // 实验分组 key 默认以实验 ID 兜底；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）。
+    // 引用分组实验 id: 填写时校验其为当前空间内的实验 id。
     102: optional i64 ref_group_experiment_id (api.js_conv = "true", api.body = 'ref_group_experiment_id', go.tag = 'json:"ref_group_experiment_id"')
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")

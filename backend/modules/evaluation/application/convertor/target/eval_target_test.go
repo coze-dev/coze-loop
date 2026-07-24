@@ -4,10 +4,12 @@
 package target
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	dto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -1236,6 +1238,37 @@ func TestSandboxAgentDO2DTO(t *testing.T) {
 			assert.Nil(t, got.Envs)
 		}
 	})
+}
+
+func TestSandboxAgentEnableAnalysisRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	for _, enableAnalysis := range []bool{true, false} {
+		enableAnalysis := enableAnalysis
+		t.Run(fmt.Sprintf("enable_analysis_%t", enableAnalysis), func(t *testing.T) {
+			t.Parallel()
+
+			dtoInput := &dto.SandboxAgent{EnableAnalysis: gptr.Of(enableAnalysis)}
+			doFromDTO := SandboxAgentDTO2DO(dtoInput)
+			require.NotNil(t, doFromDTO)
+			assert.Equal(t, enableAnalysis, doFromDTO.EnableAnalysis)
+
+			dtoRoundTrip := SandboxAgentDO2DTO(doFromDTO)
+			require.NotNil(t, dtoRoundTrip)
+			require.NotNil(t, dtoRoundTrip.EnableAnalysis)
+			assert.Equal(t, enableAnalysis, *dtoRoundTrip.EnableAnalysis)
+
+			doInput := &do.SandboxAgent{EnableAnalysis: enableAnalysis}
+			dtoFromDO := SandboxAgentDO2DTO(doInput)
+			require.NotNil(t, dtoFromDO)
+			require.NotNil(t, dtoFromDO.EnableAnalysis)
+			assert.Equal(t, enableAnalysis, *dtoFromDO.EnableAnalysis)
+
+			doRoundTrip := SandboxAgentDTO2DO(dtoFromDO)
+			require.NotNil(t, doRoundTrip)
+			assert.Equal(t, enableAnalysis, doRoundTrip.EnableAnalysis)
+		})
+	}
 }
 
 func TestSandboxEnvVarsDTO2DO(t *testing.T) {

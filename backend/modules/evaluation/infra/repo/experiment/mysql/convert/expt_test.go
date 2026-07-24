@@ -5,9 +5,11 @@ package convert
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
@@ -120,6 +122,24 @@ func TestExptConverter_PO2DO_KeepsExplicitGroupKey(t *testing.T) {
 	do, err := NewExptConverter().PO2DO(po, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "explicit-group", do.ExperimentGroupKey)
+}
+
+func TestExptConverter_PO2DO_CreatedAt(t *testing.T) {
+	t.Parallel()
+
+	createdAt := time.Date(2026, time.July, 24, 13, 14, 15, 123456000, time.UTC)
+	po := &model.Experiment{
+		ID:        201,
+		CreatedBy: "creator-201",
+		CreatedAt: createdAt,
+	}
+
+	do, err := NewExptConverter().PO2DO(po, nil)
+	require.NoError(t, err)
+	require.NotNil(t, do)
+	require.NotNil(t, do.CreatedAt)
+	require.Equal(t, createdAt, *do.CreatedAt)
+	require.Equal(t, "creator-201", do.CreatedBy)
 }
 
 func TestExptConverter_PO2DO_EvaluatorRefs(t *testing.T) {

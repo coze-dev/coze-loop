@@ -22,6 +22,11 @@ type ItemCompleteEvent struct {
 	ExperimentGroupKey    string `json:"experiment_group_key"`     // 实验组 Key（关联同组实验），默认为实验 ID，空间内唯一
 	ItemID                string `json:"item_id"`                  // 数据集某一行的 ID
 	ItemKey               string `json:"item_key"`                 // 评测集 item 的实体 ItemKey（下游 data 服务写入）；直接透传，为空则空、不降级
+	// EnableAnalysis 评测对象是否开启分析，来源 eval_target 的 SandboxAgent.EnableAnalysis。
+	// 商业化侧 producer 据此与 TCC 空间白名单 AND，决定是否发送本事件。
+	EnableAnalysis bool `json:"enable_analysis"`
+	// CreatedBy 实验创建人 userID，来源 experiment.created_by（实验级恒定）。
+	CreatedBy string `json:"created_by"`
 }
 
 type IItemCompletePublisher interface {

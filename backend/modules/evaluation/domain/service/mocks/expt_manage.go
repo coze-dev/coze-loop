@@ -396,6 +396,21 @@ func (mr *MockIExptManagerMockRecorder) MGet(arg0, arg1, arg2, arg3 any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGet", reflect.TypeOf((*MockIExptManager)(nil).MGet), arg0, arg1, arg2, arg3)
 }
 
+// MGetBasicByID mocks base method.
+func (m *MockIExptManager) MGetBasicByID(arg0 context.Context, arg1 []int64) ([]*entity.Experiment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MGetBasicByID", arg0, arg1)
+	ret0, _ := ret[0].([]*entity.Experiment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MGetBasicByID indicates an expected call of MGetBasicByID.
+func (mr *MockIExptManagerMockRecorder) MGetBasicByID(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetBasicByID", reflect.TypeOf((*MockIExptManager)(nil).MGetBasicByID), arg0, arg1)
+}
+
 // MGetDetail mocks base method.
 func (m *MockIExptManager) MGetDetail(arg0 context.Context, arg1 []int64, arg2 int64, arg3 *entity.Session) ([]*entity.Experiment, error) {
 	m.ctrl.T.Helper()

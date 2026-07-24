@@ -1318,10 +1318,12 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		if state, ok := itemID2ItemRunState[itemID]; ok {
 			itemResult.SystemInfo = &entity.ItemSystemInfo{
 				RunState: state,
+				EndTime:  itemResultPO.UpdatedAt,
 			}
 		} else {
 			itemResult.SystemInfo = &entity.ItemSystemInfo{
 				RunState: itemResultPO.Status,
+				EndTime:  itemResultPO.UpdatedAt,
 			}
 		}
 		for _, turnID := range itemID2TurnIDs[itemID] {

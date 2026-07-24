@@ -43,6 +43,7 @@ func (ExptItemResultConvertor) PO2DO(rl *model.ExptItemResult) *entity.ExptItemR
 		Status:        entity.ItemRunState(rl.Status),
 		ErrMsg:        conv.UnsafeBytesToString(gptr.Indirect(rl.ErrMsg)),
 		LogID:         rl.LogID,
+		UpdatedAt:     gptr.Of(rl.UpdatedAt),
 	}
 	// 反序列化 Ext 字段
 	if rl.Ext != nil && len(*rl.Ext) > 0 {

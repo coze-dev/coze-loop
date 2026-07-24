@@ -385,6 +385,9 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	if experiment.EndAt != nil {
 		res.EndTime = gptr.Of(experiment.EndAt.Unix())
 	}
+	if experiment.CreatedAt != nil {
+		res.CreateTime = gptr.Of(experiment.CreatedAt.Unix())
+	}
 	if experiment.EvalConf != nil {
 		if experiment.EvalConf.ItemConcurNum != nil {
 			res.ItemConcurNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemConcurNum)))
@@ -837,7 +840,6 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		EvaluatorVersionIds:   cer.GetEvaluatorVersionIds(),
 		Name:                  cer.GetName(),
 		Desc:                  cer.GetDesc(),
-		ExperimentGroupKey:    strings.TrimSpace(cer.GetExperimentGroupKey()),
 		RefGroupExperimentID:  cer.GetRefGroupExperimentID(),
 		EvalSetID:             cer.GetEvalSetID(),
 		TargetID:              cer.TargetID,

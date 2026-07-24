@@ -26,6 +26,16 @@ import (
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 )
 
+type stubItemCompletePublisher struct {
+	events []*component.ItemCompleteEvent
+	err    error
+}
+
+func (s *stubItemCompletePublisher) PublishItemComplete(_ context.Context, event *component.ItemCompleteEvent) error {
+	s.events = append(s.events, event)
+	return s.err
+}
+
 func Test_NewExptItemEvaluation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -395,6 +405,129 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 		err := executor.CompleteItemRun(ctx, eiec, errors.New("target timeout"))
 		assert.NoError(t, err)
 	})
+}
+
+func Test_ExptItemEvalCtxExecutor_CompleteItemRun_ItemCompletePublisher(t *testing.T) {
+	const (
+		exptID      = int64(1)
+		exptRunID   = int64(2)
+		itemID      = int64(3)
+		spaceID     = int64(4)
+		targetID    = int64(5)
+		targetSpace = int64(6)
+	)
+
+	tests := []struct {
+		name         string
+		mutateExpt   func(*entity.Experiment)
+		publisherErr error
+		evalErr      error
+		wantPublish  bool
+		wantAnalysis bool
+	}{
+		{name: "complete target version and sandbox", wantPublish: true, wantAnalysis: true},
+		{
+			name: "nil target",
+			mutateExpt: func(expt *entity.Experiment) {
+				expt.Target = nil
+			},
+			wantPublish: true,
+		},
+		{
+			name: "nil target version",
+			mutateExpt: func(expt *entity.Experiment) {
+				expt.Target.EvalTargetVersion = nil
+			},
+			wantPublish: true,
+		},
+		{
+			name: "nil sandbox agent",
+			mutateExpt: func(expt *entity.Experiment) {
+				expt.Target.EvalTargetVersion.SandboxAgent = nil
+			},
+			wantPublish: true,
+		},
+		{
+			name:         "publisher error does not block completion",
+			publisherErr: errors.New("publish failed"),
+			wantPublish:  true,
+			wantAnalysis: true,
+		},
+		{name: "evaluation error skips publish", evalErr: errors.New("evaluation failed")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			itemResultRepo := repomocks.NewMockIExptItemResultRepo(ctrl)
+			configer := configermocks.NewMockIConfiger(ctrl)
+			publisher := &stubItemCompletePublisher{err: tt.publisherErr}
+			expt := &entity.Experiment{
+				CreatedBy:          "creator_user_id",
+				ExperimentGroupKey: "group-key",
+				TargetID:           targetID,
+				Target: &entity.EvalTarget{
+					SpaceID:        targetSpace,
+					SourceTargetID: "source-target-id",
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						SandboxAgent: &entity.SandboxAgent{EnableAnalysis: true},
+					},
+				},
+			}
+			if tt.mutateExpt != nil {
+				tt.mutateExpt(expt)
+			}
+
+			execCtx := &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{
+					ExptID: exptID, ExptRunID: exptRunID, EvalSetItemID: itemID, SpaceID: spaceID,
+				},
+				Expt: expt,
+			}
+			wantFields := map[string]any{
+				"result_state": entity.ExptItemResultStateLogged,
+				"status":       int32(entity.ItemRunState_Success),
+			}
+			if tt.evalErr != nil {
+				wantFields["status"] = int32(entity.ItemRunState_Fail)
+				wantFields["err_msg"] = tt.evalErr.Error()
+				configer.EXPECT().GetErrRetryConf(gomock.Any(), spaceID, tt.evalErr).
+					Times(2).
+					Return(&entity.RetryConf{})
+			}
+			itemResultRepo.EXPECT().UpdateItemRunLog(
+				gomock.Any(), exptID, exptRunID, []int64{itemID}, gomock.Any(), spaceID,
+			).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+				require.Equal(t, wantFields, fields)
+				return nil
+			})
+
+			executor := &ExptItemEvalCtxExecutor{
+				ItemResultRepo:        itemResultRepo,
+				Configer:              configer,
+				itemCompletePublisher: publisher,
+			}
+			require.NoError(t, executor.CompleteItemRun(context.Background(), execCtx, tt.evalErr))
+
+			if !tt.wantPublish {
+				require.Empty(t, publisher.events)
+				return
+			}
+			require.Len(t, publisher.events, 1)
+			published := publisher.events[0]
+			require.Equal(t, "1", published.ExptID)
+			require.Equal(t, "2", published.ExptRunID)
+			require.Equal(t, "3", published.ItemID)
+			require.Equal(t, "creator_user_id", published.CreatedBy)
+			require.Equal(t, tt.wantAnalysis, published.EnableAnalysis)
+			if tt.wantAnalysis {
+				require.Equal(t, "6", published.EvalTargetWorkspaceID)
+				require.Equal(t, "source-target-id", published.SourceTargetID)
+			}
+		})
+	}
 }
 
 func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
@@ -807,6 +940,90 @@ func Test_buildExptTurnEvalCtx_BuildEvalExtMerge(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, etec)
 			assert.Equal(t, tt.wantValue, etec.Ext[tt.wantKey])
+		})
+	}
+}
+
+func Test_buildItemCompleteEvent(t *testing.T) {
+	tests := []struct {
+		name               string
+		eiec               *entity.ExptItemEvalCtx
+		wantCreatedBy      string
+		wantEnableAnalysis bool
+	}{
+		{
+			name: "sandbox agent analysis enabled -> created_by + enable_analysis both set",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_abc",
+					TargetID:  9,
+					Target: &entity.EvalTarget{
+						SpaceID: 1,
+						EvalTargetVersion: &entity.EvalTargetVersion{
+							SandboxAgent: &entity.SandboxAgent{EnableAnalysis: true},
+						},
+					},
+				},
+			},
+			wantCreatedBy:      "user_abc",
+			wantEnableAnalysis: true,
+		},
+		{
+			name: "sandbox agent analysis disabled -> created_by set, enable_analysis false",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_def",
+					Target: &entity.EvalTarget{
+						SpaceID:           1,
+						EvalTargetVersion: &entity.EvalTargetVersion{SandboxAgent: &entity.SandboxAgent{EnableAnalysis: false}},
+					},
+				},
+			},
+			wantCreatedBy:      "user_def",
+			wantEnableAnalysis: false,
+		},
+		{
+			name: "nil sandbox agent -> enable_analysis false, no panic",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_ghi",
+					Target:    &entity.EvalTarget{SpaceID: 1, EvalTargetVersion: &entity.EvalTargetVersion{}},
+				},
+			},
+			wantCreatedBy:      "user_ghi",
+			wantEnableAnalysis: false,
+		},
+		{
+			name: "nil target version -> enable_analysis false, no panic",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt:  &entity.Experiment{CreatedBy: "user_jkl", Target: &entity.EvalTarget{SpaceID: 1}},
+			},
+			wantCreatedBy:      "user_jkl",
+			wantEnableAnalysis: false,
+		},
+		{
+			name: "nil target -> enable_analysis false, created_by still set, no panic",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt:  &entity.Experiment{CreatedBy: "user_mno"},
+			},
+			wantCreatedBy:      "user_mno",
+			wantEnableAnalysis: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ev := buildItemCompleteEvent(tt.eiec)
+			assert.NotNil(t, ev)
+			assert.Equal(t, tt.wantCreatedBy, ev.CreatedBy)
+			assert.Equal(t, tt.wantEnableAnalysis, ev.EnableAnalysis)
+			// 基础字段恒填充
+			assert.Equal(t, "100", ev.ExptID)
+			assert.Equal(t, "300", ev.ItemID)
 		})
 	}
 }

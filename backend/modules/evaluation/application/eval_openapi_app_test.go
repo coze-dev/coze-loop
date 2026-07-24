@@ -2053,10 +2053,10 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 			},
 		},
 		{
-			name: "success with experiment group key",
+			name: "success with ref group experiment id",
 			buildReq: func() *openapi.SubmitExperimentOApiRequest {
 				req := buildBaseReq()
-				req.ExperimentGroupKey = gptr.Of("oapi-gk-transparent")
+				req.RefGroupExperimentID = gptr.Of(int64(6001))
 				return req
 			},
 			setup: func(req *openapi.SubmitExperimentOApiRequest, auth *rpcmocks.MockIAuthProvider, manager *servicemocks.MockIExptManager, versionSvc *servicemocks.MockEvaluationSetVersionService, evaluatorSvc *servicemocks.MockEvaluatorService, fakeApp *fakeExperimentApp) {
@@ -2169,8 +2169,8 @@ func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 					assert.Equal(t, workspaceID, fakeApp.lastReq.GetWorkspaceID())
 					assert.Len(t, fakeApp.lastReq.EvaluatorVersionIds, 1)
 					assert.Equal(t, evaluatorVersionID, fakeApp.lastReq.EvaluatorVersionIds[0])
-					// experiment_group_key 透传: 显式传入时应原样透传给内部 SubmitExperimentRequest。
-					assert.Equal(t, req.ExperimentGroupKey, fakeApp.lastReq.ExperimentGroupKey)
+					// ref_group_experiment_id 透传: 显式传入时应原样透传给内部 SubmitExperimentRequest。
+					assert.Equal(t, req.RefGroupExperimentID, fakeApp.lastReq.RefGroupExperimentID)
 				}
 			}
 

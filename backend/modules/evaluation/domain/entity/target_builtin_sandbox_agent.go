@@ -24,4 +24,7 @@ type SandboxAgent struct {
 	Image         string           `json:"image"`
 	// 自定义输出结果，与 CustomRPCServer.CustomFieldSchemas 对齐
 	CustomFieldSchemas []*CustomFieldSchema `json:"custom_field_schemas,omitempty"`
+	// EnableAnalysis 是否开启分析：创建评测对象时从 application.usages（含 "analysis"）反查固化，
+	// 控制 item-complete MQ 是否发送（与 TCC 空间白名单 AND）。
+	EnableAnalysis bool `json:"enable_analysis,omitempty"`
 }

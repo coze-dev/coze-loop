@@ -129,6 +129,15 @@ func (e *exptRepoImpl) MGetByID(ctx context.Context, ids []int64, spaceID int64)
 		return nil, err
 	}
 
+	// exptDAO.MGetByID 只按主键查、不带 space 过滤；此处按 spaceID 兜底过滤，防止跨空间读取越权。
+	inSpace := make([]*model.Experiment, 0, len(pos))
+	for _, po := range pos {
+		if po.SpaceID == spaceID {
+			inSpace = append(inSpace, po)
+		}
+	}
+	pos = inSpace
+
 	exptIDs := slices.Transform(pos, func(e *model.Experiment, _ int) int64 {
 		return e.ID
 	})
