@@ -14,6 +14,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
@@ -1619,6 +1620,216 @@ func TestExperimentApplication_BatchGetExperiments(t *testing.T) {
 				assert.Equal(t, wantExpt.GetBaseInfo().GetCreatedBy().GetUserID(),
 					gotExpt.GetBaseInfo().GetCreatedBy().GetUserID())
 			}
+		})
+	}
+}
+
+func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
+	const (
+		workspaceID = int64(123)
+		groupKey    = "group-key"
+	)
+
+	authErr := errors.New("authorization failed")
+	getIDsErr := errors.New("get experiment ids failed")
+	mGetBasicErr := errors.New("mget basic experiments failed")
+	createdAt1 := time.Date(2026, time.July, 23, 10, 30, 0, 0, time.UTC)
+	createdAt2 := time.Date(2026, time.July, 23, 11, 45, 0, 0, time.UTC)
+	exptIDs := []int64{456, 457}
+	expts := []*entity.Experiment{
+		{
+			ID:                 exptIDs[0],
+			SpaceID:            workspaceID,
+			Name:               "experiment-1",
+			ExperimentGroupKey: groupKey,
+			CreatedBy:          "creator-1",
+			CreatedAt:          &createdAt1,
+		},
+		{
+			ID:                 exptIDs[1],
+			SpaceID:            workspaceID,
+			Name:               "experiment-2",
+			ExperimentGroupKey: groupKey,
+			CreatedBy:          "creator-2",
+			CreatedAt:          &createdAt2,
+		},
+	}
+
+	type testMocks struct {
+		manager  *servicemocks.MockIExptManager
+		auth     *rpcmocks.MockIAuthProvider
+		userInfo *userinfomocks.MockUserInfoService
+	}
+
+	expectAuthorization := func(t *testing.T, auth *rpcmocks.MockIAuthProvider, retErr error) {
+		auth.EXPECT().
+			Authorization(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+				require.NotNil(t, param)
+				require.Equal(t, strconv.FormatInt(workspaceID, 10), param.ObjectID)
+				require.Equal(t, workspaceID, param.SpaceID)
+				require.Len(t, param.ActionObjects, 1)
+				require.NotNil(t, param.ActionObjects[0].Action)
+				require.Equal(t, consts.ActionReadExpt, *param.ActionObjects[0].Action)
+				require.NotNil(t, param.ActionObjects[0].EntityType)
+				require.Equal(t, rpc.AuthEntityType_Space, *param.ActionObjects[0].EntityType)
+				return retErr
+			})
+	}
+
+	tests := []struct {
+		name       string
+		groupKey   string
+		setupMocks func(t *testing.T, mocks testMocks)
+		check      func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error)
+	}{
+		{
+			name:     "authorization failed",
+			groupKey: groupKey,
+			setupMocks: func(t *testing.T, mocks testMocks) {
+				expectAuthorization(t, mocks.auth, authErr)
+				// No manager or user-info expectation: any call must fail the test.
+			},
+			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
+				require.ErrorIs(t, err, authErr)
+				require.Nil(t, resp)
+			},
+		},
+		{
+			name:     "empty group key returns empty response",
+			groupKey: "",
+			setupMocks: func(t *testing.T, mocks testMocks) {
+				expectAuthorization(t, mocks.auth, nil)
+				// No manager or user-info expectation: any call must fail the test.
+			},
+			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.Empty(t, resp.GetExptIds())
+				require.Empty(t, resp.GetExperiments())
+				require.NotNil(t, resp.GetBaseResp())
+			},
+		},
+		{
+			name:     "blank group key returns empty response",
+			groupKey: " \t\n ",
+			setupMocks: func(t *testing.T, mocks testMocks) {
+				expectAuthorization(t, mocks.auth, nil)
+				// No manager or user-info expectation: any call must fail the test.
+			},
+			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.Empty(t, resp.GetExptIds())
+				require.Empty(t, resp.GetExperiments())
+				require.NotNil(t, resp.GetBaseResp())
+			},
+		},
+		{
+			name:     "get ids by group key failed",
+			groupKey: groupKey,
+			setupMocks: func(t *testing.T, mocks testMocks) {
+				expectAuthorization(t, mocks.auth, nil)
+				mocks.manager.EXPECT().
+					GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, &entity.Session{}).
+					Return(nil, getIDsErr)
+			},
+			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
+				require.ErrorIs(t, err, getIDsErr)
+				require.Nil(t, resp)
+			},
+		},
+		{
+			name:     "empty ids skips mget basic",
+			groupKey: groupKey,
+			setupMocks: func(t *testing.T, mocks testMocks) {
+				expectAuthorization(t, mocks.auth, nil)
+				mocks.manager.EXPECT().
+					GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, &entity.Session{}).
+					Return([]int64{}, nil)
+				// No MGetBasicByID or user-info expectation: any call must fail the test.
+			},
+			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.Empty(t, resp.GetExptIds())
+				require.Empty(t, resp.GetExperiments())
+				require.NotNil(t, resp.GetBaseResp())
+			},
+		},
+		{
+			name:     "success returns ids and basic experiments without user rpc",
+			groupKey: "  " + groupKey + "  ",
+			setupMocks: func(t *testing.T, mocks testMocks) {
+				expectAuthorization(t, mocks.auth, nil)
+				gomock.InOrder(
+					mocks.manager.EXPECT().
+						GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, &entity.Session{}).
+						Return(exptIDs, nil),
+					mocks.manager.EXPECT().
+						MGetBasicByID(gomock.Any(), exptIDs).
+						Return(expts, nil),
+				)
+				// No user-info expectation: PackUserInfo must not be called.
+			},
+			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.Equal(t, exptIDs, resp.GetExptIds())
+				require.Len(t, resp.GetExperiments(), len(expts))
+				require.NotNil(t, resp.GetBaseResp())
+
+				for i, got := range resp.GetExperiments() {
+					require.NotNil(t, got)
+					require.Equal(t, expts[i].ID, got.GetID())
+					require.Equal(t, expts[i].CreatedAt.Unix(), got.GetCreateTime())
+					require.Equal(t, expts[i].CreatedBy, got.GetCreatorBy())
+					require.Equal(t, expts[i].ExperimentGroupKey, got.GetExperimentGroupKey())
+				}
+			},
+		},
+		{
+			name:     "mget basic by id failed",
+			groupKey: groupKey,
+			setupMocks: func(t *testing.T, mocks testMocks) {
+				expectAuthorization(t, mocks.auth, nil)
+				gomock.InOrder(
+					mocks.manager.EXPECT().
+						GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, &entity.Session{}).
+						Return(exptIDs, nil),
+					mocks.manager.EXPECT().
+						MGetBasicByID(gomock.Any(), exptIDs).
+						Return(nil, mGetBasicErr),
+				)
+			},
+			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
+				require.ErrorIs(t, err, mGetBasicErr)
+				require.Nil(t, resp)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mocks := testMocks{
+				manager:  servicemocks.NewMockIExptManager(ctrl),
+				auth:     rpcmocks.NewMockIAuthProvider(ctrl),
+				userInfo: userinfomocks.NewMockUserInfoService(ctrl),
+			}
+			tt.setupMocks(t, mocks)
+
+			app := &experimentApplication{
+				manager:         mocks.manager,
+				auth:            mocks.auth,
+				userInfoService: mocks.userInfo,
+			}
+			resp, err := app.GetExperimentIDsByGroup(context.Background(), &exptpb.GetExperimentIDsByGroupRequest{
+				WorkspaceID:        workspaceID,
+				ExperimentGroupKey: tt.groupKey,
+			})
+
+			tt.check(t, resp, err)
 		})
 	}
 }

@@ -4,7 +4,9 @@
 package experiment
 
 import (
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -1842,6 +1844,30 @@ func TestToExptDTO_RuntimeParam(t *testing.T) {
 	}
 }
 
+func TestToExptDTO_CreateTime(t *testing.T) {
+	t.Parallel()
+
+	t.Run("created_at is converted to Unix seconds", func(t *testing.T) {
+		t.Parallel()
+		createdAt := time.Unix(1_725_555_555, 987_654_321)
+
+		result := ToExptDTO(&entity.Experiment{CreatedAt: &createdAt})
+
+		require.NotNil(t, result)
+		require.NotNil(t, result.CreateTime)
+		assert.Equal(t, createdAt.Unix(), *result.CreateTime)
+	})
+
+	t.Run("nil created_at leaves create_time unset", func(t *testing.T) {
+		t.Parallel()
+
+		result := ToExptDTO(&entity.Experiment{})
+
+		require.NotNil(t, result)
+		assert.Nil(t, result.CreateTime)
+	})
+}
+
 func TestConvertCreateReq(t *testing.T) {
 	tests := []struct {
 		name                       string
@@ -1949,6 +1975,22 @@ func TestConvertCreateReq(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("ref group experiment id is passed without legacy group key", func(t *testing.T) {
+		const refGroupExperimentID int64 = 123456
+		_, hasLegacyRequestField := reflect.TypeOf(expt.CreateExperimentRequest{}).FieldByName("ExperimentGroupKey")
+		assert.False(t, hasLegacyRequestField, "experiment_group_key must stay removed from CreateExperimentRequest")
+
+		got, err := ConvertCreateReq(&expt.CreateExperimentRequest{
+			WorkspaceID:          1,
+			RefGroupExperimentID: gptr.Of(refGroupExperimentID),
+		}, nil)
+
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, refGroupExperimentID, got.RefGroupExperimentID)
+		assert.Empty(t, got.ExperimentGroupKey, "removed experiment_group_key must not enter CreateExptParam")
+	})
 }
 
 func TestBuildTemplateScoreWeightConfigDTO_FromTripleConfig(t *testing.T) {

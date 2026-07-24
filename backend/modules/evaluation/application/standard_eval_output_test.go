@@ -23,6 +23,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
+const (
+	standardEvalOutputExptCreateUnix = int64(1_700_000_000)
+	standardEvalOutputItemEndUnix    = int64(1_700_000_100)
+	standardEvalOutputCreatedBy      = "creator-1"
+)
+
 func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -110,6 +116,9 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	assert.Equal(t, workspaceID, got.GetDatasetWorkspaceID())
 	assert.Equal(t, int64(1001), got.GetDatasetVersionID())
 	assert.Equal(t, "1.2.0", got.GetDatasetVersionName())
+	assert.Equal(t, standardEvalOutputExptCreateUnix, got.GetExperimentCreateTime())
+	assert.Equal(t, standardEvalOutputCreatedBy, got.GetCreatedBy())
+	assert.Equal(t, standardEvalOutputItemEndUnix, got.GetItemEndTime())
 }
 
 func TestBuildItemStandardEvalOutput_ProcessingOnlyReturnsMetadata(t *testing.T) {
@@ -223,6 +232,33 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs_Auth(t *testing
 	require.Len(t, resp.Items, 1)
 }
 
+func TestExperimentApplication_MGetExperimentStandardEvalOutputs_ProcessingOmitsItemEndTime(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
+	result := makeStandardEvalOutputReportResult(2, 3, 4, 5, 6)
+	result.ItemResults[0].SystemInfo.RunState = entity.ItemRunState_Processing
+	mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(result, nil)
+	mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+	mockTargetSvc.EXPECT().GetEvalTarget(gomock.Any(), int64(200)).Return(&entity.EvalTarget{ID: 200, SpaceID: 1, SourceTargetID: "src-200"}, nil)
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+	mockManager.EXPECT().GetDetail(gomock.Any(), int64(2), int64(1), gomock.Any()).Return(makeStandardEvalOutputExpt(2, 1), nil)
+	app := &experimentApplication{auth: mockAuth, resultSvc: mockResultSvc, evalTargetService: mockTargetSvc, manager: mockManager}
+
+	resp, err := app.MGetExperimentStandardEvalOutputs(context.Background(), &exptpb.MGetExperimentStandardEvalOutputsRequest{
+		WorkspaceID: 1,
+		ExptID:      2,
+		ItemIds:     []int64{4},
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+	assert.Equal(t, exptdomain.ItemRunState_Processing, resp.Items[0].GetStatus())
+	assert.Nil(t, resp.Items[0].ItemEndTime)
+}
+
 func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -260,6 +296,10 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 	require.Len(t, resp.Items, 1)
 	require.NotNil(t, resp.Total)
 	assert.Equal(t, int64(1), *resp.Total)
+	got := resp.Items[0]
+	assert.Equal(t, standardEvalOutputExptCreateUnix, got.GetExperimentCreateTime())
+	assert.Equal(t, standardEvalOutputCreatedBy, got.GetCreatedBy())
+	assert.Equal(t, standardEvalOutputItemEndUnix, got.GetItemEndTime())
 }
 
 func TestExperimentApplication_ListExperimentStandardEvalOutputs_OnlyItemIDs(t *testing.T) {
@@ -317,6 +357,7 @@ func makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targe
 	score := 0.8
 	latency := int64(123)
 	turnIndex := int64(0)
+	itemEndTime := time.Unix(standardEvalOutputItemEndUnix, 0)
 	return &entity.MGetExperimentReportResult{
 		Total: 1,
 		ItemResults: []*entity.ItemResult{{
@@ -325,6 +366,7 @@ func makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targe
 			Ext:       map[string]string{"dataset_key": "dataset-1", "item_key": "case-1"},
 			SystemInfo: &entity.ItemSystemInfo{
 				RunState: entity.ItemRunState_Success,
+				EndTime:  &itemEndTime,
 			},
 			TurnResults: []*entity.TurnResult{{
 				TurnID:    turnID,
@@ -384,9 +426,12 @@ func makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targe
 // makeStandardEvalOutputExpt 构造标准输出 MQ 元信息测试用的实验详情，
 // 主评测集 id=100（与 makeStandardEvalOutputReportResult 的 payload EvalSetID 对齐），target id=200。
 func makeStandardEvalOutputExpt(exptID, spaceID int64) *entity.Experiment {
+	createdAt := time.Unix(standardEvalOutputExptCreateUnix, 0)
 	return &entity.Experiment{
 		ID:                 exptID,
 		SpaceID:            spaceID,
+		CreatedBy:          standardEvalOutputCreatedBy,
+		CreatedAt:          &createdAt,
 		LatestRunID:        3,
 		ExperimentGroupKey: "group-key-1",
 		TargetID:           200,
