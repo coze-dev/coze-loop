@@ -722,6 +722,10 @@ func (e *ExptMangerImpl) emitSandboxAgentExperimentFinished(ctx context.Context,
 		ExperimentID:   expt.ID,
 		DatasetID:      expt.EvalSetID,
 		DatasetVersion: expt.EvalSetVersionID,
+		TargetID:       expt.TargetID,
+	}
+	if expt.EvalSet != nil {
+		tags.DatasetKey = expt.EvalSet.DatasetKey
 	}
 	var startAt time.Time
 	if expt.StartAt != nil {
@@ -730,8 +734,8 @@ func (e *ExptMangerImpl) emitSandboxAgentExperimentFinished(ctx context.Context,
 	if endAt.IsZero() {
 		endAt = time.Now()
 	}
-	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_finished, expt_id=%d, status=%v, start_at=%d, end_at=%d",
-		tags.ExperimentID, status, startAt.UnixMilli(), endAt.UnixMilli())
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_finished, expt_id=%d, status=%v, start_at=%d, end_at=%d, target_id=%d, dataset_key=%s",
+		tags.ExperimentID, status, startAt.UnixMilli(), endAt.UnixMilli(), tags.TargetID, tags.DatasetKey)
 	e.sandboxAgentMetrics.EmitExperimentFinished(tags, statusToErr(status), startAt, endAt)
 }
 

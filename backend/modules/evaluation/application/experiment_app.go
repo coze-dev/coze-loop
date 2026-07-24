@@ -641,9 +641,11 @@ func (e *experimentApplication) emitSandboxAgentExperimentStarted(ctx context.Co
 		ExperimentID:   exptDTO.GetID(),
 		DatasetID:      exptDTO.GetEvalSetID(),
 		DatasetVersion: exptDTO.GetEvalSetVersionID(),
+		TargetID:       exptDTO.GetTargetID(),
+		DatasetKey:     exptDTO.GetEvalSet().GetDatasetKey(),
 	}
-	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_started, expt_id=%d, dataset_id=%d, dataset_version=%d",
-		tags.ExperimentID, tags.DatasetID, tags.DatasetVersion)
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_started, expt_id=%d, dataset_id=%d, dataset_version=%d, target_id=%d, dataset_key=%s",
+		tags.ExperimentID, tags.DatasetID, tags.DatasetVersion, tags.TargetID, tags.DatasetKey)
 	e.sandboxAgentMetrics.EmitExperimentStarted(tags)
 }
 

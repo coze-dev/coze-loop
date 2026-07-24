@@ -70,10 +70,13 @@ func (t *SandboxAgentSourceEvalTargetServiceImpl) emitInvokeStarted(invokeID int
 	tags := metricscomp.SandboxAgentInvokeTags{
 		ExperimentID: param.ExptID,
 		InvokeID:     strconv.FormatInt(invokeID, 10),
+		TargetID:     param.TargetID,
 	}
 	if param.ItemMeta != nil {
 		tags.DatasetID = parseInt64OrZero(param.ItemMeta.EvalSetID)
 		tags.DatasetVersion = parseInt64OrZero(param.ItemMeta.EvalSetVersionID)
+		tags.ItemKey = param.ItemMeta.ItemKey
+		tags.DatasetKey = param.ItemMeta.DatasetKey
 	}
 	if param.EvalSetItemID != nil {
 		tags.ItemID = *param.EvalSetItemID
