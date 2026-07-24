@@ -32,7 +32,7 @@ func (f *fakeSecretProvider) GetSecret(_ context.Context, _ int64) (string, erro
 }
 
 // ---------------------------------------------------------------------------
-// generateNonce — not covered in webhook_dispatcher_test.go
+// GenerateNonce — not covered in webhook_dispatcher_test.go
 // ---------------------------------------------------------------------------
 
 func TestGenerateNonce_BitsUT(t *testing.T) {
@@ -40,12 +40,12 @@ func TestGenerateNonce_BitsUT(t *testing.T) {
 
 	t.Run("nonce is 32 hex chars (16 bytes)", func(t *testing.T) {
 		t.Parallel()
-		assert.Len(t, generateNonce(), 32)
+		assert.Len(t, GenerateNonce(), 32)
 	})
 
 	t.Run("two nonces are unique", func(t *testing.T) {
 		t.Parallel()
-		assert.NotEqual(t, generateNonce(), generateNonce())
+		assert.NotEqual(t, GenerateNonce(), GenerateNonce())
 	})
 }
 
@@ -350,8 +350,8 @@ func TestWebhookDispatcher_Dispatch_WithRealSecret_BitsUT(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, capturedSig, "signature should be non-empty when secret provider returns a real secret")
 	// With empty secret, the signature should differ
-	emptySigSample := computeHMACSHA256("", "dummy")
-	realSigSample := computeHMACSHA256("my-webhook-secret", "dummy")
+	emptySigSample := ComputeHMACSHA256("", "dummy")
+	realSigSample := ComputeHMACSHA256("my-webhook-secret", "dummy")
 	assert.NotEqual(t, emptySigSample, realSigSample)
 }
 

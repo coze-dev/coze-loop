@@ -112,9 +112,9 @@ func (d *WebhookDispatcher) Dispatch(ctx context.Context, event *entity.ExptLife
 		secret, _ = d.secretProvider.GetSecret(ctx, expt.SpaceID)
 	}
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-	nonce := generateNonce()
+	nonce := GenerateNonce()
 	signMessage := timestamp + "\n" + nonce + "\n"
-	signature := computeHMACSHA256(secret, signMessage)
+	signature := ComputeHMACSHA256(secret, signMessage)
 
 	deliveryID := payload["delivery_id"].(string)
 	payloadStr := string(payloadBytes)
@@ -210,15 +210,15 @@ func BuildLaneHeaders(env *entity.WebhookEnvironment, lane *string) map[string]s
 	}
 }
 
-// computeHMACSHA256 计算 HMAC-SHA256 签名，返回 hex 编码
-func computeHMACSHA256(secret, message string) string {
+// ComputeHMACSHA256 计算 HMAC-SHA256 签名（hex 编码），供 webhook 与 evaluator 回调复用
+func ComputeHMACSHA256(secret, message string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(message))
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
-// generateNonce 生成随机字符串
-func generateNonce() string {
+// GenerateNonce 生成 16 字节随机 nonce（hex 编码）
+func GenerateNonce() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)

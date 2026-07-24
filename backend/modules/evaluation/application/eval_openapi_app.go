@@ -10,13 +10,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
-
+	"github.com/bytedance/gg/gmap"
+	"github.com/bytedance/gg/gptr"
+	usersession "github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
@@ -24,26 +27,20 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	evaluator_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	experiment_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
-
-	"github.com/bytedance/gg/gmap"
-	"github.com/bytedance/gg/gptr"
-
-	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -70,6 +67,7 @@ type EvalOpenAPIApplication struct {
 	configer                component.IConfiger
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 	fileProvider            rpc.IFileProvider
+	callbackDispatcher      service.IEvaluatorCallbackDispatcher
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -91,6 +89,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	configer component.IConfiger,
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
 	fileProvider rpc.IFileProvider,
+	callbackDispatcher service.IEvaluatorCallbackDispatcher,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -113,6 +112,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		configer:                    configer,
 		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
 		fileProvider:                fileProvider,
+		callbackDispatcher:          callbackDispatcher,
 	}
 }
 
@@ -2178,6 +2178,94 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 	}, nil
 }
 
+func (e *EvalOpenAPIApplication) AsyncRunEvaluatorOApi(ctx context.Context, req *openapi.AsyncRunEvaluatorOApiRequest) (r *openapi.AsyncRunEvaluatorOApiResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	logs.CtxInfo(ctx, "AsyncRunEvaluatorOApi receive req: %v", json.Jsonify(req))
+	startTime := time.Now()
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluatorVersionID(), kitexutil.GetTOMethod(ctx), startTime.UnixMilli(), err)
+	}()
+
+	// 校验评估器版本是否存在且有权限
+	// 预置评估器（Builtin）允许跨 workspace 执行：查询时不传 spaceID
+	evaluator, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, req.GetEvaluatorVersionID(), false, false)
+	if err != nil {
+		return nil, err
+	}
+	if evaluator == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
+	}
+
+	if !evaluator.Builtin {
+		if evaluator.SpaceID != req.GetWorkspaceID() {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
+		}
+
+		var ownerID *string
+		if evaluator.BaseInfo != nil && evaluator.BaseInfo.CreatedBy != nil {
+			ownerID = evaluator.BaseInfo.CreatedBy.UserID
+		}
+		err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(evaluator.ID, 10),
+			SpaceID:         req.GetWorkspaceID(),
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+			OwnerID:         ownerID,
+			ResourceSpaceID: evaluator.SpaceID,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	inputData := evaluator_convertor.OpenAPIEvaluatorInputDataDTO2DO(req.InputData)
+	runConf := evaluator_convertor.OpenAPIEvaluatorRunConfigDTO2DO(req.EvaluatorRunConf)
+	// 与 EvaluatorHandlerImpl.buildRunEvaluatorRequest 一致：将 evaluator_runtime_param 注入到 InputData.Ext，供下游执行时使用
+	if runConf != nil && runConf.EvaluatorRuntimeParam != nil && runConf.EvaluatorRuntimeParam.JSONValue != nil && len(*runConf.EvaluatorRuntimeParam.JSONValue) > 0 {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = *runConf.EvaluatorRuntimeParam.JSONValue
+	}
+
+	// 异步提交（评估器类型限制由领域层 AsyncRunEvaluator 继承处理）
+	record, err := e.evaluatorService.AsyncRunEvaluator(ctx, &entity.AsyncRunEvaluatorRequest{
+		SpaceID:            req.GetWorkspaceID(),
+		Name:               evaluator.Name,
+		EvaluatorVersionID: req.GetEvaluatorVersionID(),
+		InputData:          inputData,
+		EvaluatorRunConf:   runConf,
+		Ext:                req.Ext,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 写入异步上下文供 ReportEvaluatorInvokeResult 回调读取；独立调用 Event 留空
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", record.ID)
+	if err = e.asyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		RecordID:           record.ID,
+		AsyncUnixMS:        startTime.UnixMilli(),
+		Session:            &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
+		EvaluatorVersionID: req.GetEvaluatorVersionID(),
+		CallbackURL:        req.GetCallbackURL(),
+	}); err != nil {
+		logs.CtxError(ctx, "[AsyncRunEvaluatorOApi] SetEvalAsyncCtx fail, invokeID: %d, err: %v", record.ID, err)
+		return nil, err
+	}
+
+	return &openapi.AsyncRunEvaluatorOApiResponse{
+		Data: &openapi.AsyncRunEvaluatorOpenAPIData{
+			InvokeID: gptr.Of(record.ID),
+			Record:   evaluator_convertor.OpenAPIEvaluatorRecordDO2DTO(record),
+		},
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest) (r *openapi.RunBuiltinEvaluatorOApiResponse, err error) {
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
@@ -2710,11 +2798,12 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		outputData.TimeConsumingMS = time.Now().UnixMilli() - actx.AsyncUnixMS
 	}
 
+	runStatus := evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus())
 	if err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
 		SpaceID:    req.GetWorkspaceID(),
 		RecordID:   req.GetInvokeID(),
 		OutputData: outputData,
-		Status:     evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus()),
+		Status:     runStatus,
 	}); err != nil {
 		return nil, err
 	}
@@ -2724,6 +2813,24 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 			event.AsyncEvaluatorReportTrigger = true
 		}); err != nil {
 			return nil, err
+		}
+	}
+
+	if actx.CallbackURL != "" {
+		payload := &openapi.EvaluatorCallbackPayloadOApi{
+			InvokeID:           gptr.Of(req.GetInvokeID()),
+			WorkspaceID:        gptr.Of(req.GetWorkspaceID()),
+			EvaluatorVersionID: gptr.Of(actx.EvaluatorVersionID),
+			Status:             gptr.Of(evaluatorCallbackStatusString(runStatus)),
+			TimeConsumingMs:    gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS),
+		}
+		if outputData != nil {
+			payload.Output = evaluator_convertor.OpenAPIEvaluatorOutputDataDO2DTO(outputData)
+		}
+		if derr := e.callbackDispatcher.Dispatch(ctx, req.GetWorkspaceID(), actx.CallbackURL, payload); derr != nil {
+			logs.CtxError(ctx, "[ReportEvaluatorInvokeResult] callback dispatch fail, invoke_id: %v, url: %v, err: %v",
+				req.GetInvokeID(), actx.CallbackURL, derr)
+			// 不返回错误：回调失败不影响运行时回报接口成功
 		}
 	}
 
@@ -2752,7 +2859,7 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 	}
 
 	asyncStart := time.Now()
-	userID := session.UserIDInCtxOrEmpty(ctx)
+	userID := usersession.UserIDInCtxOrEmpty(ctx)
 	inputFields := make(map[string]*spi.Content)
 	if err := json.Unmarshal([]byte(req.GetParam()), &inputFields); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
@@ -3114,4 +3221,11 @@ func (e *EvalOpenAPIApplication) fillExtraOutputURLs(ctx context.Context, itemRe
 		}
 	}
 	return nil
+}
+
+func evaluatorCallbackStatusString(status entity.EvaluatorRunStatus) string {
+	if status == entity.EvaluatorRunStatusSuccess {
+		return "success"
+	}
+	return "fail"
 }
