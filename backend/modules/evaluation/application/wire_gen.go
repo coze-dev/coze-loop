@@ -278,7 +278,7 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	return evaluationEvaluatorService, nil
 }
 
-func InitEvaluationSetApplication(client datasetservice.Client, authClient authservice.Client, meter metrics.Meter, userClient userservice.Client) evaluation.EvaluationSetService {
+func InitEvaluationSetApplication(client datasetservice.Client, authClient authservice.Client, meter metrics.Meter, userClient userservice.Client, configFactory conf.IConfigLoaderFactory) (evaluation.EvaluationSetService, error) {
 	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
 	iDatasetRPCAdapter := data.NewDatasetRPCAdapter(client)
 	iEvaluationSetService := service.NewEvaluationSetServiceImpl(iDatasetRPCAdapter)
@@ -288,8 +288,13 @@ func InitEvaluationSetApplication(client datasetservice.Client, authClient auths
 	evaluationSetMetrics := metrics4.NewEvaluationSetMetrics(meter)
 	iUserProvider := foundation.NewUserRPCProvider(userClient)
 	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
-	evaluationSetService := NewEvaluationSetApplicationImpl(iAuthProvider, iEvaluationSetService, evaluationSetSchemaService, evaluationSetVersionService, evaluationSetItemService, evaluationSetMetrics, userInfoService)
-	return evaluationSetService
+	sharedResourceConfigProvider, err := conf2.NewSharedResourceConfigProvider(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	resourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, sharedResourceConfigProvider)
+	evaluationSetService := NewEvaluationSetApplicationImpl(iAuthProvider, iEvaluationSetService, evaluationSetSchemaService, evaluationSetVersionService, evaluationSetItemService, evaluationSetMetrics, userInfoService, resourceAccessAuthorizer)
+	return evaluationSetService, nil
 }
 
 func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, cmdable redis.Cmdable, meter metrics.Meter, trajectoryAdapter rpc.ITrajectoryAdapter, configFactory conf.IConfigLoaderFactory, batchObjectStorage fileserver.BatchObjectStorage) (evaluation.EvalTargetService, error) {
@@ -313,7 +318,12 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v, trajectoryAdapter, iConfiger, sandboxSchedulerAdapter, iExptRunLogRepo)
 	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
 	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
-	evalTargetService := NewEvalTargetHandlerImpl(iAuthProvider, iEvalTargetService, v, iEvalAsyncRepo)
+	sharedResourceConfigProvider, err := conf2.NewSharedResourceConfigProvider(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	resourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, sharedResourceConfigProvider)
+	evalTargetService := NewEvalTargetHandlerImpl(iAuthProvider, iEvalTargetService, v, iEvalAsyncRepo, resourceAccessAuthorizer)
 	return evalTargetService, nil
 }
 

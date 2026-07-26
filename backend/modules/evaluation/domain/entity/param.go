@@ -52,6 +52,7 @@ type ListEvaluationSetsParam struct {
 	OrderBys         []*OrderBy
 	TagFilter        *TagFilter
 	DatasetKeys      []string
+	SharedOption     *SharedResourceOption
 }
 
 type ListEvaluationSetItemsParam struct {
@@ -128,6 +129,7 @@ type ListEvaluationSetVersionsParam struct {
 	PageNumber      *int32
 	VersionLike     *string
 	Versions        []string // 精确查询
+	SharedOption    *SharedResourceOption
 }
 
 type BatchGetEvaluationSetVersionsResult struct {
@@ -473,14 +475,16 @@ type BatchGetEvalTargetBySourceParam struct {
 	SpaceID        int64
 	SourceTargetID []string
 	TargetType     EvalTargetType
+	SharedOption   *SharedResourceOption
 }
 
 type ListSourceParam struct {
-	TargetType EvalTargetType
-	SpaceID    *int64
-	PageSize   *int32
-	Cursor     *string
-	KeyWord    *string
+	TargetType   EvalTargetType
+	SpaceID      *int64
+	PageSize     *int32
+	Cursor       *string
+	KeyWord      *string
+	SharedOption *SharedResourceOption
 }
 
 type ListSourceVersionParam struct {
@@ -489,6 +493,7 @@ type ListSourceVersionParam struct {
 	PageSize       *int32
 	Cursor         *string
 	SourceTargetID string
+	SharedOption   *SharedResourceOption
 }
 
 type LLMCallParam struct {

@@ -73,7 +73,7 @@ func TestExptMangerImpl_Run(t *testing.T) {
 				// Mock GetEvaluationSet
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				// Mock MGetStats
@@ -132,7 +132,7 @@ func TestExptMangerImpl_Run(t *testing.T) {
 				// Mock GetEvaluationSet
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				// Mock MGetStats
@@ -177,7 +177,7 @@ func TestExptMangerImpl_Run(t *testing.T) {
 				// Mock GetEvaluationSet
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				// Mock MGetStats
@@ -879,7 +879,7 @@ func TestExptMangerImpl_RetryItems(t *testing.T) {
 					EXPECT().MGetByID(ctx, []int64{exptID}, spaceID).
 					Return([]*entity.Experiment{{ID: exptID, SpaceID: spaceID, ExptType: 1}}, nil).AnyTimes()
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
-					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
 				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
@@ -905,7 +905,7 @@ func TestExptMangerImpl_RetryItems(t *testing.T) {
 					EXPECT().MGetByID(ctx, []int64{exptID}, spaceID).
 					Return([]*entity.Experiment{{ID: exptID, SpaceID: spaceID}}, nil).AnyTimes()
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
-					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
 				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
@@ -927,7 +927,7 @@ func TestExptMangerImpl_RetryItems(t *testing.T) {
 					EXPECT().MGetByID(ctx, []int64{exptID}, spaceID).
 					Return([]*entity.Experiment{{ID: exptID, SpaceID: spaceID}}, nil).AnyTimes()
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
-					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
 				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
@@ -2389,7 +2389,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
@@ -2511,7 +2511,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
@@ -3177,7 +3177,7 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 			}}, nil).AnyTimes()
 		mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 			EXPECT().
-			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(&entity.EvaluationSet{}, nil).AnyTimes()
 		mgr.exptResultService.(*svcMocks.MockExptResultService).
 			EXPECT().
@@ -3224,7 +3224,7 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 			}}, nil).AnyTimes()
 		mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 			EXPECT().
-			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(&entity.EvaluationSet{}, nil).AnyTimes()
 		mgr.exptResultService.(*svcMocks.MockExptResultService).
 			EXPECT().
@@ -3271,7 +3271,7 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 			}}, nil).AnyTimes()
 		mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 			EXPECT().
-			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(&entity.EvaluationSet{}, nil).AnyTimes()
 		mgr.exptResultService.(*svcMocks.MockExptResultService).
 			EXPECT().

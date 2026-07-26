@@ -276,6 +276,11 @@ func (p *ListEvaluationSetsRequest) IsValid() error {
 			return fmt.Errorf("field TagFilter not valid, %w", err)
 		}
 	}
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.PageNumber != nil {
 		if *p.PageNumber <= int32(0) {
 			return fmt.Errorf("field PageNumber gt rule failed, current value: %v", *p.PageNumber)
@@ -334,6 +339,11 @@ func (p *CreateEvaluationSetVersionResponse) IsValid() error {
 	return nil
 }
 func (p *GetEvaluationSetVersionRequest) IsValid() error {
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -362,6 +372,11 @@ func (p *GetEvaluationSetVersionResponse) IsValid() error {
 func (p *BatchGetEvaluationSetVersionsRequest) IsValid() error {
 	if len(p.VersionIds) > int(100) {
 		return fmt.Errorf("field VersionIds MaxLen rule failed, current value: %v", p.VersionIds)
+	}
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
@@ -392,6 +407,11 @@ func (p *VersionedEvaluationSet) IsValid() error {
 	return nil
 }
 func (p *ListEvaluationSetVersionsRequest) IsValid() error {
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.PageNumber != nil {
 		if *p.PageNumber <= int32(0) {
 			return fmt.Errorf("field PageNumber gt rule failed, current value: %v", *p.PageNumber)
@@ -546,6 +566,11 @@ func (p *BatchDeleteEvaluationSetItemsResponse) IsValid() error {
 	return nil
 }
 func (p *ListEvaluationSetItemsRequest) IsValid() error {
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.Filter != nil {
 		if err := p.Filter.IsValid(); err != nil {
 			return fmt.Errorf("field Filter not valid, %w", err)
@@ -593,6 +618,11 @@ func (p *GetEvaluationSetItemResponse) IsValid() error {
 	return nil
 }
 func (p *BatchGetEvaluationSetItemsRequest) IsValid() error {
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if len(p.ItemVersionQueries) > int(100) {
 		return fmt.Errorf("field ItemVersionQueries MaxLen rule failed, current value: %v", p.ItemVersionQueries)
 	}

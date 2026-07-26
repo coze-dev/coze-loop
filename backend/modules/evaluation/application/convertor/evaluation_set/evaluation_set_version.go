@@ -37,5 +37,6 @@ func VersionDO2DTO(do *entity.EvaluationSetVersion) *eval_set.EvaluationSetVersi
 		EvaluationSetSchema: SchemaDO2DTO(do.EvaluationSetSchema),
 		ItemCount:           gptr.Of(do.ItemCount),
 		BaseInfo:            common.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		SharedInfo:          SharedResourceInfoDO2DTO(do.SharedInfo),
 	}
 }

@@ -1020,14 +1020,14 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, spaceID, evalSetID, evalSetVersionID int64) ([]*entity.ColumnEvalSetField, error) {
 	var version *entity.EvaluationSetVersion
 	if evalSetID == evalSetVersionID {
-		evalSet, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(spaceID), evalSetID, gptr.Of(true))
+		evalSet, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(spaceID), evalSetID, gptr.Of(true), nil)
 		if err != nil {
 			return nil, err
 		}
 		version = evalSet.EvaluationSetVersion
 	} else {
 		var err error
-		version, _, err = e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, spaceID, evalSetVersionID, gptr.Of(true))
+		version, _, err = e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, spaceID, evalSetVersionID, gptr.Of(true), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2135,7 +2135,7 @@ func (e *ExptResultBuilder) buildDatasetKeyByEvalSetID(ctx context.Context, pair
 
 	if len(versionIDSet) > 0 && e.evaluationSetVersionService != nil {
 		versionIDs := maps.ToSlice(versionIDSet, func(k int64, _ struct{}) int64 { return k })
-		sets, err := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(e.SpaceID), versionIDs, gptr.Of(true))
+		sets, err := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(e.SpaceID), versionIDs, gptr.Of(true), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2149,7 +2149,7 @@ func (e *ExptResultBuilder) buildDatasetKeyByEvalSetID(ctx context.Context, pair
 
 	if len(draftIDSet) > 0 && e.evaluationSetService != nil {
 		setIDs := maps.ToSlice(draftIDSet, func(k int64, _ struct{}) int64 { return k })
-		sets, err := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(e.SpaceID), setIDs, gptr.Of(false))
+		sets, err := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(e.SpaceID), setIDs, gptr.Of(false), nil)
 		if err != nil {
 			return nil, err
 		}
