@@ -91,13 +91,13 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	var output map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
 	assert.Contains(t, output, "detail")
-	assert.Contains(t, output, "rounds")
+	assert.NotContains(t, output, "rounds") // 平台兜底只补 detail
 
 	var eval map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
 	assert.Contains(t, eval, "task_config")
 	assert.Contains(t, eval, "detail")
-	assert.Contains(t, eval, "rounds")
+	assert.NotContains(t, eval, "rounds") // 平台兜底只补 detail
 
 	require.NotNil(t, got.Agent)
 	var agent map[string]any
@@ -568,7 +568,6 @@ func TestBuildItemStandardEvalOutput_DoesNotMisclassifyOrdinaryJSONActualOutput(
 	require.NotNil(t, got.Output)
 	assert.Contains(t, got.Output.GetText(), "actual_output")
 	assert.Contains(t, got.Output.GetText(), "detail")
-	assert.Contains(t, got.Output.GetText(), "rounds")
 }
 
 // --- FORNAX_ 前缀逐字段深合并 ---
@@ -625,8 +624,8 @@ func TestBuildItemStandardEvalOutput_SubfieldConflictObjectWins(t *testing.T) {
 	assert.Equal(t, "from-object", detail["custom"]) // 对象子字段
 	// 平台 detail 里原有的 file_diff 兄弟键仍在。
 	assert.Contains(t, detail, "file_diff")
-	// 平台 output.rounds 兄弟键仍在（对象没提 rounds 子字段）。
-	assert.Contains(t, output, "rounds")
+	// 平台不再补 output.rounds（内部 round 粒度补全已移除）。
+	assert.NotContains(t, output, "rounds")
 }
 
 func TestBuildItemStandardEvalOutput_RoundsMergeByRoundID(t *testing.T) {
@@ -719,19 +718,17 @@ func TestBuildItemStandardEvalOutput_EvaluatorIDFilled(t *testing.T) {
 	require.NoError(t, err)
 	var eval map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
-	rounds := eval["rounds"].(map[string]any)
-	require.NotEmpty(t, rounds)
-	for _, rv := range rounds {
-		round := rv.(map[string]any)
-		evalResult := round["eval_result"].(map[string]any)
-		results := evalResult["results"].(map[string]any)
-		require.NotEmpty(t, results)
-		for _, resv := range results {
-			res := resv.(map[string]any)
-			assert.EqualValues(t, 9001, res["evaluator_id"])
-			assert.EqualValues(t, 101, res["evaluator_version_id"])
-			assert.Equal(t, "完整性", res["evaluator_name"])
-		}
+	// 平台兜底只补 detail、不补 round 粒度；evaluator_id/version_id 在 detail.eval_result.results。
+	assert.NotContains(t, eval, "rounds")
+	detail := eval["detail"].(map[string]any)
+	evalResult := detail["eval_result"].(map[string]any)
+	results := evalResult["results"].(map[string]any)
+	require.NotEmpty(t, results)
+	for _, resv := range results {
+		res := resv.(map[string]any)
+		assert.EqualValues(t, 9001, res["evaluator_id"])
+		assert.EqualValues(t, 101, res["evaluator_version_id"])
+		assert.Equal(t, "完整性", res["evaluator_name"])
 	}
 }
 
@@ -774,4 +771,24 @@ func TestMergeRoundsField_AppendsUnmatchedObjectRound(t *testing.T) {
 	object := []any{map[string]any{"round_id": "round_2", "o": true}}
 	merged := mergeRoundsField(platform, object).([]any)
 	require.Len(t, merged, 2) // round_2 追加
+}
+
+func TestBuildItemStandardEvalOutput_PlatformEvalOutputNoInnerRounds(t *testing.T) {
+	// 平台兜底的 eval / output 只补 detail，不再补内部 round 粒度 rounds（顶层 rounds 字段不受影响）。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+
+	var eval map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
+	assert.Contains(t, eval, "detail")
+	assert.NotContains(t, eval, "rounds")
+
+	var output map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
+	assert.Contains(t, output, "detail")
+	assert.NotContains(t, output, "rounds")
+
+	// 顶层 rounds 字段仍由平台兜底产出（每轮 query/latency/context），不受影响。
+	require.NotNil(t, got.Rounds)
 }

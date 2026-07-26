@@ -895,42 +895,28 @@ func standardAgent(item *entity.ItemResult, exptID int64, opt standardEvalOutput
 
 func standardOutput(item *entity.ItemResult, exptID int64) map[string]any {
 	payloads := standardPayloads(item, exptID)
-	rounds := map[string]any{}
 	var detailOutput map[string]*entity.Content
-	for _, payload := range payloads {
-		tr := payload.TargetOutput
-		if tr == nil || tr.EvalTargetRecord == nil || tr.EvalTargetRecord.EvalTargetOutputData == nil {
-			continue
-		}
-		data := tr.EvalTargetRecord.EvalTargetOutputData
-		out := data.OutputFields
-		if detailOutput == nil {
-			detailOutput = out
-		}
-		rounds[standardRoundID(payload)] = map[string]any{"output": out, "file_diff": []any{}}
-	}
 	if len(payloads) > 0 {
 		last := payloads[len(payloads)-1]
 		if last.TargetOutput != nil && last.TargetOutput.EvalTargetRecord != nil && last.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
 			detailOutput = last.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
 		}
 	}
-	return map[string]any{"detail": map[string]any{"file_diff": []any{}, "output": detailOutput}, "rounds": rounds}
+	// 平台兜底只补 detail，不补 round 粒度的 rounds（对象要 round 粒度自行上报 FORNAX_output.rounds）。
+	return map[string]any{"detail": map[string]any{"file_diff": []any{}, "output": detailOutput}}
 }
 
 func standardEval(item *entity.ItemResult, exptID int64, opt standardEvalOutputBuildOptions) map[string]any {
 	payloads := standardPayloads(item, exptID)
-	rounds := map[string]any{}
 	var detailEval map[string]any
 	for _, payload := range payloads {
-		evalResult := standardEvalResult(payload, opt)
-		rounds[standardRoundID(payload)] = map[string]any{"run_status": turnRunStatus(payload), "eval_result": evalResult}
-		detailEval = evalResult
+		detailEval = standardEvalResult(payload, opt)
 	}
 	if detailEval == nil {
 		detailEval = map[string]any{"type": "score", "score": nil, "reason": "", "results": map[string]any{}}
 	}
-	return map[string]any{"task_config": standardEvalTaskConfig(item), "detail": map[string]any{"run_status": itemRunStatus(item), "eval_result": detailEval}, "rounds": rounds}
+	// 平台兜底只补 detail，不补 round 粒度的 rounds（对象要 round 粒度自行上报 FORNAX_eval.rounds）。
+	return map[string]any{"task_config": standardEvalTaskConfig(item), "detail": map[string]any{"run_status": itemRunStatus(item), "eval_result": detailEval}}
 }
 
 func standardExtra(item *entity.ItemResult) map[string]any {
@@ -1160,18 +1146,6 @@ func evaluatorID(opt standardEvalOutputBuildOptions, key int64) int64 {
 	return 0
 }
 
-func turnRunStatus(payload *entity.ExperimentTurnPayload) map[string]any {
-	status := "unknown"
-	failedReason := ""
-	if payload != nil && payload.SystemInfo != nil {
-		status = turnRunStateString(payload.SystemInfo.TurnRunState)
-		if payload.SystemInfo.Error != nil && payload.SystemInfo.Error.Message != nil {
-			failedReason = *payload.SystemInfo.Error.Message
-		}
-	}
-	return map[string]any{"status": status, "failed_reason": failedReason}
-}
-
 func itemRunStatus(item *entity.ItemResult) map[string]any {
 	status := "unknown"
 	failedReason := ""
@@ -1182,23 +1156,6 @@ func itemRunStatus(item *entity.ItemResult) map[string]any {
 		}
 	}
 	return map[string]any{"status": status, "failed_reason": failedReason}
-}
-
-func turnRunStateString(state entity.TurnRunState) string {
-	switch state {
-	case entity.TurnRunState_Success:
-		return "completed"
-	case entity.TurnRunState_Fail:
-		return "failed"
-	case entity.TurnRunState_Processing:
-		return "processing"
-	case entity.TurnRunState_Queueing:
-		return "queueing"
-	case entity.TurnRunState_Terminal:
-		return "terminated"
-	default:
-		return "unknown"
-	}
 }
 
 func itemRunStateString(state entity.ItemRunState) string {
