@@ -95,7 +95,7 @@ func TestExptMangerImpl_MGetDetail(t *testing.T) {
 	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MGetByID(ctx, []int64{exptID}, int64(1)).Return([]*entity.Experiment{expt}, nil).AnyTimes()
 	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().MGetStats(ctx, []int64{exptID}, int64(1), session).Return([]*entity.ExptStats{{ExptID: exptID}}, nil).AnyTimes()
 	mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).EXPECT().BatchGetExptAggrResultByExperimentIDs(ctx, int64(1), []int64{exptID}).Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
-	mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSet{{}}, nil).AnyTimes()
+	mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return([]*entity.EvaluationSet{{}}, nil).AnyTimes()
 	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).EXPECT().BatchGetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTarget{{}}, nil).AnyTimes()
 	mgr.evaluatorService.(*svcMocks.MockEvaluatorService).EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{}, nil).AnyTimes()
 
@@ -201,7 +201,7 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		}, nil).AnyTimes()
 	mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 		EXPECT().
-		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 		Return(nil, &entity.EvaluationSet{
 			EvaluationSetVersion: &entity.EvaluationSetVersion{
 				EvaluationSetSchema: &entity.EvaluationSetSchema{
@@ -386,7 +386,7 @@ func TestExptMangerImpl_CreateExpt_GroupKey(t *testing.T) {
 		version := &entity.EvaluationSetVersion{ID: evalSetVerID}
 		mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 			EXPECT().
-			GetEvaluationSetVersion(ctx, workspaceID, evalSetVerID, gptr.Of(true)).
+			GetEvaluationSetVersion(ctx, workspaceID, evalSetVerID, gptr.Of(true), nil).
 			Return(version, &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}, nil)
 		mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 			EXPECT().
@@ -580,7 +580,7 @@ func TestExptMangerImpl_CreateExpt_WorkspacePermission(t *testing.T) {
 					}, nil).AnyTimes()
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
-					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}, nil).AnyTimes()
 				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 					EXPECT().
@@ -608,7 +608,7 @@ func TestExptMangerImpl_CreateExpt_WorkspacePermission(t *testing.T) {
 					}, nil).AnyTimes()
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
-					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, &entity.EvaluationSet{ID: evalSetID, SpaceID: otherSpaceID}, nil).AnyTimes()
 				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 					EXPECT().
@@ -636,7 +636,7 @@ func TestExptMangerImpl_CreateExpt_WorkspacePermission(t *testing.T) {
 					}, nil).AnyTimes()
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
-					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}, nil).AnyTimes()
 				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 					EXPECT().
@@ -668,7 +668,7 @@ func TestExptMangerImpl_CreateExpt_WorkspacePermission(t *testing.T) {
 					}, nil).AnyTimes()
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
-					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, &entity.EvaluationSet{
 						ID:      evalSetID,
 						SpaceID: workspaceID,
@@ -850,7 +850,7 @@ func TestExptMangerImpl_CreateExpt_OnlineSourceTargetVersionInjection(t *testing
 				}, nil).AnyTimes()
 			mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 				EXPECT().
-				GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 				Return(nil, &entity.EvaluationSet{
 					EvaluationSetVersion: &entity.EvaluationSetVersion{
 						EvaluationSetSchema: &entity.EvaluationSetSchema{
@@ -970,7 +970,7 @@ func TestExptMangerImpl_CreateExpt_WithExistingTarget(t *testing.T) {
 	}
 	mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 		EXPECT().
-		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 		Return(version, &entity.EvaluationSet{ID: 2, SpaceID: 1}, nil)
 	mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 		EXPECT().
@@ -1451,7 +1451,7 @@ func TestExptMangerImpl_List(t *testing.T) {
 			List(ctx, page, pageSize, filter, orderBys, spaceID).
 			Return([]*entity.Experiment{expt}, int64(1), nil).Times(1)
 		mockEvaluationSetService.EXPECT().
-			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return([]*entity.EvaluationSet{exptTuple.EvalSet}, nil).AnyTimes()
 		mockEvalTargetService.EXPECT().
 			BatchGetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -1497,7 +1497,7 @@ func TestExptMangerImpl_List(t *testing.T) {
 			Return([]*entity.Experiment{expt}, int64(1), nil).Times(1)
 		// 所有相关依赖都返回错误
 		mockEvaluationSetService.EXPECT().
-			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(nil, fmt.Errorf("tuple error")).AnyTimes()
 		mockEvalTargetService.EXPECT().
 			BatchGetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -1520,7 +1520,7 @@ func TestExptMangerImpl_List(t *testing.T) {
 			List(ctx, page, pageSize, filter, orderBys, spaceID).
 			Return([]*entity.Experiment{expt}, int64(1), nil).Times(1)
 		mockEvaluationSetService.EXPECT().
-			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return([]*entity.EvaluationSet{exptTuple.EvalSet}, nil).AnyTimes()
 		mockEvalTargetService.EXPECT().
 			BatchGetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -1556,7 +1556,7 @@ func TestExptMangerImpl_List(t *testing.T) {
 			List(ctx, page, pageSize, filter, orderBys, spaceID).
 			Return([]*entity.Experiment{onlineExpt}, int64(1), nil).Times(1)
 		mockEvaluationSetVersionService.EXPECT().
-			BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return([]*entity.BatchGetEvaluationSetVersionsResult{
 				{Version: onlineEvalSetVersion, EvaluationSet: onlineEvalSet},
 			}, nil).AnyTimes()
@@ -1674,7 +1674,7 @@ func TestExptMangerImpl_GetDetail(t *testing.T) {
 			GetEvalTargetVersion(gomock.Any(), spaceID, gomock.Any(), gomock.Any()).
 			Return(tuple.Target, nil).AnyTimes()
 		mockEvaluationSetService.EXPECT().
-			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(tuple.EvalSet, nil).AnyTimes()
 		mockEvaluatorService.EXPECT().
 			BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).

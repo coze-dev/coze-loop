@@ -38,8 +38,9 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 	}
 
 	// Test data
@@ -238,11 +239,11 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 }
 
 func TestNewEvalTargetHandlerImpl(t *testing.T) {
-	handler := NewEvalTargetHandlerImpl(nil, nil, nil, nil)
+	handler := NewEvalTargetHandlerImpl(nil, nil, nil, nil, nil)
 	if handler == nil {
 		t.Fatalf("handler is nil")
 	}
-	if handler2 := NewEvalTargetHandlerImpl(nil, nil, nil, nil); handler2 != handler {
+	if handler2 := NewEvalTargetHandlerImpl(nil, nil, nil, nil, nil); handler2 != handler {
 		t.Fatalf("handler should be singleton")
 	}
 }
@@ -257,8 +258,9 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetsBySource(t *testing.T) {
 	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
 			1: mockTypedOperator,
 		},
@@ -434,8 +436,9 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 	}
 
 	// Test data
@@ -470,15 +473,11 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().
-					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, false).
+					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, true).
 					Return(validEvalTarget, nil)
 
 				mockAuth.EXPECT().
-					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validEvalTarget.ID, 10),
-						SpaceID:       validSpaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
-					}).
+					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			wantResp: &evaltargetapi.GetEvalTargetVersionResponse{
@@ -512,7 +511,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().
-					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, false).
+					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, true).
 					Return(nil, nil)
 			},
 			wantResp: &evaltargetapi.GetEvalTargetVersionResponse{},
@@ -526,7 +525,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().
-					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, false).
+					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, true).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantResp:    nil,
@@ -541,11 +540,11 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().
-					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, false).
+					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, true).
 					Return(validEvalTarget, nil)
 
 				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
+					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
 					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
 			},
 			wantResp:    nil,
@@ -584,8 +583,9 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetVersions(t *testing.T) {
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 	}
 
 	// Test data
@@ -640,6 +640,10 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetVersions(t *testing.T) {
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), gomock.Any()).
 					Return(nil)
+				mockAuth.EXPECT().
+					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+					Return(nil).
+					Times(len(validEvalTargets))
 			},
 			wantResp: &evaltargetapi.BatchGetEvalTargetVersionsResponse{
 				EvalTargets: []*domain_eval_target.EvalTarget{
@@ -740,8 +744,9 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargets(t *testing.T) {
 	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
 			1: mockTypedOperator,
 		},
@@ -862,8 +867,9 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {
 	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
 			1: mockTypedOperator,
 		},
@@ -1005,7 +1011,8 @@ func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
 	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth: mockAuth,
+		auth:                     mockAuth,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
 			1: mockTypedOperator,
 		},
@@ -1154,7 +1161,8 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth: mockAuth,
+		auth:                     mockAuth,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
 			entity.EvalTargetTypeCustomRPCServer: mockTypedOperator,
 		},
@@ -1453,8 +1461,9 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
 			1: mockTypedOperator,
 		},
@@ -1705,8 +1714,9 @@ func TestEvalTargetApplicationImpl_AsyncExecuteEvalTarget(t *testing.T) {
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 	}
 
 	workspaceID := int64(101)
@@ -1813,8 +1823,9 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 	}
 
 	workspaceID := int64(1001)
@@ -2120,8 +2131,9 @@ func TestEvalTargetApplicationImpl_ExecuteEvalTarget(t *testing.T) {
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 	}
 
 	workspaceID := int64(100)
@@ -2245,8 +2257,9 @@ func TestEvalTargetApplicationImpl_GetEvalTargetRecord(t *testing.T) {
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 	}
 
 	workspaceID := int64(111)
@@ -2353,8 +2366,9 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetRecords(t *testing.T) {
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 	}
 
 	workspaceID := int64(777)
@@ -2452,7 +2466,8 @@ func TestEvalTargetApplicationImpl_GetSourceEvalTargetVersion(t *testing.T) {
 	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth: mockAuth,
+		auth:                     mockAuth,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
 			1: mockTypedOperator,
 		},
@@ -2658,8 +2673,9 @@ func TestEvalTargetApplicationImpl_GetEvalTargetOutputFieldContent(t *testing.T)
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:              mockAuth,
-		evalTargetService: mockEvalTargetService,
+		auth:                     mockAuth,
+		evalTargetService:        mockEvalTargetService,
+		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
 	}
 
 	workspaceID := int64(100)

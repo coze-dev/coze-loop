@@ -38,10 +38,48 @@ import (
 var _ evaluation.EvalTargetService = &EvalTargetApplicationImpl{}
 
 type EvalTargetApplicationImpl struct {
-	auth              rpc.IAuthProvider
-	evalTargetService service.IEvalTargetService
-	typedOperators    map[entity.EvalTargetType]service.ISourceEvalTargetOperateService
-	evalAsyncRepo     repo.IEvalAsyncRepo
+	auth                     rpc.IAuthProvider
+	evalTargetService        service.IEvalTargetService
+	typedOperators           map[entity.EvalTargetType]service.ISourceEvalTargetOperateService
+	evalAsyncRepo            repo.IEvalAsyncRepo
+	resourceAccessAuthorizer service.ResourceAccessAuthorizer
+}
+
+func sharedTargetOptionDTO2DO(option *common.SharedResourceOption) *entity.SharedResourceOption {
+	if option == nil {
+		return nil
+	}
+	sharedOption := &entity.SharedResourceOption{
+		IsShared: option.GetIsShared(),
+	}
+	if option.SourceSpaceID != nil {
+		sharedOption.SourceSpaceID = option.SourceSpaceID
+	}
+	if !sharedOption.Enabled() {
+		return nil
+	}
+	return sharedOption
+}
+
+// buildEvalTargetAuthorizeRequest 组装评测对象读授权入参。
+// 评测对象读取即返回其配置（相当于内容），共享读要求 readable（execute 黑盒会被拒）。
+func buildEvalTargetAuthorizeRequest(callerSpaceID, evalTargetID int64, sharedOption *entity.SharedResourceOption, versionID *int64) *entity.AuthorizeResourceRequest {
+	return &entity.AuthorizeResourceRequest{
+		CallerSpaceID:      callerSpaceID,
+		ResourceType:       entity.SharedResourceTypeEvalTarget,
+		ResourceID:         evalTargetID,
+		VersionID:          versionID,
+		SharedOption:       sharedOption,
+		Action:             consts.Read,
+		RequireContentRead: true,
+	}
+}
+
+func evalTargetVersionID(evalTarget *entity.EvalTarget) *int64 {
+	if evalTarget == nil || evalTarget.EvalTargetVersion == nil {
+		return nil
+	}
+	return gptr.Of(evalTarget.EvalTargetVersion.ID)
 }
 
 var (
@@ -54,13 +92,15 @@ func NewEvalTargetHandlerImpl(
 	evalTargetService service.IEvalTargetService,
 	typedOperators map[entity.EvalTargetType]service.ISourceEvalTargetOperateService,
 	evalAsyncRepo repo.IEvalAsyncRepo,
+	resourceAccessAuthorizer service.ResourceAccessAuthorizer,
 ) evaluation.EvalTargetService {
 	evalTargetHandlerOnce.Do(func() {
 		evalTargetHandler = &EvalTargetApplicationImpl{
-			auth:              auth,
-			evalTargetService: evalTargetService,
-			typedOperators:    typedOperators,
-			evalAsyncRepo:     evalAsyncRepo,
+			auth:                     auth,
+			evalTargetService:        evalTargetService,
+			typedOperators:           typedOperators,
+			evalAsyncRepo:            evalAsyncRepo,
+			resourceAccessAuthorizer: resourceAccessAuthorizer,
 		}
 	})
 	return evalTargetHandler
@@ -181,21 +221,31 @@ func (e EvalTargetApplicationImpl) GetEvalTargetVersion(ctx context.Context, req
 	if request.EvalTargetVersionID == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target version id is nil"))
 	}
-	evalTarget, err := e.evalTargetService.GetEvalTargetVersion(ctx, request.WorkspaceID, request.GetEvalTargetVersionID(), false)
+	sharedOption := sharedTargetOptionDTO2DO(request.SharedOption)
+	// 共享读:评测对象存在于来源空间,DAO 按传入 spaceID 硬过滤,
+	// 故先用来源空间加载(此时仅为"按调用方声明"加载,尚未鉴权),
+	// 授权由下方 authorizer 前置把关(命中白名单才返回,否则 fail-closed 拒绝)。
+	querySpaceID := request.WorkspaceID
+	if sharedOption.Enabled() {
+		querySpaceID = gptr.Indirect(sharedOption.SourceSpaceID)
+	}
+	evalTarget, err := e.evalTargetService.GetEvalTargetVersion(ctx, querySpaceID, request.GetEvalTargetVersionID(), sharedOption == nil)
 	if err != nil {
 		return nil, err
 	}
 	if evalTarget == nil {
 		return &eval_target.GetEvalTargetVersionResponse{}, nil
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evalTarget.ID, 10),
-		SpaceID:       request.WorkspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
-	})
+	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalTargetAuthorizeRequest(request.WorkspaceID, evalTarget.ID, sharedOption, evalTargetVersionID(evalTarget)))
 	if err != nil {
 		return nil, err
+	}
+	if evalTarget.EvalTargetVersion != nil && accessCtx.IsShared() && !service.IsSharedVersionAllowed(evalTarget.EvalTargetVersion.ID, "", "", accessCtx.VersionPolicy, accessCtx.SpecifiedIDs) {
+		return &eval_target.GetEvalTargetVersionResponse{}, nil
+	}
+	evalTarget.SharedInfo = accessCtx.SharedInfo()
+	if evalTarget.EvalTargetVersion != nil {
+		evalTarget.EvalTargetVersion.SharedInfo = accessCtx.SharedInfo()
 	}
 	return &eval_target.GetEvalTargetVersionResponse{
 		EvalTarget: target.EvalTargetDO2DTO(evalTarget),
@@ -218,7 +268,14 @@ func (e EvalTargetApplicationImpl) BatchGetEvalTargetVersions(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
-	evalTargets, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, request.WorkspaceID, request.GetEvalTargetVersionIds(), gptr.Indirect(request.NeedSourceInfo))
+	sharedOption := sharedTargetOptionDTO2DO(request.SharedOption)
+	needSourceInfo := gptr.Indirect(request.NeedSourceInfo) || sharedOption != nil
+	// 共享读:按来源空间加载,鉴权前置(见 GetEvalTargetVersion 注释)
+	querySpaceID := request.WorkspaceID
+	if sharedOption.Enabled() {
+		querySpaceID = gptr.Indirect(sharedOption.SourceSpaceID)
+	}
+	evalTargets, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, querySpaceID, request.GetEvalTargetVersionIds(), needSourceInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -227,6 +284,17 @@ func (e EvalTargetApplicationImpl) BatchGetEvalTargetVersions(ctx context.Contex
 	}
 	res := make([]*eval_target_dto.EvalTarget, 0)
 	for _, evalTarget := range evalTargets {
+		accessCtx, authErr := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalTargetAuthorizeRequest(request.WorkspaceID, evalTarget.ID, sharedOption, evalTargetVersionID(evalTarget)))
+		if authErr != nil {
+			return nil, authErr
+		}
+		if evalTarget.EvalTargetVersion != nil && accessCtx.IsShared() && !service.IsSharedVersionAllowed(evalTarget.EvalTargetVersion.ID, "", "", accessCtx.VersionPolicy, accessCtx.SpecifiedIDs) {
+			continue
+		}
+		evalTarget.SharedInfo = accessCtx.SharedInfo()
+		if evalTarget.EvalTargetVersion != nil {
+			evalTarget.EvalTargetVersion.SharedInfo = accessCtx.SharedInfo()
+		}
 		res = append(res, target.EvalTargetDO2DTO(evalTarget))
 	}
 	return &eval_target.BatchGetEvalTargetVersionsResponse{
@@ -249,6 +317,11 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargets(ctx context.Context, re
 	})
 	if err != nil {
 		return nil, err
+	}
+	// is_shared=true：按共享配置枚举「共享给调用方空间」的评测对象来源空间，
+	// 逐来源空间重定向 ListSource（用 source space 而非 request.WorkspaceID）。
+	if request.SharedOption != nil && request.SharedOption.GetIsShared() {
+		return e.listSharedSourceEvalTargets(ctx, request)
 	}
 	var res []*entity.EvalTarget
 	var nextCursor string
@@ -280,6 +353,79 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargets(ctx context.Context, re
 	}, nil
 }
 
+// listSharedSourceEvalTargets 枚举「共享给调用方空间」的评测对象来源空间，逐来源空间列举其可选来源。
+// source_space_id 为空 → 跨全部来源空间；有值 → 限定该来源空间。空配置 → 空列表（fail-closed）。
+func (e EvalTargetApplicationImpl) listSharedSourceEvalTargets(ctx context.Context, request *eval_target.ListSourceEvalTargetsRequest) (*eval_target.ListSourceEvalTargetsResponse, error) {
+	targetType := entity.EvalTargetType(request.GetTargetType())
+	opType := resolveOperatorType(targetType)
+	if e.typedOperators[opType] == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+	}
+	sourceSpaces, err := e.sharedSourceSpaces(ctx, request.WorkspaceID, request.SharedOption)
+	if err != nil {
+		return nil, err
+	}
+	dtos := make([]*eval_target_dto.EvalTarget, 0)
+	for _, src := range sourceSpaces {
+		sharedInfo := entity.BuildSharedResourceInfo(request.WorkspaceID, src, entity.SharedAccessLevelReadable, entity.SharedVersionPolicyAll)
+		param := &entity.ListSourceParam{
+			SpaceID:      gptr.Of(src),
+			PageSize:     request.PageSize,
+			Cursor:       request.PageToken,
+			KeyWord:      request.Name,
+			TargetType:   targetType,
+			SharedOption: &entity.SharedResourceOption{IsShared: true, SourceSpaceID: gptr.Of(src)},
+		}
+		res, _, _, listErr := e.typedOperators[opType].ListSource(ctx, param)
+		if listErr != nil {
+			return nil, listErr
+		}
+		for _, do := range res {
+			if do == nil {
+				continue
+			}
+			do.SharedInfo = sharedInfo
+			if do.EvalTargetVersion != nil {
+				do.EvalTargetVersion.SharedInfo = sharedInfo
+			}
+			dtos = append(dtos, target.EvalTargetDO2DTO(do))
+		}
+	}
+	return &eval_target.ListSourceEvalTargetsResponse{
+		EvalTargets: dtos,
+		HasMore:     gptr.Of(false),
+	}, nil
+}
+
+// sharedSourceSpaces 返回「共享评测对象给调用方空间」的去重来源空间列表。
+func (e EvalTargetApplicationImpl) sharedSourceSpaces(ctx context.Context, callerSpaceID int64, sharedOption *common.SharedResourceOption) ([]int64, error) {
+	var sourceFilter *int64
+	if sharedOption != nil && sharedOption.SourceSpaceID != nil && sharedOption.GetSourceSpaceID() > 0 {
+		sourceFilter = sharedOption.SourceSpaceID
+	}
+	accessCtxs, err := e.resourceAccessAuthorizer.ListSharedResources(ctx, &entity.ListSharedResourcesRequest{
+		CallerSpaceID:     callerSpaceID,
+		ResourceType:      entity.SharedResourceTypeEvalTarget,
+		SourceSpaceFilter: sourceFilter,
+	})
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[int64]struct{})
+	spaces := make([]int64, 0)
+	for _, accessCtx := range accessCtxs {
+		if accessCtx == nil || accessCtx.ResourceSpaceID <= 0 {
+			continue
+		}
+		if _, ok := seen[accessCtx.ResourceSpaceID]; ok {
+			continue
+		}
+		seen[accessCtx.ResourceSpaceID] = struct{}{}
+		spaces = append(spaces, accessCtx.ResourceSpaceID)
+	}
+	return spaces, nil
+}
+
 func (e EvalTargetApplicationImpl) ListSourceEvalTargetVersions(ctx context.Context, request *eval_target.ListSourceEvalTargetVersionsRequest) (r *eval_target.ListSourceEvalTargetVersionsResponse, err error) {
 	if request == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
@@ -297,15 +443,32 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargetVersions(ctx context.Cont
 		return nil, err
 	}
 
+	sharedOption := sharedTargetOptionDTO2DO(request.SharedOption)
+	// 共享读：先校验该来源目标共享给调用方，再重定向到来源空间列举版本并按版本策略过滤。
+	var accessCtx *entity.ResourceAccessContext
+	querySpaceID := request.WorkspaceID
+	if sharedOption.Enabled() {
+		sourceTargetID, parseErr := strconv.ParseInt(request.SourceTargetID, 10, 64)
+		if parseErr != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid source target id"))
+		}
+		accessCtx, err = e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalTargetAuthorizeRequest(request.WorkspaceID, sourceTargetID, sharedOption, nil))
+		if err != nil {
+			return nil, err
+		}
+		querySpaceID = accessCtx.QuerySpaceID()
+	}
+
 	var res []*entity.EvalTargetVersion
 	var nextCursor string
 	var hasMore bool
 	param := &entity.ListSourceVersionParam{
-		SpaceID:        &request.WorkspaceID,
+		SpaceID:        gptr.Of(querySpaceID),
 		PageSize:       request.PageSize,
 		Cursor:         request.PageToken,
 		SourceTargetID: request.SourceTargetID,
 		TargetType:     entity.EvalTargetType(request.GetTargetType()),
+		SharedOption:   sharedOption,
 	}
 	opType := resolveOperatorType(param.TargetType)
 	if e.typedOperators[opType] == nil {
@@ -317,6 +480,15 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargetVersions(ctx context.Cont
 	}
 	dtos := make([]*eval_target_dto.EvalTargetVersion, 0)
 	for _, do := range res {
+		if do == nil {
+			continue
+		}
+		if accessCtx.IsShared() {
+			if !service.IsSharedVersionAllowed(do.ID, do.SourceTargetVersion, "", accessCtx.VersionPolicy, accessCtx.SpecifiedIDs) {
+				continue
+			}
+			do.SharedInfo = accessCtx.SharedInfo()
+		}
 		dtos = append(dtos, target.EvalTargetVersionDO2DTO(do))
 	}
 	return &eval_target.ListSourceEvalTargetVersionsResponse{

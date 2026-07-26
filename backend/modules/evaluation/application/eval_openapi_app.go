@@ -183,7 +183,7 @@ func (e *EvalOpenAPIApplication) ImportEvaluationSetOApi(ctx context.Context, re
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(req.GetWorkspaceID()), req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(req.GetWorkspaceID()), req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func (e *EvalOpenAPIApplication) GetEvaluationSetOApi(ctx context.Context, req *
 	}
 
 	// 调用domain服务
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +321,7 @@ func (e *EvalOpenAPIApplication) UpdateEvaluationSetOApi(ctx context.Context, re
 	}
 
 	// 调用domain服务
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -370,7 +370,7 @@ func (e *EvalOpenAPIApplication) DeleteEvaluationSetOApi(ctx context.Context, re
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 调用domain服务
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -470,7 +470,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetVersionOApi(ctx context.Cont
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("version is required"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -516,7 +516,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionsOApi(ctx context.Conte
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -572,7 +572,7 @@ func (e *EvalOpenAPIApplication) BatchCreateEvaluationSetItemsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is required"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -629,7 +629,7 @@ func (e *EvalOpenAPIApplication) BatchUpdateEvaluationSetItemsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is required"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -686,7 +686,7 @@ func (e *EvalOpenAPIApplication) BatchDeleteEvaluationSetItemsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is required"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -735,7 +735,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -810,7 +810,7 @@ func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context,
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -876,7 +876,7 @@ func (e *EvalOpenAPIApplication) UpdateEvaluationSetSchemaOApi(ctx context.Conte
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -3192,7 +3192,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -3248,7 +3248,7 @@ func (e *EvalOpenAPIApplication) GetEvaluationSetItemVersionOApi(ctx context.Con
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true), nil)
 	if err != nil {
 		return nil, err
 	}

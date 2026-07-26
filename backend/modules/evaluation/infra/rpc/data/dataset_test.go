@@ -663,7 +663,7 @@ func TestGetDataset(t *testing.T) {
 				BaseResp: &base.BaseResp{StatusCode: 0},
 			}, nil)
 
-		set, err := adapter.GetDataset(ctx, gptr.Of(int64(1)), 123, nil)
+		set, err := adapter.GetDataset(ctx, gptr.Of(int64(1)), 123, nil, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, set)
 		assert.Equal(t, int64(123), set.ID)

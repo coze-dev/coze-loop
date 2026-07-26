@@ -49,7 +49,7 @@ func TestEnrichEvalSetDetails_ListPath(t *testing.T) {
 			},
 		}, nil)
 	mockSetVerSvc.EXPECT().
-		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 		Return([]*entity.BatchGetEvaluationSetVersionsResult{
 			{Version: &entity.EvaluationSetVersion{ID: 110}, EvaluationSet: &entity.EvaluationSet{ID: 10, Name: "set-10", DatasetKey: "dataset-10"}},
 			{Version: &entity.EvaluationSetVersion{ID: 220}, EvaluationSet: &entity.EvaluationSet{ID: 20, Name: "set-20", DatasetKey: "dataset-20"}},
@@ -86,7 +86,7 @@ func TestEnrichEvalSetDetails_GetPath(t *testing.T) {
 		Return(map[int64][]*entity.ExptEvalSetItemCount{}, nil) // 首跑前无行
 
 	mockSetVerSvc.EXPECT().
-		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 		Return([]*entity.BatchGetEvaluationSetVersionsResult{
 			{Version: &entity.EvaluationSetVersion{ID: 110}, EvaluationSet: &entity.EvaluationSet{ID: 10, Name: "set-10", DatasetKey: "dataset-10"}},
 			{Version: &entity.EvaluationSetVersion{ID: 220}, EvaluationSet: &entity.EvaluationSet{ID: 20, Name: "set-20", DatasetKey: "dataset-20"}},
