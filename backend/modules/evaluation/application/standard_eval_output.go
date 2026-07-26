@@ -799,17 +799,24 @@ func standardTurns(item *entity.ItemResult, exptID int64) []map[string]any {
 	payloads := standardPayloads(item, exptID)
 	rounds := make([]map[string]any, 0, len(payloads))
 	for i, payload := range payloads {
-		roundID := standardRoundID(payload)
-		rounds = append(rounds, map[string]any{
-			"round_id":   roundID,
-			"round_no":   i + 1,
-			"user_query": userQueryFromPayload(payload),
-			"latency":    latencyFromPayload(payload),
-			"start_time": startTimeFromPayload(payload),
-			"end_time":   endTimeFromPayload(payload),
-			"tokens":     tokensFromPayload(payload),
-			"context":    contextFromPayload(payload),
-		})
+		// 平台补的轮次只填拿得到的字段，拿不到的（start/end_time、无 trace 等）不硬塞 0/空串占位。
+		round := map[string]any{
+			"round_id": standardRoundID(payload),
+			"round_no": i + 1,
+		}
+		if q := userQueryFromPayload(payload); q != "" {
+			round["user_query"] = q
+		}
+		if l := latencyFromPayload(payload); l != 0 {
+			round["latency"] = l
+		}
+		if tokens := tokensFromPayload(payload); len(tokens) > 0 {
+			round["tokens"] = tokens
+		}
+		if c := contextFromPayload(payload); len(c) > 0 {
+			round["context"] = c
+		}
+		rounds = append(rounds, round)
 	}
 	return rounds
 }
@@ -929,37 +936,44 @@ func tokensFromPayload(payload *entity.ExperimentTurnPayload) map[string]any {
 	if payload != nil && payload.TargetOutput != nil && payload.TargetOutput.EvalTargetRecord != nil && payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
 		usage = payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage
 	}
-	return map[string]any{
-		"prompt_tokens":                gptr.Indirect(gptr.Of(usage.GetInputTokens())),
-		"completion_tokens":            gptr.Indirect(gptr.Of(usage.GetOutputTokens())),
-		"total_tokens":                 gptr.Indirect(gptr.Of(usage.GetTotalTokens())),
-		"reasoning_tokens":             0,
-		"input_cached_tokens":          0,
-		"input_creation_cached_tokens": 0,
+	// 只填有值的 token 统计，无值不塞 0。
+	tokens := map[string]any{}
+	if v := usage.GetInputTokens(); v != 0 {
+		tokens["prompt_tokens"] = v
 	}
+	if v := usage.GetOutputTokens(); v != 0 {
+		tokens["completion_tokens"] = v
+	}
+	if v := usage.GetTotalTokens(); v != 0 {
+		tokens["total_tokens"] = v
+	}
+	return tokens
 }
 
 func contextFromPayload(payload *entity.ExperimentTurnPayload) map[string]any {
-	ctx := map[string]any{"log_id": "", "message_id": "", "thread_id": "", "trace_id": "", "start_time": int64(0), "end_time": int64(0)}
+	// 只填拿得到的 trace 关联字段，拿不到的不硬塞空串/0（start_time/end_time 平台侧无数据源，不填）。
+	ctx := map[string]any{}
 	if payload == nil {
 		return ctx
 	}
+	logID := ""
 	if payload.SystemInfo != nil && payload.SystemInfo.LogID != nil {
-		ctx["log_id"] = *payload.SystemInfo.LogID
+		logID = *payload.SystemInfo.LogID
 	}
 	if payload.TargetOutput != nil && payload.TargetOutput.EvalTargetRecord != nil {
 		rec := payload.TargetOutput.EvalTargetRecord
 		if rec.LogID != "" {
-			ctx["log_id"] = rec.LogID
+			logID = rec.LogID
 		}
-		ctx["trace_id"] = rec.TraceID
+		if rec.TraceID != "" {
+			ctx["trace_id"] = rec.TraceID
+		}
+	}
+	if logID != "" {
+		ctx["log_id"] = logID
 	}
 	return ctx
 }
-
-func startTimeFromPayload(payload *entity.ExperimentTurnPayload) int64 { return 0 }
-
-func endTimeFromPayload(payload *entity.ExperimentTurnPayload) int64 { return 0 }
 
 func firstTargetID(record *entity.EvalTargetRecord) int64 {
 	if record == nil {
