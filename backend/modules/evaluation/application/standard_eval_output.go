@@ -1075,17 +1075,17 @@ func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalO
 	return map[string]any{"type": "score", "score": score, "reason": reason, "results": results}
 }
 
-// evaluatorResultKey 生成 results map 的唯一 key = 评估器ID + 版本号 + 别名。
-//   - evaluatorID / version 从 ColumnEvaluator（按 evaluator_version_id 反查）取；
+// evaluatorResultKey 生成 results map 的唯一 key = 评估器名 + 版本号 + 别名。
+//   - name / version 从 ColumnEvaluator（按 evaluator_version_id 反查）取；
 //   - alias 区分同评估器版本的多实例（judge_A/judge_B）；
 //
-// 三者组合保证单 item results 内不撞，且能反查具体评估器版本 + 别名引用。
-// 反查不到 ColumnEvaluator 时退化用 record 自身 version_id / inline_key 兜底。
+// 三者组合在单 item results 内不撞（同评估器多别名靠 alias 区分、不同评估器名不同）。
+// name 反查不到（老数据 / inline）时退化用 record 自身 version_id / inline_key 兜底。
 func evaluatorResultKey(opt standardEvalOutputBuildOptions, key int64, record *entity.EvaluatorRecord) string {
-	evaluatorID := int64(0)
+	name := ""
 	version := ""
 	if meta := opt.EvaluatorByVersionID[key]; meta != nil {
-		evaluatorID = meta.EvaluatorID
+		name = gptr.Indirect(meta.Name)
 		version = gptr.Indirect(meta.Version)
 	}
 	alias := ""
@@ -1094,8 +1094,8 @@ func evaluatorResultKey(opt standardEvalOutputBuildOptions, key int64, record *e
 		alias = record.Alias
 		inlineKey = record.InlineKey
 	}
-	if evaluatorID != 0 {
-		return strconv.FormatInt(evaluatorID, 10) + ":" + version + ":" + alias
+	if name != "" {
+		return name + ":" + version + ":" + alias
 	}
 	// 兜底（inline / 反查不到 ColumnEvaluator）：versionID + alias(+inlineKey)，避免撞 key
 	rk := entity.EncodeEvaluatorInstanceKey(key, alias)

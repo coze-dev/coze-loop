@@ -779,11 +779,11 @@ func TestDeepMergeStandardEvalOutput_ArrayObjectOverrides(t *testing.T) {
 }
 
 func TestEvaluatorResultKey_NoCollision(t *testing.T) {
-	// result_key = evaluatorID:version:alias(反查得到 ColumnEvaluator);同版本多 alias 不撞;
-	// 反查不到时退化 versionID(+alias/inlineKey)兜底。
+	// result_key = name:version:alias(从 ColumnEvaluator 反查);同评估器多 alias 不撞;
+	// 反查不到(老数据/inline)时退化 versionID(+inlineKey)兜底。
 	opt := standardEvalOutputBuildOptions{
 		EvaluatorByVersionID: map[int64]*entity.ColumnEvaluator{
-			101: {EvaluatorVersionID: 101, EvaluatorID: 9001, Version: gptr.Of("1.0.0")},
+			101: {EvaluatorVersionID: 101, EvaluatorID: 9001, Name: gptr.Of("完整性"), Version: gptr.Of("1.0.0")},
 		},
 	}
 	cases := []struct {
@@ -792,9 +792,9 @@ func TestEvaluatorResultKey_NoCollision(t *testing.T) {
 		record *entity.EvaluatorRecord
 		want   string
 	}{
-		{"主键 evaluatorID:version:空别名", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101}, "9001:1.0.0:"},
-		{"同评估器 alias A", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_A"}, "9001:1.0.0:judge_A"},
-		{"同评估器 alias B", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_B"}, "9001:1.0.0:judge_B"},
+		{"主键 name:version:空别名", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101}, "完整性:1.0.0:"},
+		{"同评估器 alias A", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_A"}, "完整性:1.0.0:judge_A"},
+		{"同评估器 alias B", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_B"}, "完整性:1.0.0:judge_B"},
 		{"反查不到-退化 versionID", 202, &entity.EvaluatorRecord{EvaluatorVersionID: 202}, "202"},
 		{"inline 退化 versionID#inlineKey", 0, &entity.EvaluatorRecord{EvaluatorVersionID: 0, InlineKey: "ik1"}, "0#ik1"},
 	}
