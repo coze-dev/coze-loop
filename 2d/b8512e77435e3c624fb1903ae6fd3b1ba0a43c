@@ -1,0 +1,23 @@
+backend/modules/evaluation/domain/service/expt_manage_execution_impl.go
+  s_8a302b4d0e71ba::t_09490693c6532b 810
+backend/modules/evaluation/domain/service/expt_manage_execution_impl_test.go
+  s_8a302b4d0e71ba::t_dea09020dbd336 2319,2444
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2db8512e77435e3c624fb1903ae6fd3b1ba0a43c",
+  "prompts": {},
+  "sessions": {
+    "s_8a302b4d0e71ba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_8a302b4d0e71ba",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

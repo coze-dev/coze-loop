@@ -1,0 +1,23 @@
+backend/modules/evaluation/application/eval_target_app.go
+  s_e4de67344303c6::t_3edcd9d632f31e 653-661
+backend/modules/evaluation/application/eval_target_app_test.go
+  s_e4de67344303c6::t_e86ee1da71d118 1812,1816,1859-1863,1867-1880,1888-1890,1904,1918-1921
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "881efbea2f9f54460c267b7b21c8d88054adf98a",
+  "prompts": {},
+  "sessions": {
+    "s_e4de67344303c6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_e4de67344303c6",
+        "model": "unknown"
+      },
+      "human_author": "liuzihan.23 <liuzihan.23@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

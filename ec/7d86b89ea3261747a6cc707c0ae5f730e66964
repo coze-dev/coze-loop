@@ -1,0 +1,39 @@
+backend/kitex_gen/coze/loop/evaluation/openapi/coze.loop.evaluation.openapi.go
+  s_fccd7b6836c072::t_7e7128294a9bd3 24897-24901,25103-25114,25186-25188,25213,25282-25285,25440-25447,25708-25718,25806-25809,26159-26176,26276-26278,26459-26470
+backend/kitex_gen/coze/loop/evaluation/openapi/k-coze.loop.evaluation.openapi.go
+  s_fccd7b6836c072::t_69ae03a1378364 18114-18127,18439-18452,18500,18527,18708-18716,18897-18905,19078-19085
+backend/modules/evaluation/application/eval_openapi_app.go
+  s_fccd7b6836c072::t_7316452ea647a0 1099-1100
+backend/modules/evaluation/application/eval_openapi_app_test.go
+  s_fccd7b6836c072::t_04593478411bcc 2055-2077,2172-2173
+backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model/experiment.gen.go
+  s_fccd7b6836c072::t_6447103265496f 21,33
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.openapi.thrift
+  s_fccd7b6836c072::t_7ffaf051fc15f6 555-558
+release/deployment/docker-compose/bootstrap/mysql-init/init-sql/experiment.sql
+  s_fccd7b6836c072::t_91c85e6c24d721 48-49
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/experiment_alter.sql
+  s_fccd7b6836c072::t_f2c4b9c7670ba7 24-26
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/experiment.sql
+  s_fccd7b6836c072::t_949bd22a0671d1 47-48
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/experiment_alter.sql
+  s_fccd7b6836c072::t_dcdb61a4a63d82 24-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ec7d86b89ea3261747a6cc707c0ae5f730e66964",
+  "prompts": {},
+  "sessions": {
+    "s_fccd7b6836c072": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_fccd7b6836c072",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

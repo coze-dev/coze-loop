@@ -1,0 +1,473 @@
+modules/evaluation/infra/repo/experiment/bytehouse/model/cozeweb_analysis.go
+  d46ccfaf48775460 96-108 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3d2f594c461f2b73ce3240","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[96,108]}]}]}
+modules/evaluation/domain/service/offline_analysis_impl_test.go
+  d46ccfaf48775460 24,376,412,1502,1528,2367-2374,2377-2380,2383-2389,2391,2394-2403,2405,2408-2411,2413,2416-2419,2421,2429-2441,2443-2450,2452-2495,2497,2502-2511,2513-2555,2557-2573,2575,2577-2579,2581-2624 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3d2f594c461f2b73ce3240","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":24},{"Single":376},{"Single":412},{"Single":1502},{"Single":1528},{"Range":[2367,2374]},{"Range":[2377,2380]},{"Range":[2383,2389]},{"Single":2391},{"Range":[2394,2403]},{"Single":2405},{"Range":[2408,2411]},{"Single":2413},{"Range":[2416,2419]},{"Single":2421},{"Range":[2429,2441]},{"Range":[2443,2450]},{"Range":[2452,2495]},{"Single":2497},{"Range":[2502,2511]},{"Range":[2513,2555]},{"Range":[2557,2573]},{"Single":2575},{"Range":[2577,2579]},{"Range":[2581,2624]}]}]}
+modules/evaluation/domain/service/offline_analysis_impl.go
+  d46ccfaf48775460 479-480,737,855,877,884-885,907-909,1177,1179,1207,1307,1528,1575-1576,1597-1599,1775,1800-1801,1843-1944 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3d2f594c461f2b73ce3240","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[479,480]},{"Single":737},{"Single":855},{"Single":877},{"Range":[884,885]},{"Range":[907,909]},{"Single":1177},{"Single":1179},{"Single":1207},{"Single":1307},{"Single":1528},{"Range":[1575,1576]},{"Range":[1597,1599]},{"Single":1775},{"Range":[1800,1801]},{"Range":[1843,1944]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "15bd5c64d1a46bb67fe3ea3d4a59a1f937d52269",
+  "prompts": {
+    "d46ccfaf48775460": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3b81ed4c461f2b73ce14e2",
+        "model": "c_new_thinking__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 441,
+      "total_deletions": 41,
+      "accepted_lines": 399,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "modules/evaluation/domain/service/offline_analysis_impl.go": [
+      {
+        "hash": "d46ccfaf48775460",
+        "line_ranges": [
+          {
+            "Range": [
+              479,
+              480
+            ]
+          },
+          {
+            "Single": 737
+          },
+          {
+            "Single": 855
+          },
+          {
+            "Single": 877
+          },
+          {
+            "Range": [
+              884,
+              885
+            ]
+          },
+          {
+            "Range": [
+              907,
+              909
+            ]
+          },
+          {
+            "Single": 1177
+          },
+          {
+            "Single": 1179
+          },
+          {
+            "Single": 1207
+          },
+          {
+            "Single": 1307
+          },
+          {
+            "Single": 1528
+          },
+          {
+            "Range": [
+              1575,
+              1576
+            ]
+          },
+          {
+            "Range": [
+              1597,
+              1599
+            ]
+          },
+          {
+            "Single": 1775
+          },
+          {
+            "Range": [
+              1800,
+              1801
+            ]
+          },
+          {
+            "Range": [
+              1843,
+              1944
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3d2f594c461f2b73ce3240",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  479,
+                  480
+                ]
+              },
+              {
+                "Single": 737
+              },
+              {
+                "Single": 855
+              },
+              {
+                "Single": 877
+              },
+              {
+                "Range": [
+                  884,
+                  885
+                ]
+              },
+              {
+                "Range": [
+                  907,
+                  909
+                ]
+              },
+              {
+                "Single": 1177
+              },
+              {
+                "Single": 1179
+              },
+              {
+                "Single": 1207
+              },
+              {
+                "Single": 1307
+              },
+              {
+                "Single": 1528
+              },
+              {
+                "Range": [
+                  1575,
+                  1576
+                ]
+              },
+              {
+                "Range": [
+                  1597,
+                  1599
+                ]
+              },
+              {
+                "Single": 1775
+              },
+              {
+                "Range": [
+                  1800,
+                  1801
+                ]
+              },
+              {
+                "Range": [
+                  1843,
+                  1944
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/domain/service/offline_analysis_impl_test.go": [
+      {
+        "hash": "d46ccfaf48775460",
+        "line_ranges": [
+          {
+            "Single": 24
+          },
+          {
+            "Single": 376
+          },
+          {
+            "Single": 412
+          },
+          {
+            "Single": 1502
+          },
+          {
+            "Single": 1528
+          },
+          {
+            "Range": [
+              2367,
+              2374
+            ]
+          },
+          {
+            "Range": [
+              2377,
+              2380
+            ]
+          },
+          {
+            "Range": [
+              2383,
+              2389
+            ]
+          },
+          {
+            "Single": 2391
+          },
+          {
+            "Range": [
+              2394,
+              2403
+            ]
+          },
+          {
+            "Single": 2405
+          },
+          {
+            "Range": [
+              2408,
+              2411
+            ]
+          },
+          {
+            "Single": 2413
+          },
+          {
+            "Range": [
+              2416,
+              2419
+            ]
+          },
+          {
+            "Single": 2421
+          },
+          {
+            "Range": [
+              2429,
+              2441
+            ]
+          },
+          {
+            "Range": [
+              2443,
+              2450
+            ]
+          },
+          {
+            "Range": [
+              2452,
+              2495
+            ]
+          },
+          {
+            "Single": 2497
+          },
+          {
+            "Range": [
+              2502,
+              2511
+            ]
+          },
+          {
+            "Range": [
+              2513,
+              2555
+            ]
+          },
+          {
+            "Range": [
+              2557,
+              2573
+            ]
+          },
+          {
+            "Single": 2575
+          },
+          {
+            "Range": [
+              2577,
+              2579
+            ]
+          },
+          {
+            "Range": [
+              2581,
+              2624
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3d2f594c461f2b73ce3240",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 24
+              },
+              {
+                "Single": 376
+              },
+              {
+                "Single": 412
+              },
+              {
+                "Single": 1502
+              },
+              {
+                "Single": 1528
+              },
+              {
+                "Range": [
+                  2367,
+                  2374
+                ]
+              },
+              {
+                "Range": [
+                  2377,
+                  2380
+                ]
+              },
+              {
+                "Range": [
+                  2383,
+                  2389
+                ]
+              },
+              {
+                "Single": 2391
+              },
+              {
+                "Range": [
+                  2394,
+                  2403
+                ]
+              },
+              {
+                "Single": 2405
+              },
+              {
+                "Range": [
+                  2408,
+                  2411
+                ]
+              },
+              {
+                "Single": 2413
+              },
+              {
+                "Range": [
+                  2416,
+                  2419
+                ]
+              },
+              {
+                "Single": 2421
+              },
+              {
+                "Range": [
+                  2429,
+                  2441
+                ]
+              },
+              {
+                "Range": [
+                  2443,
+                  2450
+                ]
+              },
+              {
+                "Range": [
+                  2452,
+                  2495
+                ]
+              },
+              {
+                "Single": 2497
+              },
+              {
+                "Range": [
+                  2502,
+                  2511
+                ]
+              },
+              {
+                "Range": [
+                  2513,
+                  2555
+                ]
+              },
+              {
+                "Range": [
+                  2557,
+                  2573
+                ]
+              },
+              {
+                "Single": 2575
+              },
+              {
+                "Range": [
+                  2577,
+                  2579
+                ]
+              },
+              {
+                "Range": [
+                  2581,
+                  2624
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/repo/experiment/bytehouse/model/cozeweb_analysis.go": [
+      {
+        "hash": "d46ccfaf48775460",
+        "line_ranges": [
+          {
+            "Range": [
+              96,
+              108
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3d2f594c461f2b73ce3240",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  96,
+                  108
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "d46ccfaf48775460": {
+      "tool": "trae",
+      "conversation_id": "6a3b81ed4c461f2b73ce14e2",
+      "session_id": "6a3b81ed4c461f2b73ce14e2",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

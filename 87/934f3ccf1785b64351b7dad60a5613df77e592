@@ -1,0 +1,104 @@
+release/deployment/helm-chart/umbrella/conf/observability.yaml
+  s_a5f92a47c6ad4b::t_3f1ccaf533e371 81-86 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4f61979d2c05345e65dc61","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[81,86]}]}]}
+release/deployment/docker-compose/conf/observability.yaml
+  s_a5f92a47c6ad4b::t_8fccccc91ac379 81-86 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4f61839d2c05345e65dc5e","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[81,86]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "87934f3ccf1785b64351b7dad60a5613df77e592",
+  "prompts": {},
+  "sessions": {
+    "s_a5f92a47c6ad4b": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a4ce32a9d2c05345e65c7f3",
+        "model": "c_o_new_thinking__dev"
+      },
+      "human_author": "cuichen <cuichen.cuichen@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "release/deployment/docker-compose/conf/observability.yaml": [
+      {
+        "hash": "s_a5f92a47c6ad4b::t_8fccccc91ac379",
+        "line_ranges": [
+          {
+            "Range": [
+              81,
+              86
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4f61839d2c05345e65dc5e",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  81,
+                  86
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "release/deployment/helm-chart/umbrella/conf/observability.yaml": [
+      {
+        "hash": "s_a5f92a47c6ad4b::t_3f1ccaf533e371",
+        "line_ranges": [
+          {
+            "Range": [
+              81,
+              86
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4f61979d2c05345e65dc61",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  81,
+                  86
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_a5f92a47c6ad4b": {
+      "tool": "trae",
+      "conversation_id": "6a4ce32a9d2c05345e65c7f3",
+      "session_id": "6a4ce32a9d2c05345e65c7f3",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_a5f92a47c6ad4b::t_3f1ccaf533e371": {
+      "tool": "trae",
+      "conversation_id": "6a4ce32a9d2c05345e65c7f3",
+      "session_id": "6a4ce32a9d2c05345e65c7f3",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_a5f92a47c6ad4b::t_8fccccc91ac379": {
+      "tool": "trae",
+      "conversation_id": "6a4ce32a9d2c05345e65c7f3",
+      "session_id": "6a4ce32a9d2c05345e65c7f3",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

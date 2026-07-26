@@ -1,0 +1,23 @@
+backend/modules/evaluation/application/experiment_app.go
+  s_00844a4374cd04::t_39465522287f24 288,297-307
+backend/modules/evaluation/application/experiment_app_test.go
+  s_00844a4374cd04::t_b944a168bb042e 3411,3416,3418-3428,3461-3518
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2e53460725bb89938129720ed99f6fdf38d59382",
+  "prompts": {},
+  "sessions": {
+    "s_00844a4374cd04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_00844a4374cd04",
+        "model": "unknown"
+      },
+      "human_author": "liuzihan.23 <liuzihan.23@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

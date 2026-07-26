@@ -1,0 +1,60 @@
+backend/modules/observability/domain/trace/service/trace_service.go
+  s_ec3ea0496d81f8::t_a02bffe94ef9c8 1574 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a562ffca02d2b0c3ef41035","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":1574}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "65a5ae1435e45f0959c276a5acb14137b3428417",
+  "prompts": {},
+  "sessions": {
+    "s_ec3ea0496d81f8": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a55d6d69d2c05345e65e31c",
+        "model": "c_o_new_thinking__dev"
+      },
+      "human_author": "cuichen <cuichen.cuichen@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/observability/domain/trace/service/trace_service.go": [
+      {
+        "hash": "s_ec3ea0496d81f8::t_a02bffe94ef9c8",
+        "line_ranges": [
+          {
+            "Single": 1574
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a562ffca02d2b0c3ef41035",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 1574
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_ec3ea0496d81f8": {
+      "tool": "trae",
+      "conversation_id": "6a55d6d69d2c05345e65e31c",
+      "session_id": "6a55d6d69d2c05345e65e31c",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_ec3ea0496d81f8::t_a02bffe94ef9c8": {
+      "tool": "trae",
+      "conversation_id": "6a55d6d69d2c05345e65e31c",
+      "session_id": "6a55d6d69d2c05345e65e31c",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

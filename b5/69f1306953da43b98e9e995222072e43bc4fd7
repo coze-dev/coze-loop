@@ -1,0 +1,37 @@
+backend/modules/evaluation/application/experiment_app.go
+  s_fb9c585355a2fd::t_e8c6e284b1feac 152-158
+backend/modules/evaluation/domain/component/conf.go
+  s_fb9c585355a2fd::t_60566ea21dac30 37
+backend/modules/evaluation/domain/component/mocks/expt_configer.go
+  s_fb9c585355a2fd::t_d9abee823bf976 171-184
+backend/modules/evaluation/domain/entity/expt_eval_set_config_validation.go
+  s_fb9c585355a2fd::t_a020e4e1f426c4 9,171-195
+backend/modules/evaluation/infra/repo/evaluator/evaluator_record_impl_test.go
+  s_fb9c585355a2fd::t_ce8db373752361 105-108
+backend/modules/evaluation/infra/repo/target/eval_target_repo_impl_test.go
+  s_fb9c585355a2fd::t_27ba2eeaa367f6 2044-2047
+backend/modules/evaluation/infra/storage/record_data_test.go
+  s_fb9c585355a2fd::t_2b36641da03031 69-72
+backend/modules/evaluation/pkg/conf/configer.go
+  s_fb9c585355a2fd::t_50c6789f333ce2 104-108
+backend/modules/evaluation/pkg/errno/evaluation.go
+  s_fb9c585355a2fd::t_b4a40e75c0bb52 398-401,988-993
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b569f1306953da43b98e9e995222072e43bc4fd7",
+  "prompts": {},
+  "sessions": {
+    "s_fb9c585355a2fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_fb9c585355a2fd",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
