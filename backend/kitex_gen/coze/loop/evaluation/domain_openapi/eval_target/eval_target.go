@@ -7932,6 +7932,9 @@ type SandboxAgent struct {
 	Type *SandboxAgentType `thrift:"type,2,optional" frugal:"2,optional,string" form:"type" json:"type,omitempty" query:"type"`
 	// 模型名称，声明该 Agent 要评测的模型，仅支持单个
 	ModelName *string `thrift:"model_name,3,optional" frugal:"3,optional,string" form:"model_name" json:"model_name,omitempty" query:"model_name"`
+	// 模型 ID（平台模型服务 model_id）。填写后被测 Agent 模型密钥可经 GetModelAndAccount 解析，
+	// 与 SUA 的 sua_model_id 对称；缺省 0 时仅用 model_name + TCC 替换规则（行为不变）
+	ModelID *int64 `thrift:"model_id,4,optional" frugal:"4,optional,i64" form:"model_id" json:"model_id,omitempty" query:"model_id"`
 	// Agent 安装命令，安装 Agent CLI 本体
 	AgentSetupCmd *string `thrift:"agent_setup_cmd,5,optional" frugal:"5,optional,string" form:"agent_setup_cmd" json:"agent_setup_cmd,omitempty" query:"agent_setup_cmd"`
 	// Agent 运行命令，注入到 Execution 阶段的 user 槽位
@@ -7986,6 +7989,18 @@ func (p *SandboxAgent) GetModelName() (v string) {
 		return SandboxAgent_ModelName_DEFAULT
 	}
 	return *p.ModelName
+}
+
+var SandboxAgent_ModelID_DEFAULT int64
+
+func (p *SandboxAgent) GetModelID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelID() {
+		return SandboxAgent_ModelID_DEFAULT
+	}
+	return *p.ModelID
 }
 
 var SandboxAgent_AgentSetupCmd_DEFAULT string
@@ -8056,6 +8071,9 @@ func (p *SandboxAgent) SetType(val *SandboxAgentType) {
 func (p *SandboxAgent) SetModelName(val *string) {
 	p.ModelName = val
 }
+func (p *SandboxAgent) SetModelID(val *int64) {
+	p.ModelID = val
+}
 func (p *SandboxAgent) SetAgentSetupCmd(val *string) {
 	p.AgentSetupCmd = val
 }
@@ -8076,6 +8094,7 @@ var fieldIDToName_SandboxAgent = map[int16]string{
 	1: "name",
 	2: "type",
 	3: "model_name",
+	4: "model_id",
 	5: "agent_setup_cmd",
 	6: "agent_run_cmd",
 	7: "envs",
@@ -8093,6 +8112,10 @@ func (p *SandboxAgent) IsSetType() bool {
 
 func (p *SandboxAgent) IsSetModelName() bool {
 	return p.ModelName != nil
+}
+
+func (p *SandboxAgent) IsSetModelID() bool {
+	return p.ModelID != nil
 }
 
 func (p *SandboxAgent) IsSetAgentSetupCmd() bool {
@@ -8152,6 +8175,14 @@ func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8259,6 +8290,17 @@ func (p *SandboxAgent) ReadField3(iprot thrift.TProtocol) error {
 	p.ModelName = _field
 	return nil
 }
+func (p *SandboxAgent) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelID = _field
+	return nil
+}
 func (p *SandboxAgent) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -8343,6 +8385,10 @@ func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField5(oprot); err != nil {
@@ -8436,6 +8482,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *SandboxAgent) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelID() {
+		if err = oprot.WriteFieldBegin("model_id", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ModelID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *SandboxAgent) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAgentSetupCmd() {
@@ -8559,6 +8623,9 @@ func (p *SandboxAgent) DeepEqual(ano *SandboxAgent) bool {
 	if !p.Field3DeepEqual(ano.ModelName) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.ModelID) {
+		return false
+	}
 	if !p.Field5DeepEqual(ano.AgentSetupCmd) {
 		return false
 	}
@@ -8609,6 +8676,18 @@ func (p *SandboxAgent) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ModelName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxAgent) Field4DeepEqual(src *int64) bool {
+
+	if p.ModelID == src {
+		return true
+	} else if p.ModelID == nil || src == nil {
+		return false
+	}
+	if *p.ModelID != *src {
 		return false
 	}
 	return true

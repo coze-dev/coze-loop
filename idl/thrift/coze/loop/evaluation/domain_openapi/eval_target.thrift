@@ -216,6 +216,10 @@ struct SandboxAgent {
     // 模型名称，声明该 Agent 要评测的模型，仅支持单个
     3: optional string model_name
 
+    // 模型 ID（平台模型服务 model_id）。填写后被测 Agent 模型密钥可经 GetModelAndAccount 解析，
+    // 与 SUA 的 sua_model_id 对称；缺省 0 时仅用 model_name + TCC 替换规则（行为不变）
+    4: optional i64 model_id
+
     // Agent 安装命令，安装 Agent CLI 本体
     5: optional string agent_setup_cmd
 

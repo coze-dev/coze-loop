@@ -216,6 +216,7 @@ func openapiSandboxAgentDTO2Domain(dtoObj *openapiEvalTarget.SandboxAgent) *doma
 	res := &domaindoEvalTarget.SandboxAgent{
 		Name:          dtoObj.Name,
 		ModelName:     dtoObj.ModelName,
+		ModelID:       dtoObj.ModelID,
 		AgentSetupCmd: dtoObj.AgentSetupCmd,
 		AgentRunCmd:   dtoObj.AgentRunCmd,
 		Envs:          envs,
@@ -2045,6 +2046,7 @@ func OpenAPISandboxAgentDO2DTO(do *entity.SandboxAgent) *openapiEvalTarget.Sandb
 		Name:          gptr.Of(do.Name),
 		Type:          gptr.Of(openapiEvalTarget.SandboxAgentType(do.Type)),
 		ModelName:     gptr.Of(do.ModelName),
+		ModelID:       gptr.Of(do.ModelID),
 		AgentSetupCmd: gptr.Of(do.AgentSetupCmd),
 		AgentRunCmd:   gptr.Of(do.AgentRunCmd),
 		Envs:          envs,
@@ -2076,6 +2078,7 @@ func OpenAPISandboxAgentDTO2DO(dto *openapiEvalTarget.SandboxAgent) *entity.Sand
 		Name:             dto.GetName(),
 		Type:             entity.SandboxAgentType(dto.GetType()),
 		ModelName:        dto.GetModelName(),
+		ModelID:          dto.GetModelID(),
 		AgentSetupCmd:    dto.GetAgentSetupCmd(),
 		AgentRunCmd:      dto.GetAgentRunCmd(),
 		Envs:             envs,
