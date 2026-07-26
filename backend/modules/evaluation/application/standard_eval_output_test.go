@@ -628,20 +628,32 @@ func TestBuildItemStandardEvalOutput_SubfieldConflictObjectWins(t *testing.T) {
 	assert.NotContains(t, output, "rounds")
 }
 
-func TestBuildItemStandardEvalOutput_RoundsMergeByRoundID(t *testing.T) {
-	// rounds 按 round_id 对齐：对象报 round_1 的补充字段，平台其他轮保留。
+func TestBuildItemStandardEvalOutput_ObjectRoundsWinsWholesale(t *testing.T) {
+	// rounds 语义：对象上报了 rounds → 整体采用对象的，平台不合并、不补轮次。
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
-	// 平台 round_id 形如 round_<turnID>，此处 turnID=1 → round_1。
-	injectFornaxField(item, "FORNAX_rounds", `[{"round_id":"round_1","extra_note":"obj"}]`)
+	injectFornaxField(item, "FORNAX_rounds", `[{"round_id":"r-obj","extra_note":"obj"}]`)
 
 	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	var rounds []any
 	require.NoError(t, json.Unmarshal([]byte(got.GetRounds().GetText()), &rounds))
-	require.Len(t, rounds, 1) // 对齐合并，不新增元素
+	require.Len(t, rounds, 1)
 	r0 := rounds[0].(map[string]any)
-	assert.Equal(t, "obj", r0["extra_note"]) // 对象补充字段
-	assert.Contains(t, r0, "round_no")       // 平台原字段保留
+	assert.Equal(t, "r-obj", r0["round_id"])
+	assert.Equal(t, "obj", r0["extra_note"])
+	assert.NotContains(t, r0, "round_no") // 平台字段不再混入(对象整体采用)
+}
+
+func TestBuildItemStandardEvalOutput_PlatformRoundIDIsTurnID(t *testing.T) {
+	// 对象未报 rounds → 平台补,每轮 round_id = TurnID(此处 turnID=1)。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	var rounds []any
+	require.NoError(t, json.Unmarshal([]byte(got.GetRounds().GetText()), &rounds))
+	require.Len(t, rounds, 1)
+	r0 := rounds[0].(map[string]any)
+	assert.Equal(t, "1", r0["round_id"]) // round_id = TurnID,不再是 round_0/round_1
 }
 
 func TestBuildItemStandardEvalOutput_BareKeyFallback(t *testing.T) {
@@ -766,30 +778,29 @@ func TestDeepMergeStandardEvalOutput_ArrayObjectOverrides(t *testing.T) {
 	assert.EqualValues(t, 9, arr[0])
 }
 
-func TestMergeRoundsField_AppendsUnmatchedObjectRound(t *testing.T) {
-	platform := []any{map[string]any{"round_id": "round_1", "p": true}}
-	object := []any{map[string]any{"round_id": "round_2", "o": true}}
-	merged := mergeRoundsField(platform, object).([]any)
-	require.Len(t, merged, 2) // round_2 追加
-}
-
 func TestEvaluatorResultKey_NoCollision(t *testing.T) {
-	// 同 versionID 多 alias 不撞;alias 空退化裸 versionID(旧数据不变);inline 用 InlineKey 兜底。
+	// result_key = evaluatorID:version:alias(反查得到 ColumnEvaluator);同版本多 alias 不撞;
+	// 反查不到时退化 versionID(+alias/inlineKey)兜底。
+	opt := standardEvalOutputBuildOptions{
+		EvaluatorByVersionID: map[int64]*entity.ColumnEvaluator{
+			101: {EvaluatorVersionID: 101, EvaluatorID: 9001, Version: gptr.Of("1.0.0")},
+		},
+	}
 	cases := []struct {
 		name   string
 		key    int64
 		record *entity.EvaluatorRecord
 		want   string
 	}{
-		{"无 alias 退化裸 versionID", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101}, "101"},
-		{"同版本 alias A", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_A"}, "101:judge_A"},
-		{"同版本 alias B", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_B"}, "101:judge_B"},
-		{"inline versionID=0 用 InlineKey", 0, &entity.EvaluatorRecord{EvaluatorVersionID: 0, InlineKey: "ik1"}, "0#ik1"},
-		{"inline 第二条不同 InlineKey", 0, &entity.EvaluatorRecord{EvaluatorVersionID: 0, InlineKey: "ik2"}, "0#ik2"},
+		{"主键 evaluatorID:version:空别名", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101}, "9001:1.0.0:"},
+		{"同评估器 alias A", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_A"}, "9001:1.0.0:judge_A"},
+		{"同评估器 alias B", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_B"}, "9001:1.0.0:judge_B"},
+		{"反查不到-退化 versionID", 202, &entity.EvaluatorRecord{EvaluatorVersionID: 202}, "202"},
+		{"inline 退化 versionID#inlineKey", 0, &entity.EvaluatorRecord{EvaluatorVersionID: 0, InlineKey: "ik1"}, "0#ik1"},
 	}
 	seen := map[string]bool{}
 	for _, c := range cases {
-		got := evaluatorResultKey(c.key, c.record)
+		got := evaluatorResultKey(opt, c.key, c.record)
 		assert.Equal(t, c.want, got, c.name)
 		assert.False(t, seen[got], "result_key 撞了: %s (%s)", got, c.name)
 		seen[got] = true

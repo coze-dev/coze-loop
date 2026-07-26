@@ -88,8 +88,6 @@ func normalizeToJSONValue(v any) any {
 // deepMergeStandardEvalOutput 深度合并平台兜底值与评测对象上报值，冲突以对象为准：
 //   - 两侧均为 JSON object(map) 时逐 key 递归合并（只在一侧的 key 保留该侧）；
 //   - 其余情况（类型冲突 / 标量 / 数组 / null）由对象整体覆盖平台。
-//
-// 注：顶层 rounds 数组的按 round_id 对齐合并由 mergeRoundsField 单独处理，不走本函数的数组覆盖。
 func deepMergeStandardEvalOutput(platform, object any) any {
 	pm, pOK := platform.(map[string]any)
 	om, oOK := object.(map[string]any)
@@ -108,49 +106,6 @@ func deepMergeStandardEvalOutput(platform, object any) any {
 		return merged
 	}
 	return object
-}
-
-// mergeRoundsField 按 round_id 对齐合并 rounds 字段（D7）：
-// 两侧均为数组时，以平台数组为基底按 round_id 建索引；对象数组中 round_id 命中的 round
-// 逐 round 深合并（对象子字段优先），未命中的 round 追加末尾——对象没报的轮次保留平台已算结果。
-// 任一侧非数组时退化为通用深合并（对象覆盖）。
-func mergeRoundsField(platform, object any) any {
-	pArr, pOK := platform.([]any)
-	oArr, oOK := object.([]any)
-	if !pOK || !oOK {
-		return deepMergeStandardEvalOutput(platform, object)
-	}
-	merged := make([]any, len(pArr))
-	copy(merged, pArr)
-	idx := make(map[string]int, len(pArr))
-	for i, r := range pArr {
-		if id, ok := standardRoundIDFromValue(r); ok {
-			idx[id] = i
-		}
-	}
-	for _, or := range oArr {
-		if id, ok := standardRoundIDFromValue(or); ok {
-			if i, exists := idx[id]; exists {
-				merged[i] = deepMergeStandardEvalOutput(merged[i], or)
-				continue
-			}
-		}
-		merged = append(merged, or)
-	}
-	return merged
-}
-
-// standardRoundIDFromValue 从 round 对象（map）中取非空的 round_id 字符串。
-func standardRoundIDFromValue(r any) (string, bool) {
-	m, ok := r.(map[string]any)
-	if !ok {
-		return "", false
-	}
-	s, ok := m["round_id"].(string)
-	if !ok || s == "" {
-		return "", false
-	}
-	return s, true
 }
 
 // putStandardField 仅在值非空（空串跳过）时写入 map，避免输出一堆空占位 key。
@@ -498,6 +453,12 @@ func reportedStandardOutputFields(item *entity.ItemResult, exptID int64) map[str
 //   - 对象未报该字段 → 平台兜底值；
 //   - 对象报了但内容无法结构化（省略大对象 / 非 JSON）→ 对象 Content 原样透出（对象优先，保留省略语义）；
 //   - 对象报了合法 JSON → 与平台兜底深合并（rounds 按 round_id 对齐），冲突以对象为准。
+//
+// mergeStandardEvalOutputField 逐字段实现「对象优先 + 平台兜底」：
+//   - 对象未报该字段 → 平台兜底值；
+//   - 对象报了但内容无法结构化（省略大对象 / 非 JSON）→ 对象 Content 原样透出（对象优先，保留省略语义）；
+//   - rounds 字段：对象报了 → 整体用对象的，平台不再补（每一轮由对象自报）；
+//   - 其余字段：对象报了合法 JSON → 与平台兜底子字段级深合并，冲突以对象为准。
 func mergeStandardEvalOutputField(platformVal any, fields map[string]*entity.Content, field string) (*expt.StandardEvalOutputContent, error) {
 	c, ok := lookupFornaxField(fields, field)
 	if !ok {
@@ -510,13 +471,11 @@ func mergeStandardEvalOutputField(platformVal any, fields map[string]*entity.Con
 	if err := json.Unmarshal([]byte(c.GetText()), &objVal); err != nil {
 		return contentToStandardEvalOutputContent(c), nil
 	}
-	platformJSON := normalizeToJSONValue(platformVal)
-	var merged any
+	// rounds：对象上报即整体采用对象的，平台不合并、不补轮次。
 	if field == "rounds" {
-		merged = mergeRoundsField(platformJSON, objVal)
-	} else {
-		merged = deepMergeStandardEvalOutput(platformJSON, objVal)
+		return inlineJSONContent(objVal)
 	}
+	merged := deepMergeStandardEvalOutput(normalizeToJSONValue(platformVal), objVal)
 	return inlineJSONContent(merged)
 }
 
@@ -944,11 +903,12 @@ func standardPayloads(item *entity.ItemResult, exptID int64) []*entity.Experimen
 	return payloads
 }
 
+// standardRoundID 平台兜底轮次的 round_id：直接用 TurnID（对象未上报 rounds 时平台补的每轮标识）。
 func standardRoundID(payload *entity.ExperimentTurnPayload) string {
 	if payload == nil {
-		return "round_0"
+		return ""
 	}
-	return "round_" + strconv.FormatInt(payload.TurnID, 10)
+	return strconv.FormatInt(payload.TurnID, 10)
 }
 
 func userQueryFromPayload(payload *entity.ExperimentTurnPayload) string {
@@ -1087,7 +1047,7 @@ func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalO
 			if record == nil {
 				continue
 			}
-			resultKey := evaluatorResultKey(key, record)
+			resultKey := evaluatorResultKey(opt, key, record)
 			if score == nil && record.GetScore() != nil {
 				score = *record.GetScore()
 			}
@@ -1115,24 +1075,30 @@ func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalO
 	return map[string]any{"type": "score", "score": score, "reason": reason, "results": results}
 }
 
-// evaluatorResultKey 生成 results map 的唯一 key，治同 versionID 多别名 / 多 inline 撞 key。
-// 复用 entity.EncodeEvaluatorInstanceKey(versionID, alias)：
-//   - alias 为空 → 裸 "<versionID>"（旧数据 byte 级不变）
-//   - alias 非空 → "<versionID>:<alias>"（同版本多别名不撞）
+// evaluatorResultKey 生成 results map 的唯一 key = 评估器ID + 版本号 + 别名。
+//   - evaluatorID / version 从 ColumnEvaluator（按 evaluator_version_id 反查）取；
+//   - alias 区分同评估器版本的多实例（judge_A/judge_B）；
 //
-// inline 评分 versionID=0 哨兵、多条会撞，故 InlineKey 非空时再拼一段 "#<inlineKey>" 兜底。
-func evaluatorResultKey(key int64, record *entity.EvaluatorRecord) string {
-	versionID := key
+// 三者组合保证单 item results 内不撞，且能反查具体评估器版本 + 别名引用。
+// 反查不到 ColumnEvaluator 时退化用 record 自身 version_id / inline_key 兜底。
+func evaluatorResultKey(opt standardEvalOutputBuildOptions, key int64, record *entity.EvaluatorRecord) string {
+	evaluatorID := int64(0)
+	version := ""
+	if meta := opt.EvaluatorByVersionID[key]; meta != nil {
+		evaluatorID = meta.EvaluatorID
+		version = gptr.Indirect(meta.Version)
+	}
 	alias := ""
 	inlineKey := ""
 	if record != nil {
-		if record.EvaluatorVersionID != 0 {
-			versionID = record.EvaluatorVersionID
-		}
 		alias = record.Alias
 		inlineKey = record.InlineKey
 	}
-	rk := entity.EncodeEvaluatorInstanceKey(versionID, alias)
+	if evaluatorID != 0 {
+		return strconv.FormatInt(evaluatorID, 10) + ":" + version + ":" + alias
+	}
+	// 兜底（inline / 反查不到 ColumnEvaluator）：versionID + alias(+inlineKey)，避免撞 key
+	rk := entity.EncodeEvaluatorInstanceKey(key, alias)
 	if inlineKey != "" {
 		rk += "#" + inlineKey
 	}
