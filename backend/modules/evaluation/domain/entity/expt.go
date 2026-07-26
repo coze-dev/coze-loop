@@ -337,9 +337,9 @@ type EvaluationConfiguration struct {
 	// SkillTOSKeys skill 入库 TOS 后的 tos_key 快照；key="{skill_id}:{version}"，value=tos_key。
 	SkillTOSKeys map[string]string `json:"agent_buddy_skill_tos_keys,omitempty"`
 
-	// SuaRunConfig 实验级多轮/SUA 跑法配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)。
+	// RunModeConfig 实验级跑法配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)。
 	// 序列化进 experiment.eval_conf; 提交时展开到各 item 的 ItemTargetConf.RunConf 兜底默认值。
-	SuaRunConfig *SuaRunConfig `json:"sua_run_config,omitempty"`
+	RunModeConfig *RunModeConfig `json:"run_mode_config,omitempty"`
 }
 
 // RunMode 实验级评测模式 (跑法)。与 runtime domain RunMode / IDL ExptRunMode 对齐。
@@ -378,14 +378,14 @@ const (
 	SuaModeFixed     SuaMode = "fixed"
 )
 
-// SuaRunConfig 实验级多轮/SUA 跑法配置。run_mode 决定编排模式;
-// sua_mode / sua_model_name 仅在 SUA 驱动模式生效。sua_model_name 只传模型名,
-// 密钥由 operator 侧解析注入 case-file, 绝不落库明文。
-type SuaRunConfig struct {
+// RunModeConfig 实验级跑法配置。run_mode 是顶层跑法总开关;
+// sua_mode / sua_model_name 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 生效。
+// sua_model_name 只传模型名, 密钥由 operator 侧解析注入 case-file, 绝不落库明文。
+type RunModeConfig struct {
 	RunMode       RunMode `json:"run_mode,omitempty"`
+	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
 	SuaMode       SuaMode `json:"sua_mode,omitempty"`
 	SuaModelName  string  `json:"sua_model_name,omitempty"`
-	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
 }
 
 // ItemRunConf 题目级多轮/SUA 运行配置, 冻结进 expt_item_ref.item_config (ItemTargetConf.RunConf)。

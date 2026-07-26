@@ -1000,13 +1000,13 @@ func (p *CreateExperimentRequest) FastReadField47(buf []byte) (int, error) {
 
 func (p *CreateExperimentRequest) FastReadField49(buf []byte) (int, error) {
 	offset := 0
-	_field := expt.NewSuaRunConfig()
+	_field := expt.NewRunModeConfig()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 	}
-	p.SuaRunConfig = _field
+	p.RunModeConfig = _field
 	return offset, nil
 }
 
@@ -1516,9 +1516,9 @@ func (p *CreateExperimentRequest) fastWriteField47(buf []byte, w thrift.NocopyWr
 
 func (p *CreateExperimentRequest) fastWriteField49(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetSuaRunConfig() {
+	if p.IsSetRunModeConfig() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 49)
-		offset += p.SuaRunConfig.FastWriteNocopy(buf[offset:], w)
+		offset += p.RunModeConfig.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -1865,9 +1865,9 @@ func (p *CreateExperimentRequest) field47Length() int {
 
 func (p *CreateExperimentRequest) field49Length() int {
 	l := 0
-	if p.IsSetSuaRunConfig() {
+	if p.IsSetRunModeConfig() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.SuaRunConfig.BLength()
+		l += p.RunModeConfig.BLength()
 	}
 	return l
 }
@@ -2149,14 +2149,14 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 		p.EnableExtractTrajectory = &tmp
 	}
 
-	var _suaRunConfig *expt.SuaRunConfig
-	if src.SuaRunConfig != nil {
-		_suaRunConfig = &expt.SuaRunConfig{}
-		if err := _suaRunConfig.DeepCopy(src.SuaRunConfig); err != nil {
+	var _runModeConfig *expt.RunModeConfig
+	if src.RunModeConfig != nil {
+		_runModeConfig = &expt.RunModeConfig{}
+		if err := _runModeConfig.DeepCopy(src.RunModeConfig); err != nil {
 			return err
 		}
 	}
-	p.SuaRunConfig = _suaRunConfig
+	p.RunModeConfig = _runModeConfig
 
 	if src.ThreadID != nil {
 		var tmp string
@@ -3384,13 +3384,13 @@ func (p *SubmitExperimentRequest) FastReadField48(buf []byte) (int, error) {
 
 func (p *SubmitExperimentRequest) FastReadField49(buf []byte) (int, error) {
 	offset := 0
-	_field := expt.NewSuaRunConfig()
+	_field := expt.NewRunModeConfig()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 	}
-	p.SuaRunConfig = _field
+	p.RunModeConfig = _field
 	return offset, nil
 }
 
@@ -3932,9 +3932,9 @@ func (p *SubmitExperimentRequest) fastWriteField48(buf []byte, w thrift.NocopyWr
 
 func (p *SubmitExperimentRequest) fastWriteField49(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetSuaRunConfig() {
+	if p.IsSetRunModeConfig() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 49)
-		offset += p.SuaRunConfig.FastWriteNocopy(buf[offset:], w)
+		offset += p.RunModeConfig.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -4304,9 +4304,9 @@ func (p *SubmitExperimentRequest) field48Length() int {
 
 func (p *SubmitExperimentRequest) field49Length() int {
 	l := 0
-	if p.IsSetSuaRunConfig() {
+	if p.IsSetRunModeConfig() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.SuaRunConfig.BLength()
+		l += p.RunModeConfig.BLength()
 	}
 	return l
 }
@@ -4603,14 +4603,14 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 		p.XJwtToken = &tmp
 	}
 
-	var _suaRunConfig *expt.SuaRunConfig
-	if src.SuaRunConfig != nil {
-		_suaRunConfig = &expt.SuaRunConfig{}
-		if err := _suaRunConfig.DeepCopy(src.SuaRunConfig); err != nil {
+	var _runModeConfig *expt.RunModeConfig
+	if src.RunModeConfig != nil {
+		_runModeConfig = &expt.RunModeConfig{}
+		if err := _runModeConfig.DeepCopy(src.RunModeConfig); err != nil {
 			return err
 		}
 	}
-	p.SuaRunConfig = _suaRunConfig
+	p.RunModeConfig = _runModeConfig
 
 	if src.TriggerType != nil {
 		tmp := *src.TriggerType

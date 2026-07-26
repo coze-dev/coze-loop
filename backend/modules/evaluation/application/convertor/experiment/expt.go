@@ -37,7 +37,7 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 	ec := &entity.EvaluationConfiguration{
 		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:           cer.Ext,
-		SuaRunConfig:  suaRunConfigDTO2DO(cer.GetSuaRunConfig()),
+		RunModeConfig: runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
 
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
@@ -963,7 +963,7 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 	ec := &entity.EvaluationConfiguration{
 		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:           cer.Ext,
-		SuaRunConfig:  suaRunConfigDTO2DO(cer.GetSuaRunConfig()),
+		RunModeConfig: runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
 	if cer.GetItemRetryNum() > 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
@@ -1346,14 +1346,14 @@ func notificationConfDO2DTO(conf *entity.ExptNotificationConf) *domain_expt.Expt
 	return result
 }
 
-// suaRunConfigDTO2DO 把请求 DTO 的实验级多轮/SUA 子配置转为领域实体。
+// runModeConfigDTO2DO 把请求 DTO 的实验级多轮/SUA 子配置转为领域实体。
 // 枚举经 DTO String() 映射为领域字符串 (single_turn/sua_multi_turn... 与 runtime 对齐)。
 // 入参为空 (未配多轮) 返回 nil, 走老路径不变。
-func suaRunConfigDTO2DO(dto *domain_expt.SuaRunConfig) *entity.SuaRunConfig {
+func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 	if dto == nil {
 		return nil
 	}
-	do := &entity.SuaRunConfig{
+	do := &entity.RunModeConfig{
 		SuaModelName:  dto.GetSuaModelName(),
 		MaxRunMinutes: int(dto.GetMaxRunMinutes()),
 	}

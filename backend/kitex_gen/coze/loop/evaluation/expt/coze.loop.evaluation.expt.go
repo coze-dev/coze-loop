@@ -58,7 +58,7 @@ type CreateExperimentRequest struct {
 	TrialRunItemCount       *int64 `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
 	EnableExtractTrajectory *bool  `thrift:"enable_extract_trajectory,47,optional" frugal:"47,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
 	// 实验级多轮/SUA 跑法子配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)
-	SuaRunConfig *expt.SuaRunConfig `thrift:"sua_run_config,49,optional" frugal:"49,optional,expt.SuaRunConfig" form:"sua_run_config" json:"sua_run_config,omitempty"`
+	RunModeConfig *expt.RunModeConfig `thrift:"run_mode_config,49,optional" frugal:"49,optional,expt.RunModeConfig" form:"run_mode_config" json:"run_mode_config,omitempty"`
 	// 关联的智能评测会话ID
 	ThreadID    *string               `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
 	TriggerType *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
@@ -391,16 +391,16 @@ func (p *CreateExperimentRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
-var CreateExperimentRequest_SuaRunConfig_DEFAULT *expt.SuaRunConfig
+var CreateExperimentRequest_RunModeConfig_DEFAULT *expt.RunModeConfig
 
-func (p *CreateExperimentRequest) GetSuaRunConfig() (v *expt.SuaRunConfig) {
+func (p *CreateExperimentRequest) GetRunModeConfig() (v *expt.RunModeConfig) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetSuaRunConfig() {
-		return CreateExperimentRequest_SuaRunConfig_DEFAULT
+	if !p.IsSetRunModeConfig() {
+		return CreateExperimentRequest_RunModeConfig_DEFAULT
 	}
-	return p.SuaRunConfig
+	return p.RunModeConfig
 }
 
 var CreateExperimentRequest_ThreadID_DEFAULT string
@@ -588,8 +588,8 @@ func (p *CreateExperimentRequest) SetTrialRunItemCount(val *int64) {
 func (p *CreateExperimentRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
-func (p *CreateExperimentRequest) SetSuaRunConfig(val *expt.SuaRunConfig) {
-	p.SuaRunConfig = val
+func (p *CreateExperimentRequest) SetRunModeConfig(val *expt.RunModeConfig) {
+	p.RunModeConfig = val
 }
 func (p *CreateExperimentRequest) SetThreadID(val *string) {
 	p.ThreadID = val
@@ -646,7 +646,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	45:  "item_retry_num",
 	46:  "trial_run_item_count",
 	47:  "enable_extract_trajectory",
-	49:  "sua_run_config",
+	49:  "run_mode_config",
 	60:  "thread_id",
 	50:  "trigger_type",
 	70:  "eval_set_configs",
@@ -758,8 +758,8 @@ func (p *CreateExperimentRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
 }
 
-func (p *CreateExperimentRequest) IsSetSuaRunConfig() bool {
-	return p.SuaRunConfig != nil
+func (p *CreateExperimentRequest) IsSetRunModeConfig() bool {
+	return p.RunModeConfig != nil
 }
 
 func (p *CreateExperimentRequest) IsSetThreadID() bool {
@@ -1475,11 +1475,11 @@ func (p *CreateExperimentRequest) ReadField47(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *CreateExperimentRequest) ReadField49(iprot thrift.TProtocol) error {
-	_field := expt.NewSuaRunConfig()
+	_field := expt.NewRunModeConfig()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.SuaRunConfig = _field
+	p.RunModeConfig = _field
 	return nil
 }
 func (p *CreateExperimentRequest) ReadField60(iprot thrift.TProtocol) error {
@@ -2274,11 +2274,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 47 end error: ", p), err)
 }
 func (p *CreateExperimentRequest) writeField49(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSuaRunConfig() {
-		if err = oprot.WriteFieldBegin("sua_run_config", thrift.STRUCT, 49); err != nil {
+	if p.IsSetRunModeConfig() {
+		if err = oprot.WriteFieldBegin("run_mode_config", thrift.STRUCT, 49); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.SuaRunConfig.Write(oprot); err != nil {
+		if err := p.RunModeConfig.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2565,7 +2565,7 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 	if !p.Field47DeepEqual(ano.EnableExtractTrajectory) {
 		return false
 	}
-	if !p.Field49DeepEqual(ano.SuaRunConfig) {
+	if !p.Field49DeepEqual(ano.RunModeConfig) {
 		return false
 	}
 	if !p.Field60DeepEqual(ano.ThreadID) {
@@ -2894,9 +2894,9 @@ func (p *CreateExperimentRequest) Field47DeepEqual(src *bool) bool {
 	}
 	return true
 }
-func (p *CreateExperimentRequest) Field49DeepEqual(src *expt.SuaRunConfig) bool {
+func (p *CreateExperimentRequest) Field49DeepEqual(src *expt.RunModeConfig) bool {
 
-	if !p.SuaRunConfig.DeepEqual(src) {
+	if !p.RunModeConfig.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -3270,9 +3270,9 @@ type SubmitExperimentRequest struct {
 	// 提交实验时前端透传的发起人 user JWT，用于预下载 skill 入 TOS
 	XJwtToken *string `thrift:"x_jwt_token,48,optional" frugal:"48,optional,string" header:"X-Jwt-Token" json:"x_jwt_token,omitempty"`
 	// 实验级多轮/SUA 跑法子配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)
-	SuaRunConfig *expt.SuaRunConfig    `thrift:"sua_run_config,49,optional" frugal:"49,optional,expt.SuaRunConfig" form:"sua_run_config" json:"sua_run_config,omitempty"`
-	TriggerType  *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
-	TimeRange    *expt.TaskTimeRange   `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
+	RunModeConfig *expt.RunModeConfig   `thrift:"run_mode_config,49,optional" frugal:"49,optional,expt.RunModeConfig" form:"run_mode_config" json:"run_mode_config,omitempty"`
+	TriggerType   *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
+	TimeRange     *expt.TaskTimeRange   `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
 	// 智能评测相关
 	ThreadID *string `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
 	// 指定执行的评测集条目ID列表
@@ -3607,16 +3607,16 @@ func (p *SubmitExperimentRequest) GetXJwtToken() (v string) {
 	return *p.XJwtToken
 }
 
-var SubmitExperimentRequest_SuaRunConfig_DEFAULT *expt.SuaRunConfig
+var SubmitExperimentRequest_RunModeConfig_DEFAULT *expt.RunModeConfig
 
-func (p *SubmitExperimentRequest) GetSuaRunConfig() (v *expt.SuaRunConfig) {
+func (p *SubmitExperimentRequest) GetRunModeConfig() (v *expt.RunModeConfig) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetSuaRunConfig() {
-		return SubmitExperimentRequest_SuaRunConfig_DEFAULT
+	if !p.IsSetRunModeConfig() {
+		return SubmitExperimentRequest_RunModeConfig_DEFAULT
 	}
-	return p.SuaRunConfig
+	return p.RunModeConfig
 }
 
 var SubmitExperimentRequest_TriggerType_DEFAULT expt.ExptTriggerType
@@ -3828,8 +3828,8 @@ func (p *SubmitExperimentRequest) SetEnableExtractTrajectory(val *bool) {
 func (p *SubmitExperimentRequest) SetXJwtToken(val *string) {
 	p.XJwtToken = val
 }
-func (p *SubmitExperimentRequest) SetSuaRunConfig(val *expt.SuaRunConfig) {
-	p.SuaRunConfig = val
+func (p *SubmitExperimentRequest) SetRunModeConfig(val *expt.RunModeConfig) {
+	p.RunModeConfig = val
 }
 func (p *SubmitExperimentRequest) SetTriggerType(val *expt.ExptTriggerType) {
 	p.TriggerType = val
@@ -3892,7 +3892,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	46:  "trial_run_item_count",
 	47:  "enable_extract_trajectory",
 	48:  "x_jwt_token",
-	49:  "sua_run_config",
+	49:  "run_mode_config",
 	50:  "trigger_type",
 	51:  "time_range",
 	60:  "thread_id",
@@ -4006,8 +4006,8 @@ func (p *SubmitExperimentRequest) IsSetXJwtToken() bool {
 	return p.XJwtToken != nil
 }
 
-func (p *SubmitExperimentRequest) IsSetSuaRunConfig() bool {
-	return p.SuaRunConfig != nil
+func (p *SubmitExperimentRequest) IsSetRunModeConfig() bool {
+	return p.RunModeConfig != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetTriggerType() bool {
@@ -4729,11 +4729,11 @@ func (p *SubmitExperimentRequest) ReadField48(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *SubmitExperimentRequest) ReadField49(iprot thrift.TProtocol) error {
-	_field := expt.NewSuaRunConfig()
+	_field := expt.NewRunModeConfig()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.SuaRunConfig = _field
+	p.RunModeConfig = _field
 	return nil
 }
 func (p *SubmitExperimentRequest) ReadField50(iprot thrift.TProtocol) error {
@@ -5556,11 +5556,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 48 end error: ", p), err)
 }
 func (p *SubmitExperimentRequest) writeField49(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSuaRunConfig() {
-		if err = oprot.WriteFieldBegin("sua_run_config", thrift.STRUCT, 49); err != nil {
+	if p.IsSetRunModeConfig() {
+		if err = oprot.WriteFieldBegin("run_mode_config", thrift.STRUCT, 49); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.SuaRunConfig.Write(oprot); err != nil {
+		if err := p.RunModeConfig.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -5891,7 +5891,7 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 	if !p.Field48DeepEqual(ano.XJwtToken) {
 		return false
 	}
-	if !p.Field49DeepEqual(ano.SuaRunConfig) {
+	if !p.Field49DeepEqual(ano.RunModeConfig) {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.TriggerType) {
@@ -6225,9 +6225,9 @@ func (p *SubmitExperimentRequest) Field48DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *SubmitExperimentRequest) Field49DeepEqual(src *expt.SuaRunConfig) bool {
+func (p *SubmitExperimentRequest) Field49DeepEqual(src *expt.RunModeConfig) bool {
 
-	if !p.SuaRunConfig.DeepEqual(src) {
+	if !p.RunModeConfig.DeepEqual(src) {
 		return false
 	}
 	return true

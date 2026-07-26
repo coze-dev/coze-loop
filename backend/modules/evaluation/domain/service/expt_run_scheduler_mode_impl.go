@@ -2243,7 +2243,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 
 		// 构建该 set 下每 item 共享的 item_config (per-set 级配置下沉到行)。
 		// 传入实验级 SUA 跑法配置, 展开为各 item 的 RunConf 兜底默认值 (nil = 老路径不变)。
-		baseItemConfig := buildItemConfigFromSetConf(setConf, evalConf.SuaRunConfig)
+		baseItemConfig := buildItemConfigFromSetConf(setConf, evalConf.RunModeConfig)
 
 		// 草稿哨兵: 草稿集读侧走 live (VersionID=nil), ref 落 0; committed 走 ByVersion 冻结。
 		setReadVersionID := resolveSetReadVersionID(setConf.EvalSetID, setConf.EvalSetVersionID)
@@ -2459,7 +2459,7 @@ func resolveSetRefVersionID(evalSetID, evalSetVersionID int64) int64 {
 // buildItemConfigFromSetConf 将 per-set 配置下沉为 ExptItemConfig (同 set 所有 item 共享)。
 // suaRunConfig 为实验级多轮/SUA 跑法配置 (可空)：非空时展开为各 item 的 RunConf 兜底默认值
 // (题目 Schema 接入前, 全题目共享一份; 接入后由题目自带值覆盖)。
-func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig, suaRunConfig *entity.SuaRunConfig) *entity.ExptItemConfig {
+func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig, runModeConfig *entity.RunModeConfig) *entity.ExptItemConfig {
 	cfg := &entity.ExptItemConfig{}
 
 	// evaluator_conf
@@ -2488,17 +2488,17 @@ func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig, suaRunConfig *ent
 			FieldMapping:    tc.FieldMapping,
 			DynamicConf:     tc.RuntimeParam,
 			// 实验级 SUA 跑法配置展开为 item 级 RunConf 兜底 (题目 Schema 接入前全题目一份)。
-			RunConf: itemRunConfFromSuaRunConfig(suaRunConfig),
+			RunConf: itemRunConfFromRunModeConfig(runModeConfig),
 		}
 	}
 
 	return cfg
 }
 
-// itemRunConfFromSuaRunConfig 把实验级 SuaRunConfig 翻译为题目级 ItemRunConf 兜底默认值。
+// itemRunConfFromRunModeConfig 把实验级 RunModeConfig 翻译为题目级 ItemRunConf 兜底默认值。
 // 仅承接与 item 粒度相关的时长上限 (max_run_minutes); run_mode/sua_mode/model 是实验级、
 // 由 case-file experiment_info 承载, 不落 item RunConf。返回 nil 表示无多轮配置 (老路径不变)。
-func itemRunConfFromSuaRunConfig(sc *entity.SuaRunConfig) *entity.ItemRunConf {
+func itemRunConfFromRunModeConfig(sc *entity.RunModeConfig) *entity.ItemRunConf {
 	if sc == nil {
 		return nil
 	}

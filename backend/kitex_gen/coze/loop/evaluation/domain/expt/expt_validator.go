@@ -21,7 +21,7 @@ var (
 	_ = time.Nanosecond
 )
 
-func (p *SuaRunConfig) IsValid() error {
+func (p *RunModeConfig) IsValid() error {
 	return nil
 }
 func (p *Experiment) IsValid() error {

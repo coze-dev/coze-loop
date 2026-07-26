@@ -65,14 +65,15 @@ enum SuaMode {
     Fixed     = 3    // 照固定脚本
 }
 
-// SuaRunConfig 实验级多轮/SUA 跑法子配置。run_mode 决定编排模式;
-// sua_mode / sua_model_name 仅在 SUA 驱动模式生效。sua_model_name 只传模型名,
+// RunModeConfig 实验级跑法配置 (对齐 runtime RunModeConfig)。run_mode 是顶层跑法总开关;
+// sua_mode / sua_model_name 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
+// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。sua_model_name 只传模型名,
 // 密钥由服务端 operator 解析注入 case-file, 绝不进请求体/落库明文。
-struct SuaRunConfig {
+struct RunModeConfig {
     1: optional ExptRunMode run_mode (api.body = 'run_mode')
-    2: optional SuaMode sua_mode (api.body = 'sua_mode')
-    3: optional string sua_model_name (api.body = 'sua_model_name')
-    4: optional i32 max_run_minutes (api.body = 'max_run_minutes')
+    2: optional i32 max_run_minutes (api.body = 'max_run_minutes')
+    3: optional SuaMode sua_mode (api.body = 'sua_mode')
+    4: optional string sua_model_name (api.body = 'sua_model_name')
 }
 
 typedef string Visibility(ts.enum="true")

@@ -43,7 +43,7 @@ var (
 	_ = thrift.STOP
 )
 
-func (p *SuaRunConfig) FastRead(buf []byte) (int, error) {
+func (p *RunModeConfig) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -89,7 +89,7 @@ func (p *SuaRunConfig) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 3:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField3(buf[offset:])
 				offset += l
 				if err != nil {
@@ -103,7 +103,7 @@ func (p *SuaRunConfig) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 4:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField4(buf[offset:])
 				offset += l
 				if err != nil {
@@ -129,12 +129,12 @@ func (p *SuaRunConfig) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SuaRunConfig[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RunModeConfig[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *SuaRunConfig) FastReadField1(buf []byte) (int, error) {
+func (p *RunModeConfig) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *ExptRunMode
@@ -150,7 +150,21 @@ func (p *SuaRunConfig) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *SuaRunConfig) FastReadField2(buf []byte) (int, error) {
+func (p *RunModeConfig) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxRunMinutes = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *SuaMode
@@ -166,7 +180,7 @@ func (p *SuaRunConfig) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *SuaRunConfig) FastReadField3(buf []byte) (int, error) {
+func (p *RunModeConfig) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -180,37 +194,23 @@ func (p *SuaRunConfig) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *SuaRunConfig) FastReadField4(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *int32
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.MaxRunMinutes = _field
-	return offset, nil
-}
-
-func (p *SuaRunConfig) FastWrite(buf []byte) int {
+func (p *RunModeConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *SuaRunConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *RunModeConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
-		offset += p.fastWriteField4(buf[offset:], w)
-		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
 }
 
-func (p *SuaRunConfig) BLength() int {
+func (p *RunModeConfig) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -222,7 +222,7 @@ func (p *SuaRunConfig) BLength() int {
 	return l
 }
 
-func (p *SuaRunConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *RunModeConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetRunMode() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 1)
@@ -231,34 +231,34 @@ func (p *SuaRunConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *SuaRunConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetSuaMode() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 2)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.SuaMode))
-	}
-	return offset
-}
-
-func (p *SuaRunConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetSuaModelName() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SuaModelName)
-	}
-	return offset
-}
-
-func (p *SuaRunConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+func (p *RunModeConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetMaxRunMinutes() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 4)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 2)
 		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxRunMinutes)
 	}
 	return offset
 }
 
-func (p *SuaRunConfig) field1Length() int {
+func (p *RunModeConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuaMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 3)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.SuaMode))
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuaModelName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SuaModelName)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) field1Length() int {
 	l := 0
 	if p.IsSetRunMode() {
 		l += thrift.Binary.FieldBeginLength()
@@ -267,25 +267,7 @@ func (p *SuaRunConfig) field1Length() int {
 	return l
 }
 
-func (p *SuaRunConfig) field2Length() int {
-	l := 0
-	if p.IsSetSuaMode() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
-	}
-	return l
-}
-
-func (p *SuaRunConfig) field3Length() int {
-	l := 0
-	if p.IsSetSuaModelName() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.SuaModelName)
-	}
-	return l
-}
-
-func (p *SuaRunConfig) field4Length() int {
+func (p *RunModeConfig) field2Length() int {
 	l := 0
 	if p.IsSetMaxRunMinutes() {
 		l += thrift.Binary.FieldBeginLength()
@@ -294,8 +276,26 @@ func (p *SuaRunConfig) field4Length() int {
 	return l
 }
 
-func (p *SuaRunConfig) DeepCopy(s interface{}) error {
-	src, ok := s.(*SuaRunConfig)
+func (p *RunModeConfig) field3Length() int {
+	l := 0
+	if p.IsSetSuaMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *RunModeConfig) field4Length() int {
+	l := 0
+	if p.IsSetSuaModelName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SuaModelName)
+	}
+	return l
+}
+
+func (p *RunModeConfig) DeepCopy(s interface{}) error {
+	src, ok := s.(*RunModeConfig)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -303,6 +303,11 @@ func (p *SuaRunConfig) DeepCopy(s interface{}) error {
 	if src.RunMode != nil {
 		tmp := *src.RunMode
 		p.RunMode = &tmp
+	}
+
+	if src.MaxRunMinutes != nil {
+		tmp := *src.MaxRunMinutes
+		p.MaxRunMinutes = &tmp
 	}
 
 	if src.SuaMode != nil {
@@ -316,11 +321,6 @@ func (p *SuaRunConfig) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.SuaModelName)
 		}
 		p.SuaModelName = &tmp
-	}
-
-	if src.MaxRunMinutes != nil {
-		tmp := *src.MaxRunMinutes
-		p.MaxRunMinutes = &tmp
 	}
 
 	return nil
