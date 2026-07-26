@@ -103,7 +103,7 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	var agent map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetAgent().GetText()), &agent))
 	assert.Equal(t, "src-200", agent["source_target_id"])
-	assert.EqualValues(t, 200, agent["target_id"])
+	assert.Equal(t, "200", agent["target_id"]) // i64 已 string 化防精度丢失
 
 	// MQ 元信息顶层字段（与 item-complete MQ 对齐）。
 	assert.Equal(t, workspaceID, got.GetExptWorkspaceID())
@@ -726,8 +726,8 @@ func TestBuildItemStandardEvalOutput_EvaluatorIDFilled(t *testing.T) {
 	require.NotEmpty(t, results)
 	for _, resv := range results {
 		res := resv.(map[string]any)
-		assert.EqualValues(t, 9001, res["evaluator_id"])
-		assert.EqualValues(t, 101, res["evaluator_version_id"])
+		assert.Equal(t, "9001", res["evaluator_id"])        // i64 已 string 化
+		assert.Equal(t, "101", res["evaluator_version_id"]) // i64 已 string 化
 		assert.Equal(t, "完整性", res["evaluator_name"])
 	}
 }

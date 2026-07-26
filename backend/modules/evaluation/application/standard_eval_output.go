@@ -731,8 +731,8 @@ func buildStandardEvalOutputJSON(item *entity.ItemResult, opt standardEvalOutput
 		return std
 	}
 	return standardEvalOutputJSON{
-		Source: map[string]any{"type": "evaluation", "expt_id": opt.ExptID, "item_id": item.ItemID, "dataset_key": datasetKeyFromItem(item), "item_key": itemKeyFromItem(item)},
-		Detail: map[string]any{"item_id": item.ItemID, "item_key": itemKeyFromItem(item), "item_index": item.ItemIndex, "system_info": item.SystemInfo, "turn_count": len(standardTurns(item, opt.ExptID))},
+		Source: map[string]any{"type": "evaluation", "expt_id": int64String(opt.ExptID), "item_id": int64String(item.ItemID), "dataset_key": datasetKeyFromItem(item), "item_key": itemKeyFromItem(item)},
+		Detail: map[string]any{"item_id": int64String(item.ItemID), "item_key": itemKeyFromItem(item), "item_index": item.ItemIndex, "system_info": item.SystemInfo, "turn_count": len(standardTurns(item, opt.ExptID))},
 		Rounds: standardTurns(item, opt.ExptID),
 		Agent:  standardAgent(item, opt.ExptID, opt),
 		Output: standardOutput(item, opt.ExptID),
@@ -885,11 +885,12 @@ func standardAgent(item *entity.ItemResult, exptID int64, opt standardEvalOutput
 	// source_target_id 为业务侧原始对象 ID（如 promptID / sandbox agent 外部标识），
 	// 需按 target_id 反查 EvalTarget 得到；未解析到时留空、不填。
 	putStandardField(agent, "source_target_id", opt.SourceTargetIDByTargetID[firstTargetID(first)])
+	// target_id/target_version_id 为 i64 雪花，inline JSON 须 string 化防精度丢失（与 agent_id 一致）。
 	if tid := firstTargetID(first); tid != 0 {
-		agent["target_id"] = tid
+		agent["target_id"] = int64String(tid)
 	}
 	if tvid := firstTargetVersionID(first); tvid != 0 {
-		agent["target_version_id"] = tvid
+		agent["target_version_id"] = int64String(tvid)
 	}
 	return agent
 }
@@ -1094,18 +1095,19 @@ func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalO
 				reason = record.GetReasoning()
 			}
 			// key 即 evaluator_version_id；evaluator_id 从 ColumnEvaluator 反查。
+			// 二者均为 i64 雪花，inline JSON 须 string 化防精度丢失。
 			// 空值不填 key（D11）：name/version/alias/id 无值时不放进 map。
 			entry := map[string]any{
 				"type":                 "score",
 				"score":                record.GetScore(),
 				"reason":               record.GetReasoning(),
-				"evaluator_version_id": key,
+				"evaluator_version_id": int64String(key),
 			}
 			putStandardField(entry, "evaluator_name", evaluatorName(opt, key, record))
 			putStandardField(entry, "evaluator_version", evaluatorVersion(opt, key, record))
 			putStandardField(entry, "evaluator_alias", record.Alias)
 			if eid := evaluatorID(opt, key); eid != 0 {
-				entry["evaluator_id"] = eid
+				entry["evaluator_id"] = int64String(eid)
 			}
 			results[resultKey] = entry
 		}
