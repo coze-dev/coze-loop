@@ -1115,16 +1115,28 @@ func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalO
 	return map[string]any{"type": "score", "score": score, "reason": reason, "results": results}
 }
 
+// evaluatorResultKey 生成 results map 的唯一 key，治同 versionID 多别名 / 多 inline 撞 key。
+// 复用 entity.EncodeEvaluatorInstanceKey(versionID, alias)：
+//   - alias 为空 → 裸 "<versionID>"（旧数据 byte 级不变）
+//   - alias 非空 → "<versionID>:<alias>"（同版本多别名不撞）
+//
+// inline 评分 versionID=0 哨兵、多条会撞，故 InlineKey 非空时再拼一段 "#<inlineKey>" 兜底。
 func evaluatorResultKey(key int64, record *entity.EvaluatorRecord) string {
+	versionID := key
+	alias := ""
+	inlineKey := ""
 	if record != nil {
-		if record.Alias != "" {
-			return record.Alias
+		if record.EvaluatorVersionID != 0 {
+			versionID = record.EvaluatorVersionID
 		}
-		if record.InlineKey != "" {
-			return record.InlineKey
-		}
+		alias = record.Alias
+		inlineKey = record.InlineKey
 	}
-	return strconv.FormatInt(key, 10)
+	rk := entity.EncodeEvaluatorInstanceKey(versionID, alias)
+	if inlineKey != "" {
+		rk += "#" + inlineKey
+	}
+	return rk
 }
 
 func evaluatorName(opt standardEvalOutputBuildOptions, key int64, record *entity.EvaluatorRecord) string {

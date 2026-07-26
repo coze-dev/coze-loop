@@ -773,6 +773,29 @@ func TestMergeRoundsField_AppendsUnmatchedObjectRound(t *testing.T) {
 	require.Len(t, merged, 2) // round_2 追加
 }
 
+func TestEvaluatorResultKey_NoCollision(t *testing.T) {
+	// 同 versionID 多 alias 不撞;alias 空退化裸 versionID(旧数据不变);inline 用 InlineKey 兜底。
+	cases := []struct {
+		name   string
+		key    int64
+		record *entity.EvaluatorRecord
+		want   string
+	}{
+		{"无 alias 退化裸 versionID", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101}, "101"},
+		{"同版本 alias A", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_A"}, "101:judge_A"},
+		{"同版本 alias B", 101, &entity.EvaluatorRecord{EvaluatorVersionID: 101, Alias: "judge_B"}, "101:judge_B"},
+		{"inline versionID=0 用 InlineKey", 0, &entity.EvaluatorRecord{EvaluatorVersionID: 0, InlineKey: "ik1"}, "0#ik1"},
+		{"inline 第二条不同 InlineKey", 0, &entity.EvaluatorRecord{EvaluatorVersionID: 0, InlineKey: "ik2"}, "0#ik2"},
+	}
+	seen := map[string]bool{}
+	for _, c := range cases {
+		got := evaluatorResultKey(c.key, c.record)
+		assert.Equal(t, c.want, got, c.name)
+		assert.False(t, seen[got], "result_key 撞了: %s (%s)", got, c.name)
+		seen[got] = true
+	}
+}
+
 func TestBuildItemStandardEvalOutput_PlatformEvalOutputNoInnerRounds(t *testing.T) {
 	// 平台兜底的 eval / output 只补 detail，不再补内部 round 粒度 rounds（顶层 rounds 字段不受影响）。
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
