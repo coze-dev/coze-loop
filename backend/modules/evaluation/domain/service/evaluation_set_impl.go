@@ -92,14 +92,14 @@ func (d *EvaluationSetServiceImpl) DeleteEvaluationSet(ctx context.Context, spac
 	return d.datasetRPCAdapter.DeleteDataset(ctx, spaceID, evaluationSetID)
 }
 
-func (d *EvaluationSetServiceImpl) GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error) {
+func (d *EvaluationSetServiceImpl) GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (set *entity.EvaluationSet, err error) {
 	// 依赖数据集服务
-	return d.datasetRPCAdapter.GetDataset(ctx, spaceID, evaluationSetID, deletedAt)
+	return d.datasetRPCAdapter.GetDataset(ctx, spaceID, evaluationSetID, deletedAt, sharedOption)
 }
 
-func (d *EvaluationSetServiceImpl) BatchGetEvaluationSets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (set []*entity.EvaluationSet, err error) {
+func (d *EvaluationSetServiceImpl) BatchGetEvaluationSets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (set []*entity.EvaluationSet, err error) {
 	// 依赖数据集服务
-	return d.datasetRPCAdapter.BatchGetDatasets(ctx, spaceID, evaluationSetID, deletedAt)
+	return d.datasetRPCAdapter.BatchGetDatasets(ctx, spaceID, evaluationSetID, deletedAt, sharedOption)
 }
 
 func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param *entity.ListEvaluationSetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error) {
@@ -118,6 +118,7 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 		OrderBys:         param.OrderBys,
 		TagFilter:        param.TagFilter,
 		DatasetKeys:      param.DatasetKeys,
+		SharedOption:     param.SharedOption,
 	})
 }
 

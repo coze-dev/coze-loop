@@ -105,6 +105,8 @@ var (
 
 	evaluationSetSet = wire.NewSet(
 		NewEvaluationSetApplicationImpl,
+		evalconf.NewSharedResourceConfigProvider,
+		domainservice.NewResourceAccessAuthorizer,
 		// Domain Service Sets
 		domainservice.EvaluationSetDomainServiceSet,
 		// Infrastructure Sets
@@ -115,6 +117,8 @@ var (
 
 	evalTargetSet = wire.NewSet(
 		NewEvalTargetHandlerImpl,
+		evalconf.NewSharedResourceConfigProvider,
+		domainservice.NewResourceAccessAuthorizer,
 		// Domain Service Sets
 		domainservice.TargetDomainServiceSet,
 		// Infrastructure Sets
@@ -129,6 +133,8 @@ var (
 		NewEvalOpenAPIApplication,
 		experimentSet,
 		evalconf.NewConfiger,
+		evalconf.NewSharedResourceConfigProvider,
+		domainservice.NewResourceAccessAuthorizer,
 		openapimetrics.OpenAPIMetricsSet,
 	)
 )
@@ -208,11 +214,12 @@ func InitEvaluationSetApplication(client datasetservice.Client,
 	authClient authservice.Client,
 	meter metrics.Meter,
 	userClient userservice.Client,
-) evaluation.EvaluationSetService {
+	configFactory conf.IConfigLoaderFactory,
+) (evaluation.EvaluationSetService, error) {
 	wire.Build(
 		evaluationSetSet,
 	)
-	return nil
+	return nil, nil
 }
 
 func InitEvalTargetApplication(ctx context.Context,

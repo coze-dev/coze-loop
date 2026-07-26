@@ -436,7 +436,7 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
 				errorx.WithExtraMsg("eval_set_id and eval_set_version_id are required when updating eval set"))
 		}
-		version, _, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, param.SpaceID, updatedTripleConfig.EvalSetVersionID, gptr.Of(false))
+		version, _, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, param.SpaceID, updatedTripleConfig.EvalSetVersionID, gptr.Of(false), nil)
 		if err != nil {
 			return nil, errorx.Wrapf(err, "get evaluation set version fail, version_id: %d", updatedTripleConfig.EvalSetVersionID)
 		}
@@ -2122,7 +2122,7 @@ func (e *ExptTemplateManagerImpl) mgetExptTupleByID(ctx context.Context, tupleID
 			pool.Add(func() error {
 				verIDs := maps.ToSlice(gslice.ToMap(evalSetVersionIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
 				// 仅查询未删除版本，避免带出已删除列
-				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(false))
+				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(false), nil)
 				if poolErr != nil {
 					return poolErr
 				}
@@ -2146,7 +2146,7 @@ func (e *ExptTemplateManagerImpl) mgetExptTupleByID(ctx context.Context, tupleID
 		if len(evalSetIDs) > 0 {
 			pool.Add(func() error {
 				setIDs := maps.ToSlice(gslice.ToMap(evalSetIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
-				got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(spaceID), setIDs, gptr.Of(false))
+				got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(spaceID), setIDs, gptr.Of(false), nil)
 				if poolErr != nil {
 					return poolErr
 				}

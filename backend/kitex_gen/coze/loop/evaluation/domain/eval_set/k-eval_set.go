@@ -900,6 +900,20 @@ func (p *EvaluationSet) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 101:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField101(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1175,6 +1189,18 @@ func (p *EvaluationSet) FastReadField100(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluationSet) FastReadField101(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceInfo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SharedInfo = _field
+	return offset, nil
+}
+
 func (p *EvaluationSet) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1200,6 +1226,7 @@ func (p *EvaluationSet) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField30(buf[offset:], w)
 		offset += p.fastWriteField31(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
+		offset += p.fastWriteField101(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1226,6 +1253,7 @@ func (p *EvaluationSet) BLength() int {
 		l += p.field31Length()
 		l += p.field32Length()
 		l += p.field100Length()
+		l += p.field101Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1400,6 +1428,15 @@ func (p *EvaluationSet) fastWriteField100(buf []byte, w thrift.NocopyWriter) int
 	return offset
 }
 
+func (p *EvaluationSet) fastWriteField101(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSharedInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 101)
+		offset += p.SharedInfo.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *EvaluationSet) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -1566,6 +1603,15 @@ func (p *EvaluationSet) field100Length() int {
 	return l
 }
 
+func (p *EvaluationSet) field101Length() int {
+	l := 0
+	if p.IsSetSharedInfo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SharedInfo.BLength()
+	}
+	return l
+}
+
 func (p *EvaluationSet) DeepCopy(s interface{}) error {
 	src, ok := s.(*EvaluationSet)
 	if !ok {
@@ -1699,6 +1745,15 @@ func (p *EvaluationSet) DeepCopy(s interface{}) error {
 		}
 	}
 	p.BaseInfo = _baseInfo
+
+	var _sharedInfo *common.SharedResourceInfo
+	if src.SharedInfo != nil {
+		_sharedInfo = &common.SharedResourceInfo{}
+		if err := _sharedInfo.DeepCopy(src.SharedInfo); err != nil {
+			return err
+		}
+	}
+	p.SharedInfo = _sharedInfo
 
 	return nil
 }
@@ -1849,6 +1904,20 @@ func (p *EvaluationSetVersion) FastRead(buf []byte) (int, error) {
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 101:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField101(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -2014,6 +2083,18 @@ func (p *EvaluationSetVersion) FastReadField100(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluationSetVersion) FastReadField101(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceInfo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SharedInfo = _field
+	return offset, nil
+}
+
 func (p *EvaluationSetVersion) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2031,6 +2112,7 @@ func (p *EvaluationSetVersion) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
+		offset += p.fastWriteField101(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2049,6 +2131,7 @@ func (p *EvaluationSetVersion) BLength() int {
 		l += p.field13Length()
 		l += p.field14Length()
 		l += p.field100Length()
+		l += p.field101Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2144,6 +2227,15 @@ func (p *EvaluationSetVersion) fastWriteField100(buf []byte, w thrift.NocopyWrit
 	return offset
 }
 
+func (p *EvaluationSetVersion) fastWriteField101(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSharedInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 101)
+		offset += p.SharedInfo.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *EvaluationSetVersion) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -2234,6 +2326,15 @@ func (p *EvaluationSetVersion) field100Length() int {
 	return l
 }
 
+func (p *EvaluationSetVersion) field101Length() int {
+	l := 0
+	if p.IsSetSharedInfo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SharedInfo.BLength()
+	}
+	return l
+}
+
 func (p *EvaluationSetVersion) DeepCopy(s interface{}) error {
 	src, ok := s.(*EvaluationSetVersion)
 	if !ok {
@@ -2303,6 +2404,15 @@ func (p *EvaluationSetVersion) DeepCopy(s interface{}) error {
 		}
 	}
 	p.BaseInfo = _baseInfo
+
+	var _sharedInfo *common.SharedResourceInfo
+	if src.SharedInfo != nil {
+		_sharedInfo = &common.SharedResourceInfo{}
+		if err := _sharedInfo.DeepCopy(src.SharedInfo); err != nil {
+			return err
+		}
+	}
+	p.SharedInfo = _sharedInfo
 
 	return nil
 }

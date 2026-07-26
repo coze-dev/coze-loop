@@ -5066,6 +5066,676 @@ func (p *BaseInfo) Field5DeepEqual(src *int64) bool {
 	return true
 }
 
+type SharedResourceOption struct {
+	IsShared      *bool  `thrift:"is_shared,1,optional" frugal:"1,optional,bool" form:"is_shared" json:"is_shared,omitempty" query:"is_shared"`
+	SourceSpaceID *int64 `thrift:"source_space_id,2,optional" frugal:"2,optional,i64" json:"source_space_id" form:"source_space_id" query:"source_space_id"`
+}
+
+func NewSharedResourceOption() *SharedResourceOption {
+	return &SharedResourceOption{}
+}
+
+func (p *SharedResourceOption) InitDefault() {
+}
+
+var SharedResourceOption_IsShared_DEFAULT bool
+
+func (p *SharedResourceOption) GetIsShared() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsShared() {
+		return SharedResourceOption_IsShared_DEFAULT
+	}
+	return *p.IsShared
+}
+
+var SharedResourceOption_SourceSpaceID_DEFAULT int64
+
+func (p *SharedResourceOption) GetSourceSpaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceSpaceID() {
+		return SharedResourceOption_SourceSpaceID_DEFAULT
+	}
+	return *p.SourceSpaceID
+}
+func (p *SharedResourceOption) SetIsShared(val *bool) {
+	p.IsShared = val
+}
+func (p *SharedResourceOption) SetSourceSpaceID(val *int64) {
+	p.SourceSpaceID = val
+}
+
+var fieldIDToName_SharedResourceOption = map[int16]string{
+	1: "is_shared",
+	2: "source_space_id",
+}
+
+func (p *SharedResourceOption) IsSetIsShared() bool {
+	return p.IsShared != nil
+}
+
+func (p *SharedResourceOption) IsSetSourceSpaceID() bool {
+	return p.SourceSpaceID != nil
+}
+
+func (p *SharedResourceOption) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SharedResourceOption[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SharedResourceOption) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsShared = _field
+	return nil
+}
+func (p *SharedResourceOption) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SourceSpaceID = _field
+	return nil
+}
+
+func (p *SharedResourceOption) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SharedResourceOption"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SharedResourceOption) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsShared() {
+		if err = oprot.WriteFieldBegin("is_shared", thrift.BOOL, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsShared); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SharedResourceOption) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceSpaceID() {
+		if err = oprot.WriteFieldBegin("source_space_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.SourceSpaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *SharedResourceOption) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SharedResourceOption(%+v)", *p)
+
+}
+
+func (p *SharedResourceOption) DeepEqual(ano *SharedResourceOption) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.IsShared) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SourceSpaceID) {
+		return false
+	}
+	return true
+}
+
+func (p *SharedResourceOption) Field1DeepEqual(src *bool) bool {
+
+	if p.IsShared == src {
+		return true
+	} else if p.IsShared == nil || src == nil {
+		return false
+	}
+	if *p.IsShared != *src {
+		return false
+	}
+	return true
+}
+func (p *SharedResourceOption) Field2DeepEqual(src *int64) bool {
+
+	if p.SourceSpaceID == src {
+		return true
+	} else if p.SourceSpaceID == nil || src == nil {
+		return false
+	}
+	if *p.SourceSpaceID != *src {
+		return false
+	}
+	return true
+}
+
+type SharedResourceInfo struct {
+	IsShared      *bool   `thrift:"is_shared,1,optional" frugal:"1,optional,bool" form:"is_shared" json:"is_shared,omitempty" query:"is_shared"`
+	SourceSpaceID *int64  `thrift:"source_space_id,2,optional" frugal:"2,optional,i64" json:"source_space_id" form:"source_space_id" query:"source_space_id"`
+	AccessLevel   *string `thrift:"access_level,3,optional" frugal:"3,optional,string" form:"access_level" json:"access_level,omitempty" query:"access_level"`
+	VersionPolicy *string `thrift:"version_policy,4,optional" frugal:"4,optional,string" form:"version_policy" json:"version_policy,omitempty" query:"version_policy"`
+}
+
+func NewSharedResourceInfo() *SharedResourceInfo {
+	return &SharedResourceInfo{}
+}
+
+func (p *SharedResourceInfo) InitDefault() {
+}
+
+var SharedResourceInfo_IsShared_DEFAULT bool
+
+func (p *SharedResourceInfo) GetIsShared() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsShared() {
+		return SharedResourceInfo_IsShared_DEFAULT
+	}
+	return *p.IsShared
+}
+
+var SharedResourceInfo_SourceSpaceID_DEFAULT int64
+
+func (p *SharedResourceInfo) GetSourceSpaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceSpaceID() {
+		return SharedResourceInfo_SourceSpaceID_DEFAULT
+	}
+	return *p.SourceSpaceID
+}
+
+var SharedResourceInfo_AccessLevel_DEFAULT string
+
+func (p *SharedResourceInfo) GetAccessLevel() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAccessLevel() {
+		return SharedResourceInfo_AccessLevel_DEFAULT
+	}
+	return *p.AccessLevel
+}
+
+var SharedResourceInfo_VersionPolicy_DEFAULT string
+
+func (p *SharedResourceInfo) GetVersionPolicy() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVersionPolicy() {
+		return SharedResourceInfo_VersionPolicy_DEFAULT
+	}
+	return *p.VersionPolicy
+}
+func (p *SharedResourceInfo) SetIsShared(val *bool) {
+	p.IsShared = val
+}
+func (p *SharedResourceInfo) SetSourceSpaceID(val *int64) {
+	p.SourceSpaceID = val
+}
+func (p *SharedResourceInfo) SetAccessLevel(val *string) {
+	p.AccessLevel = val
+}
+func (p *SharedResourceInfo) SetVersionPolicy(val *string) {
+	p.VersionPolicy = val
+}
+
+var fieldIDToName_SharedResourceInfo = map[int16]string{
+	1: "is_shared",
+	2: "source_space_id",
+	3: "access_level",
+	4: "version_policy",
+}
+
+func (p *SharedResourceInfo) IsSetIsShared() bool {
+	return p.IsShared != nil
+}
+
+func (p *SharedResourceInfo) IsSetSourceSpaceID() bool {
+	return p.SourceSpaceID != nil
+}
+
+func (p *SharedResourceInfo) IsSetAccessLevel() bool {
+	return p.AccessLevel != nil
+}
+
+func (p *SharedResourceInfo) IsSetVersionPolicy() bool {
+	return p.VersionPolicy != nil
+}
+
+func (p *SharedResourceInfo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SharedResourceInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SharedResourceInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsShared = _field
+	return nil
+}
+func (p *SharedResourceInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SourceSpaceID = _field
+	return nil
+}
+func (p *SharedResourceInfo) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AccessLevel = _field
+	return nil
+}
+func (p *SharedResourceInfo) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.VersionPolicy = _field
+	return nil
+}
+
+func (p *SharedResourceInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SharedResourceInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SharedResourceInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsShared() {
+		if err = oprot.WriteFieldBegin("is_shared", thrift.BOOL, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsShared); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SharedResourceInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceSpaceID() {
+		if err = oprot.WriteFieldBegin("source_space_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.SourceSpaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SharedResourceInfo) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAccessLevel() {
+		if err = oprot.WriteFieldBegin("access_level", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AccessLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *SharedResourceInfo) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersionPolicy() {
+		if err = oprot.WriteFieldBegin("version_policy", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.VersionPolicy); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *SharedResourceInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SharedResourceInfo(%+v)", *p)
+
+}
+
+func (p *SharedResourceInfo) DeepEqual(ano *SharedResourceInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.IsShared) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SourceSpaceID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.AccessLevel) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.VersionPolicy) {
+		return false
+	}
+	return true
+}
+
+func (p *SharedResourceInfo) Field1DeepEqual(src *bool) bool {
+
+	if p.IsShared == src {
+		return true
+	} else if p.IsShared == nil || src == nil {
+		return false
+	}
+	if *p.IsShared != *src {
+		return false
+	}
+	return true
+}
+func (p *SharedResourceInfo) Field2DeepEqual(src *int64) bool {
+
+	if p.SourceSpaceID == src {
+		return true
+	} else if p.SourceSpaceID == nil || src == nil {
+		return false
+	}
+	if *p.SourceSpaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *SharedResourceInfo) Field3DeepEqual(src *string) bool {
+
+	if p.AccessLevel == src {
+		return true
+	} else if p.AccessLevel == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AccessLevel, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SharedResourceInfo) Field4DeepEqual(src *string) bool {
+
+	if p.VersionPolicy == src {
+		return true
+	} else if p.VersionPolicy == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.VersionPolicy, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 // 评测模型配置
 type ModelConfig struct {
 	// 模型id

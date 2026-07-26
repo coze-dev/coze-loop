@@ -64,12 +64,13 @@ type EvalOpenAPIApplication struct {
 	manager                     service.IExptManager
 	resultSvc                   service.ExptResultService
 	service.ExptAggrResultService
-	evaluatorService        service.EvaluatorService
-	evaluatorRecordService  service.EvaluatorRecordService
-	exptTemplateManager     service.IExptTemplateManager
-	configer                component.IConfiger
-	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
-	fileProvider            rpc.IFileProvider
+	evaluatorService           service.EvaluatorService
+	evaluatorRecordService     service.EvaluatorRecordService
+	exptTemplateManager        service.IExptTemplateManager
+	configer                   component.IConfiger
+	sandboxSchedulerAdapter    rpc.ISandboxSchedulerAdapter
+	fileProvider               rpc.IFileProvider
+	resourceAccessAuthorizer   service.ResourceAccessAuthorizer
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -91,6 +92,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	configer component.IConfiger,
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
 	fileProvider rpc.IFileProvider,
+	resourceAccessAuthorizer service.ResourceAccessAuthorizer,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -113,6 +115,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		configer:                    configer,
 		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
 		fileProvider:                fileProvider,
+		resourceAccessAuthorizer:    resourceAccessAuthorizer,
 	}
 }
 
@@ -177,7 +180,7 @@ func (e *EvalOpenAPIApplication) ImportEvaluationSetOApi(ctx context.Context, re
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(req.GetWorkspaceID()), req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(req.GetWorkspaceID()), req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +274,7 @@ func (e *EvalOpenAPIApplication) GetEvaluationSetOApi(ctx context.Context, req *
 	}
 
 	// 调用domain服务
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +318,7 @@ func (e *EvalOpenAPIApplication) UpdateEvaluationSetOApi(ctx context.Context, re
 	}
 
 	// 调用domain服务
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +367,7 @@ func (e *EvalOpenAPIApplication) DeleteEvaluationSetOApi(ctx context.Context, re
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 调用domain服务
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -416,6 +419,63 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 	if err != nil {
 		return nil, err
 	}
+	sharedOption, err := parseSharedOptionOApi(req.SharedOption)
+	if err != nil {
+		return nil, err
+	}
+	if sharedOption != nil && sharedOption.IsShared {
+		var sourceFilter *int64
+		if sharedOption.SourceSpaceID != nil && gptr.Indirect(sharedOption.SourceSpaceID) > 0 {
+			sourceFilter = sharedOption.SourceSpaceID
+		}
+		accessCtxs, err := e.resourceAccessAuthorizer.ListSharedResources(ctx, &entity.ListSharedResourcesRequest{
+			CallerSpaceID:     req.GetWorkspaceID(),
+			ResourceType:      entity.SharedResourceTypeEvalSet,
+			SourceSpaceFilter: sourceFilter,
+		})
+		if err != nil {
+			return nil, err
+		}
+		idsBySource := make(map[int64][]int64)
+		ctxByKey := make(map[string]*entity.ResourceAccessContext)
+		sourceOrder := make([]int64, 0)
+		for _, accessCtx := range accessCtxs {
+			if accessCtx == nil {
+				continue
+			}
+			src := accessCtx.ResourceSpaceID
+			if _, ok := idsBySource[src]; !ok {
+				sourceOrder = append(sourceOrder, src)
+			}
+			idsBySource[src] = append(idsBySource[src], accessCtx.ResourceID)
+			ctxByKey[sharedResourceKey(src, accessCtx.ResourceID)] = accessCtx
+		}
+		allSets := make([]*entity.EvaluationSet, 0)
+		for _, src := range sourceOrder {
+			so := &entity.SharedResourceOption{IsShared: true, SourceSpaceID: gptr.Of(src)}
+			sets, loadErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(req.GetWorkspaceID()), idsBySource[src], gptr.Of(false), so)
+			if loadErr != nil {
+				return nil, loadErr
+			}
+			for _, set := range sets {
+				if set == nil {
+					continue
+				}
+				if accessCtx, ok := ctxByKey[sharedResourceKey(set.SpaceID, set.ID)]; ok {
+					set.SharedInfo = accessCtx.SharedInfo()
+				}
+				allSets = append(allSets, set)
+			}
+		}
+		dtos := evaluation_set.OpenAPIEvaluationSetDO2DTOs(allSets)
+		total := int64(len(dtos))
+		return &openapi.ListEvaluationSetsOApiResponse{
+			Data: &openapi.ListEvaluationSetsOpenAPIData{
+				Sets:  dtos,
+				Total: &total,
+			},
+		}, nil
+	}
 	tagFilter, err := evaluation_set.OpenAPITagFilterQueryDTO2DO(req.GetTagNames(), req.TagFilterRelation)
 	if err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
@@ -450,6 +510,33 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 	}, nil
 }
 
+func parseSharedOptionOApi(option any) (*entity.SharedResourceOption, error) {
+	var dto *openapiCommon.SharedResourceOption
+	switch value := option.(type) {
+	case nil:
+		return nil, nil
+	case *string:
+		if value == nil || strings.TrimSpace(*value) == "" {
+			return nil, nil
+		}
+		dto = &openapiCommon.SharedResourceOption{}
+		if err := json.Unmarshal([]byte(*value), dto); err != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid shared_option"))
+		}
+	case *openapiCommon.SharedResourceOption:
+		dto = value
+	default:
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid shared_option"))
+	}
+	if dto == nil || !dto.GetIsShared() {
+		return nil, nil
+	}
+	return &entity.SharedResourceOption{
+		IsShared:      true,
+		SourceSpaceID: dto.SourceSpaceID,
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) CreateEvaluationSetVersionOApi(ctx context.Context, req *openapi.CreateEvaluationSetVersionOApiRequest) (r *openapi.CreateEvaluationSetVersionOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -464,7 +551,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetVersionOApi(ctx context.Cont
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("version is required"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -509,43 +596,53 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionsOApi(ctx context.Conte
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	sharedOption, err := parseSharedOptionOApi(req.SharedOption)
+	if err != nil {
+		return nil, err
+	}
+	if sharedOption != nil && !sharedOption.Enabled() {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when shared_option.is_shared is true"))
+	}
+	// 鉴权：先用sharedOption加载set（共享时重定向到来源空间）
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, sharedOption)
 	if err != nil {
 		return nil, err
 	}
 	if set == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
 	}
-	var ownerID *string
-	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
-		ownerID = set.BaseInfo.CreatedBy.UserID
-	}
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(set.ID, 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
-		OwnerID:         ownerID,
-		ResourceSpaceID: set.SpaceID,
-	})
+	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.GetWorkspaceID(), set, sharedOption, nil, nil, false))
 	if err != nil {
 		return nil, err
 	}
+	set.SharedInfo = accessCtx.SharedInfo()
 	// domain调用
 	versions, total, nextCursor, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
-		SpaceID:         req.GetWorkspaceID(),
+		SpaceID:         accessCtx.QuerySpaceID(),
 		EvaluationSetID: req.GetEvaluationSetID(),
 		PageSize:        req.PageSize,
 		PageToken:       req.PageToken,
 		VersionLike:     req.VersionLike,
+		SharedOption:    sharedOption,
 	})
 	if err != nil {
 		return nil, err
 	}
+	if accessCtx.IsShared() {
+		filteredVersions := make([]*entity.EvaluationSetVersion, 0, len(versions))
+		for _, version := range versions {
+			if service.IsSharedVersionAllowed(version.ID, version.Version, set.LatestVersion, accessCtx.VersionPolicy, accessCtx.SpecifiedIDs) {
+				version.SharedInfo = accessCtx.SharedInfo()
+				filteredVersions = append(filteredVersions, version)
+			}
+		}
+		versions = filteredVersions
+	}
 	// 返回结果构建、错误处理
+	versionDTOs := evaluation_set.OpenAPIEvaluationSetVersionDO2DTOs(versions)
 	return &openapi.ListEvaluationSetVersionsOApiResponse{
 		Data: &openapi.ListEvaluationSetVersionsOpenAPIData{
-			Versions:      evaluation_set.OpenAPIEvaluationSetVersionDO2DTOs(versions),
+			Versions:      versionDTOs,
 			Total:         total,
 			NextPageToken: nextCursor,
 		},
@@ -566,7 +663,7 @@ func (e *EvalOpenAPIApplication) BatchCreateEvaluationSetItemsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is required"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -623,7 +720,7 @@ func (e *EvalOpenAPIApplication) BatchUpdateEvaluationSetItemsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is required"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -680,7 +777,7 @@ func (e *EvalOpenAPIApplication) BatchDeleteEvaluationSetItemsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is required"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -728,29 +825,26 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	sharedOption, err := parseSharedOptionOApi(req.SharedOption)
+	if err != nil {
+		return nil, err
+	}
+	if sharedOption != nil && !sharedOption.Enabled() {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when shared_option.is_shared is true"))
+	}
+	// 鉴权：共享场景下按来源空间加载评测集
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true), sharedOption)
 	if err != nil {
 		return nil, err
 	}
 	if set == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
 	}
-	var ownerID *string
-	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
-		ownerID = set.BaseInfo.CreatedBy.UserID
-	}
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(set.ID, 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
-		OwnerID:         ownerID,
-		ResourceSpaceID: set.SpaceID,
-	})
+	// item 内容路径要求 readable（execute 黑盒不可读内容）
+	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.GetWorkspaceID(), set, sharedOption, nil, nil, true))
 	if err != nil {
 		return nil, err
 	}
-
 	tagFilter, err := evaluation_set.OpenAPITagFilterQueryDTO2DO(req.GetTagNames(), req.TagFilterRelation)
 	if err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
@@ -760,9 +854,9 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
 
-	// 调用domain服务
+	// 调用domain服务：共享时用来源空间查询 item
 	items, total, filterTotal, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-		SpaceID:         req.GetWorkspaceID(),
+		SpaceID:         accessCtx.QuerySpaceID(),
 		EvaluationSetID: req.GetEvaluationSetID(),
 		VersionID:       req.VersionID,
 		PageSize:        req.PageSize,
@@ -804,7 +898,7 @@ func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context,
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -870,7 +964,7 @@ func (e *EvalOpenAPIApplication) UpdateEvaluationSetSchemaOApi(ctx context.Conte
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2907,7 +3001,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetItemVersionsOApi(ctx context.C
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2963,7 +3057,7 @@ func (e *EvalOpenAPIApplication) GetEvaluationSetItemVersionOApi(ctx context.Con
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true), nil)
 	if err != nil {
 		return nil, err
 	}
