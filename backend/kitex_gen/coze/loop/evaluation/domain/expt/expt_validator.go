@@ -75,6 +75,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field NotificationConf not valid, %w", err)
 		}
 	}
+	if p.RunModeConfig != nil {
+		if err := p.RunModeConfig.IsValid(); err != nil {
+			return fmt.Errorf("field RunModeConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {

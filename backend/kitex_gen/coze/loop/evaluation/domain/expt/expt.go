@@ -1768,6 +1768,9 @@ type Experiment struct {
 	EvaluatorsConcurNum *int32 `thrift:"evaluators_concur_num,113,optional" frugal:"113,optional,i32" form:"evaluators_concur_num" json:"evaluators_concur_num,omitempty" query:"evaluators_concur_num"`
 	// 实验绑定 item 总数; 首跑前可能缺省
 	TotalItemCount *int64 `thrift:"total_item_count,114,optional" frugal:"114,optional,i64" json:"total_item_count" form:"total_item_count" query:"total_item_count"`
+	// 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
+	// 仅 SandboxAgent + MultiSetConfig 实验非空。sua_model_id 回显平台模型 ID; api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
+	RunModeConfig *RunModeConfig `thrift:"run_mode_config,115,optional" frugal:"115,optional,RunModeConfig" form:"run_mode_config" json:"run_mode_config,omitempty" query:"run_mode_config"`
 }
 
 func NewExperiment() *Experiment {
@@ -2328,6 +2331,18 @@ func (p *Experiment) GetTotalItemCount() (v int64) {
 	}
 	return *p.TotalItemCount
 }
+
+var Experiment_RunModeConfig_DEFAULT *RunModeConfig
+
+func (p *Experiment) GetRunModeConfig() (v *RunModeConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunModeConfig() {
+		return Experiment_RunModeConfig_DEFAULT
+	}
+	return p.RunModeConfig
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -2466,6 +2481,9 @@ func (p *Experiment) SetEvaluatorsConcurNum(val *int32) {
 func (p *Experiment) SetTotalItemCount(val *int64) {
 	p.TotalItemCount = val
 }
+func (p *Experiment) SetRunModeConfig(val *RunModeConfig) {
+	p.RunModeConfig = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:   "id",
@@ -2514,6 +2532,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	112: "eval_set_details",
 	113: "evaluators_concur_num",
 	114: "total_item_count",
+	115: "run_mode_config",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -2698,6 +2717,10 @@ func (p *Experiment) IsSetEvaluatorsConcurNum() bool {
 
 func (p *Experiment) IsSetTotalItemCount() bool {
 	return p.TotalItemCount != nil
+}
+
+func (p *Experiment) IsSetRunModeConfig() bool {
+	return p.RunModeConfig != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -3081,6 +3104,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 114:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField114(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 115:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField115(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3686,6 +3717,14 @@ func (p *Experiment) ReadField114(iprot thrift.TProtocol) error {
 	p.TotalItemCount = _field
 	return nil
 }
+func (p *Experiment) ReadField115(iprot thrift.TProtocol) error {
+	_field := NewRunModeConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RunModeConfig = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3875,6 +3914,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField114(oprot); err != nil {
 			fieldId = 114
+			goto WriteFieldError
+		}
+		if err = p.writeField115(oprot); err != nil {
+			fieldId = 115
 			goto WriteFieldError
 		}
 	}
@@ -4782,6 +4825,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 114 end error: ", p), err)
 }
+func (p *Experiment) writeField115(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunModeConfig() {
+		if err = oprot.WriteFieldBegin("run_mode_config", thrift.STRUCT, 115); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RunModeConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 115 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 115 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -4933,6 +4994,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field114DeepEqual(ano.TotalItemCount) {
+		return false
+	}
+	if !p.Field115DeepEqual(ano.RunModeConfig) {
 		return false
 	}
 	return true
@@ -5443,6 +5507,13 @@ func (p *Experiment) Field114DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.TotalItemCount != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field115DeepEqual(src *RunModeConfig) bool {
+
+	if !p.RunModeConfig.DeepEqual(src) {
 		return false
 	}
 	return true

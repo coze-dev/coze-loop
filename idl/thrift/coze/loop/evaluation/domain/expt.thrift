@@ -156,6 +156,9 @@ struct Experiment {
     113: optional i32 evaluators_concur_num
     // 实验绑定 item 总数; 首跑前可能缺省
     114: optional i64 total_item_count (api.js_conv='true', go.tag='json:"total_item_count"')
+    // 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
+    // 仅 SandboxAgent + MultiSetConfig 实验非空。sua_model_id 回显平台模型 ID; api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
+    115: optional RunModeConfig run_mode_config
 }
 
 // 实验模板基础信息

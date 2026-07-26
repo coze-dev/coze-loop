@@ -474,6 +474,11 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	if experiment.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
 		res.TotalItemCount = gptr.Of(experiment.TotalItemCount)
 	}
+	// run_mode_config 回显: 从 eval_conf.RunModeConfig 反序列化 (仅 SandboxAgent + MultiSetConfig 非空)。
+	// 密钥不落回显, 见 runModeConfigDO2DTO 注释。
+	if experiment.EvalConf != nil && experiment.EvalConf.RunModeConfig != nil {
+		res.RunModeConfig = runModeConfigDO2DTO(experiment.EvalConf.RunModeConfig)
+	}
 
 	// ★ §2 老字段降级投影 (新实验 MultiSetConfig): 老字段 = 主集封面/去重投影, 仅当 flat 来源为空才兜底
 	projectLegacyFieldsFromPrimarySet(experiment, res)
@@ -1387,5 +1392,50 @@ func suaModeDTO2DO(m domain_expt.SuaMode) entity.SuaMode {
 		return entity.SuaModeFixed
 	default:
 		return entity.SuaModeHumanLoop
+	}
+}
+
+// runModeConfigDO2DTO 把实验级跑法配置回显给 DTO (与 runModeConfigDTO2DO 反向)。
+// 入参为空 (未配多轮/老实验) 返回 nil, DTO 字段留空不影响老实验。
+// ⚠️ 只回显 run_mode/max_run_minutes/sua_mode/sua_model_id; api_key/base_url 是运行时从 TCC
+// 解析注入 case-file 的密钥, 领域实体本就不持有, 绝不落回显。
+func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
+	if do == nil {
+		return nil
+	}
+	dto := &domain_expt.RunModeConfig{
+		RunMode:    gptr.Of(suaRunModeDO2DTO(do.RunMode)),
+		SuaModelID: gptr.Of(do.SuaModelID),
+	}
+	if do.MaxRunMinutes != 0 {
+		dto.MaxRunMinutes = gptr.Of(int32(do.MaxRunMinutes))
+	}
+	if do.SuaMode != "" {
+		dto.SuaMode = gptr.Of(suaModeDO2DTO(do.SuaMode))
+	}
+	return dto
+}
+
+func suaRunModeDO2DTO(m entity.RunMode) domain_expt.ExptRunMode {
+	switch m {
+	case entity.RunModeFixedScriptMultiTurn:
+		return domain_expt.ExptRunMode_FixedScriptMultiTurn
+	case entity.RunModeSUAMultiTurn:
+		return domain_expt.ExptRunMode_SuaMultiTurn
+	case entity.RunModeGoal:
+		return domain_expt.ExptRunMode_Goal
+	default:
+		return domain_expt.ExptRunMode_SingleTurn
+	}
+}
+
+func suaModeDO2DTO(m entity.SuaMode) domain_expt.SuaMode {
+	switch m {
+	case entity.SuaModeLoop:
+		return domain_expt.SuaMode_Loop
+	case entity.SuaModeFixed:
+		return domain_expt.SuaMode_Fixed
+	default:
+		return domain_expt.SuaMode_HumanLoop
 	}
 }
