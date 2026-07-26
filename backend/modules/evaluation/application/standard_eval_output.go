@@ -867,7 +867,8 @@ func standardAgent(item *entity.ItemResult, exptID int64, opt standardEvalOutput
 		if first == nil {
 			first = rec
 		}
-		runs = append(runs, map[string]any{"target_record_id": rec.ID, "experiment_run_id": rec.ExperimentRunID, "status": rec.Status, "trace_id": rec.TraceID, "log_id": rec.LogID})
+		// i64 id 在 inline JSON 里必须 string 化，否则 JSON number 超 float64 精度会丢尾数（下游反查取错）。
+		runs = append(runs, map[string]any{"target_record_id": int64String(rec.ID), "experiment_run_id": int64String(rec.ExperimentRunID), "status": rec.Status, "trace_id": rec.TraceID, "log_id": rec.LogID})
 	}
 	runtimeParam := runtimeParamObjectFromTargetRecord(first)
 	// 空值不填 key（D11）：字符串空串 / 数值 0 视为无意义，不放进输出 map，避免一堆空占位。
