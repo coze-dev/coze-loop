@@ -13,11 +13,12 @@ import (
 )
 
 type ListEvaluatorsRequest struct {
-	WorkspaceID   int64                     `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	SearchName    *string                   `thrift:"search_name,2,optional" frugal:"2,optional,string" form:"search_name" json:"search_name,omitempty"`
-	CreatorIds    []int64                   `thrift:"creator_ids,3,optional" frugal:"3,optional,list<i64>" json:"creator_ids" form:"creator_ids" `
-	EvaluatorType []evaluator.EvaluatorType `thrift:"evaluator_type,4,optional" frugal:"4,optional,list<EvaluatorType>" form:"evaluator_type" json:"evaluator_type,omitempty"`
-	WithVersion   *bool                     `thrift:"with_version,5,optional" frugal:"5,optional,bool" form:"with_version" json:"with_version,omitempty"`
+	WorkspaceID       int64                     `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	SearchName        *string                   `thrift:"search_name,2,optional" frugal:"2,optional,string" form:"search_name" json:"search_name,omitempty"`
+	SearchDescription *string                   `thrift:"search_description,6,optional" frugal:"6,optional,string" form:"search_description" json:"search_description,omitempty"`
+	CreatorIds        []int64                   `thrift:"creator_ids,3,optional" frugal:"3,optional,list<i64>" json:"creator_ids" form:"creator_ids" `
+	EvaluatorType     []evaluator.EvaluatorType `thrift:"evaluator_type,4,optional" frugal:"4,optional,list<EvaluatorType>" form:"evaluator_type" json:"evaluator_type,omitempty"`
+	WithVersion       *bool                     `thrift:"with_version,5,optional" frugal:"5,optional,bool" form:"with_version" json:"with_version,omitempty"`
 	// 是否查询预置评估器
 	Builtin *bool `thrift:"builtin,11,optional" frugal:"11,optional,bool" form:"builtin" json:"builtin,omitempty"`
 	// 筛选器选项
@@ -52,6 +53,18 @@ func (p *ListEvaluatorsRequest) GetSearchName() (v string) {
 		return ListEvaluatorsRequest_SearchName_DEFAULT
 	}
 	return *p.SearchName
+}
+
+var ListEvaluatorsRequest_SearchDescription_DEFAULT string
+
+func (p *ListEvaluatorsRequest) GetSearchDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSearchDescription() {
+		return ListEvaluatorsRequest_SearchDescription_DEFAULT
+	}
+	return *p.SearchDescription
 }
 
 var ListEvaluatorsRequest_CreatorIds_DEFAULT []int64
@@ -167,6 +180,9 @@ func (p *ListEvaluatorsRequest) SetWorkspaceID(val int64) {
 func (p *ListEvaluatorsRequest) SetSearchName(val *string) {
 	p.SearchName = val
 }
+func (p *ListEvaluatorsRequest) SetSearchDescription(val *string) {
+	p.SearchDescription = val
+}
 func (p *ListEvaluatorsRequest) SetCreatorIds(val []int64) {
 	p.CreatorIds = val
 }
@@ -198,6 +214,7 @@ func (p *ListEvaluatorsRequest) SetBase(val *base.Base) {
 var fieldIDToName_ListEvaluatorsRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "search_name",
+	6:   "search_description",
 	3:   "creator_ids",
 	4:   "evaluator_type",
 	5:   "with_version",
@@ -211,6 +228,10 @@ var fieldIDToName_ListEvaluatorsRequest = map[int16]string{
 
 func (p *ListEvaluatorsRequest) IsSetSearchName() bool {
 	return p.SearchName != nil
+}
+
+func (p *ListEvaluatorsRequest) IsSetSearchDescription() bool {
+	return p.SearchDescription != nil
 }
 
 func (p *ListEvaluatorsRequest) IsSetCreatorIds() bool {
@@ -280,6 +301,14 @@ func (p *ListEvaluatorsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -412,6 +441,17 @@ func (p *ListEvaluatorsRequest) ReadField2(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.SearchName = _field
+	return nil
+}
+func (p *ListEvaluatorsRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SearchDescription = _field
 	return nil
 }
 func (p *ListEvaluatorsRequest) ReadField3(iprot thrift.TProtocol) error {
@@ -558,6 +598,10 @@ func (p *ListEvaluatorsRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 2
 			goto WriteFieldError
 		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
 			goto WriteFieldError
@@ -645,6 +689,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListEvaluatorsRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSearchDescription() {
+		if err = oprot.WriteFieldBegin("search_description", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SearchDescription); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *ListEvaluatorsRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCreatorIds() {
@@ -853,6 +915,9 @@ func (p *ListEvaluatorsRequest) DeepEqual(ano *ListEvaluatorsRequest) bool {
 	if !p.Field2DeepEqual(ano.SearchName) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.SearchDescription) {
+		return false
+	}
 	if !p.Field3DeepEqual(ano.CreatorIds) {
 		return false
 	}
@@ -898,6 +963,18 @@ func (p *ListEvaluatorsRequest) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.SearchName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluatorsRequest) Field6DeepEqual(src *string) bool {
+
+	if p.SearchDescription == src {
+		return true
+	} else if p.SearchDescription == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SearchDescription, *src) != 0 {
 		return false
 	}
 	return true
