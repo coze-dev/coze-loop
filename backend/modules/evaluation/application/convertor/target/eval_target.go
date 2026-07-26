@@ -606,14 +606,15 @@ func SandboxAgentDTO2DO(dtoObj *dto.SandboxAgent) *do.SandboxAgent {
 		return nil
 	}
 	return &do.SandboxAgent{
-		Name:           gptr.Indirect(dtoObj.Name),
-		Type:           do.SandboxAgentType(gptr.Indirect(dtoObj.Type)),
-		ModelName:      gptr.Indirect(dtoObj.ModelName),
-		AgentSetupCmd:  gptr.Indirect(dtoObj.AgentSetupCmd),
-		AgentRunCmd:    gptr.Indirect(dtoObj.AgentRunCmd),
-		Envs:           SandboxEnvVarsDTO2DO(dtoObj.Envs),
-		Image:          gptr.Indirect(dtoObj.Image),
-		EnableAnalysis: gptr.Indirect(dtoObj.EnableAnalysis),
+		Name:             gptr.Indirect(dtoObj.Name),
+		Type:             do.SandboxAgentType(gptr.Indirect(dtoObj.Type)),
+		ModelName:        gptr.Indirect(dtoObj.ModelName),
+		AgentSetupCmd:    gptr.Indirect(dtoObj.AgentSetupCmd),
+		AgentRunCmd:      gptr.Indirect(dtoObj.AgentRunCmd),
+		Envs:             SandboxEnvVarsDTO2DO(dtoObj.Envs),
+		Image:            gptr.Indirect(dtoObj.Image),
+		EnableAnalysis:   gptr.Indirect(dtoObj.EnableAnalysis),
+		SandboxCountMode: do.SandboxCountMode(gptr.Indirect(dtoObj.SandboxCountMode)),
 	}
 }
 
@@ -621,7 +622,7 @@ func SandboxAgentDO2DTO(doObj *do.SandboxAgent) *dto.SandboxAgent {
 	if doObj == nil {
 		return nil
 	}
-	return &dto.SandboxAgent{
+	res := &dto.SandboxAgent{
 		Name:           gptr.Of(doObj.Name),
 		Type:           gptr.Of(dto.SandboxAgentType(doObj.Type)),
 		ModelName:      gptr.Of(doObj.ModelName),
@@ -631,6 +632,12 @@ func SandboxAgentDO2DTO(doObj *do.SandboxAgent) *dto.SandboxAgent {
 		Image:          gptr.Of(doObj.Image),
 		EnableAnalysis: gptr.Of(doObj.EnableAnalysis),
 	}
+	// 历史记录里没有 SandboxCountMode 字段，entity 为空串；此时保持 DTO 为 nil，
+	// 保留旧的 wire 语义（消费者 IsSet 为 false），避免误让老客户端认为该字段被显式设置为 ""。
+	if doObj.SandboxCountMode != "" {
+		res.SandboxCountMode = gptr.Of(dto.SandboxCountMode(doObj.SandboxCountMode))
+	}
+	return res
 }
 
 func SandboxEnvVarsDTO2DO(dtoObjs []*dto.SandboxEnvVar) []*do.SandboxEnvVar {

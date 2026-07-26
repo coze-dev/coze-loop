@@ -48,6 +48,21 @@ const (
 	SandboxDestroyTypeExecute SandboxDestroyType = 1
 )
 
+// SandboxTenant 沙箱租户，与 stone.cozeloop.agent_studio 的 sandbox_scheduler.Tenant 枚举保持数值一致。
+// 决定容器 start_cmd / env 注入 / case-file 等能力开关，Init 时下发，一个 task 只能配置一次。
+type SandboxTenant int32
+
+const (
+	// SandboxTenantDefault = FornaxTraeEval，兼容单沙箱链路的默认租户。
+	SandboxTenantDefault SandboxTenant = 0
+	// SandboxTenantGeneralAgent 通用 agent 场景。
+	SandboxTenantGeneralAgent SandboxTenant = 1
+	// SandboxTenantLabelingAnalysis 标注 / 分析场景。
+	SandboxTenantLabelingAnalysis SandboxTenant = 2
+	// SandboxTenantFornaxTraeEvalDualSandbox = FornaxTraeEvalDoubleSandbox，双沙箱模式。
+	SandboxTenantFornaxTraeEvalDualSandbox SandboxTenant = 3
+)
+
 // ---------- Domain ----------
 
 // SandboxExecuteError 单次执行错误信息。
@@ -88,6 +103,9 @@ type SandboxInitRequest struct {
 	Concurrency int32
 	Metadata    map[string]string
 	WorkspaceID int64
+	// Tenant 沙箱租户；未显式设置（值为 SandboxTenantDefault）时沿用调度侧默认租户 FornaxTraeEval。
+	// 双沙箱模式的评测对象必须传 SandboxTenantFornaxTraeEvalDualSandbox。
+	Tenant SandboxTenant
 }
 
 // SandboxInitResponse 初始化任务响应。
@@ -101,11 +119,31 @@ type SandboxRunRequest struct {
 	TaskID      string
 	Param       map[string]string
 	WorkspaceID int64
+	// StartCmd 覆盖沙箱容器启动后执行的默认命令；仅在租户开启 start_cmd 能力时生效。
+	StartCmd string
+	// Env 会与租户策略注入的环境变量合并；同名 key 以调用方为准（含 FORNAX_* 前缀）。
+	Env map[string]string
+	// Sync 为 true 时同步等待 session 创建完成，返回 SessionID；默认异步返回。
+	Sync bool
+	// Files 在 session 创建后、StartCmd 执行前写入容器内的文件。
+	Files []*SandboxFileWrite
+}
+
+// SandboxFileWrite 单个待写入沙箱容器的文件。
+type SandboxFileWrite struct {
+	// Path 容器内绝对路径。
+	Path string
+	// Content UTF-8 文本；IsBase64=true 时按 base64 解码后写入。
+	Content string
+	// IsBase64 表示 Content 是 base64 编码的二进制内容。
+	IsBase64 bool
 }
 
 // SandboxRunResponse 提交一次执行响应。
 type SandboxRunResponse struct {
 	ExecuteID string
+	// SessionID 仅在 SandboxRunRequest.Sync=true 时返回；异步模式下 session 未创建，值为空。
+	SessionID string
 }
 
 // SandboxGetRequest 查询执行请求。
