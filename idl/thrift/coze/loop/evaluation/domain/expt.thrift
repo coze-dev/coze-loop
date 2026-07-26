@@ -49,6 +49,32 @@ enum SourceType {
     IntelligentGen =4    // 智能生成
 }
 
+// ExptRunMode 实验评测模式(跑法)。对齐 runtime runModeFromInt: 1=single/2=fixed/3=sua/4=goal。
+// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
+enum ExptRunMode {
+    SingleTurn           = 1    // 单轮
+    FixedScriptMultiTurn = 2    // 固定脚本多轮
+    SuaMultiTurn         = 3    // SUA 驱动多轮
+    Goal                 = 4    // 目标驱动
+}
+
+// SuaMode 模拟用户(SUA)生成下一轮 query 的模式。对齐 runtime sua.Mode。
+enum SuaMode {
+    HumanLoop = 1    // LLM 按人设驱动
+    Loop      = 2    // 上轮 eval 结果透传成下一轮
+    Fixed     = 3    // 照固定脚本
+}
+
+// SuaRunConfig 实验级多轮/SUA 跑法子配置。run_mode 决定编排模式;
+// sua_mode / sua_model_name 仅在 SUA 驱动模式生效。sua_model_name 只传模型名,
+// 密钥由服务端 operator 解析注入 case-file, 绝不进请求体/落库明文。
+struct SuaRunConfig {
+    1: optional ExptRunMode run_mode (api.body = 'run_mode')
+    2: optional SuaMode sua_mode (api.body = 'sua_mode')
+    3: optional string sua_model_name (api.body = 'sua_model_name')
+    4: optional i32 max_run_minutes (api.body = 'max_run_minutes')
+}
+
 typedef string Visibility(ts.enum="true")
 const Visibility Visibility_Hidden = "hidden"
 

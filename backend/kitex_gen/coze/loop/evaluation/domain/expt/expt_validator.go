@@ -21,6 +21,9 @@ var (
 	_ = time.Nanosecond
 )
 
+func (p *SuaRunConfig) IsValid() error {
+	return nil
+}
 func (p *Experiment) IsValid() error {
 	if p.EvalSet != nil {
 		if err := p.EvalSet.IsValid(); err != nil {

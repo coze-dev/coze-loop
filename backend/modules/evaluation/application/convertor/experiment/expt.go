@@ -37,6 +37,7 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 	ec := &entity.EvaluationConfiguration{
 		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:           cer.Ext,
+		SuaRunConfig:  suaRunConfigDTO2DO(cer.GetSuaRunConfig()),
 	}
 
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
@@ -962,6 +963,7 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 	ec := &entity.EvaluationConfiguration{
 		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
 		Ext:           cer.Ext,
+		SuaRunConfig:  suaRunConfigDTO2DO(cer.GetSuaRunConfig()),
 	}
 	if cer.GetItemRetryNum() > 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
@@ -1342,4 +1344,48 @@ func notificationConfDO2DTO(conf *entity.ExptNotificationConf) *domain_expt.Expt
 		}
 	}
 	return result
+}
+
+// suaRunConfigDTO2DO 把请求 DTO 的实验级多轮/SUA 子配置转为领域实体。
+// 枚举经 DTO String() 映射为领域字符串 (single_turn/sua_multi_turn... 与 runtime 对齐)。
+// 入参为空 (未配多轮) 返回 nil, 走老路径不变。
+func suaRunConfigDTO2DO(dto *domain_expt.SuaRunConfig) *entity.SuaRunConfig {
+	if dto == nil {
+		return nil
+	}
+	do := &entity.SuaRunConfig{
+		SuaModelName:  dto.GetSuaModelName(),
+		MaxRunMinutes: int(dto.GetMaxRunMinutes()),
+	}
+	if dto.IsSetRunMode() {
+		do.RunMode = suaRunModeDTO2DO(dto.GetRunMode())
+	}
+	if dto.IsSetSuaMode() {
+		do.SuaMode = suaModeDTO2DO(dto.GetSuaMode())
+	}
+	return do
+}
+
+func suaRunModeDTO2DO(m domain_expt.ExptRunMode) entity.RunMode {
+	switch m {
+	case domain_expt.ExptRunMode_FixedScriptMultiTurn:
+		return entity.RunModeFixedScriptMultiTurn
+	case domain_expt.ExptRunMode_SuaMultiTurn:
+		return entity.RunModeSUAMultiTurn
+	case domain_expt.ExptRunMode_Goal:
+		return entity.RunModeGoal
+	default:
+		return entity.RunModeSingleTurn
+	}
+}
+
+func suaModeDTO2DO(m domain_expt.SuaMode) entity.SuaMode {
+	switch m {
+	case domain_expt.SuaMode_Loop:
+		return entity.SuaModeLoop
+	case domain_expt.SuaMode_Fixed:
+		return entity.SuaModeFixed
+	default:
+		return entity.SuaModeHumanLoop
+	}
 }

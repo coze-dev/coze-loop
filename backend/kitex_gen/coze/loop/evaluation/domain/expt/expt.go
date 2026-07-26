@@ -344,6 +344,115 @@ func (p *SourceType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+// ExptRunMode 实验评测模式(跑法)。对齐 runtime runModeFromInt: 1=single/2=fixed/3=sua/4=goal。
+// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
+type ExptRunMode int64
+
+const (
+	// 单轮
+	ExptRunMode_SingleTurn ExptRunMode = 1
+	// 固定脚本多轮
+	ExptRunMode_FixedScriptMultiTurn ExptRunMode = 2
+	// SUA 驱动多轮
+	ExptRunMode_SuaMultiTurn ExptRunMode = 3
+	// 目标驱动
+	ExptRunMode_Goal ExptRunMode = 4
+)
+
+func (p ExptRunMode) String() string {
+	switch p {
+	case ExptRunMode_SingleTurn:
+		return "SingleTurn"
+	case ExptRunMode_FixedScriptMultiTurn:
+		return "FixedScriptMultiTurn"
+	case ExptRunMode_SuaMultiTurn:
+		return "SuaMultiTurn"
+	case ExptRunMode_Goal:
+		return "Goal"
+	}
+	return "<UNSET>"
+}
+
+func ExptRunModeFromString(s string) (ExptRunMode, error) {
+	switch s {
+	case "SingleTurn":
+		return ExptRunMode_SingleTurn, nil
+	case "FixedScriptMultiTurn":
+		return ExptRunMode_FixedScriptMultiTurn, nil
+	case "SuaMultiTurn":
+		return ExptRunMode_SuaMultiTurn, nil
+	case "Goal":
+		return ExptRunMode_Goal, nil
+	}
+	return ExptRunMode(0), fmt.Errorf("not a valid ExptRunMode string")
+}
+
+func ExptRunModePtr(v ExptRunMode) *ExptRunMode { return &v }
+func (p *ExptRunMode) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = ExptRunMode(result.Int64)
+	return
+}
+
+func (p *ExptRunMode) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+// SuaMode 模拟用户(SUA)生成下一轮 query 的模式。对齐 runtime sua.Mode。
+type SuaMode int64
+
+const (
+	// LLM 按人设驱动
+	SuaMode_HumanLoop SuaMode = 1
+	// 上轮 eval 结果透传成下一轮
+	SuaMode_Loop SuaMode = 2
+	// 照固定脚本
+	SuaMode_Fixed SuaMode = 3
+)
+
+func (p SuaMode) String() string {
+	switch p {
+	case SuaMode_HumanLoop:
+		return "HumanLoop"
+	case SuaMode_Loop:
+		return "Loop"
+	case SuaMode_Fixed:
+		return "Fixed"
+	}
+	return "<UNSET>"
+}
+
+func SuaModeFromString(s string) (SuaMode, error) {
+	switch s {
+	case "HumanLoop":
+		return SuaMode_HumanLoop, nil
+	case "Loop":
+		return SuaMode_Loop, nil
+	case "Fixed":
+		return SuaMode_Fixed, nil
+	}
+	return SuaMode(0), fmt.Errorf("not a valid SuaMode string")
+}
+
+func SuaModePtr(v SuaMode) *SuaMode { return &v }
+func (p *SuaMode) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = SuaMode(result.Int64)
+	return
+}
+
+func (p *SuaMode) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type WebhookEnvironment int64
 
 const (
@@ -1177,6 +1286,423 @@ type InsightAnalysisReportVoteType = string
 
 // 反馈动作
 type FeedbackActionType = string
+
+// SuaRunConfig 实验级多轮/SUA 跑法子配置。run_mode 决定编排模式;
+// sua_mode / sua_model_name 仅在 SUA 驱动模式生效。sua_model_name 只传模型名,
+// 密钥由服务端 operator 解析注入 case-file, 绝不进请求体/落库明文。
+type SuaRunConfig struct {
+	RunMode       *ExptRunMode `thrift:"run_mode,1,optional" frugal:"1,optional,ExptRunMode" form:"run_mode" json:"run_mode,omitempty"`
+	SuaMode       *SuaMode     `thrift:"sua_mode,2,optional" frugal:"2,optional,SuaMode" form:"sua_mode" json:"sua_mode,omitempty"`
+	SuaModelName  *string      `thrift:"sua_model_name,3,optional" frugal:"3,optional,string" form:"sua_model_name" json:"sua_model_name,omitempty"`
+	MaxRunMinutes *int32       `thrift:"max_run_minutes,4,optional" frugal:"4,optional,i32" form:"max_run_minutes" json:"max_run_minutes,omitempty"`
+}
+
+func NewSuaRunConfig() *SuaRunConfig {
+	return &SuaRunConfig{}
+}
+
+func (p *SuaRunConfig) InitDefault() {
+}
+
+var SuaRunConfig_RunMode_DEFAULT ExptRunMode
+
+func (p *SuaRunConfig) GetRunMode() (v ExptRunMode) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunMode() {
+		return SuaRunConfig_RunMode_DEFAULT
+	}
+	return *p.RunMode
+}
+
+var SuaRunConfig_SuaMode_DEFAULT SuaMode
+
+func (p *SuaRunConfig) GetSuaMode() (v SuaMode) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuaMode() {
+		return SuaRunConfig_SuaMode_DEFAULT
+	}
+	return *p.SuaMode
+}
+
+var SuaRunConfig_SuaModelName_DEFAULT string
+
+func (p *SuaRunConfig) GetSuaModelName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuaModelName() {
+		return SuaRunConfig_SuaModelName_DEFAULT
+	}
+	return *p.SuaModelName
+}
+
+var SuaRunConfig_MaxRunMinutes_DEFAULT int32
+
+func (p *SuaRunConfig) GetMaxRunMinutes() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxRunMinutes() {
+		return SuaRunConfig_MaxRunMinutes_DEFAULT
+	}
+	return *p.MaxRunMinutes
+}
+func (p *SuaRunConfig) SetRunMode(val *ExptRunMode) {
+	p.RunMode = val
+}
+func (p *SuaRunConfig) SetSuaMode(val *SuaMode) {
+	p.SuaMode = val
+}
+func (p *SuaRunConfig) SetSuaModelName(val *string) {
+	p.SuaModelName = val
+}
+func (p *SuaRunConfig) SetMaxRunMinutes(val *int32) {
+	p.MaxRunMinutes = val
+}
+
+var fieldIDToName_SuaRunConfig = map[int16]string{
+	1: "run_mode",
+	2: "sua_mode",
+	3: "sua_model_name",
+	4: "max_run_minutes",
+}
+
+func (p *SuaRunConfig) IsSetRunMode() bool {
+	return p.RunMode != nil
+}
+
+func (p *SuaRunConfig) IsSetSuaMode() bool {
+	return p.SuaMode != nil
+}
+
+func (p *SuaRunConfig) IsSetSuaModelName() bool {
+	return p.SuaModelName != nil
+}
+
+func (p *SuaRunConfig) IsSetMaxRunMinutes() bool {
+	return p.MaxRunMinutes != nil
+}
+
+func (p *SuaRunConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SuaRunConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SuaRunConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *ExptRunMode
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := ExptRunMode(v)
+		_field = &tmp
+	}
+	p.RunMode = _field
+	return nil
+}
+func (p *SuaRunConfig) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *SuaMode
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := SuaMode(v)
+		_field = &tmp
+	}
+	p.SuaMode = _field
+	return nil
+}
+func (p *SuaRunConfig) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SuaModelName = _field
+	return nil
+}
+func (p *SuaRunConfig) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxRunMinutes = _field
+	return nil
+}
+
+func (p *SuaRunConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SuaRunConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SuaRunConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunMode() {
+		if err = oprot.WriteFieldBegin("run_mode", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.RunMode)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SuaRunConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuaMode() {
+		if err = oprot.WriteFieldBegin("sua_mode", thrift.I32, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SuaMode)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SuaRunConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuaModelName() {
+		if err = oprot.WriteFieldBegin("sua_model_name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SuaModelName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *SuaRunConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxRunMinutes() {
+		if err = oprot.WriteFieldBegin("max_run_minutes", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxRunMinutes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *SuaRunConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SuaRunConfig(%+v)", *p)
+
+}
+
+func (p *SuaRunConfig) DeepEqual(ano *SuaRunConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.RunMode) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SuaMode) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SuaModelName) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.MaxRunMinutes) {
+		return false
+	}
+	return true
+}
+
+func (p *SuaRunConfig) Field1DeepEqual(src *ExptRunMode) bool {
+
+	if p.RunMode == src {
+		return true
+	} else if p.RunMode == nil || src == nil {
+		return false
+	}
+	if *p.RunMode != *src {
+		return false
+	}
+	return true
+}
+func (p *SuaRunConfig) Field2DeepEqual(src *SuaMode) bool {
+
+	if p.SuaMode == src {
+		return true
+	} else if p.SuaMode == nil || src == nil {
+		return false
+	}
+	if *p.SuaMode != *src {
+		return false
+	}
+	return true
+}
+func (p *SuaRunConfig) Field3DeepEqual(src *string) bool {
+
+	if p.SuaModelName == src {
+		return true
+	} else if p.SuaModelName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SuaModelName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SuaRunConfig) Field4DeepEqual(src *int32) bool {
+
+	if p.MaxRunMinutes == src {
+		return true
+	} else if p.MaxRunMinutes == nil || src == nil {
+		return false
+	}
+	if *p.MaxRunMinutes != *src {
+		return false
+	}
+	return true
+}
 
 type Experiment struct {
 	ID            *int64      `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
