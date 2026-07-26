@@ -1354,7 +1354,7 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 		return nil
 	}
 	do := &entity.RunModeConfig{
-		SuaModelName:  dto.GetSuaModelName(),
+		SuaModelID:    dto.GetSuaModelID(),
 		MaxRunMinutes: int(dto.GetMaxRunMinutes()),
 	}
 	if dto.IsSetRunMode() {

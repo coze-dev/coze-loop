@@ -379,13 +379,13 @@ const (
 )
 
 // RunModeConfig 实验级跑法配置。run_mode 是顶层跑法总开关;
-// sua_mode / sua_model_name 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 生效。
-// sua_model_name 只传模型名, 密钥由 operator 侧解析注入 case-file, 绝不落库明文。
+// sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 生效。
+// sua_model_id 传平台模型 ID, operator 经 GetModelAndAccount 解析密钥注入 case-file, 绝不落库明文。
 type RunModeConfig struct {
 	RunMode       RunMode `json:"run_mode,omitempty"`
 	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
 	SuaMode       SuaMode `json:"sua_mode,omitempty"`
-	SuaModelName  string  `json:"sua_model_name,omitempty"`
+	SuaModelID    int64   `json:"sua_model_id,omitempty"`
 }
 
 // ItemRunConf 题目级多轮/SUA 运行配置, 冻结进 expt_item_ref.item_config (ItemTargetConf.RunConf)。
