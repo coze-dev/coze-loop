@@ -102,8 +102,13 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	require.NotNil(t, got.Agent)
 	var agent map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetAgent().GetText()), &agent))
-	assert.Equal(t, "src-200", agent["source_target_id"])
-	assert.Equal(t, "200", agent["target_id"]) // i64 已 string 化防精度丢失
+	// agent 不再回填 runs / target_id / target_version_id / source_target_id（顶层 MQ meta 已有）。
+	_, hasRuns := agent["runs"]
+	assert.False(t, hasRuns)
+	_, hasTargetID := agent["target_id"]
+	assert.False(t, hasTargetID)
+	_, hasSrcTargetID := agent["source_target_id"]
+	assert.False(t, hasSrcTargetID)
 
 	// MQ 元信息顶层字段（与 item-complete MQ 对齐）。
 	assert.Equal(t, workspaceID, got.GetExptWorkspaceID())
@@ -622,9 +627,10 @@ func TestBuildItemStandardEvalOutput_SubfieldConflictObjectWins(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
 	detail := output["detail"].(map[string]any)
 	assert.Equal(t, "from-object", detail["custom"]) // 对象子字段
-	// 平台 detail 里原有的 file_diff 兄弟键仍在。
-	assert.Contains(t, detail, "file_diff")
-	// 平台不再补 output.rounds（内部 round 粒度补全已移除）。
+	// 平台 detail 里原有的 output 兄弟键仍在（深合并保留平台未冲突子字段）。
+	assert.Contains(t, detail, "output")
+	// 平台不再补 file_diff（空不回填）、不补 output.rounds。
+	assert.NotContains(t, detail, "file_diff")
 	assert.NotContains(t, output, "rounds")
 }
 

@@ -816,24 +816,24 @@ func standardTurns(item *entity.ItemResult, exptID int64) []map[string]any {
 
 func standardAgent(item *entity.ItemResult, exptID int64, opt standardEvalOutputBuildOptions) map[string]any {
 	var first *entity.EvalTargetRecord
-	runs := make([]any, 0)
 	for _, payload := range standardPayloads(item, exptID) {
 		tr := payload.TargetOutput
 		if tr == nil || tr.EvalTargetRecord == nil {
 			continue
 		}
-		rec := tr.EvalTargetRecord
 		if first == nil {
-			first = rec
+			first = tr.EvalTargetRecord
+			break
 		}
-		// i64 id 在 inline JSON 里必须 string 化，否则 JSON number 超 float64 精度会丢尾数（下游反查取错）。
-		runs = append(runs, map[string]any{"target_record_id": int64String(rec.ID), "experiment_run_id": int64String(rec.ExperimentRunID), "status": rec.Status, "trace_id": rec.TraceID, "log_id": rec.LogID})
 	}
 	runtimeParam := runtimeParamObjectFromTargetRecord(first)
-	// 空值不填 key（D11）：字符串空串 / 数值 0 视为无意义，不放进输出 map，避免一堆空占位。
-	agent := map[string]any{
-		"runtime_param": runtimeParam,
-		"runs":          runs,
+	// agent 只保留评测对象元信息（对齐文档 FORNAX_agent）+ runtime_param；
+	// 不回填 runs / target_id / target_version_id / source_target_id（顶层 ItemStandardEvalOutput
+	// 已有 eval_target_id / source_target_id 等 MQ meta 字段，不在此重复）。
+	// 空值不填 key（D11）：无值不放进 map，避免空占位。
+	agent := map[string]any{}
+	if runtimeParam != nil {
+		agent["runtime_param"] = runtimeParam
 	}
 	putStandardField(agent, "agent_id", int64String(firstTargetID(first)))
 	putStandardField(agent, "model_name", stringFromRuntimeParam(runtimeParam, "model_name", "model", "model_id"))
@@ -841,16 +841,6 @@ func standardAgent(item *entity.ItemResult, exptID int64, opt standardEvalOutput
 	putStandardField(agent, "agent_version", stringFromRuntimeParam(runtimeParam, "agent_version", "version"))
 	putStandardField(agent, "thinking_effort", stringFromRuntimeParam(runtimeParam, "thinking_effort", "effort"))
 	putStandardField(agent, "context_window", stringFromRuntimeParam(runtimeParam, "context_window", "context_window_size", "main_context_window_size"))
-	// source_target_id 为业务侧原始对象 ID（如 promptID / sandbox agent 外部标识），
-	// 需按 target_id 反查 EvalTarget 得到；未解析到时留空、不填。
-	putStandardField(agent, "source_target_id", opt.SourceTargetIDByTargetID[firstTargetID(first)])
-	// target_id/target_version_id 为 i64 雪花，inline JSON 须 string 化防精度丢失（与 agent_id 一致）。
-	if tid := firstTargetID(first); tid != 0 {
-		agent["target_id"] = int64String(tid)
-	}
-	if tvid := firstTargetVersionID(first); tvid != 0 {
-		agent["target_version_id"] = int64String(tvid)
-	}
 	return agent
 }
 
@@ -863,8 +853,8 @@ func standardOutput(item *entity.ItemResult, exptID int64) map[string]any {
 			detailOutput = last.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
 		}
 	}
-	// 平台兜底只补 detail，不补 round 粒度的 rounds（对象要 round 粒度自行上报 FORNAX_output.rounds）。
-	return map[string]any{"detail": map[string]any{"file_diff": []any{}, "output": detailOutput}}
+	// 平台兜底只补 detail.output；file_diff 平台侧无数据、为空不回填（对象要则自报 FORNAX_output）。
+	return map[string]any{"detail": map[string]any{"output": detailOutput}}
 }
 
 func standardEval(item *entity.ItemResult, exptID int64, opt standardEvalOutputBuildOptions) map[string]any {
@@ -976,13 +966,6 @@ func firstTargetID(record *entity.EvalTargetRecord) int64 {
 		return 0
 	}
 	return record.TargetID
-}
-
-func firstTargetVersionID(record *entity.EvalTargetRecord) int64 {
-	if record == nil {
-		return 0
-	}
-	return record.TargetVersionID
 }
 
 func int64String(v int64) string {
