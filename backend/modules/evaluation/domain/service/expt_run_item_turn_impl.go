@@ -268,6 +268,11 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 			}
 		}
 	}
+	// 题目级多轮/SUA 运行配置透传: 仅 MultiSetConfig 新实验的 ItemConfig 非空, 老 DataSet 实验 nil 回退不透传。
+	// SandboxAgent 算子从此 Ext key 读出 RunConf 组 case-file dataset_item.run_conf。
+	if ic := etec.ItemConfig; ic != nil && ic.EvalTargetConf != nil && ic.EvalTargetConf.RunConf != nil {
+		ext[consts.TargetExecuteExtRunConfKey] = json.Jsonify(ic.EvalTargetConf.RunConf)
+	}
 
 	var targetRecord *entity.EvalTargetRecord
 	etc := &entity.ExecuteTargetCtx{

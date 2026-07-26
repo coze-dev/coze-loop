@@ -104,6 +104,17 @@ func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment,
 		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item retry num must be in range [0, %d]", entity.MaxItemRetryNum)))
 	}
 
+	// 多轮/SUA 校验门: 启用多轮/SUA 跑法 ⟺ (评测对象 == SandboxAgent) && (实验 == MultiSetConfig)。
+	// 不满足直接拒绝——单沙箱/非沙箱对象不支持多轮; 老 DataSet 实验路径不写/不读 item_config.RunConf。
+	if sc := expt.EvalConf.SuaRunConfig; sc != nil && sc.RunMode != "" && sc.RunMode != entity.RunModeSingleTurn {
+		if !expt.IsSandboxAgentTarget() {
+			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("multi-turn/SUA run_mode is only supported for SandboxAgent eval target"))
+		}
+		if expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("multi-turn/SUA run_mode requires MultiSetConfig experiment"))
+		}
+	}
+
 	return nil
 }
 

@@ -288,6 +288,15 @@ func (e *Experiment) AsyncCallTarget() bool {
 	return false
 }
 
+// IsSandboxAgentTarget 判断实验的评测对象是否为沙箱 Agent (SandboxAgent, EvalTargetType=17)。
+// 用版本级类型 OR 版本级 SandboxAgent 配置双判 (与 AsyncCallTarget 同一惯例)。
+func (e *Experiment) IsSandboxAgentTarget() bool {
+	if e == nil || e.Target == nil || e.Target.EvalTargetVersion == nil {
+		return false
+	}
+	return e.Target.EvalTargetVersion.EvalTargetType == EvalTargetTypeSandboxAgent || e.Target.EvalTargetVersion.SandboxAgent != nil
+}
+
 func (e *Experiment) AsyncCallEvaluators() bool {
 	if e == nil || len(e.Evaluators) == 0 {
 		return false
@@ -327,6 +336,74 @@ type EvaluationConfiguration struct {
 
 	// SkillTOSKeys skill 入库 TOS 后的 tos_key 快照；key="{skill_id}:{version}"，value=tos_key。
 	SkillTOSKeys map[string]string `json:"agent_buddy_skill_tos_keys,omitempty"`
+
+	// SuaRunConfig 实验级多轮/SUA 跑法配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)。
+	// 序列化进 experiment.eval_conf; 提交时展开到各 item 的 ItemTargetConf.RunConf 兜底默认值。
+	SuaRunConfig *SuaRunConfig `json:"sua_run_config,omitempty"`
+}
+
+// RunMode 实验级评测模式 (跑法)。与 runtime domain RunMode / IDL ExptRunMode 对齐。
+type RunMode = string
+
+const (
+	RunModeSingleTurn           RunMode = "single_turn"
+	RunModeFixedScriptMultiTurn RunMode = "fixed_script_multi_turn"
+	RunModeSUAMultiTurn         RunMode = "sua_multi_turn"
+	RunModeGoal                 RunMode = "goal"
+)
+
+// RunModeToInt 把 RunMode 字符串映射为 case-file experiment_info.run_mode 的整数枚举
+// (对齐 runtime runModeFromInt: 1=single/2=fixed/3=sua/4=goal)。未知值回退 1。
+func RunModeToInt(m RunMode) int {
+	switch m {
+	case RunModeSingleTurn:
+		return 1
+	case RunModeFixedScriptMultiTurn:
+		return 2
+	case RunModeSUAMultiTurn:
+		return 3
+	case RunModeGoal:
+		return 4
+	default:
+		return 1
+	}
+}
+
+// SuaMode SUA 生成下一轮 query 的模式。与 runtime sua.Mode / IDL SuaMode 对齐。
+type SuaMode = string
+
+const (
+	SuaModeHumanLoop SuaMode = "humanloop"
+	SuaModeLoop      SuaMode = "loop"
+	SuaModeFixed     SuaMode = "fixed"
+)
+
+// SuaRunConfig 实验级多轮/SUA 跑法配置。run_mode 决定编排模式;
+// sua_mode / sua_model_name 仅在 SUA 驱动模式生效。sua_model_name 只传模型名,
+// 密钥由 operator 侧解析注入 case-file, 绝不落库明文。
+type SuaRunConfig struct {
+	RunMode       RunMode `json:"run_mode,omitempty"`
+	SuaMode       SuaMode `json:"sua_mode,omitempty"`
+	SuaModelName  string  `json:"sua_model_name,omitempty"`
+	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
+}
+
+// ItemRunConf 题目级多轮/SUA 运行配置, 冻结进 expt_item_ref.item_config (ItemTargetConf.RunConf)。
+// 字段名与 runtime testcase.RunConf 逐一对齐, 供 SandboxAgent 算子透传 case-file dataset_item.run_conf。
+// SUA 相关字段对被测 Agent 不可见。
+type ItemRunConf struct {
+	MaxTurns                 int           `json:"max_turns,omitempty"`
+	MaxRunMinutes            int           `json:"max_run_minutes,omitempty"`
+	FixedQueryList           []*FixedQuery `json:"fixed_query_list,omitempty"`
+	SuaGoal                  string        `json:"sua_goal,omitempty"`
+	SuaPersona               string        `json:"sua_persona,omitempty"`
+	SuaBehavioralConstraints string        `json:"sua_behavioral_constraints,omitempty"`
+}
+
+// FixedQuery 固定脚本多轮的一轮 query (fixed_script 跑法依赖)。
+type FixedQuery struct {
+	Query      string                 `json:"query,omitempty"`
+	Evaluators map[string]interface{} `json:"evaluators,omitempty"`
 }
 
 // DefaultSubmitItemConcurNum 提交评测实验时，未传或非正数时的兜底并发度。
@@ -601,6 +678,9 @@ type ItemTargetConf struct {
 	FieldMapping    []*FieldConf      `json:"field_mapping,omitempty"`
 	DynamicConf     map[string]string `json:"dynamic_conf,omitempty"`
 	ScoreWeight     *float64          `json:"score_weight,omitempty"`
+	// RunConf 题目级多轮/SUA 运行配置 (SandboxAgent 专用)。首次调度冻结进 item_config,
+	// 执行期 callTarget 读取并透传给算子组 case-file。老实验/非沙箱为 nil。
+	RunConf *ItemRunConf `json:"run_conf,omitempty"`
 }
 
 // ItemEvaluatorConf per-item 单个 evaluator binding 配置

@@ -19,7 +19,7 @@ func TestBuildItemConfigFromSetConf(t *testing.T) {
 			EvalSetVersionID: 10,
 			EvaluatorConfs:   nil,
 		}
-		cfg := buildItemConfigFromSetConf(setConf)
+		cfg := buildItemConfigFromSetConf(setConf, nil)
 		assert.NotNil(t, cfg)
 		assert.Empty(t, cfg.EvaluatorConfs)
 		assert.Nil(t, cfg.EvalTargetConf)
@@ -37,7 +37,7 @@ func TestBuildItemConfigFromSetConf(t *testing.T) {
 				},
 			},
 		}
-		cfg := buildItemConfigFromSetConf(setConf)
+		cfg := buildItemConfigFromSetConf(setConf, nil)
 		assert.NotNil(t, cfg)
 		assert.Len(t, cfg.EvaluatorConfs, 1)
 		assert.Equal(t, "judge_A", cfg.EvaluatorConfs[0].Alias)
@@ -63,7 +63,7 @@ func TestBuildItemConfigFromSetConf(t *testing.T) {
 				},
 			},
 		}
-		cfg := buildItemConfigFromSetConf(setConf)
+		cfg := buildItemConfigFromSetConf(setConf, nil)
 		assert.NotNil(t, cfg)
 		// target conf
 		assert.NotNil(t, cfg.EvalTargetConf)
