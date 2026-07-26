@@ -101,8 +101,8 @@ func TestBatchGetEvaluationSets(t *testing.T) {
 		{}, {}, {},
 	}
 	// 模拟成功情况
-	mockRPCAdapter.EXPECT().BatchGetDatasets(context.Background(), &spaceID, evaluationSetIDs, &deletedAt).Return(expectedSets, nil)
-	sets, err := serviceImpl.BatchGetEvaluationSets(context.Background(), &spaceID, evaluationSetIDs, &deletedAt)
+	mockRPCAdapter.EXPECT().BatchGetDatasets(context.Background(), &spaceID, evaluationSetIDs, &deletedAt, nil).Return(expectedSets, nil)
+	sets, err := serviceImpl.BatchGetEvaluationSets(context.Background(), &spaceID, evaluationSetIDs, &deletedAt, nil)
 	if err != nil {
 		t.Errorf("BatchGetEvaluationSets failed with error: %v", err)
 	}
@@ -433,7 +433,7 @@ func TestEvaluationSetServiceImpl_GetEvaluationSet(t *testing.T) {
 			deletedAt: gptr.Of(false),
 			mockSetup: func() {
 				mockDatasetRPCAdapter.EXPECT().
-					GetDataset(gomock.Any(), gptr.Of[int64](123), int64(456), gptr.Of(false)).
+					GetDataset(gomock.Any(), gptr.Of[int64](123), int64(456), gptr.Of(false), gomock.Nil()).
 					Return(&entity.EvaluationSet{
 						ID:          456,
 						SpaceID:     123,
@@ -455,7 +455,7 @@ func TestEvaluationSetServiceImpl_GetEvaluationSet(t *testing.T) {
 			evalSetID: 456,
 			mockSetup: func() {
 				mockDatasetRPCAdapter.EXPECT().
-					GetDataset(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetDataset(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantErr:     true,
@@ -467,7 +467,7 @@ func TestEvaluationSetServiceImpl_GetEvaluationSet(t *testing.T) {
 			evalSetID: 789,
 			mockSetup: func() {
 				mockDatasetRPCAdapter.EXPECT().
-					GetDataset(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetDataset(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, nil)
 			},
 			wantEvalSet: nil,
@@ -479,7 +479,7 @@ func TestEvaluationSetServiceImpl_GetEvaluationSet(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			gotEvalSet, err := service.GetEvaluationSet(context.Background(), tt.spaceID, tt.evalSetID, tt.deletedAt)
+			gotEvalSet, err := service.GetEvaluationSet(context.Background(), tt.spaceID, tt.evalSetID, tt.deletedAt, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)

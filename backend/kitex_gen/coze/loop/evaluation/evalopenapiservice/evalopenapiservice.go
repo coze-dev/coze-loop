@@ -161,6 +161,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListEvalTargetsOApi": kitex.NewMethodInfo(
+		listEvalTargetsOApiHandler,
+		newEvaluationOpenAPIServiceListEvalTargetsOApiArgs,
+		newEvaluationOpenAPIServiceListEvalTargetsOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"SubmitExperimentOApi": kitex.NewMethodInfo(
 		submitExperimentOApiHandler,
 		newEvaluationOpenAPIServiceSubmitExperimentOApiArgs,
@@ -808,6 +815,25 @@ func newEvaluationOpenAPIServiceGetEvalTargetRecordOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceGetEvalTargetRecordOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceGetEvalTargetRecordOApiResult()
+}
+
+func listEvalTargetsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceListEvalTargetsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceListEvalTargetsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ListEvalTargetsOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceListEvalTargetsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvalTargetsOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceListEvalTargetsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvalTargetsOApiResult()
 }
 
 func submitExperimentOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1616,6 +1642,16 @@ func (p *kClient) GetEvalTargetRecordOApi(ctx context.Context, req *openapi.GetE
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceGetEvalTargetRecordOApiResult
 	if err = p.c.Call(ctx, "GetEvalTargetRecordOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvalTargetsOApi(ctx context.Context, req *openapi.ListEvalTargetsOApiRequest) (r *openapi.ListEvalTargetsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceListEvalTargetsOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceListEvalTargetsOApiResult
+	if err = p.c.Call(ctx, "ListEvalTargetsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

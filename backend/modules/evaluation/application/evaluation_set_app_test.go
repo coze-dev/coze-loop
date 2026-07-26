@@ -11,15 +11,18 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
+	domain_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmock "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
+	userinfomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -33,11 +36,13 @@ func TestEvaluationSetApplicationImpl_CreateEvaluationSetWithImport(t *testing.T
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
 	mockMetric := metricsmock.NewMockEvaluationSetMetrics(ctrl)
+	mockAuthorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
 
 	app := &EvaluationSetApplicationImpl{
-		auth:                 mockAuth,
-		evaluationSetService: mockSvc,
-		metric:               mockMetric,
+		auth:                     mockAuth,
+		evaluationSetService:     mockSvc,
+		metric:                   mockMetric,
+		resourceAccessAuthorizer: mockAuthorizer,
 	}
 
 	workspaceID := int64(1001)
@@ -155,6 +160,62 @@ func TestEvaluationSetApplicationImpl_CreateEvaluationSetWithImport(t *testing.T
 	}
 }
 
+func TestEvaluationSetApplicationImpl_ListEvaluationSets_SharedPagination(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const workspaceID = int64(1001)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+	mockAuthorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
+	mockUserInfo := userinfomocks.NewMockUserInfoService(ctrl)
+	app := &EvaluationSetApplicationImpl{
+		auth:                     mockAuth,
+		evaluationSetService:     mockSvc,
+		resourceAccessAuthorizer: mockAuthorizer,
+		userInfoService:          mockUserInfo,
+	}
+	accessCtxs := []*entity.ResourceAccessContext{
+		{ResourceSpaceID: 20, ResourceID: 3, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+		{ResourceSpaceID: 10, ResourceID: 2, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+		{ResourceSpaceID: 10, ResourceID: 1, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+	}
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	mockAuthorizer.EXPECT().ListSharedResources(gomock.Any(), gomock.Any()).Return(accessCtxs, nil).Times(2)
+	mockUserInfo.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Times(2)
+	mockSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(workspaceID), []int64{1, 2}, gomock.Any(), gomock.Any()).Return(
+		[]*entity.EvaluationSet{{ID: 2, SpaceID: 10}, {ID: 1, SpaceID: 10}},
+		nil,
+	)
+
+	pageSize := int32(2)
+	req := &eval_set.ListEvaluationSetsRequest{
+		WorkspaceID: workspaceID,
+		PageSize:    &pageSize,
+		SharedOption: &domain_common.SharedResourceOption{
+			IsShared: gptr.Of(true),
+		},
+	}
+	firstPage, err := app.ListEvaluationSets(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, firstPage.EvaluationSets, 2)
+	assert.Equal(t, int64(1), firstPage.EvaluationSets[0].GetID())
+	assert.Equal(t, int64(2), firstPage.EvaluationSets[1].GetID())
+	assert.Equal(t, int64(3), firstPage.GetTotal())
+	require.NotNil(t, firstPage.NextPageToken)
+
+	mockSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(workspaceID), []int64{3}, gomock.Any(), gomock.Any()).Return(
+		[]*entity.EvaluationSet{{ID: 3, SpaceID: 20}},
+		nil,
+	)
+	req.PageToken = firstPage.NextPageToken
+	secondPage, err := app.ListEvaluationSets(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, secondPage.EvaluationSets, 1)
+	assert.Equal(t, int64(3), secondPage.EvaluationSets[0].GetID())
+	assert.Nil(t, secondPage.NextPageToken)
+}
+
 func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -163,8 +224,9 @@ func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 	mockSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
 
 	app := &EvaluationSetApplicationImpl{
-		auth:                 mockAuth,
-		evaluationSetService: mockSvc,
+		auth:                     mockAuth,
+		evaluationSetService:     mockSvc,
+		resourceAccessAuthorizer: servicemocks.NewMockResourceAccessAuthorizer(ctrl),
 	}
 
 	workspaceID := int64(2002)
@@ -264,8 +326,9 @@ func TestEvaluationSetApplicationImpl_EvaluationSetValidateMultiPartData(t *test
 	mockSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
 
 	app := &EvaluationSetApplicationImpl{
-		auth:                 mockAuth,
-		evaluationSetService: mockSvc,
+		auth:                     mockAuth,
+		evaluationSetService:     mockSvc,
+		resourceAccessAuthorizer: servicemocks.NewMockResourceAccessAuthorizer(ctrl),
 	}
 
 	spaceID := int64(2002)
@@ -368,7 +431,7 @@ func TestEvaluationSetApplicationImpl_UpdateEvaluationSet(t *testing.T) {
 			name: "nil req",
 			req:  nil,
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
 				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -378,7 +441,7 @@ func TestEvaluationSetApplicationImpl_UpdateEvaluationSet(t *testing.T) {
 			name: "get evaluation set error",
 			req:  baseReq(),
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(nil, errors.New("get err"))
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil(), gomock.Nil()).Return(nil, errors.New("get err"))
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
 				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -388,7 +451,7 @@ func TestEvaluationSetApplicationImpl_UpdateEvaluationSet(t *testing.T) {
 			name: "evaluation set not found",
 			req:  baseReq(),
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(nil, nil)
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil(), gomock.Nil()).Return(nil, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
 				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -398,7 +461,7 @@ func TestEvaluationSetApplicationImpl_UpdateEvaluationSet(t *testing.T) {
 			name: "auth failed",
 			req:  baseReq(),
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(validSet, nil)
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil(), gomock.Nil()).Return(validSet, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
 				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -408,7 +471,7 @@ func TestEvaluationSetApplicationImpl_UpdateEvaluationSet(t *testing.T) {
 			name: "update service error",
 			req:  baseReq(),
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(validSet, nil)
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil(), gomock.Nil()).Return(validSet, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
 				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.AssignableToTypeOf(&entity.UpdateEvaluationSetParam{})).Return(errors.New("update err"))
 			},
@@ -418,7 +481,7 @@ func TestEvaluationSetApplicationImpl_UpdateEvaluationSet(t *testing.T) {
 			name: "success",
 			req:  baseReq(),
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(validSet, nil)
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil(), gomock.Nil()).Return(validSet, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).DoAndReturn(func(_ context.Context, p *rpc.AuthorizationWithoutSPIParam) error {
 					assert.Equal(t, strconv.FormatInt(validSet.ID, 10), p.ObjectID)
 					assert.Equal(t, workspaceID, p.SpaceID)
@@ -512,7 +575,7 @@ func TestEvaluationSetApplicationImpl_GetEvaluationSetItemField(t *testing.T) {
 			name: "set not found",
 			req:  baseReq(),
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(nil, nil)
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true)), gomock.Nil()).Return(nil, nil)
 			},
 			wantErr: errno.ResourceNotFoundCode,
 		},
@@ -520,7 +583,7 @@ func TestEvaluationSetApplicationImpl_GetEvaluationSetItemField(t *testing.T) {
 			name: "auth failed",
 			req:  baseReq(),
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(validSet, nil)
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true)), gomock.Nil()).Return(validSet, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
 			},
 			wantErr: errno.CommonNoPermissionCode,
@@ -529,7 +592,7 @@ func TestEvaluationSetApplicationImpl_GetEvaluationSetItemField(t *testing.T) {
 			name: "get field error",
 			req:  baseReq(),
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(validSet, nil)
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true)), gomock.Nil()).Return(validSet, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
 				mockItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.AssignableToTypeOf(&entity.GetEvaluationSetItemFieldParam{})).Return(nil, errors.New("svc err"))
 			},
@@ -539,7 +602,7 @@ func TestEvaluationSetApplicationImpl_GetEvaluationSetItemField(t *testing.T) {
 			name: "成功",
 			req:  baseReq(),
 			setup: func() {
-				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(validSet, nil)
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true)), gomock.Nil()).Return(validSet, nil)
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).DoAndReturn(func(_ context.Context, p *rpc.AuthorizationWithoutSPIParam) error {
 					assert.Equal(t, strconv.FormatInt(evalSetID, 10), p.ObjectID)
 					assert.Equal(t, workspaceID, p.SpaceID)

@@ -24,6 +24,42 @@ type DatasetRPCAdapter struct {
 	client datasetservice.Client
 }
 
+func resolveDatasetWorkspaceID(spaceID *int64, sharedOption *entity.SharedResourceOption) *int64 {
+	if sharedOption != nil && sharedOption.Enabled() {
+		return sharedOption.SourceSpaceID
+	}
+	return spaceID
+}
+
+func fillSharedInfoForEvaluationSet(set *entity.EvaluationSet, consumerSpaceID *int64, sharedOption *entity.SharedResourceOption) {
+	if set == nil {
+		return
+	}
+	set.SharedInfo = entity.BuildSharedResourceInfo(gptr.Indirect(consumerSpaceID), set.SpaceID, "read", "versioned")
+	if set.EvaluationSetVersion != nil {
+		fillSharedInfoForEvaluationSetVersion(set.EvaluationSetVersion, consumerSpaceID, sharedOption)
+	}
+}
+
+func fillSharedInfoForEvaluationSetVersion(version *entity.EvaluationSetVersion, consumerSpaceID *int64, sharedOption *entity.SharedResourceOption) {
+	if version == nil {
+		return
+	}
+	version.SharedInfo = entity.BuildSharedResourceInfo(gptr.Indirect(consumerSpaceID), version.SpaceID, "read", "versioned")
+}
+
+func fillSharedInfoForEvaluationSetVersions(versions []*entity.EvaluationSetVersion, consumerSpaceID *int64, sharedOption *entity.SharedResourceOption) {
+	for _, version := range versions {
+		fillSharedInfoForEvaluationSetVersion(version, consumerSpaceID, sharedOption)
+	}
+}
+
+func fillSharedInfoForEvaluationSets(sets []*entity.EvaluationSet, consumerSpaceID *int64, sharedOption *entity.SharedResourceOption) {
+	for _, set := range sets {
+		fillSharedInfoForEvaluationSet(set, consumerSpaceID, sharedOption)
+	}
+}
+
 func NewDatasetRPCAdapter(client datasetservice.Client) rpc.IDatasetRPCAdapter {
 	return &DatasetRPCAdapter{
 		client: client,
@@ -152,9 +188,9 @@ func (a *DatasetRPCAdapter) DeleteDataset(ctx context.Context, spaceID, evaluati
 	return nil
 }
 
-func (a *DatasetRPCAdapter) GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error) {
+func (a *DatasetRPCAdapter) GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (set *entity.EvaluationSet, err error) {
 	resp, err := a.client.GetDataset(ctx, &datasetdto.GetDatasetRequest{
-		WorkspaceID: spaceID,
+		WorkspaceID: resolveDatasetWorkspaceID(spaceID, sharedOption),
 		DatasetID:   evaluationSetID,
 		WithDeleted: deletedAt,
 	})
@@ -167,12 +203,14 @@ func (a *DatasetRPCAdapter) GetDataset(ctx context.Context, spaceID *int64, eval
 	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
 		return nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
-	return convert2EvaluationSet(ctx, resp.Dataset), nil
+	set = convert2EvaluationSet(ctx, resp.Dataset)
+	fillSharedInfoForEvaluationSet(set, spaceID, sharedOption)
+	return set, nil
 }
 
-func (a *DatasetRPCAdapter) BatchGetDatasets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (sets []*entity.EvaluationSet, err error) {
+func (a *DatasetRPCAdapter) BatchGetDatasets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (sets []*entity.EvaluationSet, err error) {
 	resp, err := a.client.BatchGetDatasets(ctx, &datasetdto.BatchGetDatasetsRequest{
-		WorkspaceID: gptr.Indirect(spaceID),
+		WorkspaceID: gptr.Indirect(resolveDatasetWorkspaceID(spaceID, sharedOption)),
 		DatasetIds:  evaluationSetID,
 		WithDeleted: deletedAt,
 	})
@@ -185,12 +223,14 @@ func (a *DatasetRPCAdapter) BatchGetDatasets(ctx context.Context, spaceID *int64
 	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
 		return nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
-	return convert2EvaluationSets(ctx, resp.Datasets), nil
+	sets = convert2EvaluationSets(ctx, resp.Datasets)
+	fillSharedInfoForEvaluationSets(sets, gptr.Of(gptr.Indirect(spaceID)), sharedOption)
+	return sets, nil
 }
 
 func (a *DatasetRPCAdapter) ListDatasets(ctx context.Context, param *rpc.ListDatasetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error) {
 	resp, err := a.client.ListDatasets(ctx, &datasetdto.ListDatasetsRequest{
-		WorkspaceID: param.SpaceID,
+		WorkspaceID: gptr.Indirect(resolveDatasetWorkspaceID(gptr.Of(param.SpaceID), param.SharedOption)),
 		DatasetIds:  param.EvaluationSetIDs,
 		Name:        param.Name,
 		CreatedBys:  param.Creators,
@@ -210,7 +250,9 @@ func (a *DatasetRPCAdapter) ListDatasets(ctx context.Context, param *rpc.ListDat
 	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
 		return nil, nil, nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
-	return convert2EvaluationSets(ctx, resp.Datasets), resp.Total, resp.NextPageToken, nil
+	sets = convert2EvaluationSets(ctx, resp.Datasets)
+	fillSharedInfoForEvaluationSets(sets, gptr.Of(param.SpaceID), param.SharedOption)
+	return sets, resp.Total, resp.NextPageToken, nil
 }
 
 func (a *DatasetRPCAdapter) CreateDatasetVersion(ctx context.Context, spaceID, evaluationSetID int64, version string, desc *string) (id int64, err error) {
@@ -232,9 +274,9 @@ func (a *DatasetRPCAdapter) CreateDatasetVersion(ctx context.Context, spaceID, e
 	return resp.GetID(), nil
 }
 
-func (a *DatasetRPCAdapter) GetDatasetVersion(ctx context.Context, spaceID, versionID int64, deletedAt *bool) (version *entity.EvaluationSetVersion, set *entity.EvaluationSet, err error) {
+func (a *DatasetRPCAdapter) GetDatasetVersion(ctx context.Context, spaceID, versionID int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (version *entity.EvaluationSetVersion, set *entity.EvaluationSet, err error) {
 	resp, err := a.client.GetDatasetVersion(ctx, &datasetdto.GetDatasetVersionRequest{
-		WorkspaceID: &spaceID,
+		WorkspaceID: resolveDatasetWorkspaceID(gptr.Of(spaceID), sharedOption),
 		VersionID:   versionID,
 		WithDeleted: deletedAt,
 	})
@@ -249,6 +291,8 @@ func (a *DatasetRPCAdapter) GetDatasetVersion(ctx context.Context, spaceID, vers
 	}
 	version = convert2EvaluationSetVersion(ctx, resp.Version, resp.Dataset)
 	set = convert2EvaluationSet(ctx, resp.Dataset)
+	fillSharedInfoForEvaluationSet(set, gptr.Of(spaceID), sharedOption)
+	fillSharedInfoForEvaluationSetVersion(version, gptr.Of(spaceID), sharedOption)
 	// 数据集返回的dataset结构体中version的值是草稿版本的值，这里需要替换一下
 	if set != nil {
 		set.EvaluationSetVersion = version
@@ -256,9 +300,9 @@ func (a *DatasetRPCAdapter) GetDatasetVersion(ctx context.Context, spaceID, vers
 	return version, set, nil
 }
 
-func (a *DatasetRPCAdapter) BatchGetVersionedDatasets(ctx context.Context, spaceID *int64, versionIDs []int64, deletedAt *bool) (sets []*rpc.BatchGetVersionedDatasetsResult, err error) {
+func (a *DatasetRPCAdapter) BatchGetVersionedDatasets(ctx context.Context, spaceID *int64, versionIDs []int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (sets []*rpc.BatchGetVersionedDatasetsResult, err error) {
 	resp, err := a.client.BatchGetDatasetVersions(ctx, &datasetdto.BatchGetDatasetVersionsRequest{
-		WorkspaceID: spaceID,
+		WorkspaceID: resolveDatasetWorkspaceID(spaceID, sharedOption),
 		VersionIds:  versionIDs,
 		WithDeleted: deletedAt,
 	})
@@ -276,6 +320,8 @@ func (a *DatasetRPCAdapter) BatchGetVersionedDatasets(ctx context.Context, space
 		version := convert2EvaluationSetVersion(ctx, v.Version, v.Dataset)
 		set := convert2EvaluationSet(ctx, v.Dataset)
 		// 数据集返回的dataset结构体中version的值是草稿版本的值，这里需要替换一下
+		fillSharedInfoForEvaluationSet(set, spaceID, sharedOption)
+		fillSharedInfoForEvaluationSetVersion(version, spaceID, sharedOption)
 		if set != nil {
 			set.EvaluationSetVersion = version
 		}
@@ -287,9 +333,9 @@ func (a *DatasetRPCAdapter) BatchGetVersionedDatasets(ctx context.Context, space
 	return sets, nil
 }
 
-func (a *DatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceID, evaluationSetID int64, pageToken *string, pageNumber, pageSize *int32, versionLike *string, versions []string) (version []*entity.EvaluationSetVersion, total *int64, nextPageToken *string, err error) {
+func (a *DatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceID, evaluationSetID int64, pageToken *string, pageNumber, pageSize *int32, versionLike *string, versions []string, sharedOption *entity.SharedResourceOption) (version []*entity.EvaluationSetVersion, total *int64, nextPageToken *string, err error) {
 	resp, err := a.client.ListDatasetVersions(ctx, &datasetdto.ListDatasetVersionsRequest{
-		WorkspaceID: &spaceID,
+		WorkspaceID: resolveDatasetWorkspaceID(gptr.Of(spaceID), sharedOption),
 		DatasetID:   evaluationSetID,
 		PageToken:   pageToken,
 		PageSize:    pageSize,
@@ -305,7 +351,9 @@ func (a *DatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceID, ev
 	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
 		return nil, nil, nil, errorx.NewByCode(errno.CommonRPCErrorCode, errorx.WithExtraMsg(fmt.Sprintf("ListDatasetVersions err, WorkspaceID: %v, evaluationSetID: %v, rpc code: %v", spaceID, evaluationSetID, resp.BaseResp.StatusCode)))
 	}
-	return convert2EvaluationSetVersions(ctx, resp.Versions), resp.Total, resp.NextPageToken, nil
+	version = convert2EvaluationSetVersions(ctx, resp.Versions)
+	fillSharedInfoForEvaluationSetVersions(version, gptr.Of(spaceID), sharedOption)
+	return version, resp.Total, resp.NextPageToken, nil
 }
 
 func (a *DatasetRPCAdapter) UpdateDatasetSchema(ctx context.Context, spaceID, evaluationSetID int64, schemas []*entity.FieldSchema) (err error) {

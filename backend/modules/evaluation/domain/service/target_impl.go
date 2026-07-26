@@ -164,6 +164,9 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceI
 	if err != nil {
 		return nil, err
 	}
+	if do == nil {
+		return nil, nil
+	}
 	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
@@ -173,6 +176,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceI
 			}
 		}
 	}
+	e.fillSharedInfo(spaceID, do, entity.BuildSharedResourceInfo(spaceID, do.SpaceID, consts.Read, "versioned"))
 	return do, nil
 }
 
@@ -247,6 +251,16 @@ func (e *EvalTargetServiceImpl) BatchGetEvalTargetBySource(ctx context.Context, 
 	})
 }
 
+func (e *EvalTargetServiceImpl) fillSharedInfo(consumerSpaceID int64, target *entity.EvalTarget, sharedInfo *entity.SharedResourceInfo) {
+	if target == nil {
+		return
+	}
+	target.SharedInfo = sharedInfo
+	if target.EvalTargetVersion != nil {
+		target.EvalTargetVersion.SharedInfo = sharedInfo
+	}
+}
+
 func (e *EvalTargetServiceImpl) BatchGetEvalTargetVersion(ctx context.Context, spaceID int64, versionIDs []int64, needSourceInfo bool) (dos []*entity.EvalTarget, err error) {
 	versions, err := e.evalTargetRepo.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
 	if err != nil {
@@ -260,6 +274,9 @@ func (e *EvalTargetServiceImpl) BatchGetEvalTargetVersion(ctx context.Context, s
 				return nil, err
 			}
 		}
+	}
+	for _, version := range versions {
+		e.fillSharedInfo(spaceID, version, entity.BuildSharedResourceInfo(spaceID, version.SpaceID, consts.Read, "versioned"))
 	}
 	return versions, nil
 }

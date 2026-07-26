@@ -113,6 +113,18 @@ struct BaseInfo {
     5: optional i64 deleted_at      (api.js_conv="true", go.tag = 'json:"deleted_at"')
 }
 
+struct SharedResourceOption {
+    1: optional bool is_shared
+    2: optional i64 source_space_id (api.js_conv="true", go.tag = 'json:"source_space_id"')
+}
+
+struct SharedResourceInfo {
+    1: optional bool is_shared
+    2: optional i64 source_space_id (api.js_conv="true", go.tag = 'json:"source_space_id"')
+    3: optional string access_level
+    4: optional string version_policy
+}
+
 // 评测模型配置
 struct ModelConfig {
     1: optional i64 model_id (api.js_conv="true", go.tag = 'json:"model_id"') // 模型id

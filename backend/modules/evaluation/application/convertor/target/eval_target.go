@@ -22,6 +22,7 @@ func EvalTargetDTO2DO(targetDTO *dto.EvalTarget) (targetDO *do.EvalTarget) {
 	targetDO.SourceTargetID = targetDTO.GetSourceTargetID()
 	targetDO.EvalTargetType = do.EvalTargetType(targetDTO.GetEvalTargetType())
 	targetDO.BaseInfo = commonconvertor.ConvertBaseInfoDTO2DO(targetDTO.GetBaseInfo())
+	targetDO.SharedInfo = SharedResourceInfoDTO2DO(targetDTO.GetSharedInfo())
 	targetDO.EvalTargetVersion = &do.EvalTargetVersion{}
 
 	targetDO.EvalTargetVersion = EvalTargetVersionDTO2DO(targetDTO.GetEvalTargetVersion())
@@ -85,6 +86,7 @@ func EvalTargetVersionDTO2DO(targetVersionDTO *dto.EvalTargetVersion) (targetVer
 		targetVersionDO.CustomRPCServer = CustomRPCServerDTO2DO(targetVersionDTO.GetEvalTargetContent().GetCustomRPCServer())
 		targetVersionDO.RuntimeParamDemo = gptr.Of(targetVersionDTO.GetEvalTargetContent().GetRuntimeParamJSONDemo())
 	}
+	targetVersionDO.SharedInfo = SharedResourceInfoDTO2DO(targetVersionDTO.GetSharedInfo())
 
 	return targetVersionDO
 }
@@ -109,6 +111,7 @@ func EvalTargetDO2DTO(targetDO *do.EvalTarget) (targetDTO *dto.EvalTarget) {
 		WorkspaceID:    &targetDO.SpaceID,
 		SourceTargetID: &targetDO.SourceTargetID,
 		EvalTargetType: gptr.Of(dtoEvalType),
+		SharedInfo:     SharedResourceInfoDO2DTO(targetDO.SharedInfo),
 	}
 	if targetDO.EvalTargetVersion != nil {
 		// 填充version上的类型
@@ -122,6 +125,30 @@ func EvalTargetDO2DTO(targetDO *do.EvalTarget) (targetDTO *dto.EvalTarget) {
 	return targetDTO
 }
 
+func SharedResourceInfoDTO2DO(info *commondto.SharedResourceInfo) *do.SharedResourceInfo {
+	if info == nil {
+		return nil
+	}
+	return &do.SharedResourceInfo{
+		IsShared:      info.GetIsShared(),
+		SourceSpaceID: info.GetSourceSpaceID(),
+		AccessLevel:   info.GetAccessLevel(),
+		VersionPolicy: info.GetVersionPolicy(),
+	}
+}
+
+func SharedResourceInfoDO2DTO(info *do.SharedResourceInfo) *commondto.SharedResourceInfo {
+	if info == nil {
+		return nil
+	}
+	return &commondto.SharedResourceInfo{
+		IsShared:      gptr.Of(info.IsShared),
+		SourceSpaceID: gptr.Of(info.SourceSpaceID),
+		AccessLevel:   gptr.Of(info.AccessLevel),
+		VersionPolicy: gptr.Of(info.VersionPolicy),
+	}
+}
+
 func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersionDTO *dto.EvalTargetVersion) {
 	if targetVersionDO == nil {
 		return nil
@@ -132,6 +159,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 		WorkspaceID:         &targetVersionDO.SpaceID,
 		TargetID:            &targetVersionDO.TargetID,
 		SourceTargetVersion: &targetVersionDO.SourceTargetVersion,
+		SharedInfo:          SharedResourceInfoDO2DTO(targetVersionDO.SharedInfo),
 	}
 	// 仅记录型（*Online）与对应基础类型共用同一套 DTO 构建逻辑
 	verType := targetVersionDO.EvalTargetType.ToOperatorBaseType()

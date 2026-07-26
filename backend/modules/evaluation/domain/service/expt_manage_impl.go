@@ -503,7 +503,7 @@ func (e *ExptMangerImpl) getExptTupleByID(ctx context.Context, exptTupleID *enti
 	if exptTupleID.VersionedEvalSetID != nil {
 		if exptTupleID.VersionedEvalSetID.EvalSetID != exptTupleID.VersionedEvalSetID.VersionID {
 			pool.Add(func() error {
-				version, set, poolErr := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, spaceID, exptTupleID.VersionedEvalSetID.VersionID, gptr.Of(true))
+				version, set, poolErr := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, spaceID, exptTupleID.VersionedEvalSetID.VersionID, gptr.Of(true), nil)
 				if poolErr != nil {
 					return poolErr
 				}
@@ -514,7 +514,7 @@ func (e *ExptMangerImpl) getExptTupleByID(ctx context.Context, exptTupleID *enti
 		} else {
 			pool.Add(func() error {
 				var poolErr error
-				evalSet, poolErr = e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(spaceID), exptTupleID.VersionedEvalSetID.EvalSetID, gptr.Of(false))
+				evalSet, poolErr = e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(spaceID), exptTupleID.VersionedEvalSetID.EvalSetID, gptr.Of(false), nil)
 				if poolErr != nil {
 					return poolErr
 				}
@@ -598,7 +598,7 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 		if len(evalSetVersionIDs) > 0 {
 			pool.Add(func() error {
 				verIDs := maps.ToSlice(gslice.ToMap(evalSetVersionIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
-				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(true))
+				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(true), nil)
 				if poolErr != nil {
 					return poolErr
 				}
@@ -622,7 +622,7 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 		if len(evalSetIDs) > 0 {
 			pool.Add(func() error {
 				setIDs := maps.ToSlice(gslice.ToMap(evalSetIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
-				got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(spaceID), setIDs, gptr.Of(false))
+				got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(spaceID), setIDs, gptr.Of(false), nil)
 				if poolErr != nil {
 					return poolErr
 				}
@@ -797,7 +797,7 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 	if len(versionIDSet) > 0 {
 		verIDs := maps.ToSlice(versionIDSet, func(k int64, _ struct{}) int64 { return k })
 		pool.Add(func() error {
-			got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(true))
+			got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(true), nil)
 			if poolErr != nil {
 				return poolErr
 			}
@@ -814,7 +814,7 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 	if len(draftIDSet) > 0 {
 		setIDs := maps.ToSlice(draftIDSet, func(k int64, _ struct{}) int64 { return k })
 		pool.Add(func() error {
-			got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(spaceID), setIDs, gptr.Of(false))
+			got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(spaceID), setIDs, gptr.Of(false), nil)
 			if poolErr != nil {
 				return poolErr
 			}

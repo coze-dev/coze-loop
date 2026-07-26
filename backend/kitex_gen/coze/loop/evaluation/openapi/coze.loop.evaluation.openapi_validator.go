@@ -718,6 +718,53 @@ func (p *GetEvalTargetRecordOpenAPIData) IsValid() error {
 	}
 	return nil
 }
+func (p *ListEvalTargetsOApiRequest) IsValid() error {
+	if p.SearchName != nil {
+		if len(*p.SearchName) < int(1) {
+			return fmt.Errorf("field SearchName min_len rule failed, current value: %d", len(*p.SearchName))
+		}
+	}
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
+	if p.PageSize != nil {
+		if *p.PageSize <= int32(0) {
+			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+		}
+		if *p.PageSize > int32(200) {
+			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvalTargetsOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvalTargetsOpenAPIData) IsValid() error {
+	return nil
+}
 func (p *ImportEvaluationSetOpenAPIData) IsValid() error {
 	return nil
 }

@@ -128,6 +128,7 @@ struct ListEvaluationSetsRequest {
     5: optional eval_set.EvaluationSetType type (vt.max_size = "128"), // 按评测集类型过滤
     6: optional list<string> dataset_keys (vt.max_size = "255"), // 按 dataset_key 精确匹配
     7: optional eval_set.TagFilter tag_filter,          // 系统资源标签过滤
+    8: optional common.SharedResourceOption shared_option,
 
     100: optional i32 page_number (vt.gt = "0"),
     101: optional i32 page_size (vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20
@@ -167,6 +168,7 @@ struct GetEvaluationSetVersionRequest {
     2: required i64 version_id (api.path = "version_id", api.js_conv="true", go.tag='json:"version_id"'),
     3: optional i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv="true", go.tag='json:"evaluation_set_id"'),
     4: optional bool deleted_at (api.query='deleted_at'),
+    5: optional common.SharedResourceOption shared_option,
 
     255: optional base.Base Base
 }
@@ -182,7 +184,7 @@ struct BatchGetEvaluationSetVersionsRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required list<i64> version_ids (vt.max_size = "100", api.js_conv="true", go.tag='json:"version_ids"'),
     3: optional bool deleted_at,
-
+    4: optional common.SharedResourceOption shared_option,
 
     255: optional base.Base Base
 }
@@ -202,6 +204,7 @@ struct ListEvaluationSetVersionsRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
     3: optional string version_like// 根据版本号模糊匹配
+    4: optional common.SharedResourceOption shared_option,
 
     100: optional i32 page_number (vt.gt = "0"),
     101: optional i32 page_size (vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20
@@ -305,6 +308,7 @@ struct ListEvaluationSetItemsRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
     3: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"'),
+    4: optional common.SharedResourceOption shared_option, // 跨空间共享读:来源空间等信息
 
     100: optional i32 page_number,
     101: optional i32 page_size,    // 分页大小 (0, 200]，默认为 20
@@ -348,6 +352,7 @@ struct BatchGetEvaluationSetItemsRequest {
     2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
     3: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"'),
     4: optional list<i64> item_ids (api.js_conv = 'true', go.tag='json:"item_ids"'),
+    5: optional common.SharedResourceOption shared_option, // 跨空间共享读:来源空间等信息
     20: optional list<EvaluationItemVersionRef> item_version_queries (vt.max_size = "100", vt.elem.skip = "false")
     201: optional data_filter.Filter filter // item 过滤条件
     212: optional eval_set.TagFilter tag_filter // 系统资源标签过滤

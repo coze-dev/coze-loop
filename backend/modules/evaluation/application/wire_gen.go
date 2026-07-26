@@ -278,7 +278,7 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	return evaluationEvaluatorService, nil
 }
 
-func InitEvaluationSetApplication(client datasetservice.Client, authClient authservice.Client, meter metrics.Meter, userClient userservice.Client) evaluation.EvaluationSetService {
+func InitEvaluationSetApplication(client datasetservice.Client, authClient authservice.Client, meter metrics.Meter, userClient userservice.Client, configFactory conf.IConfigLoaderFactory) (evaluation.EvaluationSetService, error) {
 	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
 	iDatasetRPCAdapter := data.NewDatasetRPCAdapter(client)
 	iEvaluationSetService := service.NewEvaluationSetServiceImpl(iDatasetRPCAdapter)
@@ -288,8 +288,13 @@ func InitEvaluationSetApplication(client datasetservice.Client, authClient auths
 	evaluationSetMetrics := metrics4.NewEvaluationSetMetrics(meter)
 	iUserProvider := foundation.NewUserRPCProvider(userClient)
 	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
-	evaluationSetService := NewEvaluationSetApplicationImpl(iAuthProvider, iEvaluationSetService, evaluationSetSchemaService, evaluationSetVersionService, evaluationSetItemService, evaluationSetMetrics, userInfoService)
-	return evaluationSetService
+	sharedResourceConfigProvider, err := conf2.NewSharedResourceConfigProvider(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	resourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, sharedResourceConfigProvider)
+	evaluationSetService := NewEvaluationSetApplicationImpl(iAuthProvider, iEvaluationSetService, evaluationSetSchemaService, evaluationSetVersionService, evaluationSetItemService, evaluationSetMetrics, userInfoService, resourceAccessAuthorizer)
+	return evaluationSetService, nil
 }
 
 func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, cmdable redis.Cmdable, meter metrics.Meter, trajectoryAdapter rpc.ITrajectoryAdapter, configFactory conf.IConfigLoaderFactory, batchObjectStorage fileserver.BatchObjectStorage) (evaluation.EvalTargetService, error) {
@@ -313,11 +318,16 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v, trajectoryAdapter, iConfiger, sandboxSchedulerAdapter, iExptRunLogRepo)
 	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
 	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
-	evalTargetService := NewEvalTargetHandlerImpl(iAuthProvider, iEvalTargetService, v, iEvalAsyncRepo)
+	sharedResourceConfigProvider, err := conf2.NewSharedResourceConfigProvider(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	resourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, sharedResourceConfigProvider)
+	evalTargetService := NewEvalTargetHandlerImpl(iAuthProvider, iEvalTargetService, v, iEvalAsyncRepo, resourceAccessAuthorizer)
 	return evalTargetService, nil
 }
 
-func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClient taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (evaluation.EvalOpenAPIService, error) {
+func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClient taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (IEvalOpenAPIApplication, error) {
 	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
 	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
@@ -435,8 +445,13 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	webhookDispatcher := service.NewWebhookDispatcher(exptEventPublisher, noopWebhookSecretProvider, iExptStatsRepo)
 	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher)
 	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler, sandboxSchedulerAdapter)
-	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, sandboxSchedulerAdapter, iFileProvider)
-	return evalOpenAPIService, nil
+	sharedResourceConfigProvider, err := conf2.NewSharedResourceConfigProvider(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	resourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, sharedResourceConfigProvider)
+	v3 := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, sandboxSchedulerAdapter, iFileProvider, resourceAccessAuthorizer)
+	return v3, nil
 }
 
 // wire.go:
@@ -454,16 +469,16 @@ var (
 	)
 
 	evaluationSetSet = wire.NewSet(
-		NewEvaluationSetApplicationImpl, service.EvaluationSetDomainServiceSet, metrics4.EvaluationSetMetricsSet, foundation.FoundationRPCSet, userinfo.NewUserInfoServiceImpl,
+		NewEvaluationSetApplicationImpl, conf2.NewSharedResourceConfigProvider, service.NewResourceAccessAuthorizer, service.EvaluationSetDomainServiceSet, metrics4.EvaluationSetMetricsSet, foundation.FoundationRPCSet, userinfo.NewUserInfoServiceImpl,
 	)
 
 	evalTargetSet = wire.NewSet(
-		NewEvalTargetHandlerImpl, service.TargetDomainServiceSet, metrics3.EvalTargetMetricsSet, foundation.FoundationRPCSet, experiment.ExperimentRepoSet, flagSet, storage.StorageSet,
+		NewEvalTargetHandlerImpl, conf2.NewSharedResourceConfigProvider, service.NewResourceAccessAuthorizer, service.TargetDomainServiceSet, metrics3.EvalTargetMetricsSet, foundation.FoundationRPCSet, experiment.ExperimentRepoSet, flagSet, storage.StorageSet,
 	)
 
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
-		experimentSet, conf2.NewConfiger, openapi.OpenAPIMetricsSet,
+		experimentSet, conf2.NewConfiger, conf2.NewSharedResourceConfigProvider, service.NewResourceAccessAuthorizer, openapi.OpenAPIMetricsSet,
 	)
 )
 
