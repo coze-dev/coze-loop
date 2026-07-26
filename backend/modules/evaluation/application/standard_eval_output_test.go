@@ -570,3 +570,208 @@ func TestBuildItemStandardEvalOutput_DoesNotMisclassifyOrdinaryJSONActualOutput(
 	assert.Contains(t, got.Output.GetText(), "detail")
 	assert.Contains(t, got.Output.GetText(), "rounds")
 }
+
+// --- FORNAX_ 前缀逐字段深合并 ---
+
+// injectFornaxField 在 item 首个 payload 的 target OutputFields 写入一个字段（key 原样，调用方决定是否带 FORNAX_ 前缀）。
+func injectFornaxField(item *entity.ItemResult, key, jsonText string) {
+	textType := entity.ContentTypeText
+	fields := item.TurnResults[0].ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
+	txt := jsonText
+	fields[key] = &entity.Content{ContentType: &textType, Text: &txt}
+}
+
+func TestBuildItemStandardEvalOutput_NoFornaxFields_AllPlatform(t *testing.T) {
+	// 对象未报任何 FORNAX_ 字段 → 七字段全平台兜底（等价现状）。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	require.NotNil(t, got.Eval)
+	var eval map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
+	assert.Contains(t, eval, "task_config") // 平台兜底结构特征
+}
+
+func TestBuildItemStandardEvalOutput_FornaxEvalOnly_OthersPlatform(t *testing.T) {
+	// 对象只报 FORNAX_eval，其余平台兜底。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	injectFornaxField(item, "FORNAX_eval", `{"detail":{"eval_result":{"score":0.99}}}`)
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	// eval 深合并：对象的 score 覆盖，平台的 task_config 保留。
+	var eval map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
+	assert.Contains(t, eval, "task_config")
+	detail := eval["detail"].(map[string]any)
+	evalResult := detail["eval_result"].(map[string]any)
+	assert.EqualValues(t, 0.99, evalResult["score"])
+	// output 仍是平台兜底。
+	var output map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
+	assert.Contains(t, output, "detail")
+}
+
+func TestBuildItemStandardEvalOutput_SubfieldConflictObjectWins(t *testing.T) {
+	// 子字段冲突：对象 output.detail.custom 覆盖，平台已有的 detail 兄弟子字段保留。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	injectFornaxField(item, "FORNAX_output", `{"detail":{"custom":"from-object"}}`)
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	var output map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
+	detail := output["detail"].(map[string]any)
+	assert.Equal(t, "from-object", detail["custom"]) // 对象子字段
+	// 平台 detail 里原有的 file_diff 兄弟键仍在。
+	assert.Contains(t, detail, "file_diff")
+	// 平台 output.rounds 兄弟键仍在（对象没提 rounds 子字段）。
+	assert.Contains(t, output, "rounds")
+}
+
+func TestBuildItemStandardEvalOutput_RoundsMergeByRoundID(t *testing.T) {
+	// rounds 按 round_id 对齐：对象报 round_1 的补充字段，平台其他轮保留。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	// 平台 round_id 形如 round_<turnID>，此处 turnID=1 → round_1。
+	injectFornaxField(item, "FORNAX_rounds", `[{"round_id":"round_1","extra_note":"obj"}]`)
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	var rounds []any
+	require.NoError(t, json.Unmarshal([]byte(got.GetRounds().GetText()), &rounds))
+	require.Len(t, rounds, 1) // 对齐合并，不新增元素
+	r0 := rounds[0].(map[string]any)
+	assert.Equal(t, "obj", r0["extra_note"]) // 对象补充字段
+	assert.Contains(t, r0, "round_no")       // 平台原字段保留
+}
+
+func TestBuildItemStandardEvalOutput_BareKeyFallback(t *testing.T) {
+	// 向前兼容：对象用旧裸 key output 上报，仍被识别复用。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	injectFornaxField(item, "output", `{"detail":{"custom":"bare-key"}}`)
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	var output map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
+	detail := output["detail"].(map[string]any)
+	assert.Equal(t, "bare-key", detail["custom"])
+}
+
+func TestBuildItemStandardEvalOutput_FornaxPrefixOverBareKey(t *testing.T) {
+	// FORNAX_ 前缀优先于裸 key。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	injectFornaxField(item, "output", `{"detail":{"src":"bare"}}`)
+	injectFornaxField(item, "FORNAX_output", `{"detail":{"src":"prefixed"}}`)
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	var output map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
+	detail := output["detail"].(map[string]any)
+	assert.Equal(t, "prefixed", detail["src"])
+}
+
+func TestBuildItemStandardEvalOutput_ContentOmittedNotMerged(t *testing.T) {
+	// 内容省略的大对象（S3）→ 不深合并，原样透出并保留省略语义。
+	textType := entity.ContentTypeText
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	preview := `{"detail":{"partial":true}}` // 预览片段（合法 JSON 也不合并）
+	fields := item.TurnResults[0].ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
+	fields["FORNAX_output"] = &entity.Content{
+		ContentType:    &textType,
+		Text:           &preview,
+		ContentOmitted: gptr.Of(true),
+		FullContent:    &entity.ObjectStorage{URI: gptr.Of("eval:record:field:uuid-1")},
+	}
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	require.NotNil(t, got.Output)
+	assert.True(t, got.Output.GetContentOmitted())
+	require.NotNil(t, got.Output.FullContent)
+	assert.Equal(t, "eval:record:field:uuid-1", got.Output.FullContent.GetURI())
+	// 原样透出预览文本，不与平台合并（不含平台 rounds 键）。
+	assert.Equal(t, preview, got.Output.GetText())
+}
+
+func TestBuildItemStandardEvalOutput_NonJSONFornaxFieldNoPanic(t *testing.T) {
+	// 对象 FORNAX_output.text 非合法 JSON → 原样透出，不 panic。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	injectFornaxField(item, "FORNAX_output", `this is not json`)
+
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	require.NotNil(t, got.Output)
+	assert.Equal(t, "this is not json", got.Output.GetText())
+}
+
+func TestBuildItemStandardEvalOutput_EvaluatorIDFilled(t *testing.T) {
+	// 平台兜底的 eval.detail.eval_result.results.<key> 含 evaluator_id 与 evaluator_version_id。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	opt := standardEvalOutputBuildOptions{
+		ExptID: 20,
+		EvaluatorByVersionID: map[int64]*entity.ColumnEvaluator{
+			101: {EvaluatorVersionID: 101, EvaluatorID: 9001, Name: gptr.Of("完整性"), Version: gptr.Of("0.0.1")},
+		},
+	}
+	got, err := buildItemStandardEvalOutput(item, opt)
+	require.NoError(t, err)
+	var eval map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
+	rounds := eval["rounds"].(map[string]any)
+	require.NotEmpty(t, rounds)
+	for _, rv := range rounds {
+		round := rv.(map[string]any)
+		evalResult := round["eval_result"].(map[string]any)
+		results := evalResult["results"].(map[string]any)
+		require.NotEmpty(t, results)
+		for _, resv := range results {
+			res := resv.(map[string]any)
+			assert.EqualValues(t, 9001, res["evaluator_id"])
+			assert.EqualValues(t, 101, res["evaluator_version_id"])
+			assert.Equal(t, "完整性", res["evaluator_name"])
+		}
+	}
+}
+
+func TestBuildItemStandardEvalOutput_AgentOmitsEmptyKeys(t *testing.T) {
+	// agent 中无值字段不填 key（不出现空串占位）。
+	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	// runtime_param 为 {"model":"x"}，故 model_name 有值；agent_name/thinking_effort 等无值应缺席。
+	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	require.NoError(t, err)
+	var agent map[string]any
+	require.NoError(t, json.Unmarshal([]byte(got.GetAgent().GetText()), &agent))
+	assert.Equal(t, "x", agent["model_name"])
+	_, hasAgentName := agent["agent_name"]
+	assert.False(t, hasAgentName, "空值的 agent_name 不应出现")
+	_, hasEffort := agent["thinking_effort"]
+	assert.False(t, hasEffort, "空值的 thinking_effort 不应出现")
+}
+
+func TestDeepMergeStandardEvalOutput_MapRecursiveObjectWins(t *testing.T) {
+	platform := map[string]any{"a": 1.0, "nested": map[string]any{"x": "p", "y": "p"}}
+	object := map[string]any{"b": 2.0, "nested": map[string]any{"y": "o"}}
+	merged := deepMergeStandardEvalOutput(platform, object).(map[string]any)
+	assert.EqualValues(t, 1, merged["a"])
+	assert.EqualValues(t, 2, merged["b"])
+	nested := merged["nested"].(map[string]any)
+	assert.Equal(t, "p", nested["x"]) // 平台独有保留
+	assert.Equal(t, "o", nested["y"]) // 冲突对象覆盖
+}
+
+func TestDeepMergeStandardEvalOutput_ArrayObjectOverrides(t *testing.T) {
+	// 非 rounds 的普通数组：对象整体覆盖平台。
+	merged := deepMergeStandardEvalOutput([]any{1.0, 2.0}, []any{9.0})
+	arr := merged.([]any)
+	require.Len(t, arr, 1)
+	assert.EqualValues(t, 9, arr[0])
+}
+
+func TestMergeRoundsField_AppendsUnmatchedObjectRound(t *testing.T) {
+	platform := []any{map[string]any{"round_id": "round_1", "p": true}}
+	object := []any{map[string]any{"round_id": "round_2", "o": true}}
+	merged := mergeRoundsField(platform, object).([]any)
+	require.Len(t, merged, 2) // round_2 追加
+}

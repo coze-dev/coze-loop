@@ -24,6 +24,142 @@ import (
 
 const maxStandardEvalOutputMGetItemIDs = 100
 
+// standardEvalOutputFornaxPrefix 评测对象自报 standard eval output 字段时使用的前缀，
+// 用于与用户自定义的普通 ext_output 字段区分、避免重名（见《PSM类评测对象Schema对齐》）。
+const standardEvalOutputFornaxPrefix = "FORNAX_"
+
+// standardEvalOutputMergeableFields 平台组装 standard eval output 时，支持
+// “评测对象上报优先 + 平台兜底 + 子字段深合并” 的字段集合。
+// 不含 source：source 恒由平台生成，忽略任何 FORNAX_source 上报。
+var standardEvalOutputMergeableFields = []string{"detail", "rounds", "agent", "output", "eval", "extra"}
+
+// lookupFornaxField 在评测对象上报的 output_fields 中查找某标准字段对应的 Content：
+// 先查带 FORNAX_ 前缀的 key（新协议），未命中再 fallback 到裸 key（向前兼容存量上报）。
+// 两者都无（或值为 nil）时返回 false，表示对象未上报该字段、由平台兜底。
+func lookupFornaxField(fields map[string]*entity.Content, field string) (*entity.Content, bool) {
+	if len(fields) == 0 {
+		return nil, false
+	}
+	if c, ok := fields[standardEvalOutputFornaxPrefix+field]; ok && c != nil {
+		return c, true
+	}
+	if c, ok := fields[field]; ok && c != nil {
+		return c, true
+	}
+	return nil, false
+}
+
+// standardFieldContentMergeable 判断评测对象上报的字段 Content 能否参与结构化子字段深合并。
+// 两种情况无法结构化、只能原样透出（对象优先）：
+//   - 内容被省略的大对象（ContentOmitted 或 FullContent 非空）：Text 仅为裁剪后的预览片段，
+//     全量在对象存储（full_content.uri），平台侧没有完整数据可合并；
+//   - Text 为空或非合法 JSON：无法反序列化成结构，没有“子字段”可递归。
+func standardFieldContentMergeable(c *entity.Content) bool {
+	if c == nil {
+		return false
+	}
+	if gptr.Indirect(c.ContentOmitted) || c.FullContent != nil {
+		return false
+	}
+	text := c.GetText()
+	if text == "" || !json.Valid([]byte(text)) {
+		return false
+	}
+	return true
+}
+
+// normalizeToJSONValue 把任意 Go 值经 JSON round-trip 归一为 map[string]any / []any / 标量，
+// 使平台兜底值与评测对象上报的已解析 JSON 值在同一套原生类型上做深合并。失败时返回原值。
+func normalizeToJSONValue(v any) any {
+	if v == nil {
+		return nil
+	}
+	text, err := json.MarshalString(v)
+	if err != nil {
+		return v
+	}
+	var out any
+	if err := json.Unmarshal([]byte(text), &out); err != nil {
+		return v
+	}
+	return out
+}
+
+// deepMergeStandardEvalOutput 深度合并平台兜底值与评测对象上报值，冲突以对象为准：
+//   - 两侧均为 JSON object(map) 时逐 key 递归合并（只在一侧的 key 保留该侧）；
+//   - 其余情况（类型冲突 / 标量 / 数组 / null）由对象整体覆盖平台。
+//
+// 注：顶层 rounds 数组的按 round_id 对齐合并由 mergeRoundsField 单独处理，不走本函数的数组覆盖。
+func deepMergeStandardEvalOutput(platform, object any) any {
+	pm, pOK := platform.(map[string]any)
+	om, oOK := object.(map[string]any)
+	if pOK && oOK {
+		merged := make(map[string]any, len(pm)+len(om))
+		for k, v := range pm {
+			merged[k] = v
+		}
+		for k, ov := range om {
+			if pv, exists := merged[k]; exists {
+				merged[k] = deepMergeStandardEvalOutput(pv, ov)
+			} else {
+				merged[k] = ov
+			}
+		}
+		return merged
+	}
+	return object
+}
+
+// mergeRoundsField 按 round_id 对齐合并 rounds 字段（D7）：
+// 两侧均为数组时，以平台数组为基底按 round_id 建索引；对象数组中 round_id 命中的 round
+// 逐 round 深合并（对象子字段优先），未命中的 round 追加末尾——对象没报的轮次保留平台已算结果。
+// 任一侧非数组时退化为通用深合并（对象覆盖）。
+func mergeRoundsField(platform, object any) any {
+	pArr, pOK := platform.([]any)
+	oArr, oOK := object.([]any)
+	if !pOK || !oOK {
+		return deepMergeStandardEvalOutput(platform, object)
+	}
+	merged := make([]any, len(pArr))
+	copy(merged, pArr)
+	idx := make(map[string]int, len(pArr))
+	for i, r := range pArr {
+		if id, ok := standardRoundIDFromValue(r); ok {
+			idx[id] = i
+		}
+	}
+	for _, or := range oArr {
+		if id, ok := standardRoundIDFromValue(or); ok {
+			if i, exists := idx[id]; exists {
+				merged[i] = deepMergeStandardEvalOutput(merged[i], or)
+				continue
+			}
+		}
+		merged = append(merged, or)
+	}
+	return merged
+}
+
+// standardRoundIDFromValue 从 round 对象（map）中取非空的 round_id 字符串。
+func standardRoundIDFromValue(r any) (string, bool) {
+	m, ok := r.(map[string]any)
+	if !ok {
+		return "", false
+	}
+	s, ok := m["round_id"].(string)
+	if !ok || s == "" {
+		return "", false
+	}
+	return s, true
+}
+
+// putStandardField 仅在值非空（空串跳过）时写入 map，避免输出一堆空占位 key。
+func putStandardField(m map[string]any, key, val string) {
+	if val != "" {
+		m[key] = val
+	}
+}
+
 func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
 	if req == nil || len(req.GetItemIds()) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is empty"))
@@ -313,55 +449,75 @@ func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutput
 	if !isItemStandardEvalOutputContentReady(item) {
 		return res, nil
 	}
-	if out, ok := buildReportedItemStandardEvalOutput(item, opt); ok {
-		return out, nil
-	}
+	// 平台兜底基线：buildStandardEvalOutputJSON 已内含旧的整包 / 裸 key 复用路径。
 	std := buildStandardEvalOutputJSON(item, opt)
+	// 评测对象自报的 ext_output（FORNAX_ 前缀优先，裸 key 兜底），逐字段叠加到基线上。
+	// source 恒由平台生成、不被对象覆盖，故不在可合并字段内、也保持现状不 emit。
+	fields := reportedStandardOutputFields(item, opt.ExptID)
 
 	var err error
-	if res.Detail, err = inlineJSONContent(std.Detail); err != nil {
+	if res.Detail, err = mergeStandardEvalOutputField(std.Detail, fields, "detail"); err != nil {
 		return nil, err
 	}
-	if res.Rounds, err = inlineJSONContent(std.Rounds); err != nil {
+	if res.Rounds, err = mergeStandardEvalOutputField(std.Rounds, fields, "rounds"); err != nil {
 		return nil, err
 	}
-	if res.Agent, err = inlineJSONContent(std.Agent); err != nil {
+	if res.Agent, err = mergeStandardEvalOutputField(std.Agent, fields, "agent"); err != nil {
 		return nil, err
 	}
-	if res.Output, err = inlineJSONContent(std.Output); err != nil {
+	if res.Output, err = mergeStandardEvalOutputField(std.Output, fields, "output"); err != nil {
 		return nil, err
 	}
-	if res.Eval, err = inlineJSONContent(std.Eval); err != nil {
+	if res.Eval, err = mergeStandardEvalOutputField(std.Eval, fields, "eval"); err != nil {
 		return nil, err
 	}
-	if res.Extra, err = inlineJSONContent(std.Extra); err != nil {
+	if res.Extra, err = mergeStandardEvalOutputField(std.Extra, fields, "extra"); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func buildReportedItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (*expt.ItemStandardEvalOutput, bool) {
-	for _, payload := range standardPayloads(item, opt.ExptID) {
+// reportedStandardOutputFields 取评测对象自报的 output_fields：在该 item 的各 turn payload 中，
+// 返回第一个含有任一标准字段（FORNAX_ 前缀或裸 key）的 OutputFields；均无则返回 nil。
+func reportedStandardOutputFields(item *entity.ItemResult, exptID int64) map[string]*entity.Content {
+	for _, payload := range standardPayloads(item, exptID) {
 		if payload == nil || payload.TargetOutput == nil || payload.TargetOutput.EvalTargetRecord == nil || payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData == nil {
 			continue
 		}
 		fields := payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
-		if !looksLikeStandardEvalOutputFields(fields) {
-			continue
+		for _, f := range standardEvalOutputMergeableFields {
+			if _, ok := lookupFornaxField(fields, f); ok {
+				return fields
+			}
 		}
-		res := newItemStandardEvalOutput(item, opt)
-		if itemKey := itemKeyFromItem(item); itemKey != "" {
-			res.ItemKey = gptr.Of(itemKey)
-		}
-		res.Detail = contentToStandardEvalOutputContent(fields["detail"])
-		res.Rounds = contentToStandardEvalOutputContent(fields["rounds"])
-		res.Agent = contentToStandardEvalOutputContent(fields["agent"])
-		res.Output = contentToStandardEvalOutputContent(fields["output"])
-		res.Eval = contentToStandardEvalOutputContent(fields["eval"])
-		res.Extra = contentToStandardEvalOutputContent(fields["extra"])
-		return res, true
 	}
-	return nil, false
+	return nil
+}
+
+// mergeStandardEvalOutputField 逐字段实现「对象优先 + 平台兜底 + 子字段深合并」：
+//   - 对象未报该字段 → 平台兜底值；
+//   - 对象报了但内容无法结构化（省略大对象 / 非 JSON）→ 对象 Content 原样透出（对象优先，保留省略语义）；
+//   - 对象报了合法 JSON → 与平台兜底深合并（rounds 按 round_id 对齐），冲突以对象为准。
+func mergeStandardEvalOutputField(platformVal any, fields map[string]*entity.Content, field string) (*expt.StandardEvalOutputContent, error) {
+	c, ok := lookupFornaxField(fields, field)
+	if !ok {
+		return inlineJSONContent(platformVal)
+	}
+	if !standardFieldContentMergeable(c) {
+		return contentToStandardEvalOutputContent(c), nil
+	}
+	var objVal any
+	if err := json.Unmarshal([]byte(c.GetText()), &objVal); err != nil {
+		return contentToStandardEvalOutputContent(c), nil
+	}
+	platformJSON := normalizeToJSONValue(platformVal)
+	var merged any
+	if field == "rounds" {
+		merged = mergeRoundsField(platformJSON, objVal)
+	} else {
+		merged = deepMergeStandardEvalOutput(platformJSON, objVal)
+	}
+	return inlineJSONContent(merged)
 }
 
 func isItemStandardEvalOutputContentReady(item *entity.ItemResult) bool {
@@ -714,21 +870,27 @@ func standardAgent(item *entity.ItemResult, exptID int64, opt standardEvalOutput
 		runs = append(runs, map[string]any{"target_record_id": rec.ID, "experiment_run_id": rec.ExperimentRunID, "status": rec.Status, "trace_id": rec.TraceID, "log_id": rec.LogID})
 	}
 	runtimeParam := runtimeParamObjectFromTargetRecord(first)
-	return map[string]any{
-		"agent_id":          int64String(firstTargetID(first)),
-		"model_name":        stringFromRuntimeParam(runtimeParam, "model_name", "model", "model_id"),
-		"agent_name":        stringFromRuntimeParam(runtimeParam, "agent_name", "agent", "name"),
-		"agent_version":     stringFromRuntimeParam(runtimeParam, "agent_version", "version"),
-		"thinking_effort":   stringFromRuntimeParam(runtimeParam, "thinking_effort", "effort"),
-		"context_window":    stringFromRuntimeParam(runtimeParam, "context_window", "context_window_size", "main_context_window_size"),
-		"target_id":         firstTargetID(first),
-		"target_version_id": firstTargetVersionID(first),
-		// source_target_id 为业务侧原始对象 ID（如 promptID / sandbox agent 外部标识），
-		// 需按 target_id 反查 EvalTarget 得到；未解析到时留空。
-		"source_target_id": opt.SourceTargetIDByTargetID[firstTargetID(first)],
-		"runtime_param":    runtimeParam,
-		"runs":             runs,
+	// 空值不填 key（D11）：字符串空串 / 数值 0 视为无意义，不放进输出 map，避免一堆空占位。
+	agent := map[string]any{
+		"runtime_param": runtimeParam,
+		"runs":          runs,
 	}
+	putStandardField(agent, "agent_id", int64String(firstTargetID(first)))
+	putStandardField(agent, "model_name", stringFromRuntimeParam(runtimeParam, "model_name", "model", "model_id"))
+	putStandardField(agent, "agent_name", stringFromRuntimeParam(runtimeParam, "agent_name", "agent", "name"))
+	putStandardField(agent, "agent_version", stringFromRuntimeParam(runtimeParam, "agent_version", "version"))
+	putStandardField(agent, "thinking_effort", stringFromRuntimeParam(runtimeParam, "thinking_effort", "effort"))
+	putStandardField(agent, "context_window", stringFromRuntimeParam(runtimeParam, "context_window", "context_window_size", "main_context_window_size"))
+	// source_target_id 为业务侧原始对象 ID（如 promptID / sandbox agent 外部标识），
+	// 需按 target_id 反查 EvalTarget 得到；未解析到时留空、不填。
+	putStandardField(agent, "source_target_id", opt.SourceTargetIDByTargetID[firstTargetID(first)])
+	if tid := firstTargetID(first); tid != 0 {
+		agent["target_id"] = tid
+	}
+	if tvid := firstTargetVersionID(first); tvid != 0 {
+		agent["target_version_id"] = tvid
+	}
+	return agent
 }
 
 func standardOutput(item *entity.ItemResult, exptID int64) map[string]any {
@@ -944,14 +1106,21 @@ func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalO
 			if reason == "" {
 				reason = record.GetReasoning()
 			}
-			results[resultKey] = map[string]any{
-				"evaluator_name":    evaluatorName(opt, key, record),
-				"evaluator_version": evaluatorVersion(opt, key, record),
-				"evaluator_alias":   record.Alias,
-				"type":              "score",
-				"score":             record.GetScore(),
-				"reason":            record.GetReasoning(),
+			// key 即 evaluator_version_id；evaluator_id 从 ColumnEvaluator 反查。
+			// 空值不填 key（D11）：name/version/alias/id 无值时不放进 map。
+			entry := map[string]any{
+				"type":                 "score",
+				"score":                record.GetScore(),
+				"reason":               record.GetReasoning(),
+				"evaluator_version_id": key,
 			}
+			putStandardField(entry, "evaluator_name", evaluatorName(opt, key, record))
+			putStandardField(entry, "evaluator_version", evaluatorVersion(opt, key, record))
+			putStandardField(entry, "evaluator_alias", record.Alias)
+			if eid := evaluatorID(opt, key); eid != 0 {
+				entry["evaluator_id"] = eid
+			}
+			results[resultKey] = entry
 		}
 	}
 	return map[string]any{"type": "score", "score": score, "reason": reason, "results": results}
@@ -981,6 +1150,14 @@ func evaluatorVersion(opt standardEvalOutputBuildOptions, key int64, record *ent
 		return *meta.Version
 	}
 	return ""
+}
+
+// evaluatorID 从 ColumnEvaluator（按 evaluator_version_id 索引）反查 evaluator_id；未命中返回 0。
+func evaluatorID(opt standardEvalOutputBuildOptions, key int64) int64 {
+	if meta := opt.EvaluatorByVersionID[key]; meta != nil {
+		return meta.EvaluatorID
+	}
+	return 0
 }
 
 func turnRunStatus(payload *entity.ExperimentTurnPayload) map[string]any {
