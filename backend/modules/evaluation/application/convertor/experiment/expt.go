@@ -1360,6 +1360,7 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 	}
 	do := &entity.RunModeConfig{
 		SuaModelID:    dto.GetSuaModelID(),
+		SuaModelName:  dto.GetSuaModelName(),
 		MaxRunMinutes: int(dto.GetMaxRunMinutes()),
 	}
 	if dto.IsSetRunMode() {
@@ -1406,6 +1407,9 @@ func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 	dto := &domain_expt.RunModeConfig{
 		RunMode:    gptr.Of(suaRunModeDO2DTO(do.RunMode)),
 		SuaModelID: gptr.Of(do.SuaModelID),
+	}
+	if do.SuaModelName != "" {
+		dto.SuaModelName = gptr.Of(do.SuaModelName)
 	}
 	if do.MaxRunMinutes != 0 {
 		dto.MaxRunMinutes = gptr.Of(int32(do.MaxRunMinutes))

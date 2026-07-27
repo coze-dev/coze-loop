@@ -2962,6 +2962,7 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) *domainE
 	out := &domainExpt.RunModeConfig{
 		MaxRunMinutes: c.MaxRunMinutes,
 		SuaModelID:    c.SuaModelID,
+		SuaModelName:  c.SuaModelName,
 	}
 	if c.RunMode != nil {
 		if rm, ok := openAPIRunModeToDomain(*c.RunMode); ok {

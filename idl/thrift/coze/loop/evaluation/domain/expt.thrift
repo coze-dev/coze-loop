@@ -75,6 +75,8 @@ struct RunModeConfig {
     2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
     3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
     4: optional i64 sua_model_id (api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
+    // SUA 模型名, 与 sua_model_id 二选一: operator 优先用 name 直取模型, id 走平台解析 (GetModelAndAccount)。
+    5: optional string sua_model_name (go.tag = 'json:"sua_model_name"')
 }
 
 typedef string Visibility(ts.enum="true")

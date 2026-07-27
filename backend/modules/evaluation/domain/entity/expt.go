@@ -386,6 +386,7 @@ type RunModeConfig struct {
 	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
 	SuaMode       SuaMode `json:"sua_mode,omitempty"`
 	SuaModelID    int64   `json:"sua_model_id,omitempty"`
+	SuaModelName  string  `json:"sua_model_name,omitempty"`
 }
 
 // ItemRunConf 题目级多轮/SUA 运行配置, 冻结进 expt_item_ref.item_config (ItemTargetConf.RunConf)。
