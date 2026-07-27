@@ -1,0 +1,59 @@
+backend/kitex_gen/coze/loop/data/dataset/coze.loop.data.dataset.go
+  s_43759df5c24f9d::t_af68e491358f66 3811-3813,3878-3889,3997-3999,4030,4053-4056,4141-4148,4305-4315,4472-4475,4604-4621,4825-4827,4899-4910
+backend/kitex_gen/coze/loop/data/dataset/coze.loop.data.dataset_validator.go
+  s_43759df5c24f9d::t_8e4887f2ca6077 221-225
+backend/kitex_gen/coze/loop/data/dataset/k-coze.loop.data.dataset.go
+  s_43759df5c24f9d::t_272f84d8b44fd4 2836-2849,3054-3067,3232,3251,3306-3314,3451-3459,3576-3583
+backend/kitex_gen/coze/loop/evaluation/eval_set/coze.loop.evaluation.eval_set.go
+  s_43759df5c24f9d::t_f071af426d3a06 5702-5705,5800-5811,5892-5894,5919,5951-5954,6051-6058,6244-6254,6354-6357,6544-6561,6696-6698,6794-6805
+idl/thrift/coze/loop/data/coze.loop.data.dataset.thrift
+  s_43759df5c24f9d::t_b654532bbc82c9 80
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.eval_set.thrift
+  s_43759df5c24f9d::t_ea7345cbbd7d3f 131
+backend/kitex_gen/coze/loop/evaluation/eval_set/coze.loop.evaluation.eval_set_validator.go
+  s_43759df5c24f9d::t_be22d0b8444189 279-283
+backend/kitex_gen/coze/loop/evaluation/eval_set/k-coze.loop.evaluation.eval_set.go
+  s_43759df5c24f9d::t_35010625035740 4346-4359,4580-4593,4689,4708,4801-4809,4933-4941,5052-5059
+backend/modules/data/application/dataset_app.go
+  s_43759df5c24f9d::t_59ff8c8830371e 203
+backend/modules/data/domain/dataset/repo/types.go
+  s_43759df5c24f9d::t_3f50dc44b3b1c0 17-24
+backend/modules/data/domain/dataset/service/dataset.go
+  s_43759df5c24f9d::t_ce7498c450c9d8 162-169
+backend/modules/data/domain/dataset/service/dataset_test.go
+  s_43759df5c24f9d::t_69c8bbaf2a7e0a 658-708
+backend/modules/data/domain/dataset/service/types.go
+  s_43759df5c24f9d::t_a5b69922529a43 43-45
+backend/modules/data/infra/repo/dataset/dataset_repo_impl.go
+  s_43759df5c24f9d::t_1ef89721a8c312 138-145,159-166
+backend/modules/data/infra/repo/dataset/mysql/dataset_dao.go
+  s_43759df5c24f9d::t_c26b08153970f5 50-57,73
+backend/modules/evaluation/application/evaluation_set_app.go
+  s_43759df5c24f9d::t_e8d2282daba4ce 381
+backend/modules/evaluation/domain/component/rpc/dataset.go
+  s_43759df5c24f9d::t_1e0195ead6ae93 105
+backend/modules/evaluation/domain/entity/param.go
+  s_43759df5c24f9d::t_130329e54a8304 48
+backend/modules/evaluation/domain/service/evaluation_set_impl.go
+  s_43759df5c24f9d::t_406ac079aa5e26 114
+backend/modules/evaluation/infra/rpc/data/dataset.go
+  s_43759df5c24f9d::t_286171d3d50354 196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3927c2bf6e5715cb88de8ed7257f360137e4eef5",
+  "prompts": {},
+  "sessions": {
+    "s_43759df5c24f9d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac853281c0572d56f",
+        "model": "unknown"
+      },
+      "human_author": "yangfeng.alanyf <yangfeng.alanyf@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
