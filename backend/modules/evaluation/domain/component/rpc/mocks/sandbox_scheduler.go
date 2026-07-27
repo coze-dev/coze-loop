@@ -21,7 +21,6 @@ import (
 type MockISandboxSchedulerAdapter struct {
 	ctrl     *gomock.Controller
 	recorder *MockISandboxSchedulerAdapterMockRecorder
-	isgomock struct{}
 }
 
 // MockISandboxSchedulerAdapterMockRecorder is the mock recorder for MockISandboxSchedulerAdapter.
@@ -42,76 +41,106 @@ func (m *MockISandboxSchedulerAdapter) EXPECT() *MockISandboxSchedulerAdapterMoc
 }
 
 // Destroy mocks base method.
-func (m *MockISandboxSchedulerAdapter) Destroy(ctx context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+func (m *MockISandboxSchedulerAdapter) Destroy(arg0 context.Context, arg1 *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Destroy", ctx, req)
+	ret := m.ctrl.Call(m, "Destroy", arg0, arg1)
 	ret0, _ := ret[0].(*rpc.SandboxDestroyResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Destroy indicates an expected call of Destroy.
-func (mr *MockISandboxSchedulerAdapterMockRecorder) Destroy(ctx, req any) *gomock.Call {
+func (mr *MockISandboxSchedulerAdapterMockRecorder) Destroy(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).Destroy), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).Destroy), arg0, arg1)
 }
 
 // Get mocks base method.
-func (m *MockISandboxSchedulerAdapter) Get(ctx context.Context, req *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
+func (m *MockISandboxSchedulerAdapter) Get(arg0 context.Context, arg1 *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, req)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1)
 	ret0, _ := ret[0].(*rpc.SandboxGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockISandboxSchedulerAdapterMockRecorder) Get(ctx, req any) *gomock.Call {
+func (mr *MockISandboxSchedulerAdapterMockRecorder) Get(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).Get), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).Get), arg0, arg1)
 }
 
 // GetTaskInfo mocks base method.
-func (m *MockISandboxSchedulerAdapter) GetTaskInfo(ctx context.Context, req *rpc.SandboxGetTaskInfoRequest) (*rpc.SandboxGetTaskInfoResponse, error) {
+func (m *MockISandboxSchedulerAdapter) GetTaskInfo(arg0 context.Context, arg1 *rpc.SandboxGetTaskInfoRequest) (*rpc.SandboxGetTaskInfoResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTaskInfo", ctx, req)
+	ret := m.ctrl.Call(m, "GetTaskInfo", arg0, arg1)
 	ret0, _ := ret[0].(*rpc.SandboxGetTaskInfoResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTaskInfo indicates an expected call of GetTaskInfo.
-func (mr *MockISandboxSchedulerAdapterMockRecorder) GetTaskInfo(ctx, req any) *gomock.Call {
+func (mr *MockISandboxSchedulerAdapterMockRecorder) GetTaskInfo(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskInfo", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).GetTaskInfo), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskInfo", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).GetTaskInfo), arg0, arg1)
 }
 
 // Init mocks base method.
-func (m *MockISandboxSchedulerAdapter) Init(ctx context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+func (m *MockISandboxSchedulerAdapter) Init(arg0 context.Context, arg1 *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", ctx, req)
+	ret := m.ctrl.Call(m, "Init", arg0, arg1)
 	ret0, _ := ret[0].(*rpc.SandboxInitResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockISandboxSchedulerAdapterMockRecorder) Init(ctx, req any) *gomock.Call {
+func (mr *MockISandboxSchedulerAdapterMockRecorder) Init(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).Init), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).Init), arg0, arg1)
 }
 
 // Run mocks base method.
-func (m *MockISandboxSchedulerAdapter) Run(ctx context.Context, req *rpc.SandboxRunRequest) (*rpc.SandboxRunResponse, error) {
+func (m *MockISandboxSchedulerAdapter) Run(arg0 context.Context, arg1 *rpc.SandboxRunRequest) (*rpc.SandboxRunResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, req)
+	ret := m.ctrl.Call(m, "Run", arg0, arg1)
 	ret0, _ := ret[0].(*rpc.SandboxRunResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockISandboxSchedulerAdapterMockRecorder) Run(ctx, req any) *gomock.Call {
+func (mr *MockISandboxSchedulerAdapterMockRecorder) Run(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).Run), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).Run), arg0, arg1)
+}
+
+// RunCommand mocks base method.
+func (m *MockISandboxSchedulerAdapter) RunCommand(arg0 context.Context, arg1 *rpc.SandboxRunCommandRequest) (*rpc.SandboxRunCommandResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunCommand", arg0, arg1)
+	ret0, _ := ret[0].(*rpc.SandboxRunCommandResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunCommand indicates an expected call of RunCommand.
+func (mr *MockISandboxSchedulerAdapterMockRecorder) RunCommand(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunCommand", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).RunCommand), arg0, arg1)
+}
+
+// WriteFile mocks base method.
+func (m *MockISandboxSchedulerAdapter) WriteFile(arg0 context.Context, arg1 *rpc.SandboxWriteFileRequest) (*rpc.SandboxWriteFileResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteFile", arg0, arg1)
+	ret0, _ := ret[0].(*rpc.SandboxWriteFileResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WriteFile indicates an expected call of WriteFile.
+func (mr *MockISandboxSchedulerAdapterMockRecorder) WriteFile(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFile", reflect.TypeOf((*MockISandboxSchedulerAdapter)(nil).WriteFile), arg0, arg1)
 }
