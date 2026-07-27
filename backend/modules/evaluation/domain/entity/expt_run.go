@@ -613,4 +613,5 @@ type EvalAsyncCtx struct {
 	Callee                  string
 	EvaluatorVersionID      int64 // evaluator version id, used for evaluator async scenario
 	EnableExtractTrajectory *bool
+	CallbackURL             string `json:"callback_url,omitempty"` // 异步执行完成后回调通知的 URL，为空则不回调
 }

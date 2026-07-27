@@ -2295,6 +2295,11 @@ func _listtrajectoryoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _asyncrunevaluatoroapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _getevaltargetrecordoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil

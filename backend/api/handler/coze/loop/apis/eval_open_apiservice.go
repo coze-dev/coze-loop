@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
 )
 
@@ -289,6 +288,12 @@ func ExportExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
 // @router /v1/loop/evaluation/experiments/:experiment_id/export_records/:export_id [GET]
 func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentResultExportRecordOApi)
+}
+
+// AsyncRunEvaluatorOApi .
+// @router /v1/loop/evaluation/evaluators_versions/:evaluator_version_id/async_run [POST]
+func AsyncRunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.AsyncRunEvaluatorOApi)
 }
 
 // ListEvaluationSetItemVersionsOApi .

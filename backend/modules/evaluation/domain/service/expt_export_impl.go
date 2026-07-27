@@ -708,7 +708,7 @@ func formatMultiPartData(data *entity.Content) string {
 	for _, content := range data.MultiPart {
 		switch content.GetContentType() {
 		case entity.ContentTypeText:
-			builder.WriteString(fmt.Sprintf("%s\n", content.GetText()))
+			fmt.Fprintf(&builder, "%s\n", content.GetText())
 		case entity.ContentTypeImage:
 			url := ""
 			if content.Image != nil && content.Image.URL != nil {

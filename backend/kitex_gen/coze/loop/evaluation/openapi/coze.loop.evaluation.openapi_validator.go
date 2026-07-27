@@ -1508,6 +1508,58 @@ func (p *RunEvaluatorOpenAPIData) IsValid() error {
 	}
 	return nil
 }
+func (p *AsyncRunEvaluatorOApiRequest) IsValid() error {
+	if p.InputData != nil {
+		if err := p.InputData.IsValid(); err != nil {
+			return fmt.Errorf("field InputData not valid, %w", err)
+		}
+	}
+	if p.EvaluatorRunConf != nil {
+		if err := p.EvaluatorRunConf.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AsyncRunEvaluatorOpenAPIData) IsValid() error {
+	if p.Record != nil {
+		if err := p.Record.IsValid(); err != nil {
+			return fmt.Errorf("field Record not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) IsValid() error {
+	if p.Output != nil {
+		if err := p.Output.IsValid(); err != nil {
+			return fmt.Errorf("field Output not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *RunBuiltinEvaluatorOApiRequest) IsValid() error {
 	if p.InputData != nil {
 		if err := p.InputData.IsValid(); err != nil {

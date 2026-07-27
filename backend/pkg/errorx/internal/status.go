@@ -92,12 +92,12 @@ func (w *withStatus) Error() string {
 
 	if w.cause != nil {
 		b.WriteString("\n")
-		b.WriteString(fmt.Sprintf("cause=%s", w.cause))
+		fmt.Fprintf(&b, "cause=%s", w.cause)
 	}
 
 	if w.stack != "" {
 		b.WriteString("\n")
-		b.WriteString(fmt.Sprintf("stack=%s", w.stack))
+		fmt.Fprintf(&b, "stack=%s", w.stack)
 	}
 
 	return b.String()

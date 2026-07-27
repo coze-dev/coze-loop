@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	taskapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task/taskservice"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	taskmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/task/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -25,7 +26,7 @@ func TestTaskRPCAdapter_ListTasks(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := taskmocks.NewMockClient(ctrl)
-	adapter := NewTaskRPCAdapter(mockClient)
+	adapter := NewTaskRPCAdapter(func() taskservice.Client { return mockClient })
 	ctx := context.Background()
 
 	t.Run("成功获取任务列表", func(t *testing.T) {
@@ -194,7 +195,7 @@ func TestNewTaskRPCAdapter(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := taskmocks.NewMockClient(ctrl)
-	adapter := NewTaskRPCAdapter(mockClient)
+	adapter := NewTaskRPCAdapter(func() taskservice.Client { return mockClient })
 	assert.NotNil(t, adapter)
 	assert.IsType(t, &TaskRPCAdapter{}, adapter)
 }

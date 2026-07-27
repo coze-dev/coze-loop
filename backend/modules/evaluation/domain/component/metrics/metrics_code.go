@@ -31,17 +31,17 @@ func GetCode(err error) (code, isError int64) {
 	code = int64(601200702)
 	isError = int64(1)
 	value := reflect.ValueOf(err)
-	if value.Kind() == reflect.Ptr { // 如果传入的是指针类型
+	if value.Kind() == reflect.Pointer { // 如果传入的是指针类型
 		value = reflect.Indirect(value) // 解引用指针
 	}
 	kitexBizErrWrapper := value.FieldByName("kitexBizErrWrapper")
 	if kitexBizErrWrapper.IsValid() { // 检查字段是否存在且有效
-		if kitexBizErrWrapper.Kind() == reflect.Ptr { // 如果传入的是指针类型
+		if kitexBizErrWrapper.Kind() == reflect.Pointer { // 如果传入的是指针类型
 			kitexBizErrWrapper = reflect.Indirect(kitexBizErrWrapper) // 解引用指针
 		}
 		status := kitexBizErrWrapper.FieldByName("status")
 		if status.IsValid() {
-			if status.Kind() == reflect.Ptr {
+			if status.Kind() == reflect.Pointer {
 				status = reflect.Indirect(status)
 			}
 			statusCode := status.FieldByName("statusCode")

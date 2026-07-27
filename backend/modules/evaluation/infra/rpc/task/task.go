@@ -5,6 +5,7 @@ package task
 
 import (
 	"context"
+	"sync"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -17,13 +18,34 @@ import (
 )
 
 type TaskRPCAdapter struct {
+	clientFactory func() taskservice.Client
+
 	client taskservice.Client
+	mu     sync.Mutex
 }
 
-func NewTaskRPCAdapter(client taskservice.Client) rpc.ITaskRPCAdapter {
+// NewTaskRPCAdapter takes a factory rather than a resolved client so the
+// underlying taskservice.Client is created on first use instead of at wire
+// time. The client is backed by ObservabilityHandler, which is constructed
+// after the evaluation applications, so resolving it eagerly would dereference
+// a still-nil handler. This mirrors how the trajectory adapter defers its
+// tracer factory.
+func NewTaskRPCAdapter(clientFactory func() taskservice.Client) rpc.ITaskRPCAdapter {
 	return &TaskRPCAdapter{
-		client: client,
+		clientFactory: clientFactory,
 	}
+}
+
+func (t *TaskRPCAdapter) getClient() taskservice.Client {
+	if t.client != nil {
+		return t.client
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.client == nil {
+		t.client = t.clientFactory()
+	}
+	return t.client
 }
 
 func (t *TaskRPCAdapter) ListTasks(ctx context.Context, param *rpc.ListTasksParam) (tasks []*taskdomain.Task, total *int64, err error) {
@@ -43,7 +65,7 @@ func (t *TaskRPCAdapter) ListTasks(ctx context.Context, param *rpc.ListTasksPara
 		req.OrderBy = param.OrderBy
 	}
 
-	resp, err := t.client.ListTasks(ctx, req)
+	resp, err := t.getClient().ListTasks(ctx, req)
 	if err != nil {
 		return nil, nil, err
 	}

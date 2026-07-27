@@ -781,7 +781,7 @@ func TestSpan_MergeHistoryContext(t *testing.T) {
 		assert.Error(t, err)
 
 		assert.NotNil(t, ptrField)
-		assert.Equal(t, reflect.Ptr, ptrField.Kind())
+		assert.Equal(t, reflect.Pointer, ptrField.Kind())
 		assert.NoError(t, ptrField.Set("x"))
 		assert.NotNil(t, s.Ptr)
 		assert.Equal(t, "x", *s.Ptr)
