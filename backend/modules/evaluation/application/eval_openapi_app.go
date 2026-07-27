@@ -1098,6 +1098,8 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		EvalSetSourceType: gptr.Of(srcType),
 		// ★ 透传引用分组实验 id: 命中当前空间实验则复用其 group key(归入同一分组); 缺省则以实验 id 兜底。
 		RefGroupExperimentID: req.RefGroupExperimentID,
+		// ★ 透传实验级跑法配置(SUA/run_mode): OpenAPI 字符串枚举结构 → 内部 expt.RunModeConfig; 缺省 nil 不下发。
+		RunModeConfig: experiment_convertor.OpenAPIRunModeConfigDTO2Domain(req.RunModeConfig),
 	}
 
 	if isNewPath {

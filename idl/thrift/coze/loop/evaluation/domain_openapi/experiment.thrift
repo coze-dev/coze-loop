@@ -124,6 +124,34 @@ typedef string ExptEvalSetSourceType (ts.enum = "true")
 const ExptEvalSetSourceType ExptEvalSetSourceType_SingleSet = "single_set"
 const ExptEvalSetSourceType ExptEvalSetSourceType_MultiSetConfig = "multi_set_config"
 
+// ===== 实验级跑法配置 (SUA / run_mode) OpenAPI 版本 =====
+// domain 侧对应 domain/expt.thrift 的 ExptRunMode/SuaMode(int enum) + RunModeConfig。
+// 与既有 ExptEvalSetSourceType 一致, OpenAPI 侧用字符串枚举对等映射, 由 convertor 与内部 int 枚举互转,
+// 避免 include domain/expt.thrift 引入与本文件已定义结构 (如 TargetFieldMapping/ExptNotificationConf) 的同名符号冲突。
+
+// ExptRunMode 实验评测模式(跑法), 对齐 domain ExptRunMode: single/fixed_script/sua/goal。
+typedef string ExptRunMode (ts.enum = "true")
+const ExptRunMode ExptRunMode_SingleTurn = "single_turn"                       // 单轮
+const ExptRunMode ExptRunMode_FixedScriptMultiTurn = "fixed_script_multi_turn" // 固定脚本多轮
+const ExptRunMode ExptRunMode_SuaMultiTurn = "sua_multi_turn"                  // SUA 驱动多轮
+const ExptRunMode ExptRunMode_Goal = "goal"                                    // 目标驱动
+
+// SuaMode 模拟用户(SUA)生成下一轮 query 的模式, 对齐 domain SuaMode。
+typedef string SuaMode (ts.enum = "true")
+const SuaMode SuaMode_HumanLoop = "human_loop" // LLM 按人设驱动
+const SuaMode SuaMode_Loop = "loop"            // 上轮 eval 结果透传成下一轮
+const SuaMode SuaMode_Fixed = "fixed"          // 照固定脚本
+
+// RunModeConfig 实验级跑法配置 (OpenAPI 版本, 对齐 domain RunModeConfig)。run_mode 是顶层跑法总开关;
+// sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
+// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。sua_model_id 传平台模型 ID。
+struct RunModeConfig {
+    1: optional ExptRunMode run_mode (api.body = 'run_mode')
+    2: optional i32 max_run_minutes (api.body = 'max_run_minutes')
+    3: optional SuaMode sua_mode (api.body = 'sua_mode')
+    4: optional i64 sua_model_id (api.body = 'sua_model_id', api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
+}
+
 // per-set 运行期增量信息 (纯读模型; Get 全填含详情, List 只填 id/count)
 struct ExptEvalSetDetail {
     1: optional i64 eval_set_id (api.js_conv = "true", go.tag = 'json:"eval_set_id"')

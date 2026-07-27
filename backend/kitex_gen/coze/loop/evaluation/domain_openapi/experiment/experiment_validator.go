@@ -64,6 +64,9 @@ func (p *OpenAPIEvalSetConfig) IsValid() error {
 	}
 	return nil
 }
+func (p *RunModeConfig) IsValid() error {
+	return nil
+}
 func (p *ExptEvalSetDetail) IsValid() error {
 	if p.EvalSet != nil {
 		if err := p.EvalSet.IsValid(); err != nil {

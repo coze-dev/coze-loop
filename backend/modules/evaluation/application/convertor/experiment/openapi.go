@@ -2952,6 +2952,60 @@ func OpenAPIEvalSetSourceTypeDTO2Domain(s *openapiExperiment.ExptEvalSetSourceTy
 	return domainExpt.ExptEvalSetSourceType_SingleSet
 }
 
+// OpenAPIRunModeConfigDTO2Domain 将 OpenAPI 的 RunModeConfig (字符串枚举风格) 转为内部 domain/expt.RunModeConfig (int 枚举)。
+// run_mode / sua_mode 字符串→int 枚举; max_run_minutes / sua_model_id 原样透传。未识别的字符串跳过对应字段 (不设值)。
+// nil 入参返回 nil, 供 handler 直接赋给 createReq.RunModeConfig (缺省不下发, 与其它可选字段一致)。
+func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) *domainExpt.RunModeConfig {
+	if c == nil {
+		return nil
+	}
+	out := &domainExpt.RunModeConfig{
+		MaxRunMinutes: c.MaxRunMinutes,
+		SuaModelID:    c.SuaModelID,
+	}
+	if c.RunMode != nil {
+		if rm, ok := openAPIRunModeToDomain(*c.RunMode); ok {
+			out.RunMode = gptr.Of(rm)
+		}
+	}
+	if c.SuaMode != nil {
+		if sm, ok := openAPISuaModeToDomain(*c.SuaMode); ok {
+			out.SuaMode = gptr.Of(sm)
+		}
+	}
+	return out
+}
+
+// openAPIRunModeToDomain 将 OpenAPI ExptRunMode 字符串枚举转为内部 int 枚举; 未识别返回 false。
+func openAPIRunModeToDomain(s openapiExperiment.ExptRunMode) (domainExpt.ExptRunMode, bool) {
+	switch s {
+	case openapiExperiment.ExptRunModeSingleTurn:
+		return domainExpt.ExptRunMode_SingleTurn, true
+	case openapiExperiment.ExptRunModeFixedScriptMultiTurn:
+		return domainExpt.ExptRunMode_FixedScriptMultiTurn, true
+	case openapiExperiment.ExptRunModeSuaMultiTurn:
+		return domainExpt.ExptRunMode_SuaMultiTurn, true
+	case openapiExperiment.ExptRunModeGoal:
+		return domainExpt.ExptRunMode_Goal, true
+	default:
+		return 0, false
+	}
+}
+
+// openAPISuaModeToDomain 将 OpenAPI SuaMode 字符串枚举转为内部 int 枚举; 未识别返回 false。
+func openAPISuaModeToDomain(s openapiExperiment.SuaMode) (domainExpt.SuaMode, bool) {
+	switch s {
+	case openapiExperiment.SuaModeHumanLoop:
+		return domainExpt.SuaMode_HumanLoop, true
+	case openapiExperiment.SuaModeLoop:
+		return domainExpt.SuaMode_Loop, true
+	case openapiExperiment.SuaModeFixed:
+		return domainExpt.SuaMode_Fixed, true
+	default:
+		return 0, false
+	}
+}
+
 // OpenAPIKeywordSearchDTO2Domain 将 OpenAPI 的 KeywordSearch 转为 domain/expt.KeywordSearch，供实验结果模糊搜索。
 // 返回 nil 表示入参无效或空（keyword 为空或没有任何合法的 filter_field）。
 func OpenAPIKeywordSearchDTO2Domain(ks *openapiExperiment.KeywordSearch) (*domainExpt.KeywordSearch, error) {

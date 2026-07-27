@@ -24891,6 +24891,11 @@ type SubmitExperimentOApiRequest struct {
 	TargetRuntimeParam      *common.RuntimeParam `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
 	ItemRetryNum            *int32               `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
 	EnableExtractTrajectory *bool                `thrift:"enable_extract_trajectory,46,optional" frugal:"46,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
+	// 实验级多轮/SUA 跑法配置: 与内部 SubmitExperimentRequest.run_mode_config (domain/expt.thrift RunModeConfig) 同构。
+	// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。OpenAPI 侧用 domain_openapi/experiment.thrift 的对等
+	// 字符串枚举结构 (与 ExptEvalSetSourceType 同套模式), 由 handler 经 experiment_convertor 转成内部 expt.RunModeConfig,
+	// 故不引入 domain/expt.thrift, 无符号冲突。
+	RunModeConfig *experiment.RunModeConfig `thrift:"run_mode_config,47,optional" frugal:"47,optional,experiment.RunModeConfig" form:"run_mode_config" json:"run_mode_config,omitempty"`
 	// 通知配置
 	NotificationConf *experiment.ExptNotificationConf `thrift:"notification_conf,50,optional" frugal:"50,optional,experiment.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Ext              map[string]string                `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
@@ -25076,6 +25081,18 @@ func (p *SubmitExperimentOApiRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var SubmitExperimentOApiRequest_RunModeConfig_DEFAULT *experiment.RunModeConfig
+
+func (p *SubmitExperimentOApiRequest) GetRunModeConfig() (v *experiment.RunModeConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunModeConfig() {
+		return SubmitExperimentOApiRequest_RunModeConfig_DEFAULT
+	}
+	return p.RunModeConfig
+}
+
 var SubmitExperimentOApiRequest_NotificationConf_DEFAULT *experiment.ExptNotificationConf
 
 func (p *SubmitExperimentOApiRequest) GetNotificationConf() (v *experiment.ExptNotificationConf) {
@@ -25177,6 +25194,9 @@ func (p *SubmitExperimentOApiRequest) SetItemRetryNum(val *int32) {
 func (p *SubmitExperimentOApiRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *SubmitExperimentOApiRequest) SetRunModeConfig(val *experiment.RunModeConfig) {
+	p.RunModeConfig = val
+}
 func (p *SubmitExperimentOApiRequest) SetNotificationConf(val *experiment.ExptNotificationConf) {
 	p.NotificationConf = val
 }
@@ -25208,6 +25228,7 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	22:  "target_runtime_param",
 	45:  "item_retry_num",
 	46:  "enable_extract_trajectory",
+	47:  "run_mode_config",
 	50:  "notification_conf",
 	100: "ext",
 	102: "ref_group_experiment_id",
@@ -25269,6 +25290,10 @@ func (p *SubmitExperimentOApiRequest) IsSetItemRetryNum() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetRunModeConfig() bool {
+	return p.RunModeConfig != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetNotificationConf() bool {
@@ -25416,6 +25441,14 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 46:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField46(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 47:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField47(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -25668,6 +25701,14 @@ func (p *SubmitExperimentOApiRequest) ReadField46(iprot thrift.TProtocol) error 
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *SubmitExperimentOApiRequest) ReadField47(iprot thrift.TProtocol) error {
+	_field := experiment.NewRunModeConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RunModeConfig = _field
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) ReadField50(iprot thrift.TProtocol) error {
 	_field := experiment.NewExptNotificationConf()
 	if err := _field.Read(iprot); err != nil {
@@ -25793,6 +25834,10 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField46(oprot); err != nil {
 			fieldId = 46
+			goto WriteFieldError
+		}
+		if err = p.writeField47(oprot); err != nil {
+			fieldId = 47
 			goto WriteFieldError
 		}
 		if err = p.writeField50(oprot); err != nil {
@@ -26109,6 +26154,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 46 end error: ", p), err)
 }
+func (p *SubmitExperimentOApiRequest) writeField47(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunModeConfig() {
+		if err = oprot.WriteFieldBegin("run_mode_config", thrift.STRUCT, 47); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RunModeConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 47 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 47 end error: ", p), err)
+}
 func (p *SubmitExperimentOApiRequest) writeField50(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNotificationConf() {
 		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 50); err != nil {
@@ -26265,6 +26328,9 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 		return false
 	}
 	if !p.Field46DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field47DeepEqual(ano.RunModeConfig) {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.NotificationConf) {
@@ -26432,6 +26498,13 @@ func (p *SubmitExperimentOApiRequest) Field46DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field47DeepEqual(src *experiment.RunModeConfig) bool {
+
+	if !p.RunModeConfig.DeepEqual(src) {
 		return false
 	}
 	return true

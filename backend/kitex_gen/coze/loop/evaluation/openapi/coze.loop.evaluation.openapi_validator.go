@@ -823,6 +823,11 @@ func (p *SubmitExperimentOApiRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.RunModeConfig != nil {
+		if err := p.RunModeConfig.IsValid(); err != nil {
+			return fmt.Errorf("field RunModeConfig not valid, %w", err)
+		}
+	}
 	if p.NotificationConf != nil {
 		if err := p.NotificationConf.IsValid(); err != nil {
 			return fmt.Errorf("field NotificationConf not valid, %w", err)

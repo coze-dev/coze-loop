@@ -18083,6 +18083,20 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 47:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField47(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField50(buf[offset:])
@@ -18392,6 +18406,18 @@ func (p *SubmitExperimentOApiRequest) FastReadField46(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentOApiRequest) FastReadField47(buf []byte) (int, error) {
+	offset := 0
+	_field := experiment.NewRunModeConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RunModeConfig = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentOApiRequest) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 	_field := experiment.NewExptNotificationConf()
@@ -18496,6 +18522,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
+		offset += p.fastWriteField47(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
@@ -18522,6 +18549,7 @@ func (p *SubmitExperimentOApiRequest) BLength() int {
 		l += p.field22Length()
 		l += p.field45Length()
 		l += p.field46Length()
+		l += p.field47Length()
 		l += p.field50Length()
 		l += p.field100Length()
 		l += p.field102Length()
@@ -18675,6 +18703,15 @@ func (p *SubmitExperimentOApiRequest) fastWriteField46(buf []byte, w thrift.Noco
 	if p.IsSetEnableExtractTrajectory() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 46)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField47(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunModeConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 47)
+		offset += p.RunModeConfig.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -18870,6 +18907,15 @@ func (p *SubmitExperimentOApiRequest) field46Length() int {
 	return l
 }
 
+func (p *SubmitExperimentOApiRequest) field47Length() int {
+	l := 0
+	if p.IsSetRunModeConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RunModeConfig.BLength()
+	}
+	return l
+}
+
 func (p *SubmitExperimentOApiRequest) field50Length() int {
 	l := 0
 	if p.IsSetNotificationConf() {
@@ -19048,6 +19094,15 @@ func (p *SubmitExperimentOApiRequest) DeepCopy(s interface{}) error {
 		tmp := *src.EnableExtractTrajectory
 		p.EnableExtractTrajectory = &tmp
 	}
+
+	var _runModeConfig *experiment.RunModeConfig
+	if src.RunModeConfig != nil {
+		_runModeConfig = &experiment.RunModeConfig{}
+		if err := _runModeConfig.DeepCopy(src.RunModeConfig); err != nil {
+			return err
+		}
+	}
+	p.RunModeConfig = _runModeConfig
 
 	var _notificationConf *experiment.ExptNotificationConf
 	if src.NotificationConf != nil {

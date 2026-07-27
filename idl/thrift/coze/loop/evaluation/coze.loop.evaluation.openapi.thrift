@@ -547,6 +547,12 @@ struct SubmitExperimentOApiRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag = 'json:"enable_extract_trajectory"')
 
+    // 实验级多轮/SUA 跑法配置: 与内部 SubmitExperimentRequest.run_mode_config (domain/expt.thrift RunModeConfig) 同构。
+    // 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。OpenAPI 侧用 domain_openapi/experiment.thrift 的对等
+    // 字符串枚举结构 (与 ExptEvalSetSourceType 同套模式), 由 handler 经 experiment_convertor 转成内部 expt.RunModeConfig,
+    // 故不引入 domain/expt.thrift, 无符号冲突。
+    47: optional experiment.RunModeConfig run_mode_config (api.body = 'run_mode_config')
+
     // 通知配置
     50: optional experiment.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
