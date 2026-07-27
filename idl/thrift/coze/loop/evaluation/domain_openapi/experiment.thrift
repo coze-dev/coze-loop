@@ -146,10 +146,10 @@ const SuaMode SuaMode_Fixed = "fixed"          // 照固定脚本
 // sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
 // 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。sua_model_id 传平台模型 ID。
 struct RunModeConfig {
-    1: optional ExptRunMode run_mode (api.body = 'run_mode')
-    2: optional i32 max_run_minutes (api.body = 'max_run_minutes')
-    3: optional SuaMode sua_mode (api.body = 'sua_mode')
-    4: optional i64 sua_model_id (api.body = 'sua_model_id', api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
+    1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
+    2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
+    3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
+    4: optional i64 sua_model_id (api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
 }
 
 // per-set 运行期增量信息 (纯读模型; Get 全填含详情, List 只填 id/count)

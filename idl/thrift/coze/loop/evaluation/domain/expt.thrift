@@ -71,10 +71,10 @@ enum SuaMode {
 // 服务端 operator 用它经 GetModelAndAccount 解析出 api_key/base_url 注入 case-file
 // (本期可经 TCC 劫持为专有模型), 密钥绝不进请求体/落库明文。
 struct RunModeConfig {
-    1: optional ExptRunMode run_mode (api.body = 'run_mode')
-    2: optional i32 max_run_minutes (api.body = 'max_run_minutes')
-    3: optional SuaMode sua_mode (api.body = 'sua_mode')
-    4: optional i64 sua_model_id (api.body = 'sua_model_id', api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
+    1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
+    2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
+    3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
+    4: optional i64 sua_model_id (api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
 }
 
 typedef string Visibility(ts.enum="true")
