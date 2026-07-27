@@ -485,9 +485,24 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 			ev.EvalTargetWorkspaceID = strconv.FormatInt(expt.Target.SpaceID, 10)
 			// source_target_id: 业务侧原始对象 ID，加载详情时经 EvalTargetPO2DO 已回填，直接透传。
 			ev.SourceTargetID = expt.Target.SourceTargetID
-			// enable_analysis: 评测对象是否开启分析，从 eval_target 版本的 SandboxAgent 固化字段取。
-			if ver := expt.Target.EvalTargetVersion; ver != nil && ver.SandboxAgent != nil {
-				ev.EnableAnalysis = ver.SandboxAgent.EnableAnalysis
+			// enable_analysis: 评测对象是否开启分析，从 eval_target 版本对应子结构的固化字段取。
+			// 各类型创建评测对象时从 application.usages（含 "analysis"）反查固化到自身子结构。
+			// 覆盖走 application.usages 的全部类型；Prompt / CozeBot / CozeWorkflow 不经 usages、不支持分析。
+			if ver := expt.Target.EvalTargetVersion; ver != nil {
+				switch {
+				case ver.SandboxAgent != nil:
+					ev.EnableAnalysis = ver.SandboxAgent.EnableAnalysis
+				case ver.CustomRPCServer != nil:
+					ev.EnableAnalysis = ver.CustomRPCServer.EnableAnalysis
+				case ver.CustomAgent != nil:
+					ev.EnableAnalysis = ver.CustomAgent.EnableAnalysis
+				case ver.VolcengineAgent != nil:
+					ev.EnableAnalysis = ver.VolcengineAgent.EnableAnalysis
+				case ver.WebAgent != nil:
+					ev.EnableAnalysis = ver.WebAgent.EnableAnalysis
+				case ver.A2AAgent != nil:
+					ev.EnableAnalysis = ver.A2AAgent.EnableAnalysis
+				}
 			}
 		}
 		// experiment_group_key: 关联同组实验，默认为实验 ID。

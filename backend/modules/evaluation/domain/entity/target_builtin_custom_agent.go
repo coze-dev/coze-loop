@@ -17,6 +17,10 @@ type CustomAgent struct {
 	TimeoutMs           *int64           // 超时时间，单位ms
 	FirstTokenTimeoutMs *int64           // 首包超时时间，单位ms
 	AgentConnection     *AgentConnection // 连接信息
+
+	// EnableAnalysis 是否开启分析：创建评测对象时从 application.usages（含 "analysis"）反查固化，
+	// 控制 item-complete MQ 是否发送（与 TCC 空间白名单 AND）。
+	EnableAnalysis bool `json:"enable_analysis,omitempty"`
 }
 
 type AgentConnection struct {
