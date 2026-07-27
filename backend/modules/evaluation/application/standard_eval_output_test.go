@@ -813,6 +813,154 @@ func TestEvaluatorResultKey_NoCollision(t *testing.T) {
 	}
 }
 
+func TestBuildItemStandardEvalOutput_SnowflakeI64StringifiedNoPrecisionLoss(t *testing.T) {
+	// i64 精度铁律：agent_id / evaluator_id / evaluator_version_id / source.item_id / source.expt_id
+	// 在 inline JSON 里都必须是 string，雪花大 id 不被 JSON number 抹掉尾部精度。
+	const (
+		bigExptID      int64 = 7590093945404251906
+		bigItemID      int64 = 7590093945404251907
+		bigTargetID    int64 = 7590093945404251908
+		bigVersionID   int64 = 7590093945404251909
+		bigEvaluatorID int64 = 7590093945404251910
+	)
+	item := makeStandardEvalOutputReportResult(bigExptID, 30, bigItemID, 1, 100).ItemResults[0]
+	// 把评估器 record 的 version_id 换成大雪花 id（原 fixture key=101）。
+	oldRec := item.TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[101]
+	oldRec.EvaluatorVersionID = bigVersionID
+	delete(item.TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords, 101)
+	item.TurnResults[0].ExperimentResults[0].Payload.EvaluatorOutput.EvaluatorRecords[bigVersionID] = oldRec
+	// 把 target_id 换成大雪花 id。
+	item.TurnResults[0].ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.TargetID = bigTargetID
+
+	opt := standardEvalOutputBuildOptions{
+		ExptID: bigExptID,
+		EvaluatorByVersionID: map[int64]*entity.ColumnEvaluator{
+			bigVersionID: {EvaluatorVersionID: bigVersionID, EvaluatorID: bigEvaluatorID, Name: gptr.Of("n"), Version: gptr.Of("v")},
+		},
+	}
+	got, err := buildItemStandardEvalOutput(item, opt)
+	require.NoError(t, err)
+
+	// 断言 raw JSON 文本里对应字段是带引号的 string（雪花值完整、无精度丢失）。
+	// json.Number 反序列化会引入 float64 精度问题，故直接在原始文本上核对。
+	agentText := got.GetAgent().GetText()
+	assert.Contains(t, agentText, `"agent_id":"7590093945404251908"`, "agent_id 必须 string 化且值完整: %s", agentText)
+
+	evalText := got.GetEval().GetText()
+	assert.Contains(t, evalText, `"evaluator_id":"7590093945404251910"`, "evaluator_id 必须 string 化且值完整: %s", evalText)
+	assert.Contains(t, evalText, `"evaluator_version_id":"7590093945404251909"`, "evaluator_version_id 必须 string 化且值完整: %s", evalText)
+
+	// source 由平台生成（不 emit 到顶层 StandardEvalOutputContent 字段），改从 buildStandardEvalOutputJSON 侧核对：
+	// source.expt_id / source.item_id、detail.item_id 都走 int64String，须是 string。
+	std := buildStandardEvalOutputJSON(item, opt)
+	srcText, err := json.MarshalString(std.Source)
+	require.NoError(t, err)
+	assert.Contains(t, srcText, `"expt_id":"7590093945404251906"`, "source.expt_id 必须 string 化: %s", srcText)
+	assert.Contains(t, srcText, `"item_id":"7590093945404251907"`, "source.item_id 必须 string 化: %s", srcText)
+
+	detailText, err := json.MarshalString(std.Detail)
+	require.NoError(t, err)
+	assert.Contains(t, detailText, `"item_id":"7590093945404251907"`, "detail.item_id 必须 string 化: %s", detailText)
+}
+
+func TestEvaluatorResultKey_MetaPresentButNameEmpty_DegradesToVersionID(t *testing.T) {
+	// name 反查到 ColumnEvaluator 但 Name 为空 → 退化用 versionID(+inlineKey) 兜底，不产出 ":version:" 空 name 前缀。
+	opt := standardEvalOutputBuildOptions{
+		EvaluatorByVersionID: map[int64]*entity.ColumnEvaluator{
+			// meta 存在，但 Name 为 nil（空）、Version 有值。
+			303: {EvaluatorVersionID: 303, Version: gptr.Of("2.0.0")},
+		},
+	}
+	// meta 命中但 name 空 → 走兜底分支 EncodeEvaluatorInstanceKey(key, alias)。
+	got := evaluatorResultKey(opt, 303, &entity.EvaluatorRecord{EvaluatorVersionID: 303, Alias: "a1"})
+	wantFallback := entity.EncodeEvaluatorInstanceKey(303, "a1")
+	assert.Equal(t, wantFallback, got)
+	// 不能以裸冒号 name 前缀开头（即不是 ":2.0.0:a1" 这种空 name 形态）。
+	assert.NotEqual(t, ":2.0.0:a1", got)
+
+	// name 空 + 有 inlineKey → 兜底再拼 #inlineKey。
+	gotInline := evaluatorResultKey(opt, 303, &entity.EvaluatorRecord{EvaluatorVersionID: 303, Alias: "a1", InlineKey: "ik9"})
+	assert.Equal(t, wantFallback+"#ik9", gotInline)
+}
+
+func TestContextFromPayload_OnlyFilledTraceAndLogNoEmptyKeys(t *testing.T) {
+	// context 只填有值的 log_id / trace_id，不含 message_id / thread_id / start_time / end_time。
+	payload := &entity.ExperimentTurnPayload{
+		TargetOutput: &entity.TurnTargetOutput{EvalTargetRecord: &entity.EvalTargetRecord{
+			TraceID: "trace-xyz",
+			LogID:   "log-xyz",
+		}},
+	}
+	ctx := contextFromPayload(payload)
+	assert.Equal(t, "trace-xyz", ctx["trace_id"])
+	assert.Equal(t, "log-xyz", ctx["log_id"])
+	assert.Len(t, ctx, 2, "context 只应含 log_id / trace_id 两个键: %v", ctx)
+	for _, k := range []string{"message_id", "thread_id", "start_time", "end_time"} {
+		_, has := ctx[k]
+		assert.False(t, has, "context 不应含 %s", k)
+	}
+}
+
+func TestContextFromPayload_NoTraceNoLog_EmptyMap(t *testing.T) {
+	// 无 trace / log 的 payload → context 为空 map（不硬塞空串占位）。
+	assert.Empty(t, contextFromPayload(nil))
+	payload := &entity.ExperimentTurnPayload{
+		TargetOutput: &entity.TurnTargetOutput{EvalTargetRecord: &entity.EvalTargetRecord{}},
+	}
+	ctx := contextFromPayload(payload)
+	assert.Empty(t, ctx, "无 trace/log 时 context 应为空: %v", ctx)
+}
+
+func TestContextFromPayload_TurnSystemInfoLogIDUsedWhenRecordLogIDEmpty(t *testing.T) {
+	// record.LogID 为空时回退用 TurnSystemInfo.LogID；record.LogID 非空时优先 record。
+	fallback := &entity.ExperimentTurnPayload{
+		SystemInfo:   &entity.TurnSystemInfo{LogID: gptr.Of("turn-log")},
+		TargetOutput: &entity.TurnTargetOutput{EvalTargetRecord: &entity.EvalTargetRecord{}},
+	}
+	assert.Equal(t, "turn-log", contextFromPayload(fallback)["log_id"])
+
+	recordWins := &entity.ExperimentTurnPayload{
+		SystemInfo:   &entity.TurnSystemInfo{LogID: gptr.Of("turn-log")},
+		TargetOutput: &entity.TurnTargetOutput{EvalTargetRecord: &entity.EvalTargetRecord{LogID: "record-log"}},
+	}
+	assert.Equal(t, "record-log", contextFromPayload(recordWins)["log_id"])
+}
+
+func TestTokensFromPayload_OnlyFilledStats(t *testing.T) {
+	// tokens 只填有值的统计项，无值不塞 0。
+	payload := &entity.ExperimentTurnPayload{
+		TargetOutput: &entity.TurnTargetOutput{EvalTargetRecord: &entity.EvalTargetRecord{
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 5, TotalTokens: 5},
+			},
+		}},
+	}
+	tokens := tokensFromPayload(payload)
+	assert.EqualValues(t, 5, tokens["prompt_tokens"])
+	assert.EqualValues(t, 5, tokens["total_tokens"])
+	_, hasCompletion := tokens["completion_tokens"]
+	assert.False(t, hasCompletion, "completion_tokens 为 0 不应出现: %v", tokens)
+	assert.Len(t, tokens, 2)
+}
+
+func TestTokensFromPayload_NoUsage_EmptyMap(t *testing.T) {
+	// 无 usage（nil payload / nil usage）→ tokens 为空 map。
+	assert.Empty(t, tokensFromPayload(nil))
+	noUsage := &entity.ExperimentTurnPayload{
+		TargetOutput: &entity.TurnTargetOutput{EvalTargetRecord: &entity.EvalTargetRecord{
+			EvalTargetOutputData: &entity.EvalTargetOutputData{},
+		}},
+	}
+	assert.Empty(t, tokensFromPayload(noUsage), "无 usage 时 tokens 应为空")
+	// 全 0 usage → 也不填任何 key。
+	zeroUsage := &entity.ExperimentTurnPayload{
+		TargetOutput: &entity.TurnTargetOutput{EvalTargetRecord: &entity.EvalTargetRecord{
+			EvalTargetOutputData: &entity.EvalTargetOutputData{EvalTargetUsage: &entity.EvalTargetUsage{}},
+		}},
+	}
+	assert.Empty(t, tokensFromPayload(zeroUsage), "全 0 usage 时 tokens 应为空")
+}
+
 func TestBuildItemStandardEvalOutput_PlatformEvalOutputNoInnerRounds(t *testing.T) {
 	// 平台兜底的 eval / output 只补 detail，不再补内部 round 粒度 rounds（顶层 rounds 字段不受影响）。
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
