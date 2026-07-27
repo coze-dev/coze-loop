@@ -525,3 +525,71 @@ error_code:
     message: "async eval target terminated: experiment cancelled"
     description: the async eval target was terminated because the experiment was manually cancelled
     no_affect_stability: true
+
+  # 沙箱 agent 评测对象上报结果错误码 (5073-5083)。5072 由既有 gray-release 白名单占用，
+  # 沙箱侧上报时用下列细分码替代通用 CallTargetFail，便于 metrics classifier / 前端展示分类。
+  - name: SandboxAgentModelNotFound
+    code: 5073
+    message: "sandbox agent: model not found"
+    description: 'sandbox agent target reported model_not_found (trigger: {code:10003, msg:"model X not found, allow:..."})'
+    no_affect_stability: false
+
+  - name: SandboxAgentAllModelsFailed
+    code: 5074
+    message: "sandbox agent: all models failed"
+    description: 'sandbox agent target reported all_models_failed (trigger: code=3003 or msg contains "all models failed")'
+    no_affect_stability: false
+
+  - name: SandboxAgentAzureEmptyStream
+    code: 5075
+    message: "sandbox agent: azure empty stream"
+    description: 'sandbox agent target reported azure_empty_stream (trigger: msg contains "azure" + ("empty"|"stream"), or "stream has sent too many empty messages")'
+    no_affect_stability: false
+
+  - name: SandboxAgentModelRetryable
+    code: 5076
+    message: "sandbox agent: model retryable exhausted"
+    description: 'sandbox agent target reported model_retryable (trigger: code in {10000,10001,10002}, retry exhausted fallback)'
+    no_affect_stability: false
+
+  - name: SandboxAgentSessionNotFinished
+    code: 5077
+    message: "sandbox agent: session not finished"
+    description: 'sandbox agent target reported session_not_finished (trigger: turn_status=failed or turn_error_message indicates unfinished retry, or streaming status not success)'
+    no_affect_stability: false
+
+  - name: SandboxAgentExceededMaxTurns
+    code: 5078
+    message: "sandbox agent: exceeded maximum number of turns"
+    description: 'sandbox agent target reported exceeded_max_turns (trigger: code=4000002 or msg contains "exceeded maximum number of turns")'
+    no_affect_stability: true
+
+  - name: SandboxAgentSessionNotWaitingInput
+    code: 5079
+    message: "sandbox agent: session not waiting input"
+    description: 'sandbox agent target reported session_not_waiting_input (trigger: {code:10003, msg:"Now session is not waiting input..."}; disambiguated from model_not_found by msg substring)'
+    no_affect_stability: true
+
+  - name: SandboxAgentCmdForwardPortNotReady
+    code: 5080
+    message: "sandbox agent: cmd forward port not ready"
+    description: 'sandbox agent target reported cmd_forward_port_not_ready (trigger: port 16259 timeout / "Failed to connect to localhost port 16259" / VSCode cmd exec failure / "[Errno 111] Connection refused")'
+    no_affect_stability: false
+
+  - name: SandboxAgentNetwork
+    code: 5081
+    message: "sandbox agent: network error"
+    description: 'sandbox agent target reported network (trigger: connection refused/reset/timed out, could not resolve host, ssl/tls handshake, network/connection timeout keywords)'
+    no_affect_stability: false
+
+  - name: SandboxAgentIDEHostMismatch
+    code: 5082
+    message: "sandbox agent: IDE host mismatch"
+    description: 'sandbox agent target reported ide_host_mismatch (trigger: (a) explicit "CN 环境机器不支持评测海外 IDE"; (b) /Applications/Trae.app/.../product.json missing and combined does not contain "Trae CN.app")'
+    no_affect_stability: true
+
+  - name: SandboxAgentConfigNameMismatch
+    code: 5083
+    message: "sandbox agent: config_name mismatch"
+    description: 'sandbox agent target reported config_name_mismatch (trigger: "[ASSERT] config_name verification failed" or "config_name mismatch")'
+    no_affect_stability: true
