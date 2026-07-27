@@ -449,11 +449,6 @@ func reportedStandardOutputFields(item *entity.ItemResult, exptID int64) map[str
 	return nil
 }
 
-// mergeStandardEvalOutputField 逐字段实现「对象优先 + 平台兜底 + 子字段深合并」：
-//   - 对象未报该字段 → 平台兜底值；
-//   - 对象报了但内容无法结构化（省略大对象 / 非 JSON）→ 对象 Content 原样透出（对象优先，保留省略语义）；
-//   - 对象报了合法 JSON → 与平台兜底深合并（rounds 按 round_id 对齐），冲突以对象为准。
-//
 // mergeStandardEvalOutputField 逐字段实现「对象优先 + 平台兜底」：
 //   - 对象未报该字段 → 平台兜底值；
 //   - 对象报了但内容无法结构化（省略大对象 / 非 JSON）→ 对象 Content 原样透出（对象优先，保留省略语义）；
@@ -1053,13 +1048,13 @@ func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalO
 			}
 			// key 即 evaluator_version_id；evaluator_id 从 ColumnEvaluator 反查。
 			// 二者均为 i64 雪花，inline JSON 须 string 化防精度丢失。
-			// 空值不填 key（D11）：name/version/alias/id 无值时不放进 map。
+			// 空值不填 key（D11）：name/version/alias/id/version_id 无值时不放进 map。
 			entry := map[string]any{
-				"type":                 "score",
-				"score":                record.GetScore(),
-				"reason":               record.GetReasoning(),
-				"evaluator_version_id": int64String(key),
+				"type":   "score",
+				"score":  record.GetScore(),
+				"reason": record.GetReasoning(),
 			}
+			putStandardField(entry, "evaluator_version_id", int64String(key))
 			putStandardField(entry, "evaluator_name", evaluatorName(opt, key, record))
 			putStandardField(entry, "evaluator_version", evaluatorVersion(opt, key, record))
 			putStandardField(entry, "evaluator_alias", record.Alias)
