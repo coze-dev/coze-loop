@@ -1414,10 +1414,42 @@ func openAPITargetOutputDataDO2DTO(data *entity.EvalTargetOutputData) *openapiEv
 	if len(data.Ext) > 0 {
 		res.Ext = data.Ext
 	}
-	if len(res.OutputFields) == 0 && res.EvalTargetUsage == nil && res.EvalTargetRunError == nil && res.TimeConsumingMs == nil && len(res.Ext) == 0 {
+	if steps := openAPIEvalTargetStepsDO2DTO(data.EvalTargetSteps); len(steps) > 0 {
+		res.EvalTargetSteps = steps
+	}
+	if len(res.OutputFields) == 0 && res.EvalTargetUsage == nil && res.EvalTargetRunError == nil && res.TimeConsumingMs == nil && len(res.Ext) == 0 && len(res.EvalTargetSteps) == 0 {
 		return nil
 	}
 	return res
+}
+
+func openAPIEvalTargetStepsDO2DTO(src []*entity.EvalTargetStep) []*openapiEvalTarget.EvalTargetStep {
+	if len(src) == 0 {
+		return nil
+	}
+	out := make([]*openapiEvalTarget.EvalTargetStep, 0, len(src))
+	for _, s := range src {
+		if s == nil {
+			continue
+		}
+		stepName := s.StepName
+		eventType := s.EventType
+		eventTime := s.EventTimeMS
+		success := s.Success
+		errCode := s.ErrorCode
+		errMsg := s.ErrorMessage
+		durMS := s.DurationMS
+		out = append(out, &openapiEvalTarget.EvalTargetStep{
+			StepName:     &stepName,
+			EventType:    &eventType,
+			EventTimeMs:  &eventTime,
+			Success:      &success,
+			ErrorCode:    &errCode,
+			ErrorMessage: &errMsg,
+			DurationMs:   &durMS,
+		})
+	}
+	return out
 }
 
 func openAPITargetOutputFieldsDO2DTO(fields map[string]*entity.Content) map[string]*openapiCommon.Content {

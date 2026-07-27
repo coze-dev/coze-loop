@@ -48,6 +48,7 @@ type IEvalOpenAPIApplication = evaluation.EvalOpenAPIService
 
 type EvalOpenAPIApplication struct {
 	targetSvc                   service.IEvalTargetService
+	evalTargetRepo              repo.IEvalTargetRepo
 	asyncRepo                   repo.IEvalAsyncRepo
 	publisher                   events.ExptEventPublisher
 	auth                        rpc.IAuthProvider
@@ -73,6 +74,7 @@ type EvalOpenAPIApplication struct {
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
 	targetSvc service.IEvalTargetService,
+	evalTargetRepo repo.IEvalTargetRepo,
 	auth rpc.IAuthProvider,
 	evaluationSetService service.IEvaluationSetService,
 	evaluationSetVersionService service.EvaluationSetVersionService,
@@ -97,6 +99,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		asyncRepo:                   asyncRepo,
 		publisher:                   publisher,
 		targetSvc:                   targetSvc,
+		evalTargetRepo:              evalTargetRepo,
 		auth:                        auth,
 		evaluationSetService:        evaluationSetService,
 		evaluationSetVersionService: evaluationSetVersionService,
@@ -1099,6 +1102,29 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 	default:
 		logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: unknown event_type=%v, invoke_id=%d, step_name=%s",
 			req.GetEventType(), req.GetInvokeID(), req.GetStepName())
+	}
+
+	// 落库: 事件 append 到 eval_target_record.output_data.eval_target_steps。
+	// best-effort: repo 层出错只 log warn, 不返回 error 阻塞沙箱调用。
+	// 只处理已知事件类型 (STARTED / FINISHED); UNKNOWN 事件直接跳过。
+	if e.evalTargetRepo != nil && req.GetInvokeID() != 0 &&
+		(req.GetEventType() == openapi.EvalTargetStepEventType_STARTED ||
+			req.GetEventType() == openapi.EvalTargetStepEventType_FINISHED) {
+		step := &entity.EvalTargetStep{
+			StepName:    req.GetStepName(),
+			EventType:   req.GetEventType().String(),
+			EventTimeMS: time.Now().UnixMilli(),
+		}
+		if req.GetEventType() == openapi.EvalTargetStepEventType_FINISHED {
+			step.Success = req.GetSuccess()
+			step.ErrorCode = req.GetErrorCode()
+			step.ErrorMessage = req.GetErrorMessage()
+			step.DurationMS = req.GetDurationMs()
+		}
+		if err := e.evalTargetRepo.AppendEvalTargetStep(ctx, req.GetInvokeID(), step); err != nil {
+			logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: AppendEvalTargetStep failed, invoke_id=%d, step_name=%s, event_type=%v, err=%v",
+				req.GetInvokeID(), req.GetStepName(), req.GetEventType(), err)
+		}
 	}
 
 	return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil

@@ -8139,3 +8139,103 @@ func TestEvalOpenAPIApplication_UpdateExptRunConfOApi(t *testing.T) {
 		})
 	}
 }
+
+// TestEvalOpenAPIApplication_emitSandboxAgentInvokeFinished 覆盖沙箱 agent 回调侧
+// invoke_finished / invoke_duration 打点的所有分支：短路（metric/req/actx 缺失）、
+// callee 非沙箱不上报、status=SUCCESS / FAILED 两条业务路径。
+func TestEvalOpenAPIApplication_emitSandboxAgentInvokeFinished(t *testing.T) {
+	t.Parallel()
+
+	buildReq := func(status spi.InvokeEvalTargetStatus, errCode int32) *openapi.ReportEvalTargetInvokeResultRequest {
+		return &openapi.ReportEvalTargetInvokeResultRequest{
+			WorkspaceID: gptr.Of(int64(1)),
+			InvokeID:    gptr.Of(int64(9001)),
+			Status:      &status,
+			ErrorCode:   gptr.Of(errCode),
+		}
+	}
+
+	t.Run("nil metric skips", func(t *testing.T) {
+		app := &EvalOpenAPIApplication{}
+		// 不 panic 即为通过
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), &entity.EvalAsyncCtx{Callee: sandboxAgentAsyncCallee})
+	})
+
+	t.Run("nil req skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		// EmitInvokeFinished 不应被调用
+		app.emitSandboxAgentInvokeFinished(context.Background(), nil, &entity.EvalAsyncCtx{Callee: sandboxAgentAsyncCallee})
+	})
+
+	t.Run("nil actx skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), nil)
+	})
+
+	t.Run("non sandbox callee skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), &entity.EvalAsyncCtx{Callee: "other_callee"})
+	})
+
+	t.Run("success status emits with nil error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		submitMS := time.Now().Add(-time.Second).UnixMilli()
+		actx := &entity.EvalAsyncCtx{
+			Callee:           sandboxAgentAsyncCallee,
+			AsyncUnixMS:      submitMS,
+			Event:            &entity.ExptItemEvalEvent{ExptID: 100, EvalSetItemID: 200},
+			DatasetID:        300,
+			DatasetVersionID: 400,
+			TargetID:         500,
+			ItemKey:          "ik",
+			DatasetKey:       "dk",
+		}
+		mock.EXPECT().EmitInvokeFinished(gomock.Any(), nil, int32(0), gomock.Any()).Do(func(tags metrics.SandboxAgentInvokeTags, err error, code int32, submit time.Time) {
+			assert.Equal(t, "9001", tags.InvokeID)
+			assert.Equal(t, int64(100), tags.ExperimentID)
+			assert.Equal(t, int64(200), tags.ItemID)
+			assert.Equal(t, int64(300), tags.DatasetID)
+			assert.Equal(t, int64(400), tags.DatasetVersion)
+			assert.Equal(t, int64(500), tags.TargetID)
+			assert.Equal(t, "ik", tags.ItemKey)
+			assert.Equal(t, "dk", tags.DatasetKey)
+			assert.Equal(t, submitMS, submit.UnixMilli())
+		})
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), actx)
+	})
+
+	t.Run("failed status passes marker error and error code", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		actx := &entity.EvalAsyncCtx{Callee: sandboxAgentAsyncCallee}
+		mock.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Not(gomock.Nil()), int32(601200999), gomock.Any()).Do(func(tags metrics.SandboxAgentInvokeTags, err error, code int32, submit time.Time) {
+			assert.Equal(t, "9001", tags.InvokeID)
+			// AsyncUnixMS 未落地时 submitTime 走 time.Time 零值，UnixMilli 会返回负值，用 IsZero 判定
+			assert.True(t, submit.IsZero(), "expect zero submitTime when AsyncUnixMS is 0")
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "sandbox agent invoke reported failed")
+		})
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_FAILED, 601200999), actx)
+	})
+}
+
+// TestSandboxAgentInvokeFailure 保证 marker error 实现 error 接口且返回稳定文案。
+func TestSandboxAgentInvokeFailure(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "sandbox agent invoke reported failed", (&sandboxAgentInvokeFailure{}).Error())
+	assert.Equal(t, "sandbox agent step reported failed", (&sandboxAgentStepFailure{}).Error())
+}
