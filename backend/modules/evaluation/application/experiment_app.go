@@ -556,6 +556,9 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		EvalSetSourceType:    req.EvalSetSourceType,
 		RefGroupExperimentID: req.RefGroupExperimentID,
 		NotificationConf:     req.NotificationConf,
+		// ★ wiring fix: 透传 run_mode_config 到 CreateExperimentRequest，否则落不进 eval_conf，
+		// operator 读不到 → 走默认 sua_multi_turn 兜底，用户选的 single_turn 被静默忽略。nil 安全。
+		RunModeConfig: req.RunModeConfig,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
