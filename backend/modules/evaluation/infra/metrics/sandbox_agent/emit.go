@@ -47,6 +47,7 @@ const (
 	tagDatasetKey     = "dataset_key"
 	tagSuccess        = "success"
 	tagErrorType      = "error_type"
+	tagErrorCode      = "error_code"
 
 	// tag 空值占位，遵循 fornax 平台约定
 	tagValuePlaceholder = "-"
@@ -65,6 +66,7 @@ func metricTagNames() []string {
 		tagDatasetKey,
 		tagSuccess,
 		tagErrorType,
+		tagErrorCode,
 	}
 }
 
@@ -101,7 +103,7 @@ func (m *metricsImpl) EmitInvokeStarted(tags eval_metrics.SandboxAgentInvokeTags
 	if m == nil || m.metric == nil {
 		return
 	}
-	m.metric.Emit(m.buildInvokeTags(tags, "", ""),
+	m.metric.Emit(m.buildInvokeTags(tags, "", "", 0),
 		metrics.Counter(1, metrics.WithSuffix(suffixInvokeStarted)))
 }
 
@@ -112,7 +114,7 @@ func (m *metricsImpl) EmitInvokeFinished(tags eval_metrics.SandboxAgentInvokeTag
 	success := successTag(err, errCode)
 	errType := ClassifyErrorType(err, errCode)
 	durationMS := durationMS(submitTime)
-	m.metric.Emit(m.buildInvokeTags(tags, success, errType),
+	m.metric.Emit(m.buildInvokeTags(tags, success, errType, errCode),
 		metrics.Counter(1, metrics.WithSuffix(suffixInvokeFinished)),
 		metrics.Timer(durationMS, metrics.WithSuffix(suffixInvokeDuration)))
 }
@@ -121,7 +123,7 @@ func (m *metricsImpl) EmitExperimentStarted(tags eval_metrics.SandboxAgentExperi
 	if m == nil || m.metric == nil {
 		return
 	}
-	m.metric.Emit(m.buildExperimentTags(tags, "", ""),
+	m.metric.Emit(m.buildExperimentTags(tags, "", "", 0),
 		metrics.Counter(1, metrics.WithSuffix(suffixExperimentStarted)))
 }
 
@@ -135,7 +137,7 @@ func (m *metricsImpl) EmitExperimentFinished(tags eval_metrics.SandboxAgentExper
 	if !startTime.IsZero() && !endTime.IsZero() && !endTime.Before(startTime) {
 		durMS = endTime.Sub(startTime).Milliseconds()
 	}
-	m.metric.Emit(m.buildExperimentTags(tags, success, errType),
+	m.metric.Emit(m.buildExperimentTags(tags, success, errType, 0),
 		metrics.Counter(1, metrics.WithSuffix(suffixExperimentFinished)),
 		metrics.Timer(durMS, metrics.WithSuffix(suffixExperimentDuration)))
 }
@@ -144,7 +146,7 @@ func (m *metricsImpl) EmitStepStarted(tags eval_metrics.SandboxAgentStepTags) {
 	if m == nil || m.metric == nil {
 		return
 	}
-	m.metric.Emit(m.buildStepTags(tags, "", ""),
+	m.metric.Emit(m.buildStepTags(tags, "", "", 0),
 		metrics.Counter(1, metrics.WithSuffix(suffixStepStarted)))
 }
 
@@ -157,12 +159,12 @@ func (m *metricsImpl) EmitStepFinished(tags eval_metrics.SandboxAgentStepTags, e
 	if durationMS < 0 {
 		durationMS = 0
 	}
-	m.metric.Emit(m.buildStepTags(tags, success, errType),
+	m.metric.Emit(m.buildStepTags(tags, success, errType, errCode),
 		metrics.Counter(1, metrics.WithSuffix(suffixStepFinished)),
 		metrics.Timer(durationMS, metrics.WithSuffix(suffixStepDuration)))
 }
 
-func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, success, errType string) []metrics.T {
+func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, success, errType string, errCode int32) []metrics.T {
 	return []metrics.T{
 		{Name: tagExperimentID, Value: int64Tag(t.ExperimentID)},
 		{Name: tagItemID, Value: int64Tag(t.ItemID)},
@@ -175,10 +177,11 @@ func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, suc
 		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
+		{Name: tagErrorCode, Value: errCodeTag(errCode)},
 	}
 }
 
-func (m *metricsImpl) buildExperimentTags(t eval_metrics.SandboxAgentExperimentTags, success, errType string) []metrics.T {
+func (m *metricsImpl) buildExperimentTags(t eval_metrics.SandboxAgentExperimentTags, success, errType string, errCode int32) []metrics.T {
 	return []metrics.T{
 		{Name: tagExperimentID, Value: int64Tag(t.ExperimentID)},
 		{Name: tagItemID, Value: tagValuePlaceholder},
@@ -191,10 +194,11 @@ func (m *metricsImpl) buildExperimentTags(t eval_metrics.SandboxAgentExperimentT
 		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
+		{Name: tagErrorCode, Value: errCodeTag(errCode)},
 	}
 }
 
-func (m *metricsImpl) buildStepTags(t eval_metrics.SandboxAgentStepTags, success, errType string) []metrics.T {
+func (m *metricsImpl) buildStepTags(t eval_metrics.SandboxAgentStepTags, success, errType string, errCode int32) []metrics.T {
 	return []metrics.T{
 		{Name: tagExperimentID, Value: int64Tag(t.ExperimentID)},
 		{Name: tagItemID, Value: int64Tag(t.ItemID)},
@@ -207,6 +211,7 @@ func (m *metricsImpl) buildStepTags(t eval_metrics.SandboxAgentStepTags, success
 		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
+		{Name: tagErrorCode, Value: errCodeTag(errCode)},
 	}
 }
 
@@ -215,6 +220,16 @@ func int64Tag(v int64) string {
 		return tagValuePlaceholder
 	}
 	return strconv.FormatInt(v, 10)
+}
+
+// errCodeTag 沙箱侧上报的 error_code (int32) → tag value。
+// 0 视为无错误 (与 successTag 语义一致)，走占位符 `-`；非 0 直接 FormatInt。
+// 高基数风险由 tag 数值本身决定（当前 sandbox agent 错误码 5073-5083 加通用码，可控）。
+func errCodeTag(v int32) string {
+	if v == 0 {
+		return tagValuePlaceholder
+	}
+	return strconv.FormatInt(int64(v), 10)
 }
 
 func stringTag(v string) string {
