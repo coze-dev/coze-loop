@@ -969,12 +969,12 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 }
 
 // emitSandboxAgentInvokeFinished 组装 tags 并上报 invoke_finished / invoke_duration.
-// - 只对沙箱 agent 路径的回调打点。判断依据是 asyncCtx.Callee (backend 提交侧写入,
-//   来自 commercial SandboxAgentSourceEvalTargetServiceImpl.AsyncExecute 返回的
-//   evaluation target 类型标识)。**不用** req.GetCallee (那是沙箱侧回调时独立填的,
-//   值是 "fornax.sandbox.pipeline", 不能作为 backend 侧类型判断的稳定依据)。
-// - 错误分类根据 req.Status + req.ErrorCode 决定, 遵循 classifier 表.
-// - submitTime 来自 AsyncCtx.AsyncUnixMS (提交侧写入), 未落时长度回退为 0.
+//   - 只对沙箱 agent 路径的回调打点。判断依据是 asyncCtx.Callee (backend 提交侧写入,
+//     来自 commercial SandboxAgentSourceEvalTargetServiceImpl.AsyncExecute 返回的
+//     evaluation target 类型标识)。**不用** req.GetCallee (那是沙箱侧回调时独立填的,
+//     值是 "fornax.sandbox.pipeline", 不能作为 backend 侧类型判断的稳定依据)。
+//   - 错误分类根据 req.Status + req.ErrorCode 决定, 遵循 classifier 表.
+//   - submitTime 来自 AsyncCtx.AsyncUnixMS (提交侧写入), 未落时长度回退为 0.
 func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, actx *entity.EvalAsyncCtx) {
 	if e == nil || e.sandboxAgentMetric == nil || req == nil {
 		logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, metric_nil=%v, req_nil=%v",

@@ -36,17 +36,17 @@ const (
 	suffixStepFinished = "step_finished"
 	suffixStepDuration = "step_duration"
 
-	tagExperimentID    = "experiment_id"
-	tagItemID          = "item_id"
-	tagInvokeID        = "invoke_id"
-	tagDatasetID       = "dataset_id"
-	tagDatasetVersion  = "dataset_version"
-	tagStepName        = "step_name"
-	tagTargetID        = "target_id"
-	tagItemKey         = "item_key"
-	tagDatasetKey      = "dataset_key"
-	tagSuccess         = "success"
-	tagErrorType       = "error_type"
+	tagExperimentID   = "experiment_id"
+	tagItemID         = "item_id"
+	tagInvokeID       = "invoke_id"
+	tagDatasetID      = "dataset_id"
+	tagDatasetVersion = "dataset_version"
+	tagStepName       = "step_name"
+	tagTargetID       = "target_id"
+	tagItemKey        = "item_key"
+	tagDatasetKey     = "dataset_key"
+	tagSuccess        = "success"
+	tagErrorType      = "error_type"
 
 	// tag 空值占位，遵循 fornax 平台约定
 	tagValuePlaceholder = "-"
@@ -280,9 +280,12 @@ func durationMS(submitTime time.Time) int64 {
 
 type noopMetrics struct{}
 
-func (n *noopMetrics) EmitInvokeStarted(_ eval_metrics.SandboxAgentInvokeTags)                                     {}
-func (n *noopMetrics) EmitInvokeFinished(_ eval_metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time)     {}
-func (n *noopMetrics) EmitExperimentStarted(_ eval_metrics.SandboxAgentExperimentTags)                             {}
-func (n *noopMetrics) EmitExperimentFinished(_ eval_metrics.SandboxAgentExperimentTags, _ error, _, _ time.Time)   {}
-func (n *noopMetrics) EmitStepStarted(_ eval_metrics.SandboxAgentStepTags)                                         {}
-func (n *noopMetrics) EmitStepFinished(_ eval_metrics.SandboxAgentStepTags, _ error, _ int32, _ int64)             {}
+func (n *noopMetrics) EmitInvokeStarted(_ eval_metrics.SandboxAgentInvokeTags) {}
+func (n *noopMetrics) EmitInvokeFinished(_ eval_metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time) {
+}
+func (n *noopMetrics) EmitExperimentStarted(_ eval_metrics.SandboxAgentExperimentTags) {}
+func (n *noopMetrics) EmitExperimentFinished(_ eval_metrics.SandboxAgentExperimentTags, _ error, _, _ time.Time) {
+}
+func (n *noopMetrics) EmitStepStarted(_ eval_metrics.SandboxAgentStepTags) {}
+func (n *noopMetrics) EmitStepFinished(_ eval_metrics.SandboxAgentStepTags, _ error, _ int32, _ int64) {
+}
