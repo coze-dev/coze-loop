@@ -6077,8 +6077,8 @@ func (p *SkillConfig) Field2DeepEqual(src *string) bool {
 
 // 跨空间共享资源可选项: is_shared=true 时以 source_space_id 为资源来源空间发起/查询共享资源。
 type SharedResourceOption struct {
-	IsShared      *bool  `thrift:"is_shared,1,optional" frugal:"1,optional,bool" json:"is_shared" form:"is_shared" `
-	SourceSpaceID *int64 `thrift:"source_space_id,2,optional" frugal:"2,optional,i64" json:"source_space_id" form:"source_space_id" `
+	IsShared      *bool  `thrift:"is_shared,1,optional" frugal:"1,optional,bool" json:"is_shared" form:"is_shared" query:"is_shared"`
+	SourceSpaceID *int64 `thrift:"source_space_id,2,optional" frugal:"2,optional,i64" json:"source_space_id" form:"source_space_id" query:"source_space_id"`
 }
 
 func NewSharedResourceOption() *SharedResourceOption {
