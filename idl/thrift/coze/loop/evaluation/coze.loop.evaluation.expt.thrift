@@ -51,6 +51,10 @@ struct CreateExperimentRequest {
     // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
     71: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
 
+    // 单评测集(SingleSet)跨空间共享来源; 多评测集走 eval_set_configs 内每个 EvalSetConfig 的 shared_option
+    80: optional common.SharedResourceOption eval_set_shared_option (api.body = 'eval_set_shared_option') // 评测集来源空间
+    81: optional common.SharedResourceOption target_shared_option (api.body = 'target_shared_option')     // 评测对象来源空间
+
     // 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
     // 引用分组实验 id：填写时校验其为当前空间内的实验 id
     91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
@@ -118,6 +122,10 @@ struct SubmitExperimentRequest {
     // ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
     // 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
     76: optional expt.ExptEvalSetSourceType eval_set_source_type (api.body = 'eval_set_source_type')
+
+    // 单评测集(SingleSet)跨空间共享来源; 多评测集走 eval_set_configs 内每个 EvalSetConfig 的 shared_option
+    80: optional common.SharedResourceOption eval_set_shared_option (api.body = 'eval_set_shared_option') // 评测集来源空间
+    81: optional common.SharedResourceOption target_shared_option (api.body = 'target_shared_option')     // 评测对象来源空间
 
     100: optional map<string, string> ext (api.body = 'ext')
 

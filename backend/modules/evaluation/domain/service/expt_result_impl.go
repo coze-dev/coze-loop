@@ -618,7 +618,84 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 
 	res.ItemResults = itemResults
 	res.Total = total
+	// ★ 跨空间共享脱敏: 冻结 access_level=execute 的评测集为黑盒, 抹评测集题目内容 (列定义 + 每条 Payload.EvalSet),
+	// 保留 evaluator/target/system 列. per-set 判定: 单评测集看主表冻结级别, 多评测集看对应 EvalSetConfig.
+	desensitizeSharedEvalSetResult(res, exptMap)
 	return res, nil
+}
+
+// newEvalSetExecuteDesensitizer 针对某实验判断某评测集是否需脱敏 (execute 黑盒).
+// 单评测集(SingleSet): 全实验按主表 EvalSetAccessLevel 判定 (evalSetID 参数忽略).
+// 多评测集(MultiSetConfig): 按 evalSetID 查对应 EvalSetConfig.AccessLevel.
+func newEvalSetExecuteDesensitizer(expt *entity.Experiment) func(evalSetID int64) bool {
+	if expt == nil {
+		return func(int64) bool { return false }
+	}
+	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && expt.EvalConf != nil {
+		levelBySet := make(map[int64]string, len(expt.EvalConf.EvalSetConfigs))
+		for _, sc := range expt.EvalConf.EvalSetConfigs {
+			if sc != nil {
+				levelBySet[sc.EvalSetID] = sc.AccessLevel
+			}
+		}
+		return func(evalSetID int64) bool {
+			return levelBySet[evalSetID] == entity.SharedAccessLevelExecute
+		}
+	}
+	// 单评测集: 冻结级别为 execute 则全脱
+	execute := expt.EvalSetAccessLevel == entity.SharedAccessLevelExecute
+	return func(int64) bool { return execute }
+}
+
+// desensitizeSharedEvalSetResult 对查询结果做跨空间共享脱敏 (只脱评测集题目, 不脱 target 输出).
+func desensitizeSharedEvalSetResult(res *entity.MGetExperimentReportResult, exptMap map[int64]*entity.Experiment) {
+	if res == nil {
+		return
+	}
+	// 是否存在任一 execute 实验; 有则抹掉列定义 (列为各实验并集, 命中即隐藏评测集列).
+	anyExecute := false
+	desensitizers := make(map[int64]func(int64) bool, len(exptMap))
+	for id, expt := range exptMap {
+		d := newEvalSetExecuteDesensitizer(expt)
+		desensitizers[id] = d
+		if expt != nil && expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+			if expt.EvalSetAccessLevel == entity.SharedAccessLevelExecute {
+				anyExecute = true
+			}
+		} else if expt != nil && expt.EvalConf != nil {
+			for _, sc := range expt.EvalConf.EvalSetConfigs {
+				if sc != nil && sc.AccessLevel == entity.SharedAccessLevelExecute {
+					anyExecute = true
+				}
+			}
+		}
+	}
+	if anyExecute {
+		res.ColumnEvalSetFields = nil // 抹评测集列定义
+	}
+	// 逐条抹掉命中 execute 的 Payload.EvalSet (per-set 判定)
+	for _, item := range res.ItemResults {
+		if item == nil {
+			continue
+		}
+		for _, tr := range item.TurnResults {
+			if tr == nil {
+				continue
+			}
+			for _, er := range tr.ExperimentResults {
+				if er == nil || er.Payload == nil || er.Payload.EvalSet == nil {
+					continue
+				}
+				d := desensitizers[er.ExperimentID]
+				if d == nil {
+					continue
+				}
+				if d(er.Payload.EvalSet.EvalSetID) {
+					er.Payload.EvalSet = nil // 抹该条评测集题目内容
+				}
+			}
+		}
+	}
 }
 
 // exportListTurnResultByCursor 仅用于导出等场景：按库内顺序返回 turn，不做内存重排，与 ListTurnResult 游标语义一致。

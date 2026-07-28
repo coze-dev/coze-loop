@@ -67,6 +67,9 @@ var (
 		domainservice.EvaluationSetDomainServiceSet,
 		domainservice.TargetDomainServiceSet,
 		domainservice.EvaluatorDomainServiceSet,
+		// 跨空间共享: 资源访问鉴权底座 (真实现 + 真配置 provider), 供 ExptManager 发起期鉴权
+		evalconf.NewSharedResourceConfigProvider,
+		domainservice.NewResourceAccessAuthorizer,
 		// Infrastructure Sets
 		experimentmetrics.ExperimentMetricsSet,
 		evaltargetmetrics.EvalTargetMetricsSet,

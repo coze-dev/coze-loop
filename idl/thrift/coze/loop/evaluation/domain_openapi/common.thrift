@@ -137,3 +137,9 @@ struct SkillConfig {
     1: optional i64 skill_id (api.js_conv="true", go.tag = 'json:"skill_id"')
     2: optional string version
 }
+
+// 跨空间共享资源可选项: is_shared=true 时以 source_space_id 为资源来源空间发起/查询共享资源。
+struct SharedResourceOption {
+    1: optional bool is_shared (api.body = 'is_shared', go.tag = 'json:"is_shared"')
+    2: optional i64 source_space_id (api.js_conv = "true", api.body = 'source_space_id', go.tag = 'json:"source_space_id"')
+}

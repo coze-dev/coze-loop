@@ -62,6 +62,16 @@ func (p *OpenAPIEvalSetConfig) IsValid() error {
 			return fmt.Errorf("field ItemFilter not valid, %w", err)
 		}
 	}
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
+	if p.TargetSharedOption != nil {
+		if err := p.TargetSharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field TargetSharedOption not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptEvalSetDetail) IsValid() error {

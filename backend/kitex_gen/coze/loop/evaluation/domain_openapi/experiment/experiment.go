@@ -2270,6 +2270,10 @@ type OpenAPIEvalSetConfig struct {
 	// 题目圈选: 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter, 与内部 EvalSetConfig.item_filter 同型透传)
 	// 校验白名单(应用层, 与内部一致): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
 	ItemFilter *filter.Filter `thrift:"item_filter,30,optional" frugal:"30,optional,filter.Filter" form:"item_filter" json:"item_filter,omitempty" query:"item_filter"`
+	// 跨空间: 该 set 评测集来源空间; nil/!is_shared=同空间
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,40,optional" frugal:"40,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
+	// 跨空间: 该 set 评测对象来源空间
+	TargetSharedOption *common.SharedResourceOption `thrift:"target_shared_option,41,optional" frugal:"41,optional,common.SharedResourceOption" form:"target_shared_option" json:"target_shared_option,omitempty" query:"target_shared_option"`
 }
 
 func NewOpenAPIEvalSetConfig() *OpenAPIEvalSetConfig {
@@ -2338,6 +2342,30 @@ func (p *OpenAPIEvalSetConfig) GetItemFilter() (v *filter.Filter) {
 	}
 	return p.ItemFilter
 }
+
+var OpenAPIEvalSetConfig_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *OpenAPIEvalSetConfig) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return OpenAPIEvalSetConfig_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
+
+var OpenAPIEvalSetConfig_TargetSharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *OpenAPIEvalSetConfig) GetTargetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetSharedOption() {
+		return OpenAPIEvalSetConfig_TargetSharedOption_DEFAULT
+	}
+	return p.TargetSharedOption
+}
 func (p *OpenAPIEvalSetConfig) SetEvalSetID(val *int64) {
 	p.EvalSetID = val
 }
@@ -2353,6 +2381,12 @@ func (p *OpenAPIEvalSetConfig) SetTargetConfs(val []*OpenAPIExptTargetConf) {
 func (p *OpenAPIEvalSetConfig) SetItemFilter(val *filter.Filter) {
 	p.ItemFilter = val
 }
+func (p *OpenAPIEvalSetConfig) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
+func (p *OpenAPIEvalSetConfig) SetTargetSharedOption(val *common.SharedResourceOption) {
+	p.TargetSharedOption = val
+}
 
 var fieldIDToName_OpenAPIEvalSetConfig = map[int16]string{
 	1:  "eval_set_id",
@@ -2360,6 +2394,8 @@ var fieldIDToName_OpenAPIEvalSetConfig = map[int16]string{
 	10: "evaluator_confs",
 	20: "target_confs",
 	30: "item_filter",
+	40: "shared_option",
+	41: "target_shared_option",
 }
 
 func (p *OpenAPIEvalSetConfig) IsSetEvalSetID() bool {
@@ -2380,6 +2416,14 @@ func (p *OpenAPIEvalSetConfig) IsSetTargetConfs() bool {
 
 func (p *OpenAPIEvalSetConfig) IsSetItemFilter() bool {
 	return p.ItemFilter != nil
+}
+
+func (p *OpenAPIEvalSetConfig) IsSetSharedOption() bool {
+	return p.SharedOption != nil
+}
+
+func (p *OpenAPIEvalSetConfig) IsSetTargetSharedOption() bool {
+	return p.TargetSharedOption != nil
 }
 
 func (p *OpenAPIEvalSetConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2435,6 +2479,22 @@ func (p *OpenAPIEvalSetConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 30:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField30(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 40:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField40(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 41:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField41(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2545,6 +2605,22 @@ func (p *OpenAPIEvalSetConfig) ReadField30(iprot thrift.TProtocol) error {
 	p.ItemFilter = _field
 	return nil
 }
+func (p *OpenAPIEvalSetConfig) ReadField40(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
+func (p *OpenAPIEvalSetConfig) ReadField41(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TargetSharedOption = _field
+	return nil
+}
 
 func (p *OpenAPIEvalSetConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2570,6 +2646,14 @@ func (p *OpenAPIEvalSetConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField30(oprot); err != nil {
 			fieldId = 30
+			goto WriteFieldError
+		}
+		if err = p.writeField40(oprot); err != nil {
+			fieldId = 40
+			goto WriteFieldError
+		}
+		if err = p.writeField41(oprot); err != nil {
+			fieldId = 41
 			goto WriteFieldError
 		}
 	}
@@ -2696,6 +2780,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
+func (p *OpenAPIEvalSetConfig) writeField40(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 40); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
+}
+func (p *OpenAPIEvalSetConfig) writeField41(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetSharedOption() {
+		if err = oprot.WriteFieldBegin("target_shared_option", thrift.STRUCT, 41); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TargetSharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
+}
 
 func (p *OpenAPIEvalSetConfig) String() string {
 	if p == nil {
@@ -2724,6 +2844,12 @@ func (p *OpenAPIEvalSetConfig) DeepEqual(ano *OpenAPIEvalSetConfig) bool {
 		return false
 	}
 	if !p.Field30DeepEqual(ano.ItemFilter) {
+		return false
+	}
+	if !p.Field40DeepEqual(ano.SharedOption) {
+		return false
+	}
+	if !p.Field41DeepEqual(ano.TargetSharedOption) {
 		return false
 	}
 	return true
@@ -2782,6 +2908,20 @@ func (p *OpenAPIEvalSetConfig) Field20DeepEqual(src []*OpenAPIExptTargetConf) bo
 func (p *OpenAPIEvalSetConfig) Field30DeepEqual(src *filter.Filter) bool {
 
 	if !p.ItemFilter.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *OpenAPIEvalSetConfig) Field40DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *OpenAPIEvalSetConfig) Field41DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.TargetSharedOption.DeepEqual(src) {
 		return false
 	}
 	return true

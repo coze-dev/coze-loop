@@ -37,6 +37,16 @@ func (p *CreateExperimentRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.EvalSetSharedOption != nil {
+		if err := p.EvalSetSharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field EvalSetSharedOption not valid, %w", err)
+		}
+	}
+	if p.TargetSharedOption != nil {
+		if err := p.TargetSharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field TargetSharedOption not valid, %w", err)
+		}
+	}
 	if p.NotificationConf != nil {
 		if err := p.NotificationConf.IsValid(); err != nil {
 			return fmt.Errorf("field NotificationConf not valid, %w", err)
@@ -86,6 +96,16 @@ func (p *SubmitExperimentRequest) IsValid() error {
 	if p.TimeRange != nil {
 		if err := p.TimeRange.IsValid(); err != nil {
 			return fmt.Errorf("field TimeRange not valid, %w", err)
+		}
+	}
+	if p.EvalSetSharedOption != nil {
+		if err := p.EvalSetSharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field EvalSetSharedOption not valid, %w", err)
+		}
+	}
+	if p.TargetSharedOption != nil {
+		if err := p.TargetSharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field TargetSharedOption not valid, %w", err)
 		}
 	}
 	if p.NotificationConf != nil {

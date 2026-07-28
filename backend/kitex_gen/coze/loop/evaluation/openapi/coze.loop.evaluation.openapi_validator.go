@@ -862,6 +862,11 @@ func (p *SubmitExperimentOApiRequest) IsValid() error {
 	return nil
 }
 func (p *SubmitExperimentEvalSetParam) IsValid() error {
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *SubmitExperimentEvaluatorParam) IsValid() error {
@@ -886,6 +891,11 @@ func (p *SubmitExperimentEvalTargetParam) IsValid() error {
 	if p.SandboxAgent != nil {
 		if err := p.SandboxAgent.IsValid(); err != nil {
 			return fmt.Errorf("field SandboxAgent not valid, %w", err)
+		}
+	}
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
 		}
 	}
 	return nil

@@ -1205,6 +1205,18 @@ func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context
 	}, nil
 }
 
+// openapiSharedOptionDTO2Domain 跨空间共享可选项 OpenAPI DTO -> domain kitex 类型;
+// nil 或 !is_shared 返回 nil (普通访问)。
+func openapiSharedOptionDTO2Domain(opt *openapiCommon.SharedResourceOption) *domaincommon.SharedResourceOption {
+	if opt == nil || !opt.GetIsShared() {
+		return nil
+	}
+	return &domaincommon.SharedResourceOption{
+		IsShared:      gptr.Of(true),
+		SourceSpaceID: gptr.Of(opt.GetSourceSpaceID()),
+	}
+}
+
 func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -1320,6 +1332,8 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		createReq.EvaluatorVersionIds = evaluatorVersionIDs
 		createReq.EvaluatorFieldMapping = experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap)
 		createReq.EvaluatorIDVersionList = experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams)
+		// ★ 跨空间共享 (单评测集): 评测集来源空间选项 (SubmitExperimentEvalSetParam.shared_option)
+		createReq.EvalSetSharedOption = openapiSharedOptionDTO2Domain(req.GetEvalSetParam().GetSharedOption())
 	}
 
 	notificationConf, err := experiment_convertor.OpenAPINotificationConfDTO2Domain(req.NotificationConf)
@@ -1353,6 +1367,10 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	}
 	createReq.CreateEvalTargetParam = createEvalTargetParam
 	createReq.NotificationConf = notificationConf
+	// ★ 跨空间共享 (单评测集): 评测对象来源空间选项 (SubmitExperimentEvalTargetParam.shared_option)
+	if req.EvalTargetParam != nil {
+		createReq.TargetSharedOption = openapiSharedOptionDTO2Domain(req.EvalTargetParam.GetSharedOption())
+	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
 	if err != nil {
