@@ -972,7 +972,26 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		if req.CreateEvalTargetParam.SandboxAgent != nil {
 			opts = append(opts, entity.WithSandboxAgent(req.CreateEvalTargetParam.SandboxAgent))
 		}
-		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, req.WorkspaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
+		// ★ 跨空间共享: 评测对象现建时按来源空间 B 建(BuildBySource 会用该 spaceID 去 Application/源服务拉配置,
+		// 消费方 A 拉不到 B 的 source; 鉴权通过后用来源空间 B 建 eval_target, 归 B, A 的实验跨空间引用)。
+		createTargetSpaceID := req.WorkspaceID
+		if req.TargetSharedOption != nil && req.TargetSharedOption.Enabled() {
+			var srcTargetVerID *int64
+			srcTargetID := gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID)
+			var srcTargetIDInt int64
+			if v, convErr := strconv.ParseInt(strings.TrimSpace(srcTargetID), 10, 64); convErr == nil {
+				srcTargetIDInt = v
+			}
+			tgtSrcSpace, _, authErr := e.authorizeSharedResource(
+				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, srcTargetIDInt, srcTargetVerID, req.TargetSharedOption)
+			if authErr != nil {
+				return nil, authErr
+			}
+			if tgtSrcSpace > 0 {
+				createTargetSpaceID = tgtSrcSpace
+			}
+		}
+		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, createTargetSpaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
 			opts...)
 		if err != nil {
 			return nil, errorx.Wrapf(err, "CreateEvalTarget failed, param: %v", json.Jsonify(req.CreateEvalTargetParam))
@@ -981,6 +1000,10 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		versionedTargetID = &entity.VersionedTargetID{
 			TargetID:  targetID,
 			VersionID: targetVersionID,
+		}
+		// 跨空间: 回填来源空间, 供 getExptTupleByID / 执行链路按 B 加载执行评测对象
+		if createTargetSpaceID != req.WorkspaceID {
+			versionedTargetID.SourceSpaceID = createTargetSpaceID
 		}
 	} else if req.TargetID != nil && *req.TargetID > 0 && req.TargetVersionID > 0 {
 		// 使用已有 target（如从模板提交实验时）
@@ -1008,7 +1031,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 		logs.CtxInfo(ctx, "[XSPACE-DBG] after evalset authz: evalSetSpaceID=%d accessLevel=%s", evalSetSpaceID, evalSetAccessLevel)
 		targetSpaceID = req.WorkspaceID
-		if versionedTargetID != nil {
+		// 现建路径(CreateEvalTargetParam)已在建 target 时完成跨空间鉴权+回填 SourceSpaceID, 此处只处理引用路径(req.TargetID)。
+		// 现建路径下 versionedTargetID.TargetID 是新建 eval_target id(非 source bot id), 不能再拿去按 source 鉴权。
+		if versionedTargetID != nil && req.CreateEvalTargetParam.IsNull() {
 			var targetVerID *int64
 			if versionedTargetID.VersionID > 0 {
 				targetVerID = gptr.Of(versionedTargetID.VersionID)
@@ -1022,6 +1047,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			if targetSpaceID != req.WorkspaceID {
 				versionedTargetID.SourceSpaceID = targetSpaceID
 			}
+		} else if versionedTargetID != nil && versionedTargetID.SourceSpaceID > 0 {
+			// 现建路径已回填来源空间, 同步给 targetSpaceID 供后续硬校验放行
+			targetSpaceID = versionedTargetID.SourceSpaceID
 		}
 	}
 
