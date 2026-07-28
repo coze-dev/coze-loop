@@ -61,7 +61,14 @@ func (p *sharedResourceConfigProvider) GetSharedResourceConfig(ctx context.Conte
 		logs.CtxInfo(ctx, "shared resource config unset or invalid, default deny; key=%s err=%v", sharedResourceConfigKey, err)
 		return &entity.SharedResourceConfig{}, nil
 	}
-	return convertSharedResourceConfig(raw), nil
+	logs.CtxInfo(ctx, "[XSPACE-DBG] TCC raw config read: key=%s rawSpaces=%d raw=%+v", sharedResourceConfigKey, len(raw), raw)
+	cfg := convertSharedResourceConfig(raw)
+	for sid, sr := range cfg.SpaceRules {
+		for _, r := range sr.Resources {
+			logs.CtxInfo(ctx, "[XSPACE-DBG] TCC parsed rule: source=%d resID=%d type=%s accessRules=%d", sid, r.ResourceID, r.ResourceType, len(r.AccessRules))
+		}
+	}
+	return cfg, nil
 }
 
 func convertSharedResourceConfig(raw sharedResourceConfigFile) *entity.SharedResourceConfig {
