@@ -126,8 +126,8 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return nil, err
 	}
 
-	// ★ 跨空间共享: 评测对象按发起冻结的来源空间执行 (0=同消费方空间); trace/打点仍用消费方空间.
-	record, err := e.callTarget(ctx, etec, etec.History, resolveLoadSpaceID(etec.Event.SpaceID, etec.Expt.TargetSpaceID))
+	// ★ 跨空间共享: 评测对象按发起冻结的来源空间执行 (单集/多集分别取 Expt/ItemConfig 冻结值, 0=同消费方空间); trace/打点仍用消费方空间.
+	record, err := e.callTarget(ctx, etec, etec.History, resolveLoadSpaceID(etec.Event.SpaceID, etec.TargetSourceSpaceID()))
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +196,9 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 
 	turn := etec.Turn
 	targetConf := etec.Expt.EvalConf.ConnectorConf.TargetConf
+	// ★ 跨空间共享: 评测集大字段(被裁剪列)属评测集数据, 用评测集来源空间加载, 不用 target 执行空间(spaceID);
+	// 两者来源空间可能不同(评测集来自 B、评测对象来自 B2)。
+	evalSetSpaceID := resolveLoadSpaceID(etec.Event.SpaceID, etec.EvalSetSourceSpaceID())
 
 	if err := targetConf.Valid(ctx, etec.Expt.Target.EvalTargetType); err != nil {
 		return nil, err
@@ -211,7 +214,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 			for _, field := range turn.FieldDataList {
 				if field.Content != nil && field.Content.IsContentOmitted() {
 					req := &entity.GetEvaluationSetItemFieldParam{
-						SpaceID:         spaceID,
+						SpaceID:         evalSetSpaceID,
 						EvaluationSetID: turn.EvalSetID,
 						ItemPK:          turn.ItemID,
 						FieldName:       field.Name,
@@ -228,7 +231,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 			}
 			return fields, nil
 		case entity.EvalTargetTypeCustomAgent, entity.EvalTargetTypeA2AAgent, entity.EvalTargetTypeSandboxAgent:
-			fields, err := e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
+			fields, err := e.buildEvalSetFields(ctx, evalSetSpaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
 			if err != nil {
 				return nil, err
 			}
@@ -236,7 +239,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 			for _, field := range turn.FieldDataList {
 				if field.Content != nil && field.Content.IsContentOmitted() {
 					req := &entity.GetEvaluationSetItemFieldParam{
-						SpaceID:         spaceID,
+						SpaceID:         evalSetSpaceID,
 						EvaluationSetID: turn.EvalSetID,
 						ItemPK:          turn.ItemID,
 						FieldName:       field.Name,
@@ -254,7 +257,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 			}
 			return fields, nil
 		default:
-			return e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
+			return e.buildEvalSetFields(ctx, evalSetSpaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
 		}
 	}()
 	if err != nil {
@@ -418,7 +421,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		item           = etec.EvalSetItem
 		expt           = etec.Expt
 		turn           = etec.Turn
-		spaceID        = expt.SpaceID
+		// ★ 跨空间共享: evaluator 侧的 spaceID 仅用于加载评测集字段做 hydrate, 故用评测集来源空间
+		// (单集 Expt.EvalSetSpaceID / 多集 ItemConfig.EvalSetSourceSpaceID); evaluator 本身同调用方空间执行。
+		// 消费方基线用 expt.SpaceID (与原实现一致, 不依赖 etec.Event, 避免空指针)。
+		spaceID        = resolveLoadSpaceID(expt.SpaceID, etec.EvalSetSourceSpaceID())
 		evaluatorsConf = expt.EvalConf.ConnectorConf.EvaluatorsConf
 	)
 
@@ -576,7 +582,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 		item           = etec.EvalSetItem
 		expt           = etec.Expt
 		turn           = etec.Turn
-		spaceID        = expt.SpaceID
+		// ★ 跨空间共享: evaluator 侧的 spaceID 仅用于加载评测集字段做 hydrate, 故用评测集来源空间
+		// (单集 Expt.EvalSetSpaceID / 多集 ItemConfig.EvalSetSourceSpaceID); evaluator 本身同调用方空间执行。
+		// 消费方基线用 expt.SpaceID (与原实现一致, 不依赖 etec.Event, 避免空指针)。
+		spaceID        = resolveLoadSpaceID(expt.SpaceID, etec.EvalSetSourceSpaceID())
 		evaluatorsConf = expt.EvalConf.ConnectorConf.EvaluatorsConf
 	)
 

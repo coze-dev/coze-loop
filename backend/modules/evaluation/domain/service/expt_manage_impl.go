@@ -586,32 +586,52 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 
 	if len(versionedTargetIDs) > 0 {
 		pool.Add(func() error {
-			// 去重,可以优化循环次数
-			targetVersionIDs := make([]int64, 0, len(versionedTargetIDs))
+			// 跨空间共享: 评测对象版本按来源空间加载 (SourceSpaceID>0), 否则用调用方空间。
+			// 与单条路径 getExptTupleByID 一致; 批量路径按 (加载空间) 分组, 逐组 BatchGet 后合并。
+			// 缺此分组时, 跨空间评测对象版本落在来源空间 B, 用调用方 A 批量读会查不到 → 601203004。
+			versionIDsBySpace := make(map[int64][]int64, 1)
 			for _, tids := range versionedTargetIDs {
-				targetVersionIDs = append(targetVersionIDs, tids.VersionID)
+				loadSpaceID := spaceID
+				if tids.SourceSpaceID > 0 {
+					loadSpaceID = tids.SourceSpaceID
+				}
+				versionIDsBySpace[loadSpaceID] = append(versionIDsBySpace[loadSpaceID], tids.VersionID)
 			}
-			targetVersionIDs = maps.ToSlice(gslice.ToMap(targetVersionIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
-			var poolErr error
-			targets, poolErr = e.evalTargetService.BatchGetEvalTargetVersion(ctx, spaceID, targetVersionIDs, true)
-			if poolErr != nil {
-				return poolErr
+			for loadSpaceID, verIDs := range versionIDsBySpace {
+				verIDs = maps.ToSlice(gslice.ToMap(verIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
+				grpTargets, poolErr := e.evalTargetService.BatchGetEvalTargetVersion(ctx, loadSpaceID, verIDs, true)
+				if poolErr != nil {
+					return poolErr
+				}
+				targets = append(targets, grpTargets...)
 			}
 			return nil
 		})
 	}
 
 	if len(versionedEvalSetIDs) > 0 {
-		evalSetVersionIDs := make([]int64, 0, len(versionedEvalSetIDs))
+		// 跨空间共享: 评测集版本/草稿按来源空间加载 (SourceSpaceID>0), 否则用调用方空间。
+		// 与单条路径 getExptTupleByID 一致; 批量路径按 (加载空间) 分组, 逐组 BatchGet 后合并。
+		// 缺此分组时, 跨空间评测集落在来源空间 B, 用调用方 A 批量读会查不到 → resource not found。
+		resolveEvalSetSpace := func(ids *entity.VersionedEvalSetID) int64 {
+			if ids.SourceSpaceID > 0 {
+				return ids.SourceSpaceID
+			}
+			return spaceID
+		}
+		// 版本化: eval_set_id != version_id
+		versionIDsBySpace := make(map[int64][]int64)
 		for _, ids := range versionedEvalSetIDs {
 			if ids.EvalSetID != ids.VersionID {
-				evalSetVersionIDs = append(evalSetVersionIDs, ids.VersionID)
+				loadSpaceID := resolveEvalSetSpace(ids)
+				versionIDsBySpace[loadSpaceID] = append(versionIDsBySpace[loadSpaceID], ids.VersionID)
 			}
 		}
-		if len(evalSetVersionIDs) > 0 {
+		for loadSpaceID, verIDs := range versionIDsBySpace {
+			loadSpaceID, verIDs := loadSpaceID, verIDs
 			pool.Add(func() error {
-				verIDs := maps.ToSlice(gslice.ToMap(evalSetVersionIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
-				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(true), nil)
+				verIDs = maps.ToSlice(gslice.ToMap(verIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
+				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(loadSpaceID), verIDs, gptr.Of(true), nil)
 				if poolErr != nil {
 					return poolErr
 				}
@@ -625,17 +645,19 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 				return nil
 			})
 		}
-		// 草稿的evalSetID和versionID相同
-		evalSetIDs := make([]int64, 0, len(versionedEvalSetIDs))
+		// 草稿: eval_set_id == version_id
+		draftIDsBySpace := make(map[int64][]int64)
 		for _, ids := range versionedEvalSetIDs {
 			if ids.EvalSetID == ids.VersionID {
-				evalSetIDs = append(evalSetIDs, ids.EvalSetID)
+				loadSpaceID := resolveEvalSetSpace(ids)
+				draftIDsBySpace[loadSpaceID] = append(draftIDsBySpace[loadSpaceID], ids.EvalSetID)
 			}
 		}
-		if len(evalSetIDs) > 0 {
+		for loadSpaceID, setIDsRaw := range draftIDsBySpace {
+			loadSpaceID, setIDsRaw := loadSpaceID, setIDsRaw
 			pool.Add(func() error {
-				setIDs := maps.ToSlice(gslice.ToMap(evalSetIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
-				got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(spaceID), setIDs, gptr.Of(false), nil)
+				setIDs := maps.ToSlice(gslice.ToMap(setIDsRaw, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
+				got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(loadSpaceID), setIDs, gptr.Of(false), nil)
 				if poolErr != nil {
 					return poolErr
 				}
@@ -759,6 +781,16 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 	}
 	versionIDSet := make(map[int64]struct{})
 	draftIDSet := make(map[int64]struct{})
+	// 跨空间共享: 按加载空间分组的版本/草稿 id (SourceSpaceID>0 用来源空间, 否则调用方 spaceID)。
+	// 缺此分组时, 跨空间多集详情会用调用方 A 读来源空间 B 的评测集 → 查不到, 详情缺失。
+	versionIDsBySpace := make(map[int64]map[int64]struct{})
+	draftIDsBySpace := make(map[int64]map[int64]struct{})
+	addToSpace := func(m map[int64]map[int64]struct{}, spaceKey, id int64) {
+		if m[spaceKey] == nil {
+			m[spaceKey] = make(map[int64]struct{})
+		}
+		m[spaceKey][id] = struct{}{}
+	}
 	for _, expt := range newExpts {
 		// (eval_set_id, eval_set_version_id) -> count
 		cnt := make(map[setKey]int64)
@@ -785,12 +817,19 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 			}
 			details = append(details, detail)
 			// 草稿 (version_id==0 或等于 set_id) 与版本化分流, 对齐 mgetExptTupleByID 写法
+			// 跨空间: 用该 set 的来源空间分组 (sc.SourceSpaceID>0), 否则调用方 spaceID。
+			loadSpaceID := spaceID
+			if sc.SourceSpaceID > 0 {
+				loadSpaceID = sc.SourceSpaceID
+			}
 			if sc.EvalSetVersionID == 0 || sc.EvalSetVersionID == sc.EvalSetID {
 				if sc.EvalSetID > 0 {
 					draftIDSet[sc.EvalSetID] = struct{}{}
+					addToSpace(draftIDsBySpace, loadSpaceID, sc.EvalSetID)
 				}
 			} else {
 				versionIDSet[sc.EvalSetVersionID] = struct{}{}
+				addToSpace(versionIDsBySpace, loadSpaceID, sc.EvalSetVersionID)
 			}
 		}
 		expt.EvalSetDetails = details
@@ -807,38 +846,44 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 	if err != nil {
 		return err
 	}
-	if len(versionIDSet) > 0 {
-		verIDs := maps.ToSlice(versionIDSet, func(k int64, _ struct{}) int64 { return k })
-		pool.Add(func() error {
-			got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(true), nil)
-			if poolErr != nil {
-				return poolErr
-			}
-			for _, elem := range got {
-				if elem == nil || elem.EvaluationSet == nil || elem.Version == nil {
-					continue
+	if len(versionIDsBySpace) > 0 {
+		for loadSpaceID, idSet := range versionIDsBySpace {
+			loadSpaceID, idSet := loadSpaceID, idSet
+			verIDs := maps.ToSlice(idSet, func(k int64, _ struct{}) int64 { return k })
+			pool.Add(func() error {
+				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(loadSpaceID), verIDs, gptr.Of(true), nil)
+				if poolErr != nil {
+					return poolErr
 				}
-				elem.EvaluationSet.EvaluationSetVersion = elem.Version
-				versionedByVersionID[elem.Version.ID] = elem.EvaluationSet
-			}
-			return nil
-		})
+				for _, elem := range got {
+					if elem == nil || elem.EvaluationSet == nil || elem.Version == nil {
+						continue
+					}
+					elem.EvaluationSet.EvaluationSetVersion = elem.Version
+					versionedByVersionID[elem.Version.ID] = elem.EvaluationSet
+				}
+				return nil
+			})
+		}
 	}
-	if len(draftIDSet) > 0 {
-		setIDs := maps.ToSlice(draftIDSet, func(k int64, _ struct{}) int64 { return k })
-		pool.Add(func() error {
-			got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(spaceID), setIDs, gptr.Of(false), nil)
-			if poolErr != nil {
-				return poolErr
-			}
-			for _, elem := range got {
-				if elem == nil {
-					continue
+	if len(draftIDsBySpace) > 0 {
+		for loadSpaceID, idSet := range draftIDsBySpace {
+			loadSpaceID, idSet := loadSpaceID, idSet
+			setIDs := maps.ToSlice(idSet, func(k int64, _ struct{}) int64 { return k })
+			pool.Add(func() error {
+				got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(loadSpaceID), setIDs, gptr.Of(false), nil)
+				if poolErr != nil {
+					return poolErr
 				}
-				draftBySetID[elem.ID] = elem
-			}
-			return nil
-		})
+				for _, elem := range got {
+					if elem == nil {
+						continue
+					}
+					draftBySetID[elem.ID] = elem
+				}
+				return nil
+			})
+		}
 	}
 	if err := pool.Exec(ctx); err != nil { // ignore_security_alert_wait_for_fix SQL_INJECTION
 		return err
@@ -874,6 +919,9 @@ func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experimen
 		VersionedEvalSetID: &entity.VersionedEvalSetID{
 			EvalSetID: expt.EvalSetID,
 			VersionID: expt.EvalSetVersionID,
+			// 跨空间共享: 从冻结列回填评测集来源空间, 供 getExptTupleByID / 执行链路按来源空间加载;
+			// 缺此回填时, 发起后再查/再执行会用调用方空间读来源空间的评测集 → resource not found。
+			SourceSpaceID: expt.EvalSetSpaceID,
 		},
 		// EvaluatorVersionIDs: evaluatorVersionIDs,
 	}
@@ -882,6 +930,8 @@ func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experimen
 		exptTupleID.VersionedTargetID = &entity.VersionedTargetID{
 			TargetID:  expt.TargetID,
 			VersionID: expt.TargetVersionID,
+			// 跨空间共享: 从冻结列回填评测对象来源空间, 同理供后续加载。
+			SourceSpaceID: expt.TargetSpaceID,
 		}
 	}
 

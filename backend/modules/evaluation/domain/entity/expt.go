@@ -594,8 +594,11 @@ type ExptItemRef struct {
 	ItemVersionID    int64 // 0=无版本概念(DataSet暂不支持); 全链路真值源
 	EvalSetID        int64 // 归属评测集标签 (前端分组/CK分桶/反查; 调度不读)
 	EvalSetVersionID int64 // 调度键: 配合 item_id 定位 dataset_item_snapshot
-	ItemConfig       *ExptItemConfig
-	OrderIdx         int32
+	// EvalSetSourceSpaceID 跨空间共享: 该 ref 所属评测集的来源空间; 0=用调用方空间加载(同空间)。
+	// 重试链路按 ref 拉 item 时据此切到来源空间, 否则跨空间实验重试会用调用方空间查不到 item。
+	EvalSetSourceSpaceID int64
+	ItemConfig           *ExptItemConfig
+	OrderIdx             int32
 }
 
 // ExptItemConfig per-item 行级配置 JSON (expt_item_ref.item_config)
@@ -605,6 +608,11 @@ type ExptItemConfig struct {
 	EvaluatorConfs []*ItemEvaluatorConf `json:"evaluator_conf,omitempty"`
 	TurnIndexes    []int32              `json:"turn_indexes,omitempty"`
 	Ext            map[string]string    `json:"ext,omitempty"`
+
+	// ★ 跨空间共享 (多评测集执行期逐行携带来源空间, 随 item_config blob 序列化, 无 DDL):
+	// 执行 target / hydrate 评测集大字段时据此切到各自来源空间; 0=同调用方空间。
+	EvalSetSourceSpaceID int64 `json:"eval_set_source_space_id,omitempty"` // 本行评测集来源空间
+	TargetSourceSpaceID  int64 `json:"target_source_space_id,omitempty"`   // 本行评测对象来源空间
 }
 
 // ItemTargetConf per-item target 运行配置
