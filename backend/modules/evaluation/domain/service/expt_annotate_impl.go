@@ -59,7 +59,8 @@ func (e ExptAnnotateServiceImpl) CreateExptTurnResultTagRefs(ctx context.Context
 	}
 
 	_, total, _, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-		SpaceID:         ref.SpaceID,
+		// ★ 跨空间共享: 评测集 item 属来源空间, 按冻结 EvalSetSpaceID 读 (单集; 0=同调用方空间)。
+		SpaceID:         resolveLoadSpaceID(ref.SpaceID, expt.EvalSetSpaceID),
 		EvaluationSetID: expt.EvalSetID,
 		VersionID:       ptr.Of(expt.EvalSetVersionID),
 		PageNumber:      ptr.Of(int32(1)),

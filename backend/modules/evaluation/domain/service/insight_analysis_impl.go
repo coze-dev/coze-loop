@@ -147,7 +147,8 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		param.EndTime = expt.EndAt.UnixMilli()
 	}
 
-	target, err := e.targetRepo.GetEvalTargetVersion(ctx, spaceID, expt.TargetVersionID)
+	// ★ 跨空间共享: 评测对象版本属来源空间, 按冻结的 TargetSpaceID 加载 (0=同调用方空间)。
+	target, err := e.targetRepo.GetEvalTargetVersion(ctx, resolveLoadSpaceID(spaceID, expt.TargetSpaceID), expt.TargetVersionID)
 	if err != nil {
 		return err
 	}
