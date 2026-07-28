@@ -2150,7 +2150,9 @@ func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 	if e.exptDO.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
 		pairs = collectEvalSetVersionPairs(e.exptDO)
 	} else {
-		pairs = []evalSetVersionPair{{EvalSetID: e.exptDO.EvalSetID, EvalSetVersionID: e.exptDO.EvalSetVersionID}}
+		// 跨空间共享: 单集 pair 必须带上冻结的评测集来源空间 EvalSetSpaceID,
+		// 否则下游按 SourceSpaceID=0 用调用方空间读来源空间评测集 → get dataset_version not found。
+		pairs = []evalSetVersionPair{{EvalSetID: e.exptDO.EvalSetID, EvalSetVersionID: e.exptDO.EvalSetVersionID, SourceSpaceID: e.exptDO.EvalSetSpaceID}}
 	}
 
 	datasetKeyByEvalSetID, err := e.buildDatasetKeyByEvalSetID(ctx, pairs)
