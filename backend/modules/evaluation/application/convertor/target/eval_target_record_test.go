@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -308,4 +309,188 @@ func TestToSPIContentTypeDO_AudioAndVideo(t *testing.T) {
 	unknownDO := ToSPIContentDO(unknownContent)
 	assert.NotNil(t, unknownDO)
 	assert.Equal(t, entity.ContentTypeText, *unknownDO.ContentType)
+}
+
+func TestToInvokeOutputDataDO_ErrorCode(t *testing.T) {
+	failStatus := spi.InvokeEvalTargetStatus_FAILED
+
+	t.Run("explicit_error_code_overrides_default", func(t *testing.T) {
+		req := &openapi.ReportEvalTargetInvokeResultRequest{
+			Status:       &failStatus,
+			ErrorMessage: gptr.Of("timeout"),
+			ErrorCode:    gptr.Of(int32(601200701)),
+		}
+		out := ToInvokeOutputDataDO(req)
+		assert.NotNil(t, out.EvalTargetRunError)
+		assert.Equal(t, int32(601200701), out.EvalTargetRunError.Code)
+		assert.Equal(t, "timeout", out.EvalTargetRunError.Message)
+	})
+
+	t.Run("zero_error_code_falls_back_to_default", func(t *testing.T) {
+		req := &openapi.ReportEvalTargetInvokeResultRequest{
+			Status:       &failStatus,
+			ErrorMessage: gptr.Of("plain fail"),
+		}
+		out := ToInvokeOutputDataDO(req)
+		assert.NotNil(t, out.EvalTargetRunError)
+		assert.Equal(t, int32(errno.CustomEvalTargetInvokeFailCode), out.EvalTargetRunError.Code)
+	})
+
+	t.Run("error_code_only_no_message", func(t *testing.T) {
+		req := &openapi.ReportEvalTargetInvokeResultRequest{
+			Status:    &failStatus,
+			ErrorCode: gptr.Of(int32(601299999)),
+		}
+		out := ToInvokeOutputDataDO(req)
+		assert.NotNil(t, out.EvalTargetRunError)
+		assert.Equal(t, int32(601299999), out.EvalTargetRunError.Code)
+	})
+}
+
+// TestStepsConvert 覆盖 StepsDO2DTO / StepsDTO2DO 的完整分支：
+// - nil/empty 返回 nil；
+// - 元素含 nil 时跳过；
+// - 字段完整回环 (round-trip) 语义等价。
+func TestStepsConvert(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil and empty return nil", func(t *testing.T) {
+		assert.Nil(t, StepsDO2DTO(nil))
+		assert.Nil(t, StepsDO2DTO([]*entity.EvalTargetStep{}))
+		assert.Nil(t, StepsDTO2DO(nil))
+		assert.Nil(t, StepsDTO2DO([]*eval_target.EvalTargetStep{}))
+	})
+
+	t.Run("skip nil element", func(t *testing.T) {
+		got := StepsDO2DTO([]*entity.EvalTargetStep{nil})
+		assert.Empty(t, got)
+
+		got2 := StepsDTO2DO([]*eval_target.EvalTargetStep{nil})
+		assert.Empty(t, got2)
+	})
+
+	t.Run("round trip preserves all fields", func(t *testing.T) {
+		src := []*entity.EvalTargetStep{
+			{
+				StepName:     "plan",
+				EventType:    "STARTED",
+				EventTimeMS:  1700000000000,
+				Success:      true,
+				ErrorCode:    0,
+				ErrorMessage: "",
+				DurationMS:   0,
+			},
+			{
+				StepName:     "act",
+				EventType:    "FINISHED",
+				EventTimeMS:  1700000000500,
+				Success:      false,
+				ErrorCode:    601200999,
+				ErrorMessage: "step failed",
+				DurationMS:   1500,
+			},
+		}
+		dto := StepsDO2DTO(src)
+		if !assert.Len(t, dto, 2) {
+			return
+		}
+		assert.Equal(t, "plan", dto[0].GetStepName())
+		assert.Equal(t, "STARTED", dto[0].GetEventType())
+		assert.Equal(t, int64(1700000000000), dto[0].GetEventTimeMs())
+		assert.True(t, dto[0].GetSuccess())
+		assert.Equal(t, "act", dto[1].GetStepName())
+		assert.Equal(t, int32(601200999), dto[1].GetErrorCode())
+		assert.Equal(t, "step failed", dto[1].GetErrorMessage())
+		assert.Equal(t, int64(1500), dto[1].GetDurationMs())
+
+		back := StepsDTO2DO(dto)
+		assert.Equal(t, src, back)
+	})
+}
+
+// TestMessagesAndContentDO2DTOs 覆盖 MessagesDO2DTOs / ContentDOToDTOs 的非空分支。
+func TestMessagesAndContentDO2DTOs(t *testing.T) {
+	t.Parallel()
+
+	t.Run("MessagesDO2DTOs converts each element", func(t *testing.T) {
+		msgs := []*entity.Message{
+			{Role: entity.RoleUser, Content: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of("hi"),
+			}},
+			{Role: entity.RoleAssistant, Content: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of("world"),
+			}},
+		}
+		res := MessagesDO2DTOs(msgs)
+		assert.Len(t, res, 2)
+		assert.Equal(t, "hi", res[0].GetContent().GetText())
+		assert.Equal(t, "world", res[1].GetContent().GetText())
+	})
+
+	t.Run("ContentDOToDTOs converts each entry", func(t *testing.T) {
+		src := map[string]*entity.Content{
+			"a": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("A")},
+			"b": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("B")},
+		}
+		res := ContentDOToDTOs(src)
+		assert.Len(t, res, 2)
+		assert.Equal(t, "A", res["a"].GetText())
+		assert.Equal(t, "B", res["b"].GetText())
+	})
+
+	t.Run("empty inputs return empty non-nil", func(t *testing.T) {
+		// nil / empty msgs 走 len==0 早退路径
+		got := MessagesDO2DTOs(nil)
+		assert.NotNil(t, got)
+		assert.Empty(t, got)
+
+		got2 := ContentDOToDTOs(nil)
+		assert.NotNil(t, got2)
+		assert.Empty(t, got2)
+	})
+}
+
+// TestToInvokeOutputDataDO_FailedWithOutputExt 覆盖 FAILED 分支下 output.Ext 透传。
+func TestToInvokeOutputDataDO_FailedWithOutputExt(t *testing.T) {
+	t.Parallel()
+
+	failStatus := spi.InvokeEvalTargetStatus_FAILED
+	req := &openapi.ReportEvalTargetInvokeResultRequest{
+		Status:       &failStatus,
+		ErrorMessage: gptr.Of("failed"),
+		ErrorCode:    gptr.Of(int32(601200999)),
+		Output: &spi.InvokeEvalTargetOutput{
+			Ext: map[string]string{"k": "v"},
+		},
+	}
+	out := ToInvokeOutputDataDO(req)
+	if assert.NotNil(t, out) {
+		assert.Equal(t, "v", out.Ext["k"])
+		assert.NotNil(t, out.EvalTargetRunError)
+		assert.Equal(t, int32(601200999), out.EvalTargetRunError.Code)
+	}
+}
+
+// TestToInvokeOutputDataDO_ExtOutputFields 覆盖 SUCCESS 分支下 ExtOutput 拷贝逻辑。
+func TestToInvokeOutputDataDO_ExtOutputFields(t *testing.T) {
+	t.Parallel()
+
+	successStatus := spi.InvokeEvalTargetStatus_SUCCESS
+	contentType := spi.ContentTypeText
+	req := &openapi.ReportEvalTargetInvokeResultRequest{
+		Status: &successStatus,
+		Output: &spi.InvokeEvalTargetOutput{
+			ExtOutput: map[string]*spi.Content{
+				"extra": {ContentType: &contentType, Text: gptr.Of("extra-val")},
+			},
+		},
+	}
+	out := ToInvokeOutputDataDO(req)
+	if assert.NotNil(t, out) {
+		if assert.Contains(t, out.OutputFields, "extra") {
+			assert.Equal(t, "extra-val", *out.OutputFields["extra"].Text)
+		}
+	}
 }

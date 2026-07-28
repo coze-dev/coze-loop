@@ -33,8 +33,15 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 	logs.CtxInfo(ctx, "HandleLifecycleEvent: received event, expt_id: %d, space_id: %d, to_status: %s", event.ExptID, event.SpaceID, event.ToStatus)
 	expt, err := h.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 	if err != nil {
+		logs.CtxError(ctx, "HandleLifecycleEvent: GetByID failed, expt_id=%d, space_id=%d, to_status=%v, err=%v",
+			event.ExptID, event.SpaceID, event.ToStatus, err)
 		return err
 	}
+
+	// 注意: 沙箱 agent 的 experiment_started / experiment_finished 打点已从此处迁出。
+	// 现在打在 SubmitExperiment (application/experiment_app.go) 和 CompleteExpt
+	// (domain/service/expt_manage_execution_impl.go) 里, 走同步路径以避免 rocket MQ
+	// consumer group 竞争导致灰度实例采集不到。此处仅保留飞书通知 + Webhook 分发。
 
 	// Feishu notification
 	h.handleFeishuNotification(ctx, event, expt)
@@ -44,6 +51,36 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 
 	return nil
 }
+
+// isSandboxAgentExperiment 判断实验是否属于沙箱 agent 类型。
+// 优先看 Target.EvalTargetVersion.EvalTargetType, 兼容部分历史记录仅落 SandboxAgent 指针的场景。
+// 保留在此文件是因为同 package 的 CompleteExpt (expt_manage_execution_impl.go) 复用。
+func isSandboxAgentExperiment(expt *entity.Experiment) bool {
+	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
+		return false
+	}
+	if expt.Target.EvalTargetVersion.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+		return true
+	}
+	return expt.Target.EvalTargetVersion.SandboxAgent != nil
+}
+
+// statusToErr 将终态状态映射为一个"错误标记"error, 供 metrics 侧判定 success/error_type;
+// 终态非 Success 视为 error, 但不携带具体分类 (由业务侧 invoke 级错误码承载)。
+// 保留在此文件是因为同 package 的 CompleteExpt (expt_manage_execution_impl.go) 复用。
+func statusToErr(status entity.ExptStatus) error {
+	if status == entity.ExptStatus_Success {
+		return nil
+	}
+	return errExptTerminatedWithFailure
+}
+
+// errExptTerminatedWithFailure 表征实验以非成功状态终结, 仅用于 metrics 打点分类。
+var errExptTerminatedWithFailure = &exptFailureError{}
+
+type exptFailureError struct{}
+
+func (e *exptFailureError) Error() string { return "experiment terminated with non-success status" }
 
 func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
 	logs.CtxInfo(ctx, "feishu_notification: enter, expt_id: %d, to_status: %v, has_notification_conf: %v",

@@ -104,6 +104,9 @@ func (p *EvalTargetOutputData) IsValid() error {
 	}
 	return nil
 }
+func (p *EvalTargetStep) IsValid() error {
+	return nil
+}
 func (p *EvalTargetUsage) IsValid() error {
 	return nil
 }

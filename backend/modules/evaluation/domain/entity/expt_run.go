@@ -614,4 +614,11 @@ type EvalAsyncCtx struct {
 	EvaluatorVersionID      int64 // evaluator version id, used for evaluator async scenario
 	EnableExtractTrajectory *bool
 	CallbackURL             string `json:"callback_url,omitempty"` // 异步执行完成后回调通知的 URL，为空则不回调
+	// 下述字段用于沙箱内部 step 上报的 tag 反查, 由 target async 写入位点从 etec 填充,
+	// 调试场景 (无实验上下文) 保留零值, 由上报侧回退为占位符.
+	TargetID         int64
+	DatasetID        int64
+	DatasetVersionID int64
+	ItemKey          string
+	DatasetKey       string
 }

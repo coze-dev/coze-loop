@@ -10204,6 +10204,20 @@ func (p *EvalTargetOutputData) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 20:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField20(buf[offset:])
@@ -10307,6 +10321,31 @@ func (p *EvalTargetOutputData) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvalTargetOutputData) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*EvalTargetStep, 0, size)
+	values := make([]EvalTargetStep, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.EvalTargetSteps = _field
+	return offset, nil
+}
+
 func (p *EvalTargetOutputData) FastReadField20(buf []byte) (int, error) {
 	offset := 0
 
@@ -10350,6 +10389,7 @@ func (p *EvalTargetOutputData) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -10363,6 +10403,7 @@ func (p *EvalTargetOutputData) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field20Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -10409,6 +10450,22 @@ func (p *EvalTargetOutputData) fastWriteField4(buf []byte, w thrift.NocopyWriter
 	if p.IsSetTimeConsumingMs() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.TimeConsumingMs)
+	}
+	return offset
+}
+
+func (p *EvalTargetOutputData) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalTargetSteps() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 5)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.EvalTargetSteps {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -10468,6 +10525,19 @@ func (p *EvalTargetOutputData) field4Length() int {
 	if p.IsSetTimeConsumingMs() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *EvalTargetOutputData) field5Length() int {
+	l := 0
+	if p.IsSetEvalTargetSteps() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.EvalTargetSteps {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -10536,6 +10606,21 @@ func (p *EvalTargetOutputData) DeepCopy(s interface{}) error {
 		p.TimeConsumingMs = &tmp
 	}
 
+	if src.EvalTargetSteps != nil {
+		p.EvalTargetSteps = make([]*EvalTargetStep, 0, len(src.EvalTargetSteps))
+		for _, elem := range src.EvalTargetSteps {
+			var _elem *EvalTargetStep
+			if elem != nil {
+				_elem = &EvalTargetStep{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.EvalTargetSteps = append(p.EvalTargetSteps, _elem)
+		}
+	}
+
 	if src.Ext != nil {
 		p.Ext = make(map[string]string, len(src.Ext))
 		for key, val := range src.Ext {
@@ -10551,6 +10636,450 @@ func (p *EvalTargetOutputData) DeepCopy(s interface{}) error {
 
 			p.Ext[_key] = _val
 		}
+	}
+
+	return nil
+}
+
+func (p *EvalTargetStep) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvalTargetStep[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *EvalTargetStep) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.StepName = _field
+	return offset, nil
+}
+
+func (p *EvalTargetStep) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EventType = _field
+	return offset, nil
+}
+
+func (p *EvalTargetStep) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EventTimeMs = _field
+	return offset, nil
+}
+
+func (p *EvalTargetStep) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Success = _field
+	return offset, nil
+}
+
+func (p *EvalTargetStep) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ErrorCode = _field
+	return offset, nil
+}
+
+func (p *EvalTargetStep) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ErrorMessage = _field
+	return offset, nil
+}
+
+func (p *EvalTargetStep) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.DurationMs = _field
+	return offset, nil
+}
+
+func (p *EvalTargetStep) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *EvalTargetStep) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *EvalTargetStep) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *EvalTargetStep) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetStepName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.StepName)
+	}
+	return offset
+}
+
+func (p *EvalTargetStep) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEventType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.EventType)
+	}
+	return offset
+}
+
+func (p *EvalTargetStep) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEventTimeMs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EventTimeMs)
+	}
+	return offset
+}
+
+func (p *EvalTargetStep) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuccess() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 4)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.Success)
+	}
+	return offset
+}
+
+func (p *EvalTargetStep) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetErrorCode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 5)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.ErrorCode)
+	}
+	return offset
+}
+
+func (p *EvalTargetStep) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetErrorMessage() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ErrorMessage)
+	}
+	return offset
+}
+
+func (p *EvalTargetStep) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDurationMs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 7)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.DurationMs)
+	}
+	return offset
+}
+
+func (p *EvalTargetStep) field1Length() int {
+	l := 0
+	if p.IsSetStepName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.StepName)
+	}
+	return l
+}
+
+func (p *EvalTargetStep) field2Length() int {
+	l := 0
+	if p.IsSetEventType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.EventType)
+	}
+	return l
+}
+
+func (p *EvalTargetStep) field3Length() int {
+	l := 0
+	if p.IsSetEventTimeMs() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *EvalTargetStep) field4Length() int {
+	l := 0
+	if p.IsSetSuccess() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *EvalTargetStep) field5Length() int {
+	l := 0
+	if p.IsSetErrorCode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *EvalTargetStep) field6Length() int {
+	l := 0
+	if p.IsSetErrorMessage() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ErrorMessage)
+	}
+	return l
+}
+
+func (p *EvalTargetStep) field7Length() int {
+	l := 0
+	if p.IsSetDurationMs() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *EvalTargetStep) DeepCopy(s interface{}) error {
+	src, ok := s.(*EvalTargetStep)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.StepName != nil {
+		var tmp string
+		if *src.StepName != "" {
+			tmp = kutils.StringDeepCopy(*src.StepName)
+		}
+		p.StepName = &tmp
+	}
+
+	if src.EventType != nil {
+		var tmp string
+		if *src.EventType != "" {
+			tmp = kutils.StringDeepCopy(*src.EventType)
+		}
+		p.EventType = &tmp
+	}
+
+	if src.EventTimeMs != nil {
+		tmp := *src.EventTimeMs
+		p.EventTimeMs = &tmp
+	}
+
+	if src.Success != nil {
+		tmp := *src.Success
+		p.Success = &tmp
+	}
+
+	if src.ErrorCode != nil {
+		tmp := *src.ErrorCode
+		p.ErrorCode = &tmp
+	}
+
+	if src.ErrorMessage != nil {
+		var tmp string
+		if *src.ErrorMessage != "" {
+			tmp = kutils.StringDeepCopy(*src.ErrorMessage)
+		}
+		p.ErrorMessage = &tmp
+	}
+
+	if src.DurationMs != nil {
+		tmp := *src.DurationMs
+		p.DurationMs = &tmp
 	}
 
 	return nil
