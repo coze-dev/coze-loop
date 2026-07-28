@@ -864,6 +864,10 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		param.ThreadID = cer.ThreadID
 	}
 
+	// ★ 跨空间共享 (单评测集): 透传评测集/评测对象来源空间选项
+	param.EvalSetSharedOption = sharedResourceOptionDTO2DO(cer.GetEvalSetSharedOption())
+	param.TargetSharedOption = sharedResourceOptionDTO2DO(cer.GetTargetSharedOption())
+
 	// ★ 新路径: 仅当 eval_set_source_type == MultiSetConfig(2) 时转换 EvalSetConfigs (不再用 len 判断)
 	if cer.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig {
 		param.EvalSetConfigs = convertEvalSetConfigsDTOToDO(cer.GetEvalSetConfigs())
@@ -1059,6 +1063,17 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 	return ec
 }
 
+// sharedResourceOptionDTO2DO 跨空间共享可选项 DTO->DO; nil 或 !is_shared 返回 nil (普通访问)。
+func sharedResourceOptionDTO2DO(dto *common.SharedResourceOption) *entity.SharedResourceOption {
+	if dto == nil || !dto.GetIsShared() {
+		return nil
+	}
+	return &entity.SharedResourceOption{
+		IsShared:      dto.GetIsShared(),
+		SourceSpaceID: gptr.Of(dto.GetSourceSpaceID()),
+	}
+}
+
 // convertEvalSetConfigsDTOToDO 将 IDL EvalSetConfig 列表转换为 domain EvalSetConfig
 func convertEvalSetConfigsDTOToDO(dtos []*domain_expt.EvalSetConfig) []*entity.EvalSetConfig {
 	if len(dtos) == 0 {
@@ -1072,6 +1087,9 @@ func convertEvalSetConfigsDTOToDO(dtos []*domain_expt.EvalSetConfig) []*entity.E
 		do := &entity.EvalSetConfig{
 			EvalSetID:        dto.GetEvalSetID(),
 			EvalSetVersionID: dto.GetEvalSetVersionID(),
+			// ★ 跨空间共享 (多评测集 per-set): 透传该 set 评测集/评测对象来源空间选项
+			SharedOption:       sharedResourceOptionDTO2DO(dto.GetSharedOption()),
+			TargetSharedOption: sharedResourceOptionDTO2DO(dto.GetTargetSharedOption()),
 		}
 		// item_filter
 		if dto.IsSetItemFilter() {

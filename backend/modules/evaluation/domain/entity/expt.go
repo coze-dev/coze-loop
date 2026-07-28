@@ -164,6 +164,14 @@ type Experiment struct {
 	EvaluatorVersionRef []*ExptEvaluatorVersionRef
 	EvalConf            *EvaluationConfiguration
 
+	// ★ 跨空间共享 (单评测集 SingleSet 冻结值; 0/空=同空间或老数据):
+	// EvalSetSpaceID 评测集来源空间 (执行期以它加载 item, 0=同消费方空间)
+	EvalSetSpaceID int64
+	// TargetSpaceID 评测对象来源空间 (执行期以它执行 target, 0=同消费方空间)
+	TargetSpaceID int64
+	// EvalSetAccessLevel 发起时冻结的评测集访问级别 (execute=结果查询脱敏 / readable / 空=同空间不脱敏)
+	EvalSetAccessLevel string
+
 	// ★ 新增: 评测集来源模式 (1=SingleSet老路径 / 2=MultiSetConfig新路径)
 	EvalSetSourceType ExptEvalSetSourceType
 
@@ -500,11 +508,15 @@ type ExptTupleID struct {
 type VersionedTargetID struct {
 	TargetID  int64
 	VersionID int64
+	// SourceSpaceID 跨空间共享: 评测对象来源空间; 0=用调用方空间加载(同空间)
+	SourceSpaceID int64
 }
 
 type VersionedEvalSetID struct {
 	EvalSetID int64
 	VersionID int64
+	// SourceSpaceID 跨空间共享: 评测集来源空间; 0=用调用方空间加载(同空间)
+	SourceSpaceID int64
 }
 
 type CreateEvalTargetParam struct {
@@ -638,6 +650,15 @@ type EvalSetConfig struct {
 	TargetConfs      []*ExptTargetConf    `json:"target_confs,omitempty"`
 	EvaluatorConfs   []*ExptEvaluatorConf `json:"evaluator_confs,omitempty"`
 	Ext              map[string]string    `json:"ext,omitempty"`
+
+	// ★ 跨空间共享 (多评测集 MultiSetConfig 逐 set 冻结值; 随 experiment.eval_conf blob 序列化, 无 DDL):
+	SourceSpaceID int64  `json:"source_space_id,omitempty"` // 该 set 评测集来源空间 (0=同空间)
+	TargetSpaceID int64  `json:"target_space_id,omitempty"` // 该 set 评测对象来源空间 (0=同空间)
+	AccessLevel   string `json:"access_level,omitempty"`    // 该 set 发起冻结访问级别 (execute/readable/空)
+
+	// ★ 跨空间共享发起入参 (仅发起期使用, 鉴权后冻结进上面三字段; 不持久化):
+	SharedOption       *SharedResourceOption `json:"-"` // 该 set 评测集共享来源
+	TargetSharedOption *SharedResourceOption `json:"-"` // 该 set 评测对象共享来源
 }
 
 // ExptTargetConf per-set target 运行配置 (本期 len<=1, alias 恒空)

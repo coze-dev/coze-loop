@@ -1579,6 +1579,34 @@ func (p *OpenAPIEvalSetConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 40:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField40(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 41:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField41(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1687,6 +1715,30 @@ func (p *OpenAPIEvalSetConfig) FastReadField30(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *OpenAPIEvalSetConfig) FastReadField40(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SharedOption = _field
+	return offset, nil
+}
+
+func (p *OpenAPIEvalSetConfig) FastReadField41(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.TargetSharedOption = _field
+	return offset, nil
+}
+
 func (p *OpenAPIEvalSetConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1699,6 +1751,8 @@ func (p *OpenAPIEvalSetConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField30(buf[offset:], w)
+		offset += p.fastWriteField40(buf[offset:], w)
+		offset += p.fastWriteField41(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1712,6 +1766,8 @@ func (p *OpenAPIEvalSetConfig) BLength() int {
 		l += p.field10Length()
 		l += p.field20Length()
 		l += p.field30Length()
+		l += p.field40Length()
+		l += p.field41Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1776,6 +1832,24 @@ func (p *OpenAPIEvalSetConfig) fastWriteField30(buf []byte, w thrift.NocopyWrite
 	return offset
 }
 
+func (p *OpenAPIEvalSetConfig) fastWriteField40(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 40)
+		offset += p.SharedOption.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *OpenAPIEvalSetConfig) fastWriteField41(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTargetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 41)
+		offset += p.TargetSharedOption.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *OpenAPIEvalSetConfig) field1Length() int {
 	l := 0
 	if p.IsSetEvalSetID() {
@@ -1825,6 +1899,24 @@ func (p *OpenAPIEvalSetConfig) field30Length() int {
 	if p.IsSetItemFilter() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.ItemFilter.BLength()
+	}
+	return l
+}
+
+func (p *OpenAPIEvalSetConfig) field40Length() int {
+	l := 0
+	if p.IsSetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SharedOption.BLength()
+	}
+	return l
+}
+
+func (p *OpenAPIEvalSetConfig) field41Length() int {
+	l := 0
+	if p.IsSetTargetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.TargetSharedOption.BLength()
 	}
 	return l
 }
@@ -1886,6 +1978,24 @@ func (p *OpenAPIEvalSetConfig) DeepCopy(s interface{}) error {
 		}
 	}
 	p.ItemFilter = _itemFilter
+
+	var _sharedOption *common.SharedResourceOption
+	if src.SharedOption != nil {
+		_sharedOption = &common.SharedResourceOption{}
+		if err := _sharedOption.DeepCopy(src.SharedOption); err != nil {
+			return err
+		}
+	}
+	p.SharedOption = _sharedOption
+
+	var _targetSharedOption *common.SharedResourceOption
+	if src.TargetSharedOption != nil {
+		_targetSharedOption = &common.SharedResourceOption{}
+		if err := _targetSharedOption.DeepCopy(src.TargetSharedOption); err != nil {
+			return err
+		}
+	}
+	p.TargetSharedOption = _targetSharedOption
 
 	return nil
 }

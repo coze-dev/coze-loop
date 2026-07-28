@@ -26486,6 +26486,8 @@ func (p *SubmitExperimentOApiRequest) Field255DeepEqual(src *base.Base) bool {
 type SubmitExperimentEvalSetParam struct {
 	EvalSetID *int64  `thrift:"eval_set_id,1,optional" frugal:"1,optional,i64" json:"eval_set_id" form:"eval_set_id" query:"eval_set_id"`
 	Version   *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	// 跨空间共享评测集来源
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,3,optional" frugal:"3,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty"`
 }
 
 func NewSubmitExperimentEvalSetParam() *SubmitExperimentEvalSetParam {
@@ -26518,16 +26520,32 @@ func (p *SubmitExperimentEvalSetParam) GetVersion() (v string) {
 	}
 	return *p.Version
 }
+
+var SubmitExperimentEvalSetParam_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *SubmitExperimentEvalSetParam) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return SubmitExperimentEvalSetParam_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
 func (p *SubmitExperimentEvalSetParam) SetEvalSetID(val *int64) {
 	p.EvalSetID = val
 }
 func (p *SubmitExperimentEvalSetParam) SetVersion(val *string) {
 	p.Version = val
 }
+func (p *SubmitExperimentEvalSetParam) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 
 var fieldIDToName_SubmitExperimentEvalSetParam = map[int16]string{
 	1: "eval_set_id",
 	2: "version",
+	3: "shared_option",
 }
 
 func (p *SubmitExperimentEvalSetParam) IsSetEvalSetID() bool {
@@ -26536,6 +26554,10 @@ func (p *SubmitExperimentEvalSetParam) IsSetEvalSetID() bool {
 
 func (p *SubmitExperimentEvalSetParam) IsSetVersion() bool {
 	return p.Version != nil
+}
+
+func (p *SubmitExperimentEvalSetParam) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *SubmitExperimentEvalSetParam) Read(iprot thrift.TProtocol) (err error) {
@@ -26567,6 +26589,14 @@ func (p *SubmitExperimentEvalSetParam) Read(iprot thrift.TProtocol) (err error) 
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -26623,6 +26653,14 @@ func (p *SubmitExperimentEvalSetParam) ReadField2(iprot thrift.TProtocol) error 
 	p.Version = _field
 	return nil
 }
+func (p *SubmitExperimentEvalSetParam) ReadField3(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 
 func (p *SubmitExperimentEvalSetParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -26636,6 +26674,10 @@ func (p *SubmitExperimentEvalSetParam) Write(oprot thrift.TProtocol) (err error)
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -26692,6 +26734,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *SubmitExperimentEvalSetParam) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *SubmitExperimentEvalSetParam) String() string {
 	if p == nil {
@@ -26711,6 +26771,9 @@ func (p *SubmitExperimentEvalSetParam) DeepEqual(ano *SubmitExperimentEvalSetPar
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SharedOption) {
 		return false
 	}
 	return true
@@ -26736,6 +26799,13 @@ func (p *SubmitExperimentEvalSetParam) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvalSetParam) Field3DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -27087,6 +27157,8 @@ type SubmitExperimentEvalTargetParam struct {
 	AgentConnection *eval_target.AgentConnection `thrift:"agent_connection,10,optional" frugal:"10,optional,eval_target.AgentConnection" form:"agent_connection" json:"agent_connection,omitempty" query:"agent_connection"`
 	// type=17(sandbox_agent)时需填写，SandboxAgent 评测对象配置
 	SandboxAgent *eval_target.SandboxAgent `thrift:"sandbox_agent,11,optional" frugal:"11,optional,eval_target.SandboxAgent" form:"sandbox_agent" json:"sandbox_agent,omitempty" query:"sandbox_agent"`
+	// 跨空间共享评测对象来源
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,12,optional" frugal:"12,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty"`
 }
 
 func NewSubmitExperimentEvalTargetParam() *SubmitExperimentEvalTargetParam {
@@ -27227,6 +27299,18 @@ func (p *SubmitExperimentEvalTargetParam) GetSandboxAgent() (v *eval_target.Sand
 	}
 	return p.SandboxAgent
 }
+
+var SubmitExperimentEvalTargetParam_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *SubmitExperimentEvalTargetParam) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return SubmitExperimentEvalTargetParam_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
 func (p *SubmitExperimentEvalTargetParam) SetSourceTargetID(val *string) {
 	p.SourceTargetID = val
 }
@@ -27260,6 +27344,9 @@ func (p *SubmitExperimentEvalTargetParam) SetAgentConnection(val *eval_target.Ag
 func (p *SubmitExperimentEvalTargetParam) SetSandboxAgent(val *eval_target.SandboxAgent) {
 	p.SandboxAgent = val
 }
+func (p *SubmitExperimentEvalTargetParam) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 
 var fieldIDToName_SubmitExperimentEvalTargetParam = map[int16]string{
 	1:  "source_target_id",
@@ -27273,6 +27360,7 @@ var fieldIDToName_SubmitExperimentEvalTargetParam = map[int16]string{
 	9:  "cluster",
 	10: "agent_connection",
 	11: "sandbox_agent",
+	12: "shared_option",
 }
 
 func (p *SubmitExperimentEvalTargetParam) IsSetSourceTargetID() bool {
@@ -27317,6 +27405,10 @@ func (p *SubmitExperimentEvalTargetParam) IsSetAgentConnection() bool {
 
 func (p *SubmitExperimentEvalTargetParam) IsSetSandboxAgent() bool {
 	return p.SandboxAgent != nil
+}
+
+func (p *SubmitExperimentEvalTargetParam) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *SubmitExperimentEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
@@ -27420,6 +27512,14 @@ func (p *SubmitExperimentEvalTargetParam) Read(iprot thrift.TProtocol) (err erro
 		case 11:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -27566,6 +27666,14 @@ func (p *SubmitExperimentEvalTargetParam) ReadField11(iprot thrift.TProtocol) er
 	p.SandboxAgent = _field
 	return nil
 }
+func (p *SubmitExperimentEvalTargetParam) ReadField12(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 
 func (p *SubmitExperimentEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -27615,6 +27723,10 @@ func (p *SubmitExperimentEvalTargetParam) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -27833,6 +27945,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *SubmitExperimentEvalTargetParam) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 
 func (p *SubmitExperimentEvalTargetParam) String() string {
 	if p == nil {
@@ -27879,6 +28009,9 @@ func (p *SubmitExperimentEvalTargetParam) DeepEqual(ano *SubmitExperimentEvalTar
 		return false
 	}
 	if !p.Field11DeepEqual(ano.SandboxAgent) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.SharedOption) {
 		return false
 	}
 	return true
@@ -27997,6 +28130,13 @@ func (p *SubmitExperimentEvalTargetParam) Field10DeepEqual(src *eval_target.Agen
 func (p *SubmitExperimentEvalTargetParam) Field11DeepEqual(src *eval_target.SandboxAgent) bool {
 
 	if !p.SandboxAgent.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvalTargetParam) Field12DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true

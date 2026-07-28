@@ -323,7 +323,7 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		if err := backoff.RetryThreeSeconds(ctx, func() error {
 			var retryErr error
 			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-				SpaceID:         event.SpaceID,
+				SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
 				EvaluationSetID: evalSetID,
 				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 				PageSize:        &pageSize,
@@ -550,7 +550,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		if err := backoff.RetryThreeSeconds(ctx, func() error {
 			var retryErr error
 			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-				SpaceID:         event.SpaceID,
+				SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
 				EvaluationSetID: evalSetID,
 				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 				PageSize:        &pageSize,
@@ -1604,7 +1604,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		if err := backoff.RetryThreeSeconds(ctx, func() error {
 			var retryErr error
 			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-				SpaceID:         event.SpaceID,
+				SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
 				EvaluationSetID: evalSetID,
 				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 				PageSize:        &pageSize,
@@ -2378,7 +2378,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			if err := backoff.RetryThreeSeconds(ctx, func() error {
 				var retryErr error
 				items, total, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-					SpaceID:         event.SpaceID,
+					SpaceID:         resolveLoadSpaceID(event.SpaceID, setConf.SourceSpaceID),
 					EvaluationSetID: setConf.EvalSetID,
 					VersionID:       setReadVersionID,
 					PageSize:        &pageSizePtr,
@@ -2443,6 +2443,15 @@ func resolveSetReadVersionID(evalSetID, evalSetVersionID int64) *int64 {
 		return nil
 	}
 	return &evalSetVersionID
+}
+
+// resolveLoadSpaceID 跨空间共享: 执行期加载评测集 item 用的空间。
+// sourceSpaceID>0 (发起冻结的来源空间) 用来源空间; 否则 (同空间/老数据) fallback 消费方空间。
+func resolveLoadSpaceID(consumerSpaceID, sourceSpaceID int64) int64 {
+	if sourceSpaceID > 0 {
+		return sourceSpaceID
+	}
+	return consumerSpaceID
 }
 
 // resolveSetRefVersionID 计算落 expt_item_ref.eval_set_version_id 的值。

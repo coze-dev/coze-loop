@@ -1739,6 +1739,18 @@ func OpenAPIEvaluatorParamDTO2Domain(dto *openapi.SubmitExperimentEvaluatorParam
 // item_filter 与内部同型 (data_filter.Filter) 直接透传;
 // 其余结构性校验 (set 去重 / (version,alias) 唯一 / target_confs len<=1 / alias 字符集 / item_filter 白名单)
 // 由内部 SubmitExperiment 的 ValidateEvalSetConfigs 统一兜底, 此处不重复。
+// openapiSharedOptionToDomainCommon 跨空间共享可选项 OpenAPI DTO -> domain common;
+// nil 或 !is_shared 返回 nil (普通访问)。
+func openapiSharedOptionToDomainCommon(opt *openapiCommon.SharedResourceOption) *domainCommon.SharedResourceOption {
+	if opt == nil || !opt.GetIsShared() {
+		return nil
+	}
+	return &domainCommon.SharedResourceOption{
+		IsShared:      gptr.Of(true),
+		SourceSpaceID: gptr.Of(opt.GetSourceSpaceID()),
+	}
+}
+
 func OpenAPIEvalSetConfigsDTO2Domain(
 	confs []*openapiExperiment.OpenAPIEvalSetConfig,
 	evalSetVersionIDMap map[int64]int64,
@@ -1758,6 +1770,9 @@ func OpenAPIEvalSetConfigsDTO2Domain(
 			// item_filter 与内部 EvalSetConfig.item_filter 同型 (data_filter.Filter), 直接透传;
 			// 白名单/存在性等结构校验由内部 SubmitExperiment 的 ValidateEvalSetConfigs 统一兜底。
 			ItemFilter: conf.GetItemFilter(),
+			// ★ 跨空间共享 (多评测集 per-set): 该 set 评测集/评测对象来源空间选项
+			SharedOption:       openapiSharedOptionToDomainCommon(conf.GetSharedOption()),
+			TargetSharedOption: openapiSharedOptionToDomainCommon(conf.GetTargetSharedOption()),
 		}
 		// evaluator_confs
 		for _, ec := range conf.GetEvaluatorConfs() {

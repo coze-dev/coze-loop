@@ -10999,13 +10999,13 @@ func (p *SandboxAgent) SetSandboxCountMode(val *SandboxCountMode) {
 }
 
 var fieldIDToName_SandboxAgent = map[int16]string{
-	1: "name",
-	2: "type",
-	3: "model_name",
-	5: "agent_setup_cmd",
-	6: "agent_run_cmd",
-	7: "envs",
-	8: "image",
+	1:  "name",
+	2:  "type",
+	3:  "model_name",
+	5:  "agent_setup_cmd",
+	6:  "agent_run_cmd",
+	7:  "envs",
+	8:  "image",
 	9:  "enable_analysis",
 	10: "sandbox_count_mode",
 }

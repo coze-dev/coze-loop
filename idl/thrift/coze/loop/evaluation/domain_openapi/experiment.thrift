@@ -116,6 +116,9 @@ struct OpenAPIEvalSetConfig {
     // 题目圈选: 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter, 与内部 EvalSetConfig.item_filter 同型透传)
     // 校验白名单(应用层, 与内部一致): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
     30: optional data_filter.Filter item_filter
+
+    40: optional common.SharedResourceOption shared_option        // 跨空间: 该 set 评测集来源空间; nil/!is_shared=同空间
+    41: optional common.SharedResourceOption target_shared_option // 跨空间: 该 set 评测对象来源空间
 }
 
 // 实验评测集来源模式 (OpenAPI 字符串枚举, 与 domain ExptEvalSetSourceType 对应)

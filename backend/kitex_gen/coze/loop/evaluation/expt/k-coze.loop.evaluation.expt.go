@@ -478,6 +478,34 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 80:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField80(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 81:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField81(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 91:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField91(buf[offset:])
@@ -1053,6 +1081,30 @@ func (p *CreateExperimentRequest) FastReadField71(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateExperimentRequest) FastReadField80(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.EvalSetSharedOption = _field
+	return offset, nil
+}
+
+func (p *CreateExperimentRequest) FastReadField81(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.TargetSharedOption = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentRequest) FastReadField91(buf []byte) (int, error) {
 	offset := 0
 
@@ -1173,6 +1225,8 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField70(buf[offset:], w)
 		offset += p.fastWriteField71(buf[offset:], w)
+		offset += p.fastWriteField80(buf[offset:], w)
+		offset += p.fastWriteField81(buf[offset:], w)
 		offset += p.fastWriteField110(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
@@ -1215,6 +1269,8 @@ func (p *CreateExperimentRequest) BLength() int {
 		l += p.field50Length()
 		l += p.field70Length()
 		l += p.field71Length()
+		l += p.field80Length()
+		l += p.field81Length()
 		l += p.field91Length()
 		l += p.field110Length()
 		l += p.field100Length()
@@ -1525,6 +1581,24 @@ func (p *CreateExperimentRequest) fastWriteField71(buf []byte, w thrift.NocopyWr
 	if p.IsSetEvalSetSourceType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 71)
 		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.EvalSetSourceType))
+	}
+	return offset
+}
+
+func (p *CreateExperimentRequest) fastWriteField80(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 80)
+		offset += p.EvalSetSharedOption.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *CreateExperimentRequest) fastWriteField81(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTargetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 81)
+		offset += p.TargetSharedOption.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -1866,6 +1940,24 @@ func (p *CreateExperimentRequest) field71Length() int {
 	return l
 }
 
+func (p *CreateExperimentRequest) field80Length() int {
+	l := 0
+	if p.IsSetEvalSetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.EvalSetSharedOption.BLength()
+	}
+	return l
+}
+
+func (p *CreateExperimentRequest) field81Length() int {
+	l := 0
+	if p.IsSetTargetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.TargetSharedOption.BLength()
+	}
+	return l
+}
+
 func (p *CreateExperimentRequest) field91Length() int {
 	l := 0
 	if p.IsSetRefGroupExperimentID() {
@@ -2135,6 +2227,24 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 		tmp := *src.EvalSetSourceType
 		p.EvalSetSourceType = &tmp
 	}
+
+	var _evalSetSharedOption *common.SharedResourceOption
+	if src.EvalSetSharedOption != nil {
+		_evalSetSharedOption = &common.SharedResourceOption{}
+		if err := _evalSetSharedOption.DeepCopy(src.EvalSetSharedOption); err != nil {
+			return err
+		}
+	}
+	p.EvalSetSharedOption = _evalSetSharedOption
+
+	var _targetSharedOption *common.SharedResourceOption
+	if src.TargetSharedOption != nil {
+		_targetSharedOption = &common.SharedResourceOption{}
+		if err := _targetSharedOption.DeepCopy(src.TargetSharedOption); err != nil {
+			return err
+		}
+	}
+	p.TargetSharedOption = _targetSharedOption
 
 	if src.RefGroupExperimentID != nil {
 		tmp := *src.RefGroupExperimentID
@@ -2825,6 +2935,34 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 80:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField80(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 81:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField81(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -3418,6 +3556,30 @@ func (p *SubmitExperimentRequest) FastReadField76(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentRequest) FastReadField80(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.EvalSetSharedOption = _field
+	return offset, nil
+}
+
+func (p *SubmitExperimentRequest) FastReadField81(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.TargetSharedOption = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -3540,6 +3702,8 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField70(buf[offset:], w)
 		offset += p.fastWriteField75(buf[offset:], w)
 		offset += p.fastWriteField76(buf[offset:], w)
+		offset += p.fastWriteField80(buf[offset:], w)
+		offset += p.fastWriteField81(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField110(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
@@ -3584,6 +3748,8 @@ func (p *SubmitExperimentRequest) BLength() int {
 		l += p.field70Length()
 		l += p.field75Length()
 		l += p.field76Length()
+		l += p.field80Length()
+		l += p.field81Length()
 		l += p.field100Length()
 		l += p.field91Length()
 		l += p.field110Length()
@@ -3911,6 +4077,24 @@ func (p *SubmitExperimentRequest) fastWriteField76(buf []byte, w thrift.NocopyWr
 	if p.IsSetEvalSetSourceType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 76)
 		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.EvalSetSourceType))
+	}
+	return offset
+}
+
+func (p *SubmitExperimentRequest) fastWriteField80(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 80)
+		offset += p.EvalSetSharedOption.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentRequest) fastWriteField81(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTargetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 81)
+		offset += p.TargetSharedOption.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -4270,6 +4454,24 @@ func (p *SubmitExperimentRequest) field76Length() int {
 	return l
 }
 
+func (p *SubmitExperimentRequest) field80Length() int {
+	l := 0
+	if p.IsSetEvalSetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.EvalSetSharedOption.BLength()
+	}
+	return l
+}
+
+func (p *SubmitExperimentRequest) field81Length() int {
+	l := 0
+	if p.IsSetTargetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.TargetSharedOption.BLength()
+	}
+	return l
+}
+
 func (p *SubmitExperimentRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -4552,6 +4754,24 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 		tmp := *src.EvalSetSourceType
 		p.EvalSetSourceType = &tmp
 	}
+
+	var _evalSetSharedOption *common.SharedResourceOption
+	if src.EvalSetSharedOption != nil {
+		_evalSetSharedOption = &common.SharedResourceOption{}
+		if err := _evalSetSharedOption.DeepCopy(src.EvalSetSharedOption); err != nil {
+			return err
+		}
+	}
+	p.EvalSetSharedOption = _evalSetSharedOption
+
+	var _targetSharedOption *common.SharedResourceOption
+	if src.TargetSharedOption != nil {
+		_targetSharedOption = &common.SharedResourceOption{}
+		if err := _targetSharedOption.DeepCopy(src.TargetSharedOption); err != nil {
+			return err
+		}
+	}
+	p.TargetSharedOption = _targetSharedOption
 
 	if src.Ext != nil {
 		p.Ext = make(map[string]string, len(src.Ext))

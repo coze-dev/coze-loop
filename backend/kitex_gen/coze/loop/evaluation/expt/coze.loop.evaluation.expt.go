@@ -65,6 +65,10 @@ type CreateExperimentRequest struct {
 	// ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
 	// 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
 	EvalSetSourceType *expt.ExptEvalSetSourceType `thrift:"eval_set_source_type,71,optional" frugal:"71,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
+	// 单评测集(SingleSet)跨空间共享来源; 多评测集走 eval_set_configs 内每个 EvalSetConfig 的 shared_option
+	EvalSetSharedOption *common.SharedResourceOption `thrift:"eval_set_shared_option,80,optional" frugal:"80,optional,common.SharedResourceOption" form:"eval_set_shared_option" json:"eval_set_shared_option,omitempty"`
+	// 评测对象来源空间
+	TargetSharedOption *common.SharedResourceOption `thrift:"target_shared_option,81,optional" frugal:"81,optional,common.SharedResourceOption" form:"target_shared_option" json:"target_shared_option,omitempty"`
 	// 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
 	// 引用分组实验 id：填写时校验其为当前空间内的实验 id
 	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
@@ -437,6 +441,30 @@ func (p *CreateExperimentRequest) GetEvalSetSourceType() (v expt.ExptEvalSetSour
 	return *p.EvalSetSourceType
 }
 
+var CreateExperimentRequest_EvalSetSharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *CreateExperimentRequest) GetEvalSetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSetSharedOption() {
+		return CreateExperimentRequest_EvalSetSharedOption_DEFAULT
+	}
+	return p.EvalSetSharedOption
+}
+
+var CreateExperimentRequest_TargetSharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *CreateExperimentRequest) GetTargetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetSharedOption() {
+		return CreateExperimentRequest_TargetSharedOption_DEFAULT
+	}
+	return p.TargetSharedOption
+}
+
 var CreateExperimentRequest_RefGroupExperimentID_DEFAULT int64
 
 func (p *CreateExperimentRequest) GetRefGroupExperimentID() (v int64) {
@@ -586,6 +614,12 @@ func (p *CreateExperimentRequest) SetEvalSetConfigs(val []*expt.EvalSetConfig) {
 func (p *CreateExperimentRequest) SetEvalSetSourceType(val *expt.ExptEvalSetSourceType) {
 	p.EvalSetSourceType = val
 }
+func (p *CreateExperimentRequest) SetEvalSetSharedOption(val *common.SharedResourceOption) {
+	p.EvalSetSharedOption = val
+}
+func (p *CreateExperimentRequest) SetTargetSharedOption(val *common.SharedResourceOption) {
+	p.TargetSharedOption = val
+}
 func (p *CreateExperimentRequest) SetRefGroupExperimentID(val *int64) {
 	p.RefGroupExperimentID = val
 }
@@ -633,6 +667,8 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	50:  "trigger_type",
 	70:  "eval_set_configs",
 	71:  "eval_set_source_type",
+	80:  "eval_set_shared_option",
+	81:  "target_shared_option",
 	91:  "ref_group_experiment_id",
 	110: "notification_conf",
 	100: "ext",
@@ -754,6 +790,14 @@ func (p *CreateExperimentRequest) IsSetEvalSetConfigs() bool {
 
 func (p *CreateExperimentRequest) IsSetEvalSetSourceType() bool {
 	return p.EvalSetSourceType != nil
+}
+
+func (p *CreateExperimentRequest) IsSetEvalSetSharedOption() bool {
+	return p.EvalSetSharedOption != nil
+}
+
+func (p *CreateExperimentRequest) IsSetTargetSharedOption() bool {
+	return p.TargetSharedOption != nil
 }
 
 func (p *CreateExperimentRequest) IsSetRefGroupExperimentID() bool {
@@ -1031,6 +1075,22 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 71:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField71(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 80:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField80(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 81:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField81(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1501,6 +1561,22 @@ func (p *CreateExperimentRequest) ReadField71(iprot thrift.TProtocol) error {
 	p.EvalSetSourceType = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField80(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvalSetSharedOption = _field
+	return nil
+}
+func (p *CreateExperimentRequest) ReadField81(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TargetSharedOption = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField91(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -1690,6 +1766,14 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField71(oprot); err != nil {
 			fieldId = 71
+			goto WriteFieldError
+		}
+		if err = p.writeField80(oprot); err != nil {
+			fieldId = 80
+			goto WriteFieldError
+		}
+		if err = p.writeField81(oprot); err != nil {
+			fieldId = 81
 			goto WriteFieldError
 		}
 		if err = p.writeField91(oprot); err != nil {
@@ -2311,6 +2395,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 71 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField80(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSetSharedOption() {
+		if err = oprot.WriteFieldBegin("eval_set_shared_option", thrift.STRUCT, 80); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvalSetSharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 80 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 80 end error: ", p), err)
+}
+func (p *CreateExperimentRequest) writeField81(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetSharedOption() {
+		if err = oprot.WriteFieldBegin("target_shared_option", thrift.STRUCT, 81); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TargetSharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 81 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 81 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField91(oprot thrift.TProtocol) (err error) {
 	if p.IsSetRefGroupExperimentID() {
 		if err = oprot.WriteFieldBegin("ref_group_experiment_id", thrift.I64, 91); err != nil {
@@ -2515,6 +2635,12 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field71DeepEqual(ano.EvalSetSourceType) {
+		return false
+	}
+	if !p.Field80DeepEqual(ano.EvalSetSharedOption) {
+		return false
+	}
+	if !p.Field81DeepEqual(ano.TargetSharedOption) {
 		return false
 	}
 	if !p.Field91DeepEqual(ano.RefGroupExperimentID) {
@@ -2880,6 +3006,20 @@ func (p *CreateExperimentRequest) Field71DeepEqual(src *expt.ExptEvalSetSourceTy
 	}
 	return true
 }
+func (p *CreateExperimentRequest) Field80DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.EvalSetSharedOption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field81DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.TargetSharedOption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *CreateExperimentRequest) Field91DeepEqual(src *int64) bool {
 
 	if p.RefGroupExperimentID == src {
@@ -3211,7 +3351,11 @@ type SubmitExperimentRequest struct {
 	// ★ 新路径分流依据 (唯一开关): 仅 == MultiSetConfig(2) 走 item-centric 多评测集路径; 缺省/SingleSet(1) 走老路径。
 	// 与 eval_set_configs 须一致: ==2 要求 configs 非空; !=2 要求 configs 为空, 否则硬校验报错。
 	EvalSetSourceType *expt.ExptEvalSetSourceType `thrift:"eval_set_source_type,76,optional" frugal:"76,optional,ExptEvalSetSourceType" form:"eval_set_source_type" json:"eval_set_source_type,omitempty"`
-	Ext               map[string]string           `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	// 单评测集(SingleSet)跨空间共享来源; 多评测集走 eval_set_configs 内每个 EvalSetConfig 的 shared_option
+	EvalSetSharedOption *common.SharedResourceOption `thrift:"eval_set_shared_option,80,optional" frugal:"80,optional,common.SharedResourceOption" form:"eval_set_shared_option" json:"eval_set_shared_option,omitempty"`
+	// 评测对象来源空间
+	TargetSharedOption *common.SharedResourceOption `thrift:"target_shared_option,81,optional" frugal:"81,optional,common.SharedResourceOption" form:"target_shared_option" json:"target_shared_option,omitempty"`
+	Ext                map[string]string            `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	// 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
 	// 引用分组实验 id：填写时校验其为当前空间内的实验 id
 	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
@@ -3607,6 +3751,30 @@ func (p *SubmitExperimentRequest) GetEvalSetSourceType() (v expt.ExptEvalSetSour
 	return *p.EvalSetSourceType
 }
 
+var SubmitExperimentRequest_EvalSetSharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *SubmitExperimentRequest) GetEvalSetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSetSharedOption() {
+		return SubmitExperimentRequest_EvalSetSharedOption_DEFAULT
+	}
+	return p.EvalSetSharedOption
+}
+
+var SubmitExperimentRequest_TargetSharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *SubmitExperimentRequest) GetTargetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetSharedOption() {
+		return SubmitExperimentRequest_TargetSharedOption_DEFAULT
+	}
+	return p.TargetSharedOption
+}
+
 var SubmitExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
@@ -3762,6 +3930,12 @@ func (p *SubmitExperimentRequest) SetEvalSetConfigs(val []*expt.EvalSetConfig) {
 func (p *SubmitExperimentRequest) SetEvalSetSourceType(val *expt.ExptEvalSetSourceType) {
 	p.EvalSetSourceType = val
 }
+func (p *SubmitExperimentRequest) SetEvalSetSharedOption(val *common.SharedResourceOption) {
+	p.EvalSetSharedOption = val
+}
+func (p *SubmitExperimentRequest) SetTargetSharedOption(val *common.SharedResourceOption) {
+	p.TargetSharedOption = val
+}
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -3811,6 +3985,8 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	70:  "item_ids",
 	75:  "eval_set_configs",
 	76:  "eval_set_source_type",
+	80:  "eval_set_shared_option",
+	81:  "target_shared_option",
 	100: "ext",
 	91:  "ref_group_experiment_id",
 	110: "notification_conf",
@@ -3940,6 +4116,14 @@ func (p *SubmitExperimentRequest) IsSetEvalSetConfigs() bool {
 
 func (p *SubmitExperimentRequest) IsSetEvalSetSourceType() bool {
 	return p.EvalSetSourceType != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetEvalSetSharedOption() bool {
+	return p.EvalSetSharedOption != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetTargetSharedOption() bool {
+	return p.TargetSharedOption != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
@@ -4233,6 +4417,22 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 76:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField76(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 80:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField80(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 81:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField81(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4716,6 +4916,22 @@ func (p *SubmitExperimentRequest) ReadField76(iprot thrift.TProtocol) error {
 	p.EvalSetSourceType = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField80(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvalSetSharedOption = _field
+	return nil
+}
+func (p *SubmitExperimentRequest) ReadField81(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TargetSharedOption = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -4913,6 +5129,14 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField76(oprot); err != nil {
 			fieldId = 76
+			goto WriteFieldError
+		}
+		if err = p.writeField80(oprot); err != nil {
+			fieldId = 80
+			goto WriteFieldError
+		}
+		if err = p.writeField81(oprot); err != nil {
+			fieldId = 81
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -5567,6 +5791,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 76 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField80(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSetSharedOption() {
+		if err = oprot.WriteFieldBegin("eval_set_shared_option", thrift.STRUCT, 80); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvalSetSharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 80 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 80 end error: ", p), err)
+}
+func (p *SubmitExperimentRequest) writeField81(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetSharedOption() {
+		if err = oprot.WriteFieldBegin("target_shared_option", thrift.STRUCT, 81); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TargetSharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 81 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 81 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -5777,6 +6037,12 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field76DeepEqual(ano.EvalSetSourceType) {
+		return false
+	}
+	if !p.Field80DeepEqual(ano.EvalSetSharedOption) {
+		return false
+	}
+	if !p.Field81DeepEqual(ano.TargetSharedOption) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -6157,6 +6423,20 @@ func (p *SubmitExperimentRequest) Field76DeepEqual(src *expt.ExptEvalSetSourceTy
 		return false
 	}
 	if *p.EvalSetSourceType != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field80DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.EvalSetSharedOption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field81DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.TargetSharedOption.DeepEqual(src) {
 		return false
 	}
 	return true

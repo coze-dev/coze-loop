@@ -164,7 +164,12 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	pipelineListAdapter := pipeline.NewPipelineListAdapter()
 	iExptTemplateManager := service.NewExptTemplateManager(iExptTemplateRepo, idgen2, serviceEvaluatorService, iEvalTargetService, iEvaluationSetService, evaluationSetVersionService, iLatestWriteTracker, iTaskRPCAdapter, pipelineListAdapter, iExperimentRepo, scheduleAdapter, componentIConfiger)
 	iNotifyRPCAdapter := notify.NewNotifyRPCAdapter()
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter)
+	exptSharedResourceConfigProvider, err := conf2.NewSharedResourceConfigProvider(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	exptResourceAccessAuthorizer := service.NewResourceAccessAuthorizer(foundation.NewAuthRPCProvider(authClient), exptSharedResourceConfigProvider)
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, exptResourceAccessAuthorizer)
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, componentIConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker)
 	exptSchedulerEvent := service.NewExptSchedulerSvc(iExptManager, iExperimentRepo, iExptItemResultRepo, iExptTurnResultRepo, iEvaluatorRecordRepo, iExptStatsRepo, iExptRunLogRepo, idempotentService, componentIConfiger, quotaRepo, iLocker, exptEventPublisher, auditClient, exptMetric, exptResultService, idgen2, evaluationSetItemService, schedulerModeFactory, iEvalTargetService)
 	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
@@ -425,7 +430,12 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	pipelineListAdapter := pipeline.NewPipelineListAdapter()
 	iExptTemplateManager := service.NewExptTemplateManager(iExptTemplateRepo, idgen2, evaluatorService, iEvalTargetService, iEvaluationSetService, evaluationSetVersionService, iLatestWriteTracker, iTaskRPCAdapter, pipelineListAdapter, iExperimentRepo, scheduleAdapter, iConfiger)
 	iNotifyRPCAdapter := notify.NewNotifyRPCAdapter()
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter)
+	exptSharedResourceConfigProvider, err := conf2.NewSharedResourceConfigProvider(configFactory)
+	if err != nil {
+		return nil, err
+	}
+	exptResourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, exptSharedResourceConfigProvider)
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, exptResourceAccessAuthorizer)
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, iConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker)
 	exptSchedulerEvent := service.NewExptSchedulerSvc(iExptManager, iExperimentRepo, iExptItemResultRepo, iExptTurnResultRepo, iEvaluatorRecordRepo, iExptStatsRepo, iExptRunLogRepo, idempotentService, iConfiger, quotaRepo, iLocker, exptEventPublisher, auditClient, exptMetric, exptResultService, idgen2, evaluationSetItemService, schedulerModeFactory, iEvalTargetService)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()

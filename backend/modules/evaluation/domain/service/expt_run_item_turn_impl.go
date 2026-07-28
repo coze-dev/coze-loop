@@ -126,7 +126,8 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return nil, err
 	}
 
-	record, err := e.callTarget(ctx, etec, etec.History, etec.Event.SpaceID)
+	// ★ 跨空间共享: 评测对象按发起冻结的来源空间执行 (0=同消费方空间); trace/打点仍用消费方空间.
+	record, err := e.callTarget(ctx, etec, etec.History, resolveLoadSpaceID(etec.Event.SpaceID, etec.Expt.TargetSpaceID))
 	if err != nil {
 		return nil, err
 	}
