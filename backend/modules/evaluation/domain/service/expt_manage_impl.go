@@ -904,6 +904,7 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 	ctx context.Context, callerSpaceID int64, resourceType string, resourceID int64,
 	versionID *int64, opt *entity.SharedResourceOption,
 ) (sourceSpaceID int64, accessLevel string, err error) {
+	logs.CtxInfo(ctx, "[XSPACE-DBG] authorizeSharedResource: type=%s resID=%d opt_nil=%v opt=%+v enabled=%v", resourceType, resourceID, opt == nil, opt, opt != nil && opt.Enabled())
 	if opt == nil || !opt.Enabled() {
 		return callerSpaceID, "", nil
 	}
@@ -919,6 +920,7 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 	if err != nil {
 		return 0, "", err
 	}
+	logs.CtxInfo(ctx, "[XSPACE-DBG] AuthorizeRead ok: ResourceSpaceID=%d AccessLevel=%s AccessMode=%s", accessCtx.ResourceSpaceID, accessCtx.AccessLevel, accessCtx.AccessMode)
 	return accessCtx.ResourceSpaceID, accessCtx.AccessLevel, nil
 }
 
@@ -994,11 +996,13 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			evalSetVerID = gptr.Of(req.EvalSetVersionID)
 		}
 		var authErr error
+		logs.CtxInfo(ctx, "[XSPACE-DBG] before authz: workspace=%d evalSetID=%d evalSetSharedOpt=%+v targetSharedOpt=%+v", req.WorkspaceID, req.EvalSetID, req.EvalSetSharedOption, req.TargetSharedOption)
 		evalSetSpaceID, evalSetAccessLevel, authErr = e.authorizeSharedResource(
 			ctx, req.WorkspaceID, entity.SharedResourceTypeEvalSet, req.EvalSetID, evalSetVerID, req.EvalSetSharedOption)
 		if authErr != nil {
 			return nil, authErr
 		}
+		logs.CtxInfo(ctx, "[XSPACE-DBG] after evalset authz: evalSetSpaceID=%d accessLevel=%s", evalSetSpaceID, evalSetAccessLevel)
 		targetSpaceID = req.WorkspaceID
 		if versionedTargetID != nil {
 			var targetVerID *int64
@@ -1024,6 +1028,12 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if evalSetSpaceID != req.WorkspaceID {
 		evalSetTupleID.SourceSpaceID = evalSetSpaceID // 跨空间: 按来源空间加载评测集
 	}
+	logs.CtxInfo(ctx, "[XSPACE-DBG] tupleID built: evalSetTupleID.SourceSpaceID=%d targetSourceSpaceID=%d", evalSetTupleID.SourceSpaceID, func() int64 {
+		if versionedTargetID != nil {
+			return versionedTargetID.SourceSpaceID
+		}
+		return -1
+	}())
 
 	tuple, err := e.getExptTupleByID(ctx, &entity.ExptTupleID{
 		VersionedEvalSetID:  evalSetTupleID,
