@@ -1,0 +1,27 @@
+backend/kitex_gen/coze/loop/evaluation/expt/coze.loop.evaluation.expt.go
+  s_43ab048099a634::t_1c539a8a473d39 17577-17578,17799-17810,17933-17935,17973,18050-18053,18232-18239,18505-18515,18639-18642,18991-19008,19183-19185,19411-19422
+backend/kitex_gen/coze/loop/evaluation/expt/k-coze.loop.evaluation.expt.go
+  s_43ab048099a634::t_79a171c13b120a 13127-13140,13483-13496,13593,13625,13790-13798,14006-14014,14175-14182
+backend/modules/evaluation/application/standard_eval_output.go
+  s_43ab048099a634::t_604ddf108774f3 226,273-274,416-418
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.expt.thrift
+  s_43ab048099a634::t_ba02a0e55e51a3 400
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d020a87ddfa4a1bcc90cb0a2084c3744148cd659",
+  "prompts": {},
+  "sessions": {
+    "s_43ab048099a634": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_43ab048099a634",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
