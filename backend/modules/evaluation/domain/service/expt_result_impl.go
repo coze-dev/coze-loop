@@ -958,16 +958,20 @@ var (
 )
 
 func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spaceID int64, expts []*entity.Experiment, fullTrajectory bool) ([]*entity.ExptColumnEvalTarget, error) {
-	// 查询评估对象信息
-	versionIDs := make([]int64, 0)
+	// 查询评估对象信息。跨空间共享: 评测对象封装记录(eval_target version)属来源空间, 按 target 来源空间分组加载。
+	versionIDsBySpace := make(map[int64][]int64)
 	for _, expt := range expts {
 		if expt.ContainsEvalTarget() {
-			versionIDs = append(versionIDs, expt.TargetVersionID)
+			loadSpaceID := resolveLoadSpaceID(spaceID, expt.TargetSpaceID)
+			versionIDsBySpace[loadSpaceID] = append(versionIDsBySpace[loadSpaceID], expt.TargetVersionID)
 		}
 	}
 	versionID2TargetInfo := make(map[int64]*entity.EvalTarget)
-	if len(versionIDs) > 0 {
-		targetInfos, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs, false)
+	for loadSpaceID, versionIDs := range versionIDsBySpace {
+		if len(versionIDs) == 0 {
+			continue
+		}
+		targetInfos, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, loadSpaceID, versionIDs, false)
 		if err != nil {
 			return nil, err
 		}
@@ -1095,16 +1099,22 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 }
 
 func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, spaceID, evalSetID, evalSetVersionID int64) ([]*entity.ColumnEvalSetField, error) {
+	return e.getColumnEvalSetFieldsWithSource(ctx, spaceID, evalSetID, evalSetVersionID, 0)
+}
+
+// getColumnEvalSetFieldsWithSource 跨空间: sourceSpaceID>0 时按来源空间读评测集 schema, 否则用调用方 spaceID。
+func (e ExptResultServiceImpl) getColumnEvalSetFieldsWithSource(ctx context.Context, spaceID, evalSetID, evalSetVersionID, sourceSpaceID int64) ([]*entity.ColumnEvalSetField, error) {
+	loadSpaceID := resolveLoadSpaceID(spaceID, sourceSpaceID)
 	var version *entity.EvaluationSetVersion
 	if evalSetID == evalSetVersionID {
-		evalSet, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(spaceID), evalSetID, gptr.Of(true), nil)
+		evalSet, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(loadSpaceID), evalSetID, gptr.Of(true), nil)
 		if err != nil {
 			return nil, err
 		}
 		version = evalSet.EvaluationSetVersion
 	} else {
 		var err error
-		version, _, err = e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, spaceID, evalSetVersionID, gptr.Of(true), nil)
+		version, _, err = e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, loadSpaceID, evalSetVersionID, gptr.Of(true), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -1134,6 +1144,8 @@ func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, space
 type evalSetVersionPair struct {
 	EvalSetID        int64
 	EvalSetVersionID int64
+	// SourceSpaceID 跨空间共享: 该评测集来源空间(单集取 expt 冻结列/多集取 EvalSetConfig); 0=同调用方空间。
+	SourceSpaceID int64
 }
 
 // collectEvalSetVersionPairs 返回实验涉及的所有 (eval_set_id, eval_set_version_id):
@@ -1144,25 +1156,26 @@ type evalSetVersionPair struct {
 func collectEvalSetVersionPairs(expt *entity.Experiment) []evalSetVersionPair {
 	pairs := make([]evalSetVersionPair, 0, 1)
 	seen := make(map[evalSetVersionPair]struct{})
-	add := func(setID, verID int64) {
+	add := func(setID, verID, sourceSpaceID int64) {
 		if setID == 0 && verID == 0 {
 			return
 		}
-		p := evalSetVersionPair{EvalSetID: setID, EvalSetVersionID: verID}
+		p := evalSetVersionPair{EvalSetID: setID, EvalSetVersionID: verID, SourceSpaceID: sourceSpaceID}
 		if _, ok := seen[p]; ok {
 			return
 		}
 		seen[p] = struct{}{}
 		pairs = append(pairs, p)
 	}
-	// 主集优先 (作为封面 / 降级首选)
-	add(expt.EvalSetID, expt.EvalSetVersionID)
+	// 主集优先 (作为封面 / 降级首选)。跨空间: 单集来源空间取 expt 冻结列。
+	add(expt.EvalSetID, expt.EvalSetVersionID, expt.EvalSetSpaceID)
 	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && expt.EvalConf != nil {
 		for _, sc := range expt.EvalConf.EvalSetConfigs {
 			if sc == nil {
 				continue
 			}
-			add(sc.EvalSetID, sc.EvalSetVersionID)
+			// 跨空间: 多集来源空间取各 set 冻结的 SourceSpaceID。
+			add(sc.EvalSetID, sc.EvalSetVersionID, sc.SourceSpaceID)
 		}
 	}
 	return pairs
@@ -1172,15 +1185,16 @@ func collectEvalSetVersionPairs(expt *entity.Experiment) []evalSetVersionPair {
 // SingleSet/老实验退化为只取主集, 行为与原 getColumnEvalSetFields 一致 (含 evalSetID/version 为 0 的边界)。
 func (e ExptResultServiceImpl) getColumnEvalSetFieldsMultiSet(ctx context.Context, spaceID int64, expt *entity.Experiment) ([]*entity.ColumnEvalSetField, error) {
 	// 非 MultiSetConfig: 完全沿用原有单集调用 (含主集 id/version 透传, 不改变任何边界语义)。
+	// 跨空间: 单集来源空间取 expt 冻结列。
 	if expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
-		return e.getColumnEvalSetFields(ctx, spaceID, expt.EvalSetID, expt.EvalSetVersionID)
+		return e.getColumnEvalSetFieldsWithSource(ctx, spaceID, expt.EvalSetID, expt.EvalSetVersionID, expt.EvalSetSpaceID)
 	}
 
 	pairs := collectEvalSetVersionPairs(expt)
 	merged := make([]*entity.ColumnEvalSetField, 0)
 	seenKey := make(map[string]struct{})
 	for _, p := range pairs {
-		fields, err := e.getColumnEvalSetFields(ctx, spaceID, p.EvalSetID, p.EvalSetVersionID)
+		fields, err := e.getColumnEvalSetFieldsWithSource(ctx, spaceID, p.EvalSetID, p.EvalSetVersionID, p.SourceSpaceID)
 		if err != nil {
 			return nil, err
 		}
@@ -2148,7 +2162,9 @@ func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 	itemIDTurnID2Turn := make(map[int64]map[int64]*entity.TurnEvalSet) // item_id -> turn_id -> turn
 	for _, p := range pairs {
 		param := &entity.BatchGetEvaluationSetItemsParam{
-			SpaceID:         e.SpaceID,
+			// 跨空间共享: 评测集 item 内容属来源空间, 按 pair 来源空间加载 (与 buildDatasetKeyByEvalSetID 一致);
+			// 缺此切换时详情页评测集列为空 + get dataset_version not found。
+			SpaceID:         resolveLoadSpaceID(e.SpaceID, p.SourceSpaceID),
 			EvaluationSetID: p.EvalSetID,
 			ItemIDs:         e.ItemIDs,
 		}
@@ -2197,44 +2213,56 @@ func (e *ExptResultBuilder) buildDatasetKeyByEvalSetID(ctx context.Context, pair
 		}
 	}
 
-	versionIDSet := make(map[int64]struct{})
-	draftIDSet := make(map[int64]struct{})
+	// 跨空间共享: 按 pair 来源空间分组 (SourceSpaceID>0 用来源空间, 否则调用方 e.SpaceID)。
+	versionIDsBySpace := make(map[int64]map[int64]struct{})
+	draftIDsBySpace := make(map[int64]map[int64]struct{})
+	addToSpace := func(m map[int64]map[int64]struct{}, spaceKey, id int64) {
+		if m[spaceKey] == nil {
+			m[spaceKey] = make(map[int64]struct{})
+		}
+		m[spaceKey][id] = struct{}{}
+	}
 	for _, p := range pairs {
 		if p.EvalSetID == 0 || datasetKeyByEvalSetID[p.EvalSetID] != "" {
 			continue
 		}
+		loadSpaceID := resolveLoadSpaceID(e.SpaceID, p.SourceSpaceID)
 		if p.EvalSetVersionID == 0 || p.EvalSetVersionID == p.EvalSetID {
-			draftIDSet[p.EvalSetID] = struct{}{}
+			addToSpace(draftIDsBySpace, loadSpaceID, p.EvalSetID)
 		} else {
-			versionIDSet[p.EvalSetVersionID] = struct{}{}
+			addToSpace(versionIDsBySpace, loadSpaceID, p.EvalSetVersionID)
 		}
 	}
 
-	if len(versionIDSet) > 0 && e.evaluationSetVersionService != nil {
-		versionIDs := maps.ToSlice(versionIDSet, func(k int64, _ struct{}) int64 { return k })
-		sets, err := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(e.SpaceID), versionIDs, gptr.Of(true), nil)
-		if err != nil {
-			return nil, err
-		}
-		for _, elem := range sets {
-			if elem == nil || elem.EvaluationSet == nil || elem.EvaluationSet.ID == 0 || elem.EvaluationSet.DatasetKey == "" {
-				continue
+	if e.evaluationSetVersionService != nil {
+		for loadSpaceID, idSet := range versionIDsBySpace {
+			versionIDs := maps.ToSlice(idSet, func(k int64, _ struct{}) int64 { return k })
+			sets, err := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(loadSpaceID), versionIDs, gptr.Of(true), nil)
+			if err != nil {
+				return nil, err
 			}
-			datasetKeyByEvalSetID[elem.EvaluationSet.ID] = elem.EvaluationSet.DatasetKey
+			for _, elem := range sets {
+				if elem == nil || elem.EvaluationSet == nil || elem.EvaluationSet.ID == 0 || elem.EvaluationSet.DatasetKey == "" {
+					continue
+				}
+				datasetKeyByEvalSetID[elem.EvaluationSet.ID] = elem.EvaluationSet.DatasetKey
+			}
 		}
 	}
 
-	if len(draftIDSet) > 0 && e.evaluationSetService != nil {
-		setIDs := maps.ToSlice(draftIDSet, func(k int64, _ struct{}) int64 { return k })
-		sets, err := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(e.SpaceID), setIDs, gptr.Of(false), nil)
-		if err != nil {
-			return nil, err
-		}
-		for _, set := range sets {
-			if set == nil || set.ID == 0 || set.DatasetKey == "" {
-				continue
+	if e.evaluationSetService != nil {
+		for loadSpaceID, idSet := range draftIDsBySpace {
+			setIDs := maps.ToSlice(idSet, func(k int64, _ struct{}) int64 { return k })
+			sets, err := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(loadSpaceID), setIDs, gptr.Of(false), nil)
+			if err != nil {
+				return nil, err
 			}
-			datasetKeyByEvalSetID[set.ID] = set.DatasetKey
+			for _, set := range sets {
+				if set == nil || set.ID == 0 || set.DatasetKey == "" {
+					continue
+				}
+				datasetKeyByEvalSetID[set.ID] = set.DatasetKey
+			}
 		}
 	}
 
