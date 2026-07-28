@@ -1217,6 +1217,18 @@ func openapiSharedOptionDTO2Domain(opt *openapiCommon.SharedResourceOption) *dom
 	}
 }
 
+// openapiSharedOptionDTO2Entity 跨空间共享可选项 OpenAPI DTO -> domain entity 类型
+// (供 service 层 ListEvaluationSetVersionsParam 等 entity 入参使用); nil 或 !is_shared 返回 nil。
+func openapiSharedOptionDTO2Entity(opt *openapiCommon.SharedResourceOption) *entity.SharedResourceOption {
+	if opt == nil || !opt.GetIsShared() {
+		return nil
+	}
+	return &entity.SharedResourceOption{
+		IsShared:      true,
+		SourceSpaceID: gptr.Of(opt.GetSourceSpaceID()),
+	}
+}
+
 func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -1298,6 +1310,8 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 			EvaluationSetID: req.GetEvalSetParam().GetEvalSetID(),
 			PageSize:        gptr.Of(int32(1)),
 			VersionLike:     req.GetEvalSetParam().Version,
+			// ★ 跨空间共享: 版本解析也按来源空间读，否则消费方空间查不到共享评测集(601103001)
+			SharedOption: openapiSharedOptionDTO2Entity(req.GetEvalSetParam().GetSharedOption()),
 		})
 		if err != nil {
 			return nil, err
@@ -1412,6 +1426,8 @@ func (e *EvalOpenAPIApplication) resolveEvalSetConfigsVersionIDs(ctx context.Con
 				EvaluationSetID: conf.GetEvalSetID(),
 				PageSize:        gptr.Of(int32(1)),
 				VersionLike:     gptr.Of(conf.GetEvalSetVersion()),
+				// ★ 跨空间共享(多评测集 per-set): 版本解析按该 set 来源空间读
+				SharedOption: openapiSharedOptionDTO2Entity(conf.GetSharedOption()),
 			})
 			if err != nil {
 				return nil, nil, err
