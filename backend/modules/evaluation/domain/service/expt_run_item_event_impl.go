@@ -357,8 +357,16 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 
 	// 统一走 ItemVersionQueries: 每个 query 必带 ItemID; 新数据集额外带 ItemVersionID, 老数据集 versionID 留空。
 	// 集级 VersionID 仍透传, 供老数据集(versionID 留空)按集版本定位。
+	// ★ 跨空间共享: 执行期加载评测集 item 必须按来源空间; 多集取 item_config 冻结的 EvalSetSourceSpaceID,
+	// 单集/老实验取 exptDetail.EvalSetSpaceID; 缺此切换时用调用方空间读来源空间评测集 → get dataset_version not found, turn 执行失败。
+	evalSetSourceSpaceID := int64(0)
+	if itemConfig != nil && itemConfig.EvalSetSourceSpaceID > 0 {
+		evalSetSourceSpaceID = itemConfig.EvalSetSourceSpaceID
+	} else if exptDetail != nil {
+		evalSetSourceSpaceID = exptDetail.EvalSetSpaceID
+	}
 	batchGetEvaluationSetItemsParam := &entity.BatchGetEvaluationSetItemsParam{
-		SpaceID:         event.SpaceID,
+		SpaceID:         resolveLoadSpaceID(event.SpaceID, evalSetSourceSpaceID),
 		EvaluationSetID: evalSetID,
 		VersionID:       gptr.Of(evalSetVerID),
 		ItemVersionQueries: []*entity.EvaluationItemVersionRef{
