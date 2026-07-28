@@ -722,7 +722,38 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 	}
 
 	taskID := e.resolveSandboxTaskIDByRunID(ctx, record.ExperimentRunID)
-	e.destroySandboxExecute(ctx, taskID, record.SpaceID, record.ID)
+	e.destroySandboxExecute(ctx, taskID, record.SpaceID, sandboxExecuteIDsOf(ctx, record))
+}
+
+// sandboxExecuteIDsOf 取该 record 本次调用实际创建的 sandbox execution id 列表。
+// 权威来源是 operator 在 AsyncExecute 回传、落在 output ext 的 consts.OutputDataExtKeySandboxExecuteIDs
+// (JSON 字符串数组) —— 双沙箱一次调用会创建多个 execution, 其 id 命名规则属 operator 实现细节,
+// 平台侧不推断。缺省或解析失败时退回 record.ID (单沙箱实现的 executeID 即 record.ID/invokeID)。
+func sandboxExecuteIDsOf(ctx context.Context, record *entity.EvalTargetRecord) []string {
+	fallback := []string{strconv.FormatInt(record.ID, 10)}
+	if record.EvalTargetOutputData == nil || len(record.EvalTargetOutputData.Ext) == 0 {
+		return fallback
+	}
+	raw := record.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxExecuteIDs]
+	if raw == "" {
+		return fallback
+	}
+	var ids []string
+	if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal sandbox execute ids fail, record_id=%d, raw=%s, err=%v",
+			record.ID, raw, err)
+		return fallback
+	}
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id != "" {
+			out = append(out, id)
+		}
+	}
+	if len(out) == 0 {
+		return fallback
+	}
+	return out
 }
 
 // resolveSandboxTaskIDByRunID 通过 ExperimentRunID 反查 ExptID 作为 sandbox TaskID。
@@ -741,20 +772,20 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 	return strconv.FormatInt(runLog.ExptID, 10)
 }
 
-// destroySandboxExecute 异步 best-effort 销毁单个 sandbox execute。
-func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID, executeID int64) {
-	if e.sandboxSchedulerAdapter == nil {
+// destroySandboxExecute 异步 best-effort 销毁本次调用创建的 sandbox execute（可能多个）。
+func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string) {
+	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
 		return
 	}
 	goroutine.Go(ctx, func() {
 		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
 			TaskID:      taskID,
 			DestroyType: rpc.SandboxDestroyTypeExecute,
-			ExecuteIDs:  []string{strconv.FormatInt(executeID, 10)},
+			ExecuteIDs:  executeIDs,
 			WorkspaceID: spaceID,
 		}); err != nil {
-			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_id=%d, err=%v",
-				taskID, executeID, err)
+			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_ids=%v, err=%v",
+				taskID, executeIDs, err)
 		}
 	})
 }
@@ -821,6 +852,10 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
 			continue
 		}
+		// ⚠️ 必须在下面用 failOutput 覆盖 EvalTargetOutputData 之前取，否则 ext 里
+		// operator 回传的 sandbox execute id 列表会被抹掉，只能退回裸 record.ID。
+		executeIDs := sandboxExecuteIDsOf(ctx, r)
+
 		r.Status = gptr.Of(entity.EvalTargetRunStatusFail)
 		r.EvalTargetOutputData = failOutput
 		if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, r, nil); err != nil {
@@ -832,7 +867,7 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
 			taskIDCache[r.ExperimentRunID] = taskID
 		}
-		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID)
+		e.destroySandboxExecute(ctx, taskID, r.SpaceID, executeIDs)
 	}
 }
 
