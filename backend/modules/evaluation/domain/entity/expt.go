@@ -415,6 +415,10 @@ type ItemRunConf struct {
 	SuaGoal                  string        `json:"sua_goal,omitempty"`
 	SuaPersona               string        `json:"sua_persona,omitempty"`
 	SuaBehavioralConstraints string        `json:"sua_behavioral_constraints,omitempty"`
+	// SuaPETemplate 是 SUA loop 跑法必需的 PE 模板 (含 {{eval_result}} 占位符, sua-cli 用它
+	// 把上一轮评分拼成下一轮追问); 缺失时 runtime 在 prepare 阶段即拒绝该 trial。
+	// 题目级配置优先于实验级配置。
+	SuaPETemplate string `json:"sua_pe_template,omitempty"`
 }
 
 // FixedQuery 固定脚本多轮的一轮 query (fixed_script 跑法依赖)。
