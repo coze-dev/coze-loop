@@ -378,6 +378,22 @@ const (
 	SuaModeFixed     SuaMode = "fixed"
 )
 
+// SuaModeToInt 把 SuaMode 字符串映射为 case-file experiment_info.sua_mode 的整数枚举
+// (对齐 runtime suaModeFromInt / IDL SuaMode: 1=humanloop/2=loop/3=fixed)。
+// 空串或未知值返回 0 (不使用 SUA / runtime 侧回退)。
+func SuaModeToInt(m SuaMode) int {
+	switch m {
+	case SuaModeHumanLoop:
+		return 1
+	case SuaModeLoop:
+		return 2
+	case SuaModeFixed:
+		return 3
+	default:
+		return 0
+	}
+}
+
 // RunModeConfig 实验级跑法配置。run_mode 是顶层跑法总开关;
 // sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 生效。
 // sua_model_id 传平台模型 ID, operator 经 GetModelAndAccount 解析密钥注入 case-file, 绝不落库明文。

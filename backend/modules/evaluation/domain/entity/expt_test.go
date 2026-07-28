@@ -566,3 +566,29 @@ func TestValidateExperimentName(t *testing.T) {
 		})
 	}
 }
+
+func TestRunModeToInt(t *testing.T) {
+	cases := map[RunMode]int{
+		RunModeSingleTurn:           1,
+		RunModeFixedScriptMultiTurn: 2,
+		RunModeSUAMultiTurn:         3,
+		RunModeGoal:                 4,
+		"unknown":                   1,
+	}
+	for m, want := range cases {
+		assert.Equal(t, want, RunModeToInt(m), "run_mode=%q", m)
+	}
+}
+
+func TestSuaModeToInt(t *testing.T) {
+	cases := map[SuaMode]int{
+		SuaModeHumanLoop: 1,
+		SuaModeLoop:      2,
+		SuaModeFixed:     3,
+		"":               0,
+		"unknown":        0,
+	}
+	for m, want := range cases {
+		assert.Equal(t, want, SuaModeToInt(m), "sua_mode=%q", m)
+	}
+}
