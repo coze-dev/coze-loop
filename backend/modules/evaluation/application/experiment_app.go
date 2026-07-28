@@ -549,6 +549,10 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		EvalSetSourceType:    req.EvalSetSourceType,
 		RefGroupExperimentID: req.RefGroupExperimentID,
 		NotificationConf:     req.NotificationConf,
+		// ★ 跨空间共享: Submit 的 shared_option (field 80/81) 透传到 Create，
+		// 否则 SubmitExperiment 路径丢失来源空间，发起鉴权/加载会退化成消费方空间。
+		EvalSetSharedOption: req.EvalSetSharedOption,
+		TargetSharedOption:  req.TargetSharedOption,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
