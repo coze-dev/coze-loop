@@ -27650,7 +27650,7 @@ type SubmitExperimentEvalSetParam struct {
 	EvalSetID *int64  `thrift:"eval_set_id,1,optional" frugal:"1,optional,i64" json:"eval_set_id" form:"eval_set_id" query:"eval_set_id"`
 	Version   *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
 	// 跨空间共享评测集来源
-	SharedOption *common.SharedResourceOption `thrift:"shared_option,3,optional" frugal:"3,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty"`
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,3,optional" frugal:"3,optional,common.SharedResourceOption" json:"shared_option" form:"shared_option" query:"shared_option"`
 }
 
 func NewSubmitExperimentEvalSetParam() *SubmitExperimentEvalSetParam {
@@ -28321,7 +28321,7 @@ type SubmitExperimentEvalTargetParam struct {
 	// type=17(sandbox_agent)时需填写，SandboxAgent 评测对象配置
 	SandboxAgent *eval_target.SandboxAgent `thrift:"sandbox_agent,11,optional" frugal:"11,optional,eval_target.SandboxAgent" form:"sandbox_agent" json:"sandbox_agent,omitempty" query:"sandbox_agent"`
 	// 跨空间共享评测对象来源
-	SharedOption *common.SharedResourceOption `thrift:"shared_option,12,optional" frugal:"12,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty"`
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,12,optional" frugal:"12,optional,common.SharedResourceOption" json:"shared_option" form:"shared_option" query:"shared_option"`
 }
 
 func NewSubmitExperimentEvalTargetParam() *SubmitExperimentEvalTargetParam {

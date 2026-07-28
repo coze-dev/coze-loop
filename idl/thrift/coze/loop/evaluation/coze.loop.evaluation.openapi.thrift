@@ -595,7 +595,7 @@ struct SubmitExperimentOApiRequest {
 struct SubmitExperimentEvalSetParam {
     1: optional i64 eval_set_id (api.js_conv = "true", go.tag = 'json:"eval_set_id"')
     2: optional string version
-    3: optional common.SharedResourceOption shared_option (api.body = 'shared_option') // 跨空间共享评测集来源
+    3: optional common.SharedResourceOption shared_option (go.tag = 'json:"shared_option"') // 跨空间共享评测集来源
 }
 
 struct SubmitExperimentEvaluatorParam {
@@ -616,7 +616,7 @@ struct SubmitExperimentEvalTargetParam {
     9: optional string cluster // type=10时需填写，自定义智能体所属集群
     10: optional eval_target.AgentConnection agent_connection // type=10时需填写，自定义智能体连接信息
     11: optional eval_target.SandboxAgent sandbox_agent // type=17(sandbox_agent)时需填写，SandboxAgent 评测对象配置
-    12: optional common.SharedResourceOption shared_option (api.body = 'shared_option') // 跨空间共享评测对象来源
+    12: optional common.SharedResourceOption shared_option (go.tag = 'json:"shared_option"') // 跨空间共享评测对象来源
 }
 
 
