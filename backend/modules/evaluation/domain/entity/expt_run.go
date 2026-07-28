@@ -437,6 +437,34 @@ type ExptItemEvalCtx struct {
 	EvalSetVersionID int64
 }
 
+// EvalSetSourceSpaceID 该行评测集来源空间: 多集从 ItemConfig(行级冻结), 单集从 Expt 冻结列; 0=同调用方空间。
+func (e *ExptItemEvalCtx) EvalSetSourceSpaceID() int64 {
+	if e == nil {
+		return 0
+	}
+	if e.ItemConfig != nil && e.ItemConfig.EvalSetSourceSpaceID > 0 {
+		return e.ItemConfig.EvalSetSourceSpaceID
+	}
+	if e.Expt != nil {
+		return e.Expt.EvalSetSpaceID
+	}
+	return 0
+}
+
+// TargetSourceSpaceID 该行评测对象来源空间: 多集从 ItemConfig, 单集从 Expt 冻结列; 0=同调用方空间。
+func (e *ExptItemEvalCtx) TargetSourceSpaceID() int64 {
+	if e == nil {
+		return 0
+	}
+	if e.ItemConfig != nil && e.ItemConfig.TargetSourceSpaceID > 0 {
+		return e.ItemConfig.TargetSourceSpaceID
+	}
+	if e.Expt != nil {
+		return e.Expt.TargetSpaceID
+	}
+	return 0
+}
+
 func (e *ExptItemEvalCtx) GetRecordEvalLogID(ctx context.Context) (logID string) {
 	itemRunLog := e.GetExistItemResultLog()
 
