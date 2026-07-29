@@ -238,6 +238,28 @@ struct ExperimentStatistics {
 }
 
 // 评测实验
+//
+// ⚠️ 已知缺口 (2026-07 记录, **只记录未实现**): 本读模型**没有** run_mode_config 字段。
+//
+// 现状是不对称的:
+//   - **写侧有**: coze.loop.evaluation.openapi.thrift 的 SubmitExperimentRequest 47 号字段
+//     `optional experiment.RunModeConfig run_mode_config` —— OpenAPI 用户提交实验时能配跑法
+//     (run_mode / sua_mode / sua_model / SUA 行为四项 / max_turns / max_run_minutes)。
+//   - **读侧缺**: 本 struct 无对应字段, 于是 OpenAPI 用户 **查实验详情拿不到自己配了什么跑法**。
+//   - 对比内部接口: domain/expt.thrift 的 struct Experiment 有 115 号字段 run_mode_config,
+//     且 coze-loop 侧 convertor 的 runModeConfigDO2DTO 已写好回显 —— 即"内部接口能回显、
+//     OpenAPI 查不到"。
+//
+// **为什么现在不补 (不是漏了)**: 补齐要走一整轮 IDL 变更 —— ① 本 struct 加字段 (需与
+// coze-loop 仓 idl/thrift/.../domain_openapi/experiment.thrift 同步, open/ 是从那里同步来的);
+// ② 重跑代码生成 (cozeloop-gen-commercial / backend/script/cloudwego/code_gen.sh);
+// ③ 给 DomainExperimentDTO2OpenAPI 和 OpenAPIExperimentDO2DTO **两个** OpenAPI 读路径接线
+// (coze-loop backend/modules/evaluation/application/convertor/experiment/openapi.go);
+// ④ 补 UT。属独立排期项, 不夹带在功能改动里做。
+//
+// 补的时候注意: OpenAPI 侧用的是 domain_openapi 自己那套**字符串枚举**结构
+// (本文件已有 struct RunModeConfig, 与 ExptEvalSetSourceType 同套模式), 不要 include
+// domain/expt.thrift, 否则符号冲突。
 struct Experiment {
     // 基本信息
     1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')

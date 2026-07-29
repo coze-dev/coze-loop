@@ -2496,15 +2496,35 @@ func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig, runModeConfig *en
 }
 
 // itemRunConfFromRunModeConfig 把实验级 RunModeConfig 翻译为题目级 ItemRunConf 兜底默认值。
-// 仅承接与 item 粒度相关的时长上限 (max_run_minutes); run_mode/sua_mode/model 是实验级、
-// 由 case-file experiment_info 承载, 不落 item RunConf。返回 nil 表示无多轮配置 (老路径不变)。
+// 仅承接与 item 粒度相关的时长上限 (max_run_minutes); run_mode/sua_mode/model/SUA 行为四项/max_turns
+// 是实验级、由 case-file experiment_info 承载, **故意不落** item RunConf —— 一旦在平台侧预合并,
+// 实验级值就会伪装成题目级下发, runtime 再也分不出"这个值来自哪一级", 题目优先语义直接失效。
+// 返回 nil 表示无多轮配置 (老路径不变)。
+//
+// **无字段可搬时必须返回 nil, 不能返回空结构体** (曾经的 bug, 后果如下):
+// ItemRunConf 全字段 omitempty ⇒ json.Marshal(&entity.ItemRunConf{}) == "{}";
+// 执行侧 (expt_run_item_turn_impl.go callTarget) 的闸门是 `RunConf != nil`, 空结构体能过闸,
+// 于是 ext["builtin_run_conf"] 被写成 "{}"; 而 commercial 侧 extractItemRunConf 的回退判据是
+// `raw == ""`, "{}" 非空 ⇒ 「Ext 为空则回退读题目自带 InputFields["run_conf"]」这条回退**永远走不到**,
+// 评测集题目里配的 sua_goal / sua_persona / sua_behavioral_constraints / sua_pe_template /
+// max_turns / fixed_query_list 一个都到不了 runtime —— 实验级值仍能生效 (runtime 遇空题目级会回落),
+// 所以现象是"题目级覆盖 100% 静默失效", 恰好把「题目级优先」语义整个打掉。
+// 即: 实验配了 run_mode_config 但没配 max_run_minutes 时, 这里必须返回 nil 让 Ext 压根不写。
 func itemRunConfFromRunModeConfig(sc *entity.RunModeConfig) *entity.ItemRunConf {
 	if sc == nil {
 		return nil
 	}
+	// 逐字段搬运; 一个都没搬到就返回 nil (见上方注释, 空结构体会序列化成 "{}" 吞掉题目级配置)。
+	// 用显式 moved 标记而非 `*rc == entity.ItemRunConf{}` —— ItemRunConf 含 slice 字段 (FixedQueryList)
+	// 不可比较; 也不用 reflect.DeepEqual, 免得以后新增字段时零值判断悄悄漂移。
 	rc := &entity.ItemRunConf{}
+	moved := false
 	if sc.MaxRunMinutes > 0 {
 		rc.MaxRunMinutes = sc.MaxRunMinutes
+		moved = true
+	}
+	if !moved {
+		return nil
 	}
 	return rc
 }

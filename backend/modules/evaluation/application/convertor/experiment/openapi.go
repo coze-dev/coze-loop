@@ -408,6 +408,11 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EvaluatorsConcurNum = dto.EvaluatorsConcurNum
 	result.TotalItemCount = dto.TotalItemCount
 	result.EvalSetDetails = DomainEvalSetDetailsDTO2OpenAPI(dto.EvalSetDetails)
+	// ⚠️ run_mode_config 不回显, 是**已知缺口而非漏写**: OpenAPI 读模型
+	// (domain_openapi/experiment.thrift 的 struct Experiment) 压根没有这个字段, 无处可放 ——
+	// 写侧 SubmitExperimentRequest 47 号字段能配跑法, 读侧查不到; 内部 domain Experiment 有
+	// 115 号字段且 runModeConfigDO2DTO 已回显。补齐要一整轮 IDL 变更 + 代码生成, 另行排期。
+	// 缺口详情记在 domain_openapi/experiment.thrift 的 struct Experiment 注释里。
 	return result
 }
 
