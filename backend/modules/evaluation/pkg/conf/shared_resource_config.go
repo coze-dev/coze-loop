@@ -61,13 +61,9 @@ func (p *sharedResourceConfigProvider) GetSharedResourceConfig(ctx context.Conte
 		logs.CtxInfo(ctx, "shared resource config unset or invalid, default deny; key=%s err=%v", sharedResourceConfigKey, err)
 		return &entity.SharedResourceConfig{}, nil
 	}
-	logs.CtxInfo(ctx, "[XSPACE-DBG] TCC raw config read: key=%s rawSpaces=%d raw=%+v", sharedResourceConfigKey, len(raw), raw)
 	cfg := convertSharedResourceConfig(raw)
-	for sid, sr := range cfg.SpaceRules {
-		for _, r := range sr.Resources {
-			logs.CtxInfo(ctx, "[XSPACE-DBG] TCC parsed rule: source=%d resID=%d type=%s accessRules=%d", sid, r.ResourceID, r.ResourceType, len(r.AccessRules))
-		}
-	}
+	// 稳定性运维日志: 记录读到的跨空间共享规则规模(来源空间数), 便于确认 TCC 已生效、区分"未配置(默认拒绝)"与"配置为空"。
+	logs.CtxInfo(ctx, "shared resource config loaded; key=%s sourceSpaces=%d", sharedResourceConfigKey, len(cfg.SpaceRules))
 	return cfg, nil
 }
 

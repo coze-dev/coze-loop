@@ -954,7 +954,6 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 	ctx context.Context, callerSpaceID int64, resourceType string, resourceID int64,
 	versionID *int64, opt *entity.SharedResourceOption,
 ) (sourceSpaceID int64, accessLevel string, err error) {
-	logs.CtxInfo(ctx, "[XSPACE-DBG] authorizeSharedResource: type=%s resID=%d opt_nil=%v opt=%+v enabled=%v", resourceType, resourceID, opt == nil, opt, opt != nil && opt.Enabled())
 	if opt == nil || !opt.Enabled() {
 		return callerSpaceID, "", nil
 	}
@@ -970,7 +969,8 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 	if err != nil {
 		return 0, "", err
 	}
-	logs.CtxInfo(ctx, "[XSPACE-DBG] AuthorizeRead ok: ResourceSpaceID=%d AccessLevel=%s AccessMode=%s", accessCtx.ResourceSpaceID, accessCtx.AccessLevel, accessCtx.AccessMode)
+	// 稳定性日志: 跨空间共享鉴权通过, 记录解析出的资源来源空间与冻结访问级别(供脱敏/加载定位)。
+	logs.CtxInfo(ctx, "shared resource authorized; type=%s resID=%d sourceSpace=%d accessLevel=%s mode=%s", resourceType, resourceID, accessCtx.ResourceSpaceID, accessCtx.AccessLevel, accessCtx.AccessMode)
 	return accessCtx.ResourceSpaceID, accessCtx.AccessLevel, nil
 }
 
@@ -1069,13 +1069,11 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			evalSetVerID = gptr.Of(req.EvalSetVersionID)
 		}
 		var authErr error
-		logs.CtxInfo(ctx, "[XSPACE-DBG] before authz: workspace=%d evalSetID=%d evalSetSharedOpt=%+v targetSharedOpt=%+v", req.WorkspaceID, req.EvalSetID, req.EvalSetSharedOption, req.TargetSharedOption)
 		evalSetSpaceID, evalSetAccessLevel, authErr = e.authorizeSharedResource(
 			ctx, req.WorkspaceID, entity.SharedResourceTypeEvalSet, req.EvalSetID, evalSetVerID, req.EvalSetSharedOption)
 		if authErr != nil {
 			return nil, authErr
 		}
-		logs.CtxInfo(ctx, "[XSPACE-DBG] after evalset authz: evalSetSpaceID=%d accessLevel=%s", evalSetSpaceID, evalSetAccessLevel)
 		targetSpaceID = req.WorkspaceID
 		// 现建路径(CreateEvalTargetParam)已在建 target 时完成跨空间鉴权+回填 SourceSpaceID, 此处只处理引用路径(req.TargetID)。
 		// 现建路径下 versionedTargetID.TargetID 是新建 eval_target id(非 source bot id), 不能再拿去按 source 鉴权。
@@ -1106,12 +1104,6 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if evalSetSpaceID != req.WorkspaceID {
 		evalSetTupleID.SourceSpaceID = evalSetSpaceID // 跨空间: 按来源空间加载评测集
 	}
-	logs.CtxInfo(ctx, "[XSPACE-DBG] tupleID built: evalSetTupleID.SourceSpaceID=%d targetSourceSpaceID=%d", evalSetTupleID.SourceSpaceID, func() int64 {
-		if versionedTargetID != nil {
-			return versionedTargetID.SourceSpaceID
-		}
-		return -1
-	}())
 
 	tuple, err := e.getExptTupleByID(ctx, &entity.ExptTupleID{
 		VersionedEvalSetID:  evalSetTupleID,
