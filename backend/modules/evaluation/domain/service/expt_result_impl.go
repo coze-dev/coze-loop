@@ -2307,7 +2307,10 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 		targetResultIDs = append(targetResultIDs, turnResult.TargetResultID)
 		targetResultID2turnResultID[turnResult.TargetResultID] = turnResult.ID
 	}
-	targetRecords, err := e.evalTargetService.BatchGetRecordByIDs(ctx, e.SpaceID, targetResultIDs)
+	// ★ 跨空间共享: 评测对象执行记录(eval_target_record)随执行落在来源空间(冻结 TargetSpaceID),
+	// 按 space_id 严格过滤; 用调用方空间读会查不到 → target 输出(含 Ext[sandbox_session_id])整体丢失,
+	// 前端 case 旁不显示 aiosession。按来源空间读 (0=同调用方空间)。
+	targetRecords, err := e.evalTargetService.BatchGetRecordByIDs(ctx, resolveLoadSpaceID(e.SpaceID, e.exptDO.TargetSpaceID), targetResultIDs)
 	if err != nil {
 		return err
 	}
