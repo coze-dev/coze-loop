@@ -1173,7 +1173,14 @@ func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval target record not found for the given experiment result"))
 	}
 
-	record, err := e.targetSvc.GetRecordByID(ctx, req.GetWorkspaceID(), targetRecordID)
+	// ★ 跨空间共享: 评测对象执行记录随执行落在冻结的来源空间(TargetSpaceID>0), 按 space_id 严格过滤;
+	// 用调用方空间读会查不到 record → target 输出/session 丢失。按来源空间读。
+	recordSpaceID := req.GetWorkspaceID()
+	if exptDetail, gErr := e.manager.GetDetail(ctx, req.GetExperimentID(), req.GetWorkspaceID(), entity.NewSession(ctx)); gErr == nil && exptDetail != nil && exptDetail.TargetSpaceID > 0 {
+		recordSpaceID = exptDetail.TargetSpaceID
+	}
+
+	record, err := e.targetSvc.GetRecordByID(ctx, recordSpaceID, targetRecordID)
 	if err != nil {
 		return nil, err
 	}
