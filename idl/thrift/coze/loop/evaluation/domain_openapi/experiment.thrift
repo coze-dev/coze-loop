@@ -101,8 +101,11 @@ struct OpenAPIExptEvaluatorConf {
 }
 
 // per-set target 运行配置 (版本字符串风格); 本期 len<=1
-// target_id/version 继承 request 顶层 eval_target_param, 不在 per-set 重复指定
+// target_id/version 不传时继承 request 顶层 eval_target_param;
+// 跨空间多集场景 per-set 需显式指定 target_id 以对该 set 的评测对象做来源空间授权。
 struct OpenAPIExptTargetConf {
+    1: optional i64 target_id (api.js_conv = "true", go.tag = 'json:"target_id"')   // per-set 评测对象 id; 跨空间授权必需
+    2: optional string target_version               // 版本字符串, handler 解析成 target_version_id (锁定版本); 不传=latest
     10: optional TargetFieldMapping field_mapping    // 本评测集字段 → target 输入
     20: optional common.RuntimeParam runtime_param
 }
