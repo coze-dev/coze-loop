@@ -1806,12 +1806,13 @@ func OpenAPIEvalSetConfigsDTO2Domain(
 			}
 			do.EvaluatorConfs = append(do.EvaluatorConfs, evConf)
 		}
-		// target_confs (本期 len<=1; target_id/version 继承顶层, 此处只带字段映射与 runtime_param)
+		// target_confs (本期 len<=1; target_id 不传=继承顶层, 跨空间多集 per-set 需显式带 target_id 做来源空间授权)
 		for _, tc := range conf.GetTargetConfs() {
 			if tc == nil {
 				continue
 			}
 			tConf := &domainExpt.ExptTargetConf{
+				TargetID:     tc.TargetID,
 				FieldMapping: OpenAPITargetFieldMappingDTO2Domain(tc.FieldMapping),
 				RuntimeParam: OpenAPIRuntimeParamDTO2Domain(tc.RuntimeParam),
 			}
