@@ -17,6 +17,8 @@ import (
 	evaluator_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 
@@ -2953,11 +2955,21 @@ func OpenAPIEvalSetSourceTypeDTO2Domain(s *openapiExperiment.ExptEvalSetSourceTy
 }
 
 // OpenAPIRunModeConfigDTO2Domain 将 OpenAPI 的 RunModeConfig (字符串枚举风格) 转为内部 domain/expt.RunModeConfig (int 枚举)。
-// run_mode / sua_mode 字符串→int 枚举; max_run_minutes / sua_model_id 原样透传。未识别的字符串跳过对应字段 (不设值)。
-// nil 入参返回 nil, 供 handler 直接赋给 createReq.RunModeConfig (缺省不下发, 与其它可选字段一致)。
-func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) *domainExpt.RunModeConfig {
+// run_mode / sua_mode 字符串→int 枚举; max_run_minutes / sua_model_id 原样透传。
+// nil 入参返回 (nil, nil), 供 handler 直接赋给 createReq.RunModeConfig (缺省不下发, 与其它可选字段一致)。
+//
+// **非空但认不出的枚举字符串一律返回错误, 让创建实验的请求直接失败** —— 这是 sua_mode /
+// run_mode 校验的最早落点 (薛一正 2026-07-29: "实在不行在 submit 那里加个校验")。
+//
+// 此前这里是 `if v, ok := conv(...); ok { set }`, ok==false 时**什么都不做**: 非法值被静默
+// 丢弃成"没配", 再到 suaModeDTO2DO 的 default 兜成 humanloop, 于是拿真非法值
+// sua_mode="bogus" 发的实验 (7590112175193295618) 一路跑到 success、按 humanloop 跑了 22 轮,
+// 落库 eval_conf.run_mode_config 里连 sua_mode 这个 key 都没有。用户以为自己配的跑法生效了,
+// 实际跑的是另一个跑法, 且不留任何痕迹 —— 这类"配置写错但看起来成功"比直接报错难排查得多。
+// 改成入口即拒: 实验根本不该被创建, 而不是等跑到 case-file 组装、甚至跑完才发现。
+func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domainExpt.RunModeConfig, error) {
 	if c == nil {
-		return nil
+		return nil, nil
 	}
 	out := &domainExpt.RunModeConfig{
 		MaxRunMinutes: c.MaxRunMinutes,
@@ -2965,16 +2977,26 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) *domainE
 		SuaModelName:  c.SuaModelName,
 	}
 	if c.RunMode != nil {
-		if rm, ok := openAPIRunModeToDomain(*c.RunMode); ok {
-			out.RunMode = gptr.Of(rm)
+		rm, ok := openAPIRunModeToDomain(*c.RunMode)
+		if !ok {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid run_mode %q (supported: %s, %s, %s, %s)", *c.RunMode,
+				openapiExperiment.ExptRunModeSingleTurn, openapiExperiment.ExptRunModeFixedScriptMultiTurn,
+				openapiExperiment.ExptRunModeSuaMultiTurn, openapiExperiment.ExptRunModeGoal)))
 		}
+		out.RunMode = gptr.Of(rm)
 	}
 	if c.SuaMode != nil {
-		if sm, ok := openAPISuaModeToDomain(*c.SuaMode); ok {
-			out.SuaMode = gptr.Of(sm)
+		sm, ok := openAPISuaModeToDomain(*c.SuaMode)
+		if !ok {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid sua_mode %q (supported: %s, %s, %s)", *c.SuaMode,
+				openapiExperiment.SuaModeHumanLoop, openapiExperiment.SuaModeLoop,
+				openapiExperiment.SuaModeFixed)))
 		}
+		out.SuaMode = gptr.Of(sm)
 	}
-	return out
+	return out, nil
 }
 
 // openAPIRunModeToDomain 将 OpenAPI ExptRunMode 字符串枚举转为内部 int 枚举; 未识别返回 false。

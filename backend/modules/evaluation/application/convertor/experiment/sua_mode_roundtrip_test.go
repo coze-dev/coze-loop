@@ -47,10 +47,11 @@ func TestSuaMode_OpenAPIToEntityRoundTripIsClosed(t *testing.T) {
 			t.Parallel()
 
 			// 第一跳: OpenAPI DTO → domain int 枚举 (创建接口实际调的就是这个函数)。
-			dom := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{
+			dom, err := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{
 				RunMode: gptr.Of(openapiExperiment.ExptRunModeSuaMultiTurn),
 				SuaMode: gptr.Of(tc.openAPI),
 			})
+			require.NoError(t, err, "合法 sua_mode 不该报错")
 			require.NotNil(t, dom)
 			require.True(t, dom.IsSetSuaMode(), "合法 sua_mode 不该被丢弃")
 
@@ -69,45 +70,88 @@ func TestSuaMode_OpenAPIToEntityRoundTripIsClosed(t *testing.T) {
 	}
 }
 
-// 非法 sua_mode 在 OpenAPI 入口被**静默丢弃** (不设值), 而不是报错 —— 这是当前
-// OpenAPIRunModeConfigDTO2Domain 的既有行为 (`if sm, ok := ...; ok` 的 ok=false 分支跳过)。
+// 非空但认不出的 sua_mode 必须在**创建实验的入口**就报参数错误, 实验根本不该被创建。
 //
-// 实测证据: 拿真非法值 "bogus" 发的实验 7590112175193295618, 落库 eval_conf 的
-// run_mode_config 里**根本没有 sua_mode 这个 key** (只剩 run_mode/max_run_minutes/
-// sua_model_id), 而不是带着 "bogus" 落进去。
+// 这是本次修的第二个 bug 的护栏。此前入口是 `if v, ok := conv(..); ok { set }` —— ok==false
+// 时什么都不做, 非法值被静默丢弃成"没配"(字段保持 nil → int 0), 再到 suaModeDTO2DO 的
+// default 兜成 humanloop。实测拿真非法值 sua_mode="bogus" 发的实验 7590112175193295618
+// 因此一路跑到 success、按 humanloop 跑了 22 轮, 落库 eval_conf.run_mode_config 里连
+// sua_mode 这个 key 都没有; commercial runtimeRunMode 那个"未知 sua_mode 报错"分支压根走不到
+// (到那里时 suaMode 已经是 "" 或 humanloop, 都是合法值) —— 所以那条报错逻辑从来没被真验过。
 //
-// 由此推出一个重要结论, 本测试即为其护栏: **commercial runtimeRunMode 的"未知 sua_mode
-// 报错"分支走不到 OpenAPI 这条路**。因为非法值在入口就被丢成了"没配", 到 commercial 时
-// suaMode == "" 命中合法缺省分支, 按 human_loop 跑完。那条报错逻辑只对**绕过 OpenAPI
-// 入口**的调用方 (内部 RPC / 直接构造 entity / 未来新接口) 生效。
-//
-// 这里只钉住"丢弃"这一事实, 不改它 —— 入口应当报错还是丢弃是产品决策 (报错更符合本次
-// "拒绝静默降级"的取向), 留给薛一正定; 见调研报告「发现但没改的问题」。
-func TestSuaMode_InvalidOpenAPIValueIsDroppedNotErrored(t *testing.T) {
+// 反向验证 (证明本测试真的在守): 把 OpenAPIRunModeConfigDTO2Domain 里 sua_mode 的
+// `if !ok { return nil, err }` 改回静默丢弃 (`if ok { set }`), 本测试全部 case FAIL。已还原。
+func TestSuaMode_InvalidValueRejectedAtSubmit(t *testing.T) {
 	t.Parallel()
 
 	for _, bad := range []openapiExperiment.SuaMode{
 		"bogus",     // 实测发过的真非法值 (实验 7590112175193295618)
-		"humanloop", // 统一前的旧值, 现在同样非法
-		"HumanLoop",
-		"",
+		"humanloop", // 统一前的旧值, 现在同样非法 (刻意不做双值兼容)
+		"HumanLoop", // 大小写
+		"human-loop",
+		"loops",
 	} {
 		bad := bad
 		t.Run(string(bad), func(t *testing.T) {
 			t.Parallel()
 
-			dom := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{
+			dom, err := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{
 				RunMode: gptr.Of(openapiExperiment.ExptRunModeSuaMultiTurn),
 				SuaMode: gptr.Of(bad),
 			})
-			require.NotNil(t, dom)
-			assert.False(t, dom.IsSetSuaMode(),
-				"非法 sua_mode %q 当前被静默丢弃(不设值); 若哪天改成报错/透传, 本断言应随之更新", bad)
-
-			// run_mode 是合法值, 不受 sua_mode 非法的影响 —— 确认丢弃是**字段级**的,
-			// 不会顺手把整个 RunModeConfig 废掉。
-			require.True(t, dom.IsSetRunMode())
-			assert.Equal(t, domain_expt.ExptRunMode_SuaMultiTurn, dom.GetRunMode())
+			require.Error(t, err, "非法 sua_mode %q 必须在入口报错, 不能静默丢弃", bad)
+			assert.Contains(t, err.Error(), string(bad), "报错要指名道姓, 否则用户看不出是哪个值不对")
+			assert.Nil(t, dom, "报错时不该返回半成品配置")
 		})
 	}
+}
+
+// run_mode 与 sua_mode 同理: 非空但认不出一律入口报错 (此前同样是静默丢弃)。
+func TestRunMode_InvalidValueRejectedAtSubmit(t *testing.T) {
+	t.Parallel()
+
+	for _, bad := range []openapiExperiment.ExptRunMode{"bogus", "SingleTurn", "sua"} {
+		bad := bad
+		t.Run(string(bad), func(t *testing.T) {
+			t.Parallel()
+			dom, err := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{
+				RunMode: gptr.Of(bad),
+			})
+			require.Error(t, err, "非法 run_mode %q 必须在入口报错", bad)
+			assert.Contains(t, err.Error(), string(bad))
+			assert.Nil(t, dom)
+		})
+	}
+}
+
+// 合法缺省: sua_mode / run_mode 都不传时不报错, 也不设值 —— "没配"必须能如实表达成"没配",
+// 由下游既有的缺省逻辑 (commercial runtimeRunMode 的 `case "":` 按默认 human_loop 跑) 接管。
+//
+// **本测试与 suaModeDTO2DO 的 default 改动配对**: 原 default 把 int 0 (未设置) 兜成
+// humanloop, 等于谎报"用户显式配了 human_loop"。现在 0 → 空串, 语义如实。
+func TestSuaMode_UnsetIsLegalDefaultNotHumanLoop(t *testing.T) {
+	t.Parallel()
+
+	// 入口: 两个枚举都不传 → 不报错、不设值。
+	dom, err := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{
+		MaxRunMinutes: gptr.Of(int32(30)),
+	})
+	require.NoError(t, err, "缺省 (不传枚举) 是合法的")
+	require.NotNil(t, dom)
+	assert.False(t, dom.IsSetSuaMode(), "没传就不该设值")
+	assert.False(t, dom.IsSetRunMode())
+
+	// 第二跳: domain int 未设置/未识别必须落成**空串**, 而不是某个具体跑法。
+	// 直接调 suaModeDTO2DO: runModeConfigDTO2DO 只在 IsSetSuaMode() 为真时才调它, 所以
+	// "字段整个没传"这条路走不到 default; 真能走到 default 的是**显式设了 0** (int 零值,
+	// thrift optional 字段被赋零值) 和**未识别的非 0 值** (未来新增枚举 / 内部调用方乱传)。
+	for _, unset := range []domain_expt.SuaMode{0, 99} {
+		assert.Empty(t, suaModeDTO2DO(unset),
+			`sua_mode int %d 必须落空串(合法缺省), 不能兜成 human_loop —— "未设置/认不出"与"显式配了 human_loop"是两件事`, unset)
+	}
+
+	// 三个已识别值仍各归各位 (确认改 default 没把正常映射带坏)。
+	assert.Equal(t, entity.SuaModeHumanLoop, suaModeDTO2DO(domain_expt.SuaMode_HumanLoop))
+	assert.Equal(t, entity.SuaModeLoop, suaModeDTO2DO(domain_expt.SuaMode_Loop))
+	assert.Equal(t, entity.SuaModeFixed, suaModeDTO2DO(domain_expt.SuaMode_Fixed))
 }

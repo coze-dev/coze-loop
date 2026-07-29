@@ -1385,14 +1385,35 @@ func suaRunModeDTO2DO(m domain_expt.ExptRunMode) entity.RunMode {
 	}
 }
 
+// suaModeDTO2DO 把 domain 的 sua_mode int 枚举转成 entity 字符串。
+//
+// **default 返回空串而不是 humanloop** (本次修的第二个 bug): 原实现 default 兜成
+// entity.SuaModeHumanLoop, 于是把两件完全不同的事混为一谈 ——
+//   - int 0 = **字段未设置** (用户没配 sua_mode, 存量提交都不带这个字段);
+//   - 非 0 但认不出 = **配错了 / 未来新增的枚举值**。
+//
+// 两者都被写成 "humanloop" 落库, 恰好等于"用户显式配了 human_loop"。配合入口
+// OpenAPIRunModeConfigDTO2Domain 此前对非法值的静默丢弃 (ok==false 什么都不做, 字段保持
+// nil→int 0), 非法值 sua_mode="bogus" 就这样一路变成 humanloop 跑完 22 轮还 success
+// (实验 7590112175193295618), 而 commercial 那个"未知 sua_mode 报错"分支压根走不到。
+//
+// 现在返回空串: 空是**既有的合法缺省语义** —— commercial runtimeRunMode 的 `case "":`
+// 分支明确把空 sua_mode 当"没配"处理并沿用默认 human_loop 跑法。让"未设置"如实表达成
+// "未设置", 由下游那条既有缺省逻辑接管, 而不是在这里假装用户配过。
+//
+// 非 0 未识别值同样返回空: 此处已在入口校验 (OpenAPIRunModeConfigDTO2Domain 报参数错误)
+// 之后, 理论上到不了; 真到了 (内部 RPC 直接构造 domain 结构等绕过入口的路径), 返回空让
+// 下游走缺省, 也比谎报成某个具体跑法安全。本函数无 error 出口, 报错的职责在入口那层。
 func suaModeDTO2DO(m domain_expt.SuaMode) entity.SuaMode {
 	switch m {
+	case domain_expt.SuaMode_HumanLoop:
+		return entity.SuaModeHumanLoop
 	case domain_expt.SuaMode_Loop:
 		return entity.SuaModeLoop
 	case domain_expt.SuaMode_Fixed:
 		return entity.SuaModeFixed
 	default:
-		return entity.SuaModeHumanLoop
+		return ""
 	}
 }
 

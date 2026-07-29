@@ -1083,6 +1083,13 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
 	}
 
+	// ★ 透传实验级跑法配置(SUA/run_mode): OpenAPI 字符串枚举结构 → 内部 expt.RunModeConfig; 缺省 nil 不下发。
+	// 非空但认不出的 run_mode / sua_mode 在此**直接报参数错误**, 实验不被创建 (最早的校验落点)。
+	runModeConfig, err := experiment_convertor.OpenAPIRunModeConfigDTO2Domain(req.RunModeConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	createReq := &exptpb.SubmitExperimentRequest{
 		WorkspaceID:             req.GetWorkspaceID(),
 		Name:                    req.Name,
@@ -1098,8 +1105,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		EvalSetSourceType: gptr.Of(srcType),
 		// ★ 透传引用分组实验 id: 命中当前空间实验则复用其 group key(归入同一分组); 缺省则以实验 id 兜底。
 		RefGroupExperimentID: req.RefGroupExperimentID,
-		// ★ 透传实验级跑法配置(SUA/run_mode): OpenAPI 字符串枚举结构 → 内部 expt.RunModeConfig; 缺省 nil 不下发。
-		RunModeConfig: experiment_convertor.OpenAPIRunModeConfigDTO2Domain(req.RunModeConfig),
+		RunModeConfig:        runModeConfig,
 	}
 
 	if isNewPath {
