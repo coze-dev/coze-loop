@@ -1312,7 +1312,6 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		createReq.EvalSetConfigs = experiment_convertor.OpenAPIEvalSetConfigsDTO2Domain(req.GetEvalSetConfigs(), evalSetVersionIDMap, evaluatorVersionIDMap)
 	} else {
 		// 老路径: 单评测集, 解析顶层 eval_set_param / evaluator_params 的版本字符串。
-		logs.CtxInfo(ctx, "[XSPACE-DBG] oapi oldpath version resolve: evalSetID=%d sharedOpt=%+v workspace=%d", req.GetEvalSetParam().GetEvalSetID(), req.GetEvalSetParam().GetSharedOption(), req.GetWorkspaceID())
 		versions, _, _, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
 			SpaceID:         req.GetWorkspaceID(),
 			EvaluationSetID: req.GetEvalSetParam().GetEvalSetID(),

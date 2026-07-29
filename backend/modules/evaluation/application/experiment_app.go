@@ -563,7 +563,6 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
 	}
-	logs.CtxInfo(ctx, "[XSPACE-DBG] SubmitExperiment->Create: req.EvalSetSharedOption=%+v createReq.EvalSetSharedOption=%+v", req.EvalSetSharedOption, createReq.EvalSetSharedOption)
 
 	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {
