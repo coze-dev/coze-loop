@@ -405,8 +405,31 @@ func RunModeToInt(m RunMode) int {
 // SuaMode SUA 生成下一轮 query 的模式。与 runtime sua.Mode / IDL SuaMode 对齐。
 type SuaMode = string
 
+// **字面量以 OpenAPI IDL 为准 (薛一正 2026-07-29 拍板)**: humanloop 一度在三处写法不一致 ——
+// OpenAPI IDL (对外契约) 是带下划线的 "human_loop" (domain_openapi/experiment.thrift
+// SuaMode_HumanLoop), 本 entity 常量却是无下划线的 "humanloop", domain IDL 又是 int enum
+// HumanLoop=1。
+//
+// 三处能"歪着跑通"纯靠**本常量自己**充当了隐式归一点: OpenAPI 提交的 "human_loop" 先经
+// openAPISuaModeToDomain 转成 int 1, 再经 suaModeDTO2DO 转回本常量, 落库就成了 "humanloop"
+// (实测实验 7590112179985613570 的 eval_conf 即为此值)。所谓"某一层做了归一"其实没有独立的
+// 归一代码 —— 就是这个常量的值和 IDL 不一样, 而字符串→int→字符串的往返把差异吃掉了。
+// 故把本常量改成 "human_loop" 即全链路自动一致, 没有额外的归一层要拆。
+//
+// 以 IDL 为准而不是以落库值为准, 两条理由:
+//  1. **对外契约优先**。OpenAPI 的字符串枚举是用户直接书写的东西 (fornax-cli
+//     --run-mode-config-json / OpenAPI 调用方都照 IDL 抄), 它是唯一有外部消费者的那份表示;
+//     entity 常量纯内部, 改它的代价只在本仓。让内部去对齐对外, 而不是反过来。
+//  2. **靠隐式归一兜三处不一致太脆**。归一只在"经过 int 枚举中转"的那条路径上成立;
+//     任何绕过 int 中转、直接把字符串塞进 entity 的入口都会漏出原始的 "human_loop", 而它在
+//     归一后的世界里是个"认不出的值"。统一字面量后, 无论走不走 int 中转, 两端都是同一个词。
+//
+// **不保留对旧值 "humanloop" 的兼容识别** (薛一正 2026-07-29 二次确认): 本功能在研发中、
+// 未上线、无真实用户, 因此不存在存量旧值; sua_mode 只有"实验创建时写入
+// experiment.eval_conf.run_mode_config"这一个入口。双值兼容是永久的复杂度负担, 还会掩盖
+// "某处仍在用旧值"这种真问题。故 "humanloop" 从此与 "bogus" 同级 —— 是非法值, 消费侧应报错。
 const (
-	SuaModeHumanLoop SuaMode = "humanloop"
+	SuaModeHumanLoop SuaMode = "human_loop"
 	SuaModeLoop      SuaMode = "loop"
 	SuaModeFixed     SuaMode = "fixed"
 )

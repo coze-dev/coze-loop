@@ -610,3 +610,29 @@ func TestRunModeToInt_NoDuplicateCodes(t *testing.T) {
 	}
 	assert.Len(t, seen, len(modes))
 }
+
+// TestSuaModeLiteralsMatchOpenAPIIDL 钉住 sua_mode 三个常量的**字面量**, 使其与 OpenAPI IDL
+// 逐字一致 (cozeloop-idl-commercial open/coze/loop/evaluation/domain_openapi/experiment.thrift:
+// SuaMode_HumanLoop = "human_loop" / SuaMode_Loop = "loop" / SuaMode_Fixed = "fixed";
+// 生成码见 kitex_gen/.../domain_openapi/experiment.SuaModeHumanLoop)。
+//
+// 为什么必须对**裸字符串**断言: 全链路其它比对点 (commercial runtimeRunMode 等) 一律经
+// SuaModeXxx 常量取值, 常量改成什么它们都照样过 —— 唯独察觉不到"常量与 IDL 漂了"。而这正是
+// 本次修的 bug: 常量曾是无下划线的 "humanloop", 与 IDL 的 "human_loop" 不一致, 靠
+// OpenAPI 字符串→domain int→entity 字符串的**往返**把差异吃掉 (openAPISuaModeToDomain +
+// suaModeDTO2DO), 于是落库 eval_conf.run_mode_config.sua_mode 成了 "humanloop"
+// (实测实验 7590112179985613570)。统一后往返两端同词, 无隐式归一。
+//
+// 反向验证 (证明本测试真的在守): 把 SuaModeHumanLoop 改回 "humanloop", 本测试 FAIL
+// (expected "human_loop", actual "humanloop")。已还原。
+func TestSuaModeLiteralsMatchOpenAPIIDL(t *testing.T) {
+	assert.Equal(t, "human_loop", SuaModeHumanLoop,
+		"sua_mode 以对外契约 (OpenAPI IDL) 为准; 旧值 humanloop 已废弃且刻意不兼容")
+	assert.Equal(t, "loop", SuaModeLoop)
+	assert.Equal(t, "fixed", SuaModeFixed)
+
+	// 旧值不得再作为任何常量的值复活 —— 兼容双值会掩盖"某处仍在用旧值"这类真问题。
+	for _, m := range []SuaMode{SuaModeHumanLoop, SuaModeLoop, SuaModeFixed} {
+		assert.NotEqual(t, "humanloop", m, "旧值 humanloop 不该再出现在合法值集合里")
+	}
+}
