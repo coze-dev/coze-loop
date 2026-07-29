@@ -476,11 +476,14 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		item           = etec.EvalSetItem
 		expt           = etec.Expt
 		turn           = etec.Turn
-		// ★ 跨空间共享: evaluator 侧的 spaceID 仅用于加载评测集字段做 hydrate, 故用评测集来源空间
-		// (单集 Expt.EvalSetSpaceID / 多集 ItemConfig.EvalSetSourceSpaceID); evaluator 本身同调用方空间执行。
-		// 消费方基线用 expt.SpaceID (与原实现一致, 不依赖 etec.Event, 避免空指针)。
-		spaceID        = resolveLoadSpaceID(expt.SpaceID, etec.EvalSetSourceSpaceID())
-		evaluatorsConf = expt.EvalConf.ConnectorConf.EvaluatorsConf
+		// ★ 跨空间共享: evaluator 侧要拆两个空间 ——
+		//   evalSetSpaceID(=评测集来源空间 B): 仅用于 buildEvaluatorInputData 读评测集字段做 hydrate;
+		//   evaluatorSpaceID(=消费方 A, expt.SpaceID): evaluator 归属/执行/劫持/打点空间。evaluator 属于消费方 A,
+		//     若用来源空间 B 做 RunEvaluator 归属校验会 601205013 (evaluator not found in current space)。
+		//   (async 分支 asyncCallEvaluator 用的 etec.Event.SpaceID 本就是消费方 A, 语义一致。)
+		evalSetSpaceID   = resolveLoadSpaceID(expt.SpaceID, etec.EvalSetSourceSpaceID())
+		evaluatorSpaceID = expt.SpaceID
+		evaluatorsConf   = expt.EvalConf.ConnectorConf.EvaluatorsConf
 	)
 
 	if err := evaluatorsConf.Valid(ctx); err != nil {
@@ -530,7 +533,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext, expt.EvalConf)
+		inputData, err := e.buildEvaluatorInputData(ctx, evalSetSpaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext, expt.EvalConf)
 		if err != nil {
 			return nil, err
 		}
@@ -544,7 +547,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 
 		// 评估器劫持逻辑：根据输入数据前置判断是否需要劫持本次评估
 		if evaluatorRecord, intercepted, interceptErr := e.evaluatorService.ShouldInterceptEvaluator(ctx, &entity.RunEvaluatorRequest{
-			SpaceID:            spaceID,
+			SpaceID:            evaluatorSpaceID,
 			EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
 			InputData:          inputDataForCapture,
 			ExperimentID:       etec.Event.ExptID,
@@ -560,7 +563,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		}
 
 		baseRunReq := &entity.RunEvaluatorRequest{
-			SpaceID:            spaceID,
+			SpaceID:            evaluatorSpaceID,
 			Name:               "",
 			EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
 			InputData:          inputDataForCapture,
@@ -579,7 +582,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		} else {
 			pool.Add(func() error {
 				var err error
-				defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
+				defer e.metric.EmitTurnExecEvaluatorResult(evaluatorSpaceID, err != nil)
 				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, baseRunReq)
 				if err != nil {
 					if e.evaluatorService != nil {
@@ -637,11 +640,11 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 		item           = etec.EvalSetItem
 		expt           = etec.Expt
 		turn           = etec.Turn
-		// ★ 跨空间共享: evaluator 侧的 spaceID 仅用于加载评测集字段做 hydrate, 故用评测集来源空间
-		// (单集 Expt.EvalSetSpaceID / 多集 ItemConfig.EvalSetSourceSpaceID); evaluator 本身同调用方空间执行。
-		// 消费方基线用 expt.SpaceID (与原实现一致, 不依赖 etec.Event, 避免空指针)。
-		spaceID        = resolveLoadSpaceID(expt.SpaceID, etec.EvalSetSourceSpaceID())
-		evaluatorsConf = expt.EvalConf.ConnectorConf.EvaluatorsConf
+		// ★ 跨空间共享: 同 callEvaluators, 拆两个空间 —— evalSetSpaceID(来源 B)只喂 buildEvaluatorInputData
+		// 读评测集字段; evaluatorSpaceID(消费方 A)用于 evaluator 归属/执行/劫持/占位/打点, 否则 601205013。
+		evalSetSpaceID   = resolveLoadSpaceID(expt.SpaceID, etec.EvalSetSourceSpaceID())
+		evaluatorSpaceID = expt.SpaceID
+		evaluatorsConf   = expt.EvalConf.ConnectorConf.EvaluatorsConf
 	)
 
 	if err := evaluatorsConf.Valid(ctx); err != nil {
@@ -703,7 +706,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 				continue
 			}
 			req := &entity.GetEvaluationSetItemFieldParam{
-				SpaceID:         spaceID,
+				SpaceID:         evalSetSpaceID,
 				EvaluationSetID: turn.EvalSetID,
 				ItemPK:          turn.ItemID,
 				FieldName:       fd.Name,
@@ -744,7 +747,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 			// 落一条 Status=Skipped 的占位 record (带真实 ID), 供 GUI/数仓展示"已跳过";
 			// ref 表行由 storeTurnRunResult -> NewTurnEvaluatorResultRefs 从 Registered 数组自动跟上。
 			skippedRecord, serr := e.evaluatorService.CreateSkippedEvaluatorRecord(ctx, &entity.RunEvaluatorRequest{
-				SpaceID:            spaceID,
+				SpaceID:            evaluatorSpaceID,
 				ExperimentID:       etec.Event.ExptID,
 				ExperimentRunID:    etec.Event.ExptRunID,
 				ItemID:             item.ItemID,
@@ -792,7 +795,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 			effectiveRunConf = aliasRunConf
 		}
 
-		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ecForBuild, turn, targetFields, ev.GetInputSchemas(), etec.Ext, expt.EvalConf)
+		inputData, err := e.buildEvaluatorInputData(ctx, evalSetSpaceID, ev.EvaluatorType, ecForBuild, turn, targetFields, ev.GetInputSchemas(), etec.Ext, expt.EvalConf)
 		if err != nil {
 			return nil, err
 		}
@@ -827,7 +830,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 
 		// 评估器劫持: 跟老路径保持一致, 拦截就 collector.store 跳过实际调用
 		if evaluatorRecord, intercepted, interceptErr := e.evaluatorService.ShouldInterceptEvaluator(ctx, &entity.RunEvaluatorRequest{
-			SpaceID:            spaceID,
+			SpaceID:            evaluatorSpaceID,
 			EvaluatorVersionID: versionIDForCapture,
 			InputData:          inputDataForCapture,
 			ExperimentID:       etec.Event.ExptID,
@@ -857,9 +860,9 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 
 		pool.Add(func() error {
 			var err error
-			defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
+			defer e.metric.EmitTurnExecEvaluatorResult(evaluatorSpaceID, err != nil)
 			evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
-				SpaceID:            spaceID,
+				SpaceID:            evaluatorSpaceID,
 				Name:               "",
 				EvaluatorVersionID: versionIDForCapture,
 				InputData:          inputDataForCapture,
