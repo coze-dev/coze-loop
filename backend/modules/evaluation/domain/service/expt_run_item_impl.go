@@ -361,7 +361,9 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	}
 
 	if tid := existTurnRunResult.TargetResultID; tid > 0 {
-		targetRecord, err := e.evalTargetService.GetRecordByID(ctx, spaceID, tid)
+		// ★ 跨空间共享: 评测对象执行记录随执行落来源空间(冻结 TargetSpaceID), 按来源空间读;
+		// 用调用方空间读会得 nil → 异步回调 validateEvalTargetCtx 报 "target result must not be nil"。
+		targetRecord, err := e.evalTargetService.GetRecordByID(ctx, resolveLoadSpaceID(spaceID, eiec.TargetSourceSpaceID()), tid)
 		if err != nil {
 			return nil, err
 		}
