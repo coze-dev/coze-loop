@@ -140,6 +140,8 @@ var (
 		NewEvalOpenAPIApplication,
 		experimentSet,
 		evalconf.NewConfiger,
+		evalconf.NewSharedResourceConfigProvider,
+		domainservice.NewResourceAccessAuthorizer,
 		openapimetrics.OpenAPIMetricsSet,
 		domainservice.NewEvaluatorCallbackDispatcher,
 		wire.Bind(new(domainservice.IEvaluatorCallbackDispatcher), new(*domainservice.EvaluatorCallbackDispatcher)),

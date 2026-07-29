@@ -857,6 +857,84 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargets(t *testing.T) {
 	}
 }
 
+func TestEvalTargetApplicationImpl_ListSourceEvalTargets_SharedFiltersByResource(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+	mockResourceAccess := mocks.NewMockResourceAccessAuthorizer(ctrl)
+
+	const (
+		callerSpaceID = int64(123)
+		sourceSpaceID = int64(456)
+		readableID    = int64(101)
+		executableID  = int64(102)
+	)
+	targetType := domain_eval_target.EvalTargetType(1)
+	app := &EvalTargetApplicationImpl{
+		auth:                     mockAuth,
+		resourceAccessAuthorizer: mockResourceAccess,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			1: mockTypedOperator,
+		},
+	}
+
+	mockAuth.EXPECT().
+		Authorization(gomock.Any(), gomock.Any()).
+		Return(nil)
+	mockResourceAccess.EXPECT().
+		ListSharedResources(gomock.Any(), gomock.Any()).
+		Return([]*entity.ResourceAccessContext{
+			{
+				CallerSpaceID:   callerSpaceID,
+				ResourceSpaceID: sourceSpaceID,
+				ResourceType:    entity.SharedResourceTypeEvalTarget,
+				ResourceID:      readableID,
+				AccessMode:      entity.AccessModeShared,
+				AccessLevel:     entity.SharedAccessLevelReadable,
+				VersionPolicy:   entity.SharedVersionPolicyAll,
+			},
+			{
+				CallerSpaceID:   callerSpaceID,
+				ResourceSpaceID: sourceSpaceID,
+				ResourceType:    entity.SharedResourceTypeEvalTarget,
+				ResourceID:      executableID,
+				AccessMode:      entity.AccessModeShared,
+				AccessLevel:     entity.SharedAccessLevelExecute,
+				VersionPolicy:   entity.SharedVersionPolicySpecified,
+				SpecifiedIDs:    []int64{1002},
+			},
+		}, nil)
+	mockTypedOperator.EXPECT().
+		ListSource(gomock.Any(), gomock.Any()).
+		Return([]*entity.EvalTarget{
+			{SpaceID: sourceSpaceID, SourceTargetID: "101", EvalTargetType: 1},
+			{SpaceID: sourceSpaceID, SourceTargetID: "999", EvalTargetType: 1},
+			{SpaceID: sourceSpaceID, SourceTargetID: "102", EvalTargetType: 1},
+			{SpaceID: sourceSpaceID, SourceTargetID: "invalid", EvalTargetType: 1},
+		}, "", false, nil)
+
+	resp, err := app.ListSourceEvalTargets(context.Background(), &evaltargetapi.ListSourceEvalTargetsRequest{
+		WorkspaceID: callerSpaceID,
+		TargetType:  &targetType,
+		SharedOption: &domaincommon.SharedResourceOption{
+			IsShared:      gptr.Of(true),
+			SourceSpaceID: gptr.Of(sourceSpaceID),
+		},
+	})
+
+	assert.NoError(t, err)
+	if assert.Len(t, resp.EvalTargets, 2) {
+		assert.Equal(t, "101", resp.EvalTargets[0].GetSourceTargetID())
+		assert.Equal(t, entity.SharedAccessLevelReadable, resp.EvalTargets[0].GetSharedInfo().GetAccessLevel())
+		assert.Equal(t, entity.SharedVersionPolicyAll, resp.EvalTargets[0].GetSharedInfo().GetVersionPolicy())
+		assert.Equal(t, "102", resp.EvalTargets[1].GetSourceTargetID())
+		assert.Equal(t, entity.SharedAccessLevelExecute, resp.EvalTargets[1].GetSharedInfo().GetAccessLevel())
+		assert.Equal(t, entity.SharedVersionPolicySpecified, resp.EvalTargets[1].GetSharedInfo().GetVersionPolicy())
+	}
+}
+
 func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

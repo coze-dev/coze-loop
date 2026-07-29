@@ -50,6 +50,21 @@ type fakeOpenAPIMetric struct {
 	err             error
 }
 
+func TestParseSharedOptionOApi(t *testing.T) {
+	raw := `{"is_shared":true,"source_space_id":7533126599059701761}`
+	option, err := parseSharedOptionOApi(&raw)
+	require.NoError(t, err)
+	require.NotNil(t, option)
+	assert.True(t, option.IsShared)
+	require.NotNil(t, option.SourceSpaceID)
+	assert.Equal(t, int64(7533126599059701761), *option.SourceSpaceID)
+
+	invalid := `{"is_shared":`
+	option, err = parseSharedOptionOApi(&invalid)
+	require.Error(t, err)
+	assert.Nil(t, option)
+}
+
 func (f *fakeOpenAPIMetric) EmitOpenAPIMetric(_ context.Context, spaceID, evaluationSetID int64, method string, startTime int64, err error) {
 	f.called = true
 	f.spaceID = spaceID
@@ -571,7 +586,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 	tests := []struct {
 		name     string
 		buildReq func() *openapi.ListEvaluationSetsOApiRequest
-		setup    func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService)
+		setup    func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, resourceAccess *servicemocks.MockResourceAccessAuthorizer)
 		wantErr  int32
 		wantLen  int
 	}{
@@ -581,7 +596,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 				pageSize := int32(10)
 				return &openapi.ListEvaluationSetsOApiRequest{WorkspaceID: gptr.Of(workspaceID), PageSize: &pageSize}
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockResourceAccessAuthorizer) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
 			},
 			wantErr: errno.CommonNoPermissionCode,
@@ -591,7 +606,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 			buildReq: func() *openapi.ListEvaluationSetsOApiRequest {
 				return &openapi.ListEvaluationSetsOApiRequest{WorkspaceID: gptr.Of(workspaceID)}
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockResourceAccessAuthorizer) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
 				evalSetSvc.EXPECT().ListEvaluationSets(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetsParam{})).Return(nil, nil, nil, errors.New("list error"))
 			},
@@ -607,7 +622,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 					TagFilterRelation: &relation,
 				}
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockResourceAccessAuthorizer) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
 				evalSetSvc.EXPECT().ListEvaluationSets(gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -625,7 +640,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 					TagFilterRelation: &relation,
 				}
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockResourceAccessAuthorizer) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
 				total := gptr.Of(int64(2))
 				next := gptr.Of("next")
@@ -640,6 +655,73 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 			},
 			wantLen: 2,
 		},
+		{
+			name: "shared across all source spaces",
+			buildReq: func() *openapi.ListEvaluationSetsOApiRequest {
+				return &openapi.ListEvaluationSetsOApiRequest{
+					WorkspaceID:  gptr.Of(workspaceID),
+					SharedOption: gptr.Of(`{"is_shared":true}`),
+				}
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, resourceAccess *servicemocks.MockResourceAccessAuthorizer) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				sourceSpaceID := int64(9001)
+				resourceID := int64(101)
+				resourceAccess.EXPECT().ListSharedResources(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListSharedResourcesRequest{})).DoAndReturn(
+					func(_ context.Context, req *entity.ListSharedResourcesRequest) ([]*entity.ResourceAccessContext, error) {
+						assert.Equal(t, workspaceID, req.CallerSpaceID)
+						assert.Equal(t, entity.SharedResourceTypeEvalSet, req.ResourceType)
+						assert.Nil(t, req.SourceSpaceFilter)
+						return []*entity.ResourceAccessContext{{
+							CallerSpaceID:   workspaceID,
+							ResourceSpaceID: sourceSpaceID,
+							ResourceType:    entity.SharedResourceTypeEvalSet,
+							ResourceID:      resourceID,
+							AccessMode:      entity.AccessModeShared,
+							AccessLevel:     entity.SharedAccessLevelReadable,
+							VersionPolicy:   entity.SharedVersionPolicyAll,
+						}}, nil
+					},
+				)
+				evalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), []int64{resourceID}, gomock.Any(), gomock.Any()).
+					Return([]*entity.EvaluationSet{{ID: resourceID, SpaceID: sourceSpaceID, Name: "shared"}}, nil)
+			},
+			wantLen: 1,
+		},
+		{
+			name: "shared from specified source space",
+			buildReq: func() *openapi.ListEvaluationSetsOApiRequest {
+				return &openapi.ListEvaluationSetsOApiRequest{
+					WorkspaceID:  gptr.Of(workspaceID),
+					SharedOption: gptr.Of(`{"is_shared":true,"source_space_id":9002}`),
+				}
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, resourceAccess *servicemocks.MockResourceAccessAuthorizer) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				sourceSpaceID := int64(9002)
+				resourceID := int64(202)
+				resourceAccess.EXPECT().ListSharedResources(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListSharedResourcesRequest{})).DoAndReturn(
+					func(_ context.Context, req *entity.ListSharedResourcesRequest) ([]*entity.ResourceAccessContext, error) {
+						assert.Equal(t, workspaceID, req.CallerSpaceID)
+						assert.Equal(t, entity.SharedResourceTypeEvalSet, req.ResourceType)
+						require.NotNil(t, req.SourceSpaceFilter)
+						assert.Equal(t, sourceSpaceID, *req.SourceSpaceFilter)
+						return []*entity.ResourceAccessContext{{
+							CallerSpaceID:   workspaceID,
+							ResourceSpaceID: sourceSpaceID,
+							ResourceType:    entity.SharedResourceTypeEvalSet,
+							ResourceID:      resourceID,
+							AccessMode:      entity.AccessModeShared,
+							AccessLevel:     entity.SharedAccessLevelReadable,
+							VersionPolicy:   entity.SharedVersionPolicyAll,
+						}}, nil
+					},
+				)
+				evalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), []int64{resourceID}, gomock.Any(), gomock.Any()).
+					Return([]*entity.EvaluationSet{{ID: resourceID, SpaceID: sourceSpaceID, Name: "shared"}}, nil)
+			},
+			wantLen: 1,
+		},
 	}
 
 	for _, tt := range tests {
@@ -652,16 +734,18 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 
 			auth := rpcmocks.NewMockIAuthProvider(ctrl)
 			evalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+			resourceAccess := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
 			metric := &fakeOpenAPIMetric{}
 
 			app := &EvalOpenAPIApplication{
-				auth:                 auth,
-				evaluationSetService: evalSetSvc,
-				metric:               metric,
+				auth:                     auth,
+				evaluationSetService:     evalSetSvc,
+				resourceAccessAuthorizer: resourceAccess,
+				metric:                   metric,
 			}
 
 			req := tc.buildReq()
-			tc.setup(auth, evalSetSvc)
+			tc.setup(auth, evalSetSvc, resourceAccess)
 
 			resp, err := app.ListEvaluationSetsOApi(context.Background(), req)
 
