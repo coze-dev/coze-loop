@@ -344,8 +344,18 @@ func (p *SourceType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
-// ExptRunMode 实验评测模式(跑法)。对齐 runtime runModeFromInt: 1=single/2=fixed/3=sua/4=goal。
-// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
+// ExptRunMode 实验评测模式(跑法)。仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
+//
+// ⚠️ 本枚举值 **不等于** case-file 下发给 runtime 的 run_mode 整数, 两套编号并存:
+//
+//	本枚举(对外契约):  1=single_turn 2=fixed_script 3=sua_multi_turn 4=goal
+//	case-file/runtime: 1=single_turn 2=fixed_script 3=sua_loop 4=sua_human_loop 5=goal
+//
+// 因为 entity 侧把 sua_multi_turn 按 sua_mode 折叠成 sua_loop_multi_turn(3) /
+// sua_human_loop_multi_turn(4) 两个独立跑法, goal 被顶到 5。转换单点在
+// entity.RunModeToInt (backend/modules/evaluation/domain/entity/expt.go), runtime 侧对应
+// runModeFromInt (fornax_agent_eval_runtime/internal/interfaces/platform/casefile.go)。
+// 排查时切勿用本枚举的 4 去对 case-file 日志里的 run_mode=4 —— 那是 sua_human_loop, 不是 goal。
 type ExptRunMode int64
 
 const (
@@ -353,9 +363,9 @@ const (
 	ExptRunMode_SingleTurn ExptRunMode = 1
 	// 固定脚本多轮
 	ExptRunMode_FixedScriptMultiTurn ExptRunMode = 2
-	// SUA 驱动多轮
+	// SUA 驱动多轮(下发时按 sua_mode 折叠成 3 或 4)
 	ExptRunMode_SuaMultiTurn ExptRunMode = 3
-	// 目标驱动
+	// 目标驱动(下发时为 5)
 	ExptRunMode_Goal ExptRunMode = 4
 )
 
@@ -402,15 +412,21 @@ func (p *ExptRunMode) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
-// SuaMode 模拟用户(SUA)生成下一轮 query 的模式。对齐 runtime sua.Mode。
+// SuaMode 模拟用户(SUA)生成下一轮 query 的模式, 仅 run_mode=sua_multi_turn 时有意义。
+//
+// 注意它 **不下发给 runtime**: 下发 case-file 前由 commercial 的 runtimeRunModeInt 把
+// (run_mode, sua_mode) 折叠进单一 run_mode 整数(见上), sua_mode 字段本身不过线, 故 entity
+// 侧的 SuaModeToInt 已删。runtime 的 sua.Mode 只有 humanloop/loop 两个值、由 run_mode 反推。
 type SuaMode int64
 
 const (
-	// LLM 按人设驱动
+	// LLM 按人设驱动 → 折叠成 run_mode=4
 	SuaMode_HumanLoop SuaMode = 1
-	// 上轮 eval 结果透传成下一轮
+	// 上轮 eval 结果透传成下一轮 → 折叠成 run_mode=3
 	SuaMode_Loop SuaMode = 2
-	// 照固定脚本
+	// 已废弃: 与 run_mode=fixed_script_multi_turn 完全等价(同一份 run_conf.fixed_query_list,
+	// 只多起一个 sua-cli 子进程)。存量提交等价降级为 fixed_script_multi_turn 而非报错
+	// (薛一正 2026-07-29 确认); 保留本值仅为详情页回显存量实验。新实验请勿使用。
 	SuaMode_Fixed SuaMode = 3
 )
 
