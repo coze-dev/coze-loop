@@ -481,6 +481,28 @@ type GetThreadStatResponse struct {
 	UsedModels  []string
 }
 
+// AdjacentDirection 相邻方向：Prev=上一条（时间更早），Next=下一条（时间更晚），与 IDL enum 值对齐。
+type AdjacentDirection int32
+
+const (
+	AdjacentDirectionPrev AdjacentDirection = 1
+	AdjacentDirectionNext AdjacentDirection = 2
+)
+
+type GetAdjacentTraceRequest struct {
+	PlatformType loop_span.PlatformType
+	WorkspaceID  int64
+	ThreadID     string
+	TraceID      string
+	StartTime    int64 // 锚点 trace 起始时间，ms，作为 ±7 天窗口中心
+	Direction    AdjacentDirection
+}
+
+type GetAdjacentTraceResponse struct {
+	TraceID   string
+	StartTime int64 // ms
+}
+
 type GetAgentMetadataRequest struct {
 	WorkspaceID  int64
 	PlatformType loop_span.PlatformType
@@ -531,6 +553,7 @@ type ITraceService interface {
 	ListTraceChat(ctx context.Context, req *ListTraceChatRequest) (*ListTraceChatResponse, error)
 	ListThreadChat(ctx context.Context, req *ListThreadChatRequest) (*ListThreadChatResponse, error)
 	GetThreadStat(ctx context.Context, req *GetThreadStatRequest) (*GetThreadStatResponse, error)
+	GetAdjacentTrace(ctx context.Context, req *GetAdjacentTraceRequest) (*GetAdjacentTraceResponse, error)
 	GetAgentMetadata(ctx context.Context, req *GetAgentMetadataRequest) (*GetAgentMetadataResponse, error)
 }
 
@@ -3022,6 +3045,80 @@ func (r *TraceServiceImpl) ListThreadChat(ctx context.Context, req *ListThreadCh
 		Messages:      messages,
 		NextPageToken: listResp.PageToken,
 		HasMore:       listResp.HasMore,
+	}, nil
+}
+
+// GetAdjacentTrace 以锚点 trace 为中心，在同 thread 内按方向取相邻的一条 trace。
+// trace_id != 锚点 下推 CK 排除自身，(start_time, span_id) 复合序保证同起始时间稳定 tie-break，
+// 时间窗服务端固定为锚点 start_time 前后各 7 天，LIMIT 1 由 DB 直接返回 0 或 1 条。
+func (r *TraceServiceImpl) GetAdjacentTrace(ctx context.Context, req *GetAdjacentTraceRequest) (*GetAdjacentTraceResponse, error) {
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+
+	filters := &loop_span.FilterFields{
+		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldThreadId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{req.ThreadID},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			},
+			{
+				FieldName: loop_span.SpanFieldSpaceId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{strconv.FormatInt(req.WorkspaceID, 10)},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			},
+			{
+				FieldName: loop_span.SpanFieldTraceId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{req.TraceID},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumNotEq),
+			},
+		},
+	}
+
+	// 方向 → 时间窗 + 排序：next 取更晚一条（升序），prev 取更早一条（降序）。
+	var startAt, endAt int64
+	param := &repo.ListSpansParam{
+		WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:            tenants,
+		Filters:            filters,
+		Limit:              1,
+		NotQueryAnnotation: true,
+		SelectColumns:      []string{loop_span.SpanFieldTraceId, loop_span.SpanFieldStartTime, loop_span.SpanFieldSpanId},
+	}
+	switch req.Direction {
+	case AdjacentDirectionNext:
+		startAt = req.StartTime
+		endAt = req.StartTime + timeutil.Day2MillSec(7)
+		param.AscByStartTime = true
+	case AdjacentDirectionPrev:
+		startAt = req.StartTime - timeutil.Day2MillSec(7)
+		endAt = req.StartTime
+		param.DescByStartTime = true
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid direction"))
+	}
+	param.StartAt = startAt
+	param.EndAt = endAt
+
+	listResp, err := r.traceRepo.ListSpans(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+
+	if listResp == nil || len(listResp.Spans) == 0 {
+		return nil, errorx.NewByCode(obErrorx.ResourceNotFoundCode, errorx.WithExtraMsg("no adjacent trace in this thread"))
+	}
+
+	adjacent := listResp.Spans[0]
+	return &GetAdjacentTraceResponse{
+		TraceID:   adjacent.TraceID,
+		StartTime: timeutil.MicroSec2MillSec(adjacent.StartTime),
 	}, nil
 }
 

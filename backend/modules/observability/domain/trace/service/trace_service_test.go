@@ -6819,6 +6819,157 @@ func TestTraceServiceImpl_GetThreadStat(t *testing.T) {
 	})
 }
 
+func TestTraceServiceImpl_GetAdjacentTrace(t *testing.T) {
+	t.Run("next success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		var captured *repo.ListSpansParam
+		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+				captured = param
+				// StartTime 是 us，返回给 API 前转 ms。
+				return &repo.ListSpansResult{Spans: loop_span.SpanList{
+					{TraceID: "t-next", SpanID: "s1", StartTime: 5000000},
+				}}, nil
+			})
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		resp, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirectionNext,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, "t-next", resp.TraceID)
+		assert.Equal(t, int64(5000), resp.StartTime) // us→ms
+
+		// 断言下推参数：trace_id != 锚点 + 升序 + LIMIT 1 + 7 天窗
+		assert.NotNil(t, captured)
+		assert.Equal(t, int32(1), captured.Limit)
+		assert.True(t, captured.AscByStartTime)
+		assert.False(t, captured.DescByStartTime)
+		assert.Equal(t, int64(1000), captured.StartAt)
+		assert.Equal(t, int64(1000)+timeutil.Day2MillSec(7), captured.EndAt)
+		var hasNotEqTraceID bool
+		for _, f := range captured.Filters.FilterFields {
+			if f.FieldName == loop_span.SpanFieldTraceId && f.QueryType != nil && *f.QueryType == loop_span.QueryTypeEnumNotEq {
+				hasNotEqTraceID = true
+				assert.Equal(t, []string{"t-anchor"}, f.Values)
+			}
+		}
+		assert.True(t, hasNotEqTraceID)
+	})
+
+	t.Run("prev success desc order", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		var captured *repo.ListSpansParam
+		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+				captured = param
+				return &repo.ListSpansResult{Spans: loop_span.SpanList{
+					{TraceID: "t-prev", SpanID: "s0", StartTime: 800000},
+				}}, nil
+			})
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		resp, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    10000,
+			Direction:    AdjacentDirectionPrev,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "t-prev", resp.TraceID)
+		assert.Equal(t, int64(800), resp.StartTime)
+		assert.True(t, captured.DescByStartTime)
+		assert.False(t, captured.AscByStartTime)
+		assert.Equal(t, int64(10000)-timeutil.Day2MillSec(7), captured.StartAt)
+		assert.Equal(t, int64(10000), captured.EndAt)
+	})
+
+	t.Run("boundary not found", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		_, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirectionNext,
+		})
+		assert.Error(t, err)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		assert.Equal(t, int32(obErrorx.ResourceNotFoundCode), statusErr.Code())
+	})
+
+	t.Run("invalid direction", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		_, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirection(99),
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("tenant error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, _, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error"))
+		r := newTraceServiceForChat(ctrl, fields.traceRepo.(*repomocks.MockITraceRepo), fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		_, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirectionNext,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("repo error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		_, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirectionNext,
+		})
+		assert.Error(t, err)
+	})
+}
+
 func TestTraceServiceImpl_buildChatMessages(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

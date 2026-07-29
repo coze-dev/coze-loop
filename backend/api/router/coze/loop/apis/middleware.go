@@ -2444,3 +2444,8 @@ func _killexperimentoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _getadjacenttraceMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

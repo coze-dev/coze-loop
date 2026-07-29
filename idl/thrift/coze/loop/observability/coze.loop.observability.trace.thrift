@@ -588,6 +588,29 @@ struct ChatMessage {
     2: optional span.OutputSpan span (go.tag='json:"span,omitempty"')
 }
 
+enum AdjacentDirection {
+    Prev = 1
+    Next = 2
+}
+
+struct GetAdjacentTraceRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: required string thread_id (go.tag='json:"thread_id"', api.body="thread_id", vt.min_size="1")
+    3: required string trace_id (go.tag='json:"trace_id"', api.body="trace_id", vt.min_size="1")
+    4: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time")
+    5: required AdjacentDirection direction (go.tag='json:"direction"', api.body="direction")
+    6: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
+
+    255: optional base.Base Base
+}
+
+struct GetAdjacentTraceResponse {
+    1: optional string trace_id (go.tag='json:"trace_id,omitempty"')
+    2: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time,omitempty"')
+
+    255: optional base.BaseResp BaseResp
+}
+
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
     ListPreSpanResponse ListPreSpan(1: ListPreSpanRequest req) (api.post = '/api/observability/v1/spans/pre_list')
@@ -617,6 +640,7 @@ service TraceService {
     ListTraceChatResponse ListTraceChat(1: ListTraceChatRequest req) (api.post = '/api/observability/v1/traces/chat/list')
     ListThreadChatResponse ListThreadChat(1: ListThreadChatRequest req) (api.post = '/api/observability/v1/threads/chat/list')
     GetThreadStatResponse GetThreadStat(1: GetThreadStatRequest req) (api.post = '/api/observability/v1/threads/stat')
+    GetAdjacentTraceResponse GetAdjacentTrace(1: GetAdjacentTraceRequest req) (api.post = '/api/observability/v1/threads/adjacent_trace')
     UpsertColumnExtractConfigResponse UpsertColumnExtractConfig(1: UpsertColumnExtractConfigRequest req) (api.post = '/api/observability/v1/column_extract_config')
     GetColumnExtractConfigResponse GetColumnExtractConfig(1: GetColumnExtractConfigRequest req) (api.get = '/api/observability/v1/column_extract_config')
     GetAgentMetadataResponse GetAgentMetadata(1: GetAgentMetadataRequest req) (api.get = '/api/observability/v1/trace/agent/metadata')
