@@ -70,6 +70,12 @@ enum SuaMode {
 // 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。sua_model_id 传平台模型 ID,
 // 服务端 operator 用它经 GetModelAndAccount 解析出 api_key/base_url 注入 case-file
 // (本期可经 TCC 劫持为专有模型), 密钥绝不进请求体/落库明文。
+//
+// sua_goal / sua_persona / sua_behavioral_constraints / sua_pe_template 与 max_turns 是
+// **两级配置的实验级一半**: 题目级同名字段在 ItemRunConf 上。**合并规则: 题目级优先、实验级兜底**
+// —— 实验级是整个实验的默认值, 题目级是单题特例, 单题特例赢 (题目 schema 亦如此声明)。
+// 合并逐字段在 runtime 侧进行 (internal/application/orchestration.go suaConfig)。
+// 此前这五项只有题目级一半, 实验粒度配了 100% 无效, 且 runtime 读实验级的代码因恒为空而是死代码。
 struct RunModeConfig {
     1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
     2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
@@ -77,6 +83,17 @@ struct RunModeConfig {
     4: optional i64 sua_model_id (api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
     // SUA 模型名, 与 sua_model_id 二选一: operator 优先用 name 直取模型, id 走平台解析 (GetModelAndAccount)。
     5: optional string sua_model_name (go.tag = 'json:"sua_model_name"')
+    // sua_goal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
+    6: optional string sua_goal (go.tag = 'json:"sua_goal"')
+    // sua_persona 模拟用户人设。human_loop 跑法必需 —— sua-cli 缺它报 INVALID_CONFIG。
+    7: optional string sua_persona (go.tag = 'json:"sua_persona"')
+    // sua_behavioral_constraints 模拟用户的行为约束 (如"每轮只追问一个点""不泄露参考答案")。
+    8: optional string sua_behavioral_constraints (go.tag = 'json:"sua_behavioral_constraints"')
+    // sua_pe_template loop 跑法必需的 PE 模板, **必须含 {{eval_result}} 占位符** ——
+    // sua-cli 用它把上轮评估结果拼成下一轮追问; 缺它 loop 直接 INVALID_CONFIG。
+    9: optional string sua_pe_template (go.tag = 'json:"sua_pe_template"')
+    // max_turns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
+    10: optional i32 max_turns (go.tag = 'json:"max_turns"')
 }
 
 typedef string Visibility(ts.enum="true")

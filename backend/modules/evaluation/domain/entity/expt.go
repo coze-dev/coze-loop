@@ -441,12 +441,32 @@ const (
 // RunModeConfig 实验级跑法配置。run_mode 是顶层跑法总开关;
 // sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 生效。
 // sua_model_id 传平台模型 ID, operator 经 GetModelAndAccount 解析密钥注入 case-file, 绝不落库明文。
+//
+// SUA 行为四项 (SuaGoal / SuaPersona / SuaBehavioralConstraints / SuaPETemplate) 与 MaxTurns
+// 是**两级配置的实验级一半**, 题目级同名字段在 ItemRunConf 上。**合并规则: 题目级优先、
+// 实验级兜底** —— 实验级是整个实验的默认值, 题目级是单题特例, 单题特例赢。合并逐字段在
+// runtime 侧进行 (internal/application/orchestration.go suaConfig), 平台只负责如实下发两级值。
+//
+// 字段名与 runtime orchestration.RunModeConfig 的 json tag 对齐 (sua_goal / sua_persona /
+// sua_behavioral_constraints / sua_pe_template / max_turns), 便于逐段对账。
 type RunModeConfig struct {
 	RunMode       RunMode `json:"run_mode,omitempty"`
 	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
 	SuaMode       SuaMode `json:"sua_mode,omitempty"`
 	SuaModelID    int64   `json:"sua_model_id,omitempty"`
 	SuaModelName  string  `json:"sua_model_name,omitempty"`
+
+	// SuaGoal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
+	SuaGoal string `json:"sua_goal,omitempty"`
+	// SuaPersona 模拟用户人设。human_loop 跑法必需 —— sua-cli 缺它报 INVALID_CONFIG。
+	SuaPersona string `json:"sua_persona,omitempty"`
+	// SuaBehavioralConstraints 模拟用户的行为约束 (如"每轮只追问一个点""不泄露参考答案")。
+	SuaBehavioralConstraints string `json:"sua_behavioral_constraints,omitempty"`
+	// SuaPETemplate loop 跑法必需的 PE 模板, **必须含 {{eval_result}} 占位符** ——
+	// sua-cli 用它把上轮评估结果拼成下一轮追问; 缺它 loop 直接 INVALID_CONFIG。
+	SuaPETemplate string `json:"sua_pe_template,omitempty"`
+	// MaxTurns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
+	MaxTurns int `json:"max_turns,omitempty"`
 }
 
 // ItemRunConf 题目级多轮/SUA 运行配置, 冻结进 expt_item_ref.item_config (ItemTargetConf.RunConf)。

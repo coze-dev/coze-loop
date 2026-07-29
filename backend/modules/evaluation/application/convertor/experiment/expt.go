@@ -1362,6 +1362,13 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 		SuaModelID:    dto.GetSuaModelID(),
 		SuaModelName:  dto.GetSuaModelName(),
 		MaxRunMinutes: int(dto.GetMaxRunMinutes()),
+		// SUA 行为四项 + max_turns: 两级配置的实验级一半, 原样透传 (题目级优先的合并在
+		// runtime 侧做, 平台不在这里裁决)。空值即"实验级没配", 由题目级或默认值接管。
+		SuaGoal:                  dto.GetSuaGoal(),
+		SuaPersona:               dto.GetSuaPersona(),
+		SuaBehavioralConstraints: dto.GetSuaBehavioralConstraints(),
+		SuaPETemplate:            dto.GetSuaPeTemplate(),
+		MaxTurns:                 int(dto.GetMaxTurns()),
 	}
 	if dto.IsSetRunMode() {
 		do.RunMode = suaRunModeDTO2DO(dto.GetRunMode())
@@ -1419,8 +1426,8 @@ func suaModeDTO2DO(m domain_expt.SuaMode) entity.SuaMode {
 
 // runModeConfigDO2DTO 把实验级跑法配置回显给 DTO (与 runModeConfigDTO2DO 反向)。
 // 入参为空 (未配多轮/老实验) 返回 nil, DTO 字段留空不影响老实验。
-// ⚠️ 只回显 run_mode/max_run_minutes/sua_mode/sua_model_id; api_key/base_url 是运行时从 TCC
-// 解析注入 case-file 的密钥, 领域实体本就不持有, 绝不落回显。
+// ⚠️ 不回显 api_key/base_url: 那是运行时从 TCC 解析注入 case-file 的密钥, 领域实体本就不持有。
+// SUA 行为四项 + max_turns 是用户自己填的配置 (非密钥), 回显它们才能让详情页显示"这个实验配了什么"。
 func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 	if do == nil {
 		return nil
@@ -1437,6 +1444,23 @@ func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 	}
 	if do.SuaMode != "" {
 		dto.SuaMode = gptr.Of(suaModeDO2DTO(do.SuaMode))
+	}
+	// 逐字段判空回显 (与上面 SuaModelName/MaxRunMinutes 同一风格): 未配的字段保持 nil,
+	// 让"没配"和"配了空串"在回显上可区分, 也不给详情页塞一堆空字段。
+	if do.SuaGoal != "" {
+		dto.SuaGoal = gptr.Of(do.SuaGoal)
+	}
+	if do.SuaPersona != "" {
+		dto.SuaPersona = gptr.Of(do.SuaPersona)
+	}
+	if do.SuaBehavioralConstraints != "" {
+		dto.SuaBehavioralConstraints = gptr.Of(do.SuaBehavioralConstraints)
+	}
+	if do.SuaPETemplate != "" {
+		dto.SuaPeTemplate = gptr.Of(do.SuaPETemplate)
+	}
+	if do.MaxTurns != 0 {
+		dto.MaxTurns = gptr.Of(int32(do.MaxTurns))
 	}
 	return dto
 }

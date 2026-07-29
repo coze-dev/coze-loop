@@ -145,6 +145,9 @@ const SuaMode SuaMode_Fixed = "fixed"          // 照固定脚本
 // RunModeConfig 实验级跑法配置 (OpenAPI 版本, 对齐 domain RunModeConfig)。run_mode 是顶层跑法总开关;
 // sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
 // 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。sua_model_id 传平台模型 ID。
+//
+// 字段号与 domain 版**逐一对齐** (6-10 为两级配置的实验级一半: SUA 行为四项 + max_turns);
+// 合并规则「题目级优先、实验级兜底」详见 domain/expt.thrift 的同名 struct 注释。
 struct RunModeConfig {
     1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
     2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
@@ -152,6 +155,17 @@ struct RunModeConfig {
     4: optional i64 sua_model_id (api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
     // SUA 模型名, 与 sua_model_id 二选一: operator 优先用 name 直取模型, id 走平台解析。
     5: optional string sua_model_name (go.tag = 'json:"sua_model_name"')
+    // sua_goal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
+    6: optional string sua_goal (go.tag = 'json:"sua_goal"')
+    // sua_persona 模拟用户人设。human_loop 跑法必需 —— sua-cli 缺它报 INVALID_CONFIG。
+    7: optional string sua_persona (go.tag = 'json:"sua_persona"')
+    // sua_behavioral_constraints 模拟用户的行为约束 (如"每轮只追问一个点""不泄露参考答案")。
+    8: optional string sua_behavioral_constraints (go.tag = 'json:"sua_behavioral_constraints"')
+    // sua_pe_template loop 跑法必需的 PE 模板, **必须含 {{eval_result}} 占位符**;
+    // 缺它 loop 直接 INVALID_CONFIG。
+    9: optional string sua_pe_template (go.tag = 'json:"sua_pe_template"')
+    // max_turns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
+    10: optional i32 max_turns (go.tag = 'json:"max_turns"')
 }
 
 // per-set 运行期增量信息 (纯读模型; Get 全填含详情, List 只填 id/count)

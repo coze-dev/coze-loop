@@ -2975,6 +2975,13 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domain
 		MaxRunMinutes: c.MaxRunMinutes,
 		SuaModelID:    c.SuaModelID,
 		SuaModelName:  c.SuaModelName,
+		// SUA 行为四项 + max_turns 无枚举可校验, 原样透传 (两级配置的实验级一半,
+		// 题目级优先的合并在 runtime 侧做)。
+		SuaGoal:                  c.SuaGoal,
+		SuaPersona:               c.SuaPersona,
+		SuaBehavioralConstraints: c.SuaBehavioralConstraints,
+		SuaPeTemplate:            c.SuaPeTemplate,
+		MaxTurns:                 c.MaxTurns,
 	}
 	if c.RunMode != nil {
 		rm, ok := openAPIRunModeToDomain(*c.RunMode)
