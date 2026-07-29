@@ -305,11 +305,66 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		Session:                 etec.Event.Session,
 		Callee:                  callee,
 		EnableExtractTrajectory: etc.EnableExtractTrajectory,
+		TargetID:                pickTargetID(etec),
+		DatasetID:               pickDatasetID(etec),
+		DatasetVersionID:        etec.EvalSetVersionID,
+		ItemKey:                 pickItemKey(etec),
+		DatasetKey:              pickDatasetKey(etec),
 	}); err != nil {
 		return nil, err
 	}
 
 	return targetRecord, nil
+}
+
+// pickTargetID / pickDatasetID / pickItemKey / pickDatasetKey 尽量宽松地从 etec 中提取字段, 缺失时返回零值。
+// 这些字段仅用于沙箱 step 上报 tag 反查, 缺失时上报侧走占位符, 不会 panic。
+func pickTargetID(etec *entity.ExptTurnEvalCtx) int64 {
+	if etec == nil || etec.Expt == nil || etec.Expt.Target == nil {
+		return 0
+	}
+	return etec.Expt.Target.ID
+}
+
+func pickDatasetID(etec *entity.ExptTurnEvalCtx) int64 {
+	if etec == nil {
+		return 0
+	}
+	if etec.EvalSetItem != nil && etec.EvalSetItem.EvaluationSetID != 0 {
+		return etec.EvalSetItem.EvaluationSetID
+	}
+	if etec.Expt == nil {
+		return 0
+	}
+	return etec.Expt.EvalSetID
+}
+
+func pickItemKey(etec *entity.ExptTurnEvalCtx) string {
+	if etec == nil || etec.EvalSetItem == nil {
+		return ""
+	}
+	return etec.EvalSetItem.ItemKey
+}
+
+// pickDatasetKey 解析当前 item 归属评测集的 dataset_key。
+// MultiSetConfig 下 item 可能归属非主集, 因此优先按 (evalSetID, evalSetVersionID) 从
+// expt.EvalSetDetails 反查, 命中不到再回落 expt.EvalSet (兼容 SingleSet 主集)。
+// 与 buildEvalSetItemMeta 保持同一寻源逻辑, 避免看板 dataset_key 缺失。
+func pickDatasetKey(etec *entity.ExptTurnEvalCtx) string {
+	if etec == nil || etec.Expt == nil {
+		return ""
+	}
+	evalSetID := pickDatasetID(etec)
+	var evalSetVersionID int64
+	if etec.EvalSetVersionID != 0 {
+		evalSetVersionID = etec.EvalSetVersionID
+	} else {
+		evalSetVersionID = etec.Expt.EvalSetVersionID
+	}
+	if evalSet := findEvalSetForItemMeta(etec.Expt, evalSetID, evalSetVersionID); evalSet != nil {
+		return evalSet.DatasetKey
+	}
+	return ""
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) ([]*entity.EvaluatorRecord, error) {

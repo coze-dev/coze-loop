@@ -27,6 +27,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	datafilter "github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	configermocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
@@ -1819,6 +1821,137 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEvalOpenAPIApplication_ReportEvalTargetStepMetric(t *testing.T) {
+	t.Parallel()
+
+	build := func(t *testing.T) (*EvalOpenAPIApplication, *metricsmocks.MockSandboxAgentMetrics, *repomocks.MockIEvalAsyncRepo, *gomock.Controller) {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock, asyncRepo: asyncRepo}
+		return app, mock, asyncRepo, ctrl
+	}
+
+	t.Run("nil_req_returns_ok", func(t *testing.T) {
+		app, _, _, ctrl := build(t)
+		defer ctrl.Finish()
+		resp, err := app.ReportEvalTargetStepMetric(context.Background(), nil)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	t.Run("nil_metric_returns_ok", func(t *testing.T) {
+		app := &EvalOpenAPIApplication{}
+		resp, err := app.ReportEvalTargetStepMetric(context.Background(), &openapi.ReportEvalTargetStepMetricRequest{})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	t.Run("started_event_reverse_lookups_tags_from_actx", func(t *testing.T) {
+		app, mock, asyncRepo, ctrl := build(t)
+		defer ctrl.Finish()
+		started := openapi.EvalTargetStepEventType_STARTED
+		req := &openapi.ReportEvalTargetStepMetricRequest{
+			WorkspaceID: gptr.Of(int64(1)),
+			InvokeID:    gptr.Of(int64(999)),
+			EventType:   &started,
+			StepName:    gptr.Of("plan"),
+		}
+		asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "999").Return(&entity.EvalAsyncCtx{
+			Event:            &entity.ExptItemEvalEvent{ExptID: 100, EvalSetItemID: 200},
+			DatasetID:        300,
+			DatasetVersionID: 400,
+			TargetID:         500,
+			ItemKey:          "item-key",
+			DatasetKey:       "ds-key",
+		}, nil)
+		mock.EXPECT().EmitStepStarted(gomock.Any()).Do(func(tags metrics.SandboxAgentStepTags) {
+			assert.Equal(t, int64(100), tags.ExperimentID)
+			assert.Equal(t, int64(200), tags.ItemID)
+			assert.Equal(t, "999", tags.InvokeID)
+			assert.Equal(t, int64(300), tags.DatasetID)
+			assert.Equal(t, int64(400), tags.DatasetVersion)
+			assert.Equal(t, int64(500), tags.TargetID)
+			assert.Equal(t, "plan", tags.StepName)
+			assert.Equal(t, "item-key", tags.ItemKey)
+			assert.Equal(t, "ds-key", tags.DatasetKey)
+		})
+		resp, err := app.ReportEvalTargetStepMetric(context.Background(), req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	t.Run("finished_success_event_reverse_lookups_and_emits", func(t *testing.T) {
+		app, mock, asyncRepo, ctrl := build(t)
+		defer ctrl.Finish()
+		finished := openapi.EvalTargetStepEventType_FINISHED
+		req := &openapi.ReportEvalTargetStepMetricRequest{
+			InvokeID:   gptr.Of(int64(1)),
+			EventType:  &finished,
+			StepName:   gptr.Of("act"),
+			Success:    gptr.Of(true),
+			DurationMs: gptr.Of(int64(1500)),
+		}
+		asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "1").Return(&entity.EvalAsyncCtx{
+			Event:    &entity.ExptItemEvalEvent{ExptID: 10},
+			TargetID: 11,
+		}, nil)
+		mock.EXPECT().EmitStepFinished(gomock.Any(), nil, int32(0), int64(1500)).Do(func(tags metrics.SandboxAgentStepTags, _ error, _ int32, _ int64) {
+			assert.Equal(t, int64(10), tags.ExperimentID)
+			assert.Equal(t, int64(11), tags.TargetID)
+		})
+		_, err := app.ReportEvalTargetStepMetric(context.Background(), req)
+		require.NoError(t, err)
+	})
+
+	t.Run("finished_failure_event_passes_marker_error_and_code", func(t *testing.T) {
+		app, mock, asyncRepo, ctrl := build(t)
+		defer ctrl.Finish()
+		finished := openapi.EvalTargetStepEventType_FINISHED
+		req := &openapi.ReportEvalTargetStepMetricRequest{
+			InvokeID:   gptr.Of(int64(2)),
+			EventType:  &finished,
+			StepName:   gptr.Of("act"),
+			Success:    gptr.Of(false),
+			DurationMs: gptr.Of(int64(800)),
+			ErrorCode:  gptr.Of(int32(601200701)),
+		}
+		asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "2").Return(nil, nil)
+		mock.EXPECT().EmitStepFinished(gomock.Any(), gomock.Not(gomock.Nil()), int32(601200701), int64(800))
+		_, err := app.ReportEvalTargetStepMetric(context.Background(), req)
+		require.NoError(t, err)
+	})
+
+	t.Run("actx_lookup_error_still_emits_with_placeholder_tags", func(t *testing.T) {
+		app, mock, asyncRepo, ctrl := build(t)
+		defer ctrl.Finish()
+		started := openapi.EvalTargetStepEventType_STARTED
+		req := &openapi.ReportEvalTargetStepMetricRequest{
+			InvokeID:  gptr.Of(int64(3)),
+			EventType: &started,
+			StepName:  gptr.Of("act"),
+		}
+		asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "3").Return(nil, errors.New("redis down"))
+		mock.EXPECT().EmitStepStarted(gomock.Any()).Do(func(tags metrics.SandboxAgentStepTags) {
+			assert.Equal(t, int64(0), tags.ExperimentID)
+			assert.Equal(t, "3", tags.InvokeID)
+		})
+		_, err := app.ReportEvalTargetStepMetric(context.Background(), req)
+		require.NoError(t, err)
+	})
+
+	t.Run("unknown_event_type_does_not_emit", func(t *testing.T) {
+		app, _, asyncRepo, ctrl := build(t)
+		defer ctrl.Finish()
+		asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "4").Return(nil, nil)
+		_, err := app.ReportEvalTargetStepMetric(context.Background(), &openapi.ReportEvalTargetStepMetricRequest{
+			InvokeID: gptr.Of(int64(4)),
+		})
+		require.NoError(t, err)
+	})
 }
 
 func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
@@ -8005,4 +8138,104 @@ func TestEvalOpenAPIApplication_UpdateExptRunConfOApi(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestEvalOpenAPIApplication_emitSandboxAgentInvokeFinished 覆盖沙箱 agent 回调侧
+// invoke_finished / invoke_duration 打点的所有分支：短路（metric/req/actx 缺失）、
+// callee 非沙箱不上报、status=SUCCESS / FAILED 两条业务路径。
+func TestEvalOpenAPIApplication_emitSandboxAgentInvokeFinished(t *testing.T) {
+	t.Parallel()
+
+	buildReq := func(status spi.InvokeEvalTargetStatus, errCode int32) *openapi.ReportEvalTargetInvokeResultRequest {
+		return &openapi.ReportEvalTargetInvokeResultRequest{
+			WorkspaceID: gptr.Of(int64(1)),
+			InvokeID:    gptr.Of(int64(9001)),
+			Status:      &status,
+			ErrorCode:   gptr.Of(errCode),
+		}
+	}
+
+	t.Run("nil metric skips", func(t *testing.T) {
+		app := &EvalOpenAPIApplication{}
+		// 不 panic 即为通过
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), &entity.EvalAsyncCtx{Callee: sandboxAgentAsyncCallee})
+	})
+
+	t.Run("nil req skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		// EmitInvokeFinished 不应被调用
+		app.emitSandboxAgentInvokeFinished(context.Background(), nil, &entity.EvalAsyncCtx{Callee: sandboxAgentAsyncCallee})
+	})
+
+	t.Run("nil actx skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), nil)
+	})
+
+	t.Run("non sandbox callee skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), &entity.EvalAsyncCtx{Callee: "other_callee"})
+	})
+
+	t.Run("success status emits with nil error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		submitMS := time.Now().Add(-time.Second).UnixMilli()
+		actx := &entity.EvalAsyncCtx{
+			Callee:           sandboxAgentAsyncCallee,
+			AsyncUnixMS:      submitMS,
+			Event:            &entity.ExptItemEvalEvent{ExptID: 100, EvalSetItemID: 200},
+			DatasetID:        300,
+			DatasetVersionID: 400,
+			TargetID:         500,
+			ItemKey:          "ik",
+			DatasetKey:       "dk",
+		}
+		mock.EXPECT().EmitInvokeFinished(gomock.Any(), nil, int32(0), gomock.Any()).Do(func(tags metrics.SandboxAgentInvokeTags, err error, code int32, submit time.Time) {
+			assert.Equal(t, "9001", tags.InvokeID)
+			assert.Equal(t, int64(100), tags.ExperimentID)
+			assert.Equal(t, int64(200), tags.ItemID)
+			assert.Equal(t, int64(300), tags.DatasetID)
+			assert.Equal(t, int64(400), tags.DatasetVersion)
+			assert.Equal(t, int64(500), tags.TargetID)
+			assert.Equal(t, "ik", tags.ItemKey)
+			assert.Equal(t, "dk", tags.DatasetKey)
+			assert.Equal(t, submitMS, submit.UnixMilli())
+		})
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), actx)
+	})
+
+	t.Run("failed status passes marker error and error code", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		actx := &entity.EvalAsyncCtx{Callee: sandboxAgentAsyncCallee}
+		mock.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Not(gomock.Nil()), int32(601200999), gomock.Any()).Do(func(tags metrics.SandboxAgentInvokeTags, err error, code int32, submit time.Time) {
+			assert.Equal(t, "9001", tags.InvokeID)
+			// AsyncUnixMS 未落地时 submitTime 走 time.Time 零值，UnixMilli 会返回负值，用 IsZero 判定
+			assert.True(t, submit.IsZero(), "expect zero submitTime when AsyncUnixMS is 0")
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "sandbox agent invoke reported failed")
+		})
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_FAILED, 601200999), actx)
+	})
+}
+
+// TestSandboxAgentInvokeFailure 保证 marker error 实现 error 接口且返回稳定文案。
+func TestSandboxAgentInvokeFailure(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "sandbox agent invoke reported failed", (&sandboxAgentInvokeFailure{}).Error())
+	assert.Equal(t, "sandbox agent step reported failed", (&sandboxAgentStepFailure{}).Error())
 }

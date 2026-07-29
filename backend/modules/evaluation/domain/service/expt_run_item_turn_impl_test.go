@@ -4941,3 +4941,69 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputDataExt(t *testing.T) 
 		assert.False(t, exists)
 	})
 }
+
+// TestPickHelpers 覆盖 pickTargetID / pickDatasetID / pickItemKey / pickDatasetKey：
+// 每个 helper 都要保证 nil / 缺字段 / 命中三条路径下的返回值。
+func TestPickHelpers(t *testing.T) {
+	t.Parallel()
+
+	t.Run("pickTargetID", func(t *testing.T) {
+		assert.Equal(t, int64(0), pickTargetID(nil))
+		// 无 Expt 时返回 0（生产路径的 etec 必然有 ExptItemEvalCtx，因此仅测 Expt=nil 的 nil-check）
+		assert.Equal(t, int64(0), pickTargetID(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}))
+		assert.Equal(t, int64(0), pickTargetID(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{Expt: &entity.Experiment{}}}))
+		assert.Equal(t, int64(42), pickTargetID(&entity.ExptTurnEvalCtx{
+			ExptItemEvalCtx: &entity.ExptItemEvalCtx{Expt: &entity.Experiment{Target: &entity.EvalTarget{ID: 42}}},
+		}))
+	})
+
+	t.Run("pickDatasetID prefers EvalSetItem.EvaluationSetID", func(t *testing.T) {
+		assert.Equal(t, int64(0), pickDatasetID(nil))
+		// EvalSetItem 命中优先
+		assert.Equal(t, int64(11), pickDatasetID(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetItem: &entity.EvaluationSetItem{EvaluationSetID: 11},
+			Expt:        &entity.Experiment{EvalSetID: 22},
+		}}))
+		// EvalSetItem.EvaluationSetID 为 0 时回落 expt.EvalSetID
+		assert.Equal(t, int64(22), pickDatasetID(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetItem: &entity.EvaluationSetItem{},
+			Expt:        &entity.Experiment{EvalSetID: 22},
+		}}))
+		// expt 缺失时 0
+		assert.Equal(t, int64(0), pickDatasetID(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}))
+	})
+
+	t.Run("pickItemKey", func(t *testing.T) {
+		assert.Equal(t, "", pickItemKey(nil))
+		assert.Equal(t, "", pickItemKey(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}))
+		assert.Equal(t, "ik", pickItemKey(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			EvalSetItem: &entity.EvaluationSetItem{ItemKey: "ik"},
+		}}))
+	})
+
+	t.Run("pickDatasetKey by expt.EvalSet fallback", func(t *testing.T) {
+		assert.Equal(t, "", pickDatasetKey(nil))
+		assert.Equal(t, "", pickDatasetKey(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}))
+		// 无 EvalSetItem/EvalSetDetails 时走 expt.EvalSet
+		expt := &entity.Experiment{EvalSetID: 33, EvalSet: &entity.EvaluationSet{ID: 33, DatasetKey: "main-key"}}
+		assert.Equal(t, "main-key", pickDatasetKey(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt: expt,
+		}}))
+	})
+
+	t.Run("pickDatasetKey by EvalSetDetails match", func(t *testing.T) {
+		// 多集场景：按 (evalSetID, evalSetVersionID) 命中 EvalSetDetails
+		expt := &entity.Experiment{
+			EvalSetVersionID: 999,
+			EvalSetDetails: []*entity.ExptEvalSetDetail{
+				{EvalSetID: 100, EvalSetVersionID: 200, EvalSet: &entity.EvaluationSet{DatasetKey: "sub-key"}},
+			},
+		}
+		etec := &entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:             expt,
+			EvalSetItem:      &entity.EvaluationSetItem{EvaluationSetID: 100},
+			EvalSetVersionID: 200,
+		}}
+		assert.Equal(t, "sub-key", pickDatasetKey(etec))
+	})
+}

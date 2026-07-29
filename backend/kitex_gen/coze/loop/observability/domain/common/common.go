@@ -35,6 +35,8 @@ const (
 
 	PlatformTypeInnerDoubao = "inner_doubao"
 
+	PlatformTypeInnerDoubaoUnencrypted = "inner_doubao_unencrypted"
+
 	PlatformTypeInnerPrompt = "inner_prompt"
 
 	PlatformTypeInnerCozeBot = "inner_coze_bot"

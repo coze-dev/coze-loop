@@ -390,12 +390,44 @@ struct ReportEvalTargetInvokeResultRequest {
     11: optional coze.loop.evaluation.spi.InvokeEvalTargetUsage usage
     // set error_message if status=FAILED
     20: optional string error_message
+    // set error_code if status=FAILED，用于错误分类看板（0/未设置回退到平台默认错误码）
+    21: optional i32 error_code
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
 }
 
 struct ReportEvalTargetInvokeResultResponse {
+    255: base.BaseResp BaseResp
+}
+
+// 沙箱 agent 内部 step 打点事件类型
+// 沙箱在编排每个 step 的开始/结束时刻分别调用一次上报接口
+enum EvalTargetStepEventType {
+    UNKNOWN = 0
+    STARTED = 1
+    FINISHED = 2
+}
+
+// ReportEvalTargetStepMetricRequest 沙箱内部 step 打点上报请求
+// 沙箱只需要传 invoke_id, 服务端通过 asyncCtx 反查 experiment_id / item_id /
+// dataset_id / dataset_version_id / target_id / item_key / dataset_key 等 tag
+struct ReportEvalTargetStepMetricRequest {
+    1: optional i64 workspace_id (api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 invoke_id (api.js_conv = "true", go.tag = 'json:"invoke_id"')
+    3: optional EvalTargetStepEventType event_type
+    4: optional string step_name
+    // 仅 FINISHED 事件携带
+    20: optional i64 duration_ms
+    21: optional bool success
+    22: optional i32 error_code
+    23: optional string error_message
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ReportEvalTargetStepMetricResponse {
     255: base.BaseResp BaseResp
 }
 
@@ -1393,6 +1425,8 @@ service EvaluationOpenAPIService {
 
     // 评测目标调用结果上报接口
     ReportEvalTargetInvokeResultResponse ReportEvalTargetInvokeResult(1: ReportEvalTargetInvokeResultRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/result")
+    // 沙箱内部 step 打点上报接口：沙箱侧在 step 开始/结束时调用，服务端转成 evaluation_target_sandbox_agent.step_* 指标
+    ReportEvalTargetStepMetricResponse ReportEvalTargetStepMetric(1: ReportEvalTargetStepMetricRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/step_metric")
     // 按需查询评测对象输出中大对象的完整内容
     GetEvalTargetOutputFieldContentOApiResponse GetEvalTargetOutputFieldContentOApi(1: GetEvalTargetOutputFieldContentOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/eval_target_records/output_fields")
     // 异步调试评测对象

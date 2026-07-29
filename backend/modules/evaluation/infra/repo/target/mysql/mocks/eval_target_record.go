@@ -41,6 +41,20 @@ func (m *MockEvalTargetRecordDAO) EXPECT() *MockEvalTargetRecordDAOMockRecorder 
 	return m.recorder
 }
 
+// AppendStep mocks base method.
+func (m *MockEvalTargetRecordDAO) AppendStep(ctx context.Context, invokeID int64, mutate func([]byte) ([]byte, error)) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppendStep", ctx, invokeID, mutate)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AppendStep indicates an expected call of AppendStep.
+func (mr *MockEvalTargetRecordDAOMockRecorder) AppendStep(ctx, invokeID, mutate any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendStep", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).AppendStep), ctx, invokeID, mutate)
+}
+
 // Create mocks base method.
 func (m *MockEvalTargetRecordDAO) Create(ctx context.Context, record *model.TargetRecord) (int64, error) {
 	m.ctrl.T.Helper()

@@ -128,6 +128,10 @@ const (
 	expiredTraceErrorMessage           = "the trace has expired"
 	expiredTraceErrorNoAffectStability = true
 
+	QueryTimeoutErrorCode              = 600903209 // 查询超时，建议缩短时间范围
+	queryTimeoutErrorMessage           = "query timeout, please shorten the trace query time range"
+	queryTimeoutErrorNoAffectStability = true
+
 	TraceNoCapacityAvailableErrorCode              = 600903230 // trace可用余量不足，无法上报
 	traceNoCapacityAvailableErrorMessage           = "no capacity available to report trace"
 	traceNoCapacityAvailableErrorNoAffectStability = true
@@ -345,6 +349,12 @@ func init() {
 		ExpiredTraceErrorCode,
 		expiredTraceErrorMessage,
 		code.WithAffectStability(!expiredTraceErrorNoAffectStability),
+	)
+
+	code.Register(
+		QueryTimeoutErrorCode,
+		queryTimeoutErrorMessage,
+		code.WithAffectStability(!queryTimeoutErrorNoAffectStability),
 	)
 
 	code.Register(

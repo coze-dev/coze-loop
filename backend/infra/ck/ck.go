@@ -5,8 +5,11 @@ package ck
 
 import (
 	"context"
+	"net"
+	"time"
 
 	std_ck "github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"gorm.io/driver/clickhouse"
 	"gorm.io/gorm"
 )
@@ -38,6 +41,7 @@ func NewCKFromConfig(cfg *Config) (Provider, error) {
 		HttpHeaders: cfg.HttpHeaders,
 		Settings:    cfg.Settings,
 	}
+	opt.DialContext = newRetryDialer(cfg.DialTimeout)
 	switch cfg.CompressionMethod {
 	case CompressionMethodLZ4:
 		opt.Compression = &std_ck.Compression{
@@ -83,4 +87,23 @@ func NewCKFromConfig(cfg *Config) (Provider, error) {
 		return nil, err
 	}
 	return &provider{db: ckDb}, nil
+}
+
+func newRetryDialer(timeout time.Duration) func(ctx context.Context, addr string) (net.Conn, error) {
+	if timeout == 0 {
+		timeout = 5 * time.Second
+	}
+	return func(ctx context.Context, addr string) (net.Conn, error) {
+		d := net.Dialer{Timeout: timeout}
+		var lastErr error
+		for i := 0; i < 3; i++ {
+			conn, err := d.DialContext(ctx, "tcp", addr)
+			if err == nil {
+				return conn, nil
+			}
+			lastErr = err
+			logs.CtxWarn(ctx, "clickhouse dial failed, addr=%s, attempt=%d/3, err=%v", addr, i+1, err)
+		}
+		return nil, lastErr
+	}
 }

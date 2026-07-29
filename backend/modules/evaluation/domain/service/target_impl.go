@@ -860,6 +860,14 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 			param.OutputData.Ext[k] = v
 		}
 	}
+	// 保留 record 上累积的 EvalTargetSteps（沙箱 agent ReportEvalTargetStepMetric 期间 append 上来的）,
+	// 否则整体覆盖 param.OutputData 会抹掉 step 明细。与上方 Ext 保留一致的模式。
+	if record.EvalTargetOutputData != nil && len(record.EvalTargetOutputData.EvalTargetSteps) > 0 {
+		if param.OutputData == nil {
+			param.OutputData = &entity.EvalTargetOutputData{}
+		}
+		param.OutputData.EvalTargetSteps = record.EvalTargetOutputData.EvalTargetSteps
+	}
 
 	record.EvalTargetOutputData = param.OutputData
 	record.Status = gptr.Of(param.Status)

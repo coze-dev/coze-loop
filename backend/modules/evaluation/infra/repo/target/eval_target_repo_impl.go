@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	jsonPkg "github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
 var (
@@ -386,4 +387,27 @@ func (e *EvalTargetRepoImpl) UpdateEvalTargetRecord(ctx context.Context, record 
 		return err
 	}
 	return e.evalTargetRecordDao.Update(ctx, po)
+}
+
+// AppendEvalTargetStep 走 DAO 的 AppendStep（行锁 tx）原子 append 一条 step 到 output_data.eval_target_steps。
+// 解码/编码用与 DO2PO/PO2DO 相同的 json 结构：output_data 直接就是 entity.EvalTargetOutputData 的 marshal 结果。
+// row 不存在时 DAO 侧静默返回 nil，此处一并 pass-through。
+func (e *EvalTargetRepoImpl) AppendEvalTargetStep(ctx context.Context, invokeID int64, step *entity.EvalTargetStep) error {
+	if step == nil {
+		return nil
+	}
+	return e.evalTargetRecordDao.AppendStep(ctx, invokeID, func(current []byte) ([]byte, error) {
+		var od entity.EvalTargetOutputData
+		if len(current) > 0 {
+			if err := jsonPkg.Unmarshal(current, &od); err != nil {
+				return nil, errorx.Wrapf(err, "unmarshal output_data fail, invoke_id=%d", invokeID)
+			}
+		}
+		od.EvalTargetSteps = append(od.EvalTargetSteps, step)
+		next, err := jsonPkg.Marshal(&od)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "marshal output_data fail, invoke_id=%d", invokeID)
+		}
+		return next, nil
+	})
 }

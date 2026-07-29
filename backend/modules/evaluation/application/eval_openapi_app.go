@@ -48,6 +48,7 @@ type IEvalOpenAPIApplication = evaluation.EvalOpenAPIService
 
 type EvalOpenAPIApplication struct {
 	targetSvc                   service.IEvalTargetService
+	evalTargetRepo              repo.IEvalTargetRepo
 	asyncRepo                   repo.IEvalAsyncRepo
 	publisher                   events.ExptEventPublisher
 	auth                        rpc.IAuthProvider
@@ -56,6 +57,7 @@ type EvalOpenAPIApplication struct {
 	evaluationSetItemService    service.EvaluationSetItemService
 	evaluationSetSchemaService  service.EvaluationSetSchemaService
 	metric                      metrics.OpenAPIEvaluationMetrics
+	sandboxAgentMetric          metrics.SandboxAgentMetrics
 	userInfoService             userinfo.UserInfoService
 	experimentApp               IExperimentApplication
 	manager                     service.IExptManager
@@ -72,12 +74,14 @@ type EvalOpenAPIApplication struct {
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
 	targetSvc service.IEvalTargetService,
+	evalTargetRepo repo.IEvalTargetRepo,
 	auth rpc.IAuthProvider,
 	evaluationSetService service.IEvaluationSetService,
 	evaluationSetVersionService service.EvaluationSetVersionService,
 	evaluationSetItemService service.EvaluationSetItemService,
 	evaluationSetSchemaService service.EvaluationSetSchemaService,
 	metric metrics.OpenAPIEvaluationMetrics,
+	sandboxAgentMetric metrics.SandboxAgentMetrics,
 	userInfoService userinfo.UserInfoService,
 	experimentApp IExperimentApplication,
 	manager service.IExptManager,
@@ -95,12 +99,14 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		asyncRepo:                   asyncRepo,
 		publisher:                   publisher,
 		targetSvc:                   targetSvc,
+		evalTargetRepo:              evalTargetRepo,
 		auth:                        auth,
 		evaluationSetService:        evaluationSetService,
 		evaluationSetVersionService: evaluationSetVersionService,
 		evaluationSetItemService:    evaluationSetItemService,
 		evaluationSetSchemaService:  evaluationSetSchemaService,
 		metric:                      metric,
+		sandboxAgentMetric:          sandboxAgentMetric,
 		userInfoService:             userInfoService,
 		experimentApp:               experimentApp,
 		manager:                     manager,
@@ -946,6 +952,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		return nil, err
 	}
 
+	// 回调侧打点：evaluation_target_sandbox_agent.invoke_finished / invoke_duration
+	// 用 AsyncCtx.AsyncUnixMS 与当前时间差计算端到端异步耗时。仅对沙箱 agent 目标上报的调用生效。
+	e.emitSandboxAgentInvokeFinished(ctx, req, actx)
+
 	if actx.Event != nil {
 		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*35),
 			func(event *entity.ExptItemEvalEvent) {
@@ -956,6 +966,168 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	return &openapi.ReportEvalTargetInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
+// emitSandboxAgentInvokeFinished 组装 tags 并上报 invoke_finished / invoke_duration.
+//   - 只对沙箱 agent 路径的回调打点。判断依据是 asyncCtx.Callee (backend 提交侧写入,
+//     来自 commercial SandboxAgentSourceEvalTargetServiceImpl.AsyncExecute 返回的
+//     evaluation target 类型标识)。**不用** req.GetCallee (那是沙箱侧回调时独立填的,
+//     值是 "fornax.sandbox.pipeline", 不能作为 backend 侧类型判断的稳定依据)。
+//   - 错误分类根据 req.Status + req.ErrorCode 决定, 遵循 classifier 表.
+//   - submitTime 来自 AsyncCtx.AsyncUnixMS (提交侧写入), 未落时长度回退为 0.
+func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, actx *entity.EvalAsyncCtx) {
+	if e == nil || e.sandboxAgentMetric == nil || req == nil {
+		logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, metric_nil=%v, req_nil=%v",
+			e == nil || e.sandboxAgentMetric == nil, req == nil)
+		return
+	}
+	if actx == nil || actx.Callee != sandboxAgentAsyncCallee {
+		actxCallee := ""
+		if actx != nil {
+			actxCallee = actx.Callee
+		}
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitInvokeFinished skipped, actx_nil=%v, actx.callee=%q (expect %s), invoke_id=%d",
+			actx == nil, actxCallee, sandboxAgentAsyncCallee, req.GetInvokeID())
+		return
+	}
+	tags := metrics.SandboxAgentInvokeTags{
+		InvokeID: strconv.FormatInt(req.GetInvokeID(), 10),
+	}
+	if actx != nil {
+		if actx.Event != nil {
+			tags.ExperimentID = actx.Event.ExptID
+			tags.ItemID = actx.Event.EvalSetItemID
+		}
+		tags.DatasetID = actx.DatasetID
+		tags.DatasetVersion = actx.DatasetVersionID
+		tags.TargetID = actx.TargetID
+		tags.ItemKey = actx.ItemKey
+		tags.DatasetKey = actx.DatasetKey
+	}
+	var submitTime time.Time
+	if actx != nil && actx.AsyncUnixMS > 0 {
+		submitTime = time.UnixMilli(actx.AsyncUnixMS)
+	}
+	var reportErr error
+	if req.GetStatus() == spi.InvokeEvalTargetStatus_FAILED {
+		reportErr = errSandboxAgentInvokeFailed
+	}
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit invoke_finished, invoke_id=%d, expt_id=%d, item_id=%d, status=%v, err_code=%d, submit_ms=%d",
+		req.GetInvokeID(), tags.ExperimentID, tags.ItemID, req.GetStatus(), req.GetErrorCode(), submitTime.UnixMilli())
+	e.sandboxAgentMetric.EmitInvokeFinished(tags, reportErr, req.GetErrorCode(), submitTime)
+}
+
+// errSandboxAgentInvokeFailed 一个标记 error, 让 metrics classifier 走 non-success 分支;
+// 具体分类由 errorCode 承载, 不需要真实业务 error 内容.
+var errSandboxAgentInvokeFailed = &sandboxAgentInvokeFailure{}
+
+// sandboxAgentAsyncCallee 沙箱 agent target 在提交时写入 asyncCtx.Callee 的固定值,
+// 来自 commercial SandboxAgentSourceEvalTargetServiceImpl.AsyncExecute 的第二个返回值。
+// 这是 backend 内部记录的"评测对象类型"标识, 用来判断当前回调是否属于沙箱 agent 路径。
+// 注意: 这个值 != 沙箱侧回调 request.callee (那个是 "fornax.sandbox.pipeline",
+// 由沙箱侧独立填写, 不可靠)。
+const sandboxAgentAsyncCallee = "sandbox_agent"
+
+type sandboxAgentInvokeFailure struct{}
+
+func (e *sandboxAgentInvokeFailure) Error() string {
+	return "sandbox agent invoke reported failed"
+}
+
+// errSandboxAgentStepFailed 与 invoke 版本同源, 用于 step_finished 事件错误分类.
+var errSandboxAgentStepFailed = &sandboxAgentStepFailure{}
+
+type sandboxAgentStepFailure struct{}
+
+func (e *sandboxAgentStepFailure) Error() string {
+	return "sandbox agent step reported failed"
+}
+
+// ReportEvalTargetStepMetric 接收沙箱内部编排流程的 step 打点事件, 落到
+// evaluation_target_sandbox_agent.step_started / step_finished / step_duration.
+//
+// 关键设计:
+//   - 沙箱请求只需要传 invoke_id (+ step_name + event_type + FINISHED 的 duration/success/error_code);
+//     experiment_id / item_id / dataset_id / dataset_version_id / target_id / item_key / dataset_key
+//     全部由服务端通过 asyncCtx (Redis) 反查, 减少沙箱侧维护上下文的心智负担;
+//   - 单接口 + event_type 区分 STARTED / FINISHED, FINISHED 携带 duration_ms + success + error_code;
+//   - metrics 打点为 best-effort, actx 缺失/metric 组件缺失时静默丢弃, 不返回 error 影响沙箱执行。
+func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context, req *openapi.ReportEvalTargetStepMetricRequest) (r *openapi.ReportEvalTargetStepMetricResponse, err error) {
+	if req == nil {
+		return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
+	}
+	logs.CtxInfo(ctx, "ReportEvalTargetStepMetric receive req: %v", json.Jsonify(req))
+
+	if e.sandboxAgentMetric == nil {
+		// 未注入 metrics 组件时直接返回, 不影响沙箱侧调用。
+		return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
+	}
+
+	// 反查 asyncCtx 拿全部 tag; 拿不到时 tag 会走占位符, 但仍然上报以便看板不遗漏事件。
+	tags := metrics.SandboxAgentStepTags{
+		InvokeID: strconv.FormatInt(req.GetInvokeID(), 10),
+		StepName: req.GetStepName(),
+	}
+	if req.GetInvokeID() != 0 {
+		actx, ctxErr := e.asyncRepo.GetEvalAsyncCtx(ctx, strconv.FormatInt(req.GetInvokeID(), 10))
+		if ctxErr != nil {
+			// asyncCtx 反查失败不阻塞打点, 上报仅缺失 tag; 打个 warn 便于排障。
+			logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: GetEvalAsyncCtx failed, invoke_id=%d, err=%v", req.GetInvokeID(), ctxErr)
+		} else if actx != nil {
+			if actx.Event != nil {
+				tags.ExperimentID = actx.Event.ExptID
+				tags.ItemID = actx.Event.EvalSetItemID
+			}
+			tags.DatasetID = actx.DatasetID
+			tags.DatasetVersion = actx.DatasetVersionID
+			tags.TargetID = actx.TargetID
+			tags.ItemKey = actx.ItemKey
+			tags.DatasetKey = actx.DatasetKey
+		}
+	}
+
+	switch req.GetEventType() {
+	case openapi.EvalTargetStepEventType_STARTED:
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit step_started, invoke_id=%d, step_name=%s, expt_id=%d, item_id=%d",
+			req.GetInvokeID(), req.GetStepName(), tags.ExperimentID, tags.ItemID)
+		e.sandboxAgentMetric.EmitStepStarted(tags)
+	case openapi.EvalTargetStepEventType_FINISHED:
+		var stepErr error
+		if !req.GetSuccess() {
+			stepErr = errSandboxAgentStepFailed
+		}
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit step_finished, invoke_id=%d, step_name=%s, success=%v, err_code=%d, duration_ms=%d",
+			req.GetInvokeID(), req.GetStepName(), req.GetSuccess(), req.GetErrorCode(), req.GetDurationMs())
+		e.sandboxAgentMetric.EmitStepFinished(tags, stepErr, req.GetErrorCode(), req.GetDurationMs())
+	default:
+		logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: unknown event_type=%v, invoke_id=%d, step_name=%s",
+			req.GetEventType(), req.GetInvokeID(), req.GetStepName())
+	}
+
+	// 落库: 事件 append 到 eval_target_record.output_data.eval_target_steps。
+	// best-effort: repo 层出错只 log warn, 不返回 error 阻塞沙箱调用。
+	// 只处理已知事件类型 (STARTED / FINISHED); UNKNOWN 事件直接跳过。
+	if e.evalTargetRepo != nil && req.GetInvokeID() != 0 &&
+		(req.GetEventType() == openapi.EvalTargetStepEventType_STARTED ||
+			req.GetEventType() == openapi.EvalTargetStepEventType_FINISHED) {
+		step := &entity.EvalTargetStep{
+			StepName:    req.GetStepName(),
+			EventType:   req.GetEventType().String(),
+			EventTimeMS: time.Now().UnixMilli(),
+		}
+		if req.GetEventType() == openapi.EvalTargetStepEventType_FINISHED {
+			step.Success = req.GetSuccess()
+			step.ErrorCode = req.GetErrorCode()
+			step.ErrorMessage = req.GetErrorMessage()
+			step.DurationMS = req.GetDurationMs()
+		}
+		if err := e.evalTargetRepo.AppendEvalTargetStep(ctx, req.GetInvokeID(), step); err != nil {
+			logs.CtxWarn(ctx, "ReportEvalTargetStepMetric: AppendEvalTargetStep failed, invoke_id=%d, step_name=%s, event_type=%v, err=%v",
+				req.GetInvokeID(), req.GetStepName(), req.GetEventType(), err)
+		}
+	}
+
+	return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
 }
 
 func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {
