@@ -567,28 +567,46 @@ func TestValidateExperimentName(t *testing.T) {
 	}
 }
 
+// TestRunModeToInt 钉住 case-file experiment_info.run_mode 的整数编号映射。
+// 编号必须与 runtime runModeFromInt (许强 feat/agent_runtime 分支) 逐一一致 —— 错一位就是
+// 整个实验按另一个跑法执行, 而实验照样 success, 只能靠人肉比对轨迹才能发现。
+//
+// 反向验证 (证明本测试真的在守): 把 RunModeToInt 里 goal 的返回值从 5 改回 4,
+// 本测试 FAIL —— run_mode="goal" expected 5, actual 4。已还原。
 func TestRunModeToInt(t *testing.T) {
 	cases := map[RunMode]int{
-		RunModeSingleTurn:           1,
-		RunModeFixedScriptMultiTurn: 2,
-		RunModeSUAMultiTurn:         3,
-		RunModeGoal:                 4,
-		"unknown":                   1,
+		RunModeSingleTurn:            1,
+		RunModeFixedScriptMultiTurn:  2,
+		RunModeSUALoopMultiTurn:      3,
+		RunModeSUAHumanLoopMultiTurn: 4,
+		RunModeGoal:                  5,
+		// 平台对外契约的聚合态: 跑法藏在 sua_mode 子字段里, 一个整数表达不了, 故没有独立
+		// 编号。下发前必须由 commercial runtimeRunModeInt 折叠成 3/4; 漏折叠则落 default。
+		RunModeSUAMultiTurn: 1,
+		"unknown":           1,
+		"":                  1,
 	}
 	for m, want := range cases {
 		assert.Equal(t, want, RunModeToInt(m), "run_mode=%q", m)
 	}
 }
 
-func TestSuaModeToInt(t *testing.T) {
-	cases := map[SuaMode]int{
-		SuaModeHumanLoop: 1,
-		SuaModeLoop:      2,
-		SuaModeFixed:     3,
-		"":               0,
-		"unknown":        0,
+// TestRunModeToInt_NoDuplicateCodes 五个 runtime 跑法必须占五个互不相同的编号 ——
+// 撞号意味着两个跑法在 wire 上不可区分 (这正是 goal 必须从 4 挪到 5 的原因)。
+func TestRunModeToInt_NoDuplicateCodes(t *testing.T) {
+	modes := []RunMode{
+		RunModeSingleTurn,
+		RunModeFixedScriptMultiTurn,
+		RunModeSUALoopMultiTurn,
+		RunModeSUAHumanLoopMultiTurn,
+		RunModeGoal,
 	}
-	for m, want := range cases {
-		assert.Equal(t, want, SuaModeToInt(m), "sua_mode=%q", m)
+	seen := make(map[int]RunMode, len(modes))
+	for _, m := range modes {
+		code := RunModeToInt(m)
+		prev, dup := seen[code]
+		assert.False(t, dup, "run_mode %q 与 %q 撞了同一个编号 %d", m, prev, code)
+		seen[code] = m
 	}
+	assert.Len(t, seen, len(modes))
 }

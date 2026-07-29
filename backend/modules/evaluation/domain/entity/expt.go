@@ -348,22 +348,55 @@ type RunMode = string
 const (
 	RunModeSingleTurn           RunMode = "single_turn"
 	RunModeFixedScriptMultiTurn RunMode = "fixed_script_multi_turn"
-	RunModeSUAMultiTurn         RunMode = "sua_multi_turn"
-	RunModeGoal                 RunMode = "goal"
+	// RunModeSUAMultiTurn 是**平台对外契约**里的 SUA 多轮聚合态 (IDL / 前端 / OpenAPI /
+	// 存量实验都是 run_mode=sua_multi_turn + sua_mode 子字段)。runtime 侧没有这个枚举:
+	// 它把 SUA 多轮拆成了下面两个独立跑法。故它**没有独立整数编号**, 见 RunModeToInt。
+	RunModeSUAMultiTurn RunMode = "sua_multi_turn"
+	// RunModeSUALoopMultiTurn / RunModeSUAHumanLoopMultiTurn 是 runtime 的两个独立 SUA 跑法
+	// (字面量与 runtime internal/domain/orchestration RunMode 逐字一致)。平台侧只在下发
+	// case-file 时用: commercial runtimeRunModeInt 先把 (sua_multi_turn, sua_mode) 折叠成
+	// 这两个之一, 再转整数。
+	RunModeSUALoopMultiTurn      RunMode = "sua_loop_multi_turn"
+	RunModeSUAHumanLoopMultiTurn RunMode = "sua_human_loop_multi_turn"
+	RunModeGoal                  RunMode = "goal"
 )
 
-// RunModeToInt 把 RunMode 字符串映射为 case-file experiment_info.run_mode 的整数枚举
-// (对齐 runtime runModeFromInt: 1=single/2=fixed/3=sua/4=goal)。未知值回退 1。
+// RunModeToInt 把 RunMode 字符串映射为 case-file experiment_info.run_mode 的整数枚举。
+//
+// 编号对齐 runtime (fornax_agent_eval_runtime internal/interfaces/platform
+// runModeFromInt, 亦即许强 feat/agent_runtime 分支的建模):
+//
+//	1 = single_turn
+//	2 = fixed_script_multi_turn
+//	3 = sua_loop_multi_turn
+//	4 = sua_human_loop_multi_turn
+//	5 = goal
+//
+// ⚠️ **破坏性重编号: goal 从 4 挪到 5**, 给两个 SUA 跑法腾出 3/4。安全性依据是**无存量**:
+// case-file 是纯瞬态产物 (评测 operator 现场组装 → 写进本次新建的 orchestrator 沙箱
+// /tmp/fornax-agent-case.json → 跑完随沙箱销毁), 既不落库也不落 TOS, 所以世上不存在任何
+// 一份"用旧编号写的历史 case-file"; 且双沙箱多轮功能尚未上线、没有真实用户, 连"新平台已
+// 发版 + 旧 runtime 还没滚完"的部署窗口也不成立。整数空间因此可以自由重新分配。
+//
+// **RunModeSUAMultiTurn 刻意没有独立编号**: 它是平台对外契约的聚合态, 跑法信息藏在
+// sua_mode 子字段里, 一个整数表达不了。下发路径上 commercial 的 runtimeRunModeInt 会先把
+// 它折叠成 sua_loop / sua_human_loop 再调本函数, 所以它永远不该直接走到这里。真走到了就
+// 落 default(1) —— 与 runtime 自己对未知整数的兜底 (回退 single_turn) 完全一致, 不会因为
+// 平台漏折叠而跑成"另一个 SUA 跑法"。
+//
+// 未知值回退 1。
 func RunModeToInt(m RunMode) int {
 	switch m {
 	case RunModeSingleTurn:
 		return 1
 	case RunModeFixedScriptMultiTurn:
 		return 2
-	case RunModeSUAMultiTurn:
+	case RunModeSUALoopMultiTurn:
 		return 3
-	case RunModeGoal:
+	case RunModeSUAHumanLoopMultiTurn:
 		return 4
+	case RunModeGoal:
+		return 5
 	default:
 		return 1
 	}
@@ -378,21 +411,9 @@ const (
 	SuaModeFixed     SuaMode = "fixed"
 )
 
-// SuaModeToInt 把 SuaMode 字符串映射为 case-file experiment_info.sua_mode 的整数枚举
-// (对齐 runtime suaModeFromInt / IDL SuaMode: 1=humanloop/2=loop/3=fixed)。
-// 空串或未知值返回 0 (不使用 SUA / runtime 侧回退)。
-func SuaModeToInt(m SuaMode) int {
-	switch m {
-	case SuaModeHumanLoop:
-		return 1
-	case SuaModeLoop:
-		return 2
-	case SuaModeFixed:
-		return 3
-	default:
-		return 0
-	}
-}
+// SuaMode 只作为**平台对外契约的子字段**存在 (run_mode=sua_multi_turn 时它才有意义):
+// 下发 case-file 前由 commercial 的 runtimeRunModeInt 折叠进 run_mode, 不再单独下发, 故不再
+// 需要 SuaModeToInt (已删)。
 
 // RunModeConfig 实验级跑法配置。run_mode 是顶层跑法总开关;
 // sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 生效。
