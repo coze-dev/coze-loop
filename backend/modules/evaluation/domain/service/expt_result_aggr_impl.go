@@ -161,6 +161,15 @@ func (e *ExptAggrResultServiceImpl) computeEvaluatorAggrGroup(ctx context.Contex
 func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx context.Context, spaceID, exptID int64) (*targetMtrAggrGroup, error) {
 	const queryInterval = time.Millisecond * 30
 
+	// ★ 跨空间共享: 评测对象执行记录随执行落来源空间(冻结 TargetSpaceID), 聚合读 record 也需按来源空间,
+	// 否则跨空间实验 target latency/token 聚合取不到 record。载入实验取冻结来源空间。
+	recordSpaceID := spaceID
+	if exptDO, exptErr := e.experimentRepo.GetByID(ctx, exptID, spaceID); exptErr == nil && exptDO != nil {
+		recordSpaceID = resolveLoadSpaceID(spaceID, exptDO.TargetSpaceID)
+	} else if exptErr != nil {
+		logs.CtxWarn(ctx, "buildExptTargetMtrAggregatorGroup load expt for target space fail, expt_id=%d, err=%v", exptID, exptErr)
+	}
+
 	mtrAggrGroup := &targetMtrAggrGroup{
 		latency:      NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
 		inputTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
@@ -193,7 +202,7 @@ func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx contex
 	}
 
 	for _, resIDs := range gslice.Chunk(targetResultIDs, 50) {
-		records, err := e.evalTargetSvc.BatchGetRecordByIDs(ctx, spaceID, resIDs)
+		records, err := e.evalTargetSvc.BatchGetRecordByIDs(ctx, recordSpaceID, resIDs)
 		if err != nil {
 			return nil, err
 		}
