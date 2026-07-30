@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -83,6 +84,9 @@ type experimentApplication struct {
 }
 
 const sandboxSchedulerInitTimeout = 5 * time.Second
+
+// sandboxConcurrencyBuffer 是沙箱任务并发配额的余量系数（见 sandboxInitConcurrency）。
+const sandboxConcurrencyBuffer = 1.2
 
 func NewExperimentApplication(
 	aggResultSvc service.ExptAggrResultService,
@@ -1557,16 +1561,18 @@ func isSandboxAgentExperiment(expt *entity.Experiment) bool {
 
 // sandboxInitConcurrency 计算 SandboxAgent 评测对象 Init 时下发的 Concurrency：
 //  1. 先用 NormalizeSubmitItemConcurNum 兜底 nil/<=0 → DefaultSubmitItemConcurNum；
-//  2. 双沙箱模式一次评测占用 2 个沙箱 execute，需要额外放大到 2 倍上限，否则调度侧任务并发度不够。
+//  2. 双沙箱模式一次评测占用 2 个沙箱 execute，需要额外放大到 2 倍上限，否则调度侧任务并发度不够；
+//  3. 再乘 1.2 向上取整留一点余量：配额是 execution 粒度的硬闸，卡住的 item 直接判永久失败、
+//     不重试不排队，所以宁可多给一点，也不要因为边界刚好贴死而整条 item 挂掉。
 //
 // 入参 itemConcurNum 允许来自 SubmitRequest.ItemConcurNum(int32) 或 EvalConf.ItemConcurNum(*int)，
 // 调用方自行转成 *int 后传入。
 func sandboxInitConcurrency(itemConcurNum *int, dual bool) int32 {
 	normalized := gptr.Indirect(entity.NormalizeSubmitItemConcurNum(itemConcurNum))
 	if dual {
-		return int32(normalized * 2)
+		normalized *= 2
 	}
-	return int32(normalized)
+	return int32(math.Ceil(float64(normalized) * sandboxConcurrencyBuffer))
 }
 
 // sandboxTenantForExperimentEntity 从 entity 层实验推导出 Init 所需的沙箱租户。
