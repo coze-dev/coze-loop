@@ -419,6 +419,7 @@ func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.Eval
 		BaseInfo:            ConvertBaseInfoDO2DTO(do.BaseInfo),
 		Tags:                OpenAPIResourceTagDO2DTOs(do.Tags),
 		DatasetKey:          gptr.Of(do.DatasetKey),
+		SharedInfo:          OpenAPISharedResourceInfoDO2DTO(do.SharedInfo),
 	}
 }
 

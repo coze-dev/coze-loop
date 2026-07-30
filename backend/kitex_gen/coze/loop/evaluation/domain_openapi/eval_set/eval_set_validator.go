@@ -81,6 +81,11 @@ func (p *EvaluationSet) IsValid() error {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
 		}
 	}
+	if p.SharedInfo != nil {
+		if err := p.SharedInfo.IsValid(); err != nil {
+			return fmt.Errorf("field SharedInfo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *FieldData) IsValid() error {
