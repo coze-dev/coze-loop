@@ -1468,7 +1468,7 @@ service EvaluationOpenAPIService {
     // 获取评测对象记录
     GetEvalTargetRecordOApiResponse GetEvalTargetRecordOApi(1: GetEvalTargetRecordOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/eval_target_records/:eval_target_record_id")
     // 查询可用的来源评测对象
-    ListEvalTargetsOApiResponse ListEvalTargetsOApi(1: ListEvalTargetsOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/eval_targets/list")
+    ListEvalTargetsOApiResponse ListEvalTargetsOApi(1: ListEvalTargetsOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/list")
 
     // 评测实验接口
     // 创建评测实验

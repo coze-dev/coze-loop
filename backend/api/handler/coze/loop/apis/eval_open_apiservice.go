@@ -330,19 +330,9 @@ func KillExperimentOApi(ctx context.Context, c *app.RequestContext) {
 }
 
 // ListEvalTargetsOApi .
-// @router /v1/loop/evaluation/eval_targets/list [POST]
+// @router /v1/loop/eval_targets/list [POST]
 func ListEvalTargetsOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.ListEvalTargetsOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.ListEvalTargetsOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvalTargetsOApi)
 }
 
 // AsyncRunEvaluatorOApi .
