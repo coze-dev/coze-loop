@@ -2721,3 +2721,89 @@ func TestExptMangerImpl_CheckExpt_ItemRetryNumBounds(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+// TestExptMangerImpl_authorizeSharedResource_TargetType 覆盖跨空间共享发起鉴权时 targetType 透传:
+// - eval_target: 必须把 targetType 写入 AuthorizeResourceRequest.TargetType, 否则 sharedResourceMatches
+//   守卫 (targetType != 0) 会短路所有 eval_target 共享规则, Lookup 返回 nil, 报 "resource not shared to caller"。
+// - eval_set: targetType 传 0, 不参与匹配, 行为保持不变。
+func TestExptMangerImpl_authorizeSharedResource_TargetType(t *testing.T) {
+	const (
+		callerSpaceID = int64(1001)
+		sourceSpaceID = int64(2002)
+		resourceID    = int64(3003)
+	)
+	sharedOpt := &entity.SharedResourceOption{IsShared: true, SourceSpaceID: gptr.Of(sourceSpaceID)}
+
+	t.Run("eval_target 传对 targetType 后 Lookup 命中并回填来源空间", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		authorizer := svcMocks.NewMockResourceAccessAuthorizer(ctrl)
+		// DoAndReturn 断言 targetType 已透传到 AuthorizeResourceRequest.TargetType (回归核心)。
+		authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, req *entity.AuthorizeResourceRequest) (*entity.ResourceAccessContext, error) {
+				assert.Equal(t, entity.SharedResourceTypeEvalTarget, req.ResourceType)
+				assert.Equal(t, entity.EvalTargetTypeSandboxAgent, req.TargetType)
+				assert.Equal(t, resourceID, req.ResourceID)
+				return &entity.ResourceAccessContext{
+					CallerSpaceID:   callerSpaceID,
+					ResourceSpaceID: sourceSpaceID,
+					ResourceType:    entity.SharedResourceTypeEvalTarget,
+					ResourceID:      resourceID,
+					TargetType:      entity.EvalTargetTypeSandboxAgent,
+					AccessMode:      entity.AccessModeShared,
+					AccessLevel:     entity.SharedAccessLevelExecute,
+				}, nil
+			})
+
+		mgr := &ExptMangerImpl{resourceAccessAuthorizer: authorizer}
+		srcSpace, level, err := mgr.authorizeSharedResource(
+			context.Background(), callerSpaceID, entity.SharedResourceTypeEvalTarget, resourceID, nil, sharedOpt,
+			entity.EvalTargetTypeSandboxAgent)
+		require.NoError(t, err)
+		assert.Equal(t, sourceSpaceID, srcSpace)
+		assert.Equal(t, entity.SharedAccessLevelExecute, level)
+	})
+
+	t.Run("eval_set targetType 传 0 不参与匹配", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		authorizer := svcMocks.NewMockResourceAccessAuthorizer(ctrl)
+		authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, req *entity.AuthorizeResourceRequest) (*entity.ResourceAccessContext, error) {
+				assert.Equal(t, entity.SharedResourceTypeEvalSet, req.ResourceType)
+				assert.Equal(t, entity.EvalTargetType(0), req.TargetType)
+				return &entity.ResourceAccessContext{
+					CallerSpaceID:   callerSpaceID,
+					ResourceSpaceID: sourceSpaceID,
+					ResourceType:    entity.SharedResourceTypeEvalSet,
+					ResourceID:      resourceID,
+					AccessMode:      entity.AccessModeShared,
+					AccessLevel:     entity.SharedAccessLevelReadable,
+				}, nil
+			})
+
+		mgr := &ExptMangerImpl{resourceAccessAuthorizer: authorizer}
+		srcSpace, level, err := mgr.authorizeSharedResource(
+			context.Background(), callerSpaceID, entity.SharedResourceTypeEvalSet, resourceID, nil, sharedOpt, 0)
+		require.NoError(t, err)
+		assert.Equal(t, sourceSpaceID, srcSpace)
+		assert.Equal(t, entity.SharedAccessLevelReadable, level)
+	})
+
+	t.Run("未开启共享直接返回调用方空间, 不调 AuthorizeRead", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		authorizer := svcMocks.NewMockResourceAccessAuthorizer(ctrl)
+		// 无 EXPECT: opt 未开启时不应触发鉴权调用。
+		mgr := &ExptMangerImpl{resourceAccessAuthorizer: authorizer}
+		srcSpace, level, err := mgr.authorizeSharedResource(
+			context.Background(), callerSpaceID, entity.SharedResourceTypeEvalTarget, resourceID, nil, nil,
+			entity.EvalTargetTypeSandboxAgent)
+		require.NoError(t, err)
+		assert.Equal(t, callerSpaceID, srcSpace)
+		assert.Equal(t, "", level)
+	})
+}

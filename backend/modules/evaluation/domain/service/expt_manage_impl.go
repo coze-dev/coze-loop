@@ -953,10 +953,11 @@ func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experimen
 // authorizeSharedResource 跨空间共享发起鉴权 (RequireContentRead=false):
 // - opt 为 nil 或 !Enabled(): 普通访问, 返回 sourceSpaceID=callerSpaceID, accessLevel="".
 // - 共享访问: 调 AuthorizeRead 完成共享校验 + 版本策略校验, 返回资源来源空间与冻结访问级别.
+// targetType 仅 eval_target 参与共享规则匹配 (须与配置里的 target_type 同基类型); eval_set 传 0 即可.
 // 任何鉴权失败一律 fail-closed 返回 error, 由上层中断发起.
 func (e *ExptMangerImpl) authorizeSharedResource(
 	ctx context.Context, callerSpaceID int64, resourceType string, resourceID int64,
-	versionID *int64, opt *entity.SharedResourceOption,
+	versionID *int64, opt *entity.SharedResourceOption, targetType entity.EvalTargetType,
 ) (sourceSpaceID int64, accessLevel string, err error) {
 	if opt == nil || !opt.Enabled() {
 		return callerSpaceID, "", nil
@@ -965,6 +966,7 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 		CallerSpaceID:      callerSpaceID,
 		ResourceType:       resourceType,
 		ResourceID:         resourceID,
+		TargetType:         targetType, // eval_target 共享规则匹配依据; eval_set 传 0 不参与匹配
 		VersionID:          versionID,
 		SharedOption:       opt,
 		Action:             consts.ActionCreateExpt,
@@ -1033,7 +1035,8 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 				srcTargetIDInt = v
 			}
 			tgtSrcSpace, _, authErr := e.authorizeSharedResource(
-				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, srcTargetIDInt, srcTargetVerID, req.TargetSharedOption)
+				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, srcTargetIDInt, srcTargetVerID, req.TargetSharedOption,
+				gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType))
 			if authErr != nil {
 				return nil, authErr
 			}
@@ -1074,7 +1077,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 		var authErr error
 		evalSetSpaceID, evalSetAccessLevel, authErr = e.authorizeSharedResource(
-			ctx, req.WorkspaceID, entity.SharedResourceTypeEvalSet, req.EvalSetID, evalSetVerID, req.EvalSetSharedOption)
+			ctx, req.WorkspaceID, entity.SharedResourceTypeEvalSet, req.EvalSetID, evalSetVerID, req.EvalSetSharedOption, 0)
 		if authErr != nil {
 			return nil, authErr
 		}
@@ -1086,8 +1089,14 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			if versionedTargetID.VersionID > 0 {
 				targetVerID = gptr.Of(versionedTargetID.VersionID)
 			}
+			// 引用路径无 CreateEvalTargetParam, targetType 从已落库的 eval_target 记录读取,
+			// 供跨空间共享规则匹配 (否则 targetType=0 会短路所有 eval_target 共享规则, 报 resource not shared)。
+			var refTargetType entity.EvalTargetType
+			if refTarget, getErr := e.evalTargetService.GetEvalTarget(ctx, versionedTargetID.TargetID); getErr == nil && refTarget != nil {
+				refTargetType = refTarget.EvalTargetType
+			}
 			targetSpaceID, _, authErr = e.authorizeSharedResource(
-				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, versionedTargetID.TargetID, targetVerID, req.TargetSharedOption)
+				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, versionedTargetID.TargetID, targetVerID, req.TargetSharedOption, refTargetType)
 			if authErr != nil {
 				return nil, authErr
 			}
@@ -1262,7 +1271,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 				setVerID = gptr.Of(setConf.EvalSetVersionID)
 			}
 			srcSpaceID, level, authErr := e.authorizeSharedResource(
-				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalSet, setConf.EvalSetID, setVerID, setConf.SharedOption)
+				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalSet, setConf.EvalSetID, setVerID, setConf.SharedOption, 0)
 			if authErr != nil {
 				return nil, authErr
 			}
@@ -1280,8 +1289,14 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 						setTargetVerID = gptr.Of(setConf.TargetConfs[0].TargetVersionID)
 					}
 				}
+				// 多集执行恒用顶层 target, ExptTargetConf 无 targetType 字段, targetType 取顶层 CreateEvalTargetParam。
+				var setTargetType entity.EvalTargetType
+				if req.CreateEvalTargetParam != nil {
+					setTargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
+				}
 				tgtSrcSpaceID, _, tgtErr := e.authorizeSharedResource(
-					ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, setTargetID, setTargetVerID, setConf.TargetSharedOption)
+					ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, setTargetID, setTargetVerID, setConf.TargetSharedOption,
+					setTargetType)
 				if tgtErr != nil {
 					return nil, tgtErr
 				}
