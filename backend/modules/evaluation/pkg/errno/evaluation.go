@@ -445,6 +445,15 @@ const (
 	SandboxAgentConfigNameMismatchCode              = 601205083 // sandbox agent target reported config_name_mismatch (trigger: "[ASSERT] config_name verification failed" or "config_name mismatch")
 	sandboxAgentConfigNameMismatchMessage           = "sandbox agent: config_name mismatch"
 	sandboxAgentConfigNameMismatchNoAffectStability = true
+
+	// 实验/行级超时错误码（用于把超时原因暴露给用户，替代原来落库为空 err_msg 或英文 raw string 的实现）
+	ExptZombieTimeoutCode              = 601205084 // 实验整体运行时长超过阈值被超时终止（HandleEventCheck 触发）
+	exptZombieTimeoutMessage           = "实验已超过最大执行时长被终止"
+	exptZombieTimeoutNoAffectStability = false
+
+	ItemZombieTimeoutCode              = 601205085 // 实验行长时间未更新被判定为僵尸（handleZombies 触发）
+	itemZombieTimeoutMessage           = "实验行长时间未更新，已被系统判定为僵尸并置为失败"
+	itemZombieTimeoutNoAffectStability = false
 )
 
 func init() {
@@ -1101,6 +1110,18 @@ func init() {
 		SandboxAgentConfigNameMismatchCode,
 		sandboxAgentConfigNameMismatchMessage,
 		code.WithAffectStability(!sandboxAgentConfigNameMismatchNoAffectStability),
+	)
+
+	code.Register(
+		ExptZombieTimeoutCode,
+		exptZombieTimeoutMessage,
+		code.WithAffectStability(!exptZombieTimeoutNoAffectStability),
+	)
+
+	code.Register(
+		ItemZombieTimeoutCode,
+		itemZombieTimeoutMessage,
+		code.WithAffectStability(!itemZombieTimeoutNoAffectStability),
 	)
 
 }

@@ -870,8 +870,20 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1, 3},
-					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
+					gomock.Any(),
 					int64(3),
+				).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+					assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
+					assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
+					assert.NotNil(t, ufields["err_msg"])
+					return nil
+				}).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemsResult(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					[]int64{1, 3},
+					gomock.Any(),
 				).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
 					gomock.Any(),
@@ -957,7 +969,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1},
-					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
+					gomock.Any(),
 					int64(3),
 				).Return(errors.New("update item run log failed")).Times(1)
 			},
@@ -1009,8 +1021,15 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1},
-					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
+					gomock.Any(),
 					int64(3),
+				).Return(nil).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemsResult(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					[]int64{1},
+					gomock.Any(),
 				).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
 					gomock.Any(),
@@ -1075,8 +1094,15 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1, 2},
-					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
+					gomock.Any(),
 					int64(3),
+				).Return(nil).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemsResult(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					[]int64{1, 2},
+					gomock.Any(),
 				).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
 					gomock.Any(),

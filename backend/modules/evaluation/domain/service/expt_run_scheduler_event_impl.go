@@ -158,7 +158,7 @@ func (e *ExptSchedulerImpl) HandleEventCheck(next SchedulerEndPoint) SchedulerEn
 
 		interval := int64(e.Configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond())
 		if time.Now().Unix()-event.CreatedAt >= interval {
-			return fmt.Errorf("expt exec found timeout event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+			return errno.NewExptZombieTimeoutErr(interval, event.ExptID, event.ExptRunID)
 		}
 
 		return next(ctx, event)
@@ -256,12 +256,24 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 		}
 
 		if err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Failed),
-			entity.WithStatusMessage(nextErr.Error()), entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
+			entity.WithStatusMessage(userVisibleErrMsg(nextErr)), entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 			return errorx.Wrapf(err, "complete expt fail, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 		}
 
 		return nil
 	}
+}
+
+// userVisibleErrMsg 提取用户友好的错误描述：若为 errno.ErrImpl 则取其 Msg（如"实验已超过最大执行时长 …"），
+// 否则回退到 err.Error()（历史英文 raw string）。
+func userVisibleErrMsg(err error) string {
+	if err == nil {
+		return ""
+	}
+	if ei, ok := errno.ParseErrImpl(err); ok && ei != nil && len(ei.ErrMsg()) > 0 {
+		return ei.ErrMsg()
+	}
+	return err.Error()
 }
 
 // isSchedulerInfraError 判断是否为基础设施类可重试错误
@@ -527,8 +539,23 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		logs.CtxError(ctx, "[ExptEval] terminate async eval target records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
 	}
 
-	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)}, event.SpaceID); err != nil {
+	// 把行超时错误写入 err_msg，供 API 层（ItemSystemInfo.Error）暴露给用户
+	zombieErrBytes := []byte(errno.SerializeErr(errno.NewItemZombieTimeoutErr(zombieSecond, asyncExec)))
+
+	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{
+		"status":       int32(entity.ItemRunState_Fail),
+		"result_state": int32(entity.ExptItemResultStateLogged),
+		"err_msg":      zombieErrBytes,
+	}, event.SpaceID); err != nil {
 		return nil, nil, err
+	}
+
+	// 主表 expt_item_result 也带上 err_msg，供 MGetExperimentResult 构造 ItemSystemInfo 时读取
+	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, zombieItemIDs, map[string]any{
+		"status":  int32(entity.ItemRunState_Fail),
+		"err_msg": zombieErrBytes,
+	}); err != nil {
+		logs.CtxError(ctx, "[ExptEval] update zombie items main table err_msg fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
 	}
 
 	if err := e.ExptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(ctx, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs, entity.TurnRunState_Fail); err != nil {
