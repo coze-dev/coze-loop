@@ -52,7 +52,6 @@ struct BatchGetEvalTargetVersionsRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: optional list<i64> eval_target_version_ids (api.js_conv="true", go.tag = 'json:"eval_target_version_ids"')
     3: optional bool need_source_info
-    4: optional common.SharedResourceOption shared_option
 
     255: optional base.Base Base
 }

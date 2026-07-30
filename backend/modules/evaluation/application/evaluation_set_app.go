@@ -681,17 +681,25 @@ func (e *EvaluationSetApplicationImpl) BatchGetEvaluationSetItems(ctx context.Co
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	sharedOption := sharedOptionDTO2DO(req.SharedOption)
-	// 鉴权：共享场景下按来源空间加载评测集
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, gptr.Of(true), sharedOption)
+	// 鉴权
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, gptr.Of(true), nil)
 	if err != nil {
 		return nil, err
 	}
 	if set == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
 	}
-	// item 内容路径要求 readable（execute 黑盒不可读内容）
-	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.WorkspaceID, set, sharedOption, nil, nil, true))
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.WorkspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -701,7 +709,7 @@ func (e *EvaluationSetApplicationImpl) BatchGetEvaluationSetItems(ctx context.Co
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
 	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
-		SpaceID:            accessCtx.QuerySpaceID(),
+		SpaceID:            req.WorkspaceID,
 		EvaluationSetID:    req.EvaluationSetID,
 		VersionID:          req.VersionID,
 		ItemIDs:            req.ItemIds,
@@ -903,24 +911,12 @@ func (e *EvaluationSetApplicationImpl) BatchGetEvaluationSetVersions(ctx context
 		return nil, err
 	}
 	// domain调用
-	sets, err := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, &req.WorkspaceID, req.VersionIds, req.DeletedAt, sharedOptionDTO2DO(req.SharedOption))
+	sets, err := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, &req.WorkspaceID, req.VersionIds, req.DeletedAt, nil)
 	if err != nil {
 		return nil, err
 	}
 	res := make([]*eval_set.VersionedEvaluationSet, 0)
 	for _, set := range sets {
-		if set == nil || set.EvaluationSet == nil || set.Version == nil {
-			continue
-		}
-		accessCtx, authErr := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.WorkspaceID, set.EvaluationSet, sharedOptionDTO2DO(req.SharedOption), gptr.Of(set.Version.ID), gptr.Of(set.Version.Version), false))
-		if authErr != nil {
-			return nil, authErr
-		}
-		if accessCtx.IsShared() && !service.IsSharedVersionAllowed(set.Version.ID, set.Version.Version, set.EvaluationSet.LatestVersion, accessCtx.VersionPolicy, accessCtx.SpecifiedIDs) {
-			continue
-		}
-		set.EvaluationSet.SharedInfo = accessCtx.SharedInfo()
-		set.Version.SharedInfo = accessCtx.SharedInfo()
 		res = append(res, &eval_set.VersionedEvaluationSet{
 			EvaluationSet: evaluation_set.EvaluationSetDO2DTO(set.EvaluationSet),
 			Version:       evaluation_set.VersionDO2DTO(set.Version),

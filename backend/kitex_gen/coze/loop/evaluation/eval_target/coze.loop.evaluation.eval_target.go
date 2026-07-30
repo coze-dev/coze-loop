@@ -2297,11 +2297,10 @@ func (p *GetEvalTargetVersionResponse) Field255DeepEqual(src *base.BaseResp) boo
 }
 
 type BatchGetEvalTargetVersionsRequest struct {
-	WorkspaceID          int64                        `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
-	EvalTargetVersionIds []int64                      `thrift:"eval_target_version_ids,2,optional" frugal:"2,optional,list<i64>" json:"eval_target_version_ids" form:"eval_target_version_ids" query:"eval_target_version_ids"`
-	NeedSourceInfo       *bool                        `thrift:"need_source_info,3,optional" frugal:"3,optional,bool" form:"need_source_info" json:"need_source_info,omitempty" query:"need_source_info"`
-	SharedOption         *common.SharedResourceOption `thrift:"shared_option,4,optional" frugal:"4,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
-	Base                 *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID          int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
+	EvalTargetVersionIds []int64    `thrift:"eval_target_version_ids,2,optional" frugal:"2,optional,list<i64>" json:"eval_target_version_ids" form:"eval_target_version_ids" query:"eval_target_version_ids"`
+	NeedSourceInfo       *bool      `thrift:"need_source_info,3,optional" frugal:"3,optional,bool" form:"need_source_info" json:"need_source_info,omitempty" query:"need_source_info"`
+	Base                 *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchGetEvalTargetVersionsRequest() *BatchGetEvalTargetVersionsRequest {
@@ -2342,18 +2341,6 @@ func (p *BatchGetEvalTargetVersionsRequest) GetNeedSourceInfo() (v bool) {
 	return *p.NeedSourceInfo
 }
 
-var BatchGetEvalTargetVersionsRequest_SharedOption_DEFAULT *common.SharedResourceOption
-
-func (p *BatchGetEvalTargetVersionsRequest) GetSharedOption() (v *common.SharedResourceOption) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSharedOption() {
-		return BatchGetEvalTargetVersionsRequest_SharedOption_DEFAULT
-	}
-	return p.SharedOption
-}
-
 var BatchGetEvalTargetVersionsRequest_Base_DEFAULT *base.Base
 
 func (p *BatchGetEvalTargetVersionsRequest) GetBase() (v *base.Base) {
@@ -2374,9 +2361,6 @@ func (p *BatchGetEvalTargetVersionsRequest) SetEvalTargetVersionIds(val []int64)
 func (p *BatchGetEvalTargetVersionsRequest) SetNeedSourceInfo(val *bool) {
 	p.NeedSourceInfo = val
 }
-func (p *BatchGetEvalTargetVersionsRequest) SetSharedOption(val *common.SharedResourceOption) {
-	p.SharedOption = val
-}
 func (p *BatchGetEvalTargetVersionsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -2385,7 +2369,6 @@ var fieldIDToName_BatchGetEvalTargetVersionsRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "eval_target_version_ids",
 	3:   "need_source_info",
-	4:   "shared_option",
 	255: "Base",
 }
 
@@ -2395,10 +2378,6 @@ func (p *BatchGetEvalTargetVersionsRequest) IsSetEvalTargetVersionIds() bool {
 
 func (p *BatchGetEvalTargetVersionsRequest) IsSetNeedSourceInfo() bool {
 	return p.NeedSourceInfo != nil
-}
-
-func (p *BatchGetEvalTargetVersionsRequest) IsSetSharedOption() bool {
-	return p.SharedOption != nil
 }
 
 func (p *BatchGetEvalTargetVersionsRequest) IsSetBase() bool {
@@ -2444,14 +2423,6 @@ func (p *BatchGetEvalTargetVersionsRequest) Read(iprot thrift.TProtocol) (err er
 		case 3:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2545,14 +2516,6 @@ func (p *BatchGetEvalTargetVersionsRequest) ReadField3(iprot thrift.TProtocol) e
 	p.NeedSourceInfo = _field
 	return nil
 }
-func (p *BatchGetEvalTargetVersionsRequest) ReadField4(iprot thrift.TProtocol) error {
-	_field := common.NewSharedResourceOption()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.SharedOption = _field
-	return nil
-}
 func (p *BatchGetEvalTargetVersionsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -2578,10 +2541,6 @@ func (p *BatchGetEvalTargetVersionsRequest) Write(oprot thrift.TProtocol) (err e
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -2666,24 +2625,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *BatchGetEvalTargetVersionsRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSharedOption() {
-		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.SharedOption.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
 func (p *BatchGetEvalTargetVersionsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -2726,9 +2667,6 @@ func (p *BatchGetEvalTargetVersionsRequest) DeepEqual(ano *BatchGetEvalTargetVer
 	if !p.Field3DeepEqual(ano.NeedSourceInfo) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.SharedOption) {
-		return false
-	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -2763,13 +2701,6 @@ func (p *BatchGetEvalTargetVersionsRequest) Field3DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.NeedSourceInfo != *src {
-		return false
-	}
-	return true
-}
-func (p *BatchGetEvalTargetVersionsRequest) Field4DeepEqual(src *common.SharedResourceOption) bool {
-
-	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true

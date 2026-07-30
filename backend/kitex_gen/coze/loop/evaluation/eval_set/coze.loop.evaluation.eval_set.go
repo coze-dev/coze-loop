@@ -8830,11 +8830,10 @@ func (p *GetEvaluationSetVersionResponse) Field255DeepEqual(src *base.BaseResp) 
 }
 
 type BatchGetEvaluationSetVersionsRequest struct {
-	WorkspaceID  int64                        `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
-	VersionIds   []int64                      `thrift:"version_ids,2,required" frugal:"2,required,list<i64>" json:"version_ids" form:"version_ids,required" query:"version_ids,required"`
-	DeletedAt    *bool                        `thrift:"deleted_at,3,optional" frugal:"3,optional,bool" form:"deleted_at" json:"deleted_at,omitempty" query:"deleted_at"`
-	SharedOption *common.SharedResourceOption `thrift:"shared_option,4,optional" frugal:"4,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
-	Base         *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
+	VersionIds  []int64    `thrift:"version_ids,2,required" frugal:"2,required,list<i64>" json:"version_ids" form:"version_ids,required" query:"version_ids,required"`
+	DeletedAt   *bool      `thrift:"deleted_at,3,optional" frugal:"3,optional,bool" form:"deleted_at" json:"deleted_at,omitempty" query:"deleted_at"`
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchGetEvaluationSetVersionsRequest() *BatchGetEvaluationSetVersionsRequest {
@@ -8870,18 +8869,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) GetDeletedAt() (v bool) {
 	return *p.DeletedAt
 }
 
-var BatchGetEvaluationSetVersionsRequest_SharedOption_DEFAULT *common.SharedResourceOption
-
-func (p *BatchGetEvaluationSetVersionsRequest) GetSharedOption() (v *common.SharedResourceOption) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSharedOption() {
-		return BatchGetEvaluationSetVersionsRequest_SharedOption_DEFAULT
-	}
-	return p.SharedOption
-}
-
 var BatchGetEvaluationSetVersionsRequest_Base_DEFAULT *base.Base
 
 func (p *BatchGetEvaluationSetVersionsRequest) GetBase() (v *base.Base) {
@@ -8902,9 +8889,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) SetVersionIds(val []int64) {
 func (p *BatchGetEvaluationSetVersionsRequest) SetDeletedAt(val *bool) {
 	p.DeletedAt = val
 }
-func (p *BatchGetEvaluationSetVersionsRequest) SetSharedOption(val *common.SharedResourceOption) {
-	p.SharedOption = val
-}
 func (p *BatchGetEvaluationSetVersionsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -8913,16 +8897,11 @@ var fieldIDToName_BatchGetEvaluationSetVersionsRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "version_ids",
 	3:   "deleted_at",
-	4:   "shared_option",
 	255: "Base",
 }
 
 func (p *BatchGetEvaluationSetVersionsRequest) IsSetDeletedAt() bool {
 	return p.DeletedAt != nil
-}
-
-func (p *BatchGetEvaluationSetVersionsRequest) IsSetSharedOption() bool {
-	return p.SharedOption != nil
 }
 
 func (p *BatchGetEvaluationSetVersionsRequest) IsSetBase() bool {
@@ -8970,14 +8949,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) Read(iprot thrift.TProtocol) (err
 		case 3:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9076,14 +9047,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) ReadField3(iprot thrift.TProtocol
 	p.DeletedAt = _field
 	return nil
 }
-func (p *BatchGetEvaluationSetVersionsRequest) ReadField4(iprot thrift.TProtocol) error {
-	_field := common.NewSharedResourceOption()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.SharedOption = _field
-	return nil
-}
 func (p *BatchGetEvaluationSetVersionsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -9109,10 +9072,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) Write(oprot thrift.TProtocol) (er
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -9195,24 +9154,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *BatchGetEvaluationSetVersionsRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSharedOption() {
-		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.SharedOption.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
 func (p *BatchGetEvaluationSetVersionsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -9255,9 +9196,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) DeepEqual(ano *BatchGetEvaluation
 	if !p.Field3DeepEqual(ano.DeletedAt) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.SharedOption) {
-		return false
-	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -9292,13 +9230,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) Field3DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.DeletedAt != *src {
-		return false
-	}
-	return true
-}
-func (p *BatchGetEvaluationSetVersionsRequest) Field4DeepEqual(src *common.SharedResourceOption) bool {
-
-	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -17003,13 +16934,11 @@ func (p *GetEvaluationSetItemResponse) Field255DeepEqual(src *base.BaseResp) boo
 }
 
 type BatchGetEvaluationSetItemsRequest struct {
-	WorkspaceID     int64   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
-	EvaluationSetID int64   `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
-	VersionID       *int64  `thrift:"version_id,3,optional" frugal:"3,optional,i64" json:"version_id" form:"version_id" query:"version_id"`
-	ItemIds         []int64 `thrift:"item_ids,4,optional" frugal:"4,optional,list<i64>" json:"item_ids" form:"item_ids" query:"item_ids"`
-	// 跨空间共享读:来源空间等信息
-	SharedOption       *common.SharedResourceOption `thrift:"shared_option,5,optional" frugal:"5,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
-	ItemVersionQueries []*EvaluationItemVersionRef  `thrift:"item_version_queries,20,optional" frugal:"20,optional,list<EvaluationItemVersionRef>" form:"item_version_queries" json:"item_version_queries,omitempty" query:"item_version_queries"`
+	WorkspaceID        int64                       `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
+	EvaluationSetID    int64                       `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
+	VersionID          *int64                      `thrift:"version_id,3,optional" frugal:"3,optional,i64" json:"version_id" form:"version_id" query:"version_id"`
+	ItemIds            []int64                     `thrift:"item_ids,4,optional" frugal:"4,optional,list<i64>" json:"item_ids" form:"item_ids" query:"item_ids"`
+	ItemVersionQueries []*EvaluationItemVersionRef `thrift:"item_version_queries,20,optional" frugal:"20,optional,list<EvaluationItemVersionRef>" form:"item_version_queries" json:"item_version_queries,omitempty" query:"item_version_queries"`
 	// item 过滤条件
 	Filter *filter.Filter `thrift:"filter,201,optional" frugal:"201,optional,filter.Filter" form:"filter" json:"filter,omitempty" query:"filter"`
 	// 系统资源标签过滤
@@ -17060,18 +16989,6 @@ func (p *BatchGetEvaluationSetItemsRequest) GetItemIds() (v []int64) {
 		return BatchGetEvaluationSetItemsRequest_ItemIds_DEFAULT
 	}
 	return p.ItemIds
-}
-
-var BatchGetEvaluationSetItemsRequest_SharedOption_DEFAULT *common.SharedResourceOption
-
-func (p *BatchGetEvaluationSetItemsRequest) GetSharedOption() (v *common.SharedResourceOption) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSharedOption() {
-		return BatchGetEvaluationSetItemsRequest_SharedOption_DEFAULT
-	}
-	return p.SharedOption
 }
 
 var BatchGetEvaluationSetItemsRequest_ItemVersionQueries_DEFAULT []*EvaluationItemVersionRef
@@ -17133,9 +17050,6 @@ func (p *BatchGetEvaluationSetItemsRequest) SetVersionID(val *int64) {
 func (p *BatchGetEvaluationSetItemsRequest) SetItemIds(val []int64) {
 	p.ItemIds = val
 }
-func (p *BatchGetEvaluationSetItemsRequest) SetSharedOption(val *common.SharedResourceOption) {
-	p.SharedOption = val
-}
 func (p *BatchGetEvaluationSetItemsRequest) SetItemVersionQueries(val []*EvaluationItemVersionRef) {
 	p.ItemVersionQueries = val
 }
@@ -17154,7 +17068,6 @@ var fieldIDToName_BatchGetEvaluationSetItemsRequest = map[int16]string{
 	2:   "evaluation_set_id",
 	3:   "version_id",
 	4:   "item_ids",
-	5:   "shared_option",
 	20:  "item_version_queries",
 	201: "filter",
 	212: "tag_filter",
@@ -17167,10 +17080,6 @@ func (p *BatchGetEvaluationSetItemsRequest) IsSetVersionID() bool {
 
 func (p *BatchGetEvaluationSetItemsRequest) IsSetItemIds() bool {
 	return p.ItemIds != nil
-}
-
-func (p *BatchGetEvaluationSetItemsRequest) IsSetSharedOption() bool {
-	return p.SharedOption != nil
 }
 
 func (p *BatchGetEvaluationSetItemsRequest) IsSetItemVersionQueries() bool {
@@ -17238,14 +17147,6 @@ func (p *BatchGetEvaluationSetItemsRequest) Read(iprot thrift.TProtocol) (err er
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 5:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17379,14 +17280,6 @@ func (p *BatchGetEvaluationSetItemsRequest) ReadField4(iprot thrift.TProtocol) e
 	p.ItemIds = _field
 	return nil
 }
-func (p *BatchGetEvaluationSetItemsRequest) ReadField5(iprot thrift.TProtocol) error {
-	_field := common.NewSharedResourceOption()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.SharedOption = _field
-	return nil
-}
 func (p *BatchGetEvaluationSetItemsRequest) ReadField20(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -17455,10 +17348,6 @@ func (p *BatchGetEvaluationSetItemsRequest) Write(oprot thrift.TProtocol) (err e
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -17571,24 +17460,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *BatchGetEvaluationSetItemsRequest) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSharedOption() {
-		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 5); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.SharedOption.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
-}
 func (p *BatchGetEvaluationSetItemsRequest) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetItemVersionQueries() {
 		if err = oprot.WriteFieldBegin("item_version_queries", thrift.LIST, 20); err != nil {
@@ -17696,9 +17567,6 @@ func (p *BatchGetEvaluationSetItemsRequest) DeepEqual(ano *BatchGetEvaluationSet
 	if !p.Field4DeepEqual(ano.ItemIds) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.SharedOption) {
-		return false
-	}
 	if !p.Field20DeepEqual(ano.ItemVersionQueries) {
 		return false
 	}
@@ -17750,13 +17618,6 @@ func (p *BatchGetEvaluationSetItemsRequest) Field4DeepEqual(src []int64) bool {
 		if v != _src {
 			return false
 		}
-	}
-	return true
-}
-func (p *BatchGetEvaluationSetItemsRequest) Field5DeepEqual(src *common.SharedResourceOption) bool {
-
-	if !p.SharedOption.DeepEqual(src) {
-		return false
 	}
 	return true
 }

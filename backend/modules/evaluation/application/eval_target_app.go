@@ -298,14 +298,7 @@ func (e EvalTargetApplicationImpl) BatchGetEvalTargetVersions(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
-	sharedOption := sharedTargetOptionDTO2DO(request.SharedOption)
-	needSourceInfo := gptr.Indirect(request.NeedSourceInfo) || sharedOption != nil
-	// 共享读:按来源空间加载,鉴权前置(见 GetEvalTargetVersion 注释)
-	querySpaceID := request.WorkspaceID
-	if sharedOption.Enabled() {
-		querySpaceID = gptr.Indirect(sharedOption.SourceSpaceID)
-	}
-	evalTargets, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, querySpaceID, request.GetEvalTargetVersionIds(), needSourceInfo)
+	evalTargets, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, request.WorkspaceID, request.GetEvalTargetVersionIds(), gptr.Indirect(request.NeedSourceInfo))
 	if err != nil {
 		return nil, err
 	}
@@ -314,30 +307,6 @@ func (e EvalTargetApplicationImpl) BatchGetEvalTargetVersions(ctx context.Contex
 	}
 	res := make([]*eval_target_dto.EvalTarget, 0)
 	for _, evalTarget := range evalTargets {
-		authResourceID := evalTarget.ID
-		if sharedOption.Enabled() {
-			authResourceID, err = parseEvalTargetSourceResourceID(evalTarget.SourceTargetID)
-			if err != nil {
-				return nil, err
-			}
-		}
-		accessCtx, authErr := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalTargetAuthorizeRequest(
-			request.WorkspaceID, authResourceID, evalTarget.EvalTargetType, sharedOption, evalTargetVersionID(evalTarget), evalTargetVersionName(evalTarget),
-		))
-		if authErr != nil {
-			return nil, authErr
-		}
-		versionAllowed, allowErr := e.isSharedEvalTargetVersionAllowed(ctx, evalTarget, accessCtx)
-		if allowErr != nil {
-			return nil, allowErr
-		}
-		if !versionAllowed {
-			continue
-		}
-		evalTarget.SharedInfo = accessCtx.SharedInfo()
-		if evalTarget.EvalTargetVersion != nil {
-			evalTarget.EvalTargetVersion.SharedInfo = accessCtx.SharedInfo()
-		}
 		res = append(res, target.EvalTargetDO2DTO(evalTarget))
 	}
 	return &eval_target.BatchGetEvalTargetVersionsResponse{

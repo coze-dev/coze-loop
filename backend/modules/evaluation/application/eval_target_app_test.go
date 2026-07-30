@@ -654,9 +654,8 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetVersions(t *testing.T) {
 	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
 
 	app := &EvalTargetApplicationImpl{
-		auth:                     mockAuth,
-		evalTargetService:        mockEvalTargetService,
-		resourceAccessAuthorizer: service.NewResourceAccessAuthorizer(mockAuth, nil),
+		auth:              mockAuth,
+		evalTargetService: mockEvalTargetService,
 	}
 
 	// Test data
@@ -711,10 +710,6 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetVersions(t *testing.T) {
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), gomock.Any()).
 					Return(nil)
-				mockAuth.EXPECT().
-					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
-					Return(nil).
-					Times(len(validEvalTargets))
 			},
 			wantResp: &evaltargetapi.BatchGetEvalTargetVersionsResponse{
 				EvalTargets: []*domain_eval_target.EvalTarget{

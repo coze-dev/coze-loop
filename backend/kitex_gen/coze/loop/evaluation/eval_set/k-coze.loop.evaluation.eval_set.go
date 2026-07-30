@@ -6591,20 +6591,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) FastRead(buf []byte) (int, error)
 					goto SkipFieldError
 				}
 			}
-		case 4:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField4(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -6700,18 +6686,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) FastReadField3(buf []byte) (int, 
 	return offset, nil
 }
 
-func (p *BatchGetEvaluationSetVersionsRequest) FastReadField4(buf []byte) (int, error) {
-	offset := 0
-	_field := common.NewSharedResourceOption()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.SharedOption = _field
-	return offset, nil
-}
-
 func (p *BatchGetEvaluationSetVersionsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -6734,7 +6708,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) FastWriteNocopy(buf []byte, w thr
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
-		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -6747,7 +6720,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
-		l += p.field4Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6780,15 +6752,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) fastWriteField3(buf []byte, w thr
 	if p.IsSetDeletedAt() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 3)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.DeletedAt)
-	}
-	return offset
-}
-
-func (p *BatchGetEvaluationSetVersionsRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetSharedOption() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 4)
-		offset += p.SharedOption.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -6827,15 +6790,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) field3Length() int {
 	return l
 }
 
-func (p *BatchGetEvaluationSetVersionsRequest) field4Length() int {
-	l := 0
-	if p.IsSetSharedOption() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.SharedOption.BLength()
-	}
-	return l
-}
-
 func (p *BatchGetEvaluationSetVersionsRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -6866,15 +6820,6 @@ func (p *BatchGetEvaluationSetVersionsRequest) DeepCopy(s interface{}) error {
 		tmp := *src.DeletedAt
 		p.DeletedAt = &tmp
 	}
-
-	var _sharedOption *common.SharedResourceOption
-	if src.SharedOption != nil {
-		_sharedOption = &common.SharedResourceOption{}
-		if err := _sharedOption.DeepCopy(src.SharedOption); err != nil {
-			return err
-		}
-	}
-	p.SharedOption = _sharedOption
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -12655,20 +12600,6 @@ func (p *BatchGetEvaluationSetItemsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 5:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField5(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 20:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField20(buf[offset:])
@@ -12820,18 +12751,6 @@ func (p *BatchGetEvaluationSetItemsRequest) FastReadField4(buf []byte) (int, err
 	return offset, nil
 }
 
-func (p *BatchGetEvaluationSetItemsRequest) FastReadField5(buf []byte) (int, error) {
-	offset := 0
-	_field := common.NewSharedResourceOption()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.SharedOption = _field
-	return offset, nil
-}
-
 func (p *BatchGetEvaluationSetItemsRequest) FastReadField20(buf []byte) (int, error) {
 	offset := 0
 
@@ -12904,7 +12823,6 @@ func (p *BatchGetEvaluationSetItemsRequest) FastWriteNocopy(buf []byte, w thrift
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
-		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField201(buf[offset:], w)
 		offset += p.fastWriteField212(buf[offset:], w)
@@ -12921,7 +12839,6 @@ func (p *BatchGetEvaluationSetItemsRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
-		l += p.field5Length()
 		l += p.field20Length()
 		l += p.field201Length()
 		l += p.field212Length()
@@ -12966,15 +12883,6 @@ func (p *BatchGetEvaluationSetItemsRequest) fastWriteField4(buf []byte, w thrift
 			offset += thrift.Binary.WriteI64(buf[offset:], v)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
-	}
-	return offset
-}
-
-func (p *BatchGetEvaluationSetItemsRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetSharedOption() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
-		offset += p.SharedOption.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -13056,15 +12964,6 @@ func (p *BatchGetEvaluationSetItemsRequest) field4Length() int {
 	return l
 }
 
-func (p *BatchGetEvaluationSetItemsRequest) field5Length() int {
-	l := 0
-	if p.IsSetSharedOption() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.SharedOption.BLength()
-	}
-	return l
-}
-
 func (p *BatchGetEvaluationSetItemsRequest) field20Length() int {
 	l := 0
 	if p.IsSetItemVersionQueries() {
@@ -13128,15 +13027,6 @@ func (p *BatchGetEvaluationSetItemsRequest) DeepCopy(s interface{}) error {
 			p.ItemIds = append(p.ItemIds, _elem)
 		}
 	}
-
-	var _sharedOption *common.SharedResourceOption
-	if src.SharedOption != nil {
-		_sharedOption = &common.SharedResourceOption{}
-		if err := _sharedOption.DeepCopy(src.SharedOption); err != nil {
-			return err
-		}
-	}
-	p.SharedOption = _sharedOption
 
 	if src.ItemVersionQueries != nil {
 		p.ItemVersionQueries = make([]*EvaluationItemVersionRef, 0, len(src.ItemVersionQueries))
