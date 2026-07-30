@@ -419,6 +419,7 @@ func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.Eval
 		BaseInfo:            ConvertBaseInfoDO2DTO(do.BaseInfo),
 		Tags:                OpenAPIResourceTagDO2DTOs(do.Tags),
 		DatasetKey:          gptr.Of(do.DatasetKey),
+		SharedInfo:          OpenAPISharedResourceInfoDO2DTO(do.SharedInfo),
 	}
 }
 
@@ -1110,5 +1111,18 @@ func OpenAPIItemVersionDO2DTO(do *entity.EvaluationSetItemVersion) *openapi_eval
 		Turns:         OpenAPITurnDO2DTOs(do.Turns),
 		Status:        gptr.Of(do.Status),
 		BaseInfo:      ConvertBaseInfoDO2DTO(do.BaseInfo),
+	}
+}
+
+// OpenAPISharedResourceInfoDO2DTO 跨空间共享资源信息 DO→DTO（合并 owner 读侧共享浏览能力）。
+func OpenAPISharedResourceInfoDO2DTO(info *entity.SharedResourceInfo) *common.SharedResourceInfo {
+	if info == nil {
+		return nil
+	}
+	return &common.SharedResourceInfo{
+		IsShared:      gptr.Of(info.IsShared),
+		SourceSpaceID: gptr.Of(info.SourceSpaceID),
+		AccessLevel:   gptr.Of(info.AccessLevel),
+		VersionPolicy: gptr.Of(info.VersionPolicy),
 	}
 }

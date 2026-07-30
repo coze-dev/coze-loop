@@ -566,6 +566,35 @@ func (t *PromptSourceEvalTargetServiceImpl) BatchGetSource(ctx context.Context, 
 	return targets, nil
 }
 
+func (t *PromptSourceEvalTargetServiceImpl) GetLatestSourceVersion(ctx context.Context, spaceID int64, sourceTargetID string) (*entity.EvalTargetVersion, error) {
+	promptID, err := strconv.ParseInt(sourceTargetID, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	prompt, err := t.promptRPCAdapter.GetPrompt(ctx, spaceID, promptID, rpc.GetPromptParams{})
+	if err != nil {
+		return nil, err
+	}
+	if prompt == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
+	}
+	latestVersion := ""
+	if prompt.PromptBasic != nil {
+		latestVersion = gptr.Indirect(prompt.PromptBasic.LatestVersion)
+	}
+	if latestVersion == "" {
+		return nil, nil
+	}
+	evalTarget, err := t.BuildBySource(ctx, spaceID, sourceTargetID, latestVersion)
+	if err != nil {
+		return nil, err
+	}
+	if evalTarget == nil {
+		return nil, nil
+	}
+	return evalTarget.EvalTargetVersion, nil
+}
+
 func (t *PromptSourceEvalTargetServiceImpl) SearchCustomEvalTarget(ctx context.Context, param *entity.SearchCustomEvalTargetParam) (targets []*entity.CustomEvalTarget, nextCursor string, hasMore bool, err error) {
 	return nil, "", false, nil
 }

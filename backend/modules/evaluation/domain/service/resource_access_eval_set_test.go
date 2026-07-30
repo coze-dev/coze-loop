@@ -50,3 +50,17 @@ func TestEarlyCheckVersionPolicy(t *testing.T) {
 	// version_id 为空不早拒
 	assert.NoError(t, earlyCheckVersionPolicy(entity.SharedVersionPolicySpecified, []int64{3}, nil))
 }
+
+func TestSharedVersionNamePolicy(t *testing.T) {
+	versions := []string{"v1", "v2"}
+	assert.True(t, IsSharedVersionNameAllowed("v2", "", entity.SharedVersionPolicySpecified, versions))
+	assert.False(t, IsSharedVersionNameAllowed("v3", "", entity.SharedVersionPolicySpecified, versions))
+	assert.True(t, IsSharedVersionNameAllowed("v3", "v3", entity.SharedVersionPolicyLatest, nil))
+	assert.False(t, IsSharedVersionNameAllowed("v2", "v3", entity.SharedVersionPolicyLatest, nil))
+
+	version := "v2"
+	assert.NoError(t, earlyCheckVersionNamePolicy(entity.SharedVersionPolicySpecified, versions, &version))
+	version = "v3"
+	assert.Error(t, earlyCheckVersionNamePolicy(entity.SharedVersionPolicySpecified, versions, &version))
+	assert.NoError(t, earlyCheckVersionNamePolicy(entity.SharedVersionPolicySpecified, versions, nil))
+}

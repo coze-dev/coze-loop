@@ -265,6 +265,7 @@ var supportedOpenAPIEvalTargetTypes = []openapiEvalTarget.EvalTargetType{
 	openapiEvalTarget.EvalTargetTypeCustomRPCServer,
 	openapiEvalTarget.EvalTargetTypeA2Agent,
 	openapiEvalTarget.EvalTargetTypeCustomAgent,
+	openapiEvalTarget.EvalTargetTypeSandboxAgent,
 }
 
 func supportedOpenAPIEvalTargetTypesString() string {
@@ -283,6 +284,11 @@ func SupportedOpenAPIEvalTargetTypesString() string {
 func IsSupportedOpenAPIEvalTargetType(t openapiEvalTarget.EvalTargetType) bool {
 	_, err := mapOpenAPIEvalTargetType(t)
 	return err == nil
+}
+
+// OpenAPIEvalTargetTypeDTO2DO converts the public string enum to the domain enum.
+func OpenAPIEvalTargetTypeDTO2DO(t openapiEvalTarget.EvalTargetType) (domaindoEvalTarget.EvalTargetType, error) {
+	return mapOpenAPIEvalTargetType(t)
 }
 
 // ValidateOpenAPIEvalTargetClusterEnv validates the required cluster/env for the
@@ -1857,6 +1863,21 @@ func OpenAPIEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.Eva
 	return targetDTO
 }
 
+// OpenAPIListEvalTargetDO2DTO adds source-space metadata required by list responses.
+func OpenAPIListEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.EvalTarget {
+	targetDTO := OpenAPIEvalTargetDO2DTO(targetDO)
+	if targetDTO == nil {
+		return nil
+	}
+	targetDTO.WorkspaceID = gptr.Of(targetDO.SpaceID)
+	targetDTO.SharedInfo = evalsetopenapi.OpenAPISharedResourceInfoDO2DTO(targetDO.SharedInfo)
+	if targetDTO.EvalTargetVersion != nil && targetDO.EvalTargetVersion != nil {
+		targetDTO.EvalTargetVersion.WorkspaceID = gptr.Of(targetDO.EvalTargetVersion.SpaceID)
+		targetDTO.EvalTargetVersion.SharedInfo = evalsetopenapi.OpenAPISharedResourceInfoDO2DTO(targetDO.EvalTargetVersion.SharedInfo)
+	}
+	return targetDTO
+}
+
 func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion, typ entity.EvalTargetType) *openapiEvalTarget.EvalTargetVersion {
 	if versionDO == nil {
 		return nil
@@ -1937,6 +1958,10 @@ func convertEntityEvalTargetTypeToOpenAPI(typ entity.EvalTargetType) openapiEval
 		return openapiEvalTarget.EvalTargetTypeVolcengineAgent
 	case entity.EvalTargetTypeCustomRPCServer:
 		return openapiEvalTarget.EvalTargetTypeCustomRPCServer
+	case entity.EvalTargetTypeA2AAgent:
+		return openapiEvalTarget.EvalTargetTypeA2Agent
+	case entity.EvalTargetTypeCustomAgent:
+		return openapiEvalTarget.EvalTargetTypeCustomAgent
 	case entity.EvalTargetTypeSandboxAgent:
 		return openapiEvalTarget.EvalTargetTypeSandboxAgent
 	default:
