@@ -2013,14 +2013,12 @@ func (p *OpenAPIExptEvaluatorConf) Field41DeepEqual(src *int32) bool {
 	return true
 }
 
-// per-set target 运行配置 (版本字符串风格); 本期 len<=1
-// target_id/version 不传时继承 request 顶层 eval_target_param;
-// 跨空间多集场景 per-set 需显式指定 target_id 以对该 set 的评测对象做来源空间授权。
+// per-set target 运行配置; 本期 len<=1
+// target_id 不传时继承 request 顶层 eval_target_param;
+// 跨空间多集场景 per-set 需显式指定 target_id 以对该 set 的评测对象做来源空间授权(执行仍用顶层 target)。
 type OpenAPIExptTargetConf struct {
 	// per-set 评测对象 id; 跨空间授权必需
 	TargetID *int64 `thrift:"target_id,1,optional" frugal:"1,optional,i64" json:"target_id" form:"target_id" query:"target_id"`
-	// 版本字符串, handler 解析成 target_version_id (锁定版本); 不传=latest
-	TargetVersion *string `thrift:"target_version,2,optional" frugal:"2,optional,string" form:"target_version" json:"target_version,omitempty" query:"target_version"`
 	// 本评测集字段 → target 输入
 	FieldMapping *TargetFieldMapping  `thrift:"field_mapping,10,optional" frugal:"10,optional,TargetFieldMapping" form:"field_mapping" json:"field_mapping,omitempty" query:"field_mapping"`
 	RuntimeParam *common.RuntimeParam `thrift:"runtime_param,20,optional" frugal:"20,optional,common.RuntimeParam" form:"runtime_param" json:"runtime_param,omitempty" query:"runtime_param"`
@@ -2043,18 +2041,6 @@ func (p *OpenAPIExptTargetConf) GetTargetID() (v int64) {
 		return OpenAPIExptTargetConf_TargetID_DEFAULT
 	}
 	return *p.TargetID
-}
-
-var OpenAPIExptTargetConf_TargetVersion_DEFAULT string
-
-func (p *OpenAPIExptTargetConf) GetTargetVersion() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTargetVersion() {
-		return OpenAPIExptTargetConf_TargetVersion_DEFAULT
-	}
-	return *p.TargetVersion
 }
 
 var OpenAPIExptTargetConf_FieldMapping_DEFAULT *TargetFieldMapping
@@ -2083,9 +2069,6 @@ func (p *OpenAPIExptTargetConf) GetRuntimeParam() (v *common.RuntimeParam) {
 func (p *OpenAPIExptTargetConf) SetTargetID(val *int64) {
 	p.TargetID = val
 }
-func (p *OpenAPIExptTargetConf) SetTargetVersion(val *string) {
-	p.TargetVersion = val
-}
 func (p *OpenAPIExptTargetConf) SetFieldMapping(val *TargetFieldMapping) {
 	p.FieldMapping = val
 }
@@ -2095,17 +2078,12 @@ func (p *OpenAPIExptTargetConf) SetRuntimeParam(val *common.RuntimeParam) {
 
 var fieldIDToName_OpenAPIExptTargetConf = map[int16]string{
 	1:  "target_id",
-	2:  "target_version",
 	10: "field_mapping",
 	20: "runtime_param",
 }
 
 func (p *OpenAPIExptTargetConf) IsSetTargetID() bool {
 	return p.TargetID != nil
-}
-
-func (p *OpenAPIExptTargetConf) IsSetTargetVersion() bool {
-	return p.TargetVersion != nil
 }
 
 func (p *OpenAPIExptTargetConf) IsSetFieldMapping() bool {
@@ -2137,14 +2115,6 @@ func (p *OpenAPIExptTargetConf) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2206,17 +2176,6 @@ func (p *OpenAPIExptTargetConf) ReadField1(iprot thrift.TProtocol) error {
 	p.TargetID = _field
 	return nil
 }
-func (p *OpenAPIExptTargetConf) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.TargetVersion = _field
-	return nil
-}
 func (p *OpenAPIExptTargetConf) ReadField10(iprot thrift.TProtocol) error {
 	_field := NewTargetFieldMapping()
 	if err := _field.Read(iprot); err != nil {
@@ -2242,10 +2201,6 @@ func (p *OpenAPIExptTargetConf) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField10(oprot); err != nil {
@@ -2291,24 +2246,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-func (p *OpenAPIExptTargetConf) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTargetVersion() {
-		if err = oprot.WriteFieldBegin("target_version", thrift.STRING, 2); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.TargetVersion); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *OpenAPIExptTargetConf) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFieldMapping() {
@@ -2364,9 +2301,6 @@ func (p *OpenAPIExptTargetConf) DeepEqual(ano *OpenAPIExptTargetConf) bool {
 	if !p.Field1DeepEqual(ano.TargetID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.TargetVersion) {
-		return false
-	}
 	if !p.Field10DeepEqual(ano.FieldMapping) {
 		return false
 	}
@@ -2384,18 +2318,6 @@ func (p *OpenAPIExptTargetConf) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.TargetID != *src {
-		return false
-	}
-	return true
-}
-func (p *OpenAPIExptTargetConf) Field2DeepEqual(src *string) bool {
-
-	if p.TargetVersion == src {
-		return true
-	} else if p.TargetVersion == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.TargetVersion, *src) != 0 {
 		return false
 	}
 	return true
