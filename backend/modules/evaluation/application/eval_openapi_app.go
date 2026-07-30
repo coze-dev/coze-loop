@@ -913,19 +913,33 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
 	}
 
-	// 调试场景（actx.Event == nil）：无论成功失败都 best-effort 销毁沙箱执行
+	// 调试场景（actx.Event == nil）：无论成功失败都 best-effort 销毁沙箱执行。
+	//
+	// **这条路径必须保留，不能指望 service 层的 destroySandboxExecuteIfNeeded 兜底**：那个函数先
+	// GetEvalTargetVersion(record.TargetVersionID) 判类型，而调试用的是 patchy target
+	// （AsyncDebugTarget 传的 EvalTargetVersion 没有 ID、从未落库），查不到 version 就直接 return
+	// —— 调试态压根走不到它的销毁。
+	//
+	// executeIDs 必须从 record 的 output ext 读 operator 真实回传的列表，**不能推断**：
+	// 双沙箱的 id 带后缀（`<invokeID>-agent` / `<invokeID>-orch`），原实现硬编码裸 invokeID，
+	// 对不上任何一个 execution → 两个沙箱一个都清不掉，只能等平台侧 patrol（而
+	// session_max_alive_minutes=0 时它会无限续期）。见 service 层 sandboxExecuteIDsOf 的同一约定。
+	//
+	// 放在 defer 里是刻意的：无论 ReportInvokeRecords 成败都要销 —— 上报失败时沙箱更需要被回收。
+	// 此时 record 已被 ReportInvokeRecords 写入 ext，故重新读一次拿到的是最终值。
 	if actx.Event == nil {
 		defer func() {
 			if e.sandboxSchedulerAdapter == nil {
 				return
 			}
+			executeIDs := e.debugSandboxExecuteIDs(ctx, req.GetWorkspaceID(), req.GetInvokeID())
 			if _, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
 				TaskID:      "sandbox_debug",
 				DestroyType: rpc.SandboxDestroyTypeExecute,
-				ExecuteIDs:  []string{strconv.FormatInt(req.GetInvokeID(), 10)},
+				ExecuteIDs:  executeIDs,
 				WorkspaceID: req.GetWorkspaceID(),
 			}); derr != nil {
-				logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox debug execute fail, invoke_id=%d, err=%v", req.GetInvokeID(), derr)
+				logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox debug execute fail, invoke_id=%d, execute_ids=%v, err=%v", req.GetInvokeID(), executeIDs, derr)
 			}
 		}()
 		logs.CtxInfo(ctx, "report target record (debug), record_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
@@ -956,6 +970,42 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	return &openapi.ReportEvalTargetInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
+// debugSandboxExecuteIDs 取调试态本次调用实际创建的 sandbox execution id 列表。
+//
+// 权威来源是 operator 在 AsyncExecute 回传、落在 record output ext 的
+// consts.OutputDataExtKeySandboxExecuteIDs（JSON 字符串数组）：双沙箱一次调用创建多个 execution，
+// id 命名规则（`<invokeID>-agent` / `-orch`）属 operator 实现细节，**平台侧不推断**。
+//
+// 读不到时退回裸 invokeID —— 那是单沙箱实现的 executeID，也是本函数引入前的唯一行为，
+// 所以退化路径与改动前完全一致，不会因为读 ext 失败而比原来更差。
+func (e *EvalOpenAPIApplication) debugSandboxExecuteIDs(ctx context.Context, spaceID, invokeID int64) []string {
+	fallback := []string{strconv.FormatInt(invokeID, 10)}
+	record, err := e.targetSvc.GetRecordByID(ctx, spaceID, invokeID)
+	if err != nil || record == nil || record.EvalTargetOutputData == nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] load debug record for execute ids fail, invoke_id=%d, err=%v", invokeID, err)
+		return fallback
+	}
+	raw := record.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxExecuteIDs]
+	if raw == "" {
+		return fallback
+	}
+	var ids []string
+	if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal debug sandbox execute ids fail, invoke_id=%d, raw=%s, err=%v", invokeID, raw, err)
+		return fallback
+	}
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id != "" {
+			out = append(out, id)
+		}
+	}
+	if len(out) == 0 {
+		return fallback
+	}
+	return out
 }
 
 func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {
