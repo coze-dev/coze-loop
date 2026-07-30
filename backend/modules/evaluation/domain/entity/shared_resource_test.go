@@ -84,3 +84,80 @@ func TestSharedResourceConfig_NonPromptEvalTargetIgnoresVersionPolicy(t *testing
 		assert.Empty(t, share.SpecifiedVersions)
 	}
 }
+
+func TestMatchAccessLevel(t *testing.T) {
+	callerKey := "200"
+
+	tests := []struct {
+		name        string
+		accessRules []*SharedAccessRule
+		wantLevel   string
+		wantMatched bool
+	}{
+		{
+			name:        "unknown level with exact target is denied",
+			accessRules: []*SharedAccessRule{{AccessLevel: "read", Targets: []string{callerKey}}},
+		},
+		{
+			name:        "unknown level with wildcard is denied",
+			accessRules: []*SharedAccessRule{{AccessLevel: "executor", Targets: []string{sharedAccessTargetAll}}},
+		},
+		{
+			name:        "empty level is denied",
+			accessRules: []*SharedAccessRule{{Targets: []string{callerKey}}},
+		},
+		{
+			name: "readable exact target",
+			accessRules: []*SharedAccessRule{{
+				AccessLevel: SharedAccessLevelReadable,
+				Targets:     []string{callerKey},
+			}},
+			wantLevel:   SharedAccessLevelReadable,
+			wantMatched: true,
+		},
+		{
+			name: "readable wildcard",
+			accessRules: []*SharedAccessRule{{
+				AccessLevel: SharedAccessLevelReadable,
+				Targets:     []string{sharedAccessTargetAll},
+			}},
+			wantLevel:   SharedAccessLevelReadable,
+			wantMatched: true,
+		},
+		{
+			name: "execute exact target",
+			accessRules: []*SharedAccessRule{{
+				AccessLevel: SharedAccessLevelExecute,
+				Targets:     []string{callerKey},
+			}},
+			wantLevel:   SharedAccessLevelExecute,
+			wantMatched: true,
+		},
+		{
+			name: "execute wildcard",
+			accessRules: []*SharedAccessRule{{
+				AccessLevel: SharedAccessLevelExecute,
+				Targets:     []string{sharedAccessTargetAll},
+			}},
+			wantLevel:   SharedAccessLevelExecute,
+			wantMatched: true,
+		},
+		{
+			name: "readable takes precedence over execute",
+			accessRules: []*SharedAccessRule{
+				{AccessLevel: SharedAccessLevelExecute, Targets: []string{sharedAccessTargetAll}},
+				{AccessLevel: SharedAccessLevelReadable, Targets: []string{callerKey}},
+			},
+			wantLevel:   SharedAccessLevelReadable,
+			wantMatched: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			level, matched := matchAccessLevel(tt.accessRules, callerKey)
+			assert.Equal(t, tt.wantLevel, level)
+			assert.Equal(t, tt.wantMatched, matched)
+		})
+	}
+}

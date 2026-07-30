@@ -649,3 +649,152 @@ func TestEvaluationSetApplicationImpl_GetEvaluationSetItemField(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluationSetApplicationImpl_ListEvaluationSetVersions_NonSharedPreservesPagination(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const (
+		workspaceID = int64(1001)
+		setID       = int64(2001)
+	)
+	mockSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+	mockVersionSvc := servicemocks.NewMockEvaluationSetVersionService(ctrl)
+	mockAuthorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
+	mockUserInfo := userinfomocks.NewMockUserInfoService(ctrl)
+	app := &EvaluationSetApplicationImpl{
+		evaluationSetService:        mockSetSvc,
+		evaluationSetVersionService: mockVersionSvc,
+		resourceAccessAuthorizer:    mockAuthorizer,
+		userInfoService:             mockUserInfo,
+	}
+
+	set := &entity.EvaluationSet{ID: setID, SpaceID: workspaceID}
+	mockSetSvc.EXPECT().
+		GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), setID, nil, nil).
+		Return(set, nil)
+	mockAuthorizer.EXPECT().
+		AuthorizeRead(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, req *entity.AuthorizeResourceRequest) (*entity.ResourceAccessContext, error) {
+			assert.Nil(t, req.SharedOption)
+			return &entity.ResourceAccessContext{
+				CallerSpaceID:   workspaceID,
+				ResourceSpaceID: workspaceID,
+				AccessMode:      entity.AccessModeDirect,
+			}, nil
+		})
+
+	pageSize := int32(7)
+	pageNumber := int32(3)
+	pageToken := "dataset-token"
+	versionLike := "v"
+	total := int64(9)
+	nextToken := "dataset-next"
+	mockVersionSvc.EXPECT().
+		ListEvaluationSetVersions(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, param *entity.ListEvaluationSetVersionsParam) ([]*entity.EvaluationSetVersion, *int64, *string, error) {
+			assert.Equal(t, workspaceID, param.SpaceID)
+			assert.Equal(t, setID, param.EvaluationSetID)
+			assert.Equal(t, &pageSize, param.PageSize)
+			assert.Equal(t, &pageNumber, param.PageNumber)
+			assert.Equal(t, &pageToken, param.PageToken)
+			assert.Equal(t, &versionLike, param.VersionLike)
+			assert.Nil(t, param.SharedOption)
+			return []*entity.EvaluationSetVersion{{ID: 11, Version: "v1"}}, &total, &nextToken, nil
+		})
+	mockUserInfo.EXPECT().PackUserInfo(gomock.Any(), gomock.Any())
+
+	resp, err := app.ListEvaluationSetVersions(context.Background(), &eval_set.ListEvaluationSetVersionsRequest{
+		WorkspaceID:     workspaceID,
+		EvaluationSetID: setID,
+		PageSize:        &pageSize,
+		PageNumber:      &pageNumber,
+		PageToken:       &pageToken,
+		VersionLike:     &versionLike,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Len(t, resp.Versions, 1)
+	assert.Equal(t, total, resp.GetTotal())
+	assert.Equal(t, nextToken, resp.GetNextPageToken())
+}
+
+func TestEvaluationSetApplicationImpl_ListEvaluationSetVersions_SharedSpecifiedFiltersBeforePagination(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const (
+		workspaceID = int64(1001)
+		sourceID    = int64(3001)
+		setID       = int64(2001)
+	)
+	mockSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+	mockVersionSvc := servicemocks.NewMockEvaluationSetVersionService(ctrl)
+	mockAuthorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
+	mockUserInfo := userinfomocks.NewMockUserInfoService(ctrl)
+	app := &EvaluationSetApplicationImpl{
+		evaluationSetService:        mockSetSvc,
+		evaluationSetVersionService: mockVersionSvc,
+		resourceAccessAuthorizer:    mockAuthorizer,
+		userInfoService:             mockUserInfo,
+	}
+
+	set := &entity.EvaluationSet{ID: setID, SpaceID: sourceID, LatestVersion: "v5"}
+	mockSetSvc.EXPECT().
+		GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), setID, nil, gomock.Any()).
+		Return(set, nil)
+	mockAuthorizer.EXPECT().
+		AuthorizeRead(gomock.Any(), gomock.Any()).
+		Return(&entity.ResourceAccessContext{
+			CallerSpaceID:   workspaceID,
+			ResourceSpaceID: sourceID,
+			AccessMode:      entity.AccessModeShared,
+			AccessLevel:     entity.SharedAccessLevelReadable,
+			VersionPolicy:   entity.SharedVersionPolicySpecified,
+			SpecifiedIDs:    []int64{4, 2},
+		}, nil)
+
+	scanToken := "scan-next"
+	gomock.InOrder(
+		mockVersionSvc.EXPECT().
+			ListEvaluationSetVersions(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, param *entity.ListEvaluationSetVersionsParam) ([]*entity.EvaluationSetVersion, *int64, *string, error) {
+				assert.Equal(t, int32(maxSharedPageSize), gptr.Indirect(param.PageSize))
+				assert.Nil(t, param.PageToken)
+				require.NotNil(t, param.SharedOption)
+				assert.Equal(t, sourceID, gptr.Indirect(param.SharedOption.SourceSpaceID))
+				return []*entity.EvaluationSetVersion{
+					{ID: 5, Version: "v5"},
+					{ID: 4, Version: "v4"},
+				}, nil, &scanToken, nil
+			}),
+		mockVersionSvc.EXPECT().
+			ListEvaluationSetVersions(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, param *entity.ListEvaluationSetVersionsParam) ([]*entity.EvaluationSetVersion, *int64, *string, error) {
+				require.NotNil(t, param.PageToken)
+				assert.Equal(t, scanToken, *param.PageToken)
+				return []*entity.EvaluationSetVersion{
+					{ID: 3, Version: "v3"},
+					{ID: 2, Version: "v2"},
+				}, nil, nil, nil
+			}),
+	)
+	mockUserInfo.EXPECT().PackUserInfo(gomock.Any(), gomock.Any())
+
+	pageSize := int32(1)
+	resp, err := app.ListEvaluationSetVersions(context.Background(), &eval_set.ListEvaluationSetVersionsRequest{
+		WorkspaceID:     workspaceID,
+		EvaluationSetID: setID,
+		PageSize:        &pageSize,
+		SharedOption: &domain_common.SharedResourceOption{
+			IsShared:      gptr.Of(true),
+			SourceSpaceID: gptr.Of(sourceID),
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Len(t, resp.Versions, 1)
+	assert.Equal(t, int64(4), resp.Versions[0].GetID())
+	assert.Equal(t, int64(2), resp.GetTotal())
+	assert.NotEmpty(t, resp.GetNextPageToken())
+}

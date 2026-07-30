@@ -25,7 +25,7 @@ const (
 	SharedAccessLevelExecute = "execute"
 )
 
-// sharedAccessTargetAll 表示共享给所有空间的通配符（仅 execute 允许，readable 禁止）
+// sharedAccessTargetAll 表示共享给所有空间的通配符，readable 和 execute 均支持。
 const sharedAccessTargetAll = "*"
 
 type SharedResourceInfo struct {
@@ -153,31 +153,33 @@ func sharedResourceMatches(res *SharedResourceRule, resourceType string, targetT
 }
 
 // matchAccessLevel 在资源的访问规则中匹配调用方空间，返回命中的访问级别。
-// 优先返回 readable（内容可读优先于黑盒执行），readable 不接受 "*" 通配。
+// 优先返回 readable（内容可读优先于黑盒执行）；未知访问级别默认拒绝。
 func matchAccessLevel(accessRules []*SharedAccessRule, callerKey string) (string, bool) {
 	var matchedExecute bool
 	for _, rule := range accessRules {
 		if rule == nil {
 			continue
 		}
-		readable := rule.AccessLevel == SharedAccessLevelReadable
-		for _, target := range rule.Targets {
-			if target == sharedAccessTargetAll {
-				// readable 禁止通配，跳过；execute 允许通配
-				if readable {
-					continue
-				}
-				matchedExecute = true
-				continue
-			}
-			if target == callerKey {
-				if readable {
+
+		switch rule.AccessLevel {
+		case SharedAccessLevelReadable:
+			for _, target := range rule.Targets {
+				if target == sharedAccessTargetAll || target == callerKey {
 					return SharedAccessLevelReadable, true
 				}
-				matchedExecute = true
 			}
+		case SharedAccessLevelExecute:
+			for _, target := range rule.Targets {
+				if target == sharedAccessTargetAll || target == callerKey {
+					matchedExecute = true
+				}
+			}
+		default:
+			// 配置错误或未来新增但当前代码不认识的枚举值不得产生权限。
+			continue
 		}
 	}
+
 	if matchedExecute {
 		return SharedAccessLevelExecute, true
 	}

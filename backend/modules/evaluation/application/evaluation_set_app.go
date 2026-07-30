@@ -635,8 +635,19 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItems(ctx context.Contex
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	sharedOption := sharedOptionDTO2DO(req.SharedOption)
-	// 鉴权：共享场景下按来源空间加载评测集
+	isShared := req.SharedOption != nil && req.SharedOption.GetIsShared()
+	var sharedOption *entity.SharedResourceOption
+	if isShared {
+		sharedOption = sharedOptionDTO2DO(req.SharedOption)
+		if sharedOption == nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when shared_option.is_shared is true"))
+		}
+		// 共享评测集只开放已发布版本快照，不允许读取 draft/current items。
+		if req.VersionID == nil || req.GetVersionID() <= 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("version_id is required for shared evaluation set items"))
+		}
+	}
+
 	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, gptr.Of(true), sharedOption)
 	if err != nil {
 		return nil, err
@@ -644,18 +655,52 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItems(ctx context.Contex
 	if set == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
 	}
-	// item 内容路径要求 readable（execute 黑盒不可读内容）
-	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.WorkspaceID, set, sharedOption, nil, nil, true))
-	if err != nil {
-		return nil, err
+
+	querySpaceID := req.WorkspaceID
+	if isShared {
+		// item 内容路径要求 readable（execute 黑盒不可读内容）
+		accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.WorkspaceID, set, sharedOption, req.VersionID, nil, true))
+		if err != nil {
+			return nil, err
+		}
+		// AuthorizeRead 只能对 specified + version_id 做加载前早拒；latest 必须在版本加载后
+		// 与评测集的 LatestVersion 比较。这里同时校验版本确实属于当前评测集，防止跨集读取。
+		version, versionSet, err := e.evaluationSetVersionService.GetEvaluationSetVersion(
+			ctx, req.WorkspaceID, req.GetVersionID(), gptr.Of(true), sharedOption,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if version == nil || versionSet == nil || versionSet.ID != set.ID ||
+			!service.IsSharedVersionAllowed(version.ID, version.Version, versionSet.LatestVersion, accessCtx.VersionPolicy, accessCtx.SpecifiedIDs) {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set version not shared"))
+		}
+		querySpaceID = accessCtx.QuerySpaceID()
+	} else {
+		// 非共享场景保持 main 分支原有鉴权逻辑。
+		var ownerID *string
+		if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+			ownerID = set.BaseInfo.CreatedBy.UserID
+		}
+		err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(set.ID, 10),
+			SpaceID:         req.WorkspaceID,
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+			OwnerID:         ownerID,
+			ResourceSpaceID: set.SpaceID,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	tagFilter, err := evaluation_set.TagFilterDTO2DO(req.TagFilter)
 	if err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
 	// domain调用：共享时用来源空间查询 item
 	items, total, filterTotal, nextCursor, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-		SpaceID:         accessCtx.QuerySpaceID(),
+		SpaceID:         querySpaceID,
 		EvaluationSetID: req.EvaluationSetID,
 		VersionID:       req.VersionID,
 		PageNumber:      req.PageNumber,
@@ -850,42 +895,100 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetVersions(ctx context.Con
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
+	sharedOption := sharedOptionDTO2DO(req.SharedOption)
 	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, nil, sharedOptionDTO2DO(req.SharedOption))
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, nil, sharedOption)
 	if err != nil {
 		return nil, err
 	}
 	if set == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
 	}
-	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.WorkspaceID, set, sharedOptionDTO2DO(req.SharedOption), nil, nil, false))
+	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.WorkspaceID, set, sharedOption, nil, nil, false))
 	if err != nil {
 		return nil, err
 	}
 	set.SharedInfo = accessCtx.SharedInfo()
-	// domain调用
-	versions, total, nextCursor, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
-		SpaceID:         req.WorkspaceID,
-		EvaluationSetID: req.EvaluationSetID,
-		PageSize:        req.PageSize,
-		PageNumber:      req.PageNumber,
-		PageToken:       req.PageToken,
-		VersionLike:     req.VersionLike,
-		SharedOption:    sharedOptionDTO2DO(req.SharedOption),
-	})
-	if err != nil {
-		return nil, err
-	}
-	if accessCtx.IsShared() {
-		filteredVersions := make([]*entity.EvaluationSetVersion, 0, len(versions))
-		for _, version := range versions {
-			if service.IsSharedVersionAllowed(version.ID, version.Version, set.LatestVersion, accessCtx.VersionPolicy, accessCtx.SpecifiedIDs) {
-				version.SharedInfo = accessCtx.SharedInfo()
-				filteredVersions = append(filteredVersions, version)
+
+	var (
+		versions   []*entity.EvaluationSetVersion
+		total      *int64
+		nextCursor *string
+	)
+	// 非共享和共享 all 的可见集合与底层集合一致，严格保留原分页调用。
+	if !accessCtx.IsShared() || accessCtx.VersionPolicy == "" || accessCtx.VersionPolicy == entity.SharedVersionPolicyAll {
+		versions, total, nextCursor, err = e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+			SpaceID:         req.WorkspaceID,
+			EvaluationSetID: req.EvaluationSetID,
+			PageSize:        req.PageSize,
+			PageNumber:      req.PageNumber,
+			PageToken:       req.PageToken,
+			VersionLike:     req.VersionLike,
+			SharedOption:    sharedOption,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if accessCtx.IsShared() {
+			for _, version := range versions {
+				if version != nil {
+					version.SharedInfo = accessCtx.SharedInfo()
+				}
 			}
 		}
-		versions = filteredVersions
+	} else {
+		switch accessCtx.VersionPolicy {
+		case entity.SharedVersionPolicyLatest, entity.SharedVersionPolicySpecified:
+		default:
+			return nil, errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg("unsupported shared version policy"))
+		}
+
+		// latest/specified 必须先在完整匹配集合上做权限过滤，再对授权集合分页。
+		// 扫描时使用底层最大页长，保持底层排序和 VersionLike 语义。
+		filteredVersions := make([]*entity.EvaluationSetVersion, 0)
+		scanPageSize := int32(maxSharedPageSize)
+		var scanPageToken *string
+		for {
+			page, _, nextScanPageToken, listErr := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+				SpaceID:         req.WorkspaceID,
+				EvaluationSetID: req.EvaluationSetID,
+				PageSize:        &scanPageSize,
+				PageToken:       scanPageToken,
+				VersionLike:     req.VersionLike,
+				SharedOption:    sharedOption,
+			})
+			if listErr != nil {
+				return nil, listErr
+			}
+			for _, version := range page {
+				if version != nil && service.IsSharedVersionAllowed(version.ID, version.Version, set.LatestVersion, accessCtx.VersionPolicy, accessCtx.SpecifiedIDs) {
+					version.SharedInfo = accessCtx.SharedInfo()
+					filteredVersions = append(filteredVersions, version)
+				}
+			}
+			if nextScanPageToken == nil || strings.TrimSpace(*nextScanPageToken) == "" {
+				break
+			}
+			if scanPageToken != nil && *nextScanPageToken == *scanPageToken {
+				return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("list evaluation set versions returned repeated page token"))
+			}
+			scanPageToken = nextScanPageToken
+		}
+
+		pageToken := req.PageToken
+		if pageToken == nil || strings.TrimSpace(*pageToken) == "" {
+			pageToken, err = sharedPageTokenForPageNumber(req.PageNumber, req.PageSize)
+			if err != nil {
+				return nil, err
+			}
+		}
+		versions, nextCursor, _, err = paginateShared(filteredVersions, req.PageSize, pageToken)
+		if err != nil {
+			return nil, err
+		}
+		total = gptr.Of(int64(len(filteredVersions)))
 	}
+
 	// 返回结果构建、错误处理
 	versionDTOs := evaluation_set.VersionDO2DTOs(versions)
 	e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier(versionDTOs))
