@@ -161,6 +161,11 @@ func TestSandboxAgentSourceEvalTargetServiceImpl_NopMethods(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Nil(t, dos)
 	})
+	t.Run("GetLatestSourceVersion", func(t *testing.T) {
+		version, err := svc.GetLatestSourceVersion(ctx, 1, "a")
+		assert.NoError(t, err)
+		assert.Nil(t, version)
+	})
 	t.Run("ListSourceVersion", func(t *testing.T) {
 		dos, cursor, hasMore, err := svc.ListSourceVersion(ctx, &entity.ListSourceVersionParam{})
 		assert.NoError(t, err)

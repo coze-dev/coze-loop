@@ -56,6 +56,7 @@ func (a *resourceAccessAuthorizerImpl) authorizeDirectRead(ctx context.Context, 
 		ResourceSpaceID: req.CallerSpaceID,
 		ResourceType:    req.ResourceType,
 		ResourceID:      req.ResourceID,
+		TargetType:      req.TargetType,
 		AccessMode:      entity.AccessModeDirect,
 		AccessLevel:     consts.Read,
 		VersionPolicy:   entity.SharedVersionPolicyAll,
@@ -73,7 +74,7 @@ func (a *resourceAccessAuthorizerImpl) authorizeSharedRead(ctx context.Context, 
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid shared source space id"))
 	}
 
-	resolved, err := a.resolveShare(ctx, sourceSpaceID, req.ResourceType, req.ResourceID, req.CallerSpaceID)
+	resolved, err := a.resolveShare(ctx, sourceSpaceID, req.ResourceType, req.TargetType, req.ResourceID, req.CallerSpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -83,19 +84,27 @@ func (a *resourceAccessAuthorizerImpl) authorizeSharedRead(ctx context.Context, 
 	// 版本策略的逐版本过滤在资源加载后由 app 层用 IsSharedVersionAllowed 完成
 	// （latest 需比对资源最新版本名，authorizer 不加载资源）。此处仅在 specified 策略下
 	// 对显式请求的 version_id 做早拒，减少无谓加载。
-	if err := earlyCheckVersionPolicy(resolved.VersionPolicy, resolved.SpecifiedIDs, req.VersionID); err != nil {
-		return nil, err
+	if req.ResourceType == entity.SharedResourceTypeEvalTarget {
+		if err := earlyCheckVersionNamePolicy(resolved.VersionPolicy, resolved.SpecifiedVersions, req.VersionName); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := earlyCheckVersionPolicy(resolved.VersionPolicy, resolved.SpecifiedIDs, req.VersionID); err != nil {
+			return nil, err
+		}
 	}
 
 	accessCtx := &entity.ResourceAccessContext{
-		CallerSpaceID:   req.CallerSpaceID,
-		ResourceSpaceID: sourceSpaceID,
-		ResourceType:    req.ResourceType,
-		ResourceID:      req.ResourceID,
-		AccessMode:      entity.AccessModeShared,
-		AccessLevel:     resolved.AccessLevel,
-		VersionPolicy:   resolved.VersionPolicy,
-		SpecifiedIDs:    resolved.SpecifiedIDs,
+		CallerSpaceID:     req.CallerSpaceID,
+		ResourceSpaceID:   sourceSpaceID,
+		ResourceType:      req.ResourceType,
+		ResourceID:        req.ResourceID,
+		TargetType:        resolved.TargetType,
+		AccessMode:        entity.AccessModeShared,
+		AccessLevel:       resolved.AccessLevel,
+		VersionPolicy:     resolved.VersionPolicy,
+		SpecifiedIDs:      resolved.SpecifiedIDs,
+		SpecifiedVersions: resolved.SpecifiedVersions,
 	}
 	if err := a.callBaseAuth(ctx, accessCtx, req.Action, req.OwnerID); err != nil {
 		return nil, err
@@ -104,7 +113,7 @@ func (a *resourceAccessAuthorizerImpl) authorizeSharedRead(ctx context.Context, 
 }
 
 // resolveShare 拉全量共享配置并 Lookup；任何失败 / 未命中一律 fail-closed。
-func (a *resourceAccessAuthorizerImpl) resolveShare(ctx context.Context, sourceSpaceID int64, resourceType string, resourceID, callerSpaceID int64) (*entity.ResolvedShare, error) {
+func (a *resourceAccessAuthorizerImpl) resolveShare(ctx context.Context, sourceSpaceID int64, resourceType string, targetType entity.EvalTargetType, resourceID, callerSpaceID int64) (*entity.ResolvedShare, error) {
 	if a.configProvider == nil {
 		return nil, errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg("shared resource config unavailable"))
 	}
@@ -112,7 +121,7 @@ func (a *resourceAccessAuthorizerImpl) resolveShare(ctx context.Context, sourceS
 	if err != nil || cfg == nil {
 		return nil, errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg("shared resource config unavailable"))
 	}
-	resolved := cfg.Lookup(sourceSpaceID, resourceType, resourceID, callerSpaceID)
+	resolved := cfg.Lookup(sourceSpaceID, resourceType, targetType, resourceID, callerSpaceID)
 	if resolved == nil {
 		return nil, errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg("resource not shared to caller"))
 	}
@@ -140,21 +149,23 @@ func (a *resourceAccessAuthorizerImpl) ListSharedResources(ctx context.Context, 
 	if cfg == nil {
 		return nil, nil
 	}
-	entries := cfg.ListSharedTo(req.CallerSpaceID, req.ResourceType, req.SourceSpaceFilter)
+	entries := cfg.ListSharedTo(req.CallerSpaceID, req.ResourceType, req.TargetType, req.SourceSpaceFilter)
 	res := make([]*entity.ResourceAccessContext, 0, len(entries))
 	for _, e := range entries {
 		if e == nil {
 			continue
 		}
 		res = append(res, &entity.ResourceAccessContext{
-			CallerSpaceID:   req.CallerSpaceID,
-			ResourceSpaceID: e.SourceSpaceID,
-			ResourceType:    e.ResourceType,
-			ResourceID:      e.ResourceID,
-			AccessMode:      entity.AccessModeShared,
-			AccessLevel:     e.AccessLevel,
-			VersionPolicy:   e.VersionPolicy,
-			SpecifiedIDs:    e.SpecifiedIDs,
+			CallerSpaceID:     req.CallerSpaceID,
+			ResourceSpaceID:   e.SourceSpaceID,
+			ResourceType:      e.ResourceType,
+			ResourceID:        e.ResourceID,
+			TargetType:        e.TargetType,
+			AccessMode:        entity.AccessModeShared,
+			AccessLevel:       e.AccessLevel,
+			VersionPolicy:     e.VersionPolicy,
+			SpecifiedIDs:      e.SpecifiedIDs,
+			SpecifiedVersions: e.SpecifiedVersions,
 		})
 	}
 	return res, nil

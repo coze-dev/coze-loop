@@ -79,11 +79,13 @@ type SpaceSharedRules struct {
 
 // SharedResourceRule 单个资源的共享规则。
 type SharedResourceRule struct {
-	ResourceID    int64
-	ResourceType  string // eval_set / eval_target
-	VersionPolicy string // latest / all / specified
-	SpecifiedIDs  []int64
-	AccessRules   []*SharedAccessRule
+	ResourceID        int64
+	ResourceType      string // eval_set / eval_target
+	TargetType        EvalTargetType
+	VersionPolicy     string // latest / all / specified
+	SpecifiedIDs      []int64
+	SpecifiedVersions []string
+	AccessRules       []*SharedAccessRule
 }
 
 // SharedAccessRule 资源的一条访问规则：把某访问级别授予一组目标空间。
@@ -94,15 +96,17 @@ type SharedAccessRule struct {
 
 // ResolvedShare 白名单命中后解析出的共享授权结论。
 type ResolvedShare struct {
-	AccessLevel   string
-	VersionPolicy string
-	SpecifiedIDs  []int64
+	AccessLevel       string
+	TargetType        EvalTargetType
+	VersionPolicy     string
+	SpecifiedIDs      []int64
+	SpecifiedVersions []string
 }
 
 // Lookup 按 (来源空间, 资源类型, 资源 id, 调用方空间) 查询共享授权。
 // 未命中（来源空间未配置 / 资源未共享 / 未授权给该调用方）返回 nil，交由上层 fail-closed 处理。
 // readable 级别禁止通配符 "*"（仅 execute 允许通配），保证内容可读授权必须显式指定调用方。
-func (c *SharedResourceConfig) Lookup(sourceSpaceID int64, resourceType string, resourceID, callerSpaceID int64) *ResolvedShare {
+func (c *SharedResourceConfig) Lookup(sourceSpaceID int64, resourceType string, targetType EvalTargetType, resourceID, callerSpaceID int64) *ResolvedShare {
 	if c == nil || c.SpaceRules == nil {
 		return nil
 	}
@@ -112,7 +116,7 @@ func (c *SharedResourceConfig) Lookup(sourceSpaceID int64, resourceType string, 
 	}
 	callerKey := formatSpaceID(callerSpaceID)
 	for _, res := range spaceRules.Resources {
-		if res == nil || res.ResourceID != resourceID || res.ResourceType != resourceType {
+		if !sharedResourceMatches(res, resourceType, targetType) || res.ResourceID != resourceID {
 			continue
 		}
 		accessLevel, matched := matchAccessLevel(res.AccessRules, callerKey)
@@ -120,16 +124,32 @@ func (c *SharedResourceConfig) Lookup(sourceSpaceID int64, resourceType string, 
 			return nil
 		}
 		versionPolicy := res.VersionPolicy
-		if versionPolicy == "" {
+		specifiedVersions := res.SpecifiedVersions
+		if resourceType == SharedResourceTypeEvalTarget && targetType.ToOperatorBaseType() != EvalTargetTypeLoopPrompt {
+			versionPolicy = SharedVersionPolicyAll
+			specifiedVersions = nil
+		} else if versionPolicy == "" {
 			versionPolicy = SharedVersionPolicyAll
 		}
 		return &ResolvedShare{
-			AccessLevel:   accessLevel,
-			VersionPolicy: versionPolicy,
-			SpecifiedIDs:  res.SpecifiedIDs,
+			AccessLevel:       accessLevel,
+			TargetType:        res.TargetType,
+			VersionPolicy:     versionPolicy,
+			SpecifiedIDs:      res.SpecifiedIDs,
+			SpecifiedVersions: specifiedVersions,
 		}
 	}
 	return nil
+}
+
+func sharedResourceMatches(res *SharedResourceRule, resourceType string, targetType EvalTargetType) bool {
+	if res == nil || res.ResourceType != resourceType {
+		return false
+	}
+	if resourceType != SharedResourceTypeEvalTarget {
+		return true
+	}
+	return targetType != 0 && res.TargetType.ToOperatorBaseType() == targetType.ToOperatorBaseType()
 }
 
 // matchAccessLevel 在资源的访问规则中匹配调用方空间，返回命中的访问级别。
@@ -170,18 +190,20 @@ func formatSpaceID(spaceID int64) string {
 
 // SharedResourceEntry 枚举「共享给某调用方空间」时的单条命中结果。
 type SharedResourceEntry struct {
-	SourceSpaceID int64
-	ResourceID    int64
-	ResourceType  string
-	AccessLevel   string
-	VersionPolicy string
-	SpecifiedIDs  []int64
+	SourceSpaceID     int64
+	ResourceID        int64
+	ResourceType      string
+	TargetType        EvalTargetType
+	AccessLevel       string
+	VersionPolicy     string
+	SpecifiedIDs      []int64
+	SpecifiedVersions []string
 }
 
 // ListSharedTo 枚举配置中「共享给 callerSpaceID」的指定类型资源。
 // sourceSpaceFilter 为 nil 时跨全部来源空间枚举；有值则仅枚举该来源空间。
 // 复用与 Lookup 相同的 matchAccessLevel 判定（readable 禁通配 "*" 规则天然继承）。
-func (c *SharedResourceConfig) ListSharedTo(callerSpaceID int64, resourceType string, sourceSpaceFilter *int64) []*SharedResourceEntry {
+func (c *SharedResourceConfig) ListSharedTo(callerSpaceID int64, resourceType string, targetType EvalTargetType, sourceSpaceFilter *int64) []*SharedResourceEntry {
 	if c == nil || c.SpaceRules == nil {
 		return nil
 	}
@@ -195,7 +217,7 @@ func (c *SharedResourceConfig) ListSharedTo(callerSpaceID int64, resourceType st
 			continue
 		}
 		for _, res := range spaceRules.Resources {
-			if res == nil || res.ResourceType != resourceType {
+			if !sharedResourceMatches(res, resourceType, targetType) {
 				continue
 			}
 			accessLevel, matched := matchAccessLevel(res.AccessRules, callerKey)
@@ -203,16 +225,22 @@ func (c *SharedResourceConfig) ListSharedTo(callerSpaceID int64, resourceType st
 				continue
 			}
 			versionPolicy := res.VersionPolicy
-			if versionPolicy == "" {
+			specifiedVersions := res.SpecifiedVersions
+			if resourceType == SharedResourceTypeEvalTarget && targetType.ToOperatorBaseType() != EvalTargetTypeLoopPrompt {
+				versionPolicy = SharedVersionPolicyAll
+				specifiedVersions = nil
+			} else if versionPolicy == "" {
 				versionPolicy = SharedVersionPolicyAll
 			}
 			entries = append(entries, &SharedResourceEntry{
-				SourceSpaceID: sourceSpaceID,
-				ResourceID:    res.ResourceID,
-				ResourceType:  res.ResourceType,
-				AccessLevel:   accessLevel,
-				VersionPolicy: versionPolicy,
-				SpecifiedIDs:  res.SpecifiedIDs,
+				SourceSpaceID:     sourceSpaceID,
+				ResourceID:        res.ResourceID,
+				ResourceType:      res.ResourceType,
+				TargetType:        res.TargetType,
+				AccessLevel:       accessLevel,
+				VersionPolicy:     versionPolicy,
+				SpecifiedIDs:      res.SpecifiedIDs,
+				SpecifiedVersions: specifiedVersions,
 			})
 		}
 	}
