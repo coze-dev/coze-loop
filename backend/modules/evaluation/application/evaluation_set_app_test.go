@@ -11,15 +11,18 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
+	domain_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmock "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
+	userinfomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -155,6 +158,62 @@ func TestEvaluationSetApplicationImpl_CreateEvaluationSetWithImport(t *testing.T
 			}
 		})
 	}
+}
+
+func TestEvaluationSetApplicationImpl_ListEvaluationSets_SharedPagination(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const workspaceID = int64(1001)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+	mockAuthorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
+	mockUserInfo := userinfomocks.NewMockUserInfoService(ctrl)
+	app := &EvaluationSetApplicationImpl{
+		auth:                     mockAuth,
+		evaluationSetService:     mockSvc,
+		resourceAccessAuthorizer: mockAuthorizer,
+		userInfoService:          mockUserInfo,
+	}
+	accessCtxs := []*entity.ResourceAccessContext{
+		{ResourceSpaceID: 20, ResourceID: 3, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+		{ResourceSpaceID: 10, ResourceID: 2, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+		{ResourceSpaceID: 10, ResourceID: 1, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+	}
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	mockAuthorizer.EXPECT().ListSharedResources(gomock.Any(), gomock.Any()).Return(accessCtxs, nil).Times(2)
+	mockUserInfo.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Times(2)
+	mockSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(workspaceID), []int64{1, 2}, gomock.Any(), gomock.Any()).Return(
+		[]*entity.EvaluationSet{{ID: 2, SpaceID: 10}, {ID: 1, SpaceID: 10}},
+		nil,
+	)
+
+	pageSize := int32(2)
+	req := &eval_set.ListEvaluationSetsRequest{
+		WorkspaceID: workspaceID,
+		PageSize:    &pageSize,
+		SharedOption: &domain_common.SharedResourceOption{
+			IsShared: gptr.Of(true),
+		},
+	}
+	firstPage, err := app.ListEvaluationSets(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, firstPage.EvaluationSets, 2)
+	assert.Equal(t, int64(1), firstPage.EvaluationSets[0].GetID())
+	assert.Equal(t, int64(2), firstPage.EvaluationSets[1].GetID())
+	assert.Equal(t, int64(3), firstPage.GetTotal())
+	require.NotNil(t, firstPage.NextPageToken)
+
+	mockSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(workspaceID), []int64{3}, gomock.Any(), gomock.Any()).Return(
+		[]*entity.EvaluationSet{{ID: 3, SpaceID: 20}},
+		nil,
+	)
+	req.PageToken = firstPage.NextPageToken
+	secondPage, err := app.ListEvaluationSets(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, secondPage.EvaluationSets, 1)
+	assert.Equal(t, int64(3), secondPage.EvaluationSets[0].GetID())
+	assert.Nil(t, secondPage.NextPageToken)
 }
 
 func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {

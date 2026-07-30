@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -28,6 +29,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
+
+type evalTargetOperatorWithLatest struct {
+	service.ISourceEvalTargetOperateService
+	service.LatestSourceVersionProvider
+}
 
 func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -236,6 +242,71 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions_SharedSpecifiedTwoPages(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+	mockResourceAccess := mocks.NewMockResourceAccessAuthorizer(ctrl)
+	targetType := domain_eval_target.EvalTargetType(1)
+	app := &EvalTargetApplicationImpl{
+		auth:                     mockAuth,
+		resourceAccessAuthorizer: mockResourceAccess,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			1: mockOperator,
+		},
+	}
+	accessCtx := &entity.ResourceAccessContext{
+		CallerSpaceID:     123,
+		ResourceSpaceID:   456,
+		ResourceType:      entity.SharedResourceTypeEvalTarget,
+		ResourceID:        101,
+		AccessMode:        entity.AccessModeShared,
+		AccessLevel:       entity.SharedAccessLevelReadable,
+		VersionPolicy:     entity.SharedVersionPolicySpecified,
+		SpecifiedVersions: []string{"v2", "v1"},
+	}
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	mockResourceAccess.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(accessCtx, nil).Times(2)
+	for _, version := range accessCtx.SpecifiedVersions {
+		mockOperator.EXPECT().BuildBySource(gomock.Any(), int64(456), "101", version).Return(&entity.EvalTarget{
+			SpaceID:        456,
+			SourceTargetID: "101",
+			EvalTargetType: 1,
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				SourceTargetVersion: version,
+				EvalTargetType:      1,
+			},
+		}, nil)
+	}
+
+	pageSize := int32(1)
+	req := &evaltargetapi.ListSourceEvalTargetVersionsRequest{
+		WorkspaceID:    123,
+		TargetType:     &targetType,
+		SourceTargetID: "101",
+		PageSize:       &pageSize,
+		SharedOption: &domaincommon.SharedResourceOption{
+			IsShared:      gptr.Of(true),
+			SourceSpaceID: gptr.Of(int64(456)),
+		},
+	}
+	firstPage, err := app.ListSourceEvalTargetVersions(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, firstPage.Versions, 1)
+	assert.Equal(t, "v2", firstPage.Versions[0].GetSourceTargetVersion())
+	assert.True(t, firstPage.GetHasMore())
+	assert.NotEmpty(t, firstPage.GetNextPageToken())
+
+	req.PageToken = firstPage.NextPageToken
+	secondPage, err := app.ListSourceEvalTargetVersions(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, secondPage.Versions, 1)
+	assert.Equal(t, "v1", secondPage.Versions[0].GetSourceTargetVersion())
+	assert.False(t, secondPage.GetHasMore())
 }
 
 func TestNewEvalTargetHandlerImpl(t *testing.T) {
@@ -855,6 +926,271 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargets(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEvalTargetApplicationImpl_ListSourceEvalTargets_SharedFiltersByResource(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+	mockResourceAccess := mocks.NewMockResourceAccessAuthorizer(ctrl)
+
+	const (
+		callerSpaceID = int64(123)
+		sourceSpaceID = int64(456)
+		readableID    = int64(101)
+		executableID  = int64(102)
+	)
+	targetType := domain_eval_target.EvalTargetType_SandboxAgent
+	app := &EvalTargetApplicationImpl{
+		auth:                     mockAuth,
+		resourceAccessAuthorizer: mockResourceAccess,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			entity.EvalTargetTypeSandboxAgent: mockTypedOperator,
+		},
+	}
+
+	mockAuth.EXPECT().
+		Authorization(gomock.Any(), gomock.Any()).
+		Return(nil)
+	mockResourceAccess.EXPECT().
+		ListSharedResources(gomock.Any(), gomock.Any()).
+		Return([]*entity.ResourceAccessContext{
+			{
+				CallerSpaceID:   callerSpaceID,
+				ResourceSpaceID: sourceSpaceID,
+				ResourceType:    entity.SharedResourceTypeEvalTarget,
+				ResourceID:      readableID,
+				AccessMode:      entity.AccessModeShared,
+				AccessLevel:     entity.SharedAccessLevelReadable,
+				VersionPolicy:   entity.SharedVersionPolicyAll,
+			},
+			{
+				CallerSpaceID:     callerSpaceID,
+				ResourceSpaceID:   sourceSpaceID,
+				ResourceType:      entity.SharedResourceTypeEvalTarget,
+				ResourceID:        executableID,
+				AccessMode:        entity.AccessModeShared,
+				AccessLevel:       entity.SharedAccessLevelExecute,
+				VersionPolicy:     entity.SharedVersionPolicySpecified,
+				SpecifiedVersions: []string{"v2"},
+			},
+		}, nil)
+	mockTypedOperator.EXPECT().
+		BatchGetSource(gomock.Any(), sourceSpaceID, []string{"101", "102"}).
+		Return([]*entity.EvalTarget{
+			{
+				SpaceID:        sourceSpaceID,
+				SourceTargetID: "101",
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SpaceID:             sourceSpaceID,
+					SourceTargetVersion: "v1",
+					EvalTargetType:      entity.EvalTargetTypeSandboxAgent,
+					SandboxAgent:        &entity.SandboxAgent{Name: "readable-sandbox"},
+				},
+			},
+			{
+				SpaceID:        sourceSpaceID,
+				SourceTargetID: "102",
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SpaceID:             sourceSpaceID,
+					SourceTargetVersion: "v2",
+					EvalTargetType:      entity.EvalTargetTypeSandboxAgent,
+					SandboxAgent:        &entity.SandboxAgent{Name: "execute-sandbox"},
+					InputSchema:         []*entity.ArgsSchema{{Key: gptr.Of("secret-input")}},
+					RuntimeParamDemo:    gptr.Of(`{"secret":"value"}`),
+				},
+			},
+		}, nil)
+
+	resp, err := app.ListSourceEvalTargets(context.Background(), &evaltargetapi.ListSourceEvalTargetsRequest{
+		WorkspaceID: callerSpaceID,
+		TargetType:  &targetType,
+		SharedOption: &domaincommon.SharedResourceOption{
+			IsShared:      gptr.Of(true),
+			SourceSpaceID: gptr.Of(sourceSpaceID),
+		},
+	})
+
+	assert.NoError(t, err)
+	if assert.Len(t, resp.EvalTargets, 2) {
+		assert.Equal(t, "101", resp.EvalTargets[0].GetSourceTargetID())
+		assert.Equal(t, entity.SharedAccessLevelReadable, resp.EvalTargets[0].GetSharedInfo().GetAccessLevel())
+		assert.Equal(t, entity.SharedVersionPolicyAll, resp.EvalTargets[0].GetSharedInfo().GetVersionPolicy())
+		assert.Equal(t, "readable-sandbox", resp.EvalTargets[0].GetEvalTargetVersion().GetEvalTargetContent().GetSandboxAgent().GetName())
+		assert.Equal(t, "102", resp.EvalTargets[1].GetSourceTargetID())
+		assert.Equal(t, entity.SharedAccessLevelExecute, resp.EvalTargets[1].GetSharedInfo().GetAccessLevel())
+		assert.Equal(t, entity.SharedVersionPolicySpecified, resp.EvalTargets[1].GetSharedInfo().GetVersionPolicy())
+		assert.Equal(t, "v2", resp.EvalTargets[1].GetEvalTargetVersion().GetSourceTargetVersion())
+		assert.Nil(t, resp.EvalTargets[1].GetEvalTargetVersion().GetEvalTargetContent().GetSandboxAgent())
+		assert.Empty(t, resp.EvalTargets[1].GetEvalTargetVersion().GetEvalTargetContent().GetInputSchemas())
+		assert.Empty(t, resp.EvalTargets[1].GetEvalTargetVersion().GetEvalTargetContent().GetRuntimeParamJSONDemo())
+	}
+}
+
+func TestEvalTargetApplicationImpl_ListSourceEvalTargets_SharedGlobalPagination(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+	mockResourceAccess := mocks.NewMockResourceAccessAuthorizer(ctrl)
+	const callerSpaceID = int64(123)
+	targetType := domain_eval_target.EvalTargetType(1)
+	app := &EvalTargetApplicationImpl{
+		auth:                     mockAuth,
+		resourceAccessAuthorizer: mockResourceAccess,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			1: mockTypedOperator,
+		},
+	}
+	accessContexts := []*entity.ResourceAccessContext{
+		{CallerSpaceID: callerSpaceID, ResourceSpaceID: 456, ResourceType: entity.SharedResourceTypeEvalTarget, ResourceID: 101, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+		{CallerSpaceID: callerSpaceID, ResourceSpaceID: 789, ResourceType: entity.SharedResourceTypeEvalTarget, ResourceID: 201, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+	}
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	mockResourceAccess.EXPECT().ListSharedResources(gomock.Any(), gomock.Any()).Return(accessContexts, nil).Times(2)
+	mockTypedOperator.EXPECT().BatchGetSource(gomock.Any(), int64(456), []string{"101"}).
+		Return([]*entity.EvalTarget{{SpaceID: 456, SourceTargetID: "101", EvalTargetType: 1}}, nil)
+	mockTypedOperator.EXPECT().BatchGetSource(gomock.Any(), int64(789), []string{"201"}).
+		Return([]*entity.EvalTarget{{SpaceID: 789, SourceTargetID: "201", EvalTargetType: 1}}, nil)
+
+	pageSize := int32(1)
+	firstPage, err := app.ListSourceEvalTargets(context.Background(), &evaltargetapi.ListSourceEvalTargetsRequest{
+		WorkspaceID: callerSpaceID,
+		TargetType:  &targetType,
+		PageSize:    &pageSize,
+		SharedOption: &domaincommon.SharedResourceOption{
+			IsShared: gptr.Of(true),
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, firstPage.EvalTargets, 1)
+	assert.Equal(t, "101", firstPage.EvalTargets[0].GetSourceTargetID())
+	assert.True(t, firstPage.GetHasMore())
+	assert.Equal(t, "MQ", firstPage.GetNextPageToken())
+
+	secondPage, err := app.ListSourceEvalTargets(context.Background(), &evaltargetapi.ListSourceEvalTargetsRequest{
+		WorkspaceID: callerSpaceID,
+		TargetType:  &targetType,
+		PageSize:    &pageSize,
+		PageToken:   firstPage.NextPageToken,
+		SharedOption: &domaincommon.SharedResourceOption{
+			IsShared: gptr.Of(true),
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, secondPage.EvalTargets, 1)
+	assert.Equal(t, "201", secondPage.EvalTargets[0].GetSourceTargetID())
+	assert.False(t, secondPage.GetHasMore())
+}
+
+func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions_SharedLatest(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockTypedOperator := &evalTargetOperatorWithLatest{
+		ISourceEvalTargetOperateService: mocks.NewMockISourceEvalTargetOperateService(ctrl),
+		LatestSourceVersionProvider:     mocks.NewMockLatestSourceVersionProvider(ctrl),
+	}
+	mockResourceAccess := mocks.NewMockResourceAccessAuthorizer(ctrl)
+	targetType := domain_eval_target.EvalTargetType(1)
+	app := &EvalTargetApplicationImpl{
+		auth:                     mockAuth,
+		resourceAccessAuthorizer: mockResourceAccess,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			1: mockTypedOperator,
+		},
+	}
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	mockResourceAccess.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(&entity.ResourceAccessContext{
+		CallerSpaceID:   123,
+		ResourceSpaceID: 456,
+		ResourceType:    entity.SharedResourceTypeEvalTarget,
+		ResourceID:      101,
+		AccessMode:      entity.AccessModeShared,
+		AccessLevel:     entity.SharedAccessLevelReadable,
+		VersionPolicy:   entity.SharedVersionPolicyLatest,
+	}, nil)
+	mockTypedOperator.LatestSourceVersionProvider.(*mocks.MockLatestSourceVersionProvider).
+		EXPECT().GetLatestSourceVersion(gomock.Any(), int64(456), "101").Return(
+		&entity.EvalTargetVersion{
+			SourceTargetVersion: "v2",
+			EvalTargetType:      1,
+		}, nil,
+	)
+
+	resp, err := app.ListSourceEvalTargetVersions(context.Background(), &evaltargetapi.ListSourceEvalTargetVersionsRequest{
+		WorkspaceID:    123,
+		TargetType:     &targetType,
+		SourceTargetID: "101",
+		SharedOption: &domaincommon.SharedResourceOption{
+			IsShared:      gptr.Of(true),
+			SourceSpaceID: gptr.Of(int64(456)),
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Versions, 1)
+	assert.Equal(t, "v2", resp.Versions[0].GetSourceTargetVersion())
+	assert.False(t, resp.GetHasMore())
+}
+
+func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions_SharedSpecifiedFirstPageAfterLatest(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+	mockResourceAccess := mocks.NewMockResourceAccessAuthorizer(ctrl)
+	targetType := domain_eval_target.EvalTargetType(1)
+	app := &EvalTargetApplicationImpl{
+		auth:                     mockAuth,
+		resourceAccessAuthorizer: mockResourceAccess,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			1: mockTypedOperator,
+		},
+	}
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	mockResourceAccess.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(&entity.ResourceAccessContext{
+		CallerSpaceID:     123,
+		ResourceSpaceID:   456,
+		ResourceType:      entity.SharedResourceTypeEvalTarget,
+		ResourceID:        101,
+		AccessMode:        entity.AccessModeShared,
+		AccessLevel:       entity.SharedAccessLevelReadable,
+		VersionPolicy:     entity.SharedVersionPolicySpecified,
+		SpecifiedVersions: []string{"v2", "v1"},
+	}, nil)
+	mockTypedOperator.EXPECT().BuildBySource(gomock.Any(), int64(456), "101", "v2").Return(&entity.EvalTarget{
+		SpaceID:        456,
+		SourceTargetID: "101",
+		EvalTargetType: 1,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			SourceTargetVersion: "v2",
+			EvalTargetType:      1,
+		},
+	}, nil)
+
+	pageSize := int32(1)
+	resp, err := app.ListSourceEvalTargetVersions(context.Background(), &evaltargetapi.ListSourceEvalTargetVersionsRequest{
+		WorkspaceID:    123,
+		TargetType:     &targetType,
+		SourceTargetID: "101",
+		PageSize:       &pageSize,
+		SharedOption: &domaincommon.SharedResourceOption{
+			IsShared:      gptr.Of(true),
+			SourceSpaceID: gptr.Of(int64(456)),
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Versions, 1)
+	assert.Equal(t, "v2", resp.Versions[0].GetSourceTargetVersion())
+	assert.True(t, resp.GetHasMore())
+	assert.NotEmpty(t, resp.GetNextPageToken())
 }
 
 func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {

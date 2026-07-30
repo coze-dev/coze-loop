@@ -96,6 +96,10 @@ func (t *SandboxAgentSourceEvalTargetServiceImpl) BatchGetSource(ctx context.Con
 	return nil, nil
 }
 
+func (t *SandboxAgentSourceEvalTargetServiceImpl) GetLatestSourceVersion(ctx context.Context, spaceID int64, sourceTargetID string) (*entity.EvalTargetVersion, error) {
+	return nil, nil
+}
+
 func (t *SandboxAgentSourceEvalTargetServiceImpl) ListSourceVersion(ctx context.Context, param *entity.ListSourceVersionParam) ([]*entity.EvalTargetVersion, string, bool, error) {
 	return nil, "", false, nil
 }

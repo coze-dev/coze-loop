@@ -29,8 +29,10 @@ type sharedSpaceRulesFile struct {
 type sharedResourceRuleFile struct {
 	ResourceID       int64                  `mapstructure:"resource_id" json:"resource_id"`
 	ResourceType     string                 `mapstructure:"resource_type" json:"resource_type"`
+	TargetType       entity.EvalTargetType  `mapstructure:"target_type" json:"target_type"`
 	VersionPolicy    string                 `mapstructure:"version_policy" json:"version_policy"`
 	SharedVersionIDs []int64                `mapstructure:"shared_version_ids" json:"shared_version_ids"`
+	SharedVersions   []string               `mapstructure:"shared_versions" json:"shared_versions"`
 	AccessRules      []sharedAccessRuleFile `mapstructure:"access_rules" json:"access_rules"`
 }
 
@@ -84,11 +86,13 @@ func convertSharedResourceConfig(raw sharedResourceConfigFile) *entity.SharedRes
 				})
 			}
 			resources = append(resources, &entity.SharedResourceRule{
-				ResourceID:    res.ResourceID,
-				ResourceType:  res.ResourceType,
-				VersionPolicy: res.VersionPolicy,
-				SpecifiedIDs:  res.SharedVersionIDs,
-				AccessRules:   accessRules,
+				ResourceID:        res.ResourceID,
+				ResourceType:      res.ResourceType,
+				TargetType:        res.TargetType,
+				VersionPolicy:     res.VersionPolicy,
+				SpecifiedIDs:      res.SharedVersionIDs,
+				SpecifiedVersions: res.SharedVersions,
+				AccessRules:       accessRules,
 			})
 		}
 		cfg.SpaceRules[sourceSpaceID] = &entity.SpaceSharedRules{Resources: resources}

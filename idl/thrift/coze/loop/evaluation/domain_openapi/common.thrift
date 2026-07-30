@@ -143,3 +143,11 @@ struct SharedResourceOption {
     1: optional bool is_shared (go.tag = 'json:"is_shared"')
     2: optional i64 source_space_id (api.js_conv = "true", go.tag = 'json:"source_space_id"')
 }
+
+// 跨空间共享资源信息（返回给前端标识资源来源）
+struct SharedResourceInfo {
+    1: optional bool is_shared
+    2: optional i64 source_space_id (api.js_conv="true", go.tag = 'json:"source_space_id"')
+    3: optional string access_level
+    4: optional string version_policy
+}
