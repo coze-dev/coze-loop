@@ -575,6 +575,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 		wantErr           int32
 		wantLen           int
 		wantSchemaVisible *bool
+		wantSharedInfo    *entity.SharedResourceInfo
 	}{
 		{
 			name: "auth failed",
@@ -681,6 +682,12 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 			},
 			wantLen:           1,
 			wantSchemaVisible: gptr.Of(true),
+			wantSharedInfo: &entity.SharedResourceInfo{
+				IsShared:      true,
+				SourceSpaceID: 9001,
+				AccessLevel:   entity.SharedAccessLevelReadable,
+				VersionPolicy: entity.SharedVersionPolicyAll,
+			},
 		},
 		{
 			name: "shared execute access hides schema",
@@ -716,6 +723,12 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 			},
 			wantLen:           1,
 			wantSchemaVisible: gptr.Of(false),
+			wantSharedInfo: &entity.SharedResourceInfo{
+				IsShared:      true,
+				SourceSpaceID: 9001,
+				AccessLevel:   entity.SharedAccessLevelExecute,
+				VersionPolicy: entity.SharedVersionPolicyAll,
+			},
 		},
 		{
 			name: "shared from specified source space",
@@ -750,6 +763,12 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 					Return([]*entity.EvaluationSet{{ID: resourceID, SpaceID: sourceSpaceID, Name: "shared"}}, nil)
 			},
 			wantLen: 1,
+			wantSharedInfo: &entity.SharedResourceInfo{
+				IsShared:      true,
+				SourceSpaceID: 9002,
+				AccessLevel:   entity.SharedAccessLevelReadable,
+				VersionPolicy: entity.SharedVersionPolicyAll,
+			},
 		},
 	}
 
@@ -794,6 +813,15 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi(t *testing.T) {
 						currentVersion := resp.Data.Sets[0].GetCurrentVersion()
 						if assert.NotNil(t, currentVersion) {
 							assert.Equal(t, *tc.wantSchemaVisible, currentVersion.EvaluationSetSchema != nil)
+						}
+					}
+					if tc.wantSharedInfo != nil && assert.NotEmpty(t, resp.Data.Sets) {
+						sharedInfo := resp.Data.Sets[0].GetSharedInfo()
+						if assert.NotNil(t, sharedInfo) {
+							assert.Equal(t, tc.wantSharedInfo.IsShared, sharedInfo.GetIsShared())
+							assert.Equal(t, tc.wantSharedInfo.SourceSpaceID, sharedInfo.GetSourceSpaceID())
+							assert.Equal(t, tc.wantSharedInfo.AccessLevel, sharedInfo.GetAccessLevel())
+							assert.Equal(t, tc.wantSharedInfo.VersionPolicy, sharedInfo.GetVersionPolicy())
 						}
 					}
 				}
