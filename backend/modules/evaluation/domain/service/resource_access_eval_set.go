@@ -29,6 +29,21 @@ func earlyCheckVersionPolicy(versionPolicy string, specifiedIDs []int64, version
 	return errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg("version not in shared_versions"))
 }
 
+func earlyCheckVersionNamePolicy(versionPolicy string, specifiedVersions []string, versionName *string) error {
+	if versionPolicy != entity.SharedVersionPolicySpecified {
+		return nil
+	}
+	if versionName == nil || *versionName == "" {
+		return nil
+	}
+	for _, version := range specifiedVersions {
+		if version == *versionName {
+			return nil
+		}
+	}
+	return errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg("version not in shared_versions"))
+}
+
 // IsSharedVersionAllowed 判断某版本在共享版本策略下是否可见（资源加载后逐版本过滤）。
 //
 //   - ""/all：全部可见
@@ -44,6 +59,24 @@ func IsSharedVersionAllowed(versionID int64, versionName, latestVersionName, ver
 	case entity.SharedVersionPolicySpecified:
 		for _, id := range specifiedIDs {
 			if id == versionID {
+				return true
+			}
+		}
+		return false
+	case entity.SharedVersionPolicyLatest:
+		return latestVersionName != "" && versionName == latestVersionName
+	default:
+		return false
+	}
+}
+
+func IsSharedVersionNameAllowed(versionName, latestVersionName, versionPolicy string, specifiedVersions []string) bool {
+	switch versionPolicy {
+	case "", entity.SharedVersionPolicyAll:
+		return true
+	case entity.SharedVersionPolicySpecified:
+		for _, version := range specifiedVersions {
+			if version == versionName {
 				return true
 			}
 		}

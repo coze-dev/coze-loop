@@ -507,6 +507,35 @@ struct GetEvalTargetRecordOpenAPIData {
     1: optional eval_target.EvalTargetRecord eval_target_record (go.tag = 'json:"eval_target_record"')
 }
 
+// 查询可用的来源评测对象
+struct ListEvalTargetsOApiRequest {
+    1: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional eval_target.EvalTargetType eval_target_type (api.body = "eval_target_type")
+    3: optional string search_name (api.body = "search_name", vt.min_size = "1")
+    4: optional common.SharedResourceOption shared_option (api.body = "shared_option")
+
+    100: optional string page_token (api.body = "page_token")
+    101: optional i32 page_size (api.body = "page_size", vt.gt = "0", vt.le = "200")
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ListEvalTargetsOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional ListEvalTargetsOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListEvalTargetsOpenAPIData {
+    1: optional list<eval_target.EvalTarget> eval_targets (api.body = "eval_targets")
+
+    100: optional bool has_more (api.body = "has_more")
+    101: optional string next_page_token (api.body = "next_page_token")
+}
+
 struct ImportEvaluationSetOpenAPIData {
     1: optional i64 job_id (api.js_conv = "true", go.tag = 'json:"job_id"')
 }
@@ -1438,6 +1467,8 @@ service EvaluationOpenAPIService {
     AsyncDebugEvalTargetOApiResponse AsyncDebugEvalTargetOApi(1: AsyncDebugEvalTargetOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/async_debug")
     // 获取评测对象记录
     GetEvalTargetRecordOApiResponse GetEvalTargetRecordOApi(1: GetEvalTargetRecordOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/eval_target_records/:eval_target_record_id")
+    // 查询可用的来源评测对象
+    ListEvalTargetsOApiResponse ListEvalTargetsOApi(1: ListEvalTargetsOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/eval_targets/list")
 
     // 评测实验接口
     // 创建评测实验

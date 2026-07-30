@@ -11,6 +11,8 @@ type AuthorizeResourceRequest struct {
 	ResourceType string
 	// ResourceID 资源 id。
 	ResourceID int64
+	// TargetType 评测对象类型；仅 ResourceType=eval_target 时参与共享配置匹配。
+	TargetType EvalTargetType
 
 	// VersionID / Version 供版本策略校验；不涉及版本的读取可为空。
 	VersionID   *int64
@@ -37,12 +39,15 @@ type ResourceAccessContext struct {
 
 	ResourceType string
 	ResourceID   int64
+	TargetType   EvalTargetType
 
 	AccessMode  AccessMode
 	AccessLevel string
 	// VersionPolicy latest / all / specified；SpecifiedIDs 仅 specified 有效。
-	VersionPolicy string
-	SpecifiedIDs  []int64
+	// SpecifiedVersions 用于按来源版本字符串配置白名单的评测对象。
+	VersionPolicy     string
+	SpecifiedIDs      []int64
+	SpecifiedVersions []string
 }
 
 // IsShared 是否为跨空间共享访问。
@@ -79,5 +84,6 @@ func (c *ResourceAccessContext) SharedInfo() *SharedResourceInfo {
 type ListSharedResourcesRequest struct {
 	CallerSpaceID     int64
 	ResourceType      string
+	TargetType        EvalTargetType
 	SourceSpaceFilter *int64
 }

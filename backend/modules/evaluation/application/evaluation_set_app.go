@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/bytedance/gg/gptr"
@@ -446,6 +447,17 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 // source_space_id 为空 → 跨全部来源空间枚举；有值 → 限定该来源空间。
 // 逐来源空间加载资源并回填共享元信息；空配置 → 空列表（fail-closed）。
 func (e *EvaluationSetApplicationImpl) listSharedEvaluationSets(ctx context.Context, req *eval_set.ListEvaluationSetsRequest) (*eval_set.ListEvaluationSetsResponse, error) {
+	if (req.Name != nil && strings.TrimSpace(*req.Name) != "") ||
+		len(req.Creators) > 0 ||
+		req.Type != nil ||
+		len(req.DatasetKeys) > 0 ||
+		req.TagFilter != nil ||
+		len(req.OrderBys) > 0 {
+		return nil, errorx.NewByCode(
+			errno.CommonInvalidParamCode,
+			errorx.WithExtraMsg("content filters and order_bys are not supported for shared evaluation sets"),
+		)
+	}
 	var sourceFilter *int64
 	if req.SharedOption != nil && req.SharedOption.SourceSpaceID != nil && req.SharedOption.GetSourceSpaceID() > 0 {
 		sourceFilter = req.SharedOption.SourceSpaceID
@@ -459,45 +471,33 @@ func (e *EvaluationSetApplicationImpl) listSharedEvaluationSets(ctx context.Cont
 		return nil, err
 	}
 	// 按来源空间分组批量加载，并记录每个资源的授权上下文用于回填共享元信息。
-	idsBySource := make(map[int64][]int64)
-	ctxByKey := make(map[string]*entity.ResourceAccessContext)
-	sourceOrder := make([]int64, 0)
-	for _, accessCtx := range accessCtxs {
-		if accessCtx == nil {
-			continue
-		}
-		src := accessCtx.ResourceSpaceID
-		if _, ok := idsBySource[src]; !ok {
-			sourceOrder = append(sourceOrder, src)
-		}
-		idsBySource[src] = append(idsBySource[src], accessCtx.ResourceID)
-		ctxByKey[sharedResourceKey(src, accessCtx.ResourceID)] = accessCtx
-	}
-
-	allSets := make([]*entity.EvaluationSet, 0)
-	for _, src := range sourceOrder {
-		sharedOption := &entity.SharedResourceOption{IsShared: true, SourceSpaceID: gptr.Of(src)}
-		sets, loadErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(req.WorkspaceID), idsBySource[src], gptr.Of(false), sharedOption)
-		if loadErr != nil {
-			return nil, loadErr
-		}
-		for _, set := range sets {
-			if set == nil {
-				continue
-			}
-			if accessCtx, ok := ctxByKey[sharedResourceKey(set.SpaceID, set.ID)]; ok {
-				set.SharedInfo = accessCtx.SharedInfo()
-			}
-			allSets = append(allSets, set)
+	pageToken := req.PageToken
+	if pageToken == nil || strings.TrimSpace(*pageToken) == "" {
+		pageToken, err = sharedPageTokenForPageNumber(req.PageNumber, req.PageSize)
+		if err != nil {
+			return nil, err
 		}
 	}
+	pagedAccessCtxs, total, nextPageToken, _, err := paginateSharedAccessContexts(
+		accessCtxs,
+		req.EvaluationSetIds,
+		req.PageSize,
+		pageToken,
+	)
+	if err != nil {
+		return nil, err
+	}
+	sets, err := batchGetSharedEvaluationSets(ctx, e.evaluationSetService, req.WorkspaceID, pagedAccessCtxs)
+	if err != nil {
+		return nil, err
+	}
 
-	dtos := evaluation_set.EvaluationSetDO2DTOs(allSets)
+	dtos := evaluation_set.EvaluationSetDO2DTOs(sets)
 	e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier(dtos))
-	total := int64(len(dtos))
 	return &eval_set.ListEvaluationSetsResponse{
 		EvaluationSets: dtos,
 		Total:          &total,
+		NextPageToken:  nextPageToken,
 	}, nil
 }
 
