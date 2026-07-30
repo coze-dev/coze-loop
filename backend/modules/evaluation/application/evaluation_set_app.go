@@ -378,6 +378,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 		SpaceID:          req.WorkspaceID,
 		EvaluationSetIDs: req.EvaluationSetIds,
 		Name:             req.Name,
+		Description:      req.Description,
 		Creators:         req.Creators,
 		PageNumber:       req.PageNumber,
 		PageSize:         req.PageSize,

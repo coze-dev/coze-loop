@@ -45,6 +45,7 @@ type ListEvaluationSetsParam struct {
 	SpaceID          int64
 	EvaluationSetIDs []int64
 	Name             *string
+	Description      *string
 	Creators         []string
 	PageNumber       *int32
 	PageSize         *int32

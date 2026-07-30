@@ -135,13 +135,14 @@ func (d *DatasetRepo) DeleteDataset(ctx context.Context, spaceID, id int64, opt 
 
 func (d *DatasetRepo) ListDatasets(ctx context.Context, params *repo.ListDatasetsParams, opt ...repo.Option) ([]*entity.Dataset, *pagination.PageResult, error) {
 	datasets, pr, err := d.datasetDAO.ListDatasets(ctx, &mysql.ListDatasetsParams{
-		Paginator:    params.Paginator,
-		SpaceID:      params.SpaceID,
-		IDs:          params.IDs,
-		Category:     string(params.Category),
-		CreatedBys:   params.CreatedBys,
-		NameLike:     params.NameLike,
-		BizCategorys: params.BizCategorys,
+		Paginator:       params.Paginator,
+		SpaceID:         params.SpaceID,
+		IDs:             params.IDs,
+		Category:        string(params.Category),
+		CreatedBys:      params.CreatedBys,
+		NameLike:        params.NameLike,
+		DescriptionLike: params.DescriptionLike,
+		BizCategorys:    params.BizCategorys,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -155,13 +156,14 @@ func (d *DatasetRepo) ListDatasets(ctx context.Context, params *repo.ListDataset
 
 func (d *DatasetRepo) CountDatasets(ctx context.Context, params *repo.ListDatasetsParams, opt ...repo.Option) (int64, error) {
 	count, err := d.datasetDAO.CountDatasets(ctx, &mysql.ListDatasetsParams{
-		Paginator:    params.Paginator,
-		SpaceID:      params.SpaceID,
-		IDs:          params.IDs,
-		Category:     string(params.Category),
-		CreatedBys:   params.CreatedBys,
-		NameLike:     params.NameLike,
-		BizCategorys: params.BizCategorys,
+		Paginator:       params.Paginator,
+		SpaceID:         params.SpaceID,
+		IDs:             params.IDs,
+		Category:        string(params.Category),
+		CreatedBys:      params.CreatedBys,
+		NameLike:        params.NameLike,
+		DescriptionLike: params.DescriptionLike,
+		BizCategorys:    params.BizCategorys,
 	})
 	if err != nil {
 		return 0, err

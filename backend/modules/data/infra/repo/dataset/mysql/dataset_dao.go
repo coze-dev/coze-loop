@@ -47,13 +47,14 @@ type DatasetDAOImpl struct {
 }
 
 type ListDatasetsParams struct {
-	Paginator    *pagination.Paginator
-	SpaceID      int64 `validate:"required,gt=0"` // 分片键
-	IDs          []int64
-	Category     string
-	CreatedBys   []string
-	NameLike     string // 按名称模糊搜索，
-	BizCategorys []string
+	Paginator       *pagination.Paginator
+	SpaceID         int64 `validate:"required,gt=0"` // 分片键
+	IDs             []int64
+	Category        string
+	CreatedBys      []string
+	NameLike        string // 按名称模糊搜索，
+	DescriptionLike string // 按描述模糊搜索
+	BizCategorys    []string
 }
 
 func (p *ListDatasetsParams) toWhere() (*clause.Where, error) {
@@ -69,6 +70,7 @@ func (p *ListDatasetsParams) toWhere() (*clause.Where, error) {
 	db.MaybeAddInToWhere(b, p.IDs, "id")
 	db.MaybeAddInToWhere(b, p.CreatedBys, "created_by")
 	db.MaybeAddLikeToWhere(b, p.NameLike, "name")
+	db.MaybeAddLikeToWhere(b, p.DescriptionLike, "description")
 	db.MaybeAddInToWhere(b, p.BizCategorys, "biz_category")
 	return b.Build()
 }

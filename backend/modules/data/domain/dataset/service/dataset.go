@@ -159,13 +159,14 @@ func (s *DatasetServiceImpl) buildSearchDatasetParam(req *SearchDatasetsParam) *
 		pagination.WithPrePage(req.Page, req.PageSize, req.Cursor),
 	)
 	param := &repo.ListDatasetsParams{
-		IDs:          req.DatasetIDs,
-		SpaceID:      req.SpaceID,
-		Category:     req.Category,
-		CreatedBys:   req.CreatedBys,
-		NameLike:     gptr.Indirect(req.Name),
-		Paginator:    pg,
-		BizCategorys: req.BizCategorys,
+		IDs:             req.DatasetIDs,
+		SpaceID:         req.SpaceID,
+		Category:        req.Category,
+		CreatedBys:      req.CreatedBys,
+		NameLike:        gptr.Indirect(req.Name),
+		DescriptionLike: gptr.Indirect(req.Description),
+		Paginator:       pg,
+		BizCategorys:    req.BizCategorys,
 	}
 	return param
 }

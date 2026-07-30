@@ -14,13 +14,14 @@ import (
 )
 
 type ListDatasetsParams struct {
-	Paginator    *pagination.Paginator
-	SpaceID      int64 `validate:"required,gt=0"` // 分片键
-	IDs          []int64
-	Category     entity.DatasetCategory
-	CreatedBys   []string
-	NameLike     string // 按名称模糊搜索，
-	BizCategorys []string
+	Paginator       *pagination.Paginator
+	SpaceID         int64 `validate:"required,gt=0"` // 分片键
+	IDs             []int64
+	Category        entity.DatasetCategory
+	CreatedBys      []string
+	NameLike        string // 按名称模糊搜索，
+	DescriptionLike string // 按描述模糊搜索
+	BizCategorys    []string
 }
 
 type ListItemsParams struct {

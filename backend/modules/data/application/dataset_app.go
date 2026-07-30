@@ -200,6 +200,7 @@ func (h *DatasetApplicationImpl) ListDatasets(ctx context.Context, req *dataset.
 		DatasetIDs:   req.DatasetIds,
 		Category:     convertor.ConvertCategoryDTO2DO(gptr.Indirect(req.Category)),
 		Name:         req.Name,
+		Description:  req.Description, // 依赖 CI 重生成 kitex_gen（data.dataset.ListDatasetsRequest 新增 description 字段）后可编译
 		CreatedBys:   req.CreatedBys,
 		Page:         req.PageNumber,
 		PageSize:     req.PageSize,
