@@ -87,3 +87,54 @@ func IsSharedVersionNameAllowed(versionName, latestVersionName, versionPolicy st
 		return false
 	}
 }
+
+// checkSharedEvalSetVersion 发起链路加载 tuple 后, 对「跨空间共享」的评测集做版本策略硬校验。
+// 复用读接口 (evaluation_set_app.go) 同款 IsSharedVersionAllowed: 用加载出的真实版本 ID/版本名
+// 与来源空间共享白名单/最新版本名比对; latest 用评测集的 LatestVersion 作最新版名。
+//   - accessCtx nil / 非共享 (direct, VersionPolicy=all): 放行 (同空间发起不受共享版本策略约束)。
+//   - set / 其 version 缺失: 放行 (无版本信息不改变既有行为, 交由硬校验/加载报错兜底)。
+//   - 命中共享白名单外的版本: 返回 601 无权限, msg 说明版本不在共享范围。
+func checkSharedEvalSetVersion(accessCtx *entity.ResourceAccessContext, set *entity.EvaluationSet) error {
+	if accessCtx == nil || !accessCtx.IsShared() || set == nil || set.EvaluationSetVersion == nil {
+		return nil
+	}
+	if IsSharedVersionAllowed(
+		set.EvaluationSetVersion.ID,
+		set.EvaluationSetVersion.Version,
+		set.LatestVersion,
+		accessCtx.VersionPolicy,
+		accessCtx.SpecifiedIDs,
+	) {
+		return nil
+	}
+	return errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg("eval set version not in shared_versions"))
+}
+
+// checkSharedTargetVersion 发起链路加载 tuple 后, 对「跨空间共享」的评测对象做版本策略硬校验。
+// 仅 LoopPrompt (含 *Online 基类) 参与版本策略; 其它类型在 Lookup 已被强制 VersionPolicy=all (恒放行, no-op)。
+// 复用读接口 (eval_target_app.go isSharedEvalTargetVersionAllowed) 同款 IsSharedVersionNameAllowed,
+// 按来源版本名 (SourceTargetVersion) 校验 specified 白名单 / all。
+//   - accessCtx nil / 非共享: 放行。
+//   - latest 策略: 服务层无法解析来源最新版本名 (需 source operator, 归属 app 层), 保持与既有发起链路一致
+//     不在此拦截 (由 all/specified 兜底安全边界); 记录以便后续在 app 层补齐。
+//   - 命中白名单外版本: 返回 601 无权限。
+func checkSharedTargetVersion(accessCtx *entity.ResourceAccessContext, target *entity.EvalTarget) error {
+	if accessCtx == nil || !accessCtx.IsShared() || target == nil || target.EvalTargetVersion == nil {
+		return nil
+	}
+	// 非 LoopPrompt 基类恒 all, IsSharedVersionNameAllowed 直接返回 true, 无需额外分支。
+	// latest 策略下 latestVersionName 传空 → IsSharedVersionNameAllowed 返回 false 会误拒合法发起,
+	// 故 latest 场景显式放行 (服务层不具备来源最新版本解析能力, 保持既有行为不回归)。
+	if accessCtx.VersionPolicy == entity.SharedVersionPolicyLatest {
+		return nil
+	}
+	if IsSharedVersionNameAllowed(
+		target.EvalTargetVersion.SourceTargetVersion,
+		"",
+		accessCtx.VersionPolicy,
+		accessCtx.SpecifiedVersions,
+	) {
+		return nil
+	}
+	return errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg("eval target version not in shared_versions"))
+}

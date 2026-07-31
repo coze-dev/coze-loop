@@ -951,16 +951,31 @@ func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experimen
 }
 
 // authorizeSharedResource 跨空间共享发起鉴权 (RequireContentRead=false):
-// - opt 为 nil 或 !Enabled(): 普通访问, 返回 sourceSpaceID=callerSpaceID, accessLevel="".
-// - 共享访问: 调 AuthorizeRead 完成共享校验 + 版本策略校验, 返回资源来源空间与冻结访问级别.
+// - opt 为 nil 或 !Enabled(): 普通访问, 返回 direct accessCtx (ResourceSpaceID=callerSpaceID, VersionPolicy=all).
+// - 共享访问: 调 AuthorizeRead 完成共享校验 + 版本策略校验, 返回资源来源空间/冻结访问级别/版本策略.
 // targetType 仅 eval_target 参与共享规则匹配 (须与配置里的 target_type 同基类型); eval_set 传 0 即可.
 // 任何鉴权失败一律 fail-closed 返回 error, 由上层中断发起.
+//
+// 返回完整 accessCtx (含 VersionPolicy/SpecifiedIDs/SpecifiedVersions), 供调用方在 tuple 加载后
+// 用 IsSharedVersionAllowed / IsSharedVersionNameAllowed 做加载后版本校验 (读接口同款姿势):
+// AuthorizeRead 只能对 specified + 显式 version_id/name 做加载前早拒, latest 策略必须在资源加载后
+// 与其真实最新版本名比对才能拒 (authorizer 不加载资源)。
 func (e *ExptMangerImpl) authorizeSharedResource(
 	ctx context.Context, callerSpaceID int64, resourceType string, resourceID int64,
 	versionID *int64, opt *entity.SharedResourceOption, targetType entity.EvalTargetType,
-) (sourceSpaceID int64, accessLevel string, err error) {
+) (*entity.ResourceAccessContext, error) {
 	if opt == nil || !opt.Enabled() {
-		return callerSpaceID, "", nil
+		// 非共享: 构造 direct accessCtx, ResourceSpaceID=callerSpaceID (IsShared()=false),
+		// VersionPolicy=all 使加载后校验对同空间恒放行, 与旧 (callerSpaceID, "") 语义一致。
+		return &entity.ResourceAccessContext{
+			CallerSpaceID:   callerSpaceID,
+			ResourceSpaceID: callerSpaceID,
+			ResourceType:    resourceType,
+			ResourceID:      resourceID,
+			TargetType:      targetType,
+			AccessMode:      entity.AccessModeDirect,
+			VersionPolicy:   entity.SharedVersionPolicyAll,
+		}, nil
 	}
 	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, &entity.AuthorizeResourceRequest{
 		CallerSpaceID:      callerSpaceID,
@@ -973,11 +988,11 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 		RequireContentRead: false, // 发起不区分 execute/readable, 级别取出冻结落库供脱敏
 	})
 	if err != nil {
-		return 0, "", err
+		return nil, err
 	}
 	// 稳定性日志: 跨空间共享鉴权通过, 记录解析出的资源来源空间与冻结访问级别(供脱敏/加载定位)。
-	logs.CtxInfo(ctx, "shared resource authorized; type=%s resID=%d sourceSpace=%d accessLevel=%s mode=%s", resourceType, resourceID, accessCtx.ResourceSpaceID, accessCtx.AccessLevel, accessCtx.AccessMode)
-	return accessCtx.ResourceSpaceID, accessCtx.AccessLevel, nil
+	logs.CtxInfo(ctx, "shared resource authorized; type=%s resID=%d sourceSpace=%d accessLevel=%s mode=%s versionPolicy=%s", resourceType, resourceID, accessCtx.ResourceSpaceID, accessCtx.AccessLevel, accessCtx.AccessMode, accessCtx.VersionPolicy)
+	return accessCtx, nil
 }
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
@@ -999,6 +1014,28 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 				req.CreateEvalTargetParam.SourceTargetVersion = gptr.Of(consts.DefaultSourceTargetVersion)
 			}
 		}
+	}
+
+	// ★ 跨空间共享发起鉴权 (单评测集 SingleSet 路径; 多评测集在 EvalSetConfigs 循环内逐 set 鉴权).
+	// 评测集鉴权(配置查表 + 基础准入, 不加载资源)前移到「现建评测对象」之前:
+	// 消费方对评测集无权/评测集未共享时在建 target 前 fail-closed, 避免在来源空间 B 落下孤儿 eval_target 记录。
+	// accessCtx 保留 VersionPolicy/SpecifiedIDs, 供 tuple 加载后做 latest 版本校验。
+	var evalSetSpaceID, targetSpaceID int64
+	var evalSetAccessLevel string
+	var evalSetAccessCtx, targetAccessCtx *entity.ResourceAccessContext
+	{
+		var evalSetVerID *int64
+		if req.EvalSetVersionID > 0 {
+			evalSetVerID = gptr.Of(req.EvalSetVersionID)
+		}
+		var authErr error
+		evalSetAccessCtx, authErr = e.authorizeSharedResource(
+			ctx, req.WorkspaceID, entity.SharedResourceTypeEvalSet, req.EvalSetID, evalSetVerID, req.EvalSetSharedOption, 0)
+		if authErr != nil {
+			return nil, authErr
+		}
+		evalSetSpaceID = evalSetAccessCtx.ResourceSpaceID
+		evalSetAccessLevel = evalSetAccessCtx.AccessLevel
 	}
 
 	var versionedTargetID *entity.VersionedTargetID
@@ -1034,14 +1071,15 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			if v, convErr := strconv.ParseInt(strings.TrimSpace(srcTargetID), 10, 64); convErr == nil {
 				srcTargetIDInt = v
 			}
-			tgtSrcSpace, _, authErr := e.authorizeSharedResource(
+			tgtAccessCtx, authErr := e.authorizeSharedResource(
 				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, srcTargetIDInt, srcTargetVerID, req.TargetSharedOption,
 				gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType))
 			if authErr != nil {
 				return nil, authErr
 			}
-			if tgtSrcSpace > 0 {
-				createTargetSpaceID = tgtSrcSpace
+			targetAccessCtx = tgtAccessCtx
+			if tgtAccessCtx.ResourceSpaceID > 0 {
+				createTargetSpaceID = tgtAccessCtx.ResourceSpaceID
 			}
 		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, createTargetSpaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
@@ -1066,21 +1104,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 	}
 
-	// ★ 跨空间共享发起鉴权 (单评测集 SingleSet 路径; 多评测集在 EvalSetConfigs 循环内逐 set 鉴权).
-	// 评测集/评测对象各自鉴权, 取来源空间用于加载 tuple, 取冻结访问级别落库供查询脱敏.
-	var evalSetSpaceID, targetSpaceID int64
-	var evalSetAccessLevel string
+	// ★ 评测对象跨空间发起鉴权 (评测集鉴权已前移到现建 target 之前).
+	// 取来源空间用于加载 tuple, 冻结访问级别落库供查询脱敏; accessCtx 供加载后 LoopPrompt 版本校验。
 	{
-		var evalSetVerID *int64
-		if req.EvalSetVersionID > 0 {
-			evalSetVerID = gptr.Of(req.EvalSetVersionID)
-		}
-		var authErr error
-		evalSetSpaceID, evalSetAccessLevel, authErr = e.authorizeSharedResource(
-			ctx, req.WorkspaceID, entity.SharedResourceTypeEvalSet, req.EvalSetID, evalSetVerID, req.EvalSetSharedOption, 0)
-		if authErr != nil {
-			return nil, authErr
-		}
 		targetSpaceID = req.WorkspaceID
 		// 现建路径(CreateEvalTargetParam)已在建 target 时完成跨空间鉴权+回填 SourceSpaceID, 此处只处理引用路径(req.TargetID)。
 		// 现建路径下 versionedTargetID.TargetID 是新建 eval_target id(非 source bot id), 不能再拿去按 source 鉴权。
@@ -1095,11 +1121,13 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			if refTarget, getErr := e.evalTargetService.GetEvalTarget(ctx, versionedTargetID.TargetID); getErr == nil && refTarget != nil {
 				refTargetType = refTarget.EvalTargetType
 			}
-			targetSpaceID, _, authErr = e.authorizeSharedResource(
+			refAccessCtx, authErr := e.authorizeSharedResource(
 				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, versionedTargetID.TargetID, targetVerID, req.TargetSharedOption, refTargetType)
 			if authErr != nil {
 				return nil, authErr
 			}
+			targetAccessCtx = refAccessCtx
+			targetSpaceID = refAccessCtx.ResourceSpaceID
 			// 回填评测对象来源空间, 供 getExptTupleByID 按来源空间加载
 			if targetSpaceID != req.WorkspaceID {
 				versionedTargetID.SourceSpaceID = targetSpaceID
@@ -1139,6 +1167,16 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		if ev != nil && !ev.Builtin && ev.GetSpaceID() != req.WorkspaceID {
 			return nil, errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg(fmt.Sprintf("cannt access evaluator %d", ev.ID)))
 		}
+	}
+
+	// ★ 加载后版本策略校验 (SingleSet 路径): AuthorizeRead 只能对 specified+显式 version 早拒,
+	// latest 策略必须在资源加载后与真实最新版本名比对才能拒 (读接口同款姿势, 见 evaluation_set_app.go)。
+	// 仅对跨空间(IsShared)资源校验; 同空间 direct ctx VersionPolicy=all 恒放行, 不误拒合法发起。
+	if err := checkSharedEvalSetVersion(evalSetAccessCtx, tuple.EvalSet); err != nil {
+		return nil, err
+	}
+	if err := checkSharedTargetVersion(targetAccessCtx, tuple.Target); err != nil {
+		return nil, err
 	}
 
 	ids, err := e.idgenerator.GenMultiIDs(ctx, 2)
@@ -1270,14 +1308,29 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			if setConf.EvalSetVersionID > 0 {
 				setVerID = gptr.Of(setConf.EvalSetVersionID)
 			}
-			srcSpaceID, level, authErr := e.authorizeSharedResource(
+			setAccessCtx, authErr := e.authorizeSharedResource(
 				ctx, req.WorkspaceID, entity.SharedResourceTypeEvalSet, setConf.EvalSetID, setVerID, setConf.SharedOption, 0)
 			if authErr != nil {
 				return nil, authErr
 			}
-			if srcSpaceID != req.WorkspaceID {
-				setConf.SourceSpaceID = srcSpaceID
-				setConf.AccessLevel = level
+			if setAccessCtx.ResourceSpaceID != req.WorkspaceID {
+				setConf.SourceSpaceID = setAccessCtx.ResourceSpaceID
+				setConf.AccessLevel = setAccessCtx.AccessLevel
+			}
+			// ★ 加载后版本校验 (多集逐 set): 仅对跨空间且策略非 all 的 set 加载其版本比对 (避免常见路径额外加载);
+			// latest 需与来源集最新版本名比对, specified 需命中白名单, 复用 checkSharedEvalSetVersion。
+			if setAccessCtx.IsShared() && setAccessCtx.VersionPolicy != entity.SharedVersionPolicyAll &&
+				setConf.EvalSetVersionID > 0 && setConf.EvalSetID != setConf.EvalSetVersionID {
+				version, setDO, loadErr := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, setAccessCtx.ResourceSpaceID, setConf.EvalSetVersionID, gptr.Of(true), nil)
+				if loadErr != nil {
+					return nil, loadErr
+				}
+				if setDO != nil {
+					setDO.EvaluationSetVersion = version
+				}
+				if err := checkSharedEvalSetVersion(setAccessCtx, setDO); err != nil {
+					return nil, err
+				}
 			}
 			// per-set 评测对象来源空间 (target_confs 本期 len<=1)
 			if setConf.TargetSharedOption != nil && setConf.TargetSharedOption.Enabled() {
@@ -1294,14 +1347,14 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 				if req.CreateEvalTargetParam != nil {
 					setTargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
 				}
-				tgtSrcSpaceID, _, tgtErr := e.authorizeSharedResource(
+				tgtSetAccessCtx, tgtErr := e.authorizeSharedResource(
 					ctx, req.WorkspaceID, entity.SharedResourceTypeEvalTarget, setTargetID, setTargetVerID, setConf.TargetSharedOption,
 					setTargetType)
 				if tgtErr != nil {
 					return nil, tgtErr
 				}
-				if tgtSrcSpaceID != req.WorkspaceID {
-					setConf.TargetSpaceID = tgtSrcSpaceID
+				if tgtSetAccessCtx.ResourceSpaceID != req.WorkspaceID {
+					setConf.TargetSpaceID = tgtSetAccessCtx.ResourceSpaceID
 				}
 			}
 		}
