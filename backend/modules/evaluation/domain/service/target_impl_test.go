@@ -2491,7 +2491,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 		defer ctrl.Finish()
 		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
 		svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo}
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, nil, 100, "msg")
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, nil, 100, "msg", false)
 		// 无任何 mock 期望
 	})
 
@@ -2503,7 +2503,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 
 		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
 			Return(nil, errors.New("db error"))
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg")
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
 	})
 
 	t.Run("无 versionID 提前返回, 不调 BatchGetEvalTargetVersion", func(t *testing.T) {
@@ -2515,7 +2515,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 		// 所有 record 的 TargetVersionID 都是 0
 		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
 			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 0}}, nil)
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg")
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
 	})
 
 	t.Run("BatchGetEvalTargetVersion 失败安静返回", func(t *testing.T) {
@@ -2528,7 +2528,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
 		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
 			Return(nil, errors.New("db error"))
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg")
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
 	})
 
 	t.Run("非 SandboxAgent 类型不写 Save", func(t *testing.T) {
@@ -2547,7 +2547,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 				EvalTargetType:    entity.EvalTargetTypeCozeBot,
 				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20},
 			}}, nil)
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg")
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
 	})
 
 	t.Run("SandboxAgent + AsyncInvoking 落 Fail 状态并销毁", func(t *testing.T) {
@@ -2601,7 +2601,7 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 				return &rpc.SandboxDestroyResponse{}, nil
 			}).Times(1)
 
-		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10, 11}, 100, "msg")
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10, 11}, 100, "msg", false)
 
 		select {
 		case <-destroyDone:

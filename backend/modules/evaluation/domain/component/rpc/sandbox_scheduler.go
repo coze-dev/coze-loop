@@ -174,6 +174,9 @@ type SandboxDestroyRequest struct {
 	DestroyType SandboxDestroyType
 	ExecuteIDs  []string
 	WorkspaceID int64
+	// EndCmd 沙箱销毁前需要在容器内执行的收尾命令；仅 SandboxAgent zombie 超时场景传入，
+	// 其余销毁路径（正常完成 / 手动取消）留空。
+	EndCmd string
 }
 
 // SandboxDestroyResponse 销毁响应。

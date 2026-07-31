@@ -678,6 +678,7 @@ func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context
 		recordIDs,
 		int32(errno.AsyncEvalTargetZombieTimeoutCode),
 		"async eval target terminated: experiment item exceeded zombie timeout",
+		true,
 	)
 	return nil
 }
