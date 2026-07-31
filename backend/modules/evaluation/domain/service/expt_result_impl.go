@@ -1098,10 +1098,6 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 	return columnEvaluators, exptColumnEvaluators, nil
 }
 
-func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, spaceID, evalSetID, evalSetVersionID int64) ([]*entity.ColumnEvalSetField, error) {
-	return e.getColumnEvalSetFieldsWithSource(ctx, spaceID, evalSetID, evalSetVersionID, 0)
-}
-
 // getColumnEvalSetFieldsWithSource 跨空间: sourceSpaceID>0 时按来源空间读评测集 schema, 否则用调用方 spaceID。
 func (e ExptResultServiceImpl) getColumnEvalSetFieldsWithSource(ctx context.Context, spaceID, evalSetID, evalSetVersionID, sourceSpaceID int64) ([]*entity.ColumnEvalSetField, error) {
 	loadSpaceID := resolveLoadSpaceID(spaceID, sourceSpaceID)

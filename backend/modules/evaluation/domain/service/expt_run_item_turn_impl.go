@@ -472,10 +472,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	targetResult *entity.EvalTargetRecord, history []*entity.Message,
 ) ([]*entity.EvaluatorRecord, error) {
 	var (
-		collector      evalRecordCollector
-		item           = etec.EvalSetItem
-		expt           = etec.Expt
-		turn           = etec.Turn
+		collector evalRecordCollector
+		item      = etec.EvalSetItem
+		expt      = etec.Expt
+		turn      = etec.Turn
 		// ★ 跨空间共享: evaluator 侧要拆两个空间 ——
 		//   evalSetSpaceID(=评测集来源空间 B): 仅用于 buildEvaluatorInputData 读评测集字段做 hydrate;
 		//   evaluatorSpaceID(=消费方 A, expt.SpaceID): evaluator 归属/执行/劫持/打点空间。evaluator 属于消费方 A,
@@ -636,10 +636,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord,
 ) ([]*entity.EvaluatorRecord, error) {
 	var (
-		collector      evalRecordCollector
-		item           = etec.EvalSetItem
-		expt           = etec.Expt
-		turn           = etec.Turn
+		collector evalRecordCollector
+		item      = etec.EvalSetItem
+		expt      = etec.Expt
+		turn      = etec.Turn
 		// ★ 跨空间共享: 同 callEvaluators, 拆两个空间 —— evalSetSpaceID(来源 B)只喂 buildEvaluatorInputData
 		// 读评测集字段; evaluatorSpaceID(消费方 A)用于 evaluator 归属/执行/劫持/占位/打点, 否则 601205013。
 		evalSetSpaceID   = resolveLoadSpaceID(expt.SpaceID, etec.EvalSetSourceSpaceID())

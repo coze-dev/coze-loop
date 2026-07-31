@@ -46,7 +46,7 @@ func TestEvalOpenAPIApplication_ListEvalTargetsOApi(t *testing.T) {
 	t.Run("missing target type", func(t *testing.T) {
 		lister := &fakeSourceEvalTargetLister{}
 		app := &EvalOpenAPIApplication{
-			metric:                  &fakeOpenAPIMetric{},
+			metric:                 &fakeOpenAPIMetric{},
 			sourceEvalTargetLister: lister,
 		}
 
@@ -62,12 +62,12 @@ func TestEvalOpenAPIApplication_ListEvalTargetsOApi(t *testing.T) {
 	t.Run("downstream error", func(t *testing.T) {
 		lister := &fakeSourceEvalTargetLister{err: errors.New("list failed")}
 		app := &EvalOpenAPIApplication{
-			metric:                  &fakeOpenAPIMetric{},
+			metric:                 &fakeOpenAPIMetric{},
 			sourceEvalTargetLister: lister,
 		}
 
 		resp, err := app.ListEvalTargetsOApi(context.Background(), &openapi.ListEvalTargetsOApiRequest{
-			WorkspaceID:   gptr.Of(int64(1001)),
+			WorkspaceID:    gptr.Of(int64(1001)),
 			EvalTargetType: gptr.Of(openapievaltarget.EvalTargetTypeCozeLoopPrompt),
 		})
 
@@ -108,15 +108,15 @@ func TestEvalOpenAPIApplication_ListEvalTargetsOApi(t *testing.T) {
 		}
 		metric := &fakeOpenAPIMetric{}
 		app := &EvalOpenAPIApplication{
-			metric:                  metric,
+			metric:                 metric,
 			sourceEvalTargetLister: lister,
 		}
 		req := &openapi.ListEvalTargetsOApiRequest{
-			WorkspaceID:   gptr.Of(int64(1001)),
+			WorkspaceID:    gptr.Of(int64(1001)),
 			EvalTargetType: gptr.Of(openapievaltarget.EvalTargetTypeCozeLoopPrompt),
 			SearchName:     gptr.Of("prompt"),
 			SharedOption: &openapicommon.SharedResourceOption{
-				IsShared:     gptr.Of(true),
+				IsShared:      gptr.Of(true),
 				SourceSpaceID: gptr.Of(sourceSpaceID),
 			},
 			PageToken: gptr.Of("page-token"),
@@ -162,12 +162,12 @@ func TestEvalOpenAPIApplication_ListEvalTargetsOApi(t *testing.T) {
 			},
 		}
 		app := &EvalOpenAPIApplication{
-			metric:                  &fakeOpenAPIMetric{},
+			metric:                 &fakeOpenAPIMetric{},
 			sourceEvalTargetLister: lister,
 		}
 
 		resp, err := app.ListEvalTargetsOApi(context.Background(), &openapi.ListEvalTargetsOApiRequest{
-			WorkspaceID:   gptr.Of(int64(1001)),
+			WorkspaceID:    gptr.Of(int64(1001)),
 			EvalTargetType: gptr.Of(openapievaltarget.EvalTargetTypeCozeLoopPrompt),
 		})
 
