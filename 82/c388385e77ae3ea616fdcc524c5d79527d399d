@@ -1,0 +1,27 @@
+backend/modules/observability/application/trace.go
+  s_86bba57ba2f89e::t_5ee1230b2d85f3 365
+backend/modules/observability/application/trace_test.go
+  s_86bba57ba2f89e::t_5291bfc05d1931 1038,1074,1101
+backend/modules/observability/domain/trace/service/mocks/trace_service.go
+  s_86bba57ba2f89e::t_30bad2177ff113 193-207
+backend/modules/observability/domain/trace/service/trace_service.go
+  s_86bba57ba2f89e::t_edc9fb4e1ed9b3 55-61,536,1250,1252,1327-1365,3162-3164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "82c388385e77ae3ea616fdcc524c5d79527d399d",
+  "prompts": {},
+  "sessions": {
+    "s_86bba57ba2f89e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_86bba57ba2f89e",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
