@@ -31,35 +31,6 @@ func resolveDatasetWorkspaceID(spaceID *int64, sharedOption *entity.SharedResour
 	return spaceID
 }
 
-func fillSharedInfoForEvaluationSet(set *entity.EvaluationSet, consumerSpaceID *int64, sharedOption *entity.SharedResourceOption) {
-	if set == nil {
-		return
-	}
-	set.SharedInfo = entity.BuildSharedResourceInfo(gptr.Indirect(consumerSpaceID), set.SpaceID, "read", "versioned")
-	if set.EvaluationSetVersion != nil {
-		fillSharedInfoForEvaluationSetVersion(set.EvaluationSetVersion, consumerSpaceID, sharedOption)
-	}
-}
-
-func fillSharedInfoForEvaluationSetVersion(version *entity.EvaluationSetVersion, consumerSpaceID *int64, sharedOption *entity.SharedResourceOption) {
-	if version == nil {
-		return
-	}
-	version.SharedInfo = entity.BuildSharedResourceInfo(gptr.Indirect(consumerSpaceID), version.SpaceID, "read", "versioned")
-}
-
-func fillSharedInfoForEvaluationSetVersions(versions []*entity.EvaluationSetVersion, consumerSpaceID *int64, sharedOption *entity.SharedResourceOption) {
-	for _, version := range versions {
-		fillSharedInfoForEvaluationSetVersion(version, consumerSpaceID, sharedOption)
-	}
-}
-
-func fillSharedInfoForEvaluationSets(sets []*entity.EvaluationSet, consumerSpaceID *int64, sharedOption *entity.SharedResourceOption) {
-	for _, set := range sets {
-		fillSharedInfoForEvaluationSet(set, consumerSpaceID, sharedOption)
-	}
-}
-
 func NewDatasetRPCAdapter(client datasetservice.Client) rpc.IDatasetRPCAdapter {
 	return &DatasetRPCAdapter{
 		client: client,
@@ -204,7 +175,6 @@ func (a *DatasetRPCAdapter) GetDataset(ctx context.Context, spaceID *int64, eval
 		return nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
 	set = convert2EvaluationSet(ctx, resp.Dataset)
-	fillSharedInfoForEvaluationSet(set, spaceID, sharedOption)
 	return set, nil
 }
 
@@ -224,7 +194,6 @@ func (a *DatasetRPCAdapter) BatchGetDatasets(ctx context.Context, spaceID *int64
 		return nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
 	sets = convert2EvaluationSets(ctx, resp.Datasets)
-	fillSharedInfoForEvaluationSets(sets, gptr.Of(gptr.Indirect(spaceID)), sharedOption)
 	return sets, nil
 }
 
@@ -251,7 +220,6 @@ func (a *DatasetRPCAdapter) ListDatasets(ctx context.Context, param *rpc.ListDat
 		return nil, nil, nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
 	sets = convert2EvaluationSets(ctx, resp.Datasets)
-	fillSharedInfoForEvaluationSets(sets, gptr.Of(param.SpaceID), param.SharedOption)
 	return sets, resp.Total, resp.NextPageToken, nil
 }
 
@@ -291,8 +259,6 @@ func (a *DatasetRPCAdapter) GetDatasetVersion(ctx context.Context, spaceID, vers
 	}
 	version = convert2EvaluationSetVersion(ctx, resp.Version, resp.Dataset)
 	set = convert2EvaluationSet(ctx, resp.Dataset)
-	fillSharedInfoForEvaluationSet(set, gptr.Of(spaceID), sharedOption)
-	fillSharedInfoForEvaluationSetVersion(version, gptr.Of(spaceID), sharedOption)
 	// 数据集返回的dataset结构体中version的值是草稿版本的值，这里需要替换一下
 	if set != nil {
 		set.EvaluationSetVersion = version
@@ -320,8 +286,6 @@ func (a *DatasetRPCAdapter) BatchGetVersionedDatasets(ctx context.Context, space
 		version := convert2EvaluationSetVersion(ctx, v.Version, v.Dataset)
 		set := convert2EvaluationSet(ctx, v.Dataset)
 		// 数据集返回的dataset结构体中version的值是草稿版本的值，这里需要替换一下
-		fillSharedInfoForEvaluationSet(set, spaceID, sharedOption)
-		fillSharedInfoForEvaluationSetVersion(version, spaceID, sharedOption)
 		if set != nil {
 			set.EvaluationSetVersion = version
 		}
@@ -352,7 +316,6 @@ func (a *DatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceID, ev
 		return nil, nil, nil, errorx.NewByCode(errno.CommonRPCErrorCode, errorx.WithExtraMsg(fmt.Sprintf("ListDatasetVersions err, WorkspaceID: %v, evaluationSetID: %v, rpc code: %v", spaceID, evaluationSetID, resp.BaseResp.StatusCode)))
 	}
 	version = convert2EvaluationSetVersions(ctx, resp.Versions)
-	fillSharedInfoForEvaluationSetVersions(version, gptr.Of(spaceID), sharedOption)
 	return version, resp.Total, resp.NextPageToken, nil
 }
 

@@ -874,30 +874,73 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi_SharedPagination(t *testi
 	assert.NotEmpty(t, resp.Data.GetNextPageToken())
 }
 
-func TestEvalOpenAPIApplication_ListEvaluationSetsOApi_SharedRejectsContentFilters(t *testing.T) {
+func TestEvalOpenAPIApplication_ListEvaluationSetsOApi_SharedContentFiltersBeforePagination(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	const workspaceID = int64(8080)
 	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	evalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
 	resourceAccess := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
 	app := &EvalOpenAPIApplication{
 		auth:                     auth,
+		evaluationSetService:     evalSetSvc,
 		resourceAccessAuthorizer: resourceAccess,
 		metric:                   &fakeOpenAPIMetric{},
 	}
 	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-	resourceAccess.EXPECT().ListSharedResources(gomock.Any(), gomock.Any()).Times(0)
+	resourceAccess.EXPECT().ListSharedResources(gomock.Any(), gomock.Any()).Return([]*entity.ResourceAccessContext{
+		{ResourceSpaceID: 10, ResourceID: 1, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+		{ResourceSpaceID: 10, ResourceID: 2, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+		{ResourceSpaceID: 10, ResourceID: 3, AccessMode: entity.AccessModeShared, AccessLevel: entity.SharedAccessLevelReadable},
+	}, nil)
+	evalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(workspaceID), []int64{1, 2, 3}, gomock.Any(), gomock.Any()).Return(
+		[]*entity.EvaluationSet{
+			{ID: 1, SpaceID: 10, Name: "other", DatasetKey: "key-a", BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("u1")}}, Tags: []*entity.ResourceTag{{TagName: "tag-a"}}},
+			{ID: 2, SpaceID: 10, Name: "filtered first", DatasetKey: "key-b", BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("u2")}}, Tags: []*entity.ResourceTag{{TagName: "tag-a"}, {TagName: "tag-b"}}},
+			{ID: 3, SpaceID: 10, Name: "filtered second", DatasetKey: "key-b", BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("u2")}}, Tags: []*entity.ResourceTag{{TagName: "tag-a"}, {TagName: "tag-b"}}},
+		}, nil,
+	)
+	pageSize := int32(1)
 	resp, err := app.ListEvaluationSetsOApi(context.Background(), &openapi.ListEvaluationSetsOApiRequest{
 		WorkspaceID:  gptr.Of(workspaceID),
-		Name:         gptr.Of("filtered"),
+		Name:         gptr.Of("FILTERED"),
+		Creators:     []string{"u2"},
+		DatasetKeys:  []string{"key-b"},
+		PageSize:     &pageSize,
 		SharedOption: gptr.Of(`{"is_shared":true}`),
 	})
-	assert.Error(t, err)
-	assert.Nil(t, resp)
+	require.NoError(t, err)
+	require.NotNil(t, resp.Data)
+	require.Len(t, resp.Data.Sets, 1)
+	assert.Equal(t, int64(2), resp.Data.Sets[0].GetID())
+	assert.Equal(t, int64(2), resp.Data.GetTotal())
+	assert.True(t, resp.Data.GetHasMore())
+	assert.NotEmpty(t, resp.Data.GetNextPageToken())
 }
 
-func TestEvalOpenAPIApplication_ListEvaluationSetsOApi_HasMoreUsesNextPageToken(t *testing.T) {
+func TestFilterSharedEvaluationSets_PreservesNameWhitespace(t *testing.T) {
+	sets := []*entity.EvaluationSet{
+		{ID: 1, Name: "foo"},
+		{ID: 2, Name: " foo "},
+		{ID: 3, Name: "bar baz"},
+	}
+
+	t.Run("surrounding whitespace is part of filter", func(t *testing.T) {
+		filtered := filterSharedEvaluationSets(sets, gptr.Of(" FOO "), nil, nil)
+		require.Len(t, filtered, 1)
+		assert.Equal(t, int64(2), filtered[0].ID)
+	})
+
+	t.Run("whitespace-only filter is not ignored", func(t *testing.T) {
+		filtered := filterSharedEvaluationSets(sets, gptr.Of(" "), nil, nil)
+		require.Len(t, filtered, 2)
+		assert.Equal(t, int64(2), filtered[0].ID)
+		assert.Equal(t, int64(3), filtered[1].ID)
+	})
+}
+
+func TestEvalOpenAPIApplication_ListEvaluationSetsOApi_HasMoreMatchesMain(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -913,17 +956,19 @@ func TestEvalOpenAPIApplication_ListEvaluationSetsOApi_HasMoreUsesNextPageToken(
 	evalSetSvc.EXPECT().ListEvaluationSets(gomock.Any(), gomock.Any()).Return(
 		[]*entity.EvaluationSet{{ID: 1}},
 		gptr.Of(int64(2)),
-		gptr.Of("dataset-next"),
+		nil,
 		nil,
 	)
 
+	pageSize := int32(1)
 	resp, err := app.ListEvaluationSetsOApi(context.Background(), &openapi.ListEvaluationSetsOApiRequest{
 		WorkspaceID: gptr.Of(workspaceID),
+		PageSize:    &pageSize,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp.Data)
 	assert.True(t, resp.Data.GetHasMore())
-	assert.Equal(t, "dataset-next", resp.Data.GetNextPageToken())
+	assert.Empty(t, resp.Data.GetNextPageToken())
 }
 
 func TestEvalOpenAPIApplication_CreateEvaluationSetVersionOApi(t *testing.T) {

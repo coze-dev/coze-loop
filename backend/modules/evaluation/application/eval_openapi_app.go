@@ -436,14 +436,10 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 		return nil, err
 	}
 	if sharedOption != nil && sharedOption.IsShared {
-		if (req.Name != nil && strings.TrimSpace(*req.Name) != "") ||
-			len(req.Creators) > 0 ||
-			len(req.DatasetKeys) > 0 ||
-			len(req.TagNames) > 0 ||
-			req.TagFilterRelation != nil {
+		if len(req.TagNames) > 0 || req.TagFilterRelation != nil {
 			return nil, errorx.NewByCode(
 				errno.CommonInvalidParamCode,
-				errorx.WithExtraMsg("content filters are not supported for shared evaluation sets"),
+				errorx.WithExtraMsg("tag filters are not supported for shared evaluation sets"),
 			)
 		}
 		var sourceFilter *int64
@@ -458,16 +454,33 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 		if err != nil {
 			return nil, err
 		}
-		pagedAccessCtxs, total, nextPageToken, hasMore, err := paginateSharedAccessContexts(
-			accessCtxs,
-			req.EvaluationSetIds,
-			req.PageSize,
-			req.PageToken,
-		)
-		if err != nil {
-			return nil, err
+		var sets []*entity.EvaluationSet
+		var total int64
+		var nextPageToken *string
+		var hasMore bool
+		hasContentFilter := gptr.Indirect(req.Name) != "" ||
+			len(req.Creators) > 0 ||
+			len(req.DatasetKeys) > 0
+		if hasContentFilter {
+			normalizedAccessCtxs := normalizeSharedAccessContexts(accessCtxs, req.EvaluationSetIds)
+			sets, err = batchGetSharedEvaluationSets(ctx, e.evaluationSetService, req.GetWorkspaceID(), normalizedAccessCtxs)
+			if err == nil {
+				sets = filterSharedEvaluationSets(sets, req.Name, req.Creators, req.DatasetKeys)
+				total = int64(len(sets))
+				sets, nextPageToken, hasMore, err = paginateShared(sets, req.PageSize, req.PageToken)
+			}
+		} else {
+			var pagedAccessCtxs []*entity.ResourceAccessContext
+			pagedAccessCtxs, total, nextPageToken, hasMore, err = paginateSharedAccessContexts(
+				accessCtxs,
+				req.EvaluationSetIds,
+				req.PageSize,
+				req.PageToken,
+			)
+			if err == nil {
+				sets, err = batchGetSharedEvaluationSets(ctx, e.evaluationSetService, req.GetWorkspaceID(), pagedAccessCtxs)
+			}
 		}
-		sets, err := batchGetSharedEvaluationSets(ctx, e.evaluationSetService, req.GetWorkspaceID(), pagedAccessCtxs)
 		if err != nil {
 			return nil, err
 		}
@@ -503,7 +516,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 	dtos := evaluation_set.OpenAPIEvaluationSetDO2DTOs(sets)
 
 	// 构建响应
-	hasMore := nextPageToken != nil && strings.TrimSpace(*nextPageToken) != ""
+	hasMore := sets != nil && len(sets) == int(req.GetPageSize())
 	return &openapi.ListEvaluationSetsOApiResponse{
 		Data: &openapi.ListEvaluationSetsOpenAPIData{
 			Sets:          dtos,
@@ -512,6 +525,46 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetsOApi(ctx context.Context, req
 			Total:         total,
 		},
 	}, nil
+}
+
+func filterSharedEvaluationSets(
+	sets []*entity.EvaluationSet,
+	name *string,
+	creators []string,
+	datasetKeys []string,
+) []*entity.EvaluationSet {
+	nameFilter := strings.ToLower(gptr.Indirect(name))
+	creatorSet := make(map[string]struct{}, len(creators))
+	for _, creator := range creators {
+		creatorSet[creator] = struct{}{}
+	}
+	datasetKeySet := make(map[string]struct{}, len(datasetKeys))
+	for _, datasetKey := range datasetKeys {
+		datasetKeySet[datasetKey] = struct{}{}
+	}
+
+	filtered := make([]*entity.EvaluationSet, 0, len(sets))
+	for _, set := range sets {
+		if set == nil || (nameFilter != "" && !strings.Contains(strings.ToLower(set.Name), nameFilter)) {
+			continue
+		}
+		if len(creatorSet) > 0 {
+			creatorID := ""
+			if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+				creatorID = gptr.Indirect(set.BaseInfo.CreatedBy.UserID)
+			}
+			if _, ok := creatorSet[creatorID]; !ok {
+				continue
+			}
+		}
+		if len(datasetKeySet) > 0 {
+			if _, ok := datasetKeySet[set.DatasetKey]; !ok {
+				continue
+			}
+		}
+		filtered = append(filtered, set)
+	}
+	return filtered
 }
 
 func parseSharedOptionOApi(option any) (*entity.SharedResourceOption, error) {

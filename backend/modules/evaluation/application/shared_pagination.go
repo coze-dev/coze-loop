@@ -79,6 +79,16 @@ func paginateSharedAccessContexts(
 	pageSize *int32,
 	pageToken *string,
 ) ([]*entity.ResourceAccessContext, int64, *string, bool, error) {
+	sortedAccessCtxs := normalizeSharedAccessContexts(accessCtxs, resourceIDs)
+	total := int64(len(sortedAccessCtxs))
+	page, nextPageToken, hasMore, err := paginateShared(sortedAccessCtxs, pageSize, pageToken)
+	return page, total, nextPageToken, hasMore, err
+}
+
+func normalizeSharedAccessContexts(
+	accessCtxs []*entity.ResourceAccessContext,
+	resourceIDs []int64,
+) []*entity.ResourceAccessContext {
 	var resourceIDSet map[int64]struct{}
 	if len(resourceIDs) > 0 {
 		resourceIDSet = make(map[int64]struct{}, len(resourceIDs))
@@ -110,10 +120,7 @@ func paginateSharedAccessContexts(
 		}
 		return sortedAccessCtxs[i].ResourceID < sortedAccessCtxs[j].ResourceID
 	})
-
-	total := int64(len(sortedAccessCtxs))
-	page, nextPageToken, hasMore, err := paginateShared(sortedAccessCtxs, pageSize, pageToken)
-	return page, total, nextPageToken, hasMore, err
+	return sortedAccessCtxs
 }
 
 func batchGetSharedEvaluationSets(
@@ -153,7 +160,11 @@ func batchGetSharedEvaluationSets(
 		if set == nil {
 			continue
 		}
-		set.SharedInfo = accessCtx.SharedInfo()
+		sharedInfo := accessCtx.SharedInfo()
+		set.SharedInfo = sharedInfo
+		if set.EvaluationSetVersion != nil {
+			set.EvaluationSetVersion.SharedInfo = sharedInfo
+		}
 		if accessCtx.AccessLevel != entity.SharedAccessLevelReadable && set.EvaluationSetVersion != nil {
 			set.EvaluationSetVersion.EvaluationSetSchema = nil
 		}
