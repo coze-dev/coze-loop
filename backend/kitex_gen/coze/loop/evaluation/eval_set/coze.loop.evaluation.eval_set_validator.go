@@ -276,6 +276,11 @@ func (p *ListEvaluationSetsRequest) IsValid() error {
 			return fmt.Errorf("field TagFilter not valid, %w", err)
 		}
 	}
+	if p.Description != nil {
+		if len(*p.Description) > int(100) {
+			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
+		}
+	}
 	if p.PageNumber != nil {
 		if *p.PageNumber <= int32(0) {
 			return fmt.Errorf("field PageNumber gt rule failed, current value: %v", *p.PageNumber)

@@ -5699,8 +5699,10 @@ type ListEvaluationSetsRequest struct {
 	// 按 dataset_key 精确匹配
 	DatasetKeys []string `thrift:"dataset_keys,6,optional" frugal:"6,optional,list<string>" form:"dataset_keys" json:"dataset_keys,omitempty" query:"dataset_keys"`
 	// 系统资源标签过滤
-	TagFilter  *eval_set.TagFilter `thrift:"tag_filter,7,optional" frugal:"7,optional,eval_set.TagFilter" form:"tag_filter" json:"tag_filter,omitempty" query:"tag_filter"`
-	PageNumber *int32              `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
+	TagFilter *eval_set.TagFilter `thrift:"tag_filter,7,optional" frugal:"7,optional,eval_set.TagFilter" form:"tag_filter" json:"tag_filter,omitempty" query:"tag_filter"`
+	// 支持模糊搜索
+	Description *string `thrift:"description,8,optional" frugal:"8,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	PageNumber  *int32  `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
 	// 分页大小 (0, 200]，默认为 20
 	PageSize  *int32  `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
 	PageToken *string `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
@@ -5795,6 +5797,18 @@ func (p *ListEvaluationSetsRequest) GetTagFilter() (v *eval_set.TagFilter) {
 	return p.TagFilter
 }
 
+var ListEvaluationSetsRequest_Description_DEFAULT string
+
+func (p *ListEvaluationSetsRequest) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return ListEvaluationSetsRequest_Description_DEFAULT
+	}
+	return *p.Description
+}
+
 var ListEvaluationSetsRequest_PageNumber_DEFAULT int32
 
 func (p *ListEvaluationSetsRequest) GetPageNumber() (v int32) {
@@ -5875,6 +5889,9 @@ func (p *ListEvaluationSetsRequest) SetDatasetKeys(val []string) {
 func (p *ListEvaluationSetsRequest) SetTagFilter(val *eval_set.TagFilter) {
 	p.TagFilter = val
 }
+func (p *ListEvaluationSetsRequest) SetDescription(val *string) {
+	p.Description = val
+}
 func (p *ListEvaluationSetsRequest) SetPageNumber(val *int32) {
 	p.PageNumber = val
 }
@@ -5899,6 +5916,7 @@ var fieldIDToName_ListEvaluationSetsRequest = map[int16]string{
 	5:   "type",
 	6:   "dataset_keys",
 	7:   "tag_filter",
+	8:   "description",
 	100: "page_number",
 	101: "page_size",
 	102: "page_token",
@@ -5928,6 +5946,10 @@ func (p *ListEvaluationSetsRequest) IsSetDatasetKeys() bool {
 
 func (p *ListEvaluationSetsRequest) IsSetTagFilter() bool {
 	return p.TagFilter != nil
+}
+
+func (p *ListEvaluationSetsRequest) IsSetDescription() bool {
+	return p.Description != nil
 }
 
 func (p *ListEvaluationSetsRequest) IsSetPageNumber() bool {
@@ -6021,6 +6043,14 @@ func (p *ListEvaluationSetsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6211,6 +6241,17 @@ func (p *ListEvaluationSetsRequest) ReadField7(iprot thrift.TProtocol) error {
 	p.TagFilter = _field
 	return nil
 }
+func (p *ListEvaluationSetsRequest) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
 func (p *ListEvaluationSetsRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -6308,6 +6349,10 @@ func (p *ListEvaluationSetsRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -6496,6 +6541,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *ListEvaluationSetsRequest) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 func (p *ListEvaluationSetsRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageNumber() {
 		if err = oprot.WriteFieldBegin("page_number", thrift.I32, 100); err != nil {
@@ -6630,6 +6693,9 @@ func (p *ListEvaluationSetsRequest) DeepEqual(ano *ListEvaluationSetsRequest) bo
 	if !p.Field7DeepEqual(ano.TagFilter) {
 		return false
 	}
+	if !p.Field8DeepEqual(ano.Description) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.PageNumber) {
 		return false
 	}
@@ -6721,6 +6787,18 @@ func (p *ListEvaluationSetsRequest) Field6DeepEqual(src []string) bool {
 func (p *ListEvaluationSetsRequest) Field7DeepEqual(src *eval_set.TagFilter) bool {
 
 	if !p.TagFilter.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluationSetsRequest) Field8DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
 		return false
 	}
 	return true

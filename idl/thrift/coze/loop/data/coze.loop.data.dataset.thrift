@@ -80,6 +80,7 @@ struct ListDatasetsRequest {
     5: optional list<string> created_bys
     6: optional list<string> biz_categorys
     7: optional list<string> dataset_keys (vt.max_size = "255")                      // 按 dataset_key 精确匹配
+    8: optional string description (vt.max_size = "255")                             // 支持模糊搜索
 
     /* pagination */
     100: optional i32 page_number (vt.gt = "0")

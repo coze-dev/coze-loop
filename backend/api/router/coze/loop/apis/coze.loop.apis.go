@@ -506,6 +506,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_eval_targets0 := _loop.Group("/eval_targets", _eval_targets0Mw(handler)...)
 				_eval_targets0.POST("/async_debug", append(_asyncdebugevaltargetoapiMw(handler), apis.AsyncDebugEvalTargetOApi)...)
 				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
+				_eval_targets0.POST("/step_metric", append(_reportevaltargetstepmetricMw(handler), apis.ReportEvalTargetStepMetric)...)
 			}
 			{
 				_evaluation0 := _loop.Group("/evaluation", _evaluation0Mw(handler)...)
