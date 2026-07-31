@@ -739,7 +739,7 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 	}
 
 	taskID := e.resolveSandboxTaskIDByRunID(ctx, record.ExperimentRunID)
-	e.destroySandboxExecute(ctx, taskID, record.SpaceID, record.ID, "")
+	e.destroySandboxExecute(ctx, taskID, record.SpaceID, record.ID, false)
 }
 
 // resolveSandboxTaskIDByRunID 通过 ExperimentRunID 反查 ExptID 作为 sandbox TaskID。
@@ -759,18 +759,18 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 }
 
 // destroySandboxExecute 异步 best-effort 销毁单个 sandbox execute。
-// endCmd 非空时会随 Destroy 请求下发到容器内执行；仅 SandboxAgent zombie 超时链路会传入。
-func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID, executeID int64, endCmd string) {
+// zombieTimeout=true 时透传给下游适配器，由适配器决定是否附带 SandboxAgent 收尾命令。
+func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID, executeID int64, zombieTimeout bool) {
 	if e.sandboxSchedulerAdapter == nil {
 		return
 	}
 	goroutine.Go(ctx, func() {
 		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
-			TaskID:      taskID,
-			DestroyType: rpc.SandboxDestroyTypeExecute,
-			ExecuteIDs:  []string{strconv.FormatInt(executeID, 10)},
-			WorkspaceID: spaceID,
-			EndCmd:      endCmd,
+			TaskID:        taskID,
+			DestroyType:   rpc.SandboxDestroyTypeExecute,
+			ExecuteIDs:    []string{strconv.FormatInt(executeID, 10)},
+			WorkspaceID:   spaceID,
+			ZombieTimeout: zombieTimeout,
 		}); err != nil {
 			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_id=%d, err=%v",
 				taskID, executeID, err)
@@ -853,11 +853,7 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
 			taskIDCache[r.ExperimentRunID] = taskID
 		}
-		endCmd := ""
-		if zombieTimeout && taskID != "" {
-			endCmd = fmt.Sprintf(entity.SandboxAgentZombieDestroyCmdTmpl, taskID, strconv.FormatInt(r.ID, 10))
-		}
-		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID, endCmd)
+		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID, zombieTimeout)
 	}
 }
 

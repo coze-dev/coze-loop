@@ -9,10 +9,6 @@ const (
 	SandboxAgentTypeSingleRunCLI SandboxAgentType = "single_run_cli"
 )
 
-// SandboxAgentZombieDestroyCmdTmpl SandboxAgent zombie 超时销毁沙箱时通过 Destroy 接口
-// 下发到容器内执行的收尾命令模板，占位符依次为 expt_id / invoke_id。
-const SandboxAgentZombieDestroyCmdTmpl = "npx -y --registry=https://bnpm.byted.org/ -p @next-ai/sandbox-pipeline@beta sandbox-pipeline destroy --expt-id %s --invoke-id %s"
-
 // SandboxCountMode 指定单次评测使用一个还是一对沙箱。
 // - Single: 沿用原有单沙箱执行链路
 // - Dual:   先起一个从属沙箱拿到 session id，再起一个主沙箱运行 sandbox-pipeline
