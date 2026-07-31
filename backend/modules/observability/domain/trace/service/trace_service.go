@@ -1331,9 +1331,15 @@ func (r *TraceServiceImpl) GetTraceAll(ctx context.Context, req *GetTraceReq) (*
 	allSpans := make(loop_span.SpanList, 0)
 	pageToken := req.PageToken
 	truncated := false
+	// 游标翻页每页固定用自然页大小（带详情 1000 / 不带详情 10000）。
+	// 设 Limit（>0）同时也让 GetTrace 走降序，与 repo 层游标过滤（start_time < token）保持一致。
+	pageLimit := defaultTraceSpanLimit
+	if !req.WithDetail {
+		pageLimit = defaultTraceSpanLimitNoDetail
+	}
 	for {
 		pageReq := *req
-		pageReq.Limit = FetchAllMaxSpanLimit
+		pageReq.Limit = pageLimit
 		pageReq.PageToken = pageToken
 		resp, err := r.GetTrace(ctx, &pageReq)
 		if err != nil {

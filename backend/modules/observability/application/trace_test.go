@@ -1091,7 +1091,7 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "success case with custom span limit",
+			name: "success case forwards req to GetTraceAll without limit",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
@@ -1100,7 +1100,10 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockSvc.EXPECT().GetTraceAll(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, req *service.GetTraceReq) (*service.GetTraceResp, error) {
-						assert.Equal(t, int32(5000), req.Limit)
+						// GetTraceAll 内部自行按自然页大小翻页，application 层不下发 Limit；
+						// search_tree 不取 input/output 详情，故 WithDetail=false。
+						assert.Equal(t, int32(0), req.Limit)
+						assert.False(t, req.WithDetail)
 						return &service.GetTraceResp{
 							TraceId: "trace-1",
 							Spans:   loop_span.SpanList{},
