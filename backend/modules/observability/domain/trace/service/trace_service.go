@@ -52,6 +52,13 @@ const (
 	defaultChatPageSize          int32 = 50
 	maxChatPageSize              int32 = 100
 	maxChatPageSizeWithoutDetail int32 = 5000
+
+	// GetTrace / GetTraceAll 单次查询的默认 span 上限：带 input/output 详情时较小，
+	// 不带详情时较大。GetTraceAll 以此作为每轮翻页大小。
+	defaultTraceSpanLimit          int32 = 1000
+	defaultTraceSpanLimitNoDetail  int32 = 10000
+	// GetTraceAll 游标循环拉全时的累计硬上限
+	FetchAllMaxSpanLimit int32 = 100000
 )
 
 type ListSpansReq struct {
@@ -526,6 +533,7 @@ type ITraceService interface {
 	ListPreSpan(ctx context.Context, req *ListPreSpanReq) (r *ListPreSpanResp, err error)
 	ListPreSpanBatch(ctx context.Context, req *ListPreSpanBatchReq) (*ListPreSpanBatchResp, error)
 	GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error)
+	GetTraceAll(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error)
 	SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error)
 	ListSpansOApi(ctx context.Context, req *ListSpansOApiReq) (*ListSpansOApiResp, error)
 	ListPreSpanOApi(ctx context.Context, req *ListPreSpanOApiReq) (*ListPreSpanOApiResp, error)
@@ -1239,9 +1247,9 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		omitColumns = []string{"input", "output"}
 	}
 	st := time.Now()
-	limit := int32(1000)
+	limit := defaultTraceSpanLimit
 	if !req.WithDetail {
-		limit = 10000
+		limit = defaultTraceSpanLimitNoDetail
 	}
 	if req.Limit > 0 {
 		if !req.WithDetail || req.Limit < limit {
@@ -1313,6 +1321,45 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		Spans:         spans,
 		NextPageToken: traceResult.PageToken,
 		HasMore:       traceResult.HasMore,
+	}, nil
+}
+
+// GetTraceAll 用游标循环调 GetTrace，把一条 trace 的全部 span 拉全后一次性返回，
+// 累计上限为 FetchAllMaxSpanLimit（10w），触顶即截断并告警。用于 trace 详情/树这类
+// 需要完整 span 集合、且对外不暴露分页的场景。
+func (r *TraceServiceImpl) GetTraceAll(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
+	allSpans := make(loop_span.SpanList, 0)
+	pageToken := req.PageToken
+	truncated := false
+	for {
+		pageReq := *req
+		pageReq.Limit = FetchAllMaxSpanLimit
+		pageReq.PageToken = pageToken
+		resp, err := r.GetTrace(ctx, &pageReq)
+		if err != nil {
+			return nil, err
+		}
+		allSpans = append(allSpans, resp.Spans...)
+		if int32(len(allSpans)) >= FetchAllMaxSpanLimit {
+			allSpans = allSpans[:FetchAllMaxSpanLimit]
+			truncated = true
+			break
+		}
+		// !HasMore 说明拉完；NextPageToken 为空兜底防死循环
+		if !resp.HasMore || resp.NextPageToken == "" {
+			break
+		}
+		pageToken = resp.NextPageToken
+	}
+	allSpans = allSpans.Uniq()
+	allSpans.SortByStartTime(false)
+	if truncated {
+		logs.CtxWarn(ctx, "GetTraceAll reached max span limit %d, spans truncated, workspace_id=%d trace_id=%s log_id=%s",
+			FetchAllMaxSpanLimit, req.WorkspaceID, req.TraceID, req.LogID)
+	}
+	return &GetTraceResp{
+		TraceId: req.TraceID,
+		Spans:   allSpans,
 	}, nil
 }
 
@@ -3112,7 +3159,9 @@ func (r *TraceServiceImpl) GetAdjacentTrace(ctx context.Context, req *GetAdjacen
 	}
 
 	if listResp == nil || len(listResp.Spans) == 0 {
-		return nil, errorx.NewByCode(obErrorx.ResourceNotFoundCode, errorx.WithExtraMsg("no adjacent trace in this thread"))
+		logs.CtxInfo(ctx, "GetAdjacentTrace no adjacent trace, workspace_id=%d thread_id=%s trace_id=%s direction=%d",
+			req.WorkspaceID, req.ThreadID, req.TraceID, req.Direction)
+		return &GetAdjacentTraceResponse{}, nil
 	}
 
 	adjacent := listResp.Spans[0]

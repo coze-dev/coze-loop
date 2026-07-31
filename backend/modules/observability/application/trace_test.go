@@ -1034,9 +1034,8 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockCfg.EXPECT().GetSearchTraceTreeMaxSpanLimit(gomock.Any(), gomock.Any()).Return(int32(10000))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{
+				mockSvc.EXPECT().GetTraceAll(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{
 					TraceId: "trace-1",
 					Spans:   loop_span.SpanList{},
 				}, nil)
@@ -1071,9 +1070,8 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockCfg.EXPECT().GetSearchTraceTreeMaxSpanLimit(gomock.Any(), gomock.Any()).Return(int32(10000))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				mockSvc.EXPECT().GetTraceAll(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				return fields{
 					traceSvc: mockSvc,
 					auth:     mockAuth,
@@ -1099,9 +1097,8 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockCfg.EXPECT().GetSearchTraceTreeMaxSpanLimit(gomock.Any(), int64(12)).Return(int32(5000))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+				mockSvc.EXPECT().GetTraceAll(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, req *service.GetTraceReq) (*service.GetTraceResp, error) {
 						assert.Equal(t, int32(5000), req.Limit)
 						return &service.GetTraceResp{

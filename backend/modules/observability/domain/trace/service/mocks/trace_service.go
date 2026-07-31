@@ -190,6 +190,21 @@ func (mr *MockITraceServiceMockRecorder) GetTrace(ctx, req any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrace", reflect.TypeOf((*MockITraceService)(nil).GetTrace), ctx, req)
 }
 
+// GetTraceAll mocks base method.
+func (m *MockITraceService) GetTraceAll(ctx context.Context, req *service.GetTraceReq) (*service.GetTraceResp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTraceAll", ctx, req)
+	ret0, _ := ret[0].(*service.GetTraceResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTraceAll indicates an expected call of GetTraceAll.
+func (mr *MockITraceServiceMockRecorder) GetTraceAll(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceAll", reflect.TypeOf((*MockITraceService)(nil).GetTraceAll), ctx, req)
+}
+
 // GetTracesAdvanceInfo mocks base method.
 func (m *MockITraceService) GetTracesAdvanceInfo(ctx context.Context, req *service.GetTracesAdvanceInfoReq) (*service.GetTracesAdvanceInfoResp, error) {
 	m.ctrl.T.Helper()

@@ -201,20 +201,6 @@ func (mr *MockITraceConfigMockRecorder) GetReflowInsertConfig(ctx any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReflowInsertConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetReflowInsertConfig), ctx)
 }
 
-// GetSearchTraceTreeMaxSpanLimit mocks base method.
-func (m *MockITraceConfig) GetSearchTraceTreeMaxSpanLimit(ctx context.Context, workspaceID int64) int32 {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSearchTraceTreeMaxSpanLimit", ctx, workspaceID)
-	ret0, _ := ret[0].(int32)
-	return ret0
-}
-
-// GetSearchTraceTreeMaxSpanLimit indicates an expected call of GetSearchTraceTreeMaxSpanLimit.
-func (mr *MockITraceConfigMockRecorder) GetSearchTraceTreeMaxSpanLimit(ctx, workspaceID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSearchTraceTreeMaxSpanLimit", reflect.TypeOf((*MockITraceConfig)(nil).GetSearchTraceTreeMaxSpanLimit), ctx, workspaceID)
-}
-
 // GetTrajectoryMetadataConfig mocks base method.
 func (m *MockITraceConfig) GetTrajectoryMetadataConfig(ctx context.Context) *config.TrajectoryMetadataConfig {
 	m.ctrl.T.Helper()
