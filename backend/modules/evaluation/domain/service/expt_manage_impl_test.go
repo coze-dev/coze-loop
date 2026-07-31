@@ -1783,6 +1783,7 @@ func TestNewExptManager(t *testing.T) {
 		mockUser,
 		nil,
 		nil,
+		nil,
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)
