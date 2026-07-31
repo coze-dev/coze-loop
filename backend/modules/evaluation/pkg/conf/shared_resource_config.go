@@ -28,6 +28,7 @@ type sharedSpaceRulesFile struct {
 
 type sharedResourceRuleFile struct {
 	ResourceID       int64                  `mapstructure:"resource_id" json:"resource_id"`
+	ResourceIDs      []int64                `mapstructure:"resource_ids" json:"resource_ids"`
 	ResourceType     string                 `mapstructure:"resource_type" json:"resource_type"`
 	TargetType       entity.EvalTargetType  `mapstructure:"target_type" json:"target_type"`
 	VersionPolicy    string                 `mapstructure:"version_policy" json:"version_policy"`
@@ -56,6 +57,17 @@ type sharedResourceConfigProvider struct {
 	loader conf.IConfigLoader
 }
 
+type sharedResourceRuleKey struct {
+	ResourceID   int64
+	ResourceType string
+	TargetType   entity.EvalTargetType
+}
+
+type expandedSharedResourceRule struct {
+	key  sharedResourceRuleKey
+	rule *entity.SharedResourceRule
+}
+
 func (p *sharedResourceConfigProvider) GetSharedResourceConfig(ctx context.Context) (*entity.SharedResourceConfig, error) {
 	raw := sharedResourceConfigFile{}
 	if err := p.loader.UnmarshalKey(ctx, sharedResourceConfigKey, &raw); err != nil {
@@ -76,6 +88,8 @@ func convertSharedResourceConfig(raw sharedResourceConfigFile) *entity.SharedRes
 		if err != nil {
 			continue
 		}
+		expandedRules := make([]expandedSharedResourceRule, 0, len(spaceRules.Resources))
+		ruleCounts := make(map[sharedResourceRuleKey]int, len(spaceRules.Resources))
 		resources := make([]*entity.SharedResourceRule, 0, len(spaceRules.Resources))
 		for _, res := range spaceRules.Resources {
 			accessRules := make([]*entity.SharedAccessRule, 0, len(res.AccessRules))
@@ -85,17 +99,56 @@ func convertSharedResourceConfig(raw sharedResourceConfigFile) *entity.SharedRes
 					Targets:     ar.Targets,
 				})
 			}
-			resources = append(resources, &entity.SharedResourceRule{
-				ResourceID:        res.ResourceID,
-				ResourceType:      res.ResourceType,
-				TargetType:        res.TargetType,
-				VersionPolicy:     res.VersionPolicy,
-				SpecifiedIDs:      res.SharedVersionIDs,
-				SpecifiedVersions: res.SharedVersions,
-				AccessRules:       accessRules,
-			})
+			for _, resourceID := range collectResourceIDs(res.ResourceID, res.ResourceIDs) {
+				key := sharedResourceRuleKey{
+					ResourceID:   resourceID,
+					ResourceType: res.ResourceType,
+					TargetType:   res.TargetType,
+				}
+				expandedRules = append(expandedRules, expandedSharedResourceRule{key: key, rule: &entity.SharedResourceRule{
+					ResourceID:        resourceID,
+					ResourceType:      res.ResourceType,
+					TargetType:        res.TargetType,
+					VersionPolicy:     res.VersionPolicy,
+					SpecifiedIDs:      res.SharedVersionIDs,
+					SpecifiedVersions: res.SharedVersions,
+					AccessRules:       accessRules,
+				}})
+				ruleCounts[key]++
+			}
+		}
+		for _, expanded := range expandedRules {
+			// Multiple config entries for the same resource can carry conflicting
+			// policies and make list/detail authorization disagree. Treat every
+			// cross-entry duplicate as invalid instead of depending on rule order.
+			if ruleCounts[expanded.key] != 1 {
+				continue
+			}
+			resources = append(resources, expanded.rule)
 		}
 		cfg.SpaceRules[sourceSpaceID] = &entity.SpaceSharedRules{Resources: resources}
 	}
 	return cfg
+}
+
+// collectResourceIDs merges the legacy single resource_id with resource_ids.
+// Invalid IDs are ignored and duplicates keep their first occurrence.
+func collectResourceIDs(resourceID int64, resourceIDs []int64) []int64 {
+	ids := make([]int64, 0, len(resourceIDs)+1)
+	seen := make(map[int64]struct{}, len(resourceIDs)+1)
+	appendID := func(id int64) {
+		if id <= 0 {
+			return
+		}
+		if _, ok := seen[id]; ok {
+			return
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	appendID(resourceID)
+	for _, id := range resourceIDs {
+		appendID(id)
+	}
+	return ids
 }
