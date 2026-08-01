@@ -212,7 +212,35 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			})
 		}
 
+		// ★ 兜底落 Fail: 失败且不重试时, item 状态此前无人更新 —— 正常路径由 RunItem→CompleteItemRun
+		// 落 Fail, 但在 eval() 里 BuildExptRecordEvalCtx 等前置阶段就失败时压根没走到那里(eiec 未构建),
+		// item 停在进入执行时写的 Processing 上, 表现为"报错了却永久卡 processing、实验永不收敛"。
+		// 此处按 CompleteItemRun 同样的字段兜底(status=Fail + err_msg + result_state=Logged), 幂等可重复写。
+		e.completeItemRunOnUnretriableErr(ctx, event, nextErr)
+
 		return nil
+	}
+}
+
+// completeItemRunOnUnretriableErr 将 item 落为 Fail 并写入错误信息。
+// 仅在"失败且不可重试"时调用; 写库失败只告警不影响主流程(僵尸清理仍是最后防线)。
+func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) {
+	if event == nil || evalErr == nil || e.exptItemResultRepo == nil {
+		return
+	}
+
+	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	defer cancel()
+
+	ufields := map[string]any{
+		"status":       int32(entity.ItemRunState_Fail),
+		"err_msg":      errno.SerializeErr(evalErr),
+		"result_state": int32(entity.ExptItemResultStateLogged),
+	}
+	if err := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID,
+		[]int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr update item run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
 }
 
