@@ -95,6 +95,10 @@ func TestMatchAccessLevel(t *testing.T) {
 		wantMatched bool
 	}{
 		{
+			name:        "nil rule is ignored",
+			accessRules: []*SharedAccessRule{nil},
+		},
+		{
 			name:        "unknown level with exact target is denied",
 			accessRules: []*SharedAccessRule{{AccessLevel: "read", Targets: []string{callerKey}}},
 		},
@@ -160,4 +164,119 @@ func TestMatchAccessLevel(t *testing.T) {
 			assert.Equal(t, tt.wantMatched, matched)
 		})
 	}
+}
+
+func TestSharedResourceOption_Enabled(t *testing.T) {
+	var option *SharedResourceOption
+	assert.False(t, option.Enabled())
+	assert.False(t, (&SharedResourceOption{}).Enabled())
+	assert.False(t, (&SharedResourceOption{IsShared: true}).Enabled())
+	assert.False(t, (&SharedResourceOption{IsShared: true, SourceSpaceID: int64Ptr(0)}).Enabled())
+	assert.True(t, (&SharedResourceOption{IsShared: true, SourceSpaceID: int64Ptr(100)}).Enabled())
+}
+
+func TestBuildSharedResourceInfo(t *testing.T) {
+	assert.Nil(t, BuildSharedResourceInfo(100, 0, SharedAccessLevelReadable, SharedVersionPolicyAll))
+	assert.Nil(t, BuildSharedResourceInfo(100, 100, SharedAccessLevelReadable, SharedVersionPolicyAll))
+
+	info := BuildSharedResourceInfo(100, 200, SharedAccessLevelExecute, SharedVersionPolicyLatest)
+	if assert.NotNil(t, info) {
+		assert.True(t, info.IsShared)
+		assert.Equal(t, int64(200), info.SourceSpaceID)
+		assert.Equal(t, SharedAccessLevelExecute, info.AccessLevel)
+		assert.Equal(t, SharedVersionPolicyLatest, info.VersionPolicy)
+	}
+}
+
+func TestSharedResourceConfig_LookupDefaultsAndRejectsInvalidRules(t *testing.T) {
+	const sourceSpaceID, callerSpaceID, resourceID = int64(100), int64(200), int64(300)
+	var nilConfig *SharedResourceConfig
+	assert.Nil(t, nilConfig.Lookup(sourceSpaceID, SharedResourceTypeEvalSet, 0, resourceID, callerSpaceID))
+	assert.Nil(t, (&SharedResourceConfig{}).Lookup(sourceSpaceID, SharedResourceTypeEvalSet, 0, resourceID, callerSpaceID))
+	assert.Nil(t, (&SharedResourceConfig{SpaceRules: map[int64]*SpaceSharedRules{}}).
+		Lookup(sourceSpaceID, SharedResourceTypeEvalSet, 0, resourceID, callerSpaceID))
+	assert.Nil(t, (&SharedResourceConfig{SpaceRules: map[int64]*SpaceSharedRules{sourceSpaceID: nil}}).
+		Lookup(sourceSpaceID, SharedResourceTypeEvalSet, 0, resourceID, callerSpaceID))
+
+	cfg := &SharedResourceConfig{SpaceRules: map[int64]*SpaceSharedRules{
+		sourceSpaceID: {
+			Resources: []*SharedResourceRule{
+				nil,
+				{ResourceID: resourceID, ResourceType: SharedResourceTypeEvalTarget},
+				{ResourceID: resourceID + 1, ResourceType: SharedResourceTypeEvalSet},
+				{ResourceID: resourceID, ResourceType: SharedResourceTypeEvalSet},
+			},
+		},
+	}}
+	assert.Nil(t, cfg.Lookup(sourceSpaceID, SharedResourceTypeEvalSet, 0, resourceID, callerSpaceID))
+
+	cfg.SpaceRules[sourceSpaceID].Resources[3].AccessRules = []*SharedAccessRule{
+		{AccessLevel: SharedAccessLevelReadable, Targets: []string{strconv.FormatInt(callerSpaceID, 10)}},
+	}
+	share := cfg.Lookup(sourceSpaceID, SharedResourceTypeEvalSet, 0, resourceID, callerSpaceID)
+	if assert.NotNil(t, share) {
+		assert.Equal(t, SharedVersionPolicyAll, share.VersionPolicy)
+	}
+}
+
+func TestSharedResourceConfig_ListSharedToFilteringAndDefaults(t *testing.T) {
+	const sourceSpaceID, callerSpaceID = int64(100), int64(200)
+	var nilConfig *SharedResourceConfig
+	assert.Nil(t, nilConfig.ListSharedTo(callerSpaceID, SharedResourceTypeEvalSet, 0, nil))
+
+	cfg := &SharedResourceConfig{SpaceRules: map[int64]*SpaceSharedRules{
+		99: nil,
+		sourceSpaceID: {
+			Resources: []*SharedResourceRule{
+				nil,
+				{ResourceID: 1, ResourceType: SharedResourceTypeEvalTarget, TargetType: EvalTargetTypeLoopPrompt},
+				{ResourceID: 2, ResourceType: SharedResourceTypeEvalSet},
+				{
+					ResourceID:   3,
+					ResourceType: SharedResourceTypeEvalSet,
+					AccessRules: []*SharedAccessRule{{
+						AccessLevel: SharedAccessLevelReadable,
+						Targets:     []string{strconv.FormatInt(callerSpaceID, 10)},
+					}},
+				},
+				{
+					ResourceID:        4,
+					ResourceType:      SharedResourceTypeEvalTarget,
+					TargetType:        EvalTargetTypeCozeBot,
+					VersionPolicy:     SharedVersionPolicySpecified,
+					SpecifiedVersions: []string{"ignored"},
+					AccessRules: []*SharedAccessRule{{
+						AccessLevel: SharedAccessLevelExecute,
+						Targets:     []string{sharedAccessTargetAll},
+					}},
+				},
+			},
+		},
+	}}
+
+	excludedSource := int64(101)
+	assert.Empty(t, cfg.ListSharedTo(callerSpaceID, SharedResourceTypeEvalSet, 0, &excludedSource))
+
+	entries := cfg.ListSharedTo(callerSpaceID, SharedResourceTypeEvalSet, 0, int64Ptr(sourceSpaceID))
+	if assert.Len(t, entries, 1) {
+		assert.Equal(t, int64(3), entries[0].ResourceID)
+		assert.Equal(t, SharedVersionPolicyAll, entries[0].VersionPolicy)
+	}
+
+	entries = cfg.ListSharedTo(callerSpaceID, SharedResourceTypeEvalTarget, EvalTargetTypeCozeBot, nil)
+	if assert.Len(t, entries, 1) {
+		assert.Equal(t, SharedVersionPolicyAll, entries[0].VersionPolicy)
+		assert.Empty(t, entries[0].SpecifiedVersions)
+	}
+}
+
+func TestSharedResourceMatches(t *testing.T) {
+	assert.False(t, sharedResourceMatches(nil, SharedResourceTypeEvalSet, 0))
+	assert.False(t, sharedResourceMatches(&SharedResourceRule{ResourceType: SharedResourceTypeEvalTarget}, SharedResourceTypeEvalSet, 0))
+	assert.True(t, sharedResourceMatches(&SharedResourceRule{ResourceType: SharedResourceTypeEvalSet}, SharedResourceTypeEvalSet, 0))
+	assert.False(t, sharedResourceMatches(&SharedResourceRule{ResourceType: SharedResourceTypeEvalTarget, TargetType: EvalTargetTypeCozeBot}, SharedResourceTypeEvalTarget, 0))
+}
+
+func int64Ptr(value int64) *int64 {
+	return &value
 }

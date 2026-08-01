@@ -74,6 +74,29 @@ func TestIsExptFinishing(t *testing.T) {
 	}
 }
 
+func TestExptItemEvalCtx_SourceSpaceIDs(t *testing.T) {
+	var nilCtx *ExptItemEvalCtx
+	assert.Zero(t, nilCtx.EvalSetSourceSpaceID())
+	assert.Zero(t, nilCtx.TargetSourceSpaceID())
+
+	ctx := &ExptItemEvalCtx{}
+	assert.Zero(t, ctx.EvalSetSourceSpaceID())
+	assert.Zero(t, ctx.TargetSourceSpaceID())
+
+	ctx.Expt = &Experiment{EvalSetSpaceID: 101, TargetSpaceID: 201}
+	assert.Equal(t, int64(101), ctx.EvalSetSourceSpaceID())
+	assert.Equal(t, int64(201), ctx.TargetSourceSpaceID())
+
+	ctx.ItemConfig = &ExptItemConfig{}
+	assert.Equal(t, int64(101), ctx.EvalSetSourceSpaceID())
+	assert.Equal(t, int64(201), ctx.TargetSourceSpaceID())
+
+	ctx.ItemConfig.EvalSetSourceSpaceID = 102
+	ctx.ItemConfig.TargetSourceSpaceID = 202
+	assert.Equal(t, int64(102), ctx.EvalSetSourceSpaceID())
+	assert.Equal(t, int64(202), ctx.TargetSourceSpaceID())
+}
+
 func TestExptTurnRunResult_AbortWithTargetResult(t *testing.T) {
 	tests := []struct {
 		name            string
