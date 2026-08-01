@@ -246,12 +246,22 @@ func (e EvalTargetApplicationImpl) GetEvalTargetVersion(ctx context.Context, req
 	if sharedOption.Enabled() {
 		querySpaceID = gptr.Indirect(sharedOption.SourceSpaceID)
 	}
-	evalTarget, err := e.evalTargetService.GetEvalTargetVersion(ctx, querySpaceID, request.GetEvalTargetVersionID(), sharedOption == nil)
+	evalTarget, err := e.evalTargetService.GetEvalTargetVersion(ctx, querySpaceID, request.GetEvalTargetVersionID(), false)
 	if err != nil {
 		return nil, err
 	}
 	if evalTarget == nil {
 		return &eval_target.GetEvalTargetVersionResponse{}, nil
+	}
+	if sharedOption == nil {
+		if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(evalTarget.ID, 10),
+			SpaceID:       request.WorkspaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+		}); err != nil {
+			return nil, err
+		}
+		return &eval_target.GetEvalTargetVersionResponse{EvalTarget: target.EvalTargetDO2DTO(evalTarget)}, nil
 	}
 	authResourceID := evalTarget.ID
 	if sharedOption.Enabled() {

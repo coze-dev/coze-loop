@@ -657,6 +657,39 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionsOApi(ctx context.Conte
 	if err != nil {
 		return nil, err
 	}
+	if sharedOption == nil {
+		// 非共享场景严格保持 main 的加载、鉴权和分页调用。
+		set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		if set == nil {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
+		}
+		var ownerID *string
+		if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+			ownerID = set.BaseInfo.CreatedBy.UserID
+		}
+		if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(set.ID, 10),
+			SpaceID:         req.GetWorkspaceID(),
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+			OwnerID:         ownerID,
+			ResourceSpaceID: set.SpaceID,
+		}); err != nil {
+			return nil, err
+		}
+		versions, total, nextCursor, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+			SpaceID: req.GetWorkspaceID(), EvaluationSetID: req.GetEvaluationSetID(), PageSize: req.PageSize,
+			PageToken: req.PageToken, VersionLike: req.VersionLike,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &openapi.ListEvaluationSetVersionsOApiResponse{Data: &openapi.ListEvaluationSetVersionsOpenAPIData{
+			Versions: evaluation_set.OpenAPIEvaluationSetVersionDO2DTOs(versions), Total: total, NextPageToken: nextCursor,
+		}}, nil
+	}
 	if sharedOption != nil && !sharedOption.Enabled() {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when shared_option.is_shared is true"))
 	}
@@ -1003,10 +1036,33 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 	if set == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
 	}
-	// item 内容路径要求 readable（execute 黑盒不可读内容）
-	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.GetWorkspaceID(), set, sharedOption, req.VersionID, nil, true))
-	if err != nil {
-		return nil, err
+	var accessCtx *entity.ResourceAccessContext
+	if sharedOption == nil {
+		// 非共享场景严格保持 main 的 ReadItem 鉴权逻辑。
+		var ownerID *string
+		if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+			ownerID = set.BaseInfo.CreatedBy.UserID
+		}
+		if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(set.ID, 10),
+			SpaceID:         req.GetWorkspaceID(),
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+			OwnerID:         ownerID,
+			ResourceSpaceID: set.SpaceID,
+		}); err != nil {
+			return nil, err
+		}
+		accessCtx = &entity.ResourceAccessContext{
+			CallerSpaceID: req.GetWorkspaceID(), ResourceSpaceID: set.SpaceID, AccessMode: entity.AccessModeDirect,
+		}
+	} else {
+		// item 内容路径要求 readable（execute 黑盒不可读内容），基础鉴权动作仍使用 ReadItem。
+		authReq := buildEvalSetAuthorizeRequest(req.GetWorkspaceID(), set, sharedOption, req.VersionID, nil, true)
+		authReq.Action = consts.ReadItem
+		accessCtx, err = e.resourceAccessAuthorizer.AuthorizeRead(ctx, authReq)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if accessCtx.IsShared() {
 		version, versionSet, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, req.GetWorkspaceID(), req.GetVersionID(), gptr.Of(true), sharedOption)

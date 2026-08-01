@@ -858,9 +858,44 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetVersion(ctx context.Conte
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	// evaluation_set_id 为 optional：优先按 version_id 查询版本及其所属评测集，
-	// 再按返回的评测集做鉴权，避免把 optional 当 required 使用（未传 set_id 时按 0 查询会 not found）。
-	version, set, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, req.WorkspaceID, req.VersionID, req.DeletedAt, sharedOptionDTO2DO(req.SharedOption))
+	sharedOption := sharedOptionDTO2DO(req.SharedOption)
+	if req.SharedOption == nil || !req.SharedOption.GetIsShared() {
+		// 非共享场景严格保持 main：先加载评测集、鉴权，再加载版本。
+		set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, gptr.Indirect(req.EvaluationSetID), req.DeletedAt, nil)
+		if err != nil {
+			return nil, err
+		}
+		if set == nil {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
+		}
+		var ownerID *string
+		if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+			ownerID = set.BaseInfo.CreatedBy.UserID
+		}
+		if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(set.ID, 10),
+			SpaceID:         req.WorkspaceID,
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+			OwnerID:         ownerID,
+			ResourceSpaceID: set.SpaceID,
+		}); err != nil {
+			return nil, err
+		}
+		version, versionSet, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, req.WorkspaceID, req.VersionID, req.DeletedAt, nil)
+		if err != nil {
+			return nil, err
+		}
+		versionDTO := evaluation_set.VersionDO2DTO(version)
+		e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier([]*domain_eval_set.EvaluationSetVersion{versionDTO}))
+		return &eval_set.GetEvaluationSetVersionResponse{
+			Version: versionDTO, EvaluationSet: evaluation_set.EvaluationSetDO2DTO(versionSet),
+		}, nil
+	}
+	if sharedOption == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when shared_option.is_shared is true"))
+	}
+	// 共享场景允许仅凭 version_id 从来源空间加载版本及所属评测集。
+	version, set, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, req.WorkspaceID, req.VersionID, req.DeletedAt, sharedOption)
 	if err != nil {
 		return nil, err
 	}
@@ -871,7 +906,7 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetVersion(ctx context.Conte
 	if req.EvaluationSetID != nil && gptr.Indirect(req.EvaluationSetID) != 0 && gptr.Indirect(req.EvaluationSetID) != set.ID {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluation_set_id mismatch with version"))
 	}
-	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.WorkspaceID, set, sharedOptionDTO2DO(req.SharedOption), gptr.Of(req.VersionID), gptr.Of(version.Version), false))
+	accessCtx, err := e.resourceAccessAuthorizer.AuthorizeRead(ctx, buildEvalSetAuthorizeRequest(req.WorkspaceID, set, sharedOption, gptr.Of(req.VersionID), gptr.Of(version.Version), false))
 	if err != nil {
 		return nil, err
 	}
@@ -896,7 +931,43 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetVersions(ctx context.Con
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 	sharedOption := sharedOptionDTO2DO(req.SharedOption)
-	// 鉴权
+	if req.SharedOption == nil || !req.SharedOption.GetIsShared() {
+		// 非共享场景严格保持 main 的加载、鉴权和分页调用。
+		set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		if set == nil {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
+		}
+		var ownerID *string
+		if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+			ownerID = set.BaseInfo.CreatedBy.UserID
+		}
+		if err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(set.ID, 10),
+			SpaceID:         req.WorkspaceID,
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+			OwnerID:         ownerID,
+			ResourceSpaceID: set.SpaceID,
+		}); err != nil {
+			return nil, err
+		}
+		versions, total, nextCursor, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+			SpaceID: req.WorkspaceID, EvaluationSetID: req.EvaluationSetID, PageSize: req.PageSize,
+			PageNumber: req.PageNumber, PageToken: req.PageToken, VersionLike: req.VersionLike,
+		})
+		if err != nil {
+			return nil, err
+		}
+		versionDTOs := evaluation_set.VersionDO2DTOs(versions)
+		e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier(versionDTOs))
+		return &eval_set.ListEvaluationSetVersionsResponse{Versions: versionDTOs, Total: total, NextPageToken: nextCursor}, nil
+	}
+	if sharedOption == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when shared_option.is_shared is true"))
+	}
+	// 共享场景按来源空间加载并执行共享版本策略。
 	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, nil, sharedOption)
 	if err != nil {
 		return nil, err

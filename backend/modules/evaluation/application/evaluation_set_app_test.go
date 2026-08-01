@@ -660,12 +660,12 @@ func TestEvaluationSetApplicationImpl_ListEvaluationSetVersions_NonSharedPreserv
 	)
 	mockSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
 	mockVersionSvc := servicemocks.NewMockEvaluationSetVersionService(ctrl)
-	mockAuthorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockUserInfo := userinfomocks.NewMockUserInfoService(ctrl)
 	app := &EvaluationSetApplicationImpl{
+		auth:                        mockAuth,
 		evaluationSetService:        mockSetSvc,
 		evaluationSetVersionService: mockVersionSvc,
-		resourceAccessAuthorizer:    mockAuthorizer,
 		userInfoService:             mockUserInfo,
 	}
 
@@ -673,16 +673,14 @@ func TestEvaluationSetApplicationImpl_ListEvaluationSetVersions_NonSharedPreserv
 	mockSetSvc.EXPECT().
 		GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), setID, nil, nil).
 		Return(set, nil)
-	mockAuthorizer.EXPECT().
-		AuthorizeRead(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, req *entity.AuthorizeResourceRequest) (*entity.ResourceAccessContext, error) {
-			assert.Nil(t, req.SharedOption)
-			return &entity.ResourceAccessContext{
-				CallerSpaceID:   workspaceID,
-				ResourceSpaceID: workspaceID,
-				AccessMode:      entity.AccessModeDirect,
-			}, nil
-		})
+	mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, param *rpc.AuthorizationWithoutSPIParam) error {
+			require.Len(t, param.ActionObjects, 1)
+			assert.Equal(t, consts.Read, gptr.Indirect(param.ActionObjects[0].Action))
+			assert.Equal(t, workspaceID, param.ResourceSpaceID)
+			return nil
+		},
+	)
 
 	pageSize := int32(7)
 	pageNumber := int32(3)

@@ -544,11 +544,11 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().
-					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, true).
+					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, false).
 					Return(validEvalTarget, nil)
 
 				mockAuth.EXPECT().
-					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+					Authorization(gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			wantResp: &evaltargetapi.GetEvalTargetVersionResponse{
@@ -582,7 +582,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().
-					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, true).
+					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, false).
 					Return(nil, nil)
 			},
 			wantResp: &evaltargetapi.GetEvalTargetVersionResponse{},
@@ -596,7 +596,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().
-					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, true).
+					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, false).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantResp:    nil,
@@ -611,11 +611,11 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().
-					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, true).
+					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, false).
 					Return(validEvalTarget, nil)
 
 				mockAuth.EXPECT().
-					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+					Authorization(gomock.Any(), gomock.Any()).
 					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
 			},
 			wantResp:    nil,
