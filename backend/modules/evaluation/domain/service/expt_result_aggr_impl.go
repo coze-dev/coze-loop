@@ -163,11 +163,16 @@ func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx contex
 
 	// ★ 跨空间共享: 评测对象执行记录随执行落来源空间(冻结 TargetSpaceID), 聚合读 record 也需按来源空间,
 	// 否则跨空间实验 target latency/token 聚合取不到 record。载入实验取冻结来源空间。
+	// 此处 fail-closed: 载入失败必须返回错误让上层重试, 不可退回调用方空间继续 ——
+	// 跨空间实验(TargetSpaceID>0)下带错空间继续会让 BatchGetRecordByIDs 全查不到,
+	// latency/token 被静默聚合成 0 并落库, 事后无法与真实 0 区分且不会自愈。
+	exptDO, exptErr := e.experimentRepo.GetByID(ctx, exptID, spaceID)
+	if exptErr != nil {
+		return nil, exptErr
+	}
 	recordSpaceID := spaceID
-	if exptDO, exptErr := e.experimentRepo.GetByID(ctx, exptID, spaceID); exptErr == nil && exptDO != nil {
+	if exptDO != nil {
 		recordSpaceID = resolveLoadSpaceID(spaceID, exptDO.TargetSpaceID)
-	} else if exptErr != nil {
-		logs.CtxWarn(ctx, "buildExptTargetMtrAggregatorGroup load expt for target space fail, expt_id=%d, err=%v", exptID, exptErr)
 	}
 
 	mtrAggrGroup := &targetMtrAggrGroup{
