@@ -87,14 +87,39 @@ func TestExptItemEvalCtx_SourceSpaceIDs(t *testing.T) {
 	assert.Equal(t, int64(101), ctx.EvalSetSourceSpaceID())
 	assert.Equal(t, int64(201), ctx.TargetSourceSpaceID())
 
+	// 多集: ItemConfig 存在即行级冻结值权威; 空 ItemConfig 的 0 表示"该集在调用方空间", 不回退顶层列。
 	ctx.ItemConfig = &ExptItemConfig{}
-	assert.Equal(t, int64(101), ctx.EvalSetSourceSpaceID())
-	assert.Equal(t, int64(201), ctx.TargetSourceSpaceID())
+	assert.Zero(t, ctx.EvalSetSourceSpaceID())
+	assert.Zero(t, ctx.TargetSourceSpaceID())
 
 	ctx.ItemConfig.EvalSetSourceSpaceID = 102
 	ctx.ItemConfig.TargetSourceSpaceID = 202
 	assert.Equal(t, int64(102), ctx.EvalSetSourceSpaceID())
 	assert.Equal(t, int64(202), ctx.TargetSourceSpaceID())
+}
+
+// TestExptItemEvalCtx_SourceSpaceIDs_MixedSpaceMultiSet 钉住混合空间多集回归:
+// 多集里"跨空间集 + 同空间集"混用时, 顶层冻结列已被 configs[0](主集=跨空间) 兜底回填成来源空间,
+// 同空间集的行级 SourceSpaceID 合法为 0; 若按 >0 判断而回退顶层列, 会用主集来源空间去读同空间评测集 ——
+// 实测表现为 601103001 resource not found, get dataset_version, 且 retry=false 永久失败(该集 item 全挂)。
+func TestExptItemEvalCtx_SourceSpaceIDs_MixedSpaceMultiSet(t *testing.T) {
+	const (
+		sourceSpaceB  = 7590106916835897090 // 主集(configs[0]) 来源空间, 被兜底回填进顶层冻结列
+		consumerSpace = 0                   // 同空间集: 行级冻结 0 = 该集在调用方空间
+	)
+
+	ctx := &ExptItemEvalCtx{
+		Expt:       &Experiment{EvalSetSpaceID: sourceSpaceB, TargetSpaceID: sourceSpaceB},
+		ItemConfig: &ExptItemConfig{}, // 该 item 属同空间集
+	}
+
+	assert.Equal(t, int64(consumerSpace), ctx.EvalSetSourceSpaceID(), "同空间集不得回退到主集来源空间")
+	assert.Equal(t, int64(consumerSpace), ctx.TargetSourceSpaceID(), "同空间 target 不得回退到主集来源空间")
+
+	// 单集/老实验(ItemConfig 为 nil) 仍按实验级冻结列, 行为不变。
+	single := &ExptItemEvalCtx{Expt: &Experiment{EvalSetSpaceID: sourceSpaceB, TargetSpaceID: sourceSpaceB}}
+	assert.Equal(t, int64(sourceSpaceB), single.EvalSetSourceSpaceID())
+	assert.Equal(t, int64(sourceSpaceB), single.TargetSourceSpaceID())
 }
 
 func TestExptTurnRunResult_AbortWithTargetResult(t *testing.T) {

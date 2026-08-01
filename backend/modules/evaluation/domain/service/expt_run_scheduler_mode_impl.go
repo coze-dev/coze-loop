@@ -1396,10 +1396,13 @@ func backfillRefEvalSetSourceSpace(refs []*entity.ExptItemRef, expt *entity.Expe
 		return
 	}
 	// 多集: eval_set_id -> source_space_id
+	// ★ 含 SourceSpaceID == 0 的集也建 map: 0 表示"该集在调用方空间"是合法冻结值, 不是"未设置"。
+	// 若只收 >0, 混合空间多集(部分集跨空间)下同空间集会命中不到 map → 回退到被 configs[0] 兜底回填的
+	// expt.EvalSetSpaceID(主集来源空间) → 用主集来源空间读同空间评测集, 重试链路同样错。
 	sourceSpaceBySet := make(map[int64]int64)
 	if expt.EvalConf != nil {
 		for _, sc := range expt.EvalConf.EvalSetConfigs {
-			if sc != nil && sc.SourceSpaceID > 0 {
+			if sc != nil && sc.EvalSetID > 0 {
 				sourceSpaceBySet[sc.EvalSetID] = sc.SourceSpaceID
 			}
 		}
@@ -1412,7 +1415,7 @@ func backfillRefEvalSetSourceSpace(refs []*entity.ExptItemRef, expt *entity.Expe
 			ref.EvalSetSourceSpaceID = ss
 			continue
 		}
-		// 单集(或多集里该集同空间): 回退到实验级冻结列。
+		// 单集/老实验(EvalSetConfigs 未覆盖该集): 回退到实验级冻结列。
 		ref.EvalSetSourceSpaceID = expt.EvalSetSpaceID
 	}
 }

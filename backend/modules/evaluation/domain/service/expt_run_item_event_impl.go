@@ -359,8 +359,10 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 	// 集级 VersionID 仍透传, 供老数据集(versionID 留空)按集版本定位。
 	// ★ 跨空间共享: 执行期加载评测集 item 必须按来源空间; 多集取 item_config 冻结的 EvalSetSourceSpaceID,
 	// 单集/老实验取 exptDetail.EvalSetSpaceID; 缺此切换时用调用方空间读来源空间评测集 → get dataset_version not found, turn 执行失败。
+	// 多集(itemConfig != nil)行级冻结值即权威, 0 表示"该集在调用方空间"而非"未设置", 不可回退顶层列
+	// (顶层 EvalSetSpaceID 由 configs[0] 兜底回填, 混合空间多集下回退会把同空间集错送到主集来源空间)。
 	evalSetSourceSpaceID := int64(0)
-	if itemConfig != nil && itemConfig.EvalSetSourceSpaceID > 0 {
+	if itemConfig != nil {
 		evalSetSourceSpaceID = itemConfig.EvalSetSourceSpaceID
 	} else if exptDetail != nil {
 		evalSetSourceSpaceID = exptDetail.EvalSetSpaceID

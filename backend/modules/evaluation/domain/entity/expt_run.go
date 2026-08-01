@@ -438,11 +438,14 @@ type ExptItemEvalCtx struct {
 }
 
 // EvalSetSourceSpaceID 该行评测集来源空间: 多集从 ItemConfig(行级冻结), 单集从 Expt 冻结列; 0=同调用方空间。
+// ★ 多集(ItemConfig != nil)时行级冻结值即权威, 0 表示"该集在调用方空间"而非"未设置", 故不可再回退顶层列:
+// 顶层 EvalSetSpaceID 会被 configs[0] 兜底回填成主集来源空间, 混合空间多集(部分集跨空间/部分集同空间)下
+// 回退会让同空间集被错送到主集来源空间读 → BatchGetEvaluationSetItems 查不到 → 该集 item 全失败且重试无效。
 func (e *ExptItemEvalCtx) EvalSetSourceSpaceID() int64 {
 	if e == nil {
 		return 0
 	}
-	if e.ItemConfig != nil && e.ItemConfig.EvalSetSourceSpaceID > 0 {
+	if e.ItemConfig != nil {
 		return e.ItemConfig.EvalSetSourceSpaceID
 	}
 	if e.Expt != nil {
@@ -452,11 +455,12 @@ func (e *ExptItemEvalCtx) EvalSetSourceSpaceID() int64 {
 }
 
 // TargetSourceSpaceID 该行评测对象来源空间: 多集从 ItemConfig, 单集从 Expt 冻结列; 0=同调用方空间。
+// ★ 同 EvalSetSourceSpaceID: 多集行级 0 是合法值(同调用方空间), 不回退顶层列。
 func (e *ExptItemEvalCtx) TargetSourceSpaceID() int64 {
 	if e == nil {
 		return 0
 	}
-	if e.ItemConfig != nil && e.ItemConfig.TargetSourceSpaceID > 0 {
+	if e.ItemConfig != nil {
 		return e.ItemConfig.TargetSourceSpaceID
 	}
 	if e.Expt != nil {
