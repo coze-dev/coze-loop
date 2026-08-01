@@ -571,6 +571,9 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 		targets    []*entity.EvalTarget
 		evalSet    []*entity.EvaluationSet
 		evaluators []*entity.Evaluator
+		// evalSetPartsList 按来源空间分组并发拉取时, 每个任务写自己的槽位, Exec 后串行汇总进 evalSet
+		// (避免多来源空间下并发 append 同一切片导致 data race / 丢条目)。
+		evalSetPartsList [][]*entity.EvaluationSet
 	)
 
 	for _, etids := range tupleIDs {
@@ -633,19 +636,25 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 		}
 		for loadSpaceID, verIDs := range versionIDsBySpace {
 			loadSpaceID, verIDs := loadSpaceID, verIDs
+			// ★ 各任务写自己的局部切片, pool.Exec 后串行汇总: 多来源空间时并发 append 同一切片
+			// 会 data race 且丢条目 → evalSetMap 缺集 → 三元组解析出 nil EvalSet。
+			idx := len(evalSetPartsList)
+			evalSetPartsList = append(evalSetPartsList, nil)
 			pool.Add(func() error {
 				verIDs = maps.ToSlice(gslice.ToMap(verIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
 				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(loadSpaceID), verIDs, gptr.Of(true), nil)
 				if poolErr != nil {
 					return poolErr
 				}
+				local := make([]*entity.EvaluationSet, 0, len(got))
 				for _, elem := range got {
 					if elem == nil {
 						continue
 					}
 					elem.EvaluationSet.EvaluationSetVersion = elem.Version
-					evalSet = append(evalSet, elem.EvaluationSet)
+					local = append(local, elem.EvaluationSet)
 				}
+				evalSetPartsList[idx] = local
 				return nil
 			})
 		}
@@ -659,18 +668,22 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 		}
 		for loadSpaceID, setIDsRaw := range draftIDsBySpace {
 			loadSpaceID, setIDsRaw := loadSpaceID, setIDsRaw
+			idx := len(evalSetPartsList)
+			evalSetPartsList = append(evalSetPartsList, nil)
 			pool.Add(func() error {
 				setIDs := maps.ToSlice(gslice.ToMap(setIDsRaw, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
 				got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(loadSpaceID), setIDs, gptr.Of(false), nil)
 				if poolErr != nil {
 					return poolErr
 				}
+				local := make([]*entity.EvaluationSet, 0, len(got))
 				for _, elem := range got {
 					if elem == nil {
 						continue
 					}
-					evalSet = append(evalSet, elem)
+					local = append(local, elem)
 				}
+				evalSetPartsList[idx] = local
 				return nil
 			})
 		}
@@ -689,6 +702,11 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 
 	if err := pool.Exec(ctx); err != nil { // ignore_security_alert_wait_for_fix SQL_INJECTION
 		return nil, err
+	}
+
+	// 串行汇总各来源空间分组的拉取结果 (顺序与任务槽位一致, 结果稳定)
+	for _, part := range evalSetPartsList {
+		evalSet = append(evalSet, part...)
 	}
 
 	targetMap := gslice.ToMap(targets, func(t *entity.EvalTarget) (int64, *entity.EvalTarget) {
@@ -850,10 +868,17 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 	if err != nil {
 		return err
 	}
+	// ★ 跨空间共享: 按来源空间分组并发批拉, 每个空间一个任务。任务间不得写同一 map ——
+	// 多来源空间(混合空间多集)时会并发写 → fatal error: concurrent map writes, recover 拦不住、整进程挂。
+	// 故各任务只写自己的局部 map, 由 pool.Exec 之后串行合并。
+	versionedParts := make([]map[int64]*entity.EvaluationSet, 0, len(versionIDsBySpace))
+	draftParts := make([]map[int64]*entity.EvaluationSet, 0, len(draftIDsBySpace))
 	if len(versionIDsBySpace) > 0 {
 		for loadSpaceID, idSet := range versionIDsBySpace {
 			loadSpaceID, idSet := loadSpaceID, idSet
 			verIDs := maps.ToSlice(idSet, func(k int64, _ struct{}) int64 { return k })
+			part := make(map[int64]*entity.EvaluationSet, len(verIDs))
+			versionedParts = append(versionedParts, part)
 			pool.Add(func() error {
 				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(loadSpaceID), verIDs, gptr.Of(true), nil)
 				if poolErr != nil {
@@ -864,7 +889,7 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 						continue
 					}
 					elem.EvaluationSet.EvaluationSetVersion = elem.Version
-					versionedByVersionID[elem.Version.ID] = elem.EvaluationSet
+					part[elem.Version.ID] = elem.EvaluationSet
 				}
 				return nil
 			})
@@ -874,6 +899,8 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 		for loadSpaceID, idSet := range draftIDsBySpace {
 			loadSpaceID, idSet := loadSpaceID, idSet
 			setIDs := maps.ToSlice(idSet, func(k int64, _ struct{}) int64 { return k })
+			part := make(map[int64]*entity.EvaluationSet, len(setIDs))
+			draftParts = append(draftParts, part)
 			pool.Add(func() error {
 				got, poolErr := e.evaluationSetService.BatchGetEvaluationSets(ctx, gptr.Of(loadSpaceID), setIDs, gptr.Of(false), nil)
 				if poolErr != nil {
@@ -883,7 +910,7 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 					if elem == nil {
 						continue
 					}
-					draftBySetID[elem.ID] = elem
+					part[elem.ID] = elem
 				}
 				return nil
 			})
@@ -891,6 +918,17 @@ func (e *ExptMangerImpl) enrichEvalSetDetails(ctx context.Context, expts []*enti
 	}
 	if err := pool.Exec(ctx); err != nil { // ignore_security_alert_wait_for_fix SQL_INJECTION
 		return err
+	}
+	// 串行合并各来源空间的局部结果 (键为 versionID / setID, 跨空间不重叠)
+	for _, part := range versionedParts {
+		for k, v := range part {
+			versionedByVersionID[k] = v
+		}
+	}
+	for _, part := range draftParts {
+		for k, v := range part {
+			draftBySetID[k] = v
+		}
 	}
 
 	for _, expt := range newExpts {

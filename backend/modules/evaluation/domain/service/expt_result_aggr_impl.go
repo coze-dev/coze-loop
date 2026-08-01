@@ -166,9 +166,15 @@ func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx contex
 	// 此处 fail-closed: 载入失败必须返回错误让上层重试, 不可退回调用方空间继续 ——
 	// 跨空间实验(TargetSpaceID>0)下带错空间继续会让 BatchGetRecordByIDs 全查不到,
 	// latency/token 被静默聚合成 0 并落库, 事后无法与真实 0 区分且不会自愈。
+	// 例外: 实验已被软删 / spaceID 不匹配时 GetByID 返回 ResourceNotFound —— 这是确定性结果,
+	// 重试不会好转, fail-closed 会让 MQ 永久重投且锁只能靠 TTL 过期; 此类按调用方空间降级继续。
 	exptDO, exptErr := e.experimentRepo.GetByID(ctx, exptID, spaceID)
 	if exptErr != nil {
-		return nil, exptErr
+		if statusErr, ok := errorx.FromStatusError(exptErr); !ok || statusErr.Code() != errno.ResourceNotFoundCode {
+			return nil, exptErr
+		}
+		logs.CtxWarn(ctx, "buildExptTargetMtrAggregatorGroup expt not found, fallback to caller space, expt_id: %d, space_id: %d, err: %v",
+			exptID, spaceID, exptErr)
 	}
 	recordSpaceID := spaceID
 	if exptDO != nil {

@@ -224,6 +224,13 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 
 // completeItemRunOnUnretriableErr 将 item 落为 Fail 并写入错误信息。
 // 仅在"失败且不可重试"时调用; 写库失败只告警不影响主流程(僵尸清理仍是最后防线)。
+//
+// ★ 必须同时落 turn run log: 本兜底的目标场景是 BuildExptRecordEvalCtx 等前置阶段失败,
+// 此时 PreEval 还没执行过、该 run 下一条 turn run log 都没有。item 一旦变 Fail+Logged 就会被
+// scanIncompleteAndComplete 归入 complete → recordEvalItemRunLogs → RecordItemRunLogs 因
+// turn run log 缺失报 "found null turn log result" → 重试 5min 后整实验被判 Failed(其余 item 全中断)。
+// 僵尸清理路径(handleZombies)正是成对做 UpdateItemRunLog + CreateOrUpdateItemsTurnRunLogStatus,
+// 此处与之对齐; 缺这一步会把"单 item 失败"放大成"整实验失败", 比原先卡 Processing 更糟。
 func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) {
 	if event == nil || evalErr == nil || e.exptItemResultRepo == nil {
 		return
@@ -240,6 +247,15 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 	if err := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID,
 		[]int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr update item run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+	}
+
+	if e.exptTurnResultRepo == nil {
+		return
+	}
+	if err := e.exptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(persistCtx, event.SpaceID, event.ExptID, event.ExptRunID,
+		[]int64{event.EvalSetItemID}, entity.TurnRunState_Fail); err != nil {
+		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr create/update turn run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
 }
