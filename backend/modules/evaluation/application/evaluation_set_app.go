@@ -107,6 +107,21 @@ func buildEvalSetAuthorizeRequest(callerSpaceID int64, set *entity.EvaluationSet
 	return req
 }
 
+func shouldRedactSharedEvaluationSetSchema(accessCtx *entity.ResourceAccessContext) bool {
+	return accessCtx != nil && accessCtx.IsShared() && accessCtx.AccessLevel == entity.SharedAccessLevelExecute
+}
+
+func redactEvaluationSetVersionSchemas(accessCtx *entity.ResourceAccessContext, versions []*domain_eval_set.EvaluationSetVersion) {
+	if !shouldRedactSharedEvaluationSetSchema(accessCtx) {
+		return
+	}
+	for _, version := range versions {
+		if version != nil {
+			version.EvaluationSetSchema = nil
+		}
+	}
+}
+
 func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, req *eval_set.CreateEvaluationSetRequest) (resp *eval_set.CreateEvaluationSetResponse, err error) {
 	// TODO: remove debug logging after versioned_item feature is stable
 	logs.CtxInfo(ctx, "CreateEvaluationSet req: %v", json.Jsonify(req))
@@ -918,6 +933,10 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetVersion(ctx context.Conte
 	// 返回结果构建、错误处理
 	dto := evaluation_set.EvaluationSetDO2DTO(set)
 	versionDTO := evaluation_set.VersionDO2DTO(version)
+	redactEvaluationSetVersionSchemas(accessCtx, []*domain_eval_set.EvaluationSetVersion{versionDTO})
+	if dto != nil {
+		redactEvaluationSetVersionSchemas(accessCtx, []*domain_eval_set.EvaluationSetVersion{dto.EvaluationSetVersion})
+	}
 	e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier([]*domain_eval_set.EvaluationSetVersion{versionDTO}))
 	return &eval_set.GetEvaluationSetVersionResponse{
 		Version:       versionDTO,
@@ -1062,6 +1081,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetVersions(ctx context.Con
 
 	// 返回结果构建、错误处理
 	versionDTOs := evaluation_set.VersionDO2DTOs(versions)
+	redactEvaluationSetVersionSchemas(accessCtx, versionDTOs)
 	e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier(versionDTOs))
 	return &eval_set.ListEvaluationSetVersionsResponse{
 		Versions:      versionDTOs,

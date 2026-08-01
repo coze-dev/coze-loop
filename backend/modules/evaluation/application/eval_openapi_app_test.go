@@ -8765,3 +8765,61 @@ func TestSandboxAgentInvokeFailure(t *testing.T) {
 	assert.Equal(t, "sandbox agent invoke reported failed", (&sandboxAgentInvokeFailure{}).Error())
 	assert.Equal(t, "sandbox agent step reported failed", (&sandboxAgentStepFailure{}).Error())
 }
+
+func TestEvalOpenAPIApplication_ListEvaluationSetVersionsOApi_SharedExecuteHidesSchema(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const (
+		workspaceID = int64(1111)
+		sourceID    = int64(9001)
+		setID       = int64(2222)
+		versionID   = int64(3333)
+	)
+	set := &entity.EvaluationSet{ID: setID, SpaceID: sourceID}
+	version := &entity.EvaluationSetVersion{
+		ID:              versionID,
+		EvaluationSetID: setID,
+		Version:         "v1",
+		EvaluationSetSchema: &entity.EvaluationSetSchema{
+			FieldSchemas: []*entity.FieldSchema{{Name: "input"}},
+		},
+	}
+	evalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+	versionSvc := servicemocks.NewMockEvaluationSetVersionService(ctrl)
+	resourceAccess := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
+	app := &EvalOpenAPIApplication{
+		evaluationSetService:        evalSetSvc,
+		evaluationSetVersionService: versionSvc,
+		resourceAccessAuthorizer:    resourceAccess,
+	}
+
+	evalSetSvc.EXPECT().
+		GetEvaluationSet(gomock.Any(), gomock.Any(), setID, gomock.Any(), gomock.Any()).
+		Return(set, nil)
+	resourceAccess.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(&entity.ResourceAccessContext{
+		CallerSpaceID:   workspaceID,
+		ResourceSpaceID: sourceID,
+		ResourceType:    entity.SharedResourceTypeEvalSet,
+		ResourceID:      setID,
+		AccessMode:      entity.AccessModeShared,
+		AccessLevel:     entity.SharedAccessLevelExecute,
+		VersionPolicy:   entity.SharedVersionPolicyAll,
+	}, nil)
+	versionSvc.EXPECT().
+		ListEvaluationSetVersions(gomock.Any(), gomock.Any()).
+		Return([]*entity.EvaluationSetVersion{version}, gptr.Of(int64(1)), nil, nil)
+
+	resp, err := app.ListEvaluationSetVersionsOApi(context.Background(), &openapi.ListEvaluationSetVersionsOApiRequest{
+		WorkspaceID:     gptr.Of(workspaceID),
+		EvaluationSetID: gptr.Of(setID),
+		SharedOption:    gptr.Of(`{"is_shared":true,"source_space_id":9001}`),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Len(t, resp.Data.Versions, 1)
+	assert.Equal(t, versionID, resp.Data.Versions[0].GetID())
+	assert.Nil(t, resp.Data.Versions[0].EvaluationSetSchema)
+	assert.NotNil(t, version.EvaluationSetSchema)
+}

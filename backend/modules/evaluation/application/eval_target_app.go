@@ -61,6 +61,14 @@ func sharedTargetOptionDTO2DO(option *common.SharedResourceOption) *entity.Share
 	return sharedOption
 }
 
+func parseSharedTargetOption(option *common.SharedResourceOption) (*entity.SharedResourceOption, error) {
+	sharedOption := sharedTargetOptionDTO2DO(option)
+	if option != nil && option.GetIsShared() && !sharedOption.Enabled() {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when shared_option.is_shared is true"))
+	}
+	return sharedOption, nil
+}
+
 // buildEvalTargetAuthorizeRequest 组装评测对象读授权入参。
 // 评测对象读取即返回其配置（相当于内容），共享读要求 readable（execute 黑盒会被拒）。
 func buildEvalTargetAuthorizeRequest(callerSpaceID, evalTargetID int64, targetType entity.EvalTargetType, sharedOption *entity.SharedResourceOption, versionID *int64, versionName *string) *entity.AuthorizeResourceRequest {
@@ -238,7 +246,10 @@ func (e EvalTargetApplicationImpl) GetEvalTargetVersion(ctx context.Context, req
 	if request.EvalTargetVersionID == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target version id is nil"))
 	}
-	sharedOption := sharedTargetOptionDTO2DO(request.SharedOption)
+	sharedOption, err := parseSharedTargetOption(request.SharedOption)
+	if err != nil {
+		return nil, err
+	}
 	// 共享读:评测对象存在于来源空间,DAO 按传入 spaceID 硬过滤,
 	// 故先用来源空间加载(此时仅为"按调用方声明"加载,尚未鉴权),
 	// 授权由下方 authorizer 前置把关(命中白名单才返回,否则 fail-closed 拒绝)。
@@ -540,6 +551,10 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargetVersions(ctx context.Cont
 	if request.TargetType == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type is nil"))
 	}
+	sharedOption, err := parseSharedTargetOption(request.SharedOption)
+	if err != nil {
+		return nil, err
+	}
 	// 鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
@@ -550,7 +565,6 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargetVersions(ctx context.Cont
 		return nil, err
 	}
 
-	sharedOption := sharedTargetOptionDTO2DO(request.SharedOption)
 	// 共享读：先校验该来源目标共享给调用方，再重定向到来源空间列举版本并按版本策略过滤。
 	var accessCtx *entity.ResourceAccessContext
 	querySpaceID := request.WorkspaceID

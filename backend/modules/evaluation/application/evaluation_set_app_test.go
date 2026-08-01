@@ -796,3 +796,117 @@ func TestEvaluationSetApplicationImpl_ListEvaluationSetVersions_SharedSpecifiedF
 	assert.Equal(t, int64(2), resp.GetTotal())
 	assert.NotEmpty(t, resp.GetNextPageToken())
 }
+
+func TestEvaluationSetApplicationImpl_SharedExecuteVersionSchemaRedaction(t *testing.T) {
+	const (
+		workspaceID = int64(1001)
+		sourceID    = int64(3001)
+		setID       = int64(2001)
+		versionID   = int64(4001)
+	)
+	sharedOption := &domain_common.SharedResourceOption{
+		IsShared:      gptr.Of(true),
+		SourceSpaceID: gptr.Of(sourceID),
+	}
+	accessCtx := &entity.ResourceAccessContext{
+		CallerSpaceID:   workspaceID,
+		ResourceSpaceID: sourceID,
+		AccessMode:      entity.AccessModeShared,
+		AccessLevel:     entity.SharedAccessLevelExecute,
+		VersionPolicy:   entity.SharedVersionPolicyAll,
+	}
+
+	t.Run("get version hides schema without mutating domain entity", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockVersionSvc := servicemocks.NewMockEvaluationSetVersionService(ctrl)
+		mockAuthorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
+		mockUserInfo := userinfomocks.NewMockUserInfoService(ctrl)
+		app := &EvaluationSetApplicationImpl{
+			evaluationSetVersionService: mockVersionSvc,
+			resourceAccessAuthorizer:    mockAuthorizer,
+			userInfoService:             mockUserInfo,
+		}
+
+		version := &entity.EvaluationSetVersion{
+			ID:              versionID,
+			EvaluationSetID: setID,
+			Version:         "v1",
+			EvaluationSetSchema: &entity.EvaluationSetSchema{
+				FieldSchemas: []*entity.FieldSchema{{Name: "input"}},
+			},
+		}
+		set := &entity.EvaluationSet{
+			ID:                   setID,
+			SpaceID:              sourceID,
+			LatestVersion:        "v1",
+			EvaluationSetVersion: version,
+		}
+		mockVersionSvc.EXPECT().
+			GetEvaluationSetVersion(gomock.Any(), workspaceID, versionID, nil, gomock.Any()).
+			Return(version, set, nil)
+		mockAuthorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(accessCtx, nil)
+		mockUserInfo.EXPECT().PackUserInfo(gomock.Any(), gomock.Any())
+
+		resp, err := app.GetEvaluationSetVersion(context.Background(), &eval_set.GetEvaluationSetVersionRequest{
+			WorkspaceID:     workspaceID,
+			EvaluationSetID: gptr.Of(setID),
+			VersionID:       versionID,
+			SharedOption:    sharedOption,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Version)
+		assert.Nil(t, resp.Version.EvaluationSetSchema)
+		require.NotNil(t, resp.EvaluationSet)
+		require.NotNil(t, resp.EvaluationSet.EvaluationSetVersion)
+		assert.Nil(t, resp.EvaluationSet.EvaluationSetVersion.EvaluationSetSchema)
+		assert.NotNil(t, version.EvaluationSetSchema)
+	})
+
+	t.Run("list versions hides schema without mutating domain entity", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+		mockVersionSvc := servicemocks.NewMockEvaluationSetVersionService(ctrl)
+		mockAuthorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
+		mockUserInfo := userinfomocks.NewMockUserInfoService(ctrl)
+		app := &EvaluationSetApplicationImpl{
+			evaluationSetService:        mockSetSvc,
+			evaluationSetVersionService: mockVersionSvc,
+			resourceAccessAuthorizer:    mockAuthorizer,
+			userInfoService:             mockUserInfo,
+		}
+
+		set := &entity.EvaluationSet{ID: setID, SpaceID: sourceID}
+		version := &entity.EvaluationSetVersion{
+			ID:              versionID,
+			EvaluationSetID: setID,
+			Version:         "v1",
+			EvaluationSetSchema: &entity.EvaluationSetSchema{
+				FieldSchemas: []*entity.FieldSchema{{Name: "input"}},
+			},
+		}
+		mockSetSvc.EXPECT().
+			GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), setID, nil, gomock.Any()).
+			Return(set, nil)
+		mockAuthorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(accessCtx, nil)
+		mockVersionSvc.EXPECT().
+			ListEvaluationSetVersions(gomock.Any(), gomock.Any()).
+			Return([]*entity.EvaluationSetVersion{version}, gptr.Of(int64(1)), nil, nil)
+		mockUserInfo.EXPECT().PackUserInfo(gomock.Any(), gomock.Any())
+
+		resp, err := app.ListEvaluationSetVersions(context.Background(), &eval_set.ListEvaluationSetVersionsRequest{
+			WorkspaceID:     workspaceID,
+			EvaluationSetID: setID,
+			SharedOption:    sharedOption,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Len(t, resp.Versions, 1)
+		assert.Nil(t, resp.Versions[0].EvaluationSetSchema)
+		assert.NotNil(t, version.EvaluationSetSchema)
+	})
+}

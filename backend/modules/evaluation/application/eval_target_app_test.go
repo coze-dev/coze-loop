@@ -575,6 +575,20 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 			wantErrCode: errno.CommonInvalidParamCode,
 		},
 		{
+			name: "error - shared option missing source space id",
+			req: &evaltargetapi.GetEvalTargetVersionRequest{
+				WorkspaceID:         validSpaceID,
+				EvalTargetVersionID: &validVersionID,
+				SharedOption: &domaincommon.SharedResourceOption{
+					IsShared: gptr.Of(true),
+				},
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
 			name: "success - eval target not found",
 			req: &evaltargetapi.GetEvalTargetVersionRequest{
 				WorkspaceID:         validSpaceID,
@@ -1304,6 +1318,21 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {
 			name: "error - nil target type",
 			req: &evaltargetapi.ListSourceEvalTargetVersionsRequest{
 				WorkspaceID: validSpaceID,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - shared option has non-positive source space id",
+			req: &evaltargetapi.ListSourceEvalTargetVersionsRequest{
+				WorkspaceID: validSpaceID,
+				TargetType:  &validEvalTargetType,
+				SharedOption: &domaincommon.SharedResourceOption{
+					IsShared:      gptr.Of(true),
+					SourceSpaceID: gptr.Of(int64(0)),
+				},
 			},
 			mockSetup:   func() {},
 			wantResp:    nil,

@@ -18,6 +18,7 @@ import (
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
+	openapiEvalSet "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	evaltargetapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
@@ -49,6 +50,17 @@ type IEvalOpenAPIApplication = evaluation.EvalOpenAPIService
 
 type SourceEvalTargetLister interface {
 	ListSourceEvalTargets(ctx context.Context, req *evaltargetapi.ListSourceEvalTargetsRequest) (*evaltargetapi.ListSourceEvalTargetsResponse, error)
+}
+
+func redactOpenAPIEvaluationSetVersionSchemas(accessCtx *entity.ResourceAccessContext, versions []*openapiEvalSet.EvaluationSetVersion) {
+	if !shouldRedactSharedEvaluationSetSchema(accessCtx) {
+		return
+	}
+	for _, version := range versions {
+		if version != nil {
+			version.EvaluationSetSchema = nil
+		}
+	}
 }
 
 type EvalOpenAPIApplication struct {
@@ -736,10 +748,12 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionsOApi(ctx context.Conte
 			}
 		}
 	}
+	versionDTOs := evaluation_set.OpenAPIEvaluationSetVersionDO2DTOs(versions)
+	redactOpenAPIEvaluationSetVersionSchemas(accessCtx, versionDTOs)
 	// 返回结果构建、错误处理
 	return &openapi.ListEvaluationSetVersionsOApiResponse{
 		Data: &openapi.ListEvaluationSetVersionsOpenAPIData{
-			Versions:      evaluation_set.OpenAPIEvaluationSetVersionDO2DTOs(versions),
+			Versions:      versionDTOs,
 			Total:         total,
 			NextPageToken: nextCursor,
 		},
@@ -775,10 +789,12 @@ func (e *EvalOpenAPIApplication) listLatestSharedEvaluationSetVersion(
 			}
 		}
 	}
+	versionDTOs := evaluation_set.OpenAPIEvaluationSetVersionDO2DTOs(versions)
+	redactOpenAPIEvaluationSetVersionSchemas(accessCtx, versionDTOs)
 	total := int64(len(versions))
 	return &openapi.ListEvaluationSetVersionsOApiResponse{
 		Data: &openapi.ListEvaluationSetVersionsOpenAPIData{
-			Versions: evaluation_set.OpenAPIEvaluationSetVersionDO2DTOs(versions),
+			Versions: versionDTOs,
 			Total:    &total,
 		},
 	}, nil
@@ -833,9 +849,11 @@ func (e *EvalOpenAPIApplication) listSpecifiedSharedEvaluationSetVersions(
 		version.SharedInfo = accessCtx.SharedInfo()
 		versions = append(versions, version)
 	}
+	versionDTOs := evaluation_set.OpenAPIEvaluationSetVersionDO2DTOs(versions)
+	redactOpenAPIEvaluationSetVersionSchemas(accessCtx, versionDTOs)
 	return &openapi.ListEvaluationSetVersionsOApiResponse{
 		Data: &openapi.ListEvaluationSetVersionsOpenAPIData{
-			Versions:      evaluation_set.OpenAPIEvaluationSetVersionDO2DTOs(versions),
+			Versions:      versionDTOs,
 			Total:         &total,
 			NextPageToken: nextPageToken,
 		},

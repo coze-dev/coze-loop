@@ -91,7 +91,7 @@ type SharedResourceRule struct {
 // SharedAccessRule 资源的一条访问规则：把某访问级别授予一组目标空间。
 type SharedAccessRule struct {
 	AccessLevel string   // readable / execute
-	Targets     []string // "*"（仅 execute 允许）或调用方空间 id 字符串
+	Targets     []string // "*"（readable 和 execute 均允许）或调用方空间 id 字符串
 }
 
 // ResolvedShare 白名单命中后解析出的共享授权结论。
@@ -105,7 +105,7 @@ type ResolvedShare struct {
 
 // Lookup 按 (来源空间, 资源类型, 资源 id, 调用方空间) 查询共享授权。
 // 未命中（来源空间未配置 / 资源未共享 / 未授权给该调用方）返回 nil，交由上层 fail-closed 处理。
-// readable 级别禁止通配符 "*"（仅 execute 允许通配），保证内容可读授权必须显式指定调用方。
+// readable 和 execute 均支持通配符 "*"，也支持显式指定调用方空间。
 func (c *SharedResourceConfig) Lookup(sourceSpaceID int64, resourceType string, targetType EvalTargetType, resourceID, callerSpaceID int64) *ResolvedShare {
 	if c == nil || c.SpaceRules == nil {
 		return nil
@@ -204,7 +204,7 @@ type SharedResourceEntry struct {
 
 // ListSharedTo 枚举配置中「共享给 callerSpaceID」的指定类型资源。
 // sourceSpaceFilter 为 nil 时跨全部来源空间枚举；有值则仅枚举该来源空间。
-// 复用与 Lookup 相同的 matchAccessLevel 判定（readable 禁通配 "*" 规则天然继承）。
+// 复用与 Lookup 相同的 matchAccessLevel 判定，readable 和 execute 均支持通配或精确空间匹配。
 func (c *SharedResourceConfig) ListSharedTo(callerSpaceID int64, resourceType string, targetType EvalTargetType, sourceSpaceFilter *int64) []*SharedResourceEntry {
 	if c == nil || c.SpaceRules == nil {
 		return nil
