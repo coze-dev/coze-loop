@@ -864,6 +864,10 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		param.ThreadID = cer.ThreadID
 	}
 
+	// ★ 跨空间共享 (单评测集): 透传评测集/评测对象来源空间选项
+	param.EvalSetSharedOption = sharedResourceOptionDTO2DO(cer.GetEvalSetSharedOption())
+	param.TargetSharedOption = sharedResourceOptionDTO2DO(cer.GetTargetSharedOption())
+
 	// ★ 新路径: 仅当 eval_set_source_type == MultiSetConfig(2) 时转换 EvalSetConfigs (不再用 len 判断)
 	if cer.GetEvalSetSourceType() == domain_expt.ExptEvalSetSourceType_MultiSetConfig {
 		param.EvalSetConfigs = convertEvalSetConfigsDTOToDO(cer.GetEvalSetConfigs())
@@ -919,6 +923,14 @@ func fillTopLevelIdentityFromEvalSetConfigs(cer *expt.CreateExperimentRequest, p
 		if first := configs[0]; first != nil {
 			param.EvalSetID = first.GetEvalSetID()
 			param.EvalSetVersionID = first.GetEvalSetVersionID()
+			// ★ 跨空间: 顶层评测集共享来源也随主集一并兜底回填。
+			// 多集下共享信息在 per-config shared_option，顶层 EvalSetSharedOption 缺省。
+			// CreateExpt.getExptTupleByID 仍按顶层 EvalSetID+EvalSetSharedOption 解析主集来源空间并加载 tuple；
+			// 若不回填，顶层鉴权退化到消费方空间 → 用消费方空间读来源空间 dataset_version → 601103001。
+			// 主集 = config[0]，其 shared_option 即主集共享来源，语义与上面主集身份回填一致。
+			if param.EvalSetSharedOption == nil {
+				param.EvalSetSharedOption = sharedResourceOptionDTO2DO(first.GetSharedOption())
+			}
 		}
 	}
 
@@ -935,6 +947,10 @@ func fillTopLevelIdentityFromEvalSetConfigs(cer *expt.CreateExperimentRequest, p
 			if tid := tc.GetTargetID(); tid != 0 {
 				param.TargetID = gptr.Of(tid)
 				param.TargetVersionID = tc.GetTargetVersionID()
+				// ★ 跨空间: 顶层评测对象共享来源随主集 target 一并兜底回填 (同上，供顶层引用路径鉴权解析来源空间)。
+				if param.TargetSharedOption == nil {
+					param.TargetSharedOption = sharedResourceOptionDTO2DO(sc.GetTargetSharedOption())
+				}
 				break
 			}
 		}
@@ -1059,6 +1075,17 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 	return ec
 }
 
+// sharedResourceOptionDTO2DO 跨空间共享可选项 DTO->DO; nil 或 !is_shared 返回 nil (普通访问)。
+func sharedResourceOptionDTO2DO(dto *common.SharedResourceOption) *entity.SharedResourceOption {
+	if dto == nil || !dto.GetIsShared() {
+		return nil
+	}
+	return &entity.SharedResourceOption{
+		IsShared:      dto.GetIsShared(),
+		SourceSpaceID: gptr.Of(dto.GetSourceSpaceID()),
+	}
+}
+
 // convertEvalSetConfigsDTOToDO 将 IDL EvalSetConfig 列表转换为 domain EvalSetConfig
 func convertEvalSetConfigsDTOToDO(dtos []*domain_expt.EvalSetConfig) []*entity.EvalSetConfig {
 	if len(dtos) == 0 {
@@ -1072,6 +1099,9 @@ func convertEvalSetConfigsDTOToDO(dtos []*domain_expt.EvalSetConfig) []*entity.E
 		do := &entity.EvalSetConfig{
 			EvalSetID:        dto.GetEvalSetID(),
 			EvalSetVersionID: dto.GetEvalSetVersionID(),
+			// ★ 跨空间共享 (多评测集 per-set): 透传该 set 评测集/评测对象来源空间选项
+			SharedOption:       sharedResourceOptionDTO2DO(dto.GetSharedOption()),
+			TargetSharedOption: sharedResourceOptionDTO2DO(dto.GetTargetSharedOption()),
 		}
 		// item_filter
 		if dto.IsSetItemFilter() {

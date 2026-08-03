@@ -27,3 +27,13 @@ ALTER TABLE `experiment`
 
 ALTER TABLE `experiment`
     ADD COLUMN `eval_set_source_type` int unsigned NOT NULL DEFAULT '1' COMMENT '评测集来源模式: 1=SingleSet(老,单评测集) / 2=MultiSetConfig(新,多评测集+配置,权威源 eval_conf)' AFTER `eval_set_id`;
+
+
+ALTER TABLE `experiment`
+    ADD COLUMN `eval_set_space_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '评测集来源空间(跨空间共享,0=同空间)' AFTER `eval_set_source_type`;
+
+ALTER TABLE `experiment`
+    ADD COLUMN `target_space_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '评测对象来源空间(跨空间共享,0=同空间)' AFTER `eval_set_space_id`;
+
+ALTER TABLE `experiment`
+    ADD COLUMN `eval_set_access_level` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '发起冻结的评测集访问级别(execute/readable/空=同空间)' AFTER `target_space_id`;

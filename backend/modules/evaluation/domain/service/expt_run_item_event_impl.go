@@ -212,7 +212,51 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			})
 		}
 
+		// ★ 兜底落 Fail: 失败且不重试时, item 状态此前无人更新 —— 正常路径由 RunItem→CompleteItemRun
+		// 落 Fail, 但在 eval() 里 BuildExptRecordEvalCtx 等前置阶段就失败时压根没走到那里(eiec 未构建),
+		// item 停在进入执行时写的 Processing 上, 表现为"报错了却永久卡 processing、实验永不收敛"。
+		// 此处按 CompleteItemRun 同样的字段兜底(status=Fail + err_msg + result_state=Logged), 幂等可重复写。
+		e.completeItemRunOnUnretriableErr(ctx, event, nextErr)
+
 		return nil
+	}
+}
+
+// completeItemRunOnUnretriableErr 将 item 落为 Fail 并写入错误信息。
+// 仅在"失败且不可重试"时调用; 写库失败只告警不影响主流程(僵尸清理仍是最后防线)。
+//
+// ★ 必须同时落 turn run log: 本兜底的目标场景是 BuildExptRecordEvalCtx 等前置阶段失败,
+// 此时 PreEval 还没执行过、该 run 下一条 turn run log 都没有。item 一旦变 Fail+Logged 就会被
+// scanIncompleteAndComplete 归入 complete → recordEvalItemRunLogs → RecordItemRunLogs 因
+// turn run log 缺失报 "found null turn log result" → 重试 5min 后整实验被判 Failed(其余 item 全中断)。
+// 僵尸清理路径(handleZombies)正是成对做 UpdateItemRunLog + CreateOrUpdateItemsTurnRunLogStatus,
+// 此处与之对齐; 缺这一步会把"单 item 失败"放大成"整实验失败", 比原先卡 Processing 更糟。
+func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) {
+	if event == nil || evalErr == nil || e.exptItemResultRepo == nil {
+		return
+	}
+
+	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	defer cancel()
+
+	ufields := map[string]any{
+		"status":       int32(entity.ItemRunState_Fail),
+		"err_msg":      errno.SerializeErr(evalErr),
+		"result_state": int32(entity.ExptItemResultStateLogged),
+	}
+	if err := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID,
+		[]int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr update item run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+	}
+
+	if e.exptTurnResultRepo == nil {
+		return
+	}
+	if err := e.exptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(persistCtx, event.SpaceID, event.ExptID, event.ExptRunID,
+		[]int64{event.EvalSetItemID}, entity.TurnRunState_Fail); err != nil {
+		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr create/update turn run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
 }
 
@@ -357,8 +401,18 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 
 	// 统一走 ItemVersionQueries: 每个 query 必带 ItemID; 新数据集额外带 ItemVersionID, 老数据集 versionID 留空。
 	// 集级 VersionID 仍透传, 供老数据集(versionID 留空)按集版本定位。
+	// ★ 跨空间共享: 执行期加载评测集 item 必须按来源空间; 多集取 item_config 冻结的 EvalSetSourceSpaceID,
+	// 单集/老实验取 exptDetail.EvalSetSpaceID; 缺此切换时用调用方空间读来源空间评测集 → get dataset_version not found, turn 执行失败。
+	// 多集(itemConfig != nil)行级冻结值即权威, 0 表示"该集在调用方空间"而非"未设置", 不可回退顶层列
+	// (顶层 EvalSetSpaceID 由 configs[0] 兜底回填, 混合空间多集下回退会把同空间集错送到主集来源空间)。
+	evalSetSourceSpaceID := int64(0)
+	if itemConfig != nil {
+		evalSetSourceSpaceID = itemConfig.EvalSetSourceSpaceID
+	} else if exptDetail != nil {
+		evalSetSourceSpaceID = exptDetail.EvalSetSpaceID
+	}
 	batchGetEvaluationSetItemsParam := &entity.BatchGetEvaluationSetItemsParam{
-		SpaceID:         event.SpaceID,
+		SpaceID:         resolveLoadSpaceID(event.SpaceID, evalSetSourceSpaceID),
 		EvaluationSetID: evalSetID,
 		VersionID:       gptr.Of(evalSetVerID),
 		ItemVersionQueries: []*entity.EvaluationItemVersionRef{
@@ -696,7 +750,9 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.Status = entity.TurnRunState_Processing
 		runLog.ExptRunID = eiec.Event.ExptRunID
 		runLog.ErrMsg = ""
-		targetID, evalIDs := failRetrySelectTurnRunLogRefs(ctx, eiec.Event.SpaceID, tr, e.evalTargetService, e.evaluatorRecordSvc)
+		// 跨空间共享: Target 记录随执行落来源空间(冻结 TargetSpaceID), 失败重试选引用时须按来源空间读;
+		// 用调用方空间读会得 nil → 误判 Target 非 Success → 清零 target_result_id 触发无谓重跑 Target。
+		targetID, evalIDs := failRetrySelectTurnRunLogRefs(ctx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), tr, e.evalTargetService, e.evaluatorRecordSvc)
 		runLog.TargetResultID = targetID
 		runLog.EvaluatorResultIds = evalIDs
 		turnRunLogDOs = append(turnRunLogDOs, runLog)

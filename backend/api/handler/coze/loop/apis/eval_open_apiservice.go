@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
 )
 
@@ -290,12 +291,6 @@ func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestCont
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentResultExportRecordOApi)
 }
 
-// AsyncRunEvaluatorOApi .
-// @router /v1/loop/evaluation/evaluators_versions/:evaluator_version_id/async_run [POST]
-func AsyncRunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, localEvalOpenAPIClient.AsyncRunEvaluatorOApi)
-}
-
 // ListEvaluationSetItemVersionsOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/versions [GET]
 func ListEvaluationSetItemVersionsOApi(ctx context.Context, c *app.RequestContext) {
@@ -330,4 +325,16 @@ func UpdateExptRunConfOApi(ctx context.Context, c *app.RequestContext) {
 // @router /v1/loop/evaluation/experiments/:experiment_id/kill [POST]
 func KillExperimentOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.KillExperimentOApi)
+}
+
+// ListEvalTargetsOApi .
+// @router /v1/loop/eval_targets/list [POST]
+func ListEvalTargetsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvalTargetsOApi)
+}
+
+// AsyncRunEvaluatorOApi .
+// @router /v1/loop/evaluation/evaluators_versions/:evaluator_version_id/async_run [POST]
+func AsyncRunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.AsyncRunEvaluatorOApi)
 }

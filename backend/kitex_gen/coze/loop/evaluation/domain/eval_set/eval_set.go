@@ -914,7 +914,8 @@ type EvaluationSet struct {
 	// 下一个的版本号
 	NextVersionNum *int64 `thrift:"next_version_num,32,optional" frugal:"32,optional,i64" json:"next_version_num" form:"next_version_num" query:"next_version_num"`
 	// 系统信息
-	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	BaseInfo   *common.BaseInfo           `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	SharedInfo *common.SharedResourceInfo `thrift:"shared_info,101,optional" frugal:"101,optional,common.SharedResourceInfo" form:"shared_info" json:"shared_info,omitempty" query:"shared_info"`
 }
 
 func NewEvaluationSet() *EvaluationSet {
@@ -1139,6 +1140,18 @@ func (p *EvaluationSet) GetBaseInfo() (v *common.BaseInfo) {
 	}
 	return p.BaseInfo
 }
+
+var EvaluationSet_SharedInfo_DEFAULT *common.SharedResourceInfo
+
+func (p *EvaluationSet) GetSharedInfo() (v *common.SharedResourceInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedInfo() {
+		return EvaluationSet_SharedInfo_DEFAULT
+	}
+	return p.SharedInfo
+}
 func (p *EvaluationSet) SetID(val *int64) {
 	p.ID = val
 }
@@ -1193,6 +1206,9 @@ func (p *EvaluationSet) SetNextVersionNum(val *int64) {
 func (p *EvaluationSet) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
+func (p *EvaluationSet) SetSharedInfo(val *common.SharedResourceInfo) {
+	p.SharedInfo = val
+}
 
 var fieldIDToName_EvaluationSet = map[int16]string{
 	1:   "id",
@@ -1213,6 +1229,7 @@ var fieldIDToName_EvaluationSet = map[int16]string{
 	31:  "latest_version",
 	32:  "next_version_num",
 	100: "base_info",
+	101: "shared_info",
 }
 
 func (p *EvaluationSet) IsSetID() bool {
@@ -1285,6 +1302,10 @@ func (p *EvaluationSet) IsSetNextVersionNum() bool {
 
 func (p *EvaluationSet) IsSetBaseInfo() bool {
 	return p.BaseInfo != nil
+}
+
+func (p *EvaluationSet) IsSetSharedInfo() bool {
+	return p.SharedInfo != nil
 }
 
 func (p *EvaluationSet) Read(iprot thrift.TProtocol) (err error) {
@@ -1444,6 +1465,14 @@ func (p *EvaluationSet) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1677,6 +1706,14 @@ func (p *EvaluationSet) ReadField100(iprot thrift.TProtocol) error {
 	p.BaseInfo = _field
 	return nil
 }
+func (p *EvaluationSet) ReadField101(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedInfo = _field
+	return nil
+}
 
 func (p *EvaluationSet) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1754,6 +1791,10 @@ func (p *EvaluationSet) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 	}
@@ -2106,6 +2147,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
+func (p *EvaluationSet) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedInfo() {
+		if err = oprot.WriteFieldBegin("shared_info", thrift.STRUCT, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
 
 func (p *EvaluationSet) String() string {
 	if p == nil {
@@ -2173,6 +2232,9 @@ func (p *EvaluationSet) DeepEqual(ano *EvaluationSet) bool {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.SharedInfo) {
 		return false
 	}
 	return true
@@ -2375,6 +2437,13 @@ func (p *EvaluationSet) Field100DeepEqual(src *common.BaseInfo) bool {
 	}
 	return true
 }
+func (p *EvaluationSet) Field101DeepEqual(src *common.SharedResourceInfo) bool {
+
+	if !p.SharedInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 
 type EvaluationSetVersion struct {
 	// 主键&外键
@@ -2393,7 +2462,8 @@ type EvaluationSetVersion struct {
 	// 数据条数
 	ItemCount *int64 `thrift:"item_count,14,optional" frugal:"14,optional,i64" json:"item_count" form:"item_count" query:"item_count"`
 	// 系统信息
-	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" json:"base_info" form:"base_info" query:"base_info"`
+	BaseInfo   *common.BaseInfo           `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" json:"base_info" form:"base_info" query:"base_info"`
+	SharedInfo *common.SharedResourceInfo `thrift:"shared_info,101,optional" frugal:"101,optional,common.SharedResourceInfo" form:"shared_info" json:"shared_info,omitempty" query:"shared_info"`
 }
 
 func NewEvaluationSetVersion() *EvaluationSetVersion {
@@ -2522,6 +2592,18 @@ func (p *EvaluationSetVersion) GetBaseInfo() (v *common.BaseInfo) {
 	}
 	return p.BaseInfo
 }
+
+var EvaluationSetVersion_SharedInfo_DEFAULT *common.SharedResourceInfo
+
+func (p *EvaluationSetVersion) GetSharedInfo() (v *common.SharedResourceInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedInfo() {
+		return EvaluationSetVersion_SharedInfo_DEFAULT
+	}
+	return p.SharedInfo
+}
 func (p *EvaluationSetVersion) SetID(val *int64) {
 	p.ID = val
 }
@@ -2552,6 +2634,9 @@ func (p *EvaluationSetVersion) SetItemCount(val *int64) {
 func (p *EvaluationSetVersion) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
+func (p *EvaluationSetVersion) SetSharedInfo(val *common.SharedResourceInfo) {
+	p.SharedInfo = val
+}
 
 var fieldIDToName_EvaluationSetVersion = map[int16]string{
 	1:   "id",
@@ -2564,6 +2649,7 @@ var fieldIDToName_EvaluationSetVersion = map[int16]string{
 	13:  "evaluation_set_schema",
 	14:  "item_count",
 	100: "base_info",
+	101: "shared_info",
 }
 
 func (p *EvaluationSetVersion) IsSetID() bool {
@@ -2604,6 +2690,10 @@ func (p *EvaluationSetVersion) IsSetItemCount() bool {
 
 func (p *EvaluationSetVersion) IsSetBaseInfo() bool {
 	return p.BaseInfo != nil
+}
+
+func (p *EvaluationSetVersion) IsSetSharedInfo() bool {
+	return p.SharedInfo != nil
 }
 
 func (p *EvaluationSetVersion) Read(iprot thrift.TProtocol) (err error) {
@@ -2699,6 +2789,14 @@ func (p *EvaluationSetVersion) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2837,6 +2935,14 @@ func (p *EvaluationSetVersion) ReadField100(iprot thrift.TProtocol) error {
 	p.BaseInfo = _field
 	return nil
 }
+func (p *EvaluationSetVersion) ReadField101(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedInfo = _field
+	return nil
+}
 
 func (p *EvaluationSetVersion) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2882,6 +2988,10 @@ func (p *EvaluationSetVersion) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 	}
@@ -3082,6 +3192,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
+func (p *EvaluationSetVersion) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedInfo() {
+		if err = oprot.WriteFieldBegin("shared_info", thrift.STRUCT, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
 
 func (p *EvaluationSetVersion) String() string {
 	if p == nil {
@@ -3125,6 +3253,9 @@ func (p *EvaluationSetVersion) DeepEqual(ano *EvaluationSetVersion) bool {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.SharedInfo) {
 		return false
 	}
 	return true
@@ -3236,6 +3367,13 @@ func (p *EvaluationSetVersion) Field14DeepEqual(src *int64) bool {
 func (p *EvaluationSetVersion) Field100DeepEqual(src *common.BaseInfo) bool {
 
 	if !p.BaseInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSetVersion) Field101DeepEqual(src *common.SharedResourceInfo) bool {
+
+	if !p.SharedInfo.DeepEqual(src) {
 		return false
 	}
 	return true

@@ -37,6 +37,7 @@ struct CreateEvalTargetResponse {
 struct GetEvalTargetVersionRequest {
     1: required i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: optional i64 eval_target_version_id (api.path ='eval_target_version_id', api.js_conv="true", go.tag = 'json:"eval_target_version_id"')
+    3: optional common.SharedResourceOption shared_option
 
     255: optional base.Base Base
 }
@@ -163,6 +164,7 @@ struct ListSourceEvalTargetsRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: optional eval_target.EvalTargetType target_type
     3: optional string name (vt.min_size = "1")   // 用户模糊搜索bot名称、promptkey
+    4: optional common.SharedResourceOption shared_option
 
     100: optional i32 page_size
     101: optional string page_token
@@ -198,6 +200,7 @@ struct GetSourceEvalTargetVersionRequest {
     2: optional string source_target_id
     3: optional string source_target_version
     4: optional eval_target.EvalTargetType target_type
+    5: optional common.SharedResourceOption shared_option
 
     255: optional base.Base Base
 }
@@ -212,6 +215,7 @@ struct ListSourceEvalTargetVersionsRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
     2: required string source_target_id
     3: optional eval_target.EvalTargetType target_type
+    4: optional common.SharedResourceOption shared_option
 
     100: optional i32 page_size
     101: optional string page_token

@@ -55,6 +55,9 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		ThreadID:                  experiment.ThreadID,
 		TriggerType:               experiment.TriggerType,
 		EvalSetSourceType:         int32(experiment.EvalSetSourceType), // ★
+		EvalSetSpaceID:            experiment.EvalSetSpaceID,           // ★ 跨空间共享: 评测集来源空间
+		TargetSpaceID:             experiment.TargetSpaceID,            // ★ 跨空间共享: 评测对象来源空间
+		EvalSetAccessLevel:        experiment.EvalSetAccessLevel,       // ★ 跨空间共享: 冻结访问级别
 	}
 
 	if experiment.MaxAliveTime != 0 {
@@ -137,6 +140,9 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		TrialRunItemCount:         gptr.Indirect(expt.TrialRunItemCount),
 		TriggerType:               expt.TriggerType,
 		EvalSetSourceType:         entity.ExptEvalSetSourceType(expt.EvalSetSourceType), // ★
+		EvalSetSpaceID:            expt.EvalSetSpaceID,                                  // ★ 跨空间共享: 评测集来源空间
+		TargetSpaceID:             expt.TargetSpaceID,                                   // ★ 跨空间共享: 评测对象来源空间
+		EvalSetAccessLevel:        expt.EvalSetAccessLevel,                              // ★ 跨空间共享: 冻结访问级别
 	}
 
 	// 反序列化 notification_conf

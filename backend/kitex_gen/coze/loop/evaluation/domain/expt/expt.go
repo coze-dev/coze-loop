@@ -31733,7 +31733,11 @@ type EvalSetConfig struct {
 	TargetConfs []*ExptTargetConf `thrift:"target_confs,20,optional" frugal:"20,optional,list<ExptTargetConf>" form:"target_confs" json:"target_confs,omitempty" query:"target_confs"`
 	// (evaluator_version_id, alias) 在 set 内唯一
 	EvaluatorConfs []*ExptEvaluatorConf `thrift:"evaluator_confs,30,optional" frugal:"30,optional,list<ExptEvaluatorConf>" form:"evaluator_confs" json:"evaluator_confs,omitempty" query:"evaluator_confs"`
-	Ext            map[string]string    `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
+	// 跨空间: 该 set 评测集来源空间; nil/!is_shared=同空间
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,40,optional" frugal:"40,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
+	// 跨空间: 该 set 评测对象来源空间
+	TargetSharedOption *common.SharedResourceOption `thrift:"target_shared_option,41,optional" frugal:"41,optional,common.SharedResourceOption" form:"target_shared_option" json:"target_shared_option,omitempty" query:"target_shared_option"`
+	Ext                map[string]string            `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 }
 
 func NewEvalSetConfig() *EvalSetConfig {
@@ -31793,6 +31797,30 @@ func (p *EvalSetConfig) GetEvaluatorConfs() (v []*ExptEvaluatorConf) {
 	return p.EvaluatorConfs
 }
 
+var EvalSetConfig_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *EvalSetConfig) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return EvalSetConfig_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
+
+var EvalSetConfig_TargetSharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *EvalSetConfig) GetTargetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetSharedOption() {
+		return EvalSetConfig_TargetSharedOption_DEFAULT
+	}
+	return p.TargetSharedOption
+}
+
 var EvalSetConfig_Ext_DEFAULT map[string]string
 
 func (p *EvalSetConfig) GetExt() (v map[string]string) {
@@ -31819,6 +31847,12 @@ func (p *EvalSetConfig) SetTargetConfs(val []*ExptTargetConf) {
 func (p *EvalSetConfig) SetEvaluatorConfs(val []*ExptEvaluatorConf) {
 	p.EvaluatorConfs = val
 }
+func (p *EvalSetConfig) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
+func (p *EvalSetConfig) SetTargetSharedOption(val *common.SharedResourceOption) {
+	p.TargetSharedOption = val
+}
 func (p *EvalSetConfig) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -31829,6 +31863,8 @@ var fieldIDToName_EvalSetConfig = map[int16]string{
 	10:  "item_filter",
 	20:  "target_confs",
 	30:  "evaluator_confs",
+	40:  "shared_option",
+	41:  "target_shared_option",
 	100: "ext",
 }
 
@@ -31842,6 +31878,14 @@ func (p *EvalSetConfig) IsSetTargetConfs() bool {
 
 func (p *EvalSetConfig) IsSetEvaluatorConfs() bool {
 	return p.EvaluatorConfs != nil
+}
+
+func (p *EvalSetConfig) IsSetSharedOption() bool {
+	return p.SharedOption != nil
+}
+
+func (p *EvalSetConfig) IsSetTargetSharedOption() bool {
+	return p.TargetSharedOption != nil
 }
 
 func (p *EvalSetConfig) IsSetExt() bool {
@@ -31905,6 +31949,22 @@ func (p *EvalSetConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 30:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField30(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 40:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField40(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 41:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField41(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -32034,6 +32094,22 @@ func (p *EvalSetConfig) ReadField30(iprot thrift.TProtocol) error {
 	p.EvaluatorConfs = _field
 	return nil
 }
+func (p *EvalSetConfig) ReadField40(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
+func (p *EvalSetConfig) ReadField41(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TargetSharedOption = _field
+	return nil
+}
 func (p *EvalSetConfig) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -32088,6 +32164,14 @@ func (p *EvalSetConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField30(oprot); err != nil {
 			fieldId = 30
+			goto WriteFieldError
+		}
+		if err = p.writeField40(oprot); err != nil {
+			fieldId = 40
+			goto WriteFieldError
+		}
+		if err = p.writeField41(oprot); err != nil {
+			fieldId = 41
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -32214,6 +32298,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
+func (p *EvalSetConfig) writeField40(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 40); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
+}
+func (p *EvalSetConfig) writeField41(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetSharedOption() {
+		if err = oprot.WriteFieldBegin("target_shared_option", thrift.STRUCT, 41); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TargetSharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
+}
 func (p *EvalSetConfig) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -32273,6 +32393,12 @@ func (p *EvalSetConfig) DeepEqual(ano *EvalSetConfig) bool {
 	if !p.Field30DeepEqual(ano.EvaluatorConfs) {
 		return false
 	}
+	if !p.Field40DeepEqual(ano.SharedOption) {
+		return false
+	}
+	if !p.Field41DeepEqual(ano.TargetSharedOption) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -32323,6 +32449,20 @@ func (p *EvalSetConfig) Field30DeepEqual(src []*ExptEvaluatorConf) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *EvalSetConfig) Field40DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvalSetConfig) Field41DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.TargetSharedOption.DeepEqual(src) {
+		return false
 	}
 	return true
 }

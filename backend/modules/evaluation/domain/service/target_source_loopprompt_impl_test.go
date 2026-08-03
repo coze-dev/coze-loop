@@ -1807,6 +1807,7 @@ func TestPromptSourceEvalTargetServiceImpl_BatchGetSource(t *testing.T) {
 					assert.Equal(t, want.SourceTargetID, got.SourceTargetID)
 					assert.Equal(t, want.EvalTargetType, got.EvalTargetType)
 					assert.NotNil(t, got.EvalTargetVersion)
+					assert.Empty(t, got.EvalTargetVersion.SourceTargetVersion)
 					assert.NotNil(t, got.EvalTargetVersion.Prompt)
 					assert.Equal(t, want.EvalTargetVersion.Prompt.PromptID, got.EvalTargetVersion.Prompt.PromptID)
 					assert.Equal(t, want.EvalTargetVersion.Prompt.Name, got.EvalTargetVersion.Prompt.Name)
@@ -1815,6 +1816,107 @@ func TestPromptSourceEvalTargetServiceImpl_BatchGetSource(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPromptSourceEvalTargetServiceImpl_GetLatestSourceVersion(t *testing.T) {
+	const (
+		spaceID        = int64(123)
+		sourceTargetID = "456"
+		latestVersion  = "v2"
+	)
+	newProvider := func(adapter rpc.IPromptRPCAdapter) LatestSourceVersionProvider {
+		return NewPromptSourceEvalTargetServiceImpl(adapter).(LatestSourceVersionProvider)
+	}
+
+	t.Run("success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockAdapter := mocks.NewMockIPromptRPCAdapter(ctrl)
+		svc := newProvider(mockAdapter)
+
+		mockAdapter.EXPECT().
+			GetPrompt(gomock.Any(), spaceID, int64(456), rpc.GetPromptParams{}).
+			Return(&rpc.LoopPrompt{
+				ID: 456,
+				PromptBasic: &rpc.PromptBasic{
+					LatestVersion: gptr.Of(latestVersion),
+				},
+			}, nil)
+		mockAdapter.EXPECT().
+			MGetPrompt(gomock.Any(), spaceID, []*rpc.MGetPromptQuery{{
+				PromptID: 456,
+				Version:  gptr.Of(latestVersion),
+			}}).
+			Return([]*rpc.LoopPrompt{{
+				ID:        456,
+				PromptKey: "prompt_key",
+			}}, nil)
+
+		version, err := svc.GetLatestSourceVersion(context.Background(), spaceID, sourceTargetID)
+
+		assert.NoError(t, err)
+		if assert.NotNil(t, version) {
+			assert.Equal(t, latestVersion, version.SourceTargetVersion)
+			assert.Equal(t, entity.EvalTargetTypeLoopPrompt, version.EvalTargetType)
+		}
+	})
+
+	t.Run("no committed version", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockAdapter := mocks.NewMockIPromptRPCAdapter(ctrl)
+		svc := newProvider(mockAdapter)
+
+		mockAdapter.EXPECT().
+			GetPrompt(gomock.Any(), spaceID, int64(456), rpc.GetPromptParams{}).
+			Return(&rpc.LoopPrompt{
+				ID:          456,
+				PromptBasic: &rpc.PromptBasic{},
+			}, nil)
+
+		version, err := svc.GetLatestSourceVersion(context.Background(), spaceID, sourceTargetID)
+
+		assert.NoError(t, err)
+		assert.Nil(t, version)
+	})
+
+	t.Run("prompt not found", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockAdapter := mocks.NewMockIPromptRPCAdapter(ctrl)
+		svc := newProvider(mockAdapter)
+
+		mockAdapter.EXPECT().
+			GetPrompt(gomock.Any(), spaceID, int64(456), rpc.GetPromptParams{}).
+			Return(nil, nil)
+
+		version, err := svc.GetLatestSourceVersion(context.Background(), spaceID, sourceTargetID)
+
+		assert.Error(t, err)
+		assert.Nil(t, version)
+	})
+
+	t.Run("invalid source target id", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		svc := newProvider(mocks.NewMockIPromptRPCAdapter(ctrl))
+
+		version, err := svc.GetLatestSourceVersion(context.Background(), spaceID, "invalid")
+
+		assert.Error(t, err)
+		assert.Nil(t, version)
+	})
+
+	t.Run("get prompt failed", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockAdapter := mocks.NewMockIPromptRPCAdapter(ctrl)
+		svc := newProvider(mockAdapter)
+
+		mockAdapter.EXPECT().
+			GetPrompt(gomock.Any(), spaceID, int64(456), rpc.GetPromptParams{}).
+			Return(nil, assert.AnError)
+
+		version, err := svc.GetLatestSourceVersion(context.Background(), spaceID, sourceTargetID)
+
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.Nil(t, version)
+	})
 }
 
 func TestPromptSourceEvalTargetServiceImpl_RuntimeParam(t *testing.T) {
