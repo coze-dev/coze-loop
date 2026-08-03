@@ -478,9 +478,16 @@ func TestPromptManageApplicationImpl_BatchGetPromptBasic(t *testing.T) {
 		{
 			name: "permission denied",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockIManageRepo(ctrl)
+				repoMock.EXPECT().BatchGetPromptBasic(gomock.Any(), []int64{1, 2}).Return(map[int64]*entity.Prompt{
+					1: {ID: 1, SpaceID: 100},
+					2: {ID: 2, SpaceID: 100},
+				}, nil)
+
 				auth := mocks.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(100), []int64{1, 2}, consts.ActionLoopPromptRead).Return(errorx.New("permission denied"))
-				return fields{authRPCProvider: auth}
+
+				return fields{manageRepo: repoMock, authRPCProvider: auth}
 			},
 			args: args{
 				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user"}),
@@ -492,18 +499,32 @@ func TestPromptManageApplicationImpl_BatchGetPromptBasic(t *testing.T) {
 			wantErr: errorx.New("permission denied"),
 		},
 		{
+			name: "cross workspace prompt rejected",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockIManageRepo(ctrl)
+				repoMock.EXPECT().BatchGetPromptBasic(gomock.Any(), []int64{1, 2}).Return(map[int64]*entity.Prompt{
+					1: {ID: 1, SpaceID: 100},
+					2: {ID: 2, SpaceID: 200},
+				}, nil)
+
+				return fields{manageRepo: repoMock}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user"}),
+				request: &manage.BatchGetPromptBasicRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PromptIds:   []int64{1, 2},
+				},
+			},
+			wantErr: errorx.NewByCode(prompterr.CommonNoPermissionCode, errorx.WithExtraMsg("prompt does not belong to the requested workspace")),
+		},
+		{
 			name: "repo error",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				auth := mocks.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(100), []int64{1}, consts.ActionLoopPromptRead).Return(nil)
-
 				repoMock := repomocks.NewMockIManageRepo(ctrl)
 				repoMock.EXPECT().BatchGetPromptBasic(gomock.Any(), []int64{1}).Return(nil, errorx.New("repo error"))
 
-				return fields{
-					manageRepo:      repoMock,
-					authRPCProvider: auth,
-				}
+				return fields{manageRepo: repoMock}
 			},
 			args: args{
 				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user"}),
@@ -2335,10 +2356,16 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 		{
 			name: "permission denied",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{
+					PromptID: 1,
+				}).Return(&entity.Prompt{ID: 1, SpaceID: 1}, nil)
+
 				mockAuth := mocks.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(1), []int64{1}, consts.ActionLoopPromptRead).Return(errorx.NewByCode(prompterr.CommonNoPermissionCode))
 
 				return fields{
+					manageRepo:      mockRepo,
 					authRPCProvider: mockAuth,
 				}
 			},
@@ -2380,8 +2407,12 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockAuth := mocks.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(1), []int64{1}, consts.ActionLoopPromptRead).Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(1), []int64{2}, consts.ActionLoopPromptRead).Return(nil)
 
 				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{
+					PromptID: 1,
+				}).Return(&entity.Prompt{ID: 1, SpaceID: 1}, nil)
 				mockRepo.EXPECT().ListParentPrompt(gomock.Any(), repo.ListParentPromptParam{
 					SubPromptID:       1,
 					SubPromptVersions: []string{"v1.0.0"},
@@ -2452,6 +2483,9 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(1), []int64{1}, consts.ActionLoopPromptRead).Return(nil)
 
 				mockRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockRepo.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{
+					PromptID: 1,
+				}).Return(&entity.Prompt{ID: 1, SpaceID: 1}, nil)
 				mockRepo.EXPECT().ListParentPrompt(gomock.Any(), repo.ListParentPromptParam{
 					SubPromptID: 1,
 				}).Return(nil, errorx.New("database error"))

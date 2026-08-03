@@ -72,10 +72,21 @@ func (app *PromptManageApplicationImpl) ListParentPrompt(ctx context.Context, re
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Prompt ID is required"))
 	}
 
-	// 权限检查
-	err = app.authRPCProvider.MCheckPromptPermission(ctx, request.GetWorkspaceID(), []int64{request.GetPromptID()}, consts.ActionLoopPromptRead)
+	// 获取子 Prompt 真实 SpaceID 并做权限校验
+	subPromptDO, err := app.manageRepo.GetPrompt(ctx, repo.GetPromptParam{
+		PromptID: request.GetPromptID(),
+	})
 	if err != nil {
 		return r, err
+	}
+
+	err = app.authRPCProvider.MCheckPromptPermission(ctx, subPromptDO.SpaceID, []int64{request.GetPromptID()}, consts.ActionLoopPromptRead)
+	if err != nil {
+		return r, err
+	}
+
+	if request.GetWorkspaceID() > 0 && request.GetWorkspaceID() != subPromptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.CommonNoPermissionCode, errorx.WithExtraMsg("workspace_id does not match prompt's actual space"))
 	}
 
 	// 调用repository层查询父prompt
@@ -87,11 +98,14 @@ func (app *PromptManageApplicationImpl) ListParentPrompt(ctx context.Context, re
 		return r, err
 	}
 
-	// 转换结果
+	// 对父 Prompt 按真实 SpaceID 做读权限校验
 	parentPrompts := make(map[string][]*prompt.PromptCommitVersions)
 	for version, promptCommitVersions := range result {
 		promptVersionDTOs := make([]*prompt.PromptCommitVersions, 0, len(promptCommitVersions))
 		for _, promptCommitVersion := range promptCommitVersions {
+			if err := app.authRPCProvider.MCheckPromptPermission(ctx, promptCommitVersion.SpaceID, []int64{promptCommitVersion.PromptID}, consts.ActionLoopPromptRead); err != nil {
+				continue
+			}
 			promptVersionDTO := &prompt.PromptCommitVersions{
 				ID:             ptr.Of(promptCommitVersion.PromptID),
 				WorkspaceID:    ptr.Of(promptCommitVersion.SpaceID),
@@ -101,7 +115,9 @@ func (app *PromptManageApplicationImpl) ListParentPrompt(ctx context.Context, re
 			}
 			promptVersionDTOs = append(promptVersionDTOs, promptVersionDTO)
 		}
-		parentPrompts[version] = promptVersionDTOs
+		if len(promptVersionDTOs) > 0 {
+			parentPrompts[version] = promptVersionDTOs
+		}
 	}
 
 	r.ParentPrompts = parentPrompts
@@ -984,17 +1000,35 @@ func (app *PromptManageApplicationImpl) BatchGetPromptBasic(ctx context.Context,
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found"))
 	}
 
-	// 权限检查
-	err = app.authRPCProvider.MCheckPromptPermission(ctx, request.GetWorkspaceID(), request.GetPromptIds(), consts.ActionLoopPromptRead)
+	promptIDs := lo.Uniq(request.GetPromptIds())
+	if len(promptIDs) == 0 {
+		return r, nil
+	}
+	const maxBatchSize = 100
+	if len(promptIDs) > maxBatchSize {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("prompt_ids exceeds max batch size"))
+	}
+
+	// 先查询 Prompt，获取真实 workspace 归属信息
+	promptBasics, err := app.manageRepo.BatchGetPromptBasic(ctx, promptIDs)
 	if err != nil {
 		return r, err
 	}
 
-	// 调用domain层服务查询PromptBasic列表
-	promptBasics, err := app.manageRepo.BatchGetPromptBasic(ctx, request.GetPromptIds())
+	// 校验所有 Prompt 均属于请求的 workspace，防止跨 workspace 越权读取
+	workspaceID := request.GetWorkspaceID()
+	for _, p := range promptBasics {
+		if p.SpaceID != workspaceID {
+			return r, errorx.NewByCode(prompterr.CommonNoPermissionCode, errorx.WithExtraMsg("prompt does not belong to the requested workspace"))
+		}
+	}
+
+	// 权限检查
+	err = app.authRPCProvider.MCheckPromptPermission(ctx, workspaceID, promptIDs, consts.ActionLoopPromptRead)
 	if err != nil {
 		return r, err
 	}
+
 	// 转换结果
 	r.Prompts = convertor.BatchPromptDO2DTO(maps.Values(promptBasics))
 
