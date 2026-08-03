@@ -893,14 +893,8 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					[]int64{1, 3},
 					entity.TurnRunState_Fail,
 				).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(
-					gomock.Any(),
-					int64(3),
-					int64(1),
-					int64(2),
-					[]int64{1, 3},
-					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()},
-				).Return(nil).Times(1)
+				// zombie 场景不再清 run_log 的 target_result_id / evaluator_result_ids，
+				// 保留 record id 让 /results/batch_get 能返回 eval_target_record.id
 			},
 			wantAlives: []*entity.ExptEvalItem{
 				{
@@ -1112,14 +1106,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					[]int64{1, 2},
 					entity.TurnRunState_Fail,
 				).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(
-					gomock.Any(),
-					int64(3),
-					int64(1),
-					int64(2),
-					[]int64{1, 2},
-					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()},
-				).Return(nil).Times(1)
+				// zombie 场景不再清 run_log 的 target_result_id / evaluator_result_ids
 			},
 			wantAlives: []*entity.ExptEvalItem{},
 			wantZombies: []*entity.ExptEvalItem{

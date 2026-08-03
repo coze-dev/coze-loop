@@ -562,9 +562,11 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		return nil, nil, err
 	}
 
-	if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.ExptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs); err != nil {
-		logs.CtxError(ctx, "[ExptEval] clear turn run log result refs for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
-	}
+	// 不清 run_log 的 target_result_id / evaluator_result_ids：
+	// zombie 场景是「终态失败」，需要保留已入库的 record id，
+	// 让 /results/batch_get 能返回 eval_target_record.id、evaluator_record.id 供用户查详情。
+	// 「清 id」的语义只属于「重跑起点」（见 clearExptTurnRunLogResultRefsOnItems 其他调用点：
+	// FailRetry / rerunItems / 手动重跑），失败落地不应触发。
 
 	time.Sleep(time.Millisecond * 1500)
 
