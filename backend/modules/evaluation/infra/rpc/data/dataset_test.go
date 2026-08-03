@@ -663,10 +663,39 @@ func TestGetDataset(t *testing.T) {
 				BaseResp: &base.BaseResp{StatusCode: 0},
 			}, nil)
 
-		set, err := adapter.GetDataset(ctx, gptr.Of(int64(1)), 123, nil)
+		set, err := adapter.GetDataset(ctx, gptr.Of(int64(1)), 123, nil, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, set)
 		assert.Equal(t, int64(123), set.ID)
+		assert.Nil(t, set.SharedInfo)
+		assert.Nil(t, set.EvaluationSetVersion.SharedInfo)
+	})
+
+	t.Run("shared query does not fabricate authorization info", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		adapter, mockClient := newTestAdapter(ctrl)
+		sourceSpaceID := int64(2)
+		mockClient.EXPECT().GetDataset(gomock.Any(), gomock.Any()).
+			Return(&datasetdto.GetDatasetResponse{
+				Dataset: &domain_dataset.Dataset{
+					ID:      123,
+					SpaceID: sourceSpaceID,
+					Name:    gptr.Of("shared"),
+				},
+				BaseResp: &base.BaseResp{StatusCode: 0},
+			}, nil)
+
+		set, err := adapter.GetDataset(ctx, gptr.Of(int64(1)), 123, nil, &entity.SharedResourceOption{
+			IsShared:      true,
+			SourceSpaceID: gptr.Of(sourceSpaceID),
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, set)
+		assert.Nil(t, set.SharedInfo)
+		assert.Nil(t, set.EvaluationSetVersion.SharedInfo)
 	})
 }
 

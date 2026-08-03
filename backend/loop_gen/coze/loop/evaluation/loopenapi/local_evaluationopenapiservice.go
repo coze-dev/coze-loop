@@ -529,6 +529,29 @@ func (l *LocalEvaluationOpenAPIService) GetEvalTargetRecordOApi(ctx context.Cont
 	return result.GetSuccess(), nil
 }
 
+// ListEvalTargetsOApi
+// 查询可用的来源评测对象
+func (l *LocalEvaluationOpenAPIService) ListEvalTargetsOApi(ctx context.Context, req *openapi.ListEvalTargetsOApiRequest, callOptions ...callopt.Option) (*openapi.ListEvalTargetsOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceListEvalTargetsOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceListEvalTargetsOApiResult)
+		resp, err := l.impl.ListEvalTargetsOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceListEvalTargetsOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceListEvalTargetsOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListEvalTargetsOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // SubmitExperimentOApi
 // 评测实验接口
 // 创建评测实验

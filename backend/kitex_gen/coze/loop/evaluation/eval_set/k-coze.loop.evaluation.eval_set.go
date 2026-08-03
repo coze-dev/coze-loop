@@ -4343,6 +4343,20 @@ func (p *ListEvaluationSetsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField100(buf[offset:])
@@ -4563,6 +4577,18 @@ func (p *ListEvaluationSetsRequest) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListEvaluationSetsRequest) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SharedOption = _field
+	return offset, nil
+}
+
 func (p *ListEvaluationSetsRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -4658,6 +4684,7 @@ func (p *ListEvaluationSetsRequest) FastWriteNocopy(buf []byte, w thrift.NocopyW
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -4676,6 +4703,7 @@ func (p *ListEvaluationSetsRequest) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
 		l += p.field100Length()
 		l += p.field101Length()
 		l += p.field102Length()
@@ -4764,6 +4792,15 @@ func (p *ListEvaluationSetsRequest) fastWriteField7(buf []byte, w thrift.NocopyW
 	if p.IsSetTagFilter() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 7)
 		offset += p.TagFilter.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ListEvaluationSetsRequest) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 8)
+		offset += p.SharedOption.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -4891,6 +4928,15 @@ func (p *ListEvaluationSetsRequest) field7Length() int {
 	return l
 }
 
+func (p *ListEvaluationSetsRequest) field8Length() int {
+	l := 0
+	if p.IsSetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SharedOption.BLength()
+	}
+	return l
+}
+
 func (p *ListEvaluationSetsRequest) field100Length() int {
 	l := 0
 	if p.IsSetPageNumber() {
@@ -5000,6 +5046,15 @@ func (p *ListEvaluationSetsRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.TagFilter = _tagFilter
+
+	var _sharedOption *common.SharedResourceOption
+	if src.SharedOption != nil {
+		_sharedOption = &common.SharedResourceOption{}
+		if err := _sharedOption.DeepCopy(src.SharedOption); err != nil {
+			return err
+		}
+	}
+	p.SharedOption = _sharedOption
 
 	if src.PageNumber != nil {
 		tmp := *src.PageNumber
@@ -5938,6 +5993,20 @@ func (p *GetEvaluationSetVersionRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -6037,6 +6106,18 @@ func (p *GetEvaluationSetVersionRequest) FastReadField4(buf []byte) (int, error)
 	return offset, nil
 }
 
+func (p *GetEvaluationSetVersionRequest) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SharedOption = _field
+	return offset, nil
+}
+
 func (p *GetEvaluationSetVersionRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -6060,6 +6141,7 @@ func (p *GetEvaluationSetVersionRequest) FastWriteNocopy(buf []byte, w thrift.No
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -6073,6 +6155,7 @@ func (p *GetEvaluationSetVersionRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6107,6 +6190,15 @@ func (p *GetEvaluationSetVersionRequest) fastWriteField4(buf []byte, w thrift.No
 	if p.IsSetDeletedAt() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 4)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.DeletedAt)
+	}
+	return offset
+}
+
+func (p *GetEvaluationSetVersionRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
+		offset += p.SharedOption.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -6152,6 +6244,15 @@ func (p *GetEvaluationSetVersionRequest) field4Length() int {
 	return l
 }
 
+func (p *GetEvaluationSetVersionRequest) field5Length() int {
+	l := 0
+	if p.IsSetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SharedOption.BLength()
+	}
+	return l
+}
+
 func (p *GetEvaluationSetVersionRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -6180,6 +6281,15 @@ func (p *GetEvaluationSetVersionRequest) DeepCopy(s interface{}) error {
 		tmp := *src.DeletedAt
 		p.DeletedAt = &tmp
 	}
+
+	var _sharedOption *common.SharedResourceOption
+	if src.SharedOption != nil {
+		_sharedOption = &common.SharedResourceOption{}
+		if err := _sharedOption.DeepCopy(src.SharedOption); err != nil {
+			return err
+		}
+	}
+	p.SharedOption = _sharedOption
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -7160,6 +7270,20 @@ func (p *ListEvaluationSetVersionsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField100(buf[offset:])
@@ -7287,6 +7411,18 @@ func (p *ListEvaluationSetVersionsRequest) FastReadField3(buf []byte) (int, erro
 	return offset, nil
 }
 
+func (p *ListEvaluationSetVersionsRequest) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SharedOption = _field
+	return offset, nil
+}
+
 func (p *ListEvaluationSetVersionsRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -7353,6 +7489,7 @@ func (p *ListEvaluationSetVersionsRequest) FastWriteNocopy(buf []byte, w thrift.
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -7366,6 +7503,7 @@ func (p *ListEvaluationSetVersionsRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field100Length()
 		l += p.field101Length()
 		l += p.field102Length()
@@ -7394,6 +7532,15 @@ func (p *ListEvaluationSetVersionsRequest) fastWriteField3(buf []byte, w thrift.
 	if p.IsSetVersionLike() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.VersionLike)
+	}
+	return offset
+}
+
+func (p *ListEvaluationSetVersionsRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 4)
+		offset += p.SharedOption.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -7457,6 +7604,15 @@ func (p *ListEvaluationSetVersionsRequest) field3Length() int {
 	return l
 }
 
+func (p *ListEvaluationSetVersionsRequest) field4Length() int {
+	l := 0
+	if p.IsSetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SharedOption.BLength()
+	}
+	return l
+}
+
 func (p *ListEvaluationSetVersionsRequest) field100Length() int {
 	l := 0
 	if p.IsSetPageNumber() {
@@ -7510,6 +7666,15 @@ func (p *ListEvaluationSetVersionsRequest) DeepCopy(s interface{}) error {
 		}
 		p.VersionLike = &tmp
 	}
+
+	var _sharedOption *common.SharedResourceOption
+	if src.SharedOption != nil {
+		_sharedOption = &common.SharedResourceOption{}
+		if err := _sharedOption.DeepCopy(src.SharedOption); err != nil {
+			return err
+		}
+	}
+	p.SharedOption = _sharedOption
 
 	if src.PageNumber != nil {
 		tmp := *src.PageNumber
@@ -10843,6 +11008,20 @@ func (p *ListEvaluationSetItemsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField100(buf[offset:])
@@ -11026,6 +11205,18 @@ func (p *ListEvaluationSetItemsRequest) FastReadField3(buf []byte) (int, error) 
 	return offset, nil
 }
 
+func (p *ListEvaluationSetItemsRequest) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSharedResourceOption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SharedOption = _field
+	return offset, nil
+}
+
 func (p *ListEvaluationSetItemsRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -11165,6 +11356,7 @@ func (p *ListEvaluationSetItemsRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
@@ -11182,6 +11374,7 @@ func (p *ListEvaluationSetItemsRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field100Length()
 		l += p.field101Length()
 		l += p.field102Length()
@@ -11214,6 +11407,15 @@ func (p *ListEvaluationSetItemsRequest) fastWriteField3(buf []byte, w thrift.Noc
 	if p.IsSetVersionID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.VersionID)
+	}
+	return offset
+}
+
+func (p *ListEvaluationSetItemsRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSharedOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 4)
+		offset += p.SharedOption.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -11327,6 +11529,15 @@ func (p *ListEvaluationSetItemsRequest) field3Length() int {
 	return l
 }
 
+func (p *ListEvaluationSetItemsRequest) field4Length() int {
+	l := 0
+	if p.IsSetSharedOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SharedOption.BLength()
+	}
+	return l
+}
+
 func (p *ListEvaluationSetItemsRequest) field100Length() int {
 	l := 0
 	if p.IsSetPageNumber() {
@@ -11419,6 +11630,15 @@ func (p *ListEvaluationSetItemsRequest) DeepCopy(s interface{}) error {
 		tmp := *src.VersionID
 		p.VersionID = &tmp
 	}
+
+	var _sharedOption *common.SharedResourceOption
+	if src.SharedOption != nil {
+		_sharedOption = &common.SharedResourceOption{}
+		if err := _sharedOption.DeepCopy(src.SharedOption); err != nil {
+			return err
+		}
+	}
+	p.SharedOption = _sharedOption
 
 	if src.PageNumber != nil {
 		tmp := *src.PageNumber

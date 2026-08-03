@@ -61,6 +61,11 @@ func (p *CreateEvalTargetResponse) IsValid() error {
 	return nil
 }
 func (p *GetEvalTargetVersionRequest) IsValid() error {
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -227,6 +232,11 @@ func (p *ListSourceEvalTargetsRequest) IsValid() error {
 			return fmt.Errorf("field Name min_len rule failed, current value: %d", len(*p.Name))
 		}
 	}
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -259,6 +269,11 @@ func (p *BatchGetSourceEvalTargetsResponse) IsValid() error {
 	return nil
 }
 func (p *GetSourceEvalTargetVersionRequest) IsValid() error {
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -280,6 +295,11 @@ func (p *GetSourceEvalTargetVersionResponse) IsValid() error {
 	return nil
 }
 func (p *ListSourceEvalTargetVersionsRequest) IsValid() error {
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

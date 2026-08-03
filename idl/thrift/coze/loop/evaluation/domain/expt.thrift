@@ -853,6 +853,9 @@ struct EvalSetConfig {
     20: optional list<ExptTargetConf> target_confs   // 本期 len<=1; 不传=继承 request 顶层 target
     30: optional list<ExptEvaluatorConf> evaluator_confs // (evaluator_version_id, alias) 在 set 内唯一
 
+    40: optional common.SharedResourceOption shared_option // 跨空间: 该 set 评测集来源空间; nil/!is_shared=同空间
+    41: optional common.SharedResourceOption target_shared_option // 跨空间: 该 set 评测对象来源空间
+
     100: optional map<string, string> ext
 }
 

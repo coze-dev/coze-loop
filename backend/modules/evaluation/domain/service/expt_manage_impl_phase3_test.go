@@ -151,7 +151,7 @@ func TestExptMangerImpl_getExptTupleByID_WithoutTarget(t *testing.T) {
 
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
-					GetEvaluationSetVersion(ctx, int64(1), int64(2), gptr.Of(true)).
+					GetEvaluationSetVersion(ctx, int64(1), int64(2), gptr.Of(true), nil).
 					Return(&entity.EvaluationSetVersion{ID: 2}, &entity.EvaluationSet{ID: 1}, nil)
 
 				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).

@@ -278,10 +278,16 @@ func (e *experimentApplication) resolveSourceTargetIDs(ctx context.Context, spac
 					out[targetID] = ""
 					continue
 				}
-				if target == nil || target.SpaceID != spaceID {
-					logs.CtxWarn(ctx, "resolveSourceTargetIDs space mismatch or nil, target_id=%d, want_space=%d", targetID, spaceID)
+				if target == nil {
+					logs.CtxWarn(ctx, "resolveSourceTargetIDs target nil, target_id=%d", targetID)
 					out[targetID] = ""
 					continue
+				}
+				// 跨空间共享: 评测对象归来源空间 B, target.SpaceID != 调用方 spaceID(A) 属正常;
+				// targetID 来自本实验自身结果记录(发起时已 AuthorizeRead 授权), 回填其恒定 SourceTargetID
+				// (非内容, 仅标识) 不构成越权。仅同空间(B==A)时保留原语义, 跨空间放行。
+				if target.SpaceID != spaceID {
+					logs.CtxInfo(ctx, "resolveSourceTargetIDs cross-space target, target_id=%d, target_space=%d, caller_space=%d", targetID, target.SpaceID, spaceID)
 				}
 				out[targetID] = target.SourceTargetID
 			}

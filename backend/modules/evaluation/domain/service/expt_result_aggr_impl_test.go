@@ -1134,10 +1134,16 @@ func TestExptAggrResultServiceImpl_buildExptTargetMtrAggregatorGroup(t *testing.
 
 			mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 			mockEvalTargetSvc := svcMocks.NewMockIEvalTargetService(ctrl)
+			// buildExptTargetMtrAggregatorGroup 跨空间改造后会先 GetByID 载入实验取冻结来源空间;
+			// 返回 TargetSpaceID=0(同空间), resolveLoadSpaceID 回退到 spaceID, 保持原测试语义不变。
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+			mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(&entity.Experiment{ID: 1, TargetSpaceID: 0}, nil).AnyTimes()
 
 			svc := &ExptAggrResultServiceImpl{
 				exptTurnResultRepo: mockExptTurnResultRepo,
 				evalTargetSvc:      mockEvalTargetSvc,
+				experimentRepo:     mockExperimentRepo,
 			}
 
 			tt.setup(mockExptTurnResultRepo, mockEvalTargetSvc)

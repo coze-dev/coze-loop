@@ -14,6 +14,7 @@ struct EvalTarget {
 
     // 系统信息
     100: optional common.BaseInfo base_info (go.tag='json:\"base_info\"')
+    101: optional common.SharedResourceInfo shared_info
 }
 
 struct EvalTargetVersion {
@@ -26,6 +27,7 @@ struct EvalTargetVersion {
 
     // 系统信息
     100: optional common.BaseInfo base_info (go.tag='json:\"base_info\"')
+    101: optional common.SharedResourceInfo shared_info
 }
 
 struct EvalTargetContent {

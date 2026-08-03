@@ -19,14 +19,14 @@ type IDatasetRPCAdapter interface {
 	ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error)
 	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string, tags []*entity.ResourceTagRef) (err error)
 	DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) (err error)
-	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
-	BatchGetDatasets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (sets []*entity.EvaluationSet, err error)
+	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (set *entity.EvaluationSet, err error)
+	BatchGetDatasets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (sets []*entity.EvaluationSet, err error)
 	ListDatasets(ctx context.Context, param *ListDatasetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error)
 
 	CreateDatasetVersion(ctx context.Context, spaceID, evaluationSetID int64, version string, desc *string) (id int64, err error)
-	GetDatasetVersion(ctx context.Context, spaceID, versionID int64, deletedAt *bool) (version *entity.EvaluationSetVersion, set *entity.EvaluationSet, err error)
-	BatchGetVersionedDatasets(ctx context.Context, spaceID *int64, versionIDs []int64, deletedAt *bool) (sets []*BatchGetVersionedDatasetsResult, err error)
-	ListDatasetVersions(ctx context.Context, spaceID, evaluationSetID int64, pageToken *string, pageNumber, pageSize *int32, versionLike *string, versions []string) (version []*entity.EvaluationSetVersion, total *int64, nextPageToken *string, err error)
+	GetDatasetVersion(ctx context.Context, spaceID, versionID int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (version *entity.EvaluationSetVersion, set *entity.EvaluationSet, err error)
+	BatchGetVersionedDatasets(ctx context.Context, spaceID *int64, versionIDs []int64, deletedAt *bool, sharedOption *entity.SharedResourceOption) (sets []*BatchGetVersionedDatasetsResult, err error)
+	ListDatasetVersions(ctx context.Context, spaceID, evaluationSetID int64, pageToken *string, pageNumber, pageSize *int32, versionLike *string, versions []string, sharedOption *entity.SharedResourceOption) (version []*entity.EvaluationSetVersion, total *int64, nextPageToken *string, err error)
 
 	UpdateDatasetSchema(ctx context.Context, spaceID, evaluationSetID int64, schemas []*entity.FieldSchema) (err error)
 
@@ -109,6 +109,7 @@ type ListDatasetsParam struct {
 	OrderBys         []*entity.OrderBy
 	TagFilter        *entity.TagFilter
 	DatasetKeys      []string
+	SharedOption     *entity.SharedResourceOption
 }
 
 type ListDatasetItemsParam struct {

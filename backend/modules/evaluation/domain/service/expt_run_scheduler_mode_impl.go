@@ -323,7 +323,7 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		if err := backoff.RetryThreeSeconds(ctx, func() error {
 			var retryErr error
 			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-				SpaceID:         event.SpaceID,
+				SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
 				EvaluationSetID: evalSetID,
 				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 				PageSize:        &pageSize,
@@ -444,7 +444,8 @@ func (e *ExptTrialRunExec) exptStartByItemIds(ctx context.Context, event *entity
 			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, chunk)
 
 		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
-			SpaceID:         event.SpaceID,
+			// 跨空间共享: 单集点选执行按来源空间加载 item (对齐 List 路径)。
+			SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
 			EvaluationSetID: evalSetID,
 			VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 			ItemIDs:         chunk,
@@ -550,7 +551,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		if err := backoff.RetryThreeSeconds(ctx, func() error {
 			var retryErr error
 			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-				SpaceID:         event.SpaceID,
+				SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
 				EvaluationSetID: evalSetID,
 				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 				PageSize:        &pageSize,
@@ -1387,6 +1388,38 @@ func itemVersionIDPtr(versionID int64) *int64 {
 	return gptr.Of(versionID)
 }
 
+// backfillRefEvalSetSourceSpace 从实验冻结信息回填每个 ExptItemRef 的评测集来源空间。
+// expt_item_ref 表未存来源空间, 从 DB 读回的 ref 缺该字段; 重试链路据此切到来源空间加载 item。
+// 单集: 所有 ref 用 expt.EvalSetSpaceID; 多集: 按 ref.EvalSetID 映射到对应 EvalSetConfig.SourceSpaceID。
+func backfillRefEvalSetSourceSpace(refs []*entity.ExptItemRef, expt *entity.Experiment) {
+	if expt == nil {
+		return
+	}
+	// 多集: eval_set_id -> source_space_id
+	// ★ 含 SourceSpaceID == 0 的集也建 map: 0 表示"该集在调用方空间"是合法冻结值, 不是"未设置"。
+	// 若只收 >0, 混合空间多集(部分集跨空间)下同空间集会命中不到 map → 回退到被 configs[0] 兜底回填的
+	// expt.EvalSetSpaceID(主集来源空间) → 用主集来源空间读同空间评测集, 重试链路同样错。
+	sourceSpaceBySet := make(map[int64]int64)
+	if expt.EvalConf != nil {
+		for _, sc := range expt.EvalConf.EvalSetConfigs {
+			if sc != nil && sc.EvalSetID > 0 {
+				sourceSpaceBySet[sc.EvalSetID] = sc.SourceSpaceID
+			}
+		}
+	}
+	for _, ref := range refs {
+		if ref == nil {
+			continue
+		}
+		if ss, ok := sourceSpaceBySet[ref.EvalSetID]; ok {
+			ref.EvalSetSourceSpaceID = ss
+			continue
+		}
+		// 单集/老实验(EvalSetConfigs 未覆盖该集): 回退到实验级冻结列。
+		ref.EvalSetSourceSpaceID = expt.EvalSetSpaceID
+	}
+}
+
 func fetchEvaluationSetItemsByRefs(ctx context.Context, deps retryItemResetDeps, spaceID int64, refs []*entity.ExptItemRef) ([]*entity.EvaluationSetItem, map[int64]int64, error) {
 	if len(refs) == 0 {
 		return nil, nil, nil
@@ -1395,6 +1428,7 @@ func fetchEvaluationSetItemsByRefs(ctx context.Context, deps retryItemResetDeps,
 	type setVersionKey struct {
 		evalSetID        int64
 		evalSetVersionID int64
+		sourceSpaceID    int64 // 跨空间共享: 按来源空间分组, 逐组切到来源空间加载
 	}
 
 	groups := make(map[setVersionKey][]*entity.ExptItemRef)
@@ -1406,7 +1440,7 @@ func fetchEvaluationSetItemsByRefs(ctx context.Context, deps retryItemResetDeps,
 		if ref.EvalSetID <= 0 {
 			return nil, nil, errorx.New("invalid expt_item_ref eval_set_id, expt_id: %v, item_id: %v", ref.ExptID, ref.ItemID)
 		}
-		key := setVersionKey{evalSetID: ref.EvalSetID, evalSetVersionID: ref.EvalSetVersionID}
+		key := setVersionKey{evalSetID: ref.EvalSetID, evalSetVersionID: ref.EvalSetVersionID, sourceSpaceID: ref.EvalSetSourceSpaceID}
 		groups[key] = append(groups[key], ref)
 		if ref.ItemVersionID > 0 {
 			itemVersionByItemID[ref.ItemID] = ref.ItemVersionID
@@ -1415,19 +1449,21 @@ func fetchEvaluationSetItemsByRefs(ctx context.Context, deps retryItemResetDeps,
 
 	items := make([]*entity.EvaluationSetItem, 0, len(refs))
 	for key, group := range groups {
+		// 跨空间共享: 按 ref 携带的来源空间加载 item (SourceSpaceID>0), 否则用调用方空间。
+		loadSpaceID := resolveLoadSpaceID(spaceID, key.sourceSpaceID)
 		queries := make([]*entity.EvaluationItemVersionRef, 0, len(group))
 		queryItemIDs := make([]int64, 0, len(group))
 		for _, ref := range group {
 			queries = append(queries, &entity.EvaluationItemVersionRef{ItemID: ref.ItemID, ItemVersionID: itemVersionIDPtr(ref.ItemVersionID)})
 			queryItemIDs = append(queryItemIDs, ref.ItemID)
 		}
-		logs.CtxInfo(ctx, "fetchEvaluationSetItemsByRefs from expt_item_ref, space_id: %v, eval_set_id: %v, eval_set_version_id: %v, item_ids: %v", spaceID, key.evalSetID, key.evalSetVersionID, queryItemIDs)
+		logs.CtxInfo(ctx, "fetchEvaluationSetItemsByRefs from expt_item_ref, space_id: %v, load_space_id: %v, eval_set_id: %v, eval_set_version_id: %v, item_ids: %v", spaceID, loadSpaceID, key.evalSetID, key.evalSetVersionID, queryItemIDs)
 
 		var got []*entity.EvaluationSetItem
 		if err := backoff.RetryThreeSeconds(ctx, func() error {
 			var retryErr error
 			got, retryErr = deps.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
-				SpaceID:            spaceID,
+				SpaceID:            loadSpaceID,
 				EvaluationSetID:    key.evalSetID,
 				VersionID:          resolveSetReadVersionID(key.evalSetID, key.evalSetVersionID),
 				ItemVersionQueries: queries,
@@ -1604,7 +1640,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		if err := backoff.RetryThreeSeconds(ctx, func() error {
 			var retryErr error
 			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-				SpaceID:         event.SpaceID,
+				SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
 				EvaluationSetID: evalSetID,
 				VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 				PageSize:        &pageSize,
@@ -1830,6 +1866,8 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 			break
 		}
 
+		// 跨空间共享: DB 读回的 ref 未带来源空间, 从实验冻结信息回填后再按来源空间加载 item。
+		backfillRefEvalSetSourceSpace(refs, expt)
 		items, itemVersionByItemID, err := fetchEvaluationSetItemsByRefs(ctx, deps, event.SpaceID, refs)
 		if err != nil {
 			return err
@@ -1952,7 +1990,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		return err
 	}
 	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig {
-		return e.resetEvalItemsMultiSet(ctx, event, itemIDs, got)
+		return e.resetEvalItemsMultiSet(ctx, event, expt, itemIDs, got)
 	}
 
 	var (
@@ -1966,7 +2004,8 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, chunk)
 
 		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
-			SpaceID:         event.SpaceID,
+			// 跨空间共享: 单集点选执行按来源空间加载 item (对齐 List 路径)。
+			SpaceID:         resolveLoadSpaceID(event.SpaceID, expt.EvalSetSpaceID),
 			EvaluationSetID: evalSetID,
 			VersionID:       resolveSetReadVersionID(evalSetID, evalSetVersionID),
 			ItemIDs:         chunk,
@@ -2068,7 +2107,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 	return nil
 }
 
-func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *entity.ExptScheduleEvent, itemIDs []int64, got *entity.ExptStats) error {
+func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, itemIDs []int64, got *entity.ExptStats) error {
 	if len(itemIDs) == 0 {
 		return nil
 	}
@@ -2092,6 +2131,8 @@ func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *
 			return errorx.New("expt_item_ref missing for retry items, expt_id: %v, expected: %v, got: %v", event.ExptID, len(chunk), len(refs))
 		}
 
+		// 跨空间共享: DB 读回的 ref 未带来源空间, 从实验冻结信息回填后再按来源空间加载 item。
+		backfillRefEvalSetSourceSpace(refs, expt)
 		items, itemVersionByItemID, err := fetchEvaluationSetItemsByRefs(ctx, deps, event.SpaceID, refs)
 		if err != nil {
 			return err
@@ -2273,15 +2314,16 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 				itemVerID := gptr.Indirect(item.ItemVersionID)
 				// ExptItemRef
 				ref := &entity.ExptItemRef{
-					ID:               ids[idIdx],
-					SpaceID:          event.SpaceID,
-					ExptID:           event.ExptID,
-					ItemID:           item.ItemID,
-					ItemVersionID:    itemVerID,
-					EvalSetID:        setConf.EvalSetID,
-					EvalSetVersionID: setRefVersionID,
-					ItemConfig:       baseItemConfig,
-					OrderIdx:         itemIdx,
+					ID:                   ids[idIdx],
+					SpaceID:              event.SpaceID,
+					ExptID:               event.ExptID,
+					ItemID:               item.ItemID,
+					ItemVersionID:        itemVerID,
+					EvalSetID:            setConf.EvalSetID,
+					EvalSetVersionID:     setRefVersionID,
+					EvalSetSourceSpaceID: setConf.SourceSpaceID, // 跨空间: 该 set 来源空间
+					ItemConfig:           baseItemConfig,
+					OrderIdx:             itemIdx,
 				}
 				itemRefs = append(itemRefs, ref)
 				idIdx++
@@ -2378,7 +2420,7 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			if err := backoff.RetryThreeSeconds(ctx, func() error {
 				var retryErr error
 				items, total, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-					SpaceID:         event.SpaceID,
+					SpaceID:         resolveLoadSpaceID(event.SpaceID, setConf.SourceSpaceID),
 					EvaluationSetID: setConf.EvalSetID,
 					VersionID:       setReadVersionID,
 					PageSize:        &pageSizePtr,
@@ -2445,6 +2487,15 @@ func resolveSetReadVersionID(evalSetID, evalSetVersionID int64) *int64 {
 	return &evalSetVersionID
 }
 
+// resolveLoadSpaceID 跨空间共享: 执行期加载评测集 item 用的空间。
+// sourceSpaceID>0 (发起冻结的来源空间) 用来源空间; 否则 (同空间/老数据) fallback 消费方空间。
+func resolveLoadSpaceID(consumerSpaceID, sourceSpaceID int64) int64 {
+	if sourceSpaceID > 0 {
+		return sourceSpaceID
+	}
+	return consumerSpaceID
+}
+
 // resolveSetRefVersionID 计算落 expt_item_ref.eval_set_version_id 的值。
 // 草稿落 0 (与老路径 ItemVersionID=0 口径一致, 全链路下游据此识别草稿 → live 读),
 // committed 落真实 version_id (调度键, 配合 item_id 定位 dataset_item_snapshot 冻结快照)。
@@ -2457,7 +2508,11 @@ func resolveSetRefVersionID(evalSetID, evalSetVersionID int64) int64 {
 
 // buildItemConfigFromSetConf 将 per-set 配置下沉为 ExptItemConfig (同 set 所有 item 共享)
 func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig) *entity.ExptItemConfig {
-	cfg := &entity.ExptItemConfig{}
+	cfg := &entity.ExptItemConfig{
+		// 跨空间共享: 逐行携带本 set 的评测集/评测对象来源空间, 供多集执行期切空间。
+		EvalSetSourceSpaceID: setConf.SourceSpaceID,
+		TargetSourceSpaceID:  setConf.TargetSpaceID,
+	}
 
 	// evaluator_conf
 	for _, ec := range setConf.EvaluatorConfs {

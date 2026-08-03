@@ -52,6 +52,7 @@ type ListEvaluationSetsParam struct {
 	OrderBys         []*OrderBy
 	TagFilter        *TagFilter
 	DatasetKeys      []string
+	SharedOption     *SharedResourceOption
 }
 
 type ListEvaluationSetItemsParam struct {
@@ -128,6 +129,7 @@ type ListEvaluationSetVersionsParam struct {
 	PageNumber      *int32
 	VersionLike     *string
 	Versions        []string // 精确查询
+	SharedOption    *SharedResourceOption
 }
 
 type BatchGetEvaluationSetVersionsResult struct {
@@ -380,6 +382,11 @@ type CreateExptParam struct {
 	// ★ 新增: 分流依据 (== MultiSetConfig 走新路径), 由 request 透传, 不再从 len(EvalSetConfigs) 派生
 	EvalSetSourceType ExptEvalSetSourceType `json:"eval_set_source_type"`
 	NotificationConf  *ExptNotificationConf `json:"notification_conf,omitempty"`
+
+	// ★ 跨空间共享 (单评测集 SingleSet): 发起时携带评测集/评测对象来源空间;
+	// 多评测集 MultiSetConfig 走 EvalSetConfigs 内每个元素的 shared_option。
+	EvalSetSharedOption *SharedResourceOption `json:"eval_set_shared_option,omitempty"`
+	TargetSharedOption  *SharedResourceOption `json:"target_shared_option,omitempty"`
 }
 
 type ExptRunCheckOption struct {
@@ -473,14 +480,16 @@ type BatchGetEvalTargetBySourceParam struct {
 	SpaceID        int64
 	SourceTargetID []string
 	TargetType     EvalTargetType
+	SharedOption   *SharedResourceOption
 }
 
 type ListSourceParam struct {
-	TargetType EvalTargetType
-	SpaceID    *int64
-	PageSize   *int32
-	Cursor     *string
-	KeyWord    *string
+	TargetType   EvalTargetType
+	SpaceID      *int64
+	PageSize     *int32
+	Cursor       *string
+	KeyWord      *string
+	SharedOption *SharedResourceOption
 }
 
 type ListSourceVersionParam struct {
@@ -489,6 +498,7 @@ type ListSourceVersionParam struct {
 	PageSize       *int32
 	Cursor         *string
 	SourceTargetID string
+	SharedOption   *SharedResourceOption
 }
 
 type LLMCallParam struct {

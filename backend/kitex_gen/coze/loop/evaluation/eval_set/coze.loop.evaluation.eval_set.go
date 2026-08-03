@@ -5699,8 +5699,9 @@ type ListEvaluationSetsRequest struct {
 	// 按 dataset_key 精确匹配
 	DatasetKeys []string `thrift:"dataset_keys,6,optional" frugal:"6,optional,list<string>" form:"dataset_keys" json:"dataset_keys,omitempty" query:"dataset_keys"`
 	// 系统资源标签过滤
-	TagFilter  *eval_set.TagFilter `thrift:"tag_filter,7,optional" frugal:"7,optional,eval_set.TagFilter" form:"tag_filter" json:"tag_filter,omitempty" query:"tag_filter"`
-	PageNumber *int32              `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
+	TagFilter    *eval_set.TagFilter          `thrift:"tag_filter,7,optional" frugal:"7,optional,eval_set.TagFilter" form:"tag_filter" json:"tag_filter,omitempty" query:"tag_filter"`
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,8,optional" frugal:"8,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
+	PageNumber   *int32                       `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
 	// 分页大小 (0, 200]，默认为 20
 	PageSize  *int32  `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
 	PageToken *string `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
@@ -5795,6 +5796,18 @@ func (p *ListEvaluationSetsRequest) GetTagFilter() (v *eval_set.TagFilter) {
 	return p.TagFilter
 }
 
+var ListEvaluationSetsRequest_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *ListEvaluationSetsRequest) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return ListEvaluationSetsRequest_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
+
 var ListEvaluationSetsRequest_PageNumber_DEFAULT int32
 
 func (p *ListEvaluationSetsRequest) GetPageNumber() (v int32) {
@@ -5875,6 +5888,9 @@ func (p *ListEvaluationSetsRequest) SetDatasetKeys(val []string) {
 func (p *ListEvaluationSetsRequest) SetTagFilter(val *eval_set.TagFilter) {
 	p.TagFilter = val
 }
+func (p *ListEvaluationSetsRequest) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 func (p *ListEvaluationSetsRequest) SetPageNumber(val *int32) {
 	p.PageNumber = val
 }
@@ -5899,6 +5915,7 @@ var fieldIDToName_ListEvaluationSetsRequest = map[int16]string{
 	5:   "type",
 	6:   "dataset_keys",
 	7:   "tag_filter",
+	8:   "shared_option",
 	100: "page_number",
 	101: "page_size",
 	102: "page_token",
@@ -5928,6 +5945,10 @@ func (p *ListEvaluationSetsRequest) IsSetDatasetKeys() bool {
 
 func (p *ListEvaluationSetsRequest) IsSetTagFilter() bool {
 	return p.TagFilter != nil
+}
+
+func (p *ListEvaluationSetsRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *ListEvaluationSetsRequest) IsSetPageNumber() bool {
@@ -6021,6 +6042,14 @@ func (p *ListEvaluationSetsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6211,6 +6240,14 @@ func (p *ListEvaluationSetsRequest) ReadField7(iprot thrift.TProtocol) error {
 	p.TagFilter = _field
 	return nil
 }
+func (p *ListEvaluationSetsRequest) ReadField8(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *ListEvaluationSetsRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -6308,6 +6345,10 @@ func (p *ListEvaluationSetsRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -6496,6 +6537,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *ListEvaluationSetsRequest) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 func (p *ListEvaluationSetsRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageNumber() {
 		if err = oprot.WriteFieldBegin("page_number", thrift.I32, 100); err != nil {
@@ -6630,6 +6689,9 @@ func (p *ListEvaluationSetsRequest) DeepEqual(ano *ListEvaluationSetsRequest) bo
 	if !p.Field7DeepEqual(ano.TagFilter) {
 		return false
 	}
+	if !p.Field8DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.PageNumber) {
 		return false
 	}
@@ -6721,6 +6783,13 @@ func (p *ListEvaluationSetsRequest) Field6DeepEqual(src []string) bool {
 func (p *ListEvaluationSetsRequest) Field7DeepEqual(src *eval_set.TagFilter) bool {
 
 	if !p.TagFilter.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluationSetsRequest) Field8DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -7919,11 +7988,12 @@ func (p *CreateEvaluationSetVersionResponse) Field255DeepEqual(src *base.BaseRes
 }
 
 type GetEvaluationSetVersionRequest struct {
-	WorkspaceID     int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
-	VersionID       int64      `thrift:"version_id,2,required" frugal:"2,required,i64" json:"version_id" path:"version_id,required" `
-	EvaluationSetID *int64     `thrift:"evaluation_set_id,3,optional" frugal:"3,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
-	DeletedAt       *bool      `thrift:"deleted_at,4,optional" frugal:"4,optional,bool" json:"deleted_at,omitempty" query:"deleted_at"`
-	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID     int64                        `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
+	VersionID       int64                        `thrift:"version_id,2,required" frugal:"2,required,i64" json:"version_id" path:"version_id,required" `
+	EvaluationSetID *int64                       `thrift:"evaluation_set_id,3,optional" frugal:"3,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
+	DeletedAt       *bool                        `thrift:"deleted_at,4,optional" frugal:"4,optional,bool" json:"deleted_at,omitempty" query:"deleted_at"`
+	SharedOption    *common.SharedResourceOption `thrift:"shared_option,5,optional" frugal:"5,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
+	Base            *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetEvaluationSetVersionRequest() *GetEvaluationSetVersionRequest {
@@ -7971,6 +8041,18 @@ func (p *GetEvaluationSetVersionRequest) GetDeletedAt() (v bool) {
 	return *p.DeletedAt
 }
 
+var GetEvaluationSetVersionRequest_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *GetEvaluationSetVersionRequest) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return GetEvaluationSetVersionRequest_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
+
 var GetEvaluationSetVersionRequest_Base_DEFAULT *base.Base
 
 func (p *GetEvaluationSetVersionRequest) GetBase() (v *base.Base) {
@@ -7994,6 +8076,9 @@ func (p *GetEvaluationSetVersionRequest) SetEvaluationSetID(val *int64) {
 func (p *GetEvaluationSetVersionRequest) SetDeletedAt(val *bool) {
 	p.DeletedAt = val
 }
+func (p *GetEvaluationSetVersionRequest) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 func (p *GetEvaluationSetVersionRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -8003,6 +8088,7 @@ var fieldIDToName_GetEvaluationSetVersionRequest = map[int16]string{
 	2:   "version_id",
 	3:   "evaluation_set_id",
 	4:   "deleted_at",
+	5:   "shared_option",
 	255: "Base",
 }
 
@@ -8012,6 +8098,10 @@ func (p *GetEvaluationSetVersionRequest) IsSetEvaluationSetID() bool {
 
 func (p *GetEvaluationSetVersionRequest) IsSetDeletedAt() bool {
 	return p.DeletedAt != nil
+}
+
+func (p *GetEvaluationSetVersionRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *GetEvaluationSetVersionRequest) IsSetBase() bool {
@@ -8067,6 +8157,14 @@ func (p *GetEvaluationSetVersionRequest) Read(iprot thrift.TProtocol) (err error
 		case 4:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8164,6 +8262,14 @@ func (p *GetEvaluationSetVersionRequest) ReadField4(iprot thrift.TProtocol) erro
 	p.DeletedAt = _field
 	return nil
 }
+func (p *GetEvaluationSetVersionRequest) ReadField5(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *GetEvaluationSetVersionRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -8193,6 +8299,10 @@ func (p *GetEvaluationSetVersionRequest) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -8285,6 +8395,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *GetEvaluationSetVersionRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *GetEvaluationSetVersionRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -8330,6 +8458,9 @@ func (p *GetEvaluationSetVersionRequest) DeepEqual(ano *GetEvaluationSetVersionR
 	if !p.Field4DeepEqual(ano.DeletedAt) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -8370,6 +8501,13 @@ func (p *GetEvaluationSetVersionRequest) Field4DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.DeletedAt != *src {
+		return false
+	}
+	return true
+}
+func (p *GetEvaluationSetVersionRequest) Field5DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -9619,8 +9757,9 @@ type ListEvaluationSetVersionsRequest struct {
 	WorkspaceID     int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64 `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	// 根据版本号模糊匹配
-	VersionLike *string `thrift:"version_like,3,optional" frugal:"3,optional,string" form:"version_like" json:"version_like,omitempty" query:"version_like"`
-	PageNumber  *int32  `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
+	VersionLike  *string                      `thrift:"version_like,3,optional" frugal:"3,optional,string" form:"version_like" json:"version_like,omitempty" query:"version_like"`
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,4,optional" frugal:"4,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
+	PageNumber   *int32                       `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
 	// 分页大小 (0, 200]，默认为 20
 	PageSize  *int32     `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
 	PageToken *string    `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
@@ -9658,6 +9797,18 @@ func (p *ListEvaluationSetVersionsRequest) GetVersionLike() (v string) {
 		return ListEvaluationSetVersionsRequest_VersionLike_DEFAULT
 	}
 	return *p.VersionLike
+}
+
+var ListEvaluationSetVersionsRequest_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *ListEvaluationSetVersionsRequest) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return ListEvaluationSetVersionsRequest_SharedOption_DEFAULT
+	}
+	return p.SharedOption
 }
 
 var ListEvaluationSetVersionsRequest_PageNumber_DEFAULT int32
@@ -9716,6 +9867,9 @@ func (p *ListEvaluationSetVersionsRequest) SetEvaluationSetID(val int64) {
 func (p *ListEvaluationSetVersionsRequest) SetVersionLike(val *string) {
 	p.VersionLike = val
 }
+func (p *ListEvaluationSetVersionsRequest) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 func (p *ListEvaluationSetVersionsRequest) SetPageNumber(val *int32) {
 	p.PageNumber = val
 }
@@ -9733,6 +9887,7 @@ var fieldIDToName_ListEvaluationSetVersionsRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "version_like",
+	4:   "shared_option",
 	100: "page_number",
 	101: "page_size",
 	102: "page_token",
@@ -9741,6 +9896,10 @@ var fieldIDToName_ListEvaluationSetVersionsRequest = map[int16]string{
 
 func (p *ListEvaluationSetVersionsRequest) IsSetVersionLike() bool {
 	return p.VersionLike != nil
+}
+
+func (p *ListEvaluationSetVersionsRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *ListEvaluationSetVersionsRequest) IsSetPageNumber() bool {
@@ -9800,6 +9959,14 @@ func (p *ListEvaluationSetVersionsRequest) Read(iprot thrift.TProtocol) (err err
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9910,6 +10077,14 @@ func (p *ListEvaluationSetVersionsRequest) ReadField3(iprot thrift.TProtocol) er
 	p.VersionLike = _field
 	return nil
 }
+func (p *ListEvaluationSetVersionsRequest) ReadField4(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *ListEvaluationSetVersionsRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -9968,6 +10143,10 @@ func (p *ListEvaluationSetVersionsRequest) Write(oprot thrift.TProtocol) (err er
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -10053,6 +10232,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListEvaluationSetVersionsRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *ListEvaluationSetVersionsRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageNumber() {
@@ -10150,6 +10347,9 @@ func (p *ListEvaluationSetVersionsRequest) DeepEqual(ano *ListEvaluationSetVersi
 	if !p.Field3DeepEqual(ano.VersionLike) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.PageNumber) {
 		return false
 	}
@@ -10187,6 +10387,13 @@ func (p *ListEvaluationSetVersionsRequest) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.VersionLike, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluationSetVersionsRequest) Field4DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -14586,7 +14793,9 @@ type ListEvaluationSetItemsRequest struct {
 	WorkspaceID     int64  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64  `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	VersionID       *int64 `thrift:"version_id,3,optional" frugal:"3,optional,i64" json:"version_id" form:"version_id" query:"version_id"`
-	PageNumber      *int32 `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
+	// 跨空间共享读:来源空间等信息
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,4,optional" frugal:"4,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
+	PageNumber   *int32                       `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
 	// 分页大小 (0, 200]，默认为 20
 	PageSize  *int32  `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
 	PageToken *string `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
@@ -14631,6 +14840,18 @@ func (p *ListEvaluationSetItemsRequest) GetVersionID() (v int64) {
 		return ListEvaluationSetItemsRequest_VersionID_DEFAULT
 	}
 	return *p.VersionID
+}
+
+var ListEvaluationSetItemsRequest_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *ListEvaluationSetItemsRequest) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return ListEvaluationSetItemsRequest_SharedOption_DEFAULT
+	}
+	return p.SharedOption
 }
 
 var ListEvaluationSetItemsRequest_PageNumber_DEFAULT int32
@@ -14737,6 +14958,9 @@ func (p *ListEvaluationSetItemsRequest) SetEvaluationSetID(val int64) {
 func (p *ListEvaluationSetItemsRequest) SetVersionID(val *int64) {
 	p.VersionID = val
 }
+func (p *ListEvaluationSetItemsRequest) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 func (p *ListEvaluationSetItemsRequest) SetPageNumber(val *int32) {
 	p.PageNumber = val
 }
@@ -14766,6 +14990,7 @@ var fieldIDToName_ListEvaluationSetItemsRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "version_id",
+	4:   "shared_option",
 	100: "page_number",
 	101: "page_size",
 	102: "page_token",
@@ -14778,6 +15003,10 @@ var fieldIDToName_ListEvaluationSetItemsRequest = map[int16]string{
 
 func (p *ListEvaluationSetItemsRequest) IsSetVersionID() bool {
 	return p.VersionID != nil
+}
+
+func (p *ListEvaluationSetItemsRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *ListEvaluationSetItemsRequest) IsSetPageNumber() bool {
@@ -14853,6 +15082,14 @@ func (p *ListEvaluationSetItemsRequest) Read(iprot thrift.TProtocol) (err error)
 		case 3:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14995,6 +15232,14 @@ func (p *ListEvaluationSetItemsRequest) ReadField3(iprot thrift.TProtocol) error
 	p.VersionID = _field
 	return nil
 }
+func (p *ListEvaluationSetItemsRequest) ReadField4(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *ListEvaluationSetItemsRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -15117,6 +15362,10 @@ func (p *ListEvaluationSetItemsRequest) Write(oprot thrift.TProtocol) (err error
 			fieldId = 3
 			goto WriteFieldError
 		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
 			goto WriteFieldError
@@ -15216,6 +15465,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListEvaluationSetItemsRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *ListEvaluationSetItemsRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageNumber() {
@@ -15401,6 +15668,9 @@ func (p *ListEvaluationSetItemsRequest) DeepEqual(ano *ListEvaluationSetItemsReq
 	if !p.Field3DeepEqual(ano.VersionID) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.PageNumber) {
 		return false
 	}
@@ -15450,6 +15720,13 @@ func (p *ListEvaluationSetItemsRequest) Field3DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.VersionID != *src {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluationSetItemsRequest) Field4DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true

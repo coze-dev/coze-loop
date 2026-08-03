@@ -281,6 +281,15 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 	var sel *exportColumnSelection
 	var turnCursor *entity.ExptTurnResultListCursor
 
+	// ★ 跨空间共享: 预载实验冻结信息, 构建 evalSetID → 来源空间映射, 供导出补裁剪字段按来源空间读。
+	var evalSetSrcSpaceByID map[int64]int64
+	if exptForSpace, exptErr := e.exptRepo.GetByID(ctx, exptID, spaceID); exptErr == nil {
+		evalSetSrcSpaceByID = buildEvalSetSrcSpaceMap(exptForSpace)
+	} else {
+		logs.CtxWarn(ctx, "DoExportCSV load expt for src space map fail, expt_id=%d, err=%v", exptID, exptErr)
+		evalSetSrcSpaceByID = map[int64]int64{}
+	}
+
 	for batch := 0; batch < maxBatches; batch++ {
 		param.Page = entity.NewPage(1, pageSize)
 		param.TurnListCursor = turnCursor
@@ -319,6 +328,7 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 				exptResultService:    e.exptResultService,
 				fileClient:           e.fileClient,
 				evalSetItemSvc:       e.evalSetItemSvc,
+				evalSetSrcSpaceByID:  evalSetSrcSpaceByID,
 			}
 			columns, err := helper.buildColumns(ctx)
 			if err != nil {
@@ -378,6 +388,29 @@ type exportCSVHelper struct {
 	exptResultService  ExptResultService
 	fileClient         fileserver.ObjectStorage
 	evalSetItemSvc     EvaluationSetItemService
+
+	// evalSetSrcSpaceByID 跨空间共享: evalSetID → 冻结的评测集来源空间 (0=同调用方空间)。
+	// 导出补裁剪大字段 GetEvaluationSetItemField 时据此切来源空间, 否则跨空间读失败/该列导出为空。
+	evalSetSrcSpaceByID map[int64]int64
+}
+
+// buildEvalSetSrcSpaceMap 从实验冻结信息构建 evalSetID → 来源空间映射 (单集 EvalSetSpaceID / 多集 EvalSetConfig.SourceSpaceID)。
+func buildEvalSetSrcSpaceMap(expt *entity.Experiment) map[int64]int64 {
+	m := make(map[int64]int64)
+	if expt == nil {
+		return m
+	}
+	if expt.EvalSetID > 0 {
+		m[expt.EvalSetID] = expt.EvalSetSpaceID
+	}
+	if expt.EvalConf != nil {
+		for _, sc := range expt.EvalConf.EvalSetConfigs {
+			if sc != nil && sc.EvalSetID > 0 {
+				m[sc.EvalSetID] = sc.SourceSpaceID
+			}
+		}
+	}
+	return m
 }
 
 const (
@@ -651,8 +684,9 @@ func (e *exportCSVHelper) getDatasetFields(ctx context.Context, colEvalSetFields
 
 		if fieldData.Content.IsContentOmitted() {
 			logs.CtxInfo(ctx, "ContentOmitted fieldData: %v", json.Jsonify(fieldData))
+			// ★ 跨空间共享: 补裁剪大字段按评测集来源空间读 (0=同调用方空间)。
 			if fieldData, err = e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
-				SpaceID:         e.spaceID,
+				SpaceID:         resolveLoadSpaceID(e.spaceID, e.evalSetSrcSpaceByID[tes.EvalSetID]),
 				EvaluationSetID: tes.EvalSetID,
 				ItemPK:          tes.ItemID,
 				FieldName:       gptr.Indirect(colEvalSetField.Name),

@@ -704,8 +704,10 @@ func (e *ExptMangerImpl) emitSandboxAgentExperimentFinished(ctx context.Context,
 		return
 	}
 	// fallback 补查 target: GetByID 不返回 Target, 但 isSandboxAgentExperiment 依赖 Target
+	// ★ 跨空间共享: 评测对象属来源空间, 按冻结 TargetSpaceID 读 (0=同调用方空间);
+	// 用调用方空间读跨空间 target version 会失败 → Target 仍为 nil → 沙箱实验完成打点静默丢失。
 	if expt.Target == nil && expt.TargetVersionID != 0 && e.evalTargetService != nil {
-		target, err := e.evalTargetService.GetEvalTargetVersion(ctx, expt.SpaceID, expt.TargetVersionID, false)
+		target, err := e.evalTargetService.GetEvalTargetVersion(ctx, resolveLoadSpaceID(expt.SpaceID, expt.TargetSpaceID), expt.TargetVersionID, false)
 		if err != nil {
 			logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitExperimentFinished GetEvalTargetVersion failed, expt_id=%d, target_version_id=%d, err=%v",
 				expt.ID, expt.TargetVersionID, err)
