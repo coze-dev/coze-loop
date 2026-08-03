@@ -4541,3 +4541,118 @@ func TestOpenAPIEvalSetConfigsDTO2Domain(t *testing.T) {
 		assert.Len(t, cfg.TargetConfs, 1)
 	}
 }
+
+// TestOpenAPIRunErrorDO2DTO 单独覆盖 openAPIRunErrorDO2DTO 所有分支
+func TestOpenAPIRunErrorDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil → nil", func(t *testing.T) {
+		assert.Nil(t, openAPIRunErrorDO2DTO(nil))
+	})
+
+	t.Run("全字段填充 → 全部映射", func(t *testing.T) {
+		got := openAPIRunErrorDO2DTO(&entity.RunError{
+			Code:    123,
+			Message: gptr.Of("m"),
+			Detail:  gptr.Of("d"),
+		})
+		require.NotNil(t, got)
+		require.NotNil(t, got.Code)
+		assert.Equal(t, int64(123), *got.Code)
+		require.NotNil(t, got.Message)
+		assert.Equal(t, "m", *got.Message)
+		require.NotNil(t, got.Detail)
+		assert.Equal(t, "d", *got.Detail)
+	})
+
+	t.Run("Code=0 时 Code 不写", func(t *testing.T) {
+		got := openAPIRunErrorDO2DTO(&entity.RunError{
+			Code:   0,
+			Detail: gptr.Of("d"),
+		})
+		require.NotNil(t, got)
+		assert.Nil(t, got.Code)
+		assert.Nil(t, got.Message)
+		require.NotNil(t, got.Detail)
+	})
+
+	t.Run("Message/Detail 为空字符串 → 不设置", func(t *testing.T) {
+		got := openAPIRunErrorDO2DTO(&entity.RunError{
+			Code:    1,
+			Message: gptr.Of(""),
+			Detail:  gptr.Of(""),
+		})
+		require.NotNil(t, got)
+		assert.Nil(t, got.Message)
+		assert.Nil(t, got.Detail)
+	})
+
+	t.Run("三字段全空 → 返回 nil", func(t *testing.T) {
+		// Code=0，Message/Detail 均为空指针 → 返回 nil
+		assert.Nil(t, openAPIRunErrorDO2DTO(&entity.RunError{}))
+		// Code=0，Message/Detail 为空字符串 → 也应返回 nil
+		assert.Nil(t, openAPIRunErrorDO2DTO(&entity.RunError{
+			Message: gptr.Of(""),
+			Detail:  gptr.Of(""),
+		}))
+	})
+}
+
+// TestOpenAPIItemResultsDO2DTOs_WithError 覆盖 item SystemInfo.Error 走 openAPIRunErrorDO2DTO 的链路
+func TestOpenAPIItemResultsDO2DTOs_WithError(t *testing.T) {
+	t.Parallel()
+
+	from := []*entity.ItemResult{
+		{
+			ItemID: 42,
+			SystemInfo: &entity.ItemSystemInfo{
+				RunState: entity.ItemRunState_Fail,
+				Error: &entity.RunError{
+					Code:   601205085,
+					Detail: gptr.Of("行超时"),
+				},
+			},
+		},
+	}
+	got := OpenAPIItemResultsDO2DTOs(from)
+	require.Len(t, got, 1)
+	require.NotNil(t, got[0].SystemInfo)
+	require.NotNil(t, got[0].SystemInfo.Error)
+	require.NotNil(t, got[0].SystemInfo.Error.Code)
+	assert.Equal(t, int64(601205085), *got[0].SystemInfo.Error.Code)
+	require.NotNil(t, got[0].SystemInfo.Error.Detail)
+	assert.Equal(t, "行超时", *got[0].SystemInfo.Error.Detail)
+}
+
+// TestOpenAPIResultPayloadDO2DTO_TurnError 覆盖 payload.SystemInfo.Error 走 openAPIRunErrorDO2DTO 的链路
+func TestOpenAPIResultPayloadDO2DTO_TurnError(t *testing.T) {
+	t.Parallel()
+
+	result := &entity.ExperimentResult{
+		ExperimentID: 999,
+		Payload: &entity.ExperimentTurnPayload{
+			TurnID: 5,
+			EvalSet: &entity.TurnEvalSet{
+				Turn: &entity.Turn{ID: 5},
+			},
+			SystemInfo: &entity.TurnSystemInfo{
+				TurnRunState: entity.TurnRunState_Fail,
+				Error: &entity.RunError{
+					Code:    13,
+					Message: gptr.Of("turn 超时"),
+					Detail:  gptr.Of("详情"),
+				},
+			},
+		},
+	}
+	got := openAPIResultPayloadDO2DTO(result)
+	require.NotNil(t, got)
+	require.NotNil(t, got.SystemInfo)
+	require.NotNil(t, got.SystemInfo.Error)
+	require.NotNil(t, got.SystemInfo.Error.Code)
+	assert.Equal(t, int64(13), *got.SystemInfo.Error.Code)
+	require.NotNil(t, got.SystemInfo.Error.Message)
+	assert.Equal(t, "turn 超时", *got.SystemInfo.Error.Message)
+	require.NotNil(t, got.SystemInfo.Error.Detail)
+	assert.Equal(t, "详情", *got.SystemInfo.Error.Detail)
+}

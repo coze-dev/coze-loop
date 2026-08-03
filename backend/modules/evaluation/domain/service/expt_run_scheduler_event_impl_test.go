@@ -26,6 +26,7 @@ import (
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	mock_repo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -1707,4 +1708,35 @@ func TestExptSchedulerImpl_HandleEventErr(t *testing.T) {
 type handleEventErrFields struct {
 	manager   *svcmocks.MockIExptManager
 	publisher *eventmocks.MockExptEventPublisher
+}
+
+// TestUserVisibleErrMsg 覆盖 HandleEventErr 里 err → 用户可见 msg 的三个分支：
+// - nil 返回空
+// - ErrImpl 返回 Msg 字段（用户友好中文描述）
+// - 普通 error 回退到 Error() 字符串
+func TestUserVisibleErrMsg(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.Equal(t, "", userVisibleErrMsg(nil))
+	})
+
+	t.Run("ErrImpl 走 Msg 字段", func(t *testing.T) {
+		err := errno.NewExptZombieTimeoutErr(60, 111, 222)
+		got := userVisibleErrMsg(err)
+		assert.Contains(t, got, "60s")
+		assert.Contains(t, got, "expt_id=111")
+		// 明确不应回退到 error 的 Error() 输出（那种输出前缀是 ErrMsg=...）
+		assert.NotContains(t, got, "ErrMsg=")
+	})
+
+	t.Run("ErrImpl 无 Msg 时回退到 Error", func(t *testing.T) {
+		err := errno.WrapMQRetryErr(errors.New("boom"))
+		got := userVisibleErrMsg(err)
+		// Msg 为空 → fallback 到 err.Error()（会带 Cause=...）
+		assert.Contains(t, got, "boom")
+	})
+
+	t.Run("普通 error 回退到 Error", func(t *testing.T) {
+		err := errors.New("plain error")
+		assert.Equal(t, "plain error", userVisibleErrMsg(err))
+	})
 }
