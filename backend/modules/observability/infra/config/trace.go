@@ -36,11 +36,11 @@ const (
 	trajectoryMetadataCfgKey           = "trajectory_metadata_config"
 	traceTimeRangeCfgKey               = "trace_time_range"
 
-	defaultBackfillDispatchBatchSize   = 10
-	defaultBackfillDispatchIntervalMs  = 1000
-	defaultBackfillCkQueryLimit        = 100
-	defaultEvalSetInvokeBatchSize      = 1
-	defaultDatasetInvokeBatchSize      = 1
+	defaultBackfillDispatchBatchSize  = 10
+	defaultBackfillDispatchIntervalMs = 1000
+	defaultBackfillCkQueryLimit       = 100
+	defaultEvalSetInvokeBatchSize     = 1
+	defaultDatasetInvokeBatchSize     = 1
 )
 
 type TraceConfigCenter struct {

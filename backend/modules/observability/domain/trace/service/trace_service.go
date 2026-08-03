@@ -55,8 +55,8 @@ const (
 
 	// GetTrace / GetTraceAll 单次查询的默认 span 上限：带 input/output 详情时较小，
 	// 不带详情时较大。GetTraceAll 以此作为每轮翻页大小。
-	defaultTraceSpanLimit          int32 = 1000
-	defaultTraceSpanLimitNoDetail  int32 = 10000
+	defaultTraceSpanLimit         int32 = 1000
+	defaultTraceSpanLimitNoDetail int32 = 10000
 	// GetTraceAll 游标循环拉全时的累计硬上限
 	FetchAllMaxSpanLimit int32 = 100000
 )
