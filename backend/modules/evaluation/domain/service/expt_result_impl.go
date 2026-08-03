@@ -1413,6 +1413,15 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 				EndTime:  itemResultPO.UpdatedAt,
 			}
 		}
+		// 从 err_msg 反解出用户可见的 item 级错误（当前仅识别 item 僵尸超时；其他类型未来可扩展）
+		if len(itemResultPO.ErrMsg) > 0 {
+			if ok, msg := errno.ParseItemZombieTimeoutErr(errno.DeserializeErr([]byte(itemResultPO.ErrMsg))); ok {
+				itemResult.SystemInfo.Error = &entity.RunError{
+					Code:   int64(errno.ItemZombieTimeoutCode),
+					Detail: gptr.Of(msg),
+				}
+			}
+		}
 		for _, turnID := range itemID2TurnIDs[itemID] {
 			turnIndex := int64(0)
 			if itemIDTurnIDTurnIndex[itemID] != nil {
@@ -2386,6 +2395,28 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 
 		turnResultID2TargetOutput[turnResultID] = &entity.TurnTargetOutput{
 			EvalTargetRecord: targetRecord,
+		}
+	}
+
+	// 兜底：对于 turnResultDO 中已有 TargetResultID 但 BatchGetRecordByIDs 未命中 record 的
+	// turn（典型场景：异步 target 已提交、record 已入库但读取时序未对齐；或极端情况下 record
+	// 尚在异步落库中），构造仅带 ID + AsyncInvoking 状态的 stub，
+	// 让上层 API 能立即拿到 eval_target_record.id 供用户查询详情。
+	for _, turnResult := range e.turnResultDO {
+		if turnResult == nil || turnResult.TargetResultID == 0 {
+			continue
+		}
+		if _, ok := turnResultID2TargetOutput[turnResult.ID]; ok {
+			continue
+		}
+		turnResultID2TargetOutput[turnResult.ID] = &entity.TurnTargetOutput{
+			EvalTargetRecord: &entity.EvalTargetRecord{
+				ID:      turnResult.TargetResultID,
+				SpaceID: e.SpaceID,
+				ItemID:  turnResult.ItemID,
+				TurnID:  turnResult.TurnID,
+				Status:  gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			},
 		}
 	}
 

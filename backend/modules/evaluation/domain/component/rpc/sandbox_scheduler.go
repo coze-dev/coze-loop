@@ -174,6 +174,9 @@ type SandboxDestroyRequest struct {
 	DestroyType SandboxDestroyType
 	ExecuteIDs  []string
 	WorkspaceID int64
+	// ZombieTimeout 标记本次销毁是否由 SandboxAgent zombie 超时触发；
+	// 具体收尾命令的拼接由调用侧适配器实现，backend 不感知命令内容。
+	ZombieTimeout bool
 }
 
 // SandboxDestroyResponse 销毁响应。

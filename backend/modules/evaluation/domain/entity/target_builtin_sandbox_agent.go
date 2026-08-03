@@ -9,6 +9,11 @@ const (
 	SandboxAgentTypeSingleRunCLI SandboxAgentType = "single_run_cli"
 )
 
+// SandboxAgentExtKeyExtraExecuteID 是 EvalTargetOutputData.Ext 里用于携带
+// SandboxAgent 评测对象**额外沙箱 execute id** 的 key。双沙箱模式的从沙箱走此扩展点，
+// 让完成回调时 backend 能在销毁主 execute 之外，再销毁一次此 id 关联的执行。
+const SandboxAgentExtKeyExtraExecuteID = "sandbox_agent_extra_execute_id"
+
 // SandboxCountMode 指定单次评测使用一个还是一对沙箱。
 // - Single: 沿用原有单沙箱执行链路
 // - Dual:   先起一个从属沙箱拿到 session id，再起一个主沙箱运行 sandbox-pipeline

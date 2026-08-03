@@ -27,6 +27,7 @@ import (
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
@@ -8017,5 +8018,191 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 		assert.Equal(t, "dataset-200", builder.itemIDTurnID2Turn[22][1].DatasetKey)
 		assert.Equal(t, "case-11", builder.itemIDTurnID2Turn[11][1].ItemKey)
 		assert.Equal(t, "case-22", builder.itemIDTurnID2Turn[22][1].ItemKey)
+	})
+}
+
+// TestExptResultBuilder_buildTargetOutput_StubAsyncInvoking 覆盖新增分支：
+// 当 turnResultDO 中有 TargetResultID 但 BatchGetRecordByIDs 未返回对应 record（异步 target 时序未对齐），
+// 应构造仅带 ID + AsyncInvoking 状态的 stub，让上层 API 立即拿到 record.id
+func TestExptResultBuilder_buildTargetOutput_StubAsyncInvoking(t *testing.T) {
+	t.Run("BatchGetRecordByIDs 未命中 → stub AsyncInvoking", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+		mockEvalTargetService.EXPECT().
+			BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{555}).
+			Return(nil, nil)
+
+		builder := &ExptResultBuilder{
+			exptDO:  &entity.Experiment{ID: 1, ExptType: entity.ExptType_Offline},
+			SpaceID: 100,
+			turnResultDO: []*entity.ExptTurnResult{{
+				ID: 77, ItemID: 8, TurnID: 9, TargetResultID: 555,
+			}},
+			evalTargetService: mockEvalTargetService,
+		}
+		err := builder.buildTargetOutput(context.Background())
+		assert.NoError(t, err)
+		out, ok := builder.turnResultID2TargetOutput[77]
+		require.True(t, ok)
+		require.NotNil(t, out.EvalTargetRecord)
+		assert.Equal(t, int64(555), out.EvalTargetRecord.ID)
+		assert.Equal(t, int64(100), out.EvalTargetRecord.SpaceID)
+		assert.Equal(t, int64(8), out.EvalTargetRecord.ItemID)
+		assert.Equal(t, int64(9), out.EvalTargetRecord.TurnID)
+		assert.Equal(t, entity.EvalTargetRunStatusAsyncInvoking, gptr.Indirect(out.EvalTargetRecord.Status))
+	})
+
+	t.Run("TargetResultID=0 时跳过，不产生 stub", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+		mockEvalTargetService.EXPECT().
+			BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{0}).
+			Return(nil, nil)
+
+		builder := &ExptResultBuilder{
+			exptDO:            &entity.Experiment{ID: 1, ExptType: entity.ExptType_Offline},
+			SpaceID:           100,
+			turnResultDO:      []*entity.ExptTurnResult{{ID: 77, TargetResultID: 0}},
+			evalTargetService: mockEvalTargetService,
+		}
+		assert.NoError(t, builder.buildTargetOutput(context.Background()))
+		_, ok := builder.turnResultID2TargetOutput[77]
+		assert.False(t, ok, "TargetResultID=0 should not create stub")
+	})
+
+	t.Run("已有 record 时不覆盖，保留原始 record", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		realRecord := &entity.EvalTargetRecord{
+			ID: 555,
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				OutputFields: map[string]*entity.Content{"k": {Text: gptr.Of("v")}},
+			},
+		}
+		mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+		mockEvalTargetService.EXPECT().
+			BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{555}).
+			Return([]*entity.EvalTargetRecord{realRecord}, nil)
+
+		builder := &ExptResultBuilder{
+			exptDO:            &entity.Experiment{ID: 1, ExptType: entity.ExptType_Offline},
+			SpaceID:           100,
+			turnResultDO:      []*entity.ExptTurnResult{{ID: 77, TargetResultID: 555}},
+			evalTargetService: mockEvalTargetService,
+		}
+		assert.NoError(t, builder.buildTargetOutput(context.Background()))
+		out := builder.turnResultID2TargetOutput[77]
+		require.NotNil(t, out)
+		// 保留真实 record（不再覆盖成 stub）
+		assert.Nil(t, out.EvalTargetRecord.Status)
+		assert.NotNil(t, out.EvalTargetRecord.EvalTargetOutputData)
+	})
+}
+
+// TestNewPayloadBuilder_ItemZombieTimeoutErrParsing 覆盖新增分支：
+// itemResultPO.ErrMsg 里若序列化的是 ItemZombieTimeout 错误，需反解出到 SystemInfo.Error
+func TestNewPayloadBuilder_ItemZombieTimeoutErrParsing(t *testing.T) {
+	t.Run("err_msg 命中 ItemZombieTimeout 时挂到 SystemInfo.Error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		zombieErr := errno.NewItemZombieTimeoutErr(120, false)
+		errBytes := errno.SerializeErr(zombieErr)
+
+		baselineItemResults := []*entity.ExptItemResult{
+			{ItemID: 1, ItemIdx: 0, Status: entity.ItemRunState_Fail, ErrMsg: errBytes},
+		}
+		baselineTurnResults := []*entity.ExptTurnResult{
+			{ID: 1, ItemID: 1, TurnID: 0, TurnIdx: 0},
+		}
+		builder := NewPayloadBuilder(
+			context.Background(),
+			&entity.MGetExperimentResultParam{SpaceID: 100, ExptIDs: []int64{1}},
+			1, baselineTurnResults, baselineItemResults,
+			repoMocks.NewMockIExperimentRepo(ctrl),
+			repoMocks.NewMockIExptTurnResultRepo(ctrl),
+			repoMocks.NewMockIExptAnnotateRepo(ctrl),
+			svcMocks.NewMockIEvalTargetService(ctrl),
+			svcMocks.NewMockEvaluatorRecordService(ctrl),
+			svcMocks.NewMockEvaluationSetItemService(ctrl),
+			nil, nil, nil,
+			nil, nil,
+			map[int64]entity.ItemRunState{},
+			nil, nil,
+		)
+		require.Len(t, builder.ItemResults, 1)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo.Error)
+		assert.Equal(t, int64(errno.ItemZombieTimeoutCode), builder.ItemResults[0].SystemInfo.Error.Code)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo.Error.Detail)
+		assert.Contains(t, *builder.ItemResults[0].SystemInfo.Error.Detail, "同步")
+	})
+
+	t.Run("err_msg 非 ItemZombieTimeout 时不设置 SystemInfo.Error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		otherErr := errno.NewTargetResultErr("something else")
+		errBytes := errno.SerializeErr(otherErr)
+
+		baselineItemResults := []*entity.ExptItemResult{
+			{ItemID: 1, ItemIdx: 0, Status: entity.ItemRunState_Fail, ErrMsg: errBytes},
+		}
+		baselineTurnResults := []*entity.ExptTurnResult{
+			{ID: 1, ItemID: 1, TurnID: 0, TurnIdx: 0},
+		}
+		builder := NewPayloadBuilder(
+			context.Background(),
+			&entity.MGetExperimentResultParam{SpaceID: 100, ExptIDs: []int64{1}},
+			1, baselineTurnResults, baselineItemResults,
+			repoMocks.NewMockIExperimentRepo(ctrl),
+			repoMocks.NewMockIExptTurnResultRepo(ctrl),
+			repoMocks.NewMockIExptAnnotateRepo(ctrl),
+			svcMocks.NewMockIEvalTargetService(ctrl),
+			svcMocks.NewMockEvaluatorRecordService(ctrl),
+			svcMocks.NewMockEvaluationSetItemService(ctrl),
+			nil, nil, nil,
+			nil, nil,
+			map[int64]entity.ItemRunState{},
+			nil, nil,
+		)
+		require.Len(t, builder.ItemResults, 1)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo)
+		assert.Nil(t, builder.ItemResults[0].SystemInfo.Error)
+	})
+
+	t.Run("err_msg 为空时不设置 SystemInfo.Error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		baselineItemResults := []*entity.ExptItemResult{
+			{ItemID: 1, ItemIdx: 0, Status: entity.ItemRunState_Success, ErrMsg: ""},
+		}
+		baselineTurnResults := []*entity.ExptTurnResult{
+			{ID: 1, ItemID: 1, TurnID: 0, TurnIdx: 0},
+		}
+		builder := NewPayloadBuilder(
+			context.Background(),
+			&entity.MGetExperimentResultParam{SpaceID: 100, ExptIDs: []int64{1}},
+			1, baselineTurnResults, baselineItemResults,
+			repoMocks.NewMockIExperimentRepo(ctrl),
+			repoMocks.NewMockIExptTurnResultRepo(ctrl),
+			repoMocks.NewMockIExptAnnotateRepo(ctrl),
+			svcMocks.NewMockIEvalTargetService(ctrl),
+			svcMocks.NewMockEvaluatorRecordService(ctrl),
+			svcMocks.NewMockEvaluationSetItemService(ctrl),
+			nil, nil, nil,
+			nil, nil,
+			map[int64]entity.ItemRunState{},
+			nil, nil,
+		)
+		require.Len(t, builder.ItemResults, 1)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo)
+		assert.Nil(t, builder.ItemResults[0].SystemInfo.Error)
 	})
 }
