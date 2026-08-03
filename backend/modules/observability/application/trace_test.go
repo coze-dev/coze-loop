@@ -1034,9 +1034,8 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockCfg.EXPECT().GetSearchTraceTreeMaxSpanLimit(gomock.Any(), gomock.Any()).Return(int32(10000))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{
+				mockSvc.EXPECT().GetTraceAll(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{
 					TraceId: "trace-1",
 					Spans:   loop_span.SpanList{},
 				}, nil)
@@ -1071,9 +1070,8 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockCfg.EXPECT().GetSearchTraceTreeMaxSpanLimit(gomock.Any(), gomock.Any()).Return(int32(10000))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				mockSvc.EXPECT().GetTraceAll(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				return fields{
 					traceSvc: mockSvc,
 					auth:     mockAuth,
@@ -1093,17 +1091,19 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "success case with custom span limit",
+			name: "success case forwards req to GetTraceAll without limit",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockSvc := svcmock.NewMockITraceService(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
-				mockCfg.EXPECT().GetSearchTraceTreeMaxSpanLimit(gomock.Any(), int64(12)).Return(int32(5000))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+				mockSvc.EXPECT().GetTraceAll(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, req *service.GetTraceReq) (*service.GetTraceResp, error) {
-						assert.Equal(t, int32(5000), req.Limit)
+						// GetTraceAll 内部自行按自然页大小翻页，application 层不下发 Limit；
+						// search_tree 不取 input/output 详情，故 WithDetail=false。
+						assert.Equal(t, int32(0), req.Limit)
+						assert.False(t, req.WithDetail)
 						return &service.GetTraceResp{
 							TraceId: "trace-1",
 							Spans:   loop_span.SpanList{},
@@ -4505,6 +4505,120 @@ func TestTraceApplication_GetAgentMetadata(t *testing.T) {
 				assert.NotNil(t, got)
 				assert.Len(t, got.GetAgents(), tt.wantAgents)
 			}
+		})
+	}
+}
+
+func TestTraceApplication_GetAdjacentTrace(t *testing.T) {
+	type fields struct {
+		traceSvc service.ITraceService
+		auth     rpc.IAuthProvider
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.GetAdjacentTraceRequest
+	}
+	validReq := func() *trace.GetAdjacentTraceRequest {
+		return &trace.GetAdjacentTraceRequest{
+			WorkspaceID: 12,
+			ThreadID:    "th-1",
+			TraceID:     "tr-1",
+			StartTime:   time.Now().UnixMilli(),
+			Direction:   trace.AdjacentDirection_Next,
+		}
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.GetAdjacentTraceResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetAdjacentTrace(gomock.Any(), gomock.Any()).Return(&service.GetAdjacentTraceResponse{
+					TraceID:   "tr-2",
+					StartTime: 5000,
+				}, nil)
+				return fields{traceSvc: mockSvc, auth: mockAuth}
+			},
+			args: args{ctx: context.Background(), req: validReq()},
+			want: &trace.GetAdjacentTraceResponse{
+				TraceID:   ptr.Of("tr-2"),
+				StartTime: ptr.Of(int64(5000)),
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid param: missing thread_id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{ctx: context.Background(), req: &trace.GetAdjacentTraceRequest{
+				WorkspaceID: 12,
+				TraceID:     "tr-1",
+				StartTime:   time.Now().UnixMilli(),
+				Direction:   trace.AdjacentDirection_Next,
+			}},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "invalid param: bad direction",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{ctx: context.Background(), req: &trace.GetAdjacentTraceRequest{
+				WorkspaceID: 12,
+				ThreadID:    "th-1",
+				TraceID:     "tr-1",
+				StartTime:   time.Now().UnixMilli(),
+				Direction:   trace.AdjacentDirection(99),
+			}},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "permission error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("forbidden"))
+				return fields{auth: mockAuth}
+			},
+			args:    args{ctx: context.Background(), req: validReq()},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetAdjacentTrace(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{traceSvc: mockSvc, auth: mockAuth}
+			},
+			args:    args{ctx: context.Background(), req: validReq()},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+			}
+			got, err := tr.GetAdjacentTrace(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

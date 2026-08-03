@@ -382,6 +382,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				{
 					_threads := _v14.Group("/threads", _threadsMw(handler)...)
+					_threads.POST("/adjacent_trace", append(_getadjacenttraceMw(handler), apis.GetAdjacentTrace)...)
 					_threads.POST("/stat", append(_getthreadstatMw(handler), apis.GetThreadStat)...)
 					{
 						_chat := _threads.Group("/chat", _chatMw(handler)...)

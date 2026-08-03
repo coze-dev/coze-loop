@@ -52,6 +52,13 @@ const (
 	defaultChatPageSize          int32 = 50
 	maxChatPageSize              int32 = 100
 	maxChatPageSizeWithoutDetail int32 = 5000
+
+	// GetTrace / GetTraceAll 单次查询的默认 span 上限：带 input/output 详情时较小，
+	// 不带详情时较大。GetTraceAll 以此作为每轮翻页大小。
+	defaultTraceSpanLimit         int32 = 1000
+	defaultTraceSpanLimitNoDetail int32 = 10000
+	// GetTraceAll 游标循环拉全时的累计硬上限
+	FetchAllMaxSpanLimit int32 = 100000
 )
 
 type ListSpansReq struct {
@@ -481,6 +488,28 @@ type GetThreadStatResponse struct {
 	UsedModels  []string
 }
 
+// AdjacentDirection 相邻方向：Prev=上一条（时间更早），Next=下一条（时间更晚），与 IDL enum 值对齐。
+type AdjacentDirection int32
+
+const (
+	AdjacentDirectionPrev AdjacentDirection = 1
+	AdjacentDirectionNext AdjacentDirection = 2
+)
+
+type GetAdjacentTraceRequest struct {
+	PlatformType loop_span.PlatformType
+	WorkspaceID  int64
+	ThreadID     string
+	TraceID      string
+	StartTime    int64 // 锚点 trace 起始时间，ms，作为 ±7 天窗口中心
+	Direction    AdjacentDirection
+}
+
+type GetAdjacentTraceResponse struct {
+	TraceID   string
+	StartTime int64 // ms
+}
+
 type GetAgentMetadataRequest struct {
 	WorkspaceID  int64
 	PlatformType loop_span.PlatformType
@@ -504,6 +533,7 @@ type ITraceService interface {
 	ListPreSpan(ctx context.Context, req *ListPreSpanReq) (r *ListPreSpanResp, err error)
 	ListPreSpanBatch(ctx context.Context, req *ListPreSpanBatchReq) (*ListPreSpanBatchResp, error)
 	GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error)
+	GetTraceAll(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error)
 	SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error)
 	ListSpansOApi(ctx context.Context, req *ListSpansOApiReq) (*ListSpansOApiResp, error)
 	ListPreSpanOApi(ctx context.Context, req *ListPreSpanOApiReq) (*ListPreSpanOApiResp, error)
@@ -531,6 +561,7 @@ type ITraceService interface {
 	ListTraceChat(ctx context.Context, req *ListTraceChatRequest) (*ListTraceChatResponse, error)
 	ListThreadChat(ctx context.Context, req *ListThreadChatRequest) (*ListThreadChatResponse, error)
 	GetThreadStat(ctx context.Context, req *GetThreadStatRequest) (*GetThreadStatResponse, error)
+	GetAdjacentTrace(ctx context.Context, req *GetAdjacentTraceRequest) (*GetAdjacentTraceResponse, error)
 	GetAgentMetadata(ctx context.Context, req *GetAgentMetadataRequest) (*GetAgentMetadataResponse, error)
 }
 
@@ -1216,9 +1247,9 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		omitColumns = []string{"input", "output"}
 	}
 	st := time.Now()
-	limit := int32(1000)
+	limit := defaultTraceSpanLimit
 	if !req.WithDetail {
-		limit = 10000
+		limit = defaultTraceSpanLimitNoDetail
 	}
 	if req.Limit > 0 {
 		if !req.WithDetail || req.Limit < limit {
@@ -1290,6 +1321,51 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		Spans:         spans,
 		NextPageToken: traceResult.PageToken,
 		HasMore:       traceResult.HasMore,
+	}, nil
+}
+
+// GetTraceAll 用游标循环调 GetTrace，把一条 trace 的全部 span 拉全后一次性返回，
+// 累计上限为 FetchAllMaxSpanLimit（10w），触顶即截断并告警。用于 trace 详情/树这类
+// 需要完整 span 集合、且对外不暴露分页的场景。
+func (r *TraceServiceImpl) GetTraceAll(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
+	allSpans := make(loop_span.SpanList, 0)
+	pageToken := req.PageToken
+	truncated := false
+	// 游标翻页每页固定用自然页大小（带详情 1000 / 不带详情 10000）。
+	// 设 Limit（>0）同时也让 GetTrace 走降序，与 repo 层游标过滤（start_time < token）保持一致。
+	pageLimit := defaultTraceSpanLimit
+	if !req.WithDetail {
+		pageLimit = defaultTraceSpanLimitNoDetail
+	}
+	for {
+		pageReq := *req
+		pageReq.Limit = pageLimit
+		pageReq.PageToken = pageToken
+		resp, err := r.GetTrace(ctx, &pageReq)
+		if err != nil {
+			return nil, err
+		}
+		allSpans = append(allSpans, resp.Spans...)
+		if int32(len(allSpans)) >= FetchAllMaxSpanLimit {
+			allSpans = allSpans[:FetchAllMaxSpanLimit]
+			truncated = true
+			break
+		}
+		// !HasMore 说明拉完；NextPageToken 为空兜底防死循环
+		if !resp.HasMore || resp.NextPageToken == "" {
+			break
+		}
+		pageToken = resp.NextPageToken
+	}
+	allSpans = allSpans.Uniq()
+	allSpans.SortByStartTime(false)
+	if truncated {
+		logs.CtxWarn(ctx, "GetTraceAll reached max span limit %d, spans truncated, workspace_id=%d trace_id=%s log_id=%s",
+			FetchAllMaxSpanLimit, req.WorkspaceID, req.TraceID, req.LogID)
+	}
+	return &GetTraceResp{
+		TraceId: req.TraceID,
+		Spans:   allSpans,
 	}, nil
 }
 
@@ -3022,6 +3098,82 @@ func (r *TraceServiceImpl) ListThreadChat(ctx context.Context, req *ListThreadCh
 		Messages:      messages,
 		NextPageToken: listResp.PageToken,
 		HasMore:       listResp.HasMore,
+	}, nil
+}
+
+// GetAdjacentTrace 以锚点 trace 为中心，在同 thread 内按方向取相邻的一条 trace。
+// trace_id != 锚点 下推 CK 排除自身，(start_time, span_id) 复合序保证同起始时间稳定 tie-break，
+// 时间窗服务端固定为锚点 start_time 前后各 7 天，LIMIT 1 由 DB 直接返回 0 或 1 条。
+func (r *TraceServiceImpl) GetAdjacentTrace(ctx context.Context, req *GetAdjacentTraceRequest) (*GetAdjacentTraceResponse, error) {
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+
+	filters := &loop_span.FilterFields{
+		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldThreadId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{req.ThreadID},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			},
+			{
+				FieldName: loop_span.SpanFieldSpaceId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{strconv.FormatInt(req.WorkspaceID, 10)},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			},
+			{
+				FieldName: loop_span.SpanFieldTraceId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{req.TraceID},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumNotEq),
+			},
+		},
+	}
+
+	// 方向 → 时间窗 + 排序：next 取更晚一条（升序），prev 取更早一条（降序）。
+	var startAt, endAt int64
+	param := &repo.ListSpansParam{
+		WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:            tenants,
+		Filters:            filters,
+		Limit:              1,
+		NotQueryAnnotation: true,
+		SelectColumns:      []string{loop_span.SpanFieldTraceId, loop_span.SpanFieldStartTime, loop_span.SpanFieldSpanId},
+	}
+	switch req.Direction {
+	case AdjacentDirectionNext:
+		startAt = req.StartTime
+		endAt = req.StartTime + timeutil.Day2MillSec(7)
+		param.AscByStartTime = true
+	case AdjacentDirectionPrev:
+		startAt = req.StartTime - timeutil.Day2MillSec(7)
+		endAt = req.StartTime
+		param.DescByStartTime = true
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid direction"))
+	}
+	param.StartAt = startAt
+	param.EndAt = endAt
+
+	listResp, err := r.traceRepo.ListSpans(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+
+	if listResp == nil || len(listResp.Spans) == 0 {
+		logs.CtxInfo(ctx, "GetAdjacentTrace no adjacent trace, workspace_id=%d thread_id=%s trace_id=%s direction=%d",
+			req.WorkspaceID, req.ThreadID, req.TraceID, req.Direction)
+		return &GetAdjacentTraceResponse{}, nil
+	}
+
+	adjacent := listResp.Spans[0]
+	return &GetAdjacentTraceResponse{
+		TraceID:   adjacent.TraceID,
+		StartTime: timeutil.MicroSec2MillSec(adjacent.StartTime),
 	}, nil
 }
 

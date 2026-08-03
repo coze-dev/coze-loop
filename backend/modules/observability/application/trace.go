@@ -362,8 +362,7 @@ func (t *TraceApplication) SearchTraceTree(ctx context.Context, req *trace.Searc
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Get trace req is invalid"))
 	}
-	sReq.Limit = t.traceConfig.GetSearchTraceTreeMaxSpanLimit(ctx, req.GetWorkspaceID())
-	sResp, err := t.traceService.GetTrace(ctx, sReq)
+	sResp, err := t.traceService.GetTraceAll(ctx, sReq)
 	if err != nil {
 		return nil, err
 	}
@@ -1513,6 +1512,62 @@ func (t *TraceApplication) GetThreadStat(ctx context.Context, req *trace.GetThre
 		TotalTokens: &sResp.TotalTokens,
 		UsedModels:  sResp.UsedModels,
 	}, nil
+}
+
+func (t *TraceApplication) GetAdjacentTrace(ctx context.Context, req *trace.GetAdjacentTraceRequest) (*trace.GetAdjacentTraceResponse, error) {
+	if err := t.validateGetAdjacentTraceReq(ctx, req); err != nil {
+		return nil, err
+	}
+
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+
+	sResp, err := t.traceService.GetAdjacentTrace(ctx, &service.GetAdjacentTraceRequest{
+		PlatformType: platformType,
+		WorkspaceID:  req.GetWorkspaceID(),
+		ThreadID:     req.GetThreadID(),
+		TraceID:      req.GetTraceID(),
+		StartTime:    req.GetStartTime(),
+		Direction:    service.AdjacentDirection(req.GetDirection()),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.GetAdjacentTraceResponse{
+		TraceID:   ptr.Of(sResp.TraceID),
+		StartTime: ptr.Of(sResp.StartTime),
+	}, nil
+}
+
+func (t *TraceApplication) validateGetAdjacentTraceReq(ctx context.Context, req *trace.GetAdjacentTraceRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("request is nil"))
+	}
+	if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	if req.GetThreadID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("thread_id is required"))
+	}
+	if req.GetTraceID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("trace_id is required"))
+	}
+	if req.GetStartTime() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid start_time"))
+	}
+	if req.GetDirection() != trace.AdjacentDirection_Prev && req.GetDirection() != trace.AdjacentDirection_Next {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid direction"))
+	}
+	return nil
 }
 
 func (t *TraceApplication) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest) (r *trace.UpsertColumnExtractConfigResponse, err error) {
