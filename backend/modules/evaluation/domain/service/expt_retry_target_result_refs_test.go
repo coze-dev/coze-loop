@@ -418,7 +418,9 @@ func (m runLogFullMatcher) Matches(x any) bool {
 	return true
 }
 
-func (m runLogFullMatcher) String() string { return "run_log slice with expected (item_id, version_id)" }
+func (m runLogFullMatcher) String() string {
+	return "run_log slice with expected (item_id, version_id)"
+}
 
 func newRetryHelperDeps(ctrl *gomock.Controller) retryItemResetDeps {
 	return retryItemResetDeps{
@@ -826,7 +828,7 @@ func TestExptRetryAllExec_ExptStart_MultiItemMixedVersion(t *testing.T) {
 	f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 	f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 		{ItemID: 10, ItemVersionID: ptr.Of(int64(1010)), Turns: []*entity.Turn{{ID: 100}}},
-		{ItemID: 20, ItemVersionID: nil, Turns: []*entity.Turn{{ID: 200}}},               // nil → 0
+		{ItemID: 20, ItemVersionID: nil, Turns: []*entity.Turn{{ID: 200}}},              // nil → 0
 		{ItemID: 30, ItemVersionID: ptr.Of(int64(0)), Turns: []*entity.Turn{{ID: 300}}}, // 0 也 0
 	}, ptr.Of(int64(3)), ptr.Of(int64(3)), nil, nil).Times(1)
 
