@@ -1327,6 +1327,30 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 		return nil, err
 	}
 
+	// SandboxAgent 评测对象：并发度改了就必须把沙箱任务的名额同步过去。
+	//
+	// 沙箱任务的并发上限只在 Init 时设定 —— SandboxScheduler 的 IDL 里 concurrency 只存在于
+	// InitRequest，没有任何 Update/Scale 方法。所以运行中只改实验的 ItemConcurNum 会造成两侧
+	// 分裂：evaluation 按新并发去申请沙箱，agent_studio 的名额还是 Init 时那份。超出的部分全部
+	// 601300702 concurrency limit reached，而该错误 fail-fast、不入队不重试（RunSync 满即返回
+	// ErrConcurrencyLimited；调度侧 isRetryableError 只认 "QuotaExceeded"），撞上即 item 永久失败。
+	// 实测：运行中把并发从 5 调到 30，59 题里 35 题以此挂掉。
+	//
+	// 重复 Init 是安全的：调度侧 Init 走 taskRepo.Upsert，会更新 Concurrency；同 tenant 重复调用
+	// 不报错（只有在 Active task 上换 tenant 才拒绝），而这里 tenant 由同一个实验推导，不会变。
+	//
+	// 与 Retry 不同，Init 失败**不**让整个更新失败：DB 里的 ItemConcurNum 已经改完了，此时返回错误
+	// 会让调用方以为没生效而重试，反而更乱。名额没跟上的后果是新并发暂时吃不满（老名额仍可用，
+	// 实验不会中断），故降级为告警。
+	if itemConcurNum != nil && e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
+		tenant := sandboxTenantForExperimentEntity(got)
+		concurrency := sandboxInitConcurrency(itemConcurNum, tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox)
+		if initErr := e.initSandboxTask(ctx, "update run conf", req.GetExptID(), concurrency, req.GetWorkspaceID(), tenant); initErr != nil {
+			logs.CtxWarn(ctx, "update run conf: re-init sandbox task fail, sandbox quota still at the old value, expt_id=%d, item_concur_num=%d, concurrency=%d, err=%v",
+				req.GetExptID(), gptr.Indirect(itemConcurNum), concurrency, initErr)
+		}
+	}
+
 	return &expt.UpdateExptRunConfResponse{
 		BaseResp: base.NewBaseResp(),
 	}, nil
