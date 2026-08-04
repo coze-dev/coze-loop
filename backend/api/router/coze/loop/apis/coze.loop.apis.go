@@ -210,6 +210,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_eval_target_versions.GET("/:eval_target_version_id", append(_getevaltargetversionMw(handler), apis.GetEvalTargetVersion)...)
 				}
 				{
+					_evaluation_set_templates := _v11.Group("/evaluation_set_templates", _evaluation_set_templatesMw(handler)...)
+					_evaluation_set_templates.POST("/list", append(_listevaluationsettemplatesMw(handler), apis.ListEvaluationSetTemplates)...)
+				}
+				{
 					_evaluation_set_versions := _v11.Group("/evaluation_set_versions", _evaluation_set_versionsMw(handler)...)
 					_evaluation_set_versions.POST("/batch_get", append(_batchgetevaluationsetversionsMw(handler), apis.BatchGetEvaluationSetVersions)...)
 				}
@@ -586,6 +590,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_eval_target_records0 := _evaluation0.Group("/eval_target_records", _eval_target_records0Mw(handler)...)
 					_eval_target_records0.GET("/:eval_target_record_id", append(_getevaltargetrecordoapiMw(handler), apis.GetEvalTargetRecordOApi)...)
 					_eval_target_records0.POST("/output_fields", append(_getevaltargetoutputfieldcontentoapiMw(handler), apis.GetEvalTargetOutputFieldContentOApi)...)
+				}
+				{
+					_evaluation_set_templates0 := _evaluation0.Group("/evaluation_set_templates", _evaluation_set_templates0Mw(handler)...)
+					_evaluation_set_templates0.GET("/list", append(_listevaluationsettemplatesoapiMw(handler), apis.ListEvaluationSetTemplatesOApi)...)
 				}
 				{
 					_evaluator_records0 := _evaluation0.Group("/evaluator_records", _evaluator_records0Mw(handler)...)

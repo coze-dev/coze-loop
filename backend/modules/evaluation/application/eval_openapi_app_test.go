@@ -2096,6 +2096,20 @@ func TestEvalOpenAPIApplication_UpdateEvaluationSetSchemaOApi(t *testing.T) {
 			wantErr: errno.CommonNoPermissionCode,
 		},
 		{
+			name: "template validation error",
+			buildReq: func() *openapi.UpdateEvaluationSetSchemaOApiRequest {
+				fields := []*eval_set.FieldSchema{{}}
+				return &openapi.UpdateEvaluationSetSchemaOApiRequest{WorkspaceID: gptr.Of(workspaceID), EvaluationSetID: gptr.Of(evaluationSetID), Fields: fields}
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockEvaluationSetSchemaService) {
+				set := &entity.EvaluationSet{ID: evaluationSetID, SpaceID: workspaceID}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evaluationSetID, gomock.Nil(), gomock.Nil()).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				evalSetSvc.EXPECT().ValidateEvaluationSetSchemaUpdate(gomock.Any(), gomock.AssignableToTypeOf(&entity.ValidateEvaluationSetSchemaUpdateParam{})).Return(errors.New("locked field changed"))
+			},
+			wantErr: -1,
+		},
+		{
 			name: "update error",
 			buildReq: func() *openapi.UpdateEvaluationSetSchemaOApiRequest {
 				fields := []*eval_set.FieldSchema{{}}
@@ -2105,6 +2119,7 @@ func TestEvalOpenAPIApplication_UpdateEvaluationSetSchemaOApi(t *testing.T) {
 				set := &entity.EvaluationSet{ID: evaluationSetID, SpaceID: workspaceID}
 				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evaluationSetID, gomock.Nil(), gomock.Nil()).Return(set, nil)
 				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				evalSetSvc.EXPECT().ValidateEvaluationSetSchemaUpdate(gomock.Any(), gomock.AssignableToTypeOf(&entity.ValidateEvaluationSetSchemaUpdateParam{})).Return(nil)
 				schemaSvc.EXPECT().UpdateEvaluationSetSchema(gomock.Any(), workspaceID, evaluationSetID, gomock.Any()).Return(errors.New("update error"))
 			},
 			wantErr: -1,
@@ -2120,6 +2135,7 @@ func TestEvalOpenAPIApplication_UpdateEvaluationSetSchemaOApi(t *testing.T) {
 				set := &entity.EvaluationSet{ID: evaluationSetID, SpaceID: workspaceID, BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: owner}}}
 				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evaluationSetID, gomock.Nil(), gomock.Nil()).Return(set, nil)
 				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				evalSetSvc.EXPECT().ValidateEvaluationSetSchemaUpdate(gomock.Any(), gomock.AssignableToTypeOf(&entity.ValidateEvaluationSetSchemaUpdateParam{})).Return(nil)
 				schemaSvc.EXPECT().UpdateEvaluationSetSchema(gomock.Any(), workspaceID, evaluationSetID, gomock.Any()).Return(nil)
 			},
 		},

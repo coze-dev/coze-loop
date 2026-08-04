@@ -23,6 +23,7 @@ struct CreateEvaluationSetOApiRequest {
     5: optional eval_set.EvaluationSetType type (api.body = "type", vt.max_size = "128")
     6: optional list<eval_set.ResourceTagRef> tags (api.body = "tags", vt.elem.skip = "false")
     7: optional string dataset_key (api.body = "dataset_key", vt.max_size = "255")  // 数据集业务唯一键，创建后不可变
+    8: optional i64 template_dataset_id (api.body = "template_dataset_id", api.js_conv = "true", go.tag = 'json:"template_dataset_id"') // 评测集模版ID
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -38,6 +39,33 @@ struct CreateEvaluationSetOApiResponse {
 
 struct CreateEvaluationSetOpenAPIData {
     1: optional i64 evaluation_set_id (api.js_conv = "true", go.tag = 'json:"evaluation_set_id"'),
+}
+
+// 查询评测集模版列表
+struct ListEvaluationSetTemplatesOApiRequest {
+    1: optional i64 workspace_id (api.query = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
+
+    100: optional string page_token (api.query = "page_token")
+    101: optional i32 page_size (api.query = "page_size", vt.gt = "0", vt.le = "200")
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ListEvaluationSetTemplatesOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional ListEvaluationSetTemplatesOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListEvaluationSetTemplatesOpenAPIData {
+    1: optional list<eval_set.EvaluationSetTemplate> templates
+
+    100: optional bool has_more
+    101: optional string next_page_token
+    102: optional i64 total (api.js_conv = "true", go.tag = 'json:"total"')
 }
 
 // 1.2 获取评测集详情
@@ -1423,6 +1451,8 @@ service EvaluationOpenAPIService {
     // 评测集接口
     // 创建评测集
     CreateEvaluationSetOApiResponse CreateEvaluationSetOApi(1: CreateEvaluationSetOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/evaluation_sets")
+    // 查询评测集模版列表
+    ListEvaluationSetTemplatesOApiResponse ListEvaluationSetTemplatesOApi(1: ListEvaluationSetTemplatesOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_set_templates/list")
     // 获取评测集详情
     GetEvaluationSetOApiResponse GetEvaluationSetOApi(1: GetEvaluationSetOApiRequest req) (api.category = "openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
     // 更新评测集详情

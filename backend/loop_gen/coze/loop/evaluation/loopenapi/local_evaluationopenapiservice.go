@@ -46,6 +46,29 @@ func (l *LocalEvaluationOpenAPIService) CreateEvaluationSetOApi(ctx context.Cont
 	return result.GetSuccess(), nil
 }
 
+// ListEvaluationSetTemplatesOApi
+// 查询评测集模版列表
+func (l *LocalEvaluationOpenAPIService) ListEvaluationSetTemplatesOApi(ctx context.Context, req *openapi.ListEvaluationSetTemplatesOApiRequest, callOptions ...callopt.Option) (*openapi.ListEvaluationSetTemplatesOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceListEvaluationSetTemplatesOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceListEvaluationSetTemplatesOApiResult)
+		resp, err := l.impl.ListEvaluationSetTemplatesOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceListEvaluationSetTemplatesOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceListEvaluationSetTemplatesOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListEvaluationSetTemplatesOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // GetEvaluationSetOApi
 // 获取评测集详情
 func (l *LocalEvaluationOpenAPIService) GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest, callOptions ...callopt.Option) (*openapi.GetEvaluationSetOApiResponse, error) {

@@ -71,6 +71,7 @@ func EvaluationSetDO2DTO(do *entity.EvaluationSet) *eval_set.EvaluationSet {
 		Type:                 do.DatasetType,
 		Tags:                 ResourceTagDO2DTOs(do.Tags),
 		DatasetKey:           gptr.Of(do.DatasetKey),
+		TemplateDatasetID:    do.TemplateDatasetID,
 	}
 }
 

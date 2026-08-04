@@ -9,6 +9,8 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 )
 
@@ -174,4 +176,20 @@ func GetEvaluationSetItemVersion(ctx context.Context, c *app.RequestContext) {
 // @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/versions/:item_version_id [PATCH]
 func UpdateEvaluationSetItemVersion(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalSetSvc.UpdateEvaluationSetItemVersion)
+}
+
+// ListEvaluationSetTemplates .
+// @router /api/evaluation/v1/evaluation_set_templates/list [POST]
+func ListEvaluationSetTemplates(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req eval_set.ListEvaluationSetTemplatesRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(eval_set.ListEvaluationSetTemplatesResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }

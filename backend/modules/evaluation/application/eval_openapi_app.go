@@ -159,6 +159,9 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 	if req.GetName() == "" {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("name is required"))
 	}
+	if req.TemplateDatasetID != nil && req.GetTemplateDatasetID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template_dataset_id must be greater than 0"))
+	}
 	// 鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
@@ -178,6 +181,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 		DatasetType:         req.Type,
 		Tags:                evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
 		DatasetKey:          req.DatasetKey,
+		TemplateDatasetID:   req.TemplateDatasetID,
 	})
 	if err != nil {
 		return nil, err
@@ -189,6 +193,44 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 	return &openapi.CreateEvaluationSetOApiResponse{
 		Data: &openapi.CreateEvaluationSetOpenAPIData{
 			EvaluationSetID: gptr.Of(id),
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) ListEvaluationSetTemplatesOApi(ctx context.Context, req *openapi.ListEvaluationSetTemplatesOApiRequest) (r *openapi.ListEvaluationSetTemplatesOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	workspaceID := int64(0)
+	if req != nil {
+		workspaceID = req.GetWorkspaceID()
+	}
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, workspaceID, 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+	templates, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSetTemplates(ctx, &entity.ListEvaluationSetTemplatesParam{
+		SpaceID:   req.GetWorkspaceID(),
+		PageSize:  req.PageSize,
+		PageToken: req.PageToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+	hasMore := nextPageToken != nil && *nextPageToken != ""
+	return &openapi.ListEvaluationSetTemplatesOApiResponse{
+		Data: &openapi.ListEvaluationSetTemplatesOpenAPIData{
+			Templates:     evaluation_set.OpenAPIEvaluationSetTemplateDO2DTOs(templates),
+			HasMore:       gptr.Of(hasMore),
+			NextPageToken: nextPageToken,
+			Total:         total,
 		},
 	}, nil
 }
@@ -1233,7 +1275,21 @@ func (e *EvalOpenAPIApplication) UpdateEvaluationSetSchemaOApi(ctx context.Conte
 		return nil, err
 	}
 	// domain调用
-	err = e.evaluationSetSchemaService.UpdateEvaluationSetSchema(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), evaluation_set.OpenAPIFieldSchemaDTO2DOs(req.Fields))
+	fields := evaluation_set.OpenAPIFieldSchemaDTO2DOs(req.Fields)
+	var currentSchema *entity.EvaluationSetSchema
+	if set.EvaluationSetVersion != nil {
+		currentSchema = set.EvaluationSetVersion.EvaluationSetSchema
+	}
+	err = e.evaluationSetService.ValidateEvaluationSetSchemaUpdate(ctx, &entity.ValidateEvaluationSetSchemaUpdateParam{
+		SpaceID:             req.GetWorkspaceID(),
+		EvaluationSetID:     req.GetEvaluationSetID(),
+		CurrentSchema:       currentSchema,
+		UpdatedFieldSchemas: fields,
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = e.evaluationSetSchemaService.UpdateEvaluationSetSchema(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), fields)
 	if err != nil {
 		return nil, err
 	}

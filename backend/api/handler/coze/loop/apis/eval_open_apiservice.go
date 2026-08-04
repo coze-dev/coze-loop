@@ -338,3 +338,9 @@ func ListEvalTargetsOApi(ctx context.Context, c *app.RequestContext) {
 func AsyncRunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.AsyncRunEvaluatorOApi)
 }
+
+// ListEvaluationSetTemplatesOApi .
+// @router /v1/loop/evaluation/evaluation_set_templates/list [GET]
+func ListEvaluationSetTemplatesOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetTemplatesOApi)
+}

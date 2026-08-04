@@ -45,6 +45,27 @@ func (l *LocalEvaluationSetService) CreateEvaluationSet(ctx context.Context, req
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationSetService) ListEvaluationSetTemplates(ctx context.Context, req *eval_set.ListEvaluationSetTemplatesRequest, callOptions ...callopt.Option) (*eval_set.ListEvaluationSetTemplatesResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceListEvaluationSetTemplatesArgs)
+		result := out.(*eval_set.EvaluationSetServiceListEvaluationSetTemplatesResult)
+		resp, err := l.impl.ListEvaluationSetTemplates(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceListEvaluationSetTemplatesArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceListEvaluationSetTemplatesResult{}
+	ctx = l.injectRPCInfo(ctx, "ListEvaluationSetTemplates")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationSetService) UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest, callOptions ...callopt.Option) (*eval_set.UpdateEvaluationSetResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*eval_set.EvaluationSetServiceUpdateEvaluationSetArgs)
