@@ -33,6 +33,7 @@ func (a *AuthRPCAdapter) mCheckPromptPermissionBase(ctx context.Context, spaceID
 		AuthPrincipalType:  authentity.AuthPrincipalTypePtr(authentity.AuthPrincipalType_CozeIdentifier),
 		AuthCozeIdentifier: &authentity.AuthCozeIdentifier{IdentityTicket: nil},
 	}
+	spaceIDStr := fmt.Sprint(spaceID)
 	for _, promptID := range promptIDs {
 		authPairs = append(authPairs, &authentity.SubjectActionObjects{
 			Subject: authSubject,
@@ -41,6 +42,7 @@ func (a *AuthRPCAdapter) mCheckPromptPermissionBase(ctx context.Context, spaceID
 				{
 					ID:         ptr.Of(fmt.Sprint(promptID)),
 					EntityType: ptr.Of(authentity.AuthEntityTypePrompt),
+					SpaceID:    &spaceIDStr,
 				},
 			},
 		})
