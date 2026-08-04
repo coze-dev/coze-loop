@@ -898,10 +898,10 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
 				}
 				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), &entity.Session{UserID: "789", AppID: 0}).Return(&sandboxExpt, nil)
-				// ItemConcurNum=1 且非双沙箱 → sandboxInitConcurrency = ceil(1*1.2) = 2
+				// ItemConcurNum=1 且非双沙箱 → sandboxInitConcurrency = 1*buffer(5) = 5
 				mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
 					TaskID:      strconv.FormatInt(validExptID, 10),
-					Concurrency: int32(2),
+					Concurrency: int32(5),
 					WorkspaceID: validWorkspaceID,
 				}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -7281,10 +7281,10 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
 		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-		// 未配 ItemConcurNum → 归一化为 DefaultSubmitItemConcurNum(5), 非双沙箱 → ceil(5*1.2) = 6
+		// 未配 ItemConcurNum → 归一化为 DefaultSubmitItemConcurNum(5), 非双沙箱 → 5*buffer(5) = 25
 		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
 			TaskID:      strconv.FormatInt(validExptID, 10),
-			Concurrency: int32(6),
+			Concurrency: int32(25),
 			WorkspaceID: validWorkspaceID,
 		}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
 

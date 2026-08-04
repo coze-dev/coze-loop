@@ -29,23 +29,23 @@ func TestSandboxInitConcurrency(t *testing.T) {
 		dual bool
 		want int32
 	}{
-		// single: 5*1.2=6
-		{name: "nil single -> default*1.2", in: nil, dual: false, want: 6},
-		// dual: 5*2*1.2=12
-		{name: "nil dual -> default*2*1.2", in: nil, dual: true, want: 12},
-		{name: "zero single -> default*1.2", in: gptr.Of(0), dual: false, want: 6},
-		{name: "negative single -> default*1.2", in: gptr.Of(-5), dual: false, want: 6},
-		// 7*1.2=8.4 → ceil 9
-		{name: "positive single ceil", in: gptr.Of(7), dual: false, want: 9},
-		// 7*2*1.2=16.8 → ceil 17
-		{name: "positive dual doubled then ceil", in: gptr.Of(7), dual: true, want: 17},
-		// 1*2*1.2=2.4 → ceil 3: 单题双沙箱至少要 2, 余量再给 1。这条是 concurrency=1 时
+		// buffer=5。single: 5*5=25
+		{name: "nil single -> default*buffer", in: nil, dual: false, want: 25},
+		// dual: 5*2*5=50
+		{name: "nil dual -> default*2*buffer", in: nil, dual: true, want: 50},
+		{name: "zero single -> default*buffer", in: gptr.Of(0), dual: false, want: 25},
+		{name: "negative single -> default*buffer", in: gptr.Of(-5), dual: false, want: 25},
+		// 7*5=35
+		{name: "positive single", in: gptr.Of(7), dual: false, want: 35},
+		// 7*2*5=70
+		{name: "positive dual doubled", in: gptr.Of(7), dual: true, want: 70},
+		// 1*2*5=10: 单题双沙箱至少要 2, 余量再放大。这条是 concurrency=1 时
 		// 100% 撞配额那个 bug 的回归钉子 —— 结果必须 >= 2。
-		{name: "one item dual must fit two sandboxes", in: gptr.Of(1), dual: true, want: 3},
-		// 1*1.2=1.2 → ceil 2: 单沙箱单并发也留一点余量。
-		{name: "one item single", in: gptr.Of(1), dual: false, want: 2},
-		// 整数结果不该被余量多推一格: 5*2=10, 10*1.2=12 恰好整数。
-		{name: "exact integer no extra bump", in: gptr.Of(def), dual: true, want: 12},
+		{name: "one item dual must fit two sandboxes", in: gptr.Of(1), dual: true, want: 10},
+		// 1*5=5: 单沙箱单并发也留余量。
+		{name: "one item single", in: gptr.Of(1), dual: false, want: 5},
+		// 整数结果不该被余量多推一格: 5*2*5=50 恰好整数。
+		{name: "exact integer no extra bump", in: gptr.Of(def), dual: true, want: 50},
 	}
 	for _, c := range cases {
 		c := c

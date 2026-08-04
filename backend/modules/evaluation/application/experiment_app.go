@@ -86,7 +86,17 @@ type experimentApplication struct {
 const sandboxSchedulerInitTimeout = 5 * time.Second
 
 // sandboxConcurrencyBuffer 是沙箱任务并发配额的余量系数（见 sandboxInitConcurrency）。
-const sandboxConcurrencyBuffer = 1.2
+//
+// 从 1.2 放大到 5：1.2 的余量隐含假设「item 跑完即归还名额」，实测该假设不成立 ——
+// 双沙箱 item 上报 SUCCESS 后 destroy 未被触发，每 item 净漏 2 个 execution 名额，
+// active_count 只增不减；而配额是 execution 粒度的硬闸、被卡的 item 直接判永久失败
+// （不重试不排队），于是 6 个 item 打满 12 个名额后剩下全挂 601300702
+// （medium 59 题实测 3 success / 21+ failed）。
+//
+// 泄漏本身另行修复（先补 OSS 37977972 的可观测性定位跳过点），这里把余量拉大兜底：
+// 名额多给**不会**多起沙箱（同时起几个沙箱由 item 并发度决定），只是把硬闸抬高，
+// 让泄漏在单次实验内不至于把队列彻底堵死。
+const sandboxConcurrencyBuffer = 5
 
 func NewExperimentApplication(
 	aggResultSvc service.ExptAggrResultService,
