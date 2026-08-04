@@ -708,6 +708,8 @@ func (e *EvalTargetServiceImpl) LoadRecordFullData(ctx context.Context, record *
 // 仅做 best-effort：任何步骤失败仅记录日志，不阻断上层调用。
 func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Context, record *entity.EvalTargetRecord) {
 	if e.sandboxSchedulerAdapter == nil || record == nil {
+		// 静默跳过等于沙箱泄漏 + 并发名额不归还，必须留痕（adapter 未接线是配置问题，不该沉默）。
+		logs.CtxWarn(ctx, "[SandboxDestroy] skip: adapter_nil=%t record_nil=%t", e.sandboxSchedulerAdapter == nil, record == nil)
 		return
 	}
 	// 仅 SandboxAgent 评测对象需要销毁沙箱执行
@@ -718,11 +720,22 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 		return
 	}
 	if targetVersion == nil || targetVersion.EvalTargetType != entity.EvalTargetTypeSandboxAgent {
+		// 类型不匹配就不销 —— 但双沙箱 item 若因 version 查不到/类型读错落到这里，沙箱同样泄漏，
+		// 而原来这条路径完全无日志，排查时无法区分「不该销」和「该销却没销」。
+		gotType := entity.EvalTargetType(-1)
+		if targetVersion != nil {
+			gotType = targetVersion.EvalTargetType
+		}
+		logs.CtxWarn(ctx, "[SandboxDestroy] skip: not a SandboxAgent target, record_id=%d, space_id=%d, version_id=%d, version_nil=%t, got_type=%d",
+			record.ID, record.SpaceID, record.TargetVersionID, targetVersion == nil, gotType)
 		return
 	}
 
 	taskID := e.resolveSandboxTaskIDByRunID(ctx, record.ExperimentRunID)
-	e.destroySandboxExecute(ctx, taskID, record.SpaceID, sandboxExecuteIDsOf(ctx, record))
+	executeIDs := sandboxExecuteIDsOf(ctx, record)
+	logs.CtxInfo(ctx, "[SandboxDestroy] destroying sandbox executes, record_id=%d, task_id=%s, expt_run_id=%d, execute_ids=%v",
+		record.ID, taskID, record.ExperimentRunID, executeIDs)
+	e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs)
 }
 
 // sandboxExecuteIDsOf 取该 record 本次调用实际创建的 sandbox execution id 列表。
@@ -882,6 +895,12 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	}
 
 	if status := gptr.Indirect(record.Status); status != entity.EvalTargetRunStatusAsyncInvoking {
+		// 这条 return 会跳过函数尾部的 destroySandboxExecuteIfNeeded —— 双沙箱下就是
+		// 「沙箱永不回收 + 并发名额永不归还」，后续 item 全撞 601300702。原来只返回 error，
+		// 而上游 ReportEvalTargetInvokeResult 并不打印它，现象是「什么都没发生」，
+		// 只能靠「日志里没有 destroy」反推。必须留痕。
+		logs.CtxWarn(ctx, "[SandboxDestroy] ReportInvokeRecords skipped: record status is not AsyncInvoking, sandbox will NOT be destroyed, record_id=%d, space_id=%d, got_status=%d, want_status=%d",
+			param.RecordID, param.SpaceID, status, entity.EvalTargetRunStatusAsyncInvoking)
 		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("unexpected target result status %d", status)))
 	}
 	if record.EvalTargetOutputData != nil && len(record.EvalTargetOutputData.Ext) > 0 {
