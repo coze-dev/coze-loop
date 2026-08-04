@@ -203,7 +203,7 @@ func (t *TraceRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTrace
 }
 
 func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam) (*repo.ListSpansResult, error) {
-	spanStorage := t.storageProvider.GetTraceStorage(ctx, req.WorkSpaceID, req.Tenants, string(loop_span.TraceSceneDefault))
+	spanStorage := t.storageProvider.GetTraceStorage(ctx, req.WorkSpaceID, req.Tenants, loop_span.TraceSceneDefault)
 	spanDao := t.spanDaos[spanStorage.StorageName]
 	if spanDao == nil {
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
@@ -328,7 +328,7 @@ func (t *TraceRepoImpl) ListSpansRepeat(ctx context.Context, req *repo.ListSpans
 }
 
 func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (*repo.GetTraceResult, error) {
-	spanStorage := t.storageProvider.GetTraceStorage(ctx, req.WorkSpaceID, req.Tenants, string(req.TraceScene))
+	spanStorage := t.storageProvider.GetTraceStorage(ctx, req.WorkSpaceID, req.Tenants, req.TraceScene)
 	spanDao := t.spanDaos[spanStorage.StorageName]
 	if spanDao == nil {
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
@@ -493,7 +493,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 }
 
 func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnnotationsParam) (loop_span.AnnotationList, error) {
-	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants, string(loop_span.TraceSceneDefault))
+	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants, loop_span.TraceSceneDefault)
 	annoDao := t.annoDaos[spanStorage.StorageName]
 	if annoDao == nil {
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
@@ -529,7 +529,7 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 }
 
 func (t *TraceRepoImpl) ListWorkspaceAnnotations(ctx context.Context, param *repo.ListWorkspaceAnnotationsParam) (loop_span.AnnotationList, error) {
-	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants, string(loop_span.TraceSceneDefault))
+	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants, loop_span.TraceSceneDefault)
 	annoDao := t.annoDaos[spanStorage.StorageName]
 	if annoDao == nil {
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
@@ -563,7 +563,7 @@ func (t *TraceRepoImpl) ListWorkspaceAnnotations(ctx context.Context, param *rep
 }
 
 func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnotationParam) (*loop_span.Annotation, error) {
-	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants, string(loop_span.TraceSceneDefault))
+	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants, loop_span.TraceSceneDefault)
 	annoDao := t.annoDaos[spanStorage.StorageName]
 	if annoDao == nil {
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
@@ -592,7 +592,7 @@ func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnota
 }
 
 func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.InsertAnnotationParam) error {
-	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, []string{param.Tenant}, string(loop_span.TraceSceneDefault))
+	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, []string{param.Tenant}, loop_span.TraceSceneDefault)
 	annoDao := t.annoDaos[spanStorage.StorageName]
 	if annoDao == nil {
 		return errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
@@ -629,7 +629,7 @@ func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Inser
 }
 
 func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
-	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants, string(loop_span.TraceSceneDefault))
+	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants, loop_span.TraceSceneDefault)
 	spanDao := t.spanDaos[spanStorage.StorageName]
 	if spanDao == nil {
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
