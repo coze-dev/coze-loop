@@ -1,0 +1,29 @@
+backend/modules/observability/domain/component/storage/mocks/storage_provider.go
+  s_61c7307bd4b79b::t_5aff0e406838c7 17,46
+backend/modules/observability/domain/component/storage/storage.go
+  s_61c7307bd4b79b::t_104d91e99add23 7-8,18
+backend/modules/observability/infra/repo/trace.go
+  s_61c7307bd4b79b::t_cdbb9939f9caa2 206,331,496,532,566,595,632
+backend/modules/observability/infra/repo/trace_test.go
+  s_61c7307bd4b79b::t_3d03cdb6e777f8 31
+backend/modules/observability/infra/storage/storage.go
+  s_61c7307bd4b79b::t_f792f77858a753 9,18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4d3997aec515502f2d649fb5cb60f886edb5018f",
+  "prompts": {},
+  "sessions": {
+    "s_61c7307bd4b79b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_61c7307bd4b79b",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
