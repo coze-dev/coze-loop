@@ -239,3 +239,155 @@ func TestExptRetryItemsExec_ResetEvalItems_ResetsTurnResultTargetAndRunID(t *tes
 	}, buildMockExpt(), []int64{itemID})
 	assert.NoError(t, err)
 }
+
+// runLogItemVersionMatcher 断言创建的 ExptItemResultRunLog 都携带非零 ItemVersionID,
+// 且与期望的 (item_id -> version_id) 映射一致。
+type runLogItemVersionMatcher struct{ want map[int64]int64 }
+
+func (m runLogItemVersionMatcher) Matches(x any) bool {
+	logs, ok := x.([]*entity.ExptItemResultRunLog)
+	if !ok {
+		return false
+	}
+	if len(logs) != len(m.want) {
+		return false
+	}
+	for _, rl := range logs {
+		if rl == nil {
+			return false
+		}
+		want, ok := m.want[rl.ItemID]
+		if !ok {
+			return false
+		}
+		if rl.ItemVersionID != want {
+			return false
+		}
+	}
+	return true
+}
+
+func (m runLogItemVersionMatcher) String() string {
+	return "[]*ExptItemResultRunLog with expected ItemVersionID per ItemID"
+}
+
+// TestExptRetryItemsExec_ResetEvalItems_ItemVersionIDPassThrough 覆盖 Single-set 单行重试:
+// 新建的 expt_item_result_run_log 必须从 expt_item_result 平移 item_version_id,
+// 否则 BuildExptRecordEvalCtx 兜底读到 0, ItemVersionQueries 里 ItemVersionID=nil,
+// 触发下游 601100201 (item_version_id or item_version is required)。
+func TestExptRetryItemsExec_ResetEvalItems_ItemVersionIDPassThrough(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const (
+		exptID          = int64(1)
+		newRunID        = int64(2)
+		spaceID         = int64(3)
+		itemID          = int64(700)
+		expectVersionID = int64(70) // 从 expt_item_result.ItemVersionID 平移
+	)
+
+	f := buildRetryItemsExecFields(ctrl)
+
+	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
+	f.evaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
+		{ItemID: itemID, ItemVersionID: ptr.Of(expectVersionID), Turns: []*entity.Turn{{ID: 7001}}},
+	}, nil).Times(1)
+	f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{800, 801}, nil).Times(1)
+	// item_result 表里已经存了 item 版本 (首次执行时落下), 重试重置时需要平移到 run_log。
+	f.exptItemResultRepo.EXPECT().MGetItemResults(gomock.Any(), exptID, gomock.Any(), spaceID).Return([]*entity.ExptItemResult{
+		{ItemID: itemID, ItemVersionID: expectVersionID, Status: entity.ItemRunState_Fail},
+	}, nil).Times(1)
+	f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, gomock.Any(), spaceID, gomock.Any()).Return(nil).Times(1)
+	f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+	// 核心断言: 落 run_log 时必须带上从 item_result 平移的 ItemVersionID。
+	f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), runLogItemVersionMatcher{want: map[int64]int64{itemID: expectVersionID}}).Return(nil).Times(1)
+
+	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+	exec := &ExptRetryItemsExec{
+		manager:                  f.manager,
+		exptItemResultRepo:       f.exptItemResultRepo,
+		exptStatsRepo:            f.exptStatsRepo,
+		exptTurnResultRepo:       f.exptTurnResultRepo,
+		idgenerator:              f.idgenerator,
+		evaluationSetItemService: f.evaluationSetItemService,
+		exptRepo:                 f.exptRepo,
+		idem:                     f.idem,
+		configer:                 f.configer,
+		publisher:                f.publisher,
+		evaluatorRecordService:   f.evaluatorRecordService,
+		templateManager:          f.templateManager,
+		exptRunLogRepo:           f.exptRunLogRepo,
+	}
+
+	err := exec.resetEvalItems(session.WithCtxUser(context.Background(), &session.User{ID: "u"}), &entity.ExptScheduleEvent{
+		ExptID:    exptID,
+		ExptRunID: newRunID,
+		SpaceID:   spaceID,
+		Session:   &entity.Session{UserID: "u"},
+	}, buildMockExpt(), []int64{itemID})
+	assert.NoError(t, err)
+}
+
+// TestExptRetryAllExec_ExptStart_ItemVersionIDPassThrough 覆盖 Single-set 全部重试:
+// 新建的 expt_item_result_run_log 必须从 List 返回的 item.ItemVersionID 平移到 run_log,
+// 与单行重试对齐, 避免同类 601100201 风险 (当前用户没在 committed 版本上试全部重试, 但潜在漏洞相同)。
+func TestExptRetryAllExec_ExptStart_ItemVersionIDPassThrough(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const (
+		exptID          = int64(1)
+		newRunID        = int64(2)
+		spaceID         = int64(3)
+		itemID          = int64(500)
+		expectVersionID = int64(50)
+	)
+
+	f := buildRetryAllExecFields(ctrl)
+
+	f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
+	f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
+		{ItemID: itemID, ItemVersionID: ptr.Of(expectVersionID), Turns: []*entity.Turn{{ID: 5001}}},
+	}, ptr.Of(int64(1)), ptr.Of(int64(1)), nil, nil).Times(1)
+
+	f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{600, 601}, nil).Times(1)
+	f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, gomock.Any(), spaceID, gomock.Any()).Return(nil).Times(1)
+	f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+	// 核心断言。
+	f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), runLogItemVersionMatcher{want: map[int64]int64{itemID: expectVersionID}}).Return(nil).Times(1)
+
+	f.exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{}, nil).Times(1)
+	f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1}).Times(1)
+	f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+	exec := &ExptRetryAllExec{
+		manager:                  f.manager,
+		exptItemResultRepo:       f.exptItemResultRepo,
+		exptStatsRepo:            f.exptStatsRepo,
+		exptTurnResultRepo:       f.exptTurnResultRepo,
+		idgenerator:              f.idgenerator,
+		evaluationSetItemService: f.evaluationSetItemService,
+		exptRepo:                 f.exptRepo,
+		idem:                     f.idem,
+		configer:                 f.configer,
+		publisher:                f.publisher,
+		evaluatorRecordService:   f.evaluatorRecordService,
+		templateManager:          f.templateManager,
+	}
+
+	err := exec.ExptStart(session.WithCtxUser(context.Background(), &session.User{ID: "u"}), &entity.ExptScheduleEvent{
+		ExptID:    exptID,
+		ExptRunID: newRunID,
+		SpaceID:   spaceID,
+		Session:   &entity.Session{UserID: "u"},
+	}, buildMockExpt())
+	assert.NoError(t, err)
+}
