@@ -73,6 +73,7 @@ struct GetTraceRequest {
     10: optional filter.FilterFields filters (api.query="filters")
     11: optional i32 page_size (api.query="page_size")
     12: optional string page_token (api.query="page_token")
+    13: optional common.TraceScene trace_scene (api.query="trace_scene")
 
     255: optional base.Base Base
 }

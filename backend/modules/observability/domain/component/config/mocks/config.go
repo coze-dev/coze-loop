@@ -349,6 +349,21 @@ func (mr *MockITraceConfigMockRecorder) GetTraceCkCfg(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceCkCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetTraceCkCfg), ctx)
 }
 
+// GetTraceSceneCfg mocks base method.
+func (m *MockITraceConfig) GetTraceSceneCfg(ctx context.Context) (*config.TraceSceneCfg, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTraceSceneCfg", ctx)
+	ret0, _ := ret[0].(*config.TraceSceneCfg)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTraceSceneCfg indicates an expected call of GetTraceSceneCfg.
+func (mr *MockITraceConfigMockRecorder) GetTraceSceneCfg(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceSceneCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetTraceSceneCfg), ctx)
+}
+
 // GetTraceDataMaxDurationDay mocks base method.
 func (m *MockITraceConfig) GetTraceDataMaxDurationDay(ctx context.Context, platformType *string) int64 {
 	m.ctrl.T.Helper()

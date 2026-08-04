@@ -21,6 +21,7 @@ const (
 	spanWithAnnotationMqProducerCfgKey = "span_with_annotation_mq_producer_config"
 	tenantTablesCfgKey                 = "trace_tenant_cfg"
 	traceCkCfgKey                      = "trace_ck_cfg"
+	traceSceneCfgKey                   = "trace_scene_cfg"
 	traceFieldMetaInfoCfgKey           = "trace_field_meta_info"
 	traceMaxDurationDay                = "trace_max_duration_day"
 	annotationSourceCfgKey             = "annotation_source_cfg"
@@ -108,6 +109,14 @@ func (t *TraceConfigCenter) GetBackfillMqProducerCfg(ctx context.Context) (*conf
 func (t *TraceConfigCenter) GetTraceCkCfg(ctx context.Context) (*config.TraceCKCfg, error) {
 	cfg := new(config.TraceCKCfg)
 	if err := t.UnmarshalKey(context.Background(), traceCkCfgKey, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func (t *TraceConfigCenter) GetTraceSceneCfg(ctx context.Context) (*config.TraceSceneCfg, error) {
+	cfg := new(config.TraceSceneCfg)
+	if err := t.UnmarshalKey(context.Background(), traceSceneCfgKey, cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil

@@ -13,6 +13,6 @@ type Storage struct {
 
 //go:generate mockgen -destination=mocks/storage_provider.go -package=mocks . IStorageProvider
 type IStorageProvider interface {
-	GetTraceStorage(ctx context.Context, workSpaceID string, tenants []string) Storage
+	GetTraceStorage(ctx context.Context, workSpaceID string, tenants []string, scene string) Storage
 	PrepareStorageForTask(ctx context.Context, workspaceID string, tenants []string) error
 }

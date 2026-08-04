@@ -16,6 +16,66 @@ import (
 	confmocks "github.com/coze-dev/coze-loop/backend/pkg/conf/mocks"
 )
 
+func TestTraceConfigCenter_GetTraceSceneCfg(t *testing.T) {
+	type fields struct {
+		configLoader *confmocks.MockIConfigLoader
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		want         *config.TraceSceneCfg
+		wantErr      bool
+	}{
+		{
+			name: "get trace scene cfg successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), traceSceneCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(*config.TraceSceneCfg)
+						cfg.CachedEnabled = config.SpaceAwareParam[bool]{
+							Default:   false,
+							Overrides: map[int64]bool{111: true},
+						}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			want: &config.TraceSceneCfg{
+				CachedEnabled: config.SpaceAwareParam[bool]{
+					Default:   false,
+					Overrides: map[int64]bool{111: true},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "unmarshal key failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), traceSceneCfgKey, gomock.Any()).
+					Return(fmt.Errorf("unmarshal error"))
+				return fields{configLoader: mockLoader}
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			f := tt.fieldsGetter(ctrl)
+			tr := &TraceConfigCenter{
+				IConfigLoader: f.configLoader,
+			}
+			got, err := tr.GetTraceSceneCfg(context.Background())
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestTraceConfigCenter_GetSystemViews(t *testing.T) {
 	type fields struct {
 		configLoader *confmocks.MockIConfigLoader

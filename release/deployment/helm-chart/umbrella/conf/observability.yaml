@@ -92,6 +92,13 @@ trace_tenant_cfg:
   tenants_support_annotation:
     cozeloop: true
 
+# trace_scene_cfg 控制 trace 热缓存（cached）查询链路的按 workspace 开关。
+# 默认全部关闭（走 ClickHouse）；命中 overrides 的 workspace 才允许 trace_scene=cached 读热缓存。
+trace_scene_cfg:
+  cached_enabled:
+    default: false
+    overrides: {}
+
 trace_field_meta_info:
   available_fields:
     input:

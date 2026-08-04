@@ -2409,6 +2409,20 @@ func (p *SearchTraceOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField100(buf[offset:])
@@ -2652,6 +2666,20 @@ func (p *SearchTraceOApiRequest) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SearchTraceOApiRequest) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *common.TraceScene
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TraceScene = _field
+	return offset, nil
+}
+
 func (p *SearchTraceOApiRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -2709,6 +2737,7 @@ func (p *SearchTraceOApiRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
+		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -2730,6 +2759,7 @@ func (p *SearchTraceOApiRequest) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 		l += p.field100Length()
 		l += p.field254Length()
 		l += p.field255Length()
@@ -2832,6 +2862,15 @@ func (p *SearchTraceOApiRequest) fastWriteField12(buf []byte, w thrift.NocopyWri
 	if p.IsSetPageToken() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PageToken)
+	}
+	return offset
+}
+
+func (p *SearchTraceOApiRequest) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTraceScene() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 13)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TraceScene)
 	}
 	return offset
 }
@@ -2958,6 +2997,15 @@ func (p *SearchTraceOApiRequest) field12Length() int {
 	return l
 }
 
+func (p *SearchTraceOApiRequest) field13Length() int {
+	l := 0
+	if p.IsSetTraceScene() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.TraceScene)
+	}
+	return l
+}
+
 func (p *SearchTraceOApiRequest) field100Length() int {
 	l := 0
 	if p.IsSetNeedOriginalTags() {
@@ -3051,6 +3099,11 @@ func (p *SearchTraceOApiRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.PageToken)
 		}
 		p.PageToken = &tmp
+	}
+
+	if src.TraceScene != nil {
+		tmp := *src.TraceScene
+		p.TraceScene = &tmp
 	}
 
 	if src.NeedOriginalTags != nil {

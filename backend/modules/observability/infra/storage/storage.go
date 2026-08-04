@@ -14,7 +14,7 @@ func NewTraceStorageProvider() storage.IStorageProvider {
 	return &TraceStorageProviderImpl{}
 }
 
-func (r *TraceStorageProviderImpl) GetTraceStorage(ctx context.Context, workspaceID string, tenants []string) storage.Storage {
+func (r *TraceStorageProviderImpl) GetTraceStorage(ctx context.Context, workspaceID string, tenants []string, scene string) storage.Storage {
 	return storage.Storage{
 		StorageName: "ck",
 	}

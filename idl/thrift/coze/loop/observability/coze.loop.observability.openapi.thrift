@@ -82,6 +82,7 @@ struct SearchTraceOApiRequest {
     10: optional filter.FilterFields filters (api.body="filters")
     11: optional i32 page_size (api.body="page_size")
     12: optional string page_token (api.body="page_token")
+    13: optional common.TraceScene trace_scene (api.body="trace_scene")
     100: optional bool need_original_tags (api.body='need_original_tags')
 
     254: optional extra.Extra extra (agw.source="not_body_struct")

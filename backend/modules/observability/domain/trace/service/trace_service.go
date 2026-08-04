@@ -140,6 +140,7 @@ type GetTraceReq struct {
 	Filters      *loop_span.FilterFields
 	Limit        int32
 	PageToken    string
+	TraceScene   loop_span.TraceScene
 }
 
 type GetTraceResp struct {
@@ -176,6 +177,7 @@ type SearchTraceOApiReq struct {
 	WithDetail            bool
 	Filters               *loop_span.FilterFields
 	PageToken             string
+	TraceScene            loop_span.TraceScene
 }
 
 type SearchTraceOApiResp struct {
@@ -1269,6 +1271,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		OmitColumns:     omitColumns,
 		PageToken:       req.PageToken,
 		DescByStartTime: req.PageToken != "" || req.Limit > 0,
+		TraceScene:      req.TraceScene,
 	})
 	r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 	if err != nil {
@@ -1466,6 +1469,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		OmitColumns:        omitColumns,
 		PageToken:          req.PageToken,
 		DescByStartTime:    true,
+		TraceScene:         req.TraceScene,
 	})
 	if err != nil {
 		return nil, err

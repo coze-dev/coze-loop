@@ -686,8 +686,22 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 			return nil, err
 		}
 	}
+	ret.TraceScene = o.resolveTraceScene(ctx, req.WorkspaceID, req.GetTraceScene())
 
 	return ret, nil
+}
+
+// resolveTraceScene 解析生效的 trace scene：仅当请求声明 cached 且该 workspace 命中开关时才走热缓存，否则降级为 default（走 CK）
+func (o *OpenAPIApplication) resolveTraceScene(ctx context.Context, workspaceID int64, scene string) loop_span.TraceScene {
+	if scene != string(loop_span.TraceSceneCached) {
+		return loop_span.TraceSceneDefault
+	}
+	cfg, err := o.traceConfig.GetTraceSceneCfg(ctx)
+	if err != nil || cfg == nil || !cfg.CachedEnabled.Get(workspaceID) {
+		logs.CtxWarn(ctx, "trace_scene=cached requested but not enabled for workspace %d, degrade to default", workspaceID)
+		return loop_span.TraceSceneDefault
+	}
+	return loop_span.TraceSceneCached
 }
 
 func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest) (*openapi.SearchTraceTreeOApiResponse, error) {

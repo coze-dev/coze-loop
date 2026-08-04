@@ -28,7 +28,7 @@ import (
 
 type mockStorageProvider struct{}
 
-func (m *mockStorageProvider) GetTraceStorage(ctx context.Context, workSpaceID string, tenants []string) storage.Storage {
+func (m *mockStorageProvider) GetTraceStorage(ctx context.Context, workSpaceID string, tenants []string, scene string) storage.Storage {
 	return storage.Storage{
 		StorageName:   "ck",
 		StorageConfig: map[string]string{},
