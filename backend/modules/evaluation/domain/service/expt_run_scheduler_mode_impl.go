@@ -865,8 +865,13 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 			return err
 		}
 
+		// 重试后 expt_turn_result 必须同时清 target_result_id 并跟随到新的 expt_run_id：
+		// 否则 batch_get 兜底按 tr.ExptRunID 分组去 turn_run_log 找不到新 run 的 target_result_id，
+		// 异步 target 阶段 eval_target_record 无法出现在结果里 (残留旧记录 / 空)。
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"status": int32(entity.TurnRunState_Queueing),
+			"status":           int32(entity.TurnRunState_Queueing),
+			"target_result_id": int64(0),
+			"expt_run_id":      event.ExptRunID,
 		}); err != nil {
 			return err
 		}
@@ -1539,6 +1544,7 @@ func resetRetryRunLogsForItems(ctx context.Context, deps retryItemResetDeps, eve
 	if err := deps.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
 		"status":           int32(entity.TurnRunState_Queueing),
 		"target_result_id": int64(0),
+		"expt_run_id":      event.ExptRunID,
 	}); err != nil {
 		return nil, err
 	}
@@ -1701,6 +1707,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
 			"status":           int32(entity.TurnRunState_Queueing),
 			"target_result_id": int64(0),
+			"expt_run_id":      event.ExptRunID,
 		}); err != nil {
 			return err
 		}
@@ -2083,6 +2090,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
 			"status":           int32(entity.TurnRunState_Queueing),
 			"target_result_id": int64(0),
+			"expt_run_id":      event.ExptRunID,
 		}); err != nil {
 			return err
 		}
