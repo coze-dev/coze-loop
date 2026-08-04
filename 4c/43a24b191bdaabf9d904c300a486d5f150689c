@@ -1,0 +1,71 @@
+backend/kitex_gen/coze/loop/observability/domain/common/common.go
+  s_f0949e68b2ef83::t_b619338fbf771f 56-59,77-78
+backend/kitex_gen/coze/loop/observability/openapi/coze.loop.observability.openapi.go
+  s_f0949e68b2ef83::t_e4f1e558b5d0ea 3014,3139-3150,3219-3221,3244,3278-3281,3408-3415,3620-3630,3709-3712,3941-3958,4061-4063,4184-4195
+backend/kitex_gen/coze/loop/observability/openapi/k-coze.loop.observability.openapi.go
+  s_f0949e68b2ef83::t_38d2292330fcc6 2412-2425,2669-2682,2740,2762,2869-2877,3000-3008,3104-3108
+backend/kitex_gen/coze/loop/observability/trace/coze.loop.observability.trace.go
+  s_f0949e68b2ef83::t_394ae27d518d37 2781,2897-2908,2950-2952,2968,3000-3003,3112-3119,3292-3302,3358-3361,3566-3583,3647-3649,3757-3768
+backend/kitex_gen/coze/loop/observability/trace/k-coze.loop.observability.trace.go
+  s_f0949e68b2ef83::t_0a52a803c14f5c 2217-2230,2427-2440,2470,2490,2588-2596,2694-2702,2778-2782
+backend/modules/observability/application/openapi.go
+  s_f0949e68b2ef83::t_c57312c50f0edd 689,694-706
+backend/modules/observability/application/trace.go
+  s_f0949e68b2ef83::t_71227fdc34f262 267,353-365
+backend/modules/observability/application/trace_scene_test.go
+  s_f0949e68b2ef83::t_6cd51c3765acfb 1-124
+backend/modules/observability/domain/component/config/config.go
+  s_f0949e68b2ef83::t_b70387728f3887 138-143,248
+backend/modules/observability/domain/component/config/mocks/config.go
+  s_f0949e68b2ef83::t_0fa2392a094c6c 352-366
+backend/modules/observability/domain/component/storage/mocks/storage_provider.go
+  s_f0949e68b2ef83::t_782e7972193244 45,47,53,55
+backend/modules/observability/domain/component/storage/storage.go
+  s_f0949e68b2ef83::t_21f9cc9bffdfe1 16
+backend/modules/observability/domain/task/service/task_service_test.go
+  s_f0949e68b2ef83::t_9965857db91c52 106,766,810,856,901,953
+backend/modules/observability/domain/trace/entity/loop_span/filter.go
+  s_f0949e68b2ef83::t_4b611c2abb97b3 24,66-68
+backend/modules/observability/domain/trace/repo/trace.go
+  s_f0949e68b2ef83::t_0e54da9cca6ef1 31
+backend/modules/observability/domain/trace/service/trace_service.go
+  s_f0949e68b2ef83::t_ba574c2fc53de0 143,180,1274,1472
+backend/modules/observability/infra/config/trace.go
+  s_f0949e68b2ef83::t_3e6f7a5dc3e1ff 24,117-124
+backend/modules/observability/infra/config/trace_test.go
+  s_f0949e68b2ef83::t_6918fb0c3af216 19-78
+backend/modules/observability/infra/repo/trace.go
+  s_f0949e68b2ef83::t_7b9e24f2cda34b 206,331,496,532,566,595,632
+backend/modules/observability/infra/repo/trace_test.go
+  s_f0949e68b2ef83::t_363802da6828f9 31
+backend/modules/observability/infra/storage/storage.go
+  s_f0949e68b2ef83::t_4261ea5877dfd9 17
+idl/thrift/coze/loop/observability/coze.loop.observability.openapi.thrift
+  s_f0949e68b2ef83::t_238a4b4a6a8f3e 85
+idl/thrift/coze/loop/observability/coze.loop.observability.trace.thrift
+  s_f0949e68b2ef83::t_2fac95527159ec 76
+idl/thrift/coze/loop/observability/domain/common.thrift
+  s_f0949e68b2ef83::t_ccf451d0c30014 31-34
+release/deployment/docker-compose/conf/observability.yaml
+  s_f0949e68b2ef83::t_2428a188483f35 95-101
+release/deployment/helm-chart/umbrella/conf/observability.yaml
+  s_f0949e68b2ef83::t_481baa0843e272 95-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4c43a24b191bdaabf9d904c300a486d5f150689c",
+  "prompts": {},
+  "sessions": {
+    "s_f0949e68b2ef83": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_f0949e68b2ef83",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
