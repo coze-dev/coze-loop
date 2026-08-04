@@ -1523,9 +1523,9 @@ func (p *CreateEvaluationSetOpenAPIData) Field1DeepEqual(src *int64) bool {
 
 // 查询评测集模版列表
 type ListEvaluationSetTemplatesOApiRequest struct {
-	WorkspaceID *int64       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" query:"workspace_id" `
-	PageToken   *string      `thrift:"page_token,100,optional" frugal:"100,optional,string" json:"page_token,omitempty" query:"page_token"`
-	PageSize    *int32       `thrift:"page_size,101,optional" frugal:"101,optional,i32" json:"page_size,omitempty" query:"page_size"`
+	WorkspaceID *int64       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	PageToken   *string      `thrift:"page_token,100,optional" frugal:"100,optional,string" form:"page_token" json:"page_token,omitempty"`
+	PageSize    *int32       `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
 	Extra       *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base        *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }

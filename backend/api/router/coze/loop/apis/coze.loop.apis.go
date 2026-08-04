@@ -545,6 +545,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets1.DELETE("/:evaluation_set_id", append(_deleteevaluationsetoapiMw(handler), apis.DeleteEvaluationSetOApi)...)
 				_evaluation_sets1.GET("/:evaluation_set_id", append(_getevaluationsetoapiMw(handler), apis.GetEvaluationSetOApi)...)
 				_evaluation_sets1.PUT("/:evaluation_set_id", append(_updateevaluationsetoapiMw(handler), apis.UpdateEvaluationSetOApi)...)
+				{
+					_templates := _evaluation_sets1.Group("/templates", _templatesMw(handler)...)
+					_templates.POST("/list", append(_listevaluationsettemplatesoapiMw(handler), apis.ListEvaluationSetTemplatesOApi)...)
+				}
 				_evaluation0.POST("/evaluators", append(_evaluators1Mw(handler), apis.CreateEvaluatorOApi)...)
 				_evaluators1 := _evaluation0.Group("/evaluators", _evaluators1Mw(handler)...)
 				_evaluators1.DELETE("/:evaluator_id", append(_evaluator_id1Mw(handler), apis.DeleteEvaluatorOApi)...)
@@ -590,10 +594,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_eval_target_records0 := _evaluation0.Group("/eval_target_records", _eval_target_records0Mw(handler)...)
 					_eval_target_records0.GET("/:eval_target_record_id", append(_getevaltargetrecordoapiMw(handler), apis.GetEvalTargetRecordOApi)...)
 					_eval_target_records0.POST("/output_fields", append(_getevaltargetoutputfieldcontentoapiMw(handler), apis.GetEvalTargetOutputFieldContentOApi)...)
-				}
-				{
-					_evaluation_set_templates0 := _evaluation0.Group("/evaluation_set_templates", _evaluation_set_templates0Mw(handler)...)
-					_evaluation_set_templates0.GET("/list", append(_listevaluationsettemplatesoapiMw(handler), apis.ListEvaluationSetTemplatesOApi)...)
 				}
 				{
 					_evaluator_records0 := _evaluation0.Group("/evaluator_records", _evaluator_records0Mw(handler)...)

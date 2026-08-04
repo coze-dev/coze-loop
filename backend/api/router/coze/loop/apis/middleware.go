@@ -2470,7 +2470,7 @@ func _listevaluationsettemplatesoapiMw(handler *apis.APIHandler) []app.HandlerFu
 	return nil
 }
 
-func _evaluation_set_templates0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+func _templatesMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
