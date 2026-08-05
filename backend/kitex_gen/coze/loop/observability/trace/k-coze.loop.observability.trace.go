@@ -2228,6 +2228,20 @@ func (p *GetTraceRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -2438,6 +2452,20 @@ func (p *GetTraceRequest) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetTraceRequest) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.NeedOriginalTags = _field
+	return offset, nil
+}
+
 func (p *GetTraceRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -2461,6 +2489,7 @@ func (p *GetTraceRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
+		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
@@ -2488,6 +2517,7 @@ func (p *GetTraceRequest) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -2590,6 +2620,15 @@ func (p *GetTraceRequest) fastWriteField13(buf []byte, w thrift.NocopyWriter) in
 	if p.IsSetTraceScene() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 13)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TraceScene)
+	}
+	return offset
+}
+
+func (p *GetTraceRequest) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetNeedOriginalTags() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 14)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.NeedOriginalTags)
 	}
 	return offset
 }
@@ -2700,6 +2739,15 @@ func (p *GetTraceRequest) field13Length() int {
 	return l
 }
 
+func (p *GetTraceRequest) field14Length() int {
+	l := 0
+	if p.IsSetNeedOriginalTags() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *GetTraceRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -2778,6 +2826,11 @@ func (p *GetTraceRequest) DeepCopy(s interface{}) error {
 	if src.TraceScene != nil {
 		tmp := *src.TraceScene
 		p.TraceScene = &tmp
+	}
+
+	if src.NeedOriginalTags != nil {
+		tmp := *src.NeedOriginalTags
+		p.NeedOriginalTags = &tmp
 	}
 
 	var _base *base.Base

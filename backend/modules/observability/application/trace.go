@@ -281,7 +281,7 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 		Spans:        sResp.Spans,
 	})
 	resp := &trace.GetTraceResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, dResp.WorkflowMap, false),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, dResp.WorkflowMap, req.GetNeedOriginalTags()),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{
