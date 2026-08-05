@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -889,6 +890,135 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			taskIDCache[r.ExperimentRunID] = taskID
 		}
 		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID, zombieTimeout)
+	}
+}
+
+// sandboxStatusCheckConcurrency 单次 sweep 内并发调 sandbox.Get 的上限，避免打爆下游。
+const sandboxStatusCheckConcurrency = 8
+
+// CheckSandboxTerminated 参见 IEvalTargetService.CheckSandboxTerminated。
+// 实现要点：
+//   - 只对 SandboxAgent 且仍处于 AsyncInvoking 的 record 发 sandbox.Get；避免在同步/非 sandbox record 上浪费 RPC。
+//   - Get 出错（含开源 stub 的 "not implement" / adapter 未注入）一律 warn + skip 该 record，让 zombie 兜底。
+//   - 只把 Failed / Canceled 视为"结束但没上报"命中；Succeeded 会有毫秒级 in-flight 回调窗口，交给 zombie 或后续 tick 兜底。
+func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spaceID int64, recordIDs []int64) ([]int64, map[int64]string) {
+	if e.sandboxSchedulerAdapter == nil || len(recordIDs) == 0 {
+		return nil, nil
+	}
+
+	records, err := e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxStatusCheck] batch get eval target records fail, space_id=%d, err=%v", spaceID, err)
+		return nil, nil
+	}
+
+	versionIDSet := make(map[int64]struct{})
+	for _, r := range records {
+		if r == nil || r.TargetVersionID <= 0 {
+			continue
+		}
+		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+			continue
+		}
+		versionIDSet[r.TargetVersionID] = struct{}{}
+	}
+	if len(versionIDSet) == 0 {
+		return nil, nil
+	}
+	versionIDs := make([]int64, 0, len(versionIDSet))
+	for id := range versionIDSet {
+		versionIDs = append(versionIDs, id)
+	}
+	versions, err := e.evalTargetRepo.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxStatusCheck] batch get eval target versions fail, space_id=%d, err=%v", spaceID, err)
+		return nil, nil
+	}
+	sandboxVersionIDs := make(map[int64]struct{})
+	for _, v := range versions {
+		if v == nil || v.EvalTargetVersion == nil {
+			continue
+		}
+		if v.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+			sandboxVersionIDs[v.EvalTargetVersion.ID] = struct{}{}
+		}
+	}
+	if len(sandboxVersionIDs) == 0 {
+		return nil, nil
+	}
+
+	// 筛出真正需要查询的 record，避免起没用的 goroutine
+	targets := make([]*entity.EvalTargetRecord, 0, len(records))
+	for _, r := range records {
+		if r == nil {
+			continue
+		}
+		if _, ok := sandboxVersionIDs[r.TargetVersionID]; !ok {
+			continue
+		}
+		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+			continue
+		}
+		targets = append(targets, r)
+	}
+	if len(targets) == 0 {
+		return nil, nil
+	}
+
+	sem := make(chan struct{}, sandboxStatusCheckConcurrency)
+	var mu sync.Mutex
+	terminated := make([]int64, 0)
+	statusMap := make(map[int64]string)
+
+	var wg sync.WaitGroup
+	for _, r := range targets {
+		r := r
+		wg.Add(1)
+		sem <- struct{}{}
+		goroutine.Go(ctx, func() {
+			defer func() {
+				<-sem
+				wg.Done()
+			}()
+			resp, err := e.sandboxSchedulerAdapter.Get(ctx, &rpc.SandboxGetRequest{
+				ExecuteID:   strconv.FormatInt(r.ID, 10),
+				WorkspaceID: spaceID,
+			})
+			if err != nil {
+				logs.CtxWarn(ctx, "[SandboxStatusCheck] sandbox get fail, record_id=%d, err=%v", r.ID, err)
+				return
+			}
+			if resp == nil || resp.ExecuteInfo == nil {
+				return
+			}
+			status := resp.ExecuteInfo.Status
+			if status != rpc.SandboxExecuteStatusFailed && status != rpc.SandboxExecuteStatusCanceled {
+				return
+			}
+			mu.Lock()
+			terminated = append(terminated, r.ID)
+			statusMap[r.ID] = sandboxStatusText(status)
+			mu.Unlock()
+		})
+	}
+	wg.Wait()
+
+	if len(terminated) == 0 {
+		return nil, nil
+	}
+	return terminated, statusMap
+}
+
+func sandboxStatusText(s rpc.SandboxExecuteStatus) string {
+	switch s {
+	case rpc.SandboxExecuteStatusFailed:
+		return "Failed"
+	case rpc.SandboxExecuteStatusCanceled:
+		return "Canceled"
+	case rpc.SandboxExecuteStatusSucceeded:
+		return "Succeeded"
+	default:
+		return strconv.Itoa(int(s))
 	}
 }
 
