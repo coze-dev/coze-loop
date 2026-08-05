@@ -457,6 +457,7 @@ func TestEvaluationSetConversions(t *testing.T) {
 					IsRequired:           ptr(true),
 					TextSchema:           ptr("schema"),
 					Key:                  ptr("key"),
+					Locked:               ptr(false),
 				},
 			}},
 			ItemCount: ptr[int64](5),

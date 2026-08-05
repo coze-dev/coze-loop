@@ -56,9 +56,6 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, para
 	} else {
 		clearFieldLocks(param.EvaluationSetSchema)
 	}
-	if param.EvaluationSetSchema == nil {
-		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluation set schema is required"))
-	}
 	// 依赖数据集服务
 	return d.datasetRPCAdapter.CreateDataset(ctx, &rpc.CreateDatasetParam{
 		SpaceID:            param.SpaceID,

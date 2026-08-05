@@ -164,6 +164,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_multi_part_data := _evaluation_sets.Group("/multi_part_data", _multi_part_dataMw(handler)...)
 					_multi_part_data.POST("/validate", append(_validateevaluationsetmultipartdataMw(handler), apis.ValidateEvaluationSetMultiPartData)...)
 				}
+				{
+					_templates := _evaluation_sets.Group("/templates", _templatesMw(handler)...)
+					_templates.POST("/list", append(_listevaluationsettemplatesMw(handler), apis.ListEvaluationSetTemplates)...)
+				}
 				_v11.POST("/evaluator_template", append(_evaluator_templateMw(handler), apis.CreateEvaluatorTemplate)...)
 				_evaluator_template := _v11.Group("/evaluator_template", _evaluator_templateMw(handler)...)
 				_evaluator_template.DELETE("/:evaluator_template_id", append(_deleteevaluatortemplateMw(handler), apis.DeleteEvaluatorTemplate)...)
@@ -208,10 +212,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_eval_target_versions := _v11.Group("/eval_target_versions", _eval_target_versionsMw(handler)...)
 					_eval_target_versions.POST("/batch_get", append(_batchgetevaltargetversionsMw(handler), apis.BatchGetEvalTargetVersions)...)
 					_eval_target_versions.GET("/:eval_target_version_id", append(_getevaltargetversionMw(handler), apis.GetEvalTargetVersion)...)
-				}
-				{
-					_evaluation_set_templates := _v11.Group("/evaluation_set_templates", _evaluation_set_templatesMw(handler)...)
-					_evaluation_set_templates.POST("/list", append(_listevaluationsettemplatesMw(handler), apis.ListEvaluationSetTemplates)...)
 				}
 				{
 					_evaluation_set_versions := _v11.Group("/evaluation_set_versions", _evaluation_set_versionsMw(handler)...)
@@ -546,8 +546,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets1.GET("/:evaluation_set_id", append(_getevaluationsetoapiMw(handler), apis.GetEvaluationSetOApi)...)
 				_evaluation_sets1.PUT("/:evaluation_set_id", append(_updateevaluationsetoapiMw(handler), apis.UpdateEvaluationSetOApi)...)
 				{
-					_templates := _evaluation_sets1.Group("/templates", _templatesMw(handler)...)
-					_templates.POST("/list", append(_listevaluationsettemplatesoapiMw(handler), apis.ListEvaluationSetTemplatesOApi)...)
+					_templates0 := _evaluation_sets1.Group("/templates", _templates0Mw(handler)...)
+					_templates0.POST("/list", append(_listevaluationsettemplatesoapiMw(handler), apis.ListEvaluationSetTemplatesOApi)...)
 				}
 				_evaluation0.POST("/evaluators", append(_evaluators1Mw(handler), apis.CreateEvaluatorOApi)...)
 				_evaluators1 := _evaluation0.Group("/evaluators", _evaluators1Mw(handler)...)

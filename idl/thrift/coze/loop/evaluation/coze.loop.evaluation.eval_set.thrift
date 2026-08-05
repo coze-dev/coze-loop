@@ -554,7 +554,7 @@ service EvaluationSetService {
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets", api.op_type = 'create', api.tag = 'volc-agentkit,open'
     )
     ListEvaluationSetTemplatesResponse ListEvaluationSetTemplates(1: ListEvaluationSetTemplatesRequest req) (
-        api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_set_templates/list", api.op_type = 'list', api.tag = 'volc-agentkit,open'
+        api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/templates/list", api.op_type = 'list', api.tag = 'volc-agentkit,open'
     )
     UpdateEvaluationSetResponse UpdateEvaluationSet(1: UpdateEvaluationSetRequest req) (
         api.category="evaluation_set", api.patch = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id", api.op_type = 'update', api.tag = 'volc-agentkit,open'

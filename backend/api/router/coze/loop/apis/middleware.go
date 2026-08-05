@@ -2455,11 +2455,6 @@ func _listevaltargetsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _evaluation_set_templatesMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
 func _listevaluationsettemplatesMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
@@ -2471,6 +2466,11 @@ func _listevaluationsettemplatesoapiMw(handler *apis.APIHandler) []app.HandlerFu
 }
 
 func _templatesMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _templates0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
