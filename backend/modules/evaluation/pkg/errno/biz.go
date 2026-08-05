@@ -115,3 +115,13 @@ func ParseItemZombieTimeoutErr(err error) (bool, string) {
 	}
 	return false, ""
 }
+
+// NewSandboxTerminatedBeforeReportErr 构造 "沙箱提前终态导致行失败" 错误。sandboxStatus 传沙箱返回的状态字面量（如 "Failed"/"Canceled"），
+// 用于把根因附在 err_msg 上供 API 展示。触发场景见 ExptSchedulerImpl.sweepTerminatedSandboxItems。
+func NewSandboxTerminatedBeforeReportErr(sandboxStatus string) error {
+	msg := fmt.Sprintf("沙箱在结果上报前已进入终态 (%s)，该实验行已置为失败", sandboxStatus)
+	return &ErrImpl{
+		Code: SandboxTerminatedBeforeReportCode,
+		Msg:  msg,
+	}
+}

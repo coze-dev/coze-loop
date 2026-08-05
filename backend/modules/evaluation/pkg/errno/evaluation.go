@@ -454,6 +454,10 @@ const (
 	ItemZombieTimeoutCode              = 601205085 // 实验行长时间未更新被判定为僵尸（handleZombies 触发）
 	itemZombieTimeoutMessage           = "实验行长时间未更新，已被系统判定为僵尸并置为失败"
 	itemZombieTimeoutNoAffectStability = false
+
+	SandboxTerminatedBeforeReportCode              = 601205086 // sandbox agent target sandbox execute reached terminal state (Failed/Canceled) before the async result was reported (sweep triggered by ExptSchedulerImpl.sweepTerminatedSandboxItems)
+	sandboxTerminatedBeforeReportMessage           = "沙箱在结果上报前已提前进入终态，该实验行已置为失败"
+	sandboxTerminatedBeforeReportNoAffectStability = false
 )
 
 func init() {
@@ -1122,6 +1126,12 @@ func init() {
 		ItemZombieTimeoutCode,
 		itemZombieTimeoutMessage,
 		code.WithAffectStability(!itemZombieTimeoutNoAffectStability),
+	)
+
+	code.Register(
+		SandboxTerminatedBeforeReportCode,
+		sandboxTerminatedBeforeReportMessage,
+		code.WithAffectStability(!sandboxTerminatedBeforeReportNoAffectStability),
 	)
 
 }
