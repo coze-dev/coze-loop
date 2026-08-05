@@ -232,6 +232,11 @@ func TestOpenAPIFieldSchemaConversions(t *testing.T) {
 	assert.Nil(t, OpenAPIEvaluationSetSchemaDO2DTO(nil))
 	backDTO := OpenAPIEvaluationSetSchemaDO2DTO(&entity.EvaluationSetSchema{FieldSchemas: []*entity.FieldSchema{expectedDO}})
 	assert.Equal(t, []*openapi_eval_set.FieldSchema{OpenAPIFieldSchemaDO2DTO(expectedDO)}, backDTO.FieldSchemas)
+	assert.Equal(t, ptr(false), backDTO.FieldSchemas[0].Locked)
+
+	lockedDO := *expectedDO
+	lockedDO.Locked = true
+	assert.Equal(t, ptr(true), OpenAPIFieldSchemaDO2DTO(&lockedDO).Locked)
 
 	assert.Nil(t, OpenAPIFieldSchemaDO2DTOs(nil))
 	assert.Equal(t, []*openapi_eval_set.FieldSchema{OpenAPIFieldSchemaDO2DTO(expectedDO)}, OpenAPIFieldSchemaDO2DTOs([]*entity.FieldSchema{expectedDO}))

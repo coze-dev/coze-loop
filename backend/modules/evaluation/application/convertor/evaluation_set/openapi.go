@@ -497,11 +497,6 @@ func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 	if do == nil {
 		return nil
 	}
-	var locked *bool
-	if do.Locked {
-		locked = gptr.Of(true)
-	}
-
 	displayFormat := convertDODisplayFormatToOpenAPI(do.DefaultDisplayFormat)
 
 	contentType := convertDOContentTypeToOpenAPI(do.ContentType)
@@ -515,7 +510,7 @@ func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 		SchemaKey:            convertDOSchemaKeyToOpenAPI(do.SchemaKey),
 		TextSchema:           gptr.Of(do.TextSchema),
 		Key:                  gptr.Of(do.Key),
-		Locked:               locked,
+		Locked:               gptr.Of(do.Locked),
 	}
 }
 
