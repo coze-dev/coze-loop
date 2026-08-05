@@ -865,8 +865,13 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 			return err
 		}
 
+		// 重试后 expt_turn_result 必须同时清 target_result_id 并跟随到新的 expt_run_id：
+		// 否则 batch_get 兜底按 tr.ExptRunID 分组去 turn_run_log 找不到新 run 的 target_result_id，
+		// 异步 target 阶段 eval_target_record 无法出现在结果里 (残留旧记录 / 空)。
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"status": int32(entity.TurnRunState_Queueing),
+			"status":           int32(entity.TurnRunState_Queueing),
+			"target_result_id": int64(0),
+			"expt_run_id":      event.ExptRunID,
 		}); err != nil {
 			return err
 		}
@@ -1539,6 +1544,7 @@ func resetRetryRunLogsForItems(ctx context.Context, deps retryItemResetDeps, eve
 	if err := deps.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
 		"status":           int32(entity.TurnRunState_Queueing),
 		"target_result_id": int64(0),
+		"expt_run_id":      event.ExptRunID,
 	}); err != nil {
 		return nil, err
 	}
@@ -1668,7 +1674,12 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		idIdx := 0
 		itemIDs := gslice.ToMap(items, func(t *entity.EvaluationSetItem) (int64, bool) { return t.ItemID, true })
 		itemTurnIDs := make([]*entity.ItemTurnID, 0, len(items))
+		// 平移 item_version_id: List 返回的 item 自带版本 (版本评测集真值, 无版本评测集为 0)。
+		// 新 run_log 必须带上, 否则 BuildExptRecordEvalCtx 兜底读到 0, 下游按 nil 版本查询报 601100201
+		// (item_version_id or item_version is required)。
+		itemVersionByItemID := make(map[int64]int64, len(items))
 		for _, item := range items {
+			itemVersionByItemID[item.ItemID] = gptr.Indirect(item.ItemVersionID)
 			for _, turn := range item.Turns {
 				itemIDs[item.ItemID] = true
 				itemTurnIDs = append(itemTurnIDs, &entity.ItemTurnID{
@@ -1681,12 +1692,13 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDs))
 		for itemID := range itemIDs {
 			itemRunLogs = append(itemRunLogs, &entity.ExptItemResultRunLog{
-				ID:        ids[idIdx],
-				SpaceID:   event.SpaceID,
-				ExptID:    event.ExptID,
-				ExptRunID: event.ExptRunID,
-				ItemID:    itemID,
-				Status:    int32(entity.ItemRunState_Queueing),
+				ID:            ids[idIdx],
+				SpaceID:       event.SpaceID,
+				ExptID:        event.ExptID,
+				ExptRunID:     event.ExptRunID,
+				ItemID:        itemID,
+				ItemVersionID: itemVersionByItemID[itemID],
+				Status:        int32(entity.ItemRunState_Queueing),
 			})
 			idIdx++
 		}
@@ -1701,6 +1713,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
 			"status":           int32(entity.TurnRunState_Queueing),
 			"target_result_id": int64(0),
+			"expt_run_id":      event.ExptRunID,
 		}); err != nil {
 			return err
 		}
@@ -2037,25 +2050,21 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 			}
 		}
 
-		itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDMap))
-		for itemID := range itemIDMap {
-			itemRunLogs = append(itemRunLogs, &entity.ExptItemResultRunLog{
-				ID:        ids[idIdx],
-				SpaceID:   event.SpaceID,
-				ExptID:    event.ExptID,
-				ExptRunID: event.ExptRunID,
-				ItemID:    itemID,
-				Status:    int32(entity.ItemRunState_Queueing),
-			})
-			idIdx++
-		}
-
 		irs, err := e.exptItemResultRepo.MGetItemResults(ctx, event.ExptID, chunk, event.SpaceID)
 		if err != nil {
 			return err
 		}
 
+		// 平移 item_version_id: 新 run_log 必须带上首次执行时冻结的 item 版本, 否则
+		// BuildExptRecordEvalCtx 兜底读到 0, 构造 ItemVersionQueries[*].ItemVersionID=nil,
+		// 下游 BatchGetDatasetItemsByVersion 校验拒绝 (biz err 601100201: item_version_id
+		// or item_version is required)。真值来源: expt_item_result.ItemVersionID。
+		itemVersionByItemID := make(map[int64]int64, len(irs))
 		for _, ir := range irs {
+			if ir == nil {
+				continue
+			}
+			itemVersionByItemID[ir.ItemID] = ir.ItemVersionID
 			switch ir.Status {
 			case entity.ItemRunState_Processing:
 				got.ProcessingItemCnt--
@@ -2073,6 +2082,20 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 			}
 		}
 
+		itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDMap))
+		for itemID := range itemIDMap {
+			itemRunLogs = append(itemRunLogs, &entity.ExptItemResultRunLog{
+				ID:            ids[idIdx],
+				SpaceID:       event.SpaceID,
+				ExptID:        event.ExptID,
+				ExptRunID:     event.ExptRunID,
+				ItemID:        itemID,
+				ItemVersionID: itemVersionByItemID[itemID],
+				Status:        int32(entity.ItemRunState_Queueing),
+			})
+			idIdx++
+		}
+
 		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k }), map[string]any{
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
@@ -2083,6 +2106,7 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
 			"status":           int32(entity.TurnRunState_Queueing),
 			"target_result_id": int64(0),
+			"expt_run_id":      event.ExptRunID,
 		}); err != nil {
 			return err
 		}
