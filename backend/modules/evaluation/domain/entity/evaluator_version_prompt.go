@@ -131,7 +131,7 @@ func (do *PromptEvaluatorVersion) ValidateInput(input *EvaluatorInputData) error
 			if gptr.Indirect(content.ContentType) == ContentTypeText {
 				valid, err := json.ValidateJSONSchema(gptr.Indirect(argsSchema.JsonSchema), gptr.Indirect(content.Text))
 				if err != nil || !valid {
-					return errorx.NewByCode(errno.ContentSchemaInvalidCode, errorx.WithExtraMsg(fmt.Sprintf("content %v does not validate with expected schema: %v", content.Text, argsSchema.JsonSchema)))
+					return errorx.NewByCode(errno.ContentSchemaInvalidCode, errorx.WithExtraMsg(fmt.Sprintf("content %v does not validate with expected schema: %v", gptr.Indirect(content.Text), gptr.Indirect(argsSchema.JsonSchema))))
 				}
 			}
 		}
