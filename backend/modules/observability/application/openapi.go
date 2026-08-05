@@ -580,7 +580,8 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 		return nil, err
 	}
 	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
-	if !o.AllowByKey(ctx, limitKey) {
+	allowed, scene := o.AllowByKeyWithScene(ctx, limitKey, loop_span.TraceScene(req.GetTraceScene()))
+	if !allowed {
 		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
 		errCode = obErrorx.CommonRequestRateLimitCode
 		return nil, err
@@ -590,6 +591,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 		errCode = obErrorx.CommonInternalErrorCode
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("search trace req is invalid"))
 	}
+	sReq.TraceScene = scene
 	sResp, err := o.traceService.SearchTraceOApi(ctx, sReq)
 	if err != nil {
 		return nil, err
@@ -686,22 +688,8 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 			return nil, err
 		}
 	}
-	ret.TraceScene = o.resolveTraceScene(ctx, req.WorkspaceID, req.GetTraceScene())
 
 	return ret, nil
-}
-
-// resolveTraceScene 解析生效的 trace scene：仅当请求声明 cached 且该 workspace 命中开关时才走热缓存，否则降级为 default（走 CK）
-func (o *OpenAPIApplication) resolveTraceScene(ctx context.Context, workspaceID int64, scene string) loop_span.TraceScene {
-	if scene != string(loop_span.TraceSceneCached) {
-		return loop_span.TraceSceneDefault
-	}
-	cfg, err := o.traceConfig.GetTraceSceneCfg(ctx)
-	if err != nil || cfg == nil || !cfg.CachedEnabled.Get(workspaceID) {
-		logs.CtxWarn(ctx, "trace_scene=cached requested but not enabled for workspace %d, degrade to default", workspaceID)
-		return loop_span.TraceSceneDefault
-	}
-	return loop_span.TraceSceneCached
 }
 
 func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest) (*openapi.SearchTraceTreeOApiResponse, error) {
@@ -1139,12 +1127,7 @@ func (o *OpenAPIApplication) Send(ctx context.Context, event *entity.AnnotationE
 	return o.traceService.Send(ctx, event)
 }
 
-func (p *OpenAPIApplication) AllowByKey(ctx context.Context, key string) bool {
-	maxQPS, err := p.traceConfig.GetQueryMaxQPS(ctx, key)
-	if err != nil {
-		logs.CtxError(ctx, "get query max qps failed, err=%v, key=%s", err, key)
-		return true
-	}
+func (p *OpenAPIApplication) allowN(ctx context.Context, key string, maxQPS int) bool {
 	result, err := p.rateLimiter.AllowN(ctx, key, 1,
 		limiter.WithLimit(&limiter.Limit{
 			Rate:   maxQPS,
@@ -1155,10 +1138,35 @@ func (p *OpenAPIApplication) AllowByKey(ctx context.Context, key string) bool {
 		logs.CtxError(ctx, "allow rate limit failed, err=%v", err)
 		return true
 	}
-	if result == nil || result.Allowed {
+	return result == nil || result.Allowed
+}
+
+func (p *OpenAPIApplication) AllowByKey(ctx context.Context, key string) bool {
+	maxQPS, err := p.traceConfig.GetQueryMaxQPS(ctx, key)
+	if err != nil {
+		logs.CtxError(ctx, "get query max qps failed, err=%v, key=%s", err, key)
 		return true
 	}
-	return false
+	return p.allowN(ctx, key, maxQPS)
+}
+
+// AllowByKeyWithScene 按 scene 做限流并返回生效 scene：
+//   - 非 cached：走原限流(key 桶)，返回 default
+//   - cached 且有 cached 限流(>0)：走 cached 桶("cached:"+key)，返回 cached
+//   - cached 但无 cached 限流(err 或 <=0)：降级用原限流(key 桶)，返回 default
+func (p *OpenAPIApplication) AllowByKeyWithScene(ctx context.Context, key string, reqScene loop_span.TraceScene) (bool, loop_span.TraceScene) {
+	if reqScene == loop_span.TraceSceneCached {
+		if cachedQPS, err := p.traceConfig.GetCachedQueryMaxQPS(ctx, key); err == nil && cachedQPS > 0 {
+			return p.allowN(ctx, "cached:"+key, cachedQPS), loop_span.TraceSceneCached
+		}
+		// 无 cached 限流配置 → 降级到 default 限流
+	}
+	maxQPS, err := p.traceConfig.GetQueryMaxQPS(ctx, key)
+	if err != nil {
+		logs.CtxError(ctx, "get query max qps failed, err=%v, key=%s", err, key)
+		return true, loop_span.TraceSceneDefault // fail-open
+	}
+	return p.allowN(ctx, key, maxQPS), loop_span.TraceSceneDefault
 }
 
 func (p *OpenAPIApplication) AllowAnnotationByKey(ctx context.Context, key string) bool {

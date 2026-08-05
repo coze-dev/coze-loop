@@ -56,6 +56,21 @@ func (mr *MockITraceConfigMockRecorder) Get(ctx, key any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockITraceConfig)(nil).Get), ctx, key)
 }
 
+// GetAnnotationMaxQPS mocks base method.
+func (m *MockITraceConfig) GetAnnotationMaxQPS(ctx context.Context, key string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnnotationMaxQPS", ctx, key)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnnotationMaxQPS indicates an expected call of GetAnnotationMaxQPS.
+func (mr *MockITraceConfigMockRecorder) GetAnnotationMaxQPS(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotationMaxQPS", reflect.TypeOf((*MockITraceConfig)(nil).GetAnnotationMaxQPS), ctx, key)
+}
+
 // GetAnnotationMqProducerCfg mocks base method.
 func (m *MockITraceConfig) GetAnnotationMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
 	m.ctrl.T.Helper()
@@ -86,6 +101,20 @@ func (mr *MockITraceConfigMockRecorder) GetAnnotationSourceCfg(ctx any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotationSourceCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetAnnotationSourceCfg), ctx)
 }
 
+// GetBackfillConfig mocks base method.
+func (m *MockITraceConfig) GetBackfillConfig(ctx context.Context) *config.BackfillConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBackfillConfig", ctx)
+	ret0, _ := ret[0].(*config.BackfillConfig)
+	return ret0
+}
+
+// GetBackfillConfig indicates an expected call of GetBackfillConfig.
+func (mr *MockITraceConfigMockRecorder) GetBackfillConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackfillConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetBackfillConfig), ctx)
+}
+
 // GetBackfillMqProducerCfg mocks base method.
 func (m *MockITraceConfig) GetBackfillMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
 	m.ctrl.T.Helper()
@@ -99,6 +128,21 @@ func (m *MockITraceConfig) GetBackfillMqProducerCfg(ctx context.Context) (*confi
 func (mr *MockITraceConfigMockRecorder) GetBackfillMqProducerCfg(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackfillMqProducerCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetBackfillMqProducerCfg), ctx)
+}
+
+// GetCachedQueryMaxQPS mocks base method.
+func (m *MockITraceConfig) GetCachedQueryMaxQPS(ctx context.Context, key string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCachedQueryMaxQPS", ctx, key)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCachedQueryMaxQPS indicates an expected call of GetCachedQueryMaxQPS.
+func (mr *MockITraceConfigMockRecorder) GetCachedQueryMaxQPS(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCachedQueryMaxQPS", reflect.TypeOf((*MockITraceConfig)(nil).GetCachedQueryMaxQPS), ctx, key)
 }
 
 // GetConsumerListening mocks base method.
@@ -173,62 +217,6 @@ func (mr *MockITraceConfigMockRecorder) GetMetricQueryConfig(ctx any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricQueryConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetMetricQueryConfig), ctx)
 }
 
-// GetBackfillConfig mocks base method.
-func (m *MockITraceConfig) GetBackfillConfig(ctx context.Context) *config.BackfillConfig {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBackfillConfig", ctx)
-	ret0, _ := ret[0].(*config.BackfillConfig)
-	return ret0
-}
-
-// GetBackfillConfig indicates an expected call of GetBackfillConfig.
-func (mr *MockITraceConfigMockRecorder) GetBackfillConfig(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackfillConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetBackfillConfig), ctx)
-}
-
-// GetReflowInsertConfig mocks base method.
-func (m *MockITraceConfig) GetReflowInsertConfig(ctx context.Context) *config.ReflowInsertConfig {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetReflowInsertConfig", ctx)
-	ret0, _ := ret[0].(*config.ReflowInsertConfig)
-	return ret0
-}
-
-// GetReflowInsertConfig indicates an expected call of GetReflowInsertConfig.
-func (mr *MockITraceConfigMockRecorder) GetReflowInsertConfig(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReflowInsertConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetReflowInsertConfig), ctx)
-}
-
-// GetTrajectoryMetadataConfig mocks base method.
-func (m *MockITraceConfig) GetTrajectoryMetadataConfig(ctx context.Context) *config.TrajectoryMetadataConfig {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTrajectoryMetadataConfig", ctx)
-	ret0, _ := ret[0].(*config.TrajectoryMetadataConfig)
-	return ret0
-}
-
-// GetTrajectoryMetadataConfig indicates an expected call of GetTrajectoryMetadataConfig.
-func (mr *MockITraceConfigMockRecorder) GetTrajectoryMetadataConfig(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectoryMetadataConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetTrajectoryMetadataConfig), ctx)
-}
-
-// GetTraceTimeRangeConfig mocks base method.
-func (m *MockITraceConfig) GetTraceTimeRangeConfig(ctx context.Context) map[string]string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTraceTimeRangeConfig", ctx)
-	ret0, _ := ret[0].(map[string]string)
-	return ret0
-}
-
-// GetTraceTimeRangeConfig indicates an expected call of GetTraceTimeRangeConfig.
-func (mr *MockITraceConfigMockRecorder) GetTraceTimeRangeConfig(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceTimeRangeConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetTraceTimeRangeConfig), ctx)
-}
-
 // GetPlatformSpansTrans mocks base method.
 func (m *MockITraceConfig) GetPlatformSpansTrans(ctx context.Context) (*config.SpanTransHandlerConfig, error) {
 	m.ctrl.T.Helper()
@@ -274,19 +262,18 @@ func (mr *MockITraceConfigMockRecorder) GetQueryMaxQPS(ctx, key any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueryMaxQPS", reflect.TypeOf((*MockITraceConfig)(nil).GetQueryMaxQPS), ctx, key)
 }
 
-// GetAnnotationMaxQPS mocks base method.
-func (m *MockITraceConfig) GetAnnotationMaxQPS(ctx context.Context, key string) (int, error) {
+// GetReflowInsertConfig mocks base method.
+func (m *MockITraceConfig) GetReflowInsertConfig(ctx context.Context) *config.ReflowInsertConfig {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAnnotationMaxQPS", ctx, key)
-	ret0, _ := ret[0].(int)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "GetReflowInsertConfig", ctx)
+	ret0, _ := ret[0].(*config.ReflowInsertConfig)
+	return ret0
 }
 
-// GetAnnotationMaxQPS indicates an expected call of GetAnnotationMaxQPS.
-func (mr *MockITraceConfigMockRecorder) GetAnnotationMaxQPS(ctx, key any) *gomock.Call {
+// GetReflowInsertConfig indicates an expected call of GetReflowInsertConfig.
+func (mr *MockITraceConfigMockRecorder) GetReflowInsertConfig(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotationMaxQPS", reflect.TypeOf((*MockITraceConfig)(nil).GetAnnotationMaxQPS), ctx, key)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReflowInsertConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetReflowInsertConfig), ctx)
 }
 
 // GetSpanWithAnnotationMqProducerCfg mocks base method.
@@ -349,21 +336,6 @@ func (mr *MockITraceConfigMockRecorder) GetTraceCkCfg(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceCkCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetTraceCkCfg), ctx)
 }
 
-// GetTraceSceneCfg mocks base method.
-func (m *MockITraceConfig) GetTraceSceneCfg(ctx context.Context) (*config.TraceSceneCfg, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTraceSceneCfg", ctx)
-	ret0, _ := ret[0].(*config.TraceSceneCfg)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetTraceSceneCfg indicates an expected call of GetTraceSceneCfg.
-func (mr *MockITraceConfigMockRecorder) GetTraceSceneCfg(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceSceneCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetTraceSceneCfg), ctx)
-}
-
 // GetTraceDataMaxDurationDay mocks base method.
 func (m *MockITraceConfig) GetTraceDataMaxDurationDay(ctx context.Context, platformType *string) int64 {
 	m.ctrl.T.Helper()
@@ -406,6 +378,34 @@ func (m *MockITraceConfig) GetTraceIngestTenantProducerCfg(ctx context.Context) 
 func (mr *MockITraceConfigMockRecorder) GetTraceIngestTenantProducerCfg(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceIngestTenantProducerCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetTraceIngestTenantProducerCfg), ctx)
+}
+
+// GetTraceTimeRangeConfig mocks base method.
+func (m *MockITraceConfig) GetTraceTimeRangeConfig(ctx context.Context) map[string]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTraceTimeRangeConfig", ctx)
+	ret0, _ := ret[0].(map[string]string)
+	return ret0
+}
+
+// GetTraceTimeRangeConfig indicates an expected call of GetTraceTimeRangeConfig.
+func (mr *MockITraceConfigMockRecorder) GetTraceTimeRangeConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceTimeRangeConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetTraceTimeRangeConfig), ctx)
+}
+
+// GetTrajectoryMetadataConfig mocks base method.
+func (m *MockITraceConfig) GetTrajectoryMetadataConfig(ctx context.Context) *config.TrajectoryMetadataConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTrajectoryMetadataConfig", ctx)
+	ret0, _ := ret[0].(*config.TrajectoryMetadataConfig)
+	return ret0
+}
+
+// GetTrajectoryMetadataConfig indicates an expected call of GetTrajectoryMetadataConfig.
+func (mr *MockITraceConfigMockRecorder) GetTrajectoryMetadataConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectoryMetadataConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetTrajectoryMetadataConfig), ctx)
 }
 
 // Unmarshal mocks base method.

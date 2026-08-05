@@ -264,7 +264,6 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Get trace req is invalid"))
 	}
-	sReq.TraceScene = t.resolveTraceScene(ctx, req.GetWorkspaceID(), req.GetTraceScene())
 	sResp, err := t.traceService.GetTrace(ctx, sReq)
 	if err != nil {
 		return nil, err
@@ -330,6 +329,7 @@ func (t *TraceApplication) buildGetTraceSvcReq(req *trace.GetTraceRequest) (*ser
 		SpanIDs:     req.GetSpanIds(),
 		WithDetail:  true,
 		PageToken:   req.GetPageToken(),
+		TraceScene:  loop_span.TraceScene(req.GetTraceScene()),
 	}
 	if req.PageSize != nil {
 		ret.Limit = req.GetPageSize()
@@ -348,19 +348,6 @@ func (t *TraceApplication) buildGetTraceSvcReq(req *trace.GetTraceRequest) (*ser
 		}
 	}
 	return ret, nil
-}
-
-// resolveTraceScene 解析生效的 trace scene：仅当请求声明 cached 且该 workspace 命中开关时才走热缓存，否则降级为 default（走 CK）
-func (t *TraceApplication) resolveTraceScene(ctx context.Context, workspaceID int64, scene string) loop_span.TraceScene {
-	if scene != string(loop_span.TraceSceneCached) {
-		return loop_span.TraceSceneDefault
-	}
-	cfg, err := t.traceConfig.GetTraceSceneCfg(ctx)
-	if err != nil || cfg == nil || !cfg.CachedEnabled.Get(workspaceID) {
-		logs.CtxWarn(ctx, "trace_scene=cached requested but not enabled for workspace %d, degrade to default", workspaceID)
-		return loop_span.TraceSceneDefault
-	}
-	return loop_span.TraceSceneCached
 }
 
 func (t *TraceApplication) SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest) (*trace.SearchTraceTreeResponse, error) {

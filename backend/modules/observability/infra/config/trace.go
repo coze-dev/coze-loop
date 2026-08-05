@@ -21,7 +21,6 @@ const (
 	spanWithAnnotationMqProducerCfgKey = "span_with_annotation_mq_producer_config"
 	tenantTablesCfgKey                 = "trace_tenant_cfg"
 	traceCkCfgKey                      = "trace_ck_cfg"
-	traceSceneCfgKey                   = "trace_scene_cfg"
 	traceFieldMetaInfoCfgKey           = "trace_field_meta_info"
 	traceMaxDurationDay                = "trace_max_duration_day"
 	annotationSourceCfgKey             = "annotation_source_cfg"
@@ -114,14 +113,6 @@ func (t *TraceConfigCenter) GetTraceCkCfg(ctx context.Context) (*config.TraceCKC
 	return cfg, nil
 }
 
-func (t *TraceConfigCenter) GetTraceSceneCfg(ctx context.Context) (*config.TraceSceneCfg, error) {
-	cfg := new(config.TraceSceneCfg)
-	if err := t.UnmarshalKey(context.Background(), traceSceneCfgKey, cfg); err != nil {
-		return nil, err
-	}
-	return cfg, nil
-}
-
 func (t *TraceConfigCenter) GetTenantConfig(ctx context.Context) (*config.TenantCfg, error) {
 	tenantTableCfg := new(config.TenantCfg)
 	if err := t.UnmarshalKey(ctx, tenantTablesCfgKey, &tenantTableCfg); err != nil {
@@ -193,6 +184,17 @@ func (t *TraceConfigCenter) GetQueryMaxQPS(ctx context.Context, key string) (int
 		return qps, nil
 	}
 	return qpsConfig.DefaultMaxQPS, nil
+}
+
+func (t *TraceConfigCenter) GetCachedQueryMaxQPS(ctx context.Context, key string) (int, error) {
+	qpsConfig := new(config.QueryTraceRateLimitConfig)
+	if err := t.UnmarshalKey(ctx, queryTraceRateLimitCfgKey, &qpsConfig); err != nil {
+		return 0, err
+	}
+	if qps, ok := qpsConfig.CachedSpaceMaxQPS[key]; ok {
+		return qps, nil
+	}
+	return qpsConfig.CachedDefaultMaxQPS, nil
 }
 
 func (t *TraceConfigCenter) GetAnnotationMaxQPS(ctx context.Context, key string) (int, error) {

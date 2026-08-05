@@ -104,6 +104,10 @@ type AnnotationConfig struct {
 type QueryTraceRateLimitConfig struct {
 	DefaultMaxQPS int            `mapstructure:"default_max_qps" json:"default_max_qps"`
 	SpaceMaxQPS   map[string]int `mapstructure:"space_max_qps" json:"space_max_qps"`
+	// cached 场景独立限流；值兼任开关——命中值 >0 = 该 workspace 开放 cached 且按此 QPS 限流；
+	// <=0 或缺失 = 未开放 cached（请求降级走 CK 并吃原 default/space 限流）。
+	CachedDefaultMaxQPS int            `mapstructure:"cached_default_max_qps" json:"cached_default_max_qps"`
+	CachedSpaceMaxQPS   map[string]int `mapstructure:"cached_space_max_qps" json:"cached_space_max_qps"`
 }
 
 type AnnotationRateLimitConfig struct {
@@ -133,12 +137,6 @@ type SpaceConfig struct {
 type SpaceAwareParam[T any] struct {
 	Default   T           `mapstructure:"default" json:"default"`
 	Overrides map[int64]T `mapstructure:"overrides" json:"overrides"`
-}
-
-// TraceSceneCfg 控制 trace 热缓存查询链路的按 workspace 开关
-type TraceSceneCfg struct {
-	// CachedEnabled 命中的 workspace 允许 trace_scene=cached 读热缓存（Abase）；未命中降级为 default（走 CK）
-	CachedEnabled SpaceAwareParam[bool] `mapstructure:"cached_enabled" json:"cached_enabled"`
 }
 
 // Get 根据 workspaceID 获取配置值，优先取 Overrides，未命中则返回 Default
@@ -245,13 +243,13 @@ type ITraceConfig interface {
 	GetTraceIngestTenantProducerCfg(ctx context.Context) (map[string]*IngestConfig, error)
 	GetAnnotationMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 	GetTraceCkCfg(ctx context.Context) (*TraceCKCfg, error)
-	GetTraceSceneCfg(ctx context.Context) (*TraceSceneCfg, error)
 	GetTenantConfig(ctx context.Context) (*TenantCfg, error)
 	GetTraceFieldMetaInfo(ctx context.Context) (*TraceFieldMetaInfoCfg, error)
 	GetTraceDataMaxDurationDay(ctx context.Context, platformType *string) int64
 	GetDefaultTraceTenant(ctx context.Context) string
 	GetAnnotationSourceCfg(ctx context.Context) (*AnnotationSourceConfig, error)
 	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
+	GetCachedQueryMaxQPS(ctx context.Context, key string) (int, error)
 	GetAnnotationMaxQPS(ctx context.Context, key string) (int, error)
 	GetKeySpanTypes(ctx context.Context) map[string][]string
 	GetBackfillMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)

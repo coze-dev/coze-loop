@@ -92,13 +92,6 @@ trace_tenant_cfg:
   tenants_support_annotation:
     cozeloop: true
 
-# trace_scene_cfg 控制 trace 热缓存（cached）查询链路的按 workspace 开关。
-# 默认全部关闭（走 ClickHouse）；命中 overrides 的 workspace 才允许 trace_scene=cached 读热缓存。
-trace_scene_cfg:
-  cached_enabled:
-    default: false
-    overrides: {}
-
 trace_field_meta_info:
   available_fields:
     input:
@@ -365,6 +358,10 @@ query_trace_rate_limit_config:
   default_max_qps: 10
   space_max_qps:
     123456: 100
+  # cached 场景独立限流；值兼任开关：>0 = 该 workspace 开放 cached 热缓存且按此 QPS 限流；
+  # <=0 或缺失 = 未开放 cached（降级走 ClickHouse 并吃原 default/space 限流）。
+  cached_default_max_qps: 0
+  cached_space_max_qps: {}
 
 key_span_type:
   default:

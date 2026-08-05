@@ -16,48 +16,65 @@ import (
 	confmocks "github.com/coze-dev/coze-loop/backend/pkg/conf/mocks"
 )
 
-func TestTraceConfigCenter_GetTraceSceneCfg(t *testing.T) {
+func TestTraceConfigCenter_GetCachedQueryMaxQPS(t *testing.T) {
 	type fields struct {
 		configLoader *confmocks.MockIConfigLoader
 	}
 	tests := []struct {
 		name         string
+		key          string
 		fieldsGetter func(ctrl *gomock.Controller) fields
-		want         *config.TraceSceneCfg
+		want         int
 		wantErr      bool
 	}{
 		{
-			name: "get trace scene cfg successfully",
+			name: "hit cached space max qps",
+			key:  "111",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
-				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), traceSceneCfgKey, gomock.Any()).
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), queryTraceRateLimitCfgKey, gomock.Any()).
 					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
-						cfg := v.(*config.TraceSceneCfg)
-						cfg.CachedEnabled = config.SpaceAwareParam[bool]{
-							Default:   false,
-							Overrides: map[int64]bool{111: true},
+						cfg := v.(**config.QueryTraceRateLimitConfig)
+						*cfg = &config.QueryTraceRateLimitConfig{
+							CachedDefaultMaxQPS: 5,
+							CachedSpaceMaxQPS:   map[string]int{"111": 50},
 						}
 						return nil
 					})
 				return fields{configLoader: mockLoader}
 			},
-			want: &config.TraceSceneCfg{
-				CachedEnabled: config.SpaceAwareParam[bool]{
-					Default:   false,
-					Overrides: map[int64]bool{111: true},
-				},
+			want:    50,
+			wantErr: false,
+		},
+		{
+			name: "fall back to cached default max qps",
+			key:  "222",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), queryTraceRateLimitCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(**config.QueryTraceRateLimitConfig)
+						*cfg = &config.QueryTraceRateLimitConfig{
+							CachedDefaultMaxQPS: 5,
+							CachedSpaceMaxQPS:   map[string]int{"111": 50},
+						}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
 			},
+			want:    5,
 			wantErr: false,
 		},
 		{
 			name: "unmarshal key failed",
+			key:  "111",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
-				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), traceSceneCfgKey, gomock.Any()).
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), queryTraceRateLimitCfgKey, gomock.Any()).
 					Return(fmt.Errorf("unmarshal error"))
 				return fields{configLoader: mockLoader}
 			},
-			want:    nil,
+			want:    0,
 			wantErr: true,
 		},
 	}
@@ -69,7 +86,7 @@ func TestTraceConfigCenter_GetTraceSceneCfg(t *testing.T) {
 			tr := &TraceConfigCenter{
 				IConfigLoader: f.configLoader,
 			}
-			got, err := tr.GetTraceSceneCfg(context.Background())
+			got, err := tr.GetCachedQueryMaxQPS(context.Background(), tt.key)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
 		})

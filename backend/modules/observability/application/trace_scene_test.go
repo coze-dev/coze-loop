@@ -8,117 +8,104 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	"github.com/coze-dev/coze-loop/backend/infra/limiter"
+	limitermocks "github.com/coze-dev/coze-loop/backend/infra/limiter/mocks"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
-// cachedCfg 构造一个命中/未命中 workspace 的 TraceSceneCfg。
-func cachedCfg(defaultEnabled bool, overrides map[int64]bool) *config.TraceSceneCfg {
-	return &config.TraceSceneCfg{
-		CachedEnabled: config.SpaceAwareParam[bool]{
-			Default:   defaultEnabled,
-			Overrides: overrides,
-		},
-	}
-}
-
-func TestResolveTraceScene(t *testing.T) {
-	const wsEnabled = int64(111)
-	const wsDisabled = int64(222)
+func TestOpenAPIApplication_AllowByKeyWithScene(t *testing.T) {
+	const key = "123"
 
 	tests := []struct {
-		name      string
-		scene     string
-		workspace int64
-		setup     func(m *configmocks.MockITraceConfig)
-		want      loop_span.TraceScene
+		name        string
+		reqScene    loop_span.TraceScene
+		setup       func(cfg *configmocks.MockITraceConfig, rl *limitermocks.MockIRateLimiter)
+		wantAllowed bool
+		wantScene   loop_span.TraceScene
 	}{
 		{
-			name:      "empty scene degrades to default without reading cfg",
-			scene:     "",
-			workspace: wsEnabled,
-			setup:     func(m *configmocks.MockITraceConfig) {}, // GetTraceSceneCfg 不应被调用
-			want:      loop_span.TraceSceneDefault,
-		},
-		{
-			name:      "explicit default scene degrades to default without reading cfg",
-			scene:     string(loop_span.TraceSceneDefault),
-			workspace: wsEnabled,
-			setup:     func(m *configmocks.MockITraceConfig) {},
-			want:      loop_span.TraceSceneDefault,
-		},
-		{
-			name:      "cached requested and workspace enabled -> cached",
-			scene:     string(loop_span.TraceSceneCached),
-			workspace: wsEnabled,
-			setup: func(m *configmocks.MockITraceConfig) {
-				m.EXPECT().GetTraceSceneCfg(gomock.Any()).
-					Return(cachedCfg(false, map[int64]bool{wsEnabled: true}), nil)
+			name:     "non-cached scene -> default bucket, default scene",
+			reqScene: loop_span.TraceSceneDefault,
+			setup: func(cfg *configmocks.MockITraceConfig, rl *limitermocks.MockIRateLimiter) {
+				cfg.EXPECT().GetQueryMaxQPS(gomock.Any(), key).Return(10, nil)
+				rl.EXPECT().AllowN(gomock.Any(), key, 1, gomock.Any()).
+					Return(&limiter.Result{Allowed: true}, nil)
 			},
-			want: loop_span.TraceSceneCached,
+			wantAllowed: true,
+			wantScene:   loop_span.TraceSceneDefault,
 		},
 		{
-			name:      "cached requested but workspace not enabled -> degrade to default",
-			scene:     string(loop_span.TraceSceneCached),
-			workspace: wsDisabled,
-			setup: func(m *configmocks.MockITraceConfig) {
-				m.EXPECT().GetTraceSceneCfg(gomock.Any()).
-					Return(cachedCfg(false, map[int64]bool{wsEnabled: true}), nil)
+			name:     "cached configured (>0) -> cached bucket, cached scene",
+			reqScene: loop_span.TraceSceneCached,
+			setup: func(cfg *configmocks.MockITraceConfig, rl *limitermocks.MockIRateLimiter) {
+				cfg.EXPECT().GetCachedQueryMaxQPS(gomock.Any(), key).Return(50, nil)
+				rl.EXPECT().AllowN(gomock.Any(), "cached:"+key, 1, gomock.Any()).
+					Return(&limiter.Result{Allowed: true}, nil)
 			},
-			want: loop_span.TraceSceneDefault,
+			wantAllowed: true,
+			wantScene:   loop_span.TraceSceneCached,
 		},
 		{
-			name:      "cached requested but cfg read errors -> degrade to default",
-			scene:     string(loop_span.TraceSceneCached),
-			workspace: wsEnabled,
-			setup: func(m *configmocks.MockITraceConfig) {
-				m.EXPECT().GetTraceSceneCfg(gomock.Any()).
-					Return(nil, errors.New("cfg boom"))
+			name:     "cached bucket full -> not allowed",
+			reqScene: loop_span.TraceSceneCached,
+			setup: func(cfg *configmocks.MockITraceConfig, rl *limitermocks.MockIRateLimiter) {
+				cfg.EXPECT().GetCachedQueryMaxQPS(gomock.Any(), key).Return(50, nil)
+				rl.EXPECT().AllowN(gomock.Any(), "cached:"+key, 1, gomock.Any()).
+					Return(&limiter.Result{Allowed: false}, nil)
 			},
-			want: loop_span.TraceSceneDefault,
+			wantAllowed: false,
+			wantScene:   loop_span.TraceSceneCached,
 		},
 		{
-			name:      "cached requested but cfg nil -> degrade to default",
-			scene:     string(loop_span.TraceSceneCached),
-			workspace: wsEnabled,
-			setup: func(m *configmocks.MockITraceConfig) {
-				m.EXPECT().GetTraceSceneCfg(gomock.Any()).Return(nil, nil)
+			name:     "cached but qps<=0 -> degrade to default bucket, default scene",
+			reqScene: loop_span.TraceSceneCached,
+			setup: func(cfg *configmocks.MockITraceConfig, rl *limitermocks.MockIRateLimiter) {
+				cfg.EXPECT().GetCachedQueryMaxQPS(gomock.Any(), key).Return(0, nil)
+				cfg.EXPECT().GetQueryMaxQPS(gomock.Any(), key).Return(10, nil)
+				rl.EXPECT().AllowN(gomock.Any(), key, 1, gomock.Any()).
+					Return(&limiter.Result{Allowed: true}, nil)
 			},
-			want: loop_span.TraceSceneDefault,
+			wantAllowed: true,
+			wantScene:   loop_span.TraceSceneDefault,
 		},
 		{
-			name:      "cached requested and enabled via default -> cached",
-			scene:     string(loop_span.TraceSceneCached),
-			workspace: wsDisabled,
-			setup: func(m *configmocks.MockITraceConfig) {
-				m.EXPECT().GetTraceSceneCfg(gomock.Any()).
-					Return(cachedCfg(true, nil), nil)
+			name:     "cached but cfg read errors -> degrade to default bucket, default scene",
+			reqScene: loop_span.TraceSceneCached,
+			setup: func(cfg *configmocks.MockITraceConfig, rl *limitermocks.MockIRateLimiter) {
+				cfg.EXPECT().GetCachedQueryMaxQPS(gomock.Any(), key).Return(0, errors.New("cfg boom"))
+				cfg.EXPECT().GetQueryMaxQPS(gomock.Any(), key).Return(10, nil)
+				rl.EXPECT().AllowN(gomock.Any(), key, 1, gomock.Any()).
+					Return(&limiter.Result{Allowed: true}, nil)
 			},
-			want: loop_span.TraceSceneCached,
+			wantAllowed: true,
+			wantScene:   loop_span.TraceSceneDefault,
+		},
+		{
+			name:     "default qps read errors -> fail-open, default scene",
+			reqScene: loop_span.TraceSceneDefault,
+			setup: func(cfg *configmocks.MockITraceConfig, rl *limitermocks.MockIRateLimiter) {
+				cfg.EXPECT().GetQueryMaxQPS(gomock.Any(), key).Return(0, errors.New("cfg boom"))
+			},
+			wantAllowed: true,
+			wantScene:   loop_span.TraceSceneDefault,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run("openapi/"+tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			cfgMock := configmocks.NewMockITraceConfig(ctrl)
-			tt.setup(cfgMock)
-			o := &OpenAPIApplication{traceConfig: cfgMock}
-			got := o.resolveTraceScene(context.Background(), tt.workspace, tt.scene)
-			assert.Equal(t, tt.want, got)
-		})
-		t.Run("trace/"+tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			cfgMock := configmocks.NewMockITraceConfig(ctrl)
-			tt.setup(cfgMock)
-			tr := &TraceApplication{traceConfig: cfgMock}
-			got := tr.resolveTraceScene(context.Background(), tt.workspace, tt.scene)
-			assert.Equal(t, tt.want, got)
+			rlMock := limitermocks.NewMockIRateLimiter(ctrl)
+			tt.setup(cfgMock, rlMock)
+
+			o := &OpenAPIApplication{traceConfig: cfgMock, rateLimiter: rlMock}
+			allowed, scene := o.AllowByKeyWithScene(context.Background(), key, tt.reqScene)
+			assert.Equal(t, tt.wantAllowed, allowed)
+			assert.Equal(t, tt.wantScene, scene)
 		})
 	}
 }
