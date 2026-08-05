@@ -167,6 +167,8 @@ func (r *ExptTurnResultRepoImpl) CreateOrUpdateItemsTurnRunLogStatus(ctx context
 	if err != nil {
 		return err
 	}
+	// 状态为 Fail 时，同时把超时 err_msg 落到 turn runlog，用于 API 层 getTurnSystemInfo 反解 turn 级 error
+	zombieErrBytes := []byte(errno.SerializeErr(errno.NewTurnOtherErr("turn status not updated for long interval", fmt.Errorf("turn result failure with timeout"))))
 	runlogs := make([]*model.ExptTurnResultRunLog, 0, len(turnResults))
 	for idx := range turnResults {
 		runlogs = append(runlogs, &model.ExptTurnResultRunLog{
@@ -177,7 +179,7 @@ func (r *ExptTurnResultRepoImpl) CreateOrUpdateItemsTurnRunLogStatus(ctx context
 			ItemID:    turnResults[idx].ItemID,
 			TurnID:    turnResults[idx].TurnID,
 			Status:    int32(status),
-			ErrMsg:    gptr.Of([]byte(errno.SerializeErr(errno.NewTurnOtherErr("turn status not updated for long interval", fmt.Errorf("turn result failure with timeout"))))),
+			ErrMsg:    gptr.Of(zombieErrBytes),
 		})
 	}
 
@@ -185,7 +187,12 @@ func (r *ExptTurnResultRepoImpl) CreateOrUpdateItemsTurnRunLogStatus(ctx context
 		return err
 	}
 
-	if err := r.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, map[string]any{"status": int32(status)}); err != nil {
+	// 覆盖已存在 runlog 的 status/err_msg（BatchCreateNX 只对未存在的行写入，已存在的行由此更新兜底）
+	ufields := map[string]any{"status": int32(status)}
+	if status == entity.TurnRunState_Fail {
+		ufields["err_msg"] = zombieErrBytes
+	}
+	if err := r.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, ufields); err != nil {
 		return err
 	}
 

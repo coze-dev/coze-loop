@@ -1172,6 +1172,9 @@ func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.I
 			if item.SystemInfo.LogID != nil && *item.SystemInfo.LogID != "" {
 				res.SystemInfo.SetLogID(gptr.Of(*item.SystemInfo.LogID))
 			}
+			if runErr := openAPIRunErrorDO2DTO(item.SystemInfo.Error); runErr != nil {
+				res.SystemInfo.SetError(runErr)
+			}
 		}
 		result = append(result, res)
 	}
@@ -1329,6 +1332,9 @@ func openAPIResultPayloadDO2DTO(result *entity.ExperimentResult) *openapiExperim
 		if payload.SystemInfo.LogID != nil && *payload.SystemInfo.LogID != "" {
 			res.SystemInfo.SetLogID(gptr.Of(*payload.SystemInfo.LogID))
 		}
+		if runErr := openAPIRunErrorDO2DTO(payload.SystemInfo.Error); runErr != nil {
+			res.SystemInfo.SetError(runErr)
+		}
 	}
 	if res.EvalSetTurn == nil && len(res.EvaluatorRecords) == 0 {
 		return nil
@@ -1485,6 +1491,28 @@ func openAPITargetUsageDO2DTO(usage *entity.EvalTargetUsage) *openapiEvalTarget.
 		InputTokens:  usage.InputTokens,
 		OutputTokens: usage.OutputTokens,
 	}
+}
+
+// openAPIRunErrorDO2DTO 把 entity.RunError 转成 openapi 结构，nil → nil。
+// 用于 item / turn SystemInfo.Error 字段（超时等系统级错误的用户可见描述）。
+func openAPIRunErrorDO2DTO(err *entity.RunError) *openapiExperiment.RunError {
+	if err == nil {
+		return nil
+	}
+	res := &openapiExperiment.RunError{}
+	if err.Code != 0 {
+		res.Code = gptr.Of(err.Code)
+	}
+	if err.Message != nil && *err.Message != "" {
+		res.Message = gptr.Of(*err.Message)
+	}
+	if err.Detail != nil && *err.Detail != "" {
+		res.Detail = gptr.Of(*err.Detail)
+	}
+	if res.Code == nil && res.Message == nil && res.Detail == nil {
+		return nil
+	}
+	return res
 }
 
 func openAPITargetRunErrorDO2DTO(err *entity.EvalTargetRunError) *openapiEvalTarget.EvalTargetRunError {

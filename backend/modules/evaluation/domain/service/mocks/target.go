@@ -355,15 +355,15 @@ func (mr *MockIEvalTargetServiceMockRecorder) ReportInvokeRecords(arg0, arg1 int
 }
 
 // TerminateAsyncRecordsAndDestroySandbox mocks base method.
-func (m *MockIEvalTargetService) TerminateAsyncRecordsAndDestroySandbox(arg0 context.Context, arg1 int64, arg2 []int64, arg3 int32, arg4 string) {
+func (m *MockIEvalTargetService) TerminateAsyncRecordsAndDestroySandbox(arg0 context.Context, arg1 int64, arg2 []int64, arg3 int32, arg4 string, arg5 bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "TerminateAsyncRecordsAndDestroySandbox", arg0, arg1, arg2, arg3, arg4)
+	m.ctrl.Call(m, "TerminateAsyncRecordsAndDestroySandbox", arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // TerminateAsyncRecordsAndDestroySandbox indicates an expected call of TerminateAsyncRecordsAndDestroySandbox.
-func (mr *MockIEvalTargetServiceMockRecorder) TerminateAsyncRecordsAndDestroySandbox(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockIEvalTargetServiceMockRecorder) TerminateAsyncRecordsAndDestroySandbox(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateAsyncRecordsAndDestroySandbox", reflect.TypeOf((*MockIEvalTargetService)(nil).TerminateAsyncRecordsAndDestroySandbox), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateAsyncRecordsAndDestroySandbox", reflect.TypeOf((*MockIEvalTargetService)(nil).TerminateAsyncRecordsAndDestroySandbox), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // ValidateRuntimeParam mocks base method.

@@ -723,6 +723,8 @@ func (e *EvalTargetServiceImpl) LoadRecordFullData(ctx context.Context, record *
 
 // destroySandboxExecuteIfNeeded 在 SandboxAgent 评测对象单行执行完成后销毁该次沙箱执行。
 // 仅做 best-effort：任何步骤失败仅记录日志，不阻断上层调用。
+// 若 record.EvalTargetOutputData.Ext 里带 SandboxAgentExtKeyExtraExecuteID（双沙箱模式的从沙箱），
+// 会追加销毁一次；避免从沙箱只能等 session TTL 到期后被 patrol 兼底回收。
 func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Context, record *entity.EvalTargetRecord) {
 	if e.sandboxSchedulerAdapter == nil || record == nil {
 		return
@@ -739,7 +741,40 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 	}
 
 	taskID := e.resolveSandboxTaskIDByRunID(ctx, record.ExperimentRunID)
-	e.destroySandboxExecute(ctx, taskID, record.SpaceID, record.ID)
+	e.destroySandboxExecute(ctx, taskID, record.SpaceID, record.ID, false)
+
+	// 双沙箱：AsyncExecute 在 outputData.Ext 里落了从沙箱 executeID，这里追加销毁一次。
+	if extra := extractExtraSandboxExecuteID(record); extra != "" {
+		e.destroySandboxExtraExecute(ctx, taskID, record.SpaceID, extra)
+	}
+}
+
+// extractExtraSandboxExecuteID 从 record 的 outputData.Ext 里读取额外沙箱 execute id；
+// 缺失/空值返回 ""。
+func extractExtraSandboxExecuteID(record *entity.EvalTargetRecord) string {
+	if record == nil || record.EvalTargetOutputData == nil {
+		return ""
+	}
+	return record.EvalTargetOutputData.Ext[entity.SandboxAgentExtKeyExtraExecuteID]
+}
+
+// destroySandboxExtraExecute 异步 best-effort 销毁指定字符串 executeID 的沙箱执行；用于双沙箱
+// 从沙箱这类没有 int64 ID 的额外销毁点。zombieTimeout 强制 false，避免向从沙箱下发收尾命令。
+func (e *EvalTargetServiceImpl) destroySandboxExtraExecute(ctx context.Context, taskID string, spaceID int64, executeID string) {
+	if e.sandboxSchedulerAdapter == nil || executeID == "" {
+		return
+	}
+	goroutine.Go(ctx, func() {
+		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
+			TaskID:      taskID,
+			DestroyType: rpc.SandboxDestroyTypeExecute,
+			ExecuteIDs:  []string{executeID},
+			WorkspaceID: spaceID,
+		}); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox extra execute fail, task_id=%s, execute_id=%s, err=%v",
+				taskID, executeID, err)
+		}
+	})
 }
 
 // resolveSandboxTaskIDByRunID 通过 ExperimentRunID 反查 ExptID 作为 sandbox TaskID。
@@ -759,16 +794,18 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 }
 
 // destroySandboxExecute 异步 best-effort 销毁单个 sandbox execute。
-func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID, executeID int64) {
+// zombieTimeout=true 时透传给下游适配器，由适配器决定是否附带 SandboxAgent 收尾命令。
+func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID, executeID int64, zombieTimeout bool) {
 	if e.sandboxSchedulerAdapter == nil {
 		return
 	}
 	goroutine.Go(ctx, func() {
 		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
-			TaskID:      taskID,
-			DestroyType: rpc.SandboxDestroyTypeExecute,
-			ExecuteIDs:  []string{strconv.FormatInt(executeID, 10)},
-			WorkspaceID: spaceID,
+			TaskID:        taskID,
+			DestroyType:   rpc.SandboxDestroyTypeExecute,
+			ExecuteIDs:    []string{strconv.FormatInt(executeID, 10)},
+			WorkspaceID:   spaceID,
+			ZombieTimeout: zombieTimeout,
 		}); err != nil {
 			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_id=%d, err=%v",
 				taskID, executeID, err)
@@ -778,7 +815,9 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 
 // TerminateAsyncRecordsAndDestroySandbox 把仍处于 AsyncInvoking 状态的 SandboxAgent EvalTargetRecord 置为 Fail，
 // 并以 best-effort 方式触发沙箱 Execute 销毁。非 SandboxAgent / 非 AsyncInvoking 的 record 会被忽略。
-func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string) {
+// zombieTimeout=true 时，Destroy 请求会带上 SandboxAgent 收尾命令 EndCmd（含 expt_id/invoke_id）；
+// 其余场景（如手动取消）不下发 EndCmd。
+func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string, zombieTimeout bool) {
 	if len(recordIDs) == 0 {
 		return
 	}
@@ -849,7 +888,7 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
 			taskIDCache[r.ExperimentRunID] = taskID
 		}
-		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID)
+		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID, zombieTimeout)
 	}
 }
 

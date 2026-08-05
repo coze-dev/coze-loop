@@ -845,6 +845,7 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 		recordIDs,
 		int32(errno.AsyncEvalTargetTerminatedCode),
 		"async eval target terminated: experiment cancelled",
+		false,
 	)
 }
 
