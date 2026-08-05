@@ -671,6 +671,7 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 		WithDetail:            true,
 		SpanIDs:               req.SpanIds,
 		PageToken:             req.GetPageToken(),
+		TraceScene:            loop_span.TraceScene(req.GetTraceScene()),
 	}
 	if req.PageSize != nil {
 		ret.Limit = *req.PageSize
