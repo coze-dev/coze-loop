@@ -1,0 +1,27 @@
+backend/kitex_gen/coze/loop/observability/trace/coze.loop.observability.trace.go
+  s_4dacd62b89d237::t_fb5a2ae78110f7 2774-2783,2910-2921,2966-2968,2985,3021-3024,3141-3148,3332-3342,3402-3405,3628-3645,3712-3714,3834-3845
+backend/kitex_gen/coze/loop/observability/trace/k-coze.loop.observability.trace.go
+  s_4dacd62b89d237::t_b6ac271c5ef928 2231-2244,2455-2468,2492,2520,2627-2635,2742-2750,2831-2835
+backend/modules/observability/application/trace.go
+  s_4dacd62b89d237::t_0241aee83203c9 284
+idl/thrift/coze/loop/observability/coze.loop.observability.trace.thrift
+  s_4dacd62b89d237::t_f365946b215320 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "070ad9ffb821f6f870cb6cc03c7a05a910d16529",
+  "prompts": {},
+  "sessions": {
+    "s_4dacd62b89d237": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_4dacd62b89d237",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
