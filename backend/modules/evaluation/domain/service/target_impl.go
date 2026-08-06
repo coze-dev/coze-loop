@@ -860,13 +860,6 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		return
 	}
 
-	failOutput := &entity.EvalTargetOutputData{
-		EvalTargetRunError: &entity.EvalTargetRunError{
-			Code:    errCode,
-			Message: errMessage,
-		},
-	}
-
 	taskIDCache := make(map[int64]string)
 	for _, r := range records {
 		if r == nil {
@@ -877,6 +870,19 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		}
 		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
 			continue
+		}
+		// 覆盖前先抓一次 extra execute id：failOutput 会替换掉整个 EvalTargetOutputData（含 Ext），
+		// 若不预先抓，双沙箱模式的从沙箱销毁就会丢失依据，只能等 session TTL。
+		extraExecuteID := extractExtraSandboxExecuteID(r)
+		failOutput := &entity.EvalTargetOutputData{
+			EvalTargetRunError: &entity.EvalTargetRunError{
+				Code:    errCode,
+				Message: errMessage,
+			},
+		}
+		// 保留 extra execute id 在落库的 fail record 上，便于事后审计 / 手动兜底销毁。
+		if extraExecuteID != "" {
+			failOutput.Ext = map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: extraExecuteID}
 		}
 		r.Status = gptr.Of(entity.EvalTargetRunStatusFail)
 		r.EvalTargetOutputData = failOutput
@@ -890,6 +896,11 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			taskIDCache[r.ExperimentRunID] = taskID
 		}
 		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID, zombieTimeout)
+		// 双沙箱：额外销毁从沙箱 execute，语义对齐 destroySandboxExecuteIfNeeded (success 分支)。
+		// 从沙箱 zombieTimeout 恒为 false，不需要下发 SandboxAgent EndCmd（EndCmd 只对主沙箱有意义）。
+		if extraExecuteID != "" {
+			e.destroySandboxExtraExecute(ctx, taskID, r.SpaceID, extraExecuteID)
+		}
 	}
 }
 
@@ -980,24 +991,21 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 				<-sem
 				wg.Done()
 			}()
-			resp, err := e.sandboxSchedulerAdapter.Get(ctx, &rpc.SandboxGetRequest{
-				ExecuteID:   strconv.FormatInt(r.ID, 10),
-				WorkspaceID: spaceID,
-			})
-			if err != nil {
-				logs.CtxWarn(ctx, "[SandboxStatusCheck] sandbox get fail, record_id=%d, err=%v", r.ID, err)
-				return
+			// 主沙箱：ExecuteID = record.ID
+			mainTerminal, mainStatus := e.querySandboxTerminalStatus(ctx, strconv.FormatInt(r.ID, 10), spaceID, r.ID, "main")
+			// 从沙箱（双沙箱模式）：ExecuteID 从 Ext 里取；单沙箱模式 extra 为空，跳过。
+			// 任一进终态就算命中——双沙箱是配对关系，一挂另一边产出也没意义。
+			var subTerminal bool
+			var subStatus rpc.SandboxExecuteStatus
+			if extra := extractExtraSandboxExecuteID(r); extra != "" {
+				subTerminal, subStatus = e.querySandboxTerminalStatus(ctx, extra, spaceID, r.ID, "subordinate")
 			}
-			if resp == nil || resp.ExecuteInfo == nil {
-				return
-			}
-			status := resp.ExecuteInfo.Status
-			if status != rpc.SandboxExecuteStatusFailed && status != rpc.SandboxExecuteStatusCanceled {
+			if !mainTerminal && !subTerminal {
 				return
 			}
 			mu.Lock()
 			terminated = append(terminated, r.ID)
-			statusMap[r.ID] = sandboxStatusText(status)
+			statusMap[r.ID] = combineSandboxStatusLabel(mainTerminal, mainStatus, subTerminal, subStatus)
 			mu.Unlock()
 		})
 	}
@@ -1007,6 +1015,41 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 		return nil, nil
 	}
 	return terminated, statusMap
+}
+
+// querySandboxTerminalStatus 查询单个 sandbox execute 状态；返回 (是否终态, 状态)。
+// Get 出错 / adapter 未接入 / 非终态 一律 (false, _) —— warn + skip 该 execute。
+func (e *EvalTargetServiceImpl) querySandboxTerminalStatus(ctx context.Context, executeID string, spaceID, recordID int64, side string) (bool, rpc.SandboxExecuteStatus) {
+	resp, err := e.sandboxSchedulerAdapter.Get(ctx, &rpc.SandboxGetRequest{
+		ExecuteID:   executeID,
+		WorkspaceID: spaceID,
+	})
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxStatusCheck] sandbox get fail, record_id=%d, execute_id=%s, side=%s, err=%v", recordID, executeID, side, err)
+		return false, 0
+	}
+	if resp == nil || resp.ExecuteInfo == nil {
+		return false, 0
+	}
+	status := resp.ExecuteInfo.Status
+	if status != rpc.SandboxExecuteStatusFailed && status != rpc.SandboxExecuteStatusCanceled {
+		return false, status
+	}
+	return true, status
+}
+
+// combineSandboxStatusLabel 生成"哪一侧沙箱进入终态"的人类可读标签，写进 err_msg 辅助定位。
+//
+//	"Failed (main)" / "Canceled (subordinate)" / "Failed (main), Canceled (subordinate)"
+func combineSandboxStatusLabel(mainTerminal bool, mainStatus rpc.SandboxExecuteStatus, subTerminal bool, subStatus rpc.SandboxExecuteStatus) string {
+	parts := make([]string, 0, 2)
+	if mainTerminal {
+		parts = append(parts, sandboxStatusText(mainStatus)+" (main)")
+	}
+	if subTerminal {
+		parts = append(parts, sandboxStatusText(subStatus)+" (subordinate)")
+	}
+	return strings.Join(parts, ", ")
 }
 
 func sandboxStatusText(s rpc.SandboxExecuteStatus) string {
