@@ -7933,7 +7933,8 @@ type SandboxAgent struct {
 	// 模型名称，声明该 Agent 要评测的模型，仅支持单个
 	ModelName *string `thrift:"model_name,3,optional" frugal:"3,optional,string" form:"model_name" json:"model_name,omitempty" query:"model_name"`
 	// 模型 ID（平台模型服务 model_id）。填写后被测 Agent 模型密钥可经 GetModelAndAccount 解析，
-	// 与 SUA 的 sua_model_id 对称；缺省 0 时仅用 model_name + TCC 替换规则（行为不变）
+	// 缺省 0 时仅用 model_name + TCC 替换规则（行为不变）。
+	// 注: 这是**被测 Agent** 的模型 ID，与已移除的 SUA 侧 sua_model_id 无关，不要一起清掉。
 	ModelID *int64 `thrift:"model_id,4,optional" frugal:"4,optional,i64" form:"model_id" json:"model_id,omitempty" query:"model_id"`
 	// Agent 安装命令，安装 Agent CLI 本体
 	AgentSetupCmd *string `thrift:"agent_setup_cmd,5,optional" frugal:"5,optional,string" form:"agent_setup_cmd" json:"agent_setup_cmd,omitempty" query:"agent_setup_cmd"`

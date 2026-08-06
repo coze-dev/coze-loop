@@ -2812,17 +2812,20 @@ func (p *OpenAPIEvalSetConfig) Field30DeepEqual(src *filter.Filter) bool {
 }
 
 // RunModeConfig 实验级跑法配置 (OpenAPI 版本, 对齐 domain RunModeConfig)。run_mode 是顶层跑法总开关;
-// sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
-// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。sua_model_id 传平台模型 ID。
+// sua_mode 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
+// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
 //
-// 字段号与 domain 版**逐一对齐** (6-10 为两级配置的实验级一半: SUA 行为四项 + max_turns);
-// 合并规则「题目级优先、实验级兜底」详见 domain/expt.thrift 的同名 struct 注释。
+// **SUA 模型不是调用方参数**: 由平台 TCC 统一控制(含密钥)。字段 4 sua_model_id **已移除**,
+// sua_model_name 已弃用(仅调试)。详见 domain/expt.thrift 同名 struct 注释。
+//
+// 字段号与 domain 版**逐一对齐** (含 4 号的保留, 6-10 为两级配置的实验级一半: SUA 行为四项
+// + max_turns); 合并规则「题目级优先、实验级兜底」详见 domain/expt.thrift 的同名 struct 注释。
 type RunModeConfig struct {
 	RunMode       *ExptRunMode `thrift:"run_mode,1,optional" frugal:"1,optional,string" json:"run_mode" form:"run_mode" query:"run_mode"`
 	MaxRunMinutes *int32       `thrift:"max_run_minutes,2,optional" frugal:"2,optional,i32" json:"max_run_minutes" form:"max_run_minutes" query:"max_run_minutes"`
 	SuaMode       *SuaMode     `thrift:"sua_mode,3,optional" frugal:"3,optional,string" json:"sua_mode" form:"sua_mode" query:"sua_mode"`
-	SuaModelID    *int64       `thrift:"sua_model_id,4,optional" frugal:"4,optional,i64" json:"sua_model_id" form:"sua_model_id" query:"sua_model_id"`
-	// SUA 模型名, 与 sua_model_id 二选一: operator 优先用 name 直取模型, id 走平台解析。
+	// 4 号**永久保留**: 曾是 sua_model_id, 与 domain 版同步移除。号段不复用。
+	// SUA 模型名, **已弃用, 仅调试用**; 常规路径不传, 由平台 TCC 选模型并带密钥。
 	SuaModelName *string `thrift:"sua_model_name,5,optional" frugal:"5,optional,string" json:"sua_model_name" form:"sua_model_name" query:"sua_model_name"`
 	// sua_goal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
 	SuaGoal *string `thrift:"sua_goal,6,optional" frugal:"6,optional,string" json:"sua_goal" form:"sua_goal" query:"sua_goal"`
@@ -2878,18 +2881,6 @@ func (p *RunModeConfig) GetSuaMode() (v SuaMode) {
 		return RunModeConfig_SuaMode_DEFAULT
 	}
 	return *p.SuaMode
-}
-
-var RunModeConfig_SuaModelID_DEFAULT int64
-
-func (p *RunModeConfig) GetSuaModelID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSuaModelID() {
-		return RunModeConfig_SuaModelID_DEFAULT
-	}
-	return *p.SuaModelID
 }
 
 var RunModeConfig_SuaModelName_DEFAULT string
@@ -2972,9 +2963,6 @@ func (p *RunModeConfig) SetMaxRunMinutes(val *int32) {
 func (p *RunModeConfig) SetSuaMode(val *SuaMode) {
 	p.SuaMode = val
 }
-func (p *RunModeConfig) SetSuaModelID(val *int64) {
-	p.SuaModelID = val
-}
 func (p *RunModeConfig) SetSuaModelName(val *string) {
 	p.SuaModelName = val
 }
@@ -2998,7 +2986,6 @@ var fieldIDToName_RunModeConfig = map[int16]string{
 	1:  "run_mode",
 	2:  "max_run_minutes",
 	3:  "sua_mode",
-	4:  "sua_model_id",
 	5:  "sua_model_name",
 	6:  "sua_goal",
 	7:  "sua_persona",
@@ -3017,10 +3004,6 @@ func (p *RunModeConfig) IsSetMaxRunMinutes() bool {
 
 func (p *RunModeConfig) IsSetSuaMode() bool {
 	return p.SuaMode != nil
-}
-
-func (p *RunModeConfig) IsSetSuaModelID() bool {
-	return p.SuaModelID != nil
 }
 
 func (p *RunModeConfig) IsSetSuaModelName() bool {
@@ -3084,14 +3067,6 @@ func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3207,17 +3182,6 @@ func (p *RunModeConfig) ReadField3(iprot thrift.TProtocol) error {
 	p.SuaMode = _field
 	return nil
 }
-func (p *RunModeConfig) ReadField4(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.SuaModelID = _field
-	return nil
-}
 func (p *RunModeConfig) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -3301,10 +3265,6 @@ func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField5(oprot); err != nil {
@@ -3402,24 +3362,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-func (p *RunModeConfig) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSuaModelID() {
-		if err = oprot.WriteFieldBegin("sua_model_id", thrift.I64, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.SuaModelID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *RunModeConfig) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuaModelName() {
@@ -3553,9 +3495,6 @@ func (p *RunModeConfig) DeepEqual(ano *RunModeConfig) bool {
 	if !p.Field3DeepEqual(ano.SuaMode) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.SuaModelID) {
-		return false
-	}
 	if !p.Field5DeepEqual(ano.SuaModelName) {
 		return false
 	}
@@ -3609,18 +3548,6 @@ func (p *RunModeConfig) Field3DeepEqual(src *SuaMode) bool {
 		return false
 	}
 	if strings.Compare(*p.SuaMode, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *RunModeConfig) Field4DeepEqual(src *int64) bool {
-
-	if p.SuaModelID == src {
-		return true
-	} else if p.SuaModelID == nil || src == nil {
-		return false
-	}
-	if *p.SuaModelID != *src {
 		return false
 	}
 	return true
@@ -7365,6 +7292,28 @@ func (p *ExperimentStatistics) Field5DeepEqual(src *int32) bool {
 }
 
 // 评测实验
+//
+// ⚠️ 已知缺口 (2026-07 记录, **只记录未实现**): 本读模型**没有** run_mode_config 字段。
+//
+// 现状是不对称的:
+//   - **写侧有**: coze.loop.evaluation.openapi.thrift 的 SubmitExperimentRequest 47 号字段
+//     `optional experiment.RunModeConfig run_mode_config` —— OpenAPI 用户提交实验时能配跑法
+//     (run_mode / sua_mode / sua_model / SUA 行为四项 / max_turns / max_run_minutes)。
+//   - **读侧缺**: 本 struct 无对应字段, 于是 OpenAPI 用户 **查实验详情拿不到自己配了什么跑法**。
+//   - 对比内部接口: domain/expt.thrift 的 struct Experiment 有 115 号字段 run_mode_config,
+//     且 coze-loop 侧 convertor 的 runModeConfigDO2DTO 已写好回显 —— 即"内部接口能回显、
+//     OpenAPI 查不到"。
+//
+// **为什么现在不补 (不是漏了)**: 补齐要走一整轮 IDL 变更 —— ① 本 struct 加字段 (需与
+// coze-loop 仓 idl/thrift/.../domain_openapi/experiment.thrift 同步, open/ 是从那里同步来的);
+// ② 重跑代码生成 (cozeloop-gen-commercial / backend/script/cloudwego/code_gen.sh);
+// ③ 给 DomainExperimentDTO2OpenAPI 和 OpenAPIExperimentDO2DTO **两个** OpenAPI 读路径接线
+// (coze-loop backend/modules/evaluation/application/convertor/experiment/openapi.go);
+// ④ 补 UT。属独立排期项, 不夹带在功能改动里做。
+//
+// 补的时候注意: OpenAPI 侧用的是 domain_openapi 自己那套**字符串枚举**结构
+// (本文件已有 struct RunModeConfig, 与 ExptEvalSetSourceType 同套模式), 不要 include
+// domain/expt.thrift, 否则符号冲突。
 type Experiment struct {
 	// 基本信息
 	ID                 *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`

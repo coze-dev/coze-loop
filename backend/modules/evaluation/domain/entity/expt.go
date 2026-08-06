@@ -453,8 +453,12 @@ type RunModeConfig struct {
 	RunMode       RunMode `json:"run_mode,omitempty"`
 	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
 	SuaMode       SuaMode `json:"sua_mode,omitempty"`
-	SuaModelID    int64   `json:"sua_model_id,omitempty"`
-	SuaModelName  string  `json:"sua_model_name,omitempty"`
+	// SuaModelID **不再来自调用方**: 对外的 sua_model_id 入口已从 IDL 移除 (SUA 用哪个模型
+	// 是运维配置, 归 TCC)。字段保留是因为 TCC 劫持规则 sandbox_sua_model_replace 自带
+	// model_id, commercial 侧仍要经 modelCredByID 解析密钥。**不要在 convertor 里重新接上**。
+	SuaModelID int64 `json:"sua_model_id,omitempty"`
+	// SuaModelName 已弃用, 仅调试用; 常规路径由 TCC 决定 SUA 模型 (含密钥)。
+	SuaModelName string `json:"sua_model_name,omitempty"`
 
 	// SuaGoal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
 	SuaGoal string `json:"sua_goal,omitempty"`

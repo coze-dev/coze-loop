@@ -81,10 +81,14 @@ enum SuaMode {
 }
 
 // RunModeConfig 实验级跑法配置 (对齐 runtime RunModeConfig)。run_mode 是顶层跑法总开关;
-// sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
-// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。sua_model_id 传平台模型 ID,
-// 服务端 operator 用它经 GetModelAndAccount 解析出 api_key/base_url 注入 case-file
-// (本期可经 TCC 劫持为专有模型), 密钥绝不进请求体/落库明文。
+// sua_mode 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
+// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
+//
+// **SUA 用哪个模型不是调用方的参数**: 模型与其密钥都由平台 TCC
+// (sandbox_sua_model_replace + orch_env 的 FORNAX_SUA_*) 统一控制, 密钥绝不进请求体/落库明文。
+// 字段 4 sua_model_id 曾是"传平台模型 ID 让 operator 经 GetModelAndAccount 解析密钥"的入口,
+// **已移除** —— 它把一个运维决策暴露成了实验参数。sua_model_name 尚存但已弃用(仅调试),
+// 后续 TCC 默认就位后一并收走; 新代码不要依赖它。
 //
 // sua_goal / sua_persona / sua_behavioral_constraints / sua_pe_template 与 max_turns 是
 // **两级配置的实验级一半**: 题目级同名字段在 ItemRunConf 上。**合并规则: 题目级优先、实验级兜底**
@@ -95,8 +99,10 @@ struct RunModeConfig {
     1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
     2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
     3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
-    4: optional i64 sua_model_id (api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
-    // SUA 模型名, 与 sua_model_id 二选一: operator 优先用 name 直取模型, id 走平台解析 (GetModelAndAccount)。
+    // 4 号**永久保留**: 曾是 sua_model_id。号段不复用 —— 存量调用方可能仍在发这个字段,
+    // 复用成别的语义会让老请求静默命中新字段。
+    // SUA 模型名, **已弃用, 仅调试用**: 原样注入作模型名, 平台不解析密钥(靠 TCC 兜底)。
+    // 常规路径不要传 —— 不传即由平台 TCC 选模型并带上密钥。
     5: optional string sua_model_name (go.tag = 'json:"sua_model_name"')
     // sua_goal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
     6: optional string sua_goal (go.tag = 'json:"sua_goal"')
@@ -191,7 +197,7 @@ struct Experiment {
     // 实验绑定 item 总数; 首跑前可能缺省
     114: optional i64 total_item_count (api.js_conv='true', go.tag='json:"total_item_count"')
     // 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
-    // 仅 SandboxAgent + MultiSetConfig 实验非空。sua_model_id 回显平台模型 ID; api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
+    // 仅 SandboxAgent + MultiSetConfig 实验非空。SUA 模型的 api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
     115: optional RunModeConfig run_mode_config
 }
 

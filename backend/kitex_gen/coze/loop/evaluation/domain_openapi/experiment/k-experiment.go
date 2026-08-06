@@ -1949,20 +1949,6 @@ func (p *RunModeConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 4:
-			if fieldTypeId == thrift.I64 {
-				l, err = p.FastReadField4(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 5:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField5(buf[offset:])
@@ -2107,20 +2093,6 @@ func (p *RunModeConfig) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *RunModeConfig) FastReadField4(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.SuaModelID = _field
-	return offset, nil
-}
-
 func (p *RunModeConfig) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
@@ -2213,7 +2185,6 @@ func (p *RunModeConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField2(buf[offset:], w)
-		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -2233,7 +2204,6 @@ func (p *RunModeConfig) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
-		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
@@ -2268,15 +2238,6 @@ func (p *RunModeConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetSuaMode() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SuaMode)
-	}
-	return offset
-}
-
-func (p *RunModeConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetSuaModelID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.SuaModelID)
 	}
 	return offset
 }
@@ -2362,15 +2323,6 @@ func (p *RunModeConfig) field3Length() int {
 	return l
 }
 
-func (p *RunModeConfig) field4Length() int {
-	l := 0
-	if p.IsSetSuaModelID() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
-	}
-	return l
-}
-
 func (p *RunModeConfig) field5Length() int {
 	l := 0
 	if p.IsSetSuaModelName() {
@@ -2444,11 +2396,6 @@ func (p *RunModeConfig) DeepCopy(s interface{}) error {
 	if src.SuaMode != nil {
 		tmp := *src.SuaMode
 		p.SuaMode = &tmp
-	}
-
-	if src.SuaModelID != nil {
-		tmp := *src.SuaModelID
-		p.SuaModelID = &tmp
 	}
 
 	if src.SuaModelName != nil {

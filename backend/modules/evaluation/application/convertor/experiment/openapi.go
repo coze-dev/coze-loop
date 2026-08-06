@@ -2978,8 +2978,9 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domain
 	}
 	out := &domainExpt.RunModeConfig{
 		MaxRunMinutes: c.MaxRunMinutes,
-		SuaModelID:    c.SuaModelID,
-		SuaModelName:  c.SuaModelName,
+		// SuaModelID 不再从入参取: sua_model_id 已从 OpenAPI 契约移除 (SUA 模型由平台
+		// TCC 控制, 不是调用方的参数)。SuaModelName 尚存但已弃用, 仅调试用。
+		SuaModelName: c.SuaModelName,
 		// SUA 行为四项 + max_turns 无枚举可校验, 原样透传 (两级配置的实验级一半,
 		// 题目级优先的合并在 runtime 侧做)。
 		SuaGoal:                  c.SuaGoal,

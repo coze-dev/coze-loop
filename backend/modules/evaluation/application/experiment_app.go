@@ -509,8 +509,8 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	logs.CtxInfo(ctx, "SubmitExperiment req: %v", json.Jsonify(req))
 	// [sandbox-mt-debug] 单独打 run_mode_config 到手内容, 定位 BFFv2/thrift 解码 vs convertor 谁丢字段。
 	if rmc := req.GetRunModeConfig(); rmc != nil {
-		logs.CtxInfo(ctx, "[sandbox-mt-debug] SubmitExperiment run_mode_config received: isSetRunMode=%v run_mode=%d isSetSuaMode=%v sua_mode=%d sua_model_id=%d max_run_minutes=%d raw=%s",
-			rmc.IsSetRunMode(), rmc.GetRunMode(), rmc.IsSetSuaMode(), rmc.GetSuaMode(), rmc.GetSuaModelID(), rmc.GetMaxRunMinutes(), json.Jsonify(rmc))
+		logs.CtxInfo(ctx, "[sandbox-mt-debug] SubmitExperiment run_mode_config received: isSetRunMode=%v run_mode=%d isSetSuaMode=%v sua_mode=%d max_run_minutes=%d raw=%s",
+			rmc.IsSetRunMode(), rmc.GetRunMode(), rmc.IsSetSuaMode(), rmc.GetSuaMode(), rmc.GetMaxRunMinutes(), json.Jsonify(rmc))
 	} else {
 		logs.CtxInfo(ctx, "[sandbox-mt-debug] SubmitExperiment run_mode_config is NIL at handler entry")
 	}

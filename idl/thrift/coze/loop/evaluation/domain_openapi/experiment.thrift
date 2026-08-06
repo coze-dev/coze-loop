@@ -143,17 +143,20 @@ const SuaMode SuaMode_Loop = "loop"            // 上轮 eval 结果透传成下
 const SuaMode SuaMode_Fixed = "fixed"          // 照固定脚本
 
 // RunModeConfig 实验级跑法配置 (OpenAPI 版本, 对齐 domain RunModeConfig)。run_mode 是顶层跑法总开关;
-// sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
-// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。sua_model_id 传平台模型 ID。
+// sua_mode 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
+// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
 //
-// 字段号与 domain 版**逐一对齐** (6-10 为两级配置的实验级一半: SUA 行为四项 + max_turns);
-// 合并规则「题目级优先、实验级兜底」详见 domain/expt.thrift 的同名 struct 注释。
+// **SUA 模型不是调用方参数**: 由平台 TCC 统一控制(含密钥)。字段 4 sua_model_id **已移除**,
+// sua_model_name 已弃用(仅调试)。详见 domain/expt.thrift 同名 struct 注释。
+//
+// 字段号与 domain 版**逐一对齐** (含 4 号的保留, 6-10 为两级配置的实验级一半: SUA 行为四项
+// + max_turns); 合并规则「题目级优先、实验级兜底」详见 domain/expt.thrift 的同名 struct 注释。
 struct RunModeConfig {
     1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
     2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
     3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
-    4: optional i64 sua_model_id (api.js_conv = 'true', go.tag = 'json:"sua_model_id"')
-    // SUA 模型名, 与 sua_model_id 二选一: operator 优先用 name 直取模型, id 走平台解析。
+    // 4 号**永久保留**: 曾是 sua_model_id, 与 domain 版同步移除。号段不复用。
+    // SUA 模型名, **已弃用, 仅调试用**; 常规路径不传, 由平台 TCC 选模型并带密钥。
     5: optional string sua_model_name (go.tag = 'json:"sua_model_name"')
     // sua_goal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
     6: optional string sua_goal (go.tag = 'json:"sua_goal"')
