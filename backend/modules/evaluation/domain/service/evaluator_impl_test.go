@@ -1141,6 +1141,7 @@ func TestEvaluatorServiceImpl_CreateEvaluator(t *testing.T) {
 		expectedID      int64
 		expectedErr     error
 		expectedErrCode int32
+		expectedOutcome entity.ReportEvaluatorResultOutcome
 	}{
 		{
 			name: "失败 - validateCreateEvaluatorRequest - CheckNameExist 返回错误",
@@ -3321,6 +3322,7 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 		name            string
 		setupMocks      func()
 		expectedErrCode int32
+		expectedOutcome entity.ReportEvaluatorResultOutcome
 	}{
 		{
 			name: "成功 - 异步运行 Agent 评估器",
@@ -3539,6 +3541,7 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 		param           *entity.ReportEvaluatorRecordParam
 		setupMocks      func()
 		expectedErrCode int32
+		expectedOutcome entity.ReportEvaluatorResultOutcome
 	}{
 		{
 			name: "成功 - 合并 Ext 并更新记录",
@@ -3571,6 +3574,7 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 					})
 			},
 			expectedErrCode: 0,
+			expectedOutcome: entity.ReportEvaluatorResultApplied,
 		},
 		{
 			name: "失败 - record 不存在",
@@ -3610,19 +3614,20 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 						SpaceID: 2,
 						Status:  entity.EvaluatorRunStatusFail,
 					}, nil)
-				mockEvaluatorRecordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(100), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, gomock.Any()).Return(false, nil)
 			},
 			expectedErrCode: 0,
+			expectedOutcome: entity.ReportEvaluatorResultConflict,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setupMocks()
-			err := s.ReportEvaluatorInvokeResult(ctx, tt.param)
+			outcome, err := s.ReportEvaluatorInvokeResult(ctx, tt.param)
 
 			if tt.expectedErrCode == 0 {
 				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedOutcome, outcome)
 				return
 			}
 			assert.Error(t, err)
@@ -3686,7 +3691,7 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_OutputDataNilOrExtNil(
 					return true, nil
 				})
 
-			err := s.ReportEvaluatorInvokeResult(ctx, param)
+			_, err := s.ReportEvaluatorInvokeResult(ctx, param)
 			assert.NoError(t, err)
 		})
 	}
@@ -4709,12 +4714,14 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_RejectsNonTerminalStat
 	t.Parallel()
 
 	s := &EvaluatorServiceImpl{}
-	require.Error(t, s.ReportEvaluatorInvokeResult(context.Background(), nil))
-	require.Error(t, s.ReportEvaluatorInvokeResult(context.Background(), &entity.ReportEvaluatorRecordParam{
+	_, err := s.ReportEvaluatorInvokeResult(context.Background(), nil)
+	require.Error(t, err)
+	_, err = s.ReportEvaluatorInvokeResult(context.Background(), &entity.ReportEvaluatorRecordParam{
 		RecordID: 1,
 		SpaceID:  2,
 		Status:   entity.EvaluatorRunStatusUnknown,
-	}))
+	})
+	require.Error(t, err)
 }
 
 func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_UsesTerminalCAS(t *testing.T) {
@@ -4745,9 +4752,11 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_UsesTerminalCAS(t *tes
 			return false, nil
 		},
 	)
+	recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, SpaceID: 2, Status: entity.EvaluatorRunStatusFail}, nil)
 
-	err := s.ReportEvaluatorInvokeResult(context.Background(), param)
+	outcome, err := s.ReportEvaluatorInvokeResult(context.Background(), param)
 	require.NoError(t, err)
+	assert.Equal(t, entity.ReportEvaluatorResultConflict, outcome)
 }
 
 func TestEvaluatorServiceImpl_ArmEvaluatorResume(t *testing.T) {

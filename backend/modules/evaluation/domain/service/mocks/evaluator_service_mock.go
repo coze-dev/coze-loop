@@ -337,11 +337,12 @@ func (mr *MockEvaluatorServiceMockRecorder) ListEvaluatorVersion(arg0, arg1 inte
 }
 
 // ReportEvaluatorInvokeResult mocks base method.
-func (m *MockEvaluatorService) ReportEvaluatorInvokeResult(arg0 context.Context, arg1 *entity.ReportEvaluatorRecordParam) error {
+func (m *MockEvaluatorService) ReportEvaluatorInvokeResult(arg0 context.Context, arg1 *entity.ReportEvaluatorRecordParam) (entity.ReportEvaluatorResultOutcome, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReportEvaluatorInvokeResult", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(entity.ReportEvaluatorResultOutcome)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // ReportEvaluatorInvokeResult indicates an expected call of ReportEvaluatorInvokeResult.
