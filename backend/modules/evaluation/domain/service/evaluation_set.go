@@ -13,6 +13,8 @@ import (
 //go:generate mockgen -destination=mocks/evaluation_set.go -package=mocks . IEvaluationSetService
 type IEvaluationSetService interface {
 	CreateEvaluationSet(ctx context.Context, param *entity.CreateEvaluationSetParam) (id int64, err error)
+	ListEvaluationSetTemplates(ctx context.Context, param *entity.ListEvaluationSetTemplatesParam) (templates []*entity.EvaluationSetTemplate, total *int64, nextPageToken *string, err error)
+	ValidateEvaluationSetSchemaUpdate(ctx context.Context, param *entity.ValidateEvaluationSetSchemaUpdateParam) error
 	CreateEvaluationSetWithImport(ctx context.Context, param *entity.CreateEvaluationSetWithImportParam) (id, jobID int64, err error)
 	ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error)
 	ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error)

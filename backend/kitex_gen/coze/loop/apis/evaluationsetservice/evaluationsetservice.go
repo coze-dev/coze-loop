@@ -21,6 +21,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListEvaluationSetTemplates": kitex.NewMethodInfo(
+		listEvaluationSetTemplatesHandler,
+		newEvaluationSetServiceListEvaluationSetTemplatesArgs,
+		newEvaluationSetServiceListEvaluationSetTemplatesResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"UpdateEvaluationSet": kitex.NewMethodInfo(
 		updateEvaluationSetHandler,
 		newEvaluationSetServiceUpdateEvaluationSetArgs,
@@ -246,6 +253,25 @@ func newEvaluationSetServiceCreateEvaluationSetArgs() interface{} {
 
 func newEvaluationSetServiceCreateEvaluationSetResult() interface{} {
 	return eval_set.NewEvaluationSetServiceCreateEvaluationSetResult()
+}
+
+func listEvaluationSetTemplatesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceListEvaluationSetTemplatesArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceListEvaluationSetTemplatesResult)
+	success, err := handler.(eval_set.EvaluationSetService).ListEvaluationSetTemplates(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceListEvaluationSetTemplatesArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceListEvaluationSetTemplatesArgs()
+}
+
+func newEvaluationSetServiceListEvaluationSetTemplatesResult() interface{} {
+	return eval_set.NewEvaluationSetServiceListEvaluationSetTemplatesResult()
 }
 
 func updateEvaluationSetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -740,6 +766,16 @@ func (p *kClient) CreateEvaluationSet(ctx context.Context, req *eval_set.CreateE
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceCreateEvaluationSetResult
 	if err = p.c.Call(ctx, "CreateEvaluationSet", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluationSetTemplates(ctx context.Context, req *eval_set.ListEvaluationSetTemplatesRequest) (r *eval_set.ListEvaluationSetTemplatesResponse, err error) {
+	var _args eval_set.EvaluationSetServiceListEvaluationSetTemplatesArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceListEvaluationSetTemplatesResult
+	if err = p.c.Call(ctx, "ListEvaluationSetTemplates", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

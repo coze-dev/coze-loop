@@ -42,6 +42,7 @@ struct EvaluationSet {
     20: optional EvaluationSetType type                 // 评测集类型
     21: optional list<ResourceTag> tags                 // 系统资源标签
     22: optional string dataset_key                     // 数据集业务唯一键，创建后不可变
+    23: optional i64 template_dataset_id (api.js_conv="true", go.tag = 'json:"template_dataset_id"') // 创建评测集时使用的模版数据集 ID
 
     // 版本信息
     30: optional EvaluationSetVersion evaluation_set_version,  // 版本详情信息
@@ -103,6 +104,16 @@ struct FieldSchema {
     50: optional bool hidden,                                   // 用户是否不可见
 
     55: optional list<dataset.FieldTransformationConfig> default_transformations                 // 默认的预置转换配置，目前在数据校验后执行
+
+    60: optional bool locked                                   // 是否为不可修改的评测集模版列
+}
+
+// EvaluationSetTemplate 评测集创建模版。模版来源空间及锁定策略由服务端配置决定。
+struct EvaluationSetTemplate {
+    1: optional i64 template_dataset_id (api.js_conv="true", go.tag = 'json:"template_dataset_id"')
+    2: optional string template_dataset_name
+    3: optional string description
+    4: optional EvaluationSetSchema evaluation_set_schema // 完整的模版列信息
 }
 
 struct EvaluationSetItem {

@@ -12,6 +12,7 @@ import (
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	CreateEvaluationSet(ctx context.Context, req *eval_set.CreateEvaluationSetRequest, callOptions ...callopt.Option) (r *eval_set.CreateEvaluationSetResponse, err error)
+	ListEvaluationSetTemplates(ctx context.Context, req *eval_set.ListEvaluationSetTemplatesRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetTemplatesResponse, err error)
 	UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetResponse, err error)
 	DeleteEvaluationSet(ctx context.Context, req *eval_set.DeleteEvaluationSetRequest, callOptions ...callopt.Option) (r *eval_set.DeleteEvaluationSetResponse, err error)
 	GetEvaluationSet(ctx context.Context, req *eval_set.GetEvaluationSetRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetResponse, err error)
@@ -71,6 +72,11 @@ type kEvaluationSetServiceClient struct {
 func (p *kEvaluationSetServiceClient) CreateEvaluationSet(ctx context.Context, req *eval_set.CreateEvaluationSetRequest, callOptions ...callopt.Option) (r *eval_set.CreateEvaluationSetResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.CreateEvaluationSet(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) ListEvaluationSetTemplates(ctx context.Context, req *eval_set.ListEvaluationSetTemplatesRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetTemplatesResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListEvaluationSetTemplates(ctx, req)
 }
 
 func (p *kEvaluationSetServiceClient) UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest, callOptions ...callopt.Option) (r *eval_set.UpdateEvaluationSetResponse, err error) {

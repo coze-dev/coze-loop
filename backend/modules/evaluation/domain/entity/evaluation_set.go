@@ -29,6 +29,14 @@ type EvaluationSet struct {
 	DatasetType          *string               `json:"dataset_type,omitempty"`
 	Tags                 []*ResourceTag        `json:"tags,omitempty"`
 	DatasetKey           string                `json:"dataset_key,omitempty"`
+	TemplateDatasetID    *int64                `json:"template_dataset_id,omitempty"`
+}
+
+type EvaluationSetTemplate struct {
+	TemplateDatasetID   int64                `json:"template_dataset_id,omitempty"`
+	TemplateDatasetName string               `json:"template_dataset_name,omitempty"`
+	Description         string               `json:"description,omitempty"`
+	EvaluationSetSchema *EvaluationSetSchema `json:"evaluation_set_schema,omitempty"`
 }
 
 type DatasetSpec struct {

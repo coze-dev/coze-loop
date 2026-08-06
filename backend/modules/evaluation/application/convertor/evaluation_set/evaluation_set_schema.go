@@ -70,6 +70,7 @@ func FieldSchemaDTO2DO(dto *eval_set.FieldSchema) *entity.FieldSchema {
 		Hidden:                 gptr.Indirect(dto.Hidden),
 		IsRequired:             gptr.Indirect(dto.IsRequired),
 		DefaultTransformations: dto.DefaultTransformations,
+		Locked:                 gptr.Indirect(dto.Locked),
 	}
 }
 
@@ -122,6 +123,10 @@ func FieldSchemaDO2DTO(do *entity.FieldSchema) *eval_set.FieldSchema {
 	if do == nil {
 		return nil
 	}
+	var locked *bool
+	if do.Locked {
+		locked = gptr.Of(true)
+	}
 	return &eval_set.FieldSchema{
 		Key:                    gptr.Of(do.Key),
 		Name:                   gptr.Of(do.Name),
@@ -135,5 +140,31 @@ func FieldSchemaDO2DTO(do *entity.FieldSchema) *eval_set.FieldSchema {
 		Hidden:                 gptr.Of(do.Hidden),
 		IsRequired:             gptr.Of(do.IsRequired),
 		DefaultTransformations: do.DefaultTransformations,
+		Locked:                 locked,
+	}
+}
+
+func EvaluationSetTemplateDO2DTOs(dos []*entity.EvaluationSetTemplate) []*eval_set.EvaluationSetTemplate {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*eval_set.EvaluationSetTemplate, 0, len(dos))
+	for _, do := range dos {
+		if dto := EvaluationSetTemplateDO2DTO(do); dto != nil {
+			result = append(result, dto)
+		}
+	}
+	return result
+}
+
+func EvaluationSetTemplateDO2DTO(do *entity.EvaluationSetTemplate) *eval_set.EvaluationSetTemplate {
+	if do == nil {
+		return nil
+	}
+	return &eval_set.EvaluationSetTemplate{
+		TemplateDatasetID:   gptr.Of(do.TemplateDatasetID),
+		TemplateDatasetName: gptr.Of(do.TemplateDatasetName),
+		Description:         gptr.Of(do.Description),
+		EvaluationSetSchema: SchemaDO2DTO(do.EvaluationSetSchema),
 	}
 }
