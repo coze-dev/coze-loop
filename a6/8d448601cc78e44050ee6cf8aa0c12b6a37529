@@ -1,0 +1,31 @@
+backend/modules/observability/domain/trace/service/trace/span_processor/attr_tos_processor_test.go
+  s_bfa390593d65f5::t_0003aa5a80bf84 142-145
+backend/modules/observability/domain/trace/service/trace/span_processor/chat_processor_test.go
+  s_bfa390593d65f5::t_8936fce5bd155b 257-260
+backend/modules/observability/domain/trace/service/trace/span_processor/check_processor_test.go
+  s_bfa390593d65f5::t_ad38307283390d 147-150
+backend/modules/observability/domain/trace/service/trace/span_processor/clip_processor_test.go
+  s_bfa390593d65f5::t_308f3fffa49437 552-559
+backend/modules/observability/domain/trace/service/trace/span_processor/expire_error_processor_test.go
+  s_bfa390593d65f5::t_ca85605767b32d 202-205
+backend/modules/observability/domain/trace/service/trace/span_processor/platform_processor_test.go
+  s_bfa390593d65f5::t_b3bbc4e405c41c 247-250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a68d448601cc78e44050ee6cf8aa0c12b6a37529",
+  "prompts": {},
+  "sessions": {
+    "s_bfa390593d65f5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_bfa390593d65f5",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
