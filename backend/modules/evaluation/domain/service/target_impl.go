@@ -1032,7 +1032,7 @@ func (e *EvalTargetServiceImpl) querySandboxTerminalStatus(ctx context.Context, 
 		return false, 0
 	}
 	status := resp.ExecuteInfo.Status
-	if status != rpc.SandboxExecuteStatusFailed && status != rpc.SandboxExecuteStatusCanceled {
+	if status != rpc.SandboxExecuteStatusFailed && status != rpc.SandboxExecuteStatusCanceled && status != rpc.SandboxExecuteStatusFinished {
 		return false, status
 	}
 	return true, status
@@ -1058,6 +1058,8 @@ func sandboxStatusText(s rpc.SandboxExecuteStatus) string {
 		return "Failed"
 	case rpc.SandboxExecuteStatusCanceled:
 		return "Canceled"
+	case rpc.SandboxExecuteStatusFinished:
+		return "Finished"
 	case rpc.SandboxExecuteStatusSucceeded:
 		return "Succeeded"
 	default:

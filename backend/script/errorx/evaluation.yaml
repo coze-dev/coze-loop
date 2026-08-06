@@ -593,3 +593,65 @@ error_code:
     message: "sandbox agent: config_name mismatch"
     description: 'sandbox agent target reported config_name_mismatch (trigger: "[ASSERT] config_name verification failed" or "config_name mismatch")'
     no_affect_stability: true
+
+  # 实验/行级超时错误码（用于把超时原因暴露给用户，替代原来落库为空 err_msg 或英文 raw string 的实现）
+  - name: ExptZombieTimeout
+    code: 5084
+    message: "实验已超过最大执行时长被终止"
+    description: '实验整体运行时长超过阈值被超时终止（HandleEventCheck 触发）'
+    no_affect_stability: false
+
+  - name: ItemZombieTimeout
+    code: 5085
+    message: "实验行长时间未更新，已被系统判定为僵尸并置为失败"
+    description: '实验行长时间未更新被判定为僵尸（handleZombies 触发）'
+    no_affect_stability: false
+
+  - name: SandboxTerminatedBeforeReport
+    code: 5086
+    message: "沙箱在结果上报前已提前进入终态，该实验行已置为失败"
+    description: 'sandbox agent target sandbox execute reached terminal state (Failed/Canceled) before the async result was reported (sweep triggered by ExptSchedulerImpl.sweepTerminatedSandboxItems)'
+    no_affect_stability: false
+
+  # SandboxAgent 评测对象阶段性错误码 (6xxx)：按沙箱内执行阶段划分，便于按阶段做 metrics 分类与用户前端展示。
+  - name: SandboxAgentSetupError
+    code: 6001
+    message: "sandbox agent: agent setup failed"
+    description: 'sandbox agent target setup phase error: agent 初始化 / 环境依赖装载失败'
+    no_affect_stability: false
+
+  - name: SandboxAgentCaseInstallError
+    code: 6101
+    message: "sandbox agent: case install failed"
+    description: 'sandbox agent target case install phase error: 评测用例的文件 / 代码资源写入沙箱失败'
+    no_affect_stability: false
+
+  - name: SandboxAgentRunError
+    code: 6201
+    message: "sandbox agent: agent run failed"
+    description: 'sandbox agent target run phase error: agent 主流程执行阶段异常'
+    no_affect_stability: false
+
+  - name: SandboxAgentEvalError
+    code: 6202
+    message: "sandbox agent: eval failed"
+    description: 'sandbox agent target eval phase error: 评测环节自身失败（如打分、断言）'
+    no_affect_stability: false
+
+  - name: SandboxAgentEnvironmentError
+    code: 6203
+    message: "sandbox agent: environment error"
+    description: 'sandbox agent target environment error: 沙箱运行时 / 系统级异常（镜像、内核、资源）'
+    no_affect_stability: false
+
+  - name: SandboxAgentReportError
+    code: 6204
+    message: "sandbox agent: report failed"
+    description: 'sandbox agent target report phase error: 结果回传阶段异常（上报接口失败 / 载荷格式错误）'
+    no_affect_stability: false
+
+  - name: SandboxAgentUnknownError
+    code: 6205
+    message: "sandbox agent: unknown error"
+    description: 'sandbox agent target unknown error: 未能归类到上述阶段的兜底错误'
+    no_affect_stability: false

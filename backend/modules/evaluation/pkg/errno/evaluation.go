@@ -458,6 +458,35 @@ const (
 	SandboxTerminatedBeforeReportCode              = 601205086 // sandbox agent target sandbox execute reached terminal state (Failed/Canceled) before the async result was reported (sweep triggered by ExptSchedulerImpl.sweepTerminatedSandboxItems)
 	sandboxTerminatedBeforeReportMessage           = "沙箱在结果上报前已提前进入终态，该实验行已置为失败"
 	sandboxTerminatedBeforeReportNoAffectStability = false
+
+	// SandboxAgent 评测对象阶段性错误码 (601206xxx)：按沙箱内执行阶段划分，便于按阶段做 metrics 分类与用户前端展示。
+	SandboxAgentSetupErrorCode              = 601206001 // sandbox agent target setup phase error: agent 初始化 / 环境依赖装载失败
+	sandboxAgentSetupErrorMessage           = "sandbox agent: agent setup failed"
+	sandboxAgentSetupErrorNoAffectStability = false
+
+	SandboxAgentCaseInstallErrorCode              = 601206101 // sandbox agent target case install phase error: 评测用例的文件 / 代码资源写入沙箱失败
+	sandboxAgentCaseInstallErrorMessage           = "sandbox agent: case install failed"
+	sandboxAgentCaseInstallErrorNoAffectStability = false
+
+	SandboxAgentRunErrorCode              = 601206201 // sandbox agent target run phase error: agent 主流程执行阶段异常
+	sandboxAgentRunErrorMessage           = "sandbox agent: agent run failed"
+	sandboxAgentRunErrorNoAffectStability = false
+
+	SandboxAgentEvalErrorCode              = 601206202 // sandbox agent target eval phase error: 评测环节自身失败（如打分、断言）
+	sandboxAgentEvalErrorMessage           = "sandbox agent: eval failed"
+	sandboxAgentEvalErrorNoAffectStability = false
+
+	SandboxAgentEnvironmentErrorCode              = 601206203 // sandbox agent target environment error: 沙箱运行时 / 系统级异常（镜像、内核、资源）
+	sandboxAgentEnvironmentErrorMessage           = "sandbox agent: environment error"
+	sandboxAgentEnvironmentErrorNoAffectStability = false
+
+	SandboxAgentReportErrorCode              = 601206204 // sandbox agent target report phase error: 结果回传阶段异常（上报接口失败 / 载荷格式错误）
+	sandboxAgentReportErrorMessage           = "sandbox agent: report failed"
+	sandboxAgentReportErrorNoAffectStability = false
+
+	SandboxAgentUnknownErrorCode              = 601206205 // sandbox agent target unknown error: 未能归类到上述阶段的兜底错误
+	sandboxAgentUnknownErrorMessage           = "sandbox agent: unknown error"
+	sandboxAgentUnknownErrorNoAffectStability = false
 )
 
 func init() {
@@ -1132,6 +1161,48 @@ func init() {
 		SandboxTerminatedBeforeReportCode,
 		sandboxTerminatedBeforeReportMessage,
 		code.WithAffectStability(!sandboxTerminatedBeforeReportNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentSetupErrorCode,
+		sandboxAgentSetupErrorMessage,
+		code.WithAffectStability(!sandboxAgentSetupErrorNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentCaseInstallErrorCode,
+		sandboxAgentCaseInstallErrorMessage,
+		code.WithAffectStability(!sandboxAgentCaseInstallErrorNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentRunErrorCode,
+		sandboxAgentRunErrorMessage,
+		code.WithAffectStability(!sandboxAgentRunErrorNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentEvalErrorCode,
+		sandboxAgentEvalErrorMessage,
+		code.WithAffectStability(!sandboxAgentEvalErrorNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentEnvironmentErrorCode,
+		sandboxAgentEnvironmentErrorMessage,
+		code.WithAffectStability(!sandboxAgentEnvironmentErrorNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentReportErrorCode,
+		sandboxAgentReportErrorMessage,
+		code.WithAffectStability(!sandboxAgentReportErrorNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentUnknownErrorCode,
+		sandboxAgentUnknownErrorMessage,
+		code.WithAffectStability(!sandboxAgentUnknownErrorNoAffectStability),
 	)
 
 }
