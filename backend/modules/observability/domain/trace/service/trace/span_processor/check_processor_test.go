@@ -144,3 +144,7 @@ func TestCheckProcessorFactory_CreateProcessor(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckProcessor_GetName(t *testing.T) {
+	assert.Equal(t, "CheckProcessor", (&CheckProcessor{}).GetName())
+}

@@ -549,3 +549,11 @@ func TestClipProcessor_NoRepoClipsOnly(t *testing.T) {
 	require.Equal(t, `{"key":"value"}`, res[0].Input)
 	require.Equal(t, "plain text", res[0].Output)
 }
+
+func TestClipProcessor_GetName(t *testing.T) {
+	require.Equal(t, "ClipProcessor", (&ClipProcessor{}).GetName())
+}
+
+func TestNoOpProcessor_GetName(t *testing.T) {
+	require.Equal(t, "NoOpProcessor", (&NoOpProcessor{}).GetName())
+}
