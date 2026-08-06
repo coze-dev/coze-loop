@@ -33,5 +33,6 @@ type Factory interface {
 }
 
 type Processor interface {
+	GetName() string
 	Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error)
 }

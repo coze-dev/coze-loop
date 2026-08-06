@@ -916,10 +916,10 @@ func runSpanProcessors(ctx context.Context, scene string, processors []span_proc
 		out, err := p.Transform(ctx, spans)
 		cost := time.Since(start)
 		if err != nil {
-			logs.CtxError(ctx, "span processor chain failed, scene=%s, processor=%T, cost=%dms, err=%v", scene, p, cost.Milliseconds(), err)
+			logs.CtxError(ctx, "span processor chain failed, scene=%s, processor=%s, cost=%dms, err=%v", scene, p.GetName(), cost.Milliseconds(), err)
 			return nil, err
 		}
-		logs.CtxInfo(ctx, "span processor chain, scene=%s, processor=%T, cost=%dms, span_num=%d", scene, p, cost.Milliseconds(), len(out))
+		logs.CtxInfo(ctx, "span processor chain, scene=%s, processor=%s, cost=%dms, span_num=%d", scene, p.GetName(), cost.Milliseconds(), len(out))
 		spans = out
 	}
 	return spans, nil
