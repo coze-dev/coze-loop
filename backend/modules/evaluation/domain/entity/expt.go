@@ -483,6 +483,17 @@ type ItemRunConf struct {
 	// 把上一轮评分拼成下一轮追问); 缺失时 runtime 在 prepare 阶段即拒绝该 trial。
 	// 题目级配置优先于实验级配置。
 	SuaPETemplate string `json:"sua_pe_template,omitempty"`
+	// EvaluatorTrigger 决定该题目**什么时候**跑评估器: never / after_each_turn /
+	// final_turn_only / by_testcase_config (空 = 未配, 回落到 by_testcase_config)。
+	//
+	// 它在题目级而非只在实验级, 因为"这道题值不值得每轮都评"是题目自己的属性: 6 轮重构题只需
+	// 评最终态, 而分步推进题希望每轮都评。混合评测集上强推同一种策略, 正是 by_testcase_config
+	// 一直在掩盖的问题。
+	//
+	// ⚠️ 这个字段此前**整条链路都缺**: runtime 的 platform.runModeConfig 把 EvaluatorTrigger
+	// 硬编码成 TriggerByTestCase, 所以另外三个值配了完全无效 —— 枚举、ShouldEvaluate 的
+	// switch 分支都在, 唯独读 wire 的那一行不存在。runtime 侧已补读, 本字段是它的生产端。
+	EvaluatorTrigger string `json:"evaluator_trigger,omitempty"`
 }
 
 // FixedQuery 固定脚本多轮的一轮 query (fixed_script 跑法依赖)。
