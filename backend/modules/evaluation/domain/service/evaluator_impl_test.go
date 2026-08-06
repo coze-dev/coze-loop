@@ -4703,7 +4703,6 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator_CoordinatorOrderAndFailureCompen
 		assert.Equal(t, "trace-1", record.TraceID)
 		assert.Equal(t, "s1", record.EvaluatorOutputData.Ext["session_id"])
 	})
-
 }
 
 func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_RejectsNonTerminalStatus(t *testing.T) {

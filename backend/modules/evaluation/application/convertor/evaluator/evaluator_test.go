@@ -1362,7 +1362,7 @@ func TestConvertEvaluatorLangTags_SkipNilInnerMap(t *testing.T) {
 // TestConvertCustomRPCEvaluatorVersionDTO2DO 测试将 CustomRPC EvaluatorVersion DTO 转换为 DO
 func TestConvertCustomRPCEvaluatorVersionDTO2DO(t *testing.T) {
 	t.Parallel()
-	post := evaluatordto.EvaluatorHTTPMethod(evaluatordo.EvaluatorHTTPMethodPost)
+	post := evaluatordo.EvaluatorHTTPMethodPost
 	asyncPath := "/async_invoke_evaluator"
 
 	tests := []struct {
