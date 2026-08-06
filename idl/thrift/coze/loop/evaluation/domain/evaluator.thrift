@@ -123,10 +123,12 @@ struct CustomRPCEvaluator {
     3: optional string service_name
     4: optional string cluster
     5: optional EvaluatorHTTPInfo invoke_http_info // 执行http信息
+    6: optional EvaluatorHTTPInfo async_invoke_http_info // 异步执行http信息
 
     10: optional i64 timeout    // ms
     11: optional common.RateLimit rate_limit     // 自定义评估器的限流配置
     12: optional map<string, string> ext         // extra fields
+    13: optional bool is_async // 是否异步执行；true 时调用 AsyncInvokeEvaluator
 }
 
 struct EvaluatorVersion {

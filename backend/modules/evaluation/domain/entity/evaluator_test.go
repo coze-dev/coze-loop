@@ -2378,3 +2378,27 @@ func TestEvaluator_SetEvaluatorVersion_CustomRPCAndAgent(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluator_IsAsync_CustomRPC(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		eval *Evaluator
+		want bool
+	}{
+		{name: "agent remains async", eval: &Evaluator{EvaluatorType: EvaluatorTypeAgent}, want: true},
+		{name: "custom rpc async version", eval: &Evaluator{EvaluatorType: EvaluatorTypeCustomRPC, CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{IsAsync: true}}, want: true},
+		{name: "custom rpc sync version", eval: &Evaluator{EvaluatorType: EvaluatorTypeCustomRPC, CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{}}, want: false},
+		{name: "custom rpc missing version", eval: &Evaluator{EvaluatorType: EvaluatorTypeCustomRPC}, want: false},
+		{name: "prompt remains sync", eval: &Evaluator{EvaluatorType: EvaluatorTypePrompt}, want: false},
+		{name: "code remains sync", eval: &Evaluator{EvaluatorType: EvaluatorTypeCode}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, tt.eval.IsAsync())
+		})
+	}
+}

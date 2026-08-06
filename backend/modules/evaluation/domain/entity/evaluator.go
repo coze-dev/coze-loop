@@ -65,7 +65,17 @@ var EvaluatorTypeSet = map[EvaluatorType]struct{}{
 }
 
 func (e *Evaluator) IsAsync() bool {
-	return e.EvaluatorType == EvaluatorTypeAgent
+	if e == nil {
+		return false
+	}
+	switch e.EvaluatorType {
+	case EvaluatorTypeAgent:
+		return true
+	case EvaluatorTypeCustomRPC:
+		return e.CustomRPCEvaluatorVersion != nil && e.CustomRPCEvaluatorVersion.IsAsync
+	default:
+		return false
+	}
 }
 
 // UpdateEvaluatorMetaRequest 用于更新评估器元信息的参数
