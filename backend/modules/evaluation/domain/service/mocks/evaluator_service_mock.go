@@ -35,6 +35,20 @@ func (m *MockEvaluatorService) EXPECT() *MockEvaluatorServiceMockRecorder {
 	return m.recorder
 }
 
+// ArmEvaluatorResume mocks base method.
+func (m *MockEvaluatorService) ArmEvaluatorResume(ctx context.Context, recordID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ArmEvaluatorResume", ctx, recordID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ArmEvaluatorResume indicates an expected call of ArmEvaluatorResume.
+func (mr *MockEvaluatorServiceMockRecorder) ArmEvaluatorResume(ctx, recordID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmEvaluatorResume", reflect.TypeOf((*MockEvaluatorService)(nil).ArmEvaluatorResume), ctx, recordID)
+}
+
 // AsyncDebugEvaluator mocks base method.
 func (m *MockEvaluatorService) AsyncDebugEvaluator(arg0 context.Context, arg1 *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error) {
 	m.ctrl.T.Helper()

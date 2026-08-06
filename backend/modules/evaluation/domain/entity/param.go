@@ -326,6 +326,9 @@ type AsyncRunEvaluatorRequest struct {
 	// ★ alias 多实例: 同步与 RunEvaluatorRequest
 	Alias      string                    `json:"alias,omitempty"`
 	SourceType EvaluatorRecordSourceType `json:"source_type,omitempty"`
+	// AsyncCtx is persisted after the AsyncInvoking record is created and before the provider is dispatched.
+	// Experiment calls set ResumeReady=false; direct calls set it true.
+	AsyncCtx *EvalAsyncCtx `json:"-"`
 }
 
 type AsyncRunEvaluatorResponse struct {

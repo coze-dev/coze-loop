@@ -42,6 +42,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"AsyncInvokeEvaluator": kitex.NewMethodInfo(
+		asyncInvokeEvaluatorHandler,
+		newEvaluationSPIServiceAsyncInvokeEvaluatorArgs,
+		newEvaluationSPIServiceAsyncInvokeEvaluatorResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -151,6 +158,25 @@ func newEvaluationSPIServiceInvokeEvaluatorResult() interface{} {
 	return spi.NewEvaluationSPIServiceInvokeEvaluatorResult()
 }
 
+func asyncInvokeEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*spi.EvaluationSPIServiceAsyncInvokeEvaluatorArgs)
+	realResult := result.(*spi.EvaluationSPIServiceAsyncInvokeEvaluatorResult)
+	success, err := handler.(spi.EvaluationSPIService).AsyncInvokeEvaluator(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSPIServiceAsyncInvokeEvaluatorArgs() interface{} {
+	return spi.NewEvaluationSPIServiceAsyncInvokeEvaluatorArgs()
+}
+
+func newEvaluationSPIServiceAsyncInvokeEvaluatorResult() interface{} {
+	return spi.NewEvaluationSPIServiceAsyncInvokeEvaluatorResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -198,6 +224,16 @@ func (p *kClient) InvokeEvaluator(ctx context.Context, req *spi.InvokeEvaluatorR
 	_args.Req = req
 	var _result spi.EvaluationSPIServiceInvokeEvaluatorResult
 	if err = p.c.Call(ctx, "InvokeEvaluator", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) AsyncInvokeEvaluator(ctx context.Context, req *spi.AsyncInvokeEvaluatorRequest) (r *spi.AsyncInvokeEvaluatorResponse, err error) {
+	var _args spi.EvaluationSPIServiceAsyncInvokeEvaluatorArgs
+	_args.Req = req
+	var _result spi.EvaluationSPIServiceAsyncInvokeEvaluatorResult
+	if err = p.c.Call(ctx, "AsyncInvokeEvaluator", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

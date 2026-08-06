@@ -75,6 +75,33 @@ func (mr *MockIEvaluatorRecordRepoMockRecorder) BatchGetEvaluatorRecordForAggr(a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorRecordForAggr", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).BatchGetEvaluatorRecordForAggr), arg0, arg1)
 }
 
+// CompareAndSwapEvaluatorRecordResult mocks base method.
+func (m *MockIEvaluatorRecordRepo) CompareAndSwapEvaluatorRecordResult(arg0 context.Context, arg1, arg2 int64, arg3, arg4 entity.EvaluatorRunStatus, arg5 *entity.EvaluatorOutputData) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompareAndSwapEvaluatorRecordResult", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockIEvaluatorRecordRepoMockRecorder) CompareAndSwapEvaluatorRecordResult(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompareAndSwapEvaluatorRecordResult", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).CompareAndSwapEvaluatorRecordResult), arg0, arg1, arg2, arg3, arg4, arg5)
+}
+
+// UpdateEvaluatorRecordAsyncDispatch mocks base method.
+func (m *MockIEvaluatorRecordRepo) UpdateEvaluatorRecordAsyncDispatch(arg0 context.Context, arg1, arg2 int64, arg3 string, arg4 *entity.EvaluatorOutputData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEvaluatorRecordAsyncDispatch", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (mr *MockIEvaluatorRecordRepoMockRecorder) UpdateEvaluatorRecordAsyncDispatch(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecordAsyncDispatch", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).UpdateEvaluatorRecordAsyncDispatch), arg0, arg1, arg2, arg3, arg4)
+}
+
 // CorrectEvaluatorRecord mocks base method.
 func (m *MockIEvaluatorRecordRepo) CorrectEvaluatorRecord(arg0 context.Context, arg1 *entity.EvaluatorRecord) error {
 	m.ctrl.T.Helper()

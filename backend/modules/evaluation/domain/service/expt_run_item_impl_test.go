@@ -1197,3 +1197,57 @@ func Test_buildItemCompleteEvent_LinkAB_Equivalence(t *testing.T) {
 
 	require.Equal(t, fromLinkA, fromLinkB, "链路A与链路B的 item-complete 组装结果必须完全一致")
 }
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsAsyncEvaluatorAfterSave(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).Return(nil)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_DoesNotArmWhenSaveFails(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(errors.New("save failed"))
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), gomock.Any()).Times(0)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.Error(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}

@@ -3066,21 +3066,14 @@ func (e *EvalOpenAPIApplication) AsyncRunEvaluatorOApi(ctx context.Context, req 
 		InputData:          inputData,
 		EvaluatorRunConf:   runConf,
 		Ext:                req.Ext,
+		AsyncCtx: &entity.EvalAsyncCtx{
+			Session:     &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
+			CallbackURL: req.GetCallbackURL(),
+			ResumeReady: true,
+			AsyncUnixMS: startTime.UnixMilli(),
+		},
 	})
 	if err != nil {
-		return nil, err
-	}
-
-	// 写入异步上下文供 ReportEvaluatorInvokeResult 回调读取；独立调用 Event 留空
-	asyncCtxKey := fmt.Sprintf("evaluator:%d", record.ID)
-	if err = e.asyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
-		RecordID:           record.ID,
-		AsyncUnixMS:        startTime.UnixMilli(),
-		Session:            &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
-		EvaluatorVersionID: req.GetEvaluatorVersionID(),
-		CallbackURL:        req.GetCallbackURL(),
-	}); err != nil {
-		logs.CtxError(ctx, "[AsyncRunEvaluatorOApi] SetEvalAsyncCtx fail, invokeID: %d, err: %v", record.ID, err)
 		return nil, err
 	}
 
@@ -3595,7 +3588,26 @@ func (e *EvalOpenAPIApplication) ListExptTemplatesOApi(ctx context.Context, req 
 }
 
 func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest) (r *openapi.ReportEvaluatorInvokeResultResponse, err error) {
-	logs.CtxInfo(ctx, "ReportEvaluatorInvokeResult receive req: %v", json.Jsonify(req))
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() <= 0 || req.GetInvokeID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id and invoke_id are required"))
+	}
+	if req.GetStatus() != spi.InvokeEvaluatorRunStatus_SUCCESS && req.GetStatus() != spi.InvokeEvaluatorRunStatus_FAILED {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("status must be SUCCESS or FAILED"))
+	}
+	if req.GetStatus() == spi.InvokeEvaluatorRunStatus_SUCCESS {
+		if req.Output == nil || req.Output.EvaluatorResult_ == nil || req.Output.EvaluatorResult_.Score == nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_result.score is required for SUCCESS"))
+		}
+	}
+	if req.GetStatus() == spi.InvokeEvaluatorRunStatus_FAILED {
+		if req.Output == nil || req.Output.EvaluatorRunError == nil || strings.TrimSpace(req.Output.EvaluatorRunError.GetMessage()) == "" {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_run_error.message is required for FAILED"))
+		}
+	}
+	logs.CtxInfo(ctx, "ReportEvaluatorInvokeResult receive, workspace_id: %d, invoke_id: %d, status: %v", req.GetWorkspaceID(), req.GetInvokeID(), req.GetStatus())
 
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
@@ -3607,7 +3619,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	asyncCtxKey := fmt.Sprintf("evaluator:%d", req.GetInvokeID())
-	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, asyncCtxKey)
+	actx, err := e.asyncRepo.GetEvalAsyncCtxStrong(ctx, asyncCtxKey)
 	if err != nil {
 		return nil, err
 	}
@@ -3620,9 +3632,6 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		req.GetInvokeID(), actx.EvaluatorVersionID, req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID(), req.GetStatus())
 
 	outputData := evaluator_convertor.ToInvokeEvaluatorOutputDataDO(req.GetOutput(), req.GetStatus())
-	if outputData != nil {
-		outputData.TimeConsumingMS = time.Now().UnixMilli() - actx.AsyncUnixMS
-	}
 
 	runStatus := evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus())
 	if err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
@@ -3633,12 +3642,22 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}); err != nil {
 		return nil, err
 	}
-
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
-			event.AsyncEvaluatorReportTrigger = true
-		}); err != nil {
-			return nil, err
+		if !actx.ResumeReady {
+			latestCtx, ctxErr := e.asyncRepo.GetEvalAsyncCtxStrong(ctx, asyncCtxKey)
+			if ctxErr != nil {
+				return nil, ctxErr
+			}
+			if latestCtx != nil {
+				actx = latestCtx
+			}
+		}
+		if actx.ResumeReady {
+			if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
+				event.AsyncEvaluatorReportTrigger = true
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 

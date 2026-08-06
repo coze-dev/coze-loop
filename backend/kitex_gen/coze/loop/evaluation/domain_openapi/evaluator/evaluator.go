@@ -858,14 +858,16 @@ type CustomRPCEvaluator struct {
 	// 自定义评估器编码
 	ProviderEvaluatorCode *string `thrift:"provider_evaluator_code,1,optional" frugal:"1,optional,string" form:"provider_evaluator_code" json:"provider_evaluator_code,omitempty" query:"provider_evaluator_code"`
 	// rpc / faas_http
-	AccessProtocol *EvaluatorAccessProtocol `thrift:"access_protocol,2,optional" frugal:"2,optional,string" form:"access_protocol" json:"access_protocol,omitempty" query:"access_protocol"`
-	ServiceName    *string                  `thrift:"service_name,3,optional" frugal:"3,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
-	Cluster        *string                  `thrift:"cluster,4,optional" frugal:"4,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
-	InvokeHTTPInfo *EvaluatorHTTPInfo       `thrift:"invoke_http_info,5,optional" frugal:"5,optional,EvaluatorHTTPInfo" form:"invoke_http_info" json:"invoke_http_info,omitempty" query:"invoke_http_info"`
+	AccessProtocol      *EvaluatorAccessProtocol `thrift:"access_protocol,2,optional" frugal:"2,optional,string" form:"access_protocol" json:"access_protocol,omitempty" query:"access_protocol"`
+	ServiceName         *string                  `thrift:"service_name,3,optional" frugal:"3,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
+	Cluster             *string                  `thrift:"cluster,4,optional" frugal:"4,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
+	InvokeHTTPInfo      *EvaluatorHTTPInfo       `thrift:"invoke_http_info,5,optional" frugal:"5,optional,EvaluatorHTTPInfo" form:"invoke_http_info" json:"invoke_http_info,omitempty" query:"invoke_http_info"`
+	AsyncInvokeHTTPInfo *EvaluatorHTTPInfo       `thrift:"async_invoke_http_info,6,optional" frugal:"6,optional,EvaluatorHTTPInfo" form:"async_invoke_http_info" json:"async_invoke_http_info,omitempty" query:"async_invoke_http_info"`
 	// ms
 	Timeout   *int64            `thrift:"timeout,10,optional" frugal:"10,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
 	RateLimit *common.RateLimit `thrift:"rate_limit,11,optional" frugal:"11,optional,common.RateLimit" form:"rate_limit" json:"rate_limit,omitempty" query:"rate_limit"`
 	Ext       map[string]string `thrift:"ext,12,optional" frugal:"12,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
+	IsAsync   *bool             `thrift:"is_async,13,optional" frugal:"13,optional,bool" form:"is_async" json:"is_async,omitempty" query:"is_async"`
 }
 
 func NewCustomRPCEvaluator() *CustomRPCEvaluator {
@@ -935,6 +937,18 @@ func (p *CustomRPCEvaluator) GetInvokeHTTPInfo() (v *EvaluatorHTTPInfo) {
 	return p.InvokeHTTPInfo
 }
 
+var CustomRPCEvaluator_AsyncInvokeHTTPInfo_DEFAULT *EvaluatorHTTPInfo
+
+func (p *CustomRPCEvaluator) GetAsyncInvokeHTTPInfo() (v *EvaluatorHTTPInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAsyncInvokeHTTPInfo() {
+		return CustomRPCEvaluator_AsyncInvokeHTTPInfo_DEFAULT
+	}
+	return p.AsyncInvokeHTTPInfo
+}
+
 var CustomRPCEvaluator_Timeout_DEFAULT int64
 
 func (p *CustomRPCEvaluator) GetTimeout() (v int64) {
@@ -970,6 +984,18 @@ func (p *CustomRPCEvaluator) GetExt() (v map[string]string) {
 	}
 	return p.Ext
 }
+
+var CustomRPCEvaluator_IsAsync_DEFAULT bool
+
+func (p *CustomRPCEvaluator) GetIsAsync() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsAsync() {
+		return CustomRPCEvaluator_IsAsync_DEFAULT
+	}
+	return *p.IsAsync
+}
 func (p *CustomRPCEvaluator) SetProviderEvaluatorCode(val *string) {
 	p.ProviderEvaluatorCode = val
 }
@@ -985,6 +1011,9 @@ func (p *CustomRPCEvaluator) SetCluster(val *string) {
 func (p *CustomRPCEvaluator) SetInvokeHTTPInfo(val *EvaluatorHTTPInfo) {
 	p.InvokeHTTPInfo = val
 }
+func (p *CustomRPCEvaluator) SetAsyncInvokeHTTPInfo(val *EvaluatorHTTPInfo) {
+	p.AsyncInvokeHTTPInfo = val
+}
 func (p *CustomRPCEvaluator) SetTimeout(val *int64) {
 	p.Timeout = val
 }
@@ -994,6 +1023,9 @@ func (p *CustomRPCEvaluator) SetRateLimit(val *common.RateLimit) {
 func (p *CustomRPCEvaluator) SetExt(val map[string]string) {
 	p.Ext = val
 }
+func (p *CustomRPCEvaluator) SetIsAsync(val *bool) {
+	p.IsAsync = val
+}
 
 var fieldIDToName_CustomRPCEvaluator = map[int16]string{
 	1:  "provider_evaluator_code",
@@ -1001,9 +1033,11 @@ var fieldIDToName_CustomRPCEvaluator = map[int16]string{
 	3:  "service_name",
 	4:  "cluster",
 	5:  "invoke_http_info",
+	6:  "async_invoke_http_info",
 	10: "timeout",
 	11: "rate_limit",
 	12: "ext",
+	13: "is_async",
 }
 
 func (p *CustomRPCEvaluator) IsSetProviderEvaluatorCode() bool {
@@ -1026,6 +1060,10 @@ func (p *CustomRPCEvaluator) IsSetInvokeHTTPInfo() bool {
 	return p.InvokeHTTPInfo != nil
 }
 
+func (p *CustomRPCEvaluator) IsSetAsyncInvokeHTTPInfo() bool {
+	return p.AsyncInvokeHTTPInfo != nil
+}
+
 func (p *CustomRPCEvaluator) IsSetTimeout() bool {
 	return p.Timeout != nil
 }
@@ -1036,6 +1074,10 @@ func (p *CustomRPCEvaluator) IsSetRateLimit() bool {
 
 func (p *CustomRPCEvaluator) IsSetExt() bool {
 	return p.Ext != nil
+}
+
+func (p *CustomRPCEvaluator) IsSetIsAsync() bool {
+	return p.IsAsync != nil
 }
 
 func (p *CustomRPCEvaluator) Read(iprot thrift.TProtocol) (err error) {
@@ -1096,6 +1138,14 @@ func (p *CustomRPCEvaluator) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 10:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField10(iprot); err != nil {
@@ -1115,6 +1165,14 @@ func (p *CustomRPCEvaluator) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1201,6 +1259,14 @@ func (p *CustomRPCEvaluator) ReadField5(iprot thrift.TProtocol) error {
 	p.InvokeHTTPInfo = _field
 	return nil
 }
+func (p *CustomRPCEvaluator) ReadField6(iprot thrift.TProtocol) error {
+	_field := NewEvaluatorHTTPInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.AsyncInvokeHTTPInfo = _field
+	return nil
+}
 func (p *CustomRPCEvaluator) ReadField10(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -1249,6 +1315,17 @@ func (p *CustomRPCEvaluator) ReadField12(iprot thrift.TProtocol) error {
 	p.Ext = _field
 	return nil
 }
+func (p *CustomRPCEvaluator) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsAsync = _field
+	return nil
+}
 
 func (p *CustomRPCEvaluator) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1276,6 +1353,10 @@ func (p *CustomRPCEvaluator) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 5
 			goto WriteFieldError
 		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
 			goto WriteFieldError
@@ -1286,6 +1367,10 @@ func (p *CustomRPCEvaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -1396,6 +1481,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *CustomRPCEvaluator) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAsyncInvokeHTTPInfo() {
+		if err = oprot.WriteFieldBegin("async_invoke_http_info", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.AsyncInvokeHTTPInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *CustomRPCEvaluator) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTimeout() {
 		if err = oprot.WriteFieldBegin("timeout", thrift.I64, 10); err != nil {
@@ -1461,6 +1564,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *CustomRPCEvaluator) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsAsync() {
+		if err = oprot.WriteFieldBegin("is_async", thrift.BOOL, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsAsync); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
 
 func (p *CustomRPCEvaluator) String() string {
 	if p == nil {
@@ -1491,6 +1612,9 @@ func (p *CustomRPCEvaluator) DeepEqual(ano *CustomRPCEvaluator) bool {
 	if !p.Field5DeepEqual(ano.InvokeHTTPInfo) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.AsyncInvokeHTTPInfo) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.Timeout) {
 		return false
 	}
@@ -1498,6 +1622,9 @@ func (p *CustomRPCEvaluator) DeepEqual(ano *CustomRPCEvaluator) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.Ext) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.IsAsync) {
 		return false
 	}
 	return true
@@ -1558,6 +1685,13 @@ func (p *CustomRPCEvaluator) Field5DeepEqual(src *EvaluatorHTTPInfo) bool {
 	}
 	return true
 }
+func (p *CustomRPCEvaluator) Field6DeepEqual(src *EvaluatorHTTPInfo) bool {
+
+	if !p.AsyncInvokeHTTPInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *CustomRPCEvaluator) Field10DeepEqual(src *int64) bool {
 
 	if p.Timeout == src {
@@ -1587,6 +1721,18 @@ func (p *CustomRPCEvaluator) Field12DeepEqual(src map[string]string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *CustomRPCEvaluator) Field13DeepEqual(src *bool) bool {
+
+	if p.IsAsync == src {
+		return true
+	} else if p.IsAsync == nil || src == nil {
+		return false
+	}
+	if *p.IsAsync != *src {
+		return false
 	}
 	return true
 }

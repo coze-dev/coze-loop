@@ -41,6 +41,11 @@ func (p *CustomRPCEvaluator) IsValid() error {
 			return fmt.Errorf("field InvokeHTTPInfo not valid, %w", err)
 		}
 	}
+	if p.AsyncInvokeHTTPInfo != nil {
+		if err := p.AsyncInvokeHTTPInfo.IsValid(); err != nil {
+			return fmt.Errorf("field AsyncInvokeHTTPInfo not valid, %w", err)
+		}
+	}
 	if p.RateLimit != nil {
 		if err := p.RateLimit.IsValid(); err != nil {
 			return fmt.Errorf("field RateLimit not valid, %w", err)

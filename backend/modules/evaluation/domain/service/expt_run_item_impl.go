@@ -230,6 +230,14 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
 		return err
 	}
+	for _, record := range result.EvaluatorResults {
+		if record == nil || record.ID <= 0 || record.Status != entity.EvaluatorRunStatusAsyncInvoking {
+			continue
+		}
+		if err := e.evaluatorService.ArmEvaluatorResume(persistCtx, record.ID); err != nil {
+			return errorx.Wrapf(err, "arm evaluator async resume fail, record_id: %d", record.ID)
+		}
+	}
 
 	logs.CtxInfo(ctx, "[ExptTurnEval] expt turn eval finished, expt_id: %v, expt_run_id: %v, item_id: %v, turn_id: %v, run_log: %v, err: %v",
 		etec.Expt.ID, etec.Event.ExptRunID, etec.EvalSetItem.ItemID, turn.ID, json.Jsonify(clone), result.EvalErr)
