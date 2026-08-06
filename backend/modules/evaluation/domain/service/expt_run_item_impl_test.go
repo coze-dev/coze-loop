@@ -1014,6 +1014,96 @@ func Test_buildItemCompleteEvent(t *testing.T) {
 			wantCreatedBy:      "user_mno",
 			wantEnableAnalysis: false,
 		},
+		{
+			name: "custom rpc server analysis enabled -> enable_analysis true",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_crpc",
+					Target: &entity.EvalTarget{
+						SpaceID:           1,
+						EvalTargetVersion: &entity.EvalTargetVersion{CustomRPCServer: &entity.CustomRPCServer{EnableAnalysis: true}},
+					},
+				},
+			},
+			wantCreatedBy:      "user_crpc",
+			wantEnableAnalysis: true,
+		},
+		{
+			name: "custom agent analysis enabled -> enable_analysis true",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_cagent",
+					Target: &entity.EvalTarget{
+						SpaceID:           1,
+						EvalTargetVersion: &entity.EvalTargetVersion{CustomAgent: &entity.CustomAgent{EnableAnalysis: true}},
+					},
+				},
+			},
+			wantCreatedBy:      "user_cagent",
+			wantEnableAnalysis: true,
+		},
+		{
+			name: "volcengine agent analysis enabled -> enable_analysis true",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_volc",
+					Target: &entity.EvalTarget{
+						SpaceID:           1,
+						EvalTargetVersion: &entity.EvalTargetVersion{VolcengineAgent: &entity.VolcengineAgent{EnableAnalysis: true}},
+					},
+				},
+			},
+			wantCreatedBy:      "user_volc",
+			wantEnableAnalysis: true,
+		},
+		{
+			name: "web agent analysis enabled -> enable_analysis true",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_web",
+					Target: &entity.EvalTarget{
+						SpaceID:           1,
+						EvalTargetVersion: &entity.EvalTargetVersion{WebAgent: &entity.WebAgent{EnableAnalysis: true}},
+					},
+				},
+			},
+			wantCreatedBy:      "user_web",
+			wantEnableAnalysis: true,
+		},
+		{
+			name: "a2a agent analysis enabled -> enable_analysis true",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_a2a",
+					Target: &entity.EvalTarget{
+						SpaceID:           1,
+						EvalTargetVersion: &entity.EvalTargetVersion{A2AAgent: &entity.A2AAgent{EnableAnalysis: true}},
+					},
+				},
+			},
+			wantCreatedBy:      "user_a2a",
+			wantEnableAnalysis: true,
+		},
+		{
+			name: "prompt target -> enable_analysis false (not supported)",
+			eiec: &entity.ExptItemEvalCtx{
+				Event: &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 100, ExptRunID: 200, EvalSetItemID: 300},
+				Expt: &entity.Experiment{
+					CreatedBy: "user_prompt",
+					Target: &entity.EvalTarget{
+						SpaceID:           1,
+						EvalTargetVersion: &entity.EvalTargetVersion{Prompt: &entity.LoopPrompt{}},
+					},
+				},
+			},
+			wantCreatedBy:      "user_prompt",
+			wantEnableAnalysis: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

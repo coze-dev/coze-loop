@@ -15,6 +15,7 @@ type EvalTarget struct {
 	EvalTargetType    EvalTargetType
 	EvalTargetVersion *EvalTargetVersion
 	BaseInfo          *BaseInfo
+	SharedInfo        *SharedResourceInfo
 }
 
 type EvalTargetVersion struct {
@@ -39,7 +40,8 @@ type EvalTargetVersion struct {
 	OutputSchema     []*ArgsSchema
 	RuntimeParamDemo *string
 
-	BaseInfo *BaseInfo
+	BaseInfo   *BaseInfo
+	SharedInfo *SharedResourceInfo
 }
 
 type EvalTargetType int64

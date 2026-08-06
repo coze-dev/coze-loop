@@ -9,7 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate mockgen -destination=mocks/target_source.go -package=mocks . ISourceEvalTargetOperateService
+//go:generate mockgen -destination=mocks/target_source.go -package=mocks . ISourceEvalTargetOperateService,LatestSourceVersionProvider
 type ISourceEvalTargetOperateService interface {
 	EvalType() entity.EvalTargetType
 	// BuildBySource 根据source target构建eval target实体
@@ -32,6 +32,11 @@ type ISourceEvalTargetOperateService interface {
 	RuntimeParam() entity.IRuntimeParam
 	// 搜索自定义评测对象
 	SearchCustomEvalTarget(ctx context.Context, param *entity.SearchCustomEvalTargetParam) (targets []*entity.CustomEvalTarget, nextCursor string, hasMore bool, err error)
+}
+
+// LatestSourceVersionProvider 提供 source target 最新版本查询能力。
+type LatestSourceVersionProvider interface {
+	GetLatestSourceVersion(ctx context.Context, spaceID int64, sourceTargetID string) (version *entity.EvalTargetVersion, err error)
 }
 
 //type Option func(option *Opt)

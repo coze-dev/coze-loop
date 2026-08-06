@@ -26,6 +26,7 @@ import (
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	mock_repo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -870,8 +871,20 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1, 3},
-					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
+					gomock.Any(),
 					int64(3),
+				).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+					assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
+					assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
+					assert.NotNil(t, ufields["err_msg"])
+					return nil
+				}).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemsResult(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					[]int64{1, 3},
+					gomock.Any(),
 				).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
 					gomock.Any(),
@@ -881,14 +894,8 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					[]int64{1, 3},
 					entity.TurnRunState_Fail,
 				).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(
-					gomock.Any(),
-					int64(3),
-					int64(1),
-					int64(2),
-					[]int64{1, 3},
-					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()},
-				).Return(nil).Times(1)
+				// zombie 场景不再清 run_log 的 target_result_id / evaluator_result_ids，
+				// 保留 record id 让 /results/batch_get 能返回 eval_target_record.id
 			},
 			wantAlives: []*entity.ExptEvalItem{
 				{
@@ -957,7 +964,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1},
-					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
+					gomock.Any(),
 					int64(3),
 				).Return(errors.New("update item run log failed")).Times(1)
 			},
@@ -1009,8 +1016,15 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1},
-					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
+					gomock.Any(),
 					int64(3),
+				).Return(nil).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemsResult(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					[]int64{1},
+					gomock.Any(),
 				).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
 					gomock.Any(),
@@ -1075,8 +1089,15 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1, 2},
-					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
+					gomock.Any(),
 					int64(3),
+				).Return(nil).Times(1)
+				f.exptItemResultRepo.EXPECT().UpdateItemsResult(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					[]int64{1, 2},
+					gomock.Any(),
 				).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
 					gomock.Any(),
@@ -1086,14 +1107,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					[]int64{1, 2},
 					entity.TurnRunState_Fail,
 				).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(
-					gomock.Any(),
-					int64(3),
-					int64(1),
-					int64(2),
-					[]int64{1, 2},
-					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()},
-				).Return(nil).Times(1)
+				// zombie 场景不再清 run_log 的 target_result_id / evaluator_result_ids
 			},
 			wantAlives: []*entity.ExptEvalItem{},
 			wantZombies: []*entity.ExptEvalItem{
@@ -1694,4 +1708,35 @@ func TestExptSchedulerImpl_HandleEventErr(t *testing.T) {
 type handleEventErrFields struct {
 	manager   *svcmocks.MockIExptManager
 	publisher *eventmocks.MockExptEventPublisher
+}
+
+// TestUserVisibleErrMsg 覆盖 HandleEventErr 里 err → 用户可见 msg 的三个分支：
+// - nil 返回空
+// - ErrImpl 返回 Msg 字段（用户友好中文描述）
+// - 普通 error 回退到 Error() 字符串
+func TestUserVisibleErrMsg(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.Equal(t, "", userVisibleErrMsg(nil))
+	})
+
+	t.Run("ErrImpl 走 Msg 字段", func(t *testing.T) {
+		err := errno.NewExptZombieTimeoutErr(60, 111, 222)
+		got := userVisibleErrMsg(err)
+		assert.Contains(t, got, "60s")
+		assert.Contains(t, got, "expt_id=111")
+		// 明确不应回退到 error 的 Error() 输出（那种输出前缀是 ErrMsg=...）
+		assert.NotContains(t, got, "ErrMsg=")
+	})
+
+	t.Run("ErrImpl 无 Msg 时回退到 Error", func(t *testing.T) {
+		err := errno.WrapMQRetryErr(errors.New("boom"))
+		got := userVisibleErrMsg(err)
+		// Msg 为空 → fallback 到 err.Error()（会带 Cause=...）
+		assert.Contains(t, got, "boom")
+	})
+
+	t.Run("普通 error 回退到 Error", func(t *testing.T) {
+		err := errors.New("plain error")
+		assert.Equal(t, "plain error", userVisibleErrMsg(err))
+	})
 }

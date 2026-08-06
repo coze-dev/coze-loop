@@ -14,6 +14,8 @@ import (
 
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	metricscomp "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -22,7 +24,7 @@ func newSandboxAgentSvc(t *testing.T) (*SandboxAgentSourceEvalTargetServiceImpl,
 	ctrl := gomock.NewController(t)
 	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockSched := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
-	svc := NewSandboxAgentSourceEvalTargetServiceImpl(mockIdgen, mockSched).(*SandboxAgentSourceEvalTargetServiceImpl)
+	svc := NewSandboxAgentSourceEvalTargetServiceImpl(mockIdgen, mockSched, nil).(*SandboxAgentSourceEvalTargetServiceImpl)
 	return svc, mockIdgen, mockSched, ctrl
 }
 
@@ -159,6 +161,11 @@ func TestSandboxAgentSourceEvalTargetServiceImpl_NopMethods(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Nil(t, dos)
 	})
+	t.Run("GetLatestSourceVersion", func(t *testing.T) {
+		version, err := svc.GetLatestSourceVersion(ctx, 1, "a")
+		assert.NoError(t, err)
+		assert.Nil(t, version)
+	})
 	t.Run("ListSourceVersion", func(t *testing.T) {
 		dos, cursor, hasMore, err := svc.ListSourceVersion(ctx, &entity.ListSourceVersionParam{})
 		assert.NoError(t, err)
@@ -176,5 +183,84 @@ func TestSandboxAgentSourceEvalTargetServiceImpl_NopMethods(t *testing.T) {
 		assert.Nil(t, dos)
 		assert.Equal(t, "", cursor)
 		assert.False(t, hasMore)
+	})
+}
+
+// TestParseInt64OrZero 覆盖 helper：空串、非数字、正常数字。
+func TestParseInt64OrZero(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, int64(0), parseInt64OrZero(""))
+	assert.Equal(t, int64(0), parseInt64OrZero("not-a-number"))
+	assert.Equal(t, int64(123), parseInt64OrZero("123"))
+	assert.Equal(t, int64(-1), parseInt64OrZero("-1"))
+}
+
+// TestSandboxAgentSourceEvalTargetServiceImpl_emitInvokeStarted 覆盖提交侧打点：
+// 1) metrics/param 缺失短路；2) ItemMeta/EvalSetItemID 缺失时零值；3) 完整 tags 透传。
+func TestSandboxAgentSourceEvalTargetServiceImpl_emitInvokeStarted(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil metrics skips", func(t *testing.T) {
+		svc, _, _, ctrl := newSandboxAgentSvc(t)
+		defer ctrl.Finish()
+		svc.sandboxAgentMetrics = nil
+		// 不 panic 即通过
+		svc.emitInvokeStarted(1, &entity.ExecuteEvalTargetParam{})
+	})
+
+	t.Run("nil param skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &SandboxAgentSourceEvalTargetServiceImpl{sandboxAgentMetrics: mock}
+		svc.emitInvokeStarted(1, nil)
+	})
+
+	t.Run("param without ItemMeta emits with zero optional tags", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &SandboxAgentSourceEvalTargetServiceImpl{sandboxAgentMetrics: mock}
+		mock.EXPECT().EmitInvokeStarted(gomock.Any()).Do(func(tags metricscomp.SandboxAgentInvokeTags) {
+			assert.Equal(t, "42", tags.InvokeID)
+			assert.Equal(t, int64(1001), tags.ExperimentID)
+			assert.Equal(t, int64(2001), tags.TargetID)
+			assert.Zero(t, tags.DatasetID)
+			assert.Zero(t, tags.DatasetVersion)
+			assert.Equal(t, "", tags.ItemKey)
+			assert.Equal(t, "", tags.DatasetKey)
+			assert.Zero(t, tags.ItemID)
+		})
+		svc.emitInvokeStarted(42, &entity.ExecuteEvalTargetParam{ExptID: 1001, TargetID: 2001})
+	})
+
+	t.Run("full ItemMeta populates all tags", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &SandboxAgentSourceEvalTargetServiceImpl{sandboxAgentMetrics: mock}
+		itemID := int64(9001)
+		mock.EXPECT().EmitInvokeStarted(gomock.Any()).Do(func(tags metricscomp.SandboxAgentInvokeTags) {
+			assert.Equal(t, "77", tags.InvokeID)
+			assert.Equal(t, int64(1001), tags.ExperimentID)
+			assert.Equal(t, int64(2001), tags.TargetID)
+			assert.Equal(t, int64(3001), tags.DatasetID)
+			assert.Equal(t, int64(4001), tags.DatasetVersion)
+			assert.Equal(t, "ik", tags.ItemKey)
+			assert.Equal(t, "dk", tags.DatasetKey)
+			assert.Equal(t, itemID, tags.ItemID)
+		})
+		svc.emitInvokeStarted(77, &entity.ExecuteEvalTargetParam{
+			ExptID:        1001,
+			TargetID:      2001,
+			EvalSetItemID: &itemID,
+			ItemMeta: &entity.EvalSetItemMeta{
+				EvalSetID:        "3001",
+				EvalSetVersionID: "4001",
+				ItemKey:          "ik",
+				DatasetKey:       "dk",
+			},
+		})
 	})
 }

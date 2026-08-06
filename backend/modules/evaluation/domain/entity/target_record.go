@@ -103,6 +103,27 @@ type EvalTargetOutputData struct {
 	EvalTargetRunError *EvalTargetRunError
 	// 运行耗时
 	TimeConsumingMS *int64
+	// 沙箱 agent 评测对象每次 ReportEvalTargetStepMetric 事件累积（顺序 append）。
+	// STARTED / FINISHED 各占一条 entry；消费方按顺序配对。
+	EvalTargetSteps []*EvalTargetStep
+}
+
+// EvalTargetStep 沙箱 agent step 事件明细。
+// 每次 ReportEvalTargetStepMetric 到达时 append 一条。
+type EvalTargetStep struct {
+	// StepName 沙箱侧 step 名
+	StepName string
+	// EventType "STARTED" | "FINISHED"
+	EventType string
+	// EventTimeMS 服务端接收该 step 事件的时刻（time.Now().UnixMilli()），
+	// 兼作"打当前 step 点位的时间点"和"上报时间点"（单一时间戳）
+	EventTimeMS int64
+	// 以下字段仅 FINISHED 事件填充
+	Success      bool
+	ErrorCode    int32
+	ErrorMessage string
+	// DurationMS 沙箱侧计算的 step 耗时（来自 request）
+	DurationMS int64
 }
 
 type EvalTargetUsage struct {

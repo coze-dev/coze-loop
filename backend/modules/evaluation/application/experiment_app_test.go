@@ -32,6 +32,8 @@ import (
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	metricscomp "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
@@ -3081,6 +3083,7 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil, // fileProvider
 				nil, // lifecycleEventHandler
 				nil, // sandboxSchedulerAdapter
+				nil, // sandboxAgentMetrics
 			)
 
 			// 执行测试
@@ -3333,6 +3336,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // fileProvider
 				nil, // lifecycleEventHandler
 				nil, // sandboxSchedulerAdapter
+				nil, // sandboxAgentMetrics
 			)
 
 			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
@@ -3437,6 +3441,7 @@ func TestExperimentApplication_CreateExperimentTemplate(t *testing.T) {
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
 		nil,                 // sandboxSchedulerAdapter
+		nil,                 // sandboxAgentMetrics
 	)
 
 	resp, err := app.CreateExperimentTemplate(context.Background(), req)
@@ -3540,6 +3545,7 @@ func TestExperimentApplication_BatchGetExperimentTemplate(t *testing.T) {
 				nil,                 // fileProvider
 				nil,                 // lifecycleEventHandler
 				nil,                 // sandboxSchedulerAdapter
+				nil,                 // sandboxAgentMetrics
 			)
 			resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
 			if tt.wantErr {
@@ -3585,6 +3591,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
 			nil,                 // sandboxSchedulerAdapter
+			nil,                 // sandboxAgentMetrics
 		)
 		_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
 		assert.Error(t, err)
@@ -3665,6 +3672,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
 			nil,                 // sandboxSchedulerAdapter
+			nil,                 // sandboxAgentMetrics
 		)
 		resp, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.NoError(t, err)
@@ -3724,6 +3732,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
 			nil,                 // sandboxSchedulerAdapter
+			nil,                 // sandboxAgentMetrics
 		)
 		_, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.Error(t, err)
@@ -3762,6 +3771,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
 			nil,                 // sandboxSchedulerAdapter
+			nil,                 // sandboxAgentMetrics
 		)
 		_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
 		assert.Error(t, err)
@@ -3830,6 +3840,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // fileProvider
 			nil,                 // lifecycleEventHandler
 			nil,                 // sandboxSchedulerAdapter
+			nil,                 // sandboxAgentMetrics
 		)
 		resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
 		assert.NoError(t, err)
@@ -3881,6 +3892,7 @@ func TestExperimentApplication_DeleteExperimentTemplate(t *testing.T) {
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
 		nil,                 // sandboxSchedulerAdapter
+		nil,                 // sandboxAgentMetrics
 	)
 	resp, err := app.DeleteExperimentTemplate(context.Background(), req)
 	assert.NoError(t, err)
@@ -3954,6 +3966,7 @@ func TestExperimentApplication_ListExperimentTemplates(t *testing.T) {
 		nil,                 // fileProvider
 		nil,                 // lifecycleEventHandler
 		nil,                 // sandboxSchedulerAdapter
+		nil,                 // sandboxAgentMetrics
 	)
 	resp, err := app.ListExperimentTemplates(context.Background(), req)
 	assert.NoError(t, err)
@@ -3998,6 +4011,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
 			nil, // sandboxSchedulerAdapter
+			nil, // sandboxAgentMetrics
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -4027,6 +4041,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
 			nil, // sandboxSchedulerAdapter
+			nil, // sandboxAgentMetrics
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -4059,6 +4074,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
 			nil, // sandboxSchedulerAdapter
+			nil, // sandboxAgentMetrics
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -4093,6 +4109,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
 			nil, // lifecycleEventHandler
 			nil, // sandboxSchedulerAdapter
+			nil, // sandboxAgentMetrics
 		)
 		// 这个测试主要验证 FilterOption 不为 nil 时会调用 Convert
 		// 具体的转换逻辑在 filter convertor 的测试中覆盖
@@ -7247,6 +7264,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 		nil, nil, mockManager, nil, nil, mockIDGen, nil, mockAuth,
 		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		mockSandboxScheduler,
+		nil,
 	)
 
 	t.Run("auth fails", func(t *testing.T) {
@@ -7397,6 +7415,7 @@ func TestExperimentApplication_ListExperimentTemplates_MoreBranches(t *testing.T
 	app := NewExperimentApplication(
 		nil, nil, nil, nil, nil, nil, nil,
 		mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+		nil,
 		nil,
 		nil,
 	)
@@ -8268,4 +8287,63 @@ func TestExperimentApplication_UpdateExptRunConf(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestExperimentApplication_emitSandboxAgentExperimentStarted 覆盖 SubmitExperiment
+// 内嵌的沙箱 agent 打点分支：metric/expt 缺失、非沙箱类型、沙箱类型上报 tags 完整性。
+func TestExperimentApplication_emitSandboxAgentExperimentStarted(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil metric skips", func(t *testing.T) {
+		app := &experimentApplication{}
+		// 不 panic 即通过
+		app.emitSandboxAgentExperimentStarted(context.Background(), &expt.Experiment{})
+	})
+
+	t.Run("nil experiment skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &experimentApplication{sandboxAgentMetrics: mock}
+		app.emitSandboxAgentExperimentStarted(context.Background(), nil)
+	})
+
+	t.Run("non sandbox agent target skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &experimentApplication{sandboxAgentMetrics: mock}
+		app.emitSandboxAgentExperimentStarted(context.Background(), &expt.Experiment{
+			EvalTarget: &domain_eval_target.EvalTarget{
+				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+			},
+		})
+	})
+
+	t.Run("sandbox agent target emits with tags", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &experimentApplication{sandboxAgentMetrics: mock}
+		exptDTO := &expt.Experiment{
+			ID:               gptr.Of(int64(1001)),
+			EvalSetID:        gptr.Of(int64(2001)),
+			EvalSetVersionID: gptr.Of(int64(3001)),
+			TargetID:         gptr.Of(int64(4001)),
+			EvalTarget: &domain_eval_target.EvalTarget{
+				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_SandboxAgent),
+			},
+			EvalSet: &domain_eval_set.EvaluationSet{
+				DatasetKey: gptr.Of("dsk"),
+			},
+		}
+		mock.EXPECT().EmitExperimentStarted(gomock.Any()).Do(func(tags metricscomp.SandboxAgentExperimentTags) {
+			assert.Equal(t, int64(1001), tags.ExperimentID)
+			assert.Equal(t, int64(2001), tags.DatasetID)
+			assert.Equal(t, int64(3001), tags.DatasetVersion)
+			assert.Equal(t, int64(4001), tags.TargetID)
+			assert.Equal(t, "dsk", tags.DatasetKey)
+		})
+		app.emitSandboxAgentExperimentStarted(context.Background(), exptDTO)
+	})
 }

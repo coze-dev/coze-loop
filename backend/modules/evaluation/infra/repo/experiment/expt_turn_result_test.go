@@ -1724,8 +1724,13 @@ func TestExptTurnResultRepoImpl_CreateOrUpdateItemsTurnRunLogStatus(t *testing.T
 					Return(nil)
 
 				mockExptTurnResultDAO.EXPECT().
-					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{3}, map[string]any{"status": int32(entity.TurnRunState_Fail)}).
-					Return(nil)
+					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{3}, gomock.Any()).
+					DoAndReturn(func(_ context.Context, _, _, _ int64, _ []int64, ufields map[string]any, _ ...any) error {
+						// Fail 状态需要同时更新 status 与 err_msg（超时原因），供前端反解成 turn 级 error
+						assert.Equal(t, int32(entity.TurnRunState_Fail), ufields["status"])
+						assert.NotNil(t, ufields["err_msg"])
+						return nil
+					})
 			},
 			wantErr: false,
 		},

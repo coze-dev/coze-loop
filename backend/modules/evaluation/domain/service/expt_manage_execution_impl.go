@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -708,9 +709,66 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	}
 
 	e.mtr.EmitExptExecResult(spaceID, int64(got.ExptType), int64(status), gptr.Indirect(got.StartAt))
+
+	// SandboxAgent 稳定性打点: experiment_finished + experiment_duration
+	// 从 lifecycle event 迁移到这里的原因: lifecycle event 走 rocket MQ, 灰度实例常常
+	// 因为 consumer group 竞争消费不到消息, 打点缺失。改到 CompleteExpt 同步路径,
+	// 语义上表示"实验实际结束时刻", 与看板终态口径对齐。
+	e.emitSandboxAgentExperimentFinished(ctx, got, status, gptr.Indirect(exptDo.EndAt))
+
 	logs.CtxInfo(ctx, "[ExptEval] CompleteExpt success, expt_id: %v, status: %v, stats: %v", exptID, status, json.Jsonify(stats))
 
 	return nil
+}
+
+// emitSandboxAgentExperimentFinished 判断实验是否为沙箱 agent 类型, 是则上报 experiment_finished / experiment_duration。
+// startAt 取 expt.StartAt (若空则 duration 为 0); endAt 采用 CompleteExpt 本次写入的 EndAt 值。
+//
+// 关键: exptRepo.GetByID 返回的 entity.Experiment 只带主表数据, Target 字段是 nil
+// (Target 需要额外从 evalTargetService 查出来)。所以判断 isSandboxAgentExperiment
+// 之前需要先 fallback 补查一次 target, 否则会静默跳过。
+func (e *ExptMangerImpl) emitSandboxAgentExperimentFinished(ctx context.Context, expt *entity.Experiment, status entity.ExptStatus, endAt time.Time) {
+	if e.sandboxAgentMetrics == nil || expt == nil {
+		logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitExperimentFinished skipped, metrics_nil=%v, expt_nil=%v",
+			e.sandboxAgentMetrics == nil, expt == nil)
+		return
+	}
+	// fallback 补查 target: GetByID 不返回 Target, 但 isSandboxAgentExperiment 依赖 Target
+	// ★ 跨空间共享: 评测对象属来源空间, 按冻结 TargetSpaceID 读 (0=同调用方空间);
+	// 用调用方空间读跨空间 target version 会失败 → Target 仍为 nil → 沙箱实验完成打点静默丢失。
+	if expt.Target == nil && expt.TargetVersionID != 0 && e.evalTargetService != nil {
+		target, err := e.evalTargetService.GetEvalTargetVersion(ctx, resolveLoadSpaceID(expt.SpaceID, expt.TargetSpaceID), expt.TargetVersionID, false)
+		if err != nil {
+			logs.CtxWarn(ctx, "[sandbox_agent_metrics] emitExperimentFinished GetEvalTargetVersion failed, expt_id=%d, target_version_id=%d, err=%v",
+				expt.ID, expt.TargetVersionID, err)
+		} else if target != nil {
+			expt.Target = target
+		}
+	}
+	if !isSandboxAgentExperiment(expt) {
+		logs.CtxInfo(ctx, "[sandbox_agent_metrics] emitExperimentFinished skipped, not sandbox agent expt, expt_id=%d, target_nil=%v",
+			expt.ID, expt.Target == nil)
+		return
+	}
+	tags := metrics.SandboxAgentExperimentTags{
+		ExperimentID:   expt.ID,
+		DatasetID:      expt.EvalSetID,
+		DatasetVersion: expt.EvalSetVersionID,
+		TargetID:       expt.TargetID,
+	}
+	if expt.EvalSet != nil {
+		tags.DatasetKey = expt.EvalSet.DatasetKey
+	}
+	var startAt time.Time
+	if expt.StartAt != nil {
+		startAt = *expt.StartAt
+	}
+	if endAt.IsZero() {
+		endAt = time.Now()
+	}
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_finished, expt_id=%d, status=%v, start_at=%d, end_at=%d, target_id=%d, dataset_key=%s",
+		tags.ExperimentID, status, startAt.UnixMilli(), endAt.UnixMilli(), tags.TargetID, tags.DatasetKey)
+	e.sandboxAgentMetrics.EmitExperimentFinished(tags, statusToErr(status), startAt, endAt)
 }
 
 // notifyWorkflowPipelineOnExptFinished 评测实验进入终态时，source_type=workflow 则回调 Pipeline 节点完成；首参传实验 ID（ExperimentID）
@@ -820,6 +878,7 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 		recordIDs,
 		int32(errno.AsyncEvalTargetTerminatedCode),
 		"async eval target terminated: experiment cancelled",
+		false,
 	)
 }
 

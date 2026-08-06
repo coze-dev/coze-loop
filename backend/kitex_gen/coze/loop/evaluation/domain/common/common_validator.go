@@ -106,6 +106,12 @@ func (p *BaseInfo) IsValid() error {
 	}
 	return nil
 }
+func (p *SharedResourceOption) IsValid() error {
+	return nil
+}
+func (p *SharedResourceInfo) IsValid() error {
+	return nil
+}
 func (p *ModelConfig) IsValid() error {
 	return nil
 }

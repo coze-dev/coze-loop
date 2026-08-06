@@ -21,6 +21,7 @@ import (
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	idemMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
@@ -73,7 +74,7 @@ func TestExptMangerImpl_Run(t *testing.T) {
 				// Mock GetEvaluationSet
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				// Mock MGetStats
@@ -132,7 +133,7 @@ func TestExptMangerImpl_Run(t *testing.T) {
 				// Mock GetEvaluationSet
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				// Mock MGetStats
@@ -177,7 +178,7 @@ func TestExptMangerImpl_Run(t *testing.T) {
 				// Mock GetEvaluationSet
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				// Mock MGetStats
@@ -879,7 +880,7 @@ func TestExptMangerImpl_RetryItems(t *testing.T) {
 					EXPECT().MGetByID(ctx, []int64{exptID}, spaceID).
 					Return([]*entity.Experiment{{ID: exptID, SpaceID: spaceID, ExptType: 1}}, nil).AnyTimes()
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
-					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
 				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
@@ -905,7 +906,7 @@ func TestExptMangerImpl_RetryItems(t *testing.T) {
 					EXPECT().MGetByID(ctx, []int64{exptID}, spaceID).
 					Return([]*entity.Experiment{{ID: exptID, SpaceID: spaceID}}, nil).AnyTimes()
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
-					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
 				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
@@ -927,7 +928,7 @@ func TestExptMangerImpl_RetryItems(t *testing.T) {
 					EXPECT().MGetByID(ctx, []int64{exptID}, spaceID).
 					Return([]*entity.Experiment{{ID: exptID, SpaceID: spaceID}}, nil).AnyTimes()
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
-					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
 				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
@@ -2389,7 +2390,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
@@ -2511,7 +2512,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 
 				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(&entity.EvaluationSet{}, nil).AnyTimes()
 
 				mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
@@ -3177,7 +3178,7 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 			}}, nil).AnyTimes()
 		mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 			EXPECT().
-			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(&entity.EvaluationSet{}, nil).AnyTimes()
 		mgr.exptResultService.(*svcMocks.MockExptResultService).
 			EXPECT().
@@ -3224,7 +3225,7 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 			}}, nil).AnyTimes()
 		mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 			EXPECT().
-			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(&entity.EvaluationSet{}, nil).AnyTimes()
 		mgr.exptResultService.(*svcMocks.MockExptResultService).
 			EXPECT().
@@ -3271,7 +3272,7 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 			}}, nil).AnyTimes()
 		mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
 			EXPECT().
-			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(&entity.EvaluationSet{}, nil).AnyTimes()
 		mgr.exptResultService.(*svcMocks.MockExptResultService).
 			EXPECT().
@@ -3698,4 +3699,105 @@ func TestExptMangerImpl_sendExptCompleteEvent(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestExptMangerImpl_emitSandboxAgentExperimentFinished 覆盖：
+// 1) metrics/expt 缺失短路；2) target 为空时反查 evalTargetService；3) 非沙箱类型跳过；
+// 4) 沙箱类型上报 tags 完整性；5) endAt 为空则用 time.Now() 兜底。
+func TestExptMangerImpl_emitSandboxAgentExperimentFinished(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("nil metrics skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+		mgr.sandboxAgentMetrics = nil
+		mgr.emitSandboxAgentExperimentFinished(ctx, &entity.Experiment{ID: 1}, entity.ExptStatus_Success, time.Now())
+	})
+
+	t.Run("nil expt skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+		mock := metricsMocks.NewMockSandboxAgentMetrics(ctrl)
+		mgr.sandboxAgentMetrics = mock
+		mgr.emitSandboxAgentExperimentFinished(ctx, nil, entity.ExptStatus_Success, time.Now())
+	})
+
+	t.Run("non sandbox target skips", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+		mock := metricsMocks.NewMockSandboxAgentMetrics(ctrl)
+		mgr.sandboxAgentMetrics = mock
+		expt := &entity.Experiment{ID: 10, SpaceID: 1, TargetVersionID: 999}
+		mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).EXPECT().
+			GetEvalTargetVersion(gomock.Any(), int64(1), int64(999), false).
+			Return(&entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{
+				EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+			}}, nil)
+		mgr.emitSandboxAgentExperimentFinished(ctx, expt, entity.ExptStatus_Success, time.Now())
+	})
+
+	t.Run("fallback target lookup error still skips gracefully", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+		mock := metricsMocks.NewMockSandboxAgentMetrics(ctrl)
+		mgr.sandboxAgentMetrics = mock
+		expt := &entity.Experiment{ID: 11, SpaceID: 1, TargetVersionID: 888}
+		mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).EXPECT().
+			GetEvalTargetVersion(gomock.Any(), int64(1), int64(888), false).
+			Return(nil, errors.New("lookup err"))
+		mgr.emitSandboxAgentExperimentFinished(ctx, expt, entity.ExptStatus_Success, time.Now())
+	})
+
+	t.Run("sandbox agent emits with full tags", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+		mock := metricsMocks.NewMockSandboxAgentMetrics(ctrl)
+		mgr.sandboxAgentMetrics = mock
+		startAt := time.Unix(1_700_000_000, 0)
+		endAt := time.Unix(1_700_000_100, 0)
+		expt := &entity.Experiment{
+			ID:               100,
+			EvalSetID:        200,
+			EvalSetVersionID: 300,
+			TargetID:         400,
+			StartAt:          &startAt,
+			EvalSet:          &entity.EvaluationSet{DatasetKey: "dsk"},
+			Target: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+			}},
+		}
+		mock.EXPECT().EmitExperimentFinished(gomock.Any(), errExptTerminatedWithFailure, startAt, endAt).Do(func(tags metrics.SandboxAgentExperimentTags, _ error, _ time.Time, _ time.Time) {
+			assert.Equal(t, int64(100), tags.ExperimentID)
+			assert.Equal(t, int64(200), tags.DatasetID)
+			assert.Equal(t, int64(300), tags.DatasetVersion)
+			assert.Equal(t, int64(400), tags.TargetID)
+			assert.Equal(t, "dsk", tags.DatasetKey)
+		})
+		mgr.emitSandboxAgentExperimentFinished(ctx, expt, entity.ExptStatus_Failed, endAt)
+	})
+
+	t.Run("empty endAt falls back to now", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+		mock := metricsMocks.NewMockSandboxAgentMetrics(ctrl)
+		mgr.sandboxAgentMetrics = mock
+		expt := &entity.Experiment{
+			ID: 101,
+			Target: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+			}},
+		}
+		before := time.Now()
+		mock.EXPECT().EmitExperimentFinished(gomock.Any(), nil, gomock.Any(), gomock.Any()).Do(func(_ metrics.SandboxAgentExperimentTags, _ error, _ time.Time, endAt time.Time) {
+			assert.False(t, endAt.IsZero())
+			assert.False(t, endAt.Before(before))
+		})
+		mgr.emitSandboxAgentExperimentFinished(ctx, expt, entity.ExptStatus_Success, time.Time{})
+	})
 }

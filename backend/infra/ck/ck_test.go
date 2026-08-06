@@ -4,6 +4,7 @@
 package ck
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -66,5 +67,19 @@ func TestNewCKFromConfig_ConnPoolSettings(t *testing.T) {
 		if err == nil {
 			assert.NotNil(t, p)
 		}
+	})
+}
+
+func TestNewRetryDialer(t *testing.T) {
+	t.Run("retries on failure", func(t *testing.T) {
+		dial := newRetryDialer(50 * time.Millisecond)
+		ctx := context.Background()
+		_, err := dial(ctx, "127.0.0.1:1")
+		assert.Error(t, err)
+	})
+
+	t.Run("default timeout when zero", func(t *testing.T) {
+		dial := newRetryDialer(0)
+		assert.NotNil(t, dial)
 	})
 }

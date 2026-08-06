@@ -26,6 +26,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+	metricscomp "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -81,6 +82,9 @@ type experimentApplication struct {
 
 	// 沙箱调度 RPC 适配器，用于 SandboxAgent 评测对象提交实验时初始化沙箱任务
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
+
+	// 沙箱 agent 稳定性打点（experiment_started / experiment_finished / experiment_duration）
+	sandboxAgentMetrics metricscomp.SandboxAgentMetrics
 }
 
 const sandboxSchedulerInitTimeout = 5 * time.Second
@@ -119,6 +123,7 @@ func NewExperimentApplication(
 	fileProvider rpc.IFileProvider,
 	lifecycleEventHandler service.ExptLifecycleEventHandler,
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter,
+	sandboxAgentMetrics metricscomp.SandboxAgentMetrics,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -141,6 +146,7 @@ func NewExperimentApplication(
 		templateManager:             templateManager,
 		fileProvider:                fileProvider,
 		sandboxSchedulerAdapter:     sandboxSchedulerAdapter,
+		sandboxAgentMetrics:         sandboxAgentMetrics,
 	}
 }
 
@@ -573,6 +579,10 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		// ★ wiring fix: 透传 run_mode_config 到 CreateExperimentRequest，否则落不进 eval_conf，
 		// operator 读不到 → 走默认 sua_multi_turn 兜底，用户选的 single_turn 被静默忽略。nil 安全。
 		RunModeConfig: req.RunModeConfig,
+		// ★ 跨空间共享: Submit 的 shared_option (field 80/81) 透传到 Create，
+		// 否则 SubmitExperiment 路径丢失来源空间，发起鉴权/加载会退化成消费方空间。
+		EvalSetSharedOption: req.EvalSetSharedOption,
+		TargetSharedOption:  req.TargetSharedOption,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -620,6 +630,12 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	// SandboxAgent 稳定性打点: experiment_started
+	// 从 lifecycle event 迁移到这里的原因: lifecycle event 走 rocket MQ, 灰度实例常常
+	// 因为 consumer group 竞争消费不到消息, 打点缺失。改到 SubmitExperiment 同步路径,
+	// 语义上表示"实验被提交并成功进入调度",与看板起始时刻对齐。
+	e.emitSandboxAgentExperimentStarted(ctx, cresp.GetExperiment())
+
 	// 如果有关联的实验模板，更新模板的 ExptInfo（创建实验，数量 +1）
 	if req.IsSetExptTemplateID() && req.GetExptTemplateID() > 0 {
 		exptID := gptr.Indirect(cresp.GetExperiment().ID)
@@ -642,6 +658,27 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		RunID:      gptr.Of(rresp.GetRunID()),
 		BaseResp:   base.NewBaseResp(),
 	}, nil
+}
+
+// emitSandboxAgentExperimentStarted 判断实验是否为沙箱 agent 类型, 是则上报 experiment_started。
+// 上报字段与看板保持一致: expt_id / dataset_id / dataset_version。
+func (e *experimentApplication) emitSandboxAgentExperimentStarted(ctx context.Context, exptDTO *domain_expt.Experiment) {
+	if e.sandboxAgentMetrics == nil || exptDTO == nil {
+		return
+	}
+	if exptDTO.GetEvalTarget().GetEvalTargetType() != domain_eval_target.EvalTargetType_SandboxAgent {
+		return
+	}
+	tags := metricscomp.SandboxAgentExperimentTags{
+		ExperimentID:   exptDTO.GetID(),
+		DatasetID:      exptDTO.GetEvalSetID(),
+		DatasetVersion: exptDTO.GetEvalSetVersionID(),
+		TargetID:       exptDTO.GetTargetID(),
+		DatasetKey:     exptDTO.GetEvalSet().GetDatasetKey(),
+	}
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit experiment_started, expt_id=%d, dataset_id=%d, dataset_version=%d, target_id=%d, dataset_key=%s",
+		tags.ExperimentID, tags.DatasetID, tags.DatasetVersion, tags.TargetID, tags.DatasetKey)
+	e.sandboxAgentMetrics.EmitExperimentStarted(tags)
 }
 
 // resolveEvaluatorVersionIDsFromCreateReq 汇总 evaluator_version_ids、runconfig 和权重配置：

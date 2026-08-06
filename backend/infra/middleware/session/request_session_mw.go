@@ -44,7 +44,7 @@ func extractSessionFromRequest(req any) *common.Session {
 	}
 
 	val := reflect.ValueOf(req)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
 

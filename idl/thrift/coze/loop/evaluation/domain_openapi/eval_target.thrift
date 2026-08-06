@@ -60,6 +60,7 @@ struct EvalTarget {
 
     // 系统信息
     100: optional common.BaseInfo base_info (go.tag='json:\"base_info\"')
+    101: optional common.SharedResourceInfo shared_info
 }
 
 struct EvalTargetVersion {
@@ -72,6 +73,7 @@ struct EvalTargetVersion {
 
     // 系统信息
     100: optional common.BaseInfo base_info (go.tag='json:\"base_info\"')
+    101: optional common.SharedResourceInfo shared_info
 }
 
 struct EvalTargetContent {
@@ -116,7 +118,20 @@ struct EvalTargetOutputData {
     2: optional EvalTargetUsage eval_target_usage             // 运行消耗
     3: optional EvalTargetRunError eval_target_run_error         // 运行报错
     4: optional i64 time_consuming_ms (api.js_conv='true', go.tag='json:\"time_consuming_ms\"') // 运行耗时
+    5: optional list<EvalTargetStep> eval_target_steps        // 沙箱 agent step 事件明细（顺序 append）
     20: optional map<string, string> ext    // 平台扩展字段
+}
+
+// EvalTargetStep 沙箱 agent step 事件明细。
+// 每次 ReportEvalTargetStepMetric 事件（STARTED 或 FINISHED）对应一条 entry。
+struct EvalTargetStep {
+    1: optional string step_name (go.tag='json:\"step_name\"')            // 沙箱侧 step 名
+    2: optional string event_type (go.tag='json:\"event_type\"')          // "STARTED" | "FINISHED"
+    3: optional i64 event_time_ms (api.js_conv='true', go.tag='json:\"event_time_ms\"') // 服务端接收时刻
+    4: optional bool success (go.tag='json:\"success\"')                  // 仅 FINISHED 有效
+    5: optional i32 error_code (go.tag='json:\"error_code\"')             // 仅 FINISHED 有效
+    6: optional string error_message (go.tag='json:\"error_message\"')    // 仅 FINISHED 有效
+    7: optional i64 duration_ms (api.js_conv='true', go.tag='json:\"duration_ms\"') // 沙箱侧计算的 step 耗时
 }
 
 struct EvalTargetUsage {

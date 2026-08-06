@@ -382,6 +382,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				{
 					_threads := _v14.Group("/threads", _threadsMw(handler)...)
+					_threads.POST("/adjacent_trace", append(_getadjacenttraceMw(handler), apis.GetAdjacentTrace)...)
 					_threads.POST("/stat", append(_getthreadstatMw(handler), apis.GetThreadStat)...)
 					{
 						_chat := _threads.Group("/chat", _chatMw(handler)...)
@@ -505,6 +506,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 			{
 				_eval_targets0 := _loop.Group("/eval_targets", _eval_targets0Mw(handler)...)
 				_eval_targets0.POST("/async_debug", append(_asyncdebugevaltargetoapiMw(handler), apis.AsyncDebugEvalTargetOApi)...)
+				_eval_targets0.POST("/list", append(_listevaltargetsoapiMw(handler), apis.ListEvalTargetsOApi)...)
 				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
 			}
 			{
@@ -600,6 +602,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_evaluators_versions0.POST("/batch_get", append(_batchgetevaluatorversionsoapiMw(handler), apis.BatchGetEvaluatorVersionsOApi)...)
 					{
 						_evaluator_version_id0 := _evaluators_versions0.Group("/:evaluator_version_id", _evaluator_version_id0Mw(handler)...)
+						_evaluator_version_id0.POST("/async_run", append(_asyncrunevaluatoroapiMw(handler), apis.AsyncRunEvaluatorOApi)...)
 						_evaluator_version_id0.POST("/run", append(_runevaluatoroapiMw(handler), apis.RunEvaluatorOApi)...)
 					}
 				}

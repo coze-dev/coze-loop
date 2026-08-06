@@ -2295,6 +2295,11 @@ func _listtrajectoryoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _asyncrunevaluatoroapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _getevaltargetrecordoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
@@ -2436,6 +2441,16 @@ func _updateexptrunconfoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _killexperimentoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getadjacenttraceMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listevaltargetsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

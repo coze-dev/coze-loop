@@ -164,6 +164,9 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceI
 	if err != nil {
 		return nil, err
 	}
+	if do == nil {
+		return nil, nil
+	}
 	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
@@ -173,6 +176,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceI
 			}
 		}
 	}
+	e.fillSharedInfo(spaceID, do, entity.BuildSharedResourceInfo(spaceID, do.SpaceID, consts.Read, "versioned"))
 	return do, nil
 }
 
@@ -247,6 +251,16 @@ func (e *EvalTargetServiceImpl) BatchGetEvalTargetBySource(ctx context.Context, 
 	})
 }
 
+func (e *EvalTargetServiceImpl) fillSharedInfo(consumerSpaceID int64, target *entity.EvalTarget, sharedInfo *entity.SharedResourceInfo) {
+	if target == nil {
+		return
+	}
+	target.SharedInfo = sharedInfo
+	if target.EvalTargetVersion != nil {
+		target.EvalTargetVersion.SharedInfo = sharedInfo
+	}
+}
+
 func (e *EvalTargetServiceImpl) BatchGetEvalTargetVersion(ctx context.Context, spaceID int64, versionIDs []int64, needSourceInfo bool) (dos []*entity.EvalTarget, err error) {
 	versions, err := e.evalTargetRepo.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
 	if err != nil {
@@ -260,6 +274,9 @@ func (e *EvalTargetServiceImpl) BatchGetEvalTargetVersion(ctx context.Context, s
 				return nil, err
 			}
 		}
+	}
+	for _, version := range versions {
+		e.fillSharedInfo(spaceID, version, entity.BuildSharedResourceInfo(spaceID, version.SpaceID, consts.Read, "versioned"))
 	}
 	return versions, nil
 }
@@ -706,6 +723,8 @@ func (e *EvalTargetServiceImpl) LoadRecordFullData(ctx context.Context, record *
 
 // destroySandboxExecuteIfNeeded 在 SandboxAgent 评测对象单行执行完成后销毁该次沙箱执行。
 // 仅做 best-effort：任何步骤失败仅记录日志，不阻断上层调用。
+// 若 record.EvalTargetOutputData.Ext 里带 SandboxAgentExtKeyExtraExecuteID（双沙箱模式的从沙箱），
+// 会追加销毁一次；避免从沙箱只能等 session TTL 到期后被 patrol 兼底回收。
 func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Context, record *entity.EvalTargetRecord) {
 	if e.sandboxSchedulerAdapter == nil || record == nil {
 		// 静默跳过等于沙箱泄漏 + 并发名额不归还，必须留痕（adapter 未接线是配置问题，不该沉默）。
@@ -735,34 +754,62 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 	executeIDs := sandboxExecuteIDsOf(ctx, record)
 	logs.CtxInfo(ctx, "[SandboxDestroy] destroying sandbox executes, record_id=%d, task_id=%s, expt_run_id=%d, execute_ids=%v",
 		record.ID, taskID, record.ExperimentRunID, executeIDs)
-	e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs)
+	e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs, false)
 }
 
 // sandboxExecuteIDsOf 取该 record 本次调用实际创建的 sandbox execution id 列表。
-// 权威来源是 operator 在 AsyncExecute 回传、落在 output ext 的 consts.OutputDataExtKeySandboxExecuteIDs
-// (JSON 字符串数组) —— 双沙箱一次调用会创建多个 execution, 其 id 命名规则属 operator 实现细节,
-// 平台侧不推断。缺省或解析失败时退回 record.ID (单沙箱实现的 executeID 即 record.ID/invokeID)。
+//
+// 双沙箱一次调用会创建多个 execution, 其 id 命名规则属 operator 实现细节, 平台侧不推断 ——
+// 只读 operator 在 AsyncExecute 回传、落在 output ext 里的值。
+//
+// ⚠️ **必须同时认两个 key**: 双沙箱目前有两套 operator 实现并存 (见 SandboxCountMode 分流),
+// 各自写自己的 key ——
+//
+//	consts.OutputDataExtKeySandboxExecuteIDs   (JSON 字符串数组, 全部 execution)
+//	entity.SandboxAgentExtKeyExtraExecuteID    (裸字符串, 仅"额外"那个; 主 execution = record.ID)
+//
+// 只认一个的后果是**另一条链路静默漏沙箱**: 代码编译通过、自己的测试也过, 但双沙箱每 item 占
+// 2 个并发名额, 泄漏累积到配额上限后新 item 直接失败 (601300702), 且该错误不重试。
+// 两个 key 都读、取并集, 是这两套实现合并期间唯一安全的形状。
+//
+// 都缺省时退回 record.ID (单沙箱实现的 executeID 即 record.ID/invokeID)。
 func sandboxExecuteIDsOf(ctx context.Context, record *entity.EvalTargetRecord) []string {
 	fallback := []string{strconv.FormatInt(record.ID, 10)}
 	if record.EvalTargetOutputData == nil || len(record.EvalTargetOutputData.Ext) == 0 {
 		return fallback
 	}
-	raw := record.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxExecuteIDs]
-	if raw == "" {
-		return fallback
+	ext := record.EvalTargetOutputData.Ext
+
+	seen := make(map[string]bool)
+	out := make([]string, 0, 2)
+	add := func(id string) {
+		if id == "" || seen[id] {
+			return
+		}
+		seen[id] = true
+		out = append(out, id)
 	}
-	var ids []string
-	if err := json.Unmarshal([]byte(raw), &ids); err != nil {
-		logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal sandbox execute ids fail, record_id=%d, raw=%s, err=%v",
-			record.ID, raw, err)
-		return fallback
-	}
-	out := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if id != "" {
-			out = append(out, id)
+
+	// 形态一: 完整列表 (我们这条链路)。
+	if raw := ext[consts.OutputDataExtKeySandboxExecuteIDs]; raw != "" {
+		var ids []string
+		if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal sandbox execute ids fail, record_id=%d, raw=%s, err=%v",
+				record.ID, raw, err)
+		} else {
+			for _, id := range ids {
+				add(id)
+			}
 		}
 	}
+
+	// 形态二: 主 execution (= record.ID) + 一个额外 id (main 那条链路)。
+	// 只有该 key 存在时才补主 id —— 否则会给形态一的结果凭空多加一个。
+	if extra := ext[entity.SandboxAgentExtKeyExtraExecuteID]; extra != "" {
+		add(strconv.FormatInt(record.ID, 10))
+		add(extra)
+	}
+
 	if len(out) == 0 {
 		return fallback
 	}
@@ -786,16 +833,21 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 }
 
 // destroySandboxExecute 异步 best-effort 销毁本次调用创建的 sandbox execute（可能多个）。
-func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string) {
+//
+// 列表形态而非单个 int64: 双沙箱一次调用创建多个 execution, 且 id 由 operator 命名 (可能不是
+// record.ID 那样的纯数字), 所以这里只接受 operator 给出的字符串 id 列表, 不做格式假定。
+// zombieTimeout=true 时透传给下游适配器，由适配器决定是否附带 SandboxAgent 收尾命令。
+func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
 	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
 		return
 	}
 	goroutine.Go(ctx, func() {
 		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
-			TaskID:      taskID,
-			DestroyType: rpc.SandboxDestroyTypeExecute,
-			ExecuteIDs:  executeIDs,
-			WorkspaceID: spaceID,
+			TaskID:        taskID,
+			DestroyType:   rpc.SandboxDestroyTypeExecute,
+			ExecuteIDs:    executeIDs,
+			WorkspaceID:   spaceID,
+			ZombieTimeout: zombieTimeout,
 		}); err != nil {
 			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_ids=%v, err=%v",
 				taskID, executeIDs, err)
@@ -805,7 +857,9 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 
 // TerminateAsyncRecordsAndDestroySandbox 把仍处于 AsyncInvoking 状态的 SandboxAgent EvalTargetRecord 置为 Fail，
 // 并以 best-effort 方式触发沙箱 Execute 销毁。非 SandboxAgent / 非 AsyncInvoking 的 record 会被忽略。
-func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string) {
+// zombieTimeout=true 时，Destroy 请求会带上 SandboxAgent 收尾命令 EndCmd（含 expt_id/invoke_id）；
+// 其余场景（如手动取消）不下发 EndCmd。
+func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string, zombieTimeout bool) {
 	if len(recordIDs) == 0 {
 		return
 	}
@@ -880,7 +934,7 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
 			taskIDCache[r.ExperimentRunID] = taskID
 		}
-		e.destroySandboxExecute(ctx, taskID, r.SpaceID, executeIDs)
+		e.destroySandboxExecute(ctx, taskID, r.SpaceID, executeIDs, zombieTimeout)
 	}
 }
 
@@ -913,6 +967,14 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		for k, v := range record.EvalTargetOutputData.Ext {
 			param.OutputData.Ext[k] = v
 		}
+	}
+	// 保留 record 上累积的 EvalTargetSteps（沙箱 agent ReportEvalTargetStepMetric 期间 append 上来的）,
+	// 否则整体覆盖 param.OutputData 会抹掉 step 明细。与上方 Ext 保留一致的模式。
+	if record.EvalTargetOutputData != nil && len(record.EvalTargetOutputData.EvalTargetSteps) > 0 {
+		if param.OutputData == nil {
+			param.OutputData = &entity.EvalTargetOutputData{}
+		}
+		param.OutputData.EvalTargetSteps = record.EvalTargetOutputData.EvalTargetSteps
 	}
 
 	record.EvalTargetOutputData = param.OutputData

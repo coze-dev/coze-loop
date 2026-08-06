@@ -268,6 +268,7 @@ var supportedOpenAPIEvalTargetTypes = []openapiEvalTarget.EvalTargetType{
 	openapiEvalTarget.EvalTargetTypeCustomRPCServer,
 	openapiEvalTarget.EvalTargetTypeA2Agent,
 	openapiEvalTarget.EvalTargetTypeCustomAgent,
+	openapiEvalTarget.EvalTargetTypeSandboxAgent,
 }
 
 func supportedOpenAPIEvalTargetTypesString() string {
@@ -286,6 +287,11 @@ func SupportedOpenAPIEvalTargetTypesString() string {
 func IsSupportedOpenAPIEvalTargetType(t openapiEvalTarget.EvalTargetType) bool {
 	_, err := mapOpenAPIEvalTargetType(t)
 	return err == nil
+}
+
+// OpenAPIEvalTargetTypeDTO2DO converts the public string enum to the domain enum.
+func OpenAPIEvalTargetTypeDTO2DO(t openapiEvalTarget.EvalTargetType) (domaindoEvalTarget.EvalTargetType, error) {
+	return mapOpenAPIEvalTargetType(t)
 }
 
 // ValidateOpenAPIEvalTargetClusterEnv validates the required cluster/env for the
@@ -1174,6 +1180,9 @@ func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.I
 			if item.SystemInfo.LogID != nil && *item.SystemInfo.LogID != "" {
 				res.SystemInfo.SetLogID(gptr.Of(*item.SystemInfo.LogID))
 			}
+			if runErr := openAPIRunErrorDO2DTO(item.SystemInfo.Error); runErr != nil {
+				res.SystemInfo.SetError(runErr)
+			}
 		}
 		result = append(result, res)
 	}
@@ -1331,6 +1340,9 @@ func openAPIResultPayloadDO2DTO(result *entity.ExperimentResult) *openapiExperim
 		if payload.SystemInfo.LogID != nil && *payload.SystemInfo.LogID != "" {
 			res.SystemInfo.SetLogID(gptr.Of(*payload.SystemInfo.LogID))
 		}
+		if runErr := openAPIRunErrorDO2DTO(payload.SystemInfo.Error); runErr != nil {
+			res.SystemInfo.SetError(runErr)
+		}
 	}
 	if res.EvalSetTurn == nil && len(res.EvaluatorRecords) == 0 {
 		return nil
@@ -1422,10 +1434,42 @@ func openAPITargetOutputDataDO2DTO(data *entity.EvalTargetOutputData) *openapiEv
 	if len(data.Ext) > 0 {
 		res.Ext = data.Ext
 	}
-	if len(res.OutputFields) == 0 && res.EvalTargetUsage == nil && res.EvalTargetRunError == nil && res.TimeConsumingMs == nil && len(res.Ext) == 0 {
+	if steps := openAPIEvalTargetStepsDO2DTO(data.EvalTargetSteps); len(steps) > 0 {
+		res.EvalTargetSteps = steps
+	}
+	if len(res.OutputFields) == 0 && res.EvalTargetUsage == nil && res.EvalTargetRunError == nil && res.TimeConsumingMs == nil && len(res.Ext) == 0 && len(res.EvalTargetSteps) == 0 {
 		return nil
 	}
 	return res
+}
+
+func openAPIEvalTargetStepsDO2DTO(src []*entity.EvalTargetStep) []*openapiEvalTarget.EvalTargetStep {
+	if len(src) == 0 {
+		return nil
+	}
+	out := make([]*openapiEvalTarget.EvalTargetStep, 0, len(src))
+	for _, s := range src {
+		if s == nil {
+			continue
+		}
+		stepName := s.StepName
+		eventType := s.EventType
+		eventTime := s.EventTimeMS
+		success := s.Success
+		errCode := s.ErrorCode
+		errMsg := s.ErrorMessage
+		durMS := s.DurationMS
+		out = append(out, &openapiEvalTarget.EvalTargetStep{
+			StepName:     &stepName,
+			EventType:    &eventType,
+			EventTimeMs:  &eventTime,
+			Success:      &success,
+			ErrorCode:    &errCode,
+			ErrorMessage: &errMsg,
+			DurationMs:   &durMS,
+		})
+	}
+	return out
 }
 
 func openAPITargetOutputFieldsDO2DTO(fields map[string]*entity.Content) map[string]*openapiCommon.Content {
@@ -1455,6 +1499,28 @@ func openAPITargetUsageDO2DTO(usage *entity.EvalTargetUsage) *openapiEvalTarget.
 		InputTokens:  usage.InputTokens,
 		OutputTokens: usage.OutputTokens,
 	}
+}
+
+// openAPIRunErrorDO2DTO 把 entity.RunError 转成 openapi 结构，nil → nil。
+// 用于 item / turn SystemInfo.Error 字段（超时等系统级错误的用户可见描述）。
+func openAPIRunErrorDO2DTO(err *entity.RunError) *openapiExperiment.RunError {
+	if err == nil {
+		return nil
+	}
+	res := &openapiExperiment.RunError{}
+	if err.Code != 0 {
+		res.Code = gptr.Of(err.Code)
+	}
+	if err.Message != nil && *err.Message != "" {
+		res.Message = gptr.Of(*err.Message)
+	}
+	if err.Detail != nil && *err.Detail != "" {
+		res.Detail = gptr.Of(*err.Detail)
+	}
+	if res.Code == nil && res.Message == nil && res.Detail == nil {
+		return nil
+	}
+	return res
 }
 
 func openAPITargetRunErrorDO2DTO(err *entity.EvalTargetRunError) *openapiEvalTarget.EvalTargetRunError {
@@ -1747,6 +1813,18 @@ func OpenAPIEvaluatorParamDTO2Domain(dto *openapi.SubmitExperimentEvaluatorParam
 // item_filter 与内部同型 (data_filter.Filter) 直接透传;
 // 其余结构性校验 (set 去重 / (version,alias) 唯一 / target_confs len<=1 / alias 字符集 / item_filter 白名单)
 // 由内部 SubmitExperiment 的 ValidateEvalSetConfigs 统一兜底, 此处不重复。
+// openapiSharedOptionToDomainCommon 跨空间共享可选项 OpenAPI DTO -> domain common;
+// nil 或 !is_shared 返回 nil (普通访问)。
+func openapiSharedOptionToDomainCommon(opt *openapiCommon.SharedResourceOption) *domainCommon.SharedResourceOption {
+	if opt == nil || !opt.GetIsShared() {
+		return nil
+	}
+	return &domainCommon.SharedResourceOption{
+		IsShared:      gptr.Of(true),
+		SourceSpaceID: gptr.Of(opt.GetSourceSpaceID()),
+	}
+}
+
 func OpenAPIEvalSetConfigsDTO2Domain(
 	confs []*openapiExperiment.OpenAPIEvalSetConfig,
 	evalSetVersionIDMap map[int64]int64,
@@ -1766,6 +1844,9 @@ func OpenAPIEvalSetConfigsDTO2Domain(
 			// item_filter 与内部 EvalSetConfig.item_filter 同型 (data_filter.Filter), 直接透传;
 			// 白名单/存在性等结构校验由内部 SubmitExperiment 的 ValidateEvalSetConfigs 统一兜底。
 			ItemFilter: conf.GetItemFilter(),
+			// ★ 跨空间共享 (多评测集 per-set): 该 set 评测集/评测对象来源空间选项
+			SharedOption:       openapiSharedOptionToDomainCommon(conf.GetSharedOption()),
+			TargetSharedOption: openapiSharedOptionToDomainCommon(conf.GetTargetSharedOption()),
 		}
 		// evaluator_confs
 		for _, ec := range conf.GetEvaluatorConfs() {
@@ -1799,12 +1880,13 @@ func OpenAPIEvalSetConfigsDTO2Domain(
 			}
 			do.EvaluatorConfs = append(do.EvaluatorConfs, evConf)
 		}
-		// target_confs (本期 len<=1; target_id/version 继承顶层, 此处只带字段映射与 runtime_param)
+		// target_confs (本期 len<=1; target_id 不传=继承顶层, 跨空间多集 per-set 需显式带 target_id 做来源空间授权)
 		for _, tc := range conf.GetTargetConfs() {
 			if tc == nil {
 				continue
 			}
 			tConf := &domainExpt.ExptTargetConf{
+				TargetID:     tc.TargetID,
 				FieldMapping: OpenAPITargetFieldMappingDTO2Domain(tc.FieldMapping),
 				RuntimeParam: OpenAPIRuntimeParamDTO2Domain(tc.RuntimeParam),
 			}
@@ -1846,6 +1928,21 @@ func OpenAPIEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.Eva
 		targetDTO.EvalTargetVersion = OpenAPIEvalTargetVersionDO2DTO(targetDO.EvalTargetVersion, typ)
 	}
 	targetDTO.BaseInfo = common.OpenAPIBaseInfoDO2DTO(targetDO.BaseInfo)
+	return targetDTO
+}
+
+// OpenAPIListEvalTargetDO2DTO adds source-space metadata required by list responses.
+func OpenAPIListEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.EvalTarget {
+	targetDTO := OpenAPIEvalTargetDO2DTO(targetDO)
+	if targetDTO == nil {
+		return nil
+	}
+	targetDTO.WorkspaceID = gptr.Of(targetDO.SpaceID)
+	targetDTO.SharedInfo = evalsetopenapi.OpenAPISharedResourceInfoDO2DTO(targetDO.SharedInfo)
+	if targetDTO.EvalTargetVersion != nil && targetDO.EvalTargetVersion != nil {
+		targetDTO.EvalTargetVersion.WorkspaceID = gptr.Of(targetDO.EvalTargetVersion.SpaceID)
+		targetDTO.EvalTargetVersion.SharedInfo = evalsetopenapi.OpenAPISharedResourceInfoDO2DTO(targetDO.EvalTargetVersion.SharedInfo)
+	}
 	return targetDTO
 }
 
@@ -1929,6 +2026,10 @@ func convertEntityEvalTargetTypeToOpenAPI(typ entity.EvalTargetType) openapiEval
 		return openapiEvalTarget.EvalTargetTypeVolcengineAgent
 	case entity.EvalTargetTypeCustomRPCServer:
 		return openapiEvalTarget.EvalTargetTypeCustomRPCServer
+	case entity.EvalTargetTypeA2AAgent:
+		return openapiEvalTarget.EvalTargetTypeA2Agent
+	case entity.EvalTargetTypeCustomAgent:
+		return openapiEvalTarget.EvalTargetTypeCustomAgent
 	case entity.EvalTargetTypeSandboxAgent:
 		return openapiEvalTarget.EvalTargetTypeSandboxAgent
 	default:

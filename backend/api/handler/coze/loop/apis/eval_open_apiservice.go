@@ -326,3 +326,15 @@ func UpdateExptRunConfOApi(ctx context.Context, c *app.RequestContext) {
 func KillExperimentOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.KillExperimentOApi)
 }
+
+// ListEvalTargetsOApi .
+// @router /v1/loop/eval_targets/list [POST]
+func ListEvalTargetsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvalTargetsOApi)
+}
+
+// AsyncRunEvaluatorOApi .
+// @router /v1/loop/evaluation/evaluators_versions/:evaluator_version_id/async_run [POST]
+func AsyncRunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.AsyncRunEvaluatorOApi)
+}

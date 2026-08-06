@@ -42,6 +42,20 @@ func (m *MockIEvalTargetRepo) EXPECT() *MockIEvalTargetRepoMockRecorder {
 	return m.recorder
 }
 
+// AppendEvalTargetStep mocks base method.
+func (m *MockIEvalTargetRepo) AppendEvalTargetStep(ctx context.Context, invokeID int64, step *entity.EvalTargetStep) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppendEvalTargetStep", ctx, invokeID, step)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AppendEvalTargetStep indicates an expected call of AppendEvalTargetStep.
+func (mr *MockIEvalTargetRepoMockRecorder) AppendEvalTargetStep(ctx, invokeID, step any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendEvalTargetStep", reflect.TypeOf((*MockIEvalTargetRepo)(nil).AppendEvalTargetStep), ctx, invokeID, step)
+}
+
 // BatchGetEvalTargetBySource mocks base method.
 func (m *MockIEvalTargetRepo) BatchGetEvalTargetBySource(ctx context.Context, param *repo.BatchGetEvalTargetBySourceParam) ([]*entity.EvalTarget, error) {
 	m.ctrl.T.Helper()

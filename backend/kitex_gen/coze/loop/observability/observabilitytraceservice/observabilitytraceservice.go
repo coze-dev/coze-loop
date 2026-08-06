@@ -210,6 +210,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetAdjacentTrace": kitex.NewMethodInfo(
+		getAdjacentTraceHandler,
+		newTraceServiceGetAdjacentTraceArgs,
+		newTraceServiceGetAdjacentTraceResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"UpsertColumnExtractConfig": kitex.NewMethodInfo(
 		upsertColumnExtractConfigHandler,
 		newTraceServiceUpsertColumnExtractConfigArgs,
@@ -796,6 +803,25 @@ func newTraceServiceGetThreadStatResult() interface{} {
 	return trace.NewTraceServiceGetThreadStatResult()
 }
 
+func getAdjacentTraceHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceGetAdjacentTraceArgs)
+	realResult := result.(*trace.TraceServiceGetAdjacentTraceResult)
+	success, err := handler.(trace.TraceService).GetAdjacentTrace(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceGetAdjacentTraceArgs() interface{} {
+	return trace.NewTraceServiceGetAdjacentTraceArgs()
+}
+
+func newTraceServiceGetAdjacentTraceResult() interface{} {
+	return trace.NewTraceServiceGetAdjacentTraceResult()
+}
+
 func upsertColumnExtractConfigHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*trace.TraceServiceUpsertColumnExtractConfigArgs)
 	realResult := result.(*trace.TraceServiceUpsertColumnExtractConfigResult)
@@ -1140,6 +1166,16 @@ func (p *kClient) GetThreadStat(ctx context.Context, req *trace.GetThreadStatReq
 	_args.Req = req
 	var _result trace.TraceServiceGetThreadStatResult
 	if err = p.c.Call(ctx, "GetThreadStat", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetAdjacentTrace(ctx context.Context, req *trace.GetAdjacentTraceRequest) (r *trace.GetAdjacentTraceResponse, err error) {
+	var _args trace.TraceServiceGetAdjacentTraceArgs
+	_args.Req = req
+	var _result trace.TraceServiceGetAdjacentTraceResult
+	if err = p.c.Call(ctx, "GetAdjacentTrace", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

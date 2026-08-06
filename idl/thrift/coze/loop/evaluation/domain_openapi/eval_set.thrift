@@ -87,6 +87,7 @@ struct EvaluationSet {
     21: optional list<ResourceTag> tags
 
     100: optional common.BaseInfo base_info
+    101: optional common.SharedResourceInfo shared_info
 }
 
 // 字段数据

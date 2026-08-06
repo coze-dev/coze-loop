@@ -564,3 +564,60 @@ func TestHandleFeishuNotification_LegacyNoConf_BitsUT(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+// TestIsSandboxAgentExperiment 覆盖 isSandboxAgentExperiment 的分支：
+// nil/无 target/无 version、Type=SandboxAgent、SandboxAgent 指针兜底、其它类型。
+func TestIsSandboxAgentExperiment(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		expt *entity.Experiment
+		want bool
+	}{
+		{name: "nil expt", expt: nil, want: false},
+		{name: "nil target", expt: &entity.Experiment{}, want: false},
+		{name: "nil eval target version", expt: &entity.Experiment{Target: &entity.EvalTarget{}}, want: false},
+		{
+			name: "sandbox agent by type",
+			expt: &entity.Experiment{Target: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+			}}},
+			want: true,
+		},
+		{
+			name: "sandbox agent by pointer fallback",
+			expt: &entity.Experiment{Target: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{
+				EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+				SandboxAgent:   &entity.SandboxAgent{},
+			}}},
+			want: true,
+		},
+		{
+			name: "non sandbox target",
+			expt: &entity.Experiment{Target: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{
+				EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+			}}},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tc.want, isSandboxAgentExperiment(tc.expt))
+		})
+	}
+}
+
+// TestStatusToErr 覆盖 statusToErr：Success 返回 nil，其它状态返回 marker error。
+func TestStatusToErr(t *testing.T) {
+	t.Parallel()
+
+	assert.NoError(t, statusToErr(entity.ExptStatus_Success))
+	err := statusToErr(entity.ExptStatus_Failed)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "experiment terminated with non-success status")
+	// marker sentinel 稳定：终态未 success 都走同一个实例
+	assert.Same(t, errExptTerminatedWithFailure, err)
+}

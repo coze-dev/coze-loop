@@ -33,7 +33,7 @@ func (p *Field) TagJson() (alias string, err error) {
 }
 
 func (p *Field) Set(val any) error {
-	if p.Kind() == reflect.Ptr {
+	if p.Kind() == reflect.Pointer {
 		ptr := reflect.New(reflect.TypeOf(val))
 		ptr.Elem().Set(reflect.ValueOf(val))
 		val = ptr.Interface()
@@ -48,7 +48,7 @@ func (p *Field) Set(val any) error {
 func (p *Field) ValueType() (TagValueType, error) {
 	var valueType TagValueType
 	fieldKind := p.f.Kind()
-	if fieldKind == reflect.Ptr {
+	if fieldKind == reflect.Pointer {
 		fieldValue := reflect.ValueOf(p.f.Value())
 		fieldKind = fieldValue.Type().Elem().Kind()
 	}

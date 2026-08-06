@@ -112,6 +112,7 @@ func OutputDO2DTO(src *entity.EvalTargetOutputData) *eval_target.EvalTargetOutpu
 		EvalTargetUsage:    UsageDO2DTO(src.EvalTargetUsage),
 		EvalTargetRunError: RunErrorDO2DTO(src.EvalTargetRunError),
 		TimeConsumingMs:    src.TimeConsumingMS,
+		EvalTargetSteps:    StepsDO2DTO(src.EvalTargetSteps),
 	}
 }
 
@@ -137,7 +138,59 @@ func OutputDTO2ToDO(src *eval_target.EvalTargetOutputData) *entity.EvalTargetOut
 		EvalTargetUsage:    UsageDTO2DO(src.EvalTargetUsage),
 		EvalTargetRunError: RunErrorDTO2DO(src.EvalTargetRunError),
 		TimeConsumingMS:    src.TimeConsumingMs,
+		EvalTargetSteps:    StepsDTO2DO(src.EvalTargetSteps),
 	}
+}
+
+func StepsDO2DTO(src []*entity.EvalTargetStep) []*eval_target.EvalTargetStep {
+	if len(src) == 0 {
+		return nil
+	}
+	out := make([]*eval_target.EvalTargetStep, 0, len(src))
+	for _, s := range src {
+		if s == nil {
+			continue
+		}
+		stepName := s.StepName
+		eventType := s.EventType
+		eventTime := s.EventTimeMS
+		success := s.Success
+		errCode := s.ErrorCode
+		errMsg := s.ErrorMessage
+		durMS := s.DurationMS
+		out = append(out, &eval_target.EvalTargetStep{
+			StepName:     &stepName,
+			EventType:    &eventType,
+			EventTimeMs:  &eventTime,
+			Success:      &success,
+			ErrorCode:    &errCode,
+			ErrorMessage: &errMsg,
+			DurationMs:   &durMS,
+		})
+	}
+	return out
+}
+
+func StepsDTO2DO(src []*eval_target.EvalTargetStep) []*entity.EvalTargetStep {
+	if len(src) == 0 {
+		return nil
+	}
+	out := make([]*entity.EvalTargetStep, 0, len(src))
+	for _, s := range src {
+		if s == nil {
+			continue
+		}
+		out = append(out, &entity.EvalTargetStep{
+			StepName:     s.GetStepName(),
+			EventType:    s.GetEventType(),
+			EventTimeMS:  s.GetEventTimeMs(),
+			Success:      s.GetSuccess(),
+			ErrorCode:    s.GetErrorCode(),
+			ErrorMessage: s.GetErrorMessage(),
+			DurationMS:   s.GetDurationMs(),
+		})
+	}
+	return out
 }
 
 // 状态枚举转换
@@ -384,10 +437,16 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 
 	case spi.InvokeEvalTargetStatus_FAILED:
 		errorMessage := req.GetErrorMessage()
+		errorCode := req.GetErrorCode()
 		var evalTargetRunError *entity.EvalTargetRunError
-		if errorMessage != "" {
+		if errorMessage != "" || errorCode != 0 {
+			code := errorCode
+			if code == 0 {
+				// 未显式指定错误码时回退到平台默认错误码，兼容存量调用方。
+				code = errno.CustomEvalTargetInvokeFailCode
+			}
 			evalTargetRunError = &entity.EvalTargetRunError{
-				Code:    errno.CustomEvalTargetInvokeFailCode,
+				Code:    code,
 				Message: errorMessage,
 			}
 		}

@@ -27,6 +27,7 @@ import (
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
@@ -978,8 +979,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{}, nil).AnyTimes()
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSet{}, nil).AnyTimes()
+				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+				mockEvaluationSetService.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return([]*entity.EvaluationSet{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
@@ -1002,8 +1003,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 						MappingSubKey: "subkey_bool",
 					},
 				}, "2025-01-01", nil).AnyTimes()
-				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{}, nil, nil).AnyTimes()
-				mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
+				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSetVersion{}, nil, nil).AnyTimes()
+				mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, nil).AnyTimes()
 				mockExptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil).AnyTimes()
@@ -1121,20 +1122,20 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{}, nil).AnyTimes()
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{
+				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{
 					EvaluationSetVersion: &entity.EvaluationSetVersion{
 						EvaluationSetSchema: &entity.EvaluationSetSchema{
 							FieldSchemas: []*entity.FieldSchema{},
 						},
 					},
 				}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSet{}, nil).AnyTimes()
-				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{
+				mockEvaluationSetService.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return([]*entity.EvaluationSet{}, nil).AnyTimes()
+				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSetVersion{
 					EvaluationSetSchema: &entity.EvaluationSetSchema{
 						FieldSchemas: []*entity.FieldSchema{},
 					},
 				}, nil, nil).AnyTimes()
-				mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
+				mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{
 					{
 						ItemID: 1,
@@ -1241,14 +1242,14 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 				mockExperimentRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptEvaluatorRef{}, nil)
 				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{
+				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{
 					EvaluationSetVersion: &entity.EvaluationSetVersion{
 						EvaluationSetSchema: &entity.EvaluationSetSchema{
 							FieldSchemas: []*entity.FieldSchema{},
 						},
 					},
 				}, nil)
-				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{
+				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSetVersion{
 					EvaluationSetSchema: &entity.EvaluationSetSchema{
 						FieldSchemas: []*entity.FieldSchema{},
 					},
@@ -1315,14 +1316,14 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 				mockExperimentRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptEvaluatorRef{}, nil)
 				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{
+				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{
 					EvaluationSetVersion: &entity.EvaluationSetVersion{
 						EvaluationSetSchema: &entity.EvaluationSetSchema{
 							FieldSchemas: []*entity.FieldSchema{},
 						},
 					},
 				}, nil)
-				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{
+				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSetVersion{
 					EvaluationSetSchema: &entity.EvaluationSetSchema{
 						FieldSchemas: []*entity.FieldSchema{},
 					},
@@ -1486,8 +1487,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{}, nil).AnyTimes()
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSet{}, nil).AnyTimes()
+				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+				mockEvaluationSetService.EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return([]*entity.EvaluationSet{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
@@ -1510,8 +1511,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 						MappingSubKey: "subkey_bool",
 					},
 				}, "2025-01-01", nil).AnyTimes()
-				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{}, nil, nil).AnyTimes()
-				mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
+				mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSetVersion{}, nil, nil).AnyTimes()
+				mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
 				mockExptItemResultRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, nil).AnyTimes()
 				mockExptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil).AnyTimes()
@@ -1637,10 +1638,10 @@ func TestExptResultServiceImpl_MGetExperimentResult_FillsProcessingTargetRecordF
 	mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), platestwrite.ResourceTypeExperiment, exptID).Return(false).Times(1)
 	mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{exptID}, spaceID).Return([]*entity.Experiment{expt}, nil).Times(1)
 	mockExperimentRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), []int64{exptID}, spaceID).Return(nil, nil).Times(1)
-	mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), spaceID, expt.EvalSetVersionID, gptr.Of(true)).Return(&entity.EvaluationSetVersion{
+	mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), spaceID, expt.EvalSetVersionID, gptr.Of(true), nil).Return(&entity.EvaluationSetVersion{
 		EvaluationSetSchema: &entity.EvaluationSetSchema{},
 	}, nil, nil).Times(1)
-	mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
+	mockEvaluationSetVersionService.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return([]*entity.BatchGetEvaluationSetVersionsResult{}, nil).AnyTimes()
 	mockExptTurnResultRepo.EXPECT().
 		ListTurnResult(gomock.Any(), spaceID, exptID, gomock.Nil(), entity.Page{}, false).
 		Return([]*entity.ExptTurnResult{{
@@ -3009,7 +3010,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 				},
 			},
 		}, nil).AnyTimes()
-		mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+		mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 		mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 			{
 				FieldKey:      "field_key_string",
@@ -3032,7 +3033,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 				MappingSubKey: "subkey_bool",
 			},
 		}, "2025-01-01", nil).AnyTimes()
-		mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSetVersion{}, nil, nil).AnyTimes()
+		mockEvaluationSetVersionService.EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(&entity.EvaluationSetVersion{}, nil, nil).AnyTimes()
 		mockExptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
 		mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnEvaluatorResultRef{
 			{
@@ -7861,7 +7862,7 @@ func TestGetColumnEvalSetFieldsMultiSet(t *testing.T) {
 			EvalSetSourceType: entity.ExptEvalSetSourceType_SingleSet,
 		}
 		// 仅应调用一次, 且用主集 version
-		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(101), gomock.Any()).
+		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(101), gomock.Any(), gomock.Nil()).
 			Return(&entity.EvaluationSetVersion{
 				EvaluationSetSchema: &entity.EvaluationSetSchema{
 					FieldSchemas: []*entity.FieldSchema{{Key: "input"}, {Key: "output"}},
@@ -7893,14 +7894,14 @@ func TestGetColumnEvalSetFieldsMultiSet(t *testing.T) {
 			},
 		}
 		// 主集 set1 ver101: input/output
-		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(101), gomock.Any()).
+		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(101), gomock.Any(), gomock.Nil()).
 			Return(&entity.EvaluationSetVersion{
 				EvaluationSetSchema: &entity.EvaluationSetSchema{
 					FieldSchemas: []*entity.FieldSchema{{Key: "input"}, {Key: "output"}},
 				},
 			}, nil, nil).Times(1)
 		// set2 ver201: input(重复, 去重) + extra(新增)
-		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(201), gomock.Any()).
+		mockEvalSetVerSvc.EXPECT().GetEvaluationSetVersion(gomock.Any(), int64(7), int64(201), gomock.Any(), gomock.Nil()).
 			Return(&entity.EvaluationSetVersion{
 				EvaluationSetSchema: &entity.EvaluationSetSchema{
 					FieldSchemas: []*entity.FieldSchema{{Key: "input"}, {Key: "extra"}},
@@ -7936,7 +7937,7 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 		}
 
 		mockSetVerSvc := svcMocks.NewMockEvaluationSetVersionService(ctrl)
-		mockSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(int64(7)), []int64{101}, gptr.Of(true)).Return([]*entity.BatchGetEvaluationSetVersionsResult{
+		mockSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(int64(7)), []int64{101}, gptr.Of(true), gomock.Nil()).Return([]*entity.BatchGetEvaluationSetVersionsResult{
 			{Version: &entity.EvaluationSetVersion{ID: 101}, EvaluationSet: &entity.EvaluationSet{ID: 100, DatasetKey: "dataset-100"}},
 		}, nil)
 
@@ -7949,7 +7950,8 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 				return []*entity.EvaluationSetItem{
 					{ItemID: 11, ItemKey: "case-11", Turns: []*entity.Turn{{ID: 1}}},
 				}, nil
-			}).Times(1)
+			},
+		).Times(1)
 		builder.evaluationSetVersionService = mockSetVerSvc
 
 		err := builder.buildEvalSet(context.Background())
@@ -7983,14 +7985,15 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 			},
 		}
 
-		mockSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(int64(7)), gomock.Any(), gptr.Of(true)).DoAndReturn(
-			func(_ context.Context, _ *int64, versionIDs []int64, _ *bool) ([]*entity.BatchGetEvaluationSetVersionsResult, error) {
+		mockSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(int64(7)), gomock.Any(), gptr.Of(true), gomock.Nil()).DoAndReturn(
+			func(_ context.Context, _ *int64, versionIDs []int64, _ *bool, _ *entity.SharedResourceOption) ([]*entity.BatchGetEvaluationSetVersionsResult, error) {
 				assert.ElementsMatch(t, []int64{101, 201}, versionIDs)
 				return []*entity.BatchGetEvaluationSetVersionsResult{
 					{Version: &entity.EvaluationSetVersion{ID: 101}, EvaluationSet: &entity.EvaluationSet{ID: 100, DatasetKey: "dataset-100"}},
 					{Version: &entity.EvaluationSetVersion{ID: 201}, EvaluationSet: &entity.EvaluationSet{ID: 200, DatasetKey: "dataset-200"}},
 				}, nil
-			}).Times(1)
+			},
+		).Times(1)
 
 		// set1: 返回 item 11 (整份 ItemIDs 传入, set2 的 22 不属于本集 -> 不返回)
 		mockItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -8003,7 +8006,8 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 					return []*entity.EvaluationSetItem{{ItemID: 22, ItemKey: "case-22", Turns: []*entity.Turn{{ID: 1}}}}, nil
 				}
 				return nil, nil
-			}).Times(2)
+			},
+		).Times(2)
 
 		err := builder.buildEvalSet(context.Background())
 		assert.NoError(t, err)
@@ -8014,5 +8018,191 @@ func TestExptResultBuilder_buildEvalSet_MultiSet(t *testing.T) {
 		assert.Equal(t, "dataset-200", builder.itemIDTurnID2Turn[22][1].DatasetKey)
 		assert.Equal(t, "case-11", builder.itemIDTurnID2Turn[11][1].ItemKey)
 		assert.Equal(t, "case-22", builder.itemIDTurnID2Turn[22][1].ItemKey)
+	})
+}
+
+// TestExptResultBuilder_buildTargetOutput_StubAsyncInvoking 覆盖新增分支：
+// 当 turnResultDO 中有 TargetResultID 但 BatchGetRecordByIDs 未返回对应 record（异步 target 时序未对齐），
+// 应构造仅带 ID + AsyncInvoking 状态的 stub，让上层 API 立即拿到 record.id
+func TestExptResultBuilder_buildTargetOutput_StubAsyncInvoking(t *testing.T) {
+	t.Run("BatchGetRecordByIDs 未命中 → stub AsyncInvoking", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+		mockEvalTargetService.EXPECT().
+			BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{555}).
+			Return(nil, nil)
+
+		builder := &ExptResultBuilder{
+			exptDO:  &entity.Experiment{ID: 1, ExptType: entity.ExptType_Offline},
+			SpaceID: 100,
+			turnResultDO: []*entity.ExptTurnResult{{
+				ID: 77, ItemID: 8, TurnID: 9, TargetResultID: 555,
+			}},
+			evalTargetService: mockEvalTargetService,
+		}
+		err := builder.buildTargetOutput(context.Background())
+		assert.NoError(t, err)
+		out, ok := builder.turnResultID2TargetOutput[77]
+		require.True(t, ok)
+		require.NotNil(t, out.EvalTargetRecord)
+		assert.Equal(t, int64(555), out.EvalTargetRecord.ID)
+		assert.Equal(t, int64(100), out.EvalTargetRecord.SpaceID)
+		assert.Equal(t, int64(8), out.EvalTargetRecord.ItemID)
+		assert.Equal(t, int64(9), out.EvalTargetRecord.TurnID)
+		assert.Equal(t, entity.EvalTargetRunStatusAsyncInvoking, gptr.Indirect(out.EvalTargetRecord.Status))
+	})
+
+	t.Run("TargetResultID=0 时跳过，不产生 stub", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+		mockEvalTargetService.EXPECT().
+			BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{0}).
+			Return(nil, nil)
+
+		builder := &ExptResultBuilder{
+			exptDO:            &entity.Experiment{ID: 1, ExptType: entity.ExptType_Offline},
+			SpaceID:           100,
+			turnResultDO:      []*entity.ExptTurnResult{{ID: 77, TargetResultID: 0}},
+			evalTargetService: mockEvalTargetService,
+		}
+		assert.NoError(t, builder.buildTargetOutput(context.Background()))
+		_, ok := builder.turnResultID2TargetOutput[77]
+		assert.False(t, ok, "TargetResultID=0 should not create stub")
+	})
+
+	t.Run("已有 record 时不覆盖，保留原始 record", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		realRecord := &entity.EvalTargetRecord{
+			ID: 555,
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				OutputFields: map[string]*entity.Content{"k": {Text: gptr.Of("v")}},
+			},
+		}
+		mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+		mockEvalTargetService.EXPECT().
+			BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{555}).
+			Return([]*entity.EvalTargetRecord{realRecord}, nil)
+
+		builder := &ExptResultBuilder{
+			exptDO:            &entity.Experiment{ID: 1, ExptType: entity.ExptType_Offline},
+			SpaceID:           100,
+			turnResultDO:      []*entity.ExptTurnResult{{ID: 77, TargetResultID: 555}},
+			evalTargetService: mockEvalTargetService,
+		}
+		assert.NoError(t, builder.buildTargetOutput(context.Background()))
+		out := builder.turnResultID2TargetOutput[77]
+		require.NotNil(t, out)
+		// 保留真实 record（不再覆盖成 stub）
+		assert.Nil(t, out.EvalTargetRecord.Status)
+		assert.NotNil(t, out.EvalTargetRecord.EvalTargetOutputData)
+	})
+}
+
+// TestNewPayloadBuilder_ItemZombieTimeoutErrParsing 覆盖新增分支：
+// itemResultPO.ErrMsg 里若序列化的是 ItemZombieTimeout 错误，需反解出到 SystemInfo.Error
+func TestNewPayloadBuilder_ItemZombieTimeoutErrParsing(t *testing.T) {
+	t.Run("err_msg 命中 ItemZombieTimeout 时挂到 SystemInfo.Error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		zombieErr := errno.NewItemZombieTimeoutErr(120, false)
+		errBytes := errno.SerializeErr(zombieErr)
+
+		baselineItemResults := []*entity.ExptItemResult{
+			{ItemID: 1, ItemIdx: 0, Status: entity.ItemRunState_Fail, ErrMsg: errBytes},
+		}
+		baselineTurnResults := []*entity.ExptTurnResult{
+			{ID: 1, ItemID: 1, TurnID: 0, TurnIdx: 0},
+		}
+		builder := NewPayloadBuilder(
+			context.Background(),
+			&entity.MGetExperimentResultParam{SpaceID: 100, ExptIDs: []int64{1}},
+			1, baselineTurnResults, baselineItemResults,
+			repoMocks.NewMockIExperimentRepo(ctrl),
+			repoMocks.NewMockIExptTurnResultRepo(ctrl),
+			repoMocks.NewMockIExptAnnotateRepo(ctrl),
+			svcMocks.NewMockIEvalTargetService(ctrl),
+			svcMocks.NewMockEvaluatorRecordService(ctrl),
+			svcMocks.NewMockEvaluationSetItemService(ctrl),
+			nil, nil, nil,
+			nil, nil,
+			map[int64]entity.ItemRunState{},
+			nil, nil,
+		)
+		require.Len(t, builder.ItemResults, 1)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo.Error)
+		assert.Equal(t, int64(errno.ItemZombieTimeoutCode), builder.ItemResults[0].SystemInfo.Error.Code)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo.Error.Detail)
+		assert.Contains(t, *builder.ItemResults[0].SystemInfo.Error.Detail, "同步")
+	})
+
+	t.Run("err_msg 非 ItemZombieTimeout 时不设置 SystemInfo.Error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		otherErr := errno.NewTargetResultErr("something else")
+		errBytes := errno.SerializeErr(otherErr)
+
+		baselineItemResults := []*entity.ExptItemResult{
+			{ItemID: 1, ItemIdx: 0, Status: entity.ItemRunState_Fail, ErrMsg: errBytes},
+		}
+		baselineTurnResults := []*entity.ExptTurnResult{
+			{ID: 1, ItemID: 1, TurnID: 0, TurnIdx: 0},
+		}
+		builder := NewPayloadBuilder(
+			context.Background(),
+			&entity.MGetExperimentResultParam{SpaceID: 100, ExptIDs: []int64{1}},
+			1, baselineTurnResults, baselineItemResults,
+			repoMocks.NewMockIExperimentRepo(ctrl),
+			repoMocks.NewMockIExptTurnResultRepo(ctrl),
+			repoMocks.NewMockIExptAnnotateRepo(ctrl),
+			svcMocks.NewMockIEvalTargetService(ctrl),
+			svcMocks.NewMockEvaluatorRecordService(ctrl),
+			svcMocks.NewMockEvaluationSetItemService(ctrl),
+			nil, nil, nil,
+			nil, nil,
+			map[int64]entity.ItemRunState{},
+			nil, nil,
+		)
+		require.Len(t, builder.ItemResults, 1)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo)
+		assert.Nil(t, builder.ItemResults[0].SystemInfo.Error)
+	})
+
+	t.Run("err_msg 为空时不设置 SystemInfo.Error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		baselineItemResults := []*entity.ExptItemResult{
+			{ItemID: 1, ItemIdx: 0, Status: entity.ItemRunState_Success, ErrMsg: ""},
+		}
+		baselineTurnResults := []*entity.ExptTurnResult{
+			{ID: 1, ItemID: 1, TurnID: 0, TurnIdx: 0},
+		}
+		builder := NewPayloadBuilder(
+			context.Background(),
+			&entity.MGetExperimentResultParam{SpaceID: 100, ExptIDs: []int64{1}},
+			1, baselineTurnResults, baselineItemResults,
+			repoMocks.NewMockIExperimentRepo(ctrl),
+			repoMocks.NewMockIExptTurnResultRepo(ctrl),
+			repoMocks.NewMockIExptAnnotateRepo(ctrl),
+			svcMocks.NewMockIEvalTargetService(ctrl),
+			svcMocks.NewMockEvaluatorRecordService(ctrl),
+			svcMocks.NewMockEvaluationSetItemService(ctrl),
+			nil, nil, nil,
+			nil, nil,
+			map[int64]entity.ItemRunState{},
+			nil, nil,
+		)
+		require.Len(t, builder.ItemResults, 1)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo)
+		assert.Nil(t, builder.ItemResults[0].SystemInfo.Error)
 	})
 }

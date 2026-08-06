@@ -107,3 +107,9 @@ func (p *AgentConfig) IsValid() error {
 func (p *SkillConfig) IsValid() error {
 	return nil
 }
+func (p *SharedResourceOption) IsValid() error {
+	return nil
+}
+func (p *SharedResourceInfo) IsValid() error {
+	return nil
+}

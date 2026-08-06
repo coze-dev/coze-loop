@@ -3961,3 +3961,698 @@ func TestValidateOpenAPIEvalTargetClusterEnv(t *testing.T) {
 		})
 	}
 }
+
+// TestSupportedOpenAPIEvalTargetTypesString 验证公开 wrapper 与内部实现一致（含所有类型）。
+func TestSupportedOpenAPIEvalTargetTypesString(t *testing.T) {
+	t.Parallel()
+	got := SupportedOpenAPIEvalTargetTypesString()
+	assert.Equal(t, supportedOpenAPIEvalTargetTypesString(), got)
+	// 至少含 coze_bot / coze_workflow / custom_agent 等常见枚举
+	assert.Contains(t, got, string(openapiEvalTarget.EvalTargetTypeCozeBot))
+	assert.Contains(t, got, string(openapiEvalTarget.EvalTargetTypeCustomAgent))
+}
+
+// TestMapOpenAPIEvalTargetType_SandboxAgent 补齐 SandboxAgent 分支。
+func TestMapOpenAPIEvalTargetType_SandboxAgent(t *testing.T) {
+	t.Parallel()
+	got, err := mapOpenAPIEvalTargetType(openapiEvalTarget.EvalTargetTypeSandboxAgent)
+	assert.NoError(t, err)
+	assert.Equal(t, domaindoEvalTarget.EvalTargetType_SandboxAgent, got)
+}
+
+// TestOpenAPIEvalSetSourceTypeDTO2Domain 覆盖两个分支：MultiSetConfig 与缺省 SingleSet。
+func TestOpenAPIEvalSetSourceTypeDTO2Domain(t *testing.T) {
+	t.Parallel()
+	multi := openapiExperiment.ExptEvalSetSourceTypeMultiSetConfig
+	assert.Equal(t, domainExpt.ExptEvalSetSourceType_MultiSetConfig, OpenAPIEvalSetSourceTypeDTO2Domain(&multi))
+	// nil / 未知 / single 都应回落 SingleSet
+	assert.Equal(t, domainExpt.ExptEvalSetSourceType_SingleSet, OpenAPIEvalSetSourceTypeDTO2Domain(nil))
+	single := openapiExperiment.ExptEvalSetSourceTypeSingleSet
+	assert.Equal(t, domainExpt.ExptEvalSetSourceType_SingleSet, OpenAPIEvalSetSourceTypeDTO2Domain(&single))
+}
+
+// TestOpenAPITargetRecordDO2DTO 公开 wrapper + 内部实现的完整字段透传。
+func TestOpenAPITargetRecordDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil returns nil", func(t *testing.T) {
+		assert.Nil(t, OpenAPITargetRecordDO2DTO(nil))
+	})
+
+	t.Run("full record with output/status", func(t *testing.T) {
+		status := entity.EvalTargetRunStatusSuccess
+		rec := &entity.EvalTargetRecord{
+			ID:              1,
+			TargetID:        2,
+			TargetVersionID: 3,
+			ItemID:          4,
+			TurnID:          5,
+			LogID:           "log",
+			TraceID:         "trace",
+			Status:          &status,
+			BaseInfo:        &entity.BaseInfo{CreatedAt: gptr.Of(int64(1000))},
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 10, OutputTokens: 20},
+				TimeConsumingMS: gptr.Of(int64(42)),
+			},
+		}
+		dto := OpenAPITargetRecordDO2DTO(rec)
+		if assert.NotNil(t, dto) {
+			assert.Equal(t, int64(1), dto.GetID())
+			assert.Equal(t, int64(2), dto.GetTargetID())
+			assert.Equal(t, "log", dto.GetLogid())
+			assert.Equal(t, "trace", dto.GetTraceID())
+			assert.Equal(t, openapiEvalTarget.EvalTargetRunStatusSuccess, dto.GetStatus())
+			if assert.NotNil(t, dto.EvalTargetOutputData) {
+				assert.Equal(t, int64(42), dto.EvalTargetOutputData.GetTimeConsumingMs())
+			}
+		}
+	})
+}
+
+// TestOpenAPIEvalTargetStepsDO2DTO 覆盖 nil / 元素 nil / 完整字段 三条路径。
+func TestOpenAPIEvalTargetStepsDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, openAPIEvalTargetStepsDO2DTO(nil))
+	assert.Nil(t, openAPIEvalTargetStepsDO2DTO([]*entity.EvalTargetStep{}))
+	assert.Empty(t, openAPIEvalTargetStepsDO2DTO([]*entity.EvalTargetStep{nil}))
+
+	src := []*entity.EvalTargetStep{{
+		StepName:     "act",
+		EventType:    "FINISHED",
+		EventTimeMS:  1700000000500,
+		Success:      false,
+		ErrorCode:    601200999,
+		ErrorMessage: "boom",
+		DurationMS:   1500,
+	}}
+	got := openAPIEvalTargetStepsDO2DTO(src)
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, "act", got[0].GetStepName())
+		assert.Equal(t, int32(601200999), got[0].GetErrorCode())
+		assert.Equal(t, int64(1500), got[0].GetDurationMs())
+	}
+}
+
+// TestOpenAPITargetOutputDataDO2DTO 覆盖 nil / 空全零 / 全字段 三种。
+func TestOpenAPITargetOutputDataDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, openAPITargetOutputDataDO2DTO(nil))
+	// 全零输出 -> 返回 nil
+	assert.Nil(t, openAPITargetOutputDataDO2DTO(&entity.EvalTargetOutputData{}))
+
+	full := &entity.EvalTargetOutputData{
+		OutputFields: map[string]*entity.Content{
+			"ok":    {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("v")},
+			"nilv":  nil,
+			"empty": {}, // 无 ContentType，转换后可能被跳过
+		},
+		EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 1},
+		EvalTargetRunError: &entity.EvalTargetRunError{
+			Code:    123,
+			Message: "err",
+		},
+		TimeConsumingMS: gptr.Of(int64(88)),
+		Ext:             map[string]string{"k": "v"},
+		EvalTargetSteps: []*entity.EvalTargetStep{{StepName: "s", EventType: "STARTED"}},
+	}
+	got := openAPITargetOutputDataDO2DTO(full)
+	if assert.NotNil(t, got) {
+		assert.NotEmpty(t, got.OutputFields)
+		assert.NotNil(t, got.EvalTargetUsage)
+		assert.NotNil(t, got.EvalTargetRunError)
+		assert.Equal(t, int64(88), got.GetTimeConsumingMs())
+		assert.Equal(t, "v", got.Ext["k"])
+		assert.Len(t, got.EvalTargetSteps, 1)
+	}
+}
+
+// TestOpenAPITargetOutputFieldsDO2DTO 覆盖 empty / 全 nil value / 混合。
+func TestOpenAPITargetOutputFieldsDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, openAPITargetOutputFieldsDO2DTO(nil))
+	assert.Nil(t, openAPITargetOutputFieldsDO2DTO(map[string]*entity.Content{}))
+	// 全为 nil value -> 返回 nil (converted 为空)
+	assert.Nil(t, openAPITargetOutputFieldsDO2DTO(map[string]*entity.Content{"a": nil, "b": nil}))
+
+	got := openAPITargetOutputFieldsDO2DTO(map[string]*entity.Content{
+		"a": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("A")},
+		"b": nil,
+	})
+	if assert.NotNil(t, got) {
+		assert.Contains(t, got, "a")
+		assert.NotContains(t, got, "b")
+	}
+}
+
+// TestOpenAPICreateEvalTargetParamDTO2Domain_SandboxAgentTypeMapping 用 openapi 类型 wrapper
+// 走 mapOpenAPIEvalTargetType 的 SandboxAgent case（该 case 未在其他测试触发过）。
+func TestOpenAPICreateEvalTargetParamDTO2Domain_SandboxAgentTypeMapping(t *testing.T) {
+	t.Parallel()
+	sandbox := openapiEvalTarget.EvalTargetTypeSandboxAgent
+	param := &openapi.SubmitExperimentEvalTargetParam{
+		EvalTargetType: &sandbox,
+		SandboxAgent: &openapiEvalTarget.SandboxAgent{
+			Name:      gptr.Of("demo"),
+			ModelName: gptr.Of("doubao"),
+		},
+	}
+	got, err := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	require.NoError(t, err)
+	if assert.NotNil(t, got) {
+		if assert.NotNil(t, got.EvalTargetType) {
+			assert.Equal(t, domaindoEvalTarget.EvalTargetType_SandboxAgent, *got.EvalTargetType)
+		}
+	}
+}
+
+// TestOpenAPIEvaluatorFieldMappingDTO2Domain_NilElement 覆盖 mapping 列表含 nil / FromEvalSet 元素含 nil。
+func TestOpenAPIEvaluatorFieldMappingDTO2Domain_NilElement(t *testing.T) {
+	t.Parallel()
+
+	// empty 直接返回 nil
+	assert.Nil(t, OpenAPIEvaluatorFieldMappingDTO2Domain(nil, nil))
+
+	m := []*openapiExperiment.EvaluatorFieldMapping{
+		nil, // 顶层 nil 应跳过
+		{
+			EvaluatorID: gptr.Of(int64(1)),
+			Version:     gptr.Of("v1"),
+			FromEvalSet: []*openapiExperiment.FieldMapping{nil, {FieldName: gptr.Of("a"), FromFieldName: gptr.Of("A")}},
+			FromTarget:  []*openapiExperiment.FieldMapping{nil, {FieldName: gptr.Of("b"), FromFieldName: gptr.Of("B")}},
+		},
+	}
+	evalMap := map[string]int64{"1_v1": 100}
+	got := OpenAPIEvaluatorFieldMappingDTO2Domain(m, evalMap)
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, int64(100), got[0].EvaluatorVersionID)
+		assert.Len(t, got[0].FromEvalSet, 1)
+		assert.Len(t, got[0].FromTarget, 1)
+	}
+}
+
+// TestFieldConfsToOpenAPIFieldMapping 覆盖 nil / 元素 nil / 正常。
+func TestFieldConfsToOpenAPIFieldMapping(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, fieldConfsToOpenAPIFieldMapping(nil))
+	assert.Empty(t, fieldConfsToOpenAPIFieldMapping([]*entity.FieldConf{nil}))
+
+	got := fieldConfsToOpenAPIFieldMapping([]*entity.FieldConf{
+		{FieldName: "a", FromField: "A"},
+	})
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, "a", got[0].GetFieldName())
+		assert.Equal(t, "A", got[0].GetFromFieldName())
+	}
+}
+
+// TestConvertEvalSetConfigsDO2OpenAPI 覆盖多集配置完整回显：
+// - nil experiment / nil EvalConf / 空 configs 都返回 nil；
+// - version_id 反查表命中/未命中；
+// - Alias 空/非空；
+// - EvaluatorConfs / TargetConfs.FieldMapping 存在；
+// - configs 中含 nil 元素跳过。
+func TestConvertEvalSetConfigsDO2OpenAPI(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convertEvalSetConfigsDO2OpenAPI(nil))
+	assert.Nil(t, convertEvalSetConfigsDO2OpenAPI(&entity.Experiment{}))
+
+	expt := &entity.Experiment{
+		Evaluators: []*entity.Evaluator{
+			{
+				ID:            100,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					ID:      900,
+					Version: "v9",
+				},
+			},
+			nil,
+		},
+		EvalSetDetails: []*entity.ExptEvalSetDetail{
+			{
+				EvalSetVersionID: 300,
+				EvalSet: &entity.EvaluationSet{
+					EvaluationSetVersion: &entity.EvaluationSetVersion{Version: "1.0"},
+				},
+			},
+			nil,
+		},
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				nil,
+				{
+					EvalSetID:        200,
+					EvalSetVersionID: 300,
+					EvaluatorConfs: []*entity.ExptEvaluatorConf{
+						nil,
+						{
+							EvaluatorID:        100,
+							EvaluatorVersionID: 900,
+							Alias:              "alias-A",
+							ScoreWeight:        gptr.Of(1.5),
+							FromEvalSet:        []*entity.FieldConf{{FieldName: "x", FromField: "X"}},
+							FromTarget:         []*entity.FieldConf{{FieldName: "y", FromField: "Y"}},
+						},
+					},
+					TargetConfs: []*entity.ExptTargetConf{
+						nil,
+						{FieldMapping: []*entity.FieldConf{{FieldName: "t", FromField: "T"}}},
+						{}, // 无 FieldMapping 也接受
+					},
+				},
+			},
+		},
+	}
+	out := convertEvalSetConfigsDO2OpenAPI(expt)
+	if assert.Len(t, out, 1) {
+		cfg := out[0]
+		assert.Equal(t, int64(200), cfg.GetEvalSetID())
+		assert.Equal(t, "1.0", cfg.GetEvalSetVersion())
+		if assert.Len(t, cfg.EvaluatorConfs, 1) {
+			ec := cfg.EvaluatorConfs[0]
+			assert.Equal(t, int64(100), ec.GetEvaluatorID())
+			assert.Equal(t, "v9", ec.GetVersion())
+			assert.Equal(t, "alias-A", ec.GetAlias())
+			assert.NotNil(t, ec.ScoreWeight)
+			assert.Len(t, ec.FromEvalSet, 1)
+			assert.Len(t, ec.FromTarget, 1)
+		}
+		assert.Len(t, cfg.TargetConfs, 2)
+	}
+}
+
+// TestEntityEvalSetDetailsDO2OpenAPI 覆盖 nil / 元素 nil / 完整字段。
+func TestEntityEvalSetDetailsDO2OpenAPI(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, entityEvalSetDetailsDO2OpenAPI(nil))
+	assert.Empty(t, entityEvalSetDetailsDO2OpenAPI([]*entity.ExptEvalSetDetail{nil}))
+
+	got := entityEvalSetDetailsDO2OpenAPI([]*entity.ExptEvalSetDetail{
+		{EvalSetID: 1, EvalSetVersionID: 2, IsPrimary: true, ItemCount: 10, DatasetKey: "k"},
+	})
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, int64(1), got[0].GetEvalSetID())
+		assert.Equal(t, int64(2), got[0].GetEvalSetVersionID())
+		assert.True(t, got[0].GetIsPrimary())
+		assert.Equal(t, int32(10), got[0].GetItemCount())
+		assert.Equal(t, "k", got[0].GetDatasetKey())
+	}
+}
+
+// TestSingleExptStatusToOpenAPI 覆盖数值枚举 → 英文串，与不合法输入的两个 fallback。
+func TestSingleExptStatusToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{strconv.FormatInt(int64(domainExpt.ExptStatus_Pending), 10), "pending"},
+		{strconv.FormatInt(int64(domainExpt.ExptStatus_Processing), 10), "processing"},
+		{strconv.FormatInt(int64(domainExpt.ExptStatus_Success), 10), "success"},
+		{strconv.FormatInt(int64(domainExpt.ExptStatus_Failed), 10), "failed"},
+		{strconv.FormatInt(int64(domainExpt.ExptStatus_Terminated), 10), "terminated"},
+		{strconv.FormatInt(int64(domainExpt.ExptStatus_SystemTerminated), 10), "system_terminated"},
+		{strconv.FormatInt(int64(domainExpt.ExptStatus_Draining), 10), "draining"},
+		{"999", "999"}, // 未知数值 -> 原样返回
+		{"already-str", "already-str"},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, singleExptStatusToOpenAPI(tt.in), "input=%s", tt.in)
+	}
+}
+
+// TestSingleExptStatusToDomain 覆盖英文串 → 数值枚举，含大写、纯数字直接透传、未知值 fallback。
+func TestSingleExptStatusToDomain(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{"pending", strconv.FormatInt(int64(domainExpt.ExptStatus_Pending), 10)},
+		{"PROCESSING", strconv.FormatInt(int64(domainExpt.ExptStatus_Processing), 10)},
+		{"success", strconv.FormatInt(int64(domainExpt.ExptStatus_Success), 10)},
+		{"failed", strconv.FormatInt(int64(domainExpt.ExptStatus_Failed), 10)},
+		{"terminated", strconv.FormatInt(int64(domainExpt.ExptStatus_Terminated), 10)},
+		{"system_terminated", strconv.FormatInt(int64(domainExpt.ExptStatus_SystemTerminated), 10)},
+		{"draining", strconv.FormatInt(int64(domainExpt.ExptStatus_Draining), 10)},
+		{"11", "11"},           // 已是纯数字 -> 原样返回
+		{"unknown", "unknown"}, // 未知值 fallback
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, singleExptStatusToDomain(tt.in), "input=%s", tt.in)
+	}
+}
+
+// TestConvertExptStatusValueRoundTrip 覆盖单值/逗号分隔/JSON 数组 三种编码 + 无效 JSON fallback。
+func TestConvertExptStatusValueRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty passes through", func(t *testing.T) {
+		assert.Equal(t, "", convertExptStatusValueToOpenAPI(""))
+		assert.Equal(t, "", convertExptStatusValueToDomain(""))
+	})
+
+	t.Run("comma separated", func(t *testing.T) {
+		// domain -> openapi
+		s := strconv.FormatInt(int64(domainExpt.ExptStatus_Success), 10) + "," +
+			strconv.FormatInt(int64(domainExpt.ExptStatus_Failed), 10)
+		assert.Equal(t, "success,failed", convertExptStatusValueToOpenAPI(s))
+		// openapi -> domain
+		back := convertExptStatusValueToDomain("success,failed")
+		assert.Equal(t, s, back)
+	})
+
+	t.Run("json array", func(t *testing.T) {
+		s := "[\"" + strconv.FormatInt(int64(domainExpt.ExptStatus_Success), 10) + "\"]"
+		assert.Equal(t, "[\"success\"]", convertExptStatusValueToOpenAPI(s))
+		back := convertExptStatusValueToDomain(`["success"]`)
+		assert.Equal(t, "[\""+strconv.FormatInt(int64(domainExpt.ExptStatus_Success), 10)+"\"]", back)
+	})
+
+	t.Run("invalid json array falls back to original", func(t *testing.T) {
+		// [ ... ] 但不是合法 json -> 原样返回
+		assert.Equal(t, "[not-json]", convertExptStatusValueToOpenAPI("[not-json]"))
+		assert.Equal(t, "[not-json]", convertExptStatusValueToDomain("[not-json]"))
+	})
+}
+
+// TestDomainFilterValueToOpenAPI 覆盖 ExptStatus 分支与 default 直接透传。
+func TestDomainFilterValueToOpenAPI(t *testing.T) {
+	t.Parallel()
+	// ExptStatus 走转换
+	s := strconv.FormatInt(int64(domainExpt.ExptStatus_Success), 10)
+	assert.Equal(t, "success", domainFilterValueToOpenAPI(domainExpt.FieldType_ExptStatus, s))
+	// 其它 field_type 原样返回
+	assert.Equal(t, "raw", domainFilterValueToOpenAPI(domainExpt.FieldType_ExperimentTemplateID, "raw"))
+}
+
+// TestOpenAPIFilterValueToDomain 覆盖 ExptStatus 分支与 default 直接透传。
+func TestOpenAPIFilterValueToDomain(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t,
+		strconv.FormatInt(int64(domainExpt.ExptStatus_Success), 10),
+		openAPIFilterValueToDomain(domainExpt.FieldType_ExptStatus, "success"))
+	assert.Equal(t, "raw", openAPIFilterValueToDomain(domainExpt.FieldType_ExperimentTemplateID, "raw"))
+}
+
+// TestOpenAPIExperimentFilterOperatorToDomain 覆盖 pascal / snake / 数字 / alias / 空 / 未知 六路径。
+func TestOpenAPIExperimentFilterOperatorToDomain(t *testing.T) {
+	t.Parallel()
+
+	// 空 -> err
+	_, err := openAPIExperimentFilterOperatorToDomain(openapiExperiment.FilterOperatorType(""))
+	assert.Error(t, err)
+
+	// 数字直接解析
+	got, err := openAPIExperimentFilterOperatorToDomain(strconv.Itoa(int(domainExpt.FilterOperatorType_Equal)))
+	assert.NoError(t, err)
+	assert.Equal(t, domainExpt.FilterOperatorType_Equal, got)
+
+	// alias 分支
+	aliasCases := map[string]domainExpt.FilterOperatorType{
+		"equal":            domainExpt.FilterOperatorType_Equal,
+		"eq":               domainExpt.FilterOperatorType_Equal,
+		"=":                domainExpt.FilterOperatorType_Equal,
+		"not_equal":        domainExpt.FilterOperatorType_NotEqual,
+		"ne":               domainExpt.FilterOperatorType_NotEqual,
+		"!=":               domainExpt.FilterOperatorType_NotEqual,
+		"greater":          domainExpt.FilterOperatorType_Greater,
+		"gt":               domainExpt.FilterOperatorType_Greater,
+		">":                domainExpt.FilterOperatorType_Greater,
+		"greater_or_equal": domainExpt.FilterOperatorType_GreaterOrEqual,
+		"gte":              domainExpt.FilterOperatorType_GreaterOrEqual,
+		">=":               domainExpt.FilterOperatorType_GreaterOrEqual,
+		"less":             domainExpt.FilterOperatorType_Less,
+		"lt":               domainExpt.FilterOperatorType_Less,
+		"<":                domainExpt.FilterOperatorType_Less,
+		"less_or_equal":    domainExpt.FilterOperatorType_LessOrEqual,
+		"lte":              domainExpt.FilterOperatorType_LessOrEqual,
+		"<=":               domainExpt.FilterOperatorType_LessOrEqual,
+		"in":               domainExpt.FilterOperatorType_In,
+		"not_in":           domainExpt.FilterOperatorType_NotIn,
+		"like":             domainExpt.FilterOperatorType_Like,
+		"not_like":         domainExpt.FilterOperatorType_NotLike,
+		"is_null":          domainExpt.FilterOperatorType_IsNull,
+	}
+	for input, want := range aliasCases {
+		got, err := openAPIExperimentFilterOperatorToDomain(input)
+		assert.NoError(t, err, "input=%s", input)
+		assert.Equal(t, want, got, "input=%s", input)
+	}
+
+	// is_not_null 单独覆盖
+	got, err = openAPIExperimentFilterOperatorToDomain("is_not_null")
+	assert.NoError(t, err)
+	assert.Equal(t, domainExpt.FilterOperatorType_IsNotNull, got)
+
+	// 未知 operator -> error
+	_, err = openAPIExperimentFilterOperatorToDomain("gibberish")
+	assert.Error(t, err)
+}
+
+// TestOpenAPISourceTargetDTO2Domain 覆盖 nil / 各类型分支 / 未知类型 error / 空返回 nil。
+func TestOpenAPISourceTargetDTO2Domain(t *testing.T) {
+	t.Parallel()
+
+	// nil
+	got, err := openAPISourceTargetDTO2Domain(nil)
+	assert.NoError(t, err)
+	assert.Nil(t, got)
+
+	// 有 SourceTargetIds 无 EvalTargetType
+	got, err = openAPISourceTargetDTO2Domain(&openapiExperiment.SourceTarget{
+		SourceTargetIds: []string{"a", "b"},
+	})
+	assert.NoError(t, err)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, []string{"a", "b"}, got.SourceTargetIds)
+	}
+
+	// 各类型分支
+	typeCases := map[openapiEvalTarget.EvalTargetType]domaindoEvalTarget.EvalTargetType{
+		openapiEvalTarget.EvalTargetTypeCozeBot:         domaindoEvalTarget.EvalTargetType_CozeBot,
+		openapiEvalTarget.EvalTargetTypeCozeLoopPrompt:  domaindoEvalTarget.EvalTargetType_CozeLoopPrompt,
+		openapiEvalTarget.EvalTargetTypeTrace:           domaindoEvalTarget.EvalTargetType_Trace,
+		openapiEvalTarget.EvalTargetTypeCozeWorkflow:    domaindoEvalTarget.EvalTargetType_CozeWorkflow,
+		openapiEvalTarget.EvalTargetTypeVolcengineAgent: domaindoEvalTarget.EvalTargetType_VolcengineAgent,
+		openapiEvalTarget.EvalTargetTypeCustomRPCServer: domaindoEvalTarget.EvalTargetType_CustomRPCServer,
+	}
+	for input, want := range typeCases {
+		got, err := openAPISourceTargetDTO2Domain(&openapiExperiment.SourceTarget{
+			EvalTargetType: &input,
+		})
+		assert.NoError(t, err, "input=%s", input)
+		if assert.NotNil(t, got) && assert.NotNil(t, got.EvalTargetType) {
+			assert.Equal(t, want, *got.EvalTargetType, "input=%s", input)
+		}
+	}
+
+	// 未知 type -> error
+	unknown := openapiEvalTarget.EvalTargetType("unknown-type")
+	_, err = openAPISourceTargetDTO2Domain(&openapiExperiment.SourceTarget{EvalTargetType: &unknown})
+	assert.Error(t, err)
+
+	// 全空 -> nil, nil (out.EvalTargetType == nil && SourceTargetIds 空)
+	empty := &openapiExperiment.SourceTarget{}
+	got, err = openAPISourceTargetDTO2Domain(empty)
+	assert.NoError(t, err)
+	assert.Nil(t, got)
+}
+
+// TestOpenAPIEvalSetConfigsDTO2Domain 覆盖多集配置转换：
+// - nil / 空返回 nil；
+// - 顶层 nil 元素跳过；
+// - EvaluatorConfs / TargetConfs / FromEvalSet / FromTarget 完整分支；
+// - version 映射命中 / 未命中；
+// - filter / runtime_param / alias 分支。
+func TestOpenAPIEvalSetConfigsDTO2Domain(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIEvalSetConfigsDTO2Domain(nil, nil, nil))
+
+	// 顶层 nil 元素跳过
+	got := OpenAPIEvalSetConfigsDTO2Domain([]*openapiExperiment.OpenAPIEvalSetConfig{nil}, nil, nil)
+	assert.Empty(t, got)
+
+	confs := []*openapiExperiment.OpenAPIEvalSetConfig{
+		{
+			EvalSetID: gptr.Of(int64(100)),
+			EvaluatorConfs: []*openapiExperiment.OpenAPIExptEvaluatorConf{
+				nil,
+				{
+					EvaluatorID:  gptr.Of(int64(200)),
+					Version:      gptr.Of("v1"),
+					Alias:        gptr.Of("A"),
+					ScoreWeight:  gptr.Of(1.5),
+					RuntimeParam: &openapiCommon.RuntimeParam{JSONValue: gptr.Of("{}")},
+					FromEvalSet: []*openapiExperiment.FieldMapping{
+						nil,
+						{FieldName: gptr.Of("x"), FromFieldName: gptr.Of("X")},
+					},
+					FromTarget: []*openapiExperiment.FieldMapping{
+						nil,
+						{FieldName: gptr.Of("y"), FromFieldName: gptr.Of("Y")},
+					},
+				},
+				{
+					// 未匹配版本 -> version id 兜底 0
+					EvaluatorID: gptr.Of(int64(201)),
+					Version:     gptr.Of("vX"),
+				},
+			},
+			TargetConfs: []*openapiExperiment.OpenAPIExptTargetConf{
+				nil,
+				{
+					FieldMapping: &openapiExperiment.TargetFieldMapping{
+						FromEvalSet: []*openapiExperiment.FieldMapping{
+							{FieldName: gptr.Of("t"), FromFieldName: gptr.Of("T")},
+						},
+					},
+					RuntimeParam: &openapiCommon.RuntimeParam{JSONValue: gptr.Of("{}")},
+				},
+			},
+		},
+	}
+
+	setMap := map[int64]int64{100: 300}
+	evalMap := map[string]int64{"200_v1": 900}
+	out := OpenAPIEvalSetConfigsDTO2Domain(confs, setMap, evalMap)
+	if assert.Len(t, out, 1) {
+		cfg := out[0]
+		assert.Equal(t, int64(100), cfg.EvalSetID)
+		assert.Equal(t, int64(300), cfg.EvalSetVersionID)
+		if assert.Len(t, cfg.EvaluatorConfs, 2) {
+			assert.Equal(t, int64(900), cfg.EvaluatorConfs[0].EvaluatorVersionID)
+			assert.Equal(t, gptr.Of("A"), cfg.EvaluatorConfs[0].Alias)
+			assert.Len(t, cfg.EvaluatorConfs[0].FromEvalSet, 1)
+			assert.Len(t, cfg.EvaluatorConfs[0].FromTarget, 1)
+			// 未命中 -> 0
+			assert.Zero(t, cfg.EvaluatorConfs[1].EvaluatorVersionID)
+		}
+		assert.Len(t, cfg.TargetConfs, 1)
+	}
+}
+
+// TestOpenAPIRunErrorDO2DTO 单独覆盖 openAPIRunErrorDO2DTO 所有分支
+func TestOpenAPIRunErrorDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil → nil", func(t *testing.T) {
+		assert.Nil(t, openAPIRunErrorDO2DTO(nil))
+	})
+
+	t.Run("全字段填充 → 全部映射", func(t *testing.T) {
+		got := openAPIRunErrorDO2DTO(&entity.RunError{
+			Code:    123,
+			Message: gptr.Of("m"),
+			Detail:  gptr.Of("d"),
+		})
+		require.NotNil(t, got)
+		require.NotNil(t, got.Code)
+		assert.Equal(t, int64(123), *got.Code)
+		require.NotNil(t, got.Message)
+		assert.Equal(t, "m", *got.Message)
+		require.NotNil(t, got.Detail)
+		assert.Equal(t, "d", *got.Detail)
+	})
+
+	t.Run("Code=0 时 Code 不写", func(t *testing.T) {
+		got := openAPIRunErrorDO2DTO(&entity.RunError{
+			Code:   0,
+			Detail: gptr.Of("d"),
+		})
+		require.NotNil(t, got)
+		assert.Nil(t, got.Code)
+		assert.Nil(t, got.Message)
+		require.NotNil(t, got.Detail)
+	})
+
+	t.Run("Message/Detail 为空字符串 → 不设置", func(t *testing.T) {
+		got := openAPIRunErrorDO2DTO(&entity.RunError{
+			Code:    1,
+			Message: gptr.Of(""),
+			Detail:  gptr.Of(""),
+		})
+		require.NotNil(t, got)
+		assert.Nil(t, got.Message)
+		assert.Nil(t, got.Detail)
+	})
+
+	t.Run("三字段全空 → 返回 nil", func(t *testing.T) {
+		// Code=0，Message/Detail 均为空指针 → 返回 nil
+		assert.Nil(t, openAPIRunErrorDO2DTO(&entity.RunError{}))
+		// Code=0，Message/Detail 为空字符串 → 也应返回 nil
+		assert.Nil(t, openAPIRunErrorDO2DTO(&entity.RunError{
+			Message: gptr.Of(""),
+			Detail:  gptr.Of(""),
+		}))
+	})
+}
+
+// TestOpenAPIItemResultsDO2DTOs_WithError 覆盖 item SystemInfo.Error 走 openAPIRunErrorDO2DTO 的链路
+func TestOpenAPIItemResultsDO2DTOs_WithError(t *testing.T) {
+	t.Parallel()
+
+	from := []*entity.ItemResult{
+		{
+			ItemID: 42,
+			SystemInfo: &entity.ItemSystemInfo{
+				RunState: entity.ItemRunState_Fail,
+				Error: &entity.RunError{
+					Code:   601205085,
+					Detail: gptr.Of("行超时"),
+				},
+			},
+		},
+	}
+	got := OpenAPIItemResultsDO2DTOs(from)
+	require.Len(t, got, 1)
+	require.NotNil(t, got[0].SystemInfo)
+	require.NotNil(t, got[0].SystemInfo.Error)
+	require.NotNil(t, got[0].SystemInfo.Error.Code)
+	assert.Equal(t, int64(601205085), *got[0].SystemInfo.Error.Code)
+	require.NotNil(t, got[0].SystemInfo.Error.Detail)
+	assert.Equal(t, "行超时", *got[0].SystemInfo.Error.Detail)
+}
+
+// TestOpenAPIResultPayloadDO2DTO_TurnError 覆盖 payload.SystemInfo.Error 走 openAPIRunErrorDO2DTO 的链路
+func TestOpenAPIResultPayloadDO2DTO_TurnError(t *testing.T) {
+	t.Parallel()
+
+	result := &entity.ExperimentResult{
+		ExperimentID: 999,
+		Payload: &entity.ExperimentTurnPayload{
+			TurnID: 5,
+			EvalSet: &entity.TurnEvalSet{
+				Turn: &entity.Turn{ID: 5},
+			},
+			SystemInfo: &entity.TurnSystemInfo{
+				TurnRunState: entity.TurnRunState_Fail,
+				Error: &entity.RunError{
+					Code:    13,
+					Message: gptr.Of("turn 超时"),
+					Detail:  gptr.Of("详情"),
+				},
+			},
+		},
+	}
+	got := openAPIResultPayloadDO2DTO(result)
+	require.NotNil(t, got)
+	require.NotNil(t, got.SystemInfo)
+	require.NotNil(t, got.SystemInfo.Error)
+	require.NotNil(t, got.SystemInfo.Error.Code)
+	assert.Equal(t, int64(13), *got.SystemInfo.Error.Code)
+	require.NotNil(t, got.SystemInfo.Error.Message)
+	assert.Equal(t, "turn 超时", *got.SystemInfo.Error.Message)
+	require.NotNil(t, got.SystemInfo.Error.Detail)
+	assert.Equal(t, "详情", *got.SystemInfo.Error.Detail)
+}

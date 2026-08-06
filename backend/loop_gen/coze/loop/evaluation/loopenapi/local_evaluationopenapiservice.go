@@ -437,6 +437,29 @@ func (l *LocalEvaluationOpenAPIService) ReportEvalTargetInvokeResult_(ctx contex
 	return result.GetSuccess(), nil
 }
 
+// ReportEvalTargetStepMetric
+// 沙箱内部 step 打点上报接口：沙箱侧在 step 开始/结束时调用，服务端转成 evaluation_target_sandbox_agent.step_* 指标
+func (l *LocalEvaluationOpenAPIService) ReportEvalTargetStepMetric(ctx context.Context, req *openapi.ReportEvalTargetStepMetricRequest, callOptions ...callopt.Option) (*openapi.ReportEvalTargetStepMetricResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricResult)
+		resp, err := l.impl.ReportEvalTargetStepMetric(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceReportEvalTargetStepMetricResult{}
+	ctx = l.injectRPCInfo(ctx, "ReportEvalTargetStepMetric")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // GetEvalTargetOutputFieldContentOApi
 // 按需查询评测对象输出中大对象的完整内容
 func (l *LocalEvaluationOpenAPIService) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest, callOptions ...callopt.Option) (*openapi.GetEvalTargetOutputFieldContentOApiResponse, error) {
@@ -500,6 +523,29 @@ func (l *LocalEvaluationOpenAPIService) GetEvalTargetRecordOApi(ctx context.Cont
 	arg := &openapi.EvaluationOpenAPIServiceGetEvalTargetRecordOApiArgs{Req: req}
 	result := &openapi.EvaluationOpenAPIServiceGetEvalTargetRecordOApiResult{}
 	ctx = l.injectRPCInfo(ctx, "GetEvalTargetRecordOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// ListEvalTargetsOApi
+// 查询可用的来源评测对象
+func (l *LocalEvaluationOpenAPIService) ListEvalTargetsOApi(ctx context.Context, req *openapi.ListEvalTargetsOApiRequest, callOptions ...callopt.Option) (*openapi.ListEvalTargetsOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceListEvalTargetsOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceListEvalTargetsOApiResult)
+		resp, err := l.impl.ListEvalTargetsOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceListEvalTargetsOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceListEvalTargetsOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListEvalTargetsOApi")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}
@@ -962,6 +1008,29 @@ func (l *LocalEvaluationOpenAPIService) RunEvaluatorOApi(ctx context.Context, re
 	arg := &openapi.EvaluationOpenAPIServiceRunEvaluatorOApiArgs{Req: req}
 	result := &openapi.EvaluationOpenAPIServiceRunEvaluatorOApiResult{}
 	ctx = l.injectRPCInfo(ctx, "RunEvaluatorOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// AsyncRunEvaluatorOApi
+// 异步执行评估器
+func (l *LocalEvaluationOpenAPIService) AsyncRunEvaluatorOApi(ctx context.Context, req *openapi.AsyncRunEvaluatorOApiRequest, callOptions ...callopt.Option) (*openapi.AsyncRunEvaluatorOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult)
+		resp, err := l.impl.AsyncRunEvaluatorOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "AsyncRunEvaluatorOApi")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

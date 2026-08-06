@@ -43,6 +43,7 @@ import (
 	evaluationsetmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluation_set"
 	experimentmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
 	openapimetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
+	sandboxagentmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/sandbox_agent"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	agentrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent"
 	foundationrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
@@ -66,9 +67,13 @@ var (
 		domainservice.EvaluationSetDomainServiceSet,
 		domainservice.TargetDomainServiceSet,
 		domainservice.EvaluatorDomainServiceSet,
+		// 跨空间共享: 资源访问鉴权底座 (真实现 + 真配置 provider), 供 ExptManager 发起期鉴权
+		evalconf.NewSharedResourceConfigProvider,
+		domainservice.NewResourceAccessAuthorizer,
 		// Infrastructure Sets
 		experimentmetrics.ExperimentMetricsSet,
 		evaltargetmetrics.EvalTargetMetricsSet,
+		sandboxagentmetrics.SandboxAgentMetricsSet,
 		infrahttp.NewHTTPClient,
 		foundationrpc.FoundationRPCSet,
 		tagrpc.TagRPCSet,
@@ -98,6 +103,7 @@ var (
 		experimentrepo.ExperimentRepoSet,
 		experimentmetrics.ExperimentMetricsSet,
 		evaltargetmetrics.EvalTargetMetricsSet,
+		sandboxagentmetrics.SandboxAgentMetricsSet,
 		evalconf.NewConfiger,
 		flagSet,
 		storage.StorageSet,
@@ -105,6 +111,8 @@ var (
 
 	evaluationSetSet = wire.NewSet(
 		NewEvaluationSetApplicationImpl,
+		evalconf.NewSharedResourceConfigProvider,
+		domainservice.NewResourceAccessAuthorizer,
 		// Domain Service Sets
 		domainservice.EvaluationSetDomainServiceSet,
 		// Infrastructure Sets
@@ -115,10 +123,13 @@ var (
 
 	evalTargetSet = wire.NewSet(
 		NewEvalTargetHandlerImpl,
+		evalconf.NewSharedResourceConfigProvider,
+		domainservice.NewResourceAccessAuthorizer,
 		// Domain Service Sets
 		domainservice.TargetDomainServiceSet,
 		// Infrastructure Sets
 		evaltargetmetrics.EvalTargetMetricsSet,
+		sandboxagentmetrics.SandboxAgentMetricsSet,
 		foundationrpc.FoundationRPCSet,
 		experimentrepo.ExperimentRepoSet,
 		flagSet,
@@ -130,6 +141,8 @@ var (
 		experimentSet,
 		evalconf.NewConfiger,
 		openapimetrics.OpenAPIMetricsSet,
+		domainservice.NewEvaluatorCallbackDispatcher,
+		wire.Bind(new(domainservice.IEvaluatorCallbackDispatcher), new(*domainservice.EvaluatorCallbackDispatcher)),
 	)
 )
 
@@ -159,7 +172,7 @@ func InitExperimentApplication(
 	benefitSvc benefit.IBenefitService,
 	ckDb ck.Provider,
 	tagClient tagservice.Client,
-	taskClient taskservice.Client,
+	taskClientFactory func() taskservice.Client,
 	objectStorage fileserver.ObjectStorage,
 	batchObjectStorage fileserver.BatchObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
@@ -208,11 +221,12 @@ func InitEvaluationSetApplication(client datasetservice.Client,
 	authClient authservice.Client,
 	meter metrics.Meter,
 	userClient userservice.Client,
-) evaluation.EvaluationSetService {
+	configFactory conf.IConfigLoaderFactory,
+) (evaluation.EvaluationSetService, error) {
 	wire.Build(
 		evaluationSetSet,
 	)
-	return nil
+	return nil, nil
 }
 
 func InitEvalTargetApplication(ctx context.Context,
@@ -258,7 +272,7 @@ func InitEvalOpenAPIApplication(
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
 	fileClient fileservice.Client,
-	taskClient taskservice.Client,
+	taskClientFactory func() taskservice.Client,
 	scheduleAdapter rpc.IExptScheduleAdapter,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(

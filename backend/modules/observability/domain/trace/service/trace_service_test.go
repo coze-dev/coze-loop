@@ -3147,6 +3147,83 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 	}
 }
 
+func TestTraceServiceImpl_GetTraceAll(t *testing.T) {
+	newService := func(ctrl *gomock.Controller, repoMock repo.ITraceRepo) *TraceServiceImpl {
+		confMock := confmocks.NewMockITraceConfig(ctrl)
+		tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+		filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+		buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}})
+		metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+		metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+		return &TraceServiceImpl{
+			traceRepo:      repoMock,
+			traceConfig:    confMock,
+			metrics:        metricsMock,
+			buildHelper:    buildHelper,
+			tenantProvider: tenantProviderMock,
+		}
+	}
+
+	t.Run("cursor pagination accumulates across pages until !HasMore", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		repoMock := repomocks.NewMockITraceRepo(ctrl)
+		// 第一页：HasMore=true + PageToken，且必须按 start_time 降序拉
+		//（GetTraceAll 给每页设自然页大小 Limit>0，触发降序，与 repo 游标过滤一致）
+		repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, p *repo.GetTraceParam) (*repo.GetTraceResult, error) {
+				assert.True(t, p.DescByStartTime, "first page must be descending")
+				assert.Empty(t, p.PageToken)
+				return &repo.GetTraceResult{
+					Spans:     loop_span.SpanList{{TraceID: "t", SpanID: "s1"}},
+					HasMore:   true,
+					PageToken: "tok1",
+				}, nil
+			})
+		// 第二页：用上一页游标，返回 HasMore=false 结束
+		repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, p *repo.GetTraceParam) (*repo.GetTraceResult, error) {
+				assert.True(t, p.DescByStartTime, "subsequent page must be descending")
+				assert.Equal(t, "tok1", p.PageToken)
+				return &repo.GetTraceResult{
+					Spans:   loop_span.SpanList{{TraceID: "t", SpanID: "s2"}},
+					HasMore: false,
+				}, nil
+			})
+		r := newService(ctrl, repoMock)
+		got, err := r.GetTraceAll(context.Background(), &GetTraceReq{
+			PlatformType: loop_span.PlatformCozeLoop,
+			TraceID:      "t",
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "t", got.TraceId)
+		assert.Len(t, got.Spans, 2)
+	})
+
+	t.Run("truncates at FetchAllMaxSpanLimit", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		repoMock := repomocks.NewMockITraceRepo(ctrl)
+		// 单页返回超过 10w 条，触发累计上限截断
+		big := make(loop_span.SpanList, FetchAllMaxSpanLimit+100)
+		for i := range big {
+			big[i] = &loop_span.Span{TraceID: "t", SpanID: strconv.Itoa(i)}
+		}
+		repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&repo.GetTraceResult{
+			Spans:   big,
+			HasMore: true,
+		}, nil)
+		r := newService(ctrl, repoMock)
+		got, err := r.GetTraceAll(context.Background(), &GetTraceReq{
+			PlatformType: loop_span.PlatformCozeLoop,
+			TraceID:      "t",
+		})
+		assert.NoError(t, err)
+		assert.Len(t, got.Spans, int(FetchAllMaxSpanLimit))
+	})
+}
+
 func TestTraceServiceImpl_Send(t *testing.T) {
 	type fields struct {
 		traceRepo          repo.ITraceRepo
@@ -6814,6 +6891,157 @@ func TestTraceServiceImpl_GetThreadStat(t *testing.T) {
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			ThreadID:     "thread-1",
+		})
+		assert.Error(t, err)
+	})
+}
+
+func TestTraceServiceImpl_GetAdjacentTrace(t *testing.T) {
+	t.Run("next success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		var captured *repo.ListSpansParam
+		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+				captured = param
+				// StartTime 是 us，返回给 API 前转 ms。
+				return &repo.ListSpansResult{Spans: loop_span.SpanList{
+					{TraceID: "t-next", SpanID: "s1", StartTime: 5000000},
+				}}, nil
+			})
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		resp, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirectionNext,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, "t-next", resp.TraceID)
+		assert.Equal(t, int64(5000), resp.StartTime) // us→ms
+
+		// 断言下推参数：trace_id != 锚点 + 升序 + LIMIT 1 + 7 天窗
+		assert.NotNil(t, captured)
+		assert.Equal(t, int32(1), captured.Limit)
+		assert.True(t, captured.AscByStartTime)
+		assert.False(t, captured.DescByStartTime)
+		assert.Equal(t, int64(1000), captured.StartAt)
+		assert.Equal(t, int64(1000)+timeutil.Day2MillSec(7), captured.EndAt)
+		var hasNotEqTraceID bool
+		for _, f := range captured.Filters.FilterFields {
+			if f.FieldName == loop_span.SpanFieldTraceId && f.QueryType != nil && *f.QueryType == loop_span.QueryTypeEnumNotEq {
+				hasNotEqTraceID = true
+				assert.Equal(t, []string{"t-anchor"}, f.Values)
+			}
+		}
+		assert.True(t, hasNotEqTraceID)
+	})
+
+	t.Run("prev success desc order", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		var captured *repo.ListSpansParam
+		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+				captured = param
+				return &repo.ListSpansResult{Spans: loop_span.SpanList{
+					{TraceID: "t-prev", SpanID: "s0", StartTime: 800000},
+				}}, nil
+			})
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		resp, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    10000,
+			Direction:    AdjacentDirectionPrev,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "t-prev", resp.TraceID)
+		assert.Equal(t, int64(800), resp.StartTime)
+		assert.True(t, captured.DescByStartTime)
+		assert.False(t, captured.AscByStartTime)
+		assert.Equal(t, int64(10000)-timeutil.Day2MillSec(7), captured.StartAt)
+		assert.Equal(t, int64(10000), captured.EndAt)
+	})
+
+	t.Run("boundary not found", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		resp, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirectionNext,
+		})
+		// 无相邻 trace 是正常业务结果：返回空响应、不报错
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Empty(t, resp.TraceID)
+	})
+
+	t.Run("invalid direction", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		_, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirection(99),
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("tenant error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, _, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error"))
+		r := newTraceServiceForChat(ctrl, fields.traceRepo.(*repomocks.MockITraceRepo), fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		_, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirectionNext,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("repo error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		fields, repoMock, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		_, err := r.GetAdjacentTrace(context.Background(), &GetAdjacentTraceRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+			TraceID:      "t-anchor",
+			StartTime:    1000,
+			Direction:    AdjacentDirectionNext,
 		})
 		assert.Error(t, err)
 	})

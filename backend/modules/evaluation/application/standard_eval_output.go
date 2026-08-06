@@ -24,6 +24,97 @@ import (
 
 const maxStandardEvalOutputMGetItemIDs = 100
 
+// standardEvalOutputFornaxPrefix 评测对象自报 standard eval output 字段时使用的前缀，
+// 用于与用户自定义的普通 ext_output 字段区分、避免重名（见《PSM类评测对象Schema对齐》）。
+const standardEvalOutputFornaxPrefix = "FORNAX_"
+
+// standardEvalOutputMergeableFields 平台组装 standard eval output 时，支持
+// “评测对象上报优先 + 平台兜底 + 子字段深合并” 的字段集合。
+// 不含 source：source 恒由平台生成，忽略任何 FORNAX_source 上报。
+var standardEvalOutputMergeableFields = []string{"detail", "rounds", "agent", "output", "eval", "extra"}
+
+// lookupFornaxField 在评测对象上报的 output_fields 中查找某标准字段对应的 Content：
+// 先查带 FORNAX_ 前缀的 key（新协议），未命中再 fallback 到裸 key（向前兼容存量上报）。
+// 两者都无（或值为 nil）时返回 false，表示对象未上报该字段、由平台兜底。
+func lookupFornaxField(fields map[string]*entity.Content, field string) (*entity.Content, bool) {
+	if len(fields) == 0 {
+		return nil, false
+	}
+	if c, ok := fields[standardEvalOutputFornaxPrefix+field]; ok && c != nil {
+		return c, true
+	}
+	if c, ok := fields[field]; ok && c != nil {
+		return c, true
+	}
+	return nil, false
+}
+
+// standardFieldContentMergeable 判断评测对象上报的字段 Content 能否参与结构化子字段深合并。
+// 两种情况无法结构化、只能原样透出（对象优先）：
+//   - 内容被省略的大对象（ContentOmitted 或 FullContent 非空）：Text 仅为裁剪后的预览片段，
+//     全量在对象存储（full_content.uri），平台侧没有完整数据可合并；
+//   - Text 为空或非合法 JSON：无法反序列化成结构，没有“子字段”可递归。
+func standardFieldContentMergeable(c *entity.Content) bool {
+	if c == nil {
+		return false
+	}
+	if gptr.Indirect(c.ContentOmitted) || c.FullContent != nil {
+		return false
+	}
+	text := c.GetText()
+	if text == "" || !json.Valid([]byte(text)) {
+		return false
+	}
+	return true
+}
+
+// normalizeToJSONValue 把任意 Go 值经 JSON round-trip 归一为 map[string]any / []any / 标量，
+// 使平台兜底值与评测对象上报的已解析 JSON 值在同一套原生类型上做深合并。失败时返回原值。
+func normalizeToJSONValue(v any) any {
+	if v == nil {
+		return nil
+	}
+	text, err := json.MarshalString(v)
+	if err != nil {
+		return v
+	}
+	var out any
+	if err := json.Unmarshal([]byte(text), &out); err != nil {
+		return v
+	}
+	return out
+}
+
+// deepMergeStandardEvalOutput 深度合并平台兜底值与评测对象上报值，冲突以对象为准：
+//   - 两侧均为 JSON object(map) 时逐 key 递归合并（只在一侧的 key 保留该侧）；
+//   - 其余情况（类型冲突 / 标量 / 数组 / null）由对象整体覆盖平台。
+func deepMergeStandardEvalOutput(platform, object any) any {
+	pm, pOK := platform.(map[string]any)
+	om, oOK := object.(map[string]any)
+	if pOK && oOK {
+		merged := make(map[string]any, len(pm)+len(om))
+		for k, v := range pm {
+			merged[k] = v
+		}
+		for k, ov := range om {
+			if pv, exists := merged[k]; exists {
+				merged[k] = deepMergeStandardEvalOutput(pv, ov)
+			} else {
+				merged[k] = ov
+			}
+		}
+		return merged
+	}
+	return object
+}
+
+// putStandardField 仅在值非空（空串跳过）时写入 map，避免输出一堆空占位 key。
+func putStandardField(m map[string]any, key, val string) {
+	if val != "" {
+		m[key] = val
+	}
+}
+
 func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
 	if req == nil || len(req.GetItemIds()) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is empty"))
@@ -187,10 +278,16 @@ func (e *experimentApplication) resolveSourceTargetIDs(ctx context.Context, spac
 					out[targetID] = ""
 					continue
 				}
-				if target == nil || target.SpaceID != spaceID {
-					logs.CtxWarn(ctx, "resolveSourceTargetIDs space mismatch or nil, target_id=%d, want_space=%d", targetID, spaceID)
+				if target == nil {
+					logs.CtxWarn(ctx, "resolveSourceTargetIDs target nil, target_id=%d", targetID)
 					out[targetID] = ""
 					continue
+				}
+				// 跨空间共享: 评测对象归来源空间 B, target.SpaceID != 调用方 spaceID(A) 属正常;
+				// targetID 来自本实验自身结果记录(发起时已 AuthorizeRead 授权), 回填其恒定 SourceTargetID
+				// (非内容, 仅标识) 不构成越权。仅同空间(B==A)时保留原语义, 跨空间放行。
+				if target.SpaceID != spaceID {
+					logs.CtxInfo(ctx, "resolveSourceTargetIDs cross-space target, target_id=%d, target_space=%d, caller_space=%d", targetID, target.SpaceID, spaceID)
 				}
 				out[targetID] = target.SourceTargetID
 			}
@@ -313,55 +410,74 @@ func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutput
 	if !isItemStandardEvalOutputContentReady(item) {
 		return res, nil
 	}
-	if out, ok := buildReportedItemStandardEvalOutput(item, opt); ok {
-		return out, nil
-	}
+	// 平台兜底基线：buildStandardEvalOutputJSON 已内含旧的整包 / 裸 key 复用路径。
 	std := buildStandardEvalOutputJSON(item, opt)
+	// 评测对象自报的 ext_output（FORNAX_ 前缀优先，裸 key 兜底），逐字段叠加到基线上。
+	// source 恒由平台生成、不被对象覆盖，故不在可合并字段内、也保持现状不 emit。
+	fields := reportedStandardOutputFields(item, opt.ExptID)
 
 	var err error
-	if res.Detail, err = inlineJSONContent(std.Detail); err != nil {
+	if res.Detail, err = mergeStandardEvalOutputField(std.Detail, fields, "detail"); err != nil {
 		return nil, err
 	}
-	if res.Rounds, err = inlineJSONContent(std.Rounds); err != nil {
+	if res.Rounds, err = mergeStandardEvalOutputField(std.Rounds, fields, "rounds"); err != nil {
 		return nil, err
 	}
-	if res.Agent, err = inlineJSONContent(std.Agent); err != nil {
+	if res.Agent, err = mergeStandardEvalOutputField(std.Agent, fields, "agent"); err != nil {
 		return nil, err
 	}
-	if res.Output, err = inlineJSONContent(std.Output); err != nil {
+	if res.Output, err = mergeStandardEvalOutputField(std.Output, fields, "output"); err != nil {
 		return nil, err
 	}
-	if res.Eval, err = inlineJSONContent(std.Eval); err != nil {
+	if res.Eval, err = mergeStandardEvalOutputField(std.Eval, fields, "eval"); err != nil {
 		return nil, err
 	}
-	if res.Extra, err = inlineJSONContent(std.Extra); err != nil {
+	if res.Extra, err = mergeStandardEvalOutputField(std.Extra, fields, "extra"); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func buildReportedItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (*expt.ItemStandardEvalOutput, bool) {
-	for _, payload := range standardPayloads(item, opt.ExptID) {
+// reportedStandardOutputFields 取评测对象自报的 output_fields：在该 item 的各 turn payload 中，
+// 返回第一个含有任一标准字段（FORNAX_ 前缀或裸 key）的 OutputFields；均无则返回 nil。
+func reportedStandardOutputFields(item *entity.ItemResult, exptID int64) map[string]*entity.Content {
+	for _, payload := range standardPayloads(item, exptID) {
 		if payload == nil || payload.TargetOutput == nil || payload.TargetOutput.EvalTargetRecord == nil || payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData == nil {
 			continue
 		}
 		fields := payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
-		if !looksLikeStandardEvalOutputFields(fields) {
-			continue
+		for _, f := range standardEvalOutputMergeableFields {
+			if _, ok := lookupFornaxField(fields, f); ok {
+				return fields
+			}
 		}
-		res := newItemStandardEvalOutput(item, opt)
-		if itemKey := itemKeyFromItem(item); itemKey != "" {
-			res.ItemKey = gptr.Of(itemKey)
-		}
-		res.Detail = contentToStandardEvalOutputContent(fields["detail"])
-		res.Rounds = contentToStandardEvalOutputContent(fields["rounds"])
-		res.Agent = contentToStandardEvalOutputContent(fields["agent"])
-		res.Output = contentToStandardEvalOutputContent(fields["output"])
-		res.Eval = contentToStandardEvalOutputContent(fields["eval"])
-		res.Extra = contentToStandardEvalOutputContent(fields["extra"])
-		return res, true
 	}
-	return nil, false
+	return nil
+}
+
+// mergeStandardEvalOutputField 逐字段实现「对象优先 + 平台兜底」：
+//   - 对象未报该字段 → 平台兜底值；
+//   - 对象报了但内容无法结构化（省略大对象 / 非 JSON）→ 对象 Content 原样透出（对象优先，保留省略语义）；
+//   - rounds 字段：对象报了 → 整体用对象的，平台不再补（每一轮由对象自报）；
+//   - 其余字段：对象报了合法 JSON → 与平台兜底子字段级深合并，冲突以对象为准。
+func mergeStandardEvalOutputField(platformVal any, fields map[string]*entity.Content, field string) (*expt.StandardEvalOutputContent, error) {
+	c, ok := lookupFornaxField(fields, field)
+	if !ok {
+		return inlineJSONContent(platformVal)
+	}
+	if !standardFieldContentMergeable(c) {
+		return contentToStandardEvalOutputContent(c), nil
+	}
+	var objVal any
+	if err := json.Unmarshal([]byte(c.GetText()), &objVal); err != nil {
+		return contentToStandardEvalOutputContent(c), nil
+	}
+	// rounds：对象上报即整体采用对象的，平台不合并、不补轮次。
+	if field == "rounds" {
+		return inlineJSONContent(objVal)
+	}
+	merged := deepMergeStandardEvalOutput(normalizeToJSONValue(platformVal), objVal)
+	return inlineJSONContent(merged)
 }
 
 func isItemStandardEvalOutputContentReady(item *entity.ItemResult) bool {
@@ -575,8 +691,8 @@ func buildStandardEvalOutputJSON(item *entity.ItemResult, opt standardEvalOutput
 		return std
 	}
 	return standardEvalOutputJSON{
-		Source: map[string]any{"type": "evaluation", "expt_id": opt.ExptID, "item_id": item.ItemID, "dataset_key": datasetKeyFromItem(item), "item_key": itemKeyFromItem(item)},
-		Detail: map[string]any{"item_id": item.ItemID, "item_key": itemKeyFromItem(item), "item_index": item.ItemIndex, "system_info": item.SystemInfo, "turn_count": len(standardTurns(item, opt.ExptID))},
+		Source: map[string]any{"type": "evaluation", "expt_id": int64String(opt.ExptID), "item_id": int64String(item.ItemID), "dataset_key": datasetKeyFromItem(item), "item_key": itemKeyFromItem(item)},
+		Detail: map[string]any{"item_id": int64String(item.ItemID), "item_key": itemKeyFromItem(item), "item_index": item.ItemIndex, "system_info": item.SystemInfo, "turn_count": len(standardTurns(item, opt.ExptID))},
 		Rounds: standardTurns(item, opt.ExptID),
 		Agent:  standardAgent(item, opt.ExptID, opt),
 		Output: standardOutput(item, opt.ExptID),
@@ -684,91 +800,82 @@ func standardTurns(item *entity.ItemResult, exptID int64) []map[string]any {
 	payloads := standardPayloads(item, exptID)
 	rounds := make([]map[string]any, 0, len(payloads))
 	for i, payload := range payloads {
-		roundID := standardRoundID(payload)
-		rounds = append(rounds, map[string]any{
-			"round_id":   roundID,
-			"round_no":   i + 1,
-			"user_query": userQueryFromPayload(payload),
-			"latency":    latencyFromPayload(payload),
-			"start_time": startTimeFromPayload(payload),
-			"end_time":   endTimeFromPayload(payload),
-			"tokens":     tokensFromPayload(payload),
-			"context":    contextFromPayload(payload),
-		})
+		// 平台补的轮次只填拿得到的字段，拿不到的（start/end_time、无 trace 等）不硬塞 0/空串占位。
+		round := map[string]any{
+			"round_id": standardRoundID(payload),
+			"round_no": i + 1,
+		}
+		if q := userQueryFromPayload(payload); q != "" {
+			round["user_query"] = q
+		}
+		if l := latencyFromPayload(payload); l != 0 {
+			round["latency"] = l
+		}
+		if tokens := tokensFromPayload(payload); len(tokens) > 0 {
+			round["tokens"] = tokens
+		}
+		if c := contextFromPayload(payload); len(c) > 0 {
+			round["context"] = c
+		}
+		rounds = append(rounds, round)
 	}
 	return rounds
 }
 
 func standardAgent(item *entity.ItemResult, exptID int64, opt standardEvalOutputBuildOptions) map[string]any {
 	var first *entity.EvalTargetRecord
-	runs := make([]any, 0)
 	for _, payload := range standardPayloads(item, exptID) {
 		tr := payload.TargetOutput
 		if tr == nil || tr.EvalTargetRecord == nil {
 			continue
 		}
-		rec := tr.EvalTargetRecord
 		if first == nil {
-			first = rec
+			first = tr.EvalTargetRecord
+			break
 		}
-		runs = append(runs, map[string]any{"target_record_id": rec.ID, "experiment_run_id": rec.ExperimentRunID, "status": rec.Status, "trace_id": rec.TraceID, "log_id": rec.LogID})
 	}
 	runtimeParam := runtimeParamObjectFromTargetRecord(first)
-	return map[string]any{
-		"agent_id":          int64String(firstTargetID(first)),
-		"model_name":        stringFromRuntimeParam(runtimeParam, "model_name", "model", "model_id"),
-		"agent_name":        stringFromRuntimeParam(runtimeParam, "agent_name", "agent", "name"),
-		"agent_version":     stringFromRuntimeParam(runtimeParam, "agent_version", "version"),
-		"thinking_effort":   stringFromRuntimeParam(runtimeParam, "thinking_effort", "effort"),
-		"context_window":    stringFromRuntimeParam(runtimeParam, "context_window", "context_window_size", "main_context_window_size"),
-		"target_id":         firstTargetID(first),
-		"target_version_id": firstTargetVersionID(first),
-		// source_target_id 为业务侧原始对象 ID（如 promptID / sandbox agent 外部标识），
-		// 需按 target_id 反查 EvalTarget 得到；未解析到时留空。
-		"source_target_id": opt.SourceTargetIDByTargetID[firstTargetID(first)],
-		"runtime_param":    runtimeParam,
-		"runs":             runs,
+	// agent 只保留评测对象元信息（对齐文档 FORNAX_agent）+ runtime_param；
+	// 不回填 runs / target_id / target_version_id / source_target_id（顶层 ItemStandardEvalOutput
+	// 已有 eval_target_id / source_target_id 等 MQ meta 字段，不在此重复）。
+	// 空值不填 key（D11）：无值不放进 map，避免空占位。
+	agent := map[string]any{}
+	if runtimeParam != nil {
+		agent["runtime_param"] = runtimeParam
 	}
+	putStandardField(agent, "agent_id", int64String(firstTargetID(first)))
+	putStandardField(agent, "model_name", stringFromRuntimeParam(runtimeParam, "model_name", "model", "model_id"))
+	putStandardField(agent, "agent_name", stringFromRuntimeParam(runtimeParam, "agent_name", "agent", "name"))
+	putStandardField(agent, "agent_version", stringFromRuntimeParam(runtimeParam, "agent_version", "version"))
+	putStandardField(agent, "thinking_effort", stringFromRuntimeParam(runtimeParam, "thinking_effort", "effort"))
+	putStandardField(agent, "context_window", stringFromRuntimeParam(runtimeParam, "context_window", "context_window_size", "main_context_window_size"))
+	return agent
 }
 
 func standardOutput(item *entity.ItemResult, exptID int64) map[string]any {
 	payloads := standardPayloads(item, exptID)
-	rounds := map[string]any{}
 	var detailOutput map[string]*entity.Content
-	for _, payload := range payloads {
-		tr := payload.TargetOutput
-		if tr == nil || tr.EvalTargetRecord == nil || tr.EvalTargetRecord.EvalTargetOutputData == nil {
-			continue
-		}
-		data := tr.EvalTargetRecord.EvalTargetOutputData
-		out := data.OutputFields
-		if detailOutput == nil {
-			detailOutput = out
-		}
-		rounds[standardRoundID(payload)] = map[string]any{"output": out, "file_diff": []any{}}
-	}
 	if len(payloads) > 0 {
 		last := payloads[len(payloads)-1]
 		if last.TargetOutput != nil && last.TargetOutput.EvalTargetRecord != nil && last.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
 			detailOutput = last.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields
 		}
 	}
-	return map[string]any{"detail": map[string]any{"file_diff": []any{}, "output": detailOutput}, "rounds": rounds}
+	// 平台兜底只补 detail.output；file_diff 平台侧无数据、为空不回填（对象要则自报 FORNAX_output）。
+	return map[string]any{"detail": map[string]any{"output": detailOutput}}
 }
 
 func standardEval(item *entity.ItemResult, exptID int64, opt standardEvalOutputBuildOptions) map[string]any {
 	payloads := standardPayloads(item, exptID)
-	rounds := map[string]any{}
 	var detailEval map[string]any
 	for _, payload := range payloads {
-		evalResult := standardEvalResult(payload, opt)
-		rounds[standardRoundID(payload)] = map[string]any{"run_status": turnRunStatus(payload), "eval_result": evalResult}
-		detailEval = evalResult
+		detailEval = standardEvalResult(payload, opt)
 	}
 	if detailEval == nil {
 		detailEval = map[string]any{"type": "score", "score": nil, "reason": "", "results": map[string]any{}}
 	}
-	return map[string]any{"task_config": standardEvalTaskConfig(item), "detail": map[string]any{"run_status": itemRunStatus(item), "eval_result": detailEval}, "rounds": rounds}
+	// 平台兜底只补 detail，不补 round 粒度的 rounds（对象要 round 粒度自行上报 FORNAX_eval.rounds）。
+	return map[string]any{"task_config": standardEvalTaskConfig(item), "detail": map[string]any{"run_status": itemRunStatus(item), "eval_result": detailEval}}
 }
 
 func standardExtra(item *entity.ItemResult) map[string]any {
@@ -794,11 +901,12 @@ func standardPayloads(item *entity.ItemResult, exptID int64) []*entity.Experimen
 	return payloads
 }
 
+// standardRoundID 平台兜底轮次的 round_id：直接用 TurnID（对象未上报 rounds 时平台补的每轮标识）。
 func standardRoundID(payload *entity.ExperimentTurnPayload) string {
 	if payload == nil {
-		return "round_0"
+		return ""
 	}
-	return "round_" + strconv.FormatInt(payload.TurnID, 10)
+	return strconv.FormatInt(payload.TurnID, 10)
 }
 
 func userQueryFromPayload(payload *entity.ExperimentTurnPayload) string {
@@ -829,50 +937,50 @@ func tokensFromPayload(payload *entity.ExperimentTurnPayload) map[string]any {
 	if payload != nil && payload.TargetOutput != nil && payload.TargetOutput.EvalTargetRecord != nil && payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
 		usage = payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage
 	}
-	return map[string]any{
-		"prompt_tokens":                gptr.Indirect(gptr.Of(usage.GetInputTokens())),
-		"completion_tokens":            gptr.Indirect(gptr.Of(usage.GetOutputTokens())),
-		"total_tokens":                 gptr.Indirect(gptr.Of(usage.GetTotalTokens())),
-		"reasoning_tokens":             0,
-		"input_cached_tokens":          0,
-		"input_creation_cached_tokens": 0,
+	// 只填有值的 token 统计，无值不塞 0。
+	tokens := map[string]any{}
+	if v := usage.GetInputTokens(); v != 0 {
+		tokens["prompt_tokens"] = v
 	}
+	if v := usage.GetOutputTokens(); v != 0 {
+		tokens["completion_tokens"] = v
+	}
+	if v := usage.GetTotalTokens(); v != 0 {
+		tokens["total_tokens"] = v
+	}
+	return tokens
 }
 
 func contextFromPayload(payload *entity.ExperimentTurnPayload) map[string]any {
-	ctx := map[string]any{"log_id": "", "message_id": "", "thread_id": "", "trace_id": "", "start_time": int64(0), "end_time": int64(0)}
+	// 只填拿得到的 trace 关联字段，拿不到的不硬塞空串/0（start_time/end_time 平台侧无数据源，不填）。
+	ctx := map[string]any{}
 	if payload == nil {
 		return ctx
 	}
+	logID := ""
 	if payload.SystemInfo != nil && payload.SystemInfo.LogID != nil {
-		ctx["log_id"] = *payload.SystemInfo.LogID
+		logID = *payload.SystemInfo.LogID
 	}
 	if payload.TargetOutput != nil && payload.TargetOutput.EvalTargetRecord != nil {
 		rec := payload.TargetOutput.EvalTargetRecord
 		if rec.LogID != "" {
-			ctx["log_id"] = rec.LogID
+			logID = rec.LogID
 		}
-		ctx["trace_id"] = rec.TraceID
+		if rec.TraceID != "" {
+			ctx["trace_id"] = rec.TraceID
+		}
+	}
+	if logID != "" {
+		ctx["log_id"] = logID
 	}
 	return ctx
 }
-
-func startTimeFromPayload(payload *entity.ExperimentTurnPayload) int64 { return 0 }
-
-func endTimeFromPayload(payload *entity.ExperimentTurnPayload) int64 { return 0 }
 
 func firstTargetID(record *entity.EvalTargetRecord) int64 {
 	if record == nil {
 		return 0
 	}
 	return record.TargetID
-}
-
-func firstTargetVersionID(record *entity.EvalTargetRecord) int64 {
-	if record == nil {
-		return 0
-	}
-	return record.TargetVersionID
 }
 
 func int64String(v int64) string {
@@ -937,36 +1045,62 @@ func standardEvalResult(payload *entity.ExperimentTurnPayload, opt standardEvalO
 			if record == nil {
 				continue
 			}
-			resultKey := evaluatorResultKey(key, record)
+			resultKey := evaluatorResultKey(opt, key, record)
 			if score == nil && record.GetScore() != nil {
 				score = *record.GetScore()
 			}
 			if reason == "" {
 				reason = record.GetReasoning()
 			}
-			results[resultKey] = map[string]any{
-				"evaluator_name":    evaluatorName(opt, key, record),
-				"evaluator_version": evaluatorVersion(opt, key, record),
-				"evaluator_alias":   record.Alias,
-				"type":              "score",
-				"score":             record.GetScore(),
-				"reason":            record.GetReasoning(),
+			// key 即 evaluator_version_id；evaluator_id 从 ColumnEvaluator 反查。
+			// 二者均为 i64 雪花，inline JSON 须 string 化防精度丢失。
+			// 空值不填 key（D11）：name/version/alias/id/version_id 无值时不放进 map。
+			entry := map[string]any{
+				"type":   "score",
+				"score":  record.GetScore(),
+				"reason": record.GetReasoning(),
 			}
+			putStandardField(entry, "evaluator_version_id", int64String(key))
+			putStandardField(entry, "evaluator_name", evaluatorName(opt, key, record))
+			putStandardField(entry, "evaluator_version", evaluatorVersion(opt, key, record))
+			putStandardField(entry, "evaluator_alias", record.Alias)
+			if eid := evaluatorID(opt, key); eid != 0 {
+				entry["evaluator_id"] = int64String(eid)
+			}
+			results[resultKey] = entry
 		}
 	}
 	return map[string]any{"type": "score", "score": score, "reason": reason, "results": results}
 }
 
-func evaluatorResultKey(key int64, record *entity.EvaluatorRecord) string {
-	if record != nil {
-		if record.Alias != "" {
-			return record.Alias
-		}
-		if record.InlineKey != "" {
-			return record.InlineKey
-		}
+// evaluatorResultKey 生成 results map 的唯一 key = 评估器名 + 版本号 + 别名。
+//   - name / version 从 ColumnEvaluator（按 evaluator_version_id 反查）取；
+//   - alias 区分同评估器版本的多实例（judge_A/judge_B）；
+//
+// 三者组合在单 item results 内不撞（同评估器多别名靠 alias 区分、不同评估器名不同）。
+// name 反查不到（老数据 / inline）时退化用 record 自身 version_id / inline_key 兜底。
+func evaluatorResultKey(opt standardEvalOutputBuildOptions, key int64, record *entity.EvaluatorRecord) string {
+	name := ""
+	version := ""
+	if meta := opt.EvaluatorByVersionID[key]; meta != nil {
+		name = gptr.Indirect(meta.Name)
+		version = gptr.Indirect(meta.Version)
 	}
-	return strconv.FormatInt(key, 10)
+	alias := ""
+	inlineKey := ""
+	if record != nil {
+		alias = record.Alias
+		inlineKey = record.InlineKey
+	}
+	if name != "" {
+		return name + ":" + version + ":" + alias
+	}
+	// 兜底（inline / 反查不到 ColumnEvaluator）：versionID + alias(+inlineKey)，避免撞 key
+	rk := entity.EncodeEvaluatorInstanceKey(key, alias)
+	if inlineKey != "" {
+		rk += "#" + inlineKey
+	}
+	return rk
 }
 
 func evaluatorName(opt standardEvalOutputBuildOptions, key int64, record *entity.EvaluatorRecord) string {
@@ -983,16 +1117,12 @@ func evaluatorVersion(opt standardEvalOutputBuildOptions, key int64, record *ent
 	return ""
 }
 
-func turnRunStatus(payload *entity.ExperimentTurnPayload) map[string]any {
-	status := "unknown"
-	failedReason := ""
-	if payload != nil && payload.SystemInfo != nil {
-		status = turnRunStateString(payload.SystemInfo.TurnRunState)
-		if payload.SystemInfo.Error != nil && payload.SystemInfo.Error.Message != nil {
-			failedReason = *payload.SystemInfo.Error.Message
-		}
+// evaluatorID 从 ColumnEvaluator（按 evaluator_version_id 索引）反查 evaluator_id；未命中返回 0。
+func evaluatorID(opt standardEvalOutputBuildOptions, key int64) int64 {
+	if meta := opt.EvaluatorByVersionID[key]; meta != nil {
+		return meta.EvaluatorID
 	}
-	return map[string]any{"status": status, "failed_reason": failedReason}
+	return 0
 }
 
 func itemRunStatus(item *entity.ItemResult) map[string]any {
@@ -1005,23 +1135,6 @@ func itemRunStatus(item *entity.ItemResult) map[string]any {
 		}
 	}
 	return map[string]any{"status": status, "failed_reason": failedReason}
-}
-
-func turnRunStateString(state entity.TurnRunState) string {
-	switch state {
-	case entity.TurnRunState_Success:
-		return "completed"
-	case entity.TurnRunState_Fail:
-		return "failed"
-	case entity.TurnRunState_Processing:
-		return "processing"
-	case entity.TurnRunState_Queueing:
-		return "queueing"
-	case entity.TurnRunState_Terminal:
-		return "terminated"
-	default:
-		return "unknown"
-	}
 }
 
 func itemRunStateString(state entity.ItemRunState) string {

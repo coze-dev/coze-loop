@@ -100,9 +100,11 @@ struct OpenAPIExptEvaluatorConf {
     41: optional i32 filter_mode                      // 0 None / 1 Include / 2 Exclude
 }
 
-// per-set target 运行配置 (版本字符串风格); 本期 len<=1
-// target_id/version 继承 request 顶层 eval_target_param, 不在 per-set 重复指定
+// per-set target 运行配置; 本期 len<=1
+// target_id 不传时继承 request 顶层 eval_target_param;
+// 跨空间多集场景 per-set 需显式指定 target_id 以对该 set 的评测对象做来源空间授权(执行仍用顶层 target)。
 struct OpenAPIExptTargetConf {
+    1: optional i64 target_id (api.js_conv = "true", go.tag = 'json:"target_id"')   // per-set 评测对象 id; 跨空间授权必需
     10: optional TargetFieldMapping field_mapping    // 本评测集字段 → target 输入
     20: optional common.RuntimeParam runtime_param
 }
@@ -116,6 +118,9 @@ struct OpenAPIEvalSetConfig {
     // 题目圈选: 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter, 与内部 EvalSetConfig.item_filter 同型透传)
     // 校验白名单(应用层, 与内部一致): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
     30: optional data_filter.Filter item_filter
+
+    40: optional common.SharedResourceOption shared_option        // 跨空间: 该 set 评测集来源空间; nil/!is_shared=同空间
+    41: optional common.SharedResourceOption target_shared_option // 跨空间: 该 set 评测对象来源空间
 }
 
 // 实验评测集来源模式 (OpenAPI 字符串枚举, 与 domain ExptEvalSetSourceType 对应)
@@ -367,6 +372,7 @@ struct ResultPayload {
 struct TurnSystemInfo {
     1: optional TurnRunState turn_run_state
     2: optional string log_id
+    3: optional RunError error
 }
 
 // 轮次结果
@@ -386,6 +392,7 @@ struct ItemResult {
 struct ItemSystemInfo {
     1: optional ItemRunState run_state
     2: optional string log_id
+    3: optional RunError error
 }
 
 // ===============================

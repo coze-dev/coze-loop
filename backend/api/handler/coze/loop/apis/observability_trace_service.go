@@ -246,3 +246,9 @@ func ListMetadata(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// GetAdjacentTrace .
+// @router /api/observability/v1/threads/adjacent_trace [POST]
+func GetAdjacentTrace(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.GetAdjacentTrace)
+}

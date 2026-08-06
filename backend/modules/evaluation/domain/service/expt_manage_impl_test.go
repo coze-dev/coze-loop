@@ -95,7 +95,7 @@ func TestExptMangerImpl_MGetDetail(t *testing.T) {
 	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MGetByID(ctx, []int64{exptID}, int64(1)).Return([]*entity.Experiment{expt}, nil).AnyTimes()
 	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().MGetStats(ctx, []int64{exptID}, int64(1), session).Return([]*entity.ExptStats{{ExptID: exptID}}, nil).AnyTimes()
 	mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).EXPECT().BatchGetExptAggrResultByExperimentIDs(ctx, int64(1), []int64{exptID}).Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
-	mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSet{{}}, nil).AnyTimes()
+	mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).EXPECT().BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return([]*entity.EvaluationSet{{}}, nil).AnyTimes()
 	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).EXPECT().BatchGetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTarget{{}}, nil).AnyTimes()
 	mgr.evaluatorService.(*svcMocks.MockEvaluatorService).EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{}, nil).AnyTimes()
 
@@ -201,7 +201,7 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		}, nil).AnyTimes()
 	mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 		EXPECT().
-		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 		Return(nil, &entity.EvaluationSet{
 			EvaluationSetVersion: &entity.EvaluationSetVersion{
 				EvaluationSetSchema: &entity.EvaluationSetSchema{
@@ -386,7 +386,7 @@ func TestExptMangerImpl_CreateExpt_GroupKey(t *testing.T) {
 		version := &entity.EvaluationSetVersion{ID: evalSetVerID}
 		mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 			EXPECT().
-			GetEvaluationSetVersion(ctx, workspaceID, evalSetVerID, gptr.Of(true)).
+			GetEvaluationSetVersion(ctx, workspaceID, evalSetVerID, gptr.Of(true), nil).
 			Return(version, &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}, nil)
 		mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 			EXPECT().
@@ -580,7 +580,7 @@ func TestExptMangerImpl_CreateExpt_WorkspacePermission(t *testing.T) {
 					}, nil).AnyTimes()
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
-					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}, nil).AnyTimes()
 				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 					EXPECT().
@@ -608,7 +608,7 @@ func TestExptMangerImpl_CreateExpt_WorkspacePermission(t *testing.T) {
 					}, nil).AnyTimes()
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
-					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, &entity.EvaluationSet{ID: evalSetID, SpaceID: otherSpaceID}, nil).AnyTimes()
 				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 					EXPECT().
@@ -636,7 +636,7 @@ func TestExptMangerImpl_CreateExpt_WorkspacePermission(t *testing.T) {
 					}, nil).AnyTimes()
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
-					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}, nil).AnyTimes()
 				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 					EXPECT().
@@ -668,7 +668,7 @@ func TestExptMangerImpl_CreateExpt_WorkspacePermission(t *testing.T) {
 					}, nil).AnyTimes()
 				mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 					EXPECT().
-					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 					Return(nil, &entity.EvaluationSet{
 						ID:      evalSetID,
 						SpaceID: workspaceID,
@@ -723,6 +723,12 @@ func TestExptMangerImpl_CreateExpt_WorkspacePermission(t *testing.T) {
 			defer ctrl.Finish()
 			mgr := newTestExptManager(ctrl)
 			tt.mockSetup(mgr)
+			// 引用路径(req.TargetID)跨空间授权前会 GetEvalTarget 取 target 类型(expt_manage_impl.go:1117)
+			mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+				EXPECT().
+				GetEvalTarget(gomock.Any(), gomock.Any()).
+				Return(&entity.EvalTarget{ID: targetID, SpaceID: otherSpaceID}, nil).
+				AnyTimes()
 
 			_, err := mgr.CreateExpt(context.Background(), buildParam(), &entity.Session{UserID: "1"})
 			if tt.wantErr {
@@ -850,7 +856,7 @@ func TestExptMangerImpl_CreateExpt_OnlineSourceTargetVersionInjection(t *testing
 				}, nil).AnyTimes()
 			mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 				EXPECT().
-				GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 				Return(nil, &entity.EvaluationSet{
 					EvaluationSetVersion: &entity.EvaluationSetVersion{
 						EvaluationSetSchema: &entity.EvaluationSetSchema{
@@ -961,6 +967,12 @@ func TestExptMangerImpl_CreateExpt_WithExistingTarget(t *testing.T) {
 				OutputSchema:   []*entity.ArgsSchema{},
 			},
 		}, nil)
+	// 引用路径(req.TargetID)跨空间授权前会 GetEvalTarget 取 target 类型(expt_manage_impl.go:1117)
+	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+		EXPECT().
+		GetEvalTarget(gomock.Any(), gomock.Any()).
+		Return(&entity.EvalTarget{ID: targetID, SpaceID: 1, EvalTargetType: entity.EvalTargetTypeLoopTrace}, nil).
+		AnyTimes()
 	version := &entity.EvaluationSetVersion{
 		ID:        3,
 		ItemCount: 1,
@@ -970,7 +982,7 @@ func TestExptMangerImpl_CreateExpt_WithExistingTarget(t *testing.T) {
 	}
 	mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 		EXPECT().
-		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 		Return(version, &entity.EvaluationSet{ID: 2, SpaceID: 1}, nil)
 	mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 		EXPECT().
@@ -1451,7 +1463,7 @@ func TestExptMangerImpl_List(t *testing.T) {
 			List(ctx, page, pageSize, filter, orderBys, spaceID).
 			Return([]*entity.Experiment{expt}, int64(1), nil).Times(1)
 		mockEvaluationSetService.EXPECT().
-			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return([]*entity.EvaluationSet{exptTuple.EvalSet}, nil).AnyTimes()
 		mockEvalTargetService.EXPECT().
 			BatchGetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -1497,7 +1509,7 @@ func TestExptMangerImpl_List(t *testing.T) {
 			Return([]*entity.Experiment{expt}, int64(1), nil).Times(1)
 		// 所有相关依赖都返回错误
 		mockEvaluationSetService.EXPECT().
-			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(nil, fmt.Errorf("tuple error")).AnyTimes()
 		mockEvalTargetService.EXPECT().
 			BatchGetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -1520,7 +1532,7 @@ func TestExptMangerImpl_List(t *testing.T) {
 			List(ctx, page, pageSize, filter, orderBys, spaceID).
 			Return([]*entity.Experiment{expt}, int64(1), nil).Times(1)
 		mockEvaluationSetService.EXPECT().
-			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			BatchGetEvaluationSets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return([]*entity.EvaluationSet{exptTuple.EvalSet}, nil).AnyTimes()
 		mockEvalTargetService.EXPECT().
 			BatchGetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -1556,7 +1568,7 @@ func TestExptMangerImpl_List(t *testing.T) {
 			List(ctx, page, pageSize, filter, orderBys, spaceID).
 			Return([]*entity.Experiment{onlineExpt}, int64(1), nil).Times(1)
 		mockEvaluationSetVersionService.EXPECT().
-			BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return([]*entity.BatchGetEvaluationSetVersionsResult{
 				{Version: onlineEvalSetVersion, EvaluationSet: onlineEvalSet},
 			}, nil).AnyTimes()
@@ -1674,7 +1686,7 @@ func TestExptMangerImpl_GetDetail(t *testing.T) {
 			GetEvalTargetVersion(gomock.Any(), spaceID, gomock.Any(), gomock.Any()).
 			Return(tuple.Target, nil).AnyTimes()
 		mockEvaluationSetService.EXPECT().
-			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 			Return(tuple.EvalSet, nil).AnyTimes()
 		mockEvaluatorService.EXPECT().
 			BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -1769,6 +1781,8 @@ func TestNewExptManager(t *testing.T) {
 		mockTemplateManager,
 		mockNotify,
 		mockUser,
+		nil,
+		nil,
 		nil,
 	)
 
@@ -2718,5 +2732,175 @@ func TestExptMangerImpl_CheckExpt_ItemRetryNumBounds(t *testing.T) {
 	t.Run("重试越上界拒绝", func(t *testing.T) {
 		err := mgr.CheckExpt(context.Background(), buildExpt(gptr.Of(entity.MaxItemRetryNum+1)), &entity.Session{})
 		assert.Error(t, err)
+	})
+}
+
+// TestExptMangerImpl_authorizeSharedResource_TargetType 覆盖跨空间共享发起鉴权时 targetType 透传:
+//   - eval_target: 必须把 targetType 写入 AuthorizeResourceRequest.TargetType, 否则 sharedResourceMatches
+//     守卫 (targetType != 0) 会短路所有 eval_target 共享规则, Lookup 返回 nil, 报 "resource not shared to caller"。
+//   - eval_set: targetType 传 0, 不参与匹配, 行为保持不变。
+func TestExptMangerImpl_authorizeSharedResource_TargetType(t *testing.T) {
+	const (
+		callerSpaceID = int64(1001)
+		sourceSpaceID = int64(2002)
+		resourceID    = int64(3003)
+	)
+	sharedOpt := &entity.SharedResourceOption{IsShared: true, SourceSpaceID: gptr.Of(sourceSpaceID)}
+
+	t.Run("eval_target 传对 targetType 后 Lookup 命中并回填来源空间", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		authorizer := svcMocks.NewMockResourceAccessAuthorizer(ctrl)
+		// DoAndReturn 断言 targetType 已透传到 AuthorizeResourceRequest.TargetType (回归核心)。
+		authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, req *entity.AuthorizeResourceRequest) (*entity.ResourceAccessContext, error) {
+				assert.Equal(t, entity.SharedResourceTypeEvalTarget, req.ResourceType)
+				assert.Equal(t, entity.EvalTargetTypeSandboxAgent, req.TargetType)
+				assert.Equal(t, resourceID, req.ResourceID)
+				return &entity.ResourceAccessContext{
+					CallerSpaceID:   callerSpaceID,
+					ResourceSpaceID: sourceSpaceID,
+					ResourceType:    entity.SharedResourceTypeEvalTarget,
+					ResourceID:      resourceID,
+					TargetType:      entity.EvalTargetTypeSandboxAgent,
+					AccessMode:      entity.AccessModeShared,
+					AccessLevel:     entity.SharedAccessLevelExecute,
+				}, nil
+			})
+
+		mgr := &ExptMangerImpl{resourceAccessAuthorizer: authorizer}
+		accessCtx, err := mgr.authorizeSharedResource(
+			context.Background(), callerSpaceID, entity.SharedResourceTypeEvalTarget, resourceID, nil, sharedOpt,
+			entity.EvalTargetTypeSandboxAgent)
+		require.NoError(t, err)
+		assert.Equal(t, sourceSpaceID, accessCtx.ResourceSpaceID)
+		assert.Equal(t, entity.SharedAccessLevelExecute, accessCtx.AccessLevel)
+	})
+
+	t.Run("eval_set targetType 传 0 不参与匹配", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		authorizer := svcMocks.NewMockResourceAccessAuthorizer(ctrl)
+		authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, req *entity.AuthorizeResourceRequest) (*entity.ResourceAccessContext, error) {
+				assert.Equal(t, entity.SharedResourceTypeEvalSet, req.ResourceType)
+				assert.Equal(t, entity.EvalTargetType(0), req.TargetType)
+				return &entity.ResourceAccessContext{
+					CallerSpaceID:   callerSpaceID,
+					ResourceSpaceID: sourceSpaceID,
+					ResourceType:    entity.SharedResourceTypeEvalSet,
+					ResourceID:      resourceID,
+					AccessMode:      entity.AccessModeShared,
+					AccessLevel:     entity.SharedAccessLevelReadable,
+				}, nil
+			})
+
+		mgr := &ExptMangerImpl{resourceAccessAuthorizer: authorizer}
+		accessCtx, err := mgr.authorizeSharedResource(
+			context.Background(), callerSpaceID, entity.SharedResourceTypeEvalSet, resourceID, nil, sharedOpt, 0)
+		require.NoError(t, err)
+		assert.Equal(t, sourceSpaceID, accessCtx.ResourceSpaceID)
+		assert.Equal(t, entity.SharedAccessLevelReadable, accessCtx.AccessLevel)
+	})
+
+	t.Run("未开启共享直接返回调用方空间, 不调 AuthorizeRead", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		authorizer := svcMocks.NewMockResourceAccessAuthorizer(ctrl)
+		// 无 EXPECT: opt 未开启时不应触发鉴权调用。
+		mgr := &ExptMangerImpl{resourceAccessAuthorizer: authorizer}
+		accessCtx, err := mgr.authorizeSharedResource(
+			context.Background(), callerSpaceID, entity.SharedResourceTypeEvalTarget, resourceID, nil, nil,
+			entity.EvalTargetTypeSandboxAgent)
+		require.NoError(t, err)
+		assert.Equal(t, callerSpaceID, accessCtx.ResourceSpaceID)
+		assert.Equal(t, "", accessCtx.AccessLevel)
+		assert.False(t, accessCtx.IsShared())
+	})
+}
+
+// TestExptMangerImpl_CreateExpt_SharedEvalSetVersionPolicy 覆盖 R-02 修复:
+// 跨空间共享评测集在 latest 策略下, 发起若使用历史(非最新)版本, 必须在加载 tuple 后被 IsSharedVersionAllowed 拦下;
+// 使用最新版本则放行 (不误拒合法发起)。
+func TestExptMangerImpl_CreateExpt_SharedEvalSetVersionPolicy(t *testing.T) {
+	const (
+		workspaceID   int64 = 1
+		sourceSpaceID int64 = 2
+		evalSetID     int64 = 200
+		evalSetVerID  int64 = 201
+	)
+	sharedOpt := &entity.SharedResourceOption{IsShared: true, SourceSpaceID: gptr.Of(sourceSpaceID)}
+
+	buildParam := func() *entity.CreateExptParam {
+		return &entity.CreateExptParam{
+			WorkspaceID:         workspaceID,
+			Name:                "expt",
+			EvalSetID:           evalSetID,
+			EvalSetVersionID:    evalSetVerID,
+			EvalSetSharedOption: sharedOpt,
+		}
+	}
+
+	// 共享 latest 策略 accessCtx (来源空间 2)
+	newAuthorizer := func(ctrl *gomock.Controller) *svcMocks.MockResourceAccessAuthorizer {
+		authorizer := svcMocks.NewMockResourceAccessAuthorizer(ctrl)
+		authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ *entity.AuthorizeResourceRequest) (*entity.ResourceAccessContext, error) {
+				return &entity.ResourceAccessContext{
+					CallerSpaceID:   workspaceID,
+					ResourceSpaceID: sourceSpaceID,
+					ResourceType:    entity.SharedResourceTypeEvalSet,
+					ResourceID:      evalSetID,
+					AccessMode:      entity.AccessModeShared,
+					AccessLevel:     entity.SharedAccessLevelReadable,
+					VersionPolicy:   entity.SharedVersionPolicyLatest,
+				}, nil
+			}).AnyTimes()
+		return authorizer
+	}
+
+	t.Run("latest 策略用历史版本发起被拒", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+		mgr.resourceAccessAuthorizer = newAuthorizer(ctrl)
+		// 加载出来的版本 v2, 而来源集最新是 v3 → latest 策略拒
+		mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
+			EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+			Return(&entity.EvaluationSetVersion{ID: evalSetVerID, Version: "v2"},
+				&entity.EvaluationSet{ID: evalSetID, SpaceID: sourceSpaceID, LatestVersion: "v3"}, nil).AnyTimes()
+
+		_, err := mgr.CreateExpt(context.Background(), buildParam(), &entity.Session{UserID: "1"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not in shared_versions")
+	})
+
+	t.Run("latest 策略用最新版本发起放行(不误拒)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+		mgr.resourceAccessAuthorizer = newAuthorizer(ctrl)
+		// 加载出来的版本 v3 == 最新 → 通过版本校验; 后续依赖 mock 用 AnyTimes 兜底
+		mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
+			EXPECT().GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+			Return(&entity.EvaluationSetVersion{ID: evalSetVerID, Version: "v3"},
+				&entity.EvaluationSet{ID: evalSetID, SpaceID: sourceSpaceID, LatestVersion: "v3"}, nil).AnyTimes()
+		mgr.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{1, 2}, nil).AnyTimes()
+		mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().CreateStats(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().InsertExptTurnResultFilterKeyMappings(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, true, nil).AnyTimes()
+		mgr.lwt.(*lwtMocks.MockILatestWriteTracker).EXPECT().SetWriteFlag(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+		mgr.audit.(*auditMocks.MockIAuditService).EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).AnyTimes()
+		mgr.benefitService.(*benefitMocks.MockIBenefitService).EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{IsFreeEvaluate: gptr.Of(true)}, nil).AnyTimes()
+
+		_, err := mgr.CreateExpt(context.Background(), buildParam(), &entity.Session{UserID: "1"})
+		// 版本校验放行后, 若仍报错也不应是版本不在共享范围
+		if err != nil {
+			assert.NotContains(t, err.Error(), "not in shared_versions")
+		}
 	})
 }

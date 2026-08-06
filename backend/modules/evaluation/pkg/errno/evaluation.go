@@ -399,6 +399,61 @@ const (
 	ExptMultiSetSpaceNotAllowedCode              = 601205072 // the space is not in the gray-release whitelist for multi-set experiments
 	exptMultiSetSpaceNotAllowedMessage           = "the space is not allowed to create multi-set experiments"
 	exptMultiSetSpaceNotAllowedNoAffectStability = true
+
+	// 沙箱 agent 评测对象上报结果错误码 (5073-5083)。沙箱侧上报时用下列细分码替代通用 CallTargetFail，
+	// 便于 metrics classifier / 前端展示按 reason 分类。触发要点见每条 comment。
+	SandboxAgentModelNotFoundCode              = 601205073 // sandbox agent target reported model_not_found (trigger: {code:10003, msg:"model X not found"})
+	sandboxAgentModelNotFoundMessage           = "sandbox agent: model not found"
+	sandboxAgentModelNotFoundNoAffectStability = false
+
+	SandboxAgentAllModelsFailedCode              = 601205074 // sandbox agent target reported all_models_failed (trigger: code=3003 or msg contains "all models failed")
+	sandboxAgentAllModelsFailedMessage           = "sandbox agent: all models failed"
+	sandboxAgentAllModelsFailedNoAffectStability = false
+
+	SandboxAgentAzureEmptyStreamCode              = 601205075 // sandbox agent target reported azure_empty_stream (trigger: msg contains "azure" + ("empty"|"stream"), or "stream has sent too many empty messages")
+	sandboxAgentAzureEmptyStreamMessage           = "sandbox agent: azure empty stream"
+	sandboxAgentAzureEmptyStreamNoAffectStability = false
+
+	SandboxAgentModelRetryableCode              = 601205076 // sandbox agent target reported model_retryable (trigger: code in {10000,10001,10002}, retry exhausted fallback)
+	sandboxAgentModelRetryableMessage           = "sandbox agent: model retryable exhausted"
+	sandboxAgentModelRetryableNoAffectStability = false
+
+	SandboxAgentSessionNotFinishedCode              = 601205077 // sandbox agent target reported session_not_finished (trigger: turn_status=failed or turn_error_message indicates unfinished retry, or streaming status not success)
+	sandboxAgentSessionNotFinishedMessage           = "sandbox agent: session not finished"
+	sandboxAgentSessionNotFinishedNoAffectStability = false
+
+	SandboxAgentExceededMaxTurnsCode              = 601205078 // sandbox agent target reported exceeded_max_turns (trigger: code=4000002 or msg contains "exceeded maximum number of turns")
+	sandboxAgentExceededMaxTurnsMessage           = "sandbox agent: exceeded maximum number of turns"
+	sandboxAgentExceededMaxTurnsNoAffectStability = true
+
+	SandboxAgentSessionNotWaitingInputCode              = 601205079 // sandbox agent target reported session_not_waiting_input (trigger: {code:10003, msg:"Now session is not waiting input..."}; disambiguated from model_not_found by msg substring)
+	sandboxAgentSessionNotWaitingInputMessage           = "sandbox agent: session not waiting input"
+	sandboxAgentSessionNotWaitingInputNoAffectStability = true
+
+	SandboxAgentCmdForwardPortNotReadyCode              = 601205080 // sandbox agent target reported cmd_forward_port_not_ready (trigger: port 16259 timeout, "Failed to connect to localhost port 16259", VSCode cmd exec failure, "[Errno 111] Connection refused")
+	sandboxAgentCmdForwardPortNotReadyMessage           = "sandbox agent: cmd forward port not ready"
+	sandboxAgentCmdForwardPortNotReadyNoAffectStability = false
+
+	SandboxAgentNetworkCode              = 601205081 // sandbox agent target reported network (trigger: connection refused/reset/timed out, could not resolve host, ssl/tls handshake, network/connection timeout keywords)
+	sandboxAgentNetworkMessage           = "sandbox agent: network error"
+	sandboxAgentNetworkNoAffectStability = false
+
+	SandboxAgentIDEHostMismatchCode              = 601205082 // sandbox agent target reported ide_host_mismatch (trigger: (a) "CN 环境机器不支持评测海外 IDE"; (b) /Applications/Trae.app/.../product.json missing and combined does not contain "Trae CN.app")
+	sandboxAgentIDEHostMismatchMessage           = "sandbox agent: IDE host mismatch"
+	sandboxAgentIDEHostMismatchNoAffectStability = true
+
+	SandboxAgentConfigNameMismatchCode              = 601205083 // sandbox agent target reported config_name_mismatch (trigger: "[ASSERT] config_name verification failed" or "config_name mismatch")
+	sandboxAgentConfigNameMismatchMessage           = "sandbox agent: config_name mismatch"
+	sandboxAgentConfigNameMismatchNoAffectStability = true
+
+	// 实验/行级超时错误码（用于把超时原因暴露给用户，替代原来落库为空 err_msg 或英文 raw string 的实现）
+	ExptZombieTimeoutCode              = 601205084 // 实验整体运行时长超过阈值被超时终止（HandleEventCheck 触发）
+	exptZombieTimeoutMessage           = "实验已超过最大执行时长被终止"
+	exptZombieTimeoutNoAffectStability = false
+
+	ItemZombieTimeoutCode              = 601205085 // 实验行长时间未更新被判定为僵尸（handleZombies 触发）
+	itemZombieTimeoutMessage           = "实验行长时间未更新，已被系统判定为僵尸并置为失败"
+	itemZombieTimeoutNoAffectStability = false
 )
 
 func init() {
@@ -989,6 +1044,84 @@ func init() {
 		ExptMultiSetSpaceNotAllowedCode,
 		exptMultiSetSpaceNotAllowedMessage,
 		code.WithAffectStability(!exptMultiSetSpaceNotAllowedNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentModelNotFoundCode,
+		sandboxAgentModelNotFoundMessage,
+		code.WithAffectStability(!sandboxAgentModelNotFoundNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentAllModelsFailedCode,
+		sandboxAgentAllModelsFailedMessage,
+		code.WithAffectStability(!sandboxAgentAllModelsFailedNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentAzureEmptyStreamCode,
+		sandboxAgentAzureEmptyStreamMessage,
+		code.WithAffectStability(!sandboxAgentAzureEmptyStreamNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentModelRetryableCode,
+		sandboxAgentModelRetryableMessage,
+		code.WithAffectStability(!sandboxAgentModelRetryableNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentSessionNotFinishedCode,
+		sandboxAgentSessionNotFinishedMessage,
+		code.WithAffectStability(!sandboxAgentSessionNotFinishedNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentExceededMaxTurnsCode,
+		sandboxAgentExceededMaxTurnsMessage,
+		code.WithAffectStability(!sandboxAgentExceededMaxTurnsNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentSessionNotWaitingInputCode,
+		sandboxAgentSessionNotWaitingInputMessage,
+		code.WithAffectStability(!sandboxAgentSessionNotWaitingInputNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentCmdForwardPortNotReadyCode,
+		sandboxAgentCmdForwardPortNotReadyMessage,
+		code.WithAffectStability(!sandboxAgentCmdForwardPortNotReadyNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentNetworkCode,
+		sandboxAgentNetworkMessage,
+		code.WithAffectStability(!sandboxAgentNetworkNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentIDEHostMismatchCode,
+		sandboxAgentIDEHostMismatchMessage,
+		code.WithAffectStability(!sandboxAgentIDEHostMismatchNoAffectStability),
+	)
+
+	code.Register(
+		SandboxAgentConfigNameMismatchCode,
+		sandboxAgentConfigNameMismatchMessage,
+		code.WithAffectStability(!sandboxAgentConfigNameMismatchNoAffectStability),
+	)
+
+	code.Register(
+		ExptZombieTimeoutCode,
+		exptZombieTimeoutMessage,
+		code.WithAffectStability(!exptZombieTimeoutNoAffectStability),
+	)
+
+	code.Register(
+		ItemZombieTimeoutCode,
+		itemZombieTimeoutMessage,
+		code.WithAffectStability(!itemZombieTimeoutNoAffectStability),
 	)
 
 }

@@ -2037,9 +2037,12 @@ func (p *OpenAPIExptEvaluatorConf) Field41DeepEqual(src *int32) bool {
 	return true
 }
 
-// per-set target 运行配置 (版本字符串风格); 本期 len<=1
-// target_id/version 继承 request 顶层 eval_target_param, 不在 per-set 重复指定
+// per-set target 运行配置; 本期 len<=1
+// target_id 不传时继承 request 顶层 eval_target_param;
+// 跨空间多集场景 per-set 需显式指定 target_id 以对该 set 的评测对象做来源空间授权(执行仍用顶层 target)。
 type OpenAPIExptTargetConf struct {
+	// per-set 评测对象 id; 跨空间授权必需
+	TargetID *int64 `thrift:"target_id,1,optional" frugal:"1,optional,i64" json:"target_id" form:"target_id" query:"target_id"`
 	// 本评测集字段 → target 输入
 	FieldMapping *TargetFieldMapping  `thrift:"field_mapping,10,optional" frugal:"10,optional,TargetFieldMapping" form:"field_mapping" json:"field_mapping,omitempty" query:"field_mapping"`
 	RuntimeParam *common.RuntimeParam `thrift:"runtime_param,20,optional" frugal:"20,optional,common.RuntimeParam" form:"runtime_param" json:"runtime_param,omitempty" query:"runtime_param"`
@@ -2050,6 +2053,18 @@ func NewOpenAPIExptTargetConf() *OpenAPIExptTargetConf {
 }
 
 func (p *OpenAPIExptTargetConf) InitDefault() {
+}
+
+var OpenAPIExptTargetConf_TargetID_DEFAULT int64
+
+func (p *OpenAPIExptTargetConf) GetTargetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetID() {
+		return OpenAPIExptTargetConf_TargetID_DEFAULT
+	}
+	return *p.TargetID
 }
 
 var OpenAPIExptTargetConf_FieldMapping_DEFAULT *TargetFieldMapping
@@ -2075,6 +2090,9 @@ func (p *OpenAPIExptTargetConf) GetRuntimeParam() (v *common.RuntimeParam) {
 	}
 	return p.RuntimeParam
 }
+func (p *OpenAPIExptTargetConf) SetTargetID(val *int64) {
+	p.TargetID = val
+}
 func (p *OpenAPIExptTargetConf) SetFieldMapping(val *TargetFieldMapping) {
 	p.FieldMapping = val
 }
@@ -2083,8 +2101,13 @@ func (p *OpenAPIExptTargetConf) SetRuntimeParam(val *common.RuntimeParam) {
 }
 
 var fieldIDToName_OpenAPIExptTargetConf = map[int16]string{
+	1:  "target_id",
 	10: "field_mapping",
 	20: "runtime_param",
+}
+
+func (p *OpenAPIExptTargetConf) IsSetTargetID() bool {
+	return p.TargetID != nil
 }
 
 func (p *OpenAPIExptTargetConf) IsSetFieldMapping() bool {
@@ -2113,6 +2136,14 @@ func (p *OpenAPIExptTargetConf) Read(iprot thrift.TProtocol) (err error) {
 		}
 
 		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 10:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField10(iprot); err != nil {
@@ -2158,6 +2189,17 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
+func (p *OpenAPIExptTargetConf) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TargetID = _field
+	return nil
+}
 func (p *OpenAPIExptTargetConf) ReadField10(iprot thrift.TProtocol) error {
 	_field := NewTargetFieldMapping()
 	if err := _field.Read(iprot); err != nil {
@@ -2181,6 +2223,10 @@ func (p *OpenAPIExptTargetConf) Write(oprot thrift.TProtocol) (err error) {
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
 			goto WriteFieldError
@@ -2207,6 +2253,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *OpenAPIExptTargetConf) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetID() {
+		if err = oprot.WriteFieldBegin("target_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TargetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
 func (p *OpenAPIExptTargetConf) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFieldMapping() {
 		if err = oprot.WriteFieldBegin("field_mapping", thrift.STRUCT, 10); err != nil {
@@ -2258,6 +2322,9 @@ func (p *OpenAPIExptTargetConf) DeepEqual(ano *OpenAPIExptTargetConf) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field1DeepEqual(ano.TargetID) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.FieldMapping) {
 		return false
 	}
@@ -2267,6 +2334,18 @@ func (p *OpenAPIExptTargetConf) DeepEqual(ano *OpenAPIExptTargetConf) bool {
 	return true
 }
 
+func (p *OpenAPIExptTargetConf) Field1DeepEqual(src *int64) bool {
+
+	if p.TargetID == src {
+		return true
+	} else if p.TargetID == nil || src == nil {
+		return false
+	}
+	if *p.TargetID != *src {
+		return false
+	}
+	return true
+}
 func (p *OpenAPIExptTargetConf) Field10DeepEqual(src *TargetFieldMapping) bool {
 
 	if !p.FieldMapping.DeepEqual(src) {
@@ -2294,6 +2373,10 @@ type OpenAPIEvalSetConfig struct {
 	// 题目圈选: 不传=全集; 点选=item_id in [...]; 条件圈选=tag 条件 (复用 data data_filter.Filter, 与内部 EvalSetConfig.item_filter 同型透传)
 	// 校验白名单(应用层, 与内部一致): query_type ∈ {eq,not_eq,in,not_in}; 单层不嵌套(sub_filter 必空); field_name ∈ {item_id, tag key}; field_type ∈ {long, tag}
 	ItemFilter *filter.Filter `thrift:"item_filter,30,optional" frugal:"30,optional,filter.Filter" form:"item_filter" json:"item_filter,omitempty" query:"item_filter"`
+	// 跨空间: 该 set 评测集来源空间; nil/!is_shared=同空间
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,40,optional" frugal:"40,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
+	// 跨空间: 该 set 评测对象来源空间
+	TargetSharedOption *common.SharedResourceOption `thrift:"target_shared_option,41,optional" frugal:"41,optional,common.SharedResourceOption" form:"target_shared_option" json:"target_shared_option,omitempty" query:"target_shared_option"`
 }
 
 func NewOpenAPIEvalSetConfig() *OpenAPIEvalSetConfig {
@@ -2362,6 +2445,30 @@ func (p *OpenAPIEvalSetConfig) GetItemFilter() (v *filter.Filter) {
 	}
 	return p.ItemFilter
 }
+
+var OpenAPIEvalSetConfig_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *OpenAPIEvalSetConfig) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return OpenAPIEvalSetConfig_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
+
+var OpenAPIEvalSetConfig_TargetSharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *OpenAPIEvalSetConfig) GetTargetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetSharedOption() {
+		return OpenAPIEvalSetConfig_TargetSharedOption_DEFAULT
+	}
+	return p.TargetSharedOption
+}
 func (p *OpenAPIEvalSetConfig) SetEvalSetID(val *int64) {
 	p.EvalSetID = val
 }
@@ -2377,6 +2484,12 @@ func (p *OpenAPIEvalSetConfig) SetTargetConfs(val []*OpenAPIExptTargetConf) {
 func (p *OpenAPIEvalSetConfig) SetItemFilter(val *filter.Filter) {
 	p.ItemFilter = val
 }
+func (p *OpenAPIEvalSetConfig) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
+func (p *OpenAPIEvalSetConfig) SetTargetSharedOption(val *common.SharedResourceOption) {
+	p.TargetSharedOption = val
+}
 
 var fieldIDToName_OpenAPIEvalSetConfig = map[int16]string{
 	1:  "eval_set_id",
@@ -2384,6 +2497,8 @@ var fieldIDToName_OpenAPIEvalSetConfig = map[int16]string{
 	10: "evaluator_confs",
 	20: "target_confs",
 	30: "item_filter",
+	40: "shared_option",
+	41: "target_shared_option",
 }
 
 func (p *OpenAPIEvalSetConfig) IsSetEvalSetID() bool {
@@ -2404,6 +2519,14 @@ func (p *OpenAPIEvalSetConfig) IsSetTargetConfs() bool {
 
 func (p *OpenAPIEvalSetConfig) IsSetItemFilter() bool {
 	return p.ItemFilter != nil
+}
+
+func (p *OpenAPIEvalSetConfig) IsSetSharedOption() bool {
+	return p.SharedOption != nil
+}
+
+func (p *OpenAPIEvalSetConfig) IsSetTargetSharedOption() bool {
+	return p.TargetSharedOption != nil
 }
 
 func (p *OpenAPIEvalSetConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2459,6 +2582,22 @@ func (p *OpenAPIEvalSetConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 30:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField30(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 40:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField40(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 41:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField41(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2569,6 +2708,22 @@ func (p *OpenAPIEvalSetConfig) ReadField30(iprot thrift.TProtocol) error {
 	p.ItemFilter = _field
 	return nil
 }
+func (p *OpenAPIEvalSetConfig) ReadField40(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
+func (p *OpenAPIEvalSetConfig) ReadField41(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TargetSharedOption = _field
+	return nil
+}
 
 func (p *OpenAPIEvalSetConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2594,6 +2749,14 @@ func (p *OpenAPIEvalSetConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField30(oprot); err != nil {
 			fieldId = 30
+			goto WriteFieldError
+		}
+		if err = p.writeField40(oprot); err != nil {
+			fieldId = 40
+			goto WriteFieldError
+		}
+		if err = p.writeField41(oprot); err != nil {
+			fieldId = 41
 			goto WriteFieldError
 		}
 	}
@@ -2720,6 +2883,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
+func (p *OpenAPIEvalSetConfig) writeField40(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 40); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
+}
+func (p *OpenAPIEvalSetConfig) writeField41(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetSharedOption() {
+		if err = oprot.WriteFieldBegin("target_shared_option", thrift.STRUCT, 41); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TargetSharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
+}
 
 func (p *OpenAPIEvalSetConfig) String() string {
 	if p == nil {
@@ -2748,6 +2947,12 @@ func (p *OpenAPIEvalSetConfig) DeepEqual(ano *OpenAPIEvalSetConfig) bool {
 		return false
 	}
 	if !p.Field30DeepEqual(ano.ItemFilter) {
+		return false
+	}
+	if !p.Field40DeepEqual(ano.SharedOption) {
+		return false
+	}
+	if !p.Field41DeepEqual(ano.TargetSharedOption) {
 		return false
 	}
 	return true
@@ -2806,6 +3011,20 @@ func (p *OpenAPIEvalSetConfig) Field20DeepEqual(src []*OpenAPIExptTargetConf) bo
 func (p *OpenAPIEvalSetConfig) Field30DeepEqual(src *filter.Filter) bool {
 
 	if !p.ItemFilter.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *OpenAPIEvalSetConfig) Field40DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *OpenAPIEvalSetConfig) Field41DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.TargetSharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -12087,6 +12306,7 @@ func (p *ResultPayload) Field20DeepEqual(src *TurnSystemInfo) bool {
 type TurnSystemInfo struct {
 	TurnRunState *TurnRunState `thrift:"turn_run_state,1,optional" frugal:"1,optional,string" form:"turn_run_state" json:"turn_run_state,omitempty" query:"turn_run_state"`
 	LogID        *string       `thrift:"log_id,2,optional" frugal:"2,optional,string" form:"log_id" json:"log_id,omitempty" query:"log_id"`
+	Error        *RunError     `thrift:"error,3,optional" frugal:"3,optional,RunError" form:"error" json:"error,omitempty" query:"error"`
 }
 
 func NewTurnSystemInfo() *TurnSystemInfo {
@@ -12119,16 +12339,32 @@ func (p *TurnSystemInfo) GetLogID() (v string) {
 	}
 	return *p.LogID
 }
+
+var TurnSystemInfo_Error_DEFAULT *RunError
+
+func (p *TurnSystemInfo) GetError() (v *RunError) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetError() {
+		return TurnSystemInfo_Error_DEFAULT
+	}
+	return p.Error
+}
 func (p *TurnSystemInfo) SetTurnRunState(val *TurnRunState) {
 	p.TurnRunState = val
 }
 func (p *TurnSystemInfo) SetLogID(val *string) {
 	p.LogID = val
 }
+func (p *TurnSystemInfo) SetError(val *RunError) {
+	p.Error = val
+}
 
 var fieldIDToName_TurnSystemInfo = map[int16]string{
 	1: "turn_run_state",
 	2: "log_id",
+	3: "error",
 }
 
 func (p *TurnSystemInfo) IsSetTurnRunState() bool {
@@ -12137,6 +12373,10 @@ func (p *TurnSystemInfo) IsSetTurnRunState() bool {
 
 func (p *TurnSystemInfo) IsSetLogID() bool {
 	return p.LogID != nil
+}
+
+func (p *TurnSystemInfo) IsSetError() bool {
+	return p.Error != nil
 }
 
 func (p *TurnSystemInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -12168,6 +12408,14 @@ func (p *TurnSystemInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -12224,6 +12472,14 @@ func (p *TurnSystemInfo) ReadField2(iprot thrift.TProtocol) error {
 	p.LogID = _field
 	return nil
 }
+func (p *TurnSystemInfo) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewRunError()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Error = _field
+	return nil
+}
 
 func (p *TurnSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -12237,6 +12493,10 @@ func (p *TurnSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -12293,6 +12553,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *TurnSystemInfo) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetError() {
+		if err = oprot.WriteFieldBegin("error", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Error.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *TurnSystemInfo) String() string {
 	if p == nil {
@@ -12312,6 +12590,9 @@ func (p *TurnSystemInfo) DeepEqual(ano *TurnSystemInfo) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.LogID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Error) {
 		return false
 	}
 	return true
@@ -12337,6 +12618,13 @@ func (p *TurnSystemInfo) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.LogID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TurnSystemInfo) Field3DeepEqual(src *RunError) bool {
+
+	if !p.Error.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -12947,6 +13235,7 @@ func (p *ItemResult_) Field20DeepEqual(src *ItemSystemInfo) bool {
 type ItemSystemInfo struct {
 	RunState *ItemRunState `thrift:"run_state,1,optional" frugal:"1,optional,string" form:"run_state" json:"run_state,omitempty" query:"run_state"`
 	LogID    *string       `thrift:"log_id,2,optional" frugal:"2,optional,string" form:"log_id" json:"log_id,omitempty" query:"log_id"`
+	Error    *RunError     `thrift:"error,3,optional" frugal:"3,optional,RunError" form:"error" json:"error,omitempty" query:"error"`
 }
 
 func NewItemSystemInfo() *ItemSystemInfo {
@@ -12979,16 +13268,32 @@ func (p *ItemSystemInfo) GetLogID() (v string) {
 	}
 	return *p.LogID
 }
+
+var ItemSystemInfo_Error_DEFAULT *RunError
+
+func (p *ItemSystemInfo) GetError() (v *RunError) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetError() {
+		return ItemSystemInfo_Error_DEFAULT
+	}
+	return p.Error
+}
 func (p *ItemSystemInfo) SetRunState(val *ItemRunState) {
 	p.RunState = val
 }
 func (p *ItemSystemInfo) SetLogID(val *string) {
 	p.LogID = val
 }
+func (p *ItemSystemInfo) SetError(val *RunError) {
+	p.Error = val
+}
 
 var fieldIDToName_ItemSystemInfo = map[int16]string{
 	1: "run_state",
 	2: "log_id",
+	3: "error",
 }
 
 func (p *ItemSystemInfo) IsSetRunState() bool {
@@ -12997,6 +13302,10 @@ func (p *ItemSystemInfo) IsSetRunState() bool {
 
 func (p *ItemSystemInfo) IsSetLogID() bool {
 	return p.LogID != nil
+}
+
+func (p *ItemSystemInfo) IsSetError() bool {
+	return p.Error != nil
 }
 
 func (p *ItemSystemInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -13028,6 +13337,14 @@ func (p *ItemSystemInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13084,6 +13401,14 @@ func (p *ItemSystemInfo) ReadField2(iprot thrift.TProtocol) error {
 	p.LogID = _field
 	return nil
 }
+func (p *ItemSystemInfo) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewRunError()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Error = _field
+	return nil
+}
 
 func (p *ItemSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -13097,6 +13422,10 @@ func (p *ItemSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -13153,6 +13482,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *ItemSystemInfo) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetError() {
+		if err = oprot.WriteFieldBegin("error", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Error.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *ItemSystemInfo) String() string {
 	if p == nil {
@@ -13172,6 +13519,9 @@ func (p *ItemSystemInfo) DeepEqual(ano *ItemSystemInfo) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.LogID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Error) {
 		return false
 	}
 	return true
@@ -13197,6 +13547,13 @@ func (p *ItemSystemInfo) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.LogID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ItemSystemInfo) Field3DeepEqual(src *RunError) bool {
+
+	if !p.Error.DeepEqual(src) {
 		return false
 	}
 	return true

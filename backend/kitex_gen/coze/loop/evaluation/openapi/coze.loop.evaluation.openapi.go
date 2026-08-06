@@ -4,6 +4,8 @@ package openapi
 
 import (
 	"context"
+	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
@@ -17,6 +19,55 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/extra"
 	"strings"
 )
+
+// 沙箱 agent 内部 step 打点事件类型
+// 沙箱在编排每个 step 的开始/结束时刻分别调用一次上报接口
+type EvalTargetStepEventType int64
+
+const (
+	EvalTargetStepEventType_UNKNOWN  EvalTargetStepEventType = 0
+	EvalTargetStepEventType_STARTED  EvalTargetStepEventType = 1
+	EvalTargetStepEventType_FINISHED EvalTargetStepEventType = 2
+)
+
+func (p EvalTargetStepEventType) String() string {
+	switch p {
+	case EvalTargetStepEventType_UNKNOWN:
+		return "UNKNOWN"
+	case EvalTargetStepEventType_STARTED:
+		return "STARTED"
+	case EvalTargetStepEventType_FINISHED:
+		return "FINISHED"
+	}
+	return "<UNSET>"
+}
+
+func EvalTargetStepEventTypeFromString(s string) (EvalTargetStepEventType, error) {
+	switch s {
+	case "UNKNOWN":
+		return EvalTargetStepEventType_UNKNOWN, nil
+	case "STARTED":
+		return EvalTargetStepEventType_STARTED, nil
+	case "FINISHED":
+		return EvalTargetStepEventType_FINISHED, nil
+	}
+	return EvalTargetStepEventType(0), fmt.Errorf("not a valid EvalTargetStepEventType string")
+}
+
+func EvalTargetStepEventTypePtr(v EvalTargetStepEventType) *EvalTargetStepEventType { return &v }
+func (p *EvalTargetStepEventType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = EvalTargetStepEventType(result.Int64)
+	return
+}
+
+func (p *EvalTargetStepEventType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
 
 // ===============================
 // 评测集相关接口 (9个接口)
@@ -4381,11 +4432,13 @@ type ListEvaluationSetsOApiRequest struct {
 	TagNames          []string                    `thrift:"tag_names,5,optional" frugal:"5,optional,list<string>" json:"tag_names,omitempty" query:"tag_names"`
 	TagFilterRelation *eval_set.TagFilterRelation `thrift:"tag_filter_relation,6,optional" frugal:"6,optional,string" json:"tag_filter_relation,omitempty" query:"tag_filter_relation"`
 	// 按 dataset_key 精确匹配
-	DatasetKeys []string     `thrift:"dataset_keys,7,optional" frugal:"7,optional,list<string>" json:"dataset_keys,omitempty" query:"dataset_keys"`
-	PageToken   *string      `thrift:"page_token,100,optional" frugal:"100,optional,string" json:"page_token,omitempty" query:"page_token"`
-	PageSize    *int32       `thrift:"page_size,101,optional" frugal:"101,optional,i32" json:"page_size,omitempty" query:"page_size"`
-	Extra       *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base        *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	DatasetKeys []string `thrift:"dataset_keys,7,optional" frugal:"7,optional,list<string>" json:"dataset_keys,omitempty" query:"dataset_keys"`
+	// 跨空间共享读选项
+	SharedOption *string      `thrift:"shared_option,8,optional" frugal:"8,optional,string" json:"shared_option,omitempty" query:"shared_option"`
+	PageToken    *string      `thrift:"page_token,100,optional" frugal:"100,optional,string" json:"page_token,omitempty" query:"page_token"`
+	PageSize     *int32       `thrift:"page_size,101,optional" frugal:"101,optional,i32" json:"page_size,omitempty" query:"page_size"`
+	Extra        *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListEvaluationSetsOApiRequest() *ListEvaluationSetsOApiRequest {
@@ -4479,6 +4532,18 @@ func (p *ListEvaluationSetsOApiRequest) GetDatasetKeys() (v []string) {
 	return p.DatasetKeys
 }
 
+var ListEvaluationSetsOApiRequest_SharedOption_DEFAULT string
+
+func (p *ListEvaluationSetsOApiRequest) GetSharedOption() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return ListEvaluationSetsOApiRequest_SharedOption_DEFAULT
+	}
+	return *p.SharedOption
+}
+
 var ListEvaluationSetsOApiRequest_PageToken_DEFAULT string
 
 func (p *ListEvaluationSetsOApiRequest) GetPageToken() (v string) {
@@ -4547,6 +4612,9 @@ func (p *ListEvaluationSetsOApiRequest) SetTagFilterRelation(val *eval_set.TagFi
 func (p *ListEvaluationSetsOApiRequest) SetDatasetKeys(val []string) {
 	p.DatasetKeys = val
 }
+func (p *ListEvaluationSetsOApiRequest) SetSharedOption(val *string) {
+	p.SharedOption = val
+}
 func (p *ListEvaluationSetsOApiRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
@@ -4568,6 +4636,7 @@ var fieldIDToName_ListEvaluationSetsOApiRequest = map[int16]string{
 	5:   "tag_names",
 	6:   "tag_filter_relation",
 	7:   "dataset_keys",
+	8:   "shared_option",
 	100: "page_token",
 	101: "page_size",
 	254: "extra",
@@ -4600,6 +4669,10 @@ func (p *ListEvaluationSetsOApiRequest) IsSetTagFilterRelation() bool {
 
 func (p *ListEvaluationSetsOApiRequest) IsSetDatasetKeys() bool {
 	return p.DatasetKeys != nil
+}
+
+func (p *ListEvaluationSetsOApiRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *ListEvaluationSetsOApiRequest) IsSetPageToken() bool {
@@ -4687,6 +4760,14 @@ func (p *ListEvaluationSetsOApiRequest) Read(iprot thrift.TProtocol) (err error)
 		case 7:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4878,6 +4959,17 @@ func (p *ListEvaluationSetsOApiRequest) ReadField7(iprot thrift.TProtocol) error
 	p.DatasetKeys = _field
 	return nil
 }
+func (p *ListEvaluationSetsOApiRequest) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *ListEvaluationSetsOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -4949,6 +5041,10 @@ func (p *ListEvaluationSetsOApiRequest) Write(oprot thrift.TProtocol) (err error
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -5143,6 +5239,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *ListEvaluationSetsOApiRequest) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SharedOption); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 func (p *ListEvaluationSetsOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageToken() {
 		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 100); err != nil {
@@ -5251,6 +5365,9 @@ func (p *ListEvaluationSetsOApiRequest) DeepEqual(ano *ListEvaluationSetsOApiReq
 	if !p.Field7DeepEqual(ano.DatasetKeys) {
 		return false
 	}
+	if !p.Field8DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.PageToken) {
 		return false
 	}
@@ -5351,6 +5468,18 @@ func (p *ListEvaluationSetsOApiRequest) Field7DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *ListEvaluationSetsOApiRequest) Field8DeepEqual(src *string) bool {
+
+	if p.SharedOption == src {
+		return true
+	} else if p.SharedOption == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SharedOption, *src) != 0 {
+		return false
 	}
 	return true
 }
@@ -7352,6 +7481,8 @@ type ListEvaluationSetVersionsOApiRequest struct {
 	EvaluationSetID *int64 `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
 	// 根据版本号模糊匹配
 	VersionLike *string `thrift:"version_like,3,optional" frugal:"3,optional,string" json:"version_like,omitempty" query:"version_like"`
+	// 跨空间共享读选项
+	SharedOption *string `thrift:"shared_option,4,optional" frugal:"4,optional,string" json:"shared_option,omitempty" query:"shared_option"`
 	// 分页大小 (0, 200]，默认为 20
 	PageSize  *int32       `thrift:"page_size,100,optional" frugal:"100,optional,i32" json:"page_size,omitempty" query:"page_size"`
 	PageToken *string      `thrift:"page_token,101,optional" frugal:"101,optional,string" json:"page_token,omitempty" query:"page_token"`
@@ -7400,6 +7531,18 @@ func (p *ListEvaluationSetVersionsOApiRequest) GetVersionLike() (v string) {
 		return ListEvaluationSetVersionsOApiRequest_VersionLike_DEFAULT
 	}
 	return *p.VersionLike
+}
+
+var ListEvaluationSetVersionsOApiRequest_SharedOption_DEFAULT string
+
+func (p *ListEvaluationSetVersionsOApiRequest) GetSharedOption() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return ListEvaluationSetVersionsOApiRequest_SharedOption_DEFAULT
+	}
+	return *p.SharedOption
 }
 
 var ListEvaluationSetVersionsOApiRequest_PageSize_DEFAULT int32
@@ -7458,6 +7601,9 @@ func (p *ListEvaluationSetVersionsOApiRequest) SetEvaluationSetID(val *int64) {
 func (p *ListEvaluationSetVersionsOApiRequest) SetVersionLike(val *string) {
 	p.VersionLike = val
 }
+func (p *ListEvaluationSetVersionsOApiRequest) SetSharedOption(val *string) {
+	p.SharedOption = val
+}
 func (p *ListEvaluationSetVersionsOApiRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
@@ -7475,6 +7621,7 @@ var fieldIDToName_ListEvaluationSetVersionsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "version_like",
+	4:   "shared_option",
 	100: "page_size",
 	101: "page_token",
 	254: "extra",
@@ -7491,6 +7638,10 @@ func (p *ListEvaluationSetVersionsOApiRequest) IsSetEvaluationSetID() bool {
 
 func (p *ListEvaluationSetVersionsOApiRequest) IsSetVersionLike() bool {
 	return p.VersionLike != nil
+}
+
+func (p *ListEvaluationSetVersionsOApiRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *ListEvaluationSetVersionsOApiRequest) IsSetPageSize() bool {
@@ -7546,6 +7697,14 @@ func (p *ListEvaluationSetVersionsOApiRequest) Read(iprot thrift.TProtocol) (err
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7645,6 +7804,17 @@ func (p *ListEvaluationSetVersionsOApiRequest) ReadField3(iprot thrift.TProtocol
 	p.VersionLike = _field
 	return nil
 }
+func (p *ListEvaluationSetVersionsOApiRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *ListEvaluationSetVersionsOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -7700,6 +7870,10 @@ func (p *ListEvaluationSetVersionsOApiRequest) Write(oprot thrift.TProtocol) (er
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -7789,6 +7963,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListEvaluationSetVersionsOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SharedOption); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *ListEvaluationSetVersionsOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageSize() {
@@ -7886,6 +8078,9 @@ func (p *ListEvaluationSetVersionsOApiRequest) DeepEqual(ano *ListEvaluationSetV
 	if !p.Field3DeepEqual(ano.VersionLike) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.PageSize) {
 		return false
 	}
@@ -7933,6 +8128,18 @@ func (p *ListEvaluationSetVersionsOApiRequest) Field3DeepEqual(src *string) bool
 		return false
 	}
 	if strings.Compare(*p.VersionLike, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluationSetVersionsOApiRequest) Field4DeepEqual(src *string) bool {
+
+	if p.SharedOption == src {
+		return true
+	} else if p.SharedOption == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SharedOption, *src) != 0 {
 		return false
 	}
 	return true
@@ -15008,11 +15215,13 @@ type ListEvaluationSetVersionItemsOApiRequest struct {
 	VersionID         *int64                      `thrift:"version_id,3,optional" frugal:"3,optional,i64" json:"version_id" query:"version_id" `
 	TagNames          []string                    `thrift:"tag_names,4,optional" frugal:"4,optional,list<string>" json:"tag_names,omitempty" query:"tag_names"`
 	TagFilterRelation *eval_set.TagFilterRelation `thrift:"tag_filter_relation,5,optional" frugal:"5,optional,string" json:"tag_filter_relation,omitempty" query:"tag_filter_relation"`
-	PageToken         *string                     `thrift:"page_token,100,optional" frugal:"100,optional,string" json:"page_token,omitempty" query:"page_token"`
-	PageSize          *int32                      `thrift:"page_size,101,optional" frugal:"101,optional,i32" json:"page_size,omitempty" query:"page_size"`
-	Filter            *string                     `thrift:"filter,201,optional" frugal:"201,optional,string" json:"filter,omitempty" query:"filter"`
-	Extra             *extra.Extra                `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base              *base.Base                  `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 跨空间共享读选项
+	SharedOption *string      `thrift:"shared_option,6,optional" frugal:"6,optional,string" json:"shared_option,omitempty" query:"shared_option"`
+	PageToken    *string      `thrift:"page_token,100,optional" frugal:"100,optional,string" json:"page_token,omitempty" query:"page_token"`
+	PageSize     *int32       `thrift:"page_size,101,optional" frugal:"101,optional,i32" json:"page_size,omitempty" query:"page_size"`
+	Filter       *string      `thrift:"filter,201,optional" frugal:"201,optional,string" json:"filter,omitempty" query:"filter"`
+	Extra        *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListEvaluationSetVersionItemsOApiRequest() *ListEvaluationSetVersionItemsOApiRequest {
@@ -15080,6 +15289,18 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) GetTagFilterRelation() (v eva
 		return ListEvaluationSetVersionItemsOApiRequest_TagFilterRelation_DEFAULT
 	}
 	return *p.TagFilterRelation
+}
+
+var ListEvaluationSetVersionItemsOApiRequest_SharedOption_DEFAULT string
+
+func (p *ListEvaluationSetVersionItemsOApiRequest) GetSharedOption() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return ListEvaluationSetVersionItemsOApiRequest_SharedOption_DEFAULT
+	}
+	return *p.SharedOption
 }
 
 var ListEvaluationSetVersionItemsOApiRequest_PageToken_DEFAULT string
@@ -15156,6 +15377,9 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) SetTagNames(val []string) {
 func (p *ListEvaluationSetVersionItemsOApiRequest) SetTagFilterRelation(val *eval_set.TagFilterRelation) {
 	p.TagFilterRelation = val
 }
+func (p *ListEvaluationSetVersionItemsOApiRequest) SetSharedOption(val *string) {
+	p.SharedOption = val
+}
 func (p *ListEvaluationSetVersionItemsOApiRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
@@ -15178,6 +15402,7 @@ var fieldIDToName_ListEvaluationSetVersionItemsOApiRequest = map[int16]string{
 	3:   "version_id",
 	4:   "tag_names",
 	5:   "tag_filter_relation",
+	6:   "shared_option",
 	100: "page_token",
 	101: "page_size",
 	201: "filter",
@@ -15203,6 +15428,10 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetTagNames() bool {
 
 func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetTagFilterRelation() bool {
 	return p.TagFilterRelation != nil
+}
+
+func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *ListEvaluationSetVersionItemsOApiRequest) IsSetPageToken() bool {
@@ -15278,6 +15507,14 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) Read(iprot thrift.TProtocol) 
 		case 5:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -15419,6 +15656,17 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField5(iprot thrift.TProt
 	p.TagFilterRelation = _field
 	return nil
 }
+func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *ListEvaluationSetVersionItemsOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -15493,6 +15741,10 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) Write(oprot thrift.TProtocol)
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -15631,6 +15883,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ListEvaluationSetVersionItemsOApiRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SharedOption); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *ListEvaluationSetVersionItemsOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageToken() {
 		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 100); err != nil {
@@ -15751,6 +16021,9 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) DeepEqual(ano *ListEvaluation
 	if !p.Field5DeepEqual(ano.TagFilterRelation) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.PageToken) {
 		return false
 	}
@@ -15826,6 +16099,18 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) Field5DeepEqual(src *eval_set
 		return false
 	}
 	if strings.Compare(*p.TagFilterRelation, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluationSetVersionItemsOApiRequest) Field6DeepEqual(src *string) bool {
+
+	if p.SharedOption == src {
+		return true
+	} else if p.SharedOption == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SharedOption, *src) != 0 {
 		return false
 	}
 	return true
@@ -18566,9 +18851,11 @@ type ReportEvalTargetInvokeResultRequest struct {
 	// set output if status=SUCCESS
 	Usage *spi.InvokeEvalTargetUsage `thrift:"usage,11,optional" frugal:"11,optional,spi.InvokeEvalTargetUsage" form:"usage" json:"usage,omitempty" query:"usage"`
 	// set error_message if status=FAILED
-	ErrorMessage *string      `thrift:"error_message,20,optional" frugal:"20,optional,string" form:"error_message" json:"error_message,omitempty" query:"error_message"`
-	Extra        *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base         *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ErrorMessage *string `thrift:"error_message,20,optional" frugal:"20,optional,string" form:"error_message" json:"error_message,omitempty" query:"error_message"`
+	// set error_code if status=FAILED，用于错误分类看板（0/未设置回退到平台默认错误码）
+	ErrorCode *int32       `thrift:"error_code,21,optional" frugal:"21,optional,i32" form:"error_code" json:"error_code,omitempty" query:"error_code"`
+	Extra     *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base      *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewReportEvalTargetInvokeResultRequest() *ReportEvalTargetInvokeResultRequest {
@@ -18662,6 +18949,18 @@ func (p *ReportEvalTargetInvokeResultRequest) GetErrorMessage() (v string) {
 	return *p.ErrorMessage
 }
 
+var ReportEvalTargetInvokeResultRequest_ErrorCode_DEFAULT int32
+
+func (p *ReportEvalTargetInvokeResultRequest) GetErrorCode() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetErrorCode() {
+		return ReportEvalTargetInvokeResultRequest_ErrorCode_DEFAULT
+	}
+	return *p.ErrorCode
+}
+
 var ReportEvalTargetInvokeResultRequest_Extra_DEFAULT *extra.Extra
 
 func (p *ReportEvalTargetInvokeResultRequest) GetExtra() (v *extra.Extra) {
@@ -18706,6 +19005,9 @@ func (p *ReportEvalTargetInvokeResultRequest) SetUsage(val *spi.InvokeEvalTarget
 func (p *ReportEvalTargetInvokeResultRequest) SetErrorMessage(val *string) {
 	p.ErrorMessage = val
 }
+func (p *ReportEvalTargetInvokeResultRequest) SetErrorCode(val *int32) {
+	p.ErrorCode = val
+}
 func (p *ReportEvalTargetInvokeResultRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -18721,6 +19023,7 @@ var fieldIDToName_ReportEvalTargetInvokeResultRequest = map[int16]string{
 	10:  "output",
 	11:  "usage",
 	20:  "error_message",
+	21:  "error_code",
 	254: "extra",
 	255: "Base",
 }
@@ -18751,6 +19054,10 @@ func (p *ReportEvalTargetInvokeResultRequest) IsSetUsage() bool {
 
 func (p *ReportEvalTargetInvokeResultRequest) IsSetErrorMessage() bool {
 	return p.ErrorMessage != nil
+}
+
+func (p *ReportEvalTargetInvokeResultRequest) IsSetErrorCode() bool {
+	return p.ErrorCode != nil
 }
 
 func (p *ReportEvalTargetInvokeResultRequest) IsSetExtra() bool {
@@ -18830,6 +19137,14 @@ func (p *ReportEvalTargetInvokeResultRequest) Read(iprot thrift.TProtocol) (err 
 		case 20:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField21(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18952,6 +19267,17 @@ func (p *ReportEvalTargetInvokeResultRequest) ReadField20(iprot thrift.TProtocol
 	p.ErrorMessage = _field
 	return nil
 }
+func (p *ReportEvalTargetInvokeResultRequest) ReadField21(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ErrorCode = _field
+	return nil
+}
 func (p *ReportEvalTargetInvokeResultRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -19001,6 +19327,10 @@ func (p *ReportEvalTargetInvokeResultRequest) Write(oprot thrift.TProtocol) (err
 		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -19155,6 +19485,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
 }
+func (p *ReportEvalTargetInvokeResultRequest) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErrorCode() {
+		if err = oprot.WriteFieldBegin("error_code", thrift.I32, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ErrorCode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
 func (p *ReportEvalTargetInvokeResultRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -19225,6 +19573,9 @@ func (p *ReportEvalTargetInvokeResultRequest) DeepEqual(ano *ReportEvalTargetInv
 		return false
 	}
 	if !p.Field20DeepEqual(ano.ErrorMessage) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.ErrorCode) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -19306,6 +19657,18 @@ func (p *ReportEvalTargetInvokeResultRequest) Field20DeepEqual(src *string) bool
 		return false
 	}
 	if strings.Compare(*p.ErrorMessage, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetInvokeResultRequest) Field21DeepEqual(src *int32) bool {
+
+	if p.ErrorCode == src {
+		return true
+	} else if p.ErrorCode == nil || src == nil {
+		return false
+	}
+	if *p.ErrorCode != *src {
 		return false
 	}
 	return true
@@ -19489,6 +19852,1040 @@ func (p *ReportEvalTargetInvokeResultResponse) DeepEqual(ano *ReportEvalTargetIn
 }
 
 func (p *ReportEvalTargetInvokeResultResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+// ReportEvalTargetStepMetricRequest 沙箱内部 step 打点上报请求
+// 沙箱只需要传 invoke_id, 服务端通过 asyncCtx 反查 experiment_id / item_id /
+// dataset_id / dataset_version_id / target_id / item_key / dataset_key 等 tag
+type ReportEvalTargetStepMetricRequest struct {
+	WorkspaceID *int64                   `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	InvokeID    *int64                   `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" json:"invoke_id" form:"invoke_id" query:"invoke_id"`
+	EventType   *EvalTargetStepEventType `thrift:"event_type,3,optional" frugal:"3,optional,EvalTargetStepEventType" form:"event_type" json:"event_type,omitempty" query:"event_type"`
+	StepName    *string                  `thrift:"step_name,4,optional" frugal:"4,optional,string" form:"step_name" json:"step_name,omitempty" query:"step_name"`
+	// 仅 FINISHED 事件携带
+	DurationMs   *int64       `thrift:"duration_ms,20,optional" frugal:"20,optional,i64" form:"duration_ms" json:"duration_ms,omitempty" query:"duration_ms"`
+	Success      *bool        `thrift:"success,21,optional" frugal:"21,optional,bool" form:"success" json:"success,omitempty" query:"success"`
+	ErrorCode    *int32       `thrift:"error_code,22,optional" frugal:"22,optional,i32" form:"error_code" json:"error_code,omitempty" query:"error_code"`
+	ErrorMessage *string      `thrift:"error_message,23,optional" frugal:"23,optional,string" form:"error_message" json:"error_message,omitempty" query:"error_message"`
+	Extra        *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewReportEvalTargetStepMetricRequest() *ReportEvalTargetStepMetricRequest {
+	return &ReportEvalTargetStepMetricRequest{}
+}
+
+func (p *ReportEvalTargetStepMetricRequest) InitDefault() {
+}
+
+var ReportEvalTargetStepMetricRequest_WorkspaceID_DEFAULT int64
+
+func (p *ReportEvalTargetStepMetricRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return ReportEvalTargetStepMetricRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var ReportEvalTargetStepMetricRequest_InvokeID_DEFAULT int64
+
+func (p *ReportEvalTargetStepMetricRequest) GetInvokeID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeID() {
+		return ReportEvalTargetStepMetricRequest_InvokeID_DEFAULT
+	}
+	return *p.InvokeID
+}
+
+var ReportEvalTargetStepMetricRequest_EventType_DEFAULT EvalTargetStepEventType
+
+func (p *ReportEvalTargetStepMetricRequest) GetEventType() (v EvalTargetStepEventType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEventType() {
+		return ReportEvalTargetStepMetricRequest_EventType_DEFAULT
+	}
+	return *p.EventType
+}
+
+var ReportEvalTargetStepMetricRequest_StepName_DEFAULT string
+
+func (p *ReportEvalTargetStepMetricRequest) GetStepName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStepName() {
+		return ReportEvalTargetStepMetricRequest_StepName_DEFAULT
+	}
+	return *p.StepName
+}
+
+var ReportEvalTargetStepMetricRequest_DurationMs_DEFAULT int64
+
+func (p *ReportEvalTargetStepMetricRequest) GetDurationMs() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDurationMs() {
+		return ReportEvalTargetStepMetricRequest_DurationMs_DEFAULT
+	}
+	return *p.DurationMs
+}
+
+var ReportEvalTargetStepMetricRequest_Success_DEFAULT bool
+
+func (p *ReportEvalTargetStepMetricRequest) GetSuccess() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ReportEvalTargetStepMetricRequest_Success_DEFAULT
+	}
+	return *p.Success
+}
+
+var ReportEvalTargetStepMetricRequest_ErrorCode_DEFAULT int32
+
+func (p *ReportEvalTargetStepMetricRequest) GetErrorCode() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetErrorCode() {
+		return ReportEvalTargetStepMetricRequest_ErrorCode_DEFAULT
+	}
+	return *p.ErrorCode
+}
+
+var ReportEvalTargetStepMetricRequest_ErrorMessage_DEFAULT string
+
+func (p *ReportEvalTargetStepMetricRequest) GetErrorMessage() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetErrorMessage() {
+		return ReportEvalTargetStepMetricRequest_ErrorMessage_DEFAULT
+	}
+	return *p.ErrorMessage
+}
+
+var ReportEvalTargetStepMetricRequest_Extra_DEFAULT *extra.Extra
+
+func (p *ReportEvalTargetStepMetricRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return ReportEvalTargetStepMetricRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
+var ReportEvalTargetStepMetricRequest_Base_DEFAULT *base.Base
+
+func (p *ReportEvalTargetStepMetricRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ReportEvalTargetStepMetricRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ReportEvalTargetStepMetricRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *ReportEvalTargetStepMetricRequest) SetInvokeID(val *int64) {
+	p.InvokeID = val
+}
+func (p *ReportEvalTargetStepMetricRequest) SetEventType(val *EvalTargetStepEventType) {
+	p.EventType = val
+}
+func (p *ReportEvalTargetStepMetricRequest) SetStepName(val *string) {
+	p.StepName = val
+}
+func (p *ReportEvalTargetStepMetricRequest) SetDurationMs(val *int64) {
+	p.DurationMs = val
+}
+func (p *ReportEvalTargetStepMetricRequest) SetSuccess(val *bool) {
+	p.Success = val
+}
+func (p *ReportEvalTargetStepMetricRequest) SetErrorCode(val *int32) {
+	p.ErrorCode = val
+}
+func (p *ReportEvalTargetStepMetricRequest) SetErrorMessage(val *string) {
+	p.ErrorMessage = val
+}
+func (p *ReportEvalTargetStepMetricRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
+func (p *ReportEvalTargetStepMetricRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ReportEvalTargetStepMetricRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "invoke_id",
+	3:   "event_type",
+	4:   "step_name",
+	20:  "duration_ms",
+	21:  "success",
+	22:  "error_code",
+	23:  "error_message",
+	254: "extra",
+	255: "Base",
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetInvokeID() bool {
+	return p.InvokeID != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetEventType() bool {
+	return p.EventType != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetStepName() bool {
+	return p.StepName != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetDurationMs() bool {
+	return p.DurationMs != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetErrorCode() bool {
+	return p.ErrorCode != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetErrorMessage() bool {
+	return p.ErrorMessage != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetExtra() bool {
+	return p.Extra != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 22:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ReportEvalTargetStepMetricRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ReportEvalTargetStepMetricRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ReportEvalTargetStepMetricRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InvokeID = _field
+	return nil
+}
+func (p *ReportEvalTargetStepMetricRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *EvalTargetStepEventType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := EvalTargetStepEventType(v)
+		_field = &tmp
+	}
+	p.EventType = _field
+	return nil
+}
+func (p *ReportEvalTargetStepMetricRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StepName = _field
+	return nil
+}
+func (p *ReportEvalTargetStepMetricRequest) ReadField20(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DurationMs = _field
+	return nil
+}
+func (p *ReportEvalTargetStepMetricRequest) ReadField21(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Success = _field
+	return nil
+}
+func (p *ReportEvalTargetStepMetricRequest) ReadField22(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ErrorCode = _field
+	return nil
+}
+func (p *ReportEvalTargetStepMetricRequest) ReadField23(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ErrorMessage = _field
+	return nil
+}
+func (p *ReportEvalTargetStepMetricRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
+func (p *ReportEvalTargetStepMetricRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ReportEvalTargetStepMetricRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ReportEvalTargetStepMetricRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ReportEvalTargetStepMetricRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepMetricRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeID() {
+		if err = oprot.WriteFieldBegin("invoke_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InvokeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepMetricRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEventType() {
+		if err = oprot.WriteFieldBegin("event_type", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.EventType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepMetricRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStepName() {
+		if err = oprot.WriteFieldBegin("step_name", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.StepName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepMetricRequest) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDurationMs() {
+		if err = oprot.WriteFieldBegin("duration_ms", thrift.I64, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DurationMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepMetricRequest) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.BOOL, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Success); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepMetricRequest) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErrorCode() {
+		if err = oprot.WriteFieldBegin("error_code", thrift.I32, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ErrorCode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepMetricRequest) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErrorMessage() {
+		if err = oprot.WriteFieldBegin("error_message", thrift.STRING, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ErrorMessage); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepMetricRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepMetricRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ReportEvalTargetStepMetricRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ReportEvalTargetStepMetricRequest(%+v)", *p)
+
+}
+
+func (p *ReportEvalTargetStepMetricRequest) DeepEqual(ano *ReportEvalTargetStepMetricRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.InvokeID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.EventType) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.StepName) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.DurationMs) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.Success) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.ErrorCode) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.ErrorMessage) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ReportEvalTargetStepMetricRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepMetricRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.InvokeID == src {
+		return true
+	} else if p.InvokeID == nil || src == nil {
+		return false
+	}
+	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepMetricRequest) Field3DeepEqual(src *EvalTargetStepEventType) bool {
+
+	if p.EventType == src {
+		return true
+	} else if p.EventType == nil || src == nil {
+		return false
+	}
+	if *p.EventType != *src {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepMetricRequest) Field4DeepEqual(src *string) bool {
+
+	if p.StepName == src {
+		return true
+	} else if p.StepName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.StepName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepMetricRequest) Field20DeepEqual(src *int64) bool {
+
+	if p.DurationMs == src {
+		return true
+	} else if p.DurationMs == nil || src == nil {
+		return false
+	}
+	if *p.DurationMs != *src {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepMetricRequest) Field21DeepEqual(src *bool) bool {
+
+	if p.Success == src {
+		return true
+	} else if p.Success == nil || src == nil {
+		return false
+	}
+	if *p.Success != *src {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepMetricRequest) Field22DeepEqual(src *int32) bool {
+
+	if p.ErrorCode == src {
+		return true
+	} else if p.ErrorCode == nil || src == nil {
+		return false
+	}
+	if *p.ErrorCode != *src {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepMetricRequest) Field23DeepEqual(src *string) bool {
+
+	if p.ErrorMessage == src {
+		return true
+	} else if p.ErrorMessage == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ErrorMessage, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepMetricRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepMetricRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ReportEvalTargetStepMetricResponse struct {
+	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewReportEvalTargetStepMetricResponse() *ReportEvalTargetStepMetricResponse {
+	return &ReportEvalTargetStepMetricResponse{}
+}
+
+func (p *ReportEvalTargetStepMetricResponse) InitDefault() {
+}
+
+var ReportEvalTargetStepMetricResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ReportEvalTargetStepMetricResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ReportEvalTargetStepMetricResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ReportEvalTargetStepMetricResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ReportEvalTargetStepMetricResponse = map[int16]string{
+	255: "BaseResp",
+}
+
+func (p *ReportEvalTargetStepMetricResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ReportEvalTargetStepMetricResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ReportEvalTargetStepMetricResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ReportEvalTargetStepMetricResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ReportEvalTargetStepMetricResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ReportEvalTargetStepMetricResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ReportEvalTargetStepMetricResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ReportEvalTargetStepMetricResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ReportEvalTargetStepMetricResponse(%+v)", *p)
+
+}
+
+func (p *ReportEvalTargetStepMetricResponse) DeepEqual(ano *ReportEvalTargetStepMetricResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ReportEvalTargetStepMetricResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -23036,6 +24433,1453 @@ func (p *GetEvalTargetRecordOpenAPIData) Field1DeepEqual(src *eval_target.EvalTa
 	return true
 }
 
+// 查询可用的来源评测对象
+type ListEvalTargetsOApiRequest struct {
+	WorkspaceID    *int64                       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	EvalTargetType *eval_target.EvalTargetType  `thrift:"eval_target_type,2,optional" frugal:"2,optional,string" form:"eval_target_type" json:"eval_target_type,omitempty"`
+	SearchName     *string                      `thrift:"search_name,3,optional" frugal:"3,optional,string" form:"search_name" json:"search_name,omitempty"`
+	SharedOption   *common.SharedResourceOption `thrift:"shared_option,4,optional" frugal:"4,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty"`
+	PageToken      *string                      `thrift:"page_token,100,optional" frugal:"100,optional,string" form:"page_token" json:"page_token,omitempty"`
+	PageSize       *int32                       `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	Extra          *extra.Extra                 `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base           *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewListEvalTargetsOApiRequest() *ListEvalTargetsOApiRequest {
+	return &ListEvalTargetsOApiRequest{}
+}
+
+func (p *ListEvalTargetsOApiRequest) InitDefault() {
+}
+
+var ListEvalTargetsOApiRequest_WorkspaceID_DEFAULT int64
+
+func (p *ListEvalTargetsOApiRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return ListEvalTargetsOApiRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var ListEvalTargetsOApiRequest_EvalTargetType_DEFAULT eval_target.EvalTargetType
+
+func (p *ListEvalTargetsOApiRequest) GetEvalTargetType() (v eval_target.EvalTargetType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalTargetType() {
+		return ListEvalTargetsOApiRequest_EvalTargetType_DEFAULT
+	}
+	return *p.EvalTargetType
+}
+
+var ListEvalTargetsOApiRequest_SearchName_DEFAULT string
+
+func (p *ListEvalTargetsOApiRequest) GetSearchName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSearchName() {
+		return ListEvalTargetsOApiRequest_SearchName_DEFAULT
+	}
+	return *p.SearchName
+}
+
+var ListEvalTargetsOApiRequest_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *ListEvalTargetsOApiRequest) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return ListEvalTargetsOApiRequest_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
+
+var ListEvalTargetsOApiRequest_PageToken_DEFAULT string
+
+func (p *ListEvalTargetsOApiRequest) GetPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageToken() {
+		return ListEvalTargetsOApiRequest_PageToken_DEFAULT
+	}
+	return *p.PageToken
+}
+
+var ListEvalTargetsOApiRequest_PageSize_DEFAULT int32
+
+func (p *ListEvalTargetsOApiRequest) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return ListEvalTargetsOApiRequest_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
+var ListEvalTargetsOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *ListEvalTargetsOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return ListEvalTargetsOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
+var ListEvalTargetsOApiRequest_Base_DEFAULT *base.Base
+
+func (p *ListEvalTargetsOApiRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ListEvalTargetsOApiRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ListEvalTargetsOApiRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *ListEvalTargetsOApiRequest) SetEvalTargetType(val *eval_target.EvalTargetType) {
+	p.EvalTargetType = val
+}
+func (p *ListEvalTargetsOApiRequest) SetSearchName(val *string) {
+	p.SearchName = val
+}
+func (p *ListEvalTargetsOApiRequest) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
+func (p *ListEvalTargetsOApiRequest) SetPageToken(val *string) {
+	p.PageToken = val
+}
+func (p *ListEvalTargetsOApiRequest) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+func (p *ListEvalTargetsOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
+func (p *ListEvalTargetsOApiRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ListEvalTargetsOApiRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "eval_target_type",
+	3:   "search_name",
+	4:   "shared_option",
+	100: "page_token",
+	101: "page_size",
+	254: "extra",
+	255: "Base",
+}
+
+func (p *ListEvalTargetsOApiRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *ListEvalTargetsOApiRequest) IsSetEvalTargetType() bool {
+	return p.EvalTargetType != nil
+}
+
+func (p *ListEvalTargetsOApiRequest) IsSetSearchName() bool {
+	return p.SearchName != nil
+}
+
+func (p *ListEvalTargetsOApiRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
+}
+
+func (p *ListEvalTargetsOApiRequest) IsSetPageToken() bool {
+	return p.PageToken != nil
+}
+
+func (p *ListEvalTargetsOApiRequest) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListEvalTargetsOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
+}
+
+func (p *ListEvalTargetsOApiRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ListEvalTargetsOApiRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvalTargetsOApiRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListEvalTargetsOApiRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *eval_target.EvalTargetType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EvalTargetType = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SearchName = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiRequest) ReadField4(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiRequest) ReadField100(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageToken = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiRequest) ReadField101(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ListEvalTargetsOApiRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListEvalTargetsOApiRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListEvalTargetsOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalTargetType() {
+		if err = oprot.WriteFieldBegin("eval_target_type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.EvalTargetType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSearchName() {
+		if err = oprot.WriteFieldBegin("search_name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SearchName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageToken() {
+		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiRequest) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListEvalTargetsOApiRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListEvalTargetsOApiRequest(%+v)", *p)
+
+}
+
+func (p *ListEvalTargetsOApiRequest) DeepEqual(ano *ListEvalTargetsOApiRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvalTargetType) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SearchName) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.SharedOption) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.PageToken) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.PageSize) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ListEvalTargetsOApiRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiRequest) Field2DeepEqual(src *eval_target.EvalTargetType) bool {
+
+	if p.EvalTargetType == src {
+		return true
+	} else if p.EvalTargetType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.EvalTargetType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiRequest) Field3DeepEqual(src *string) bool {
+
+	if p.SearchName == src {
+		return true
+	} else if p.SearchName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SearchName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiRequest) Field4DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiRequest) Field100DeepEqual(src *string) bool {
+
+	if p.PageToken == src {
+		return true
+	} else if p.PageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiRequest) Field101DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListEvalTargetsOApiResponse struct {
+	Code     *int32                      `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
+	Msg      *string                     `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
+	Data     *ListEvalTargetsOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,ListEvalTargetsOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
+	BaseResp *base.BaseResp              `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewListEvalTargetsOApiResponse() *ListEvalTargetsOApiResponse {
+	return &ListEvalTargetsOApiResponse{}
+}
+
+func (p *ListEvalTargetsOApiResponse) InitDefault() {
+}
+
+var ListEvalTargetsOApiResponse_Code_DEFAULT int32
+
+func (p *ListEvalTargetsOApiResponse) GetCode() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCode() {
+		return ListEvalTargetsOApiResponse_Code_DEFAULT
+	}
+	return *p.Code
+}
+
+var ListEvalTargetsOApiResponse_Msg_DEFAULT string
+
+func (p *ListEvalTargetsOApiResponse) GetMsg() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMsg() {
+		return ListEvalTargetsOApiResponse_Msg_DEFAULT
+	}
+	return *p.Msg
+}
+
+var ListEvalTargetsOApiResponse_Data_DEFAULT *ListEvalTargetsOpenAPIData
+
+func (p *ListEvalTargetsOApiResponse) GetData() (v *ListEvalTargetsOpenAPIData) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetData() {
+		return ListEvalTargetsOApiResponse_Data_DEFAULT
+	}
+	return p.Data
+}
+
+var ListEvalTargetsOApiResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ListEvalTargetsOApiResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ListEvalTargetsOApiResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ListEvalTargetsOApiResponse) SetCode(val *int32) {
+	p.Code = val
+}
+func (p *ListEvalTargetsOApiResponse) SetMsg(val *string) {
+	p.Msg = val
+}
+func (p *ListEvalTargetsOApiResponse) SetData(val *ListEvalTargetsOpenAPIData) {
+	p.Data = val
+}
+func (p *ListEvalTargetsOApiResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ListEvalTargetsOApiResponse = map[int16]string{
+	1:   "code",
+	2:   "msg",
+	3:   "data",
+	255: "BaseResp",
+}
+
+func (p *ListEvalTargetsOApiResponse) IsSetCode() bool {
+	return p.Code != nil
+}
+
+func (p *ListEvalTargetsOApiResponse) IsSetMsg() bool {
+	return p.Msg != nil
+}
+
+func (p *ListEvalTargetsOApiResponse) IsSetData() bool {
+	return p.Data != nil
+}
+
+func (p *ListEvalTargetsOApiResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ListEvalTargetsOApiResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvalTargetsOApiResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListEvalTargetsOApiResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Code = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Msg = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiResponse) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewListEvalTargetsOpenAPIData()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Data = _field
+	return nil
+}
+func (p *ListEvalTargetsOApiResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ListEvalTargetsOApiResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListEvalTargetsOApiResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListEvalTargetsOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCode() {
+		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Code); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMsg() {
+		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Msg); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetData() {
+		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Data.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListEvalTargetsOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListEvalTargetsOApiResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListEvalTargetsOApiResponse(%+v)", *p)
+
+}
+
+func (p *ListEvalTargetsOApiResponse) DeepEqual(ano *ListEvalTargetsOApiResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Code) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Msg) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Data) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ListEvalTargetsOApiResponse) Field1DeepEqual(src *int32) bool {
+
+	if p.Code == src {
+		return true
+	} else if p.Code == nil || src == nil {
+		return false
+	}
+	if *p.Code != *src {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiResponse) Field2DeepEqual(src *string) bool {
+
+	if p.Msg == src {
+		return true
+	} else if p.Msg == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Msg, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiResponse) Field3DeepEqual(src *ListEvalTargetsOpenAPIData) bool {
+
+	if !p.Data.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListEvalTargetsOpenAPIData struct {
+	EvalTargets   []*eval_target.EvalTarget `thrift:"eval_targets,1,optional" frugal:"1,optional,list<eval_target.EvalTarget>" form:"eval_targets" json:"eval_targets,omitempty"`
+	HasMore       *bool                     `thrift:"has_more,100,optional" frugal:"100,optional,bool" form:"has_more" json:"has_more,omitempty"`
+	NextPageToken *string                   `thrift:"next_page_token,101,optional" frugal:"101,optional,string" form:"next_page_token" json:"next_page_token,omitempty"`
+}
+
+func NewListEvalTargetsOpenAPIData() *ListEvalTargetsOpenAPIData {
+	return &ListEvalTargetsOpenAPIData{}
+}
+
+func (p *ListEvalTargetsOpenAPIData) InitDefault() {
+}
+
+var ListEvalTargetsOpenAPIData_EvalTargets_DEFAULT []*eval_target.EvalTarget
+
+func (p *ListEvalTargetsOpenAPIData) GetEvalTargets() (v []*eval_target.EvalTarget) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalTargets() {
+		return ListEvalTargetsOpenAPIData_EvalTargets_DEFAULT
+	}
+	return p.EvalTargets
+}
+
+var ListEvalTargetsOpenAPIData_HasMore_DEFAULT bool
+
+func (p *ListEvalTargetsOpenAPIData) GetHasMore() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetHasMore() {
+		return ListEvalTargetsOpenAPIData_HasMore_DEFAULT
+	}
+	return *p.HasMore
+}
+
+var ListEvalTargetsOpenAPIData_NextPageToken_DEFAULT string
+
+func (p *ListEvalTargetsOpenAPIData) GetNextPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNextPageToken() {
+		return ListEvalTargetsOpenAPIData_NextPageToken_DEFAULT
+	}
+	return *p.NextPageToken
+}
+func (p *ListEvalTargetsOpenAPIData) SetEvalTargets(val []*eval_target.EvalTarget) {
+	p.EvalTargets = val
+}
+func (p *ListEvalTargetsOpenAPIData) SetHasMore(val *bool) {
+	p.HasMore = val
+}
+func (p *ListEvalTargetsOpenAPIData) SetNextPageToken(val *string) {
+	p.NextPageToken = val
+}
+
+var fieldIDToName_ListEvalTargetsOpenAPIData = map[int16]string{
+	1:   "eval_targets",
+	100: "has_more",
+	101: "next_page_token",
+}
+
+func (p *ListEvalTargetsOpenAPIData) IsSetEvalTargets() bool {
+	return p.EvalTargets != nil
+}
+
+func (p *ListEvalTargetsOpenAPIData) IsSetHasMore() bool {
+	return p.HasMore != nil
+}
+
+func (p *ListEvalTargetsOpenAPIData) IsSetNextPageToken() bool {
+	return p.NextPageToken != nil
+}
+
+func (p *ListEvalTargetsOpenAPIData) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListEvalTargetsOpenAPIData[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListEvalTargetsOpenAPIData) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*eval_target.EvalTarget, 0, size)
+	values := make([]eval_target.EvalTarget, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvalTargets = _field
+	return nil
+}
+func (p *ListEvalTargetsOpenAPIData) ReadField100(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.HasMore = _field
+	return nil
+}
+func (p *ListEvalTargetsOpenAPIData) ReadField101(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NextPageToken = _field
+	return nil
+}
+
+func (p *ListEvalTargetsOpenAPIData) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListEvalTargetsOpenAPIData"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListEvalTargetsOpenAPIData) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalTargets() {
+		if err = oprot.WriteFieldBegin("eval_targets", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.EvalTargets)); err != nil {
+			return err
+		}
+		for _, v := range p.EvalTargets {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListEvalTargetsOpenAPIData) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHasMore() {
+		if err = oprot.WriteFieldBegin("has_more", thrift.BOOL, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.HasMore); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
+func (p *ListEvalTargetsOpenAPIData) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNextPageToken() {
+		if err = oprot.WriteFieldBegin("next_page_token", thrift.STRING, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.NextPageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
+
+func (p *ListEvalTargetsOpenAPIData) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListEvalTargetsOpenAPIData(%+v)", *p)
+
+}
+
+func (p *ListEvalTargetsOpenAPIData) DeepEqual(ano *ListEvalTargetsOpenAPIData) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.EvalTargets) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.HasMore) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.NextPageToken) {
+		return false
+	}
+	return true
+}
+
+func (p *ListEvalTargetsOpenAPIData) Field1DeepEqual(src []*eval_target.EvalTarget) bool {
+
+	if len(p.EvalTargets) != len(src) {
+		return false
+	}
+	for i, v := range p.EvalTargets {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListEvalTargetsOpenAPIData) Field100DeepEqual(src *bool) bool {
+
+	if p.HasMore == src {
+		return true
+	} else if p.HasMore == nil || src == nil {
+		return false
+	}
+	if *p.HasMore != *src {
+		return false
+	}
+	return true
+}
+func (p *ListEvalTargetsOpenAPIData) Field101DeepEqual(src *string) bool {
+
+	if p.NextPageToken == src {
+		return true
+	} else if p.NextPageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.NextPageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type ImportEvaluationSetOpenAPIData struct {
 	JobID *int64 `thrift:"job_id,1,optional" frugal:"1,optional,i64" json:"job_id" form:"job_id" query:"job_id"`
 }
@@ -26559,6 +29403,8 @@ func (p *SubmitExperimentOApiRequest) Field255DeepEqual(src *base.Base) bool {
 type SubmitExperimentEvalSetParam struct {
 	EvalSetID *int64  `thrift:"eval_set_id,1,optional" frugal:"1,optional,i64" json:"eval_set_id" form:"eval_set_id" query:"eval_set_id"`
 	Version   *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	// 跨空间共享评测集来源
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,3,optional" frugal:"3,optional,common.SharedResourceOption" json:"shared_option" form:"shared_option" query:"shared_option"`
 }
 
 func NewSubmitExperimentEvalSetParam() *SubmitExperimentEvalSetParam {
@@ -26591,16 +29437,32 @@ func (p *SubmitExperimentEvalSetParam) GetVersion() (v string) {
 	}
 	return *p.Version
 }
+
+var SubmitExperimentEvalSetParam_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *SubmitExperimentEvalSetParam) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return SubmitExperimentEvalSetParam_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
 func (p *SubmitExperimentEvalSetParam) SetEvalSetID(val *int64) {
 	p.EvalSetID = val
 }
 func (p *SubmitExperimentEvalSetParam) SetVersion(val *string) {
 	p.Version = val
 }
+func (p *SubmitExperimentEvalSetParam) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 
 var fieldIDToName_SubmitExperimentEvalSetParam = map[int16]string{
 	1: "eval_set_id",
 	2: "version",
+	3: "shared_option",
 }
 
 func (p *SubmitExperimentEvalSetParam) IsSetEvalSetID() bool {
@@ -26609,6 +29471,10 @@ func (p *SubmitExperimentEvalSetParam) IsSetEvalSetID() bool {
 
 func (p *SubmitExperimentEvalSetParam) IsSetVersion() bool {
 	return p.Version != nil
+}
+
+func (p *SubmitExperimentEvalSetParam) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *SubmitExperimentEvalSetParam) Read(iprot thrift.TProtocol) (err error) {
@@ -26640,6 +29506,14 @@ func (p *SubmitExperimentEvalSetParam) Read(iprot thrift.TProtocol) (err error) 
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -26696,6 +29570,14 @@ func (p *SubmitExperimentEvalSetParam) ReadField2(iprot thrift.TProtocol) error 
 	p.Version = _field
 	return nil
 }
+func (p *SubmitExperimentEvalSetParam) ReadField3(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 
 func (p *SubmitExperimentEvalSetParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -26709,6 +29591,10 @@ func (p *SubmitExperimentEvalSetParam) Write(oprot thrift.TProtocol) (err error)
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -26765,6 +29651,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *SubmitExperimentEvalSetParam) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *SubmitExperimentEvalSetParam) String() string {
 	if p == nil {
@@ -26784,6 +29688,9 @@ func (p *SubmitExperimentEvalSetParam) DeepEqual(ano *SubmitExperimentEvalSetPar
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SharedOption) {
 		return false
 	}
 	return true
@@ -26809,6 +29716,13 @@ func (p *SubmitExperimentEvalSetParam) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvalSetParam) Field3DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -27160,6 +30074,8 @@ type SubmitExperimentEvalTargetParam struct {
 	AgentConnection *eval_target.AgentConnection `thrift:"agent_connection,10,optional" frugal:"10,optional,eval_target.AgentConnection" form:"agent_connection" json:"agent_connection,omitempty" query:"agent_connection"`
 	// type=17(sandbox_agent)时需填写，SandboxAgent 评测对象配置
 	SandboxAgent *eval_target.SandboxAgent `thrift:"sandbox_agent,11,optional" frugal:"11,optional,eval_target.SandboxAgent" form:"sandbox_agent" json:"sandbox_agent,omitempty" query:"sandbox_agent"`
+	// 跨空间共享评测对象来源
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,12,optional" frugal:"12,optional,common.SharedResourceOption" json:"shared_option" form:"shared_option" query:"shared_option"`
 }
 
 func NewSubmitExperimentEvalTargetParam() *SubmitExperimentEvalTargetParam {
@@ -27300,6 +30216,18 @@ func (p *SubmitExperimentEvalTargetParam) GetSandboxAgent() (v *eval_target.Sand
 	}
 	return p.SandboxAgent
 }
+
+var SubmitExperimentEvalTargetParam_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *SubmitExperimentEvalTargetParam) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return SubmitExperimentEvalTargetParam_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
 func (p *SubmitExperimentEvalTargetParam) SetSourceTargetID(val *string) {
 	p.SourceTargetID = val
 }
@@ -27333,6 +30261,9 @@ func (p *SubmitExperimentEvalTargetParam) SetAgentConnection(val *eval_target.Ag
 func (p *SubmitExperimentEvalTargetParam) SetSandboxAgent(val *eval_target.SandboxAgent) {
 	p.SandboxAgent = val
 }
+func (p *SubmitExperimentEvalTargetParam) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 
 var fieldIDToName_SubmitExperimentEvalTargetParam = map[int16]string{
 	1:  "source_target_id",
@@ -27346,6 +30277,7 @@ var fieldIDToName_SubmitExperimentEvalTargetParam = map[int16]string{
 	9:  "cluster",
 	10: "agent_connection",
 	11: "sandbox_agent",
+	12: "shared_option",
 }
 
 func (p *SubmitExperimentEvalTargetParam) IsSetSourceTargetID() bool {
@@ -27390,6 +30322,10 @@ func (p *SubmitExperimentEvalTargetParam) IsSetAgentConnection() bool {
 
 func (p *SubmitExperimentEvalTargetParam) IsSetSandboxAgent() bool {
 	return p.SandboxAgent != nil
+}
+
+func (p *SubmitExperimentEvalTargetParam) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *SubmitExperimentEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
@@ -27493,6 +30429,14 @@ func (p *SubmitExperimentEvalTargetParam) Read(iprot thrift.TProtocol) (err erro
 		case 11:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -27639,6 +30583,14 @@ func (p *SubmitExperimentEvalTargetParam) ReadField11(iprot thrift.TProtocol) er
 	p.SandboxAgent = _field
 	return nil
 }
+func (p *SubmitExperimentEvalTargetParam) ReadField12(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 
 func (p *SubmitExperimentEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -27688,6 +30640,10 @@ func (p *SubmitExperimentEvalTargetParam) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -27906,6 +30862,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *SubmitExperimentEvalTargetParam) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 
 func (p *SubmitExperimentEvalTargetParam) String() string {
 	if p == nil {
@@ -27952,6 +30926,9 @@ func (p *SubmitExperimentEvalTargetParam) DeepEqual(ano *SubmitExperimentEvalTar
 		return false
 	}
 	if !p.Field11DeepEqual(ano.SandboxAgent) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.SharedOption) {
 		return false
 	}
 	return true
@@ -28070,6 +31047,13 @@ func (p *SubmitExperimentEvalTargetParam) Field10DeepEqual(src *eval_target.Agen
 func (p *SubmitExperimentEvalTargetParam) Field11DeepEqual(src *eval_target.SandboxAgent) bool {
 
 	if !p.SandboxAgent.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvalTargetParam) Field12DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -50180,6 +53164,2010 @@ func (p *RunEvaluatorOpenAPIData) Field1DeepEqual(src *evaluator.EvaluatorRecord
 	return true
 }
 
+// 3.10.2 异步执行评估器
+type AsyncRunEvaluatorOApiRequest struct {
+	EvaluatorVersionID *int64                        `thrift:"evaluator_version_id,1,optional" frugal:"1,optional,i64" json:"evaluator_version_id" path:"evaluator_version_id" `
+	WorkspaceID        *int64                        `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
+	InputData          *evaluator.EvaluatorInputData `thrift:"input_data,3,optional" frugal:"3,optional,evaluator.EvaluatorInputData" form:"input_data" json:"input_data,omitempty"`
+	EvaluatorRunConf   *evaluator.EvaluatorRunConfig `thrift:"evaluator_run_conf,4,optional" frugal:"4,optional,evaluator.EvaluatorRunConfig" form:"evaluator_run_conf" json:"evaluator_run_conf,omitempty"`
+	CallbackURL        *string                       `thrift:"callback_url,5,optional" frugal:"5,optional,string" form:"callback_url" json:"callback_url,omitempty"`
+	Ext                map[string]string             `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Extra              *extra.Extra                  `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base               *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewAsyncRunEvaluatorOApiRequest() *AsyncRunEvaluatorOApiRequest {
+	return &AsyncRunEvaluatorOApiRequest{}
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) InitDefault() {
+}
+
+var AsyncRunEvaluatorOApiRequest_EvaluatorVersionID_DEFAULT int64
+
+func (p *AsyncRunEvaluatorOApiRequest) GetEvaluatorVersionID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorVersionID() {
+		return AsyncRunEvaluatorOApiRequest_EvaluatorVersionID_DEFAULT
+	}
+	return *p.EvaluatorVersionID
+}
+
+var AsyncRunEvaluatorOApiRequest_WorkspaceID_DEFAULT int64
+
+func (p *AsyncRunEvaluatorOApiRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return AsyncRunEvaluatorOApiRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var AsyncRunEvaluatorOApiRequest_InputData_DEFAULT *evaluator.EvaluatorInputData
+
+func (p *AsyncRunEvaluatorOApiRequest) GetInputData() (v *evaluator.EvaluatorInputData) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInputData() {
+		return AsyncRunEvaluatorOApiRequest_InputData_DEFAULT
+	}
+	return p.InputData
+}
+
+var AsyncRunEvaluatorOApiRequest_EvaluatorRunConf_DEFAULT *evaluator.EvaluatorRunConfig
+
+func (p *AsyncRunEvaluatorOApiRequest) GetEvaluatorRunConf() (v *evaluator.EvaluatorRunConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorRunConf() {
+		return AsyncRunEvaluatorOApiRequest_EvaluatorRunConf_DEFAULT
+	}
+	return p.EvaluatorRunConf
+}
+
+var AsyncRunEvaluatorOApiRequest_CallbackURL_DEFAULT string
+
+func (p *AsyncRunEvaluatorOApiRequest) GetCallbackURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCallbackURL() {
+		return AsyncRunEvaluatorOApiRequest_CallbackURL_DEFAULT
+	}
+	return *p.CallbackURL
+}
+
+var AsyncRunEvaluatorOApiRequest_Ext_DEFAULT map[string]string
+
+func (p *AsyncRunEvaluatorOApiRequest) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return AsyncRunEvaluatorOApiRequest_Ext_DEFAULT
+	}
+	return p.Ext
+}
+
+var AsyncRunEvaluatorOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *AsyncRunEvaluatorOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return AsyncRunEvaluatorOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
+var AsyncRunEvaluatorOApiRequest_Base_DEFAULT *base.Base
+
+func (p *AsyncRunEvaluatorOApiRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return AsyncRunEvaluatorOApiRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *AsyncRunEvaluatorOApiRequest) SetEvaluatorVersionID(val *int64) {
+	p.EvaluatorVersionID = val
+}
+func (p *AsyncRunEvaluatorOApiRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *AsyncRunEvaluatorOApiRequest) SetInputData(val *evaluator.EvaluatorInputData) {
+	p.InputData = val
+}
+func (p *AsyncRunEvaluatorOApiRequest) SetEvaluatorRunConf(val *evaluator.EvaluatorRunConfig) {
+	p.EvaluatorRunConf = val
+}
+func (p *AsyncRunEvaluatorOApiRequest) SetCallbackURL(val *string) {
+	p.CallbackURL = val
+}
+func (p *AsyncRunEvaluatorOApiRequest) SetExt(val map[string]string) {
+	p.Ext = val
+}
+func (p *AsyncRunEvaluatorOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
+func (p *AsyncRunEvaluatorOApiRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_AsyncRunEvaluatorOApiRequest = map[int16]string{
+	1:   "evaluator_version_id",
+	2:   "workspace_id",
+	3:   "input_data",
+	4:   "evaluator_run_conf",
+	5:   "callback_url",
+	100: "ext",
+	254: "extra",
+	255: "Base",
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetEvaluatorVersionID() bool {
+	return p.EvaluatorVersionID != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetInputData() bool {
+	return p.InputData != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetEvaluatorRunConf() bool {
+	return p.EvaluatorRunConf != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetCallbackURL() bool {
+	return p.CallbackURL != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetExt() bool {
+	return p.Ext != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AsyncRunEvaluatorOApiRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EvaluatorVersionID = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiRequest) ReadField3(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorInputData()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.InputData = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiRequest) ReadField4(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorRunConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvaluatorRunConf = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CallbackURL = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiRequest) ReadField100(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AsyncRunEvaluatorOApiRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorVersionID() {
+		if err = oprot.WriteFieldBegin("evaluator_version_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EvaluatorVersionID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInputData() {
+		if err = oprot.WriteFieldBegin("input_data", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.InputData.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorRunConf() {
+		if err = oprot.WriteFieldBegin("evaluator_run_conf", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvaluatorRunConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCallbackURL() {
+		if err = oprot.WriteFieldBegin("callback_url", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CallbackURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AsyncRunEvaluatorOApiRequest(%+v)", *p)
+
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) DeepEqual(ano *AsyncRunEvaluatorOApiRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.EvaluatorVersionID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.InputData) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EvaluatorRunConf) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.CallbackURL) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.Ext) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.EvaluatorVersionID == src {
+		return true
+	} else if p.EvaluatorVersionID == nil || src == nil {
+		return false
+	}
+	if *p.EvaluatorVersionID != *src {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiRequest) Field3DeepEqual(src *evaluator.EvaluatorInputData) bool {
+
+	if !p.InputData.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiRequest) Field4DeepEqual(src *evaluator.EvaluatorRunConfig) bool {
+
+	if !p.EvaluatorRunConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiRequest) Field5DeepEqual(src *string) bool {
+
+	if p.CallbackURL == src {
+		return true
+	} else if p.CallbackURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CallbackURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiRequest) Field100DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type AsyncRunEvaluatorOApiResponse struct {
+	Code     *int32                        `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
+	Msg      *string                       `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
+	Data     *AsyncRunEvaluatorOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,AsyncRunEvaluatorOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
+	BaseResp *base.BaseResp                `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewAsyncRunEvaluatorOApiResponse() *AsyncRunEvaluatorOApiResponse {
+	return &AsyncRunEvaluatorOApiResponse{}
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) InitDefault() {
+}
+
+var AsyncRunEvaluatorOApiResponse_Code_DEFAULT int32
+
+func (p *AsyncRunEvaluatorOApiResponse) GetCode() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCode() {
+		return AsyncRunEvaluatorOApiResponse_Code_DEFAULT
+	}
+	return *p.Code
+}
+
+var AsyncRunEvaluatorOApiResponse_Msg_DEFAULT string
+
+func (p *AsyncRunEvaluatorOApiResponse) GetMsg() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMsg() {
+		return AsyncRunEvaluatorOApiResponse_Msg_DEFAULT
+	}
+	return *p.Msg
+}
+
+var AsyncRunEvaluatorOApiResponse_Data_DEFAULT *AsyncRunEvaluatorOpenAPIData
+
+func (p *AsyncRunEvaluatorOApiResponse) GetData() (v *AsyncRunEvaluatorOpenAPIData) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetData() {
+		return AsyncRunEvaluatorOApiResponse_Data_DEFAULT
+	}
+	return p.Data
+}
+
+var AsyncRunEvaluatorOApiResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *AsyncRunEvaluatorOApiResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return AsyncRunEvaluatorOApiResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *AsyncRunEvaluatorOApiResponse) SetCode(val *int32) {
+	p.Code = val
+}
+func (p *AsyncRunEvaluatorOApiResponse) SetMsg(val *string) {
+	p.Msg = val
+}
+func (p *AsyncRunEvaluatorOApiResponse) SetData(val *AsyncRunEvaluatorOpenAPIData) {
+	p.Data = val
+}
+func (p *AsyncRunEvaluatorOApiResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_AsyncRunEvaluatorOApiResponse = map[int16]string{
+	1:   "code",
+	2:   "msg",
+	3:   "data",
+	255: "BaseResp",
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) IsSetCode() bool {
+	return p.Code != nil
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) IsSetMsg() bool {
+	return p.Msg != nil
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) IsSetData() bool {
+	return p.Data != nil
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AsyncRunEvaluatorOApiResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Code = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Msg = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiResponse) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewAsyncRunEvaluatorOpenAPIData()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Data = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOApiResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AsyncRunEvaluatorOApiResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCode() {
+		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Code); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMsg() {
+		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Msg); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetData() {
+		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Data.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AsyncRunEvaluatorOApiResponse(%+v)", *p)
+
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) DeepEqual(ano *AsyncRunEvaluatorOApiResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Code) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Msg) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Data) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *AsyncRunEvaluatorOApiResponse) Field1DeepEqual(src *int32) bool {
+
+	if p.Code == src {
+		return true
+	} else if p.Code == nil || src == nil {
+		return false
+	}
+	if *p.Code != *src {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiResponse) Field2DeepEqual(src *string) bool {
+
+	if p.Msg == src {
+		return true
+	} else if p.Msg == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Msg, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiResponse) Field3DeepEqual(src *AsyncRunEvaluatorOpenAPIData) bool {
+
+	if !p.Data.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type AsyncRunEvaluatorOpenAPIData struct {
+	InvokeID *int64 `thrift:"invoke_id,1,optional" frugal:"1,optional,i64" json:"invoke_id" form:"invoke_id" `
+	// status = AsyncInvoking
+	Record *evaluator.EvaluatorRecord `thrift:"record,2,optional" frugal:"2,optional,evaluator.EvaluatorRecord" form:"record" json:"record,omitempty"`
+}
+
+func NewAsyncRunEvaluatorOpenAPIData() *AsyncRunEvaluatorOpenAPIData {
+	return &AsyncRunEvaluatorOpenAPIData{}
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) InitDefault() {
+}
+
+var AsyncRunEvaluatorOpenAPIData_InvokeID_DEFAULT int64
+
+func (p *AsyncRunEvaluatorOpenAPIData) GetInvokeID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeID() {
+		return AsyncRunEvaluatorOpenAPIData_InvokeID_DEFAULT
+	}
+	return *p.InvokeID
+}
+
+var AsyncRunEvaluatorOpenAPIData_Record_DEFAULT *evaluator.EvaluatorRecord
+
+func (p *AsyncRunEvaluatorOpenAPIData) GetRecord() (v *evaluator.EvaluatorRecord) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRecord() {
+		return AsyncRunEvaluatorOpenAPIData_Record_DEFAULT
+	}
+	return p.Record
+}
+func (p *AsyncRunEvaluatorOpenAPIData) SetInvokeID(val *int64) {
+	p.InvokeID = val
+}
+func (p *AsyncRunEvaluatorOpenAPIData) SetRecord(val *evaluator.EvaluatorRecord) {
+	p.Record = val
+}
+
+var fieldIDToName_AsyncRunEvaluatorOpenAPIData = map[int16]string{
+	1: "invoke_id",
+	2: "record",
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) IsSetInvokeID() bool {
+	return p.InvokeID != nil
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) IsSetRecord() bool {
+	return p.Record != nil
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AsyncRunEvaluatorOpenAPIData[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InvokeID = _field
+	return nil
+}
+func (p *AsyncRunEvaluatorOpenAPIData) ReadField2(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorRecord()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Record = _field
+	return nil
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AsyncRunEvaluatorOpenAPIData"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeID() {
+		if err = oprot.WriteFieldBegin("invoke_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InvokeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *AsyncRunEvaluatorOpenAPIData) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRecord() {
+		if err = oprot.WriteFieldBegin("record", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Record.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AsyncRunEvaluatorOpenAPIData(%+v)", *p)
+
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) DeepEqual(ano *AsyncRunEvaluatorOpenAPIData) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.InvokeID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Record) {
+		return false
+	}
+	return true
+}
+
+func (p *AsyncRunEvaluatorOpenAPIData) Field1DeepEqual(src *int64) bool {
+
+	if p.InvokeID == src {
+		return true
+	} else if p.InvokeID == nil || src == nil {
+		return false
+	}
+	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOpenAPIData) Field2DeepEqual(src *evaluator.EvaluatorRecord) bool {
+
+	if !p.Record.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+// 异步评估器执行完成后，服务端主动 POST 给 callback_url 的回调 body
+type EvaluatorCallbackPayloadOApi struct {
+	// 本次回调投递的唯一 ID（服务端生成，用于重试去重）
+	Cid *string `thrift:"cid,1,optional" frugal:"1,optional,string" json:"cid" form:"cid" query:"cid"`
+	// = async_run 返回的 invoke_id
+	InvokeID           *int64 `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" json:"invoke_id" form:"invoke_id" query:"invoke_id"`
+	WorkspaceID        *int64 `thrift:"workspace_id,3,optional" frugal:"3,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	EvaluatorVersionID *int64 `thrift:"evaluator_version_id,4,optional" frugal:"4,optional,i64" json:"evaluator_version_id" form:"evaluator_version_id" query:"evaluator_version_id"`
+	// success | fail
+	Status *string `thrift:"status,5,optional" frugal:"5,optional,string" json:"status" form:"status" query:"status"`
+	// 仅 success 时携带
+	Output          *evaluator.EvaluatorOutputData `thrift:"output,6,optional" frugal:"6,optional,evaluator.EvaluatorOutputData" json:"output,omitempty" form:"output" query:"output"`
+	TimeConsumingMs *int64                         `thrift:"time_consuming_ms,7,optional" frugal:"7,optional,i64" json:"time_consuming_ms" form:"time_consuming_ms" query:"time_consuming_ms"`
+}
+
+func NewEvaluatorCallbackPayloadOApi() *EvaluatorCallbackPayloadOApi {
+	return &EvaluatorCallbackPayloadOApi{}
+}
+
+func (p *EvaluatorCallbackPayloadOApi) InitDefault() {
+}
+
+var EvaluatorCallbackPayloadOApi_Cid_DEFAULT string
+
+func (p *EvaluatorCallbackPayloadOApi) GetCid() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCid() {
+		return EvaluatorCallbackPayloadOApi_Cid_DEFAULT
+	}
+	return *p.Cid
+}
+
+var EvaluatorCallbackPayloadOApi_InvokeID_DEFAULT int64
+
+func (p *EvaluatorCallbackPayloadOApi) GetInvokeID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeID() {
+		return EvaluatorCallbackPayloadOApi_InvokeID_DEFAULT
+	}
+	return *p.InvokeID
+}
+
+var EvaluatorCallbackPayloadOApi_WorkspaceID_DEFAULT int64
+
+func (p *EvaluatorCallbackPayloadOApi) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return EvaluatorCallbackPayloadOApi_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var EvaluatorCallbackPayloadOApi_EvaluatorVersionID_DEFAULT int64
+
+func (p *EvaluatorCallbackPayloadOApi) GetEvaluatorVersionID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorVersionID() {
+		return EvaluatorCallbackPayloadOApi_EvaluatorVersionID_DEFAULT
+	}
+	return *p.EvaluatorVersionID
+}
+
+var EvaluatorCallbackPayloadOApi_Status_DEFAULT string
+
+func (p *EvaluatorCallbackPayloadOApi) GetStatus() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatus() {
+		return EvaluatorCallbackPayloadOApi_Status_DEFAULT
+	}
+	return *p.Status
+}
+
+var EvaluatorCallbackPayloadOApi_Output_DEFAULT *evaluator.EvaluatorOutputData
+
+func (p *EvaluatorCallbackPayloadOApi) GetOutput() (v *evaluator.EvaluatorOutputData) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOutput() {
+		return EvaluatorCallbackPayloadOApi_Output_DEFAULT
+	}
+	return p.Output
+}
+
+var EvaluatorCallbackPayloadOApi_TimeConsumingMs_DEFAULT int64
+
+func (p *EvaluatorCallbackPayloadOApi) GetTimeConsumingMs() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTimeConsumingMs() {
+		return EvaluatorCallbackPayloadOApi_TimeConsumingMs_DEFAULT
+	}
+	return *p.TimeConsumingMs
+}
+func (p *EvaluatorCallbackPayloadOApi) SetCid(val *string) {
+	p.Cid = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetInvokeID(val *int64) {
+	p.InvokeID = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetEvaluatorVersionID(val *int64) {
+	p.EvaluatorVersionID = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetStatus(val *string) {
+	p.Status = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetOutput(val *evaluator.EvaluatorOutputData) {
+	p.Output = val
+}
+func (p *EvaluatorCallbackPayloadOApi) SetTimeConsumingMs(val *int64) {
+	p.TimeConsumingMs = val
+}
+
+var fieldIDToName_EvaluatorCallbackPayloadOApi = map[int16]string{
+	1: "cid",
+	2: "invoke_id",
+	3: "workspace_id",
+	4: "evaluator_version_id",
+	5: "status",
+	6: "output",
+	7: "time_consuming_ms",
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetCid() bool {
+	return p.Cid != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetInvokeID() bool {
+	return p.InvokeID != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetEvaluatorVersionID() bool {
+	return p.EvaluatorVersionID != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetOutput() bool {
+	return p.Output != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) IsSetTimeConsumingMs() bool {
+	return p.TimeConsumingMs != nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorCallbackPayloadOApi[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorCallbackPayloadOApi) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Cid = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InvokeID = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EvaluatorVersionID = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Status = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField6(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorOutputData()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Output = _field
+	return nil
+}
+func (p *EvaluatorCallbackPayloadOApi) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TimeConsumingMs = _field
+	return nil
+}
+
+func (p *EvaluatorCallbackPayloadOApi) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvaluatorCallbackPayloadOApi"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorCallbackPayloadOApi) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCid() {
+		if err = oprot.WriteFieldBegin("cid", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Cid); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeID() {
+		if err = oprot.WriteFieldBegin("invoke_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InvokeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorVersionID() {
+		if err = oprot.WriteFieldBegin("evaluator_version_id", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EvaluatorVersionID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Status); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOutput() {
+		if err = oprot.WriteFieldBegin("output", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Output.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *EvaluatorCallbackPayloadOApi) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeConsumingMs() {
+		if err = oprot.WriteFieldBegin("time_consuming_ms", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TimeConsumingMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *EvaluatorCallbackPayloadOApi) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorCallbackPayloadOApi(%+v)", *p)
+
+}
+
+func (p *EvaluatorCallbackPayloadOApi) DeepEqual(ano *EvaluatorCallbackPayloadOApi) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Cid) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.InvokeID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EvaluatorVersionID) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Output) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.TimeConsumingMs) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorCallbackPayloadOApi) Field1DeepEqual(src *string) bool {
+
+	if p.Cid == src {
+		return true
+	} else if p.Cid == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Cid, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field2DeepEqual(src *int64) bool {
+
+	if p.InvokeID == src {
+		return true
+	} else if p.InvokeID == nil || src == nil {
+		return false
+	}
+	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field3DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field4DeepEqual(src *int64) bool {
+
+	if p.EvaluatorVersionID == src {
+		return true
+	} else if p.EvaluatorVersionID == nil || src == nil {
+		return false
+	}
+	if *p.EvaluatorVersionID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field5DeepEqual(src *string) bool {
+
+	if p.Status == src {
+		return true
+	} else if p.Status == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Status, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field6DeepEqual(src *evaluator.EvaluatorOutputData) bool {
+
+	if !p.Output.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorCallbackPayloadOApi) Field7DeepEqual(src *int64) bool {
+
+	if p.TimeConsumingMs == src {
+		return true
+	} else if p.TimeConsumingMs == nil || src == nil {
+		return false
+	}
+	if *p.TimeConsumingMs != *src {
+		return false
+	}
+	return true
+}
+
 // 3.10.1 执行预置评估器（按标识）
 type RunBuiltinEvaluatorOApiRequest struct {
 	WorkspaceID *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
@@ -62779,12 +67767,16 @@ type EvaluationOpenAPIService interface {
 	UpdateEvaluationSetSchemaOApi(ctx context.Context, req *UpdateEvaluationSetSchemaOApiRequest) (r *UpdateEvaluationSetSchemaOApiResponse, err error)
 	// 评测目标调用结果上报接口
 	ReportEvalTargetInvokeResult_(ctx context.Context, req *ReportEvalTargetInvokeResultRequest) (r *ReportEvalTargetInvokeResultResponse, err error)
+	// 沙箱内部 step 打点上报接口：沙箱侧在 step 开始/结束时调用，服务端转成 evaluation_target_sandbox_agent.step_* 指标
+	ReportEvalTargetStepMetric(ctx context.Context, req *ReportEvalTargetStepMetricRequest) (r *ReportEvalTargetStepMetricResponse, err error)
 	// 按需查询评测对象输出中大对象的完整内容
 	GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *GetEvalTargetOutputFieldContentOApiRequest) (r *GetEvalTargetOutputFieldContentOApiResponse, err error)
 	// 异步调试评测对象
 	AsyncDebugEvalTargetOApi(ctx context.Context, req *AsyncDebugEvalTargetOApiRequest) (r *AsyncDebugEvalTargetOApiResponse, err error)
 	// 获取评测对象记录
 	GetEvalTargetRecordOApi(ctx context.Context, req *GetEvalTargetRecordOApiRequest) (r *GetEvalTargetRecordOApiResponse, err error)
+	// 查询可用的来源评测对象
+	ListEvalTargetsOApi(ctx context.Context, req *ListEvalTargetsOApiRequest) (r *ListEvalTargetsOApiResponse, err error)
 	// 评测实验接口
 	// 创建评测实验
 	SubmitExperimentOApi(ctx context.Context, req *SubmitExperimentOApiRequest) (r *SubmitExperimentOApiResponse, err error)
@@ -62827,6 +67819,8 @@ type EvaluationOpenAPIService interface {
 	SubmitEvaluatorVersionOApi(ctx context.Context, req *SubmitEvaluatorVersionOApiRequest) (r *SubmitEvaluatorVersionOApiResponse, err error)
 	// 执行评估器
 	RunEvaluatorOApi(ctx context.Context, req *RunEvaluatorOApiRequest) (r *RunEvaluatorOApiResponse, err error)
+	// 异步执行评估器
+	AsyncRunEvaluatorOApi(ctx context.Context, req *AsyncRunEvaluatorOApiRequest) (r *AsyncRunEvaluatorOApiResponse, err error)
 	// 执行预置评估器（按标识）
 	RunBuiltinEvaluatorOApi(ctx context.Context, req *RunBuiltinEvaluatorOApiRequest) (r *RunBuiltinEvaluatorOApiResponse, err error)
 	// 修正评估记录
@@ -63041,6 +68035,15 @@ func (p *EvaluationOpenAPIServiceClient) ReportEvalTargetInvokeResult_(ctx conte
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvaluationOpenAPIServiceClient) ReportEvalTargetStepMetric(ctx context.Context, req *ReportEvalTargetStepMetricRequest) (r *ReportEvalTargetStepMetricResponse, err error) {
+	var _args EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs
+	_args.Req = req
+	var _result EvaluationOpenAPIServiceReportEvalTargetStepMetricResult
+	if err = p.Client_().Call(ctx, "ReportEvalTargetStepMetric", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *EvaluationOpenAPIServiceClient) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *GetEvalTargetOutputFieldContentOApiRequest) (r *GetEvalTargetOutputFieldContentOApiResponse, err error) {
 	var _args EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs
 	_args.Req = req
@@ -63064,6 +68067,15 @@ func (p *EvaluationOpenAPIServiceClient) GetEvalTargetRecordOApi(ctx context.Con
 	_args.Req = req
 	var _result EvaluationOpenAPIServiceGetEvalTargetRecordOApiResult
 	if err = p.Client_().Call(ctx, "GetEvalTargetRecordOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *EvaluationOpenAPIServiceClient) ListEvalTargetsOApi(ctx context.Context, req *ListEvalTargetsOApiRequest) (r *ListEvalTargetsOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceListEvalTargetsOApiArgs
+	_args.Req = req
+	var _result EvaluationOpenAPIServiceListEvalTargetsOApiResult
+	if err = p.Client_().Call(ctx, "ListEvalTargetsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -63248,6 +68260,15 @@ func (p *EvaluationOpenAPIServiceClient) RunEvaluatorOApi(ctx context.Context, r
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvaluationOpenAPIServiceClient) AsyncRunEvaluatorOApi(ctx context.Context, req *AsyncRunEvaluatorOApiRequest) (r *AsyncRunEvaluatorOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs
+	_args.Req = req
+	var _result EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult
+	if err = p.Client_().Call(ctx, "AsyncRunEvaluatorOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *EvaluationOpenAPIServiceClient) RunBuiltinEvaluatorOApi(ctx context.Context, req *RunBuiltinEvaluatorOApiRequest) (r *RunBuiltinEvaluatorOApiResponse, err error) {
 	var _args EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs
 	_args.Req = req
@@ -63386,9 +68407,11 @@ func NewEvaluationOpenAPIServiceProcessor(handler EvaluationOpenAPIService) *Eva
 	self.AddToProcessorMap("GetEvaluationSetJobOApi", &evaluationOpenAPIServiceProcessorGetEvaluationSetJobOApi{handler: handler})
 	self.AddToProcessorMap("UpdateEvaluationSetSchemaOApi", &evaluationOpenAPIServiceProcessorUpdateEvaluationSetSchemaOApi{handler: handler})
 	self.AddToProcessorMap("ReportEvalTargetInvokeResult", &evaluationOpenAPIServiceProcessorReportEvalTargetInvokeResult_{handler: handler})
+	self.AddToProcessorMap("ReportEvalTargetStepMetric", &evaluationOpenAPIServiceProcessorReportEvalTargetStepMetric{handler: handler})
 	self.AddToProcessorMap("GetEvalTargetOutputFieldContentOApi", &evaluationOpenAPIServiceProcessorGetEvalTargetOutputFieldContentOApi{handler: handler})
 	self.AddToProcessorMap("AsyncDebugEvalTargetOApi", &evaluationOpenAPIServiceProcessorAsyncDebugEvalTargetOApi{handler: handler})
 	self.AddToProcessorMap("GetEvalTargetRecordOApi", &evaluationOpenAPIServiceProcessorGetEvalTargetRecordOApi{handler: handler})
+	self.AddToProcessorMap("ListEvalTargetsOApi", &evaluationOpenAPIServiceProcessorListEvalTargetsOApi{handler: handler})
 	self.AddToProcessorMap("SubmitExperimentOApi", &evaluationOpenAPIServiceProcessorSubmitExperimentOApi{handler: handler})
 	self.AddToProcessorMap("GetExperimentsOApi", &evaluationOpenAPIServiceProcessorGetExperimentsOApi{handler: handler})
 	self.AddToProcessorMap("UpdateExptRunConfOApi", &evaluationOpenAPIServiceProcessorUpdateExptRunConfOApi{handler: handler})
@@ -63409,6 +68432,7 @@ func NewEvaluationOpenAPIServiceProcessor(handler EvaluationOpenAPIService) *Eva
 	self.AddToProcessorMap("BatchGetEvaluatorVersionsOApi", &evaluationOpenAPIServiceProcessorBatchGetEvaluatorVersionsOApi{handler: handler})
 	self.AddToProcessorMap("SubmitEvaluatorVersionOApi", &evaluationOpenAPIServiceProcessorSubmitEvaluatorVersionOApi{handler: handler})
 	self.AddToProcessorMap("RunEvaluatorOApi", &evaluationOpenAPIServiceProcessorRunEvaluatorOApi{handler: handler})
+	self.AddToProcessorMap("AsyncRunEvaluatorOApi", &evaluationOpenAPIServiceProcessorAsyncRunEvaluatorOApi{handler: handler})
 	self.AddToProcessorMap("RunBuiltinEvaluatorOApi", &evaluationOpenAPIServiceProcessorRunBuiltinEvaluatorOApi{handler: handler})
 	self.AddToProcessorMap("CorrectEvaluatorRecordOApi", &evaluationOpenAPIServiceProcessorCorrectEvaluatorRecordOApi{handler: handler})
 	self.AddToProcessorMap("BatchGetEvaluatorRecordsOApi", &evaluationOpenAPIServiceProcessorBatchGetEvaluatorRecordsOApi{handler: handler})
@@ -64304,6 +69328,54 @@ func (p *evaluationOpenAPIServiceProcessorReportEvalTargetInvokeResult_) Process
 	return true, err
 }
 
+type evaluationOpenAPIServiceProcessorReportEvalTargetStepMetric struct {
+	handler EvaluationOpenAPIService
+}
+
+func (p *evaluationOpenAPIServiceProcessorReportEvalTargetStepMetric) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ReportEvalTargetStepMetric", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationOpenAPIServiceReportEvalTargetStepMetricResult{}
+	var retval *ReportEvalTargetStepMetricResponse
+	if retval, err2 = p.handler.ReportEvalTargetStepMetric(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ReportEvalTargetStepMetric: "+err2.Error())
+		oprot.WriteMessageBegin("ReportEvalTargetStepMetric", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ReportEvalTargetStepMetric", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
 type evaluationOpenAPIServiceProcessorGetEvalTargetOutputFieldContentOApi struct {
 	handler EvaluationOpenAPIService
 }
@@ -64431,6 +69503,54 @@ func (p *evaluationOpenAPIServiceProcessorGetEvalTargetRecordOApi) Process(ctx c
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("GetEvalTargetRecordOApi", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluationOpenAPIServiceProcessorListEvalTargetsOApi struct {
+	handler EvaluationOpenAPIService
+}
+
+func (p *evaluationOpenAPIServiceProcessorListEvalTargetsOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceListEvalTargetsOApiArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ListEvalTargetsOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationOpenAPIServiceListEvalTargetsOApiResult{}
+	var retval *ListEvalTargetsOApiResponse
+	if retval, err2 = p.handler.ListEvalTargetsOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListEvalTargetsOApi: "+err2.Error())
+		oprot.WriteMessageBegin("ListEvalTargetsOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ListEvalTargetsOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -65391,6 +70511,54 @@ func (p *evaluationOpenAPIServiceProcessorRunEvaluatorOApi) Process(ctx context.
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("RunEvaluatorOApi", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluationOpenAPIServiceProcessorAsyncRunEvaluatorOApi struct {
+	handler EvaluationOpenAPIService
+}
+
+func (p *evaluationOpenAPIServiceProcessorAsyncRunEvaluatorOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("AsyncRunEvaluatorOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult{}
+	var retval *AsyncRunEvaluatorOApiResponse
+	if retval, err2 = p.handler.AsyncRunEvaluatorOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing AsyncRunEvaluatorOApi: "+err2.Error())
+		oprot.WriteMessageBegin("AsyncRunEvaluatorOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("AsyncRunEvaluatorOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -72128,6 +77296,350 @@ func (p *EvaluationOpenAPIServiceReportEvalTargetInvokeResultResult) Field0DeepE
 	return true
 }
 
+type EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs struct {
+	Req *ReportEvalTargetStepMetricRequest `thrift:"req,1" frugal:"1,default,ReportEvalTargetStepMetricRequest"`
+}
+
+func NewEvaluationOpenAPIServiceReportEvalTargetStepMetricArgs() *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs {
+	return &EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs{}
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs_Req_DEFAULT *ReportEvalTargetStepMetricRequest
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) GetReq() (v *ReportEvalTargetStepMetricRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) SetReq(val *ReportEvalTargetStepMetricRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewReportEvalTargetStepMetricRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ReportEvalTargetStepMetric_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) DeepEqual(ano *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricArgs) Field1DeepEqual(src *ReportEvalTargetStepMetricRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceReportEvalTargetStepMetricResult struct {
+	Success *ReportEvalTargetStepMetricResponse `thrift:"success,0,optional" frugal:"0,optional,ReportEvalTargetStepMetricResponse"`
+}
+
+func NewEvaluationOpenAPIServiceReportEvalTargetStepMetricResult() *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult {
+	return &EvaluationOpenAPIServiceReportEvalTargetStepMetricResult{}
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceReportEvalTargetStepMetricResult_Success_DEFAULT *ReportEvalTargetStepMetricResponse
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) GetSuccess() (v *ReportEvalTargetStepMetricResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationOpenAPIServiceReportEvalTargetStepMetricResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ReportEvalTargetStepMetricResponse)
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceReportEvalTargetStepMetricResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceReportEvalTargetStepMetricResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewReportEvalTargetStepMetricResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ReportEvalTargetStepMetric_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceReportEvalTargetStepMetricResult(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) DeepEqual(ano *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceReportEvalTargetStepMetricResult) Field0DeepEqual(src *ReportEvalTargetStepMetricResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs struct {
 	Req *GetEvalTargetOutputFieldContentOApiRequest `thrift:"req,1" frugal:"1,default,GetEvalTargetOutputFieldContentOApiRequest"`
 }
@@ -73153,6 +78665,350 @@ func (p *EvaluationOpenAPIServiceGetEvalTargetRecordOApiResult) DeepEqual(ano *E
 }
 
 func (p *EvaluationOpenAPIServiceGetEvalTargetRecordOApiResult) Field0DeepEqual(src *GetEvalTargetRecordOApiResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceListEvalTargetsOApiArgs struct {
+	Req *ListEvalTargetsOApiRequest `thrift:"req,1" frugal:"1,default,ListEvalTargetsOApiRequest"`
+}
+
+func NewEvaluationOpenAPIServiceListEvalTargetsOApiArgs() *EvaluationOpenAPIServiceListEvalTargetsOApiArgs {
+	return &EvaluationOpenAPIServiceListEvalTargetsOApiArgs{}
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceListEvalTargetsOApiArgs_Req_DEFAULT *ListEvalTargetsOApiRequest
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) GetReq() (v *ListEvalTargetsOApiRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationOpenAPIServiceListEvalTargetsOApiArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) SetReq(val *ListEvalTargetsOApiRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceListEvalTargetsOApiArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvalTargetsOApiArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListEvalTargetsOApiRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListEvalTargetsOApi_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceListEvalTargetsOApiArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiArgs) Field1DeepEqual(src *ListEvalTargetsOApiRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceListEvalTargetsOApiResult struct {
+	Success *ListEvalTargetsOApiResponse `thrift:"success,0,optional" frugal:"0,optional,ListEvalTargetsOApiResponse"`
+}
+
+func NewEvaluationOpenAPIServiceListEvalTargetsOApiResult() *EvaluationOpenAPIServiceListEvalTargetsOApiResult {
+	return &EvaluationOpenAPIServiceListEvalTargetsOApiResult{}
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceListEvalTargetsOApiResult_Success_DEFAULT *ListEvalTargetsOApiResponse
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) GetSuccess() (v *ListEvalTargetsOApiResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationOpenAPIServiceListEvalTargetsOApiResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListEvalTargetsOApiResponse)
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceListEvalTargetsOApiResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListEvalTargetsOApiResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListEvalTargetsOApiResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListEvalTargetsOApi_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceListEvalTargetsOApiResult(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceListEvalTargetsOApiResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceListEvalTargetsOApiResult) Field0DeepEqual(src *ListEvalTargetsOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -80033,6 +85889,350 @@ func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) DeepEqual(ano *Evaluati
 }
 
 func (p *EvaluationOpenAPIServiceRunEvaluatorOApiResult) Field0DeepEqual(src *RunEvaluatorOApiResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs struct {
+	Req *AsyncRunEvaluatorOApiRequest `thrift:"req,1" frugal:"1,default,AsyncRunEvaluatorOApiRequest"`
+}
+
+func NewEvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs() *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs {
+	return &EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs{}
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs_Req_DEFAULT *AsyncRunEvaluatorOApiRequest
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) GetReq() (v *AsyncRunEvaluatorOApiRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) SetReq(val *AsyncRunEvaluatorOApiRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewAsyncRunEvaluatorOApiRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AsyncRunEvaluatorOApi_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiArgs) Field1DeepEqual(src *AsyncRunEvaluatorOApiRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult struct {
+	Success *AsyncRunEvaluatorOApiResponse `thrift:"success,0,optional" frugal:"0,optional,AsyncRunEvaluatorOApiResponse"`
+}
+
+func NewEvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult() *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult {
+	return &EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult{}
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult_Success_DEFAULT *AsyncRunEvaluatorOApiResponse
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) GetSuccess() (v *AsyncRunEvaluatorOApiResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*AsyncRunEvaluatorOApiResponse)
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewAsyncRunEvaluatorOApiResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AsyncRunEvaluatorOApi_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceAsyncRunEvaluatorOApiResult) Field0DeepEqual(src *AsyncRunEvaluatorOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

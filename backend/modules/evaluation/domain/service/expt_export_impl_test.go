@@ -792,6 +792,9 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 			defer ctrl.Finish()
 
 			svc := newTestExptResultExportService(ctrl)
+			svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+				GetByID(gomock.Any(), tt.exptID, tt.spaceID).
+				Return(&entity.Experiment{ID: tt.exptID, SpaceID: tt.spaceID}, nil)
 			tt.setup(svc)
 
 			out := filepath.Join(t.TempDir(), "file_name")
@@ -867,7 +870,8 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 				expt := &entity.Experiment{ID: 123, Name: "test_expt"}
 				svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
 					GetByID(gomock.Any(), int64(123), int64(1)).
-					Return(expt, nil)
+					Return(expt, nil).
+					Times(2)
 
 				// Mock DoExportCSV成功
 				colEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1, Name: ptr.Of("test_evaluator"), Version: ptr.Of("v1")}}
@@ -909,7 +913,8 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 				expt := &entity.Experiment{ID: 123, Name: "test_expt"}
 				svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
 					GetByID(gomock.Any(), int64(123), int64(1)).
-					Return(expt, nil)
+					Return(expt, nil).
+					Times(2)
 
 				// Mock DoExportCSV失败
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
@@ -940,7 +945,8 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 				expt := &entity.Experiment{ID: 123, Name: "test_expt"}
 				svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
 					GetByID(gomock.Any(), int64(123), int64(1)).
-					Return(expt, nil)
+					Return(expt, nil).
+					Times(2)
 
 				// Mock DoExportCSV成功
 				colEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1, Name: ptr.Of("test_evaluator"), Version: ptr.Of("v1")}}

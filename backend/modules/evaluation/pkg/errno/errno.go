@@ -21,12 +21,12 @@ func (e *ErrImpl) Error() string {
 	}
 	var sb strings.Builder
 	if len(e.Msg) > 0 {
-		sb.WriteString(fmt.Sprintf("ErrMsg=%v\n", e.Msg))
+		fmt.Fprintf(&sb, "ErrMsg=%v\n", e.Msg)
 	}
 	if e.Cause != nil {
 		cm := e.CauseMsg()
 		if len(cm) > 0 {
-			sb.WriteString(fmt.Sprintf("Cause=%v\n", e.Cause))
+			fmt.Fprintf(&sb, "Cause=%v\n", e.Cause)
 		}
 	}
 	return sb.String()

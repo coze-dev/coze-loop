@@ -32,6 +32,11 @@ func (p *EvalTarget) IsValid() error {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
 		}
 	}
+	if p.SharedInfo != nil {
+		if err := p.SharedInfo.IsValid(); err != nil {
+			return fmt.Errorf("field SharedInfo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *EvalTargetVersion) IsValid() error {
@@ -43,6 +48,11 @@ func (p *EvalTargetVersion) IsValid() error {
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	if p.SharedInfo != nil {
+		if err := p.SharedInfo.IsValid(); err != nil {
+			return fmt.Errorf("field SharedInfo not valid, %w", err)
 		}
 	}
 	return nil
@@ -259,6 +269,9 @@ func (p *EvalTargetOutputData) IsValid() error {
 			return fmt.Errorf("field EvalTargetRunError not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *EvalTargetStep) IsValid() error {
 	return nil
 }
 func (p *EvalTargetUsage) IsValid() error {

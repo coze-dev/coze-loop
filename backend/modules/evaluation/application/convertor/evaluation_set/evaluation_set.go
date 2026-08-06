@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+	common_domain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	app_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
@@ -66,9 +67,22 @@ func EvaluationSetDO2DTO(do *entity.EvaluationSet) *eval_set.EvaluationSet {
 		LatestVersion:        gptr.Of(do.LatestVersion),
 		NextVersionNum:       gptr.Of(do.NextVersionNum),
 		BaseInfo:             common.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		SharedInfo:           SharedResourceInfoDO2DTO(do.SharedInfo),
 		Type:                 do.DatasetType,
 		Tags:                 ResourceTagDO2DTOs(do.Tags),
 		DatasetKey:           gptr.Of(do.DatasetKey),
+	}
+}
+
+func SharedResourceInfoDO2DTO(info *entity.SharedResourceInfo) *common_domain.SharedResourceInfo {
+	if info == nil {
+		return nil
+	}
+	return &common_domain.SharedResourceInfo{
+		IsShared:      gptr.Of(info.IsShared),
+		SourceSpaceID: gptr.Of(info.SourceSpaceID),
+		AccessLevel:   gptr.Of(info.AccessLevel),
+		VersionPolicy: gptr.Of(info.VersionPolicy),
 	}
 }
 

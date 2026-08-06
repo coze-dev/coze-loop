@@ -30,6 +30,9 @@ type IEvalTargetRepo interface {
 	LoadEvalTargetRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error
 	// LoadEvalTargetRecordFullData 从 TOS 加载 record 中所有被省略的大对象完整内容（用于导出等需要完整字段的场景）
 	LoadEvalTargetRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error
+	// AppendEvalTargetStep 沙箱 agent step 事件到达时原子追加到 record.output_data.eval_target_steps。
+	// 内部走行锁 tx (SELECT ... FOR UPDATE + UPDATE)，无对应 record 时静默返回 nil（best-effort）。
+	AppendEvalTargetStep(ctx context.Context, invokeID int64, step *entity.EvalTargetStep) error
 	// target record end
 }
 

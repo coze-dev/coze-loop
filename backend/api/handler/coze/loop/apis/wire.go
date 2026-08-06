@@ -91,7 +91,6 @@ var (
 		evaluationapp.InitEvaluationSetApplication,
 		evaluationapp.InitEvalTargetApplication,
 		evaluationapp.InitEvalOpenAPIApplication,
-		provideTaskClient,
 	)
 	dataSet = wire.NewSet(
 		NewDataHandler,
@@ -110,11 +109,6 @@ var (
 		taskhook.NewNoopTaskHookProvider,
 	)
 )
-
-// provideTaskClient converts a function factory to taskservice.Client
-func provideTaskClient(factory func() taskservice.Client) taskservice.Client {
-	return factory()
-}
 
 func InitFoundationHandler(
 	idgen idgen.IIDGenerator,

@@ -157,8 +157,8 @@ func TestGetEvaluationSetVersion(t *testing.T) {
 	expectedSet := &entity.EvaluationSet{}
 	ctx := context.Background()
 	// 模拟成功情况
-	mockAdapter.EXPECT().GetDatasetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedVersion, expectedSet, nil).AnyTimes()
-	version, set, err := service.GetEvaluationSetVersion(ctx, spaceID, versionID, &deletedAt)
+	mockAdapter.EXPECT().GetDatasetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(expectedVersion, expectedSet, nil).AnyTimes()
+	version, set, err := service.GetEvaluationSetVersion(ctx, spaceID, versionID, &deletedAt, nil)
 	if err != nil {
 		t.Errorf("GetEvaluationSetVersion failed with error: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestListEvaluationSetVersions(t *testing.T) {
 	nextCursor := ""
 
 	// 模拟成功情况
-	mockAdapter.EXPECT().ListDatasetVersions(gomock.Any(), param.SpaceID, param.EvaluationSetID, param.PageToken, param.PageNumber, param.PageSize, param.VersionLike, gomock.Any()).Return(expectedSets, &total, &nextCursor, nil)
+	mockAdapter.EXPECT().ListDatasetVersions(gomock.Any(), param.SpaceID, param.EvaluationSetID, param.PageToken, param.PageNumber, param.PageSize, param.VersionLike, gomock.Any(), gomock.Nil()).Return(expectedSets, &total, &nextCursor, nil)
 	sets, totalResult, nextCursorResult, err := service.ListEvaluationSetVersions(context.Background(), param)
 	if err != nil {
 		t.Errorf("ListEvaluationSetVersions failed with error: %v", err)
@@ -223,8 +223,8 @@ func TestBatchGetEvaluationSetVersions(t *testing.T) {
 	}
 
 	// 模拟成功情况
-	mockAdapter.EXPECT().BatchGetVersionedDatasets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedSets, nil)
-	sets, err := service.BatchGetEvaluationSetVersions(context.Background(), &spaceID, versionIDs, &deletedAt)
+	mockAdapter.EXPECT().BatchGetVersionedDatasets(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(expectedSets, nil)
+	sets, err := service.BatchGetEvaluationSetVersions(context.Background(), &spaceID, versionIDs, &deletedAt, nil)
 	if err != nil {
 		t.Errorf("BatchGetEvaluationSetVersions failed with error: %v", err)
 	}

@@ -42,7 +42,7 @@ func stack() string {
 
 		file, line := fn.FileLine(pcs[i])
 		name := trimPathPrefix(fn.Name())
-		b.WriteString(fmt.Sprintf("%s:%d %s\n", file, line, name))
+		fmt.Fprintf(&b, "%s:%d %s\n", file, line, name)
 	}
 
 	return b.String()

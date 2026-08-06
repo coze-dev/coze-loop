@@ -62,6 +62,16 @@ func (p *OpenAPIEvalSetConfig) IsValid() error {
 			return fmt.Errorf("field ItemFilter not valid, %w", err)
 		}
 	}
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
+	if p.TargetSharedOption != nil {
+		if err := p.TargetSharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field TargetSharedOption not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *RunModeConfig) IsValid() error {
@@ -188,6 +198,11 @@ func (p *ResultPayload) IsValid() error {
 	return nil
 }
 func (p *TurnSystemInfo) IsValid() error {
+	if p.Error != nil {
+		if err := p.Error.IsValid(); err != nil {
+			return fmt.Errorf("field Error not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *TurnResult_) IsValid() error {
@@ -207,6 +222,11 @@ func (p *ItemResult_) IsValid() error {
 	return nil
 }
 func (p *ItemSystemInfo) IsValid() error {
+	if p.Error != nil {
+		if err := p.Error.IsValid(); err != nil {
+			return fmt.Errorf("field Error not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {

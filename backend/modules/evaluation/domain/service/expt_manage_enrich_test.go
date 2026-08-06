@@ -49,7 +49,7 @@ func TestEnrichEvalSetDetails_ListPath(t *testing.T) {
 			},
 		}, nil)
 	mockSetVerSvc.EXPECT().
-		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 		Return([]*entity.BatchGetEvaluationSetVersionsResult{
 			{Version: &entity.EvaluationSetVersion{ID: 110}, EvaluationSet: &entity.EvaluationSet{ID: 10, Name: "set-10", DatasetKey: "dataset-10"}},
 			{Version: &entity.EvaluationSetVersion{ID: 220}, EvaluationSet: &entity.EvaluationSet{ID: 20, Name: "set-20", DatasetKey: "dataset-20"}},
@@ -86,7 +86,7 @@ func TestEnrichEvalSetDetails_GetPath(t *testing.T) {
 		Return(map[int64][]*entity.ExptEvalSetItemCount{}, nil) // 首跑前无行
 
 	mockSetVerSvc.EXPECT().
-		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
 		Return([]*entity.BatchGetEvaluationSetVersionsResult{
 			{Version: &entity.EvaluationSetVersion{ID: 110}, EvaluationSet: &entity.EvaluationSet{ID: 10, Name: "set-10", DatasetKey: "dataset-10"}},
 			{Version: &entity.EvaluationSetVersion{ID: 220}, EvaluationSet: &entity.EvaluationSet{ID: 20, Name: "set-20", DatasetKey: "dataset-20"}},
@@ -152,4 +152,78 @@ func TestEnrichEvalSetDetails_NilRepo(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, expt.EvalSetDetails, 2)
 	assert.Equal(t, int32(0), expt.EvalSetDetails[0].ItemCount)
+}
+
+// TestEnrichEvalSetDetails_MultiSourceSpace_Concurrent 钉住混合空间多集下的并发安全回归:
+// 各 set 分属不同来源空间时, Get 路径按来源空间分组并发批拉。若各任务并发写同一个
+// versionedByVersionID / draftBySetID map, Go runtime 会抛 fatal error: concurrent map writes
+// (recover 拦不住、整进程挂), 且该路径被 GetDetail/MGetDetail/List 与调度器每 tick 调用。
+// 本用例构造 3 个来源空间(含同空间 0), 并在 -race 下运行以暴露竞态; 同时断言各空间的结果都被完整合并。
+func TestEnrichEvalSetDetails_MultiSourceSpace_Concurrent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRefRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+	mockSetVerSvc := svcMocks.NewMockEvaluationSetVersionService(ctrl)
+	mgr := &ExptMangerImpl{
+		itemRefRepo:                 mockRefRepo,
+		evaluationSetVersionService: mockSetVerSvc,
+	}
+
+	const (
+		consumerSpace = int64(7)
+		srcSpaceB     = int64(9001)
+		srcSpaceC     = int64(9002)
+	)
+
+	// 三个 set: 分属来源空间 B / 来源空间 C / 消费方空间(SourceSpaceID=0)
+	expt := &entity.Experiment{
+		ID:                2001,
+		EvalSetID:         10,
+		EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{
+				{EvalSetID: 10, EvalSetVersionID: 110, SourceSpaceID: srcSpaceB},
+				{EvalSetID: 20, EvalSetVersionID: 220, SourceSpaceID: srcSpaceC},
+				{EvalSetID: 30, EvalSetVersionID: 330}, // 同空间, SourceSpaceID=0
+			},
+		},
+	}
+
+	mockRefRepo.EXPECT().CountByEvalSetGrouped(gomock.Any(), consumerSpace, []int64{2001}).
+		Return(map[int64][]*entity.ExptEvalSetItemCount{}, nil)
+
+	// 按来源空间分组 → 预期三次调用, 各自只返回本空间的 set
+	bySpace := map[int64]*entity.BatchGetEvaluationSetVersionsResult{
+		srcSpaceB: {Version: &entity.EvaluationSetVersion{ID: 110}, EvaluationSet: &entity.EvaluationSet{ID: 10, Name: "set-10"}},
+		srcSpaceC: {Version: &entity.EvaluationSetVersion{ID: 220}, EvaluationSet: &entity.EvaluationSet{ID: 20, Name: "set-20"}},
+		consumerSpace: {
+			Version: &entity.EvaluationSetVersion{ID: 330}, EvaluationSet: &entity.EvaluationSet{ID: 30, Name: "set-30"},
+		},
+	}
+	mockSetVerSvc.EXPECT().
+		BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+		Times(len(bySpace)).
+		DoAndReturn(func(_ context.Context, spaceID *int64, _ []int64, _ *bool, _ any) ([]*entity.BatchGetEvaluationSetVersionsResult, error) {
+			if spaceID == nil {
+				return nil, nil
+			}
+			if res, ok := bySpace[*spaceID]; ok {
+				return []*entity.BatchGetEvaluationSetVersionsResult{res}, nil
+			}
+			return nil, nil
+		})
+
+	err := mgr.enrichEvalSetDetails(context.Background(), []*entity.Experiment{expt}, consumerSpace, true, nil)
+	assert.NoError(t, err)
+
+	// 三个空间的结果都必须完整合并进来 (并发写丢条目时此处会缺)
+	assert.Len(t, expt.EvalSetDetails, 3)
+	got := make(map[int64]string, 3)
+	for _, d := range expt.EvalSetDetails {
+		if d != nil && d.EvalSet != nil {
+			got[d.EvalSet.ID] = d.EvalSet.Name
+		}
+	}
+	assert.Equal(t, map[int64]string{10: "set-10", 20: "set-20", 30: "set-30"}, got)
 }

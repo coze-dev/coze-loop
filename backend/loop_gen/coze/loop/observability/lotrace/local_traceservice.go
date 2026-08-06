@@ -610,6 +610,27 @@ func (l *LocalTraceService) GetThreadStat(ctx context.Context, req *trace.GetThr
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalTraceService) GetAdjacentTrace(ctx context.Context, req *trace.GetAdjacentTraceRequest, callOptions ...callopt.Option) (*trace.GetAdjacentTraceResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceGetAdjacentTraceArgs)
+		result := out.(*trace.TraceServiceGetAdjacentTraceResult)
+		resp, err := l.impl.GetAdjacentTrace(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceGetAdjacentTraceArgs{Req: req}
+	result := &trace.TraceServiceGetAdjacentTraceResult{}
+	ctx = l.injectRPCInfo(ctx, "GetAdjacentTrace")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalTraceService) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (*trace.UpsertColumnExtractConfigResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*trace.TraceServiceUpsertColumnExtractConfigArgs)
