@@ -913,7 +913,11 @@ const sandboxStatusCheckConcurrency = 8
 //   - Get 出错（含开源 stub 的 "not implement" / adapter 未注入）一律 warn + skip 该 record，让 zombie 兜底。
 //   - 只把 Failed / Canceled 视为"结束但没上报"命中；Succeeded 会有毫秒级 in-flight 回调窗口，交给 zombie 或后续 tick 兜底。
 func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spaceID int64, recordIDs []int64) ([]int64, map[int64]string) {
+	// [SweepDebug] TEMP
+	logs.CtxInfo(ctx, "[SweepDebug] CheckSandboxTerminated enter, space_id=%d, record_ids=%v, adapter_nil=%v",
+		spaceID, recordIDs, e.sandboxSchedulerAdapter == nil)
 	if e.sandboxSchedulerAdapter == nil || len(recordIDs) == 0 {
+		logs.CtxInfo(ctx, "[SweepDebug] CheckSandboxTerminated short-circuit: adapter nil or empty ids")
 		return nil, nil
 	}
 
@@ -922,18 +926,26 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 		logs.CtxWarn(ctx, "[SandboxStatusCheck] batch get eval target records fail, space_id=%d, err=%v", spaceID, err)
 		return nil, nil
 	}
+	logs.CtxInfo(ctx, "[SweepDebug] CheckSandboxTerminated records fetched, space_id=%d, count=%d", spaceID, len(records))
 
 	versionIDSet := make(map[int64]struct{})
+	skippedNotAsync := 0
+	skippedZeroVer := 0
 	for _, r := range records {
 		if r == nil || r.TargetVersionID <= 0 {
+			skippedZeroVer++
 			continue
 		}
 		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+			skippedNotAsync++
+			logs.CtxInfo(ctx, "[SweepDebug] record filtered (not AsyncInvoking), record_id=%d, status=%v", r.ID, gptr.Indirect(r.Status))
 			continue
 		}
 		versionIDSet[r.TargetVersionID] = struct{}{}
 	}
 	if len(versionIDSet) == 0 {
+		logs.CtxInfo(ctx, "[SweepDebug] CheckSandboxTerminated short-circuit: versionIDSet empty, records=%d, skipped_not_async=%d, skipped_zero_ver=%d",
+			len(records), skippedNotAsync, skippedZeroVer)
 		return nil, nil
 	}
 	versionIDs := make([]int64, 0, len(versionIDSet))
@@ -948,13 +960,17 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 	sandboxVersionIDs := make(map[int64]struct{})
 	for _, v := range versions {
 		if v == nil || v.EvalTargetVersion == nil {
+			logs.CtxInfo(ctx, "[SweepDebug] version nil or EvalTargetVersion nil, skipped")
 			continue
 		}
+		logs.CtxInfo(ctx, "[SweepDebug] version fetched, version_id=%d, target_type=%v (want %v)",
+			v.EvalTargetVersion.ID, v.EvalTargetType, entity.EvalTargetTypeSandboxAgent)
 		if v.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
 			sandboxVersionIDs[v.EvalTargetVersion.ID] = struct{}{}
 		}
 	}
 	if len(sandboxVersionIDs) == 0 {
+		logs.CtxInfo(ctx, "[SweepDebug] CheckSandboxTerminated short-circuit: no SandboxAgent versions, version_ids_looked=%v", versionIDs)
 		return nil, nil
 	}
 
@@ -973,8 +989,10 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 		targets = append(targets, r)
 	}
 	if len(targets) == 0 {
+		logs.CtxInfo(ctx, "[SweepDebug] CheckSandboxTerminated short-circuit: targets empty after filter")
 		return nil, nil
 	}
+	logs.CtxInfo(ctx, "[SweepDebug] CheckSandboxTerminated firing Get, target_count=%d", len(targets))
 
 	sem := make(chan struct{}, sandboxStatusCheckConcurrency)
 	var mu sync.Mutex

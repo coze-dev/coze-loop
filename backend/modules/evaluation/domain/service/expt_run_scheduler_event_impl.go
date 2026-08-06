@@ -659,12 +659,25 @@ func (e *ExptSchedulerImpl) terminateZombieEvaluatorRecords(ctx context.Context,
 //
 // 非 SandboxAgent 类型 / adapter 未接入（开源 stub）时静默 no-op，返回原始 items。
 func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, terminated []*entity.ExptEvalItem, err error) {
+	// [SweepDebug] TEMP: 上线定位为何 sweep 没触发，验证完这批日志可整体删除
+	logs.CtxInfo(ctx, "[SweepDebug] enter, expt_id=%v, expt_run_id=%v, items=%d, evalTargetService_nil=%v, expt_nil=%v",
+		event.ExptID, event.ExptRunID, len(items), e.evalTargetService == nil, expt == nil)
+
 	if e.evalTargetService == nil || expt == nil {
+		logs.CtxInfo(ctx, "[SweepDebug] short-circuit: evalTargetService or expt is nil, expt_id=%v", event.ExptID)
 		return items, nil, nil
 	}
 	// 只对确实用 SandboxAgent 的实验做 sweep，避免每个 tick 都发无谓 RPC。
 	if expt.Target == nil || expt.Target.EvalTargetVersion == nil ||
 		expt.Target.EvalTargetVersion.EvalTargetType != entity.EvalTargetTypeSandboxAgent {
+		targetNil := expt.Target == nil
+		versionNil := expt.Target != nil && expt.Target.EvalTargetVersion == nil
+		var typ entity.EvalTargetType
+		if expt.Target != nil && expt.Target.EvalTargetVersion != nil {
+			typ = expt.Target.EvalTargetVersion.EvalTargetType
+		}
+		logs.CtxInfo(ctx, "[SweepDebug] short-circuit: not sandbox target, expt_id=%v, target_nil=%v, version_nil=%v, target_type=%v (want %v)",
+			event.ExptID, targetNil, versionNil, typ, entity.EvalTargetTypeSandboxAgent)
 		return items, nil, nil
 	}
 
@@ -676,19 +689,25 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		processingItemIDs = append(processingItemIDs, item.ItemID)
 	}
 	if len(processingItemIDs) == 0 {
+		logs.CtxInfo(ctx, "[SweepDebug] short-circuit: no Processing items, expt_id=%v, input_items=%d", event.ExptID, len(items))
 		return items, nil, nil
 	}
+	logs.CtxInfo(ctx, "[SweepDebug] processing items collected, expt_id=%v, count=%d, ids=%v", event.ExptID, len(processingItemIDs), processingItemIDs)
 
 	turnRunLogs, err := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, processingItemIDs, event.SpaceID)
 	if err != nil {
+		logs.CtxWarn(ctx, "[SweepDebug] MGetItemTurnRunLogs err, expt_id=%v, err=%v", event.ExptID, err)
 		return items, nil, err
 	}
+	logs.CtxInfo(ctx, "[SweepDebug] turn run logs fetched, expt_id=%v, count=%d", event.ExptID, len(turnRunLogs))
 
 	// recordID -> itemID(s)，一个 record 可能只对应一个 turn，但为稳妥仍走 slice
 	recordIDToItemIDs := make(map[int64][]int64)
 	recordIDs := make([]int64, 0)
+	skippedZero := 0
 	for _, rl := range turnRunLogs {
 		if rl == nil || rl.TargetResultID <= 0 {
+			skippedZero++
 			continue
 		}
 		if _, exists := recordIDToItemIDs[rl.TargetResultID]; !exists {
@@ -697,10 +716,15 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		recordIDToItemIDs[rl.TargetResultID] = append(recordIDToItemIDs[rl.TargetResultID], rl.ItemID)
 	}
 	if len(recordIDs) == 0 {
+		logs.CtxInfo(ctx, "[SweepDebug] short-circuit: no recordIDs (target_result_id<=0), expt_id=%v, turn_run_logs=%d, skipped_zero=%d",
+			event.ExptID, len(turnRunLogs), skippedZero)
 		return items, nil, nil
 	}
+	logs.CtxInfo(ctx, "[SweepDebug] recordIDs to check, expt_id=%v, count=%d, ids=%v", event.ExptID, len(recordIDs), recordIDs)
 
 	terminatedRecordIDs, statusMap := e.evalTargetService.CheckSandboxTerminated(ctx, event.SpaceID, recordIDs)
+	logs.CtxInfo(ctx, "[SweepDebug] CheckSandboxTerminated returned, expt_id=%v, terminated=%v, status_map=%v",
+		event.ExptID, terminatedRecordIDs, statusMap)
 	if len(terminatedRecordIDs) == 0 {
 		return items, nil, nil
 	}
