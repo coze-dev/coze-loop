@@ -3245,4 +3245,138 @@ func TestEvalTargetServiceImpl_CheckSandboxTerminated(t *testing.T) {
 		assert.Equal(t, []int64{10}, got)
 		assert.Equal(t, "Failed (main)", statuses[10])
 	})
+
+	// Finished(13) 是评测终态，与 Failed/Canceled 一样必须视为命中，
+	// 否则会与 3h zombie 兜底冲突（对应 commit 91e5eed20 "treat sandbox Finished(13) as terminal in status sweep"）。
+	t.Run("Finished 命中 (视为终态)", func(t *testing.T) {
+		buildSandboxCase(t, rpc.SandboxExecuteStatusFinished, true, "Finished (main)")
+	})
+
+	t.Run("BatchGetEvalTargetVersion 失败静默返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return(nil, errors.New("version load failed"))
+		// mockSched.Get 不应被调用
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	// 无有效 record 版本 (targetVersionID<=0) 时不应发起版本查询
+	t.Run("record 无版本 ID 直接短路", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 0, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	// 混合场景: SandboxAgent record + 非 SandboxAgent record → 只查前者
+	t.Run("多 record 混合 只查 SandboxAgent 版本", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10, 11}).
+			Return([]*entity.EvalTargetRecord{
+				{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)},
+				{ID: 11, TargetVersionID: 21, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)},
+			}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ int64, ids []int64) ([]*entity.EvalTarget, error) {
+				assert.ElementsMatch(t, []int64{20, 21}, ids)
+				return []*entity.EvalTarget{
+					{EvalTargetType: entity.EvalTargetTypeSandboxAgent, EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent}},
+					{EvalTargetType: entity.EvalTargetTypeCozeBot, EvalTargetVersion: &entity.EvalTargetVersion{ID: 21}},
+				}, nil
+			})
+		// 只应对 record 10 (execute id "10") 发起 Get
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
+				assert.Equal(t, "10", req.ExecuteID)
+				return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: rpc.SandboxExecuteStatusFailed}}, nil
+			}).Times(1)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10, 11})
+		assert.Equal(t, []int64{10}, got)
+		assert.Equal(t, "Failed (main)", statuses[10])
+	})
+
+	// resp.ExecuteInfo == nil 应保守视为未终态
+	t.Run("resp 或 ExecuteInfo 为 nil 视为未终态", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			Return(&rpc.SandboxGetResponse{ExecuteInfo: nil}, nil).Times(1)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+}
+
+// TestSandboxStatusText 覆盖沙箱状态字面量映射，包括所有终态、非终态以及默认分支。
+func TestSandboxStatusText(t *testing.T) {
+	cases := []struct {
+		in   rpc.SandboxExecuteStatus
+		want string
+	}{
+		{rpc.SandboxExecuteStatusFailed, "Failed"},
+		{rpc.SandboxExecuteStatusCanceled, "Canceled"},
+		{rpc.SandboxExecuteStatusFinished, "Finished"},
+		{rpc.SandboxExecuteStatusSucceeded, "Succeeded"},
+		// 未列举状态走 default 分支，返回原始数字字面量
+		{rpc.SandboxExecuteStatus(9999), "9999"},
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.want, sandboxStatusText(c.in), "status=%v", c.in)
+	}
+}
+
+// TestCombineSandboxStatusLabel 覆盖主从沙箱终态标签组合的所有分支:
+// 只主 / 只从 / 双终态 / 双未终态。
+func TestCombineSandboxStatusLabel(t *testing.T) {
+	// 只主命中
+	assert.Equal(t, "Failed (main)",
+		combineSandboxStatusLabel(true, rpc.SandboxExecuteStatusFailed, false, 0))
+	// 只从命中
+	assert.Equal(t, "Canceled (subordinate)",
+		combineSandboxStatusLabel(false, 0, true, rpc.SandboxExecuteStatusCanceled))
+	// 主从组合
+	assert.Equal(t, "Failed (main), Canceled (subordinate)",
+		combineSandboxStatusLabel(true, rpc.SandboxExecuteStatusFailed, true, rpc.SandboxExecuteStatusCanceled))
+	// 主 Finished + 从 Finished 组合
+	assert.Equal(t, "Finished (main), Finished (subordinate)",
+		combineSandboxStatusLabel(true, rpc.SandboxExecuteStatusFinished, true, rpc.SandboxExecuteStatusFinished))
+	// 都不命中 → 空字符串
+	assert.Equal(t, "",
+		combineSandboxStatusLabel(false, 0, false, 0))
 }
