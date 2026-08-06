@@ -3428,13 +3428,17 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	outputData := evaluator_convertor.ToInvokeEvaluatorOutputDataDO(req.GetOutput(), req.GetStatus())
 
 	runStatus := evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus())
-	if err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
+	outcome, err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
 		SpaceID:    req.GetWorkspaceID(),
 		RecordID:   req.GetInvokeID(),
 		OutputData: outputData,
 		Status:     runStatus,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
+	}
+	if outcome == entity.ReportEvaluatorResultConflict {
+		return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 	}
 	if actx.Event != nil {
 		if !actx.ResumeReady {
@@ -3455,7 +3459,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		}
 	}
 
-	if actx.CallbackURL != "" {
+	if outcome == entity.ReportEvaluatorResultApplied && actx.CallbackURL != "" {
 		payload := &openapi.EvaluatorCallbackPayloadOApi{
 			InvokeID:           gptr.Of(req.GetInvokeID()),
 			WorkspaceID:        gptr.Of(req.GetWorkspaceID()),

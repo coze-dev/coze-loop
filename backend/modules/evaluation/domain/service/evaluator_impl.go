@@ -1154,27 +1154,34 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 }
 
 // ReportEvaluatorInvokeResult 上报评估器异步执行结果 using a terminal CAS.
-func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) error {
+func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) (entity.ReportEvaluatorResultOutcome, error) {
 	if param == nil {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("report evaluator result param is nil"))
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("report evaluator result param is nil"))
 	}
 	if param.Status != entity.EvaluatorRunStatusSuccess && param.Status != entity.EvaluatorRunStatusFail {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("report evaluator status must be success or fail"))
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("report evaluator status must be success or fail"))
 	}
 	logs.CtxInfo(ctx, "[ReportEvaluatorInvokeResult] recordID: %d, spaceID: %d, status: %v", param.RecordID, param.SpaceID, param.Status)
 
 	existingRecord, err := e.evaluatorRecordRepo.GetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), param.RecordID, false)
 	if err != nil {
 		logs.CtxError(ctx, "[ReportEvaluatorInvokeResult] GetEvaluatorRecord fail, recordID: %d, err: %v", param.RecordID, err)
-		return err
+		return 0, err
 	}
 	if existingRecord == nil {
-		return errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("evaluator record not found"))
+		return 0, errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("evaluator record not found"))
 	}
 	if existingRecord.SpaceID != param.SpaceID {
 		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] spaceID mismatch, recordID: %d, requestSpaceID: %d, recordSpaceID: %d",
 			param.RecordID, param.SpaceID, existingRecord.SpaceID)
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("spaceID mismatch"))
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("spaceID mismatch"))
+	}
+
+	if existingRecord.Status != entity.EvaluatorRunStatusAsyncInvoking {
+		if existingRecord.Status == param.Status {
+			return entity.ReportEvaluatorResultDuplicate, nil
+		}
+		return entity.ReportEvaluatorResultConflict, nil
 	}
 
 	mergedOutputData := param.OutputData
@@ -1197,12 +1204,22 @@ func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, 
 
 	updated, err := e.evaluatorRecordRepo.CompareAndSwapEvaluatorRecordResult(ctx, param.RecordID, param.SpaceID, entity.EvaluatorRunStatusAsyncInvoking, param.Status, mergedOutputData)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	if !updated {
-		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] skip duplicate/conflicting callback, recordID: %d, reportStatus: %v", param.RecordID, param.Status)
+	if updated {
+		return entity.ReportEvaluatorResultApplied, nil
 	}
-	return nil
+
+	latestRecord, err := e.evaluatorRecordRepo.GetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), param.RecordID, false)
+	if err != nil {
+		return 0, err
+	}
+	if latestRecord != nil && latestRecord.Status == param.Status {
+		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] duplicate terminal callback, recordID: %d, status: %v", param.RecordID, param.Status)
+		return entity.ReportEvaluatorResultDuplicate, nil
+	}
+	logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] conflicting terminal callback, recordID: %d, reportStatus: %v", param.RecordID, param.Status)
+	return entity.ReportEvaluatorResultConflict, nil
 }
 
 func (e *EvaluatorServiceImpl) ArmEvaluatorResume(ctx context.Context, recordID int64) error {

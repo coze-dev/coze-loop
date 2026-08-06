@@ -340,6 +340,14 @@ type GetAsyncDebugEvaluatorInvokeResultResponse struct {
 	InputData   *EvaluatorInputData  `json:"input_data,omitempty"`
 }
 
+type ReportEvaluatorResultOutcome int
+
+const (
+	ReportEvaluatorResultApplied ReportEvaluatorResultOutcome = iota + 1
+	ReportEvaluatorResultDuplicate
+	ReportEvaluatorResultConflict
+)
+
 type ReportEvaluatorRecordParam struct {
 	SpaceID    int64                `json:"space_id"`
 	RecordID   int64                `json:"record_id"`
