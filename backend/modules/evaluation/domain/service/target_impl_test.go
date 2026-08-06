@@ -2618,6 +2618,80 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 		assert.Equal(t, int32(100), saved.EvalTargetOutputData.EvalTargetRunError.Code)
 		assert.Equal(t, "msg", saved.EvalTargetOutputData.EvalTargetRunError.Message)
 	})
+
+	t.Run("双沙箱: 主 + 从两个 execute 都要销毁, 且 ext 落库保留", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		mockRunLog := repomocks.NewMockIExptRunLogRepo(ctrl)
+		svc := &EvalTargetServiceImpl{
+			evalTargetRepo:          mockRepo,
+			sandboxSchedulerAdapter: mockSched,
+			exptRunLogRepo:          mockRunLog,
+		}
+
+		records := []*entity.EvalTargetRecord{{
+			ID: 10, TargetVersionID: 20, SpaceID: 1, ExperimentRunID: 50,
+			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				Ext: map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: "sub-99"},
+			},
+		}}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).Return(records, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+
+		var saved *entity.EvalTargetRecord
+		mockRepo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Nil()).
+			DoAndReturn(func(_ context.Context, r *entity.EvalTargetRecord, _ *bool) error {
+				saved = r
+				return nil
+			}).Times(1)
+
+		mockRunLog.EXPECT().Get(gomock.Any(), int64(0), int64(50)).Return(&entity.ExptRunLog{ExptID: 999}, nil).Times(1)
+
+		var mu sync.Mutex
+		destroyed := make([]*rpc.SandboxDestroyRequest, 0, 2)
+		done := make(chan struct{}, 2)
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				mu.Lock()
+				destroyed = append(destroyed, req)
+				mu.Unlock()
+				done <- struct{}{}
+				return &rpc.SandboxDestroyResponse{}, nil
+			}).Times(2)
+
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
+
+		for i := 0; i < 2; i++ {
+			select {
+			case <-done:
+			case <-time.After(2 * time.Second):
+				t.Fatalf("destroy goroutine timeout, got %d/2 destroys", i)
+			}
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		execIDs := map[string]bool{}
+		for _, r := range destroyed {
+			assert.Equal(t, "999", r.TaskID)
+			assert.Len(t, r.ExecuteIDs, 1)
+			execIDs[r.ExecuteIDs[0]] = true
+		}
+		assert.True(t, execIDs["10"], "should destroy main execute id")
+		assert.True(t, execIDs["sub-99"], "should destroy subordinate execute id")
+
+		// fail record 保留 extra execute id 便于事后审计
+		assert.NotNil(t, saved)
+		assert.Equal(t, entity.EvalTargetRunStatusFail, gptr.Indirect(saved.Status))
+		require.NotNil(t, saved.EvalTargetOutputData)
+		assert.Equal(t, "sub-99", saved.EvalTargetOutputData.Ext[entity.SandboxAgentExtKeyExtraExecuteID])
+	})
 }
 
 // TestEvalTargetServiceImpl_resolveSandboxTaskIDByRunID 覆盖私有方法的分支
@@ -3044,10 +3118,10 @@ func TestEvalTargetServiceImpl_CheckSandboxTerminated(t *testing.T) {
 	}
 
 	t.Run("Failed 命中", func(t *testing.T) {
-		buildSandboxCase(t, rpc.SandboxExecuteStatusFailed, true, "Failed")
+		buildSandboxCase(t, rpc.SandboxExecuteStatusFailed, true, "Failed (main)")
 	})
 	t.Run("Canceled 命中", func(t *testing.T) {
-		buildSandboxCase(t, rpc.SandboxExecuteStatusCanceled, true, "Canceled")
+		buildSandboxCase(t, rpc.SandboxExecuteStatusCanceled, true, "Canceled (main)")
 	})
 	t.Run("Succeeded 不命中 (留给回调)", func(t *testing.T) {
 		buildSandboxCase(t, rpc.SandboxExecuteStatusSucceeded, false, "")
@@ -3076,5 +3150,99 @@ func TestEvalTargetServiceImpl_CheckSandboxTerminated(t *testing.T) {
 		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
 		assert.Nil(t, got)
 		assert.Nil(t, statuses)
+	})
+
+	// 双沙箱：ext 里带从沙箱 execute id 时，主 + 从两个 execute 都要查。
+	// 用 helper 一次性组装 record + 断言 sub Get 的调用形状。
+	buildDualCase := func(t *testing.T, mainStatus, subStatus rpc.SandboxExecuteStatus, wantHit bool, wantLabel string) {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		record := &entity.EvalTargetRecord{
+			ID: 10, TargetVersionID: 20, SpaceID: 1,
+			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				Ext: map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: "sub-99"},
+			},
+		}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{record}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		// 无论命中与否，主 + 从两个 execute 各查 1 次
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
+				switch req.ExecuteID {
+				case "10":
+					return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: mainStatus}}, nil
+				case "sub-99":
+					return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: subStatus}}, nil
+				default:
+					t.Fatalf("unexpected ExecuteID %q", req.ExecuteID)
+					return nil, nil
+				}
+			}).Times(2)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		if wantHit {
+			assert.Equal(t, []int64{10}, got)
+			assert.Equal(t, wantLabel, statuses[10])
+		} else {
+			assert.Nil(t, got)
+			assert.Nil(t, statuses)
+		}
+	}
+
+	t.Run("双沙箱: 主 Running + 从 Failed 命中 (subordinate)", func(t *testing.T) {
+		buildDualCase(t, rpc.SandboxExecuteStatusRunning, rpc.SandboxExecuteStatusFailed, true, "Failed (subordinate)")
+	})
+	t.Run("双沙箱: 主 Failed + 从 Running 命中 (main)", func(t *testing.T) {
+		buildDualCase(t, rpc.SandboxExecuteStatusFailed, rpc.SandboxExecuteStatusRunning, true, "Failed (main)")
+	})
+	t.Run("双沙箱: 主 Failed + 从 Canceled 组合标签", func(t *testing.T) {
+		buildDualCase(t, rpc.SandboxExecuteStatusFailed, rpc.SandboxExecuteStatusCanceled, true, "Failed (main), Canceled (subordinate)")
+	})
+	t.Run("双沙箱: 主从均 Running 不命中", func(t *testing.T) {
+		buildDualCase(t, rpc.SandboxExecuteStatusRunning, rpc.SandboxExecuteStatusRunning, false, "")
+	})
+	t.Run("双沙箱: 主 Failed + 从 Get 出错 仍按主命中", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		record := &entity.EvalTargetRecord{
+			ID: 10, TargetVersionID: 20, SpaceID: 1,
+			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				Ext: map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: "sub-99"},
+			},
+		}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{record}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
+				if req.ExecuteID == "10" {
+					return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: rpc.SandboxExecuteStatusFailed}}, nil
+				}
+				return nil, errors.New("sub get down")
+			}).Times(2)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Equal(t, []int64{10}, got)
+		assert.Equal(t, "Failed (main)", statuses[10])
 	})
 }
