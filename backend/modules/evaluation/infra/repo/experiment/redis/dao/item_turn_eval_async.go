@@ -77,6 +77,19 @@ func (e *evalAsyncDAOImpl) GetEvalAsyncCtxStrong(ctx context.Context, invokeID s
 	return nil, lastErr
 }
 
+const markResumeReadyScript = `
+local current = redis.call('GET', KEYS[1])
+if not current then return -1 end
+if string.find(current, '"resume_ready":true', 1, true) then return 0 end
+local updated, count = string.gsub(current, '"resume_ready":false', '"resume_ready":true', 1)
+if count == 0 then
+  updated, count = string.gsub(current, '^{', '{"resume_ready":true,', 1)
+end
+if count == 0 then return -2 end
+redis.call('SET', KEYS[1], updated, 'EX', ARGV[1])
+return 1
+`
+
 func (e *evalAsyncDAOImpl) MarkEvalAsyncResumeReady(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error) {
 	actx, err := e.GetEvalAsyncCtxStrong(ctx, invokeID)
 	if err != nil {
@@ -88,24 +101,8 @@ func (e *evalAsyncDAOImpl) MarkEvalAsyncResumeReady(ctx context.Context, invokeI
 	key := e.makeExptItemTurnEvalAsyncCtxKey(invokeID)
 	// Keep the raw JSON intact instead of decoding with Redis cjson (Lua numbers cannot safely represent i64 IDs).
 	// resume_ready is a root-level field emitted by Go's JSON encoder, so an anchored string replacement/insertion is safe.
-	const markResumeReadyScript = `
-local current = redis.call('GET', KEYS[1])
-if not current then return -1 end
-if string.find(current, '"resume_ready":true', 1, true) then return 0 end
-local updated, count = string.gsub(current, '"resume_ready":false', '"resume_ready":true', 1)
-if count == 0 then
-  updated, count = string.gsub(current, '^{', '{"resume_ready":true,', 1)
-end
-if count == 0 then return -2 end
-local ttl = redis.call('PTTL', KEYS[1])
-if ttl > 0 then
-  redis.call('SET', KEYS[1], updated, 'PX', ttl)
-else
-  redis.call('SET', KEYS[1], updated)
-end
-return 1
-`
-	updated, evalErr := e.cmdable.Eval(ctx, markResumeReadyScript, []string{key}).Int64()
+
+	updated, evalErr := e.cmdable.Eval(ctx, markResumeReadyScript, []string{key}, int64((12*time.Hour)/time.Second)).Int64()
 	if evalErr != nil {
 		return nil, errorx.Wrapf(evalErr, "redis mark resume ready fail, key: %v", key)
 	}
