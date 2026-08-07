@@ -9,11 +9,36 @@ import (
 
 	jsonschemav5 "github.com/santhosh-tekuri/jsonschema/v5"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
 var SchemaCompiler *jsonschemav5.Compiler
+
+// isStringTypeSchema 判断 schema 是否语义等价于 {"type":"string"}：
+// 只要顶层是对象、type=="string"（或 type 为包含 "string" 的数组），就视为字符串型 schema，
+// 允许附带 description/title/pattern/minLength/enum 等其它字段。
+// 解析失败或结构不符时返回 false，走回原有的通用校验路径。
+func isStringTypeSchema(schemaStr string) bool {
+	var m map[string]interface{}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(schemaStr)), &m); err != nil {
+		return false
+	}
+	t, ok := m["type"]
+	if !ok {
+		return false
+	}
+	switch v := t.(type) {
+	case string:
+		return v == "string"
+	case []interface{}:
+		for _, item := range v {
+			if s, ok := item.(string); ok && s == "string" {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // ValidateJSONSchema 验证JSON字符串是否符合schema
 func ValidateJSONSchema(schemaStr, dataStr string) (bool, error) {
@@ -26,7 +51,9 @@ func ValidateJSONSchema(schemaStr, dataStr string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if strings.ReplaceAll(schemaStr, " ", "") == strings.ReplaceAll(consts.StringJsonSchema, " ", "") {
+	// 语义等价于 {"type":"string"} 的 schema（允许附带 description/title 等注解、或包含 minLength/pattern/enum 等对字符串收紧的约束）
+	// 都应把入参当作纯字符串处理：把 dataStr 包一层引号，避免下面的 json.Unmarshal 把「字符串化 JSON」解成 map/array 后再拿去校验 type:"string" 而失败。
+	if isStringTypeSchema(schemaStr) {
 		dataStr = fmt.Sprintf("\"%s\"", dataStr)
 	}
 	var data interface{}

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,6 +55,11 @@ type ExptSchedulerImpl struct {
 	evaluationSetItemService EvaluationSetItemService
 	schedulerModeFactory     SchedulerModeFactory
 	evalTargetService        IEvalTargetService
+	// sandboxAgentMetrics 复用沙箱 agent 评测对象既有打点体系。
+	// sweep 命中沙箱提前终态时，对每个受影响 item 补一次 EmitInvokeFinished，
+	// 让终态命中路径与正常回调路径在同一 dashboard 上可比。
+	// 允许为 nil：开源部署 / 未接入 metrics 时静默 no-op。
+	sandboxAgentMetrics metrics.SandboxAgentMetrics
 }
 
 func NewExptSchedulerSvc(
@@ -76,6 +82,7 @@ func NewExptSchedulerSvc(
 	evaluationSetItemService EvaluationSetItemService,
 	schedulerModeFactory SchedulerModeFactory,
 	evalTargetService IEvalTargetService,
+	sandboxAgentMetrics metrics.SandboxAgentMetrics,
 ) ExptSchedulerEvent {
 	i := &ExptSchedulerImpl{
 		Manager:                  manager,
@@ -97,6 +104,7 @@ func NewExptSchedulerSvc(
 		evaluationSetItemService: evaluationSetItemService,
 		schedulerModeFactory:     schedulerModeFactory,
 		evalTargetService:        evalTargetService,
+		sandboxAgentMetrics:      sandboxAgentMetrics,
 	}
 
 	i.Endpoints = SchedulerChain(
@@ -347,12 +355,18 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
+	incomplete, sandboxTerminated, err := e.sweepTerminatedSandboxItems(ctx, event, incomplete, exptDetail)
+	if err != nil {
+		return err
+	}
+
 	incomplete, zombies, err := e.handleZombies(ctx, event, incomplete, exptDetail)
 	if err != nil {
 		return err
 	}
 
 	complete = append(complete, zombies...)
+	complete = append(complete, sandboxTerminated...)
 	logs.CtxInfo(ctx, "expt scheduler scan item, to_submit: %v, incomplete: %v, complete: %v",
 		entity.ExptEvalItems(toSubmit).GetItemIDs(), entity.ExptEvalItems(incomplete).GetItemIDs(), entity.ExptEvalItems(complete).GetItemIDs())
 
@@ -535,7 +549,7 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		logs.CtxError(ctx, "[ExptEval] terminate async evaluator records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
 	}
 
-	if err := e.terminateZombieEvalTargetRecords(ctx, event, zombieItemIDs); err != nil {
+	if err := e.terminateZombieEvalTargetRecords(ctx, event, expt, zombieItemIDs); err != nil {
 		logs.CtxError(ctx, "[ExptEval] terminate async eval target records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
 	}
 
@@ -646,9 +660,188 @@ func (e *ExptSchedulerImpl) terminateZombieEvaluatorRecords(ctx context.Context,
 	return firstErr
 }
 
+// sweepTerminatedSandboxItems 主动巡检 SandboxAgent 异步评测对象的沙箱状态：
+// 如果沙箱 execute 已进入 Failed/Canceled 但结果还没通过 ReportEvalTargetInvokeResult 回调上报，
+// 就把对应的 item / turn run log / 主表状态直接置为 Fail，让后续 HandleEventErr 走既有的
+// 重试 / 终止决策，而不是等 3h zombie 兜底。
+//
+// 非 SandboxAgent 类型 / adapter 未接入（开源 stub）时静默 no-op，返回原始 items。
+func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, terminated []*entity.ExptEvalItem, err error) {
+	if e.evalTargetService == nil || expt == nil {
+		return items, nil, nil
+	}
+	// 只对确实用 SandboxAgent 的实验做 sweep，避免每个 tick 都发无谓 RPC。
+	if !isSandboxAgentExpt(expt) {
+		return items, nil, nil
+	}
+
+	processingItemIDs := make([]int64, 0, len(items))
+	for _, item := range items {
+		if item == nil || item.State != entity.ItemRunState_Processing {
+			continue
+		}
+		processingItemIDs = append(processingItemIDs, item.ItemID)
+	}
+	if len(processingItemIDs) == 0 {
+		return items, nil, nil
+	}
+
+	turnRunLogs, err := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, processingItemIDs, event.SpaceID)
+	if err != nil {
+		return items, nil, err
+	}
+
+	// recordID -> itemID(s)，一个 record 可能只对应一个 turn，但为稳妥仍走 slice
+	recordIDToItemIDs := make(map[int64][]int64)
+	recordIDs := make([]int64, 0)
+	for _, rl := range turnRunLogs {
+		if rl == nil || rl.TargetResultID <= 0 {
+			continue
+		}
+		if _, exists := recordIDToItemIDs[rl.TargetResultID]; !exists {
+			recordIDs = append(recordIDs, rl.TargetResultID)
+		}
+		recordIDToItemIDs[rl.TargetResultID] = append(recordIDToItemIDs[rl.TargetResultID], rl.ItemID)
+	}
+	if len(recordIDs) == 0 {
+		return items, nil, nil
+	}
+
+	terminatedRecordIDs, statusMap := e.evalTargetService.CheckSandboxTerminated(ctx, event.SpaceID, recordIDs)
+	if len(terminatedRecordIDs) == 0 {
+		return items, nil, nil
+	}
+
+	terminatedItemIDSet := make(map[int64]struct{})
+	// 用第一个命中的 record 状态作为整体 err_msg 依据（同一 item 通常只对应一个 record）。
+	var firstStatus string
+	for _, rid := range terminatedRecordIDs {
+		if firstStatus == "" {
+			firstStatus = statusMap[rid]
+		}
+		for _, itemID := range recordIDToItemIDs[rid] {
+			terminatedItemIDSet[itemID] = struct{}{}
+		}
+	}
+	if firstStatus == "" {
+		firstStatus = "Terminated"
+	}
+
+	alives = make([]*entity.ExptEvalItem, 0, len(items))
+	terminated = make([]*entity.ExptEvalItem, 0, len(terminatedItemIDSet))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		if _, hit := terminatedItemIDSet[item.ItemID]; hit && item.State == entity.ItemRunState_Processing {
+			terminated = append(terminated, item.SetState(entity.ItemRunState_Fail))
+		} else {
+			alives = append(alives, item)
+		}
+	}
+
+	if len(terminated) == 0 {
+		return alives, terminated, nil
+	}
+
+	terminatedItemIDs := gslice.Transform(terminated, func(it *entity.ExptEvalItem, _ int) int64 { return it.ItemID })
+	logs.CtxWarn(ctx, "[ExptEval] sandbox execute terminated before report, mark items failed, expt_id: %v, expt_run_id: %v, item_ids: %v, sandbox_status: %v",
+		event.ExptID, event.ExptRunID, terminatedItemIDs, firstStatus)
+
+	// 沙箱已经是终态，Destroy 不需要再发 EndCmd，zombieTimeout=false。
+	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
+		ctx,
+		event.SpaceID,
+		terminatedRecordIDs,
+		int32(errno.SandboxTerminatedBeforeReportCode),
+		fmt.Sprintf("sandbox execute reached terminal state (%s) before result was reported", firstStatus),
+		false,
+	)
+
+	// 与 handleZombies 一致的写库形状，保证 UI (MGetExperimentResult) 拿到一致的 err_msg。
+	errBytes := []byte(errno.SerializeErr(errno.NewSandboxTerminatedBeforeReportErr(firstStatus)))
+
+	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, terminatedItemIDs, map[string]any{
+		"status":       int32(entity.ItemRunState_Fail),
+		"result_state": int32(entity.ExptItemResultStateLogged),
+		"err_msg":      errBytes,
+	}, event.SpaceID); err != nil {
+		return nil, nil, err
+	}
+	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, terminatedItemIDs, map[string]any{
+		"status":  int32(entity.ItemRunState_Fail),
+		"err_msg": errBytes,
+	}); err != nil {
+		logs.CtxError(ctx, "[ExptEval] update sandbox-terminated items main table err_msg fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, terminatedItemIDs, err)
+	}
+	if err := e.ExptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(ctx, event.SpaceID, event.ExptID, event.ExptRunID, terminatedItemIDs, entity.TurnRunState_Fail); err != nil {
+		return nil, nil, err
+	}
+
+	// 打点：复用沙箱 agent 评测对象的 EmitInvokeFinished，让"沙箱终态未回调 → 兜底失败"
+	// 与正常回调路径的 invoke_finished 在同一 dashboard 上可比。err_code 用
+	// SandboxTerminatedBeforeReportCode，classifier 归入 non_engineering。
+	// invoke_id 对齐提交侧：一次 invocation 的 invokeID = record.ID。
+	e.emitSandboxSweptInvokeFinished(ctx, event, expt, terminatedRecordIDs, recordIDToItemIDs)
+
+	return alives, terminated, nil
+}
+
+// emitSandboxSweptInvokeFinished 为 sweep 命中的每个 record 补一次 invoke_finished 打点。
+// tag 语义与 emitInvokeStarted / EvalOpenAPIApplication.emitSandboxAgentInvokeFinished 对齐；
+// item_key / dataset_key 需要额外查 dataset item, 这里为控代价留空 (tag 层会填 "-")。
+// 允许 sandboxAgentMetrics == nil（未接入 metrics 时静默 no-op）。
+func (e *ExptSchedulerImpl) emitSandboxSweptInvokeFinished(
+	ctx context.Context,
+	event *entity.ExptScheduleEvent,
+	expt *entity.Experiment,
+	terminatedRecordIDs []int64,
+	recordIDToItemIDs map[int64][]int64,
+) {
+	if e.sandboxAgentMetrics == nil || len(terminatedRecordIDs) == 0 {
+		return
+	}
+	var datasetID, datasetVersion int64
+	if expt != nil && expt.EvalSet != nil {
+		datasetID = expt.EvalSet.ID
+		if expt.EvalSet.EvaluationSetVersion != nil {
+			datasetVersion = expt.EvalSet.EvaluationSetVersion.ID
+		}
+	}
+	var targetID int64
+	if expt != nil {
+		targetID = expt.TargetID
+	}
+	// submitTime 无法从 sweep 上下文精确得到 (record 上有 CreatedAt, 但获取要额外 RPC);
+	// 传 zero time, emit 侧会把 duration 归 0, 与开源 stub 保持一致语义。
+	var zero time.Time
+	reportErr := errno.NewSandboxTerminatedBeforeReportErr("swept")
+	errCode := int32(errno.SandboxTerminatedBeforeReportCode)
+	for _, recordID := range terminatedRecordIDs {
+		itemIDs := recordIDToItemIDs[recordID]
+		// 一个 record 通常对应一个 turn / 一个 item, 保底遍历。
+		if len(itemIDs) == 0 {
+			itemIDs = []int64{0}
+		}
+		for _, itemID := range itemIDs {
+			tags := metrics.SandboxAgentInvokeTags{
+				ExperimentID:   event.ExptID,
+				ItemID:         itemID,
+				InvokeID:       strconv.FormatInt(recordID, 10),
+				DatasetID:      datasetID,
+				DatasetVersion: datasetVersion,
+				TargetID:       targetID,
+			}
+			e.sandboxAgentMetrics.EmitInvokeFinished(tags, reportErr, errCode, zero)
+		}
+	}
+	logs.CtxInfo(ctx, "[ExptEval] sandbox sweep invoke_finished emitted, expt_id=%v, records=%d", event.ExptID, len(terminatedRecordIDs))
+}
+
 // terminateZombieEvalTargetRecords 将僵尸 item 关联的 EvalTargetRecord（仅 SandboxAgent 类型且仍 AsyncInvoking）置为 Fail，
-// 并 best-effort 销毁对应的沙箱 execute。
-func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context, event *entity.ExptScheduleEvent, zombieItemIDs []int64) error {
+// 并 best-effort 销毁对应的沙箱 execute。expt 用来判断实验类型: 只有 SandboxAgent 才补 EmitInvokeFinished 打点,
+// 避免非 sandbox zombie 污染 sandbox_agent 看板。
+func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, zombieItemIDs []int64) error {
 	if len(zombieItemIDs) == 0 || e.evalTargetService == nil {
 		return nil
 	}
@@ -658,20 +851,20 @@ func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context
 		return err
 	}
 
-	recordIDSet := make(map[int64]struct{})
+	// recordID -> 关联 itemIDs, 打点时需要按 (record, item) 展开 tag
+	recordIDToItemIDs := make(map[int64][]int64)
+	recordIDs := make([]int64, 0)
 	for _, rl := range turnRunLogs {
 		if rl == nil || rl.TargetResultID <= 0 {
 			continue
 		}
-		recordIDSet[rl.TargetResultID] = struct{}{}
+		if _, exists := recordIDToItemIDs[rl.TargetResultID]; !exists {
+			recordIDs = append(recordIDs, rl.TargetResultID)
+		}
+		recordIDToItemIDs[rl.TargetResultID] = append(recordIDToItemIDs[rl.TargetResultID], rl.ItemID)
 	}
-	if len(recordIDSet) == 0 {
+	if len(recordIDs) == 0 {
 		return nil
-	}
-
-	recordIDs := make([]int64, 0, len(recordIDSet))
-	for id := range recordIDSet {
-		recordIDs = append(recordIDs, id)
 	}
 
 	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
@@ -682,5 +875,64 @@ func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context
 		"async eval target terminated: experiment item exceeded zombie timeout",
 		true,
 	)
+
+	// 打点: 与 sweep 命中路径复用同一 EmitInvokeFinished, 让 zombie 兜底 fail 与其它 fail 在同一 dashboard 上可比。
+	// errCode = AsyncEvalTargetZombieTimeoutCode, classifier 归入 non_engineering (未在 engineering 白名单)。
+	if isSandboxAgentExpt(expt) {
+		e.emitSandboxZombieInvokeFinished(ctx, event, expt, recordIDs, recordIDToItemIDs)
+	}
 	return nil
+}
+
+// isSandboxAgentExpt 判断实验是否 SandboxAgent 类型。判空后再取 EvalTargetType, 保持与 sweep 一致。
+func isSandboxAgentExpt(expt *entity.Experiment) bool {
+	return expt != nil &&
+		expt.Target != nil &&
+		expt.Target.EvalTargetVersion != nil &&
+		expt.Target.EvalTargetVersion.EvalTargetType == entity.EvalTargetTypeSandboxAgent
+}
+
+// emitSandboxZombieInvokeFinished 与 emitSandboxSweptInvokeFinished 语义一致, 只是 errCode 换成 zombie timeout。
+func (e *ExptSchedulerImpl) emitSandboxZombieInvokeFinished(
+	ctx context.Context,
+	event *entity.ExptScheduleEvent,
+	expt *entity.Experiment,
+	recordIDs []int64,
+	recordIDToItemIDs map[int64][]int64,
+) {
+	if e.sandboxAgentMetrics == nil || len(recordIDs) == 0 {
+		return
+	}
+	var datasetID, datasetVersion int64
+	if expt != nil && expt.EvalSet != nil {
+		datasetID = expt.EvalSet.ID
+		if expt.EvalSet.EvaluationSetVersion != nil {
+			datasetVersion = expt.EvalSet.EvaluationSetVersion.ID
+		}
+	}
+	var targetID int64
+	if expt != nil {
+		targetID = expt.TargetID
+	}
+	var zero time.Time
+	reportErr := errno.NewItemZombieTimeoutErr(0, true)
+	errCode := int32(errno.AsyncEvalTargetZombieTimeoutCode)
+	for _, recordID := range recordIDs {
+		itemIDs := recordIDToItemIDs[recordID]
+		if len(itemIDs) == 0 {
+			itemIDs = []int64{0}
+		}
+		for _, itemID := range itemIDs {
+			tags := metrics.SandboxAgentInvokeTags{
+				ExperimentID:   event.ExptID,
+				ItemID:         itemID,
+				InvokeID:       strconv.FormatInt(recordID, 10),
+				DatasetID:      datasetID,
+				DatasetVersion: datasetVersion,
+				TargetID:       targetID,
+			}
+			e.sandboxAgentMetrics.EmitInvokeFinished(tags, reportErr, errCode, zero)
+		}
+	}
+	logs.CtxInfo(ctx, "[ExptEval] sandbox zombie invoke_finished emitted, expt_id=%v, records=%d", event.ExptID, len(recordIDs))
 }
