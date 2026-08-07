@@ -5116,9 +5116,13 @@ func TestDefaultExptTurnEvaluationImpl_AsyncTargetCallbackRunsMixedEvaluators(t 
 			EvalSetItem: &entity.EvaluationSetItem{ItemID: 5},
 			Expt: &entity.Experiment{
 				ID: 3, SpaceID: spaceID, TargetVersionID: 99,
-				Target: &entity.EvalTarget{ID: 88, EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
-					EvalTargetVersion: &entity.EvalTargetVersion{ID: 99, EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
-						CustomRPCServer: &entity.CustomRPCServer{IsAsync: gptr.Of(true)}}},
+				Target: &entity.EvalTarget{
+					ID: 88, EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID: 99, EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+						CustomRPCServer: &entity.CustomRPCServer{IsAsync: gptr.Of(true)},
+					},
+				},
 				Evaluators: allEvaluators,
 				EvalConf: &entity.EvaluationConfiguration{ConnectorConf: entity.Connector{
 					TargetConf:     &entity.TargetConf{TargetVersionID: 99},
@@ -5224,20 +5228,26 @@ func TestDefaultExptTurnEvaluationImpl_AsyncEvaluatorCallbacksPreserveAllRecords
 	}{
 		{
 			name: "first async callback keeps the other two pending",
-			statuses: map[int64]entity.EvaluatorRunStatus{101: entity.EvaluatorRunStatusSuccess, 102: entity.EvaluatorRunStatusSuccess,
-				201: entity.EvaluatorRunStatusSuccess, 202: entity.EvaluatorRunStatusAsyncInvoking, 203: entity.EvaluatorRunStatusAsyncInvoking},
+			statuses: map[int64]entity.EvaluatorRunStatus{
+				101: entity.EvaluatorRunStatusSuccess, 102: entity.EvaluatorRunStatusSuccess,
+				201: entity.EvaluatorRunStatusSuccess, 202: entity.EvaluatorRunStatusAsyncInvoking, 203: entity.EvaluatorRunStatusAsyncInvoking,
+			},
 			wantAbort: true,
 		},
 		{
 			name: "second async callback keeps the last one pending",
-			statuses: map[int64]entity.EvaluatorRunStatus{101: entity.EvaluatorRunStatusSuccess, 102: entity.EvaluatorRunStatusSuccess,
-				201: entity.EvaluatorRunStatusSuccess, 202: entity.EvaluatorRunStatusSuccess, 203: entity.EvaluatorRunStatusAsyncInvoking},
+			statuses: map[int64]entity.EvaluatorRunStatus{
+				101: entity.EvaluatorRunStatusSuccess, 102: entity.EvaluatorRunStatusSuccess,
+				201: entity.EvaluatorRunStatusSuccess, 202: entity.EvaluatorRunStatusSuccess, 203: entity.EvaluatorRunStatusAsyncInvoking,
+			},
 			wantAbort: true,
 		},
 		{
 			name: "last async callback completes the turn",
-			statuses: map[int64]entity.EvaluatorRunStatus{101: entity.EvaluatorRunStatusSuccess, 102: entity.EvaluatorRunStatusSuccess,
-				201: entity.EvaluatorRunStatusSuccess, 202: entity.EvaluatorRunStatusSuccess, 203: entity.EvaluatorRunStatusSuccess},
+			statuses: map[int64]entity.EvaluatorRunStatus{
+				101: entity.EvaluatorRunStatusSuccess, 102: entity.EvaluatorRunStatusSuccess,
+				201: entity.EvaluatorRunStatusSuccess, 202: entity.EvaluatorRunStatusSuccess, 203: entity.EvaluatorRunStatusSuccess,
+			},
 			wantAbort: false,
 		},
 	}
