@@ -97,7 +97,12 @@ if count == 0 then
   updated, count = string.gsub(current, '^{', '{"resume_ready":true,', 1)
 end
 if count == 0 then return -2 end
-redis.call('SET', KEYS[1], updated, 'KEEPTTL')
+local ttl = redis.call('PTTL', KEYS[1])
+if ttl > 0 then
+  redis.call('SET', KEYS[1], updated, 'PX', ttl)
+else
+  redis.call('SET', KEYS[1], updated)
+end
 return 1
 `
 	updated, evalErr := e.cmdable.Eval(ctx, markResumeReadyScript, []string{key}).Int64()
