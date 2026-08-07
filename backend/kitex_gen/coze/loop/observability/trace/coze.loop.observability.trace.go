@@ -2771,14 +2771,16 @@ type GetTraceRequest struct {
 	// ms
 	StartTime int64 `thrift:"start_time,3,required" frugal:"3,required,i64" json:"start_time" query:"start_time,required" `
 	// ms
-	EndTime      int64                `thrift:"end_time,4,required" frugal:"4,required,i64" json:"end_time" query:"end_time,required" `
-	Logid        *string              `thrift:"logid,5,optional" frugal:"5,optional,string" json:"logid,omitempty" query:"logid"`
-	PlatformType *common.PlatformType `thrift:"platform_type,8,optional" frugal:"8,optional,string" json:"platform_type,omitempty" query:"platform_type"`
-	SpanIds      []string             `thrift:"span_ids,9,optional" frugal:"9,optional,list<string>" json:"span_ids,omitempty" query:"span_ids"`
-	Filters      *filter.FilterFields `thrift:"filters,10,optional" frugal:"10,optional,filter.FilterFields" json:"filters,omitempty" query:"filters"`
-	PageSize     *int32               `thrift:"page_size,11,optional" frugal:"11,optional,i32" json:"page_size,omitempty" query:"page_size"`
-	PageToken    *string              `thrift:"page_token,12,optional" frugal:"12,optional,string" json:"page_token,omitempty" query:"page_token"`
-	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	EndTime          int64                `thrift:"end_time,4,required" frugal:"4,required,i64" json:"end_time" query:"end_time,required" `
+	Logid            *string              `thrift:"logid,5,optional" frugal:"5,optional,string" json:"logid,omitempty" query:"logid"`
+	PlatformType     *common.PlatformType `thrift:"platform_type,8,optional" frugal:"8,optional,string" json:"platform_type,omitempty" query:"platform_type"`
+	SpanIds          []string             `thrift:"span_ids,9,optional" frugal:"9,optional,list<string>" json:"span_ids,omitempty" query:"span_ids"`
+	Filters          *filter.FilterFields `thrift:"filters,10,optional" frugal:"10,optional,filter.FilterFields" json:"filters,omitempty" query:"filters"`
+	PageSize         *int32               `thrift:"page_size,11,optional" frugal:"11,optional,i32" json:"page_size,omitempty" query:"page_size"`
+	PageToken        *string              `thrift:"page_token,12,optional" frugal:"12,optional,string" json:"page_token,omitempty" query:"page_token"`
+	TraceScene       *common.TraceScene   `thrift:"trace_scene,13,optional" frugal:"13,optional,string" json:"trace_scene,omitempty" query:"trace_scene"`
+	NeedOriginalTags *bool                `thrift:"need_original_tags,14,optional" frugal:"14,optional,bool" json:"need_original_tags,omitempty" query:"need_original_tags"`
+	Base             *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetTraceRequest() *GetTraceRequest {
@@ -2893,6 +2895,30 @@ func (p *GetTraceRequest) GetPageToken() (v string) {
 	return *p.PageToken
 }
 
+var GetTraceRequest_TraceScene_DEFAULT common.TraceScene
+
+func (p *GetTraceRequest) GetTraceScene() (v common.TraceScene) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceScene() {
+		return GetTraceRequest_TraceScene_DEFAULT
+	}
+	return *p.TraceScene
+}
+
+var GetTraceRequest_NeedOriginalTags_DEFAULT bool
+
+func (p *GetTraceRequest) GetNeedOriginalTags() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNeedOriginalTags() {
+		return GetTraceRequest_NeedOriginalTags_DEFAULT
+	}
+	return *p.NeedOriginalTags
+}
+
 var GetTraceRequest_Base_DEFAULT *base.Base
 
 func (p *GetTraceRequest) GetBase() (v *base.Base) {
@@ -2934,6 +2960,12 @@ func (p *GetTraceRequest) SetPageSize(val *int32) {
 func (p *GetTraceRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
+func (p *GetTraceRequest) SetTraceScene(val *common.TraceScene) {
+	p.TraceScene = val
+}
+func (p *GetTraceRequest) SetNeedOriginalTags(val *bool) {
+	p.NeedOriginalTags = val
+}
 func (p *GetTraceRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -2949,6 +2981,8 @@ var fieldIDToName_GetTraceRequest = map[int16]string{
 	10:  "filters",
 	11:  "page_size",
 	12:  "page_token",
+	13:  "trace_scene",
+	14:  "need_original_tags",
 	255: "Base",
 }
 
@@ -2978,6 +3012,14 @@ func (p *GetTraceRequest) IsSetPageSize() bool {
 
 func (p *GetTraceRequest) IsSetPageToken() bool {
 	return p.PageToken != nil
+}
+
+func (p *GetTraceRequest) IsSetTraceScene() bool {
+	return p.TraceScene != nil
+}
+
+func (p *GetTraceRequest) IsSetNeedOriginalTags() bool {
+	return p.NeedOriginalTags != nil
 }
 
 func (p *GetTraceRequest) IsSetBase() bool {
@@ -3083,6 +3125,22 @@ func (p *GetTraceRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3260,6 +3318,28 @@ func (p *GetTraceRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.PageToken = _field
 	return nil
 }
+func (p *GetTraceRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *common.TraceScene
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceScene = _field
+	return nil
+}
+func (p *GetTraceRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NeedOriginalTags = _field
+	return nil
+}
 func (p *GetTraceRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -3313,6 +3393,14 @@ func (p *GetTraceRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -3519,6 +3607,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *GetTraceRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceScene() {
+		if err = oprot.WriteFieldBegin("trace_scene", thrift.STRING, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceScene); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+func (p *GetTraceRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNeedOriginalTags() {
+		if err = oprot.WriteFieldBegin("need_original_tags", thrift.BOOL, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.NeedOriginalTags); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
 func (p *GetTraceRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -3580,6 +3704,12 @@ func (p *GetTraceRequest) DeepEqual(ano *GetTraceRequest) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.PageToken) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.TraceScene) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.NeedOriginalTags) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -3685,6 +3815,30 @@ func (p *GetTraceRequest) Field12DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.PageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetTraceRequest) Field13DeepEqual(src *common.TraceScene) bool {
+
+	if p.TraceScene == src {
+		return true
+	} else if p.TraceScene == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceScene, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetTraceRequest) Field14DeepEqual(src *bool) bool {
+
+	if p.NeedOriginalTags == src {
+		return true
+	} else if p.NeedOriginalTags == nil || src == nil {
+		return false
+	}
+	if *p.NeedOriginalTags != *src {
 		return false
 	}
 	return true

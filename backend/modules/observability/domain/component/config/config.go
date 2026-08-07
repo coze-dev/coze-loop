@@ -104,6 +104,10 @@ type AnnotationConfig struct {
 type QueryTraceRateLimitConfig struct {
 	DefaultMaxQPS int            `mapstructure:"default_max_qps" json:"default_max_qps"`
 	SpaceMaxQPS   map[string]int `mapstructure:"space_max_qps" json:"space_max_qps"`
+	// cached 场景独立限流；值兼任开关——命中值 >0 = 该 workspace 开放 cached 且按此 QPS 限流；
+	// <=0 或缺失 = 未开放 cached（请求降级走 CK 并吃原 default/space 限流）。
+	CachedDefaultMaxQPS int            `mapstructure:"cached_default_max_qps" json:"cached_default_max_qps"`
+	CachedSpaceMaxQPS   map[string]int `mapstructure:"cached_space_max_qps" json:"cached_space_max_qps"`
 }
 
 type AnnotationRateLimitConfig struct {
@@ -245,6 +249,7 @@ type ITraceConfig interface {
 	GetDefaultTraceTenant(ctx context.Context) string
 	GetAnnotationSourceCfg(ctx context.Context) (*AnnotationSourceConfig, error)
 	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
+	GetCachedQueryMaxQPS(ctx context.Context, key string) (int, error)
 	GetAnnotationMaxQPS(ctx context.Context, key string) (int, error)
 	GetKeySpanTypes(ctx context.Context) map[string][]string
 	GetBackfillMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)

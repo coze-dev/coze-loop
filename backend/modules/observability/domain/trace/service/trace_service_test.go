@@ -6545,6 +6545,10 @@ type errorProcessor struct {
 	err error
 }
 
+func (e *errorProcessor) GetName() string {
+	return "errorProcessor"
+}
+
 func (e *errorProcessor) Transform(_ context.Context, _ loop_span.SpanList) (loop_span.SpanList, error) {
 	return nil, e.err
 }

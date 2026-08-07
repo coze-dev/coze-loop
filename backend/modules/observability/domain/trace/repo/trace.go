@@ -28,6 +28,7 @@ type GetTraceParam struct {
 	Filters            *loop_span.FilterFields
 	PageToken          string
 	DescByStartTime    bool
+	TraceScene         loop_span.TraceScene
 }
 
 type GetTraceResult struct {

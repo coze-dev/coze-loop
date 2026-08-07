@@ -186,6 +186,17 @@ func (t *TraceConfigCenter) GetQueryMaxQPS(ctx context.Context, key string) (int
 	return qpsConfig.DefaultMaxQPS, nil
 }
 
+func (t *TraceConfigCenter) GetCachedQueryMaxQPS(ctx context.Context, key string) (int, error) {
+	qpsConfig := new(config.QueryTraceRateLimitConfig)
+	if err := t.UnmarshalKey(ctx, queryTraceRateLimitCfgKey, &qpsConfig); err != nil {
+		return 0, err
+	}
+	if qps, ok := qpsConfig.CachedSpaceMaxQPS[key]; ok {
+		return qps, nil
+	}
+	return qpsConfig.CachedDefaultMaxQPS, nil
+}
+
 func (t *TraceConfigCenter) GetAnnotationMaxQPS(ctx context.Context, key string) (int, error) {
 	qpsConfig := new(config.AnnotationRateLimitConfig)
 	if err := t.UnmarshalKey(ctx, annotationRateLimitCfgKey, &qpsConfig); err != nil {

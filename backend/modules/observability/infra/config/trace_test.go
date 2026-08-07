@@ -16,6 +16,83 @@ import (
 	confmocks "github.com/coze-dev/coze-loop/backend/pkg/conf/mocks"
 )
 
+func TestTraceConfigCenter_GetCachedQueryMaxQPS(t *testing.T) {
+	type fields struct {
+		configLoader *confmocks.MockIConfigLoader
+	}
+	tests := []struct {
+		name         string
+		key          string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		want         int
+		wantErr      bool
+	}{
+		{
+			name: "hit cached space max qps",
+			key:  "111",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), queryTraceRateLimitCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(**config.QueryTraceRateLimitConfig)
+						*cfg = &config.QueryTraceRateLimitConfig{
+							CachedDefaultMaxQPS: 5,
+							CachedSpaceMaxQPS:   map[string]int{"111": 50},
+						}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			want:    50,
+			wantErr: false,
+		},
+		{
+			name: "fall back to cached default max qps",
+			key:  "222",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), queryTraceRateLimitCfgKey, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						cfg := v.(**config.QueryTraceRateLimitConfig)
+						*cfg = &config.QueryTraceRateLimitConfig{
+							CachedDefaultMaxQPS: 5,
+							CachedSpaceMaxQPS:   map[string]int{"111": 50},
+						}
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			want:    5,
+			wantErr: false,
+		},
+		{
+			name: "unmarshal key failed",
+			key:  "111",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), queryTraceRateLimitCfgKey, gomock.Any()).
+					Return(fmt.Errorf("unmarshal error"))
+				return fields{configLoader: mockLoader}
+			},
+			want:    0,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			f := tt.fieldsGetter(ctrl)
+			tr := &TraceConfigCenter{
+				IConfigLoader: f.configLoader,
+			}
+			got, err := tr.GetCachedQueryMaxQPS(context.Background(), tt.key)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestTraceConfigCenter_GetSystemViews(t *testing.T) {
 	type fields struct {
 		configLoader *confmocks.MockIConfigLoader

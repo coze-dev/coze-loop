@@ -16,6 +16,10 @@ type AttrTosProcessor struct {
 	fileProvider rpc.IFileProvider
 }
 
+func (a *AttrTosProcessor) GetName() string {
+	return "AttrTosProcessor"
+}
+
 func (a *AttrTosProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	for _, s := range spans {
 		if s.ObjectStorage == "" {

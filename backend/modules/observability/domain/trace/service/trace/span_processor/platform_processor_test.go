@@ -244,3 +244,7 @@ func TestPlatformProcessorFactory_CreateProcessor(t *testing.T) {
 		})
 	}
 }
+
+func TestPlatformProcessor_GetName(t *testing.T) {
+	assert.Equal(t, "PlatformProcessor", (&PlatformProcessor{}).GetName())
+}
