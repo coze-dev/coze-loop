@@ -510,8 +510,64 @@ type ItemRunConf struct {
 
 // FixedQuery 固定脚本多轮的一轮 query (fixed_script 跑法依赖)。
 type FixedQuery struct {
-	Query      string                 `json:"query,omitempty"`
-	Evaluators map[string]interface{} `json:"evaluators,omitempty"`
+	Query string `json:"query,omitempty"`
+	// ComplexQuery 该轮的结构化 query (有序 text/file 块)。Query 是纯文本回落:
+	// 两者都在时由 runtime 的 TurnQuery 决定优先级, 平台只如实透传两份。
+	//
+	// ⚠️ **本字段缺失曾让整类题目静默空跑**, 这是它存在的唯一理由, 别删:
+	// case-file 的 dataset_item.run_conf 是**唯一走强类型 struct 的字段**
+	// (兄弟字段 evaluator_conf / artifacts_conf / extra / 题目顶层的 complex_query
+	// 全是 json.RawMessage 原样透传, 平台不认的 key 也能过去)。RunConf 走强类型是
+	// 因为要做题目级/实验级逐字段合并 (mergeItemRunConf), 代价是**它必须字段齐全** ——
+	// Unmarshal→struct→Marshal 这一趟会把 struct 上没有的字段直接蒸发。
+	//
+	// 于是当题目每轮只配 complex_query 而不配 query 时 (多模态/带附件的题目就是这么写的),
+	// 每个元素 Unmarshal 后是空 struct、两个字段都 omitempty, wire 上变成 `{}`:
+	// 数组长度对、has_run_conf=true、全程零报错, 而 orchestrator 拿到的每轮 query 都是空。
+	// 实测 16 轮题目每轮 1.5 秒跑完、被测 agent 收到空 query, 实验 success 但分数无意义
+	// (实验 7590116350194896130, logid 021786092636008fdbddc03001b0406305a1222270000ff2fe9be:
+	//  orchestrator 日志 run_spec 里 fixed_query_list=[{},{}...×16],
+	//  紧随其后 16 行 `round=N, next query=, complex_parts=0`)。
+	//
+	// **给 FixedQuery 加字段时必须同步 runtime 的 testcase.FixedQuery** —— 这条链上
+	// 平台是生产端、runtime 是消费端, 少一个字段就是又一次静默空跑。
+	ComplexQuery *ComplexQuery          `json:"complex_query,omitempty"`
+	Evaluators   map[string]interface{} `json:"evaluators,omitempty"`
+}
+
+// ComplexQuery 结构化 query: 有序的 text/file 内容块序列。
+// 字段名与 runtime testcase.ComplexQuery 逐字一致 (parts / extra), 两边建模对齐才好合流。
+type ComplexQuery struct {
+	// Parts 有序内容块序列。slice 本身就是混合 text/file 的容器, 没有单独的多块类型。
+	Parts []*ContentPart `json:"parts,omitempty"`
+	// Extra 原样透传, 平台不解释。业务私有字段放这里而不是新增一等字段
+	// (如 CozeClaw 的 extra["coze_skill_ids"], 由该 agent 的 adapter 在出口翻译成它后端要的形态)。
+	Extra map[string]string `json:"extra,omitempty"`
+}
+
+// ContentPart 一个有序内容块。值放在哪个字段由 ContentType 决定 (text→Text, file→File)。
+// 与 runtime testcase.Part 对齐 —— 那边类型名是 Part, 这里叫 ContentPart 是为了避免与
+// 本包已有的泛化名冲突; **json tag 必须逐字一致**, 跨仓对接看的是 tag 不是 Go 名。
+type ContentPart struct {
+	// ContentType 区分块类型: "text" / "file"。
+	//
+	// 刻意只有两种: agent 不区分模态, 所以一切非文本资源 (图片/音频/视频/文档) 都是文件附件。
+	// 用 string 而非枚举常量, 是为了让新 schema 版本里的未知值能无损 round-trip
+	// (平台在这条链上只做透传, 不该因为不认识某个新类型就把它丢掉)。
+	ContentType string `json:"content_type,omitempty"`
+	// Text 当 ContentType 为 text 时承载值。
+	Text string `json:"text,omitempty"`
+	// File 当 ContentType 为 file 时承载值。
+	File *FileRef `json:"file,omitempty"`
+}
+
+// FileRef 一个附件。两个字段对齐题目生产方实际产出的形态: 一个文件名 + 一个沙箱可直接
+// 下载的公网 TOS 永久直链 (无需签名、无过期处理)。与 runtime testcase.FileRef 对齐。
+type FileRef struct {
+	// FileName 附件名, 也是它落到 workspace 里的文件名。
+	FileName string `json:"file_name,omitempty"`
+	// FileURL 沙箱可达的永久直链 (不需要签名)。
+	FileURL string `json:"file_url,omitempty"`
 }
 
 // DefaultSubmitItemConcurNum 提交评测实验时，未传或非正数时的兜底并发度。
