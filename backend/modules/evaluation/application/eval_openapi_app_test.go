@@ -6589,6 +6589,16 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
+		{
+			name: "missing workspace id rejected before auth",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				InvokeID: gptr.Of(invokeID),
+				Status:   gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+			},
+			setup: func(*rpcmocks.MockIAuthProvider, *repomocks.MockIEvalAsyncRepo, *servicemocks.MockEvaluatorService, *eventmocks.MockExptEventPublisher, *servicemocks.MockIEvaluatorCallbackDispatcher) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
 
 		{
 			name: "success without score rejected",
@@ -6781,6 +6791,30 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				)
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Not(gomock.Nil()), gomock.Any()).Return(nil)
 			},
+		},
+		{
+			name: "resume readiness reread failure is returned",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				InvokeID:    gptr.Of(invokeID),
+				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+				Output: &spi.InvokeEvaluatorOutputData{
+					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9))},
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				gomock.InOrder(
+					asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
+						Event:              event,
+						ResumeReady:        false,
+						EvaluatorVersionID: 9,
+					}, nil),
+					evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil),
+					asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(nil, errors.New("redis reread failed")),
+				)
+			},
+			wantErr: -1,
 		},
 
 		{

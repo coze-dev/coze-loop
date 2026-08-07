@@ -1070,6 +1070,64 @@ func TestEvaluatorRecordRepoImpl_CompareAndSwapEvaluatorRecordResult(t *testing.
 	assert.True(t, updated)
 }
 
+func TestMergeEvaluatorOutputExt(t *testing.T) {
+	t.Parallel()
+
+	got := mergeEvaluatorOutputExt(nil, &entity.EvaluatorOutputData{Ext: map[string]string{"source": "1"}})
+	require.NotNil(t, got)
+	assert.Equal(t, "1", got.Ext["source"])
+	assert.Same(t, got, mergeEvaluatorOutputExt(got, nil))
+}
+
+func TestEvaluatorRecordRepoImpl_AsyncTransactionErrors(t *testing.T) {
+	t.Parallel()
+
+	newRepo := func(t *testing.T) (*EvaluatorRecordRepoImpl, *evaluatormocks.MockEvaluatorRecordDAO) {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		dao := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+		provider := dbmocks.NewMockProvider(ctrl)
+		provider.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, _ ...db.Option) error {
+			return fc(nil)
+		}).AnyTimes()
+		return &EvaluatorRecordRepoImpl{evaluatorRecordDao: dao, dbProvider: provider}, dao
+	}
+
+	t.Run("callback get record error", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(nil, errors.New("get failed"))
+		updated, err := repo.CompareAndSwapEvaluatorRecordResult(context.Background(), 10, 20, entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, nil)
+		assert.False(t, updated)
+		require.EqualError(t, err, "get failed")
+	})
+
+	t.Run("callback invalid stored output", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		bad := []byte("{invalid")
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(&model.EvaluatorRecord{
+			ID: 10, SpaceID: 20, Status: int32(entity.EvaluatorRunStatusAsyncInvoking), OutputData: &bad,
+		}, nil)
+		updated, err := repo.CompareAndSwapEvaluatorRecordResult(context.Background(), 10, 20, entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, nil)
+		assert.False(t, updated)
+		assert.Error(t, err)
+	})
+
+	t.Run("dispatch get record error", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(nil, errors.New("get failed"))
+		require.EqualError(t, repo.UpdateEvaluatorRecordAsyncDispatch(context.Background(), 10, 20, "trace", nil), "get failed")
+	})
+
+	t.Run("dispatch invalid stored output", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		bad := []byte("{invalid")
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(&model.EvaluatorRecord{
+			ID: 10, SpaceID: 20, Status: int32(entity.EvaluatorRunStatusSuccess), OutputData: &bad,
+		}, nil)
+		assert.Error(t, repo.UpdateEvaluatorRecordAsyncDispatch(context.Background(), 10, 20, "trace", nil))
+	})
+}
+
 func TestEvaluatorRecordRepoImpl_AsyncCallbackAndDispatchMetadataMerge(t *testing.T) {
 	t.Parallel()
 

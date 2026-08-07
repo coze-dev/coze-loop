@@ -445,6 +445,15 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo_Async(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "unknown async protocol is rejected",
+			version: &CustomRPCEvaluatorVersion{
+				AccessProtocol: "unsupported",
+				ServiceName:    gptr.Of("trae.work.evaluator"),
+				IsAsync:        true,
+			},
+			wantErr: true,
+		},
+		{
 			name: "sync faas http keeps existing behavior",
 			version: &CustomRPCEvaluatorVersion{
 				AccessProtocol: EvaluatorAccessProtocolFaasHTTP,

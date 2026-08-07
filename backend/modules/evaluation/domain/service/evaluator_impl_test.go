@@ -4694,6 +4694,19 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator_CoordinatorOrderAndFailureCompen
 		assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
 	})
 
+	t.Run("missing async repo marks same record fail", func(t *testing.T) {
+		s, recordRepo, _, source := newFixture(t)
+		s.evalAsyncRepo = nil
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(true, nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.Error(t, err)
+		require.NotNil(t, record)
+		assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+	})
+
 	t.Run("dispatch ack failure preserves concurrent terminal callback", func(t *testing.T) {
 		for _, terminalStatus := range []entity.EvaluatorRunStatus{
 			entity.EvaluatorRunStatusSuccess,
@@ -4735,6 +4748,56 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator_CoordinatorOrderAndFailureCompen
 		assert.Equal(t, "trace-1", record.TraceID)
 		assert.Equal(t, "s1", record.EvaluatorOutputData.Ext["session_id"])
 	})
+
+	t.Run("dispatch failure returns CAS error", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(nil, "", errors.New("dispatch failed"))
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(false, errors.New("cas failed"))
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.Error(t, err)
+		require.NotNil(t, record)
+		assert.Contains(t, err.Error(), "mark evaluator async kickoff failed")
+	})
+
+	t.Run("dispatch failure returns reload error after lost CAS", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(nil, "", errors.New("dispatch failed"))
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(false, nil)
+		recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(999), false, gomock.Any()).Return(nil, errors.New("reload failed"))
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.Error(t, err)
+		require.NotNil(t, record)
+		assert.Contains(t, err.Error(), "reload evaluator record")
+	})
+
+	t.Run("dispatch failure remains error when lost CAS has no terminal record", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(nil, "", errors.New("dispatch failed"))
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(false, nil)
+		recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(999), false, gomock.Any()).Return(nil, nil)
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.EqualError(t, err, "dispatch failed")
+		require.NotNil(t, record)
+		assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
+	})
+}
+
+func TestEvaluatorServiceImpl_failAsyncEvaluatorRecord_NilRecord(t *testing.T) {
+	t.Parallel()
+	s := &EvaluatorServiceImpl{}
+	want := errors.New("run failed")
+	record, err := s.failAsyncEvaluatorRecord(context.Background(), nil, want)
+	assert.Nil(t, record)
+	assert.ErrorIs(t, err, want)
 }
 
 func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_RejectsNonTerminalStatus(t *testing.T) {
@@ -4847,4 +4910,87 @@ func TestEvaluatorServiceImpl_ArmEvaluatorResume_RetriesPublish(t *testing.T) {
 	)
 	s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo, exptEventPublisher: publisher}
 	require.NoError(t, s.ArmEvaluatorResume(context.Background(), 100))
+}
+
+func TestEvaluatorServiceImpl_ArmEvaluatorResume_Errors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("missing async repo", func(t *testing.T) {
+		t.Parallel()
+		s := &EvaluatorServiceImpl{}
+		require.Error(t, s.ArmEvaluatorResume(context.Background(), 100))
+	})
+
+	t.Run("mark resume ready error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(nil, errors.New("redis failed"))
+		s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo}
+		require.Error(t, s.ArmEvaluatorResume(context.Background(), 100))
+	})
+
+	t.Run("record reload error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+		recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1}}, nil)
+		recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(nil, errors.New("mysql failed"))
+		s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo}
+		require.Error(t, s.ArmEvaluatorResume(context.Background(), 100))
+	})
+
+	t.Run("missing record", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+		recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1}}, nil)
+		recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(nil, nil)
+		s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo}
+		err := s.ArmEvaluatorResume(context.Background(), 100)
+		statusErr, ok := errorx.FromStatusError(err)
+		require.True(t, ok)
+		assert.Equal(t, int32(errno.EvaluatorRecordNotFoundCode), statusErr.Code())
+	})
+}
+
+func TestEvaluatorServiceImpl_publishEvaluatorResumeEvent(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil dependencies are no-op", func(t *testing.T) {
+		t.Parallel()
+		s := &EvaluatorServiceImpl{}
+		require.NoError(t, s.publishEvaluatorResumeEvent(context.Background(), nil))
+		require.NoError(t, s.publishEvaluatorResumeEvent(context.Background(), &entity.ExptItemEvalEvent{}))
+	})
+
+	t.Run("returns last error after all retries", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+		event := &entity.ExptItemEvalEvent{ExptID: 1}
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).Return(errors.New("mq unavailable")).Times(3)
+		s := &EvaluatorServiceImpl{exptEventPublisher: publisher}
+		err := s.publishEvaluatorResumeEvent(context.Background(), event)
+		require.EqualError(t, err, "mq unavailable")
+	})
+
+	t.Run("context cancellation stops retry delay", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+		event := &entity.ExptItemEvalEvent{ExptID: 1}
+		ctx, cancel := context.WithCancel(context.Background())
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(
+			func(context.Context, *entity.ExptItemEvalEvent, *time.Duration, func(*entity.ExptItemEvalEvent)) error {
+				cancel()
+				return errors.New("mq unavailable")
+			},
+		).Times(1)
+		s := &EvaluatorServiceImpl{exptEventPublisher: publisher}
+		err := s.publishEvaluatorResumeEvent(ctx, event)
+		require.ErrorIs(t, err, context.Canceled)
+	})
 }

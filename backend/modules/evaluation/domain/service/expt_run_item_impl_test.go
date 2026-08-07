@@ -1251,3 +1251,32 @@ func TestExptItemEvalCtxExecutor_storeTurnRunResult_DoesNotArmWhenSaveFails(t *t
 	}}}
 	require.Error(t, executor.storeTurnRunResult(context.Background(), etec, result))
 }
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ReturnsArmError(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).Return(errors.New("arm failed"))
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	err := executor.storeTurnRunResult(context.Background(), etec, result)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "arm evaluator async resume fail")
+}
