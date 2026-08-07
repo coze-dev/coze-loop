@@ -2118,3 +2118,346 @@ func TestIsSandboxAgentExpt(t *testing.T) {
 		EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent},
 	}}))
 }
+
+// TestExptSchedulerImpl_sweepTerminatedSandboxItems_CoverageExtras 覆盖 sweep 里
+// 之前主表测试未覆盖的短路 / 出错分支, 集中体现:
+// - evalTargetService == nil
+// - items 里的 nil 元素被跳过
+// - turnRunLog 里的 nil / target_result_id<=0 被跳过
+// - statusMap 为空时 firstStatus 回落 "Terminated"
+// - 三处写库 err 冒泡/降级
+func TestExptSchedulerImpl_sweepTerminatedSandboxItems_CoverageExtras(t *testing.T) {
+	sandboxExpt := &entity.Experiment{
+		ID: 1,
+		Target: &entity.EvalTarget{
+			EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+		},
+	}
+	baseEvent := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+
+	t.Run("evalTargetService=nil 短路", func(t *testing.T) {
+		svc := &ExptSchedulerImpl{} // 未注入 evalTargetService
+		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+		alives, terminated, err := svc.sweepTerminatedSandboxItems(context.Background(), baseEvent, items, sandboxExpt)
+		assert.NoError(t, err)
+		assert.Len(t, alives, 1)
+		assert.Empty(t, terminated)
+	})
+
+	t.Run("items 里 nil 元素被跳过 (只 processing 计入)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := &ExptSchedulerImpl{evalTargetService: svcmocks.NewMockIEvalTargetService(ctrl)}
+		items := []*entity.ExptEvalItem{nil, {ItemID: 10, State: entity.ItemRunState_Success}}
+		alives, terminated, err := svc.sweepTerminatedSandboxItems(context.Background(), baseEvent, items, sandboxExpt)
+		assert.NoError(t, err)
+		assert.Empty(t, terminated)
+		assert.Len(t, alives, 2) // nil + success 都保留在原列表, 只是不加入 processingItemIDs
+	})
+
+	t.Run("turnRunLog 里 nil 与 target_result_id<=0 被跳过", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockTurnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+		mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+		svc := &ExptSchedulerImpl{ExptTurnResultRepo: mockTurnRepo, evalTargetService: mockTargetSvc}
+		mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).
+			Return([]*entity.ExptTurnResultRunLog{
+				nil,
+				{ItemID: 10, TargetResultID: 0}, // 被过滤
+			}, nil)
+		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+		alives, terminated, err := svc.sweepTerminatedSandboxItems(context.Background(), baseEvent, items, sandboxExpt)
+		assert.NoError(t, err)
+		assert.Empty(t, terminated)
+		assert.Len(t, alives, 1)
+	})
+
+	t.Run("statusMap 未提供状态 → firstStatus 回落 Terminated", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockTurnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+		mockItemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+		mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+		svc := &ExptSchedulerImpl{
+			ExptTurnResultRepo: mockTurnRepo,
+			ExptItemResultRepo: mockItemRepo,
+			evalTargetService:  mockTargetSvc,
+		}
+		mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).
+			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
+		// statusMap 里没有 500 对应的字面量, 触发 firstStatus="" 回落 "Terminated"
+		mockTargetSvc.EXPECT().CheckSandboxTerminated(gomock.Any(), int64(3), gomock.Any()).
+			Return([]int64{500}, map[int64]string{})
+		mockTargetSvc.EXPECT().TerminateAsyncRecordsAndDestroySandbox(
+			gomock.Any(), int64(3), []int64{500}, int32(errno.SandboxTerminatedBeforeReportCode),
+			gomock.AssignableToTypeOf(""), false,
+		).DoAndReturn(func(_ context.Context, _ int64, _ []int64, _ int32, msg string, _ bool) {
+			assert.Contains(t, msg, "Terminated") // 回落字面量
+		}).Times(1)
+		mockItemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mockItemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mockTurnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+		_, terminated, err := svc.sweepTerminatedSandboxItems(context.Background(), baseEvent, items, sandboxExpt)
+		assert.NoError(t, err)
+		assert.Len(t, terminated, 1)
+	})
+
+	t.Run("UpdateItemRunLog 失败冒泡", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockTurnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+		mockItemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+		mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+		svc := &ExptSchedulerImpl{
+			ExptTurnResultRepo: mockTurnRepo,
+			ExptItemResultRepo: mockItemRepo,
+			evalTargetService:  mockTargetSvc,
+		}
+		mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
+		mockTargetSvc.EXPECT().CheckSandboxTerminated(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]int64{500}, map[int64]string{500: "Failed"})
+		mockTargetSvc.EXPECT().TerminateAsyncRecordsAndDestroySandbox(
+			gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		).Times(1)
+		mockItemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("run log err"))
+		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+		_, _, err := svc.sweepTerminatedSandboxItems(context.Background(), baseEvent, items, sandboxExpt)
+		assert.EqualError(t, err, "run log err")
+	})
+
+	t.Run("UpdateItemsResult 失败仅告警不冒泡", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockTurnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+		mockItemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+		mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+		svc := &ExptSchedulerImpl{
+			ExptTurnResultRepo: mockTurnRepo,
+			ExptItemResultRepo: mockItemRepo,
+			evalTargetService:  mockTargetSvc,
+		}
+		mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
+		mockTargetSvc.EXPECT().CheckSandboxTerminated(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]int64{500}, map[int64]string{500: "Failed"})
+		mockTargetSvc.EXPECT().TerminateAsyncRecordsAndDestroySandbox(
+			gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		).Times(1)
+		mockItemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mockItemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("main table err")) // 只 log 不 return
+		mockTurnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+		_, terminated, err := svc.sweepTerminatedSandboxItems(context.Background(), baseEvent, items, sandboxExpt)
+		assert.NoError(t, err, "main table 更新失败只降级为 log, 不应冒泡")
+		assert.Len(t, terminated, 1)
+	})
+
+	t.Run("CreateOrUpdateItemsTurnRunLogStatus 失败冒泡", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockTurnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+		mockItemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+		mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+		svc := &ExptSchedulerImpl{
+			ExptTurnResultRepo: mockTurnRepo,
+			ExptItemResultRepo: mockItemRepo,
+			evalTargetService:  mockTargetSvc,
+		}
+		mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
+		mockTargetSvc.EXPECT().CheckSandboxTerminated(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]int64{500}, map[int64]string{500: "Failed"})
+		mockTargetSvc.EXPECT().TerminateAsyncRecordsAndDestroySandbox(
+			gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		).Times(1)
+		mockItemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mockItemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mockTurnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("turn state err"))
+
+		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+		_, _, err := svc.sweepTerminatedSandboxItems(context.Background(), baseEvent, items, sandboxExpt)
+		assert.EqualError(t, err, "turn state err")
+	})
+}
+
+// TestExptSchedulerImpl_sweepTerminated_TerminatedEmpty 覆盖 L743 分支:
+// CheckSandboxTerminated 命中了 record, 但传入 sweep 的 items 列表里没有对应 ItemID 的 Processing 元素,
+// 或该 item 已在本 tick 之后被并发修改到非 Processing 状态 → terminated 为空提前 return。
+func TestExptSchedulerImpl_sweepTerminated_TerminatedEmpty(t *testing.T) {
+	sandboxExpt := &entity.Experiment{
+		ID: 1,
+		Target: &entity.EvalTarget{
+			EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+		},
+	}
+	baseEvent := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockTurnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	// 关键: 不注入 metrics / itemRepo, 若真的走到写库/emit 会 panic 暴露 bug
+	svc := &ExptSchedulerImpl{ExptTurnResultRepo: mockTurnRepo, evalTargetService: mockTargetSvc}
+
+	// items 里有 nil (走 L733 continue) 与一个 Processing item 10;
+	// turn_run_log 里 record 500 → item 99 (但 items 列表里没有 99, 只有 nil + 10);
+	// CheckSandboxTerminated 返回 500 命中, recordIDToItemIDs[500]=[99],
+	// 遍历 items 时: nil 跳过, item 10 未在 terminatedItemIDSet, 走 alives.
+	// 结果 terminated=[] 提前 return, 不触发写库/emit.
+	mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).
+		Return([]*entity.ExptTurnResultRunLog{{ItemID: 99, TargetResultID: 500}}, nil)
+	mockTargetSvc.EXPECT().CheckSandboxTerminated(gomock.Any(), int64(3), []int64{500}).
+		Return([]int64{500}, map[int64]string{500: "Failed"})
+
+	items := []*entity.ExptEvalItem{nil, {ItemID: 10, State: entity.ItemRunState_Processing}}
+	alives, terminated, err := svc.sweepTerminatedSandboxItems(context.Background(), baseEvent, items, sandboxExpt)
+	assert.NoError(t, err)
+	assert.Empty(t, terminated)
+	// alives 只包含非 nil item (item 10, 未命中)
+	assert.Len(t, alives, 1)
+	assert.Equal(t, int64(10), alives[0].ItemID)
+}
+
+// TestExptSchedulerImpl_terminateZombieEvalTargetRecords_ExtraBranches 覆盖 zombie
+// 主表 test 未打到的短路 / 出错分支.
+func TestExptSchedulerImpl_terminateZombieEvalTargetRecords_ExtraBranches(t *testing.T) {
+	baseEvent := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+
+	t.Run("空 zombieItemIDs 短路", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := &ExptSchedulerImpl{evalTargetService: svcmocks.NewMockIEvalTargetService(ctrl)}
+		err := svc.terminateZombieEvalTargetRecords(context.Background(), baseEvent, nil, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("evalTargetService=nil 短路", func(t *testing.T) {
+		svc := &ExptSchedulerImpl{}
+		err := svc.terminateZombieEvalTargetRecords(context.Background(), baseEvent, nil, []int64{10})
+		assert.NoError(t, err)
+	})
+
+	t.Run("MGetItemTurnRunLogs 失败冒泡", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockTurnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+		svc := &ExptSchedulerImpl{
+			ExptTurnResultRepo: mockTurnRepo,
+			evalTargetService:  svcmocks.NewMockIEvalTargetService(ctrl),
+		}
+		mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, errors.New("db err"))
+		err := svc.terminateZombieEvalTargetRecords(context.Background(), baseEvent, nil, []int64{10})
+		assert.EqualError(t, err, "db err")
+	})
+
+	t.Run("turnRunLog 全为 nil/target_result_id<=0 → recordIDs 为空短路 (Terminate 不调用)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockTurnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+		mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+		svc := &ExptSchedulerImpl{ExptTurnResultRepo: mockTurnRepo, evalTargetService: mockTargetSvc}
+		mockTurnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptTurnResultRunLog{nil, {ItemID: 10, TargetResultID: 0}}, nil)
+		// mockTargetSvc.TerminateAsyncRecordsAndDestroySandbox 不应被调用
+		err := svc.terminateZombieEvalTargetRecords(context.Background(), baseEvent, nil, []int64{10})
+		assert.NoError(t, err)
+	})
+}
+
+// TestExptSchedulerImpl_emitSandbox_EdgeInputs 覆盖 emitSandboxSweptInvokeFinished /
+// emitSandboxZombieInvokeFinished 的边界输入分支:
+// - recordIDs 为空 → 提前 return
+// - metrics nil (已在其它测试覆盖, 但这里 keep 明确)
+// - expt.EvalSet == nil / EvaluationSetVersion == nil → tag 填 0
+// - recordIDToItemIDs 里缺失 record → itemIDs 兜底为 [0]
+func TestExptSchedulerImpl_emitSandbox_EdgeInputs(t *testing.T) {
+	event := &entity.ExptScheduleEvent{ExptID: 7, ExptRunID: 8, SpaceID: 9}
+
+	t.Run("swept: 空 recordIDs 直接返回不触发 emit", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		metric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		// metric.EmitInvokeFinished 断言 Times(0)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: metric}
+		svc.emitSandboxSweptInvokeFinished(context.Background(), event, &entity.Experiment{}, nil, nil)
+	})
+
+	t.Run("swept: expt.EvalSet=nil 且 record 未映射 itemIDs → 兜底 tag=0", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		metric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: metric}
+		expt := &entity.Experiment{TargetID: 42} // EvalSet=nil
+		metric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(tags metrics.SandboxAgentInvokeTags, _ error, code int32, _ time.Time) {
+				assert.Equal(t, int64(7), tags.ExperimentID)
+				assert.Equal(t, int64(0), tags.ItemID) // itemIDs 兜底
+				assert.Equal(t, "500", tags.InvokeID)
+				assert.Equal(t, int64(0), tags.DatasetID)
+				assert.Equal(t, int64(0), tags.DatasetVersion)
+				assert.Equal(t, int64(42), tags.TargetID)
+				assert.Equal(t, int32(errno.SandboxTerminatedBeforeReportCode), code)
+			}).Times(1)
+		svc.emitSandboxSweptInvokeFinished(
+			context.Background(), event, expt,
+			[]int64{500},           // recordIDs
+			map[int64][]int64{},    // recordIDToItemIDs 里没 500
+		)
+	})
+
+	t.Run("swept: EvalSet 有但 EvaluationSetVersion=nil → DatasetVersion=0", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		metric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: metric}
+		expt := &entity.Experiment{TargetID: 42, EvalSet: &entity.EvaluationSet{ID: 88}}
+		metric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(tags metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time) {
+				assert.Equal(t, int64(88), tags.DatasetID)
+				assert.Equal(t, int64(0), tags.DatasetVersion)
+				assert.Equal(t, int64(10), tags.ItemID)
+			}).Times(1)
+		svc.emitSandboxSweptInvokeFinished(
+			context.Background(), event, expt,
+			[]int64{500},
+			map[int64][]int64{500: {10}},
+		)
+	})
+
+	t.Run("zombie: 空 recordIDs 直接返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		metric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: metric}
+		svc.emitSandboxZombieInvokeFinished(context.Background(), event, &entity.Experiment{}, nil, nil)
+	})
+
+	t.Run("zombie: expt.EvalSet=nil 且 recordIDToItemIDs 缺失 → tag=0 兜底 + errCode=zombie", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		metric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: metric}
+		expt := &entity.Experiment{TargetID: 42}
+		metric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(tags metrics.SandboxAgentInvokeTags, _ error, code int32, _ time.Time) {
+				assert.Equal(t, int64(0), tags.ItemID)
+				assert.Equal(t, int64(0), tags.DatasetID)
+				assert.Equal(t, int64(0), tags.DatasetVersion)
+				assert.Equal(t, int64(42), tags.TargetID)
+				assert.Equal(t, int32(errno.AsyncEvalTargetZombieTimeoutCode), code)
+			}).Times(1)
+		svc.emitSandboxZombieInvokeFinished(
+			context.Background(), event, expt,
+			[]int64{500},
+			map[int64][]int64{},
+		)
+	})
+}
