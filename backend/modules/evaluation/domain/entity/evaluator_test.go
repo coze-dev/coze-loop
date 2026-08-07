@@ -2387,6 +2387,7 @@ func TestEvaluator_IsAsync_CustomRPC(t *testing.T) {
 		eval *Evaluator
 		want bool
 	}{
+		{name: "nil evaluator remains sync", eval: nil, want: false},
 		{name: "agent remains async", eval: &Evaluator{EvaluatorType: EvaluatorTypeAgent}, want: true},
 		{name: "custom rpc async version", eval: &Evaluator{EvaluatorType: EvaluatorTypeCustomRPC, CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{IsAsync: true}}, want: true},
 		{name: "custom rpc sync version", eval: &Evaluator{EvaluatorType: EvaluatorTypeCustomRPC, CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{}}, want: false},
