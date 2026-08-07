@@ -478,6 +478,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 	evalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
 	schedulerModeFactory := svcmocks.NewMockSchedulerModeFactory(ctrl)
 	evalTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	exptItemRefRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
 
 	svc := NewExptSchedulerSvc(
 		manager,
@@ -499,6 +500,8 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 		evalSetItemSvc,
 		schedulerModeFactory,
 		evalTargetSvc,
+		nil, // itemCompletePublisher: 开源侧 nil, scheduler 循环内以非空守卫跳过发送
+		exptItemRefRepo,
 		metricsmocks.NewMockSandboxAgentMetrics(ctrl),
 	)
 	assert.NotNil(t, svc)
@@ -523,6 +526,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 	assert.Equal(t, idGen, impl.IDGen)
 	assert.Equal(t, evalSetItemSvc, impl.evaluationSetItemService)
 	assert.Equal(t, schedulerModeFactory, impl.schedulerModeFactory)
+	assert.Equal(t, exptItemRefRepo, impl.exptItemRefRepo)
 }
 
 func TestExptSchedulerImpl_HandleEventLock(t *testing.T) {
