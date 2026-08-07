@@ -187,7 +187,8 @@ struct GetEvaluationSetVersionRequest {
     2: required i64 version_id (api.path = "version_id", api.js_conv="true", go.tag='json:"version_id"'),
     3: optional i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv="true", go.tag='json:"evaluation_set_id"'),
     4: optional bool deleted_at (api.query='deleted_at'),
-    5: optional common.SharedResourceOption shared_option,
+    5: optional bool is_shared (api.query='is_shared'),
+    6: optional i64 source_space_id (api.query='source_space_id', api.js_conv="true", go.tag='json:"source_space_id"'),
 
     255: optional base.Base Base
 }

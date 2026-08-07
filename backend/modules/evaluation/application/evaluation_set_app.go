@@ -917,8 +917,18 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetVersion(ctx context.Conte
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	sharedOption := sharedOptionDTO2DO(req.SharedOption)
-	if req.SharedOption == nil || !req.SharedOption.GetIsShared() {
+	isShared := req.GetIsShared()
+	var sharedOption *entity.SharedResourceOption
+	if isShared {
+		if req.SourceSpaceID == nil || req.GetSourceSpaceID() <= 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when is_shared is true"))
+		}
+		sharedOption = &entity.SharedResourceOption{
+			IsShared:      true,
+			SourceSpaceID: req.SourceSpaceID,
+		}
+	}
+	if !isShared {
 		// 非共享场景严格保持 main：先加载评测集、鉴权，再加载版本。
 		set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, gptr.Indirect(req.EvaluationSetID), req.DeletedAt, nil)
 		if err != nil {
@@ -949,9 +959,6 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetVersion(ctx context.Conte
 		return &eval_set.GetEvaluationSetVersionResponse{
 			Version: versionDTO, EvaluationSet: evaluation_set.EvaluationSetDO2DTO(versionSet),
 		}, nil
-	}
-	if sharedOption == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when shared_option.is_shared is true"))
 	}
 	// 共享场景允许仅凭 version_id 从来源空间加载版本及所属评测集。
 	version, set, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, req.WorkspaceID, req.VersionID, req.DeletedAt, sharedOption)

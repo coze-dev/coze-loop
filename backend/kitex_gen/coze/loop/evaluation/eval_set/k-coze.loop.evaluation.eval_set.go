@@ -6638,8 +6638,22 @@ func (p *GetEvaluationSetVersionRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 5:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField6(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -6752,13 +6766,29 @@ func (p *GetEvaluationSetVersionRequest) FastReadField4(buf []byte) (int, error)
 
 func (p *GetEvaluationSetVersionRequest) FastReadField5(buf []byte) (int, error) {
 	offset := 0
-	_field := common.NewSharedResourceOption()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
+		_field = &v
 	}
-	p.SharedOption = _field
+	p.IsShared = _field
+	return offset, nil
+}
+
+func (p *GetEvaluationSetVersionRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceSpaceID = _field
 	return offset, nil
 }
 
@@ -6786,6 +6816,7 @@ func (p *GetEvaluationSetVersionRequest) FastWriteNocopy(buf []byte, w thrift.No
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -6800,6 +6831,7 @@ func (p *GetEvaluationSetVersionRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6840,9 +6872,18 @@ func (p *GetEvaluationSetVersionRequest) fastWriteField4(buf []byte, w thrift.No
 
 func (p *GetEvaluationSetVersionRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetSharedOption() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
-		offset += p.SharedOption.FastWriteNocopy(buf[offset:], w)
+	if p.IsSetIsShared() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsShared)
+	}
+	return offset
+}
+
+func (p *GetEvaluationSetVersionRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceSpaceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 6)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.SourceSpaceID)
 	}
 	return offset
 }
@@ -6890,9 +6931,18 @@ func (p *GetEvaluationSetVersionRequest) field4Length() int {
 
 func (p *GetEvaluationSetVersionRequest) field5Length() int {
 	l := 0
-	if p.IsSetSharedOption() {
+	if p.IsSetIsShared() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.SharedOption.BLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *GetEvaluationSetVersionRequest) field6Length() int {
+	l := 0
+	if p.IsSetSourceSpaceID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
 	}
 	return l
 }
@@ -6926,14 +6976,15 @@ func (p *GetEvaluationSetVersionRequest) DeepCopy(s interface{}) error {
 		p.DeletedAt = &tmp
 	}
 
-	var _sharedOption *common.SharedResourceOption
-	if src.SharedOption != nil {
-		_sharedOption = &common.SharedResourceOption{}
-		if err := _sharedOption.DeepCopy(src.SharedOption); err != nil {
-			return err
-		}
+	if src.IsShared != nil {
+		tmp := *src.IsShared
+		p.IsShared = &tmp
 	}
-	p.SharedOption = _sharedOption
+
+	if src.SourceSpaceID != nil {
+		tmp := *src.SourceSpaceID
+		p.SourceSpaceID = &tmp
+	}
 
 	var _base *base.Base
 	if src.Base != nil {

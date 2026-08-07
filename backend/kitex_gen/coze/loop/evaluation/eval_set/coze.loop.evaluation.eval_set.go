@@ -8886,12 +8886,13 @@ func (p *CreateEvaluationSetVersionResponse) Field255DeepEqual(src *base.BaseRes
 }
 
 type GetEvaluationSetVersionRequest struct {
-	WorkspaceID     int64                        `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
-	VersionID       int64                        `thrift:"version_id,2,required" frugal:"2,required,i64" json:"version_id" path:"version_id,required" `
-	EvaluationSetID *int64                       `thrift:"evaluation_set_id,3,optional" frugal:"3,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
-	DeletedAt       *bool                        `thrift:"deleted_at,4,optional" frugal:"4,optional,bool" json:"deleted_at,omitempty" query:"deleted_at"`
-	SharedOption    *common.SharedResourceOption `thrift:"shared_option,5,optional" frugal:"5,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty" query:"shared_option"`
-	Base            *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID     int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
+	VersionID       int64      `thrift:"version_id,2,required" frugal:"2,required,i64" json:"version_id" path:"version_id,required" `
+	EvaluationSetID *int64     `thrift:"evaluation_set_id,3,optional" frugal:"3,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
+	DeletedAt       *bool      `thrift:"deleted_at,4,optional" frugal:"4,optional,bool" json:"deleted_at,omitempty" query:"deleted_at"`
+	IsShared        *bool      `thrift:"is_shared,5,optional" frugal:"5,optional,bool" json:"is_shared,omitempty" query:"is_shared"`
+	SourceSpaceID   *int64     `thrift:"source_space_id,6,optional" frugal:"6,optional,i64" json:"source_space_id" query:"source_space_id" `
+	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetEvaluationSetVersionRequest() *GetEvaluationSetVersionRequest {
@@ -8939,16 +8940,28 @@ func (p *GetEvaluationSetVersionRequest) GetDeletedAt() (v bool) {
 	return *p.DeletedAt
 }
 
-var GetEvaluationSetVersionRequest_SharedOption_DEFAULT *common.SharedResourceOption
+var GetEvaluationSetVersionRequest_IsShared_DEFAULT bool
 
-func (p *GetEvaluationSetVersionRequest) GetSharedOption() (v *common.SharedResourceOption) {
+func (p *GetEvaluationSetVersionRequest) GetIsShared() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetSharedOption() {
-		return GetEvaluationSetVersionRequest_SharedOption_DEFAULT
+	if !p.IsSetIsShared() {
+		return GetEvaluationSetVersionRequest_IsShared_DEFAULT
 	}
-	return p.SharedOption
+	return *p.IsShared
+}
+
+var GetEvaluationSetVersionRequest_SourceSpaceID_DEFAULT int64
+
+func (p *GetEvaluationSetVersionRequest) GetSourceSpaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceSpaceID() {
+		return GetEvaluationSetVersionRequest_SourceSpaceID_DEFAULT
+	}
+	return *p.SourceSpaceID
 }
 
 var GetEvaluationSetVersionRequest_Base_DEFAULT *base.Base
@@ -8974,8 +8987,11 @@ func (p *GetEvaluationSetVersionRequest) SetEvaluationSetID(val *int64) {
 func (p *GetEvaluationSetVersionRequest) SetDeletedAt(val *bool) {
 	p.DeletedAt = val
 }
-func (p *GetEvaluationSetVersionRequest) SetSharedOption(val *common.SharedResourceOption) {
-	p.SharedOption = val
+func (p *GetEvaluationSetVersionRequest) SetIsShared(val *bool) {
+	p.IsShared = val
+}
+func (p *GetEvaluationSetVersionRequest) SetSourceSpaceID(val *int64) {
+	p.SourceSpaceID = val
 }
 func (p *GetEvaluationSetVersionRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -8986,7 +9002,8 @@ var fieldIDToName_GetEvaluationSetVersionRequest = map[int16]string{
 	2:   "version_id",
 	3:   "evaluation_set_id",
 	4:   "deleted_at",
-	5:   "shared_option",
+	5:   "is_shared",
+	6:   "source_space_id",
 	255: "Base",
 }
 
@@ -8998,8 +9015,12 @@ func (p *GetEvaluationSetVersionRequest) IsSetDeletedAt() bool {
 	return p.DeletedAt != nil
 }
 
-func (p *GetEvaluationSetVersionRequest) IsSetSharedOption() bool {
-	return p.SharedOption != nil
+func (p *GetEvaluationSetVersionRequest) IsSetIsShared() bool {
+	return p.IsShared != nil
+}
+
+func (p *GetEvaluationSetVersionRequest) IsSetSourceSpaceID() bool {
+	return p.SourceSpaceID != nil
 }
 
 func (p *GetEvaluationSetVersionRequest) IsSetBase() bool {
@@ -9061,8 +9082,16 @@ func (p *GetEvaluationSetVersionRequest) Read(iprot thrift.TProtocol) (err error
 				goto SkipFieldError
 			}
 		case 5:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9161,11 +9190,25 @@ func (p *GetEvaluationSetVersionRequest) ReadField4(iprot thrift.TProtocol) erro
 	return nil
 }
 func (p *GetEvaluationSetVersionRequest) ReadField5(iprot thrift.TProtocol) error {
-	_field := common.NewSharedResourceOption()
-	if err := _field.Read(iprot); err != nil {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
 		return err
+	} else {
+		_field = &v
 	}
-	p.SharedOption = _field
+	p.IsShared = _field
+	return nil
+}
+func (p *GetEvaluationSetVersionRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SourceSpaceID = _field
 	return nil
 }
 func (p *GetEvaluationSetVersionRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -9201,6 +9244,10 @@ func (p *GetEvaluationSetVersionRequest) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -9294,11 +9341,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *GetEvaluationSetVersionRequest) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSharedOption() {
-		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 5); err != nil {
+	if p.IsSetIsShared() {
+		if err = oprot.WriteFieldBegin("is_shared", thrift.BOOL, 5); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.SharedOption.Write(oprot); err != nil {
+		if err := oprot.WriteBool(*p.IsShared); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -9310,6 +9357,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *GetEvaluationSetVersionRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceSpaceID() {
+		if err = oprot.WriteFieldBegin("source_space_id", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.SourceSpaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *GetEvaluationSetVersionRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -9356,7 +9421,10 @@ func (p *GetEvaluationSetVersionRequest) DeepEqual(ano *GetEvaluationSetVersionR
 	if !p.Field4DeepEqual(ano.DeletedAt) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.SharedOption) {
+	if !p.Field5DeepEqual(ano.IsShared) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.SourceSpaceID) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -9403,9 +9471,26 @@ func (p *GetEvaluationSetVersionRequest) Field4DeepEqual(src *bool) bool {
 	}
 	return true
 }
-func (p *GetEvaluationSetVersionRequest) Field5DeepEqual(src *common.SharedResourceOption) bool {
+func (p *GetEvaluationSetVersionRequest) Field5DeepEqual(src *bool) bool {
 
-	if !p.SharedOption.DeepEqual(src) {
+	if p.IsShared == src {
+		return true
+	} else if p.IsShared == nil || src == nil {
+		return false
+	}
+	if *p.IsShared != *src {
+		return false
+	}
+	return true
+}
+func (p *GetEvaluationSetVersionRequest) Field6DeepEqual(src *int64) bool {
+
+	if p.SourceSpaceID == src {
+		return true
+	} else if p.SourceSpaceID == nil || src == nil {
+		return false
+	}
+	if *p.SourceSpaceID != *src {
 		return false
 	}
 	return true
