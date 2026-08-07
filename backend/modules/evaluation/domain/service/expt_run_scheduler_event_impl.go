@@ -55,6 +55,13 @@ type ExptSchedulerImpl struct {
 	evaluationSetItemService EvaluationSetItemService
 	schedulerModeFactory     SchedulerModeFactory
 	evalTargetService        IEvalTargetService
+	// itemCompletePublisher 发送单行评测完成(item-complete)事件供下游离线分析。
+	// 发送点由链路A(CompleteItemRun)后移至此(recordEvalItemRunLogs, 读侧就绪后), 消除下游反查竞态。
+	// 允许为 nil: 开源侧 ProvideNilItemCompletePublisher 返回 nil, 循环内以非空守卫跳过发送。
+	itemCompletePublisher component.IItemCompletePublisher
+	// exptItemRefRepo 取每个 item 的 per-item 归属集/版本(expt_item_ref), 供 item-complete 事件组装。
+	// 多评测集下各 item 可属不同集/版本, 不能用 ExptEvalItem.EvalSetVersionID(主集硬编码)。
+	exptItemRefRepo repo.IExptItemRefRepo
 	// sandboxAgentMetrics 复用沙箱 agent 评测对象既有打点体系。
 	// sweep 命中沙箱提前终态时，对每个受影响 item 补一次 EmitInvokeFinished，
 	// 让终态命中路径与正常回调路径在同一 dashboard 上可比。
@@ -84,6 +91,8 @@ func NewExptSchedulerSvc(
 	evaluationSetItemService EvaluationSetItemService,
 	schedulerModeFactory SchedulerModeFactory,
 	evalTargetService IEvalTargetService,
+	itemCompletePublisher component.IItemCompletePublisher,
+	exptItemRefRepo repo.IExptItemRefRepo,
 	sandboxAgentMetrics metrics.SandboxAgentMetrics,
 	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容旧单测
 ) ExptSchedulerEvent {
@@ -107,6 +116,8 @@ func NewExptSchedulerSvc(
 		evaluationSetItemService: evaluationSetItemService,
 		schedulerModeFactory:     schedulerModeFactory,
 		evalTargetService:        evalTargetService,
+		itemCompletePublisher:    itemCompletePublisher,
+		exptItemRefRepo:          exptItemRefRepo,
 		sandboxAgentMetrics:      sandboxAgentMetrics,
 	}
 	if len(sandboxAgentNotifier) > 0 {
@@ -435,6 +446,15 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 
 func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem, mode entity.ExptSchedulerMode, expt *entity.Experiment) error {
 	time.Sleep(time.Millisecond * 1000) // avoid master-slave delay caused by asynchronous and other factors
+
+	// 循环外批量补齐 item-complete 事件组装所需的 per-item 归属集/版本/ItemKey(读侧就绪后才发, 见 sendItemComplete)。
+	// 仅当接了 publisher(商业化真实 producer; 开源为 nil) 且有 item 时才做, 避免开源侧无谓 IO。
+	var itemMeta map[int64]*entity.EvaluationSetItem
+	var itemVer map[int64]int64
+	if e.itemCompletePublisher != nil && len(completeItems) > 0 {
+		itemMeta, itemVer = e.resolveItemCompleteMeta(ctx, event, completeItems, expt)
+	}
+
 	for _, item := range completeItems {
 		if item.State != entity.ItemRunState_Fail && item.State != entity.ItemRunState_Success {
 			return fmt.Errorf("recordEvalItemRunLogs found invalid item run state: %v", item.State)
@@ -448,6 +468,14 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 			return err
 		}
 		time.Sleep(time.Millisecond * 50)
+
+		// item-complete(success) 唯一发送点: RecordItemRunLogs 已写完读侧三张表 + result_state=Resulted,
+		// 此刻下游反查必读到就绪结果, 消除竞态。仅发成功行(排除 fail/zombie/sandboxTerminated)。
+		// 幂等靠 result_state Logged→Resulted 状态位(下轮 tick 不再扫到); 下游按 (expt_id,expt_run_id,item_id) 去重。
+		if e.itemCompletePublisher != nil && item.State == entity.ItemRunState_Success {
+			e.sendItemComplete(ctx, event, expt, item, itemMeta[item.ItemID], itemVer[item.ItemID])
+		}
+
 		logs.CtxInfo(ctx, "[ExptEval] recordEvalItemRunLogs publish result, expt_id: %v, event: %v, item_id: %v, turn_evaluator_refs: %v", event.ExptID, event, item.ItemID, json.Jsonify(turnEvaluatorRefs))
 		err := mode.PublishResult(ctx, turnEvaluatorRefs, event)
 		if err != nil {
@@ -480,6 +508,102 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 		return item.ItemID
 	}))
 	return nil
+}
+
+// resolveItemCompleteMeta 循环外批量补齐 item-complete 事件组装所需元数据。
+// 返回 itemID→EvaluationSetItem(提供 ItemKey/SpaceID/EvaluationSetID) 与 itemID→per-item 归属集版本。
+// per-item 版本必须来自 expt_item_ref(多集非主集也正确), 不能用 ExptEvalItem.EvalSetVersionID(主集硬编码)。
+// 任一步失败只 CtxWarn 不阻断: 组装侧对缺失 item 跳过发送, 不影响读侧写入与在线结果发布。
+func (e *ExptSchedulerImpl) resolveItemCompleteMeta(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem, expt *entity.Experiment) (map[int64]*entity.EvaluationSetItem, map[int64]int64) {
+	itemMeta := make(map[int64]*entity.EvaluationSetItem, len(completeItems))
+	itemVer := make(map[int64]int64, len(completeItems))
+
+	itemIDs := gslice.Map(completeItems, func(item *entity.ExptEvalItem) int64 { return item.ItemID })
+
+	// 按归属 (EvalSetID, EvalSetVersionID, EvalSetSourceSpaceID) 分组: 多集下各 item 可属不同集/版本,
+	// BatchGetEvaluationSetItems 一次只接受单集+单版本, 故须分组各查一次。
+	type setGroup struct {
+		evalSetID        int64
+		evalSetVersionID int64
+		sourceSpaceID    int64
+		itemIDs          []int64
+	}
+	groups := make(map[string]*setGroup)
+	addToGroup := func(itemID, evalSetID, evalSetVersionID, sourceSpaceID int64) {
+		key := fmt.Sprintf("%d:%d:%d", evalSetID, evalSetVersionID, sourceSpaceID)
+		g := groups[key]
+		if g == nil {
+			g = &setGroup{evalSetID: evalSetID, evalSetVersionID: evalSetVersionID, sourceSpaceID: sourceSpaceID}
+			groups[key] = g
+		}
+		g.itemIDs = append(g.itemIDs, itemID)
+		itemVer[itemID] = evalSetVersionID // per-item 归属集版本, 直接来自 ref/主集(单集)
+	}
+
+	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && e.exptItemRefRepo != nil {
+		refs, err := e.exptItemRefRepo.MGetByExptIDAndItemIDs(ctx, event.SpaceID, event.ExptID, itemIDs)
+		if err != nil {
+			logs.CtxWarn(ctx, "[ExptEval] item complete resolve refs fail, skip publish batch, expt_id: %v, err: %v", event.ExptID, err)
+			return itemMeta, itemVer
+		}
+		refByItem := make(map[int64]*entity.ExptItemRef, len(refs))
+		for _, ref := range refs {
+			if ref != nil {
+				refByItem[ref.ItemID] = ref
+			}
+		}
+		for _, itemID := range itemIDs {
+			ref := refByItem[itemID]
+			if ref == nil || ref.EvalSetID <= 0 {
+				logs.CtxWarn(ctx, "[ExptEval] item complete ref missing, skip item, expt_id: %v, item_id: %v", event.ExptID, itemID)
+				continue
+			}
+			addToGroup(itemID, ref.EvalSetID, ref.EvalSetVersionID, ref.EvalSetSourceSpaceID)
+		}
+	} else {
+		// 单评测集/老实验: 全部 item 归属主集, 版本用主集版本, 来源空间取实验冻结列。
+		if expt.EvalSet == nil || expt.EvalSet.EvaluationSetVersion == nil {
+			logs.CtxWarn(ctx, "[ExptEval] item complete primary eval set missing, skip publish batch, expt_id: %v", event.ExptID)
+			return itemMeta, itemVer
+		}
+		evalSetID := expt.EvalSet.ID
+		evalSetVersionID := expt.EvalSet.EvaluationSetVersion.ID
+		for _, itemID := range itemIDs {
+			addToGroup(itemID, evalSetID, evalSetVersionID, expt.EvalSetSpaceID)
+		}
+	}
+
+	for _, g := range groups {
+		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
+			SpaceID:         resolveLoadSpaceID(event.SpaceID, g.sourceSpaceID),
+			EvaluationSetID: g.evalSetID,
+			VersionID:       resolveSetReadVersionID(g.evalSetID, g.evalSetVersionID),
+			ItemIDs:         g.itemIDs,
+		})
+		if err != nil {
+			logs.CtxWarn(ctx, "[ExptEval] item complete batch get items fail, skip group, expt_id: %v, eval_set_id: %v, err: %v", event.ExptID, g.evalSetID, err)
+			continue
+		}
+		for _, it := range items {
+			if it != nil {
+				itemMeta[it.ItemID] = it
+			}
+		}
+	}
+
+	return itemMeta, itemVer
+}
+
+// sendItemComplete 组装并发送单行 item-complete(success) 事件。发送失败只 CtxWarn 不阻断(靠下轮 tick / 下游幂等兜底)。
+func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) {
+	if evalSetItem == nil {
+		logs.CtxWarn(ctx, "[ExptEval] item complete meta missing, skip publish, expt_id: %v, item_id: %v", event.ExptID, item.ItemID)
+		return
+	}
+	completeEvent := buildItemCompleteEventFromScheduler(event.SpaceID, event.ExptID, event.ExptRunID, expt, item, evalSetItem, evalSetVersionID)
+	if err := e.itemCompletePublisher.PublishItemComplete(ctx, completeEvent); err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, item.ItemID, err)
+	}
 }
 
 func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.ExptScheduleEvent, toSubmits []*entity.ExptEvalItem) error {
