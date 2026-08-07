@@ -38,6 +38,7 @@ const (
 	SandboxExecuteStatusSucceeded SandboxExecuteStatus = 10
 	SandboxExecuteStatusFailed    SandboxExecuteStatus = 11
 	SandboxExecuteStatusCanceled  SandboxExecuteStatus = 12
+	SandboxExecuteStatusFinished  SandboxExecuteStatus = 13
 )
 
 // SandboxDestroyType 销毁类型。

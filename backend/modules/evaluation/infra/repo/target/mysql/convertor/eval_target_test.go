@@ -589,3 +589,27 @@ func TestEvalTargetVersionPO2DO_CustomAgent(t *testing.T) {
 	assert.NotNil(t, result.CustomAgent)
 	assert.Equal(t, entity.Region("cn"), result.CustomAgent.ExecRegion)
 }
+
+// 回归: EvalTargetVersionPO2DO 必须把 targetType 写回 DO.EvalTargetType,
+// 否则下游 (sandbox status sweep / sandbox tenant 判定) 会静默走非 SandboxAgent
+// 分支, 出现"沙箱终态但实验行卡在 Processing"的现象。
+func TestEvalTargetVersionPO2DO_PropagatesEvalTargetType(t *testing.T) {
+	t.Parallel()
+
+	po := &model.TargetVersion{
+		ID:       10,
+		SpaceID:  20,
+		TargetID: 30,
+	}
+	cases := []entity.EvalTargetType{
+		entity.EvalTargetTypeSandboxAgent,
+		entity.EvalTargetTypeCozeBot,
+		entity.EvalTargetTypeLoopPrompt,
+		entity.EvalTargetTypeA2AAgent,
+	}
+	for _, tt := range cases {
+		got := EvalTargetVersionPO2DO(po, tt)
+		assert.NotNil(t, got)
+		assert.Equal(t, tt, got.EvalTargetType, "EvalTargetType should equal input targetType (%v)", tt)
+	}
+}

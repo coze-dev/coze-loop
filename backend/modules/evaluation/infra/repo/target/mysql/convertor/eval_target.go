@@ -175,6 +175,9 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 	targetVersionDO.ID = targetVersionPO.ID
 	targetVersionDO.SpaceID = targetVersionPO.SpaceID
 	targetVersionDO.TargetID = targetVersionPO.TargetID
+	// EvalTargetType 与主表保持一致。缺失会导致下游 (sandbox status sweep / sandbox tenant 判定)
+	// 静默走非 SandboxAgent 分支，行卡在 Processing 无法失败。
+	targetVersionDO.EvalTargetType = targetType
 	targetVersionDO.SourceTargetVersion = targetVersionPO.SourceTargetVersion
 	targetVersionDO.RuntimeParamDemo = gptr.Of(entity.NewPromptRuntimeParam(nil).GetJSONDemo())
 

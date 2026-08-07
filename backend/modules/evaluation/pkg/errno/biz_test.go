@@ -84,3 +84,18 @@ func TestParseItemZombieTimeoutErr(t *testing.T) {
 		assert.Empty(t, msg)
 	})
 }
+
+func TestNewSandboxTerminatedBeforeReportErr(t *testing.T) {
+	err := NewSandboxTerminatedBeforeReportErr("Failed")
+	ei, ok := ParseErrImpl(err)
+	assert.True(t, ok)
+	assert.Equal(t, SandboxTerminatedBeforeReportCode, ei.Code)
+	assert.Contains(t, ei.Msg, "Failed")
+
+	// Round-trip serialize/deserialize keeps code + msg
+	round := DeserializeErr(conv.UnsafeStringToBytes(SerializeErr(err)))
+	rei, ok := ParseErrImpl(round)
+	assert.True(t, ok)
+	assert.Equal(t, SandboxTerminatedBeforeReportCode, rei.Code)
+	assert.Equal(t, ei.Msg, rei.Msg)
+}

@@ -7245,23 +7245,26 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	mockIDGen := idgenmock.NewMockIIDGenerator(ctrl)
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockSandboxScheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
+	mockEvalTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
 
 	validWorkspaceID := int64(123)
 	validExptID := int64(456)
 	validUserID := int64(789)
 	validRunID := int64(999)
 	itemRetryNum := 0
+	validTargetVersionID := int64(654)
 
 	baseExpt := &entity.Experiment{
-		ID:        validExptID,
-		SpaceID:   validWorkspaceID,
-		CreatedBy: strconv.FormatInt(validUserID, 10),
-		EvalConf:  &entity.EvaluationConfiguration{ItemRetryNum: &itemRetryNum},
+		ID:              validExptID,
+		SpaceID:         validWorkspaceID,
+		CreatedBy:       strconv.FormatInt(validUserID, 10),
+		TargetVersionID: validTargetVersionID,
+		EvalConf:        &entity.EvaluationConfiguration{ItemRetryNum: &itemRetryNum},
 	}
 
 	app := NewExperimentApplication(
 		nil, nil, mockManager, nil, nil, mockIDGen, nil, mockAuth,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		mockSandboxScheduler,
 		nil,
 	)
@@ -7298,11 +7301,62 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
 		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		// e.manager.Get 只返回 shallow expt，Target 为 nil，需要 lazy-load 才能算出 tenant。
+		mockEvalTargetSvc.EXPECT().GetEvalTargetVersion(gomock.Any(), validWorkspaceID, validTargetVersionID, false).
+			Return(&entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{}}, nil)
 		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
 			TaskID:      strconv.FormatInt(validExptID, 10),
 			Concurrency: int32(entity.DefaultSubmitItemConcurNum),
 			WorkspaceID: validWorkspaceID,
 		}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+		})
+		assert.Error(t, err)
+	})
+
+	// 回归 SubmitExperiment/RetryExperiment tenant 不一致的 bug:
+	// manager.Get 返回的 expt 没有 Target，之前会静默回落到 SandboxTenantDefault (=FornaxTraeEval)，
+	// 首次 Submit 若是 Dual 就会触发 sandbox 侧 "cannot change tenant of active task" 错误。
+	// 修复后 RetryExperiment 会 lazy-load target，Dual 场景下 Init 应该带 SandboxTenantFornaxTraeEvalDualSandbox。
+	t.Run("SandboxAgent dual-sandbox retry uses dual tenant", func(t *testing.T) {
+		sandboxExpt := *baseExpt
+		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockEvalTargetSvc.EXPECT().GetEvalTargetVersion(gomock.Any(), validWorkspaceID, validTargetVersionID, false).
+			Return(&entity.EvalTarget{
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeDual},
+				},
+			}, nil)
+		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
+			TaskID:      strconv.FormatInt(validExptID, 10),
+			Concurrency: int32(entity.DefaultSubmitItemConcurNum) * 2, // Dual 模式并发度翻倍
+			WorkspaceID: validWorkspaceID,
+			Tenant:      rpc.SandboxTenantFornaxTraeEvalDualSandbox,
+		}).Return(&rpc.SandboxInitResponse{}, nil)
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+		})
+		assert.NoError(t, err)
+	})
+
+	// SandboxAgent 但 lazy-load target 失败时应直接返回错误（不能以错误 tenant 去 Init）。
+	t.Run("SandboxAgent target load failure blocks retry", func(t *testing.T) {
+		sandboxExpt := *baseExpt
+		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockEvalTargetSvc.EXPECT().GetEvalTargetVersion(gomock.Any(), validWorkspaceID, validTargetVersionID, false).
+			Return(nil, errors.New("target load failed"))
 
 		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
 			WorkspaceID: gptr.Of(validWorkspaceID),
