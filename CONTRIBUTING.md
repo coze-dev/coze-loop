@@ -12,13 +12,13 @@ You can contribute to the Cozeloop project in several ways:
 * Improve documentation and code comments
 * Participate in code reviews
 
-Improvements to the core application, and documentation are all welcome. If you have any questions, please contact the project maintainers.
+Improvements to the core application and documentation are all welcome. If you have any questions, please contact the project maintainers.
 
 Before making significant changes, please open an issue to discuss your proposed changes. Make sure tests pass before submitting a pull request.
 
 ## Project Overview
 
-You could go to [README](./README.md) to find more information.
+You can refer to [README](./README.md) to find more information.
 
 ## Code Submission Process
 
