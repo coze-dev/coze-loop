@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"strconv"
 	"sync"
@@ -5033,4 +5034,309 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluatorWithAlias_CustomRPC(t *
 	require.NoError(t, service.asyncCallEvaluatorWithAlias(context.Background(), evaluator, runConf, "judge_a", etec, input, collector))
 	require.Len(t, collector.records, 1)
 	assert.Equal(t, "judge_a", collector.records[0].Alias)
+}
+
+// TestDefaultExptTurnEvaluationImpl_AsyncTargetCallbackRunsMixedEvaluators is the
+// regression guard for the full target/evaluator state machine. In particular,
+// an AsyncReportTrigger means "the target result is ready"; it must not be
+// mistaken for AsyncEvaluatorReportTrigger and skip evaluator execution.
+func TestDefaultExptTurnEvaluationImpl_AsyncTargetCallbackRunsMixedEvaluators(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	metric := metricsmocks.NewMockExptMetric(ctrl)
+	evaluatorSvc := svcmocks.NewMockEvaluatorService(ctrl)
+	benefitSvc := benefitmocks.NewMockIBenefitService(ctrl)
+	recordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:                 metric,
+		evaluatorService:       evaluatorSvc,
+		benefitService:         benefitSvc,
+		evaluatorRecordService: recordSvc,
+	}
+
+	const (
+		spaceID  = int64(2)
+		targetID = int64(900)
+	)
+	targetStatus := entity.EvalTargetRunStatusSuccess
+	targetRecord := &entity.EvalTargetRecord{
+		ID:     targetID,
+		Status: &targetStatus,
+		EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{
+			"actual_output": {Text: gptr.Of("target done")},
+		}},
+	}
+
+	newEvaluator := func(versionID int64, async bool) *entity.Evaluator {
+		if async {
+			code := fmt.Sprintf("async-%d", versionID)
+			return &entity.Evaluator{
+				ID: versionID, EvaluatorType: entity.EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: &entity.CustomRPCEvaluatorVersion{
+					ID: versionID, EvaluatorID: versionID, ProviderEvaluatorCode: &code,
+					AccessProtocol: entity.EvaluatorAccessProtocolRPC, IsAsync: true,
+				},
+			}
+		}
+		return &entity.Evaluator{
+			ID: versionID, EvaluatorType: entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: versionID},
+		}
+	}
+	newConf := func(versionID int64) *entity.EvaluatorConf {
+		return &entity.EvaluatorConf{
+			EvaluatorVersionID: versionID,
+			IngressConf: &entity.EvaluatorIngressConf{
+				EvalSetAdapter: &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{}},
+				TargetAdapter:  &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{}},
+			},
+			RunConf: &entity.EvaluatorRunConfig{Env: gptr.Of("ppe_trae_work_async_evaluator")},
+		}
+	}
+
+	syncVersions := map[int64]struct{}{101: {}, 102: {}}
+	asyncVersions := map[int64]struct{}{201: {}, 202: {}, 203: {}}
+	allEvaluators := []*entity.Evaluator{
+		newEvaluator(101, false), newEvaluator(102, false),
+		newEvaluator(201, true), newEvaluator(202, true), newEvaluator(203, true),
+	}
+	allConfs := []*entity.EvaluatorConf{
+		newConf(101), newConf(102), newConf(201), newConf(202), newConf(203),
+	}
+
+	event := &entity.ExptItemEvalEvent{
+		SpaceID: spaceID, ExptID: 3, ExptRunID: 4, EvalSetItemID: 5,
+		Session: &entity.Session{UserID: "u"}, AsyncReportTrigger: true,
+	}
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Event:       event,
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 5},
+			Expt: &entity.Experiment{
+				ID: 3, SpaceID: spaceID, TargetVersionID: 99,
+				Target: &entity.EvalTarget{ID: 88, EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+					EvalTargetVersion: &entity.EvalTargetVersion{ID: 99, EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+						CustomRPCServer: &entity.CustomRPCServer{IsAsync: gptr.Of(true)}}},
+				Evaluators: allEvaluators,
+				EvalConf: &entity.EvaluationConfiguration{ConnectorConf: entity.Connector{
+					TargetConf:     &entity.TargetConf{TargetVersionID: 99},
+					EvaluatorsConf: &entity.EvaluatorsConf{EvaluatorConcurNum: gptr.Of(5), EvaluatorConf: allConfs},
+				}},
+			},
+		},
+		Turn:              &entity.Turn{ID: 6, FieldDataList: []*entity.FieldData{}},
+		ExptTurnRunResult: &entity.ExptTurnRunResult{TargetResult: targetRecord},
+	}
+
+	metric.EXPECT().EmitTurnExecEval(spaceID, gomock.Any())
+	metric.EXPECT().EmitTurnExecResult(spaceID, gomock.Any(), true, gomock.Any(), gomock.Any(), gomock.Any())
+	benefitSvc.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+	evaluatorSvc.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(5)
+	metric.EXPECT().EmitTurnExecEvaluatorResult(spaceID, false).Times(5)
+
+	var mu sync.Mutex
+	runCounts := make(map[int64]int)
+	evaluatorSvc.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			mu.Lock()
+			runCounts[req.EvaluatorVersionID]++
+			mu.Unlock()
+			_, ok := syncVersions[req.EvaluatorVersionID]
+			require.True(t, ok, "unexpected sync evaluator %d", req.EvaluatorVersionID)
+			require.Equal(t, "ppe_trae_work_async_evaluator", gptr.Indirect(req.EvaluatorRunConf.Env))
+			return &entity.EvaluatorRecord{ID: 1000 + req.EvaluatorVersionID, EvaluatorVersionID: req.EvaluatorVersionID, Status: entity.EvaluatorRunStatusSuccess}, nil
+		},
+	).Times(2)
+	evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, req *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			mu.Lock()
+			runCounts[req.EvaluatorVersionID]++
+			mu.Unlock()
+			_, ok := asyncVersions[req.EvaluatorVersionID]
+			require.True(t, ok, "unexpected async evaluator %d", req.EvaluatorVersionID)
+			require.Equal(t, "ppe_trae_work_async_evaluator", gptr.Indirect(req.EvaluatorRunConf.Env))
+			require.NotNil(t, req.AsyncCtx)
+			require.Same(t, event, req.AsyncCtx.Event)
+			require.False(t, req.AsyncCtx.ResumeReady)
+			return &entity.EvaluatorRecord{ID: 1000 + req.EvaluatorVersionID, EvaluatorVersionID: req.EvaluatorVersionID, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil
+		},
+	).Times(3)
+	recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), gomock.Any(), false).DoAndReturn(
+		func(_ context.Context, recordID int64, _ bool) (*entity.EvaluatorRecord, error) {
+			versionID := recordID - 1000
+			return &entity.EvaluatorRecord{ID: recordID, EvaluatorVersionID: versionID, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil
+		},
+	).Times(3)
+
+	result := service.Eval(context.Background(), etec)
+	require.NoError(t, result.EvalErr)
+	require.Same(t, targetRecord, result.TargetResult)
+	require.True(t, result.AsyncAbort)
+	require.Len(t, result.EvaluatorResults, 5)
+	for versionID := range syncVersions {
+		record := result.GetEvaluatorRecord(versionID)
+		require.NotNil(t, record)
+		assert.Equal(t, entity.EvaluatorRunStatusSuccess, record.Status)
+	}
+	for versionID := range asyncVersions {
+		record := result.GetEvaluatorRecord(versionID)
+		require.NotNil(t, record)
+		assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
+	}
+	for versionID, count := range runCounts {
+		assert.Equal(t, 1, count, "evaluator %d must run exactly once", versionID)
+	}
+	assert.Len(t, runCounts, 5)
+}
+
+// TestDefaultExptTurnEvaluationImpl_AsyncEvaluatorCallbacksPreserveAllRecords
+// models staggered callbacks after the initial mixed run. Every callback event
+// must reuse the complete persisted record set and must never re-run target or
+// evaluators. The turn only converges after the final async record is terminal.
+func TestDefaultExptTurnEvaluationImpl_AsyncEvaluatorCallbacksPreserveAllRecords(t *testing.T) {
+	t.Parallel()
+
+	targetStatus := entity.EvalTargetRunStatusSuccess
+	target := &entity.EvalTargetRecord{ID: 900, Status: &targetStatus, EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}}}
+	newExpt := func() *entity.Experiment {
+		return &entity.Experiment{
+			TargetVersionID: 99,
+			Target:          &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{ID: 99, CustomRPCServer: &entity.CustomRPCServer{IsAsync: gptr.Of(true)}}},
+			Evaluators:      []*entity.Evaluator{{ID: 101}, {ID: 102}, {ID: 201}, {ID: 202}, {ID: 203}},
+			EvalConf:        &entity.EvaluationConfiguration{ConnectorConf: entity.Connector{EvaluatorsConf: &entity.EvaluatorsConf{}}},
+		}
+	}
+	newRecords := func(statuses map[int64]entity.EvaluatorRunStatus) []*entity.EvaluatorRecord {
+		versions := []int64{101, 102, 201, 202, 203}
+		records := make([]*entity.EvaluatorRecord, 0, len(versions))
+		for _, versionID := range versions {
+			records = append(records, &entity.EvaluatorRecord{ID: 1000 + versionID, EvaluatorVersionID: versionID, Status: statuses[versionID]})
+		}
+		return records
+	}
+
+	phases := []struct {
+		name      string
+		statuses  map[int64]entity.EvaluatorRunStatus
+		wantAbort bool
+	}{
+		{
+			name: "first async callback keeps the other two pending",
+			statuses: map[int64]entity.EvaluatorRunStatus{101: entity.EvaluatorRunStatusSuccess, 102: entity.EvaluatorRunStatusSuccess,
+				201: entity.EvaluatorRunStatusSuccess, 202: entity.EvaluatorRunStatusAsyncInvoking, 203: entity.EvaluatorRunStatusAsyncInvoking},
+			wantAbort: true,
+		},
+		{
+			name: "second async callback keeps the last one pending",
+			statuses: map[int64]entity.EvaluatorRunStatus{101: entity.EvaluatorRunStatusSuccess, 102: entity.EvaluatorRunStatusSuccess,
+				201: entity.EvaluatorRunStatusSuccess, 202: entity.EvaluatorRunStatusSuccess, 203: entity.EvaluatorRunStatusAsyncInvoking},
+			wantAbort: true,
+		},
+		{
+			name: "last async callback completes the turn",
+			statuses: map[int64]entity.EvaluatorRunStatus{101: entity.EvaluatorRunStatusSuccess, 102: entity.EvaluatorRunStatusSuccess,
+				201: entity.EvaluatorRunStatusSuccess, 202: entity.EvaluatorRunStatusSuccess, 203: entity.EvaluatorRunStatusSuccess},
+			wantAbort: false,
+		},
+	}
+
+	for _, phase := range phases {
+		phase := phase
+		t.Run(phase.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			metric := metricsmocks.NewMockExptMetric(ctrl)
+			service := &DefaultExptTurnEvaluationImpl{metric: metric}
+			event := &entity.ExptItemEvalEvent{SpaceID: 2, AsyncEvaluatorReportTrigger: true, Session: &entity.Session{UserID: "u"}}
+			records := newRecords(phase.statuses)
+			etec := &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx:   &entity.ExptItemEvalCtx{Event: event, Expt: newExpt()},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{TargetResult: target, EvaluatorResults: records},
+			}
+			metric.EXPECT().EmitTurnExecEval(int64(2), gomock.Any())
+			metric.EXPECT().EmitTurnExecResult(int64(2), gomock.Any(), true, gomock.Any(), gomock.Any(), gomock.Any())
+
+			result := service.Eval(context.Background(), etec)
+			require.NoError(t, result.EvalErr)
+			require.Same(t, target, result.TargetResult)
+			assert.Equal(t, phase.wantAbort, result.AsyncAbort)
+			require.Len(t, result.EvaluatorResults, 5)
+			seen := make(map[int64]int)
+			for _, record := range result.EvaluatorResults {
+				require.NotNil(t, record)
+				seen[record.EvaluatorVersionID]++
+				assert.Equal(t, phase.statuses[record.EvaluatorVersionID], record.Status)
+			}
+			for _, versionID := range []int64{101, 102, 201, 202, 203} {
+				assert.Equal(t, 1, seen[versionID], "record for evaluator %d must be preserved exactly once", versionID)
+			}
+		})
+	}
+}
+
+// TestDefaultExptTurnEvaluationImpl_MixedEvaluatorCompletionOrder covers both
+// orderings around refreshAsyncEvaluatorRecords: the async callback can arrive
+// before a slow synchronous evaluator returns, or remain pending after the
+// synchronous evaluator has completed.
+func TestDefaultExptTurnEvaluationImpl_MixedEvaluatorCompletionOrder(t *testing.T) {
+	t.Parallel()
+
+	newCase := func(t *testing.T, refreshedStatus entity.EvaluatorRunStatus, wantAbort bool) {
+		ctrl := gomock.NewController(t)
+		metric := metricsmocks.NewMockExptMetric(ctrl)
+		evaluatorSvc := svcmocks.NewMockEvaluatorService(ctrl)
+		benefitSvc := benefitmocks.NewMockIBenefitService(ctrl)
+		recordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
+		service := &DefaultExptTurnEvaluationImpl{metric: metric, evaluatorService: evaluatorSvc, benefitService: benefitSvc, evaluatorRecordService: recordSvc}
+
+		code := "async-fast"
+		expt := &entity.Experiment{
+			SpaceID: 2,
+			Evaluators: []*entity.Evaluator{
+				{ID: 101, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 101}},
+				{ID: 201, EvaluatorType: entity.EvaluatorTypeCustomRPC, CustomRPCEvaluatorVersion: &entity.CustomRPCEvaluatorVersion{ID: 201, EvaluatorID: 201, ProviderEvaluatorCode: &code, IsAsync: true}},
+			},
+			EvalConf: &entity.EvaluationConfiguration{ConnectorConf: entity.Connector{EvaluatorsConf: &entity.EvaluatorsConf{
+				EvaluatorConcurNum: gptr.Of(2), EvaluatorConf: []*entity.EvaluatorConf{
+					{EvaluatorVersionID: 101, IngressConf: &entity.EvaluatorIngressConf{EvalSetAdapter: &entity.FieldAdapter{}, TargetAdapter: &entity.FieldAdapter{}}},
+					{EvaluatorVersionID: 201, IngressConf: &entity.EvaluatorIngressConf{EvalSetAdapter: &entity.FieldAdapter{}, TargetAdapter: &entity.FieldAdapter{}}},
+				},
+			}}},
+		}
+		etec := &entity.ExptTurnEvalCtx{
+			ExptItemEvalCtx:   &entity.ExptItemEvalCtx{Expt: expt, Event: &entity.ExptItemEvalEvent{SpaceID: 2, ExptID: 3, ExptRunID: 4, Session: &entity.Session{UserID: "u"}}, EvalSetItem: &entity.EvaluationSetItem{ItemID: 5}},
+			ExptTurnRunResult: &entity.ExptTurnRunResult{}, Turn: &entity.Turn{ID: 6},
+		}
+		target := &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}}}
+
+		benefitSvc.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+		evaluatorSvc.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil).Times(2)
+		metric.EXPECT().EmitTurnExecEvaluatorResult(int64(2), false).Times(2)
+		evaluatorSvc.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(context.Context, *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			// This makes the sync branch observably slower than an immediate provider callback.
+			time.Sleep(20 * time.Millisecond)
+			return &entity.EvaluatorRecord{ID: 1101, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess}, nil
+		})
+		evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 1201, EvaluatorVersionID: 201, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil)
+		recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(1201), false).Return(&entity.EvaluatorRecord{ID: 1201, EvaluatorVersionID: 201, Status: refreshedStatus}, nil)
+
+		records, err := service.CallEvaluators(context.Background(), etec, target)
+		require.NoError(t, err)
+		require.Len(t, records, 2)
+		result := (&entity.ExptTurnRunResult{}).SetEvaluatorResults(records)
+		assert.Equal(t, wantAbort, result.AbortWithEvaluatorResults(context.Background(), etec.Event))
+		assert.Equal(t, entity.EvaluatorRunStatusSuccess, result.GetEvaluatorRecord(101).Status)
+		assert.Equal(t, refreshedStatus, result.GetEvaluatorRecord(201).Status)
+	}
+
+	t.Run("sync slow async callback fast", func(t *testing.T) {
+		t.Parallel()
+		newCase(t, entity.EvaluatorRunStatusSuccess, false)
+	})
+	t.Run("sync fast relative to async callback", func(t *testing.T) {
+		t.Parallel()
+		newCase(t, entity.EvaluatorRunStatusAsyncInvoking, true)
+	})
 }
