@@ -1085,6 +1085,19 @@ func (e *EvaluatorServiceImpl) failAsyncEvaluatorRecord(ctx context.Context, rec
 	if updated {
 		record.Status = entity.EvaluatorRunStatusFail
 		record.EvaluatorOutputData = output
+		return record, runErr
+	}
+
+	// The provider call can return an ACK error after it has already accepted the task and
+	// synchronously reported a terminal result. In that race the terminal CAS above loses by
+	// design; re-read the primary and let the callback outcome win instead of failing the turn
+	// with a stale dispatch error.
+	latest, getErr := e.evaluatorRecordRepo.GetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), record.ID, false, entity.WithoutLoadStorageData())
+	if getErr != nil {
+		return record, errorx.Wrapf(getErr, "reload evaluator record after async kickoff failure, cause: %v", runErr)
+	}
+	if latest != nil && (latest.Status == entity.EvaluatorRunStatusSuccess || latest.Status == entity.EvaluatorRunStatusFail) {
+		return latest, nil
 	}
 	return record, runErr
 }
