@@ -3645,7 +3645,7 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 			tenant := rpc.SandboxTenantDefault
 			if agent := req.GetSandboxAgent(); agent != nil &&
 				entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) == entity.SandboxCountModeDual {
-				tenant = rpc.SandboxTenantFornaxTraeEvalDualSandbox
+				tenant = rpc.SandboxTenantFornaxEvalGeneral
 			}
 			if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
 				TaskID:      "sandbox_debug",

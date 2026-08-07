@@ -61,7 +61,7 @@ func TestSandboxInitConcurrency(t *testing.T) {
 }
 
 // TestSandboxTenantForExperimentEntity 校验 entity 层实验 → 沙箱租户推导。
-// 只有 SandboxAgent.SandboxCountMode=Dual 时才升到 FornaxTraeEvalDualSandbox，其余均为 Default。
+// 只有 SandboxAgent.SandboxCountMode=Dual 时才升到 FornaxEvalGeneral，其余均为 Default。
 func TestSandboxTenantForExperimentEntity(t *testing.T) {
 	cases := []struct {
 		name string
@@ -94,7 +94,7 @@ func TestSandboxTenantForExperimentEntity(t *testing.T) {
 					SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeDual},
 				},
 			}},
-			want: rpc.SandboxTenantFornaxTraeEvalDualSandbox,
+			want: rpc.SandboxTenantFornaxEvalGeneral,
 		},
 		{
 			name: "unrecognized mode falls back to Default",
@@ -115,7 +115,7 @@ func TestSandboxTenantForExperimentEntity(t *testing.T) {
 }
 
 // TestSandboxTenantForExperimentDTO 校验 domain DTO 层实验 → 沙箱租户推导。
-// 空 DTO / 无 SandboxAgent / 空 SandboxCountMode / 未识别值均返回 Default；仅 "dual" 升到 DualSandbox。
+// 空 DTO / 无 SandboxAgent / 空 SandboxCountMode / 未识别值均返回 Default；仅 "dual" 升到 FornaxEvalGeneral。
 func TestSandboxTenantForExperimentDTO(t *testing.T) {
 	dtoWithMode := func(mode string) *domain_expt.Experiment {
 		return &domain_expt.Experiment{
@@ -167,11 +167,31 @@ func TestSandboxTenantForExperimentDTO(t *testing.T) {
 		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(dtoWithMode(domain_eval_target.SandboxCountModeSingle)))
 	})
 
-	t.Run("dual mode -> DualSandbox", func(t *testing.T) {
-		assert.Equal(t, rpc.SandboxTenantFornaxTraeEvalDualSandbox, sandboxTenantForExperimentDTO(dtoWithMode(domain_eval_target.SandboxCountModeDual)))
+	t.Run("dual mode -> FornaxEvalGeneral", func(t *testing.T) {
+		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneral, sandboxTenantForExperimentDTO(dtoWithMode(domain_eval_target.SandboxCountModeDual)))
 	})
 
 	t.Run("unrecognized mode -> Default", func(t *testing.T) {
 		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(dtoWithMode("triple")))
 	})
+}
+
+// TestIsDualSandboxTenant 钉住"双沙箱判据"与租户取值的绑定关系。
+// 这条存在的理由：并发翻倍 (sandboxInitConcurrency 的 dual 入参) 完全依赖这个判据，
+// 判据和 sandboxTenantForExperiment* 的返回值一旦脱钩就会静默恒 false —— 双沙箱失去 ×2 配额、
+// item 撞并发上限直接判永久失败，且没有任何报错。改租户值时本测试必须同步失败。
+func TestIsDualSandboxTenant(t *testing.T) {
+	assert.True(t, isDualSandboxTenant(rpc.SandboxTenantFornaxEvalGeneral))
+	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantDefault))
+	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantGeneralAgent))
+	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantLabelingAnalysis))
+	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantFornaxTraeEvalDualSandbox))
+
+	// 与两个推导函数对账：dual 模式推导出的租户必须被判据认得。
+	dualExpt := &entity.Experiment{Target: &entity.EvalTarget{
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeDual},
+		},
+	}}
+	assert.True(t, isDualSandboxTenant(sandboxTenantForExperimentEntity(dualExpt)))
 }

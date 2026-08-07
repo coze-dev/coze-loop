@@ -601,7 +601,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
 		exptID := cresp.GetExperiment().GetID()
 		tenant := sandboxTenantForExperimentDTO(cresp.GetExperiment())
-		concurrency := sandboxInitConcurrency(ptr.ConvIntPtr[int32, int](req.ItemConcurNum), tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox)
+		concurrency := sandboxInitConcurrency(ptr.ConvIntPtr[int32, int](req.ItemConcurNum), isDualSandboxTenant(tenant))
 		if err := e.initSandboxTask(ctx, "submit experiment", exptID, concurrency, req.GetWorkspaceID(), tenant); err != nil {
 			return nil, err
 		}
@@ -1381,7 +1381,7 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 	// 实验不会中断），故降级为告警。
 	if itemConcurNum != nil && e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
 		tenant := sandboxTenantForExperimentEntity(got)
-		concurrency := sandboxInitConcurrency(itemConcurNum, tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox)
+		concurrency := sandboxInitConcurrency(itemConcurNum, isDualSandboxTenant(tenant))
 		if initErr := e.initSandboxTask(ctx, "update run conf", req.GetExptID(), concurrency, req.GetWorkspaceID(), tenant); initErr != nil {
 			logs.CtxWarn(ctx, "update run conf: re-init sandbox task fail, sandbox quota still at the old value, expt_id=%d, item_concur_num=%d, concurrency=%d, err=%v",
 				req.GetExptID(), gptr.Indirect(itemConcurNum), concurrency, initErr)
@@ -1557,7 +1557,7 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 	// Init 失败即视为重试失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
 	if e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
 		tenant := sandboxTenantForExperimentEntity(got)
-		concurrency := sandboxInitConcurrency(got.EvalConf.ItemConcurNum, tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox)
+		concurrency := sandboxInitConcurrency(got.EvalConf.ItemConcurNum, isDualSandboxTenant(tenant))
 		if err := e.initSandboxTask(ctx, "retry experiment", req.GetExptID(), concurrency, req.GetWorkspaceID(), tenant); err != nil {
 			return nil, err
 		}
@@ -1646,14 +1646,23 @@ func sandboxInitConcurrency(itemConcurNum *int, dual bool) int32 {
 	return int32(math.Ceil(float64(normalized) * sandboxConcurrencyBuffer))
 }
 
+// isDualSandboxTenant 判断 tenant 是否代表双沙箱链路。
+// ⚠️ 存在的理由：双沙箱一次评测占 2 个沙箱 execute，Concurrency 要 ×2（见 sandboxInitConcurrency）。
+// 这个判据必须跟着上面两个 sandboxTenantForExperiment* 的返回值走 —— 早先是在调用处内联写
+// `tenant == SandboxTenantFornaxTraeEvalDualSandbox`，三处散落；租户值一改就集体恒 false，
+// 双沙箱静默失去并发翻倍、item 撞配额直接判永久失败。收敛成一个函数，改租户只改这里。
+func isDualSandboxTenant(tenant rpc.SandboxTenant) bool {
+	return tenant == rpc.SandboxTenantFornaxEvalGeneral
+}
+
 // sandboxTenantForExperimentEntity 从 entity 层实验推导出 Init 所需的沙箱租户。
-// SandboxAgent.SandboxCountMode=Dual 时返回 FornaxTraeEvalDualSandbox，其余情况回落到 Default（FornaxTraeEval）。
+// SandboxAgent.SandboxCountMode=Dual 时返回 FornaxEvalGeneral，其余情况回落到 Default（FornaxTraeEval）。
 func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant {
 	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
 		return rpc.SandboxTenantDefault
 	}
 	if expt.Target.EvalTargetVersion.SandboxAgent.IsDualSandbox() {
-		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
+		return rpc.SandboxTenantFornaxEvalGeneral
 	}
 	return rpc.SandboxTenantDefault
 }
@@ -1669,7 +1678,7 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 		return rpc.SandboxTenantDefault
 	}
 	if entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) == entity.SandboxCountModeDual {
-		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
+		return rpc.SandboxTenantFornaxEvalGeneral
 	}
 	return rpc.SandboxTenantDefault
 }

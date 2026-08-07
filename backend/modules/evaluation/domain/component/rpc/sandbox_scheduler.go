@@ -67,6 +67,10 @@ const (
 	SandboxTenantLabelingAnalysis SandboxTenant = 2
 	// SandboxTenantFornaxTraeEvalDualSandbox = FornaxTraeEvalDoubleSandbox，双沙箱模式。
 	SandboxTenantFornaxTraeEvalDualSandbox SandboxTenant = 3
+	// SandboxTenantFornaxEvalGeneral = FornaxEvalGeneral，通用评测租户（能力同 GeneralAgent 的最小集：
+	// 不注入平台 env、不写 case-file、无默认 start_cmd，全部由调用方显式下发）。
+	// 双沙箱链路现用此租户：编排完全由 operator 侧完成，调度侧只需提供裸沙箱。
+	SandboxTenantFornaxEvalGeneral SandboxTenant = 4
 )
 
 // ---------- Domain ----------
@@ -110,7 +114,7 @@ type SandboxInitRequest struct {
 	Metadata    map[string]string
 	WorkspaceID int64
 	// Tenant 沙箱租户；未显式设置（值为 SandboxTenantDefault）时沿用调度侧默认租户 FornaxTraeEval。
-	// 双沙箱模式的评测对象必须传 SandboxTenantFornaxTraeEvalDualSandbox。
+	// 双沙箱模式的评测对象必须传 SandboxTenantFornaxEvalGeneral。
 	Tenant SandboxTenant
 }
 
