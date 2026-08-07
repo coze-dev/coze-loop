@@ -82,3 +82,10 @@ func TestEvalAsyncDAO_MarkResumeReadyPreservesLargeIDsAndExistingPayload(t *test
 	assert.Equal(t, largeID-3, got.Event.ExptRunID)
 	assert.Equal(t, largeID-4, got.Event.EvalSetItemID)
 }
+
+func TestMarkResumeReadyScriptAvoidsVersionSensitiveTTLCommands(t *testing.T) {
+	t.Parallel()
+	assert.NotContains(t, markResumeReadyScript, "KEEPTTL")
+	assert.NotContains(t, markResumeReadyScript, "PTTL")
+	assert.Contains(t, markResumeReadyScript, "'EX', ARGV[1]")
+}
