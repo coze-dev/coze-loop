@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -4691,6 +4692,32 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator_CoordinatorOrderAndFailureCompen
 		require.Error(t, err)
 		require.NotNil(t, record)
 		assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+	})
+
+	t.Run("dispatch ack failure preserves concurrent terminal callback", func(t *testing.T) {
+		for _, terminalStatus := range []entity.EvaluatorRunStatus{
+			entity.EvaluatorRunStatusSuccess,
+			entity.EvaluatorRunStatusFail,
+		} {
+			t.Run(fmt.Sprintf("status_%d", terminalStatus), func(t *testing.T) {
+				s, recordRepo, asyncRepo, source := newFixture(t)
+				recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+				source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(nil, "", errors.New("dispatch ack lost"))
+				recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(false, nil)
+				recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(999), false, gomock.Any()).Return(&entity.EvaluatorRecord{
+					ID:                  999,
+					SpaceID:             2,
+					Status:              terminalStatus,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{},
+				}, nil)
+
+				record, err := s.AsyncRunEvaluator(context.Background(), req())
+				require.NoError(t, err)
+				require.NotNil(t, record)
+				assert.Equal(t, terminalStatus, record.Status)
+			})
+		}
 	})
 
 	t.Run("dispatch metadata persistence failure does not fail accepted work", func(t *testing.T) {
