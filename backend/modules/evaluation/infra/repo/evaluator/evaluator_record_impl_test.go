@@ -13,8 +13,11 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"gorm.io/gorm"
 
+	"github.com/coze-dev/coze-loop/backend/infra/db"
 	dbmocks "github.com/coze-dev/coze-loop/backend/infra/db/mocks"
 	fsMocks "github.com/coze-dev/coze-loop/backend/infra/fileserver/mocks"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
@@ -579,110 +582,24 @@ func TestEvaluatorRecordRepoImpl_GetEvaluatorRecord(t *testing.T) {
 }
 
 func TestEvaluatorRecordRepoImpl_UpdateEvaluatorRecordResult(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	dao := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	repo := &EvaluatorRecordRepoImpl{evaluatorRecordDao: dao}
+	output := &entity.EvaluatorOutputData{EvaluatorRunError: &entity.EvaluatorRunError{Message: "zombie"}}
 
-	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any()).Return(&model.EvaluatorRecord{ID: 10, SpaceID: 20}, nil)
+	dao.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(10), int64(20), int8(entity.EvaluatorRunStatusAsyncInvoking), int8(entity.EvaluatorRunStatusFail), float64(0), pkgjson.Jsonify(output)).Return(int64(1), nil)
+	require.NoError(t, repo.UpdateEvaluatorRecordResult(context.Background(), 10, entity.EvaluatorRunStatusFail, output))
+}
 
-	tests := []struct {
-		name              string
-		recordID          int64
-		status            entity.EvaluatorRunStatus
-		outputData        *entity.EvaluatorOutputData
-		wantScore         float64
-		wantOutputDataStr string
-		daoErr            error
-	}{
-		{
-			name:              "outputData为nil",
-			recordID:          1,
-			status:            entity.EvaluatorRunStatusSuccess,
-			outputData:        nil,
-			wantScore:         0,
-			wantOutputDataStr: "",
-		},
-		{
-			name:     "EvaluatorResult为nil",
-			recordID: 2,
-			status:   entity.EvaluatorRunStatusFail,
-			outputData: &entity.EvaluatorOutputData{
-				EvaluatorResult: nil,
-			},
-			wantScore:         0,
-			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{EvaluatorResult: nil}),
-		},
-		{
-			name:     "Score为nil但Correction有score",
-			recordID: 3,
-			status:   entity.EvaluatorRunStatusFail,
-			outputData: &entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: nil,
-					Correction: &entity.Correction{
-						Score: gptr.Of(float64(2.5)),
-					},
-				},
-			},
-			wantScore: 0,
-			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: nil,
-					Correction: &entity.Correction{
-						Score: gptr.Of(float64(2.5)),
-					},
-				},
-			}),
-		},
-		{
-			name:     "Score有值",
-			recordID: 4,
-			status:   entity.EvaluatorRunStatusSuccess,
-			outputData: &entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: gptr.Of(float64(1.25)),
-				},
-			},
-			wantScore: 1.25,
-			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: gptr.Of(float64(1.25)),
-				},
-			}),
-		},
-		{
-			name:     "DAO返回错误",
-			recordID: 5,
-			status:   entity.EvaluatorRunStatusSuccess,
-			outputData: &entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: gptr.Of(float64(3)),
-				},
-			},
-			wantScore: 3,
-			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: gptr.Of(float64(3)),
-				},
-			}),
-			daoErr: assert.AnError,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := &EvaluatorRecordRepoImpl{
-				evaluatorRecordDao: mockEvaluatorRecordDAO,
-			}
-
-			mockEvaluatorRecordDAO.EXPECT().
-				UpdateEvaluatorRecordResult(gomock.Any(), tt.recordID, int8(tt.status), tt.wantScore, tt.wantOutputDataStr).
-				Return(tt.daoErr).
-				Times(1)
-
-			err := repo.UpdateEvaluatorRecordResult(context.Background(), tt.recordID, tt.status, tt.outputData)
-			assert.Equal(t, tt.daoErr, err)
-		})
-	}
+func TestEvaluatorRecordRepoImpl_UpdateEvaluatorRecordResult_MissingRecordIsNoop(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	dao := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	repo := &EvaluatorRecordRepoImpl{evaluatorRecordDao: dao}
+	dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any()).Return(nil, nil)
+	require.NoError(t, repo.UpdateEvaluatorRecordResult(context.Background(), 10, entity.EvaluatorRunStatusFail, nil))
 }
 
 type nopReader struct{ buf *bytes.Reader }
@@ -1132,5 +1049,138 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecordForAggr(t *testing.T) {
 		got, err := repo.BatchGetEvaluatorRecordForAggr(context.Background(), []int64{9})
 		assert.Error(t, err)
 		assert.Nil(t, got)
+	})
+}
+
+func TestEvaluatorRecordRepoImpl_CompareAndSwapEvaluatorRecordResult(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	dao := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	repo := &EvaluatorRecordRepoImpl{evaluatorRecordDao: dao}
+	output := &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.75)}}
+	dao.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(10), int64(20), int8(entity.EvaluatorRunStatusAsyncInvoking), int8(entity.EvaluatorRunStatusSuccess), 0.75, pkgjson.Jsonify(output)).Return(int64(1), nil)
+
+	updated, err := repo.CompareAndSwapEvaluatorRecordResult(context.Background(), 10, 20, entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, output)
+	require.NoError(t, err)
+	assert.True(t, updated)
+}
+
+func TestMergeEvaluatorOutputExt(t *testing.T) {
+	t.Parallel()
+
+	got := mergeEvaluatorOutputExt(nil, &entity.EvaluatorOutputData{Ext: map[string]string{"source": "1"}})
+	require.NotNil(t, got)
+	assert.Equal(t, "1", got.Ext["source"])
+	assert.Same(t, got, mergeEvaluatorOutputExt(got, nil))
+}
+
+func TestEvaluatorRecordRepoImpl_AsyncTransactionErrors(t *testing.T) {
+	t.Parallel()
+
+	newRepo := func(t *testing.T) (*EvaluatorRecordRepoImpl, *evaluatormocks.MockEvaluatorRecordDAO) {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		dao := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+		provider := dbmocks.NewMockProvider(ctrl)
+		provider.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, _ ...db.Option) error {
+			return fc(nil)
+		}).AnyTimes()
+		return &EvaluatorRecordRepoImpl{evaluatorRecordDao: dao, dbProvider: provider}, dao
+	}
+
+	t.Run("callback get record error", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(nil, errors.New("get failed"))
+		updated, err := repo.CompareAndSwapEvaluatorRecordResult(context.Background(), 10, 20, entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, nil)
+		assert.False(t, updated)
+		require.EqualError(t, err, "get failed")
+	})
+
+	t.Run("callback invalid stored output", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		bad := []byte("{invalid")
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(&model.EvaluatorRecord{
+			ID: 10, SpaceID: 20, Status: int32(entity.EvaluatorRunStatusAsyncInvoking), OutputData: &bad,
+		}, nil)
+		updated, err := repo.CompareAndSwapEvaluatorRecordResult(context.Background(), 10, 20, entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, nil)
+		assert.False(t, updated)
+		assert.Error(t, err)
+	})
+
+	t.Run("dispatch get record error", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(nil, errors.New("get failed"))
+		require.EqualError(t, repo.UpdateEvaluatorRecordAsyncDispatch(context.Background(), 10, 20, "trace", nil), "get failed")
+	})
+
+	t.Run("dispatch invalid stored output", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		bad := []byte("{invalid")
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(&model.EvaluatorRecord{
+			ID: 10, SpaceID: 20, Status: int32(entity.EvaluatorRunStatusSuccess), OutputData: &bad,
+		}, nil)
+		assert.Error(t, repo.UpdateEvaluatorRecordAsyncDispatch(context.Background(), 10, 20, "trace", nil))
+	})
+}
+
+func TestEvaluatorRecordRepoImpl_AsyncCallbackAndDispatchMetadataMerge(t *testing.T) {
+	t.Parallel()
+
+	newRepo := func(t *testing.T) (*EvaluatorRecordRepoImpl, *evaluatormocks.MockEvaluatorRecordDAO) {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		dao := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+		provider := dbmocks.NewMockProvider(ctrl)
+		provider.EXPECT().Transaction(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, fc func(*gorm.DB) error, _ ...db.Option) error {
+			return fc(nil)
+		}).AnyTimes()
+		return &EvaluatorRecordRepoImpl{evaluatorRecordDao: dao, dbProvider: provider}, dao
+	}
+
+	t.Run("callback after dispatch keeps kickoff ext", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		storedOutput := &entity.EvaluatorOutputData{Ext: map[string]string{"session_id": "s1", "lb_key": "k1"}}
+		storedBytes := []byte(pkgjson.Jsonify(storedOutput))
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(&model.EvaluatorRecord{
+			ID: 10, SpaceID: 20, Status: int32(entity.EvaluatorRunStatusAsyncInvoking), OutputData: &storedBytes,
+		}, nil)
+		dao.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(10), int64(20), int8(entity.EvaluatorRunStatusAsyncInvoking), int8(entity.EvaluatorRunStatusSuccess), 0.8, gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, _, _ int64, _, _ int8, _ float64, output string, _ ...db.Option) (int64, error) {
+				var got entity.EvaluatorOutputData
+				require.NoError(t, pkgjson.Unmarshal([]byte(output), &got))
+				assert.Equal(t, "done", got.EvaluatorResult.Reasoning)
+				assert.Equal(t, "s1", got.Ext["session_id"])
+				assert.Equal(t, "k1", got.Ext["lb_key"])
+				return 1, nil
+			})
+
+		updated, err := repo.CompareAndSwapEvaluatorRecordResult(context.Background(), 10, 20, entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.8), Reasoning: "done"},
+		})
+		require.NoError(t, err)
+		assert.True(t, updated)
+	})
+
+	t.Run("dispatch after callback keeps terminal output and adds kickoff ext", func(t *testing.T) {
+		repo, dao := newRepo(t)
+		storedOutput := &entity.EvaluatorOutputData{EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.8), Reasoning: "done"}}
+		storedBytes := []byte(pkgjson.Jsonify(storedOutput))
+		dao.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(10), false, gomock.Any(), gomock.Any()).Return(&model.EvaluatorRecord{
+			ID: 10, SpaceID: 20, Status: int32(entity.EvaluatorRunStatusSuccess), OutputData: &storedBytes,
+		}, nil)
+		dao.EXPECT().UpdateEvaluatorRecordAsyncDispatch(gomock.Any(), int64(10), int64(20), "trace-1", gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, _, _ int64, _ string, output string, _ ...db.Option) error {
+				var got entity.EvaluatorOutputData
+				require.NoError(t, pkgjson.Unmarshal([]byte(output), &got))
+				assert.Equal(t, float64(0.8), gptr.Indirect(got.EvaluatorResult.Score))
+				assert.Equal(t, "done", got.EvaluatorResult.Reasoning)
+				assert.Equal(t, "s1", got.Ext["session_id"])
+				return nil
+			})
+
+		require.NoError(t, repo.UpdateEvaluatorRecordAsyncDispatch(context.Background(), 10, 20, "trace-1", &entity.EvaluatorOutputData{
+			Ext: map[string]string{"session_id": "s1"},
+		}))
 	})
 }

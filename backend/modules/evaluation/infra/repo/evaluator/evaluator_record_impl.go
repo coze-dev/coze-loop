@@ -6,6 +6,8 @@ package evaluator
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -158,16 +160,92 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecordForAggr(ctx context.Con
 	return aggrRecords, nil
 }
 
-func (r *EvaluatorRecordRepoImpl) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error {
-	var score float64
+func evaluatorRecordResultValues(outputData *entity.EvaluatorOutputData) (score float64, outputDataStr string) {
 	if outputData != nil && outputData.EvaluatorResult != nil && outputData.EvaluatorResult.Score != nil {
 		score = *outputData.EvaluatorResult.Score
 	}
-
-	var outputDataStr string
 	if outputData != nil {
 		outputDataStr = json.Jsonify(outputData)
 	}
+	return score, outputDataStr
+}
 
-	return r.evaluatorRecordDao.UpdateEvaluatorRecordResult(ctx, recordID, int8(status), score, outputDataStr)
+func mergeEvaluatorOutputExt(dst, src *entity.EvaluatorOutputData) *entity.EvaluatorOutputData {
+	if dst == nil {
+		dst = &entity.EvaluatorOutputData{}
+	}
+	if src == nil || len(src.Ext) == 0 {
+		return dst
+	}
+	if dst.Ext == nil {
+		dst.Ext = make(map[string]string, len(src.Ext))
+	}
+	for k, v := range src.Ext {
+		if _, exists := dst.Ext[k]; !exists {
+			dst.Ext[k] = v
+		}
+	}
+	return dst
+}
+
+func (r *EvaluatorRecordRepoImpl) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error {
+	// This legacy entry point is used by async-zombie termination. Resolve space on the primary and
+	// funnel the terminal write through the same AsyncInvoking CAS so a concurrent callback cannot be overwritten.
+	po, err := r.evaluatorRecordDao.GetEvaluatorRecord(ctx, recordID, false, db.WithMaster())
+	if err != nil || po == nil {
+		return err
+	}
+	_, err = r.CompareAndSwapEvaluatorRecordResult(ctx, recordID, po.SpaceID, entity.EvaluatorRunStatusAsyncInvoking, status, outputData)
+	return err
+}
+
+func (r *EvaluatorRecordRepoImpl) CompareAndSwapEvaluatorRecordResult(ctx context.Context, recordID, spaceID int64, fromStatus, toStatus entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) (bool, error) {
+	if r.dbProvider == nil {
+		score, outputDataStr := evaluatorRecordResultValues(outputData)
+		rows, err := r.evaluatorRecordDao.CompareAndSwapEvaluatorRecordResult(ctx, recordID, spaceID, int8(fromStatus), int8(toStatus), score, outputDataStr)
+		return rows > 0, err
+	}
+	var updated bool
+	err := r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
+		opt := db.WithTransaction(tx)
+		po, err := r.evaluatorRecordDao.GetEvaluatorRecord(ctx, recordID, false, opt, db.WithSelectForUpdate())
+		if err != nil || po == nil || po.SpaceID != spaceID || entity.EvaluatorRunStatus(po.Status) != fromStatus {
+			return err
+		}
+		current, err := convertor.ConvertEvaluatorRecordPO2DO(po)
+		if err != nil {
+			return err
+		}
+		if current != nil {
+			outputData = mergeEvaluatorOutputExt(outputData, current.EvaluatorOutputData)
+		}
+		score, outputDataStr := evaluatorRecordResultValues(outputData)
+		rows, err := r.evaluatorRecordDao.CompareAndSwapEvaluatorRecordResult(ctx, recordID, spaceID, int8(fromStatus), int8(toStatus), score, outputDataStr, opt)
+		updated = rows > 0
+		return err
+	})
+	return updated, err
+}
+
+func (r *EvaluatorRecordRepoImpl) UpdateEvaluatorRecordAsyncDispatch(ctx context.Context, recordID, spaceID int64, traceID string, outputData *entity.EvaluatorOutputData) error {
+	if r.dbProvider == nil {
+		_, outputDataStr := evaluatorRecordResultValues(outputData)
+		return r.evaluatorRecordDao.UpdateEvaluatorRecordAsyncDispatch(ctx, recordID, spaceID, traceID, outputDataStr)
+	}
+	return r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
+		opt := db.WithTransaction(tx)
+		po, err := r.evaluatorRecordDao.GetEvaluatorRecord(ctx, recordID, false, opt, db.WithSelectForUpdate())
+		if err != nil || po == nil || po.SpaceID != spaceID {
+			return err
+		}
+		current, err := convertor.ConvertEvaluatorRecordPO2DO(po)
+		if err != nil {
+			return err
+		}
+		if current != nil {
+			outputData = mergeEvaluatorOutputExt(current.EvaluatorOutputData, outputData)
+		}
+		_, outputDataStr := evaluatorRecordResultValues(outputData)
+		return r.evaluatorRecordDao.UpdateEvaluatorRecordAsyncDispatch(ctx, recordID, spaceID, traceID, outputDataStr, opt)
+	})
 }

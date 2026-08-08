@@ -20,4 +20,8 @@ type IEvaluatorRecordRepo interface {
 	// 三个大字段的查询与反序列化，只返回 status=Success 且 score 非 NULL 的行（与内存聚合 contributing 集一致）。
 	BatchGetEvaluatorRecordForAggr(ctx context.Context, evaluatorRecordIDs []int64) ([]*entity.EvaluatorRecordAggr, error)
 	UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error
+	// CompareAndSwapEvaluatorRecordResult updates a record only when id/space/status still match.
+	// It is the terminal-state guard for async callbacks and dispatch compensation.
+	CompareAndSwapEvaluatorRecordResult(ctx context.Context, recordID, spaceID int64, fromStatus, toStatus entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) (bool, error)
+	UpdateEvaluatorRecordAsyncDispatch(ctx context.Context, recordID, spaceID int64, traceID string, outputData *entity.EvaluatorOutputData) error
 }

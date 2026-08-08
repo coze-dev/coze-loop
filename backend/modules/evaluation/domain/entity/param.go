@@ -306,6 +306,9 @@ type AsyncRunEvaluatorRequest struct {
 	// ★ alias 多实例: 同步与 RunEvaluatorRequest
 	Alias      string                    `json:"alias,omitempty"`
 	SourceType EvaluatorRecordSourceType `json:"source_type,omitempty"`
+	// AsyncCtx is persisted after the AsyncInvoking record is created and before the provider is dispatched.
+	// Experiment calls set ResumeReady=false; direct calls set it true.
+	AsyncCtx *EvalAsyncCtx `json:"-"`
 }
 
 type AsyncRunEvaluatorResponse struct {
@@ -336,6 +339,14 @@ type GetAsyncDebugEvaluatorInvokeResultResponse struct {
 	EvaluatorDO *Evaluator           `json:"evaluator_do,omitempty"`
 	InputData   *EvaluatorInputData  `json:"input_data,omitempty"`
 }
+
+type ReportEvaluatorResultOutcome int
+
+const (
+	ReportEvaluatorResultApplied ReportEvaluatorResultOutcome = iota + 1
+	ReportEvaluatorResultDuplicate
+	ReportEvaluatorResultConflict
+)
 
 type ReportEvaluatorRecordParam struct {
 	SpaceID    int64                `json:"space_id"`

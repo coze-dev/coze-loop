@@ -10,6 +10,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -80,4 +81,23 @@ func TestBatchGetEvaluatorRecordForAggr_DAOError(t *testing.T) {
 	got, err := dao.BatchGetEvaluatorRecordForAggr(context.Background(), []int64{1})
 	assert.Error(t, err)
 	assert.Nil(t, got)
+}
+
+func TestCompareAndSwapEvaluatorRecordResult_SQL(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	dao, mock, cleanup := newAggrTestDAO(t, ctrl)
+	defer cleanup()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE `+"`evaluator_record`"+` SET .+ WHERE \(id = .+ AND space_id = .+ AND status = .+ AND deleted_at IS NULL\) AND `+"`evaluator_record`.`deleted_at`"+` IS NULL`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), int64(10), int64(20), int8(entity.EvaluatorRunStatusAsyncInvoking)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	rows, err := dao.CompareAndSwapEvaluatorRecordResult(context.Background(), 10, 20, int8(entity.EvaluatorRunStatusAsyncInvoking), int8(entity.EvaluatorRunStatusSuccess), 0.8, `{}`)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), rows)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

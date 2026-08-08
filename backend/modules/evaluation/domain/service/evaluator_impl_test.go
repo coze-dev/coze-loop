@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -21,11 +22,13 @@ import (
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -59,6 +62,8 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 		},
 		mockPlainLimiter,
 		mockErrConfiger,
+		repomocks.NewMockIEvalAsyncRepo(ctrl),
+		nil,
 	)
 
 	assert.IsType(t, &EvaluatorServiceImpl{}, service)
@@ -1137,6 +1142,7 @@ func TestEvaluatorServiceImpl_CreateEvaluator(t *testing.T) {
 		expectedID      int64
 		expectedErr     error
 		expectedErrCode int32
+		expectedOutcome entity.ReportEvaluatorResultOutcome
 	}{
 		{
 			name: "失败 - validateCreateEvaluatorRequest - CheckNameExist 返回错误",
@@ -3262,6 +3268,7 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
 	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
 	mockPlainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 
 	mockCConfiger := componentMocks.NewMockIConfiger(ctrl)
 	mockCConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -3275,6 +3282,7 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 			entity.EvaluatorTypeAgent: mockEvaluatorSourceService,
 		},
 		plainRateLimiter: mockPlainLimiter,
+		evalAsyncRepo:    mockEvalAsyncRepo,
 		cConfiger:        mockCConfiger,
 	}
 
@@ -3315,6 +3323,7 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 		name            string
 		setupMocks      func()
 		expectedErrCode int32
+		expectedOutcome entity.ReportEvaluatorResultOutcome
 	}{
 		{
 			name: "成功 - 异步运行 Agent 评估器",
@@ -3323,6 +3332,7 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), req.SpaceID).Return(true)
 				mockPlainLimiter.EXPECT().AllowInvokeWithKeyLimit(gomock.Any(), "async_run_evaluator:100", gomock.Any()).Return(true)
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(999), nil)
+				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
 				mockEvaluatorSourceService.EXPECT().AsyncRun(gomock.Any(), agentEvaluatorDO, req.InputData, req.EvaluatorRunConf, req.SpaceID, int64(999)).
 					Return(map[string]string{"async": "1"}, "trace-1", nil)
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -3332,9 +3342,13 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
 						assert.Equal(t, req.EvaluatorVersionID, record.EvaluatorVersionID)
 						assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
 						assert.Equal(t, req.Ext, record.Ext)
-						if assert.NotNil(t, record.EvaluatorOutputData) {
-							assert.Equal(t, map[string]string{"async": "1"}, record.EvaluatorOutputData.Ext)
-						}
+						return nil
+					},
+				)
+				mockEvaluatorRecordRepo.EXPECT().UpdateEvaluatorRecordAsyncDispatch(gomock.Any(), int64(999), req.SpaceID, "trace-1", gomock.Any()).DoAndReturn(
+					func(_ context.Context, _, _ int64, traceID string, out *entity.EvaluatorOutputData) error {
+						assert.Equal(t, "trace-1", traceID)
+						assert.Equal(t, map[string]string{"async": "1"}, out.Ext)
 						return nil
 					},
 				)
@@ -3528,6 +3542,7 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 		param           *entity.ReportEvaluatorRecordParam
 		setupMocks      func()
 		expectedErrCode int32
+		expectedOutcome entity.ReportEvaluatorResultOutcome
 	}{
 		{
 			name: "成功 - 合并 Ext 并更新记录",
@@ -3550,16 +3565,17 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 						},
 					}, nil,
 				)
-				mockEvaluatorRecordRepo.EXPECT().UpdateEvaluatorRecordResult(gomock.Any(), int64(100), entity.EvaluatorRunStatusSuccess, gomock.Any()).
-					DoAndReturn(func(_ context.Context, _ int64, _ entity.EvaluatorRunStatus, out *entity.EvaluatorOutputData) error {
+				mockEvaluatorRecordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(100), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, gomock.Any()).
+					DoAndReturn(func(_ context.Context, _, _ int64, _, _ entity.EvaluatorRunStatus, out *entity.EvaluatorOutputData) (bool, error) {
 						if assert.NotNil(t, out) {
 							assert.Equal(t, "1", out.Ext["new"])
 							assert.Equal(t, "1", out.Ext["old"])
 						}
-						return nil
+						return true, nil
 					})
 			},
 			expectedErrCode: 0,
+			expectedOutcome: entity.ReportEvaluatorResultApplied,
 		},
 		{
 			name: "失败 - record 不存在",
@@ -3601,16 +3617,18 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 					}, nil)
 			},
 			expectedErrCode: 0,
+			expectedOutcome: entity.ReportEvaluatorResultConflict,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setupMocks()
-			err := s.ReportEvaluatorInvokeResult(ctx, tt.param)
+			outcome, err := s.ReportEvaluatorInvokeResult(ctx, tt.param)
 
 			if tt.expectedErrCode == 0 {
 				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedOutcome, outcome)
 				return
 			}
 			assert.Error(t, err)
@@ -3666,15 +3684,15 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_OutputDataNilOrExtNil(
 					},
 				}, nil,
 			)
-			mockEvaluatorRecordRepo.EXPECT().UpdateEvaluatorRecordResult(gomock.Any(), int64(100), entity.EvaluatorRunStatusSuccess, gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ int64, _ entity.EvaluatorRunStatus, out *entity.EvaluatorOutputData) error {
+			mockEvaluatorRecordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(100), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, gomock.Any()).
+				DoAndReturn(func(_ context.Context, _, _ int64, _, _ entity.EvaluatorRunStatus, out *entity.EvaluatorOutputData) (bool, error) {
 					if assert.NotNil(t, out) && assert.NotNil(t, out.Ext) {
 						assert.Equal(t, "1", out.Ext["old"])
 					}
-					return nil
+					return true, nil
 				})
 
-			err := s.ReportEvaluatorInvokeResult(ctx, param)
+			_, err := s.ReportEvaluatorInvokeResult(ctx, param)
 			assert.NoError(t, err)
 		})
 	}
@@ -4546,5 +4564,484 @@ func TestEvaluatorServiceImpl_CreateEvaluatorRunFailRecord_Errors(t *testing.T) 
 		record, err := s.CreateEvaluatorRunFailRecord(context.Background(), &entity.RunEvaluatorRequest{EvaluatorVersionID: 1}, errors.New("run failed"))
 		assert.Error(t, err)
 		assert.Nil(t, record)
+	})
+}
+
+func TestEvaluatorServiceImpl_AsyncRunEvaluator_RejectsBuiltinCustomRPC(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	evaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+	s := &EvaluatorServiceImpl{evaluatorRepo: evaluatorRepo}
+	evaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{int64(101)}, false, false).Return([]*entity.Evaluator{{
+		Builtin:       true,
+		EvaluatorType: entity.EvaluatorTypeCustomRPC,
+		CustomRPCEvaluatorVersion: &entity.CustomRPCEvaluatorVersion{
+			ID:      101,
+			IsAsync: true,
+		},
+	}}, nil)
+
+	record, err := s.AsyncRunEvaluator(context.Background(), &entity.AsyncRunEvaluatorRequest{SpaceID: 2, EvaluatorVersionID: 101})
+	require.Error(t, err)
+	assert.Nil(t, record)
+}
+
+func TestEvaluatorServiceImpl_AsyncRunEvaluator_PersistsCopyWithoutMutatingProviderInput(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	evaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+	limiter := repomocks.NewMockRateLimiter(ctrl)
+	plainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+	idGenerator := idgenmocks.NewMockIIDGenerator(ctrl)
+	recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	source := mocks.NewMockEvaluatorSourceService(ctrl)
+
+	originalText := "full evaluator input that must reach provider"
+	input := &entity.EvaluatorInputData{InputFields: map[string]*entity.Content{
+		"actual_output": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of(originalText)},
+	}}
+	evaluatorDO := &entity.Evaluator{
+		ID: 100, SpaceID: 2, EvaluatorType: entity.EvaluatorTypeAgent,
+		AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{ID: 101},
+	}
+	evaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{int64(101)}, false, false).Return([]*entity.Evaluator{evaluatorDO}, nil)
+	limiter.EXPECT().AllowInvoke(gomock.Any(), int64(2)).Return(true)
+	plainLimiter.EXPECT().AllowInvokeWithKeyLimit(gomock.Any(), "async_run_evaluator:100", gomock.Any()).Return(true)
+	idGenerator.EXPECT().GenID(gomock.Any()).Return(int64(999), nil)
+	recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, record *entity.EvaluatorRecord) error {
+		require.NotSame(t, input, record.EvaluatorInputData)
+		record.EvaluatorInputData.InputFields["actual_output"].SetText("persisted preview")
+		return nil
+	})
+	asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+	source.EXPECT().AsyncRun(gomock.Any(), evaluatorDO, gomock.Any(), gomock.Any(), int64(2), int64(999)).DoAndReturn(
+		func(_ context.Context, _ *entity.Evaluator, got *entity.EvaluatorInputData, _ *entity.EvaluatorRunConfig, _, _ int64) (map[string]string, string, error) {
+			require.Same(t, input, got)
+			assert.Equal(t, originalText, got.InputFields["actual_output"].GetText())
+			return nil, "", nil
+		},
+	)
+
+	record, err := (&EvaluatorServiceImpl{
+		evaluatorRepo: evaluatorRepo, limiter: limiter, plainRateLimiter: plainLimiter,
+		idgen: idGenerator, evaluatorRecordRepo: recordRepo, evalAsyncRepo: asyncRepo,
+		evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{entity.EvaluatorTypeAgent: source},
+	}).AsyncRunEvaluator(context.Background(), &entity.AsyncRunEvaluatorRequest{
+		SpaceID: 2, EvaluatorVersionID: 101, InputData: input,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, record)
+	assert.Equal(t, originalText, input.InputFields["actual_output"].GetText())
+	assert.Same(t, input, record.EvaluatorInputData)
+}
+
+func TestEvaluatorServiceImpl_AsyncRunEvaluator_CoordinatorOrderAndFailureCompensation(t *testing.T) {
+	t.Parallel()
+
+	newFixture := func(t *testing.T) (*EvaluatorServiceImpl, *repomocks.MockIEvaluatorRecordRepo, *repomocks.MockIEvalAsyncRepo, *mocks.MockEvaluatorSourceService) {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		evaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+		limiter := repomocks.NewMockRateLimiter(ctrl)
+		plainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+		idGenerator := idgenmocks.NewMockIIDGenerator(ctrl)
+		recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+		source := mocks.NewMockEvaluatorSourceService(ctrl)
+		evaluatorDO := &entity.Evaluator{
+			ID:            100,
+			SpaceID:       2,
+			EvaluatorType: entity.EvaluatorTypeAgent,
+			AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{
+				ID: 101,
+			},
+		}
+		evaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{int64(101)}, false, false).Return([]*entity.Evaluator{evaluatorDO}, nil)
+		limiter.EXPECT().AllowInvoke(gomock.Any(), int64(2)).Return(true)
+		plainLimiter.EXPECT().AllowInvokeWithKeyLimit(gomock.Any(), "async_run_evaluator:100", gomock.Any()).Return(true)
+		idGenerator.EXPECT().GenID(gomock.Any()).Return(int64(999), nil)
+		return &EvaluatorServiceImpl{
+			evaluatorRepo:       evaluatorRepo,
+			limiter:             limiter,
+			plainRateLimiter:    plainLimiter,
+			idgen:               idGenerator,
+			evaluatorRecordRepo: recordRepo,
+			evalAsyncRepo:       asyncRepo,
+			evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
+				entity.EvaluatorTypeAgent: source,
+			},
+		}, recordRepo, asyncRepo, source
+	}
+
+	req := func() *entity.AsyncRunEvaluatorRequest {
+		return &entity.AsyncRunEvaluatorRequest{
+			SpaceID:            2,
+			EvaluatorVersionID: 101,
+			InputData:          &entity.EvaluatorInputData{},
+			AsyncCtx: &entity.EvalAsyncCtx{
+				Event:       &entity.ExptItemEvalEvent{ExptID: 10},
+				ResumeReady: false,
+			},
+		}
+	}
+
+	t.Run("record then context then provider", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		order := make([]string, 0, 3)
+		gomock.InOrder(
+			recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, record *entity.EvaluatorRecord) error {
+				order = append(order, "record")
+				assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
+				return nil
+			}),
+			asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).DoAndReturn(func(_ context.Context, _ string, actx *entity.EvalAsyncCtx) error {
+				order = append(order, "context")
+				assert.Equal(t, int64(999), actx.RecordID)
+				assert.Equal(t, int64(101), actx.EvaluatorVersionID)
+				assert.False(t, actx.ResumeReady)
+				return nil
+			}),
+			source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).DoAndReturn(
+				func(context.Context, *entity.Evaluator, *entity.EvaluatorInputData, *entity.EvaluatorRunConfig, int64, int64) (map[string]string, string, error) {
+					order = append(order, "provider")
+					return nil, "", nil
+				},
+			),
+		)
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.NoError(t, err)
+		require.NotNil(t, record)
+		assert.Equal(t, []string{"record", "context", "provider"}, order)
+	})
+
+	t.Run("context failure marks same record fail and skips provider", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(errors.New("redis down"))
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(true, nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.Error(t, err)
+		require.NotNil(t, record)
+		assert.Equal(t, int64(999), record.ID)
+		assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+	})
+
+	t.Run("dispatch failure marks same record fail", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(nil, "", errors.New("dispatch failed"))
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(true, nil)
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.Error(t, err)
+		require.NotNil(t, record)
+		assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+	})
+
+	t.Run("missing async repo marks same record fail", func(t *testing.T) {
+		s, recordRepo, _, source := newFixture(t)
+		s.evalAsyncRepo = nil
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(true, nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.Error(t, err)
+		require.NotNil(t, record)
+		assert.Equal(t, entity.EvaluatorRunStatusFail, record.Status)
+	})
+
+	t.Run("dispatch ack failure preserves concurrent terminal callback", func(t *testing.T) {
+		for _, terminalStatus := range []entity.EvaluatorRunStatus{
+			entity.EvaluatorRunStatusSuccess,
+			entity.EvaluatorRunStatusFail,
+		} {
+			t.Run(fmt.Sprintf("status_%d", terminalStatus), func(t *testing.T) {
+				s, recordRepo, asyncRepo, source := newFixture(t)
+				recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+				source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(nil, "", errors.New("dispatch ack lost"))
+				recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(false, nil)
+				recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(999), false, gomock.Any()).Return(&entity.EvaluatorRecord{
+					ID:                  999,
+					SpaceID:             2,
+					Status:              terminalStatus,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{},
+				}, nil)
+
+				record, err := s.AsyncRunEvaluator(context.Background(), req())
+				require.NoError(t, err)
+				require.NotNil(t, record)
+				assert.Equal(t, terminalStatus, record.Status)
+			})
+		}
+	})
+
+	t.Run("dispatch metadata persistence failure does not fail accepted work", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(map[string]string{"session_id": "s1"}, "trace-1", nil)
+		recordRepo.EXPECT().UpdateEvaluatorRecordAsyncDispatch(gomock.Any(), int64(999), int64(2), "trace-1", gomock.Any()).Return(errors.New("mysql unavailable"))
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.NoError(t, err)
+		require.NotNil(t, record)
+		assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
+		assert.Equal(t, "trace-1", record.TraceID)
+		assert.Equal(t, "s1", record.EvaluatorOutputData.Ext["session_id"])
+	})
+
+	t.Run("dispatch failure returns CAS error", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(nil, "", errors.New("dispatch failed"))
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(false, errors.New("cas failed"))
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.Error(t, err)
+		require.NotNil(t, record)
+		assert.Contains(t, err.Error(), "mark evaluator async kickoff failed")
+	})
+
+	t.Run("dispatch failure returns reload error after lost CAS", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(nil, "", errors.New("dispatch failed"))
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(false, nil)
+		recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(999), false, gomock.Any()).Return(nil, errors.New("reload failed"))
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.Error(t, err)
+		require.NotNil(t, record)
+		assert.Contains(t, err.Error(), "reload evaluator record")
+	})
+
+	t.Run("dispatch failure remains error when lost CAS has no terminal record", func(t *testing.T) {
+		s, recordRepo, asyncRepo, source := newFixture(t)
+		recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+		asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+		source.EXPECT().AsyncRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), int64(2), int64(999)).Return(nil, "", errors.New("dispatch failed"))
+		recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(999), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, gomock.Any()).Return(false, nil)
+		recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(999), false, gomock.Any()).Return(nil, nil)
+
+		record, err := s.AsyncRunEvaluator(context.Background(), req())
+		require.EqualError(t, err, "dispatch failed")
+		require.NotNil(t, record)
+		assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
+	})
+}
+
+func TestEvaluatorServiceImpl_failAsyncEvaluatorRecord_NilRecord(t *testing.T) {
+	t.Parallel()
+	s := &EvaluatorServiceImpl{}
+	want := errors.New("run failed")
+	record, err := s.failAsyncEvaluatorRecord(context.Background(), nil, want)
+	assert.Nil(t, record)
+	assert.ErrorIs(t, err, want)
+}
+
+func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_RejectsNonTerminalStatus(t *testing.T) {
+	t.Parallel()
+
+	s := &EvaluatorServiceImpl{}
+	_, err := s.ReportEvaluatorInvokeResult(context.Background(), nil)
+	require.Error(t, err)
+	_, err = s.ReportEvaluatorInvokeResult(context.Background(), &entity.ReportEvaluatorRecordParam{
+		RecordID: 1,
+		SpaceID:  2,
+		Status:   entity.EvaluatorRunStatusUnknown,
+	})
+	require.Error(t, err)
+}
+
+func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_UsesTerminalCAS(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	s := &EvaluatorServiceImpl{evaluatorRecordRepo: recordRepo}
+	param := &entity.ReportEvaluatorRecordParam{
+		SpaceID:    2,
+		RecordID:   100,
+		Status:     entity.EvaluatorRunStatusSuccess,
+		OutputData: &entity.EvaluatorOutputData{Ext: map[string]string{"new": "1"}},
+	}
+
+	recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{
+		ID:      100,
+		SpaceID: 2,
+		Status:  entity.EvaluatorRunStatusAsyncInvoking,
+		EvaluatorOutputData: &entity.EvaluatorOutputData{
+			Ext: map[string]string{"old": "1"},
+		},
+	}, nil)
+	recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(100), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, gomock.Any()).DoAndReturn(
+		func(_ context.Context, _, _ int64, _, _ entity.EvaluatorRunStatus, out *entity.EvaluatorOutputData) (bool, error) {
+			assert.Equal(t, "1", out.Ext["old"])
+			assert.Equal(t, "1", out.Ext["new"])
+			return false, nil
+		},
+	)
+	recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, SpaceID: 2, Status: entity.EvaluatorRunStatusFail}, nil)
+
+	outcome, err := s.ReportEvaluatorInvokeResult(context.Background(), param)
+	require.NoError(t, err)
+	assert.Equal(t, entity.ReportEvaluatorResultConflict, outcome)
+}
+
+func TestEvaluatorServiceImpl_ArmEvaluatorResume(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		recordStatus  entity.EvaluatorRunStatus
+		withEvent     bool
+		wantPublished bool
+	}{
+		{name: "pending record only arms", recordStatus: entity.EvaluatorRunStatusAsyncInvoking, withEvent: true},
+		{name: "terminal record republishes recovery", recordStatus: entity.EvaluatorRunStatusSuccess, withEvent: true, wantPublished: true},
+		{name: "direct invocation has no experiment recovery", recordStatus: entity.EvaluatorRunStatusSuccess, withEvent: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+			recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+			var event *entity.ExptItemEvalEvent
+			if tt.withEvent {
+				event = &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3}
+			}
+			asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: event, ResumeReady: true}, nil)
+			if tt.withEvent {
+				recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).DoAndReturn(func(ctx context.Context, _ int64, _ bool, _ ...entity.GetEvaluatorRecordOptionFn) (*entity.EvaluatorRecord, error) {
+					assert.True(t, contexts.CtxWriteDB(ctx))
+					return &entity.EvaluatorRecord{ID: 100, Status: tt.recordStatus}, nil
+				})
+			}
+			if tt.wantPublished {
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, ev *entity.ExptItemEvalEvent, _ *time.Duration, modify func(*entity.ExptItemEvalEvent)) error {
+						modify(ev)
+						assert.True(t, ev.AsyncEvaluatorReportTrigger)
+						return nil
+					},
+				)
+			}
+			s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo, exptEventPublisher: publisher}
+			require.NoError(t, s.ArmEvaluatorResume(context.Background(), 100))
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_ArmEvaluatorResume_RetriesPublish(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	event := &entity.ExptItemEvalEvent{ExptID: 1}
+	asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: event, ResumeReady: true}, nil)
+	recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, Status: entity.EvaluatorRunStatusSuccess}, nil)
+	gomock.InOrder(
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).Return(errors.New("mq unavailable")),
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).Return(nil),
+	)
+	s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo, exptEventPublisher: publisher}
+	require.NoError(t, s.ArmEvaluatorResume(context.Background(), 100))
+}
+
+func TestEvaluatorServiceImpl_ArmEvaluatorResume_Errors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("missing async repo", func(t *testing.T) {
+		t.Parallel()
+		s := &EvaluatorServiceImpl{}
+		require.Error(t, s.ArmEvaluatorResume(context.Background(), 100))
+	})
+
+	t.Run("mark resume ready error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(nil, errors.New("redis failed"))
+		s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo}
+		require.Error(t, s.ArmEvaluatorResume(context.Background(), 100))
+	})
+
+	t.Run("record reload error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+		recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1}}, nil)
+		recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(nil, errors.New("mysql failed"))
+		s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo}
+		require.Error(t, s.ArmEvaluatorResume(context.Background(), 100))
+	})
+
+	t.Run("missing record", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+		recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1}}, nil)
+		recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(nil, nil)
+		s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo}
+		err := s.ArmEvaluatorResume(context.Background(), 100)
+		statusErr, ok := errorx.FromStatusError(err)
+		require.True(t, ok)
+		assert.Equal(t, int32(errno.EvaluatorRecordNotFoundCode), statusErr.Code())
+	})
+}
+
+func TestEvaluatorServiceImpl_publishEvaluatorResumeEvent(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil dependencies are no-op", func(t *testing.T) {
+		t.Parallel()
+		s := &EvaluatorServiceImpl{}
+		require.NoError(t, s.publishEvaluatorResumeEvent(context.Background(), nil))
+		require.NoError(t, s.publishEvaluatorResumeEvent(context.Background(), &entity.ExptItemEvalEvent{}))
+	})
+
+	t.Run("returns last error after all retries", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+		event := &entity.ExptItemEvalEvent{ExptID: 1}
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).Return(errors.New("mq unavailable")).Times(3)
+		s := &EvaluatorServiceImpl{exptEventPublisher: publisher}
+		err := s.publishEvaluatorResumeEvent(context.Background(), event)
+		require.EqualError(t, err, "mq unavailable")
+	})
+
+	t.Run("context cancellation stops retry delay", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+		event := &entity.ExptItemEvalEvent{ExptID: 1}
+		ctx, cancel := context.WithCancel(context.Background())
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(
+			func(context.Context, *entity.ExptItemEvalEvent, *time.Duration, func(*entity.ExptItemEvalEvent)) error {
+				cancel()
+				return errors.New("mq unavailable")
+			},
+		).Times(1)
+		s := &EvaluatorServiceImpl{exptEventPublisher: publisher}
+		err := s.publishEvaluatorResumeEvent(ctx, event)
+		require.ErrorIs(t, err, context.Canceled)
 	})
 }

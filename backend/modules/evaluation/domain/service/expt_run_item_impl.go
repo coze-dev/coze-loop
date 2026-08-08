@@ -217,6 +217,18 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
 		return err
 	}
+	for _, record := range result.EvaluatorResults {
+		if record == nil || record.ID <= 0 || record.Status != entity.EvaluatorRunStatusAsyncInvoking {
+			continue
+		}
+		if err := e.evaluatorService.ArmEvaluatorResume(persistCtx, record.ID); err != nil {
+			// The turn references are already durable and the provider has accepted the work.
+			// Failing the item here would be unretriable (AsyncAbort sets CtxForceNoRetry) and
+			// could overwrite a valid terminal callback. Keep the item processing; callbacks can
+			// retry publication, and the existing zombie policy remains the final fallback.
+			logs.CtxError(ctx, "[ExptTurnEval] arm evaluator async resume failed after refs persisted, keep item processing, record_id: %d, err: %v", record.ID, err)
+		}
+	}
 
 	logs.CtxInfo(ctx, "[ExptTurnEval] expt turn eval finished, expt_id: %v, expt_run_id: %v, item_id: %v, turn_id: %v, run_log: %v, err: %v",
 		etec.Expt.ID, etec.Event.ExptRunID, etec.EvalSetItem.ItemID, turn.ID, json.Jsonify(clone), result.EvalErr)

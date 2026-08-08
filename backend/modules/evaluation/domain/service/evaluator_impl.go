@@ -20,8 +20,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -46,6 +48,8 @@ func NewEvaluatorServiceImpl(
 	evaluatorSourceServices map[entity.EvaluatorType]EvaluatorSourceService,
 	plainRateLimiter repo.IPlainRateLimiter,
 	cConfiger component.IConfiger,
+	evalAsyncRepo repo.IEvalAsyncRepo,
+	exptEventPublisher events.ExptEventPublisher,
 ) EvaluatorService {
 	onceEvaluatorService.Do(func() {
 		singletonEvaluatorService = &EvaluatorServiceImpl{
@@ -58,6 +62,8 @@ func NewEvaluatorServiceImpl(
 			configer:                configer,
 			evaluatorSourceServices: evaluatorSourceServices,
 			plainRateLimiter:        plainRateLimiter,
+			evalAsyncRepo:           evalAsyncRepo,
+			exptEventPublisher:      exptEventPublisher,
 			cConfiger:               cConfiger,
 		}
 	})
@@ -75,6 +81,8 @@ type EvaluatorServiceImpl struct {
 	configer                conf.IConfiger
 	evaluatorSourceServices map[entity.EvaluatorType]EvaluatorSourceService
 	plainRateLimiter        repo.IPlainRateLimiter
+	evalAsyncRepo           repo.IEvalAsyncRepo
+	exptEventPublisher      events.ExptEventPublisher
 
 	cConfiger component.IConfiger
 }
@@ -956,7 +964,7 @@ func (e *EvaluatorServiceImpl) CreateEvaluatorRunFailRecord(ctx context.Context,
 	return recordDO, nil
 }
 
-// AsyncRunEvaluator Agent evaluator_version 异步运行
+// AsyncRunEvaluator coordinates evaluator async kickoff in the strict order Record -> Context -> Provider.
 func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
 	if err != nil {
@@ -966,13 +974,14 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version version not found"))
 	}
 	evaluatorDO := evaluatorDOList[0]
-	if evaluatorDO.EvaluatorType != entity.EvaluatorTypeAgent {
-		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("async run only supports Agent evaluator type"))
+	if evaluatorDO.EvaluatorType == entity.EvaluatorTypeCustomRPC && evaluatorDO.Builtin {
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("builtin CustomRPC evaluator does not support async run"))
 	}
-	if !evaluatorDO.Builtin {
-		if evaluatorDO.SpaceID != request.SpaceID {
-			return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version not found in current space"))
-		}
+	if !evaluatorDO.IsAsync() {
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator does not support async run"))
+	}
+	if !evaluatorDO.Builtin && evaluatorDO.SpaceID != request.SpaceID {
+		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version not found in current space"))
 	}
 	if allow := e.limiter.AllowInvoke(ctx, request.SpaceID); !allow {
 		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
@@ -986,20 +995,11 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 	}
 	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
 	if !ok {
-		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for agent type"))
-	}
-	asyncRunExt, traceID, err := evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
-	if err != nil {
-		logs.CtxError(ctx, "[AsyncRunEvaluator] AsyncRun fail, invokeID: %d, err: %v", invokeID, err)
-		return nil, err
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for async type"))
 	}
 
+	now := time.Now().UnixMilli()
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-	logID := logs.GetLogID(ctx)
-	status := entity.EvaluatorRunStatusAsyncInvoking
-	outputData := &entity.EvaluatorOutputData{
-		Ext: asyncRunExt,
-	}
 	recordDO := &entity.EvaluatorRecord{
 		ID:                  invokeID,
 		SpaceID:             request.SpaceID,
@@ -1010,31 +1010,103 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		EvaluatorVersionID:  request.EvaluatorVersionID,
 		Alias:               request.Alias,
 		SourceType:          normalizeEvaluatorRecordSourceType(request.SourceType),
-		TraceID:             traceID,
-		LogID:               logID,
+		LogID:               logs.GetLogID(ctx),
 		EvaluatorInputData:  request.InputData,
-		EvaluatorOutputData: outputData,
-		Status:              status,
+		EvaluatorOutputData: &entity.EvaluatorOutputData{},
+		Status:              entity.EvaluatorRunStatusAsyncInvoking,
 		Ext:                 request.Ext,
 		BaseInfo: &entity.BaseInfo{
-			CreatedBy: &entity.UserInfo{
-				UserID: gptr.Of(userIDInContext),
-			},
-			UpdatedBy: &entity.UserInfo{
-				UserID: gptr.Of(userIDInContext),
-			},
-			CreatedAt: gptr.Of(time.Now().UnixMilli()),
-			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
+			CreatedBy: &entity.UserInfo{UserID: gptr.Of(userIDInContext)},
+			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(userIDInContext)},
+			CreatedAt: gptr.Of(now),
+			UpdatedAt: gptr.Of(now),
 		},
 	}
-	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
+	// CreateEvaluatorRecord may truncate oversized Content fields in-place before persisting them.
+	// Persist a deep copy so the provider still receives the original, complete input.
+	persistedRecord := *recordDO
+	persistedRecord.EvaluatorInputData = deepCopyEvaluatorInputData(request.InputData)
+	if persistedRecord.EvaluatorInputData == request.InputData && request.InputData != nil {
+		return nil, errorx.New("deep copy evaluator input data failed")
+	}
+	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, &persistedRecord); err != nil {
 		logs.CtxError(ctx, "[AsyncRunEvaluator] CreateEvaluatorRecord fail, invokeID: %d, err: %v", invokeID, err)
 		return nil, err
 	}
 
+	asyncCtx := request.AsyncCtx
+	if asyncCtx == nil {
+		asyncCtx = &entity.EvalAsyncCtx{ResumeReady: true}
+	}
+	asyncCtx.RecordID = invokeID
+	asyncCtx.EvaluatorVersionID = request.EvaluatorVersionID
+	if asyncCtx.AsyncUnixMS == 0 {
+		asyncCtx.AsyncUnixMS = now
+	}
+	if asyncCtx.Session == nil {
+		asyncCtx.Session = &entity.Session{UserID: userIDInContext}
+	}
+	if e.evalAsyncRepo == nil {
+		return e.failAsyncEvaluatorRecord(ctx, recordDO, errorx.New("eval async repo is nil"))
+	}
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", invokeID)
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, asyncCtx); err != nil {
+		return e.failAsyncEvaluatorRecord(ctx, recordDO, err)
+	}
+
+	asyncRunExt, traceID, err := evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+	if err != nil {
+		logs.CtxError(ctx, "[AsyncRunEvaluator] AsyncRun fail, invokeID: %d, err: %v", invokeID, err)
+		return e.failAsyncEvaluatorRecord(ctx, recordDO, err)
+	}
+	recordDO.TraceID = traceID
+	recordDO.EvaluatorOutputData.Ext = asyncRunExt
+	if traceID != "" || len(asyncRunExt) > 0 {
+		if err := e.evaluatorRecordRepo.UpdateEvaluatorRecordAsyncDispatch(ctx, recordDO.ID, recordDO.SpaceID, traceID, recordDO.EvaluatorOutputData); err != nil {
+			// The provider has already accepted the work. Treat dispatch metadata as best-effort;
+			// marking the record failed here would create an uncertain-state split brain and reject a later valid callback.
+			logs.CtxError(ctx, "[AsyncRunEvaluator] persist dispatch metadata fail, keep record async invoking, invokeID: %d, err: %v", invokeID, err)
+		}
+	}
 	logs.CtxInfo(ctx, "[AsyncRunEvaluator] invokeID: %d, evaluatorVersionID: %d, spaceID: %d, record_ext: %v",
 		invokeID, request.EvaluatorVersionID, request.SpaceID, json.Jsonify(recordDO.Ext))
 	return recordDO, nil
+}
+
+func (e *EvaluatorServiceImpl) failAsyncEvaluatorRecord(ctx context.Context, record *entity.EvaluatorRecord, runErr error) (*entity.EvaluatorRecord, error) {
+	if record == nil {
+		return nil, runErr
+	}
+	errMsg := "evaluator async run failed"
+	if runErr != nil {
+		errMsg = errorx.ErrorWithoutStack(runErr)
+	}
+	output := &entity.EvaluatorOutputData{EvaluatorRunError: &entity.EvaluatorRunError{
+		Code:    int32(errno.CommonInternalErrorCode),
+		Message: errMsg,
+	}}
+	updated, casErr := e.evaluatorRecordRepo.CompareAndSwapEvaluatorRecordResult(ctx, record.ID, record.SpaceID, entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusFail, output)
+	if casErr != nil {
+		return record, errorx.Wrapf(casErr, "mark evaluator async kickoff failed, cause: %v", runErr)
+	}
+	if updated {
+		record.Status = entity.EvaluatorRunStatusFail
+		record.EvaluatorOutputData = output
+		return record, runErr
+	}
+
+	// The provider call can return an ACK error after it has already accepted the task and
+	// synchronously reported a terminal result. In that race the terminal CAS above loses by
+	// design; re-read the primary and let the callback outcome win instead of failing the turn
+	// with a stale dispatch error.
+	latest, getErr := e.evaluatorRecordRepo.GetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), record.ID, false, entity.WithoutLoadStorageData())
+	if getErr != nil {
+		return record, errorx.Wrapf(getErr, "reload evaluator record after async kickoff failure, cause: %v", runErr)
+	}
+	if latest != nil && (latest.Status == entity.EvaluatorRunStatusSuccess || latest.Status == entity.EvaluatorRunStatusFail) {
+		return latest, nil
+	}
+	return record, runErr
 }
 
 // AsyncDebugEvaluator Agent evaluator_version 异步调试
@@ -1101,34 +1173,43 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 	}, nil
 }
 
-// ReportEvaluatorInvokeResult 上报评估器异步执行结果
-func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) error {
+// ReportEvaluatorInvokeResult 上报评估器异步执行结果 using a terminal CAS.
+func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) (entity.ReportEvaluatorResultOutcome, error) {
+	if param == nil {
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("report evaluator result param is nil"))
+	}
+	if param.Status != entity.EvaluatorRunStatusSuccess && param.Status != entity.EvaluatorRunStatusFail {
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("report evaluator status must be success or fail"))
+	}
 	logs.CtxInfo(ctx, "[ReportEvaluatorInvokeResult] recordID: %d, spaceID: %d, status: %v", param.RecordID, param.SpaceID, param.Status)
 
-	existingRecord, err := e.evaluatorRecordRepo.GetEvaluatorRecord(ctx, param.RecordID, false)
+	existingRecord, err := e.evaluatorRecordRepo.GetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), param.RecordID, false)
 	if err != nil {
 		logs.CtxError(ctx, "[ReportEvaluatorInvokeResult] GetEvaluatorRecord fail, recordID: %d, err: %v", param.RecordID, err)
-		return err
+		return 0, err
 	}
 	if existingRecord == nil {
-		return errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("evaluator record not found"))
+		return 0, errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("evaluator record not found"))
 	}
-
 	if existingRecord.SpaceID != param.SpaceID {
 		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] spaceID mismatch, recordID: %d, requestSpaceID: %d, recordSpaceID: %d",
 			param.RecordID, param.SpaceID, existingRecord.SpaceID)
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("spaceID mismatch"))
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("spaceID mismatch"))
 	}
 
 	if existingRecord.Status != entity.EvaluatorRunStatusAsyncInvoking {
-		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] skip stale callback, recordID: %d, dbStatus: %v, reportStatus: %v",
-			param.RecordID, existingRecord.Status, param.Status)
-		return nil
+		if existingRecord.Status == param.Status {
+			return entity.ReportEvaluatorResultDuplicate, nil
+		}
+		return entity.ReportEvaluatorResultConflict, nil
 	}
 
 	mergedOutputData := param.OutputData
 	if mergedOutputData == nil {
 		mergedOutputData = &entity.EvaluatorOutputData{}
+	}
+	if mergedOutputData.TimeConsumingMS == 0 && existingRecord.BaseInfo != nil && existingRecord.BaseInfo.CreatedAt != nil {
+		mergedOutputData.TimeConsumingMS = time.Now().UnixMilli() - gptr.Indirect(existingRecord.BaseInfo.CreatedAt)
 	}
 	if existingRecord.EvaluatorOutputData != nil && existingRecord.EvaluatorOutputData.Ext != nil {
 		if mergedOutputData.Ext == nil {
@@ -1141,7 +1222,75 @@ func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, 
 		}
 	}
 
-	return e.evaluatorRecordRepo.UpdateEvaluatorRecordResult(ctx, param.RecordID, param.Status, mergedOutputData)
+	updated, err := e.evaluatorRecordRepo.CompareAndSwapEvaluatorRecordResult(ctx, param.RecordID, param.SpaceID, entity.EvaluatorRunStatusAsyncInvoking, param.Status, mergedOutputData)
+	if err != nil {
+		return 0, err
+	}
+	if updated {
+		return entity.ReportEvaluatorResultApplied, nil
+	}
+
+	latestRecord, err := e.evaluatorRecordRepo.GetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), param.RecordID, false)
+	if err != nil {
+		return 0, err
+	}
+	if latestRecord != nil && latestRecord.Status == param.Status {
+		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] duplicate terminal callback, recordID: %d, status: %v", param.RecordID, param.Status)
+		return entity.ReportEvaluatorResultDuplicate, nil
+	}
+	logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] conflicting terminal callback, recordID: %d, reportStatus: %v", param.RecordID, param.Status)
+	return entity.ReportEvaluatorResultConflict, nil
+}
+
+func (e *EvaluatorServiceImpl) ArmEvaluatorResume(ctx context.Context, recordID int64) error {
+	if e.evalAsyncRepo == nil {
+		return errorx.New("eval async repo is nil")
+	}
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", recordID)
+	actx, err := e.evalAsyncRepo.MarkEvalAsyncResumeReady(ctx, asyncCtxKey)
+	if err != nil {
+		return err
+	}
+	if actx == nil || actx.Event == nil {
+		return nil
+	}
+	record, err := e.evaluatorRecordRepo.GetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), recordID, false)
+	if err != nil {
+		return err
+	}
+	if record == nil {
+		return errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("evaluator record not found"))
+	}
+	if record.Status == entity.EvaluatorRunStatusAsyncInvoking {
+		return nil
+	}
+	return e.publishEvaluatorResumeEvent(ctx, actx.Event)
+}
+
+func (e *EvaluatorServiceImpl) publishEvaluatorResumeEvent(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+	if event == nil || e.exptEventPublisher == nil {
+		return nil
+	}
+	delays := []time.Duration{0, 50 * time.Millisecond, 100 * time.Millisecond}
+	var lastErr error
+	for _, delay := range delays {
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return ctx.Err()
+			case <-timer.C:
+			}
+		}
+		lastErr = e.exptEventPublisher.PublishExptRecordEvalEvent(ctx, event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
+			event.AsyncEvaluatorReportTrigger = true
+		})
+		if lastErr == nil {
+			return nil
+		}
+	}
+	return lastErr
 }
 
 // DebugEvaluator 调试 evaluator_version
