@@ -1172,7 +1172,7 @@ func TestExptItemEvalCtxExecutor_storeTurnRunResult_DoesNotArmWhenSaveFails(t *t
 	require.Error(t, executor.storeTurnRunResult(context.Background(), etec, result))
 }
 
-func TestExptItemEvalCtxExecutor_storeTurnRunResult_ReturnsArmError(t *testing.T) {
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmErrorKeepsAsyncProcessing(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -1193,12 +1193,10 @@ func TestExptItemEvalCtxExecutor_storeTurnRunResult_ReturnsArmError(t *testing.T
 			}},
 		},
 	}
-	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+	result := &entity.ExptTurnRunResult{AsyncAbort: true, EvaluatorResults: []*entity.EvaluatorRecord{{
 		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
 	}}}
-	err := executor.storeTurnRunResult(context.Background(), etec, result)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "arm evaluator async resume fail")
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
 }
 
 func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsEveryPendingEvaluator(t *testing.T) {

@@ -222,7 +222,11 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 			continue
 		}
 		if err := e.evaluatorService.ArmEvaluatorResume(persistCtx, record.ID); err != nil {
-			return errorx.Wrapf(err, "arm evaluator async resume fail, record_id: %d", record.ID)
+			// The turn references are already durable and the provider has accepted the work.
+			// Failing the item here would be unretriable (AsyncAbort sets CtxForceNoRetry) and
+			// could overwrite a valid terminal callback. Keep the item processing; callbacks can
+			// retry publication, and the existing zombie policy remains the final fallback.
+			logs.CtxError(ctx, "[ExptTurnEval] arm evaluator async resume failed after refs persisted, keep item processing, record_id: %d, err: %v", record.ID, err)
 		}
 	}
 
