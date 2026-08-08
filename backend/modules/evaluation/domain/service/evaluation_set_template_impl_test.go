@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,6 +24,40 @@ type fakeEvaluationSetTemplateService struct {
 	builtSchema   *entity.EvaluationSetSchema
 	buildParam    *entity.BuildEvaluationSetSchemaFromTemplateParam
 	validateParam *entity.ValidateEvaluationSetSchemaUpdateParam
+}
+
+func TestEvaluationSetServiceConstructorsUseIndependentSingletons(t *testing.T) {
+	resetEvaluationSetServiceSingletons()
+	t.Cleanup(resetEvaluationSetServiceSingletons)
+
+	ctrl := gomock.NewController(t)
+	plainAdapter := rpcmocks.NewMockIDatasetRPCAdapter(ctrl)
+	templateAdapter := rpcmocks.NewMockIDatasetRPCAdapter(ctrl)
+	templateSvc := &fakeEvaluationSetTemplateService{}
+
+	plainSvc := NewEvaluationSetServiceImpl(plainAdapter)
+	templateAwareSvc := NewEvaluationSetServiceImplWithTemplate(templateAdapter, templateSvc)
+
+	assert.NotSame(t, plainSvc, templateAwareSvc)
+	assert.Same(t, plainSvc, NewEvaluationSetServiceImpl(plainAdapter))
+	assert.Same(t, templateAwareSvc, NewEvaluationSetServiceImplWithTemplate(templateAdapter, templateSvc))
+
+	plainImpl, ok := plainSvc.(*EvaluationSetServiceImpl)
+	require.True(t, ok)
+	assert.Same(t, plainAdapter, plainImpl.datasetRPCAdapter)
+	assert.IsType(t, &NoopEvaluationSetTemplateService{}, plainImpl.templateService)
+
+	templateAwareImpl, ok := templateAwareSvc.(*EvaluationSetServiceImpl)
+	require.True(t, ok)
+	assert.Same(t, templateAdapter, templateAwareImpl.datasetRPCAdapter)
+	assert.Same(t, templateSvc, templateAwareImpl.templateService)
+}
+
+func resetEvaluationSetServiceSingletons() {
+	evaluationSetServiceOnce = sync.Once{}
+	evaluationSetServiceImpl = nil
+	evaluationSetServiceWithTemplateOnce = sync.Once{}
+	evaluationSetServiceWithTemplateImpl = nil
 }
 
 func (f *fakeEvaluationSetTemplateService) ListEvaluationSetTemplates(_ context.Context, _ *entity.ListEvaluationSetTemplatesParam) ([]*entity.EvaluationSetTemplate, *int64, *string, error) {

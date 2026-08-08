@@ -14,8 +14,10 @@ import (
 )
 
 var (
-	evaluationSetServiceOnce = sync.Once{}
-	evaluationSetServiceImpl IEvaluationSetService
+	evaluationSetServiceOnce             = sync.Once{}
+	evaluationSetServiceImpl             IEvaluationSetService
+	evaluationSetServiceWithTemplateOnce = sync.Once{}
+	evaluationSetServiceWithTemplateImpl IEvaluationSetService
 )
 
 type EvaluationSetServiceImpl struct {
@@ -24,20 +26,27 @@ type EvaluationSetServiceImpl struct {
 }
 
 func NewEvaluationSetServiceImpl(datasetRPCAdapter rpc.IDatasetRPCAdapter) IEvaluationSetService {
-	return NewEvaluationSetServiceImplWithTemplate(datasetRPCAdapter, NewNoopEvaluationSetTemplateService())
+	evaluationSetServiceOnce.Do(func() {
+		evaluationSetServiceImpl = newEvaluationSetServiceImpl(datasetRPCAdapter, NewNoopEvaluationSetTemplateService())
+	})
+	return evaluationSetServiceImpl
 }
 
 func NewEvaluationSetServiceImplWithTemplate(datasetRPCAdapter rpc.IDatasetRPCAdapter, templateService EvaluationSetTemplateService) IEvaluationSetService {
 	if templateService == nil {
 		templateService = NewNoopEvaluationSetTemplateService()
 	}
-	evaluationSetServiceOnce.Do(func() {
-		evaluationSetServiceImpl = &EvaluationSetServiceImpl{
-			datasetRPCAdapter: datasetRPCAdapter,
-			templateService:   templateService,
-		}
+	evaluationSetServiceWithTemplateOnce.Do(func() {
+		evaluationSetServiceWithTemplateImpl = newEvaluationSetServiceImpl(datasetRPCAdapter, templateService)
 	})
-	return evaluationSetServiceImpl
+	return evaluationSetServiceWithTemplateImpl
+}
+
+func newEvaluationSetServiceImpl(datasetRPCAdapter rpc.IDatasetRPCAdapter, templateService EvaluationSetTemplateService) IEvaluationSetService {
+	return &EvaluationSetServiceImpl{
+		datasetRPCAdapter: datasetRPCAdapter,
+		templateService:   templateService,
+	}
 }
 
 func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, param *entity.CreateEvaluationSetParam) (id int64, err error) {
