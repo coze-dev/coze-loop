@@ -1022,7 +1022,14 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 			UpdatedAt: gptr.Of(now),
 		},
 	}
-	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
+	// CreateEvaluatorRecord may truncate oversized Content fields in-place before persisting them.
+	// Persist a deep copy so the provider still receives the original, complete input.
+	persistedRecord := *recordDO
+	persistedRecord.EvaluatorInputData = deepCopyEvaluatorInputData(request.InputData)
+	if persistedRecord.EvaluatorInputData == request.InputData && request.InputData != nil {
+		return nil, errorx.New("deep copy evaluator input data failed")
+	}
+	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, &persistedRecord); err != nil {
 		logs.CtxError(ctx, "[AsyncRunEvaluator] CreateEvaluatorRecord fail, invokeID: %d, err: %v", invokeID, err)
 		return nil, err
 	}

@@ -4587,6 +4587,57 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator_RejectsBuiltinCustomRPC(t *testi
 	assert.Nil(t, record)
 }
 
+func TestEvaluatorServiceImpl_AsyncRunEvaluator_PersistsCopyWithoutMutatingProviderInput(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	evaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+	limiter := repomocks.NewMockRateLimiter(ctrl)
+	plainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+	idGenerator := idgenmocks.NewMockIIDGenerator(ctrl)
+	recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	source := mocks.NewMockEvaluatorSourceService(ctrl)
+
+	originalText := "full evaluator input that must reach provider"
+	input := &entity.EvaluatorInputData{InputFields: map[string]*entity.Content{
+		"actual_output": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of(originalText)},
+	}}
+	evaluatorDO := &entity.Evaluator{
+		ID: 100, SpaceID: 2, EvaluatorType: entity.EvaluatorTypeAgent,
+		AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{ID: 101},
+	}
+	evaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{int64(101)}, false, false).Return([]*entity.Evaluator{evaluatorDO}, nil)
+	limiter.EXPECT().AllowInvoke(gomock.Any(), int64(2)).Return(true)
+	plainLimiter.EXPECT().AllowInvokeWithKeyLimit(gomock.Any(), "async_run_evaluator:100", gomock.Any()).Return(true)
+	idGenerator.EXPECT().GenID(gomock.Any()).Return(int64(999), nil)
+	recordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, record *entity.EvaluatorRecord) error {
+		require.NotSame(t, input, record.EvaluatorInputData)
+		record.EvaluatorInputData.InputFields["actual_output"].SetText("persisted preview")
+		return nil
+	})
+	asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
+	source.EXPECT().AsyncRun(gomock.Any(), evaluatorDO, gomock.Any(), gomock.Any(), int64(2), int64(999)).DoAndReturn(
+		func(_ context.Context, _ *entity.Evaluator, got *entity.EvaluatorInputData, _ *entity.EvaluatorRunConfig, _, _ int64) (map[string]string, string, error) {
+			require.Same(t, input, got)
+			assert.Equal(t, originalText, got.InputFields["actual_output"].GetText())
+			return nil, "", nil
+		},
+	)
+
+	record, err := (&EvaluatorServiceImpl{
+		evaluatorRepo: evaluatorRepo, limiter: limiter, plainRateLimiter: plainLimiter,
+		idgen: idGenerator, evaluatorRecordRepo: recordRepo, evalAsyncRepo: asyncRepo,
+		evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{entity.EvaluatorTypeAgent: source},
+	}).AsyncRunEvaluator(context.Background(), &entity.AsyncRunEvaluatorRequest{
+		SpaceID: 2, EvaluatorVersionID: 101, InputData: input,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, record)
+	assert.Equal(t, originalText, input.InputFields["actual_output"].GetText())
+	assert.Same(t, input, record.EvaluatorInputData)
+}
+
 func TestEvaluatorServiceImpl_AsyncRunEvaluator_CoordinatorOrderAndFailureCompensation(t *testing.T) {
 	t.Parallel()
 
