@@ -1036,7 +1036,7 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 
 	asyncCtx := request.AsyncCtx
 	if asyncCtx == nil {
-		asyncCtx = &entity.EvalAsyncCtx{ResumeBarrierEnabled: true, ResumeReady: true}
+		asyncCtx = &entity.EvalAsyncCtx{ResumeReady: true}
 	}
 	asyncCtx.RecordID = invokeID
 	asyncCtx.EvaluatorVersionID = request.EvaluatorVersionID

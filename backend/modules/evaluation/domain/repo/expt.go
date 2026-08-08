@@ -146,7 +146,7 @@ type IExptResultExportRecordRepo interface {
 
 type IEvalAsyncRepo interface {
 	GetEvalAsyncCtx(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error)
-	// GetEvalAsyncCtxStrong reads through a Redis script (master-routed command) and retries a transient missing key at 50/100/200ms.
+	// GetEvalAsyncCtxStrong uses the shared direct Redis client and retries a transient missing key at 50/100/200ms.
 	GetEvalAsyncCtxStrong(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error)
 	SetEvalAsyncCtx(ctx context.Context, invokeID string, actx *entity.EvalAsyncCtx) error
 	// MarkEvalAsyncResumeReady atomically persists ResumeReady=true and returns the latest context.

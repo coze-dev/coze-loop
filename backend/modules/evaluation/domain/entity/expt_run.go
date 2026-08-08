@@ -636,15 +636,6 @@ type ExptSchedulerMode interface {
 	PublishResult(ctx context.Context, turnEvaluatorRefs []*ExptTurnEvaluatorResultRef, event *ExptScheduleEvent) error
 }
 
-func (e *EvalAsyncCtx) CanResumeExperiment() bool {
-	if e == nil {
-		return false
-	}
-	// Contexts written before the ResumeReady barrier existed have neither field.
-	// Preserve their historical behavior during rolling upgrades.
-	return !e.ResumeBarrierEnabled || e.ResumeReady
-}
-
 type CKDBConfig struct {
 	ExptTurnResultFilterDBName string `json:"expt_turn_result_filter_db_name" mapstructure:"expt_turn_result_filter_db_name"`
 	DatasetItemsSnapshotDBName string `json:"dataset_items_snapshot_db_name" mapstructure:"dataset_items_snapshot_db_name"`
@@ -658,9 +649,8 @@ type EvalAsyncCtx struct {
 	Callee                  string
 	EvaluatorVersionID      int64 // evaluator version id, used for evaluator async scenario
 	EnableExtractTrajectory *bool
-	ResumeBarrierEnabled    bool   `json:"resume_barrier_enabled,omitempty"` // new experiment evaluator contexts require refs to be durable before resume
-	ResumeReady             bool   `json:"resume_ready,omitempty"`           // experiment turn refs are durable and callback may resume scheduling
-	CallbackURL             string `json:"callback_url,omitempty"`           // 异步执行完成后回调通知的 URL，为空则不回调
+	ResumeReady             bool   `json:"resume_ready,omitempty"` // experiment turn refs are durable and callback may resume scheduling
+	CallbackURL             string `json:"callback_url,omitempty"` // 异步执行完成后回调通知的 URL，为空则不回调
 	// 下述字段用于沙箱内部 step 上报的 tag 反查, 由 target async 写入位点从 etec 填充,
 	// 调试场景 (无实验上下文) 保留零值, 由上报侧回退为占位符.
 	TargetID         int64

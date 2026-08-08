@@ -307,7 +307,7 @@ type AsyncRunEvaluatorRequest struct {
 	Alias      string                    `json:"alias,omitempty"`
 	SourceType EvaluatorRecordSourceType `json:"source_type,omitempty"`
 	// AsyncCtx is persisted after the AsyncInvoking record is created and before the provider is dispatched.
-	// New experiment calls enable the resume barrier and set ResumeReady=false; direct calls set both enabled and ready.
+	// Experiment calls set ResumeReady=false; direct calls set it true.
 	AsyncCtx *EvalAsyncCtx `json:"-"`
 }
 

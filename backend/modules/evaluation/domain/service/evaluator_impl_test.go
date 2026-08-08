@@ -4682,9 +4682,8 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator_CoordinatorOrderAndFailureCompen
 			EvaluatorVersionID: 101,
 			InputData:          &entity.EvaluatorInputData{},
 			AsyncCtx: &entity.EvalAsyncCtx{
-				Event:                &entity.ExptItemEvalEvent{ExptID: 10},
-				ResumeBarrierEnabled: true,
-				ResumeReady:          false,
+				Event:       &entity.ExptItemEvalEvent{ExptID: 10},
+				ResumeReady: false,
 			},
 		}
 	}
@@ -4702,7 +4701,6 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator_CoordinatorOrderAndFailureCompen
 				order = append(order, "context")
 				assert.Equal(t, int64(999), actx.RecordID)
 				assert.Equal(t, int64(101), actx.EvaluatorVersionID)
-				assert.True(t, actx.ResumeBarrierEnabled)
 				assert.False(t, actx.ResumeReady)
 				return nil
 			}),

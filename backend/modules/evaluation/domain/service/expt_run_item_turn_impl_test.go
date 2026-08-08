@@ -394,7 +394,6 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent(t *testing.T) {
 			assert.Equal(t, etec.Ext, req.Ext)
 			require.NotNil(t, req.AsyncCtx)
 			assert.Equal(t, etec.Event, req.AsyncCtx.Event)
-			assert.True(t, req.AsyncCtx.ResumeBarrierEnabled)
 			assert.False(t, req.AsyncCtx.ResumeReady)
 			return mockEvaluatorRecord, nil
 		},
@@ -5026,7 +5025,6 @@ func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluatorWithAlias_CustomRPC(t *
 			assert.Same(t, runConf, req.EvaluatorRunConf)
 			require.NotNil(t, req.AsyncCtx)
 			assert.Same(t, etec.Event, req.AsyncCtx.Event)
-			assert.True(t, req.AsyncCtx.ResumeBarrierEnabled)
 			assert.False(t, req.AsyncCtx.ResumeReady)
 			return &entity.EvaluatorRecord{ID: 7, EvaluatorVersionID: 101, Alias: "judge_a", Status: entity.EvaluatorRunStatusAsyncInvoking}, nil
 		},

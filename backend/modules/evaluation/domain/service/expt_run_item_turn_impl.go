@@ -917,11 +917,10 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluatorWithAlias(
 		Alias:              alias,
 		SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
 		AsyncCtx: &entity.EvalAsyncCtx{
-			Event:                etec.Event,
-			Session:              etec.Event.Session,
-			EvaluatorVersionID:   ev.GetEvaluatorVersionID(),
-			ResumeBarrierEnabled: true,
-			ResumeReady:          false,
+			Event:              etec.Event,
+			Session:            etec.Event.Session,
+			EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+			ResumeReady:        false,
 		},
 	})
 	if evaluatorRecord != nil {
@@ -955,11 +954,10 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 		Ext:                etec.Ext,
 		EvaluatorRunConf:   ec.RunConf,
 		AsyncCtx: &entity.EvalAsyncCtx{
-			Event:                etec.Event,
-			Session:              etec.Event.Session,
-			EvaluatorVersionID:   ev.GetEvaluatorVersionID(),
-			ResumeBarrierEnabled: true,
-			ResumeReady:          false,
+			Event:              etec.Event,
+			Session:            etec.Event.Session,
+			EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+			ResumeReady:        false,
 		},
 	}
 	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, asyncReq)
