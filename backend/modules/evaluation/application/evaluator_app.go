@@ -2104,8 +2104,9 @@ func (e *EvaluatorHandlerImpl) AsyncRunEvaluator(ctx context.Context, req *evalu
 	}
 	asyncReq := buildAsyncRunEvaluatorRequest(evaluatorDO.Name, req)
 	asyncReq.AsyncCtx = &entity.EvalAsyncCtx{
-		Session:     &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
-		ResumeReady: true,
+		Session:              &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
+		ResumeBarrierEnabled: true,
+		ResumeReady:          true,
 	}
 	resp, err := e.evaluatorService.AsyncRunEvaluator(ctx, asyncReq)
 	if err != nil {

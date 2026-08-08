@@ -360,6 +360,10 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
+	if err := e.reconcileTerminalAsyncEvaluatorItems(ctx, event, exptDetail, incomplete); err != nil {
+		return err
+	}
+
 	incomplete, zombies, err := e.handleZombies(ctx, event, incomplete, exptDetail)
 	if err != nil {
 		return err
@@ -518,6 +522,145 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 		return err
 	}
 
+	return nil
+}
+
+// reconcileTerminalAsyncEvaluatorItems repairs a lost evaluator callback resume event.
+// Turn evaluator refs and evaluator record terminal states are durable DB facts, so the
+// scheduler can safely republish recovery without relying on the provider to callback again.
+func (e *ExptSchedulerImpl) reconcileTerminalAsyncEvaluatorItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, items []*entity.ExptEvalItem) error {
+	if event == nil || expt == nil || len(items) == 0 || e.ExptTurnResultRepo == nil || e.EvaluatorRecordRepo == nil || e.Publisher == nil {
+		return nil
+	}
+
+	if !expt.AsyncCallEvaluators() {
+		return nil
+	}
+
+	processingItemIDs := make([]int64, 0, len(items))
+	for _, item := range items {
+		if item != nil && item.State == entity.ItemRunState_Processing && item.ItemID > 0 {
+			processingItemIDs = append(processingItemIDs, item.ItemID)
+		}
+	}
+	if len(processingItemIDs) == 0 {
+		return nil
+	}
+
+	turnRunLogs, err := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, processingItemIDs, event.SpaceID)
+	if err != nil {
+		logs.CtxError(ctx, "[ExptEval] read turn refs for async evaluator repair failed, keep repair pending, expt_id: %d, expt_run_id: %d, err: %v",
+			event.ExptID, event.ExptRunID, err)
+		return nil
+	}
+
+	itemRecordIDs := make(map[int64]map[int64]struct{})
+	allRecordIDs := make([]int64, 0)
+	seenRecordIDs := make(map[int64]struct{})
+	for _, runLog := range turnRunLogs {
+		if runLog == nil || runLog.ItemID <= 0 || runLog.Status != entity.TurnRunState_Processing ||
+			runLog.Ext[asyncEvaluatorResumeRepairExtKey] != "true" || runLog.EvaluatorResultIds == nil {
+			continue
+		}
+		ids := make([]int64, 0)
+		seen := make(map[int64]struct{})
+		appendID := func(id int64) {
+			if id <= 0 {
+				return
+			}
+			if _, exists := seen[id]; exists {
+				return
+			}
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+		}
+		if runLog.EvaluatorResultIds.IsNewFormat() {
+			for _, result := range runLog.EvaluatorResultIds.Registered {
+				if result != nil {
+					appendID(result.RecordID)
+				}
+			}
+			for _, result := range runLog.EvaluatorResultIds.Inline {
+				if result != nil {
+					appendID(result.RecordID)
+				}
+			}
+		} else {
+			for _, id := range runLog.EvaluatorResultIds.EvalVerIDToResID {
+				appendID(id)
+			}
+		}
+		if len(ids) == 0 {
+			continue
+		}
+		set := itemRecordIDs[runLog.ItemID]
+		if set == nil {
+			set = make(map[int64]struct{})
+			itemRecordIDs[runLog.ItemID] = set
+		}
+		for _, id := range ids {
+			set[id] = struct{}{}
+			if _, exists := seenRecordIDs[id]; !exists {
+				seenRecordIDs[id] = struct{}{}
+				allRecordIDs = append(allRecordIDs, id)
+			}
+		}
+	}
+	if len(allRecordIDs) == 0 {
+		return nil
+	}
+
+	records, err := e.EvaluatorRecordRepo.BatchGetEvaluatorRecord(contexts.WithCtxWriteDB(ctx), allRecordIDs, false, false, entity.WithoutLoadStorageData())
+	if err != nil {
+		logs.CtxError(ctx, "[ExptEval] read evaluator records for async repair failed, keep repair pending, expt_id: %d, expt_run_id: %d, err: %v",
+			event.ExptID, event.ExptRunID, err)
+		return nil
+	}
+	recordStatus := make(map[int64]entity.EvaluatorRunStatus, len(records))
+	for _, record := range records {
+		if record != nil {
+			recordStatus[record.ID] = record.Status
+		}
+	}
+
+	for _, item := range items {
+		if item == nil || item.State != entity.ItemRunState_Processing {
+			continue
+		}
+		ids := itemRecordIDs[item.ItemID]
+		if len(ids) == 0 {
+			continue
+		}
+		allTerminal := true
+		for id := range ids {
+			status, exists := recordStatus[id]
+			if !exists || status == entity.EvaluatorRunStatusAsyncInvoking || status == entity.EvaluatorRunStatusUnknown {
+				allTerminal = false
+				break
+			}
+		}
+		if !allTerminal {
+			continue
+		}
+		itemEvent := &entity.ExptItemEvalEvent{
+			SpaceID:       event.SpaceID,
+			ExptID:        event.ExptID,
+			ExptRunID:     event.ExptRunID,
+			ExptRunMode:   event.ExptRunMode,
+			EvalSetItemID: item.ItemID,
+			CreateAt:      time.Now().Unix(),
+			Ext:           event.Ext,
+			Session:       event.Session,
+		}
+		if err := e.Publisher.PublishExptRecordEvalEvent(ctx, itemEvent, gptr.Of(time.Second*3), func(resume *entity.ExptItemEvalEvent) {
+			resume.AsyncEvaluatorReportTrigger = true
+		}); err != nil {
+			// The repair marker and terminal DB records remain durable. A later scheduler tick
+			// will retry, so an MQ outage here must not fail the entire experiment.
+			logs.CtxError(ctx, "[ExptEval] republish async evaluator resume event failed, keep repair pending, expt_id: %d, expt_run_id: %d, item_id: %d, err: %v",
+				event.ExptID, event.ExptRunID, item.ItemID, err)
+		}
+	}
 	return nil
 }
 

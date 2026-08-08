@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/convert"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
+	redisv9 "github.com/redis/go-redis/v9"
 )
 
 type IEvalAsyncDAO interface {
@@ -65,7 +66,7 @@ func (e *evalAsyncDAOImpl) GetEvalAsyncCtxStrong(ctx context.Context, invokeID s
 			case <-timer.C:
 			}
 		}
-		actx, err := e.getEvalAsyncCtx(ctx, invokeID)
+		actx, err := e.getEvalAsyncCtxFromPrimary(ctx, invokeID)
 		if err == nil || !redis.IsNilError(err) {
 			return actx, err
 		}
@@ -95,7 +96,7 @@ func (e *evalAsyncDAOImpl) MarkEvalAsyncResumeReady(ctx context.Context, invokeI
 	if err != nil {
 		return nil, err
 	}
-	if actx == nil || actx.ResumeReady {
+	if actx == nil || !actx.ResumeBarrierEnabled || actx.ResumeReady {
 		return actx, nil
 	}
 	key := e.makeExptItemTurnEvalAsyncCtxKey(invokeID)
@@ -114,6 +115,24 @@ func (e *evalAsyncDAOImpl) MarkEvalAsyncResumeReady(ctx context.Context, invokeI
 		return nil, err
 	}
 	return actx, nil
+}
+
+// Redis-v6 routes EVAL/EVALSHA by the script key and only routes commands whose
+// command metadata is ReadOnly to replicas. EVAL is therefore master-routed even
+// though this script only performs GET. This gives callback/arm reads the latest
+// context without changing the shared client's read priority for unrelated traffic.
+const getEvalAsyncCtxFromPrimaryScript = `return redis.call('GET', KEYS[1])`
+
+func (e *evalAsyncDAOImpl) getEvalAsyncCtxFromPrimary(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error) {
+	key := e.makeExptItemTurnEvalAsyncCtxKey(invokeID)
+	got, err := e.cmdable.Eval(ctx, getEvalAsyncCtxFromPrimaryScript, []string{key}).Text()
+	if err != nil {
+		if redis.IsNilError(err) || err == redisv9.Nil {
+			return nil, redisv9.Nil
+		}
+		return nil, errorx.Wrapf(err, "redis primary get fail, key: %v", key)
+	}
+	return convert.NewExptItemTurnEvalAsyncCtx().ToDO(conv.UnsafeStringToBytes(got))
 }
 
 func (e *evalAsyncDAOImpl) getEvalAsyncCtx(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error) {

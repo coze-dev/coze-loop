@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	auditmocks "github.com/coze-dev/coze-loop/backend/infra/external/audit/mocks"
@@ -2117,4 +2118,194 @@ func TestIsSandboxAgentExpt(t *testing.T) {
 	assert.True(t, isSandboxAgentExpt(&entity.Experiment{Target: &entity.EvalTarget{
 		EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent},
 	}}))
+}
+
+func TestExptSchedulerImpl_ReconcileTerminalAsyncEvaluatorItems(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	recordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+
+	items := []*entity.ExptEvalItem{{ExptID: 1, ItemID: 10, State: entity.ItemRunState_Processing}}
+	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2, ExptRunMode: entity.EvaluationModeSubmit, Session: &entity.Session{UserID: "u"}}
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).Return([]*entity.ExptTurnResultRunLog{{
+		ItemID: 10,
+		Status: entity.TurnRunState_Processing,
+		Ext:    map[string]string{asyncEvaluatorResumeRepairExtKey: "true"},
+		EvaluatorResultIds: &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{
+			VersionID: 101, RecordID: 1001,
+		}}},
+	}}, nil)
+	recordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false, gomock.Any()).Return([]*entity.EvaluatorRecord{{
+		ID: 1001, Status: entity.EvaluatorRunStatusSuccess,
+	}}, nil)
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, itemEvent *entity.ExptItemEvalEvent, _ *time.Duration, modify func(*entity.ExptItemEvalEvent)) error {
+			modify(itemEvent)
+			assert.Equal(t, int64(10), itemEvent.EvalSetItemID)
+			assert.True(t, itemEvent.AsyncEvaluatorReportTrigger)
+			return nil
+		},
+	)
+
+	svc := &ExptSchedulerImpl{ExptTurnResultRepo: turnRepo, EvaluatorRecordRepo: recordRepo, Publisher: publisher}
+	require.NoError(t, svc.reconcileTerminalAsyncEvaluatorItems(context.Background(), event, asyncEvaluatorExperiment(), items))
+}
+
+func TestExptSchedulerImpl_ReconcileTerminalAsyncEvaluatorItems_WaitsForAllRecords(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	recordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	items := []*entity.ExptEvalItem{{ExptID: 1, ItemID: 10, State: entity.ItemRunState_Processing}}
+	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).Return([]*entity.ExptTurnResultRunLog{{
+		ItemID: 10, Status: entity.TurnRunState_Processing,
+		Ext: map[string]string{asyncEvaluatorResumeRepairExtKey: "true"},
+		EvaluatorResultIds: &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{
+			{VersionID: 101, RecordID: 1001}, {VersionID: 102, RecordID: 1002},
+		}},
+	}}, nil)
+	recordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.InAnyOrder([]int64{1001, 1002}), false, false, gomock.Any()).Return([]*entity.EvaluatorRecord{
+		{ID: 1001, Status: entity.EvaluatorRunStatusSuccess},
+		{ID: 1002, Status: entity.EvaluatorRunStatusAsyncInvoking},
+	}, nil)
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	svc := &ExptSchedulerImpl{ExptTurnResultRepo: turnRepo, EvaluatorRecordRepo: recordRepo, Publisher: publisher}
+	require.NoError(t, svc.reconcileTerminalAsyncEvaluatorItems(context.Background(), event, asyncEvaluatorExperiment(), items))
+}
+
+func TestExptSchedulerImpl_ReconcileTerminalAsyncEvaluatorItems_RetriesOnNextTick(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	recordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	items := []*entity.ExptEvalItem{{ExptID: 1, ItemID: 10, State: entity.ItemRunState_Processing}}
+	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}
+	turnLogs := []*entity.ExptTurnResultRunLog{{
+		ItemID: 10, Status: entity.TurnRunState_Processing,
+		Ext:                map[string]string{asyncEvaluatorResumeRepairExtKey: "true"},
+		EvaluatorResultIds: &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: 101, RecordID: 1001}}},
+	}}
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).Return(turnLogs, nil).Times(2)
+	recordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false, gomock.Any()).Return([]*entity.EvaluatorRecord{{ID: 1001, Status: entity.EvaluatorRunStatusSuccess}}, nil).Times(2)
+	gomock.InOrder(
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mq down")),
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+	)
+
+	svc := &ExptSchedulerImpl{ExptTurnResultRepo: turnRepo, EvaluatorRecordRepo: recordRepo, Publisher: publisher}
+	require.NoError(t, svc.reconcileTerminalAsyncEvaluatorItems(context.Background(), event, asyncEvaluatorExperiment(), items))
+	require.NoError(t, svc.reconcileTerminalAsyncEvaluatorItems(context.Background(), event, asyncEvaluatorExperiment(), items))
+}
+
+func TestExptSchedulerImpl_ReconcileTerminalAsyncEvaluatorItems_IgnoresUnmarkedTurns(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	recordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	items := []*entity.ExptEvalItem{{ExptID: 1, ItemID: 10, State: entity.ItemRunState_Processing}}
+	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).Return([]*entity.ExptTurnResultRunLog{{
+		ItemID: 10, Status: entity.TurnRunState_Processing,
+		EvaluatorResultIds: &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{VersionID: 101, RecordID: 1001}}},
+	}}, nil)
+	recordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	svc := &ExptSchedulerImpl{ExptTurnResultRepo: turnRepo, EvaluatorRecordRepo: recordRepo, Publisher: publisher}
+	require.NoError(t, svc.reconcileTerminalAsyncEvaluatorItems(context.Background(), event, asyncEvaluatorExperiment(), items))
+}
+
+func asyncEvaluatorExperiment() *entity.Experiment {
+	return &entity.Experiment{Evaluators: []*entity.Evaluator{{
+		EvaluatorType: entity.EvaluatorTypeAgent,
+	}}}
+}
+
+func TestExptSchedulerImpl_ReconcileTerminalAsyncEvaluatorItems_SkipsSyncOnlyExperiments(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	recordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	recordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	svc := &ExptSchedulerImpl{ExptTurnResultRepo: turnRepo, EvaluatorRecordRepo: recordRepo, Publisher: publisher}
+	expt := &entity.Experiment{Evaluators: []*entity.Evaluator{{EvaluatorType: entity.EvaluatorTypePrompt}}}
+	items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+	require.NoError(t, svc.reconcileTerminalAsyncEvaluatorItems(context.Background(), &entity.ExptScheduleEvent{}, expt, items))
+}
+
+func TestExptSchedulerImpl_ReconcileTerminalAsyncEvaluatorItems_ReadErrorsAreBestEffort(t *testing.T) {
+	t.Parallel()
+
+	t.Run("turn log read error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		turnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+		recordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+		publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+		turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).Return(nil, errors.New("db down"))
+		recordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+		svc := &ExptSchedulerImpl{ExptTurnResultRepo: turnRepo, EvaluatorRecordRepo: recordRepo, Publisher: publisher}
+		event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}
+		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+		require.NoError(t, svc.reconcileTerminalAsyncEvaluatorItems(context.Background(), event, asyncEvaluatorExperiment(), items))
+	})
+
+	t.Run("record read error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		turnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+		recordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+		publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+		turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).Return([]*entity.ExptTurnResultRunLog{{
+			ItemID: 10, Status: entity.TurnRunState_Processing,
+			Ext:                map[string]string{asyncEvaluatorResumeRepairExtKey: "true"},
+			EvaluatorResultIds: &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{RecordID: 1001}}},
+		}}, nil)
+		recordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false, gomock.Any()).Return(nil, errors.New("db down"))
+		publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+		svc := &ExptSchedulerImpl{ExptTurnResultRepo: turnRepo, EvaluatorRecordRepo: recordRepo, Publisher: publisher}
+		event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}
+		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+		require.NoError(t, svc.reconcileTerminalAsyncEvaluatorItems(context.Background(), event, asyncEvaluatorExperiment(), items))
+	})
+}
+
+func TestExptSchedulerImpl_ReconcileTerminalAsyncEvaluatorItems_DoesNotRepublishWhenRecordMissing(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	recordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, int64(3)).Return([]*entity.ExptTurnResultRunLog{{
+		ItemID: 10, Status: entity.TurnRunState_Processing,
+		Ext:                map[string]string{asyncEvaluatorResumeRepairExtKey: "true"},
+		EvaluatorResultIds: &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{RecordID: 1001}, {RecordID: 1002}}},
+	}}, nil)
+	recordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.InAnyOrder([]int64{1001, 1002}), false, false, gomock.Any()).Return([]*entity.EvaluatorRecord{{ID: 1001, Status: entity.EvaluatorRunStatusSuccess}}, nil)
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	svc := &ExptSchedulerImpl{ExptTurnResultRepo: turnRepo, EvaluatorRecordRepo: recordRepo, Publisher: publisher}
+	event := &entity.ExptScheduleEvent{SpaceID: 3, ExptID: 1, ExptRunID: 2}
+	items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+	require.NoError(t, svc.reconcileTerminalAsyncEvaluatorItems(context.Background(), event, asyncEvaluatorExperiment(), items))
 }

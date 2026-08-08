@@ -2861,10 +2861,11 @@ func (e *EvalOpenAPIApplication) AsyncRunEvaluatorOApi(ctx context.Context, req 
 		EvaluatorRunConf:   runConf,
 		Ext:                req.Ext,
 		AsyncCtx: &entity.EvalAsyncCtx{
-			Session:     &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
-			CallbackURL: req.GetCallbackURL(),
-			ResumeReady: true,
-			AsyncUnixMS: startTime.UnixMilli(),
+			Session:              &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
+			CallbackURL:          req.GetCallbackURL(),
+			ResumeBarrierEnabled: true,
+			ResumeReady:          true,
+			AsyncUnixMS:          startTime.UnixMilli(),
 		},
 	})
 	if err != nil {
@@ -3441,7 +3442,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 	}
 	if actx.Event != nil {
-		if !actx.ResumeReady {
+		if !actx.CanResumeExperiment() {
 			latestCtx, ctxErr := e.asyncRepo.GetEvalAsyncCtxStrong(ctx, asyncCtxKey)
 			if ctxErr != nil {
 				return nil, ctxErr
@@ -3450,7 +3451,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 				actx = latestCtx
 			}
 		}
-		if actx.ResumeReady {
+		if actx.CanResumeExperiment() {
 			if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
 				event.AsyncEvaluatorReportTrigger = true
 			}); err != nil {

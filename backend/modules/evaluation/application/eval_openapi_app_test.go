@@ -6719,15 +6719,17 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher, _ *servicemocks.MockIEvaluatorCallbackDispatcher) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
-					Event:              event,
-					ResumeReady:        false,
-					EvaluatorVersionID: 9,
+					Event:                event,
+					ResumeBarrierEnabled: true,
+					ResumeReady:          false,
+					EvaluatorVersionID:   9,
 				}, nil)
 				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil)
 				asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
-					Event:              event,
-					ResumeReady:        false,
-					EvaluatorVersionID: 9,
+					Event:                event,
+					ResumeBarrierEnabled: true,
+					ResumeReady:          false,
+					EvaluatorVersionID:   9,
 				}, nil)
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -6746,9 +6748,10 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				gomock.InOrder(
 					asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
-						Event:              event,
-						ResumeReady:        false,
-						EvaluatorVersionID: 9,
+						Event:                event,
+						ResumeBarrierEnabled: true,
+						ResumeReady:          false,
+						EvaluatorVersionID:   9,
 					}, nil),
 					evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil),
 					asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
@@ -6774,9 +6777,10 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				gomock.InOrder(
 					asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
-						Event:              event,
-						ResumeReady:        false,
-						EvaluatorVersionID: 9,
+						Event:                event,
+						ResumeBarrierEnabled: true,
+						ResumeReady:          false,
+						EvaluatorVersionID:   9,
 					}, nil),
 					evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil),
 					asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(nil, errors.New("redis reread failed")),
@@ -8606,6 +8610,7 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 					require.NotNil(t, req.AsyncCtx)
+					assert.True(t, req.AsyncCtx.ResumeBarrierEnabled)
 					assert.True(t, req.AsyncCtx.ResumeReady)
 					assert.Nil(t, req.AsyncCtx.Event)
 					return record, nil
@@ -8624,6 +8629,7 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
 				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 					require.NotNil(t, req.AsyncCtx)
+					assert.True(t, req.AsyncCtx.ResumeBarrierEnabled)
 					assert.True(t, req.AsyncCtx.ResumeReady)
 					assert.Nil(t, req.AsyncCtx.Event)
 					return record, nil
@@ -8989,4 +8995,30 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionsOApi_SharedExecuteHides
 	assert.Equal(t, versionID, resp.Data.Versions[0].GetID())
 	assert.Nil(t, resp.Data.Versions[0].EvaluationSetSchema)
 	assert.NotNil(t, version.EvaluationSetSchema)
+}
+
+func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult_LegacyContextResumesWithoutReread(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	dispatcher := servicemocks.NewMockIEvaluatorCallbackDispatcher(ctrl)
+	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3}
+
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	asyncRepo.EXPECT().GetEvalAsyncCtxStrong(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
+		Event: event, EvaluatorVersionID: 9,
+	}, nil).Times(1)
+	evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil)
+	publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).Return(nil)
+
+	app := &EvalOpenAPIApplication{auth: auth, asyncRepo: asyncRepo, evaluatorService: evaluatorSvc, publisher: publisher, callbackDispatcher: dispatcher}
+	_, err := app.ReportEvaluatorInvokeResult_(context.Background(), &openapi.ReportEvaluatorInvokeResultRequest{
+		WorkspaceID: gptr.Of(int64(1001)), InvokeID: gptr.Of(int64(2002)), Status: gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+		Output: &spi.InvokeEvaluatorOutputData{EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(1))}},
+	})
+	require.NoError(t, err)
 }

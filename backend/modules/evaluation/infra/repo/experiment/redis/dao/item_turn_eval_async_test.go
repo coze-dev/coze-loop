@@ -24,7 +24,7 @@ func TestEvalAsyncDAO_GetStrongAndMarkResumeReady(t *testing.T) {
 
 	go func() {
 		time.Sleep(20 * time.Millisecond)
-		require.NoError(t, dao.SetEvalAsyncCtx(ctx, "evaluator:1", &entity.EvalAsyncCtx{RecordID: 1}))
+		require.NoError(t, dao.SetEvalAsyncCtx(ctx, "evaluator:1", &entity.EvalAsyncCtx{RecordID: 1, ResumeBarrierEnabled: true}))
 	}()
 
 	actx, err := dao.GetEvalAsyncCtxStrong(ctx, "evaluator:1")
@@ -61,8 +61,9 @@ func TestEvalAsyncDAO_MarkResumeReadyPreservesLargeIDsAndExistingPayload(t *test
 	ctx := context.Background()
 	const largeID int64 = 9007199254740993
 	original := &entity.EvalAsyncCtx{
-		RecordID:           largeID,
-		EvaluatorVersionID: largeID - 1,
+		ResumeBarrierEnabled: true,
+		RecordID:             largeID,
+		EvaluatorVersionID:   largeID - 1,
 		Event: &entity.ExptItemEvalEvent{
 			ExptID:        largeID - 2,
 			ExptRunID:     largeID - 3,
@@ -88,4 +89,17 @@ func TestMarkResumeReadyScriptAvoidsVersionSensitiveTTLCommands(t *testing.T) {
 	assert.NotContains(t, markResumeReadyScript, "KEEPTTL")
 	assert.NotContains(t, markResumeReadyScript, "PTTL")
 	assert.Contains(t, markResumeReadyScript, "'EX', ARGV[1]")
+}
+
+func TestEvalAsyncDAO_MarkResumeReadyDoesNotArmLegacyContext(t *testing.T) {
+	cmdable := infraredis.NewTestRedis(t)
+	dao := NewEvalAsyncDAO(cmdable)
+	ctx := context.Background()
+
+	require.NoError(t, dao.SetEvalAsyncCtx(ctx, "legacy", &entity.EvalAsyncCtx{RecordID: 1}))
+	got, err := dao.MarkEvalAsyncResumeReady(ctx, "legacy")
+	require.NoError(t, err)
+	assert.False(t, got.ResumeBarrierEnabled)
+	assert.False(t, got.ResumeReady)
+	assert.True(t, got.CanResumeExperiment())
 }

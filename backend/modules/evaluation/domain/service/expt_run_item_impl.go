@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 	"github.com/jinzhu/copier"
 
@@ -71,7 +72,10 @@ type ExptItemEvalCtxExecutor struct {
 	itemCompletePublisher  component.IItemCompletePublisher
 }
 
-const exptRunLogPersistTimeout = 5 * time.Second
+const (
+	exptRunLogPersistTimeout         = 5 * time.Second
+	asyncEvaluatorResumeRepairExtKey = "__async_evaluator_resume_repair__"
+)
 
 func (e *ExptItemEvalCtxExecutor) Eval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
 	// if err := e.SetItemRunProcessing(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID, event.Session); err != nil {
@@ -147,7 +151,7 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		return errorx.Wrapf(err, "ExptTurnResultRunLog copy fail")
 	}
 
-	clone.Ext = etec.Ext
+	clone.Ext = gmap.Clone(etec.Ext)
 
 	var evalErr error
 
@@ -214,19 +218,31 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	result.SetEvalErr(evalErr)
 
+	pendingEvaluatorRecordIDs := make([]int64, 0)
+	for _, record := range result.EvaluatorResults {
+		if record != nil && record.ID > 0 && record.Status == entity.EvaluatorRunStatusAsyncInvoking {
+			pendingEvaluatorRecordIDs = append(pendingEvaluatorRecordIDs, record.ID)
+		}
+	}
+	if len(pendingEvaluatorRecordIDs) > 0 {
+		if clone.Ext == nil {
+			clone.Ext = make(map[string]string)
+		}
+		// Durable repair intent: if arm or MQ publication fails after this save, the scheduler
+		// can recover from turn refs plus terminal evaluator records without another provider callback.
+		clone.Ext[asyncEvaluatorResumeRepairExtKey] = "true"
+	}
+
 	if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
 		return err
 	}
-	for _, record := range result.EvaluatorResults {
-		if record == nil || record.ID <= 0 || record.Status != entity.EvaluatorRunStatusAsyncInvoking {
-			continue
-		}
-		if err := e.evaluatorService.ArmEvaluatorResume(persistCtx, record.ID); err != nil {
+	for _, recordID := range pendingEvaluatorRecordIDs {
+		if err := e.evaluatorService.ArmEvaluatorResume(persistCtx, recordID); err != nil {
 			// The turn references are already durable and the provider has accepted the work.
 			// Failing the item here would be unretriable (AsyncAbort sets CtxForceNoRetry) and
-			// could overwrite a valid terminal callback. Keep the item processing; callbacks can
-			// retry publication, and the existing zombie policy remains the final fallback.
-			logs.CtxError(ctx, "[ExptTurnEval] arm evaluator async resume failed after refs persisted, keep item processing, record_id: %d, err: %v", record.ID, err)
+			// could overwrite a valid terminal callback. Keep the item processing; the scheduler
+			// repairs from the durable turn refs/record state, with Zombie only as final timeout.
+			logs.CtxError(ctx, "[ExptTurnEval] arm evaluator async resume failed after refs persisted, keep item processing, record_id: %d, err: %v", recordID, err)
 		}
 	}
 
