@@ -166,5 +166,6 @@ func EvaluationSetTemplateDO2DTO(do *entity.EvaluationSetTemplate) *eval_set.Eva
 		TemplateDatasetName: gptr.Of(do.TemplateDatasetName),
 		Description:         gptr.Of(do.Description),
 		EvaluationSetSchema: SchemaDO2DTO(do.EvaluationSetSchema),
+		IsEditable:          gptr.Of(do.IsEditable),
 	}
 }

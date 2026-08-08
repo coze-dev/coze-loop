@@ -5181,6 +5181,8 @@ type EvaluationSetTemplate struct {
 	Description         *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	// 完整的模版列信息
 	EvaluationSetSchema *EvaluationSetSchema `thrift:"evaluation_set_schema,4,optional" frugal:"4,optional,EvaluationSetSchema" form:"evaluation_set_schema" json:"evaluation_set_schema,omitempty" query:"evaluation_set_schema"`
+	// 使用该模版创建评测集时，是否允许修改模版 Schema
+	IsEditable *bool `thrift:"is_editable,5,optional" frugal:"5,optional,bool" form:"is_editable" json:"is_editable,omitempty" query:"is_editable"`
 }
 
 func NewEvaluationSetTemplate() *EvaluationSetTemplate {
@@ -5237,6 +5239,18 @@ func (p *EvaluationSetTemplate) GetEvaluationSetSchema() (v *EvaluationSetSchema
 	}
 	return p.EvaluationSetSchema
 }
+
+var EvaluationSetTemplate_IsEditable_DEFAULT bool
+
+func (p *EvaluationSetTemplate) GetIsEditable() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsEditable() {
+		return EvaluationSetTemplate_IsEditable_DEFAULT
+	}
+	return *p.IsEditable
+}
 func (p *EvaluationSetTemplate) SetTemplateDatasetID(val *int64) {
 	p.TemplateDatasetID = val
 }
@@ -5249,12 +5263,16 @@ func (p *EvaluationSetTemplate) SetDescription(val *string) {
 func (p *EvaluationSetTemplate) SetEvaluationSetSchema(val *EvaluationSetSchema) {
 	p.EvaluationSetSchema = val
 }
+func (p *EvaluationSetTemplate) SetIsEditable(val *bool) {
+	p.IsEditable = val
+}
 
 var fieldIDToName_EvaluationSetTemplate = map[int16]string{
 	1: "template_dataset_id",
 	2: "template_dataset_name",
 	3: "description",
 	4: "evaluation_set_schema",
+	5: "is_editable",
 }
 
 func (p *EvaluationSetTemplate) IsSetTemplateDatasetID() bool {
@@ -5271,6 +5289,10 @@ func (p *EvaluationSetTemplate) IsSetDescription() bool {
 
 func (p *EvaluationSetTemplate) IsSetEvaluationSetSchema() bool {
 	return p.EvaluationSetSchema != nil
+}
+
+func (p *EvaluationSetTemplate) IsSetIsEditable() bool {
+	return p.IsEditable != nil
 }
 
 func (p *EvaluationSetTemplate) Read(iprot thrift.TProtocol) (err error) {
@@ -5318,6 +5340,14 @@ func (p *EvaluationSetTemplate) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5393,6 +5423,17 @@ func (p *EvaluationSetTemplate) ReadField4(iprot thrift.TProtocol) error {
 	p.EvaluationSetSchema = _field
 	return nil
 }
+func (p *EvaluationSetTemplate) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsEditable = _field
+	return nil
+}
 
 func (p *EvaluationSetTemplate) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -5414,6 +5455,10 @@ func (p *EvaluationSetTemplate) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -5506,6 +5551,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *EvaluationSetTemplate) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsEditable() {
+		if err = oprot.WriteFieldBegin("is_editable", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsEditable); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *EvaluationSetTemplate) String() string {
 	if p == nil {
@@ -5531,6 +5594,9 @@ func (p *EvaluationSetTemplate) DeepEqual(ano *EvaluationSetTemplate) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.EvaluationSetSchema) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.IsEditable) {
 		return false
 	}
 	return true
@@ -5575,6 +5641,18 @@ func (p *EvaluationSetTemplate) Field3DeepEqual(src *string) bool {
 func (p *EvaluationSetTemplate) Field4DeepEqual(src *EvaluationSetSchema) bool {
 
 	if !p.EvaluationSetSchema.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSetTemplate) Field5DeepEqual(src *bool) bool {
+
+	if p.IsEditable == src {
+		return true
+	} else if p.IsEditable == nil || src == nil {
+		return false
+	}
+	if *p.IsEditable != *src {
 		return false
 	}
 	return true

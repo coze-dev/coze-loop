@@ -3764,6 +3764,20 @@ func (p *EvaluationSetTemplate) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3836,6 +3850,20 @@ func (p *EvaluationSetTemplate) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluationSetTemplate) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.IsEditable = _field
+	return offset, nil
+}
+
 func (p *EvaluationSetTemplate) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -3844,6 +3872,7 @@ func (p *EvaluationSetTemplate) FastWriteNocopy(buf []byte, w thrift.NocopyWrite
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -3859,6 +3888,7 @@ func (p *EvaluationSetTemplate) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -3900,6 +3930,15 @@ func (p *EvaluationSetTemplate) fastWriteField4(buf []byte, w thrift.NocopyWrite
 	return offset
 }
 
+func (p *EvaluationSetTemplate) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetIsEditable() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsEditable)
+	}
+	return offset
+}
+
 func (p *EvaluationSetTemplate) field1Length() int {
 	l := 0
 	if p.IsSetTemplateDatasetID() {
@@ -3932,6 +3971,15 @@ func (p *EvaluationSetTemplate) field4Length() int {
 	if p.IsSetEvaluationSetSchema() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.EvaluationSetSchema.BLength()
+	}
+	return l
+}
+
+func (p *EvaluationSetTemplate) field5Length() int {
+	l := 0
+	if p.IsSetIsEditable() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
 	}
 	return l
 }
@@ -3971,6 +4019,11 @@ func (p *EvaluationSetTemplate) DeepCopy(s interface{}) error {
 		}
 	}
 	p.EvaluationSetSchema = _evaluationSetSchema
+
+	if src.IsEditable != nil {
+		tmp := *src.IsEditable
+		p.IsEditable = &tmp
+	}
 
 	return nil
 }

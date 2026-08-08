@@ -114,6 +114,7 @@ struct EvaluationSetTemplate {
     2: optional string template_dataset_name
     3: optional string description
     4: optional EvaluationSetSchema evaluation_set_schema // 完整的模版列信息
+    5: optional bool is_editable // 使用该模版创建评测集时，是否允许修改模版 Schema
 }
 
 struct EvaluationSetItem {

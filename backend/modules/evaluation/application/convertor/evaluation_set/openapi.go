@@ -536,6 +536,7 @@ func OpenAPIEvaluationSetTemplateDO2DTO(do *entity.EvaluationSetTemplate) *opena
 		TemplateDatasetName: gptr.Of(do.TemplateDatasetName),
 		Description:         gptr.Of(do.Description),
 		EvaluationSetSchema: OpenAPIEvaluationSetSchemaDO2DTO(do.EvaluationSetSchema),
+		IsEditable:          gptr.Of(do.IsEditable),
 	}
 }
 

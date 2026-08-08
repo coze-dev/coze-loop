@@ -37,6 +37,7 @@ type EvaluationSetTemplate struct {
 	TemplateDatasetName string               `json:"template_dataset_name,omitempty"`
 	Description         string               `json:"description,omitempty"`
 	EvaluationSetSchema *EvaluationSetSchema `json:"evaluation_set_schema,omitempty"`
+	IsEditable          bool                 `json:"is_editable"`
 }
 
 type DatasetSpec struct {

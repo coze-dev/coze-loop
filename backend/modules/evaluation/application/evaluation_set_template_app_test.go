@@ -34,6 +34,7 @@ func TestEvaluationSetApplicationImpl_ListEvaluationSetTemplates(t *testing.T) {
 	}).Return([]*entity.EvaluationSetTemplate{{
 		TemplateDatasetID:   100,
 		TemplateDatasetName: "dialog",
+		IsEditable:          true,
 		EvaluationSetSchema: &entity.EvaluationSetSchema{FieldSchemas: []*entity.FieldSchema{{Key: "messages", Locked: true}}},
 	}}, &total, &nextPageToken, nil)
 
@@ -45,6 +46,8 @@ func TestEvaluationSetApplicationImpl_ListEvaluationSetTemplates(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, resp.Templates, 1)
 	assert.Equal(t, int64(100), resp.Templates[0].GetTemplateDatasetID())
+	require.NotNil(t, resp.Templates[0].IsEditable)
+	assert.True(t, resp.Templates[0].GetIsEditable())
 	require.Len(t, resp.Templates[0].EvaluationSetSchema.FieldSchemas, 1)
 	assert.True(t, resp.Templates[0].EvaluationSetSchema.FieldSchemas[0].GetLocked())
 	assert.Equal(t, &total, resp.Total)
@@ -62,6 +65,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetTemplatesOApi(t *testing.T) {
 	svc.EXPECT().ListEvaluationSetTemplates(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetTemplate{{
 		TemplateDatasetID:   101,
 		TemplateDatasetName: "qa",
+		IsEditable:          false,
 		EvaluationSetSchema: &entity.EvaluationSetSchema{FieldSchemas: []*entity.FieldSchema{{Key: "question", Locked: true}}},
 	}}, &total, nil, nil)
 
@@ -70,6 +74,8 @@ func TestEvalOpenAPIApplication_ListEvaluationSetTemplatesOApi(t *testing.T) {
 	require.NotNil(t, resp.Data)
 	require.Len(t, resp.Data.Templates, 1)
 	assert.Equal(t, int64(101), resp.Data.Templates[0].GetTemplateDatasetID())
+	require.NotNil(t, resp.Data.Templates[0].IsEditable)
+	assert.False(t, resp.Data.Templates[0].GetIsEditable())
 	assert.True(t, resp.Data.Templates[0].EvaluationSetSchema.FieldSchemas[0].GetLocked())
 	assert.False(t, resp.Data.GetHasMore())
 	assert.True(t, metric.called)
