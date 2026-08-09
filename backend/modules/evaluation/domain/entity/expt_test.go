@@ -568,7 +568,7 @@ func TestValidateExperimentName(t *testing.T) {
 }
 
 // TestRunModeToInt 钉住 case-file experiment_info.run_mode 的整数编号映射。
-// 编号必须与 runtime runModeFromInt (许强 feat/agent_runtime 分支) 逐一一致 —— 错一位就是
+// 编号必须与评测运行时解析 case-file 的那套编号逐一一致 —— 错一位就是
 // 整个实验按另一个跑法执行, 而实验照样 success, 只能靠人肉比对轨迹才能发现。
 //
 // 反向验证 (证明本测试真的在守): 把 RunModeToInt 里 goal 的返回值从 5 改回 4,
