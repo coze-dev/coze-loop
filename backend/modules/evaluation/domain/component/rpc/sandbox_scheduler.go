@@ -72,6 +72,9 @@ const (
 	// 不注入平台 env、不写 case-file、无默认 start_cmd，全部由调用方显式下发）。
 	// 双沙箱链路现用此租户：编排完全由 operator 侧完成，调度侧只需提供裸沙箱。
 	SandboxTenantFornaxEvalGeneral SandboxTenant = 4
+	// SandboxTenantFornaxEvalGeneralGUI = FornaxEvalGeneralGUI，Mac VM GUI 评测专用租户（能力同 GeneralAgent 最小集）。
+	// mac_vm_plus_sandbox 链路的两个 task（mac_vm + sandbox）共用此租户，靠 ResourceType 区分落到哪种 backend。
+	SandboxTenantFornaxEvalGeneralGUI SandboxTenant = 5
 )
 
 // SandboxResourceType 标识 task 落到哪种计算资源，与 stone.cozeloop.agent_studio 的
