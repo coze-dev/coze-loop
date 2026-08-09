@@ -46,9 +46,9 @@ type SandboxEnvVar struct {
 }
 
 type SandboxAgent struct {
-	Name          string           `json:"name"`
-	Type          SandboxAgentType `json:"type"`
-	ModelName     string           `json:"model_name"`
+	Name      string           `json:"name"`
+	Type      SandboxAgentType `json:"type"`
+	ModelName string           `json:"model_name"`
 	// ModelID 平台模型服务 model_id。填写后被测 Agent 模型密钥可经 GetModelAndAccount 解析，
 	// 与 SUA 的 sua_model_id 对称；缺省 0 时仅用 ModelName + TCC 替换规则（行为不变）。
 	ModelID       int64            `json:"model_id,omitempty"`

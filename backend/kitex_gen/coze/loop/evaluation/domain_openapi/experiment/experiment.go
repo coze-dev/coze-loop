@@ -7512,27 +7512,15 @@ func (p *ExperimentStatistics) Field5DeepEqual(src *int32) bool {
 
 // 评测实验
 //
-// ⚠️ 已知缺口 (2026-07 记录, **只记录未实现**): 本读模型**没有** run_mode_config 字段。
+// run_mode_config (115) 是**跑法配置的读侧回显**, 2026-08 补齐。此前只有写侧
+// (SubmitExperimentRequest 47 号字段) 能配跑法, 读侧无字段 —— OpenAPI 用户提交后
+// 查不到自己配了什么跑法, 而内部接口 (domain/expt.thrift 的 115 号字段) 一直能回显,
+// 即"内部能看、OpenAPI 看不到"的不对称。
 //
-// 现状是不对称的:
-//   - **写侧有**: coze.loop.evaluation.openapi.thrift 的 SubmitExperimentRequest 47 号字段
-//     `optional experiment.RunModeConfig run_mode_config` —— OpenAPI 用户提交实验时能配跑法
-//     (run_mode / sua_mode / sua_model / SUA 行为四项 / max_turns / max_run_minutes)。
-//   - **读侧缺**: 本 struct 无对应字段, 于是 OpenAPI 用户 **查实验详情拿不到自己配了什么跑法**。
-//   - 对比内部接口: domain/expt.thrift 的 struct Experiment 有 115 号字段 run_mode_config,
-//     且 coze-loop 侧 convertor 的 runModeConfigDO2DTO 已写好回显 —— 即"内部接口能回显、
-//     OpenAPI 查不到"。
-//
-// **为什么现在不补 (不是漏了)**: 补齐要走一整轮 IDL 变更 —— ① 本 struct 加字段 (需与
-// coze-loop 仓 idl/thrift/.../domain_openapi/experiment.thrift 同步, open/ 是从那里同步来的);
-// ② 重跑代码生成 (cozeloop-gen-commercial / backend/script/cloudwego/code_gen.sh);
-// ③ 给 DomainExperimentDTO2OpenAPI 和 OpenAPIExperimentDO2DTO **两个** OpenAPI 读路径接线
-// (coze-loop backend/modules/evaluation/application/convertor/experiment/openapi.go);
-// ④ 补 UT。属独立排期项, 不夹带在功能改动里做。
-//
-// 补的时候注意: OpenAPI 侧用的是 domain_openapi 自己那套**字符串枚举**结构
-// (本文件已有 struct RunModeConfig, 与 ExptEvalSetSourceType 同套模式), 不要 include
-// domain/expt.thrift, 否则符号冲突。
+// 注意本文件用的是 domain_openapi 自己那套**字符串枚举**结构 (本文件的 struct
+// RunModeConfig, 与 ExptEvalSetSourceType 同套模式), 不要 include domain/expt.thrift ——
+// 会符号冲突。两套枚举的整数编号刻意不同 (见 domain/expt.thrift 的 ExptRunMode 注释),
+// 所以跨模型搬字段时必须过一次显式转换, 不能直接赋值。
 type Experiment struct {
 	// 基本信息
 	ID                 *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
@@ -7576,8 +7564,12 @@ type Experiment struct {
 	// 评估器并发数回显
 	EvaluatorsConcurNum *int32 `thrift:"evaluators_concur_num,113,optional" frugal:"113,optional,i32" form:"evaluators_concur_num" json:"evaluators_concur_num,omitempty" query:"evaluators_concur_num"`
 	// 实验绑定 item 总数; 首跑前为 0
-	TotalItemCount *int64           `thrift:"total_item_count,114,optional" frugal:"114,optional,i64" json:"total_item_count" form:"total_item_count" query:"total_item_count"`
-	BaseInfo       *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	TotalItemCount *int64 `thrift:"total_item_count,114,optional" frugal:"114,optional,i64" json:"total_item_count" form:"total_item_count" query:"total_item_count"`
+	// 跑法配置回显。字段号 115 与 domain/expt.thrift 的 struct Experiment 刻意对齐, 便于两套
+	// 读模型对照 —— 它们是同一个概念的两种表示 (本文件用字符串枚举, domain 用整数枚举)。
+	// 用本文件已有的 RunModeConfig (字符串枚举), 不要 include domain/expt.thrift —— 会符号冲突。
+	RunModeConfig *RunModeConfig   `thrift:"run_mode_config,115,optional" frugal:"115,optional,RunModeConfig" form:"run_mode_config" json:"run_mode_config,omitempty" query:"run_mode_config"`
+	BaseInfo      *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewExperiment() *Experiment {
@@ -7887,6 +7879,18 @@ func (p *Experiment) GetTotalItemCount() (v int64) {
 	return *p.TotalItemCount
 }
 
+var Experiment_RunModeConfig_DEFAULT *RunModeConfig
+
+func (p *Experiment) GetRunModeConfig() (v *RunModeConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunModeConfig() {
+		return Experiment_RunModeConfig_DEFAULT
+	}
+	return p.RunModeConfig
+}
+
 var Experiment_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *Experiment) GetBaseInfo() (v *common.BaseInfo) {
@@ -7973,6 +7977,9 @@ func (p *Experiment) SetEvaluatorsConcurNum(val *int32) {
 func (p *Experiment) SetTotalItemCount(val *int64) {
 	p.TotalItemCount = val
 }
+func (p *Experiment) SetRunModeConfig(val *RunModeConfig) {
+	p.RunModeConfig = val
+}
 func (p *Experiment) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -8003,6 +8010,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	112: "eval_set_details",
 	113: "evaluators_concur_num",
 	114: "total_item_count",
+	115: "run_mode_config",
 	100: "base_info",
 }
 
@@ -8104,6 +8112,10 @@ func (p *Experiment) IsSetEvaluatorsConcurNum() bool {
 
 func (p *Experiment) IsSetTotalItemCount() bool {
 	return p.TotalItemCount != nil
+}
+
+func (p *Experiment) IsSetRunModeConfig() bool {
+	return p.RunModeConfig != nil
 }
 
 func (p *Experiment) IsSetBaseInfo() bool {
@@ -8323,6 +8335,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 114:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField114(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 115:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField115(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8667,6 +8687,14 @@ func (p *Experiment) ReadField114(iprot thrift.TProtocol) error {
 	p.TotalItemCount = _field
 	return nil
 }
+func (p *Experiment) ReadField115(iprot thrift.TProtocol) error {
+	_field := NewRunModeConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RunModeConfig = _field
+	return nil
+}
 func (p *Experiment) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -8780,6 +8808,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField114(oprot); err != nil {
 			fieldId = 114
+			goto WriteFieldError
+		}
+		if err = p.writeField115(oprot); err != nil {
+			fieldId = 115
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -9286,6 +9318,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 114 end error: ", p), err)
 }
+func (p *Experiment) writeField115(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunModeConfig() {
+		if err = oprot.WriteFieldBegin("run_mode_config", thrift.STRUCT, 115); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RunModeConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 115 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 115 end error: ", p), err)
+}
 func (p *Experiment) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -9392,6 +9442,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field114DeepEqual(ano.TotalItemCount) {
+		return false
+	}
+	if !p.Field115DeepEqual(ano.RunModeConfig) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -9665,6 +9718,13 @@ func (p *Experiment) Field114DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.TotalItemCount != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field115DeepEqual(src *RunModeConfig) bool {
+
+	if !p.RunModeConfig.DeepEqual(src) {
 		return false
 	}
 	return true

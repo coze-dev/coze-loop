@@ -155,6 +155,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field NotificationConf not valid, %w", err)
 		}
 	}
+	if p.RunModeConfig != nil {
+		if err := p.RunModeConfig.IsValid(); err != nil {
+			return fmt.Errorf("field RunModeConfig not valid, %w", err)
+		}
+	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
