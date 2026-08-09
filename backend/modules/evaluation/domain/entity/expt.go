@@ -369,6 +369,35 @@ const (
 	RunModeGoal                  RunMode = "goal"
 )
 
+// IsValidRunMode 判断 run_mode 字面量是否是平台已知的合法跑法。
+//
+// ⚠️ 不能用 RunModeToInt 代替: 它对未知值 default 返回 1 (single_turn), 是**静默回落**,
+// 无法区分"调用方传了 single_turn"和"调用方传了乱码"。分流新旧链路必须能区分这两者。
+//
+// 新增 RunMode 常量时必须同步加到这里, 否则新跑法会被判为非法、误落旧链路租户。
+func IsValidRunMode(m RunMode) bool {
+	switch m {
+	case RunModeSingleTurn, RunModeFixedScriptMultiTurn, RunModeSUAMultiTurn,
+		RunModeSUALoopMultiTurn, RunModeSUAHumanLoopMultiTurn, RunModeGoal:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsNewRunModeLink 判断该实验跑法配置属于**新链路**(有合法 run_mode)还是**旧链路**。
+//
+// 新旧两条链路会并存一段时间, 需要在沙箱租户上区分 (见 application 层 sandboxTenantFor*):
+//   - 旧链路: RunModeConfig 为 nil, 或 run_mode 为空/非法 —— 存量实验都落这一档
+//   - 新链路: RunModeConfig 非 nil 且 run_mode 合法
+//
+// 判据刻意同时覆盖"config 空"和"run_mode 非法"两种形态: 提交链路上 run_mode_config 存在
+// 透传丢字段的先例 (见 experiment_app.go 的 [sandbox-mt-debug] 日志), 只判 nil 会把
+// "config 在但 run_mode 丢了"误判成新链路。
+func IsNewRunModeLink(cfg *RunModeConfig) bool {
+	return cfg != nil && IsValidRunMode(cfg.RunMode)
+}
+
 // RunModeToInt 把 RunMode 字符串映射为 case-file experiment_info.run_mode 的整数枚举。
 //
 // 编号对齐 runtime (fornax_agent_eval_runtime internal/interfaces/platform

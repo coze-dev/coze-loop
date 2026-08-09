@@ -88,13 +88,59 @@ func TestSandboxTenantForExperimentEntity(t *testing.T) {
 			want: rpc.SandboxTenantDefault,
 		},
 		{
-			name: "dual mode",
+			// dual 但无 run_mode_config → 旧链路租户（存量实验都落这一档）
+			name: "dual mode without run_mode_config -> legacy tenant",
 			in: &entity.Experiment{Target: &entity.EvalTarget{
 				EvalTargetVersion: &entity.EvalTargetVersion{
 					SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeDual},
 				},
 			}},
+			want: rpc.SandboxTenantFornaxTraeEvalDualSandbox,
+		},
+		{
+			// dual + 合法 run_mode → 新链路租户
+			name: "dual mode with valid run_mode -> new tenant",
+			in: &entity.Experiment{
+				Target: &entity.EvalTarget{
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeDual},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					RunModeConfig: &entity.RunModeConfig{RunMode: entity.RunModeSUAMultiTurn},
+				},
+			},
 			want: rpc.SandboxTenantFornaxEvalGeneral,
+		},
+		{
+			// ★ dual + config 在但 run_mode 为空（透传丢字段的形态）→ 必须落旧链路，不能误判成新链路
+			name: "dual mode with empty run_mode -> legacy tenant",
+			in: &entity.Experiment{
+				Target: &entity.EvalTarget{
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeDual},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					RunModeConfig: &entity.RunModeConfig{},
+				},
+			},
+			want: rpc.SandboxTenantFornaxTraeEvalDualSandbox,
+		},
+		{
+			// ★ dual + run_mode 是非法字面量 → 落旧链路（RunModeToInt 会静默回落 1，不能用它判）
+			name: "dual mode with invalid run_mode -> legacy tenant",
+			in: &entity.Experiment{
+				Target: &entity.EvalTarget{
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeDual},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					RunModeConfig: &entity.RunModeConfig{RunMode: entity.RunMode("bogus_mode")},
+				},
+			},
+			want: rpc.SandboxTenantFornaxTraeEvalDualSandbox,
 		},
 		{
 			name: "unrecognized mode falls back to Default",
@@ -167,8 +213,28 @@ func TestSandboxTenantForExperimentDTO(t *testing.T) {
 		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(dtoWithMode(domain_eval_target.SandboxCountModeSingle)))
 	})
 
-	t.Run("dual mode -> FornaxEvalGeneral", func(t *testing.T) {
-		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneral, sandboxTenantForExperimentDTO(dtoWithMode(domain_eval_target.SandboxCountModeDual)))
+	t.Run("dual mode without run_mode_config -> legacy tenant", func(t *testing.T) {
+		assert.Equal(t, rpc.SandboxTenantFornaxTraeEvalDualSandbox, sandboxTenantForExperimentDTO(dtoWithMode(domain_eval_target.SandboxCountModeDual)))
+	})
+
+	t.Run("dual mode with valid run_mode -> new tenant", func(t *testing.T) {
+		expt := dtoWithMode(domain_eval_target.SandboxCountModeDual)
+		expt.RunModeConfig = &domain_expt.RunModeConfig{RunMode: domain_expt.ExptRunModePtr(domain_expt.ExptRunMode_SuaMultiTurn)}
+		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneral, sandboxTenantForExperimentDTO(expt))
+	})
+
+	// ★ config 在但 run_mode 未设置 → 旧链路。透传丢字段的形态，不能误判成新链路。
+	t.Run("dual mode with run_mode unset -> legacy tenant", func(t *testing.T) {
+		expt := dtoWithMode(domain_eval_target.SandboxCountModeDual)
+		expt.RunModeConfig = &domain_expt.RunModeConfig{}
+		assert.Equal(t, rpc.SandboxTenantFornaxTraeEvalDualSandbox, sandboxTenantForExperimentDTO(expt))
+	})
+
+	// ★ run_mode 是枚举合法集外的值 → 旧链路（不能靠 convertor 的 default 回落 single_turn 判断）。
+	t.Run("dual mode with invalid run_mode enum -> legacy tenant", func(t *testing.T) {
+		expt := dtoWithMode(domain_eval_target.SandboxCountModeDual)
+		expt.RunModeConfig = &domain_expt.RunModeConfig{RunMode: domain_expt.ExptRunModePtr(domain_expt.ExptRunMode(999))}
+		assert.Equal(t, rpc.SandboxTenantFornaxTraeEvalDualSandbox, sandboxTenantForExperimentDTO(expt))
 	})
 
 	t.Run("unrecognized mode -> Default", func(t *testing.T) {
@@ -180,12 +246,14 @@ func TestSandboxTenantForExperimentDTO(t *testing.T) {
 // 这条存在的理由：并发翻倍 (sandboxInitConcurrency 的 dual 入参) 完全依赖这个判据，
 // 判据和 sandboxTenantForExperiment* 的返回值一旦脱钩就会静默恒 false —— 双沙箱失去 ×2 配额、
 // item 撞并发上限直接判永久失败，且没有任何报错。改租户值时本测试必须同步失败。
+//
+// ⚠️ 新旧链路并存期：**两个双沙箱租户都必须被认得**。漏掉任一个，那条链路就静默失去 ×2。
 func TestIsDualSandboxTenant(t *testing.T) {
-	assert.True(t, isDualSandboxTenant(rpc.SandboxTenantFornaxEvalGeneral))
+	assert.True(t, isDualSandboxTenant(rpc.SandboxTenantFornaxEvalGeneral), "新链路双沙箱租户")
+	assert.True(t, isDualSandboxTenant(rpc.SandboxTenantFornaxTraeEvalDualSandbox), "旧链路双沙箱租户")
 	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantDefault))
 	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantGeneralAgent))
 	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantLabelingAnalysis))
-	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantFornaxTraeEvalDualSandbox))
 
 	// 与两个推导函数对账：dual 模式推导出的租户必须被判据认得。
 	dualExpt := &entity.Experiment{Target: &entity.EvalTarget{

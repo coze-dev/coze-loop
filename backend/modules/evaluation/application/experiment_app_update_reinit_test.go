@@ -83,7 +83,8 @@ func TestUpdateExptRunConf_ReInitsSandboxTaskOnConcurrencyChange(t *testing.T) {
 		if assert.NotNil(t, gotReq, "并发度改了却没有 re-Init：沙箱名额会停在旧值, 超出部分全部 601300702") {
 			assert.Equal(t, wantConcurrency, gotReq.Concurrency,
 				"Init 必须按新并发下发（双沙箱 2 倍 + 余量系数）")
-			assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneral, gotReq.Tenant)
+			// dualSandboxExpt() 不带 RunModeConfig → 旧链路租户；两个双沙箱租户都要并发 ×2。
+			assert.Equal(t, rpc.SandboxTenantFornaxTraeEvalDualSandbox, gotReq.Tenant)
 			assert.Equal(t, workspaceID, gotReq.WorkspaceID)
 		}
 	})

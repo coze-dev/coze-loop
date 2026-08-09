@@ -1659,23 +1659,47 @@ func sandboxInitConcurrency(itemConcurNum *int, dual bool) int32 {
 
 // isDualSandboxTenant 判断 tenant 是否代表双沙箱链路。
 // ⚠️ 存在的理由：双沙箱一次评测占 2 个沙箱 execute，Concurrency 要 ×2（见 sandboxInitConcurrency）。
-// 这个判据必须跟着上面两个 sandboxTenantForExperiment* 的返回值走 —— 早先是在调用处内联写
+// 这个判据必须跟着下面 sandboxTenantForExperiment* 的返回值走 —— 早先是在调用处内联写
 // `tenant == SandboxTenantFornaxTraeEvalDualSandbox`，三处散落；租户值一改就集体恒 false，
 // 双沙箱静默失去并发翻倍、item 撞配额直接判永久失败。收敛成一个函数，改租户只改这里。
+//
+// ⚠️ **新旧链路并存期必须同时认两个租户**：新链路(有合法 run_mode)走 FornaxEvalGeneral、
+// 旧链路走 FornaxTraeEvalDualSandbox，两者都是双沙箱、都要并发翻倍。只认一个会让另一条
+// 链路静默失去 ×2，撞配额的 item 直接判永久失败且不重试（601300702），没有任何一层报错。
 func isDualSandboxTenant(tenant rpc.SandboxTenant) bool {
-	return tenant == rpc.SandboxTenantFornaxEvalGeneral
+	return tenant == rpc.SandboxTenantFornaxEvalGeneral ||
+		tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox
+}
+
+// dualSandboxTenantByRunMode 在"已确定是双沙箱"的前提下，按新旧链路选租户。
+//
+// 新旧链路会并存一段时间，需要在沙箱租户上区分（下游 agent_studio 按 Tenant.String() 分
+// TCC 配额桶；policy 目前同构，差异体现在配额与后续可能的独立 policy）：
+//   - 新链路（RunModeConfig 非 nil 且 run_mode 合法）→ FornaxEvalGeneral(4)
+//   - 旧链路（config 空 / run_mode 空或非法）→ FornaxTraeEvalDualSandbox(3)
+//
+// 判据收敛在 entity.IsNewRunModeLink 单点，三处推导都调它，避免判据散落后集体走错档。
+func dualSandboxTenantByRunMode(cfg *entity.RunModeConfig) rpc.SandboxTenant {
+	if entity.IsNewRunModeLink(cfg) {
+		return rpc.SandboxTenantFornaxEvalGeneral
+	}
+	return rpc.SandboxTenantFornaxTraeEvalDualSandbox
 }
 
 // sandboxTenantForExperimentEntity 从 entity 层实验推导出 Init 所需的沙箱租户。
-// SandboxAgent.SandboxCountMode=Dual 时返回 FornaxEvalGeneral，其余情况回落到 Default（FornaxTraeEval）。
+// 非双沙箱回落 Default（FornaxTraeEval）；双沙箱再按 run_mode 分新旧链路。
 func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant {
 	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
 		return rpc.SandboxTenantDefault
 	}
-	if expt.Target.EvalTargetVersion.SandboxAgent.IsDualSandbox() {
-		return rpc.SandboxTenantFornaxEvalGeneral
+	if !expt.Target.EvalTargetVersion.SandboxAgent.IsDualSandbox() {
+		return rpc.SandboxTenantDefault
 	}
-	return rpc.SandboxTenantDefault
+	var cfg *entity.RunModeConfig
+	if expt.EvalConf != nil {
+		cfg = expt.EvalConf.RunModeConfig
+	}
+	return dualSandboxTenantByRunMode(cfg)
 }
 
 // sandboxTenantForExperimentDTO 从 domain DTO 实验推导 Init 所需的沙箱租户。
@@ -1688,10 +1712,33 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 	if agent == nil {
 		return rpc.SandboxTenantDefault
 	}
-	if entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) == entity.SandboxCountModeDual {
-		return rpc.SandboxTenantFornaxEvalGeneral
+	if entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) != entity.SandboxCountModeDual {
+		return rpc.SandboxTenantDefault
 	}
-	return rpc.SandboxTenantDefault
+	// DTO 侧 run_mode 是 ExptRunMode 整数枚举, 不能强转成 entity.RunMode 字符串。
+	// 这里直接判枚举合法性, 与 entity.IsNewRunModeLink 同语义 ——
+	// **两处必须同步**: IDL 新增 ExptRunMode 值时, 这里和 entity.IsValidRunMode 都要加。
+	// 不复用 convertor.suaRunModeDTO2DO: 它未导出, 且 default 静默回落 single_turn,
+	// 无法区分"传了 single_turn"和"传了非法值"。
+	if !isValidExptRunModeDTO(expt.GetRunModeConfig()) {
+		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
+	}
+	return rpc.SandboxTenantFornaxEvalGeneral
+}
+
+// isValidExptRunModeDTO 判断 DTO 侧 run_mode_config 是否携带合法跑法（即属于新链路）。
+// config 为 nil / run_mode 未设置 / 枚举值不在合法集内 → false（旧链路）。
+func isValidExptRunModeDTO(cfg *domain_expt.RunModeConfig) bool {
+	if cfg == nil || !cfg.IsSetRunMode() {
+		return false
+	}
+	switch cfg.GetRunMode() {
+	case domain_expt.ExptRunMode_SingleTurn, domain_expt.ExptRunMode_FixedScriptMultiTurn,
+		domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal:
+		return true
+	default:
+		return false
+	}
 }
 
 func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.KillExperimentRequest) (r *expt.KillExperimentResponse, err error) {

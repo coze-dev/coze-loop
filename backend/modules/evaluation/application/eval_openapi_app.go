@@ -3645,7 +3645,11 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 			tenant := rpc.SandboxTenantDefault
 			if agent := req.GetSandboxAgent(); agent != nil &&
 				entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) == entity.SandboxCountModeDual {
-				tenant = rpc.SandboxTenantFornaxEvalGeneral
+				// 双沙箱 debug 走**旧链路租户**: 本入口是评测对象级调试, 请求里没有实验、
+				// 也没有 run_mode_config, 无从判断新旧链路 (见 entity.IsNewRunModeLink)。
+				// 新链路租户只由实验提交/重试链路按 run_mode 推导, 见 experiment_app.go
+				// dualSandboxTenantByRunMode。
+				tenant = rpc.SandboxTenantFornaxTraeEvalDualSandbox
 			}
 			if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
 				TaskID:      "sandbox_debug",
