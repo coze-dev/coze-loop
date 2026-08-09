@@ -247,27 +247,15 @@ struct ExperimentStatistics {
 
 // 评测实验
 //
-// ⚠️ 已知缺口 (2026-07 记录, **只记录未实现**): 本读模型**没有** run_mode_config 字段。
+// run_mode_config (115) 是**跑法配置的读侧回显**, 2026-08 补齐。此前只有写侧
+// (SubmitExperimentRequest 47 号字段) 能配跑法, 读侧无字段 —— OpenAPI 用户提交后
+// 查不到自己配了什么跑法, 而内部接口 (domain/expt.thrift 的 115 号字段) 一直能回显,
+// 即"内部能看、OpenAPI 看不到"的不对称。
 //
-// 现状是不对称的:
-//   - **写侧有**: coze.loop.evaluation.openapi.thrift 的 SubmitExperimentRequest 47 号字段
-//     `optional experiment.RunModeConfig run_mode_config` —— OpenAPI 用户提交实验时能配跑法
-//     (run_mode / sua_mode / sua_model / SUA 行为四项 / max_turns / max_run_minutes)。
-//   - **读侧缺**: 本 struct 无对应字段, 于是 OpenAPI 用户 **查实验详情拿不到自己配了什么跑法**。
-//   - 对比内部接口: domain/expt.thrift 的 struct Experiment 有 115 号字段 run_mode_config,
-//     且 coze-loop 侧 convertor 的 runModeConfigDO2DTO 已写好回显 —— 即"内部接口能回显、
-//     OpenAPI 查不到"。
-//
-// **为什么现在不补 (不是漏了)**: 补齐要走一整轮 IDL 变更 —— ① 本 struct 加字段 (需与
-// coze-loop 仓 idl/thrift/.../domain_openapi/experiment.thrift 同步, open/ 是从那里同步来的);
-// ② 重跑代码生成 (cozeloop-gen-commercial / backend/script/cloudwego/code_gen.sh);
-// ③ 给 DomainExperimentDTO2OpenAPI 和 OpenAPIExperimentDO2DTO **两个** OpenAPI 读路径接线
-// (coze-loop backend/modules/evaluation/application/convertor/experiment/openapi.go);
-// ④ 补 UT。属独立排期项, 不夹带在功能改动里做。
-//
-// 补的时候注意: OpenAPI 侧用的是 domain_openapi 自己那套**字符串枚举**结构
-// (本文件已有 struct RunModeConfig, 与 ExptEvalSetSourceType 同套模式), 不要 include
-// domain/expt.thrift, 否则符号冲突。
+// 注意本文件用的是 domain_openapi 自己那套**字符串枚举**结构 (本文件的 struct
+// RunModeConfig, 与 ExptEvalSetSourceType 同套模式), 不要 include domain/expt.thrift ——
+// 会符号冲突。两套枚举的整数编号刻意不同 (见 domain/expt.thrift 的 ExptRunMode 注释),
+// 所以跨模型搬字段时必须过一次显式转换, 不能直接赋值。
 struct Experiment {
     // 基本信息
     1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
@@ -309,6 +297,10 @@ struct Experiment {
     112: optional list<ExptEvalSetDetail> eval_set_details    // per-set 评测集详情 + item 数 (Get 全填; List 只 id/count)
     113: optional i32 evaluators_concur_num                   // 评估器并发数回显
     114: optional i64 total_item_count (api.js_conv = 'true', go.tag = 'json:"total_item_count"') // 实验绑定 item 总数; 首跑前为 0
+    // 跑法配置回显。字段号 115 与 domain/expt.thrift 的 struct Experiment 刻意对齐, 便于两套
+    // 读模型对照 —— 它们是同一个概念的两种表示 (本文件用字符串枚举, domain 用整数枚举)。
+    // 用本文件已有的 RunModeConfig (字符串枚举), 不要 include domain/expt.thrift —— 会符号冲突。
+    115: optional RunModeConfig run_mode_config
 
 
     100: optional common.BaseInfo base_info

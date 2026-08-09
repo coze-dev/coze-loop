@@ -5573,6 +5573,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 115:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField115(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
@@ -5985,6 +5999,18 @@ func (p *Experiment) FastReadField114(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField115(buf []byte) (int, error) {
+	offset := 0
+	_field := NewRunModeConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RunModeConfig = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -6029,6 +6055,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField110(buf[offset:], w)
 		offset += p.fastWriteField111(buf[offset:], w)
 		offset += p.fastWriteField112(buf[offset:], w)
+		offset += p.fastWriteField115(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -6063,6 +6090,7 @@ func (p *Experiment) BLength() int {
 		l += p.field112Length()
 		l += p.field113Length()
 		l += p.field114Length()
+		l += p.field115Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6322,6 +6350,15 @@ func (p *Experiment) fastWriteField114(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Experiment) fastWriteField115(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunModeConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 115)
+		offset += p.RunModeConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *Experiment) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBaseInfo() {
@@ -6572,6 +6609,15 @@ func (p *Experiment) field114Length() int {
 	return l
 }
 
+func (p *Experiment) field115Length() int {
+	l := 0
+	if p.IsSetRunModeConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RunModeConfig.BLength()
+	}
+	return l
+}
+
 func (p *Experiment) field100Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
@@ -6788,6 +6834,15 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		tmp := *src.TotalItemCount
 		p.TotalItemCount = &tmp
 	}
+
+	var _runModeConfig *RunModeConfig
+	if src.RunModeConfig != nil {
+		_runModeConfig = &RunModeConfig{}
+		if err := _runModeConfig.DeepCopy(src.RunModeConfig); err != nil {
+			return err
+		}
+	}
+	p.RunModeConfig = _runModeConfig
 
 	var _baseInfo *common.BaseInfo
 	if src.BaseInfo != nil {

@@ -244,3 +244,107 @@ func TestRunModeConfigConvertors_NilInNilOut(t *testing.T) {
 	assert.Empty(t, do.SuaMode)
 	assert.False(t, entity.IsNewRunModeLink(do), "空配置必须仍被判为旧链路")
 }
+
+// 读侧回显: 写侧 SubmitExperiment 能配跑法, 读侧此前无字段 —— OpenAPI 调用方提交完
+// **查不到自己配了什么跑法**, 而内部接口一直能回显。本组用例钉住补齐后的读路径。
+func TestRunModeConfigDomain2OpenAPI_RoundTripsEveryField(t *testing.T) {
+	t.Parallel()
+
+	in := &domain_expt.RunModeConfig{
+		RunMode:                  gptr.Of(domain_expt.ExptRunMode_SuaMultiTurn),
+		SuaMode:                  gptr.Of(domain_expt.SuaMode_Loop),
+		MaxRunMinutes:            gptr.Of(int32(240)),
+		MaxTurns:                 gptr.Of(int32(16)),
+		SuaModelName:             gptr.Of("some-model"),
+		SuaGoal:                  gptr.Of("修到全部通过"),
+		SuaPersona:               gptr.Of("资深工程师"),
+		SuaBehavioralConstraints: gptr.Of("每轮只发一条指令"),
+		SuaPeTemplate:            gptr.Of("评估结果: {{eval_result}}"),
+	}
+
+	got := RunModeConfigDomain2OpenAPI(in)
+	require.NotNil(t, got)
+
+	// 逐字段断言而不是只挑一两个: 这是手写的字段拷贝, 新增字段忘了接线会静默丢失 ——
+	// 调用方看到的是"我没配这项", 而不是任何错误。
+	assert.Equal(t, openapiExperiment.ExptRunModeSuaMultiTurn, gptr.Indirect(got.RunMode))
+	assert.Equal(t, openapiExperiment.SuaModeLoop, gptr.Indirect(got.SuaMode))
+	assert.Equal(t, int32(240), gptr.Indirect(got.MaxRunMinutes))
+	assert.Equal(t, int32(16), gptr.Indirect(got.MaxTurns))
+	assert.Equal(t, "some-model", gptr.Indirect(got.SuaModelName))
+	assert.Equal(t, "修到全部通过", gptr.Indirect(got.SuaGoal))
+	assert.Equal(t, "资深工程师", gptr.Indirect(got.SuaPersona))
+	assert.Equal(t, "每轮只发一条指令", gptr.Indirect(got.SuaBehavioralConstraints))
+	assert.Equal(t, "评估结果: {{eval_result}}", gptr.Indirect(got.SuaPeTemplate))
+}
+
+// 四个对外跑法都必须能回显, 且**回显值要能被写侧重新解析回同一个 domain 值** ——
+// 读写不闭环就意味着"照抄详情页的配置重新提交一次"会得到另一个跑法。
+func TestRunModeConfigDomain2OpenAPI_ClosesTheLoopWithWriteSide(t *testing.T) {
+	t.Parallel()
+
+	for _, dm := range []domain_expt.ExptRunMode{
+		domain_expt.ExptRunMode_SingleTurn,
+		domain_expt.ExptRunMode_FixedScriptMultiTurn,
+		domain_expt.ExptRunMode_SuaMultiTurn,
+		domain_expt.ExptRunMode_Goal,
+	} {
+		out := RunModeConfigDomain2OpenAPI(&domain_expt.RunModeConfig{RunMode: gptr.Of(dm)})
+		require.NotNil(t, out.RunMode, "%v 必须能回显", dm)
+
+		back, ok := openAPIRunModeToDomain(gptr.Indirect(out.RunMode))
+		require.True(t, ok, "回显值 %q 必须能被写侧解析", gptr.Indirect(out.RunMode))
+		assert.Equal(t, dm, back, "读写必须闭环, 否则照抄详情页重新提交会换跑法")
+	}
+}
+
+// nil 必须出 nil, 不能出一个空壳: 空壳会让"这个实验没配跑法"看起来像"配了但全是默认值",
+// 而下游多处以 `RunModeConfig != nil` 当"是否新链路"的判据。
+func TestRunModeConfigDomain2OpenAPI_NilInNilOut(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, RunModeConfigDomain2OpenAPI(nil))
+}
+
+// 认不出的枚举值只留空**那一个字段**, 其余字段照常回显 —— 不能因为一个枚举不认识就整块丢掉,
+// 也不能猜一个值填进去 (猜的值会被调用方当成真配置)。
+func TestRunModeConfigDomain2OpenAPI_UnknownEnumLeavesOnlyThatFieldEmpty(t *testing.T) {
+	t.Parallel()
+
+	got := RunModeConfigDomain2OpenAPI(&domain_expt.RunModeConfig{
+		RunMode:       gptr.Of(domain_expt.ExptRunMode(9999)),
+		SuaMode:       gptr.Of(domain_expt.SuaMode(9999)),
+		MaxRunMinutes: gptr.Of(int32(30)),
+	})
+
+	require.NotNil(t, got)
+	assert.Nil(t, got.RunMode, "认不出的 run_mode 留空, 不猜")
+	assert.Nil(t, got.SuaMode, "认不出的 sua_mode 留空, 不猜")
+	assert.Equal(t, int32(30), gptr.Indirect(got.MaxRunMinutes), "其余字段不受影响")
+}
+
+// 两个 OpenAPI 读路径都要接线。DomainExperimentDTO2OpenAPI 走 DTO, OpenAPIExptDO2DTO 走
+// entity 直转 —— 漏接任一个, 就会出现"列表能看到跑法、详情看不到"这类只在某个接口上缺字段的
+// 现象, 比整体没有更难排查。
+func TestBothOpenAPIReadPathsEchoRunModeConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("DTO 路径", func(t *testing.T) {
+		t.Parallel()
+		out := DomainExperimentDTO2OpenAPI(&domain_expt.Experiment{
+			RunModeConfig: &domain_expt.RunModeConfig{RunMode: gptr.Of(domain_expt.ExptRunMode_Goal)},
+		})
+		require.NotNil(t, out.RunModeConfig)
+		assert.Equal(t, openapiExperiment.ExptRunModeGoal, gptr.Indirect(out.RunModeConfig.RunMode))
+	})
+
+	t.Run("entity 直转路径", func(t *testing.T) {
+		t.Parallel()
+		out := OpenAPIExptDO2DTO(&entity.Experiment{
+			EvalConf: &entity.EvaluationConfiguration{
+				RunModeConfig: &entity.RunModeConfig{RunMode: entity.RunModeGoal},
+			},
+		})
+		require.NotNil(t, out.RunModeConfig)
+		assert.Equal(t, openapiExperiment.ExptRunModeGoal, gptr.Indirect(out.RunModeConfig.RunMode))
+	})
+}
