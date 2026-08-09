@@ -9,8 +9,10 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
+	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 )
 
 var localEvalOpenAPIClient evalopenapiservice.Client
@@ -343,4 +345,20 @@ func AsyncRunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
 // @router /v1/loop/evaluation/evaluation_sets/templates/list [POST]
 func ListEvaluationSetTemplatesOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetTemplatesOApi)
+}
+
+// ReportEvalTargetStepMetric .
+// @router /v1/loop/eval_targets/step_metric [POST]
+func ReportEvalTargetStepMetric(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.ReportEvalTargetStepMetricRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.ReportEvalTargetStepMetricResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }
