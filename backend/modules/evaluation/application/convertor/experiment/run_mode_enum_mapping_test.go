@@ -72,7 +72,7 @@ func TestRunMode_OpenAPIToEntityRoundTripIsClosed(t *testing.T) {
 	}
 	for _, tc := range cases {
 		tc := tc
-		t.Run(string(tc.openAPI), func(t *testing.T) {
+		t.Run(tc.openAPI, func(t *testing.T) {
 			t.Parallel()
 
 			dom, err := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{RunMode: gptr.Of(tc.openAPI)})
@@ -84,7 +84,7 @@ func TestRunMode_OpenAPIToEntityRoundTripIsClosed(t *testing.T) {
 			require.NotNil(t, do)
 			assert.Equal(t, tc.want, do.RunMode)
 			// 闭合: 入口收什么词, 落库就该是同一个词 —— entity 常量与 IDL 常量不得再漂。
-			assert.Equal(t, string(tc.openAPI), string(do.RunMode),
+			assert.Equal(t, tc.openAPI, do.RunMode,
 				"往返必须闭合: 入口 %q 就该落库 %q", tc.openAPI, tc.openAPI)
 
 			// 再回显一次 (详情页读的就是这条): 回显值必须还能映回同一个 OpenAPI 字面量。
