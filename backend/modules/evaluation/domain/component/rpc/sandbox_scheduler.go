@@ -74,6 +74,19 @@ const (
 	SandboxTenantFornaxEvalGeneral SandboxTenant = 4
 )
 
+// SandboxResourceType 标识 task 落到哪种计算资源，与 stone.cozeloop.agent_studio 的
+// sandbox_scheduler.ResourceType 枚举保持数值一致。与 SandboxTenant 正交：Tenant 管能力门控/配额，
+// ResourceType 管路由到哪种 backend。task 级属性，Init 时下发，同一 task 只能配置一次；
+// per-op（Run/RunCommand/WriteFile/Destroy）不携带，调度侧从 task 反查。
+type SandboxResourceType int32
+
+const (
+	// SandboxResourceTypeSandbox = sandbox(0)，默认，Linux 沙箱；未显式设置即此值，保持原行为不变。
+	SandboxResourceTypeSandbox SandboxResourceType = 0
+	// SandboxResourceTypeMacVM = mac_vm(1)，从 warm pool 租借的 Mac VM。
+	SandboxResourceTypeMacVM SandboxResourceType = 1
+)
+
 // ---------- Domain ----------
 
 // SandboxExecuteError 单次执行错误信息。
@@ -104,6 +117,8 @@ type SandboxTaskInfo struct {
 	PendingCount   int32
 	TotalCount     int32
 	CompletedCount int32
+	// ResourceType 该 task 落到的计算资源类型（调度侧回显）；缺省为 sandbox。
+	ResourceType SandboxResourceType
 }
 
 // ---------- Requests / Responses ----------
@@ -117,6 +132,9 @@ type SandboxInitRequest struct {
 	// Tenant 沙箱租户；未显式设置（值为 SandboxTenantDefault）时沿用调度侧默认租户 FornaxTraeEval。
 	// 双沙箱模式的评测对象必须传 SandboxTenantFornaxEvalGeneral。
 	Tenant SandboxTenant
+	// ResourceType 计算资源类型；未显式设置（值为 SandboxResourceTypeSandbox）时落 Linux 沙箱，保持原行为。
+	// mac_vm + sandbox 双资源实验中，两个 task 用同一租户、靠本字段区分落到哪种 backend。
+	ResourceType SandboxResourceType
 }
 
 // SandboxInitResponse 初始化任务响应。

@@ -15,21 +15,28 @@ const (
 const SandboxAgentExtKeyExtraExecuteID = "sandbox_agent_extra_execute_id"
 
 // SandboxCountMode 指定单次评测使用一个还是一对沙箱。
-// - Single: 沿用原有单沙箱执行链路
-// - Dual:   先起一个从属沙箱拿到 session id，再起一个主沙箱运行 sandbox-pipeline
+//   - Single:          沿用原有单沙箱执行链路
+//   - Dual:            先起一个从属沙箱拿到 session id，再起一个主沙箱运行 sandbox-pipeline
+//   - MacVMPlusSandbox: 一次评测同时租借 1 台 Mac VM（跑被测桌面 agent）+ 1 台 Sandbox（跑 orchestrator），
+//     两者靠 runtime 侧 WebSocket 互联。下游用同一租户 + ResourceType 区分两个 task。
 type SandboxCountMode string
 
 const (
-	SandboxCountModeSingle SandboxCountMode = "single"
-	SandboxCountModeDual   SandboxCountMode = "dual"
+	SandboxCountModeSingle           SandboxCountMode = "single"
+	SandboxCountModeDual             SandboxCountMode = "dual"
+	SandboxCountModeMacVMPlusSandbox SandboxCountMode = "mac_vm_plus_sandbox"
 )
 
 // ResolveSandboxCountMode 空/未识别值一律回退到 Single，保持默认行为。
 func ResolveSandboxCountMode(mode SandboxCountMode) SandboxCountMode {
-	if mode == SandboxCountModeDual {
+	switch mode {
+	case SandboxCountModeDual:
 		return SandboxCountModeDual
+	case SandboxCountModeMacVMPlusSandbox:
+		return SandboxCountModeMacVMPlusSandbox
+	default:
+		return SandboxCountModeSingle
 	}
-	return SandboxCountModeSingle
 }
 
 // IsDualSandbox 判断 SandboxAgent 是否处于双沙箱模式；nil / 未填字段一律按 Single 处理。
@@ -40,15 +47,23 @@ func (a *SandboxAgent) IsDualSandbox() bool {
 	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeDual
 }
 
+// IsMacVMPlusSandbox 判断 SandboxAgent 是否处于 Mac VM + Sandbox 双资源模式；nil / 未填字段一律按 Single 处理。
+func (a *SandboxAgent) IsMacVMPlusSandbox() bool {
+	if a == nil {
+		return false
+	}
+	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeMacVMPlusSandbox
+}
+
 type SandboxEnvVar struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
 type SandboxAgent struct {
-	Name          string           `json:"name"`
-	Type          SandboxAgentType `json:"type"`
-	ModelName     string           `json:"model_name"`
+	Name      string           `json:"name"`
+	Type      SandboxAgentType `json:"type"`
+	ModelName string           `json:"model_name"`
 	// ModelID 平台模型服务 model_id。填写后被测 Agent 模型密钥可经 GetModelAndAccount 解析，
 	// 与 SUA 的 sua_model_id 对称；缺省 0 时仅用 ModelName + TCC 替换规则（行为不变）。
 	ModelID       int64            `json:"model_id,omitempty"`
