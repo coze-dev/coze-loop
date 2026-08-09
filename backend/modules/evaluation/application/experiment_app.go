@@ -1556,6 +1556,17 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 	// 与 Submit 保持一致：并发度先归一化，再按双沙箱模式放大 2 倍。
 	// Init 失败即视为重试失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
 	if e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
+		// e.manager.Get 走的是 basic 查询, 不会填充 got.Target;
+		// sandboxTenantForExperimentEntity 在 Target==nil 时会静默回落到 Default (=FornaxTraeEval),
+		// 若首次 Submit 是 Dual (=FornaxTraeEvalDoubleSandbox), 这里就会以错误 tenant 去 Init 已存在的沙箱任务,
+		// 触发 "cannot change tenant of active task"。故 Init 前显式补齐 target。
+		if got.Target == nil || got.Target.EvalTargetVersion == nil {
+			target, err := e.evalTargetService.GetEvalTargetVersion(ctx, req.GetWorkspaceID(), got.TargetVersionID, false)
+			if err != nil {
+				return nil, err
+			}
+			got.Target = target
+		}
 		tenant := sandboxTenantForExperimentEntity(got)
 		concurrency := sandboxInitConcurrency(got.EvalConf.ItemConcurNum, isDualSandboxTenant(tenant))
 		if err := e.initSandboxTask(ctx, "retry experiment", req.GetExptID(), concurrency, req.GetWorkspaceID(), tenant); err != nil {

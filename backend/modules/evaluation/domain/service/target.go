@@ -38,6 +38,12 @@ type IEvalTargetService interface {
 	// errCode 用于写入 EvalTargetRunError，区分 zombie timeout / 手动取消等场景。
 	// zombieTimeout=true 时，Destroy 会带上 SandboxAgent 收尾命令 EndCmd（expt_id/invoke_id 由内部拼接）。
 	TerminateAsyncRecordsAndDestroySandbox(ctx context.Context, spaceID int64, recordIDs []int64, errCode int32, errMessage string, zombieTimeout bool)
+	// CheckSandboxTerminated 查询 SandboxAgent 类型 record 关联的沙箱 execute 是否已提前进入终态（Failed/Canceled）。
+	// 沙箱状态查询失败（含开源 stub 的 "not implement"）会在内部 warn 并跳过该 record，不向外抛错。
+	// 仅当 record 仍处于 AsyncInvoking 且沙箱返回 Failed/Canceled 时命中；Succeeded/Running/Pending 不视为终态，
+	// 前者留给回调兜底，后者留给 zombie 超时兜底。
+	// 返回值：命中 recordID 列表 + recordID -> 沙箱状态字面量（用于回写 err_msg）。
+	CheckSandboxTerminated(ctx context.Context, spaceID int64, recordIDs []int64) ([]int64, map[int64]string)
 	ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error
 	GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error)
 	ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error)

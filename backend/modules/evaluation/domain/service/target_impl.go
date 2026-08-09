@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -757,6 +758,18 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 	e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs, false)
 }
 
+// extractExtraSandboxExecuteID 从 record 的 outputData.Ext 里读取额外沙箱 execute id；
+// 缺失/空值返回 ""。
+//
+// 与 sandboxExecuteIDsOf 的分工: 销毁走 sandboxExecuteIDsOf (取两个 key 的并集, 是本函数的超集);
+// 本函数只在需要"单个 extra id 原值"时用 —— 例如把它重新写回 fail record 的 ext 供事后审计。
+func extractExtraSandboxExecuteID(record *entity.EvalTargetRecord) string {
+	if record == nil || record.EvalTargetOutputData == nil {
+		return ""
+	}
+	return record.EvalTargetOutputData.Ext[entity.SandboxAgentExtKeyExtraExecuteID]
+}
+
 // sandboxExecuteIDsOf 取该 record 本次调用实际创建的 sandbox execution id 列表。
 //
 // 双沙箱一次调用会创建多个 execution, 其 id 命名规则属 operator 实现细节, 平台侧不推断 ——
@@ -855,6 +868,12 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 	})
 }
 
+// destroySandboxExtraExecute 异步 best-effort 销毁指定字符串 executeID 的沙箱执行；用于双沙箱
+// 从沙箱这类没有 int64 ID 的额外销毁点。zombieTimeout 强制 false，避免向从沙箱下发收尾命令。
+func (e *EvalTargetServiceImpl) destroySandboxExtraExecute(ctx context.Context, taskID string, spaceID int64, executeID string) {
+	e.destroySandboxExecute(ctx, taskID, spaceID, []string{executeID}, false)
+}
+
 // TerminateAsyncRecordsAndDestroySandbox 把仍处于 AsyncInvoking 状态的 SandboxAgent EvalTargetRecord 置为 Fail，
 // 并以 best-effort 方式触发沙箱 Execute 销毁。非 SandboxAgent / 非 AsyncInvoking 的 record 会被忽略。
 // zombieTimeout=true 时，Destroy 请求会带上 SandboxAgent 收尾命令 EndCmd（含 expt_id/invoke_id）；
@@ -901,13 +920,6 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		return
 	}
 
-	failOutput := &entity.EvalTargetOutputData{
-		EvalTargetRunError: &entity.EvalTargetRunError{
-			Code:    errCode,
-			Message: errMessage,
-		},
-	}
-
 	taskIDCache := make(map[int64]string)
 	for _, r := range records {
 		if r == nil {
@@ -921,8 +933,19 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		}
 		// ⚠️ 必须在下面用 failOutput 覆盖 EvalTargetOutputData 之前取，否则 ext 里
 		// operator 回传的 sandbox execute id 列表会被抹掉，只能退回裸 record.ID。
+		// sandboxExecuteIDsOf 同时覆盖两种 ext 形态（完整列表 / 主 id + extra id），是 extra 单值的超集。
 		executeIDs := sandboxExecuteIDsOf(ctx, r)
-
+		extraExecuteID := extractExtraSandboxExecuteID(r)
+		failOutput := &entity.EvalTargetOutputData{
+			EvalTargetRunError: &entity.EvalTargetRunError{
+				Code:    errCode,
+				Message: errMessage,
+			},
+		}
+		// 保留 extra execute id 在落库的 fail record 上，便于事后审计 / 手动兜底销毁。
+		if extraExecuteID != "" {
+			failOutput.Ext = map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: extraExecuteID}
+		}
 		r.Status = gptr.Of(entity.EvalTargetRunStatusFail)
 		r.EvalTargetOutputData = failOutput
 		if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, r, nil); err != nil {
@@ -934,7 +957,184 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
 			taskIDCache[r.ExperimentRunID] = taskID
 		}
-		e.destroySandboxExecute(ctx, taskID, r.SpaceID, executeIDs, zombieTimeout)
+		// ⚠️ 主 / 从沙箱必须**分两次**调用销毁，不能合成一次传 2 个 ExecuteIDs：
+		// commercial 侧 destroyReqDO2PO 只在 len(ExecuteIDs)==1 时才拼 zombie 收尾 EndCmd
+		// （见 infra/rpc/sandbox/sandbox_scheduler.go），合成一次会让 EndCmd 静默不下发。
+		// 主沙箱：executeIDs 里除 extra 之外的部分（通常即 record.ID），带 zombieTimeout。
+		for _, id := range executeIDs {
+			if id == extraExecuteID {
+				continue
+			}
+			e.destroySandboxExecute(ctx, taskID, r.SpaceID, []string{id}, zombieTimeout)
+		}
+		// 双沙箱：额外销毁从沙箱 execute，语义对齐 destroySandboxExecuteIfNeeded (success 分支)。
+		// 从沙箱 zombieTimeout 恒为 false，不需要下发 SandboxAgent EndCmd（EndCmd 只对主沙箱有意义）。
+		if extraExecuteID != "" {
+			e.destroySandboxExtraExecute(ctx, taskID, r.SpaceID, extraExecuteID)
+		}
+	}
+}
+
+// sandboxStatusCheckConcurrency 单次 sweep 内并发调 sandbox.Get 的上限，避免打爆下游。
+const sandboxStatusCheckConcurrency = 8
+
+// CheckSandboxTerminated 参见 IEvalTargetService.CheckSandboxTerminated。
+// 实现要点：
+//   - 只对 SandboxAgent 且仍处于 AsyncInvoking 的 record 发 sandbox.Get；避免在同步/非 sandbox record 上浪费 RPC。
+//   - Get 出错（含开源 stub 的 "not implement" / adapter 未注入）一律 warn + skip 该 record，让 zombie 兜底。
+//   - 只把 Failed / Canceled 视为"结束但没上报"命中；Succeeded 会有毫秒级 in-flight 回调窗口，交给 zombie 或后续 tick 兜底。
+func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spaceID int64, recordIDs []int64) ([]int64, map[int64]string) {
+	if e.sandboxSchedulerAdapter == nil || len(recordIDs) == 0 {
+		return nil, nil
+	}
+
+	records, err := e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxStatusCheck] batch get eval target records fail, space_id=%d, err=%v", spaceID, err)
+		return nil, nil
+	}
+
+	versionIDSet := make(map[int64]struct{})
+	for _, r := range records {
+		if r == nil || r.TargetVersionID <= 0 {
+			continue
+		}
+		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+			continue
+		}
+		versionIDSet[r.TargetVersionID] = struct{}{}
+	}
+	if len(versionIDSet) == 0 {
+		return nil, nil
+	}
+	versionIDs := make([]int64, 0, len(versionIDSet))
+	for id := range versionIDSet {
+		versionIDs = append(versionIDs, id)
+	}
+	versions, err := e.evalTargetRepo.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs)
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxStatusCheck] batch get eval target versions fail, space_id=%d, err=%v", spaceID, err)
+		return nil, nil
+	}
+	sandboxVersionIDs := make(map[int64]struct{})
+	for _, v := range versions {
+		if v == nil || v.EvalTargetVersion == nil {
+			continue
+		}
+		if v.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+			sandboxVersionIDs[v.EvalTargetVersion.ID] = struct{}{}
+		}
+	}
+	if len(sandboxVersionIDs) == 0 {
+		return nil, nil
+	}
+
+	// 筛出真正需要查询的 record，避免起没用的 goroutine
+	targets := make([]*entity.EvalTargetRecord, 0, len(records))
+	for _, r := range records {
+		if r == nil {
+			continue
+		}
+		if _, ok := sandboxVersionIDs[r.TargetVersionID]; !ok {
+			continue
+		}
+		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
+			continue
+		}
+		targets = append(targets, r)
+	}
+	if len(targets) == 0 {
+		return nil, nil
+	}
+
+	sem := make(chan struct{}, sandboxStatusCheckConcurrency)
+	var mu sync.Mutex
+	terminated := make([]int64, 0)
+	statusMap := make(map[int64]string)
+
+	var wg sync.WaitGroup
+	for _, r := range targets {
+		r := r
+		wg.Add(1)
+		sem <- struct{}{}
+		goroutine.Go(ctx, func() {
+			defer func() {
+				<-sem
+				wg.Done()
+			}()
+			// 主沙箱：ExecuteID = record.ID
+			mainTerminal, mainStatus := e.querySandboxTerminalStatus(ctx, strconv.FormatInt(r.ID, 10), spaceID, r.ID, "main")
+			// 从沙箱（双沙箱模式）：ExecuteID 从 Ext 里取；单沙箱模式 extra 为空，跳过。
+			// 任一进终态就算命中——双沙箱是配对关系，一挂另一边产出也没意义。
+			var subTerminal bool
+			var subStatus rpc.SandboxExecuteStatus
+			if extra := extractExtraSandboxExecuteID(r); extra != "" {
+				subTerminal, subStatus = e.querySandboxTerminalStatus(ctx, extra, spaceID, r.ID, "subordinate")
+			}
+			if !mainTerminal && !subTerminal {
+				return
+			}
+			mu.Lock()
+			terminated = append(terminated, r.ID)
+			statusMap[r.ID] = combineSandboxStatusLabel(mainTerminal, mainStatus, subTerminal, subStatus)
+			mu.Unlock()
+		})
+	}
+	wg.Wait()
+
+	if len(terminated) == 0 {
+		return nil, nil
+	}
+	return terminated, statusMap
+}
+
+// querySandboxTerminalStatus 查询单个 sandbox execute 状态；返回 (是否终态, 状态)。
+// Get 出错 / adapter 未接入 / 非终态 一律 (false, _) —— warn + skip 该 execute。
+func (e *EvalTargetServiceImpl) querySandboxTerminalStatus(ctx context.Context, executeID string, spaceID, recordID int64, side string) (bool, rpc.SandboxExecuteStatus) {
+	resp, err := e.sandboxSchedulerAdapter.Get(ctx, &rpc.SandboxGetRequest{
+		ExecuteID:   executeID,
+		WorkspaceID: spaceID,
+	})
+	if err != nil {
+		logs.CtxWarn(ctx, "[SandboxStatusCheck] sandbox get fail, record_id=%d, execute_id=%s, side=%s, err=%v", recordID, executeID, side, err)
+		return false, 0
+	}
+	if resp == nil || resp.ExecuteInfo == nil {
+		return false, 0
+	}
+	status := resp.ExecuteInfo.Status
+	if status != rpc.SandboxExecuteStatusFailed && status != rpc.SandboxExecuteStatusCanceled && status != rpc.SandboxExecuteStatusFinished {
+		return false, status
+	}
+	return true, status
+}
+
+// combineSandboxStatusLabel 生成"哪一侧沙箱进入终态"的人类可读标签，写进 err_msg 辅助定位。
+//
+//	"Failed (main)" / "Canceled (subordinate)" / "Failed (main), Canceled (subordinate)"
+func combineSandboxStatusLabel(mainTerminal bool, mainStatus rpc.SandboxExecuteStatus, subTerminal bool, subStatus rpc.SandboxExecuteStatus) string {
+	parts := make([]string, 0, 2)
+	if mainTerminal {
+		parts = append(parts, sandboxStatusText(mainStatus)+" (main)")
+	}
+	if subTerminal {
+		parts = append(parts, sandboxStatusText(subStatus)+" (subordinate)")
+	}
+	return strings.Join(parts, ", ")
+}
+
+func sandboxStatusText(s rpc.SandboxExecuteStatus) string {
+	switch s {
+	case rpc.SandboxExecuteStatusFailed:
+		return "Failed"
+	case rpc.SandboxExecuteStatusCanceled:
+		return "Canceled"
+	case rpc.SandboxExecuteStatusFinished:
+		return "Finished"
+	case rpc.SandboxExecuteStatusSucceeded:
+		return "Succeeded"
+	default:
+		return strconv.Itoa(int(s))
 	}
 }
 

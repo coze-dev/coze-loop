@@ -2618,6 +2618,80 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox(t *testing
 		assert.Equal(t, int32(100), saved.EvalTargetOutputData.EvalTargetRunError.Code)
 		assert.Equal(t, "msg", saved.EvalTargetOutputData.EvalTargetRunError.Message)
 	})
+
+	t.Run("双沙箱: 主 + 从两个 execute 都要销毁, 且 ext 落库保留", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		mockRunLog := repomocks.NewMockIExptRunLogRepo(ctrl)
+		svc := &EvalTargetServiceImpl{
+			evalTargetRepo:          mockRepo,
+			sandboxSchedulerAdapter: mockSched,
+			exptRunLogRepo:          mockRunLog,
+		}
+
+		records := []*entity.EvalTargetRecord{{
+			ID: 10, TargetVersionID: 20, SpaceID: 1, ExperimentRunID: 50,
+			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				Ext: map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: "sub-99"},
+			},
+		}}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).Return(records, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+
+		var saved *entity.EvalTargetRecord
+		mockRepo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Nil()).
+			DoAndReturn(func(_ context.Context, r *entity.EvalTargetRecord, _ *bool) error {
+				saved = r
+				return nil
+			}).Times(1)
+
+		mockRunLog.EXPECT().Get(gomock.Any(), int64(0), int64(50)).Return(&entity.ExptRunLog{ExptID: 999}, nil).Times(1)
+
+		var mu sync.Mutex
+		destroyed := make([]*rpc.SandboxDestroyRequest, 0, 2)
+		done := make(chan struct{}, 2)
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				mu.Lock()
+				destroyed = append(destroyed, req)
+				mu.Unlock()
+				done <- struct{}{}
+				return &rpc.SandboxDestroyResponse{}, nil
+			}).Times(2)
+
+		svc.TerminateAsyncRecordsAndDestroySandbox(context.Background(), 1, []int64{10}, 100, "msg", false)
+
+		for i := 0; i < 2; i++ {
+			select {
+			case <-done:
+			case <-time.After(2 * time.Second):
+				t.Fatalf("destroy goroutine timeout, got %d/2 destroys", i)
+			}
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		execIDs := map[string]bool{}
+		for _, r := range destroyed {
+			assert.Equal(t, "999", r.TaskID)
+			assert.Len(t, r.ExecuteIDs, 1)
+			execIDs[r.ExecuteIDs[0]] = true
+		}
+		assert.True(t, execIDs["10"], "should destroy main execute id")
+		assert.True(t, execIDs["sub-99"], "should destroy subordinate execute id")
+
+		// fail record 保留 extra execute id 便于事后审计
+		assert.NotNil(t, saved)
+		assert.Equal(t, entity.EvalTargetRunStatusFail, gptr.Indirect(saved.Status))
+		require.NotNil(t, saved.EvalTargetOutputData)
+		assert.Equal(t, "sub-99", saved.EvalTargetOutputData.Ext[entity.SandboxAgentExtKeyExtraExecuteID])
+	})
 }
 
 // TestEvalTargetServiceImpl_resolveSandboxTaskIDByRunID 覆盖私有方法的分支
@@ -2991,4 +3065,380 @@ func TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox_ZombieTime
 	case <-time.After(2 * time.Second):
 		t.Fatal("destroy goroutine timeout")
 	}
+}
+
+// TestEvalTargetServiceImpl_CheckSandboxTerminated 覆盖沙箱状态巡检的分支:
+// - adapter 未注入 → 直接返回 nil, nil
+// - List 失败 → 返回 nil, nil (吞掉不外抛)
+// - 版本非 SandboxAgent → 不发 Get
+// - record 非 AsyncInvoking → 提前过滤，不发 Get
+// - Get 报错 → 该 record 跳过
+// - Failed / Canceled → 命中
+// - Succeeded / Running → 不命中（避免与 in-flight 回调竞争）
+func TestEvalTargetServiceImpl_CheckSandboxTerminated(t *testing.T) {
+	t.Run("adapter 未注入直接返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := &EvalTargetServiceImpl{evalTargetRepo: repomocks.NewMockIEvalTargetRepo(ctrl)}
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	t.Run("空 recordIDs 直接返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := &EvalTargetServiceImpl{
+			sandboxSchedulerAdapter: trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl),
+			evalTargetRepo:          repomocks.NewMockIEvalTargetRepo(ctrl),
+		}
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, nil)
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	t.Run("List 失败静默返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		svc := &EvalTargetServiceImpl{
+			sandboxSchedulerAdapter: trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl),
+			evalTargetRepo:          mockRepo,
+		}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return(nil, errors.New("db error"))
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	t.Run("非 SandboxAgent 版本不发 Get", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeCozeBot,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20},
+			}}, nil)
+		// mockSched.Get 不应被调用
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	t.Run("非 AsyncInvoking 提前过滤", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, Status: gptr.Of(entity.EvalTargetRunStatusSuccess)}}, nil)
+		// 版本查询也不该发起，因为 versionIDSet 为空
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	buildSandboxCase := func(t *testing.T, status rpc.SandboxExecuteStatus, wantHit bool, wantLabel string) {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
+				assert.Equal(t, "10", req.ExecuteID)
+				assert.Equal(t, int64(1), req.WorkspaceID)
+				return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: status}}, nil
+			}).Times(1)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		if wantHit {
+			assert.Equal(t, []int64{10}, got)
+			assert.Equal(t, wantLabel, statuses[10])
+		} else {
+			assert.Nil(t, got)
+			assert.Nil(t, statuses)
+		}
+	}
+
+	t.Run("Failed 命中", func(t *testing.T) {
+		buildSandboxCase(t, rpc.SandboxExecuteStatusFailed, true, "Failed (main)")
+	})
+	t.Run("Canceled 命中", func(t *testing.T) {
+		buildSandboxCase(t, rpc.SandboxExecuteStatusCanceled, true, "Canceled (main)")
+	})
+	t.Run("Succeeded 不命中 (留给回调)", func(t *testing.T) {
+		buildSandboxCase(t, rpc.SandboxExecuteStatusSucceeded, false, "")
+	})
+	t.Run("Running 不命中", func(t *testing.T) {
+		buildSandboxCase(t, rpc.SandboxExecuteStatusRunning, false, "")
+	})
+
+	t.Run("Get 出错单条跳过", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			Return(nil, errors.New("not implement")).Times(1)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	// 双沙箱：ext 里带从沙箱 execute id 时，主 + 从两个 execute 都要查。
+	// 用 helper 一次性组装 record + 断言 sub Get 的调用形状。
+	buildDualCase := func(t *testing.T, mainStatus, subStatus rpc.SandboxExecuteStatus, wantHit bool, wantLabel string) {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		record := &entity.EvalTargetRecord{
+			ID: 10, TargetVersionID: 20, SpaceID: 1,
+			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				Ext: map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: "sub-99"},
+			},
+		}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{record}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		// 无论命中与否，主 + 从两个 execute 各查 1 次
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
+				switch req.ExecuteID {
+				case "10":
+					return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: mainStatus}}, nil
+				case "sub-99":
+					return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: subStatus}}, nil
+				default:
+					t.Fatalf("unexpected ExecuteID %q", req.ExecuteID)
+					return nil, nil
+				}
+			}).Times(2)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		if wantHit {
+			assert.Equal(t, []int64{10}, got)
+			assert.Equal(t, wantLabel, statuses[10])
+		} else {
+			assert.Nil(t, got)
+			assert.Nil(t, statuses)
+		}
+	}
+
+	t.Run("双沙箱: 主 Running + 从 Failed 命中 (subordinate)", func(t *testing.T) {
+		buildDualCase(t, rpc.SandboxExecuteStatusRunning, rpc.SandboxExecuteStatusFailed, true, "Failed (subordinate)")
+	})
+	t.Run("双沙箱: 主 Failed + 从 Running 命中 (main)", func(t *testing.T) {
+		buildDualCase(t, rpc.SandboxExecuteStatusFailed, rpc.SandboxExecuteStatusRunning, true, "Failed (main)")
+	})
+	t.Run("双沙箱: 主 Failed + 从 Canceled 组合标签", func(t *testing.T) {
+		buildDualCase(t, rpc.SandboxExecuteStatusFailed, rpc.SandboxExecuteStatusCanceled, true, "Failed (main), Canceled (subordinate)")
+	})
+	t.Run("双沙箱: 主从均 Running 不命中", func(t *testing.T) {
+		buildDualCase(t, rpc.SandboxExecuteStatusRunning, rpc.SandboxExecuteStatusRunning, false, "")
+	})
+	t.Run("双沙箱: 主 Failed + 从 Get 出错 仍按主命中", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		record := &entity.EvalTargetRecord{
+			ID: 10, TargetVersionID: 20, SpaceID: 1,
+			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				Ext: map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: "sub-99"},
+			},
+		}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{record}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
+				if req.ExecuteID == "10" {
+					return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: rpc.SandboxExecuteStatusFailed}}, nil
+				}
+				return nil, errors.New("sub get down")
+			}).Times(2)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Equal(t, []int64{10}, got)
+		assert.Equal(t, "Failed (main)", statuses[10])
+	})
+
+	// Finished(13) 是评测终态，与 Failed/Canceled 一样必须视为命中，
+	// 否则会与 3h zombie 兜底冲突（对应 commit 91e5eed20 "treat sandbox Finished(13) as terminal in status sweep"）。
+	t.Run("Finished 命中 (视为终态)", func(t *testing.T) {
+		buildSandboxCase(t, rpc.SandboxExecuteStatusFinished, true, "Finished (main)")
+	})
+
+	t.Run("BatchGetEvalTargetVersion 失败静默返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return(nil, errors.New("version load failed"))
+		// mockSched.Get 不应被调用
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	// 无有效 record 版本 (targetVersionID<=0) 时不应发起版本查询
+	t.Run("record 无版本 ID 直接短路", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 0, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
+	// 混合场景: SandboxAgent record + 非 SandboxAgent record → 只查前者
+	t.Run("多 record 混合 只查 SandboxAgent 版本", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10, 11}).
+			Return([]*entity.EvalTargetRecord{
+				{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)},
+				{ID: 11, TargetVersionID: 21, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)},
+			}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ int64, ids []int64) ([]*entity.EvalTarget, error) {
+				assert.ElementsMatch(t, []int64{20, 21}, ids)
+				return []*entity.EvalTarget{
+					{EvalTargetType: entity.EvalTargetTypeSandboxAgent, EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent}},
+					{EvalTargetType: entity.EvalTargetTypeCozeBot, EvalTargetVersion: &entity.EvalTargetVersion{ID: 21}},
+				}, nil
+			})
+		// 只应对 record 10 (execute id "10") 发起 Get
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
+				assert.Equal(t, "10", req.ExecuteID)
+				return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: rpc.SandboxExecuteStatusFailed}}, nil
+			}).Times(1)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10, 11})
+		assert.Equal(t, []int64{10}, got)
+		assert.Equal(t, "Failed (main)", statuses[10])
+	})
+
+	// resp.ExecuteInfo == nil 应保守视为未终态
+	t.Run("resp 或 ExecuteInfo 为 nil 视为未终态", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{{ID: 10, TargetVersionID: 20, SpaceID: 1, Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking)}}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			Return(&rpc.SandboxGetResponse{ExecuteInfo: nil}, nil).Times(1)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+}
+
+// TestSandboxStatusText 覆盖沙箱状态字面量映射，包括所有终态、非终态以及默认分支。
+func TestSandboxStatusText(t *testing.T) {
+	cases := []struct {
+		in   rpc.SandboxExecuteStatus
+		want string
+	}{
+		{rpc.SandboxExecuteStatusFailed, "Failed"},
+		{rpc.SandboxExecuteStatusCanceled, "Canceled"},
+		{rpc.SandboxExecuteStatusFinished, "Finished"},
+		{rpc.SandboxExecuteStatusSucceeded, "Succeeded"},
+		// 未列举状态走 default 分支，返回原始数字字面量
+		{rpc.SandboxExecuteStatus(9999), "9999"},
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.want, sandboxStatusText(c.in), "status=%v", c.in)
+	}
+}
+
+// TestCombineSandboxStatusLabel 覆盖主从沙箱终态标签组合的所有分支:
+// 只主 / 只从 / 双终态 / 双未终态。
+func TestCombineSandboxStatusLabel(t *testing.T) {
+	// 只主命中
+	assert.Equal(t, "Failed (main)",
+		combineSandboxStatusLabel(true, rpc.SandboxExecuteStatusFailed, false, 0))
+	// 只从命中
+	assert.Equal(t, "Canceled (subordinate)",
+		combineSandboxStatusLabel(false, 0, true, rpc.SandboxExecuteStatusCanceled))
+	// 主从组合
+	assert.Equal(t, "Failed (main), Canceled (subordinate)",
+		combineSandboxStatusLabel(true, rpc.SandboxExecuteStatusFailed, true, rpc.SandboxExecuteStatusCanceled))
+	// 主 Finished + 从 Finished 组合
+	assert.Equal(t, "Finished (main), Finished (subordinate)",
+		combineSandboxStatusLabel(true, rpc.SandboxExecuteStatusFinished, true, rpc.SandboxExecuteStatusFinished))
+	// 都不命中 → 空字符串
+	assert.Equal(t, "",
+		combineSandboxStatusLabel(false, 0, false, 0))
 }
