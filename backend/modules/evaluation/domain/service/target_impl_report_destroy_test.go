@@ -36,11 +36,11 @@ func TestReportInvokeRecords_DestroyUsesOperatorExecuteIDs(t *testing.T) {
 	t.Parallel()
 
 	const (
-		invokeID = int64(7590114876341516034)
-		spaceID  = int64(7590103974980812802)
+		invokeID  = int64(7590114876341516034)
+		spaceID   = int64(7590103974980812802)
 		versionID = int64(7590114891010282498)
-		runID    = int64(7590114891010283266)
-		exptID   = int64(7590114891010282754)
+		runID     = int64(7590114891010283266)
+		exptID    = int64(7590114891010282754)
 	)
 	wantIDs := []string{"7590114876341516034-agent", "7590114876341516034-orch"}
 
