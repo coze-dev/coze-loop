@@ -5,8 +5,10 @@ package application
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -862,7 +864,39 @@ func standardOutput(item *entity.ItemResult, exptID int64) map[string]any {
 		}
 	}
 	// 平台兜底只补 detail.output；file_diff 平台侧无数据、为空不回填（对象要则自报 FORNAX_output）。
-	return map[string]any{"detail": map[string]any{"output": detailOutput}}
+	return map[string]any{"detail": map[string]any{"output": stripStandardEvalOutputSelfFields(detailOutput)}}
+}
+
+// stripStandardEvalOutputSelfFields 从要放进 detail.output 的 output_fields 里剔掉
+// **standard eval output 自身的字段**，只留评测对象真正的业务输出。
+//
+// ⚠️ 存在的理由（嵌套）：外层响应的 output / eval / agent / rounds / detail / extra 已由
+// mergeStandardEvalOutputField 逐个装配，而 output_fields 顶层恰好就含着这些字段本身
+// (FORNAX_output / FORNAX_eval / ...)。整包塞进 detail.output 会让同一份数据在响应里
+// 出现两次——外层一份、detail.output 里又套一份，消费方无从判断该读哪个。
+//
+// 剔两类 key，与 lookupFornaxField 的查找口径严格对齐（它认前缀也认裸 key，故两者都要剔）：
+//  1. FORNAX_ 前缀的全部（新协议上报）
+//  2. 裸标准字段名（standardEvalOutputMergeableFields，存量上报的向前兼容形态）
+//
+// 刻意**不剔**的两类，因为外层不消费它们、不构成嵌套：
+//   - 裸 source：source 恒由平台生成，不在 mergeable 集合内（见其注释）
+//   - 小写 fornax_ 前缀的平台元信息（如 fornax_sandbox_log_url）
+//
+// 返回值恒为非 nil map（入参空时返回空 map），避免 detail.output 从 {} 变成 null
+// 让消费方多一种形态要处理。
+func stripStandardEvalOutputSelfFields(fields map[string]*entity.Content) map[string]*entity.Content {
+	out := make(map[string]*entity.Content, len(fields))
+	for k, v := range fields {
+		if strings.HasPrefix(k, standardEvalOutputFornaxPrefix) {
+			continue
+		}
+		if slices.Contains(standardEvalOutputMergeableFields, k) {
+			continue
+		}
+		out[k] = v
+	}
+	return out
 }
 
 func standardEval(item *entity.ItemResult, exptID int64, opt standardEvalOutputBuildOptions) map[string]any {
