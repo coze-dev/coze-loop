@@ -43,7 +43,7 @@ func TestSuaMode_OpenAPIToEntityRoundTripIsClosed(t *testing.T) {
 	}
 	for _, tc := range cases {
 		tc := tc
-		t.Run(string(tc.openAPI), func(t *testing.T) {
+		t.Run(tc.openAPI, func(t *testing.T) {
 			t.Parallel()
 
 			// 第一跳: OpenAPI DTO → domain int 枚举 (创建接口实际调的就是这个函数)。
@@ -64,7 +64,7 @@ func TestSuaMode_OpenAPIToEntityRoundTripIsClosed(t *testing.T) {
 
 			assert.Equal(t, tc.want, do.SuaMode)
 			// 闭合性: 落库值必须与 OpenAPI 入参**逐字相同**, 不允许再有隐式归一。
-			assert.Equal(t, string(tc.openAPI), string(do.SuaMode),
+			assert.Equal(t, tc.openAPI, do.SuaMode,
 				"往返必须闭合: 入口收 %q 就该落库 %q, 中间不得偷偷改写字面量", tc.openAPI, tc.openAPI)
 		})
 	}
@@ -92,7 +92,7 @@ func TestSuaMode_InvalidValueRejectedAtSubmit(t *testing.T) {
 		"loops",
 	} {
 		bad := bad
-		t.Run(string(bad), func(t *testing.T) {
+		t.Run(bad, func(t *testing.T) {
 			t.Parallel()
 
 			dom, err := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{
@@ -100,7 +100,7 @@ func TestSuaMode_InvalidValueRejectedAtSubmit(t *testing.T) {
 				SuaMode: gptr.Of(bad),
 			})
 			require.Error(t, err, "非法 sua_mode %q 必须在入口报错, 不能静默丢弃", bad)
-			assert.Contains(t, err.Error(), string(bad), "报错要指名道姓, 否则用户看不出是哪个值不对")
+			assert.Contains(t, err.Error(), bad, "报错要指名道姓, 否则用户看不出是哪个值不对")
 			assert.Nil(t, dom, "报错时不该返回半成品配置")
 		})
 	}
@@ -112,13 +112,13 @@ func TestRunMode_InvalidValueRejectedAtSubmit(t *testing.T) {
 
 	for _, bad := range []openapiExperiment.ExptRunMode{"bogus", "SingleTurn", "sua"} {
 		bad := bad
-		t.Run(string(bad), func(t *testing.T) {
+		t.Run(bad, func(t *testing.T) {
 			t.Parallel()
 			dom, err := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{
 				RunMode: gptr.Of(bad),
 			})
 			require.Error(t, err, "非法 run_mode %q 必须在入口报错", bad)
-			assert.Contains(t, err.Error(), string(bad))
+			assert.Contains(t, err.Error(), bad)
 			assert.Nil(t, dom)
 		})
 	}
