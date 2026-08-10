@@ -199,3 +199,7 @@ func TestExpireErrorProcessorFactory_CreateProcessor(t *testing.T) {
 		})
 	}
 }
+
+func TestExpireErrorProcessor_GetName(t *testing.T) {
+	assert.Equal(t, "ExpireErrorProcessor", (&ExpireErrorProcessor{}).GetName())
+}

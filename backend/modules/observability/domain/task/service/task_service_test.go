@@ -103,7 +103,7 @@ func newTaskServiceWithProcessor(t *testing.T, ctrl *gomock.Controller, repo tas
 		return ids, nil
 	}).AnyTimes()
 
-	storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+	storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
 		StorageName:   "ck",
 		StorageConfig: map[string]string{},
 	}).AnyTimes()
@@ -763,7 +763,7 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 
 		// 设置基本mock期望
 		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
-		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
 			StorageName:   "ck",
 			StorageConfig: map[string]string{},
 		}).AnyTimes()
@@ -807,7 +807,7 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 
 		// 设置基本mock期望
 		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
-		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
 			StorageName:   "ck",
 			StorageConfig: map[string]string{},
 		}).AnyTimes()
@@ -853,7 +853,7 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 
 		// 设置基本mock期望
 		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
-		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
 			StorageName:   "ck",
 			StorageConfig: map[string]string{},
 		}).AnyTimes()
@@ -898,7 +898,7 @@ func TestTaskServiceImpl_sendBackfillMessage(t *testing.T) {
 
 		// 设置基本mock期望
 		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
-		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
 			StorageName:   "ck",
 			StorageConfig: map[string]string{},
 		}).AnyTimes()
@@ -950,7 +950,7 @@ func TestTaskServiceImpl_sendBackfillMessage(t *testing.T) {
 
 		// 设置基本mock期望
 		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
-		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
 			StorageName:   "ck",
 			StorageConfig: map[string]string{},
 		}).AnyTimes()

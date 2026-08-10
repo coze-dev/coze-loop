@@ -195,6 +195,11 @@ func (p *ResultPayload) IsValid() error {
 	return nil
 }
 func (p *TurnSystemInfo) IsValid() error {
+	if p.Error != nil {
+		if err := p.Error.IsValid(); err != nil {
+			return fmt.Errorf("field Error not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *TurnResult_) IsValid() error {
@@ -214,6 +219,11 @@ func (p *ItemResult_) IsValid() error {
 	return nil
 }
 func (p *ItemSystemInfo) IsValid() error {
+	if p.Error != nil {
+		if err := p.Error.IsValid(); err != nil {
+			return fmt.Errorf("field Error not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {

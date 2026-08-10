@@ -25,6 +25,10 @@ const (
 	clipProcessorSuffix             = "..."
 )
 
+func (c *ClipProcessor) GetName() string {
+	return "ClipProcessor"
+}
+
 func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	var cfg *entity.ColumnExtractConfig
 	if c.columnExtractConfigRepo != nil {
@@ -74,6 +78,10 @@ func (c *ClipProcessorFactory) CreateProcessor(ctx context.Context, set Settings
 
 // NoOpProcessor is a processor that does nothing, returning spans as-is.
 type NoOpProcessor struct{}
+
+func (n *NoOpProcessor) GetName() string {
+	return "NoOpProcessor"
+}
 
 func (n *NoOpProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	return spans, nil

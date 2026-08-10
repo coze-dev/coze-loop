@@ -358,6 +358,10 @@ query_trace_rate_limit_config:
   default_max_qps: 10
   space_max_qps:
     123456: 100
+  # cached 场景独立限流；值兼任开关：>0 = 该 workspace 开放 cached 热缓存且按此 QPS 限流；
+  # <=0 或缺失 = 未开放 cached（降级走 ClickHouse 并吃原 default/space 限流）。
+  cached_default_max_qps: 0
+  cached_space_max_qps: {}
 
 key_span_type:
   default:

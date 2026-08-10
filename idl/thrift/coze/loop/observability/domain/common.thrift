@@ -28,6 +28,10 @@ typedef string MetadataScene (ts.enum="true")
 const MetadataScene MetadataScene_Default = "default"
 const MetadataScene MetadataScene_DataExtract = "data_extract"
 
+typedef string TraceScene (ts.enum="true")
+const TraceScene TraceScene_Default = "default"
+const TraceScene TraceScene_Cached = "cached"
+
 struct OrderBy {
     1: optional string field,
     2: optional bool is_asc,

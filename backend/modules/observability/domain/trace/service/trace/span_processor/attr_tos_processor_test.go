@@ -139,3 +139,7 @@ func TestAttrTosProcessorFactory_CreateProcessor(t *testing.T) {
 		})
 	}
 }
+
+func TestAttrTosProcessor_GetName(t *testing.T) {
+	assert.Equal(t, "AttrTosProcessor", (&AttrTosProcessor{}).GetName())
+}
