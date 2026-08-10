@@ -982,7 +982,9 @@ const sandboxStatusCheckConcurrency = 8
 // 实现要点：
 //   - 只对 SandboxAgent 且仍处于 AsyncInvoking 的 record 发 sandbox.Get；避免在同步/非 sandbox record 上浪费 RPC。
 //   - Get 出错（含开源 stub 的 "not implement" / adapter 未注入）一律 warn + skip 该 record，让 zombie 兜底。
-//   - 只把 Failed / Canceled 视为"结束但没上报"命中；Succeeded 会有毫秒级 in-flight 回调窗口，交给 zombie 或后续 tick 兜底。
+//   - 只把 Failed / Canceled / Finished 视为"结束但没上报"命中；Succeeded 会有毫秒级 in-flight 回调窗口，交给 zombie 或后续 tick 兜底。
+//   - 查哪些 execute id 由 sandboxExecuteIDsOf 决定（与销毁同源），**不按 record.ID 约定推断** ——
+//     否则双沙箱那种"id 带 operator 后缀"的形态整条记录都判不出终态，只能等 3h zombie。
 func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spaceID int64, recordIDs []int64) ([]int64, map[int64]string) {
 	if e.sandboxSchedulerAdapter == nil || len(recordIDs) == 0 {
 		return nil, nil
@@ -1062,14 +1064,40 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 				<-sem
 				wg.Done()
 			}()
-			// 主沙箱：ExecuteID = record.ID
-			mainTerminal, mainStatus := e.querySandboxTerminalStatus(ctx, strconv.FormatInt(r.ID, 10), spaceID, r.ID, "main")
-			// 从沙箱（双沙箱模式）：ExecuteID 从 Ext 里取；单沙箱模式 extra 为空，跳过。
-			// 任一进终态就算命中——双沙箱是配对关系，一挂另一边产出也没意义。
-			var subTerminal bool
-			var subStatus rpc.SandboxExecuteStatus
-			if extra := extractExtraSandboxExecuteID(r); extra != "" {
-				subTerminal, subStatus = e.querySandboxTerminalStatus(ctx, extra, spaceID, r.ID, "subordinate")
+			// execute id 一律走 sandboxExecuteIDsOf（与销毁同一个来源），**不按约定推断**。
+			//
+			// 这里曾把主沙箱硬编码成 `record.ID`（单沙箱约定），只从 ext 取"额外"那一个。
+			// 后果是双沙箱里"完整列表"那种形态（ext 只有 sandbox_execute_ids、没有 extra key，
+			// 其 id 带 operator 自己的后缀）**整条记录对本巡检完全不可见**：
+			// 主查询拿裸 record.ID 去问，沙箱侧根本没有这个 execution，只回
+			// "execution not found"，按 querySandboxTerminalStatus 的契约返回 (false, _)；
+			// 而 extra key 不存在，从查询直接跳过。于是 record 永远判不出终态，
+			// 这类实验拿不到本巡检的快速兜底，只能等 item 级 zombie 超时（异步默认 3h）。
+			//
+			// 现在与 destroySandboxExecuteIfNeeded / TerminateAsyncRecordsAndDestroySandbox
+			// 共用同一个取值函数：两个 ext key 都认、都缺才退回裸 record.ID。
+			// "id 怎么拼"只此一处知道，不再在巡检里复制一份约定。
+			//
+			// 任一 execution 进终态就算命中——双沙箱是配对关系，一边挂了另一边的产出也没意义。
+			ids := sandboxExecuteIDsOf(ctx, r)
+			var (
+				mainTerminal bool
+				mainStatus   rpc.SandboxExecuteStatus
+				subTerminal  bool
+				subStatus    rpc.SandboxExecuteStatus
+			)
+			for i, id := range ids {
+				// 列表首个即"主"（单沙箱下就是 record.ID；双沙箱下是 operator 回传的第一个），
+				// 其余归入"从"。side 只用于 err_msg 与日志可读性，不参与命中判定。
+				if i == 0 {
+					mainTerminal, mainStatus = e.querySandboxTerminalStatus(ctx, id, spaceID, r.ID, "main")
+					continue
+				}
+				terminal, status := e.querySandboxTerminalStatus(ctx, id, spaceID, r.ID, "subordinate")
+				// 多个从沙箱时取**第一个进终态**的那个做标签，避免被后面仍 Running 的覆盖掉。
+				if terminal && !subTerminal {
+					subTerminal, subStatus = terminal, status
+				}
 			}
 			if !mainTerminal && !subTerminal {
 				return
