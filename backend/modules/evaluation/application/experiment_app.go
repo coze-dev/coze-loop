@@ -169,6 +169,36 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs is only allowed when eval_set_source_type=MultiSetConfig"))
 	}
 
+	// ★ run_mode_config 枚举合法性校验 (内部面补齐 OpenAPI 面已有的闸)。
+	//
+	// OpenAPI 面在 convertor 入口就拒非法值 (OpenAPIRunModeConfigDTO2Domain 报
+	// CommonInvalidParamCode), 内部 Thrift 面此前**完全没有这道闸** —— 非法整数能一路进来,
+	// 然后被 suaRunModeDTO2DO 的 default 静默回落成 single_turn 落库。后果是一处判据分裂:
+	// Submit 侧 isValidExptRunModeDTO 判非法 → 旧链路租户(3), 而落库值已成合法 single_turn,
+	// Retry 侧从 eval_conf 读出来 → IsNewRunModeLink 判新链路 → 租户(4), 两次推导不一致,
+	// 撞沙箱侧 "cannot change tenant of active task"。与部署时间无关, 同一版代码即可复现。
+	//
+	// 修在入口而不是改 suaRunModeDTO2DO 的 default: 只改 default 虽能让两处判据自然一致,
+	// 但"调用方发了非法值"这件事仍被静默接受 (表现从"存 single_turn"变成"存空 run_mode")。
+	// 非法值应当报错、不该兜底 —— 与 sua_mode 那次修法同构 (default 改空串 + 入口报错,
+	// 见 convertor 的 suaModeDTO2DO 注释), 也与 entity.SuaModeHumanLoop 注释定的调子一致。
+	//
+	// 校验合法集必须与 entity.IsValidRunMode / isValidExptRunModeDTO 同步: IDL 新增
+	// ExptRunMode / SuaMode 枚举值时, 三处一起加, 否则新跑法会在入口被误拒。
+	if rmc := req.GetRunModeConfig(); rmc != nil {
+		if rmc.IsSetRunMode() && !isValidExptRunModeDTO(rmc) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid run_mode %d (supported: %d=single_turn, %d=fixed_script_multi_turn, %d=sua_multi_turn, %d=goal)",
+				rmc.GetRunMode(), domain_expt.ExptRunMode_SingleTurn, domain_expt.ExptRunMode_FixedScriptMultiTurn,
+				domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal)))
+		}
+		if rmc.IsSetSuaMode() && !isValidExptSuaModeDTO(rmc.GetSuaMode()) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid sua_mode %d (supported: %d=human_loop, %d=loop, %d=fixed)",
+				rmc.GetSuaMode(), domain_expt.SuaMode_HumanLoop, domain_expt.SuaMode_Loop, domain_expt.SuaMode_Fixed)))
+		}
+	}
+
 	// 多评测集 (MultiSetConfig) 空间灰度校验: 仅白名单空间可创建, 非白名单直接拦截报错。
 	// 白名单经 TCC 动态下发 (key=expt_multi_set_white_list), 默认空 = 全部禁止, allow_all=true 为全量开关。
 	if isMulti && !e.configer.GetExptMultiSetWhiteList(ctx).IsSpaceAllowed(req.GetWorkspaceID()) {
@@ -1374,11 +1404,22 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 	// 实测：运行中把并发从 5 调到 30，59 题里 35 题以此挂掉。
 	//
 	// 重复 Init 是安全的：调度侧 Init 走 taskRepo.Upsert，会更新 Concurrency；同 tenant 重复调用
-	// 不报错（只有在 Active task 上换 tenant 才拒绝），而这里 tenant 由同一个实验推导，不会变。
+	// 不报错 —— 调度侧只在 **Active** task 上换 tenant 才拒绝（判据 Status==Active && Tenant!=tenant，
+	// 报错文案 "cannot change tenant of active task"）。
+	//
+	// ⚠️ **原注释此处写着"tenant 由同一个实验推导，不会变"，该结论已失效**：它写于双沙箱租户恒定
+	// 的那一版，此后引入了按 run_mode 分新旧链路，同一个实验在不同代码版本下会推出不同 tenant
+	// （存量 task 上刻的是老租户，新代码推出新租户），于是本处 Init 也会撞上上面那条拒绝。
+	// 要定位是哪次改动引入的分流，用 git log -S isDualSandboxTenant / -S dualSandboxTenantByRunMode。
 	//
 	// 与 Retry 不同，Init 失败**不**让整个更新失败：DB 里的 ItemConcurNum 已经改完了，此时返回错误
 	// 会让调用方以为没生效而重试，反而更乱。名额没跟上的后果是新并发暂时吃不满（老名额仍可用，
 	// 实验不会中断），故降级为告警。
+	//
+	// ⚠️ 但**租户冲突是这条降级的例外，它会完全静默**：接口照常返回成功，用户以为并发已调好，
+	// 实际名额停在 Init 时那份，超出部分全部撞上面说的 601300702 fail-fast、item 成批永久失败
+	// —— 即上面"5 调到 30 挂 35 题"那个后果，却连一条错误都不冒（只有这条 warn）。
+	// 排查时若见并发调了不生效，先在日志里搜本条 warn 的 err 内容有没有 "cannot change tenant"。
 	if itemConcurNum != nil && e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
 		tenant := sandboxTenantForExperimentEntity(got)
 		concurrency := sandboxInitConcurrency(itemConcurNum, isDualSandboxTenant(tenant))
@@ -1735,6 +1776,22 @@ func isValidExptRunModeDTO(cfg *domain_expt.RunModeConfig) bool {
 	switch cfg.GetRunMode() {
 	case domain_expt.ExptRunMode_SingleTurn, domain_expt.ExptRunMode_FixedScriptMultiTurn,
 		domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal:
+		return true
+	default:
+		return false
+	}
+}
+
+// isValidExptSuaModeDTO 判断 DTO 侧 sua_mode 枚举值是否合法。
+//
+// 供 CreateExperiment 入口拒非法值用 (内部面补齐 OpenAPI 面 openAPISuaModeToDomain 已有的闸)。
+// Fixed 仍算合法: 它是**已废弃但仍受理**的值 (等价降级为 fixed_script_multi_turn, 见
+// domain/expt.thrift 的 SuaMode 注释), 与"拼错/未来新增值"不是一回事, 不能在入口拒掉。
+//
+// ⚠️ 合法集与 IDL 的 SuaMode 枚举同步: 新增值时这里要一起加。
+func isValidExptSuaModeDTO(m domain_expt.SuaMode) bool {
+	switch m {
+	case domain_expt.SuaMode_HumanLoop, domain_expt.SuaMode_Loop, domain_expt.SuaMode_Fixed:
 		return true
 	default:
 		return false
