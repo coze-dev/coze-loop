@@ -186,9 +186,16 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	if evalErr != nil {
 		var errMsg string
-		if se, ok := errorx.FromStatusError(evalErr); ok && (se.Code() == errno.CustomEvalTargetInvokeFailCode || se.Code() == errno.CustomRPCEvaluatorRunFailedCode) {
+		switch {
+		case isSandboxAgentExpt(etec.Expt):
+			// 沙箱 agent 评测对象加白:错误文案直接沿用异步上报方原文,不做 ConvertErrMsg 归一化。
 			errMsg = errorx.ErrorWithoutStack(evalErr)
-		} else {
+		case func() bool {
+			se, ok := errorx.FromStatusError(evalErr)
+			return ok && (se.Code() == errno.CustomEvalTargetInvokeFailCode || se.Code() == errno.CustomRPCEvaluatorRunFailedCode)
+		}():
+			errMsg = errorx.ErrorWithoutStack(evalErr)
+		default:
 			errMsg = e.Configer.GetErrCtrl(persistCtx).ConvertErrMsg(evalErr.Error())
 		}
 

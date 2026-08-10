@@ -1283,6 +1283,8 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		Session:                 actx.Session,
 		EnableExtractTrajectory: actx.EnableExtractTrajectory,
 		AsyncUnixMS:             actx.AsyncUnixMS,
+		// 沙箱 agent 评测对象加白:直接沿用上报方提供的错误文案,不再经过 ExptErrCtrl 归一化。
+		SkipErrMsgConvert: actx.Callee == sandboxAgentAsyncCallee,
 	}); err != nil {
 		return nil, err
 	}
