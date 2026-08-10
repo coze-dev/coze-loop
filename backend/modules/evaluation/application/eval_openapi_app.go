@@ -1375,12 +1375,22 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 
 // debugSandboxExecuteIDs 取调试态本次调用实际创建的 sandbox execution id 列表。
 //
-// 权威来源是 operator 在 AsyncExecute 回传、落在 record output ext 的
-// consts.OutputDataExtKeySandboxExecuteIDs（JSON 字符串数组）：双沙箱一次调用创建多个 execution，
-// id 命名规则（`<invokeID>-agent` / `-orch`）属 operator 实现细节，**平台侧不推断**。
+// 权威来源是 operator 在 AsyncExecute 回传、落在 record output ext 的两个 key：
 //
-// 读不到时退回裸 invokeID —— 那是单沙箱实现的 executeID，也是本函数引入前的唯一行为，
-// 所以退化路径与改动前完全一致，不会因为读 ext 失败而比原来更差。
+//	consts.OutputDataExtKeySandboxExecuteIDs   (JSON 字符串数组, 全部 execution)
+//	entity.SandboxAgentExtKeyExtraExecuteID    (裸字符串, 仅"额外"那个; 主 execution = invokeID)
+//
+// 双沙箱一次调用创建多个 execution，id 命名规则（`<invokeID>-agent` / `-orch`）属 operator
+// 实现细节，**平台侧不推断**。
+//
+// ⚠️ **两个 key 都要认**：双沙箱有两套 operator 实现并存、各写自己的 key（与 service 层
+// sandboxExecuteIDsOf 同一约定）。原来这里只读列表那个 key，于是写 extra key 的那套实现
+// 在调试态**静默漏掉从沙箱** —— 而调试态走不到 service 层的 destroySandboxExecuteIfNeeded
+// （那里按 record.TargetVersionID 查 version 判类型，调试用的 patchy target 从未落库），
+// 本函数是调试态唯一的清理来源，漏了就只能等平台侧 patrol。
+//
+// 两个 key 都读不到时退回裸 invokeID —— 那是单沙箱实现的 executeID，也是本函数引入前的
+// 唯一行为，所以退化路径与改动前完全一致，不会因为读 ext 失败而比原来更差。
 func (e *EvalOpenAPIApplication) debugSandboxExecuteIDs(ctx context.Context, spaceID, invokeID int64) []string {
 	fallback := []string{strconv.FormatInt(invokeID, 10)}
 	record, err := e.targetSvc.GetRecordByID(ctx, spaceID, invokeID)
@@ -1388,20 +1398,35 @@ func (e *EvalOpenAPIApplication) debugSandboxExecuteIDs(ctx context.Context, spa
 		logs.CtxWarn(ctx, "[SandboxDestroy] load debug record for execute ids fail, invoke_id=%d, err=%v", invokeID, err)
 		return fallback
 	}
-	raw := record.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxExecuteIDs]
-	if raw == "" {
-		return fallback
-	}
-	var ids []string
-	if err := json.Unmarshal([]byte(raw), &ids); err != nil {
-		logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal debug sandbox execute ids fail, invoke_id=%d, raw=%s, err=%v", invokeID, raw, err)
-		return fallback
-	}
-	out := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if id != "" {
-			out = append(out, id)
+	ext := record.EvalTargetOutputData.Ext
+
+	seen := make(map[string]bool)
+	out := make([]string, 0, 2)
+	add := func(id string) {
+		if id == "" || seen[id] {
+			return
 		}
+		seen[id] = true
+		out = append(out, id)
+	}
+
+	// 形态一：完整列表。
+	if raw := ext[consts.OutputDataExtKeySandboxExecuteIDs]; raw != "" {
+		var ids []string
+		if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal debug sandbox execute ids fail, invoke_id=%d, raw=%s, err=%v", invokeID, raw, err)
+		} else {
+			for _, id := range ids {
+				add(id)
+			}
+		}
+	}
+
+	// 形态二：主 execution (= invokeID) + 一个额外 id。
+	// 只有该 key 存在时才补主 id —— 否则会给形态一的结果凭空多加一个不存在的裸 id。
+	if extra := ext[entity.SandboxAgentExtKeyExtraExecuteID]; extra != "" {
+		add(strconv.FormatInt(invokeID, 10))
+		add(extra)
 	}
 	if len(out) == 0 {
 		return fallback
