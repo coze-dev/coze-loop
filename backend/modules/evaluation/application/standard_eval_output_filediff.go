@@ -52,19 +52,31 @@ const (
 // file_diff 子字段名。与 runtime 侧 fileDiffPayload / fileDiff 的 json tag 逐字对齐 ——
 // 两侧靠这些字面量对接，改名必须同步改 runtime。
 const (
-	fileDiffKey                = "file_diff"
-	fileDiffKeyDiffFiles       = "diff_files"
-	fileDiffKeyDiffLines       = "diff_lines"
-	fileDiffKeyFilesOmitted    = "files_omitted"
-	fileDiffKeyArchiveURL      = "archive_url"
-	fileDiffKeyDiffDetails     = "diff_details"
-	fileDiffKeyFileName        = "file_name"
-	fileDiffKeyChangedLines    = "changed_lines"
-	fileDiffKeyDiffContent     = "diff_content"
-	fileDiffKeyTruncated       = "truncated"
-	fileDiffKeyTotalLines      = "total_lines"
-	fileDiffKeyRoundsFileDiffs = "rounds"
+	fileDiffKey             = "file_diff"
+	fileDiffKeyDiffFiles    = "diff_files"
+	fileDiffKeyDiffLines    = "diff_lines"
+	fileDiffKeyFilesOmitted = "files_omitted"
+	fileDiffKeyArchiveURL   = "archive_url"
+	fileDiffKeyDiffDetails  = "diff_details"
+	fileDiffKeyFileName     = "file_name"
+	fileDiffKeyChangedLines = "changed_lines"
+	fileDiffKeyDiffContent  = "diff_content"
+	fileDiffKeyTruncated    = "truncated"
+	fileDiffKeyTotalLines   = "total_lines"
 )
+
+// fileDiffHostField 是承载 file_diff 的标准字段名。
+//
+// ⚠️ 是 **output** 不是 rounds。两者都有 "rounds" 这一层、极易搞混：
+//   - FORNAX_rounds（runtime buildRounds）是 **数组**，每项是一轮的 context/token/user_query，
+//     压根没有 file_diff；
+//   - FORNAX_output（runtime buildOutput）里才有 rounds **map**（round_id -> {file_diff, manifest, output}）。
+//
+// 查错字段的表现是"永远命中不到、静默不补全"——线上实测踩过一次。
+const fileDiffHostField = "output"
+
+// fileDiffRoundsKey 是 FORNAX_output 内部承载各轮明细的 map 键名。
+const fileDiffRoundsKey = "rounds"
 
 // fileDiffFullTextFetcher 取 archive_url 全文的能力，抽成接口只为单测能注入假实现
 // （真实现要发 HTTP，测里不能真连网）。
@@ -153,13 +165,17 @@ func expandTruncatedFileDiffs(ctx context.Context, fields map[string]*entity.Con
 	if len(fields) == 0 || fetcher == nil {
 		return fields
 	}
-	c, ok := lookupFornaxField(fields, fileDiffKeyRoundsFileDiffs)
+	c, ok := lookupFornaxField(fields, fileDiffHostField)
 	if !ok || !standardFieldContentMergeable(c) {
-		// 未报 rounds，或内容本身已被省略/非 JSON —— 后者连解析都做不到，谈不上补全。
+		// 未报 output，或内容本身已被省略/非 JSON —— 后者连解析都做不到，谈不上补全。
 		return fields
 	}
-	var rounds map[string]any
-	if err := json.Unmarshal([]byte(c.GetText()), &rounds); err != nil {
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(c.GetText()), &payload); err != nil {
+		return fields
+	}
+	rounds, ok := payload[fileDiffRoundsKey].(map[string]any)
+	if !ok {
 		return fields
 	}
 	changed := false
@@ -190,11 +206,12 @@ func expandTruncatedFileDiffs(ctx context.Context, fields map[string]*entity.Con
 	if !changed {
 		return fields
 	}
-	merged, err := json.Marshal(rounds)
+	// 回写整包 output（rounds 是它内部的一层），不是只回写 rounds。
+	merged, err := json.Marshal(payload)
 	if err != nil {
 		return fields
 	}
-	return replaceFornaxField(fields, fileDiffKeyRoundsFileDiffs, string(merged))
+	return replaceFornaxField(fields, fileDiffHostField, string(merged))
 }
 
 // fileDiffTruncated 判断一个 file_diff 是否被截断过。

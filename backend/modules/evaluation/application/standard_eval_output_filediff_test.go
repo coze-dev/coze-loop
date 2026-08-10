@@ -35,29 +35,37 @@ func (f *fakeFileDiffFetcher) FetchFullDiff(_ context.Context, url string) (stri
 
 // textContent 复用 standard_eval_output_strip_test.go 里的同名 helper。
 
-// roundsWithFileDiff 造一份 rounds payload，形状对齐 runtime 的 FORNAX_output.rounds。
+// roundsWithFileDiff 造一份 FORNAX_output payload，形状对齐 runtime buildOutput 的实际产出：
+// file_diff 在 **output** 内部的 rounds map 里，不在顶层 FORNAX_rounds（那是 context/token 数组）。
 func roundsWithFileDiff(t *testing.T, fd map[string]any) map[string]*entity.Content {
 	t.Helper()
-	rounds := map[string]any{
-		"run_1_round_1": map[string]any{
-			"file_diff": fd,
-			"output":    map[string]any{"actual_output": map[string]any{"text": "done"}},
+	payload := map[string]any{
+		"detail": map[string]any{
+			"output": map[string]any{"actual_output": map[string]any{"text": "done"}},
+		},
+		"rounds": map[string]any{
+			"run_1_round_1": map[string]any{
+				"file_diff": fd,
+				"output":    map[string]any{"actual_output": map[string]any{"text": "done"}},
+			},
 		},
 	}
-	raw, err := json.Marshal(rounds)
+	raw, err := json.Marshal(payload)
 	require.NoError(t, err)
 	return map[string]*entity.Content{
-		standardEvalOutputFornaxPrefix + "rounds": textContent(string(raw)),
+		standardEvalOutputFornaxPrefix + "output": textContent(string(raw)),
 	}
 }
 
 // fileDiffOfFields 从展开后的 fields 里取回 file_diff，供断言。
 func fileDiffOfFields(t *testing.T, fields map[string]*entity.Content) map[string]any {
 	t.Helper()
-	c, ok := lookupFornaxField(fields, "rounds")
+	c, ok := lookupFornaxField(fields, "output")
 	require.True(t, ok)
-	var rounds map[string]any
-	require.NoError(t, json.Unmarshal([]byte(c.GetText()), &rounds))
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal([]byte(c.GetText()), &payload))
+	rounds, ok := payload["rounds"].(map[string]any)
+	require.True(t, ok)
 	round, ok := rounds["run_1_round_1"].(map[string]any)
 	require.True(t, ok)
 	fd, ok := round["file_diff"].(map[string]any)
@@ -228,6 +236,64 @@ func TestExpandTruncatedFileDiffs_NilFetcher_NoOp(t *testing.T) {
 	})
 
 	assert.Equal(t, fields, expandTruncatedFileDiffs(context.Background(), fields, nil))
+}
+
+// 回归：file_diff 挂在 FORNAX_output.rounds（map）里，而 FORNAX_rounds 是一个
+// context/token 数组、压根没有 file_diff。曾把宿主字段写成 rounds，导致永远命中不到、
+// 静默不补全 —— 线上实测才发现。这里同时喂两个字段，锁住"只认 output、不被 rounds 干扰"。
+func TestExpandTruncatedFileDiffs_HostFieldIsOutputNotRounds(t *testing.T) {
+	t.Parallel()
+
+	fields := roundsWithFileDiff(t, map[string]any{
+		"files_omitted": 2,
+		"archive_url":   "https://tos.example/round_1_git_diff.diff.gz.txt",
+		"diff_details": []any{
+			map[string]any{"file_name": "src/App.jsx", "changed_lines": 8, "diff_content": "clipped"},
+		},
+	})
+	// 真实的 FORNAX_rounds：数组，每项是一轮的 context/token，没有 file_diff。
+	roundsArr, err := json.Marshal([]any{
+		map[string]any{
+			"round_id": "run_1_round_1", "round_no": 1,
+			"context": map[string]any{"trace_id": "6a78c653", "log_id": "0217862999"},
+			"tokens":  map[string]any{"total_tokens": 252878},
+		},
+	})
+	require.NoError(t, err)
+	fields[standardEvalOutputFornaxPrefix+"rounds"] = textContent(string(roundsArr))
+
+	f := &fakeFileDiffFetcher{text: twoFileDiff}
+	got := expandTruncatedFileDiffs(context.Background(), fields, f)
+
+	require.Len(t, f.calls, 1, "应从 FORNAX_output.rounds 里找到 file_diff 并取全文")
+	fd := fileDiffOfFields(t, got)
+	assert.Len(t, fd["diff_details"].([]any), 2)
+	assert.NotContains(t, fd, "files_omitted")
+	// FORNAX_rounds 原样不动。
+	assert.Equal(t, string(roundsArr), got[standardEvalOutputFornaxPrefix+"rounds"].GetText())
+}
+
+// 回归：output 里其它子字段（detail / manifest 等）必须原样保留 ——
+// 补全时回写的是整包 output，漏拷会静默丢掉 detail。
+func TestExpandTruncatedFileDiffs_PreservesSiblingsInOutput(t *testing.T) {
+	t.Parallel()
+
+	fields := roundsWithFileDiff(t, map[string]any{
+		"files_omitted": 2,
+		"archive_url":   "https://tos.example/x.diff.gz.txt",
+		"diff_details":  []any{map[string]any{"file_name": "src/App.jsx", "diff_content": "clipped"}},
+	})
+	f := &fakeFileDiffFetcher{text: twoFileDiff}
+
+	got := expandTruncatedFileDiffs(context.Background(), fields, f)
+
+	c, ok := lookupFornaxField(got, "output")
+	require.True(t, ok)
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal([]byte(c.GetText()), &payload))
+	detail, ok := payload["detail"].(map[string]any)
+	require.True(t, ok, "detail 必须还在")
+	assert.Contains(t, detail, "output")
 }
 
 // ---- HTTP fetcher ----
