@@ -249,6 +249,9 @@ type SandboxRunCommandRequest struct {
 	TimeoutMS int64
 	// Async 为 true 时后台执行、立即返回（不回 stdout/stderr）；默认同步。
 	Async bool
+	// Env 注入被执行命令的环境变量（不上命令行）。mac_vm 场景下 runner 拉起靠它注入
+	// FORNAX_ORCHESTRATOR_WS_LISTEN / FORNAX_RUNNER_SESSION_ID 等及凭据；调度侧经 guest-exec env 数组下发。
+	Env map[string]string
 }
 
 // SandboxRunCommandResponse 执行命令响应。
