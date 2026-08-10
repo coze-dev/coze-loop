@@ -306,10 +306,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						_results0 := _experiments.Group("/results", _results0Mw(handler)...)
 						_results0.POST("/batch_get", append(_batchgetexperimentresultMw(handler), apis.BatchGetExperimentResult)...)
 					}
-					{
-						_standard_eval_outputs := _experiments.Group("/standard_eval_outputs", _standard_eval_outputsMw(handler)...)
-						_standard_eval_outputs.POST("/batch_get", append(_mgetexperimentstandardevaloutputsMw(handler), apis.MGetExperimentStandardEvalOutputs)...)
-					}
 				}
 			}
 		}

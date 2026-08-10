@@ -1022,13 +1022,7 @@ service ExperimentService {
         api.post = "/api/evaluation/v1/experiments/results/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
-    // ⚠️ 临时调试用 api.post: 本方法原为纯内部 RPC(无 HTTP 注解)，既不能 curl、也没在 BAM 录入，
-    // 导致 standard eval output 的组装结果无法端到端验证(RPC 直调撞 Protego /batch_permissions)。
-    // 加路由只为在 PPE 泳道上用 HTTP 验证；刻意不带 api.tag='open'，不进对外 OpenAPI 契约。
-    // 验证完毕后应移除，或与对外契约一起正式评审后保留。
-    MGetExperimentStandardEvalOutputsResponse MGetExperimentStandardEvalOutputs(1: MGetExperimentStandardEvalOutputsRequest req) (
-        api.post = "/api/evaluation/v1/experiments/standard_eval_outputs/batch_get", api.op_type = 'query', api.category = 'experiment'
-    )
+    MGetExperimentStandardEvalOutputsResponse MGetExperimentStandardEvalOutputs(1: MGetExperimentStandardEvalOutputsRequest req)
 
     ListExperimentStandardEvalOutputsResponse ListExperimentStandardEvalOutputs(1: ListExperimentStandardEvalOutputsRequest req)
 
