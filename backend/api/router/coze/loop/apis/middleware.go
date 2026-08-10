@@ -2455,12 +2455,7 @@ func _listevaltargetsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _listevaluationsettemplatesMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _listevaluationsettemplatesoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _reportevaltargetstepmetricMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -2470,12 +2465,17 @@ func _templatesMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _listevaluationsettemplatesMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _templates0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _reportevaltargetstepmetricMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _listevaluationsettemplatesoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

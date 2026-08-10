@@ -53,6 +53,10 @@ const (
 
 	MetadataSceneDataExtract = "data_extract"
 
+	TraceSceneDefault = "default"
+
+	TraceSceneCached = "cached"
+
 	ContentTypeText = "Text"
 
 	ContentTypeImage = "Image"
@@ -69,6 +73,8 @@ type PlatformType = string
 type SpanListType = string
 
 type MetadataScene = string
+
+type TraceScene = string
 
 type ContentType = string
 

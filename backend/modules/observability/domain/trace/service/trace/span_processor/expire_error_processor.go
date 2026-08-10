@@ -22,6 +22,10 @@ type ExpireErrorProcessor struct {
 	benefitSvc   benefit.IBenefitService
 }
 
+func (c *ExpireErrorProcessor) GetName() string {
+	return "ExpireErrorProcessor"
+}
+
 func (c *ExpireErrorProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	if len(spans) > 0 {
 		return spans, nil

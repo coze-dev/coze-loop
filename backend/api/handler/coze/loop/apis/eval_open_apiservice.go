@@ -341,12 +341,6 @@ func AsyncRunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.AsyncRunEvaluatorOApi)
 }
 
-// ListEvaluationSetTemplatesOApi .
-// @router /v1/loop/evaluation/evaluation_sets/templates/list [POST]
-func ListEvaluationSetTemplatesOApi(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetTemplatesOApi)
-}
-
 // ReportEvalTargetStepMetric .
 // @router /v1/loop/eval_targets/step_metric [POST]
 func ReportEvalTargetStepMetric(ctx context.Context, c *app.RequestContext) {
@@ -361,4 +355,10 @@ func ReportEvalTargetStepMetric(ctx context.Context, c *app.RequestContext) {
 	resp := new(openapi0.ReportEvalTargetStepMetricResponse)
 
 	c.JSON(consts.StatusOK, resp)
+}
+
+// ListEvaluationSetTemplatesOApi .
+// @router /v1/loop/evaluation/evaluation_sets/templates/list [POST]
+func ListEvaluationSetTemplatesOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetTemplatesOApi)
 }

@@ -3011,6 +3011,7 @@ type SearchTraceOApiRequest struct {
 	Filters          *filter.FilterFields `thrift:"filters,10,optional" frugal:"10,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
 	PageSize         *int32               `thrift:"page_size,11,optional" frugal:"11,optional,i32" form:"page_size" json:"page_size,omitempty"`
 	PageToken        *string              `thrift:"page_token,12,optional" frugal:"12,optional,string" form:"page_token" json:"page_token,omitempty"`
+	TraceScene       *common.TraceScene   `thrift:"trace_scene,13,optional" frugal:"13,optional,string" form:"trace_scene" json:"trace_scene,omitempty"`
 	NeedOriginalTags *bool                `thrift:"need_original_tags,100,optional" frugal:"100,optional,bool" form:"need_original_tags" json:"need_original_tags,omitempty"`
 	Extra            *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base             *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -3135,6 +3136,18 @@ func (p *SearchTraceOApiRequest) GetPageToken() (v string) {
 	return *p.PageToken
 }
 
+var SearchTraceOApiRequest_TraceScene_DEFAULT common.TraceScene
+
+func (p *SearchTraceOApiRequest) GetTraceScene() (v common.TraceScene) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceScene() {
+		return SearchTraceOApiRequest_TraceScene_DEFAULT
+	}
+	return *p.TraceScene
+}
+
 var SearchTraceOApiRequest_NeedOriginalTags_DEFAULT bool
 
 func (p *SearchTraceOApiRequest) GetNeedOriginalTags() (v bool) {
@@ -3203,6 +3216,9 @@ func (p *SearchTraceOApiRequest) SetPageSize(val *int32) {
 func (p *SearchTraceOApiRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
+func (p *SearchTraceOApiRequest) SetTraceScene(val *common.TraceScene) {
+	p.TraceScene = val
+}
 func (p *SearchTraceOApiRequest) SetNeedOriginalTags(val *bool) {
 	p.NeedOriginalTags = val
 }
@@ -3225,6 +3241,7 @@ var fieldIDToName_SearchTraceOApiRequest = map[int16]string{
 	10:  "filters",
 	11:  "page_size",
 	12:  "page_token",
+	13:  "trace_scene",
 	100: "need_original_tags",
 	254: "extra",
 	255: "Base",
@@ -3256,6 +3273,10 @@ func (p *SearchTraceOApiRequest) IsSetPageSize() bool {
 
 func (p *SearchTraceOApiRequest) IsSetPageToken() bool {
 	return p.PageToken != nil
+}
+
+func (p *SearchTraceOApiRequest) IsSetTraceScene() bool {
+	return p.TraceScene != nil
 }
 
 func (p *SearchTraceOApiRequest) IsSetNeedOriginalTags() bool {
@@ -3379,6 +3400,14 @@ func (p *SearchTraceOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3588,6 +3617,17 @@ func (p *SearchTraceOApiRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.PageToken = _field
 	return nil
 }
+func (p *SearchTraceOApiRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *common.TraceScene
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceScene = _field
+	return nil
+}
 func (p *SearchTraceOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *bool
@@ -3664,6 +3704,10 @@ func (p *SearchTraceOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -3894,6 +3938,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *SearchTraceOApiRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceScene() {
+		if err = oprot.WriteFieldBegin("trace_scene", thrift.STRING, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceScene); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
 func (p *SearchTraceOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNeedOriginalTags() {
 		if err = oprot.WriteFieldBegin("need_original_tags", thrift.BOOL, 100); err != nil {
@@ -3994,6 +4056,9 @@ func (p *SearchTraceOApiRequest) DeepEqual(ano *SearchTraceOApiRequest) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.PageToken) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.TraceScene) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.NeedOriginalTags) {
@@ -4112,6 +4177,18 @@ func (p *SearchTraceOApiRequest) Field12DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.PageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SearchTraceOApiRequest) Field13DeepEqual(src *common.TraceScene) bool {
+
+	if p.TraceScene == src {
+		return true
+	} else if p.TraceScene == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceScene, *src) != 0 {
 		return false
 	}
 	return true
