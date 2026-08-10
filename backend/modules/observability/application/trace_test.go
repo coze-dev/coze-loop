@@ -959,6 +959,40 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "trace_scene and need_original_tags pass-through",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, req *service.GetTraceReq) (*service.GetTraceResp, error) {
+						assert.Equal(t, loop_span.TraceSceneCached, req.TraceScene)
+						return &service.GetTraceResp{}, nil
+					})
+				return fields{traceSvc: mockSvc, auth: mockAuth, traceCfg: mockCfg}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetTraceRequest{
+					WorkspaceID:      12,
+					StartTime:        time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:          time.Now().UnixMilli(),
+					TraceID:          ptr.Of("123"),
+					TraceScene:       ptr.Of("cached"),
+					NeedOriginalTags: ptr.Of(true),
+				},
+			},
+			want: &trace.GetTraceResponse{
+				Spans: make([]*span.OutputSpan, 0),
+				TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+					Tokens: &trace.TokenCost{},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "invalid filter fails validation",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)

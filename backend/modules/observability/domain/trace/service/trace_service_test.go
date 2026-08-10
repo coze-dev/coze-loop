@@ -3224,6 +3224,64 @@ func TestTraceServiceImpl_GetTraceAll(t *testing.T) {
 	})
 }
 
+func Test_runSpanProcessors(t *testing.T) {
+	t.Run("empty processor list returns spans unchanged", func(t *testing.T) {
+		input := loop_span.SpanList{{TraceID: "t1", SpanID: "s1"}}
+		out, err := runSpanProcessors(context.Background(), "test", nil, input)
+		assert.NoError(t, err)
+		assert.Equal(t, input, out)
+	})
+
+	t.Run("processors execute in order", func(t *testing.T) {
+		var order []string
+		p1 := &fakeProcessor{name: "p1", fn: func(spans loop_span.SpanList) (loop_span.SpanList, error) {
+			order = append(order, "p1")
+			return append(spans, &loop_span.Span{SpanID: "added-by-p1"}), nil
+		}}
+		p2 := &fakeProcessor{name: "p2", fn: func(spans loop_span.SpanList) (loop_span.SpanList, error) {
+			order = append(order, "p2")
+			return spans, nil
+		}}
+		input := loop_span.SpanList{{TraceID: "t1", SpanID: "s1"}}
+		out, err := runSpanProcessors(context.Background(), "test", []span_processor.Processor{p1, p2}, input)
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"p1", "p2"}, order)
+		assert.Len(t, out, 2)
+	})
+
+	t.Run("error in middle processor stops chain", func(t *testing.T) {
+		var order []string
+		p1 := &fakeProcessor{name: "p1", fn: func(spans loop_span.SpanList) (loop_span.SpanList, error) {
+			order = append(order, "p1")
+			return spans, nil
+		}}
+		p2 := &fakeProcessor{name: "p2", fn: func(spans loop_span.SpanList) (loop_span.SpanList, error) {
+			order = append(order, "p2")
+			return nil, fmt.Errorf("p2 failed")
+		}}
+		p3 := &fakeProcessor{name: "p3", fn: func(spans loop_span.SpanList) (loop_span.SpanList, error) {
+			order = append(order, "p3")
+			return spans, nil
+		}}
+		input := loop_span.SpanList{{TraceID: "t1", SpanID: "s1"}}
+		out, err := runSpanProcessors(context.Background(), "test", []span_processor.Processor{p1, p2, p3}, input)
+		assert.Error(t, err)
+		assert.Nil(t, out)
+		assert.Equal(t, []string{"p1", "p2"}, order)
+	})
+}
+
+type fakeProcessor struct {
+	name string
+	fn   func(loop_span.SpanList) (loop_span.SpanList, error)
+}
+
+func (f *fakeProcessor) GetName() string { return f.name }
+
+func (f *fakeProcessor) Transform(_ context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
+	return f.fn(spans)
+}
+
 func TestTraceServiceImpl_Send(t *testing.T) {
 	type fields struct {
 		traceRepo          repo.ITraceRepo

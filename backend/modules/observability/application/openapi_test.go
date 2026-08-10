@@ -2657,6 +2657,64 @@ func TestOpenAPIApplication_SearchTraceOApi_Success(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, resp)
 	})
+
+	t.Run("cached scene forwarded to service request", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
+		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+
+		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
+		traceConfigMock.EXPECT().GetCachedQueryMaxQPS(gomock.Any(), "123").Return(100, nil)
+		rateLimiter.EXPECT().AllowN(gomock.Any(), "cached:123", 1, gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+		workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+		tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1"})
+		traceServiceMock.EXPECT().SearchTraceOApi(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, req *service.SearchTraceOApiReq) (*service.SearchTraceOApiResp, error) {
+				assert.Equal(t, loop_span.TraceSceneCached, req.TraceScene)
+				return &service.SearchTraceOApiResp{
+					Spans: []*loop_span.Span{{SpanID: "s1"}},
+				}, nil
+			})
+		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		app := &OpenAPIApplication{
+			traceService: traceServiceMock,
+			auth:         authMock,
+			tenant:       tenantMock,
+			workspace:    workspaceMock,
+			rateLimiter:  rateLimiter,
+			traceConfig:  traceConfigMock,
+			metrics:      metricsMock,
+			collector:    collectorMock,
+		}
+
+		now := time.Now().UnixMilli()
+		cachedScene := "cached"
+		req := &openapi.SearchTraceOApiRequest{
+			WorkspaceID:  123,
+			TraceID:      ptr.Of("trace123"),
+			StartTime:    now - 3600000,
+			EndTime:      now,
+			Limit:        10,
+			PlatformType: ptr.Of("platform"),
+			Extra:        &extra.Extra{Src: ptr.Of("test")},
+			TraceScene:   &cachedScene,
+		}
+
+		resp, err := app.SearchTraceOApi(context.Background(), req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+	})
 }
 
 func TestOpenAPIApplication_validateSearchTraceOApiReq(t *testing.T) {
