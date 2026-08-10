@@ -144,10 +144,11 @@ func (e *experimentApplication) MGetExperimentStandardEvalOutputs(ctx context.Co
 		return nil, err
 	}
 
-	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{
+	items, err := buildItemStandardEvalOutputs(ctx, result, standardEvalOutputBuildOptions{
 		ExptID:                   req.GetExptID(),
 		SourceTargetIDByTargetID: e.resolveSourceTargetIDs(ctx, req.GetWorkspaceID(), result),
 		MQMeta:                   e.resolveStandardEvalOutputMQMeta(ctx, req.GetWorkspaceID(), req.GetExptID()),
+		FileDiffFetcher:          newHTTPFileDiffFetcher(),
 	})
 	if err != nil {
 		return nil, err
@@ -198,10 +199,11 @@ func (e *experimentApplication) ListExperimentStandardEvalOutputs(ctx context.Co
 		return nil, err
 	}
 
-	items, err := buildItemStandardEvalOutputs(result, standardEvalOutputBuildOptions{
+	items, err := buildItemStandardEvalOutputs(ctx, result, standardEvalOutputBuildOptions{
 		ExptID:                   req.GetExptID(),
 		SourceTargetIDByTargetID: e.resolveSourceTargetIDs(ctx, req.GetWorkspaceID(), result),
 		MQMeta:                   e.resolveStandardEvalOutputMQMeta(ctx, req.GetWorkspaceID(), req.GetExptID()),
+		FileDiffFetcher:          newHTTPFileDiffFetcher(),
 	})
 	if err != nil {
 		return nil, err
@@ -354,6 +356,9 @@ type standardEvalOutputBuildOptions struct {
 	// MQMeta: 实验级 MQ 元信息（同实验所有 item 相同），由 application 层加载 Experiment 详情预先解析，
 	// 与 item-complete(success) MQ 消息体对齐；nil 时对应 MQ 字段留空、不阻断主链路。
 	MQMeta *standardEvalOutputMQMeta
+	// FileDiffFetcher: 取 file_diff 全文的能力，仅在对象自报的 file_diff 带截断信号时被调用
+	// （见 expandTruncatedFileDiffs）。nil 表示不补全 —— 该字段是纯增强，缺省不影响任何既有输出。
+	FileDiffFetcher fileDiffFullTextFetcher
 }
 
 // standardEvalOutputMQMeta 承载实验级 MQ 元信息，取值与 buildItemCompleteEvent 对齐。
@@ -387,7 +392,7 @@ type standardEvalOutputJSON struct {
 	Extra  any `json:"extra,omitempty"`
 }
 
-func buildItemStandardEvalOutputs(result *entity.MGetExperimentReportResult, opt standardEvalOutputBuildOptions) ([]*expt.ItemStandardEvalOutput, error) {
+func buildItemStandardEvalOutputs(ctx context.Context, result *entity.MGetExperimentReportResult, opt standardEvalOutputBuildOptions) ([]*expt.ItemStandardEvalOutput, error) {
 	itemResults := experimentReportItemResults(result)
 	opt.EvaluatorByVersionID = evaluatorByVersionID(result)
 	items := make([]*expt.ItemStandardEvalOutput, 0, len(itemResults))
@@ -395,7 +400,7 @@ func buildItemStandardEvalOutputs(result *entity.MGetExperimentReportResult, opt
 		if item == nil {
 			continue
 		}
-		out, err := buildItemStandardEvalOutput(item, opt)
+		out, err := buildItemStandardEvalOutput(ctx, item, opt)
 		if err != nil {
 			return nil, err
 		}
@@ -404,7 +409,7 @@ func buildItemStandardEvalOutputs(result *entity.MGetExperimentReportResult, opt
 	return items, nil
 }
 
-func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (*expt.ItemStandardEvalOutput, error) {
+func buildItemStandardEvalOutput(ctx context.Context, item *entity.ItemResult, opt standardEvalOutputBuildOptions) (*expt.ItemStandardEvalOutput, error) {
 	res := newItemStandardEvalOutput(item, opt)
 	if itemKey := itemKeyFromItem(item); itemKey != "" {
 		res.ItemKey = gptr.Of(itemKey)
@@ -417,6 +422,10 @@ func buildItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutput
 	// 评测对象自报的 ext_output（FORNAX_ 前缀优先，裸 key 兜底），逐字段叠加到基线上。
 	// source 恒由平台生成、不被对象覆盖，故不在可合并字段内、也保持现状不 emit。
 	fields := reportedStandardOutputFields(item, opt.ExptID)
+	// 对象自报的 file_diff 若带截断信号（files_omitted / diff_details[].truncated），
+	// 去 archive_url 取回全文重切成全量。**在 merge 之前**改写：rounds 的合并语义是
+	// 「对象报了就整体采用对象的」，放到 merge 之后改写等于跟这条语义打架。
+	fields = expandTruncatedFileDiffs(ctx, fields, opt.FileDiffFetcher)
 
 	var err error
 	if res.Detail, err = mergeStandardEvalOutputField(std.Detail, fields, "detail"); err != nil {
