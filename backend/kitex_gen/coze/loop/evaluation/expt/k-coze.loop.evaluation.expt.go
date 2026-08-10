@@ -422,6 +422,20 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 49:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField49(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 60:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField60(buf[offset:])
@@ -1012,6 +1026,18 @@ func (p *CreateExperimentRequest) FastReadField47(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateExperimentRequest) FastReadField49(buf []byte) (int, error) {
+	offset := 0
+	_field := expt.NewRunModeConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RunModeConfig = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentRequest) FastReadField60(buf []byte) (int, error) {
 	offset := 0
 
@@ -1221,6 +1247,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField33(buf[offset:], w)
 		offset += p.fastWriteField40(buf[offset:], w)
 		offset += p.fastWriteField42(buf[offset:], w)
+		offset += p.fastWriteField49(buf[offset:], w)
 		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField70(buf[offset:], w)
@@ -1265,6 +1292,7 @@ func (p *CreateExperimentRequest) BLength() int {
 		l += p.field45Length()
 		l += p.field46Length()
 		l += p.field47Length()
+		l += p.field49Length()
 		l += p.field60Length()
 		l += p.field50Length()
 		l += p.field70Length()
@@ -1538,6 +1566,15 @@ func (p *CreateExperimentRequest) fastWriteField47(buf []byte, w thrift.NocopyWr
 	if p.IsSetEnableExtractTrajectory() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 47)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
+	}
+	return offset
+}
+
+func (p *CreateExperimentRequest) fastWriteField49(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunModeConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 49)
+		offset += p.RunModeConfig.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -1900,6 +1937,15 @@ func (p *CreateExperimentRequest) field47Length() int {
 	return l
 }
 
+func (p *CreateExperimentRequest) field49Length() int {
+	l := 0
+	if p.IsSetRunModeConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RunModeConfig.BLength()
+	}
+	return l
+}
+
 func (p *CreateExperimentRequest) field60Length() int {
 	l := 0
 	if p.IsSetThreadID() {
@@ -2194,6 +2240,15 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 		tmp := *src.EnableExtractTrajectory
 		p.EnableExtractTrajectory = &tmp
 	}
+
+	var _runModeConfig *expt.RunModeConfig
+	if src.RunModeConfig != nil {
+		_runModeConfig = &expt.RunModeConfig{}
+		if err := _runModeConfig.DeepCopy(src.RunModeConfig); err != nil {
+			return err
+		}
+	}
+	p.RunModeConfig = _runModeConfig
 
 	if src.ThreadID != nil {
 		var tmp string
@@ -2851,6 +2906,20 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 49:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField49(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 50:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField50(buf[offset:])
@@ -3451,6 +3520,18 @@ func (p *SubmitExperimentRequest) FastReadField48(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentRequest) FastReadField49(buf []byte) (int, error) {
+	offset := 0
+	_field := expt.NewRunModeConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RunModeConfig = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentRequest) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 
@@ -3696,6 +3777,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField33(buf[offset:], w)
 		offset += p.fastWriteField40(buf[offset:], w)
 		offset += p.fastWriteField48(buf[offset:], w)
+		offset += p.fastWriteField49(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField51(buf[offset:], w)
 		offset += p.fastWriteField60(buf[offset:], w)
@@ -3742,6 +3824,7 @@ func (p *SubmitExperimentRequest) BLength() int {
 		l += p.field46Length()
 		l += p.field47Length()
 		l += p.field48Length()
+		l += p.field49Length()
 		l += p.field50Length()
 		l += p.field51Length()
 		l += p.field60Length()
@@ -4009,6 +4092,15 @@ func (p *SubmitExperimentRequest) fastWriteField48(buf []byte, w thrift.NocopyWr
 	if p.IsSetXJwtToken() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 48)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.XJwtToken)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentRequest) fastWriteField49(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunModeConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 49)
+		offset += p.RunModeConfig.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -4394,6 +4486,15 @@ func (p *SubmitExperimentRequest) field48Length() int {
 	return l
 }
 
+func (p *SubmitExperimentRequest) field49Length() int {
+	l := 0
+	if p.IsSetRunModeConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RunModeConfig.BLength()
+	}
+	return l
+}
+
 func (p *SubmitExperimentRequest) field50Length() int {
 	l := 0
 	if p.IsSetTriggerType() {
@@ -4703,6 +4804,15 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 		}
 		p.XJwtToken = &tmp
 	}
+
+	var _runModeConfig *expt.RunModeConfig
+	if src.RunModeConfig != nil {
+		_runModeConfig = &expt.RunModeConfig{}
+		if err := _runModeConfig.DeepCopy(src.RunModeConfig); err != nil {
+			return err
+		}
+	}
+	p.RunModeConfig = _runModeConfig
 
 	if src.TriggerType != nil {
 		tmp := *src.TriggerType

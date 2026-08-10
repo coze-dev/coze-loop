@@ -43,6 +43,566 @@ var (
 	_ = thrift.STOP
 )
 
+func (p *RunModeConfig) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RunModeConfig[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *RunModeConfig) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *ExptRunMode
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := ExptRunMode(v)
+		_field = &tmp
+	}
+	p.RunMode = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxRunMinutes = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *SuaMode
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := SuaMode(v)
+		_field = &tmp
+	}
+	p.SuaMode = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SuaModelName = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SuaGoal = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SuaPersona = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SuaBehavioralConstraints = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SuaPeTemplate = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxTurns = _field
+	return offset, nil
+}
+
+func (p *RunModeConfig) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *RunModeConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField9(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *RunModeConfig) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
+		l += p.field10Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *RunModeConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 1)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.RunMode))
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxRunMinutes() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 2)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxRunMinutes)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuaMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 3)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.SuaMode))
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuaModelName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SuaModelName)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuaGoal() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SuaGoal)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuaPersona() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SuaPersona)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuaBehavioralConstraints() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 8)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SuaBehavioralConstraints)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuaPeTemplate() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 9)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SuaPeTemplate)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxTurns() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 10)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxTurns)
+	}
+	return offset
+}
+
+func (p *RunModeConfig) field1Length() int {
+	l := 0
+	if p.IsSetRunMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *RunModeConfig) field2Length() int {
+	l := 0
+	if p.IsSetMaxRunMinutes() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *RunModeConfig) field3Length() int {
+	l := 0
+	if p.IsSetSuaMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *RunModeConfig) field5Length() int {
+	l := 0
+	if p.IsSetSuaModelName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SuaModelName)
+	}
+	return l
+}
+
+func (p *RunModeConfig) field6Length() int {
+	l := 0
+	if p.IsSetSuaGoal() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SuaGoal)
+	}
+	return l
+}
+
+func (p *RunModeConfig) field7Length() int {
+	l := 0
+	if p.IsSetSuaPersona() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SuaPersona)
+	}
+	return l
+}
+
+func (p *RunModeConfig) field8Length() int {
+	l := 0
+	if p.IsSetSuaBehavioralConstraints() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SuaBehavioralConstraints)
+	}
+	return l
+}
+
+func (p *RunModeConfig) field9Length() int {
+	l := 0
+	if p.IsSetSuaPeTemplate() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SuaPeTemplate)
+	}
+	return l
+}
+
+func (p *RunModeConfig) field10Length() int {
+	l := 0
+	if p.IsSetMaxTurns() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *RunModeConfig) DeepCopy(s interface{}) error {
+	src, ok := s.(*RunModeConfig)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.RunMode != nil {
+		tmp := *src.RunMode
+		p.RunMode = &tmp
+	}
+
+	if src.MaxRunMinutes != nil {
+		tmp := *src.MaxRunMinutes
+		p.MaxRunMinutes = &tmp
+	}
+
+	if src.SuaMode != nil {
+		tmp := *src.SuaMode
+		p.SuaMode = &tmp
+	}
+
+	if src.SuaModelName != nil {
+		var tmp string
+		if *src.SuaModelName != "" {
+			tmp = kutils.StringDeepCopy(*src.SuaModelName)
+		}
+		p.SuaModelName = &tmp
+	}
+
+	if src.SuaGoal != nil {
+		var tmp string
+		if *src.SuaGoal != "" {
+			tmp = kutils.StringDeepCopy(*src.SuaGoal)
+		}
+		p.SuaGoal = &tmp
+	}
+
+	if src.SuaPersona != nil {
+		var tmp string
+		if *src.SuaPersona != "" {
+			tmp = kutils.StringDeepCopy(*src.SuaPersona)
+		}
+		p.SuaPersona = &tmp
+	}
+
+	if src.SuaBehavioralConstraints != nil {
+		var tmp string
+		if *src.SuaBehavioralConstraints != "" {
+			tmp = kutils.StringDeepCopy(*src.SuaBehavioralConstraints)
+		}
+		p.SuaBehavioralConstraints = &tmp
+	}
+
+	if src.SuaPeTemplate != nil {
+		var tmp string
+		if *src.SuaPeTemplate != "" {
+			tmp = kutils.StringDeepCopy(*src.SuaPeTemplate)
+		}
+		p.SuaPeTemplate = &tmp
+	}
+
+	if src.MaxTurns != nil {
+		tmp := *src.MaxTurns
+		p.MaxTurns = &tmp
+	}
+
+	return nil
+}
+
 func (p *Experiment) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -693,6 +1253,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 		case 114:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField114(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 115:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField115(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -1439,6 +2013,18 @@ func (p *Experiment) FastReadField114(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField115(buf []byte) (int, error) {
+	offset := 0
+	_field := NewRunModeConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RunModeConfig = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1492,6 +2078,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField110(buf[offset:], w)
 		offset += p.fastWriteField111(buf[offset:], w)
 		offset += p.fastWriteField112(buf[offset:], w)
+		offset += p.fastWriteField115(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1546,6 +2133,7 @@ func (p *Experiment) BLength() int {
 		l += p.field112Length()
 		l += p.field113Length()
 		l += p.field114Length()
+		l += p.field115Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2015,6 +2603,15 @@ func (p *Experiment) fastWriteField114(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Experiment) fastWriteField115(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunModeConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 115)
+		offset += p.RunModeConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *Experiment) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -2457,6 +3054,15 @@ func (p *Experiment) field114Length() int {
 	return l
 }
 
+func (p *Experiment) field115Length() int {
+	l := 0
+	if p.IsSetRunModeConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RunModeConfig.BLength()
+	}
+	return l
+}
+
 func (p *Experiment) DeepCopy(s interface{}) error {
 	src, ok := s.(*Experiment)
 	if !ok {
@@ -2819,6 +3425,15 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		tmp := *src.TotalItemCount
 		p.TotalItemCount = &tmp
 	}
+
+	var _runModeConfig *RunModeConfig
+	if src.RunModeConfig != nil {
+		_runModeConfig = &RunModeConfig{}
+		if err := _runModeConfig.DeepCopy(src.RunModeConfig); err != nil {
+			return err
+		}
+	}
+	p.RunModeConfig = _runModeConfig
 
 	return nil
 }

@@ -33,6 +33,7 @@ type FieldSchema struct {
 	Hidden                 bool                                 `json:"hidden,omitempty"`
 	IsRequired             bool                                 `json:"is_required,omitempty"`
 	DefaultTransformations []*dataset.FieldTransformationConfig `json:"default_transformations,omitempty"`
+	Locked                 bool                                 `json:"locked,omitempty"`
 }
 
 type MultiModalSpec struct {

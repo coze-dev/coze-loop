@@ -356,3 +356,9 @@ func ReportEvalTargetStepMetric(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// ListEvaluationSetTemplatesOApi .
+// @router /v1/loop/evaluation/evaluation_sets/templates/list [POST]
+func ListEvaluationSetTemplatesOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetTemplatesOApi)
+}

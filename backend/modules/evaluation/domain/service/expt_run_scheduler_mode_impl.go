@@ -2306,8 +2306,9 @@ func (e *ExptSubmitExec) exptStartMultiSet(ctx context.Context, event *entity.Ex
 			continue
 		}
 
-		// 构建该 set 下每 item 共享的 item_config (per-set 级配置下沉到行)
-		baseItemConfig := buildItemConfigFromSetConf(setConf)
+		// 构建该 set 下每 item 共享的 item_config (per-set 级配置下沉到行)。
+		// 传入实验级 SUA 跑法配置, 展开为各 item 的 RunConf 兜底默认值 (nil = 老路径不变)。
+		baseItemConfig := buildItemConfigFromSetConf(setConf, evalConf.RunModeConfig)
 
 		// 草稿哨兵: 草稿集读侧走 live (VersionID=nil), ref 落 0; committed 走 ByVersion 冻结。
 		setReadVersionID := resolveSetReadVersionID(setConf.EvalSetID, setConf.EvalSetVersionID)
@@ -2530,8 +2531,10 @@ func resolveSetRefVersionID(evalSetID, evalSetVersionID int64) int64 {
 	return evalSetVersionID
 }
 
-// buildItemConfigFromSetConf 将 per-set 配置下沉为 ExptItemConfig (同 set 所有 item 共享)
-func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig) *entity.ExptItemConfig {
+// buildItemConfigFromSetConf 将 per-set 配置下沉为 ExptItemConfig (同 set 所有 item 共享)。
+// runModeConfig 为实验级多轮/SUA 跑法配置 (可空)：非空时展开为各 item 的 RunConf 兜底默认值
+// (题目 Schema 接入前, 全题目共享一份; 接入后由题目自带值覆盖)。
+func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig, runModeConfig *entity.RunModeConfig) *entity.ExptItemConfig {
 	cfg := &entity.ExptItemConfig{
 		// 跨空间共享: 逐行携带本 set 的评测集/评测对象来源空间, 供多集执行期切空间。
 		EvalSetSourceSpaceID: setConf.SourceSpaceID,
@@ -2563,13 +2566,48 @@ func buildItemConfigFromSetConf(setConf *entity.EvalSetConfig) *entity.ExptItemC
 			TargetVersionID: tc.TargetVersionID,
 			FieldMapping:    tc.FieldMapping,
 			DynamicConf:     tc.RuntimeParam,
+			// 实验级 SUA 跑法配置展开为 item 级 RunConf 兜底 (题目 Schema 接入前全题目一份)。
+			RunConf: itemRunConfFromRunModeConfig(runModeConfig),
 		}
 	}
 
 	return cfg
 }
 
-// maxItemIDFilterInList 是下游 Filter 单个 item_id 顶层列 IN/NOT IN 列表的最大长度
+// itemRunConfFromRunModeConfig 把实验级 RunModeConfig 翻译为题目级 ItemRunConf 兜底默认值。
+// 仅承接与 item 粒度相关的时长上限 (max_run_minutes); run_mode/sua_mode/model/SUA 行为四项/max_turns
+// 是实验级、由 case-file experiment_info 承载, **故意不落** item RunConf —— 一旦在平台侧预合并,
+// 实验级值就会伪装成题目级下发, runtime 再也分不出"这个值来自哪一级", 题目优先语义直接失效。
+// 返回 nil 表示无多轮配置 (老路径不变)。
+//
+// **无字段可搬时必须返回 nil, 不能返回空结构体** (曾经的 bug, 后果如下):
+// ItemRunConf 全字段 omitempty ⇒ json.Marshal(&entity.ItemRunConf{}) == "{}";
+// 执行侧 (expt_run_item_turn_impl.go callTarget) 的闸门是 `RunConf != nil`, 空结构体能过闸,
+// 于是 ext["builtin_run_conf"] 被写成 "{}"; 而 commercial 侧 extractItemRunConf 的回退判据是
+// `raw == ""`, "{}" 非空 ⇒ 「Ext 为空则回退读题目自带 InputFields["run_conf"]」这条回退**永远走不到**,
+// 评测集题目里配的 sua_goal / sua_persona / sua_behavioral_constraints / sua_pe_template /
+// max_turns / fixed_query_list 一个都到不了 runtime —— 实验级值仍能生效 (runtime 遇空题目级会回落),
+// 所以现象是"题目级覆盖 100% 静默失效", 恰好把「题目级优先」语义整个打掉。
+// 即: 实验配了 run_mode_config 但没配 max_run_minutes 时, 这里必须返回 nil 让 Ext 压根不写。
+func itemRunConfFromRunModeConfig(sc *entity.RunModeConfig) *entity.ItemRunConf {
+	if sc == nil {
+		return nil
+	}
+	// 逐字段搬运; 一个都没搬到就返回 nil (见上方注释, 空结构体会序列化成 "{}" 吞掉题目级配置)。
+	// 用显式 moved 标记而非 `*rc == entity.ItemRunConf{}` —— ItemRunConf 含 slice 字段 (FixedQueryList)
+	// 不可比较; 也不用 reflect.DeepEqual, 免得以后新增字段时零值判断悄悄漂移。
+	rc := &entity.ItemRunConf{}
+	moved := false
+	if sc.MaxRunMinutes > 0 {
+		rc.MaxRunMinutes = sc.MaxRunMinutes
+		moved = true
+	}
+	if !moved {
+		return nil
+	}
+	return rc
+}
+
 // (对齐 fornax mlflow filter_helper.MaxItemIDFilterListSize)。include/exclude 各自超过此值时,
 // 不下推 Filter, 回退内存过滤 (List 全集逐页筛; not_in 无法分批, 故 in/not_in 统一按此阈值回退)。
 const maxItemIDFilterInList = 1000

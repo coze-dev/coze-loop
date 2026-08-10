@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -2795,8 +2796,13 @@ func TestEvalTargetServiceImpl_destroySandboxExecuteIfNeeded(t *testing.T) {
 		}
 	})
 
-	// 双沙箱模式下 outputData.Ext 里带额外 executeID，会追加销毁一次
-	t.Run("SandboxAgent + 双沙箱模式 触发额外 Destroy", func(t *testing.T) {
+	// 双沙箱模式下 outputData.Ext 里带额外 executeID，两个沙箱都要被销毁。
+	//
+	// ⚠️ 断言的是「两个 execute id 都被销毁」这个**行为**, 不是「发了几次 RPC」。
+	// main 原本发两次 Destroy(主一次 + extra 一次); 合并后 destroySandboxExecute 接受 id 列表,
+	// 一次 RPC 带上全部 id。沙箱销毁的效果完全相同, 少一次 RPC。原测试断言 Times(2) 锁死了
+	// 实现细节, 会把这类等价改进误判成回归 —— 故改为按 id 集合断言。
+	t.Run("SandboxAgent + 双沙箱模式 主从两个 execute 都销毁", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
@@ -2822,7 +2828,7 @@ func TestEvalTargetServiceImpl_destroySandboxExecuteIfNeeded(t *testing.T) {
 				mu.Unlock()
 				done <- struct{}{}
 				return &rpc.SandboxDestroyResponse{}, nil
-			}).Times(2)
+			}).MinTimes(1)
 
 		record := &entity.EvalTargetRecord{
 			ID: 10, SpaceID: 1, TargetVersionID: 2, ExperimentRunID: 50,
@@ -2834,23 +2840,24 @@ func TestEvalTargetServiceImpl_destroySandboxExecuteIfNeeded(t *testing.T) {
 		}
 		svc.destroySandboxExecuteIfNeeded(context.Background(), record)
 
-		for i := 0; i < 2; i++ {
-			select {
-			case <-done:
-			case <-time.After(2 * time.Second):
-				t.Fatal("destroy goroutines timeout")
-			}
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("destroy goroutine timeout")
 		}
+
 		mu.Lock()
 		defer mu.Unlock()
-		// 分别应有 execID "10"（主）和 "extra-exec-999"（从）
+		// 关键断言: 主 id "10" 与从 id "extra-exec-999" 都出现在被销毁的集合里。
+		// 无论实现是发 1 次带 2 个 id、还是发 2 次各带 1 个, 都算通过 —— 漏掉任一个才算回归。
 		execIDs := map[string]bool{}
 		for _, r := range destroyed {
 			assert.Equal(t, "999", r.TaskID)
 			assert.Equal(t, int64(1), r.WorkspaceID)
-			assert.Len(t, r.ExecuteIDs, 1)
-			execIDs[r.ExecuteIDs[0]] = true
-			// 从沙箱销毁一定 zombieTimeout=false；主沙箱 destroySandboxExecuteIfNeeded 也传 false
+			for _, id := range r.ExecuteIDs {
+				execIDs[id] = true
+			}
+			// destroySandboxExecuteIfNeeded 非僵尸清理路径, 不下发 EndCmd
 			assert.False(t, r.ZombieTimeout)
 		}
 		assert.True(t, execIDs["10"], "should destroy main sandbox execute id")
@@ -2858,41 +2865,90 @@ func TestEvalTargetServiceImpl_destroySandboxExecuteIfNeeded(t *testing.T) {
 	})
 }
 
-// TestExtractExtraSandboxExecuteID 覆盖各种 nil/空场景以及正常读取
-func TestExtractExtraSandboxExecuteID(t *testing.T) {
-	t.Run("nil record", func(t *testing.T) {
-		assert.Equal(t, "", extractExtraSandboxExecuteID(nil))
+// TestSandboxExecuteIDsOf_BothExtKeyShapes 覆盖 sandboxExecuteIDsOf 的两种 ext 形态。
+//
+// 原本这里是 TestExtractExtraSandboxExecuteID + TestEvalTargetServiceImpl_destroySandboxExtraExecute
+// 两个测试, 对应 main 侧"主 id + 一个 extra id"的实现。合并时两套双沙箱 operator 并存, 读取端
+// 收敛成单一入口 sandboxExecuteIDsOf(同时认两个 key), 那两个函数随之删除 —— 但**它们要守的
+// 行为一个都不能丢**: extra id 必须被销毁, 否则该链路每 item 漏一个沙箱。故在此以新入口重写。
+func TestSandboxExecuteIDsOf_BothExtKeyShapes(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("ext 为空时退回 record.ID", func(t *testing.T) {
+		r := &entity.EvalTargetRecord{ID: 10}
+		assert.Equal(t, []string{"10"}, sandboxExecuteIDsOf(ctx, r))
 	})
-	t.Run("nil outputData", func(t *testing.T) {
-		assert.Equal(t, "", extractExtraSandboxExecuteID(&entity.EvalTargetRecord{}))
+
+	t.Run("Ext 不含任何已知 key 时退回 record.ID", func(t *testing.T) {
+		r := &entity.EvalTargetRecord{ID: 10, EvalTargetOutputData: &entity.EvalTargetOutputData{
+			Ext: map[string]string{"other": "v"},
+		}}
+		assert.Equal(t, []string{"10"}, sandboxExecuteIDsOf(ctx, r))
 	})
-	t.Run("Ext 不含目标 key 返回空", func(t *testing.T) {
-		r := &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{Ext: map[string]string{"other": "v"}}}
-		assert.Equal(t, "", extractExtraSandboxExecuteID(r))
+
+	// 形态一: 我们这条链路 —— operator 回传完整列表。
+	t.Run("列表形态: 原样返回, 不补 record.ID", func(t *testing.T) {
+		r := &entity.EvalTargetRecord{ID: 10, EvalTargetOutputData: &entity.EvalTargetOutputData{
+			Ext: map[string]string{consts.OutputDataExtKeySandboxExecuteIDs: `["10-agent","10-orch"]`},
+		}}
+		assert.Equal(t, []string{"10-agent", "10-orch"}, sandboxExecuteIDsOf(ctx, r))
 	})
-	t.Run("命中 key 返回值", func(t *testing.T) {
-		r := &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{Ext: map[string]string{
-			entity.SandboxAgentExtKeyExtraExecuteID: "abc",
-		}}}
-		assert.Equal(t, "abc", extractExtraSandboxExecuteID(r))
+
+	// 形态二: main 那条链路 —— 主 execution 就是 record.ID, ext 里只带额外那个。
+	// 这条是原 TestExtractExtraSandboxExecuteID + destroySandboxExtraExecute 的行为承接点:
+	// 两个 id 都必须出现, 少了 extra 就是漏沙箱, 少了主 id 就是漏主沙箱。
+	t.Run("extra 形态: 主 id 与 extra id 都要销毁", func(t *testing.T) {
+		r := &entity.EvalTargetRecord{ID: 10, EvalTargetOutputData: &entity.EvalTargetOutputData{
+			Ext: map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: "extra-exec-999"},
+		}}
+		assert.Equal(t, []string{"10", "extra-exec-999"}, sandboxExecuteIDsOf(ctx, r))
+	})
+
+	t.Run("extra 形态: 空值等价于没配, 退回 record.ID", func(t *testing.T) {
+		r := &entity.EvalTargetRecord{ID: 10, EvalTargetOutputData: &entity.EvalTargetOutputData{
+			Ext: map[string]string{entity.SandboxAgentExtKeyExtraExecuteID: ""},
+		}}
+		assert.Equal(t, []string{"10"}, sandboxExecuteIDsOf(ctx, r))
+	})
+
+	// 两个 key 同时存在时取并集且去重 —— 迁移期理论上不会同时出现, 但读取端不该因此崩或漏。
+	t.Run("两种 key 并存: 取并集去重", func(t *testing.T) {
+		r := &entity.EvalTargetRecord{ID: 10, EvalTargetOutputData: &entity.EvalTargetOutputData{
+			Ext: map[string]string{
+				consts.OutputDataExtKeySandboxExecuteIDs: `["10","10-orch"]`,
+				entity.SandboxAgentExtKeyExtraExecuteID:  "extra-1",
+			},
+		}}
+		assert.Equal(t, []string{"10", "10-orch", "extra-1"}, sandboxExecuteIDsOf(ctx, r))
+	})
+
+	t.Run("列表 JSON 坏掉时退回 record.ID, 不 panic", func(t *testing.T) {
+		r := &entity.EvalTargetRecord{ID: 10, EvalTargetOutputData: &entity.EvalTargetOutputData{
+			Ext: map[string]string{consts.OutputDataExtKeySandboxExecuteIDs: `{not-an-array`},
+		}}
+		assert.Equal(t, []string{"10"}, sandboxExecuteIDsOf(ctx, r))
 	})
 }
 
-// TestEvalTargetServiceImpl_destroySandboxExtraExecute 覆盖 nil adapter / 空 executeID / 正常调用 + 错误分支
-func TestEvalTargetServiceImpl_destroySandboxExtraExecute(t *testing.T) {
+// TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie 承接原
+// destroySandboxExtraExecute 的 adapter 层断言: nil adapter / 空列表不触发 RPC, 正常路径把
+// 整个列表一次下发, Destroy 报错只记日志不 panic。
+func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T) {
 	t.Run("nil adapter 不触发", func(t *testing.T) {
 		svc := &EvalTargetServiceImpl{}
-		svc.destroySandboxExtraExecute(context.Background(), "task", 1, "id")
+		svc.destroySandboxExecute(context.Background(), "task", 1, []string{"id"}, false)
 	})
-	t.Run("空 executeID 不触发", func(t *testing.T) {
+
+	t.Run("空列表不触发", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
 		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
-		svc.destroySandboxExtraExecute(context.Background(), "task", 1, "")
-		// 无 EXPECT
+		svc.destroySandboxExecute(context.Background(), "task", 1, nil, false)
+		// 无 EXPECT: 一次 RPC 都不该发
 	})
-	t.Run("正常路径", func(t *testing.T) {
+
+	t.Run("正常路径: 整个列表一次下发", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
@@ -2901,65 +2957,128 @@ func TestEvalTargetServiceImpl_destroySandboxExtraExecute(t *testing.T) {
 		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
 				assert.Equal(t, "T", req.TaskID)
-				assert.Equal(t, []string{"exec-1"}, req.ExecuteIDs)
+				assert.Equal(t, []string{"exec-1", "extra-2"}, req.ExecuteIDs)
 				assert.Equal(t, int64(9), req.WorkspaceID)
 				assert.False(t, req.ZombieTimeout)
 				close(done)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
-		svc.destroySandboxExtraExecute(context.Background(), "T", 9, "exec-1")
+		svc.destroySandboxExecute(context.Background(), "T", 9, []string{"exec-1", "extra-2"}, false)
 		select {
 		case <-done:
 		case <-time.After(2 * time.Second):
 			t.Fatal("destroy goroutine timeout")
 		}
 	})
+
 	t.Run("Destroy 报错也只记录日志不 panic", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
-		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
-		done := make(chan struct{})
-		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
+		// 重试预算压到毫秒级: 这条用例要断言的是"重试用尽后只记日志不 panic", 按线上
+		// 十秒预算跑要真等十秒。
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, sandboxDestroyRetryBudget: time.Millisecond}
+		var calls int32
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).AnyTimes().
 			DoAndReturn(func(_ context.Context, _ *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
-				close(done)
+				atomic.AddInt32(&calls, 1)
 				return nil, errors.New("boom")
 			})
-		svc.destroySandboxExtraExecute(context.Background(), "T", 9, "e")
-		select {
-		case <-done:
-		case <-time.After(2 * time.Second):
-			t.Fatal("destroy goroutine timeout")
-		}
+		// 走同步入口: 原来调异步的 destroySandboxExecute + 只等第一次 Destroy 就返回,
+		// 于是重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf ——
+		// -race 下整包 exit=1 却没有任何 --- FAIL 行, 极难定位。同步调用天然无悬空 goroutine。
+		assert.NotPanics(t, func() {
+			svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+		})
+		assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(1), "至少尝试一次 Destroy")
 	})
-}
 
-// TestEvalTargetServiceImpl_destroySandboxExecute_ZombieTimeoutFlag 验证 zombieTimeout 参数会透传给 adapter
-func TestEvalTargetServiceImpl_destroySandboxExecute_ZombieTimeoutFlag(t *testing.T) {
-	t.Run("nil adapter 早退", func(t *testing.T) {
-		svc := &EvalTargetServiceImpl{}
-		svc.destroySandboxExecute(context.Background(), "t", 1, 2, true)
-	})
-	t.Run("zombieTimeout=true 透传", func(t *testing.T) {
+	// Destroy 瞬时失败后必须真的重试并最终成功 —— 这是加 backoff 的全部目的。
+	// 钉住"重试确实发生": 只断言 err 被吞掉的话, 把重试删掉测试依然绿。
+	t.Run("Destroy 瞬时失败后重试并成功", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
-		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
-		done := make(chan struct{})
-		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, sandboxDestroyRetryBudget: 5 * time.Second}
+		var calls int32
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).Times(2).
 			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
-				assert.True(t, req.ZombieTimeout)
-				assert.Equal(t, []string{"7"}, req.ExecuteIDs)
+				if atomic.AddInt32(&calls, 1) == 1 {
+					// 模拟线上那次 `remote or network error[remote]`: 不重试就等于沙箱确定性泄漏。
+					return nil, errors.New("remote or network error[remote]")
+				}
+				assert.Equal(t, []string{"e"}, req.ExecuteIDs)
+				return &rpc.SandboxDestroyResponse{}, nil
+			})
+		svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+		assert.Equal(t, int32(2), atomic.LoadInt32(&calls), "第一次失败后必须重试一次并成功")
+	})
+
+	// 调用方 ctx 已取消也必须照样销毁: 这条路径挂在请求态 ctx 上, 调用方 return 后 ctx 立即
+	// 被取消, 若沿用它则 backoff 见 ctx.Done() 直接 Stop —— 重试形同虚设, 正是要修的泄漏。
+	t.Run("调用方 ctx 已取消仍照常销毁并重试", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, sandboxDestroyRetryBudget: 5 * time.Second}
+		canceled, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		var calls int32
+		done := make(chan struct{})
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(rpcCtx context.Context, _ *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				// 下发给 adapter 的 ctx 也必须已剥离取消, 否则 RPC 自己会立刻 fail。
+				assert.NoError(t, rpcCtx.Err(), "Destroy 收到的 ctx 不能是已取消的请求 ctx")
+				if atomic.AddInt32(&calls, 1) == 1 {
+					return nil, errors.New("remote or network error[remote]")
+				}
 				close(done)
 				return &rpc.SandboxDestroyResponse{}, nil
 			})
-		svc.destroySandboxExecute(context.Background(), "task", 3, 7, true)
+
+		svc.destroySandboxExecute(canceled, "T", 9, []string{"e"}, false)
 		select {
 		case <-done:
-		case <-time.After(2 * time.Second):
-			t.Fatal("destroy goroutine timeout")
+		case <-time.After(5 * time.Second):
+			t.Fatal("destroy goroutine timeout: ctx 取消后重试被 backoff 提前 Stop 了")
 		}
+		assert.Equal(t, int32(2), atomic.LoadInt32(&calls))
 	})
+}
+
+// TestEvalTargetServiceImpl_destroySandboxExecute_ZombieTimeoutFlag 验证 zombieTimeout 参数
+// 会透传给 adapter。承接 main 侧同名测试 —— 合并把 destroySandboxExecute 的 executeID 从
+// 单个 int64 改成了字符串列表, 但 zombieTimeout 这一维必须原样保留: 它决定 Destroy 是否
+// 附带 SandboxAgent 收尾命令 EndCmd, 丢了会让僵尸超时清理退化成普通销毁。
+func TestEvalTargetServiceImpl_destroySandboxExecute_ZombieTimeoutFlag(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		zombie bool
+	}{
+		{"zombieTimeout=true 透传", true},
+		{"zombieTimeout=false 透传", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+			svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
+			done := make(chan struct{})
+			mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+					assert.Equal(t, tc.zombie, req.ZombieTimeout)
+					close(done)
+					return &rpc.SandboxDestroyResponse{}, nil
+				})
+			svc.destroySandboxExecute(context.Background(), "t", 1, []string{"2"}, tc.zombie)
+			select {
+			case <-done:
+			case <-time.After(2 * time.Second):
+				t.Fatal("destroy goroutine timeout")
+			}
+		})
+	}
 }
 
 // TestEvalTargetServiceImpl_TerminateAsyncRecordsAndDestroySandbox_ZombieTimeoutFlag

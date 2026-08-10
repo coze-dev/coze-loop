@@ -14,26 +14,56 @@ import (
 )
 
 var (
-	evaluationSetServiceOnce = sync.Once{}
-	evaluationSetServiceImpl IEvaluationSetService
+	evaluationSetServiceOnce             = sync.Once{}
+	evaluationSetServiceImpl             IEvaluationSetService
+	evaluationSetServiceWithTemplateOnce = sync.Once{}
+	evaluationSetServiceWithTemplateImpl IEvaluationSetService
 )
 
 type EvaluationSetServiceImpl struct {
 	datasetRPCAdapter rpc.IDatasetRPCAdapter
+	templateService   EvaluationSetTemplateService
 }
 
 func NewEvaluationSetServiceImpl(datasetRPCAdapter rpc.IDatasetRPCAdapter) IEvaluationSetService {
 	evaluationSetServiceOnce.Do(func() {
-		evaluationSetServiceImpl = &EvaluationSetServiceImpl{
-			datasetRPCAdapter: datasetRPCAdapter,
-		}
+		evaluationSetServiceImpl = newEvaluationSetServiceImpl(datasetRPCAdapter, NewNoopEvaluationSetTemplateService())
 	})
 	return evaluationSetServiceImpl
+}
+
+func NewEvaluationSetServiceImplWithTemplate(datasetRPCAdapter rpc.IDatasetRPCAdapter, templateService EvaluationSetTemplateService) IEvaluationSetService {
+	if templateService == nil {
+		templateService = NewNoopEvaluationSetTemplateService()
+	}
+	evaluationSetServiceWithTemplateOnce.Do(func() {
+		evaluationSetServiceWithTemplateImpl = newEvaluationSetServiceImpl(datasetRPCAdapter, templateService)
+	})
+	return evaluationSetServiceWithTemplateImpl
+}
+
+func newEvaluationSetServiceImpl(datasetRPCAdapter rpc.IDatasetRPCAdapter, templateService EvaluationSetTemplateService) IEvaluationSetService {
+	return &EvaluationSetServiceImpl{
+		datasetRPCAdapter: datasetRPCAdapter,
+		templateService:   templateService,
+	}
 }
 
 func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, param *entity.CreateEvaluationSetParam) (id int64, err error) {
 	if param == nil {
 		return 0, errorx.NewByCode(errno.CommonInternalErrorCode)
+	}
+	if param.TemplateDatasetID != nil {
+		param.EvaluationSetSchema, err = d.templateService.BuildEvaluationSetSchemaFromTemplate(ctx, &entity.BuildEvaluationSetSchemaFromTemplateParam{
+			SpaceID:           param.SpaceID,
+			TemplateDatasetID: *param.TemplateDatasetID,
+			RequestedSchema:   param.EvaluationSetSchema,
+		})
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		clearFieldLocks(param.EvaluationSetSchema)
 	}
 	// 依赖数据集服务
 	return d.datasetRPCAdapter.CreateDataset(ctx, &rpc.CreateDatasetParam{
@@ -46,7 +76,33 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, para
 		DatasetType:        param.DatasetType,
 		Tags:               param.Tags,
 		DatasetKey:         param.DatasetKey,
+		TemplateDatasetID:  param.TemplateDatasetID,
 	})
+}
+
+func clearFieldLocks(schema *entity.EvaluationSetSchema) {
+	if schema == nil {
+		return
+	}
+	for _, field := range schema.FieldSchemas {
+		if field != nil {
+			field.Locked = false
+		}
+	}
+}
+
+func (d *EvaluationSetServiceImpl) ListEvaluationSetTemplates(ctx context.Context, param *entity.ListEvaluationSetTemplatesParam) (templates []*entity.EvaluationSetTemplate, total *int64, nextPageToken *string, err error) {
+	if param == nil {
+		return nil, nil, nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("list evaluation set templates param is nil"))
+	}
+	return d.templateService.ListEvaluationSetTemplates(ctx, param)
+}
+
+func (d *EvaluationSetServiceImpl) ValidateEvaluationSetSchemaUpdate(ctx context.Context, param *entity.ValidateEvaluationSetSchemaUpdateParam) error {
+	if param == nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("validate evaluation set schema update param is nil"))
+	}
+	return d.templateService.ValidateEvaluationSetSchemaUpdate(ctx, param)
 }
 
 func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Context, param *entity.CreateEvaluationSetWithImportParam) (id, jobID int64, err error) {

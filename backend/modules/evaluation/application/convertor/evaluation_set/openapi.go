@@ -234,6 +234,7 @@ func OpenAPIFieldSchemaDTO2DO(dto *openapi_eval_set.FieldSchema) *entity.FieldSc
 		SchemaKey:            convertOpenAPISchemaKeyToDO(dto.SchemaKey),
 		TextSchema:           textSchema,
 		Key:                  gptr.Indirect(dto.Key),
+		Locked:               gptr.Indirect(dto.Locked),
 	}
 }
 
@@ -420,6 +421,7 @@ func OpenAPIEvaluationSetDO2DTO(do *entity.EvaluationSet) *openapi_eval_set.Eval
 		Tags:                OpenAPIResourceTagDO2DTOs(do.Tags),
 		DatasetKey:          gptr.Of(do.DatasetKey),
 		SharedInfo:          OpenAPISharedResourceInfoDO2DTO(do.SharedInfo),
+		TemplateDatasetID:   do.TemplateDatasetID,
 	}
 }
 
@@ -495,7 +497,6 @@ func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 	if do == nil {
 		return nil
 	}
-
 	displayFormat := convertDODisplayFormatToOpenAPI(do.DefaultDisplayFormat)
 
 	contentType := convertDOContentTypeToOpenAPI(do.ContentType)
@@ -509,6 +510,33 @@ func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 		SchemaKey:            convertDOSchemaKeyToOpenAPI(do.SchemaKey),
 		TextSchema:           gptr.Of(do.TextSchema),
 		Key:                  gptr.Of(do.Key),
+		Locked:               gptr.Of(do.Locked),
+	}
+}
+
+func OpenAPIEvaluationSetTemplateDO2DTOs(dos []*entity.EvaluationSetTemplate) []*openapi_eval_set.EvaluationSetTemplate {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.EvaluationSetTemplate, 0, len(dos))
+	for _, do := range dos {
+		if dto := OpenAPIEvaluationSetTemplateDO2DTO(do); dto != nil {
+			result = append(result, dto)
+		}
+	}
+	return result
+}
+
+func OpenAPIEvaluationSetTemplateDO2DTO(do *entity.EvaluationSetTemplate) *openapi_eval_set.EvaluationSetTemplate {
+	if do == nil {
+		return nil
+	}
+	return &openapi_eval_set.EvaluationSetTemplate{
+		TemplateDatasetID:   gptr.Of(do.TemplateDatasetID),
+		TemplateDatasetName: gptr.Of(do.TemplateDatasetName),
+		Description:         gptr.Of(do.Description),
+		EvaluationSetSchema: OpenAPIEvaluationSetSchemaDO2DTO(do.EvaluationSetSchema),
+		IsEditable:          gptr.Of(do.IsEditable),
 	}
 }
 

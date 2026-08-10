@@ -175,3 +175,9 @@ func GetEvaluationSetItemVersion(ctx context.Context, c *app.RequestContext) {
 func UpdateEvaluationSetItemVersion(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalSetSvc.UpdateEvaluationSetItemVersion)
 }
+
+// ListEvaluationSetTemplates .
+// @router /api/evaluation/v1/evaluation_sets/templates/list [POST]
+func ListEvaluationSetTemplates(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.ListEvaluationSetTemplates)
+}

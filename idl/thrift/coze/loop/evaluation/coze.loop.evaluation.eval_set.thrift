@@ -17,6 +17,7 @@ struct CreateEvaluationSetRequest {
     6: optional list<eval_set.ResourceTagRef> tags (vt.elem.skip = "false"),
     7: optional string dataset_key (vt.max_size = "255"),  // 数据集业务唯一键，创建后不可变
     10: optional eval_set.EvaluationSetType type (vt.max_size = "128") // 评测集类型，默认 default
+    11: optional i64 template_dataset_id (api.js_conv="true", go.tag='json:"template_dataset_id"') // 评测集模版数据集 ID
 
     200: optional common.Session session (api.none = 'true')
     255: optional base.Base Base
@@ -24,6 +25,24 @@ struct CreateEvaluationSetRequest {
 
 struct CreateEvaluationSetResponse {
     1: optional i64 evaluation_set_id (api.js_conv="true", go.tag='json:"evaluation_set_id"'),
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListEvaluationSetTemplatesRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+
+    100: optional i32 page_size (vt.gt = "0", vt.le = "200")
+    101: optional string page_token
+
+    255: optional base.Base Base
+}
+
+struct ListEvaluationSetTemplatesResponse {
+    1: optional list<eval_set.EvaluationSetTemplate> templates // 每个模版包含完整的列 schema
+
+    100: optional i64 total (api.js_conv="true", go.tag='json:"total"')
+    101: optional string next_page_token
 
     255: base.BaseResp BaseResp
 }
@@ -168,7 +187,8 @@ struct GetEvaluationSetVersionRequest {
     2: required i64 version_id (api.path = "version_id", api.js_conv="true", go.tag='json:"version_id"'),
     3: optional i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv="true", go.tag='json:"evaluation_set_id"'),
     4: optional bool deleted_at (api.query='deleted_at'),
-    5: optional common.SharedResourceOption shared_option,
+    5: optional bool is_shared (api.query='is_shared'),
+    6: optional i64 source_space_id (api.query='source_space_id', api.js_conv="true", go.tag='json:"source_space_id"'),
 
     255: optional base.Base Base
 }
@@ -533,6 +553,9 @@ service EvaluationSetService {
     // 基本信息管理
     CreateEvaluationSetResponse CreateEvaluationSet(1: CreateEvaluationSetRequest req) (
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets", api.op_type = 'create', api.tag = 'volc-agentkit,open'
+    )
+    ListEvaluationSetTemplatesResponse ListEvaluationSetTemplates(1: ListEvaluationSetTemplatesRequest req) (
+        api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/templates/list", api.op_type = 'list', api.tag = 'volc-agentkit,open'
     )
     UpdateEvaluationSetResponse UpdateEvaluationSet(1: UpdateEvaluationSetRequest req) (
         api.category="evaluation_set", api.patch = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id", api.op_type = 'update', api.tag = 'volc-agentkit,open'

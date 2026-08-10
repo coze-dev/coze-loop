@@ -24,6 +24,12 @@ type ISandboxSchedulerAdapter interface {
 	GetTaskInfo(ctx context.Context, req *SandboxGetTaskInfoRequest) (*SandboxGetTaskInfoResponse, error)
 	// Destroy 销毁任务或指定执行。
 	Destroy(ctx context.Context, req *SandboxDestroyRequest) (*SandboxDestroyResponse, error)
+	// WriteFile 向某个 Running execution 的 session 写入文件（批量）。
+	// 用于双沙箱 bring-up：session 建好后把补全 endpoint 的 case-file 写进 Orchestrator 沙箱。
+	WriteFile(ctx context.Context, req *SandboxWriteFileRequest) (*SandboxWriteFileResponse, error)
+	// RunCommand 在某个 Running execution 的 session 内执行命令。
+	// 用于双沙箱 bring-up：在 Orchestrator 沙箱内启动 `fornax-eval orchestrator`。
+	RunCommand(ctx context.Context, req *SandboxRunCommandRequest) (*SandboxRunCommandResponse, error)
 }
 
 // ---------- 枚举 ----------
@@ -62,6 +68,10 @@ const (
 	SandboxTenantLabelingAnalysis SandboxTenant = 2
 	// SandboxTenantFornaxTraeEvalDualSandbox = FornaxTraeEvalDoubleSandbox，双沙箱模式。
 	SandboxTenantFornaxTraeEvalDualSandbox SandboxTenant = 3
+	// SandboxTenantFornaxEvalGeneral = FornaxEvalGeneral，通用评测租户（能力同 GeneralAgent 的最小集：
+	// 不注入平台 env、不写 case-file、无默认 start_cmd，全部由调用方显式下发）。
+	// 双沙箱链路现用此租户：编排完全由 operator 侧完成，调度侧只需提供裸沙箱。
+	SandboxTenantFornaxEvalGeneral SandboxTenant = 4
 )
 
 // ---------- Domain ----------
@@ -105,7 +115,7 @@ type SandboxInitRequest struct {
 	Metadata    map[string]string
 	WorkspaceID int64
 	// Tenant 沙箱租户；未显式设置（值为 SandboxTenantDefault）时沿用调度侧默认租户 FornaxTraeEval。
-	// 双沙箱模式的评测对象必须传 SandboxTenantFornaxTraeEvalDualSandbox。
+	// 双沙箱模式的评测对象必须传 SandboxTenantFornaxEvalGeneral。
 	Tenant SandboxTenant
 }
 
@@ -183,4 +193,49 @@ type SandboxDestroyRequest struct {
 // SandboxDestroyResponse 销毁响应。
 type SandboxDestroyResponse struct {
 	AffectedCount int32
+}
+
+// SandboxWriteFileRequest 向某个 Running execution 的 session 写文件（批量）。
+type SandboxWriteFileRequest struct {
+	ExecuteID   string
+	WorkspaceID int64
+	Files       []*SandboxFileWrite
+}
+
+// SandboxWriteFileResponse 写文件响应。
+type SandboxWriteFileResponse struct {
+	// TotalBytesWritten 所有文件写入字节数之和。
+	TotalBytesWritten int64
+	// Results 每个文件的写入结果，与入参顺序一致。
+	Results []*SandboxFileWriteResult
+}
+
+// SandboxFileWriteResult 单个文件的写入结果。
+type SandboxFileWriteResult struct {
+	Path         string
+	BytesWritten int64
+}
+
+// SandboxRunCommandRequest 在某个 Running execution 的 session 内执行命令。
+type SandboxRunCommandRequest struct {
+	ExecuteID   string
+	WorkspaceID int64
+	// Command 命令行，经 bash -lc 执行。
+	Command string
+	// Cwd 工作目录，默认 "/"。
+	Cwd string
+	// TimeoutMS 执行超时（毫秒），服务端会封顶。
+	TimeoutMS int64
+	// Async 为 true 时后台执行、立即返回（不回 stdout/stderr）；默认同步。
+	Async bool
+}
+
+// SandboxRunCommandResponse 执行命令响应。
+type SandboxRunCommandResponse struct {
+	// Stdout 标准输出（async 模式下为空）。
+	Stdout string
+	// Stderr 标准错误（async 模式下为空）。
+	Stderr string
+	// ExitCode 进程退出码（async 模式下 0/未设）。
+	ExitCode int32
 }

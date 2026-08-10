@@ -159,6 +159,9 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 	if req.GetName() == "" {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("name is required"))
 	}
+	if req.TemplateDatasetID != nil && req.GetTemplateDatasetID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template_dataset_id must be greater than 0"))
+	}
 	// 鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
@@ -178,6 +181,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 		DatasetType:         req.Type,
 		Tags:                evaluation_set.OpenAPIResourceTagRefDTO2DOs(req.Tags),
 		DatasetKey:          req.DatasetKey,
+		TemplateDatasetID:   req.TemplateDatasetID,
 	})
 	if err != nil {
 		return nil, err
@@ -189,6 +193,44 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 	return &openapi.CreateEvaluationSetOApiResponse{
 		Data: &openapi.CreateEvaluationSetOpenAPIData{
 			EvaluationSetID: gptr.Of(id),
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) ListEvaluationSetTemplatesOApi(ctx context.Context, req *openapi.ListEvaluationSetTemplatesOApiRequest) (r *openapi.ListEvaluationSetTemplatesOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	workspaceID := int64(0)
+	if req != nil {
+		workspaceID = req.GetWorkspaceID()
+	}
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, workspaceID, 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+	templates, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSetTemplates(ctx, &entity.ListEvaluationSetTemplatesParam{
+		SpaceID:   req.GetWorkspaceID(),
+		PageSize:  req.PageSize,
+		PageToken: req.PageToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+	hasMore := nextPageToken != nil && *nextPageToken != ""
+	return &openapi.ListEvaluationSetTemplatesOApiResponse{
+		Data: &openapi.ListEvaluationSetTemplatesOpenAPIData{
+			Templates:     evaluation_set.OpenAPIEvaluationSetTemplateDO2DTOs(templates),
+			HasMore:       gptr.Of(hasMore),
+			NextPageToken: nextPageToken,
+			Total:         total,
 		},
 	}, nil
 }
@@ -1233,7 +1275,21 @@ func (e *EvalOpenAPIApplication) UpdateEvaluationSetSchemaOApi(ctx context.Conte
 		return nil, err
 	}
 	// domain调用
-	err = e.evaluationSetSchemaService.UpdateEvaluationSetSchema(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), evaluation_set.OpenAPIFieldSchemaDTO2DOs(req.Fields))
+	fields := evaluation_set.OpenAPIFieldSchemaDTO2DOs(req.Fields)
+	var currentSchema *entity.EvaluationSetSchema
+	if set.EvaluationSetVersion != nil {
+		currentSchema = set.EvaluationSetVersion.EvaluationSetSchema
+	}
+	err = e.evaluationSetService.ValidateEvaluationSetSchemaUpdate(ctx, &entity.ValidateEvaluationSetSchemaUpdateParam{
+		SpaceID:             req.GetWorkspaceID(),
+		EvaluationSetID:     req.GetEvaluationSetID(),
+		CurrentSchema:       currentSchema,
+		UpdatedFieldSchemas: fields,
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = e.evaluationSetSchemaService.UpdateEvaluationSetSchema(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), fields)
 	if err != nil {
 		return nil, err
 	}
@@ -1254,19 +1310,33 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
 	}
 
-	// 调试场景（actx.Event == nil）：无论成功失败都 best-effort 销毁沙箱执行
+	// 调试场景（actx.Event == nil）：无论成功失败都 best-effort 销毁沙箱执行。
+	//
+	// **这条路径必须保留，不能指望 service 层的 destroySandboxExecuteIfNeeded 兜底**：那个函数先
+	// GetEvalTargetVersion(record.TargetVersionID) 判类型，而调试用的是 patchy target
+	// （AsyncDebugTarget 传的 EvalTargetVersion 没有 ID、从未落库），查不到 version 就直接 return
+	// —— 调试态压根走不到它的销毁。
+	//
+	// executeIDs 必须从 record 的 output ext 读 operator 真实回传的列表，**不能推断**：
+	// 双沙箱的 id 带后缀（`<invokeID>-agent` / `<invokeID>-orch`），原实现硬编码裸 invokeID，
+	// 对不上任何一个 execution → 两个沙箱一个都清不掉，只能等平台侧 patrol（而
+	// session_max_alive_minutes=0 时它会无限续期）。见 service 层 sandboxExecuteIDsOf 的同一约定。
+	//
+	// 放在 defer 里是刻意的：无论 ReportInvokeRecords 成败都要销 —— 上报失败时沙箱更需要被回收。
+	// 此时 record 已被 ReportInvokeRecords 写入 ext，故重新读一次拿到的是最终值。
 	if actx.Event == nil {
 		defer func() {
 			if e.sandboxSchedulerAdapter == nil {
 				return
 			}
+			executeIDs := e.debugSandboxExecuteIDs(ctx, req.GetWorkspaceID(), req.GetInvokeID())
 			if _, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
 				TaskID:      "sandbox_debug",
 				DestroyType: rpc.SandboxDestroyTypeExecute,
-				ExecuteIDs:  []string{strconv.FormatInt(req.GetInvokeID(), 10)},
+				ExecuteIDs:  executeIDs,
 				WorkspaceID: req.GetWorkspaceID(),
 			}); derr != nil {
-				logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox debug execute fail, invoke_id=%d, err=%v", req.GetInvokeID(), derr)
+				logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox debug execute fail, invoke_id=%d, execute_ids=%v, err=%v", req.GetInvokeID(), executeIDs, derr)
 			}
 		}()
 		logs.CtxInfo(ctx, "report target record (debug), record_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
@@ -1301,6 +1371,67 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	return &openapi.ReportEvalTargetInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
+// debugSandboxExecuteIDs 取调试态本次调用实际创建的 sandbox execution id 列表。
+//
+// 权威来源是 operator 在 AsyncExecute 回传、落在 record output ext 的两个 key：
+//
+//	consts.OutputDataExtKeySandboxExecuteIDs   (JSON 字符串数组, 全部 execution)
+//	entity.SandboxAgentExtKeyExtraExecuteID    (裸字符串, 仅"额外"那个; 主 execution = invokeID)
+//
+// 双沙箱一次调用创建多个 execution，id 命名规则（`<invokeID>-agent` / `-orch`）属 operator
+// 实现细节，**平台侧不推断**。
+//
+// ⚠️ **两个 key 都要认**：双沙箱有两套 operator 实现并存、各写自己的 key（与 service 层
+// sandboxExecuteIDsOf 同一约定）。原来这里只读列表那个 key，于是写 extra key 的那套实现
+// 在调试态**静默漏掉从沙箱** —— 而调试态走不到 service 层的 destroySandboxExecuteIfNeeded
+// （那里按 record.TargetVersionID 查 version 判类型，调试用的 patchy target 从未落库），
+// 本函数是调试态唯一的清理来源，漏了就只能等平台侧 patrol。
+//
+// 两个 key 都读不到时退回裸 invokeID —— 那是单沙箱实现的 executeID，也是本函数引入前的
+// 唯一行为，所以退化路径与改动前完全一致，不会因为读 ext 失败而比原来更差。
+func (e *EvalOpenAPIApplication) debugSandboxExecuteIDs(ctx context.Context, spaceID, invokeID int64) []string {
+	fallback := []string{strconv.FormatInt(invokeID, 10)}
+	record, err := e.targetSvc.GetRecordByID(ctx, spaceID, invokeID)
+	if err != nil || record == nil || record.EvalTargetOutputData == nil {
+		logs.CtxWarn(ctx, "[SandboxDestroy] load debug record for execute ids fail, invoke_id=%d, err=%v", invokeID, err)
+		return fallback
+	}
+	ext := record.EvalTargetOutputData.Ext
+
+	seen := make(map[string]bool)
+	out := make([]string, 0, 2)
+	add := func(id string) {
+		if id == "" || seen[id] {
+			return
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+
+	// 形态一：完整列表。
+	if raw := ext[consts.OutputDataExtKeySandboxExecuteIDs]; raw != "" {
+		var ids []string
+		if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal debug sandbox execute ids fail, invoke_id=%d, raw=%s, err=%v", invokeID, raw, err)
+		} else {
+			for _, id := range ids {
+				add(id)
+			}
+		}
+	}
+
+	// 形态二：主 execution (= invokeID) + 一个额外 id。
+	// 只有该 key 存在时才补主 id —— 否则会给形态一的结果凭空多加一个不存在的裸 id。
+	if extra := ext[entity.SandboxAgentExtKeyExtraExecuteID]; extra != "" {
+		add(strconv.FormatInt(invokeID, 10))
+		add(extra)
+	}
+	if len(out) == 0 {
+		return fallback
+	}
+	return out
 }
 
 // emitSandboxAgentInvokeFinished 组装 tags 并上报 invoke_finished / invoke_duration.
@@ -1621,6 +1752,13 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
 	}
 
+	// ★ 透传实验级跑法配置(SUA/run_mode): OpenAPI 字符串枚举结构 → 内部 expt.RunModeConfig; 缺省 nil 不下发。
+	// 非空但认不出的 run_mode / sua_mode 在此**直接报参数错误**, 实验不被创建 (最早的校验落点)。
+	runModeConfig, err := experiment_convertor.OpenAPIRunModeConfigDTO2Domain(req.RunModeConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	createReq := &exptpb.SubmitExperimentRequest{
 		WorkspaceID:             req.GetWorkspaceID(),
 		Name:                    req.Name,
@@ -1636,6 +1774,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		EvalSetSourceType: gptr.Of(srcType),
 		// ★ 透传引用分组实验 id: 命中当前空间实验则复用其 group key(归入同一分组); 缺省则以实验 id 兜底。
 		RefGroupExperimentID: req.RefGroupExperimentID,
+		RunModeConfig:        runModeConfig,
 	}
 
 	if isNewPath {
@@ -3531,6 +3670,10 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 			tenant := rpc.SandboxTenantDefault
 			if agent := req.GetSandboxAgent(); agent != nil &&
 				entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) == entity.SandboxCountModeDual {
+				// 双沙箱 debug 走**旧链路租户**: 本入口是评测对象级调试, 请求里没有实验、
+				// 也没有 run_mode_config, 无从判断新旧链路 (见 entity.IsNewRunModeLink)。
+				// 新链路租户只由实验提交/重试链路按 run_mode 推导, 见 experiment_app.go
+				// dualSandboxTenantByRunMode。
 				tenant = rpc.SandboxTenantFornaxTraeEvalDualSandbox
 			}
 			if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{

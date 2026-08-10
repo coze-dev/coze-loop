@@ -41,6 +41,9 @@ struct CreateExperimentRequest {
     46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
     47: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
 
+    // 实验级多轮/SUA 跑法子配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)
+    49: optional expt.RunModeConfig run_mode_config (api.body = 'run_mode_config')
+
     60: optional string thread_id  (api.body = 'thread_id') // 关联的智能评测会话ID
 
     50: optional expt.ExptTriggerType trigger_type
@@ -106,6 +109,9 @@ struct SubmitExperimentRequest {
     46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
     47: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
     48: optional string x_jwt_token (api.header='X-Jwt-Token') // 提交实验时前端透传的发起人 user JWT，用于预下载 skill 入 TOS
+
+    // 实验级多轮/SUA 跑法子配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)
+    49: optional expt.RunModeConfig run_mode_config (api.body = 'run_mode_config')
 
     50: optional expt.ExptTriggerType trigger_type
     51: optional expt.TaskTimeRange time_range (api.body = 'time_range')

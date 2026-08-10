@@ -36,6 +36,12 @@ const (
 	// FieldAdapterBuiltinFieldNameSkillTOSKeys 执行期透传 EvalConf.SkillTOSKeys 用的 Ext key。
 	// 值须与商业版 consts.ExtKeySkillTOSKeys 逐字一致，供商业版 buildSkillsConfig 命中 TOS 现签复用。
 	FieldAdapterBuiltinFieldNameSkillTOSKeys = "agent_buddy_skill_tos_keys"
+	// TargetExecuteExtRunConfKey 执行期透传题目级多轮/SUA 运行配置 (ItemRunConf JSON) 用的 Ext key。
+	// callTarget 从 ItemConfig.EvalTargetConf.RunConf 序列化写入, SandboxAgent 算子读出组 case-file。
+	TargetExecuteExtRunConfKey = "builtin_run_conf"
+	// TargetExecuteExtRunModeConfigKey 执行期透传实验级跑法配置 (RunModeConfig JSON: run_mode/sua_mode/
+	// sua_model_id/max_run_minutes) 用的 Ext key。SandboxAgent 算子读出填 case-file experiment_info。
+	TargetExecuteExtRunModeConfigKey = "builtin_run_mode_config"
 )
 
 const (

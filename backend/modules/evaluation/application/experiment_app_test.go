@@ -900,9 +900,10 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
 				}
 				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), &entity.Session{UserID: "789", AppID: 0}).Return(&sandboxExpt, nil)
+				// ItemConcurNum=1 且非双沙箱 → sandboxInitConcurrency = 1*buffer(5) = 5
 				mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
 					TaskID:      strconv.FormatInt(validExptID, 10),
-					Concurrency: int32(1),
+					Concurrency: int32(5),
 					WorkspaceID: validWorkspaceID,
 				}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -7301,12 +7302,13 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
 		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		// 未配 ItemConcurNum → 归一化为 DefaultSubmitItemConcurNum(5), 非双沙箱 → 5*buffer(5) = 25
 		// e.manager.Get 只返回 shallow expt，Target 为 nil，需要 lazy-load 才能算出 tenant。
 		mockEvalTargetSvc.EXPECT().GetEvalTargetVersion(gomock.Any(), validWorkspaceID, validTargetVersionID, false).
 			Return(&entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{}}, nil)
 		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
 			TaskID:      strconv.FormatInt(validExptID, 10),
-			Concurrency: int32(entity.DefaultSubmitItemConcurNum),
+			Concurrency: int32(25),
 			WorkspaceID: validWorkspaceID,
 		}).Return(nil, errors.New("unknown service SandboxSchedulerService"))
 
@@ -7320,7 +7322,9 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	// 回归 SubmitExperiment/RetryExperiment tenant 不一致的 bug:
 	// manager.Get 返回的 expt 没有 Target，之前会静默回落到 SandboxTenantDefault (=FornaxTraeEval)，
 	// 首次 Submit 若是 Dual 就会触发 sandbox 侧 "cannot change tenant of active task" 错误。
-	// 修复后 RetryExperiment 会 lazy-load target，Dual 场景下 Init 应该带 SandboxTenantFornaxTraeEvalDualSandbox。
+	// 修复后 RetryExperiment 会 lazy-load target，Dual 场景下 Init 应该带双沙箱租户
+	// （本用例无 run_mode_config，故为旧链路的 FornaxTraeEvalDualSandbox；
+	//   新链路走 FornaxEvalGeneral，见 dualSandboxTenantByRunMode）。
 	t.Run("SandboxAgent dual-sandbox retry uses dual tenant", func(t *testing.T) {
 		sandboxExpt := *baseExpt
 		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
@@ -7333,10 +7337,13 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 				},
 			}, nil)
 		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
-			TaskID:      strconv.FormatInt(validExptID, 10),
-			Concurrency: int32(entity.DefaultSubmitItemConcurNum) * 2, // Dual 模式并发度翻倍
+			TaskID: strconv.FormatInt(validExptID, 10),
+			// Dual 模式并发度翻倍, 再乘 sandboxConcurrencyBuffer 向上取整 (见 sandboxInitConcurrency)
+			Concurrency: sandboxInitConcurrency(nil, true),
 			WorkspaceID: validWorkspaceID,
-			Tenant:      rpc.SandboxTenantFornaxTraeEvalDualSandbox,
+			// 本用例的 expt 不带 RunModeConfig → 旧链路租户（新旧链路按 run_mode 分流，
+			// 见 dualSandboxTenantByRunMode / entity.IsNewRunModeLink）
+			Tenant: rpc.SandboxTenantFornaxTraeEvalDualSandbox,
 		}).Return(&rpc.SandboxInitResponse{}, nil)
 		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
 		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)

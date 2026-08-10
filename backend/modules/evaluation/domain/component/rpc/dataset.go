@@ -73,6 +73,7 @@ type CreateDatasetParam struct {
 	DatasetType        *string
 	Tags               []*entity.ResourceTagRef
 	DatasetKey         *string
+	TemplateDatasetID  *int64
 }
 
 type CreateDatasetWithImportParam struct {

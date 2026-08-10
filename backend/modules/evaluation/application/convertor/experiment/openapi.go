@@ -17,6 +17,8 @@ import (
 	evaluator_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 
@@ -216,6 +218,7 @@ func openapiSandboxAgentDTO2Domain(dtoObj *openapiEvalTarget.SandboxAgent) *doma
 	res := &domaindoEvalTarget.SandboxAgent{
 		Name:          dtoObj.Name,
 		ModelName:     dtoObj.ModelName,
+		ModelID:       dtoObj.ModelID,
 		AgentSetupCmd: dtoObj.AgentSetupCmd,
 		AgentRunCmd:   dtoObj.AgentRunCmd,
 		Envs:          envs,
@@ -411,6 +414,9 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EvaluatorsConcurNum = dto.EvaluatorsConcurNum
 	result.TotalItemCount = dto.TotalItemCount
 	result.EvalSetDetails = DomainEvalSetDetailsDTO2OpenAPI(dto.EvalSetDetails)
+	// 跑法配置回显 (115): 写侧 SubmitExperimentRequest 能配, 读侧此前无字段, OpenAPI 调用方
+	// 查不到自己配了什么跑法 —— 内部接口一直能回显, 属两套读模型的不对称, 2026-08 补齐。
+	result.RunModeConfig = RunModeConfigDomain2OpenAPI(dto.RunModeConfig)
 	return result
 }
 
@@ -777,6 +783,12 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
 		result.EvaluatorsConcurNum = gptr.Of(int32(*experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum))
+	}
+	// 跑法配置回显 (115)。走 entity → domain → openapi 两跳而不是直接 entity → openapi:
+	// runModeConfigDO2DTO 已经处理了 entity 侧"零值即未配"的判定 (值类型枚举, 空串不回显),
+	// 再套一层就够了; 另写一条 entity→openapi 直转会把那套零值判定复制一份, 两处迟早漂移。
+	if experiment.EvalConf != nil {
+		result.RunModeConfig = RunModeConfigDomain2OpenAPI(runModeConfigDO2DTO(experiment.EvalConf.RunModeConfig))
 	}
 
 	return result
@@ -2146,6 +2158,7 @@ func OpenAPISandboxAgentDO2DTO(do *entity.SandboxAgent) *openapiEvalTarget.Sandb
 		Name:          gptr.Of(do.Name),
 		Type:          gptr.Of(openapiEvalTarget.SandboxAgentType(do.Type)),
 		ModelName:     gptr.Of(do.ModelName),
+		ModelID:       gptr.Of(do.ModelID),
 		AgentSetupCmd: gptr.Of(do.AgentSetupCmd),
 		AgentRunCmd:   gptr.Of(do.AgentRunCmd),
 		Envs:          envs,
@@ -2177,6 +2190,7 @@ func OpenAPISandboxAgentDTO2DO(dto *openapiEvalTarget.SandboxAgent) *entity.Sand
 		Name:             dto.GetName(),
 		Type:             entity.SandboxAgentType(dto.GetType()),
 		ModelName:        dto.GetModelName(),
+		ModelID:          dto.GetModelID(),
 		AgentSetupCmd:    dto.GetAgentSetupCmd(),
 		AgentRunCmd:      dto.GetAgentRunCmd(),
 		Envs:             envs,
@@ -3048,6 +3062,170 @@ func OpenAPIEvalSetSourceTypeDTO2Domain(s *openapiExperiment.ExptEvalSetSourceTy
 		return domainExpt.ExptEvalSetSourceType_MultiSetConfig
 	}
 	return domainExpt.ExptEvalSetSourceType_SingleSet
+}
+
+// OpenAPIRunModeConfigDTO2Domain 将 OpenAPI 的 RunModeConfig (字符串枚举风格) 转为内部 domain/expt.RunModeConfig (int 枚举)。
+// run_mode / sua_mode 字符串→int 枚举; max_run_minutes / sua_model_id 原样透传。
+// nil 入参返回 (nil, nil), 供 handler 直接赋给 createReq.RunModeConfig (缺省不下发, 与其它可选字段一致)。
+//
+// **非空但认不出的枚举字符串一律返回错误, 让创建实验的请求直接失败** —— 这是 sua_mode /
+// run_mode 校验的最早落点 (薛一正 2026-07-29: "实在不行在 submit 那里加个校验")。
+//
+// 此前这里是 `if v, ok := conv(...); ok { set }`, ok==false 时**什么都不做**: 非法值被静默
+// 丢弃成"没配", 再到 suaModeDTO2DO 的 default 兜成 humanloop, 于是拿真非法值
+// sua_mode="bogus" 发的实验 (7590112175193295618) 一路跑到 success、按 humanloop 跑了 22 轮,
+// 落库 eval_conf.run_mode_config 里连 sua_mode 这个 key 都没有。用户以为自己配的跑法生效了,
+// 实际跑的是另一个跑法, 且不留任何痕迹 —— 这类"配置写错但看起来成功"比直接报错难排查得多。
+// 改成入口即拒: 实验根本不该被创建, 而不是等跑到 case-file 组装、甚至跑完才发现。
+func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domainExpt.RunModeConfig, error) {
+	if c == nil {
+		return nil, nil
+	}
+	out := &domainExpt.RunModeConfig{
+		MaxRunMinutes: c.MaxRunMinutes,
+		// SuaModelID 不再从入参取: sua_model_id 已从 OpenAPI 契约移除 (SUA 模型由平台
+		// TCC 控制, 不是调用方的参数)。SuaModelName 尚存但已弃用, 仅调试用。
+		SuaModelName: c.SuaModelName,
+		// SUA 行为四项 + max_turns 无枚举可校验, 原样透传 (两级配置的实验级一半,
+		// 题目级优先的合并在 runtime 侧做)。
+		SuaGoal:                  c.SuaGoal,
+		SuaPersona:               c.SuaPersona,
+		SuaBehavioralConstraints: c.SuaBehavioralConstraints,
+		SuaPeTemplate:            c.SuaPeTemplate,
+		MaxTurns:                 c.MaxTurns,
+	}
+	if c.RunMode != nil {
+		rm, ok := openAPIRunModeToDomain(*c.RunMode)
+		if !ok {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid run_mode %q (supported: %s, %s, %s, %s)", *c.RunMode,
+				openapiExperiment.ExptRunModeSingleTurn, openapiExperiment.ExptRunModeFixedScriptMultiTurn,
+				openapiExperiment.ExptRunModeSuaMultiTurn, openapiExperiment.ExptRunModeGoal)))
+		}
+		out.RunMode = gptr.Of(rm)
+	}
+	if c.SuaMode != nil {
+		sm, ok := openAPISuaModeToDomain(*c.SuaMode)
+		if !ok {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid sua_mode %q (supported: %s, %s, %s)", *c.SuaMode,
+				openapiExperiment.SuaModeHumanLoop, openapiExperiment.SuaModeLoop,
+				openapiExperiment.SuaModeFixed)))
+		}
+		out.SuaMode = gptr.Of(sm)
+	}
+	return out, nil
+}
+
+// openAPIRunModeToDomain 将 OpenAPI ExptRunMode 字符串枚举转为内部 int 枚举; 未识别返回 false。
+func openAPIRunModeToDomain(s openapiExperiment.ExptRunMode) (domainExpt.ExptRunMode, bool) {
+	switch s {
+	case openapiExperiment.ExptRunModeSingleTurn:
+		return domainExpt.ExptRunMode_SingleTurn, true
+	case openapiExperiment.ExptRunModeFixedScriptMultiTurn:
+		return domainExpt.ExptRunMode_FixedScriptMultiTurn, true
+	case openapiExperiment.ExptRunModeSuaMultiTurn:
+		return domainExpt.ExptRunMode_SuaMultiTurn, true
+	case openapiExperiment.ExptRunModeGoal:
+		return domainExpt.ExptRunMode_Goal, true
+	default:
+		return 0, false
+	}
+}
+
+// openAPISuaModeToDomain 将 OpenAPI SuaMode 字符串枚举转为内部 int 枚举; 未识别返回 false。
+func openAPISuaModeToDomain(s openapiExperiment.SuaMode) (domainExpt.SuaMode, bool) {
+	switch s {
+	case openapiExperiment.SuaModeHumanLoop:
+		return domainExpt.SuaMode_HumanLoop, true
+	case openapiExperiment.SuaModeLoop:
+		return domainExpt.SuaMode_Loop, true
+	case openapiExperiment.SuaModeFixed:
+		return domainExpt.SuaMode_Fixed, true
+	default:
+		return 0, false
+	}
+}
+
+// RunModeConfigDomain2OpenAPI 把内部 domain 的跑法配置转成 OpenAPI 读模型的形态, 供实验详情/
+// 列表回显。它是 OpenAPIRunModeConfigDTO2Domain 的反向。
+//
+// # 为什么必须显式转换而不能直接强转
+//
+// 两套 RunModeConfig 长得很像, 枚举在这一层也恰好一一对应, 但它们是两个**独立的 Go 类型**,
+// 各自的整数编号由自己的 IDL 决定 —— 今天相等是巧合, 不是契约 (domain 侧的 ExptRunMode 注释
+// 明确写了它与 case-file 那套编号刻意不同)。强转会在某一侧改号时静默把一个跑法显示成另一个。
+//
+// domain 侧多出来的两个折叠跑法 (sua_loop / sua_human_loop) 只存在于 entity 枚举, 到不了
+// 这一层 —— entity→domain 的 suaRunModeDO2DTO 已把它们折回 sua_multi_turn, 具体是哪一种由
+// 同结构里的 sua_mode 表达, 信息不丢。
+//
+// 认不出的枚举值**整个字段留空而不是猜一个**: 读路径不该替调用方编造配置, 空值至少能让人
+// 看出"这里没读到", 而错值会被当成真配置。
+func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment.RunModeConfig {
+	if c == nil {
+		return nil
+	}
+	out := &openapiExperiment.RunModeConfig{
+		MaxRunMinutes: c.MaxRunMinutes,
+		MaxTurns:      c.MaxTurns,
+		// SuaModelName 已弃用, 仅调试用; 原样回显便于排查"配了什么"。
+		// sua_model_id 在两套契约里都已移除, 无可回显。
+		SuaModelName:             c.SuaModelName,
+		SuaGoal:                  c.SuaGoal,
+		SuaPersona:               c.SuaPersona,
+		SuaBehavioralConstraints: c.SuaBehavioralConstraints,
+		SuaPeTemplate:            c.SuaPeTemplate,
+	}
+	if c.RunMode != nil {
+		if rm, ok := domainRunModeToOpenAPI(*c.RunMode); ok {
+			out.RunMode = gptr.Of(rm)
+		}
+	}
+	if c.SuaMode != nil {
+		if sm, ok := domainSuaModeToOpenAPI(*c.SuaMode); ok {
+			out.SuaMode = gptr.Of(sm)
+		}
+	}
+	return out
+}
+
+// domainRunModeToOpenAPI 是 openAPIRunModeToDomain 的反向映射。
+//
+// 两套枚举在**这一层**恰好一一对应 (都只有四个对外形态), 所以看起来像可以直接强转 ——
+// 但不能: 它们是两个独立的 Go 类型, 且各自的整数编号由自己的 IDL 决定, 今天相等是巧合而非
+// 契约。domain 侧多出来的两个折叠跑法 (sua_loop / sua_human_loop) 只存在于 entity 枚举,
+// 到不了这一层 (entity→domain 的 suaRunModeDO2DTO 已经把它们折回 sua_multi_turn),
+// 区分靠同结构里的 sua_mode。
+//
+// ok=false 只留给真正认不出的值: 读路径不该替调用方编造配置。
+func domainRunModeToOpenAPI(m domainExpt.ExptRunMode) (openapiExperiment.ExptRunMode, bool) {
+	switch m {
+	case domainExpt.ExptRunMode_SingleTurn:
+		return openapiExperiment.ExptRunModeSingleTurn, true
+	case domainExpt.ExptRunMode_FixedScriptMultiTurn:
+		return openapiExperiment.ExptRunModeFixedScriptMultiTurn, true
+	case domainExpt.ExptRunMode_SuaMultiTurn:
+		return openapiExperiment.ExptRunModeSuaMultiTurn, true
+	case domainExpt.ExptRunMode_Goal:
+		return openapiExperiment.ExptRunModeGoal, true
+	default:
+		return "", false
+	}
+}
+
+// domainSuaModeToOpenAPI 是 openAPISuaModeToDomain 的反向映射。
+func domainSuaModeToOpenAPI(m domainExpt.SuaMode) (openapiExperiment.SuaMode, bool) {
+	switch m {
+	case domainExpt.SuaMode_HumanLoop:
+		return openapiExperiment.SuaModeHumanLoop, true
+	case domainExpt.SuaMode_Loop:
+		return openapiExperiment.SuaModeLoop, true
+	case domainExpt.SuaMode_Fixed:
+		return openapiExperiment.SuaModeFixed, true
+	default:
+		return "", false
+	}
 }
 
 // OpenAPIKeywordSearchDTO2Domain 将 OpenAPI 的 KeywordSearch 转为 domain/expt.KeywordSearch，供实验结果模糊搜索。

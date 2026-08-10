@@ -105,6 +105,17 @@ func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment,
 		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item retry num must be in range [0, %d]", entity.MaxItemRetryNum)))
 	}
 
+	// 多轮/SUA 校验门: 启用多轮/SUA 跑法 ⟺ (评测对象 == SandboxAgent) && (实验 == MultiSetConfig)。
+	// 不满足直接拒绝——单沙箱/非沙箱对象不支持多轮; 老 DataSet 实验路径不写/不读 item_config.RunConf。
+	if sc := expt.EvalConf.RunModeConfig; sc != nil && sc.RunMode != "" && sc.RunMode != entity.RunModeSingleTurn {
+		if !expt.IsSandboxAgentTarget() {
+			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("multi-turn/SUA run_mode is only supported for SandboxAgent eval target"))
+		}
+		if expt.EvalSetSourceType != entity.ExptEvalSetSourceType_MultiSetConfig {
+			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("multi-turn/SUA run_mode requires MultiSetConfig experiment"))
+		}
+	}
+
 	return nil
 }
 
@@ -623,6 +634,25 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, exptID, exptRunID, terminatedItemIDs)
 			}
 		default:
+			// **Failed 等其它终态也必须销毁沙箱**。此前清理只挂在 Terminated 一个 case 上, 于是
+			// "实验 Failed" 这一大类 (调度锁超时、建行失败、infra 重试耗尽、run 级 36h 僵尸) 全部
+			// 落到这个空 default 里, 已创建的沙箱无人回收 —— 而 SandboxAgent 是双沙箱, 一次漏两个。
+			//
+			// 为什么不直接把 Failed 并进上面的 Terminated case: 那个分支还会 terminateItemTurns
+			// (把未完成 turn 改写成"已终止")并 Upsert 结果过滤表, 那是"人工终止"的语义。Failed 的
+			// item 状态由各自的失败路径自己落, 不该被实验级终态改写。所以这里**只做沙箱销毁**,
+			// 不动 turn 状态 —— 两件事分开。
+			//
+			// terminateSandboxExecutesForCancelledItems 内部对非 SandboxAgent 的 record 是 no-op
+			// (它经 record 反查评测对象类型), Destroy 亦幂等, 故对普通实验无副作用。
+			if len(incompleteTurnIDs) > 0 {
+				itemIDSet := make(map[int64]bool, len(incompleteTurnIDs))
+				for _, itemTurnID := range incompleteTurnIDs {
+					itemIDSet[itemTurnID.ItemID] = true
+				}
+				itemIDs := maps.ToSlice(itemIDSet, func(k int64, v bool) int64 { return k })
+				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, exptID, exptRunID, itemIDs)
+			}
 		}
 	}
 
@@ -814,8 +844,11 @@ func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, i
 	return nil
 }
 
-// terminateSandboxExecutesForCancelledItems 在实验被取消时，针对 SandboxAgent 评测对象的未完成 turn 触发沙箱销毁。
-// best-effort：失败仅记录日志。
+// terminateSandboxExecutesForCancelledItems 在实验到达终态 (人工终止 Terminated / 失败 Failed 等)
+// 时，针对 SandboxAgent 评测对象的未完成 turn 触发沙箱销毁。best-effort：失败仅记录日志。
+//
+// 沿用 "ForCancelledItems" 这个名字是因为它已被多处引用；实际语义已扩为"所有终态"，
+// 传入的 itemIDs 在 Terminated 分支是被终止的 item、在其它终态分支是未完成的 item。
 func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.Context, spaceID, exptID int64, exptRunID *int64, terminatedItemIDs []int64) {
 	if e.evalTargetService == nil || exptRunID == nil || *exptRunID <= 0 || len(terminatedItemIDs) == 0 {
 		return

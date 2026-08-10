@@ -57,6 +57,14 @@ func (p *FieldSchema) IsValid() error {
 func (p *EvaluationSetSchema) IsValid() error {
 	return nil
 }
+func (p *EvaluationSetTemplate) IsValid() error {
+	if p.EvaluationSetSchema != nil {
+		if err := p.EvaluationSetSchema.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluationSetSchema not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *EvaluationSetVersion) IsValid() error {
 	if p.EvaluationSetSchema != nil {
 		if err := p.EvaluationSetSchema.IsValid(); err != nil {

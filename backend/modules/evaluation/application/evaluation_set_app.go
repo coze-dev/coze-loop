@@ -136,8 +136,11 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 	if req.Name == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("name is nil"))
 	}
-	if req.EvaluationSetSchema == nil {
+	if req.EvaluationSetSchema == nil && req.TemplateDatasetID == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("schema is nil"))
+	}
+	if req.TemplateDatasetID != nil && req.GetTemplateDatasetID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template_dataset_id must be greater than 0"))
 	}
 	// 鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
@@ -166,6 +169,7 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 		DatasetType:         req.Type,
 		Tags:                evaluation_set.ResourceTagRefDTO2DOs(req.Tags),
 		DatasetKey:          req.DatasetKey,
+		TemplateDatasetID:   req.TemplateDatasetID,
 	})
 	if err != nil {
 		return nil, err
@@ -173,6 +177,32 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 	// 返回结果构建、错误处理
 	return &eval_set.CreateEvaluationSetResponse{
 		EvaluationSetID: &id,
+	}, nil
+}
+
+func (e *EvaluationSetApplicationImpl) ListEvaluationSetTemplates(ctx context.Context, req *eval_set.ListEvaluationSetTemplatesRequest) (*eval_set.ListEvaluationSetTemplatesResponse, error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+	templates, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSetTemplates(ctx, &entity.ListEvaluationSetTemplatesParam{
+		SpaceID:   req.GetWorkspaceID(),
+		PageSize:  req.PageSize,
+		PageToken: req.PageToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &eval_set.ListEvaluationSetTemplatesResponse{
+		Templates:     evaluation_set.EvaluationSetTemplateDO2DTOs(templates),
+		Total:         total,
+		NextPageToken: nextPageToken,
 	}, nil
 }
 
@@ -814,7 +844,21 @@ func (e *EvaluationSetApplicationImpl) UpdateEvaluationSetSchema(ctx context.Con
 		return nil, err
 	}
 	// domain调用
-	err = e.evaluationSetSchemaService.UpdateEvaluationSetSchema(ctx, req.WorkspaceID, req.EvaluationSetID, evaluation_set.FieldSchemaDTO2DOs(req.Fields))
+	fields := evaluation_set.FieldSchemaDTO2DOs(req.Fields)
+	var currentSchema *entity.EvaluationSetSchema
+	if set.EvaluationSetVersion != nil {
+		currentSchema = set.EvaluationSetVersion.EvaluationSetSchema
+	}
+	err = e.evaluationSetService.ValidateEvaluationSetSchemaUpdate(ctx, &entity.ValidateEvaluationSetSchemaUpdateParam{
+		SpaceID:             req.WorkspaceID,
+		EvaluationSetID:     req.EvaluationSetID,
+		CurrentSchema:       currentSchema,
+		UpdatedFieldSchemas: fields,
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = e.evaluationSetSchemaService.UpdateEvaluationSetSchema(ctx, req.WorkspaceID, req.EvaluationSetID, fields)
 	if err != nil {
 		return nil, err
 	}
@@ -873,8 +917,18 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetVersion(ctx context.Conte
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	sharedOption := sharedOptionDTO2DO(req.SharedOption)
-	if req.SharedOption == nil || !req.SharedOption.GetIsShared() {
+	isShared := req.GetIsShared()
+	var sharedOption *entity.SharedResourceOption
+	if isShared {
+		if req.SourceSpaceID == nil || req.GetSourceSpaceID() <= 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when is_shared is true"))
+		}
+		sharedOption = &entity.SharedResourceOption{
+			IsShared:      true,
+			SourceSpaceID: req.SourceSpaceID,
+		}
+	}
+	if !isShared {
 		// 非共享场景严格保持 main：先加载评测集、鉴权，再加载版本。
 		set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, gptr.Indirect(req.EvaluationSetID), req.DeletedAt, nil)
 		if err != nil {
@@ -905,9 +959,6 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetVersion(ctx context.Conte
 		return &eval_set.GetEvaluationSetVersionResponse{
 			Version: versionDTO, EvaluationSet: evaluation_set.EvaluationSetDO2DTO(versionSet),
 		}, nil
-	}
-	if sharedOption == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source_space_id is required when shared_option.is_shared is true"))
 	}
 	// 共享场景允许仅凭 version_id 从来源空间加载版本及所属评测集。
 	version, set, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, req.WorkspaceID, req.VersionID, req.DeletedAt, sharedOption)

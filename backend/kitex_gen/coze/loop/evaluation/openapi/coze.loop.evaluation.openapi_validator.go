@@ -86,6 +86,43 @@ func (p *CreateEvaluationSetOApiResponse) IsValid() error {
 func (p *CreateEvaluationSetOpenAPIData) IsValid() error {
 	return nil
 }
+func (p *ListEvaluationSetTemplatesOApiRequest) IsValid() error {
+	if p.PageSize != nil {
+		if *p.PageSize <= int32(0) {
+			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+		}
+		if *p.PageSize > int32(200) {
+			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetTemplatesOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetTemplatesOpenAPIData) IsValid() error {
+	return nil
+}
 func (p *GetEvaluationSetOApiRequest) IsValid() error {
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
@@ -889,6 +926,11 @@ func (p *SubmitExperimentOApiRequest) IsValid() error {
 	if p.TargetRuntimeParam != nil {
 		if err := p.TargetRuntimeParam.IsValid(); err != nil {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
+	if p.RunModeConfig != nil {
+		if err := p.RunModeConfig.IsValid(); err != nil {
+			return fmt.Errorf("field RunModeConfig not valid, %w", err)
 		}
 	}
 	if p.NotificationConf != nil {

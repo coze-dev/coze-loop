@@ -21,6 +21,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListEvaluationSetTemplatesOApi": kitex.NewMethodInfo(
+		listEvaluationSetTemplatesOApiHandler,
+		newEvaluationOpenAPIServiceListEvaluationSetTemplatesOApiArgs,
+		newEvaluationOpenAPIServiceListEvaluationSetTemplatesOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"GetEvaluationSetOApi": kitex.NewMethodInfo(
 		getEvaluationSetOApiHandler,
 		newEvaluationOpenAPIServiceGetEvaluationSetOApiArgs,
@@ -449,6 +456,25 @@ func newEvaluationOpenAPIServiceCreateEvaluationSetOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceCreateEvaluationSetOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceCreateEvaluationSetOApiResult()
+}
+
+func listEvaluationSetTemplatesOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceListEvaluationSetTemplatesOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceListEvaluationSetTemplatesOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ListEvaluationSetTemplatesOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceListEvaluationSetTemplatesOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluationSetTemplatesOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceListEvaluationSetTemplatesOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluationSetTemplatesOApiResult()
 }
 
 func getEvaluationSetOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1494,6 +1520,16 @@ func (p *kClient) CreateEvaluationSetOApi(ctx context.Context, req *openapi.Crea
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceCreateEvaluationSetOApiResult
 	if err = p.c.Call(ctx, "CreateEvaluationSetOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluationSetTemplatesOApi(ctx context.Context, req *openapi.ListEvaluationSetTemplatesOApiRequest) (r *openapi.ListEvaluationSetTemplatesOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceListEvaluationSetTemplatesOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceListEvaluationSetTemplatesOApiResult
+	if err = p.c.Call(ctx, "ListEvaluationSetTemplatesOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

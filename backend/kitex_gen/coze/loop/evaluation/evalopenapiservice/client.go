@@ -12,6 +12,7 @@ import (
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateEvaluationSetOApiResponse, err error)
+	ListEvaluationSetTemplatesOApi(ctx context.Context, req *openapi.ListEvaluationSetTemplatesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetTemplatesOApiResponse, err error)
 	GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvaluationSetOApiResponse, err error)
 	UpdateEvaluationSetOApi(ctx context.Context, req *openapi.UpdateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetOApiResponse, err error)
 	DeleteEvaluationSetOApi(ctx context.Context, req *openapi.DeleteEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.DeleteEvaluationSetOApiResponse, err error)
@@ -100,6 +101,11 @@ type kEvalOpenAPIServiceClient struct {
 func (p *kEvalOpenAPIServiceClient) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateEvaluationSetOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.CreateEvaluationSetOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) ListEvaluationSetTemplatesOApi(ctx context.Context, req *openapi.ListEvaluationSetTemplatesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetTemplatesOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListEvaluationSetTemplatesOApi(ctx, req)
 }
 
 func (p *kEvalOpenAPIServiceClient) GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvaluationSetOApiResponse, err error) {

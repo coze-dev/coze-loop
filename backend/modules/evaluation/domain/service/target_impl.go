@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	"github.com/mohae/deepcopy"
 
+	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -46,9 +47,19 @@ type EvalTargetServiceImpl struct {
 	// SandboxAgent 评测对象单行执行完成后用于销毁沙箱执行
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 	exptRunLogRepo          repo.IExptRunLogRepo
+
+	// sandboxDestroyRetryBudget 是 destroySandboxExecute 重试的总时间预算；<=0 时取
+	// defaultSandboxDestroyRetryBudget。做成字段而非常量纯为可测：一条"Destroy 恒失败"的用例
+	// 若按线上预算跑就要真等十秒，压到毫秒级才能把"重试到用尽"确定性地断言完。
+	// 生产路径（wire 注入）从不设置它，走默认值。
+	sandboxDestroyRetryBudget time.Duration
 }
 
 const evalTargetRecordPersistTimeout = 5 * time.Second
+
+// defaultSandboxDestroyRetryBudget 是 destroySandboxExecute 重试的默认总时间预算。
+// 十秒的取舍见 destroySandboxExecute 注释「用 RetryTenSeconds 而非更长」。
+const defaultSandboxDestroyRetryBudget = 10 * time.Second
 
 // trajectoryStartTimeBufferMS 抽取 trajectory 时，时间下界额外向前预留的 buffer(1 分钟)，
 // 用于吸收请求发起时间与实际 span 上报时间之间可能的时钟/延迟误差，避免漏掉最早的 span。
@@ -591,6 +602,27 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	// 仅 DebugTarget 传入 TruncateLargeContent，其他场景 nil 默认剪裁
 	truncateLargeContent := param.TruncateLargeContent
 	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record, truncateLargeContent); err != nil {
+		// ⚠️ 这里是**唯一的清理机会**：此刻 operator 已成功返回，沙箱确定在跑，ext 也已算好
+		// 落在 outputData.Ext 里；但 record 没落库，而平台侧三条兜底销毁链
+		// (destroySandboxExecuteIfNeeded / TerminateAsyncRecordsAndDestroySandbox /
+		// CheckSandboxTerminated) **全部以"按 recordID 从库里查出 record 再读 ext"为前提** ——
+		// 库里没这行，一条都命中不到。就这么 return 掉，沙箱只能等平台侧 patrol，
+		// 期间并发名额一直不归还 (配额耗尽后新 item 直接撞 601300702 且该错误不重试)。
+		//
+		// 用内存里已有的 record 直接销毁：sandboxExecuteIDsOf 只读 record.EvalTargetOutputData.Ext
+		// 与 record.ID，是纯内存操作、不查库，所以落库失败也拿得到正确的 execute id。
+		// taskID 同理不走 resolveSandboxTaskIDByRunID (它查 expt_run_log，多一跳且可能返回 "")
+		// —— 此刻手上直接有 param.ExperimentID，operator 侧的 taskID 也正是它。
+		//
+		// 类型守卫用手上的 target 直接判，比 destroySandboxExecuteIfNeeded 那种"查库反查
+		// version"更直接可靠 (destroySandboxExecute 自己不检查 target 类型，漏判会把非沙箱
+		// 场景也发一次 Destroy)。
+		if target.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+			executeIDs := sandboxExecuteIDsOf(ctx, record)
+			logs.CtxError(ctx, "[SandboxDestroy] create eval target record fail, destroying sandbox executes to avoid leak, invoke_id=%d, expt_id=%d, execute_ids=%v, err=%v",
+				record.ID, gptr.Indirect(param.ExperimentID), executeIDs, err)
+			e.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(param.ExperimentID), 10), spaceID, executeIDs, false)
+		}
 		return nil, callee, err
 	}
 
@@ -728,6 +760,8 @@ func (e *EvalTargetServiceImpl) LoadRecordFullData(ctx context.Context, record *
 // 会追加销毁一次；避免从沙箱只能等 session TTL 到期后被 patrol 兼底回收。
 func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Context, record *entity.EvalTargetRecord) {
 	if e.sandboxSchedulerAdapter == nil || record == nil {
+		// 静默跳过等于沙箱泄漏 + 并发名额不归还，必须留痕（adapter 未接线是配置问题，不该沉默）。
+		logs.CtxWarn(ctx, "[SandboxDestroy] skip: adapter_nil=%t record_nil=%t", e.sandboxSchedulerAdapter == nil, record == nil)
 		return
 	}
 	// 仅 SandboxAgent 评测对象需要销毁沙箱执行
@@ -738,20 +772,29 @@ func (e *EvalTargetServiceImpl) destroySandboxExecuteIfNeeded(ctx context.Contex
 		return
 	}
 	if targetVersion == nil || targetVersion.EvalTargetType != entity.EvalTargetTypeSandboxAgent {
+		// 类型不匹配就不销 —— 但双沙箱 item 若因 version 查不到/类型读错落到这里，沙箱同样泄漏，
+		// 而原来这条路径完全无日志，排查时无法区分「不该销」和「该销却没销」。
+		gotType := entity.EvalTargetType(-1)
+		if targetVersion != nil {
+			gotType = targetVersion.EvalTargetType
+		}
+		logs.CtxWarn(ctx, "[SandboxDestroy] skip: not a SandboxAgent target, record_id=%d, space_id=%d, version_id=%d, version_nil=%t, got_type=%d",
+			record.ID, record.SpaceID, record.TargetVersionID, targetVersion == nil, gotType)
 		return
 	}
 
 	taskID := e.resolveSandboxTaskIDByRunID(ctx, record.ExperimentRunID)
-	e.destroySandboxExecute(ctx, taskID, record.SpaceID, record.ID, false)
-
-	// 双沙箱：AsyncExecute 在 outputData.Ext 里落了从沙箱 executeID，这里追加销毁一次。
-	if extra := extractExtraSandboxExecuteID(record); extra != "" {
-		e.destroySandboxExtraExecute(ctx, taskID, record.SpaceID, extra)
-	}
+	executeIDs := sandboxExecuteIDsOf(ctx, record)
+	logs.CtxInfo(ctx, "[SandboxDestroy] destroying sandbox executes, record_id=%d, task_id=%s, expt_run_id=%d, execute_ids=%v",
+		record.ID, taskID, record.ExperimentRunID, executeIDs)
+	e.destroySandboxExecute(ctx, taskID, record.SpaceID, executeIDs, false)
 }
 
 // extractExtraSandboxExecuteID 从 record 的 outputData.Ext 里读取额外沙箱 execute id；
 // 缺失/空值返回 ""。
+//
+// 与 sandboxExecuteIDsOf 的分工: 销毁走 sandboxExecuteIDsOf (取两个 key 的并集, 是本函数的超集);
+// 本函数只在需要"单个 extra id 原值"时用 —— 例如把它重新写回 fail record 的 ext 供事后审计。
 func extractExtraSandboxExecuteID(record *entity.EvalTargetRecord) string {
 	if record == nil || record.EvalTargetOutputData == nil {
 		return ""
@@ -759,23 +802,63 @@ func extractExtraSandboxExecuteID(record *entity.EvalTargetRecord) string {
 	return record.EvalTargetOutputData.Ext[entity.SandboxAgentExtKeyExtraExecuteID]
 }
 
-// destroySandboxExtraExecute 异步 best-effort 销毁指定字符串 executeID 的沙箱执行；用于双沙箱
-// 从沙箱这类没有 int64 ID 的额外销毁点。zombieTimeout 强制 false，避免向从沙箱下发收尾命令。
-func (e *EvalTargetServiceImpl) destroySandboxExtraExecute(ctx context.Context, taskID string, spaceID int64, executeID string) {
-	if e.sandboxSchedulerAdapter == nil || executeID == "" {
-		return
+// sandboxExecuteIDsOf 取该 record 本次调用实际创建的 sandbox execution id 列表。
+//
+// 双沙箱一次调用会创建多个 execution, 其 id 命名规则属 operator 实现细节, 平台侧不推断 ——
+// 只读 operator 在 AsyncExecute 回传、落在 output ext 里的值。
+//
+// ⚠️ **必须同时认两个 key**: 双沙箱目前有两套 operator 实现并存 (见 SandboxCountMode 分流),
+// 各自写自己的 key ——
+//
+//	consts.OutputDataExtKeySandboxExecuteIDs   (JSON 字符串数组, 全部 execution)
+//	entity.SandboxAgentExtKeyExtraExecuteID    (裸字符串, 仅"额外"那个; 主 execution = record.ID)
+//
+// 只认一个的后果是**另一条链路静默漏沙箱**: 代码编译通过、自己的测试也过, 但双沙箱每 item 占
+// 2 个并发名额, 泄漏累积到配额上限后新 item 直接失败 (601300702), 且该错误不重试。
+// 两个 key 都读、取并集, 是这两套实现合并期间唯一安全的形状。
+//
+// 都缺省时退回 record.ID (单沙箱实现的 executeID 即 record.ID/invokeID)。
+func sandboxExecuteIDsOf(ctx context.Context, record *entity.EvalTargetRecord) []string {
+	fallback := []string{strconv.FormatInt(record.ID, 10)}
+	if record.EvalTargetOutputData == nil || len(record.EvalTargetOutputData.Ext) == 0 {
+		return fallback
 	}
-	goroutine.Go(ctx, func() {
-		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
-			TaskID:      taskID,
-			DestroyType: rpc.SandboxDestroyTypeExecute,
-			ExecuteIDs:  []string{executeID},
-			WorkspaceID: spaceID,
-		}); err != nil {
-			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox extra execute fail, task_id=%s, execute_id=%s, err=%v",
-				taskID, executeID, err)
+	ext := record.EvalTargetOutputData.Ext
+
+	seen := make(map[string]bool)
+	out := make([]string, 0, 2)
+	add := func(id string) {
+		if id == "" || seen[id] {
+			return
 		}
-	})
+		seen[id] = true
+		out = append(out, id)
+	}
+
+	// 形态一: 完整列表 (我们这条链路)。
+	if raw := ext[consts.OutputDataExtKeySandboxExecuteIDs]; raw != "" {
+		var ids []string
+		if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal sandbox execute ids fail, record_id=%d, raw=%s, err=%v",
+				record.ID, raw, err)
+		} else {
+			for _, id := range ids {
+				add(id)
+			}
+		}
+	}
+
+	// 形态二: 主 execution (= record.ID) + 一个额外 id (main 那条链路)。
+	// 只有该 key 存在时才补主 id —— 否则会给形态一的结果凭空多加一个。
+	if extra := ext[entity.SandboxAgentExtKeyExtraExecuteID]; extra != "" {
+		add(strconv.FormatInt(record.ID, 10))
+		add(extra)
+	}
+
+	if len(out) == 0 {
+		return fallback
+	}
+	return out
 }
 
 // resolveSandboxTaskIDByRunID 通过 ExperimentRunID 反查 ExptID 作为 sandbox TaskID。
@@ -794,24 +877,78 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 	return strconv.FormatInt(runLog.ExptID, 10)
 }
 
-// destroySandboxExecute 异步 best-effort 销毁单个 sandbox execute。
+// destroySandboxExecute 异步 best-effort 销毁本次调用创建的 sandbox execute（可能多个）。
+//
+// 列表形态而非单个 int64: 双沙箱一次调用创建多个 execution, 且 id 由 operator 命名 (可能不是
+// record.ID 那样的纯数字), 所以这里只接受 operator 给出的字符串 id 列表, 不做格式假定。
 // zombieTimeout=true 时透传给下游适配器，由适配器决定是否附带 SandboxAgent 收尾命令。
-func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID, executeID int64, zombieTimeout bool) {
-	if e.sandboxSchedulerAdapter == nil {
+//
+// # 为什么要重试
+//
+// 这条路径是**正常完成时的主回收口** (ReportInvokeRecords → destroySandboxExecuteIfNeeded),
+// 但它此前是"一次 RPC + 失败只 warn": 一次网络抖动 (`remote or network error[remote]`) 就等于
+// 沙箱确定性泄漏, 而且**没有任何后续机制会重试** —— record 已被写成终态, 后续 tick 的
+// zombie/sweep 都以 `Status == AsyncInvoking` 为前提, 命中不到它。
+//
+// Destroy 天然幂等: 服务端对不存在/已终态的 executeID 只是不计入 affected_count, 不报错,
+// 所以重复销毁无副作用。这与 Run 路径的顾虑正好相反 (那边重试可能起第二个进程, 必须窄判),
+// 这里重试的唯一代价是多一次 RPC, 而不重试的代价是沙箱一直挂着 + 并发名额永不归还
+// (后续 item 全撞 601300702 且该错误不重试)。
+//
+// 用 RetryTenSeconds 而非更长: 本函数已在独立 goroutine 里, 拖长不阻塞调用方; 但沙箱侧
+// 真的不可用时再久也没用, 十秒足够吸收瞬时抖动。
+//
+// # 为什么重试要挂在 WithoutCancel 的 ctx 上
+//
+// 调用方 (ReportInvokeRecords) 是**请求态**: 它一 return, Hertz/Kitex 就取消请求 ctx。
+// 而本函数刻意异步 (goroutine.Go), 重试窗口 (十秒) 远长于调用方剩余寿命 —— 若直接用入参 ctx,
+// cenk/backoff 的 backOffContext.NextBackOff 见 ctx.Done() 立即返回 Stop, 于是**第一次
+// Destroy 失败后一次都不会重试**, 整个重试形同虚设 (恰是本函数要修的那个泄漏)。
+// 与 ReportInvokeRecords 里落 record 的 persistCtx 同款处置: 剥离取消信号, 保留 logID 等值。
+func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
+	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
 		return
 	}
-	goroutine.Go(ctx, func() {
-		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
+	// 先剥离取消信号再交给 goroutine: 见上"为什么重试要挂在 WithoutCancel 的 ctx 上"。
+	destroyCtx := context.WithoutCancel(ctx)
+	goroutine.Go(destroyCtx, func() {
+		e.destroySandboxExecuteSync(destroyCtx, taskID, spaceID, executeIDs, zombieTimeout)
+	})
+}
+
+// destroySandboxExecuteSync 是 destroySandboxExecute 的同步本体（含重试与终局告警）。
+//
+// 拆出来只为可测: 重试逻辑若只能经 goroutine 触发, 测试就必须靠 channel/sleep 去等一个
+// **没有 join 点**的后台 goroutine —— 那正是本次 -race 失败的成因 (等到了第一次 Destroy 就
+// 返回, 后续重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf → panic
+// "Fail in goroutine after ... has completed")。同步入口让"重试到用尽"能被确定性地断言完,
+// 不留悬空 goroutine。
+func (e *EvalTargetServiceImpl) destroySandboxExecuteSync(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
+	budget := e.sandboxDestroyRetryBudget
+	if budget <= 0 {
+		budget = defaultSandboxDestroyRetryBudget
+	}
+	if err := backoff.RetryWithElapsedTime(ctx, budget, func() error {
+		_, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
 			TaskID:        taskID,
 			DestroyType:   rpc.SandboxDestroyTypeExecute,
-			ExecuteIDs:    []string{strconv.FormatInt(executeID, 10)},
+			ExecuteIDs:    executeIDs,
 			WorkspaceID:   spaceID,
 			ZombieTimeout: zombieTimeout,
-		}); err != nil {
-			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_id=%d, err=%v",
-				taskID, executeID, err)
-		}
-	})
+		})
+		return derr
+	}); err != nil {
+		// 重试用尽仍失败 = 沙箱确定性泄漏 + 并发名额不归还, 且没有下一次机会 (见上)。
+		// 故打 Error 而非 Warn: 它需要人介入, 不是"可能有问题"。
+		logs.CtxError(ctx, "[SandboxDestroy] destroy sandbox execute fail after retries, sandboxes may leak, task_id=%s, execute_ids=%v, err=%v",
+			taskID, executeIDs, err)
+	}
+}
+
+// destroySandboxExtraExecute 异步 best-effort 销毁指定字符串 executeID 的沙箱执行；用于双沙箱
+// 从沙箱这类没有 int64 ID 的额外销毁点。zombieTimeout 强制 false，避免向从沙箱下发收尾命令。
+func (e *EvalTargetServiceImpl) destroySandboxExtraExecute(ctx context.Context, taskID string, spaceID int64, executeID string) {
+	e.destroySandboxExecute(ctx, taskID, spaceID, []string{executeID}, false)
 }
 
 // TerminateAsyncRecordsAndDestroySandbox 把仍处于 AsyncInvoking 状态的 SandboxAgent EvalTargetRecord 置为 Fail，
@@ -871,8 +1008,10 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 		if gptr.Indirect(r.Status) != entity.EvalTargetRunStatusAsyncInvoking {
 			continue
 		}
-		// 覆盖前先抓一次 extra execute id：failOutput 会替换掉整个 EvalTargetOutputData（含 Ext），
-		// 若不预先抓，双沙箱模式的从沙箱销毁就会丢失依据，只能等 session TTL。
+		// ⚠️ 必须在下面用 failOutput 覆盖 EvalTargetOutputData 之前取，否则 ext 里
+		// operator 回传的 sandbox execute id 列表会被抹掉，只能退回裸 record.ID。
+		// sandboxExecuteIDsOf 同时覆盖两种 ext 形态（完整列表 / 主 id + extra id），是 extra 单值的超集。
+		executeIDs := sandboxExecuteIDsOf(ctx, r)
 		extraExecuteID := extractExtraSandboxExecuteID(r)
 		failOutput := &entity.EvalTargetOutputData{
 			EvalTargetRunError: &entity.EvalTargetRunError{
@@ -895,7 +1034,16 @@ func (e *EvalTargetServiceImpl) TerminateAsyncRecordsAndDestroySandbox(ctx conte
 			taskID = e.resolveSandboxTaskIDByRunID(ctx, r.ExperimentRunID)
 			taskIDCache[r.ExperimentRunID] = taskID
 		}
-		e.destroySandboxExecute(ctx, taskID, r.SpaceID, r.ID, zombieTimeout)
+		// ⚠️ 主 / 从沙箱必须**分两次**调用销毁，不能合成一次传 2 个 ExecuteIDs：
+		// commercial 侧 destroyReqDO2PO 只在 len(ExecuteIDs)==1 时才拼 zombie 收尾 EndCmd
+		// （见 infra/rpc/sandbox/sandbox_scheduler.go），合成一次会让 EndCmd 静默不下发。
+		// 主沙箱：executeIDs 里除 extra 之外的部分（通常即 record.ID），带 zombieTimeout。
+		for _, id := range executeIDs {
+			if id == extraExecuteID {
+				continue
+			}
+			e.destroySandboxExecute(ctx, taskID, r.SpaceID, []string{id}, zombieTimeout)
+		}
 		// 双沙箱：额外销毁从沙箱 execute，语义对齐 destroySandboxExecuteIfNeeded (success 分支)。
 		// 从沙箱 zombieTimeout 恒为 false，不需要下发 SandboxAgent EndCmd（EndCmd 只对主沙箱有意义）。
 		if extraExecuteID != "" {
@@ -911,7 +1059,9 @@ const sandboxStatusCheckConcurrency = 8
 // 实现要点：
 //   - 只对 SandboxAgent 且仍处于 AsyncInvoking 的 record 发 sandbox.Get；避免在同步/非 sandbox record 上浪费 RPC。
 //   - Get 出错（含开源 stub 的 "not implement" / adapter 未注入）一律 warn + skip 该 record，让 zombie 兜底。
-//   - 只把 Failed / Canceled 视为"结束但没上报"命中；Succeeded 会有毫秒级 in-flight 回调窗口，交给 zombie 或后续 tick 兜底。
+//   - 只把 Failed / Canceled / Finished 视为"结束但没上报"命中；Succeeded 会有毫秒级 in-flight 回调窗口，交给 zombie 或后续 tick 兜底。
+//   - 查哪些 execute id 由 sandboxExecuteIDsOf 决定（与销毁同源），**不按 record.ID 约定推断** ——
+//     否则双沙箱那种"id 带 operator 后缀"的形态整条记录都判不出终态，只能等 3h zombie。
 func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spaceID int64, recordIDs []int64) ([]int64, map[int64]string) {
 	if e.sandboxSchedulerAdapter == nil || len(recordIDs) == 0 {
 		return nil, nil
@@ -991,14 +1141,40 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 				<-sem
 				wg.Done()
 			}()
-			// 主沙箱：ExecuteID = record.ID
-			mainTerminal, mainStatus := e.querySandboxTerminalStatus(ctx, strconv.FormatInt(r.ID, 10), spaceID, r.ID, "main")
-			// 从沙箱（双沙箱模式）：ExecuteID 从 Ext 里取；单沙箱模式 extra 为空，跳过。
-			// 任一进终态就算命中——双沙箱是配对关系，一挂另一边产出也没意义。
-			var subTerminal bool
-			var subStatus rpc.SandboxExecuteStatus
-			if extra := extractExtraSandboxExecuteID(r); extra != "" {
-				subTerminal, subStatus = e.querySandboxTerminalStatus(ctx, extra, spaceID, r.ID, "subordinate")
+			// execute id 一律走 sandboxExecuteIDsOf（与销毁同一个来源），**不按约定推断**。
+			//
+			// 这里曾把主沙箱硬编码成 `record.ID`（单沙箱约定），只从 ext 取"额外"那一个。
+			// 后果是双沙箱里"完整列表"那种形态（ext 只有 sandbox_execute_ids、没有 extra key，
+			// 其 id 带 operator 自己的后缀）**整条记录对本巡检完全不可见**：
+			// 主查询拿裸 record.ID 去问，沙箱侧根本没有这个 execution，只回
+			// "execution not found"，按 querySandboxTerminalStatus 的契约返回 (false, _)；
+			// 而 extra key 不存在，从查询直接跳过。于是 record 永远判不出终态，
+			// 这类实验拿不到本巡检的快速兜底，只能等 item 级 zombie 超时（异步默认 3h）。
+			//
+			// 现在与 destroySandboxExecuteIfNeeded / TerminateAsyncRecordsAndDestroySandbox
+			// 共用同一个取值函数：两个 ext key 都认、都缺才退回裸 record.ID。
+			// "id 怎么拼"只此一处知道，不再在巡检里复制一份约定。
+			//
+			// 任一 execution 进终态就算命中——双沙箱是配对关系，一边挂了另一边的产出也没意义。
+			ids := sandboxExecuteIDsOf(ctx, r)
+			var (
+				mainTerminal bool
+				mainStatus   rpc.SandboxExecuteStatus
+				subTerminal  bool
+				subStatus    rpc.SandboxExecuteStatus
+			)
+			for i, id := range ids {
+				// 列表首个即"主"（单沙箱下就是 record.ID；双沙箱下是 operator 回传的第一个），
+				// 其余归入"从"。side 只用于 err_msg 与日志可读性，不参与命中判定。
+				if i == 0 {
+					mainTerminal, mainStatus = e.querySandboxTerminalStatus(ctx, id, spaceID, r.ID, "main")
+					continue
+				}
+				terminal, status := e.querySandboxTerminalStatus(ctx, id, spaceID, r.ID, "subordinate")
+				// 多个从沙箱时取**第一个进终态**的那个做标签，避免被后面仍 Running 的覆盖掉。
+				if terminal && !subTerminal {
+					subTerminal, subStatus = terminal, status
+				}
 			}
 			if !mainTerminal && !subTerminal {
 				return
@@ -1078,6 +1254,12 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	}
 
 	if status := gptr.Indirect(record.Status); status != entity.EvalTargetRunStatusAsyncInvoking {
+		// 这条 return 会跳过函数尾部的 destroySandboxExecuteIfNeeded —— 双沙箱下就是
+		// 「沙箱永不回收 + 并发名额永不归还」，后续 item 全撞 601300702。原来只返回 error，
+		// 而上游 ReportEvalTargetInvokeResult 并不打印它，现象是「什么都没发生」，
+		// 只能靠「日志里没有 destroy」反推。必须留痕。
+		logs.CtxWarn(ctx, "[SandboxDestroy] ReportInvokeRecords skipped: record status is not AsyncInvoking, sandbox will NOT be destroyed, record_id=%d, space_id=%d, got_status=%d, want_status=%d",
+			param.RecordID, param.SpaceID, status, entity.EvalTargetRunStatusAsyncInvoking)
 		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("unexpected target result status %d", status)))
 	}
 	if record.EvalTargetOutputData != nil && len(record.EvalTargetOutputData.Ext) > 0 {

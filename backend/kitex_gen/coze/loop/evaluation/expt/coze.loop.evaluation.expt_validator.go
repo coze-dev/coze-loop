@@ -37,6 +37,11 @@ func (p *CreateExperimentRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.RunModeConfig != nil {
+		if err := p.RunModeConfig.IsValid(); err != nil {
+			return fmt.Errorf("field RunModeConfig not valid, %w", err)
+		}
+	}
 	if p.EvalSetSharedOption != nil {
 		if err := p.EvalSetSharedOption.IsValid(); err != nil {
 			return fmt.Errorf("field EvalSetSharedOption not valid, %w", err)
@@ -91,6 +96,11 @@ func (p *SubmitExperimentRequest) IsValid() error {
 	if p.TargetRuntimeParam != nil {
 		if err := p.TargetRuntimeParam.IsValid(); err != nil {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
+	if p.RunModeConfig != nil {
+		if err := p.RunModeConfig.IsValid(); err != nil {
+			return fmt.Errorf("field RunModeConfig not valid, %w", err)
 		}
 	}
 	if p.TimeRange != nil {

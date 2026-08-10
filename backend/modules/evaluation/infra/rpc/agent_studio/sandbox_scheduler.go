@@ -39,3 +39,11 @@ func (a *SandboxSchedulerAdapter) GetTaskInfo(ctx context.Context, req *rpc.Sand
 func (a *SandboxSchedulerAdapter) Destroy(ctx context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
 	return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("SandboxScheduler.Destroy not implement"))
 }
+
+func (a *SandboxSchedulerAdapter) WriteFile(ctx context.Context, req *rpc.SandboxWriteFileRequest) (*rpc.SandboxWriteFileResponse, error) {
+	return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("SandboxScheduler.WriteFile not implement"))
+}
+
+func (a *SandboxSchedulerAdapter) RunCommand(ctx context.Context, req *rpc.SandboxRunCommandRequest) (*rpc.SandboxRunCommandResponse, error) {
+	return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("SandboxScheduler.RunCommand not implement"))
+}

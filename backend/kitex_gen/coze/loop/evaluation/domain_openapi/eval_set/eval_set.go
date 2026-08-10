@@ -929,6 +929,8 @@ type FieldSchema struct {
 	SchemaKey *SchemaKey `thrift:"schema_key,7,optional" frugal:"7,optional,string" form:"schema_key" json:"schema_key,omitempty" query:"schema_key"`
 	// 唯一键，创建列时无需关注，更新列的时候携带即可
 	Key *string `thrift:"key,10,optional" frugal:"10,optional,string" form:"key" json:"key,omitempty" query:"key"`
+	// 是否为不可修改的评测集模版列
+	Locked *bool `thrift:"locked,11,optional" frugal:"11,optional,bool" form:"locked" json:"locked,omitempty" query:"locked"`
 }
 
 func NewFieldSchema() *FieldSchema {
@@ -1033,6 +1035,18 @@ func (p *FieldSchema) GetKey() (v string) {
 	}
 	return *p.Key
 }
+
+var FieldSchema_Locked_DEFAULT bool
+
+func (p *FieldSchema) GetLocked() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLocked() {
+		return FieldSchema_Locked_DEFAULT
+	}
+	return *p.Locked
+}
 func (p *FieldSchema) SetName(val *string) {
 	p.Name = val
 }
@@ -1057,6 +1071,9 @@ func (p *FieldSchema) SetSchemaKey(val *SchemaKey) {
 func (p *FieldSchema) SetKey(val *string) {
 	p.Key = val
 }
+func (p *FieldSchema) SetLocked(val *bool) {
+	p.Locked = val
+}
 
 var fieldIDToName_FieldSchema = map[int16]string{
 	1:  "name",
@@ -1067,6 +1084,7 @@ var fieldIDToName_FieldSchema = map[int16]string{
 	6:  "text_schema",
 	7:  "schema_key",
 	10: "key",
+	11: "locked",
 }
 
 func (p *FieldSchema) IsSetName() bool {
@@ -1099,6 +1117,10 @@ func (p *FieldSchema) IsSetSchemaKey() bool {
 
 func (p *FieldSchema) IsSetKey() bool {
 	return p.Key != nil
+}
+
+func (p *FieldSchema) IsSetLocked() bool {
+	return p.Locked != nil
 }
 
 func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
@@ -1178,6 +1200,14 @@ func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1300,6 +1330,17 @@ func (p *FieldSchema) ReadField10(iprot thrift.TProtocol) error {
 	p.Key = _field
 	return nil
 }
+func (p *FieldSchema) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Locked = _field
+	return nil
+}
 
 func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1337,6 +1378,10 @@ func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -1501,6 +1546,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *FieldSchema) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLocked() {
+		if err = oprot.WriteFieldBegin("locked", thrift.BOOL, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Locked); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 
 func (p *FieldSchema) String() string {
 	if p == nil {
@@ -1538,6 +1601,9 @@ func (p *FieldSchema) DeepEqual(ano *FieldSchema) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.Key) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.Locked) {
 		return false
 	}
 	return true
@@ -1635,6 +1701,18 @@ func (p *FieldSchema) Field10DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Key, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *FieldSchema) Field11DeepEqual(src *bool) bool {
+
+	if p.Locked == src {
+		return true
+	} else if p.Locked == nil || src == nil {
+		return false
+	}
+	if *p.Locked != *src {
 		return false
 	}
 	return true
@@ -1839,6 +1917,490 @@ func (p *EvaluationSetSchema) Field1DeepEqual(src []*FieldSchema) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+
+// 评测集创建模版。模版来源空间及锁定策略由服务端配置决定。
+type EvaluationSetTemplate struct {
+	TemplateDatasetID   *int64  `thrift:"template_dataset_id,1,optional" frugal:"1,optional,i64" json:"template_dataset_id" form:"template_dataset_id" query:"template_dataset_id"`
+	TemplateDatasetName *string `thrift:"template_dataset_name,2,optional" frugal:"2,optional,string" form:"template_dataset_name" json:"template_dataset_name,omitempty" query:"template_dataset_name"`
+	Description         *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	// 完整的模版列信息
+	EvaluationSetSchema *EvaluationSetSchema `thrift:"evaluation_set_schema,4,optional" frugal:"4,optional,EvaluationSetSchema" form:"evaluation_set_schema" json:"evaluation_set_schema,omitempty" query:"evaluation_set_schema"`
+	// 使用该模版创建评测集时，是否允许修改模版 Schema
+	IsEditable *bool `thrift:"is_editable,5,optional" frugal:"5,optional,bool" form:"is_editable" json:"is_editable,omitempty" query:"is_editable"`
+}
+
+func NewEvaluationSetTemplate() *EvaluationSetTemplate {
+	return &EvaluationSetTemplate{}
+}
+
+func (p *EvaluationSetTemplate) InitDefault() {
+}
+
+var EvaluationSetTemplate_TemplateDatasetID_DEFAULT int64
+
+func (p *EvaluationSetTemplate) GetTemplateDatasetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTemplateDatasetID() {
+		return EvaluationSetTemplate_TemplateDatasetID_DEFAULT
+	}
+	return *p.TemplateDatasetID
+}
+
+var EvaluationSetTemplate_TemplateDatasetName_DEFAULT string
+
+func (p *EvaluationSetTemplate) GetTemplateDatasetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTemplateDatasetName() {
+		return EvaluationSetTemplate_TemplateDatasetName_DEFAULT
+	}
+	return *p.TemplateDatasetName
+}
+
+var EvaluationSetTemplate_Description_DEFAULT string
+
+func (p *EvaluationSetTemplate) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return EvaluationSetTemplate_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var EvaluationSetTemplate_EvaluationSetSchema_DEFAULT *EvaluationSetSchema
+
+func (p *EvaluationSetTemplate) GetEvaluationSetSchema() (v *EvaluationSetSchema) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluationSetSchema() {
+		return EvaluationSetTemplate_EvaluationSetSchema_DEFAULT
+	}
+	return p.EvaluationSetSchema
+}
+
+var EvaluationSetTemplate_IsEditable_DEFAULT bool
+
+func (p *EvaluationSetTemplate) GetIsEditable() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsEditable() {
+		return EvaluationSetTemplate_IsEditable_DEFAULT
+	}
+	return *p.IsEditable
+}
+func (p *EvaluationSetTemplate) SetTemplateDatasetID(val *int64) {
+	p.TemplateDatasetID = val
+}
+func (p *EvaluationSetTemplate) SetTemplateDatasetName(val *string) {
+	p.TemplateDatasetName = val
+}
+func (p *EvaluationSetTemplate) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *EvaluationSetTemplate) SetEvaluationSetSchema(val *EvaluationSetSchema) {
+	p.EvaluationSetSchema = val
+}
+func (p *EvaluationSetTemplate) SetIsEditable(val *bool) {
+	p.IsEditable = val
+}
+
+var fieldIDToName_EvaluationSetTemplate = map[int16]string{
+	1: "template_dataset_id",
+	2: "template_dataset_name",
+	3: "description",
+	4: "evaluation_set_schema",
+	5: "is_editable",
+}
+
+func (p *EvaluationSetTemplate) IsSetTemplateDatasetID() bool {
+	return p.TemplateDatasetID != nil
+}
+
+func (p *EvaluationSetTemplate) IsSetTemplateDatasetName() bool {
+	return p.TemplateDatasetName != nil
+}
+
+func (p *EvaluationSetTemplate) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *EvaluationSetTemplate) IsSetEvaluationSetSchema() bool {
+	return p.EvaluationSetSchema != nil
+}
+
+func (p *EvaluationSetTemplate) IsSetIsEditable() bool {
+	return p.IsEditable != nil
+}
+
+func (p *EvaluationSetTemplate) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetTemplate[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationSetTemplate) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TemplateDatasetID = _field
+	return nil
+}
+func (p *EvaluationSetTemplate) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TemplateDatasetName = _field
+	return nil
+}
+func (p *EvaluationSetTemplate) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *EvaluationSetTemplate) ReadField4(iprot thrift.TProtocol) error {
+	_field := NewEvaluationSetSchema()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvaluationSetSchema = _field
+	return nil
+}
+func (p *EvaluationSetTemplate) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsEditable = _field
+	return nil
+}
+
+func (p *EvaluationSetTemplate) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvaluationSetTemplate"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationSetTemplate) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTemplateDatasetID() {
+		if err = oprot.WriteFieldBegin("template_dataset_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TemplateDatasetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvaluationSetTemplate) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTemplateDatasetName() {
+		if err = oprot.WriteFieldBegin("template_dataset_name", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TemplateDatasetName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvaluationSetTemplate) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *EvaluationSetTemplate) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluationSetSchema() {
+		if err = oprot.WriteFieldBegin("evaluation_set_schema", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvaluationSetSchema.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *EvaluationSetTemplate) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsEditable() {
+		if err = oprot.WriteFieldBegin("is_editable", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsEditable); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *EvaluationSetTemplate) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationSetTemplate(%+v)", *p)
+
+}
+
+func (p *EvaluationSetTemplate) DeepEqual(ano *EvaluationSetTemplate) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TemplateDatasetID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TemplateDatasetName) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EvaluationSetSchema) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.IsEditable) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationSetTemplate) Field1DeepEqual(src *int64) bool {
+
+	if p.TemplateDatasetID == src {
+		return true
+	} else if p.TemplateDatasetID == nil || src == nil {
+		return false
+	}
+	if *p.TemplateDatasetID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSetTemplate) Field2DeepEqual(src *string) bool {
+
+	if p.TemplateDatasetName == src {
+		return true
+	} else if p.TemplateDatasetName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TemplateDatasetName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSetTemplate) Field3DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSetTemplate) Field4DeepEqual(src *EvaluationSetSchema) bool {
+
+	if !p.EvaluationSetSchema.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSetTemplate) Field5DeepEqual(src *bool) bool {
+
+	if p.IsEditable == src {
+		return true
+	} else if p.IsEditable == nil || src == nil {
+		return false
+	}
+	if *p.IsEditable != *src {
+		return false
 	}
 	return true
 }
@@ -2405,11 +2967,13 @@ type EvaluationSet struct {
 	IsChangeUncommitted *bool                `thrift:"is_change_uncommitted,7,optional" frugal:"7,optional,bool" form:"is_change_uncommitted" json:"is_change_uncommitted,omitempty" query:"is_change_uncommitted"`
 	Type                *EvaluationSetType   `thrift:"type,8,optional" frugal:"8,optional,string" form:"type" json:"type,omitempty" query:"type"`
 	// 数据集业务唯一键，创建后不可变
-	DatasetKey     *string                    `thrift:"dataset_key,9,optional" frugal:"9,optional,string" form:"dataset_key" json:"dataset_key,omitempty" query:"dataset_key"`
-	CurrentVersion *EvaluationSetVersion      `thrift:"current_version,20,optional" frugal:"20,optional,EvaluationSetVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
-	Tags           []*ResourceTag             `thrift:"tags,21,optional" frugal:"21,optional,list<ResourceTag>" form:"tags" json:"tags,omitempty" query:"tags"`
-	BaseInfo       *common.BaseInfo           `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
-	SharedInfo     *common.SharedResourceInfo `thrift:"shared_info,101,optional" frugal:"101,optional,common.SharedResourceInfo" form:"shared_info" json:"shared_info,omitempty" query:"shared_info"`
+	DatasetKey *string `thrift:"dataset_key,9,optional" frugal:"9,optional,string" form:"dataset_key" json:"dataset_key,omitempty" query:"dataset_key"`
+	// 创建评测集时使用的模版数据集 ID
+	TemplateDatasetID *int64                     `thrift:"template_dataset_id,10,optional" frugal:"10,optional,i64" json:"template_dataset_id" form:"template_dataset_id" query:"template_dataset_id"`
+	CurrentVersion    *EvaluationSetVersion      `thrift:"current_version,20,optional" frugal:"20,optional,EvaluationSetVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
+	Tags              []*ResourceTag             `thrift:"tags,21,optional" frugal:"21,optional,list<ResourceTag>" form:"tags" json:"tags,omitempty" query:"tags"`
+	BaseInfo          *common.BaseInfo           `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	SharedInfo        *common.SharedResourceInfo `thrift:"shared_info,101,optional" frugal:"101,optional,common.SharedResourceInfo" form:"shared_info" json:"shared_info,omitempty" query:"shared_info"`
 }
 
 func NewEvaluationSet() *EvaluationSet {
@@ -2527,6 +3091,18 @@ func (p *EvaluationSet) GetDatasetKey() (v string) {
 	return *p.DatasetKey
 }
 
+var EvaluationSet_TemplateDatasetID_DEFAULT int64
+
+func (p *EvaluationSet) GetTemplateDatasetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTemplateDatasetID() {
+		return EvaluationSet_TemplateDatasetID_DEFAULT
+	}
+	return *p.TemplateDatasetID
+}
+
 var EvaluationSet_CurrentVersion_DEFAULT *EvaluationSetVersion
 
 func (p *EvaluationSet) GetCurrentVersion() (v *EvaluationSetVersion) {
@@ -2601,6 +3177,9 @@ func (p *EvaluationSet) SetType(val *EvaluationSetType) {
 func (p *EvaluationSet) SetDatasetKey(val *string) {
 	p.DatasetKey = val
 }
+func (p *EvaluationSet) SetTemplateDatasetID(val *int64) {
+	p.TemplateDatasetID = val
+}
 func (p *EvaluationSet) SetCurrentVersion(val *EvaluationSetVersion) {
 	p.CurrentVersion = val
 }
@@ -2624,6 +3203,7 @@ var fieldIDToName_EvaluationSet = map[int16]string{
 	7:   "is_change_uncommitted",
 	8:   "type",
 	9:   "dataset_key",
+	10:  "template_dataset_id",
 	20:  "current_version",
 	21:  "tags",
 	100: "base_info",
@@ -2664,6 +3244,10 @@ func (p *EvaluationSet) IsSetType() bool {
 
 func (p *EvaluationSet) IsSetDatasetKey() bool {
 	return p.DatasetKey != nil
+}
+
+func (p *EvaluationSet) IsSetTemplateDatasetID() bool {
+	return p.TemplateDatasetID != nil
 }
 
 func (p *EvaluationSet) IsSetCurrentVersion() bool {
@@ -2767,6 +3351,14 @@ func (p *EvaluationSet) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2932,6 +3524,17 @@ func (p *EvaluationSet) ReadField9(iprot thrift.TProtocol) error {
 	p.DatasetKey = _field
 	return nil
 }
+func (p *EvaluationSet) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TemplateDatasetID = _field
+	return nil
+}
 func (p *EvaluationSet) ReadField20(iprot thrift.TProtocol) error {
 	_field := NewEvaluationSetVersion()
 	if err := _field.Read(iprot); err != nil {
@@ -3020,6 +3623,10 @@ func (p *EvaluationSet) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -3218,6 +3825,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
+func (p *EvaluationSet) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTemplateDatasetID() {
+		if err = oprot.WriteFieldBegin("template_dataset_id", thrift.I64, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TemplateDatasetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *EvaluationSet) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCurrentVersion() {
 		if err = oprot.WriteFieldBegin("current_version", thrift.STRUCT, 20); err != nil {
@@ -3340,6 +3965,9 @@ func (p *EvaluationSet) DeepEqual(ano *EvaluationSet) bool {
 	if !p.Field9DeepEqual(ano.DatasetKey) {
 		return false
 	}
+	if !p.Field10DeepEqual(ano.TemplateDatasetID) {
+		return false
+	}
 	if !p.Field20DeepEqual(ano.CurrentVersion) {
 		return false
 	}
@@ -3459,6 +4087,18 @@ func (p *EvaluationSet) Field9DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.DatasetKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluationSet) Field10DeepEqual(src *int64) bool {
+
+	if p.TemplateDatasetID == src {
+		return true
+	} else if p.TemplateDatasetID == nil || src == nil {
+		return false
+	}
+	if *p.TemplateDatasetID != *src {
 		return false
 	}
 	return true

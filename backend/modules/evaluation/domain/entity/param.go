@@ -17,6 +17,26 @@ type CreateEvaluationSetParam struct {
 	DatasetType         *string
 	Tags                []*ResourceTagRef
 	DatasetKey          *string
+	TemplateDatasetID   *int64
+}
+
+type ListEvaluationSetTemplatesParam struct {
+	SpaceID   int64
+	PageSize  *int32
+	PageToken *string
+}
+
+type BuildEvaluationSetSchemaFromTemplateParam struct {
+	SpaceID           int64
+	TemplateDatasetID int64
+	RequestedSchema   *EvaluationSetSchema
+}
+
+type ValidateEvaluationSetSchemaUpdateParam struct {
+	SpaceID             int64
+	EvaluationSetID     int64
+	CurrentSchema       *EvaluationSetSchema
+	UpdatedFieldSchemas []*FieldSchema
 }
 
 type CreateEvaluationSetWithImportParam struct {

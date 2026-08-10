@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -88,6 +89,19 @@ type experimentApplication struct {
 
 const sandboxSchedulerInitTimeout = 5 * time.Second
 
+// sandboxConcurrencyBuffer 是沙箱任务并发配额的余量系数（见 sandboxInitConcurrency）。
+//
+// 从 1.2 放大到 5：1.2 的余量隐含假设「item 跑完即归还名额」，实测该假设不成立 ——
+// 双沙箱 item 上报 SUCCESS 后 destroy 未被触发，每 item 净漏 2 个 execution 名额，
+// active_count 只增不减；而配额是 execution 粒度的硬闸、被卡的 item 直接判永久失败
+// （不重试不排队），于是 6 个 item 打满 12 个名额后剩下全挂 601300702
+// （medium 59 题实测 3 success / 21+ failed）。
+//
+// 泄漏本身另行修复（先补 OSS 37977972 的可观测性定位跳过点），这里把余量拉大兜底：
+// 名额多给**不会**多起沙箱（同时起几个沙箱由 item 并发度决定），只是把硬闸抬高，
+// 让泄漏在单次实验内不至于把队列彻底堵死。
+const sandboxConcurrencyBuffer = 5
+
 func NewExperimentApplication(
 	aggResultSvc service.ExptAggrResultService,
 	resultSvc service.ExptResultService,
@@ -153,6 +167,36 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}
 	if !isMulti && hasConfigs {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_configs is only allowed when eval_set_source_type=MultiSetConfig"))
+	}
+
+	// ★ run_mode_config 枚举合法性校验 (内部面补齐 OpenAPI 面已有的闸)。
+	//
+	// OpenAPI 面在 convertor 入口就拒非法值 (OpenAPIRunModeConfigDTO2Domain 报
+	// CommonInvalidParamCode), 内部 Thrift 面此前**完全没有这道闸** —— 非法整数能一路进来,
+	// 然后被 suaRunModeDTO2DO 的 default 静默回落成 single_turn 落库。后果是一处判据分裂:
+	// Submit 侧 isValidExptRunModeDTO 判非法 → 旧链路租户(3), 而落库值已成合法 single_turn,
+	// Retry 侧从 eval_conf 读出来 → IsNewRunModeLink 判新链路 → 租户(4), 两次推导不一致,
+	// 撞沙箱侧 "cannot change tenant of active task"。与部署时间无关, 同一版代码即可复现。
+	//
+	// 修在入口而不是改 suaRunModeDTO2DO 的 default: 只改 default 虽能让两处判据自然一致,
+	// 但"调用方发了非法值"这件事仍被静默接受 (表现从"存 single_turn"变成"存空 run_mode")。
+	// 非法值应当报错、不该兜底 —— 与 sua_mode 那次修法同构 (default 改空串 + 入口报错,
+	// 见 convertor 的 suaModeDTO2DO 注释), 也与 entity.SuaModeHumanLoop 注释定的调子一致。
+	//
+	// 校验合法集必须与 entity.IsValidRunMode / isValidExptRunModeDTO 同步: IDL 新增
+	// ExptRunMode / SuaMode 枚举值时, 三处一起加, 否则新跑法会在入口被误拒。
+	if rmc := req.GetRunModeConfig(); rmc != nil {
+		if rmc.IsSetRunMode() && !isValidExptRunModeDTO(rmc) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid run_mode %d (supported: %d=single_turn, %d=fixed_script_multi_turn, %d=sua_multi_turn, %d=goal)",
+				rmc.GetRunMode(), domain_expt.ExptRunMode_SingleTurn, domain_expt.ExptRunMode_FixedScriptMultiTurn,
+				domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal)))
+		}
+		if rmc.IsSetSuaMode() && !isValidExptSuaModeDTO(rmc.GetSuaMode()) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid sua_mode %d (supported: %d=human_loop, %d=loop, %d=fixed)",
+				rmc.GetSuaMode(), domain_expt.SuaMode_HumanLoop, domain_expt.SuaMode_Loop, domain_expt.SuaMode_Fixed)))
+		}
 	}
 
 	// 多评测集 (MultiSetConfig) 空间灰度校验: 仅白名单空间可创建, 非白名单直接拦截报错。
@@ -499,6 +543,13 @@ func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req
 
 func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.SubmitExperimentRequest) (r *expt.SubmitExperimentResponse, err error) {
 	logs.CtxInfo(ctx, "SubmitExperiment req: %v", json.Jsonify(req))
+	// [sandbox-mt-debug] 单独打 run_mode_config 到手内容, 定位 BFFv2/thrift 解码 vs convertor 谁丢字段。
+	if rmc := req.GetRunModeConfig(); rmc != nil {
+		logs.CtxInfo(ctx, "[sandbox-mt-debug] SubmitExperiment run_mode_config received: isSetRunMode=%v run_mode=%d isSetSuaMode=%v sua_mode=%d max_run_minutes=%d raw=%s",
+			rmc.IsSetRunMode(), rmc.GetRunMode(), rmc.IsSetSuaMode(), rmc.GetSuaMode(), rmc.GetMaxRunMinutes(), json.Jsonify(rmc))
+	} else {
+		logs.CtxInfo(ctx, "[sandbox-mt-debug] SubmitExperiment run_mode_config is NIL at handler entry")
+	}
 	if hasDuplicates(req.EvaluatorVersionIds) {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
 	}
@@ -555,6 +606,9 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		EvalSetSourceType:    req.EvalSetSourceType,
 		RefGroupExperimentID: req.RefGroupExperimentID,
 		NotificationConf:     req.NotificationConf,
+		// ★ wiring fix: 透传 run_mode_config 到 CreateExperimentRequest，否则落不进 eval_conf，
+		// operator 读不到 → 走默认 sua_multi_turn 兜底，用户选的 single_turn 被静默忽略。nil 安全。
+		RunModeConfig: req.RunModeConfig,
 		// ★ 跨空间共享: Submit 的 shared_option (field 80/81) 透传到 Create，
 		// 否则 SubmitExperiment 路径丢失来源空间，发起鉴权/加载会退化成消费方空间。
 		EvalSetSharedOption: req.EvalSetSharedOption,
@@ -577,7 +631,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
 		exptID := cresp.GetExperiment().GetID()
 		tenant := sandboxTenantForExperimentDTO(cresp.GetExperiment())
-		concurrency := sandboxInitConcurrency(ptr.ConvIntPtr[int32, int](req.ItemConcurNum), tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox)
+		concurrency := sandboxInitConcurrency(ptr.ConvIntPtr[int32, int](req.ItemConcurNum), isDualSandboxTenant(tenant))
 		if err := e.initSandboxTask(ctx, "submit experiment", exptID, concurrency, req.GetWorkspaceID(), tenant); err != nil {
 			return nil, err
 		}
@@ -1340,6 +1394,41 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 		return nil, err
 	}
 
+	// SandboxAgent 评测对象：并发度改了就必须把沙箱任务的名额同步过去。
+	//
+	// 沙箱任务的并发上限只在 Init 时设定 —— SandboxScheduler 的 IDL 里 concurrency 只存在于
+	// InitRequest，没有任何 Update/Scale 方法。所以运行中只改实验的 ItemConcurNum 会造成两侧
+	// 分裂：evaluation 按新并发去申请沙箱，agent_studio 的名额还是 Init 时那份。超出的部分全部
+	// 601300702 concurrency limit reached，而该错误 fail-fast、不入队不重试（RunSync 满即返回
+	// ErrConcurrencyLimited；调度侧 isRetryableError 只认 "QuotaExceeded"），撞上即 item 永久失败。
+	// 实测：运行中把并发从 5 调到 30，59 题里 35 题以此挂掉。
+	//
+	// 重复 Init 是安全的：调度侧 Init 走 taskRepo.Upsert，会更新 Concurrency；同 tenant 重复调用
+	// 不报错 —— 调度侧只在 **Active** task 上换 tenant 才拒绝（判据 Status==Active && Tenant!=tenant，
+	// 报错文案 "cannot change tenant of active task"）。
+	//
+	// ⚠️ **原注释此处写着"tenant 由同一个实验推导，不会变"，该结论已失效**：它写于双沙箱租户恒定
+	// 的那一版，此后引入了按 run_mode 分新旧链路，同一个实验在不同代码版本下会推出不同 tenant
+	// （存量 task 上刻的是老租户，新代码推出新租户），于是本处 Init 也会撞上上面那条拒绝。
+	// 要定位是哪次改动引入的分流，用 git log -S isDualSandboxTenant / -S dualSandboxTenantByRunMode。
+	//
+	// 与 Retry 不同，Init 失败**不**让整个更新失败：DB 里的 ItemConcurNum 已经改完了，此时返回错误
+	// 会让调用方以为没生效而重试，反而更乱。名额没跟上的后果是新并发暂时吃不满（老名额仍可用，
+	// 实验不会中断），故降级为告警。
+	//
+	// ⚠️ 但**租户冲突是这条降级的例外，它会完全静默**：接口照常返回成功，用户以为并发已调好，
+	// 实际名额停在 Init 时那份，超出部分全部撞上面说的 601300702 fail-fast、item 成批永久失败
+	// —— 即上面"5 调到 30 挂 35 题"那个后果，却连一条错误都不冒（只有这条 warn）。
+	// 排查时若见并发调了不生效，先在日志里搜本条 warn 的 err 内容有没有 "cannot change tenant"。
+	if itemConcurNum != nil && e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
+		tenant := sandboxTenantForExperimentEntity(got)
+		concurrency := sandboxInitConcurrency(itemConcurNum, isDualSandboxTenant(tenant))
+		if initErr := e.initSandboxTask(ctx, "update run conf", req.GetExptID(), concurrency, req.GetWorkspaceID(), tenant); initErr != nil {
+			logs.CtxWarn(ctx, "update run conf: re-init sandbox task fail, sandbox quota still at the old value, expt_id=%d, item_concur_num=%d, concurrency=%d, err=%v",
+				req.GetExptID(), gptr.Indirect(itemConcurNum), concurrency, initErr)
+		}
+	}
+
 	return &expt.UpdateExptRunConfResponse{
 		BaseResp: base.NewBaseResp(),
 	}, nil
@@ -1520,7 +1609,7 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 			got.Target = target
 		}
 		tenant := sandboxTenantForExperimentEntity(got)
-		concurrency := sandboxInitConcurrency(got.EvalConf.ItemConcurNum, tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox)
+		concurrency := sandboxInitConcurrency(got.EvalConf.ItemConcurNum, isDualSandboxTenant(tenant))
 		if err := e.initSandboxTask(ctx, "retry experiment", req.GetExptID(), concurrency, req.GetWorkspaceID(), tenant); err != nil {
 			return nil, err
 		}
@@ -1595,28 +1684,63 @@ func isSandboxAgentExperiment(expt *entity.Experiment) bool {
 
 // sandboxInitConcurrency 计算 SandboxAgent 评测对象 Init 时下发的 Concurrency：
 //  1. 先用 NormalizeSubmitItemConcurNum 兜底 nil/<=0 → DefaultSubmitItemConcurNum；
-//  2. 双沙箱模式一次评测占用 2 个沙箱 execute，需要额外放大到 2 倍上限，否则调度侧任务并发度不够。
+//  2. 双沙箱模式一次评测占用 2 个沙箱 execute，需要额外放大到 2 倍上限，否则调度侧任务并发度不够；
+//  3. 再乘 1.2 向上取整留一点余量：配额是 execution 粒度的硬闸，卡住的 item 直接判永久失败、
+//     不重试不排队，所以宁可多给一点，也不要因为边界刚好贴死而整条 item 挂掉。
 //
 // 入参 itemConcurNum 允许来自 SubmitRequest.ItemConcurNum(int32) 或 EvalConf.ItemConcurNum(*int)，
 // 调用方自行转成 *int 后传入。
 func sandboxInitConcurrency(itemConcurNum *int, dual bool) int32 {
 	normalized := gptr.Indirect(entity.NormalizeSubmitItemConcurNum(itemConcurNum))
 	if dual {
-		return int32(normalized * 2)
+		normalized *= 2
 	}
-	return int32(normalized)
+	return int32(math.Ceil(float64(normalized) * sandboxConcurrencyBuffer))
+}
+
+// isDualSandboxTenant 判断 tenant 是否代表双沙箱链路。
+// ⚠️ 存在的理由：双沙箱一次评测占 2 个沙箱 execute，Concurrency 要 ×2（见 sandboxInitConcurrency）。
+// 这个判据必须跟着下面 sandboxTenantForExperiment* 的返回值走 —— 早先是在调用处内联写
+// `tenant == SandboxTenantFornaxTraeEvalDualSandbox`，三处散落；租户值一改就集体恒 false，
+// 双沙箱静默失去并发翻倍、item 撞配额直接判永久失败。收敛成一个函数，改租户只改这里。
+//
+// ⚠️ **新旧链路并存期必须同时认两个租户**：新链路(有合法 run_mode)走 FornaxEvalGeneral、
+// 旧链路走 FornaxTraeEvalDualSandbox，两者都是双沙箱、都要并发翻倍。只认一个会让另一条
+// 链路静默失去 ×2，撞配额的 item 直接判永久失败且不重试（601300702），没有任何一层报错。
+func isDualSandboxTenant(tenant rpc.SandboxTenant) bool {
+	return tenant == rpc.SandboxTenantFornaxEvalGeneral ||
+		tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox
+}
+
+// dualSandboxTenantByRunMode 在"已确定是双沙箱"的前提下，按新旧链路选租户。
+//
+// 新旧链路会并存一段时间，需要在沙箱租户上区分（下游 agent_studio 按 Tenant.String() 分
+// TCC 配额桶；policy 目前同构，差异体现在配额与后续可能的独立 policy）：
+//   - 新链路（RunModeConfig 非 nil 且 run_mode 合法）→ FornaxEvalGeneral(4)
+//   - 旧链路（config 空 / run_mode 空或非法）→ FornaxTraeEvalDualSandbox(3)
+//
+// 判据收敛在 entity.IsNewRunModeLink 单点，三处推导都调它，避免判据散落后集体走错档。
+func dualSandboxTenantByRunMode(cfg *entity.RunModeConfig) rpc.SandboxTenant {
+	if entity.IsNewRunModeLink(cfg) {
+		return rpc.SandboxTenantFornaxEvalGeneral
+	}
+	return rpc.SandboxTenantFornaxTraeEvalDualSandbox
 }
 
 // sandboxTenantForExperimentEntity 从 entity 层实验推导出 Init 所需的沙箱租户。
-// SandboxAgent.SandboxCountMode=Dual 时返回 FornaxTraeEvalDualSandbox，其余情况回落到 Default（FornaxTraeEval）。
+// 非双沙箱回落 Default（FornaxTraeEval）；双沙箱再按 run_mode 分新旧链路。
 func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant {
 	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
 		return rpc.SandboxTenantDefault
 	}
-	if expt.Target.EvalTargetVersion.SandboxAgent.IsDualSandbox() {
-		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
+	if !expt.Target.EvalTargetVersion.SandboxAgent.IsDualSandbox() {
+		return rpc.SandboxTenantDefault
 	}
-	return rpc.SandboxTenantDefault
+	var cfg *entity.RunModeConfig
+	if expt.EvalConf != nil {
+		cfg = expt.EvalConf.RunModeConfig
+	}
+	return dualSandboxTenantByRunMode(cfg)
 }
 
 // sandboxTenantForExperimentDTO 从 domain DTO 实验推导 Init 所需的沙箱租户。
@@ -1629,10 +1753,49 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 	if agent == nil {
 		return rpc.SandboxTenantDefault
 	}
-	if entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) == entity.SandboxCountModeDual {
+	if entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) != entity.SandboxCountModeDual {
+		return rpc.SandboxTenantDefault
+	}
+	// DTO 侧 run_mode 是 ExptRunMode 整数枚举, 不能强转成 entity.RunMode 字符串。
+	// 这里直接判枚举合法性, 与 entity.IsNewRunModeLink 同语义 ——
+	// **两处必须同步**: IDL 新增 ExptRunMode 值时, 这里和 entity.IsValidRunMode 都要加。
+	// 不复用 convertor.suaRunModeDTO2DO: 它未导出, 且 default 静默回落 single_turn,
+	// 无法区分"传了 single_turn"和"传了非法值"。
+	if !isValidExptRunModeDTO(expt.GetRunModeConfig()) {
 		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
 	}
-	return rpc.SandboxTenantDefault
+	return rpc.SandboxTenantFornaxEvalGeneral
+}
+
+// isValidExptRunModeDTO 判断 DTO 侧 run_mode_config 是否携带合法跑法（即属于新链路）。
+// config 为 nil / run_mode 未设置 / 枚举值不在合法集内 → false（旧链路）。
+func isValidExptRunModeDTO(cfg *domain_expt.RunModeConfig) bool {
+	if cfg == nil || !cfg.IsSetRunMode() {
+		return false
+	}
+	switch cfg.GetRunMode() {
+	case domain_expt.ExptRunMode_SingleTurn, domain_expt.ExptRunMode_FixedScriptMultiTurn,
+		domain_expt.ExptRunMode_SuaMultiTurn, domain_expt.ExptRunMode_Goal:
+		return true
+	default:
+		return false
+	}
+}
+
+// isValidExptSuaModeDTO 判断 DTO 侧 sua_mode 枚举值是否合法。
+//
+// 供 CreateExperiment 入口拒非法值用 (内部面补齐 OpenAPI 面 openAPISuaModeToDomain 已有的闸)。
+// Fixed 仍算合法: 它是**已废弃但仍受理**的值 (等价降级为 fixed_script_multi_turn, 见
+// domain/expt.thrift 的 SuaMode 注释), 与"拼错/未来新增值"不是一回事, 不能在入口拒掉。
+//
+// ⚠️ 合法集与 IDL 的 SuaMode 枚举同步: 新增值时这里要一起加。
+func isValidExptSuaModeDTO(m domain_expt.SuaMode) bool {
+	switch m {
+	case domain_expt.SuaMode_HumanLoop, domain_expt.SuaMode_Loop, domain_expt.SuaMode_Fixed:
+		return true
+	default:
+		return false
+	}
 }
 
 func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.KillExperimentRequest) (r *expt.KillExperimentResponse, err error) {

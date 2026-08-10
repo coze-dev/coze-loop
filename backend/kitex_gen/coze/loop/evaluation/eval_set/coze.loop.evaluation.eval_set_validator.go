@@ -83,6 +83,30 @@ func (p *CreateEvaluationSetResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ListEvaluationSetTemplatesRequest) IsValid() error {
+	if p.PageSize != nil {
+		if *p.PageSize <= int32(0) {
+			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+		}
+		if *p.PageSize > int32(200) {
+			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluationSetTemplatesResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *CreateEvaluationSetWithImportRequest) IsValid() error {
 	if p.Name != nil {
 		if len(*p.Name) < int(1) {
@@ -339,11 +363,6 @@ func (p *CreateEvaluationSetVersionResponse) IsValid() error {
 	return nil
 }
 func (p *GetEvaluationSetVersionRequest) IsValid() error {
-	if p.SharedOption != nil {
-		if err := p.SharedOption.IsValid(); err != nil {
-			return fmt.Errorf("field SharedOption not valid, %w", err)
-		}
-	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

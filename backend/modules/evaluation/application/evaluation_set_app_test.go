@@ -816,6 +816,17 @@ func TestEvaluationSetApplicationImpl_SharedExecuteVersionSchemaRedaction(t *tes
 		VersionPolicy:   entity.SharedVersionPolicyAll,
 	}
 
+	t.Run("get version requires source space for shared request", func(t *testing.T) {
+		app := &EvaluationSetApplicationImpl{}
+		resp, err := app.GetEvaluationSetVersion(context.Background(), &eval_set.GetEvaluationSetVersionRequest{
+			WorkspaceID: workspaceID,
+			VersionID:   versionID,
+			IsShared:    gptr.Of(true),
+		})
+		require.Nil(t, resp)
+		require.ErrorContains(t, err, "source_space_id is required when is_shared is true")
+	})
+
 	t.Run("get version hides schema without mutating domain entity", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -853,7 +864,8 @@ func TestEvaluationSetApplicationImpl_SharedExecuteVersionSchemaRedaction(t *tes
 			WorkspaceID:     workspaceID,
 			EvaluationSetID: gptr.Of(setID),
 			VersionID:       versionID,
-			SharedOption:    sharedOption,
+			IsShared:        gptr.Of(true),
+			SourceSpaceID:   gptr.Of(sourceID),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, resp)

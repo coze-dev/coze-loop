@@ -129,6 +129,53 @@ typedef string ExptEvalSetSourceType (ts.enum = "true")
 const ExptEvalSetSourceType ExptEvalSetSourceType_SingleSet = "single_set"
 const ExptEvalSetSourceType ExptEvalSetSourceType_MultiSetConfig = "multi_set_config"
 
+// ===== 实验级跑法配置 (SUA / run_mode) OpenAPI 版本 =====
+// domain 侧对应 domain/expt.thrift 的 ExptRunMode/SuaMode(int enum) + RunModeConfig。
+// 与既有 ExptEvalSetSourceType 一致, OpenAPI 侧用字符串枚举对等映射, 由 convertor 与内部 int 枚举互转,
+// 避免 include domain/expt.thrift 引入与本文件已定义结构 (如 TargetFieldMapping/ExptNotificationConf) 的同名符号冲突。
+
+// ExptRunMode 实验评测模式(跑法), 对齐 domain ExptRunMode: single/fixed_script/sua/goal。
+typedef string ExptRunMode (ts.enum = "true")
+const ExptRunMode ExptRunMode_SingleTurn = "single_turn"                       // 单轮
+const ExptRunMode ExptRunMode_FixedScriptMultiTurn = "fixed_script_multi_turn" // 固定脚本多轮
+const ExptRunMode ExptRunMode_SuaMultiTurn = "sua_multi_turn"                  // SUA 驱动多轮
+const ExptRunMode ExptRunMode_Goal = "goal"                                    // 目标驱动
+
+// SuaMode 模拟用户(SUA)生成下一轮 query 的模式, 对齐 domain SuaMode。
+typedef string SuaMode (ts.enum = "true")
+const SuaMode SuaMode_HumanLoop = "human_loop" // LLM 按人设驱动
+const SuaMode SuaMode_Loop = "loop"            // 上轮 eval 结果透传成下一轮
+const SuaMode SuaMode_Fixed = "fixed"          // 照固定脚本
+
+// RunModeConfig 实验级跑法配置 (OpenAPI 版本, 对齐 domain RunModeConfig)。run_mode 是顶层跑法总开关;
+// sua_mode 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
+// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
+//
+// **SUA 模型不是调用方参数**: 由平台 TCC 统一控制(含密钥)。字段 4 sua_model_id **已移除**,
+// sua_model_name 已弃用(仅调试)。详见 domain/expt.thrift 同名 struct 注释。
+//
+// 字段号与 domain 版**逐一对齐** (含 4 号的保留, 6-10 为两级配置的实验级一半: SUA 行为四项
+// + max_turns); 合并规则「题目级优先、实验级兜底」详见 domain/expt.thrift 的同名 struct 注释。
+struct RunModeConfig {
+    1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
+    2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
+    3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
+    // 4 号**永久保留**: 曾是 sua_model_id, 与 domain 版同步移除。号段不复用。
+    // SUA 模型名, **已弃用, 仅调试用**; 常规路径不传, 由平台 TCC 选模型并带密钥。
+    5: optional string sua_model_name (go.tag = 'json:"sua_model_name"')
+    // sua_goal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
+    6: optional string sua_goal (go.tag = 'json:"sua_goal"')
+    // sua_persona 模拟用户人设。human_loop 跑法必需 —— sua-cli 缺它报 INVALID_CONFIG。
+    7: optional string sua_persona (go.tag = 'json:"sua_persona"')
+    // sua_behavioral_constraints 模拟用户的行为约束 (如"每轮只追问一个点""不泄露参考答案")。
+    8: optional string sua_behavioral_constraints (go.tag = 'json:"sua_behavioral_constraints"')
+    // sua_pe_template loop 跑法必需的 PE 模板, **必须含 {{eval_result}} 占位符**;
+    // 缺它 loop 直接 INVALID_CONFIG。
+    9: optional string sua_pe_template (go.tag = 'json:"sua_pe_template"')
+    // max_turns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
+    10: optional i32 max_turns (go.tag = 'json:"max_turns"')
+}
+
 // per-set 运行期增量信息 (纯读模型; Get 全填含详情, List 只填 id/count)
 struct ExptEvalSetDetail {
     1: optional i64 eval_set_id (api.js_conv = "true", go.tag = 'json:"eval_set_id"')
@@ -199,6 +246,16 @@ struct ExperimentStatistics {
 }
 
 // 评测实验
+//
+// run_mode_config (115) 是**跑法配置的读侧回显**, 2026-08 补齐。此前只有写侧
+// (SubmitExperimentRequest 47 号字段) 能配跑法, 读侧无字段 —— OpenAPI 用户提交后
+// 查不到自己配了什么跑法, 而内部接口 (domain/expt.thrift 的 115 号字段) 一直能回显,
+// 即"内部能看、OpenAPI 看不到"的不对称。
+//
+// 注意本文件用的是 domain_openapi 自己那套**字符串枚举**结构 (本文件的 struct
+// RunModeConfig, 与 ExptEvalSetSourceType 同套模式), 不要 include domain/expt.thrift ——
+// 会符号冲突。两套枚举的整数编号刻意不同 (见 domain/expt.thrift 的 ExptRunMode 注释),
+// 所以跨模型搬字段时必须过一次显式转换, 不能直接赋值。
 struct Experiment {
     // 基本信息
     1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
@@ -240,6 +297,10 @@ struct Experiment {
     112: optional list<ExptEvalSetDetail> eval_set_details    // per-set 评测集详情 + item 数 (Get 全填; List 只 id/count)
     113: optional i32 evaluators_concur_num                   // 评估器并发数回显
     114: optional i64 total_item_count (api.js_conv = 'true', go.tag = 'json:"total_item_count"') // 实验绑定 item 总数; 首跑前为 0
+    // 跑法配置回显。字段号 115 与 domain/expt.thrift 的 struct Experiment 刻意对齐, 便于两套
+    // 读模型对照 —— 它们是同一个概念的两种表示 (本文件用字符串枚举, domain 用整数枚举)。
+    // 用本文件已有的 RunModeConfig (字符串枚举), 不要 include domain/expt.thrift —— 会符号冲突。
+    115: optional RunModeConfig run_mode_config
 
 
     100: optional common.BaseInfo base_info

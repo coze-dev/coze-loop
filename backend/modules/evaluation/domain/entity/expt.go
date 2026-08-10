@@ -296,6 +296,15 @@ func (e *Experiment) AsyncCallTarget() bool {
 	return false
 }
 
+// IsSandboxAgentTarget 判断实验的评测对象是否为沙箱 Agent (SandboxAgent, EvalTargetType=17)。
+// 用版本级类型 OR 版本级 SandboxAgent 配置双判 (与 AsyncCallTarget 同一惯例)。
+func (e *Experiment) IsSandboxAgentTarget() bool {
+	if e == nil || e.Target == nil || e.Target.EvalTargetVersion == nil {
+		return false
+	}
+	return e.Target.EvalTargetVersion.EvalTargetType == EvalTargetTypeSandboxAgent || e.Target.EvalTargetVersion.SandboxAgent != nil
+}
+
 func (e *Experiment) AsyncCallEvaluators() bool {
 	if e == nil || len(e.Evaluators) == 0 {
 		return false
@@ -335,6 +344,258 @@ type EvaluationConfiguration struct {
 
 	// SkillTOSKeys skill 入库 TOS 后的 tos_key 快照；key="{skill_id}:{version}"，value=tos_key。
 	SkillTOSKeys map[string]string `json:"agent_buddy_skill_tos_keys,omitempty"`
+
+	// RunModeConfig 实验级跑法配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)。
+	// 序列化进 experiment.eval_conf; 提交时展开到各 item 的 ItemTargetConf.RunConf 兜底默认值。
+	RunModeConfig *RunModeConfig `json:"run_mode_config,omitempty"`
+}
+
+// RunMode 实验级评测模式 (跑法)。与 runtime domain RunMode / IDL ExptRunMode 对齐。
+type RunMode = string
+
+const (
+	RunModeSingleTurn           RunMode = "single_turn"
+	RunModeFixedScriptMultiTurn RunMode = "fixed_script_multi_turn"
+	// RunModeSUAMultiTurn 是**平台对外契约**里的 SUA 多轮聚合态 (IDL / 前端 / OpenAPI /
+	// 存量实验都是 run_mode=sua_multi_turn + sua_mode 子字段)。runtime 侧没有这个枚举:
+	// 它把 SUA 多轮拆成了下面两个独立跑法。故它**没有独立整数编号**, 见 RunModeToInt。
+	RunModeSUAMultiTurn RunMode = "sua_multi_turn"
+	// RunModeSUALoopMultiTurn / RunModeSUAHumanLoopMultiTurn 是 runtime 的两个独立 SUA 跑法
+	// (字面量与 runtime internal/domain/orchestration RunMode 逐字一致)。平台侧只在下发
+	// case-file 时用: commercial runtimeRunModeInt 先把 (sua_multi_turn, sua_mode) 折叠成
+	// 这两个之一, 再转整数。
+	RunModeSUALoopMultiTurn      RunMode = "sua_loop_multi_turn"
+	RunModeSUAHumanLoopMultiTurn RunMode = "sua_human_loop_multi_turn"
+	RunModeGoal                  RunMode = "goal"
+)
+
+// IsValidRunMode 判断 run_mode 字面量是否是平台已知的合法跑法。
+//
+// ⚠️ 不能用 RunModeToInt 代替: 它对未知值 default 返回 1 (single_turn), 是**静默回落**,
+// 无法区分"调用方传了 single_turn"和"调用方传了乱码"。分流新旧链路必须能区分这两者。
+//
+// 新增 RunMode 常量时必须同步加到这里, 否则新跑法会被判为非法、误落旧链路租户。
+func IsValidRunMode(m RunMode) bool {
+	switch m {
+	case RunModeSingleTurn, RunModeFixedScriptMultiTurn, RunModeSUAMultiTurn,
+		RunModeSUALoopMultiTurn, RunModeSUAHumanLoopMultiTurn, RunModeGoal:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsNewRunModeLink 判断该实验跑法配置属于**新链路**(有合法 run_mode)还是**旧链路**。
+//
+// 新旧两条链路会并存一段时间, 需要在沙箱租户上区分 (见 application 层 sandboxTenantFor*):
+//   - 旧链路: RunModeConfig 为 nil, 或 run_mode 为空/非法 —— 存量实验都落这一档
+//   - 新链路: RunModeConfig 非 nil 且 run_mode 合法
+//
+// 判据刻意同时覆盖"config 空"和"run_mode 非法"两种形态: 提交链路上 run_mode_config 存在
+// 透传丢字段的先例 (见 experiment_app.go 的 [sandbox-mt-debug] 日志), 只判 nil 会把
+// "config 在但 run_mode 丢了"误判成新链路。
+func IsNewRunModeLink(cfg *RunModeConfig) bool {
+	return cfg != nil && IsValidRunMode(cfg.RunMode)
+}
+
+// RunModeToInt 把 RunMode 字符串映射为 case-file experiment_info.run_mode 的整数枚举。
+//
+// 编号必须与评测运行时解析 case-file 的那套编号逐一对应:
+//
+//	1 = single_turn
+//	2 = fixed_script_multi_turn
+//	3 = sua_loop_multi_turn
+//	4 = sua_human_loop_multi_turn
+//	5 = goal
+//
+// ⚠️ **破坏性重编号: goal 从 4 挪到 5**, 给两个 SUA 跑法腾出 3/4。安全性依据是**无存量**:
+// case-file 是纯瞬态产物 (评测 operator 现场组装 → 写进本次新建的 orchestrator 沙箱
+// /tmp/fornax-agent-case.json → 跑完随沙箱销毁), 既不落库也不落 TOS, 所以世上不存在任何
+// 一份"用旧编号写的历史 case-file"; 且双沙箱多轮功能尚未上线、没有真实用户, 连"新平台已
+// 发版 + 旧 runtime 还没滚完"的部署窗口也不成立。整数空间因此可以自由重新分配。
+//
+// **RunModeSUAMultiTurn 刻意没有独立编号**: 它是平台对外契约的聚合态, 跑法信息藏在
+// sua_mode 子字段里, 一个整数表达不了。下发路径上 commercial 的 runtimeRunModeInt 会先把
+// 它折叠成 sua_loop / sua_human_loop 再调本函数, 所以它永远不该直接走到这里。真走到了就
+// 落 default(1) —— 与 runtime 自己对未知整数的兜底 (回退 single_turn) 完全一致, 不会因为
+// 平台漏折叠而跑成"另一个 SUA 跑法"。
+//
+// 未知值回退 1。
+func RunModeToInt(m RunMode) int {
+	switch m {
+	case RunModeSingleTurn:
+		return 1
+	case RunModeFixedScriptMultiTurn:
+		return 2
+	case RunModeSUALoopMultiTurn:
+		return 3
+	case RunModeSUAHumanLoopMultiTurn:
+		return 4
+	case RunModeGoal:
+		return 5
+	default:
+		return 1
+	}
+}
+
+// SuaMode SUA 生成下一轮 query 的模式。与 runtime sua.Mode / IDL SuaMode 对齐。
+type SuaMode = string
+
+// **字面量以 OpenAPI IDL 为准 (薛一正 2026-07-29 拍板)**: humanloop 一度在三处写法不一致 ——
+// OpenAPI IDL (对外契约) 是带下划线的 "human_loop" (domain_openapi/experiment.thrift
+// SuaMode_HumanLoop), 本 entity 常量却是无下划线的 "humanloop", domain IDL 又是 int enum
+// HumanLoop=1。
+//
+// 三处能"歪着跑通"纯靠**本常量自己**充当了隐式归一点: OpenAPI 提交的 "human_loop" 先经
+// openAPISuaModeToDomain 转成 int 1, 再经 suaModeDTO2DO 转回本常量, 落库就成了 "humanloop"
+// (实测实验 7590112179985613570 的 eval_conf 即为此值)。所谓"某一层做了归一"其实没有独立的
+// 归一代码 —— 就是这个常量的值和 IDL 不一样, 而字符串→int→字符串的往返把差异吃掉了。
+// 故把本常量改成 "human_loop" 即全链路自动一致, 没有额外的归一层要拆。
+//
+// 以 IDL 为准而不是以落库值为准, 两条理由:
+//  1. **对外契约优先**。OpenAPI 的字符串枚举是用户直接书写的东西 (fornax-cli
+//     --run-mode-config-json / OpenAPI 调用方都照 IDL 抄), 它是唯一有外部消费者的那份表示;
+//     entity 常量纯内部, 改它的代价只在本仓。让内部去对齐对外, 而不是反过来。
+//  2. **靠隐式归一兜三处不一致太脆**。归一只在"经过 int 枚举中转"的那条路径上成立;
+//     任何绕过 int 中转、直接把字符串塞进 entity 的入口都会漏出原始的 "human_loop", 而它在
+//     归一后的世界里是个"认不出的值"。统一字面量后, 无论走不走 int 中转, 两端都是同一个词。
+//
+// **不保留对旧值 "humanloop" 的兼容识别** (薛一正 2026-07-29 二次确认): 本功能在研发中、
+// 未上线、无真实用户, 因此不存在存量旧值; sua_mode 只有"实验创建时写入
+// experiment.eval_conf.run_mode_config"这一个入口。双值兼容是永久的复杂度负担, 还会掩盖
+// "某处仍在用旧值"这种真问题。故 "humanloop" 从此与 "bogus" 同级 —— 是非法值, 消费侧应报错。
+const (
+	SuaModeHumanLoop SuaMode = "human_loop"
+	SuaModeLoop      SuaMode = "loop"
+	SuaModeFixed     SuaMode = "fixed"
+)
+
+// SuaMode 只作为**平台对外契约的子字段**存在 (run_mode=sua_multi_turn 时它才有意义):
+// 下发 case-file 前由 commercial 的 runtimeRunModeInt 折叠进 run_mode, 不再单独下发, 故不再
+// 需要 SuaModeToInt (已删)。
+
+// RunModeConfig 实验级跑法配置。run_mode 是顶层跑法总开关;
+// sua_mode / sua_model_id 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 生效。
+// sua_model_id 传平台模型 ID, operator 经 GetModelAndAccount 解析密钥注入 case-file, 绝不落库明文。
+//
+// SUA 行为四项 (SuaGoal / SuaPersona / SuaBehavioralConstraints / SuaPETemplate) 与 MaxTurns
+// 是**两级配置的实验级一半**, 题目级同名字段在 ItemRunConf 上。**合并规则: 题目级优先、
+// 实验级兜底** —— 实验级是整个实验的默认值, 题目级是单题特例, 单题特例赢。合并逐字段在
+// runtime 侧进行 (internal/application/orchestration.go suaConfig), 平台只负责如实下发两级值。
+//
+// 字段名与 runtime orchestration.RunModeConfig 的 json tag 对齐 (sua_goal / sua_persona /
+// sua_behavioral_constraints / sua_pe_template / max_turns), 便于逐段对账。
+type RunModeConfig struct {
+	RunMode       RunMode `json:"run_mode,omitempty"`
+	MaxRunMinutes int     `json:"max_run_minutes,omitempty"`
+	SuaMode       SuaMode `json:"sua_mode,omitempty"`
+	// SuaModelID **不再来自调用方**: 对外的 sua_model_id 入口已从 IDL 移除 (SUA 用哪个模型
+	// 是运维配置, 归 TCC)。字段保留是因为 TCC 劫持规则 sandbox_sua_model_replace 自带
+	// model_id, commercial 侧仍要经 modelCredByID 解析密钥。**不要在 convertor 里重新接上**。
+	SuaModelID int64 `json:"sua_model_id,omitempty"`
+	// SuaModelName 已弃用, 仅调试用; 常规路径由 TCC 决定 SUA 模型 (含密钥)。
+	SuaModelName string `json:"sua_model_name,omitempty"`
+
+	// SuaGoal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
+	SuaGoal string `json:"sua_goal,omitempty"`
+	// SuaPersona 模拟用户人设。human_loop 跑法必需 —— sua-cli 缺它报 INVALID_CONFIG。
+	SuaPersona string `json:"sua_persona,omitempty"`
+	// SuaBehavioralConstraints 模拟用户的行为约束 (如"每轮只追问一个点""不泄露参考答案")。
+	SuaBehavioralConstraints string `json:"sua_behavioral_constraints,omitempty"`
+	// SuaPETemplate loop 跑法必需的 PE 模板, **必须含 {{eval_result}} 占位符** ——
+	// sua-cli 用它把上轮评估结果拼成下一轮追问; 缺它 loop 直接 INVALID_CONFIG。
+	SuaPETemplate string `json:"sua_pe_template,omitempty"`
+	// MaxTurns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
+	MaxTurns int `json:"max_turns,omitempty"`
+}
+
+// ItemRunConf 题目级多轮/SUA 运行配置, 冻结进 expt_item_ref.item_config (ItemTargetConf.RunConf)。
+// 字段名与 runtime testcase.RunConf 逐一对齐, 供 SandboxAgent 算子透传 case-file dataset_item.run_conf。
+// SUA 相关字段对被测 Agent 不可见。
+type ItemRunConf struct {
+	MaxTurns                 int           `json:"max_turns,omitempty"`
+	MaxRunMinutes            int           `json:"max_run_minutes,omitempty"`
+	FixedQueryList           []*FixedQuery `json:"fixed_query_list,omitempty"`
+	SuaGoal                  string        `json:"sua_goal,omitempty"`
+	SuaPersona               string        `json:"sua_persona,omitempty"`
+	SuaBehavioralConstraints string        `json:"sua_behavioral_constraints,omitempty"`
+	// SuaPETemplate 是 SUA loop 跑法必需的 PE 模板 (含 {{eval_result}} 占位符, sua-cli 用它
+	// 把上一轮评分拼成下一轮追问); 缺失时 runtime 在 prepare 阶段即拒绝该 trial。
+	// 题目级配置优先于实验级配置。
+	SuaPETemplate string `json:"sua_pe_template,omitempty"`
+	// EvaluatorTrigger 决定该题目**什么时候**跑评估器: never / after_each_turn /
+	// final_turn_only / by_testcase_config (空 = 未配, 回落到 by_testcase_config)。
+	//
+	// 它在题目级而非只在实验级, 因为"这道题值不值得每轮都评"是题目自己的属性: 6 轮重构题只需
+	// 评最终态, 而分步推进题希望每轮都评。混合评测集上强推同一种策略, 正是 by_testcase_config
+	// 一直在掩盖的问题。
+	//
+	// ⚠️ 这个字段此前**整条链路都缺**: runtime 的 platform.runModeConfig 把 EvaluatorTrigger
+	// 硬编码成 TriggerByTestCase, 所以另外三个值配了完全无效 —— 枚举、ShouldEvaluate 的
+	// switch 分支都在, 唯独读 wire 的那一行不存在。runtime 侧已补读, 本字段是它的生产端。
+	EvaluatorTrigger string `json:"evaluator_trigger,omitempty"`
+}
+
+// FixedQuery 固定脚本多轮的一轮 query (fixed_script 跑法依赖)。
+type FixedQuery struct {
+	Query string `json:"query,omitempty"`
+	// ComplexQuery 该轮的结构化 query (有序 text/file 块)。Query 是纯文本回落:
+	// 两者都在时由 runtime 的 TurnQuery 决定优先级, 平台只如实透传两份。
+	//
+	// ⚠️ **本字段缺失曾让整类题目静默空跑**, 这是它存在的唯一理由, 别删:
+	// case-file 的 dataset_item.run_conf 是**唯一走强类型 struct 的字段**
+	// (兄弟字段 evaluator_conf / artifacts_conf / extra / 题目顶层的 complex_query
+	// 全是 json.RawMessage 原样透传, 平台不认的 key 也能过去)。RunConf 走强类型是
+	// 因为要做题目级/实验级逐字段合并 (mergeItemRunConf), 代价是**它必须字段齐全** ——
+	// Unmarshal→struct→Marshal 这一趟会把 struct 上没有的字段直接蒸发。
+	//
+	// 于是当题目每轮只配 complex_query 而不配 query 时 (多模态/带附件的题目就是这么写的),
+	// 每个元素 Unmarshal 后是空 struct、两个字段都 omitempty, wire 上变成 `{}`:
+	// 数组长度对、has_run_conf=true、全程零报错, 而 orchestrator 拿到的每轮 query 都是空。
+	// 实测 16 轮题目每轮 1.5 秒跑完、被测 agent 收到空 query, 实验 success 但分数无意义
+	// (实验 7590116350194896130, logid 021786092636008fdbddc03001b0406305a1222270000ff2fe9be:
+	//  orchestrator 日志 run_spec 里 fixed_query_list=[{},{}...×16],
+	//  紧随其后 16 行 `round=N, next query=, complex_parts=0`)。
+	//
+	// **给 FixedQuery 加字段时必须同步 runtime 的 testcase.FixedQuery** —— 这条链上
+	// 平台是生产端、runtime 是消费端, 少一个字段就是又一次静默空跑。
+	ComplexQuery *ComplexQuery          `json:"complex_query,omitempty"`
+	Evaluators   map[string]interface{} `json:"evaluators,omitempty"`
+}
+
+// ComplexQuery 结构化 query: 有序的 text/file 内容块序列。
+// 字段名与 runtime testcase.ComplexQuery 逐字一致 (parts / extra), 两边建模对齐才好合流。
+type ComplexQuery struct {
+	// Parts 有序内容块序列。slice 本身就是混合 text/file 的容器, 没有单独的多块类型。
+	Parts []*ContentPart `json:"parts,omitempty"`
+	// Extra 原样透传, 平台不解释。业务私有字段放这里而不是新增一等字段
+	// (如 CozeClaw 的 extra["coze_skill_ids"], 由该 agent 的 adapter 在出口翻译成它后端要的形态)。
+	Extra map[string]string `json:"extra,omitempty"`
+}
+
+// ContentPart 一个有序内容块。值放在哪个字段由 ContentType 决定 (text→Text, file→File)。
+// 与 runtime testcase.Part 对齐 —— 那边类型名是 Part, 这里叫 ContentPart 是为了避免与
+// 本包已有的泛化名冲突; **json tag 必须逐字一致**, 跨仓对接看的是 tag 不是 Go 名。
+type ContentPart struct {
+	// ContentType 区分块类型: "text" / "file"。
+	//
+	// 刻意只有两种: agent 不区分模态, 所以一切非文本资源 (图片/音频/视频/文档) 都是文件附件。
+	// 用 string 而非枚举常量, 是为了让新 schema 版本里的未知值能无损 round-trip
+	// (平台在这条链上只做透传, 不该因为不认识某个新类型就把它丢掉)。
+	ContentType string `json:"content_type,omitempty"`
+	// Text 当 ContentType 为 text 时承载值。
+	Text string `json:"text,omitempty"`
+	// File 当 ContentType 为 file 时承载值。
+	File *FileRef `json:"file,omitempty"`
+}
+
+// FileRef 一个附件。两个字段对齐题目生产方实际产出的形态: 一个文件名 + 一个沙箱可直接
+// 下载的公网 TOS 永久直链 (无需签名、无过期处理)。与 runtime testcase.FileRef 对齐。
+type FileRef struct {
+	// FileName 附件名, 也是它落到 workspace 里的文件名。
+	FileName string `json:"file_name,omitempty"`
+	// FileURL 沙箱可达的永久直链 (不需要签名)。
+	FileURL string `json:"file_url,omitempty"`
 }
 
 // DefaultSubmitItemConcurNum 提交评测实验时，未传或非正数时的兜底并发度。
@@ -621,6 +882,9 @@ type ItemTargetConf struct {
 	FieldMapping    []*FieldConf      `json:"field_mapping,omitempty"`
 	DynamicConf     map[string]string `json:"dynamic_conf,omitempty"`
 	ScoreWeight     *float64          `json:"score_weight,omitempty"`
+	// RunConf 题目级多轮/SUA 运行配置 (SandboxAgent 专用)。首次调度冻结进 item_config,
+	// 执行期 callTarget 读取并透传给算子组 case-file。老实验/非沙箱为 nil。
+	RunConf *ItemRunConf `json:"run_conf,omitempty"`
 }
 
 // ItemEvaluatorConf per-item 单个 evaluator binding 配置

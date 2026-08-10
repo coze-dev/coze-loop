@@ -49,6 +49,74 @@ enum SourceType {
     IntelligentGen =4    // 智能生成
 }
 
+// ExptRunMode 实验评测模式(跑法)。仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
+//
+// ⚠️ 本枚举值 **不等于** case-file 下发给 runtime 的 run_mode 整数, 两套编号并存:
+//   本枚举(对外契约):  1=single_turn 2=fixed_script 3=sua_multi_turn 4=goal
+//   case-file/runtime: 1=single_turn 2=fixed_script 3=sua_loop 4=sua_human_loop 5=goal
+// 因为 entity 侧把 sua_multi_turn 按 sua_mode 折叠成 sua_loop_multi_turn(3) /
+// sua_human_loop_multi_turn(4) 两个独立跑法, goal 被顶到 5。转换单点在
+// entity.RunModeToInt (backend/modules/evaluation/domain/entity/expt.go); 评测运行时侧
+// 按 case-file 那套编号解析, 两侧必须逐一对应。
+// 排查时切勿用本枚举的 4 去对 case-file 日志里的 run_mode=4 —— 那是 sua_human_loop, 不是 goal。
+enum ExptRunMode {
+    SingleTurn           = 1    // 单轮
+    FixedScriptMultiTurn = 2    // 固定脚本多轮
+    SuaMultiTurn         = 3    // SUA 驱动多轮(下发时按 sua_mode 折叠成 3 或 4)
+    Goal                 = 4    // 目标驱动(下发时为 5)
+}
+
+// SuaMode 模拟用户(SUA)生成下一轮 query 的模式, 仅 run_mode=sua_multi_turn 时有意义。
+//
+// 注意它 **不下发给 runtime**: 下发 case-file 前由 commercial 的 runtimeRunModeInt 把
+// (run_mode, sua_mode) 折叠进单一 run_mode 整数(见上), sua_mode 字段本身不过线, 故 entity
+// 侧的 SuaModeToInt 已删。runtime 的 sua.Mode 只有 humanloop/loop 两个值、由 run_mode 反推。
+enum SuaMode {
+    HumanLoop = 1    // LLM 按人设驱动 → 折叠成 run_mode=4
+    Loop      = 2    // 上轮 eval 结果透传成下一轮 → 折叠成 run_mode=3
+    // 已废弃: 与 run_mode=fixed_script_multi_turn 完全等价(同一份 run_conf.fixed_query_list,
+    // 只多起一个 sua-cli 子进程)。存量提交等价降级为 fixed_script_multi_turn 而非报错
+    // (薛一正 2026-07-29 确认); 保留本值仅为详情页回显存量实验。新实验请勿使用。
+    Fixed     = 3
+}
+
+// RunModeConfig 实验级跑法配置 (对齐 runtime RunModeConfig)。run_mode 是顶层跑法总开关;
+// sua_mode 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
+// 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
+//
+// **SUA 用哪个模型不是调用方的参数**: 模型与其密钥都由平台 TCC
+// (sandbox_sua_model_replace + orch_env 的 FORNAX_SUA_*) 统一控制, 密钥绝不进请求体/落库明文。
+// 字段 4 sua_model_id 曾是"传平台模型 ID 让 operator 经 GetModelAndAccount 解析密钥"的入口,
+// **已移除** —— 它把一个运维决策暴露成了实验参数。sua_model_name 尚存但已弃用(仅调试),
+// 后续 TCC 默认就位后一并收走; 新代码不要依赖它。
+//
+// sua_goal / sua_persona / sua_behavioral_constraints / sua_pe_template 与 max_turns 是
+// **两级配置的实验级一半**: 题目级同名字段在 ItemRunConf 上。**合并规则: 题目级优先、实验级兜底**
+// —— 实验级是整个实验的默认值, 题目级是单题特例, 单题特例赢 (题目 schema 亦如此声明)。
+// 合并逐字段在 runtime 侧进行 (internal/application/orchestration.go suaConfig)。
+// 此前这五项只有题目级一半, 实验粒度配了 100% 无效, 且 runtime 读实验级的代码因恒为空而是死代码。
+struct RunModeConfig {
+    1: optional ExptRunMode run_mode (go.tag = 'json:"run_mode"')
+    2: optional i32 max_run_minutes (go.tag = 'json:"max_run_minutes"')
+    3: optional SuaMode sua_mode (go.tag = 'json:"sua_mode"')
+    // 4 号**永久保留**: 曾是 sua_model_id。号段不复用 —— 存量调用方可能仍在发这个字段,
+    // 复用成别的语义会让老请求静默命中新字段。
+    // SUA 模型名, **已弃用, 仅调试用**: 原样注入作模型名, 平台不解析密钥(靠 TCC 兜底)。
+    // 常规路径不要传 —— 不传即由平台 TCC 选模型并带上密钥。
+    5: optional string sua_model_name (go.tag = 'json:"sua_model_name"')
+    // sua_goal 模拟用户要达成的目标 (SUA 据此判断"任务是否完成")。
+    6: optional string sua_goal (go.tag = 'json:"sua_goal"')
+    // sua_persona 模拟用户人设。human_loop 跑法必需 —— sua-cli 缺它报 INVALID_CONFIG。
+    7: optional string sua_persona (go.tag = 'json:"sua_persona"')
+    // sua_behavioral_constraints 模拟用户的行为约束 (如"每轮只追问一个点""不泄露参考答案")。
+    8: optional string sua_behavioral_constraints (go.tag = 'json:"sua_behavioral_constraints"')
+    // sua_pe_template loop 跑法必需的 PE 模板, **必须含 {{eval_result}} 占位符** ——
+    // sua-cli 用它把上轮评估结果拼成下一轮追问; 缺它 loop 直接 INVALID_CONFIG。
+    9: optional string sua_pe_template (go.tag = 'json:"sua_pe_template"')
+    // max_turns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
+    10: optional i32 max_turns (go.tag = 'json:"max_turns"')
+}
+
 typedef string Visibility(ts.enum="true")
 const Visibility Visibility_Hidden = "hidden"
 
@@ -128,6 +196,9 @@ struct Experiment {
     113: optional i32 evaluators_concur_num
     // 实验绑定 item 总数; 首跑前可能缺省
     114: optional i64 total_item_count (api.js_conv='true', go.tag='json:"total_item_count"')
+    // 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
+    // 仅 SandboxAgent + MultiSetConfig 实验非空。SUA 模型的 api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
+    115: optional RunModeConfig run_mode_config
 }
 
 // 实验模板基础信息

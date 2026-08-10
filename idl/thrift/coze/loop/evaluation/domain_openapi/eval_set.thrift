@@ -53,11 +53,21 @@ struct FieldSchema {
     7: optional SchemaKey schema_key                    // 对应的内置 schema
 
     10: optional string key    // 唯一键，创建列时无需关注，更新列的时候携带即可
+    11: optional bool locked   // 是否为不可修改的评测集模版列
 }
 
 // 评测集Schema
 struct EvaluationSetSchema {
     1: optional list<FieldSchema> field_schemas
+}
+
+// 评测集创建模版。模版来源空间及锁定策略由服务端配置决定。
+struct EvaluationSetTemplate {
+    1: optional i64 template_dataset_id (api.js_conv="true", go.tag = 'json:"template_dataset_id"')
+    2: optional string template_dataset_name
+    3: optional string description
+    4: optional EvaluationSetSchema evaluation_set_schema // 完整的模版列信息
+    5: optional bool is_editable // 使用该模版创建评测集时，是否允许修改模版 Schema
 }
 
 // 评测集版本
@@ -82,6 +92,7 @@ struct EvaluationSet {
     7: optional bool is_change_uncommitted
     8: optional EvaluationSetType type
     9: optional string dataset_key                     // 数据集业务唯一键，创建后不可变
+    10: optional i64 template_dataset_id (api.js_conv="true", go.tag = 'json:"template_dataset_id"') // 创建评测集时使用的模版数据集 ID
 
     20: optional EvaluationSetVersion current_version
     21: optional list<ResourceTag> tags

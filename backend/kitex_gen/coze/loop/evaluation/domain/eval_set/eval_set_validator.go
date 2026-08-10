@@ -113,6 +113,14 @@ func (p *FieldSchema) IsValid() error {
 	}
 	return nil
 }
+func (p *EvaluationSetTemplate) IsValid() error {
+	if p.EvaluationSetSchema != nil {
+		if err := p.EvaluationSetSchema.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluationSetSchema not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *EvaluationSetItem) IsValid() error {
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
