@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -2974,19 +2975,75 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
-		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
-		done := make(chan struct{})
-		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
+		// 重试预算压到毫秒级: 这条用例要断言的是"重试用尽后只记日志不 panic", 按线上
+		// 十秒预算跑要真等十秒。
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, sandboxDestroyRetryBudget: time.Millisecond}
+		var calls int32
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).AnyTimes().
 			DoAndReturn(func(_ context.Context, _ *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
-				close(done)
+				atomic.AddInt32(&calls, 1)
 				return nil, errors.New("boom")
 			})
-		svc.destroySandboxExecute(context.Background(), "T", 9, []string{"e"}, false)
+		// 走同步入口: 原来调异步的 destroySandboxExecute + 只等第一次 Destroy 就返回,
+		// 于是重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf ——
+		// -race 下整包 exit=1 却没有任何 --- FAIL 行, 极难定位。同步调用天然无悬空 goroutine。
+		assert.NotPanics(t, func() {
+			svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+		})
+		assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(1), "至少尝试一次 Destroy")
+	})
+
+	// Destroy 瞬时失败后必须真的重试并最终成功 —— 这是加 backoff 的全部目的。
+	// 钉住"重试确实发生": 只断言 err 被吞掉的话, 把重试删掉测试依然绿。
+	t.Run("Destroy 瞬时失败后重试并成功", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, sandboxDestroyRetryBudget: 5 * time.Second}
+		var calls int32
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				if atomic.AddInt32(&calls, 1) == 1 {
+					// 模拟线上那次 `remote or network error[remote]`: 不重试就等于沙箱确定性泄漏。
+					return nil, errors.New("remote or network error[remote]")
+				}
+				assert.Equal(t, []string{"e"}, req.ExecuteIDs)
+				return &rpc.SandboxDestroyResponse{}, nil
+			})
+		svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+		assert.Equal(t, int32(2), atomic.LoadInt32(&calls), "第一次失败后必须重试一次并成功")
+	})
+
+	// 调用方 ctx 已取消也必须照样销毁: 这条路径挂在请求态 ctx 上, 调用方 return 后 ctx 立即
+	// 被取消, 若沿用它则 backoff 见 ctx.Done() 直接 Stop —— 重试形同虚设, 正是要修的泄漏。
+	t.Run("调用方 ctx 已取消仍照常销毁并重试", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, sandboxDestroyRetryBudget: 5 * time.Second}
+		canceled, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		var calls int32
+		done := make(chan struct{})
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(rpcCtx context.Context, _ *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				// 下发给 adapter 的 ctx 也必须已剥离取消, 否则 RPC 自己会立刻 fail。
+				assert.NoError(t, rpcCtx.Err(), "Destroy 收到的 ctx 不能是已取消的请求 ctx")
+				if atomic.AddInt32(&calls, 1) == 1 {
+					return nil, errors.New("remote or network error[remote]")
+				}
+				close(done)
+				return &rpc.SandboxDestroyResponse{}, nil
+			})
+
+		svc.destroySandboxExecute(canceled, "T", 9, []string{"e"}, false)
 		select {
 		case <-done:
-		case <-time.After(2 * time.Second):
-			t.Fatal("destroy goroutine timeout")
+		case <-time.After(5 * time.Second):
+			t.Fatal("destroy goroutine timeout: ctx 取消后重试被 backoff 提前 Stop 了")
 		}
+		assert.Equal(t, int32(2), atomic.LoadInt32(&calls))
 	})
 }
 

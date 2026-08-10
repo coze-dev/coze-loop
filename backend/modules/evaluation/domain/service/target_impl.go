@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	"github.com/mohae/deepcopy"
 
+	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -46,9 +47,19 @@ type EvalTargetServiceImpl struct {
 	// SandboxAgent 评测对象单行执行完成后用于销毁沙箱执行
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 	exptRunLogRepo          repo.IExptRunLogRepo
+
+	// sandboxDestroyRetryBudget 是 destroySandboxExecute 重试的总时间预算；<=0 时取
+	// defaultSandboxDestroyRetryBudget。做成字段而非常量纯为可测：一条"Destroy 恒失败"的用例
+	// 若按线上预算跑就要真等十秒，压到毫秒级才能把"重试到用尽"确定性地断言完。
+	// 生产路径（wire 注入）从不设置它，走默认值。
+	sandboxDestroyRetryBudget time.Duration
 }
 
 const evalTargetRecordPersistTimeout = 5 * time.Second
+
+// defaultSandboxDestroyRetryBudget 是 destroySandboxExecute 重试的默认总时间预算。
+// 十秒的取舍见 destroySandboxExecute 注释「用 RetryTenSeconds 而非更长」。
+const defaultSandboxDestroyRetryBudget = 10 * time.Second
 
 // trajectoryStartTimeBufferMS 抽取 trajectory 时，时间下界额外向前预留的 buffer(1 分钟)，
 // 用于吸收请求发起时间与实际 span 上报时间之间可能的时钟/延迟误差，避免漏掉最早的 span。
@@ -850,22 +861,67 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 // 列表形态而非单个 int64: 双沙箱一次调用创建多个 execution, 且 id 由 operator 命名 (可能不是
 // record.ID 那样的纯数字), 所以这里只接受 operator 给出的字符串 id 列表, 不做格式假定。
 // zombieTimeout=true 时透传给下游适配器，由适配器决定是否附带 SandboxAgent 收尾命令。
+//
+// # 为什么要重试
+//
+// 这条路径是**正常完成时的主回收口** (ReportInvokeRecords → destroySandboxExecuteIfNeeded),
+// 但它此前是"一次 RPC + 失败只 warn": 一次网络抖动 (`remote or network error[remote]`) 就等于
+// 沙箱确定性泄漏, 而且**没有任何后续机制会重试** —— record 已被写成终态, 后续 tick 的
+// zombie/sweep 都以 `Status == AsyncInvoking` 为前提, 命中不到它。
+//
+// Destroy 天然幂等: 服务端对不存在/已终态的 executeID 只是不计入 affected_count, 不报错,
+// 所以重复销毁无副作用。这与 Run 路径的顾虑正好相反 (那边重试可能起第二个进程, 必须窄判),
+// 这里重试的唯一代价是多一次 RPC, 而不重试的代价是沙箱一直挂着 + 并发名额永不归还
+// (后续 item 全撞 601300702 且该错误不重试)。
+//
+// 用 RetryTenSeconds 而非更长: 本函数已在独立 goroutine 里, 拖长不阻塞调用方; 但沙箱侧
+// 真的不可用时再久也没用, 十秒足够吸收瞬时抖动。
+//
+// # 为什么重试要挂在 WithoutCancel 的 ctx 上
+//
+// 调用方 (ReportInvokeRecords) 是**请求态**: 它一 return, Hertz/Kitex 就取消请求 ctx。
+// 而本函数刻意异步 (goroutine.Go), 重试窗口 (十秒) 远长于调用方剩余寿命 —— 若直接用入参 ctx,
+// cenk/backoff 的 backOffContext.NextBackOff 见 ctx.Done() 立即返回 Stop, 于是**第一次
+// Destroy 失败后一次都不会重试**, 整个重试形同虚设 (恰是本函数要修的那个泄漏)。
+// 与 ReportInvokeRecords 里落 record 的 persistCtx 同款处置: 剥离取消信号, 保留 logID 等值。
 func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
 	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
 		return
 	}
-	goroutine.Go(ctx, func() {
-		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
+	// 先剥离取消信号再交给 goroutine: 见上"为什么重试要挂在 WithoutCancel 的 ctx 上"。
+	destroyCtx := context.WithoutCancel(ctx)
+	goroutine.Go(destroyCtx, func() {
+		e.destroySandboxExecuteSync(destroyCtx, taskID, spaceID, executeIDs, zombieTimeout)
+	})
+}
+
+// destroySandboxExecuteSync 是 destroySandboxExecute 的同步本体（含重试与终局告警）。
+//
+// 拆出来只为可测: 重试逻辑若只能经 goroutine 触发, 测试就必须靠 channel/sleep 去等一个
+// **没有 join 点**的后台 goroutine —— 那正是本次 -race 失败的成因 (等到了第一次 Destroy 就
+// 返回, 后续重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf → panic
+// "Fail in goroutine after ... has completed")。同步入口让"重试到用尽"能被确定性地断言完,
+// 不留悬空 goroutine。
+func (e *EvalTargetServiceImpl) destroySandboxExecuteSync(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
+	budget := e.sandboxDestroyRetryBudget
+	if budget <= 0 {
+		budget = defaultSandboxDestroyRetryBudget
+	}
+	if err := backoff.RetryWithElapsedTime(ctx, budget, func() error {
+		_, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
 			TaskID:        taskID,
 			DestroyType:   rpc.SandboxDestroyTypeExecute,
 			ExecuteIDs:    executeIDs,
 			WorkspaceID:   spaceID,
 			ZombieTimeout: zombieTimeout,
-		}); err != nil {
-			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_ids=%v, err=%v",
-				taskID, executeIDs, err)
-		}
-	})
+		})
+		return derr
+	}); err != nil {
+		// 重试用尽仍失败 = 沙箱确定性泄漏 + 并发名额不归还, 且没有下一次机会 (见上)。
+		// 故打 Error 而非 Warn: 它需要人介入, 不是"可能有问题"。
+		logs.CtxError(ctx, "[SandboxDestroy] destroy sandbox execute fail after retries, sandboxes may leak, task_id=%s, execute_ids=%v, err=%v",
+			taskID, executeIDs, err)
+	}
 }
 
 // destroySandboxExtraExecute 异步 best-effort 销毁指定字符串 executeID 的沙箱执行；用于双沙箱
