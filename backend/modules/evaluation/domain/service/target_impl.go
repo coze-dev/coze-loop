@@ -54,6 +54,15 @@ const evalTargetRecordPersistTimeout = 5 * time.Second
 // 用于吸收请求发起时间与实际 span 上报时间之间可能的时钟/延迟误差，避免漏掉最早的 span。
 const trajectoryStartTimeBufferMS = int64(60 * 1000)
 
+// sandbox mac_vm_plus_sandbox 链路: operator 给 mac_vm 那台的 execution id 加 "-macvm" 后缀
+// (invokeID+"-macvm"), 且其 task 是 <expt_id>+"-macvm" (见 commercial operator macVMTaskID)。
+// Destroy 收尾据此把 execution 分回各自 task。两者字面量相同但语义不同 (一个是 execute id 后缀、
+// 一个是 task id 后缀), 分开命名避免误当同一概念。
+const (
+	sandboxMacVMExecuteIDSuffix = "-macvm"
+	sandboxMacVMTaskIDSuffix    = "-macvm"
+)
+
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
 	metric metrics.EvalTargetMetrics,
@@ -850,22 +859,39 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 // 列表形态而非单个 int64: 双沙箱一次调用创建多个 execution, 且 id 由 operator 命名 (可能不是
 // record.ID 那样的纯数字), 所以这里只接受 operator 给出的字符串 id 列表, 不做格式假定。
 // zombieTimeout=true 时透传给下游适配器，由适配器决定是否附带 SandboxAgent 收尾命令。
+//
+// mac_vm_plus_sandbox 链路: 一次调用的两个 execution 分属**两个 task** (sandbox=taskID;
+// mac_vm=taskID+"-macvm", 见 operator asyncExecuteMacVMPlusSandbox / macVMTaskID)。Destroy 是
+// task 级签名, 单 taskID 只能销一个, 另一个泄漏。故这里按 executeID 的 "-macvm" 后缀把 id 分组到
+// 各自的 task, 每组一次 Destroy。非 mac_vm 链路 (单/双沙箱) 全部落在基础 taskID 组, 行为不变。
 func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
 	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
 		return
 	}
-	goroutine.Go(ctx, func() {
-		if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
-			TaskID:        taskID,
-			DestroyType:   rpc.SandboxDestroyTypeExecute,
-			ExecuteIDs:    executeIDs,
-			WorkspaceID:   spaceID,
-			ZombieTimeout: zombieTimeout,
-		}); err != nil {
-			logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_ids=%v, err=%v",
-				taskID, executeIDs, err)
+	// 按所属 task 分组: "-macvm" 后缀的 execution 属 mac_vm task, 其余属基础 sandbox task。
+	byTask := make(map[string][]string, 2)
+	for _, id := range executeIDs {
+		t := taskID
+		if strings.HasSuffix(id, sandboxMacVMExecuteIDSuffix) {
+			t = taskID + sandboxMacVMTaskIDSuffix
 		}
-	})
+		byTask[t] = append(byTask[t], id)
+	}
+	for t, ids := range byTask {
+		t, ids := t, ids
+		goroutine.Go(ctx, func() {
+			if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
+				TaskID:        t,
+				DestroyType:   rpc.SandboxDestroyTypeExecute,
+				ExecuteIDs:    ids,
+				WorkspaceID:   spaceID,
+				ZombieTimeout: zombieTimeout,
+			}); err != nil {
+				logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_ids=%v, err=%v",
+					t, ids, err)
+			}
+		})
+	}
 }
 
 // destroySandboxExtraExecute 异步 best-effort 销毁指定字符串 executeID 的沙箱执行；用于双沙箱
