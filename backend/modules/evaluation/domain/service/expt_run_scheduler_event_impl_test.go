@@ -308,6 +308,8 @@ func TestExptSchedulerImpl_RecordEvalItemRunLogs(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
 				f.ResultSvc.EXPECT().RecordItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				// 无 publisher(nil)时, 每个 completeItem 由 finalizeItemComplete 直接翻 Sent → MarkItemResultSent
+				f.ResultSvc.EXPECT().MarkItemResultSent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockMode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.ResultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.Publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -2121,4 +2123,57 @@ func TestIsSandboxAgentExpt(t *testing.T) {
 	assert.True(t, isSandboxAgentExpt(&entity.Experiment{Target: &entity.EvalTarget{
 		EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent},
 	}}))
+}
+
+// Test_finalizeItemComplete 覆盖可靠投递的状态收敛决策:
+//   - 成功行发成功 → MarkItemResultSent(翻 Sent)
+//   - 成功行发失败且未超时 → 不翻 Sent(留 Resulted, 下轮重发)
+//   - 成功行发失败且超时(UpdatedAt 过久) → 强制 MarkItemResultSent
+//   - 非成功行(Fail) → 直接 MarkItemResultSent(无需发送)
+//   - 无 publisher(开源 nil) → 直接 MarkItemResultSent
+func Test_finalizeItemComplete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	recent := time.Now()
+	stale := time.Now().Add(-2 * itemCompleteMaxStuckDuration)
+
+	tests := []struct {
+		name         string
+		itemState    entity.ItemRunState
+		updatedAt    *time.Time
+		publisherErr error
+		nilPublisher bool
+		wantSends    int // stub 收到的发送次数
+		wantMarkSent bool
+	}{
+		{name: "success sent ok", itemState: entity.ItemRunState_Success, updatedAt: &recent, wantSends: 1, wantMarkSent: true},
+		{name: "success send fail not stuck", itemState: entity.ItemRunState_Success, updatedAt: &recent, publisherErr: assert.AnError, wantSends: 1, wantMarkSent: false},
+		{name: "success send fail stuck timeout", itemState: entity.ItemRunState_Success, updatedAt: &stale, publisherErr: assert.AnError, wantSends: 1, wantMarkSent: true},
+		{name: "fail item no send direct sent", itemState: entity.ItemRunState_Fail, updatedAt: &recent, wantSends: 0, wantMarkSent: true},
+		{name: "nil publisher direct sent", itemState: entity.ItemRunState_Success, updatedAt: &recent, nilPublisher: true, wantSends: 0, wantMarkSent: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resultSvc := svcmocks.NewMockExptResultService(ctrl)
+			if tt.wantMarkSent {
+				resultSvc.EXPECT().MarkItemResultSent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			} else {
+				resultSvc.EXPECT().MarkItemResultSent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			}
+
+			stub := &stubItemCompletePublisher{err: tt.publisherErr}
+			svc := &ExptSchedulerImpl{ResultSvc: resultSvc}
+			if !tt.nilPublisher {
+				svc.itemCompletePublisher = stub
+			}
+
+			event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+			item := &entity.ExptEvalItem{ItemID: 10, State: tt.itemState, UpdatedAt: tt.updatedAt}
+			svc.finalizeItemComplete(context.Background(), event, &entity.Experiment{}, item, &entity.EvaluationSetItem{}, 100)
+
+			assert.Equal(t, tt.wantSends, len(stub.events))
+		})
+	}
 }

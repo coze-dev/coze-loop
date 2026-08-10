@@ -1217,7 +1217,7 @@ func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptSche
 func (e *exptBaseExec) scanIncompleteAndComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (incomplete, complete []*entity.ExptEvalItem, err error) {
 	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
 		RawFilter: true,
-		RawCond:   clause.Expr{SQL: "status IN (?) OR result_state = ?", Vars: []interface{}{[]int32{int32(entity.ItemRunState_Processing)}, int32(entity.ExptItemResultStateLogged)}},
+		RawCond:   clause.Expr{SQL: "status IN (?) OR result_state IN (?)", Vars: []interface{}{[]int32{int32(entity.ItemRunState_Processing)}, []int32{int32(entity.ExptItemResultStateLogged), int32(entity.ExptItemResultStateResulted)}}},
 	}, 0, 0, event.SpaceID)
 	if err != nil {
 		return nil, nil, err
@@ -1236,7 +1236,9 @@ func (e *exptBaseExec) scanIncompleteAndComplete(ctx context.Context, event *ent
 		if log.Status == int32(entity.ItemRunState_Processing) {
 			incomplete = append(incomplete, item)
 		}
-		if log.ResultState == int32(entity.ExptItemResultStateLogged) {
+		// Logged=待写读侧; Resulted=读侧已写但 item-complete MQ 未发/发失败, 均进 complete
+		// 让 recordEvalItemRunLogs 处理: Logged 走写表, Resulted 靠 RecordItemRunLogs 幂等门短路后只重发。
+		if log.ResultState == int32(entity.ExptItemResultStateLogged) || log.ResultState == int32(entity.ExptItemResultStateResulted) {
 			complete = append(complete, item)
 		}
 	}

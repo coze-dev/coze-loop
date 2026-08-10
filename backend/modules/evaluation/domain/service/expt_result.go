@@ -18,6 +18,9 @@ type ExptResultService interface {
 	GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) ([]int64, error)
 	// RecordItemRunLogs sync results from run_log table to result table.
 	RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error)
+	// MarkItemResultSent 把 item 的 result_state 置为 Sent(真终态): 读侧已写 + item-complete MQ 已发成功后调用,
+	// 使 tick 下轮不再扫到该 item。与 RecordItemRunLogs 的 Logged→Resulted 翻转解耦, 支撑"发成功才置终态、失败留 Resulted 重发"。
+	MarkItemResultSent(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) error
 	GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error)
 
 	CreateStats(ctx context.Context, exptStats *entity.ExptStats, session *entity.Session) error
