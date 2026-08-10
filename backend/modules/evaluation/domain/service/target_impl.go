@@ -602,6 +602,27 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	// 仅 DebugTarget 传入 TruncateLargeContent，其他场景 nil 默认剪裁
 	truncateLargeContent := param.TruncateLargeContent
 	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record, truncateLargeContent); err != nil {
+		// ⚠️ 这里是**唯一的清理机会**：此刻 operator 已成功返回，沙箱确定在跑，ext 也已算好
+		// 落在 outputData.Ext 里；但 record 没落库，而平台侧三条兜底销毁链
+		// (destroySandboxExecuteIfNeeded / TerminateAsyncRecordsAndDestroySandbox /
+		// CheckSandboxTerminated) **全部以"按 recordID 从库里查出 record 再读 ext"为前提** ——
+		// 库里没这行，一条都命中不到。就这么 return 掉，沙箱只能等平台侧 patrol，
+		// 期间并发名额一直不归还 (配额耗尽后新 item 直接撞 601300702 且该错误不重试)。
+		//
+		// 用内存里已有的 record 直接销毁：sandboxExecuteIDsOf 只读 record.EvalTargetOutputData.Ext
+		// 与 record.ID，是纯内存操作、不查库，所以落库失败也拿得到正确的 execute id。
+		// taskID 同理不走 resolveSandboxTaskIDByRunID (它查 expt_run_log，多一跳且可能返回 "")
+		// —— 此刻手上直接有 param.ExperimentID，operator 侧的 taskID 也正是它。
+		//
+		// 类型守卫用手上的 target 直接判，比 destroySandboxExecuteIfNeeded 那种"查库反查
+		// version"更直接可靠 (destroySandboxExecute 自己不检查 target 类型，漏判会把非沙箱
+		// 场景也发一次 Destroy)。
+		if target.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+			executeIDs := sandboxExecuteIDsOf(ctx, record)
+			logs.CtxError(ctx, "[SandboxDestroy] create eval target record fail, destroying sandbox executes to avoid leak, invoke_id=%d, expt_id=%d, execute_ids=%v, err=%v",
+				record.ID, gptr.Indirect(param.ExperimentID), executeIDs, err)
+			e.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(param.ExperimentID), 10), spaceID, executeIDs, false)
+		}
 		return nil, callee, err
 	}
 
