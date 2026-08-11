@@ -2177,3 +2177,147 @@ func Test_finalizeItemComplete(t *testing.T) {
 		})
 	}
 }
+
+// Test_MarkItemResultSent 覆盖置终态方法(复用 UpdateItemRunLog 写 result_state=Sent)。
+func Test_MarkItemResultSent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	itemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).
+		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+			assert.Equal(t, int32(entity.ExptItemResultStateSent), fields["result_state"])
+			return nil
+		})
+	svc := ExptResultServiceImpl{ExptItemResultRepo: itemRepo}
+	assert.NoError(t, svc.MarkItemResultSent(context.Background(), 1, 2, 3, 4))
+}
+
+// Test_resolveItemCompleteMeta 覆盖 item-complete 组装前的批量补集/版本:
+// 单集(走主集) / 多集(走 expt_item_ref) / ref 缺失跳过 / 主集缺失 / BatchGet 失败 / 无 publisher 不调用。
+func Test_resolveItemCompleteMeta(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	baseExpt := func(multiset bool) *entity.Experiment {
+		e := &entity.Experiment{
+			EvalSet:         &entity.EvaluationSet{ID: 70, EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 80}},
+			EvalSetSpaceID:  0,
+		}
+		if multiset {
+			e.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
+		}
+		return e
+	}
+	event := &entity.ExptScheduleEvent{SpaceID: 9, ExptID: 100, ExptRunID: 200}
+	items := []*entity.ExptEvalItem{{ItemID: 11}, {ItemID: 12}}
+
+	t.Run("single set - primary", func(t *testing.T) {
+		refRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
+		setItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+		setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).
+			Return([]*entity.EvaluationSetItem{{ItemID: 11, ItemKey: "k11", EvaluationSetID: 70}, {ItemID: 12, ItemKey: "k12", EvaluationSetID: 70}}, nil)
+		svc := &ExptSchedulerImpl{exptItemRefRepo: refRepo, evaluationSetItemService: setItemSvc}
+		meta, ver := svc.resolveItemCompleteMeta(context.Background(), event, items, baseExpt(false))
+		assert.Equal(t, "k11", meta[11].ItemKey)
+		assert.Equal(t, int64(80), ver[11]) // 单集: 主集版本
+		assert.Equal(t, int64(80), ver[12])
+	})
+
+	t.Run("multiset - per-item ref version", func(t *testing.T) {
+		refRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
+		refRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), int64(9), int64(100), []int64{11, 12}).
+			Return([]*entity.ExptItemRef{
+				{ItemID: 11, EvalSetID: 71, EvalSetVersionID: 81},
+				{ItemID: 12, EvalSetID: 72, EvalSetVersionID: 82},
+			}, nil)
+		setItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+		setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+				return []*entity.EvaluationSetItem{{ItemID: p.ItemIDs[0], EvaluationSetID: p.EvaluationSetID}}, nil
+			}).Times(2) // 两个 item 属不同集, 分两组各查一次
+		svc := &ExptSchedulerImpl{exptItemRefRepo: refRepo, evaluationSetItemService: setItemSvc}
+		_, ver := svc.resolveItemCompleteMeta(context.Background(), event, items, baseExpt(true))
+		assert.Equal(t, int64(81), ver[11]) // 多集: 各 item 归属集版本
+		assert.Equal(t, int64(82), ver[12])
+	})
+
+	t.Run("multiset - ref missing skip item", func(t *testing.T) {
+		refRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
+		refRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptItemRef{{ItemID: 11, EvalSetID: 71, EvalSetVersionID: 81}}, nil) // 缺 item 12
+		setItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+		setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).
+			Return([]*entity.EvaluationSetItem{{ItemID: 11}}, nil)
+		svc := &ExptSchedulerImpl{exptItemRefRepo: refRepo, evaluationSetItemService: setItemSvc}
+		_, ver := svc.resolveItemCompleteMeta(context.Background(), event, items, baseExpt(true))
+		assert.Equal(t, int64(81), ver[11])
+		_, ok := ver[12]
+		assert.False(t, ok) // 12 无 ref 被跳过
+	})
+
+	t.Run("multiset - MGet fail returns empty", func(t *testing.T) {
+		refRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
+		refRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, assert.AnError)
+		setItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+		svc := &ExptSchedulerImpl{exptItemRefRepo: refRepo, evaluationSetItemService: setItemSvc}
+		meta, ver := svc.resolveItemCompleteMeta(context.Background(), event, items, baseExpt(true))
+		assert.Empty(t, meta)
+		assert.Empty(t, ver)
+	})
+
+	t.Run("single set - primary set missing returns empty", func(t *testing.T) {
+		refRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
+		setItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+		expt := baseExpt(false)
+		expt.EvalSet = nil // 主集缺失
+		svc := &ExptSchedulerImpl{exptItemRefRepo: refRepo, evaluationSetItemService: setItemSvc}
+		meta, _ := svc.resolveItemCompleteMeta(context.Background(), event, items, expt)
+		assert.Empty(t, meta)
+	})
+
+	t.Run("BatchGet fail - group skipped, ver still set", func(t *testing.T) {
+		refRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
+		setItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+		setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+		svc := &ExptSchedulerImpl{exptItemRefRepo: refRepo, evaluationSetItemService: setItemSvc}
+		meta, ver := svc.resolveItemCompleteMeta(context.Background(), event, items, baseExpt(false))
+		assert.Empty(t, meta)          // BatchGet 失败, meta 空
+		assert.Equal(t, int64(80), ver[11]) // ver 在分组时已填, 不受影响
+	})
+}
+
+// Test_findEvalSetForItem 覆盖归属集查找: nil / 单集主集 / 多集命中 EvalSetDetails / 多集未命中不回退。
+func Test_findEvalSetForItem(t *testing.T) {
+	assert.Nil(t, findEvalSetForItem(nil, 1))
+
+	single := &entity.Experiment{EvalSet: &entity.EvaluationSet{ID: 70}}
+	assert.Equal(t, int64(70), findEvalSetForItem(single, 70).ID) // 单集命中
+	assert.Equal(t, int64(70), findEvalSetForItem(single, 0).ID)  // datasetID=0 用主集
+	assert.Nil(t, findEvalSetForItem(single, 999))                // 单集但 id 不匹配
+
+	multi := &entity.Experiment{
+		EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+		EvalSetDetails: []*entity.ExptEvalSetDetail{
+			{EvalSetID: 71, EvalSet: &entity.EvaluationSet{ID: 71}},
+		},
+	}
+	assert.Equal(t, int64(71), findEvalSetForItem(multi, 71).ID) // 多集命中
+	assert.Nil(t, findEvalSetForItem(multi, 72))                 // 多集未命中, 不回退主集
+}
+
+// Test_sendItemComplete_nilMeta 覆盖 evalSetItem==nil 时 sendItemComplete 返 false(经 finalizeItemComplete 走进)。
+func Test_sendItemComplete_nilMeta(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	resultSvc := svcmocks.NewMockExptResultService(ctrl)
+	// meta 缺失 → 发送 false → 未超时 → 不翻 Sent
+	resultSvc.EXPECT().MarkItemResultSent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	stub := &stubItemCompletePublisher{}
+	svc := &ExptSchedulerImpl{ResultSvc: resultSvc, itemCompletePublisher: stub}
+	now := time.Now()
+	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+	item := &entity.ExptEvalItem{ItemID: 10, State: entity.ItemRunState_Success, UpdatedAt: &now}
+	svc.finalizeItemComplete(context.Background(), event, &entity.Experiment{}, item, nil /*evalSetItem*/, 100)
+	assert.Empty(t, stub.events) // meta nil, 未真正 publish
+}

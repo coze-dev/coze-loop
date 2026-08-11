@@ -1146,3 +1146,54 @@ func Test_buildItemCompleteEvent(t *testing.T) {
 		})
 	}
 }
+
+// Test_buildItemCompleteEvent_LinkAB_Equivalence 钉死"发送内容与原链路A一致"契约:
+// 同一份输入, 原组装 buildItemCompleteEvent(链路A) 与 buildItemCompleteEventFromScheduler(链路B拆参)
+// 必须产出完全相等的 ItemCompleteEvent。任一函数改动导致漂移, 此测试立即失败。
+func Test_buildItemCompleteEvent_LinkAB_Equivalence(t *testing.T) {
+	const (
+		spaceID   = int64(1)
+		exptID    = int64(100)
+		exptRunID = int64(200)
+		itemID    = int64(300)
+		datasetID = int64(700)
+		datasetV  = int64(800)
+	)
+	expt := &entity.Experiment{
+		TargetID:           int64(9),
+		ExperimentGroupKey: "group-key",
+		CreatedBy:          "creator",
+		Target: &entity.EvalTarget{
+			SpaceID:        int64(6),
+			SourceTargetID: "source-target-id",
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				SandboxAgent: &entity.SandboxAgent{EnableAnalysis: true},
+			},
+		},
+		EvalSet: &entity.EvaluationSet{
+			ID:                   datasetID,
+			DatasetKey:           "ds-key",
+			EvaluationSetVersion: &entity.EvaluationSetVersion{ID: datasetV, Version: "0.0.1"},
+		},
+	}
+	evalSetItem := &entity.EvaluationSetItem{
+		SpaceID:         spaceID,
+		EvaluationSetID: datasetID,
+		ItemKey:         "item-key",
+	}
+
+	// 链路A: 原组装函数直接吃 eiec
+	eiec := &entity.ExptItemEvalCtx{
+		Event:            &entity.ExptItemEvalEvent{SpaceID: spaceID, ExptID: exptID, ExptRunID: exptRunID, EvalSetItemID: itemID},
+		Expt:             expt,
+		EvalSetItem:      evalSetItem,
+		EvalSetVersionID: datasetV,
+	}
+	fromLinkA := buildItemCompleteEvent(eiec)
+
+	// 链路B: scheduler 拆参入口
+	item := &entity.ExptEvalItem{ExptID: exptID, ItemID: itemID, State: entity.ItemRunState_Success}
+	fromLinkB := buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID, expt, item, evalSetItem, datasetV)
+
+	require.Equal(t, fromLinkA, fromLinkB, "链路A与链路B的 item-complete 组装结果必须完全一致")
+}
