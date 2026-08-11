@@ -1,0 +1,23 @@
+saas/coze/loop/eval_analysis_platform/execution.thrift
+  s_b2b6f7b51a7d9a::t_858f7d6b0a4373 88
+  s_b2b6f7b51a7d9a::t_dc025b50415d25 85-87
+  s_b2b6f7b51a7d9a::t_bafb4e3f1ee613 89-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "eb38339a809b03b871d9daf01ce0777f3185cc48",
+  "prompts": {},
+  "sessions": {
+    "s_b2b6f7b51a7d9a": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3df3b76ee409b9499505a1",
+        "model": "openrouter-3o__dev"
+      },
+      "human_author": "lizhanpeng <lizhanpeng@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

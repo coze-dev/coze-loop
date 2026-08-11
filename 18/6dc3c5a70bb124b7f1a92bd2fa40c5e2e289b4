@@ -1,0 +1,21 @@
+backend/api/handler/coze/loop/apis/experiment_service.go
+  s_7f50cd467c269b::t_1ada0945b01cae 349
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "186dc3c5a70bb124b7f1a92bd2fa40c5e2e289b4",
+  "prompts": {},
+  "sessions": {
+    "s_7f50cd467c269b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_7f50cd467c269b",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

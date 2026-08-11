@@ -1,0 +1,39 @@
+backend/api/handler/coze/loop/apis/eval_open_apiservice_test.go
+  s_120dbf7463ac4c::t_189e5a0234db66 1-55
+backend/modules/observability/domain/trace/service/trace/span_processor/attr_tos_processor.go
+  s_120dbf7463ac4c::t_7fade67050b146 19-22
+backend/modules/observability/domain/trace/service/trace/span_processor/chat_processor.go
+  s_120dbf7463ac4c::t_39039295b8ac00 19-22
+backend/modules/observability/domain/trace/service/trace/span_processor/check_processor.go
+  s_120dbf7463ac4c::t_66988336c852fd 19-22
+backend/modules/observability/domain/trace/service/trace/span_processor/clip_processor.go
+  s_120dbf7463ac4c::t_9db83fce927fc0 28-31,82-85
+backend/modules/observability/domain/trace/service/trace/span_processor/expire_error_processor.go
+  s_120dbf7463ac4c::t_05dede379aa4d9 25-28
+backend/modules/observability/domain/trace/service/trace/span_processor/platform_processor.go
+  s_120dbf7463ac4c::t_ac856ee3dbb187 17-20
+backend/modules/observability/domain/trace/service/trace/span_processor/processor.go
+  s_120dbf7463ac4c::t_82e6470471531f 36
+backend/modules/observability/domain/trace/service/trace_service.go
+  s_120dbf7463ac4c::t_31b813446095fa 919,922
+backend/modules/observability/domain/trace/service/trace_service_test.go
+  s_120dbf7463ac4c::t_07ddc2e4062e0e 6548-6551
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "50fd58693a2ab8e8f4a9e76560b32a8f6b93cc6a",
+  "prompts": {},
+  "sessions": {
+    "s_120dbf7463ac4c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_120dbf7463ac4c",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

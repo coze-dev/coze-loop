@@ -1,0 +1,21 @@
+backend/modules/observability/domain/trace/service/trace_service.go
+  s_64bc4d67deb79d::t_14e604508732bf 646-648,911-927,944,1322-1324,1438-1440,1495-1497,1550-1552,1589-1591,1702-1705,2642-2644,3008-3010,3083-3085,3225-3227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a44086d81a1f1c9dd7b6dbc4697c243b70c976c5",
+  "prompts": {},
+  "sessions": {
+    "s_64bc4d67deb79d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_64bc4d67deb79d",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

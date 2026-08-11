@@ -1,0 +1,37 @@
+backend/modules/observability/application/openapi.go
+  s_9767ffef56340c::t_3713cc754ee24a 583-584,594,1130,1141-1147,1150-1169
+backend/modules/observability/application/trace.go
+  s_9767ffef56340c::t_9bdfc43a788ed1 332
+backend/modules/observability/application/trace_scene_test.go
+  s_9767ffef56340c::t_751b5fd0d1677e 11-12,19-20,23-27,30-38,41-46,48-49,52-57,59-60,63-69,71-72,75-81,83-84,87-90,92-93,98,102-108
+backend/modules/observability/domain/component/config/config.go
+  s_9767ffef56340c::t_28dbf89b18ef25 107-110,252
+backend/modules/observability/domain/component/config/mocks/config.go
+  s_9767ffef56340c::t_da21b66db98588 59-73,104-117,133-147,265-266,268-270,273-274,276,383-410
+backend/modules/observability/infra/config/trace.go
+  s_9767ffef56340c::t_8b20bba86991f7 189-199
+backend/modules/observability/infra/config/trace_test.go
+  s_9767ffef56340c::t_11b51f06cf27e4 19,25,27,31-32,35,37-40,46-63,65,70,73,77,89
+release/deployment/docker-compose/conf/observability.yaml
+  s_9767ffef56340c::t_90eeae87ac908c 361-364
+release/deployment/helm-chart/umbrella/conf/observability.yaml
+  s_9767ffef56340c::t_3172adaa2ddbde 361-364
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b2391be47f121c9e08c53baecf54033b074b1424",
+  "prompts": {},
+  "sessions": {
+    "s_9767ffef56340c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_9767ffef56340c",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

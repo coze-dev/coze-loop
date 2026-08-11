@@ -1,0 +1,29 @@
+backend/api/handler/coze/loop/apis/eval_open_apiservice.go
+  s_b54f495d0339cb::t_3431428b948cd7 12,15,343-358
+backend/api/handler/coze/loop/apis/wire_gen.go
+  s_b54f495d0339cb::t_ec6e7ab291dcb4 11
+backend/api/router/coze/loop/apis/coze.loop.apis.go
+  s_b54f495d0339cb::t_9b9222e25a5a76 511
+backend/api/router/coze/loop/apis/middleware.go
+  s_b54f495d0339cb::t_85d23d6c898ac8 2457-2461
+backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment/experiment_validator.go
+  s_b54f495d0339cb::t_e1ea2334106b34 198-202,222-226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d2e2771ac1d88ddc80ace73f2b68afb23967633a",
+  "prompts": {},
+  "sessions": {
+    "s_b54f495d0339cb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_b54f495d0339cb",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

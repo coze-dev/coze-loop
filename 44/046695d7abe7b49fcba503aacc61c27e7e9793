@@ -1,0 +1,31 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "44046695d7abe7b49fcba503aacc61c27e7e9793",
+  "prompts": {
+    "a049de55ad473c5d": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a18746b40ab639c29c70880",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 227,
+      "total_deletions": 9,
+      "accepted_lines": 82,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {
+    "a049de55ad473c5d": {
+      "tool": "trae",
+      "conversation_id": "6a18746b40ab639c29c70880",
+      "session_id": "6a18746b40ab639c29c70880",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

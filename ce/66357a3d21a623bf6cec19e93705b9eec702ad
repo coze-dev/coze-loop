@@ -1,0 +1,528 @@
+modules/evaluation/component/config/offline_analysis.go
+  dc01211d46d39c52 30-48,53 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[30,48]},{"Single":53}]}]}
+modules/evaluation/application/wire_gen.go
+  dc01211d46d39c52 10-12,49,502,539,555,584,616,645,660,694 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[10,12]},{"Single":49},{"Single":502},{"Single":539},{"Single":555},{"Single":584},{"Single":616},{"Single":645},{"Single":660},{"Single":694}]}]}
+modules/evaluation/infra/config/expt.go
+  dc01211d46d39c52 64-67 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[64,67]}]}]}
+cmd/evaluation/main.go
+  dc01211d46d39c52 110,151,212,508-512,570,607-615 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":110},{"Single":151},{"Single":212},{"Range":[508,512]},{"Single":570},{"Range":[607,615]}]}]}
+modules/evaluation/component/config/mocks/offline_analysis.go
+  dc01211d46d39c52 71-84 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[71,84]}]}]}
+modules/evaluation/infra/mq/rocket/producer/offline_analysis_data.go
+  dc01211d46d39c52 6,11,16,29-33,39,42-45,106-109,166-236 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":6},{"Single":11},{"Single":16},{"Range":[29,33]},{"Single":39},{"Range":[42,45]},{"Range":[106,109]},{"Range":[166,236]}]}]}
+cmd/evaluation/wire.go
+  dc01211d46d39c52 49,131 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":49},{"Single":131}]}]}
+cmd/evaluation/types.go
+  dc01211d46d39c52 65,112 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":65},{"Single":112}]}]}
+cmd/evaluation/wire_gen.go
+  dc01211d46d39c52 60,93,97 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":60},{"Single":93},{"Single":97}]}]}
+modules/evaluation/application/wire.go
+  dc01211d46d39c52 75,790,812,835,856,880 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a1556f4dd40783a805975cb","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":75},{"Single":790},{"Single":812},{"Single":835},{"Single":856},{"Single":880}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "ce66357a3d21a623bf6cec19e93705b9eec702ad",
+  "prompts": {
+    "dc01211d46d39c52": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a144712dd40783a80597151",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "suhanlin <suhanlin@bytedance.com>",
+      "messages": [],
+      "total_additions": 230,
+      "total_deletions": 76,
+      "accepted_lines": 176,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "cmd/evaluation/main.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Single": 110
+          },
+          {
+            "Single": 151
+          },
+          {
+            "Single": 212
+          },
+          {
+            "Range": [
+              508,
+              512
+            ]
+          },
+          {
+            "Single": 570
+          },
+          {
+            "Range": [
+              607,
+              615
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 110
+              },
+              {
+                "Single": 151
+              },
+              {
+                "Single": 212
+              },
+              {
+                "Range": [
+                  508,
+                  512
+                ]
+              },
+              {
+                "Single": 570
+              },
+              {
+                "Range": [
+                  607,
+                  615
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "cmd/evaluation/types.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Single": 65
+          },
+          {
+            "Single": 112
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 65
+              },
+              {
+                "Single": 112
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "cmd/evaluation/wire.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Single": 49
+          },
+          {
+            "Single": 131
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 49
+              },
+              {
+                "Single": 131
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "cmd/evaluation/wire_gen.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Single": 60
+          },
+          {
+            "Single": 93
+          },
+          {
+            "Single": 97
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 60
+              },
+              {
+                "Single": 93
+              },
+              {
+                "Single": 97
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/application/wire.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Single": 75
+          },
+          {
+            "Single": 790
+          },
+          {
+            "Single": 812
+          },
+          {
+            "Single": 835
+          },
+          {
+            "Single": 856
+          },
+          {
+            "Single": 880
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 75
+              },
+              {
+                "Single": 790
+              },
+              {
+                "Single": 812
+              },
+              {
+                "Single": 835
+              },
+              {
+                "Single": 856
+              },
+              {
+                "Single": 880
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/application/wire_gen.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Range": [
+              10,
+              12
+            ]
+          },
+          {
+            "Single": 49
+          },
+          {
+            "Single": 502
+          },
+          {
+            "Single": 539
+          },
+          {
+            "Single": 555
+          },
+          {
+            "Single": 584
+          },
+          {
+            "Single": 616
+          },
+          {
+            "Single": 645
+          },
+          {
+            "Single": 660
+          },
+          {
+            "Single": 694
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  10,
+                  12
+                ]
+              },
+              {
+                "Single": 49
+              },
+              {
+                "Single": 502
+              },
+              {
+                "Single": 539
+              },
+              {
+                "Single": 555
+              },
+              {
+                "Single": 584
+              },
+              {
+                "Single": 616
+              },
+              {
+                "Single": 645
+              },
+              {
+                "Single": 660
+              },
+              {
+                "Single": 694
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/component/config/mocks/offline_analysis.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Range": [
+              71,
+              84
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  71,
+                  84
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/component/config/offline_analysis.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Range": [
+              30,
+              48
+            ]
+          },
+          {
+            "Single": 53
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  30,
+                  48
+                ]
+              },
+              {
+                "Single": 53
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/config/expt.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Range": [
+              64,
+              67
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  64,
+                  67
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "modules/evaluation/infra/mq/rocket/producer/offline_analysis_data.go": [
+      {
+        "hash": "dc01211d46d39c52",
+        "line_ranges": [
+          {
+            "Single": 6
+          },
+          {
+            "Single": 11
+          },
+          {
+            "Single": 16
+          },
+          {
+            "Range": [
+              29,
+              33
+            ]
+          },
+          {
+            "Single": 39
+          },
+          {
+            "Range": [
+              42,
+              45
+            ]
+          },
+          {
+            "Range": [
+              106,
+              109
+            ]
+          },
+          {
+            "Range": [
+              166,
+              236
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a1556f4dd40783a805975cb",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 6
+              },
+              {
+                "Single": 11
+              },
+              {
+                "Single": 16
+              },
+              {
+                "Range": [
+                  29,
+                  33
+                ]
+              },
+              {
+                "Single": 39
+              },
+              {
+                "Range": [
+                  42,
+                  45
+                ]
+              },
+              {
+                "Range": [
+                  106,
+                  109
+                ]
+              },
+              {
+                "Range": [
+                  166,
+                  236
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "dc01211d46d39c52": {
+      "tool": "trae",
+      "conversation_id": "6a144712dd40783a80597151",
+      "session_id": "6a144712dd40783a80597151",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

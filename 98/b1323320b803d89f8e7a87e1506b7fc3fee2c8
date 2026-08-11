@@ -1,0 +1,25 @@
+cmd/evaluation/main.go
+  984b7f515feaa153 128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "98b1323320b803d89f8e7a87e1506b7fc3fee2c8",
+  "prompts": {
+    "984b7f515feaa153": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-a77aaba1-1e39-4cd5-9e5d-7f8d7fb57a28",
+        "model": "default"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

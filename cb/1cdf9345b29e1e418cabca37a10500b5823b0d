@@ -1,0 +1,60 @@
+idl/thrift/coze/loop/observability/domain/common.thrift
+  s_be90ef0d481349::t_bab234470d8fbb 17 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a684d86fa20e2ba886b5860","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":17}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "cb1cdf9345b29e1e418cabca37a10500b5823b0d",
+  "prompts": {},
+  "sessions": {
+    "s_be90ef0d481349": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a66cc42fa20e2ba886b4f51",
+        "model": "c_o_new_thinking__dev"
+      },
+      "human_author": "cuichen <cuichen.cuichen@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "idl/thrift/coze/loop/observability/domain/common.thrift": [
+      {
+        "hash": "s_be90ef0d481349::t_bab234470d8fbb",
+        "line_ranges": [
+          {
+            "Single": 17
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a684d86fa20e2ba886b5860",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 17
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_be90ef0d481349": {
+      "tool": "trae",
+      "conversation_id": "6a66cc42fa20e2ba886b4f51",
+      "session_id": "6a66cc42fa20e2ba886b4f51",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_be90ef0d481349::t_bab234470d8fbb": {
+      "tool": "trae",
+      "conversation_id": "6a66cc42fa20e2ba886b4f51",
+      "session_id": "6a66cc42fa20e2ba886b4f51",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

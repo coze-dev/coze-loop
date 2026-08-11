@@ -1,0 +1,73 @@
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/eval_target_record_alter.sql
+  s_c0a835d44f1dcc::t_9f5d5c3d467152 2-4
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/evaluator_record_alter.sql
+  s_c0a835d44f1dcc::t_48d76a2ce7dbbf 1-11
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/experiment_alter.sql
+  s_c0a835d44f1dcc::t_407bed4a82f700 27-29
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/expt_evaluator_ref_alter.sql
+  s_c0a835d44f1dcc::t_be0565a37cdb68 1-5
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/expt_item_result_alter.sql
+  s_c0a835d44f1dcc::t_bf849fafafb39e 1-4
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/expt_item_result_run_log_alter.sql
+  s_c0a835d44f1dcc::t_f14d6ffaf56320 1-2
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/expt_turn_evaluator_result_ref_alter.sql
+  s_c0a835d44f1dcc::t_4b92b3bb99105d 1-14
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/expt_turn_result_alter.sql
+  s_c0a835d44f1dcc::t_5d236e1da1817b 3-5
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/expt_turn_result_run_log_alter.sql
+  s_c0a835d44f1dcc::t_c4049cdd8704f8 2-4
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/eval_target_record.sql
+  s_c0a835d44f1dcc::t_ce78c46f75b319 9,23
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/eval_target_record_alter.sql
+  s_c0a835d44f1dcc::t_ecf90852d25b56 2-4
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/evaluator_record.sql
+  s_c0a835d44f1dcc::t_fdb1131ad230d3 3-21,24-25,30
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/evaluator_record_alter.sql
+  s_c0a835d44f1dcc::t_b5e57d23629565 1-11
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/experiment.sql
+  s_c0a835d44f1dcc::t_b70a09d55fb28e 23,30-34
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/experiment_alter.sql
+  s_c0a835d44f1dcc::t_f2e94a8f0fde74 27-29
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_evaluator_ref.sql
+  s_c0a835d44f1dcc::t_a4fc41608f36e4 6,9-11,21
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_evaluator_ref_alter.sql
+  s_c0a835d44f1dcc::t_b68bd6747f5782 1-5
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_item_ref.sql
+  s_c0a835d44f1dcc::t_b7fb14ef3445c8 1-20
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_item_result.sql
+  s_c0a835d44f1dcc::t_a39542bf9ea029 3-16,23
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_item_result_alter.sql
+  s_c0a835d44f1dcc::t_e750f042ee41f2 1-4
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_item_result_run_log.sql
+  s_c0a835d44f1dcc::t_ecf62fb8baf86d 3-15,22
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_item_result_run_log_alter.sql
+  s_c0a835d44f1dcc::t_8911216dfa9994 1-2
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_turn_evaluator_result_ref_alter.sql
+  s_c0a835d44f1dcc::t_3968114af56f2d 1-14
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_turn_result.sql
+  s_c0a835d44f1dcc::t_133fa73a7674fa 8,16,26
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_turn_result_alter.sql
+  s_c0a835d44f1dcc::t_efe7b5609af4e2 3-5
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_turn_result_run_log.sql
+  s_c0a835d44f1dcc::t_ddbb0f9405f366 8,25
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/expt_turn_result_run_log_alter.sql
+  s_c0a835d44f1dcc::t_dc24f161055a92 2-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e7ba888822515d094b6ad5171ceff50fa8250cde",
+  "prompts": {},
+  "sessions": {
+    "s_c0a835d44f1dcc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_c0a835d44f1dcc",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

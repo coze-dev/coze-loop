@@ -1,0 +1,23 @@
+backend/modules/evaluation/domain/service/expt_item_filter_match.go
+  s_4bb271e48a1249::t_fb7e792f535c86 133-177
+backend/modules/evaluation/domain/service/expt_run_item_turn_impl.go
+  s_4bb271e48a1249::t_455b10737daa4b 670-675
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "11504176fcdffc1a34c84cfe0abb10ee631b816d",
+  "prompts": {},
+  "sessions": {
+    "s_4bb271e48a1249": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_4bb271e48a1249",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

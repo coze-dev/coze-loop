@@ -1,0 +1,49 @@
+backend/kitex_gen/coze/loop/evaluation/expt/coze.loop.evaluation.expt.go
+  s_e29d32de9590d2::t_614207b9ac73e2 2940-2945,3259-3270,3441-3443,3495,3602-3605,3858-3865,4269-4279,4493-4496,5019-5036,5290-5292,5603-5614
+backend/kitex_gen/coze/loop/evaluation/expt/k-coze.loop.evaluation.expt.go
+  s_e29d32de9590d2::t_da83f5742cf34a 2537-2550,3067-3080,3245,3287,3545-3553,3874-3882,4136-4143
+backend/modules/evaluation/domain/component/rpc/skill_preloader.go
+  s_4f060a9a1aac64::t_cffc2665f38184 1-25
+backend/modules/evaluation/domain/entity/expt.go
+  s_4f060a9a1aac64::t_589e3ebd19df5f 266-267
+backend/modules/evaluation/infra/repo/experiment/mysql/convert/expt_skill_tos_keys_test.go
+  s_4f060a9a1aac64::t_76e1467af292dc 1-40
+backend/modules/evaluation/infra/rpc/schedule/skill_preloader_noop.go
+  s_4f060a9a1aac64::t_47475136d5c8f4 1-24
+backend/modules/evaluation/infra/rpc/schedule/wire.go
+  s_4f060a9a1aac64::t_7fb9cf4c5063c0 12
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.expt.thrift
+  s_4f060a9a1aac64::t_affb30dd3eff50 95
+backend/modules/evaluation/consts/experiment.go
+  s_e29d32de9590d2::t_4f4ea1d8b787ab 36-38
+backend/modules/evaluation/domain/service/expt_run_item_turn_impl.go
+  s_e29d32de9590d2::t_104e89031b10a5 437,574,654,805,814-822
+backend/modules/evaluation/domain/service/expt_run_item_turn_impl_test.go
+  s_e29d32de9590d2::t_b52de7e18cf18c 313,2437,3539,4185-4186,4205-4206,4213-4214,4233-4234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "046a62f7334cc90e4f993b93aef3d1792f60d243",
+  "prompts": {},
+  "sessions": {
+    "s_4f060a9a1aac64": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aad579087eba124dc",
+        "model": "unknown"
+      },
+      "human_author": "liuzihan.23 <liuzihan.23@bytedance.com>"
+    },
+    "s_e29d32de9590d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa91c140d2d682bcc",
+        "model": "unknown"
+      },
+      "human_author": "liuzihan.23 <liuzihan.23@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

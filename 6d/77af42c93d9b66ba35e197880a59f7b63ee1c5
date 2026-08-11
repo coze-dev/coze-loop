@@ -1,0 +1,21 @@
+backend/modules/evaluation/application/standard_eval_output.go
+  s_9aa3cf3587917e::t_e097067619fd0b 34,71,120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6d77af42c93d9b66ba35e197880a59f7b63ee1c5",
+  "prompts": {},
+  "sessions": {
+    "s_9aa3cf3587917e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_9aa3cf3587917e",
+        "model": "unknown"
+      },
+      "human_author": "xueyizheng <@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
