@@ -614,6 +614,18 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 	// 「清 id」的语义只属于「重跑起点」（见 clearExptTurnRunLogResultRefsOnItems 其他调用点：
 	// FailRetry / rerunItems / 手动重跑），失败落地不应触发。
 
+	// 沙箱 agent 实验: 每个 zombie item 单独发一张飞书失败卡, 帮助用户第一时间感知卡死的行。
+	// notifier 内部会先判 enabled (非沙箱 agent / FeishuNotification.Enable=false 直接跳过),
+	// 所以这里不额外加类型判断; err 用 zombie timeout err, 让卡片 err_msg 明确表达超时原因。
+	if e.sandboxAgentNotifier != nil {
+		zombieNotifyErr := errno.NewItemZombieTimeoutErr(zombieSecond, asyncExec)
+		for _, itemID := range zombieItemIDs {
+			if nerr := e.sandboxAgentNotifier.NotifyItemFail(ctx, expt, itemID, zombieNotifyErr); nerr != nil {
+				logs.CtxWarn(ctx, "[ExptEval] sandbox agent notify zombie item fail err, expt_id: %v, item_id: %v, err: %v", event.ExptID, itemID, nerr)
+			}
+		}
+	}
+
 	time.Sleep(time.Millisecond * 1500)
 
 	return alives, zombies, nil
