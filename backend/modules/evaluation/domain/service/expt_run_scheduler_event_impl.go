@@ -34,11 +34,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-// itemCompleteMaxStuckDuration item-complete 发送重试的时间兜底: item 停在 Resulted(读侧已写、MQ 未发成功)
-// 超过此时长仍未发成功, 强制翻 Sent + 告警, 避免下游/broker 长期故障导致实验永远完不成、tick 反复重扫。
-// 以 item_run_log.updated_at 为锚(Logged→Resulted 那次翻状态是该行最后一次写), now-updated_at 即卡在 Resulted 的时长。
-const itemCompleteMaxStuckDuration = 30 * time.Minute
-
 type ExptSchedulerImpl struct {
 	Manager                  IExptManager
 	ExptRepo                 repo.IExperimentRepo
@@ -452,7 +447,7 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem, mode entity.ExptSchedulerMode, expt *entity.Experiment) error {
 	time.Sleep(time.Millisecond * 1000) // avoid master-slave delay caused by asynchronous and other factors
 
-	// 循环外批量补齐 item-complete 事件组装所需的 per-item 归属集/版本/ItemKey(读侧就绪后才发, 见 sendItemComplete)。
+	// 循环外批量补齐 item-complete 事件组装所需的 per-item 归属集/版本/ItemKey(供循环内 sendItemComplete 用)。
 	// 仅当接了 publisher(商业化真实 producer; 开源为 nil) 且有 item 时才做, 避免开源侧无谓 IO。
 	var itemMeta map[int64]*entity.EvaluationSetItem
 	var itemVer map[int64]int64
@@ -464,6 +459,15 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 		if item.State != entity.ItemRunState_Fail && item.State != entity.ItemRunState_Success {
 			return fmt.Errorf("recordEvalItemRunLogs found invalid item run state: %v", item.State)
 		}
+
+		// item-complete(success) 发送点: 每个 item 一进来先发, 仅发成功行(fail/zombie 不发, 下游只消费成功行)。
+		// 发送作为旁路, 只读不写 result_state, 发失败在 sendItemComplete 内 CtxWarn + return(仅本 item), 不阻断落库/后续。
+		// 是否真正投递由 producer 依空间开关(item_complete_space_config) + 评测对象 enable_analysis 判定, 此处不重复判。
+		// 不追求消竞态: 下游侧 defer 投递已覆盖读侧就绪窗口, 本处只保障"成功行必发一次 MQ"。
+		if e.itemCompletePublisher != nil && item.State == entity.ItemRunState_Success {
+			e.sendItemComplete(ctx, event, expt, item, itemMeta[item.ItemID], itemVer[item.ItemID])
+		}
+
 		var turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef
 		if err := backoff.RetryFiveMin(ctx, func() error {
 			var err error
@@ -473,11 +477,6 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 			return err
 		}
 		time.Sleep(time.Millisecond * 50)
-
-		// item-complete(success) 发送 + result_state 收敛到 Sent。读侧三张表已由 RecordItemRunLogs 写就绪,
-		// 此刻下游反查必读到结果, 消除竞态。成功行发 MQ, 发成功才翻 Sent; 发失败留 Resulted 下轮 tick 重发。
-		// 非成功行 / 无 publisher / 超时兜底: 直接翻 Sent(无需发送), 避免新扫描条件(纳入 Resulted)反复重扫、实验不收敛。
-		e.finalizeItemComplete(ctx, event, expt, item, itemMeta[item.ItemID], itemVer[item.ItemID])
 
 		logs.CtxInfo(ctx, "[ExptEval] recordEvalItemRunLogs publish result, expt_id: %v, event: %v, item_id: %v, turn_evaluator_refs: %v", event.ExptID, event, item.ItemID, json.Jsonify(turnEvaluatorRefs))
 		err := mode.PublishResult(ctx, turnEvaluatorRefs, event)
@@ -597,57 +596,16 @@ func (e *ExptSchedulerImpl) resolveItemCompleteMeta(ctx context.Context, event *
 	return itemMeta, itemVer
 }
 
-// finalizeItemComplete 决定单个 item 的 result_state 是否收敛到 Sent(真终态), 支撑"发成功才置终态、失败留 Resulted 重发":
-//   - 成功行且接了 publisher: 发 item-complete MQ; 发成功 → 翻 Sent; 发失败 → 不动(留 Resulted, 下轮 tick 重扫重发)。
-//   - 非成功行(fail/zombie 等) / 无 publisher(开源): 无需发送, 直接翻 Sent, 否则新扫描条件(纳入 Resulted)会反复重扫、实验不收敛。
-//   - 时间兜底: 停在 Resulted 超过 itemCompleteMaxStuckDuration(以 item.UpdatedAt 为锚) 仍未发成功, 强制翻 Sent + 告警,
-//     避免下游/broker 长期故障导致实验永远完不成。
-//
-// 翻 Sent 失败只 CtxWarn: 下轮 tick 会再扫到该 Resulted item 重试, 不阻断本批。
-func (e *ExptSchedulerImpl) finalizeItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) {
-	needSend := e.itemCompletePublisher != nil && item.State == entity.ItemRunState_Success
-
-	markSent := func(reason string) {
-		if err := e.ResultSvc.MarkItemResultSent(ctx, event.ExptID, event.ExptRunID, item.ItemID, event.SpaceID); err != nil {
-			logs.CtxWarn(ctx, "[ExptEval] mark item result sent failed, will retry next tick, expt_id: %v, item_id: %v, reason: %v, err: %v", event.ExptID, item.ItemID, reason, err)
-		}
-	}
-
-	if !needSend {
-		// 非成功行 / 开源无 publisher: 无需发送, 直接终态。
-		markSent("no_send")
-		return
-	}
-
-	if e.sendItemComplete(ctx, event, expt, item, evalSetItem, evalSetVersionID) {
-		markSent("sent")
-		return
-	}
-
-	// 发送失败: 时间兜底——停在 Resulted 过久则强制收敛, 否则留 Resulted 下轮重发。
-	if item.UpdatedAt != nil && time.Since(*item.UpdatedAt) > itemCompleteMaxStuckDuration {
-		logs.CtxError(ctx, "[ExptEval] item complete stuck in Resulted over %v, force mark sent, expt_id: %v, expt_run_id: %v, item_id: %v, stuck_since: %v",
-			itemCompleteMaxStuckDuration, event.ExptID, event.ExptRunID, item.ItemID, item.UpdatedAt)
-		markSent("stuck_timeout")
-		return
-	}
-	// 未超时: 不动, 留 Resulted, 下轮 tick 重扫重发。
-}
-
-// sendItemComplete 组装并发送单行 item-complete(success) 事件。返回是否发送成功。
-// 失败只 CtxWarn 不阻断: 调用点据返回值决定翻 Sent(成功) 还是留 Resulted 下轮重发(失败)。
-func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) bool {
+// sendItemComplete 组装并发送单行 item-complete(success) 事件。发送失败只 CtxWarn 不阻断(靠下轮 tick / 下游幂等兜底)。
+func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) {
 	if evalSetItem == nil {
 		logs.CtxWarn(ctx, "[ExptEval] item complete meta missing, skip publish, expt_id: %v, item_id: %v", event.ExptID, item.ItemID)
-		return false
+		return
 	}
 	completeEvent := buildItemCompleteEventFromScheduler(event.SpaceID, event.ExptID, event.ExptRunID, expt, item, evalSetItem, evalSetVersionID)
 	if err := e.itemCompletePublisher.PublishItemComplete(ctx, completeEvent); err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, item.ItemID, err)
-		return false
 	}
-	logs.CtxInfo(ctx, "[ExptEval] publish item complete event success, expt_id: %v, expt_run_id: %v, item_id: %v, event: %v", event.ExptID, event.ExptRunID, item.ItemID, json.Jsonify(completeEvent))
-	return true
 }
 
 func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.ExptScheduleEvent, toSubmits []*entity.ExptEvalItem) error {

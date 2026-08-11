@@ -226,20 +226,6 @@ func (mr *MockExptResultServiceMockRecorder) RecordItemRunLogs(arg0, arg1, arg2,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordItemRunLogs", reflect.TypeOf((*MockExptResultService)(nil).RecordItemRunLogs), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
-// MarkItemResultSent mocks base method.
-func (m *MockExptResultService) MarkItemResultSent(arg0 context.Context, arg1, arg2, arg3, arg4 int64) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarkItemResultSent", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// MarkItemResultSent indicates an expected call of MarkItemResultSent.
-func (mr *MockExptResultServiceMockRecorder) MarkItemResultSent(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkItemResultSent", reflect.TypeOf((*MockExptResultService)(nil).MarkItemResultSent), arg0, arg1, arg2, arg3, arg4)
-}
-
 // UpsertExptTurnResultFilter mocks base method.
 func (m *MockExptResultService) UpsertExptTurnResultFilter(arg0 context.Context, arg1, arg2 int64, arg3 []int64) error {
 	m.ctrl.T.Helper()

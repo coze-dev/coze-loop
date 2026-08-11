@@ -89,9 +89,6 @@ const (
 	ExptItemResultStateDefault  ExptItemResultState = 0
 	ExptItemResultStateLogged   ExptItemResultState = 2
 	ExptItemResultStateResulted ExptItemResultState = 1
-	// ExptItemResultStateSent 读侧已写 + item-complete MQ 已发成功, 真终态; tick 不再扫。
-	// Resulted 由"终态"降级为"读侧已写待发送": 发成功才翻 Sent, 发失败留 Resulted 下轮 tick 重发。
-	ExptItemResultStateSent ExptItemResultState = 3
 )
 
 type CreditCost int

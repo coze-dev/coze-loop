@@ -285,14 +285,6 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 	return turnEvaluatorRefs, nil
 }
 
-// MarkItemResultSent 把 result_state 置 Sent(真终态)。复用 UpdateItemRunLog(与 RecordItemRunLogs 内翻 Resulted 同一 repo 方法),
-// 调用点在 item-complete MQ 发成功后(或无需发送时)调用, 使 tick 下轮不再扫该 item。
-func (e ExptResultServiceImpl) MarkItemResultSent(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) error {
-	return e.ExptItemResultRepo.UpdateItemRunLog(ctx, exptID, exptRunID, []int64{itemID}, map[string]any{
-		"result_state": int32(entity.ExptItemResultStateSent),
-	}, spaceID)
-}
-
 func NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID int64, evaluatorResults *entity.EvaluatorResults) []*entity.ExptTurnEvaluatorResultRef {
 	if evaluatorResults == nil {
 		return nil
