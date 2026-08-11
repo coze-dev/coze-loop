@@ -89,13 +89,13 @@ func (s *sandboxAgentNotifier) NotifyProgressIfDue(ctx context.Context, expt *en
 	if !s.enabled(expt, logTagProgress) {
 		return nil
 	}
-	// 卡片模板未配置时静默跳过, 避免打无效 RPC。
+	// 卡片模板未配置时静默跳过, 避免打无效 RPC。card id 是常量, 状态不会在运行期变, 无需日志。
 	if sandboxAgentProgressCardID == "" {
-		logs.CtxInfo(ctx, "%s skip: card id empty, expt_id=%v", logTagProgress, expt.ID)
 		return nil
 	}
 
 	// N 秒闸门: Lock SETNX + TTL=N。拿到锁 → 距上次通知≥N → 发送; 拿不到 → 静默。
+	// gate 未拿到锁属于正常节流分支, daemon tick 每 10s 打一次噪声太大, 不再打日志。
 	interval := s.progressNotifyInterval(ctx, expt.SpaceID)
 	key := sandboxAgentProgressGateKey(expt.ID)
 	locked, err := s.locker.Lock(ctx, key, interval)
@@ -104,7 +104,6 @@ func (s *sandboxAgentNotifier) NotifyProgressIfDue(ctx context.Context, expt *en
 		return nil
 	}
 	if !locked {
-		logs.CtxInfo(ctx, "%s skip: gate not acquired (within interval=%v), expt_id=%v", logTagProgress, interval, expt.ID)
 		return nil
 	}
 
@@ -135,7 +134,6 @@ func (s *sandboxAgentNotifier) NotifyItemFail(ctx context.Context, expt *entity.
 		return nil
 	}
 	if sandboxAgentItemFailCardID == "" {
-		logs.CtxInfo(ctx, "%s skip: card id empty, expt_id=%v, item_id=%v", logTagItemFail, expt.ID, itemID)
 		return nil
 	}
 
