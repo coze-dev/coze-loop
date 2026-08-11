@@ -1088,21 +1088,28 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 				<-sem
 				wg.Done()
 			}()
-			// 主沙箱：ExecuteID = record.ID
-			mainTerminal, mainStatus := e.querySandboxTerminalStatus(ctx, strconv.FormatInt(r.ID, 10), spaceID, r.ID, "main")
-			// 从沙箱（双沙箱模式）：ExecuteID 从 Ext 里取；单沙箱模式 extra 为空，跳过。
-			// 任一进终态就算命中——双沙箱是配对关系，一挂另一边产出也没意义。
-			var subTerminal bool
-			var subStatus rpc.SandboxExecuteStatus
-			if extra := extractExtraSandboxExecuteID(r); extra != "" {
-				subTerminal, subStatus = e.querySandboxTerminalStatus(ctx, extra, spaceID, r.ID, "subordinate")
+			// 取该 record 本次调用实际创建的全部 sandbox execution id（单沙箱=裸 record.ID；
+			// 双沙箱=-agent/-orch；mac_vm=-orch/-macvm），与 destroy 侧同源（sandboxExecuteIDsOf）。
+			// 早先只查裸 record.ID：单沙箱能命中，但双沙箱/mac_vm 的 execution 全带后缀、裸 id 下无
+			// execution，导致对每个 item 永远 Get 601300702（execution not found），兜底轮询彻底失
+			// 效、实验空转到僵尸兜底。改为遍历所有 execution id，任一进终态即整条命中——与双沙箱
+			// 「配对关系，一挂另一边产出也没意义」的语义一致。
+			executeIDs := sandboxExecuteIDsOf(ctx, r)
+			var anyTerminal bool
+			labelParts := make([]string, 0, len(executeIDs))
+			for _, eid := range executeIDs {
+				terminal, status := e.querySandboxTerminalStatus(ctx, eid, spaceID, r.ID, sideForExecuteID(eid, r.ID))
+				if terminal {
+					anyTerminal = true
+					labelParts = append(labelParts, sandboxStatusText(status)+" ("+sideForExecuteID(eid, r.ID)+")")
+				}
 			}
-			if !mainTerminal && !subTerminal {
+			if !anyTerminal {
 				return
 			}
 			mu.Lock()
 			terminated = append(terminated, r.ID)
-			statusMap[r.ID] = combineSandboxStatusLabel(mainTerminal, mainStatus, subTerminal, subStatus)
+			statusMap[r.ID] = strings.Join(labelParts, ", ")
 			mu.Unlock()
 		})
 	}
@@ -1133,6 +1140,25 @@ func (e *EvalTargetServiceImpl) querySandboxTerminalStatus(ctx context.Context, 
 		return false, status
 	}
 	return true, status
+}
+
+// sideForExecuteID 按 executeID 给出人类可读的沙箱角色标签，写进 err_msg 辅助定位。
+// 优先精确匹配裸 record.ID → "main"（单沙箱，以及双沙箱/mac_vm 里恰为 record.ID 的那台）；
+// 其余按 operator 命名后缀区分（mac_vm=-orch/-macvm，双沙箱=-agent/-orch）；
+// 都不匹配则是"额外 execution"（旧双沙箱 extra，命名由 operator 定），记为 "subordinate"。
+func sideForExecuteID(id string, recordID int64) string {
+	switch {
+	case id == strconv.FormatInt(recordID, 10):
+		return "main"
+	case strings.HasSuffix(id, "-macvm"):
+		return "mac_vm"
+	case strings.HasSuffix(id, "-orch"):
+		return "orchestrator"
+	case strings.HasSuffix(id, "-agent"):
+		return "agent"
+	default:
+		return "subordinate"
+	}
 }
 
 // combineSandboxStatusLabel 生成"哪一侧沙箱进入终态"的人类可读标签，写进 err_msg 辅助定位。
