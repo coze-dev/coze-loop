@@ -120,13 +120,13 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 	case entity.EvaluationModeTrialRun:
 		return NewExptTrialRunMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.resultSvc, f.templateManager, f.exptItemRefRepo), nil
 	case entity.EvaluationModeFailRetry:
-		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
+		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.resultSvc), nil
 	case entity.EvaluationModeAppend:
 		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.mutex), nil
 	case entity.EvaluationModeRetryAll:
-		return NewExptRetryAllExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.exptItemRefRepo), nil
+		return NewExptRetryAllExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.exptItemRefRepo, f.resultSvc), nil
 	case entity.EvaluationModeRetryItems:
-		return NewExptRetryItemsExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.exptRunLogRepo, f.exptItemRefRepo), nil
+		return NewExptRetryItemsExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.exptRunLogRepo, f.exptItemRefRepo, f.resultSvc), nil
 	default:
 		return nil, fmt.Errorf("NewSchedulerMode with unknown mode: %v", mode)
 	}
@@ -759,6 +759,7 @@ type ExptFailRetryExec struct {
 	publisher              events.ExptEventPublisher
 	evaluatorRecordService EvaluatorRecordService
 	templateManager        IExptTemplateManager
+	resultSvc              ExptResultService // 重试 reset 后主动刷 CK expt_turn_result_filter,避免加速器读到旧终态
 }
 
 func NewExptFailRetryMode(
@@ -773,8 +774,9 @@ func NewExptFailRetryMode(
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
 	templateManager IExptTemplateManager,
+	resultSvc ...ExptResultService, // variadic 保持已有单测 (未传 resultSvc) 编译通过
 ) *ExptFailRetryExec {
-	return &ExptFailRetryExec{
+	exec := &ExptFailRetryExec{
 		manager:                manager,
 		exptItemResultRepo:     exptItemResultRepo,
 		exptStatsRepo:          exptStatsRepo,
@@ -787,6 +789,10 @@ func NewExptFailRetryMode(
 		evaluatorRecordService: evaluatorRecordService,
 		templateManager:        templateManager,
 	}
+	if len(resultSvc) > 0 {
+		exec.resultSvc = resultSvc[0]
+	}
+	return exec
 }
 
 func (e *ExptFailRetryExec) Mode() entity.ExptRunMode {
@@ -882,6 +888,14 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 
 		if err := e.exptItemResultRepo.BatchCreateNXRunLogs(ctx, itemRunLogs); err != nil {
 			return err
+		}
+
+		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态 (Fail/Terminal)
+		if e.resultSvc != nil {
+			pageItemIDs := maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k })
+			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, pageItemIDs); ferr != nil {
+				logs.CtxError(ctx, "ExptFailRetryExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
+			}
 		}
 
 		time.Sleep(time.Millisecond * 30)
@@ -1570,7 +1584,8 @@ func NewExptRetryAllExec(
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
 	templateManager IExptTemplateManager,
-	exptItemRefRepo ...repo.IExptItemRefRepo,
+	exptItemRefRepo repo.IExptItemRefRepo,
+	resultSvc ...ExptResultService, // variadic 保持已有单测编译通过
 ) *ExptRetryAllExec {
 	exec := &ExptRetryAllExec{
 		configer:                 configer,
@@ -1585,9 +1600,10 @@ func NewExptRetryAllExec(
 		manager:                  manager,
 		publisher:                publisher,
 		templateManager:          templateManager,
+		exptItemRefRepo:          exptItemRefRepo,
 	}
-	if len(exptItemRefRepo) > 0 {
-		exec.exptItemRefRepo = exptItemRefRepo[0]
+	if len(resultSvc) > 0 {
+		exec.resultSvc = resultSvc[0]
 	}
 	return exec
 }
@@ -1606,6 +1622,7 @@ type ExptRetryAllExec struct {
 	evaluatorRecordService   EvaluatorRecordService
 	templateManager          IExptTemplateManager
 	exptItemRefRepo          repo.IExptItemRefRepo
+	resultSvc                ExptResultService // 重试 reset 后主动刷 CK expt_turn_result_filter
 }
 
 func (e *ExptRetryAllExec) Mode() entity.ExptRunMode {
@@ -1726,6 +1743,14 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			return err
 		}
 
+		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态
+		if e.resultSvc != nil {
+			pageItemIDs := maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k })
+			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, pageItemIDs); ferr != nil {
+				logs.CtxError(ctx, "ExptRetryAllExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
+			}
+		}
+
 		if (total > 0 && itemCnt >= int(total)) || len(items) == 0 || pageToken == nil || *pageToken == "" {
 			break
 		}
@@ -1833,7 +1858,8 @@ func NewExptRetryItemsExec(
 	evaluatorRecordService EvaluatorRecordService,
 	templateManager IExptTemplateManager,
 	exptRunLogRepo repo.IExptRunLogRepo,
-	exptItemRefRepo ...repo.IExptItemRefRepo,
+	exptItemRefRepo repo.IExptItemRefRepo,
+	resultSvc ...ExptResultService, // variadic 保持已有单测编译通过
 ) *ExptRetryItemsExec {
 	exec := &ExptRetryItemsExec{
 		configer:                 configer,
@@ -1849,9 +1875,10 @@ func NewExptRetryItemsExec(
 		publisher:                publisher,
 		templateManager:          templateManager,
 		exptRunLogRepo:           exptRunLogRepo,
+		exptItemRefRepo:          exptItemRefRepo,
 	}
-	if len(exptItemRefRepo) > 0 {
-		exec.exptItemRefRepo = exptItemRefRepo[0]
+	if len(resultSvc) > 0 {
+		exec.resultSvc = resultSvc[0]
 	}
 	return exec
 }
@@ -1885,8 +1912,16 @@ func (e *ExptRetryAllExec) exptStartMultiSet(ctx context.Context, event *entity.
 		if err != nil {
 			return err
 		}
-		if _, err := resetRetryRunLogsForItems(ctx, deps, event, items, itemVersionByItemID); err != nil {
+		resetItemIDs, err := resetRetryRunLogsForItems(ctx, deps, event, items, itemVersionByItemID)
+		if err != nil {
 			return err
+		}
+
+		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态
+		if e.resultSvc != nil && len(resetItemIDs) > 0 {
+			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, resetItemIDs); ferr != nil {
+				logs.CtxError(ctx, "ExptRetryAllExec.exptStartMultiSet UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
+			}
 		}
 
 		if nextCursor == 0 {
@@ -1947,6 +1982,7 @@ type ExptRetryItemsExec struct {
 	templateManager          IExptTemplateManager
 	exptRunLogRepo           repo.IExptRunLogRepo
 	exptItemRefRepo          repo.IExptItemRefRepo
+	resultSvc                ExptResultService // 重试 reset 后主动刷 CK expt_turn_result_filter
 }
 
 func (e *ExptRetryItemsExec) Mode() entity.ExptRunMode {
@@ -2119,6 +2155,14 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 			return err
 		}
 
+		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态
+		if e.resultSvc != nil {
+			pageItemIDs := maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k })
+			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, pageItemIDs); ferr != nil {
+				logs.CtxError(ctx, "ExptRetryItemsExec.resetEvalItems UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
+			}
+		}
+
 		time.Sleep(time.Millisecond * 30)
 	}
 
@@ -2186,6 +2230,13 @@ func (e *ExptRetryItemsExec) resetEvalItemsMultiSet(ctx context.Context, event *
 
 		if _, err := resetRetryRunLogsForItems(ctx, deps, event, items, itemVersionByItemID); err != nil {
 			return err
+		}
+
+		// reset 后主动刷 CK expt_turn_result_filter,避免加速器读到重试前的旧终态
+		if e.resultSvc != nil && len(chunk) > 0 {
+			if ferr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, chunk); ferr != nil {
+				logs.CtxError(ctx, "ExptRetryItemsExec.resetEvalItemsMultiSet UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, ferr)
+			}
 		}
 		time.Sleep(time.Millisecond * 30)
 	}

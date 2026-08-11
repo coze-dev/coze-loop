@@ -5265,6 +5265,7 @@ func TestNewExptRetryAllExec(t *testing.T) {
 		f.publisher,
 		f.evaluatorRecordService,
 		f.templateManager,
+		f.exptItemRefRepo,
 	)
 
 	assert.NotNil(t, exec)
@@ -5300,6 +5301,7 @@ func TestNewExptRetryItemsExec(t *testing.T) {
 		f.evaluatorRecordService,
 		f.templateManager,
 		f.exptRunLogRepo,
+		f.exptItemRefRepo,
 	)
 
 	assert.NotNil(t, exec)
