@@ -6093,6 +6093,101 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 	})
 }
 
+// TestExptResultBuilder_FillExptTurnResultFilters_TargetOutputNilGuard 回归: buildTargetOutput 为
+// 「turn_result 有 target_result_id 但 record 未命中」的行构造的 stub 只带 ID/SpaceID/ItemID/TurnID/Status,
+// 没有 EvalTargetOutputData。fillExptTurnResultFilters 若只判 map 命中就解引用 .EvalTargetOutputData.OutputFields
+// 会 NPE 打挂调度器 goroutine → 实验被置 Failed(线上 expt 7590117239516698626 即此故障)。
+func TestExptResultBuilder_FillExptTurnResultFilters_TargetOutputNilGuard(t *testing.T) {
+	ctx := context.Background()
+
+	newBuilder := func(targetOutput *entity.TurnTargetOutput) *PayloadBuilder {
+		return &PayloadBuilder{
+			SpaceID:         100,
+			BaselineExptID:  1,
+			ScoreCalculator: NewEvaluatorScoreCalculator(nil, nil),
+			BaseExptItemResultDO: []*entity.ExptItemResult{
+				{ItemID: 1, ItemIdx: 1, Status: entity.ItemRunState_Success},
+			},
+			BaseExptTurnResultDO: []*entity.ExptTurnResult{
+				{ID: 1, ItemID: 1, TurnID: 0},
+			},
+			ExptResultBuilders: []*ExptResultBuilder{
+				{
+					exptDO: &entity.Experiment{ID: 1},
+					turnResultID2TargetOutput: map[int64]*entity.TurnTargetOutput{
+						1: targetOutput,
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("stub record 无 EvalTargetOutputData 时不 panic 且跳过 target 数据", func(t *testing.T) {
+		builder := newBuilder(&entity.TurnTargetOutput{
+			EvalTargetRecord: &entity.EvalTargetRecord{
+				ID:      999,
+				SpaceID: 100,
+				ItemID:  1,
+				TurnID:  0,
+				Status:  gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			},
+		})
+
+		assert.NotPanics(t, func() {
+			assert.NoError(t, builder.fillExptTurnResultFilters(ctx, nil, 0, 1))
+		})
+		assert.Len(t, builder.ExptTurnResultFilters, 1)
+		assert.Empty(t, builder.ExptTurnResultFilters[0].EvalTargetData)
+		assert.Empty(t, builder.ExptTurnResultFilters[0].EvalTargetMetrics)
+	})
+
+	t.Run("TurnTargetOutput 或 EvalTargetRecord 为 nil 时不 panic", func(t *testing.T) {
+		for name, output := range map[string]*entity.TurnTargetOutput{
+			"nil TurnTargetOutput": nil,
+			"nil EvalTargetRecord": {EvalTargetRecord: nil},
+		} {
+			builder := newBuilder(output)
+			assert.NotPanics(t, func() {
+				assert.NoError(t, builder.fillExptTurnResultFilters(ctx, nil, 0, 1))
+			}, name)
+			assert.Len(t, builder.ExptTurnResultFilters, 1, name)
+			assert.Empty(t, builder.ExptTurnResultFilters[0].EvalTargetData, name)
+		}
+	})
+
+	t.Run("正常 record 仍正确填充 target 数据与 metrics", func(t *testing.T) {
+		builder := newBuilder(&entity.TurnTargetOutput{
+			EvalTargetRecord: &entity.EvalTargetRecord{
+				ID:      999,
+				SpaceID: 100,
+				EvalTargetOutputData: &entity.EvalTargetOutputData{
+					OutputFields: map[string]*entity.Content{
+						"actual_output": {
+							ContentType: gptr.Of(entity.ContentTypeText),
+							Text:        gptr.Of("hello"),
+						},
+					},
+					EvalTargetUsage: &entity.EvalTargetUsage{
+						InputTokens:  3,
+						OutputTokens: 5,
+						TotalTokens:  8,
+					},
+					TimeConsumingMS: gptr.Of(int64(120)),
+				},
+			},
+		})
+
+		assert.NoError(t, builder.fillExptTurnResultFilters(ctx, nil, 0, 1))
+		assert.Len(t, builder.ExptTurnResultFilters, 1)
+		got := builder.ExptTurnResultFilters[0]
+		assert.Equal(t, "hello", got.EvalTargetData["actual_output"])
+		assert.Equal(t, int64(3), got.EvalTargetMetrics["input_tokens"])
+		assert.Equal(t, int64(5), got.EvalTargetMetrics["output_tokens"])
+		assert.Equal(t, int64(8), got.EvalTargetMetrics["total_tokens"])
+		assert.Equal(t, int64(120), got.EvalTargetMetrics["total_latency"])
+	})
+}
+
 // TestExptResultServiceImpl_RecalculateWeightedScore 测试 RecalculateWeightedScore 函数（2707-2802行）
 func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 	ctrl := gomock.NewController(t)
