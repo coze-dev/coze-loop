@@ -228,7 +228,9 @@ func TestRetryExecModes(t *testing.T) {
 }
 
 // 保底: 未使用的 import 变量, 避免"imported and not used"。
-var _ = idgenmocks.NewMockIIDGenerator
-var _ = lockMocks.NewMockILocker
-var _ = configmocks.NewMockIConfiger
-var _ = eventmocks.NewMockExptEventPublisher
+var (
+	_ = idgenmocks.NewMockIIDGenerator
+	_ = lockMocks.NewMockILocker
+	_ = configmocks.NewMockIConfiger
+	_ = eventmocks.NewMockExptEventPublisher
+)

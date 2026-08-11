@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -115,7 +114,7 @@ func TestSandboxAgentNotifier_NotifyProgressIfDue_GateHeld_Skip(t *testing.T) {
 	defer ctrl.Finish()
 	n, _, _, _, locker := newTestSandboxAgentNotifier(ctrl)
 	expt := buildSandboxAgentExpt(true, "ou_abc")
-	locker.EXPECT().Lock(gomock.Any(), gomock.Any(), sandboxAgentProgressGateTTL).Return(false, nil)
+	locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 	err := n.NotifyProgressIfDue(context.Background(), expt)
 	assert.NoError(t, err)
 }
@@ -128,7 +127,7 @@ func TestSandboxAgentNotifier_NotifyProgressIfDue_LockErr_Skip(t *testing.T) {
 	defer ctrl.Finish()
 	n, _, _, _, locker := newTestSandboxAgentNotifier(ctrl)
 	expt := buildSandboxAgentExpt(true, "ou_abc")
-	locker.EXPECT().Lock(gomock.Any(), gomock.Any(), sandboxAgentProgressGateTTL).Return(false, errors.New("redis boom"))
+	locker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, errors.New("redis boom"))
 	err := n.NotifyProgressIfDue(context.Background(), expt)
 	assert.NoError(t, err) // 锁层报错不阻塞
 }
@@ -234,9 +233,4 @@ func TestSandboxAgentNotifier_NilRPC_AllSkip(t *testing.T) {
 	expt := buildSandboxAgentExpt(true, "ou_abc")
 	assert.NoError(t, n.NotifyProgressIfDue(context.Background(), expt))
 	assert.NoError(t, n.NotifyItemFail(context.Background(), expt, 1, errors.New("x")))
-}
-
-// 保护 hourly TTL 常量,防止有人误改小值绕过闸门。
-func TestSandboxAgentProgressGateTTL(t *testing.T) {
-	assert.Equal(t, time.Hour, sandboxAgentProgressGateTTL)
 }

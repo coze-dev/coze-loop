@@ -186,7 +186,7 @@ func TestStoreTurnRunResult_SandboxAgentWhitelist(t *testing.T) {
 			require.Equal(t, entity.TurnRunState_Fail, logs[0].Status)
 			// 序列化后的 err_msg 应包含原文, 未经 ConvertErrMsg 归一化。
 			require.NotEmpty(t, logs[0].ErrMsg)
-			require.Contains(t, string(logs[0].ErrMsg), rawMsg)
+			require.Contains(t, logs[0].ErrMsg, rawMsg)
 			return nil
 		})
 

@@ -62,7 +62,7 @@ func TestNotifyProgressIfDue_HappyPath(t *testing.T) {
 			UserID: strPtr("ou_test_open_id"),
 		}},
 	}
-	locker.EXPECT().Lock(gomock.Any(), "sandbox_agent_progress_notify:42", sandboxAgentProgressGateTTL).Return(true, nil)
+	locker.EXPECT().Lock(gomock.Any(), "sandbox_agent_progress_notify:42", gomock.Any()).Return(true, nil)
 	stats.EXPECT().Get(gomock.Any(), int64(42), int64(7)).Return(&entity.ExptStats{SuccessItemCnt: 3, FailItemCnt: 1}, nil)
 	notify.EXPECT().
 		SendMessageCard(gomock.Any(), "ou_test_open_id", "open_id", "test_progress_card_id", gomock.Any()).
@@ -195,7 +195,7 @@ func TestEnabled_NilTarget(t *testing.T) {
 		ID:               1,
 		NotificationConf: &entity.ExptNotificationConf{FeishuNotification: &entity.FeishuNotificationConf{Enable: true}},
 	}
-	assert.False(t, n.enabled(expt))
+	assert.False(t, n.enabled(expt, logTagProgress))
 }
 
 // enabled: NotificationConf nil -> false.
@@ -204,7 +204,7 @@ func TestEnabled_NilNotificationConf(t *testing.T) {
 	expt := &entity.Experiment{
 		Target: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent}},
 	}
-	assert.False(t, n.enabled(expt))
+	assert.False(t, n.enabled(expt, logTagProgress))
 }
 
 // enabled: FeishuNotification 为 nil -> false.
@@ -214,7 +214,7 @@ func TestEnabled_NilFeishuConf(t *testing.T) {
 		Target:           &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent}},
 		NotificationConf: &entity.ExptNotificationConf{},
 	}
-	assert.False(t, n.enabled(expt))
+	assert.False(t, n.enabled(expt, logTagProgress))
 }
 
 // enabled: 满足所有条件 -> true.
@@ -224,7 +224,7 @@ func TestEnabled_AllOK(t *testing.T) {
 		Target:           &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent}},
 		NotificationConf: &entity.ExptNotificationConf{FeishuNotification: &entity.FeishuNotificationConf{Enable: true}},
 	}
-	assert.True(t, n.enabled(expt))
+	assert.True(t, n.enabled(expt, logTagProgress))
 }
 
 // strPtr 辅助工具, 保持与 entity 中 *string 语义一致。

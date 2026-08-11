@@ -110,6 +110,10 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetExptTurnScoreHookConf(ctx contex
 	return nil, false
 }
 
+func (f *fakeEvaluatorRecordStorageConfiger) GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf {
+	return nil
+}
+
 func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
