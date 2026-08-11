@@ -2200,8 +2200,8 @@ func Test_resolveItemCompleteMeta(t *testing.T) {
 
 	baseExpt := func(multiset bool) *entity.Experiment {
 		e := &entity.Experiment{
-			EvalSet:         &entity.EvaluationSet{ID: 70, EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 80}},
-			EvalSetSpaceID:  0,
+			EvalSet:        &entity.EvaluationSet{ID: 70, EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 80}},
+			EvalSetSpaceID: 0,
 		}
 		if multiset {
 			e.EvalSetSourceType = entity.ExptEvalSetSourceType_MultiSetConfig
@@ -2282,7 +2282,7 @@ func Test_resolveItemCompleteMeta(t *testing.T) {
 		setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 		svc := &ExptSchedulerImpl{exptItemRefRepo: refRepo, evaluationSetItemService: setItemSvc}
 		meta, ver := svc.resolveItemCompleteMeta(context.Background(), event, items, baseExpt(false))
-		assert.Empty(t, meta)          // BatchGet 失败, meta 空
+		assert.Empty(t, meta)               // BatchGet 失败, meta 空
 		assert.Equal(t, int64(80), ver[11]) // ver 在分组时已填, 不受影响
 	})
 }

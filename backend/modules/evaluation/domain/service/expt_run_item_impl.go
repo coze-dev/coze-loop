@@ -554,6 +554,7 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 //   - evalSetItem: 提供 ItemKey / SpaceID / EvaluationSetID(归属集);
 //   - evalSetVersionID: 该 item 归属集的 per-item 版本(来自 expt_item_ref, 多集非主集也正确)。
 //     切勿用 ExptEvalItem.EvalSetVersionID —— 那是 scanIncompleteAndComplete 硬编码的主集版本(张冠李戴)。
+//
 // 组装逻辑复用 buildItemCompleteEvent(构造最小 ExptItemEvalCtx), 与链路A 逐字段等价、单一实现不漂移。
 func buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID int64, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) *component.ItemCompleteEvent {
 	eiec := &entity.ExptItemEvalCtx{
@@ -569,6 +570,7 @@ func buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID int64, expt 
 	}
 	return buildItemCompleteEvent(eiec)
 }
+
 // 按 experiment.eval_set_source_type 显式分流（权威分流开关，DB not null default 1）：
 //   - MultiSetConfig(2) 新实验: 从 EvalSetDetails 按 datasetID 匹配归属集（GetDetail 已批量填充所有集详情）；
 //     匹配不到即返回 nil，不回退主集，避免把主集版本误安到非主集 item 上（张冠李戴）。
