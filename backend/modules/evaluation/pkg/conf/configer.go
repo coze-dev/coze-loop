@@ -110,6 +110,15 @@ func (c *configer) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID
 	return nil, false
 }
 
+func (c *configer) GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf {
+	const key = "sandbox_agent_notify_conf"
+	var cfg *entity.SandboxAgentNotifyConf
+	if c.loader.UnmarshalKey(ctx, key, &cfg) == nil && cfg != nil {
+		return cfg
+	}
+	return entity.DefaultSandboxAgentNotifyConf()
+}
+
 func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	const key = "system_maintainer_conf"
 	var maintainerConf *entity.SystemMaintainerConf

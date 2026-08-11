@@ -36,6 +36,9 @@ type IConfiger interface {
 	GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList
 	GetExptMultiSetWhiteList(ctx context.Context) *entity.ExptMultiSetWhiteList
 	GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool)
+	// GetSandboxAgentNotifyConf 沙箱 agent 通知配置（进度卡间隔等）。返回 nil 表示读取失败，
+	// 上层应回落到 entity.DefaultSandboxAgentNotifyConf。
+	GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf
 	// BuildEvalExt 构造评测记录（EvaluatorRecord/EvalTargetRecord/ExptTurnResultRunLog）落库时的 ext 扩展字段。
 	// turn 为评测集中的轮次数据（部分调用点不可用时为 nil），spaceID 为空间 id。默认空实现返回 nil。
 	BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string

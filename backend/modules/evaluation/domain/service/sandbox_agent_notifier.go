@@ -11,6 +11,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -20,22 +21,24 @@ import (
 // ISandboxAgentNotifier 沙箱 agent 实验专用飞书通知。
 //
 // 两类卡片:
-//   - 每 1h 一张进度快照 (NotifyProgressIfDue): 由 daemon tick 反复调用, 内部用 Redis SETNX 做闸门。
+//   - 每 N 秒一张进度快照 (NotifyProgressIfDue): 由 daemon tick 反复调用, 内部用 Redis SETNX 做闸门。
+//     间隔 N 从 IConfiger.GetSandboxAgentNotifyConf 读取, 支持按 space 覆盖 (兜底 1h)。
 //   - 每行终态失败一张 (NotifyItemFail): CompleteItemRun fail 分支同步调用, 不限流。
 //
 // 两张卡都要求实验是沙箱 agent 类型, 且 NotificationConf.FeishuNotification.Enable == true。
 // 非沙箱 agent / Enable=false / 接收人无法解析 时, 方法内部静默返回 nil (不阻塞主流程)。
 //
+// 日志前缀:
+//   - 进度卡路径统一 [SandboxAgentProgress]
+//   - 单行失败卡路径统一 [SandboxAgentItemFail]
+//
 //go:generate mockgen -destination=mocks/sandbox_agent_notifier.go -package=mocks . ISandboxAgentNotifier
 type ISandboxAgentNotifier interface {
 	NotifyProgressIfDue(ctx context.Context, expt *entity.Experiment) error
 	NotifyItemFail(ctx context.Context, expt *entity.Experiment, itemID int64, evalErr error) error
-	// ResetHourlyGate RetryAll / RetryItems 重置 1h 闸门, 让下一 tick 立刻发一张新快照。
+	// ResetHourlyGate RetryAll / RetryItems 重置进度卡闸门, 让下一 tick 立刻发一张新快照。
 	ResetHourlyGate(ctx context.Context, spaceID, exptID int64) error
 }
-
-// sandboxAgentProgressGateTTL 每 1h 进度卡的闸门 TTL。同 key 内不再重复发。
-const sandboxAgentProgressGateTTL = time.Hour
 
 // sandboxAgentItemFailErrMsgMaxLen 失败卡 err_msg 字段最大长度, 超过截断加省略号。
 // 飞书卡片文本字段一般 2000 字符, 512 足够容纳一条 error 描述且留白。
@@ -51,89 +54,103 @@ var (
 	sandboxAgentItemFailCardID = consts.SandboxAgentItemFailNotifyCardID
 )
 
+const (
+	logTagProgress = "[SandboxAgentProgress]"
+	logTagItemFail = "[SandboxAgentItemFail]"
+)
+
 type sandboxAgentNotifier struct {
 	notifyRPC     rpc.INotifyRPCAdapter
 	userProvider  rpc.IUserProvider
 	exptStatsRepo repo.IExptStatsRepo
 	locker        lock.ILocker
+	configer      component.IConfiger // 允许为 nil, 后续调用回落默认间隔
 }
 
 // NewSandboxAgentNotifier 构造沙箱 agent 通知器。任一依赖为 nil 时后续调用会静默 no-op。
+// configer 用于读取进度卡间隔等运行期配置; nil 时全部走 entity.DefaultSandboxAgentNotifyConf。
 func NewSandboxAgentNotifier(
 	notifyRPC rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
 	exptStatsRepo repo.IExptStatsRepo,
 	locker lock.ILocker,
+	configer component.IConfiger,
 ) ISandboxAgentNotifier {
 	return &sandboxAgentNotifier{
 		notifyRPC:     notifyRPC,
 		userProvider:  userProvider,
 		exptStatsRepo: exptStatsRepo,
 		locker:        locker,
+		configer:      configer,
 	}
 }
 
 func (s *sandboxAgentNotifier) NotifyProgressIfDue(ctx context.Context, expt *entity.Experiment) error {
-	if !s.enabled(expt) {
+	if !s.enabled(expt, logTagProgress) {
 		return nil
 	}
 	// 卡片模板未配置时静默跳过, 避免打无效 RPC。
 	if sandboxAgentProgressCardID == "" {
+		logs.CtxInfo(ctx, "%s skip: card id empty, expt_id=%v", logTagProgress, expt.ID)
 		return nil
 	}
 
-	// 1h 闸门: Lock SETNX + TTL=1h。拿到锁 → 距上次通知≥1h → 发送; 拿不到 → 静默。
+	// N 秒闸门: Lock SETNX + TTL=N。拿到锁 → 距上次通知≥N → 发送; 拿不到 → 静默。
+	interval := s.progressNotifyInterval(ctx, expt.SpaceID)
 	key := sandboxAgentProgressGateKey(expt.ID)
-	locked, err := s.locker.Lock(ctx, key, sandboxAgentProgressGateTTL)
+	locked, err := s.locker.Lock(ctx, key, interval)
 	if err != nil {
-		logs.CtxWarn(ctx, "[SandboxAgentNotify] progress gate lock err, expt_id=%v, err=%v", expt.ID, err)
+		logs.CtxWarn(ctx, "%s gate lock err, expt_id=%v, interval=%v, err=%v", logTagProgress, expt.ID, interval, err)
 		return nil
 	}
 	if !locked {
+		logs.CtxInfo(ctx, "%s skip: gate not acquired (within interval=%v), expt_id=%v", logTagProgress, interval, expt.ID)
 		return nil
 	}
 
 	receiveID, receiveIDType := resolveNotifyTarget(ctx, s.userProvider, expt)
 	if receiveID == "" {
-		logs.CtxWarn(ctx, "[SandboxAgentNotify] progress notify without target, expt_id=%v", expt.ID)
+		logs.CtxWarn(ctx, "%s notify without target, expt_id=%v", logTagProgress, expt.ID)
 		return nil
 	}
 
 	stats, err := s.exptStatsRepo.Get(ctx, expt.ID, expt.SpaceID)
 	if err != nil {
-		logs.CtxWarn(ctx, "[SandboxAgentNotify] progress stats get err, expt_id=%v, err=%v", expt.ID, err)
+		logs.CtxWarn(ctx, "%s stats get err, expt_id=%v, err=%v", logTagProgress, expt.ID, err)
 		// 拿不到 stats 也发一张空快照, 便于运维知道实验还在跑; 但把 total 记 0。
 	}
 
 	param := buildSandboxAgentProgressParam(expt, stats)
 	if err := s.notifyRPC.SendMessageCard(ctx, receiveID, receiveIDType, sandboxAgentProgressCardID, param); err != nil {
-		logs.CtxWarn(ctx, "[SandboxAgentNotify] progress SendMessageCard err, expt_id=%v, err=%v", expt.ID, err)
+		logs.CtxWarn(ctx, "%s SendMessageCard err, expt_id=%v, err=%v", logTagProgress, expt.ID, err)
 		return nil
 	}
-	logs.CtxInfo(ctx, "[SandboxAgentNotify] progress card sent, expt_id=%v, param=%v", expt.ID, param)
+	logs.CtxInfo(ctx, "%s card sent, expt_id=%v, interval=%v, receive_id_type=%v, param=%v",
+		logTagProgress, expt.ID, interval, receiveIDType, param)
 	return nil
 }
 
 func (s *sandboxAgentNotifier) NotifyItemFail(ctx context.Context, expt *entity.Experiment, itemID int64, evalErr error) error {
-	if !s.enabled(expt) {
+	if !s.enabled(expt, logTagItemFail) {
 		return nil
 	}
 	if sandboxAgentItemFailCardID == "" {
+		logs.CtxInfo(ctx, "%s skip: card id empty, expt_id=%v, item_id=%v", logTagItemFail, expt.ID, itemID)
 		return nil
 	}
 
 	receiveID, receiveIDType := resolveNotifyTarget(ctx, s.userProvider, expt)
 	if receiveID == "" {
-		logs.CtxWarn(ctx, "[SandboxAgentNotify] item fail notify without target, expt_id=%v, item_id=%v", expt.ID, itemID)
+		logs.CtxWarn(ctx, "%s notify without target, expt_id=%v, item_id=%v", logTagItemFail, expt.ID, itemID)
 		return nil
 	}
 
 	param := buildSandboxAgentItemFailParam(expt, itemID, evalErr)
 	if err := s.notifyRPC.SendMessageCard(ctx, receiveID, receiveIDType, sandboxAgentItemFailCardID, param); err != nil {
-		logs.CtxWarn(ctx, "[SandboxAgentNotify] item fail SendMessageCard err, expt_id=%v, item_id=%v, err=%v", expt.ID, itemID, err)
+		logs.CtxWarn(ctx, "%s SendMessageCard err, expt_id=%v, item_id=%v, err=%v", logTagItemFail, expt.ID, itemID, err)
 		return nil
 	}
-	logs.CtxInfo(ctx, "[SandboxAgentNotify] item fail card sent, expt_id=%v, item_id=%v", expt.ID, itemID)
+	logs.CtxInfo(ctx, "%s card sent, expt_id=%v, item_id=%v, receive_id_type=%v", logTagItemFail, expt.ID, itemID, receiveIDType)
 	return nil
 }
 
@@ -141,25 +158,46 @@ func (s *sandboxAgentNotifier) ResetHourlyGate(ctx context.Context, spaceID, exp
 	key := sandboxAgentProgressGateKey(exptID)
 	// 用 UnlockForce 而非 Unlock: 闸门可能在不同进程/holder 上设置, holder 校验会失败。
 	if _, err := s.locker.UnlockForce(ctx, key); err != nil {
-		logs.CtxWarn(ctx, "[SandboxAgentNotify] reset hourly gate err, expt_id=%v, err=%v", exptID, err)
+		logs.CtxWarn(ctx, "%s reset gate err, expt_id=%v, err=%v", logTagProgress, exptID, err)
 		return err
 	}
-	logs.CtxInfo(ctx, "[SandboxAgentNotify] hourly gate reset, expt_id=%v", exptID)
+	logs.CtxInfo(ctx, "%s gate reset, expt_id=%v", logTagProgress, exptID)
 	return nil
 }
 
 // enabled 沙箱 agent + FeishuNotification.Enable 均满足才发。
-func (s *sandboxAgentNotifier) enabled(expt *entity.Experiment) bool {
+// tag 用于在 skip 分支打日志时区分是哪张卡的调用方。
+func (s *sandboxAgentNotifier) enabled(expt *entity.Experiment, tag string) bool {
 	if s == nil || s.notifyRPC == nil {
+		logs.CtxInfo(context.Background(), "%s skip: notifier or notifyRPC nil", tag)
+		return false
+	}
+	if expt == nil {
 		return false
 	}
 	if !isSandboxAgentExperiment(expt) {
+		logs.CtxInfo(context.Background(), "%s skip: not sandbox agent experiment, expt_id=%v", tag, expt.ID)
 		return false
 	}
 	if expt.NotificationConf == nil || expt.NotificationConf.FeishuNotification == nil {
+		logs.CtxInfo(context.Background(), "%s skip: notification_conf.feishu missing, expt_id=%v", tag, expt.ID)
 		return false
 	}
-	return expt.NotificationConf.FeishuNotification.Enable
+	if !expt.NotificationConf.FeishuNotification.Enable {
+		logs.CtxInfo(context.Background(), "%s skip: feishu.enable=false, expt_id=%v", tag, expt.ID)
+		return false
+	}
+	return true
+}
+
+// progressNotifyInterval 从 configer 读进度卡间隔; configer 未注入或读失败时用默认。
+func (s *sandboxAgentNotifier) progressNotifyInterval(ctx context.Context, spaceID int64) time.Duration {
+	var cfg *entity.SandboxAgentNotifyConf
+	if s.configer != nil {
+		cfg = s.configer.GetSandboxAgentNotifyConf(ctx)
+	}
+	sec := cfg.GetProgressNotifyIntervalSec(spaceID) // nil-safe
+	return time.Duration(sec) * time.Second
 }
 
 func sandboxAgentProgressGateKey(exptID int64) string {

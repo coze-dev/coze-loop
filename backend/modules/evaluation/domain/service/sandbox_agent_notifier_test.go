@@ -67,7 +67,7 @@ func TestNewSandboxAgentNotifier(t *testing.T) {
 	user := rpcMocks.NewMockIUserProvider(ctrl)
 	stats := repoMocks.NewMockIExptStatsRepo(ctrl)
 	locker := lockMocks.NewMockILocker(ctrl)
-	got := NewSandboxAgentNotifier(notify, user, stats, locker)
+	got := NewSandboxAgentNotifier(notify, user, stats, locker, nil)
 	assert.NotNil(t, got)
 }
 
