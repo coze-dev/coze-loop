@@ -63,20 +63,20 @@ const (
 // 卡片模板 ID 需在飞书开放平台创建后填入; 空串时 Notifier 会静默跳过发送。
 const (
 	// SandboxAgentProgressNotifyCardID 沙箱 agent 实验每 1h 进度快照卡。
-	SandboxAgentProgressNotifyCardID = ""
+	SandboxAgentProgressNotifyCardID = "AAqPubiuyeOmy"
 	// SandboxAgentItemFailNotifyCardID 沙箱 agent 实验单行失败即时通知卡。
-	SandboxAgentItemFailNotifyCardID = ""
+	SandboxAgentItemFailNotifyCardID = "AAqPubXfnS7nr"
 
 	// 进度卡字段 key (跟卡片 template 对齐, 待 template 创建后可能调整)
-	SandboxAgentProgressKeyExptName       = "expt_name"
-	SandboxAgentProgressKeyExptID         = "expt_id"
-	SandboxAgentProgressKeySpaceID        = "space_id"
-	SandboxAgentProgressKeySuccessCnt     = "success_cnt"
-	SandboxAgentProgressKeyFailCnt        = "fail_cnt"
-	SandboxAgentProgressKeyProcessingCnt  = "processing_cnt"
-	SandboxAgentProgressKeyPendingCnt     = "pending_cnt"
-	SandboxAgentProgressKeyTerminatedCnt  = "terminated_cnt"
-	SandboxAgentProgressKeyTotalCnt       = "total_cnt"
+	SandboxAgentProgressKeyExptName      = "expt_name"
+	SandboxAgentProgressKeyExptID        = "expt_id"
+	SandboxAgentProgressKeySpaceID       = "space_id"
+	SandboxAgentProgressKeySuccessCnt    = "success_cnt"
+	SandboxAgentProgressKeyFailCnt       = "fail_cnt"
+	SandboxAgentProgressKeyProcessingCnt = "processing_cnt"
+	SandboxAgentProgressKeyPendingCnt    = "pending_cnt"
+	SandboxAgentProgressKeyTerminatedCnt = "terminated_cnt"
+	SandboxAgentProgressKeyTotalCnt      = "total_cnt"
 
 	// 失败卡字段 key
 	SandboxAgentItemFailKeyExptName = "expt_name"

@@ -25,6 +25,8 @@ import (
 //
 // 两张卡都要求实验是沙箱 agent 类型, 且 NotificationConf.FeishuNotification.Enable == true。
 // 非沙箱 agent / Enable=false / 接收人无法解析 时, 方法内部静默返回 nil (不阻塞主流程)。
+//
+//go:generate mockgen -destination=mocks/sandbox_agent_notifier.go -package=mocks . ISandboxAgentNotifier
 type ISandboxAgentNotifier interface {
 	NotifyProgressIfDue(ctx context.Context, expt *entity.Experiment) error
 	NotifyItemFail(ctx context.Context, expt *entity.Experiment, itemID int64, evalErr error) error
@@ -38,6 +40,16 @@ const sandboxAgentProgressGateTTL = time.Hour
 // sandboxAgentItemFailErrMsgMaxLen 失败卡 err_msg 字段最大长度, 超过截断加省略号。
 // 飞书卡片文本字段一般 2000 字符, 512 足够容纳一条 error 描述且留白。
 const sandboxAgentItemFailErrMsgMaxLen = 512
+
+// 卡片模板 ID 用 var 而非 const, 便于:
+//   - 测试单元用例通过 test-only setter 覆写 (无需引入 build tag);
+//   - 商业版部署时按 tenant/region 在启动路径注入不同 template。
+//
+// 默认值取自 consts, 保持与 OSS 一致 (空串 -> 静默不发)。
+var (
+	sandboxAgentProgressCardID = consts.SandboxAgentProgressNotifyCardID
+	sandboxAgentItemFailCardID = consts.SandboxAgentItemFailNotifyCardID
+)
 
 type sandboxAgentNotifier struct {
 	notifyRPC     rpc.INotifyRPCAdapter
@@ -66,7 +78,7 @@ func (s *sandboxAgentNotifier) NotifyProgressIfDue(ctx context.Context, expt *en
 		return nil
 	}
 	// 卡片模板未配置时静默跳过, 避免打无效 RPC。
-	if consts.SandboxAgentProgressNotifyCardID == "" {
+	if sandboxAgentProgressCardID == "" {
 		return nil
 	}
 
@@ -94,7 +106,7 @@ func (s *sandboxAgentNotifier) NotifyProgressIfDue(ctx context.Context, expt *en
 	}
 
 	param := buildSandboxAgentProgressParam(expt, stats)
-	if err := s.notifyRPC.SendMessageCard(ctx, receiveID, receiveIDType, consts.SandboxAgentProgressNotifyCardID, param); err != nil {
+	if err := s.notifyRPC.SendMessageCard(ctx, receiveID, receiveIDType, sandboxAgentProgressCardID, param); err != nil {
 		logs.CtxWarn(ctx, "[SandboxAgentNotify] progress SendMessageCard err, expt_id=%v, err=%v", expt.ID, err)
 		return nil
 	}
@@ -106,7 +118,7 @@ func (s *sandboxAgentNotifier) NotifyItemFail(ctx context.Context, expt *entity.
 	if !s.enabled(expt) {
 		return nil
 	}
-	if consts.SandboxAgentItemFailNotifyCardID == "" {
+	if sandboxAgentItemFailCardID == "" {
 		return nil
 	}
 
@@ -117,7 +129,7 @@ func (s *sandboxAgentNotifier) NotifyItemFail(ctx context.Context, expt *entity.
 	}
 
 	param := buildSandboxAgentItemFailParam(expt, itemID, evalErr)
-	if err := s.notifyRPC.SendMessageCard(ctx, receiveID, receiveIDType, consts.SandboxAgentItemFailNotifyCardID, param); err != nil {
+	if err := s.notifyRPC.SendMessageCard(ctx, receiveID, receiveIDType, sandboxAgentItemFailCardID, param); err != nil {
 		logs.CtxWarn(ctx, "[SandboxAgentNotify] item fail SendMessageCard err, expt_id=%v, item_id=%v, err=%v", expt.ID, itemID, err)
 		return nil
 	}
