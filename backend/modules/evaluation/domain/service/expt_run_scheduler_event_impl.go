@@ -60,6 +60,8 @@ type ExptSchedulerImpl struct {
 	// 让终态命中路径与正常回调路径在同一 dashboard 上可比。
 	// 允许为 nil：开源部署 / 未接入 metrics 时静默 no-op。
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
+	// sandboxAgentNotifier 每 1h 进度快照飞书通知; 允许为 nil (未接入通知)。
+	sandboxAgentNotifier ISandboxAgentNotifier
 }
 
 func NewExptSchedulerSvc(
@@ -83,6 +85,7 @@ func NewExptSchedulerSvc(
 	schedulerModeFactory SchedulerModeFactory,
 	evalTargetService IEvalTargetService,
 	sandboxAgentMetrics metrics.SandboxAgentMetrics,
+	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容旧单测
 ) ExptSchedulerEvent {
 	i := &ExptSchedulerImpl{
 		Manager:                  manager,
@@ -106,6 +109,9 @@ func NewExptSchedulerSvc(
 		evalTargetService:        evalTargetService,
 		sandboxAgentMetrics:      sandboxAgentMetrics,
 	}
+	if len(sandboxAgentNotifier) > 0 {
+		i.sandboxAgentNotifier = sandboxAgentNotifier[0]
+	}
 
 	i.Endpoints = SchedulerChain(
 		i.HandleEventErr,
@@ -113,6 +119,7 @@ func NewExptSchedulerSvc(
 		i.HandleEventCheck,
 		i.HandleEventLock,
 		i.HandleEventEndpoint,
+		i.SandboxAgentHourlyNotify,
 	)(func(_ context.Context, _ *entity.ExptScheduleEvent) error { return nil })
 
 	return i
@@ -211,6 +218,31 @@ func (e *ExptSchedulerImpl) HandleEventEndpoint(next SchedulerEndPoint) Schedule
 		}
 
 		return next(ctx, event)
+	}
+}
+
+// SandboxAgentHourlyNotify 中间件: 沙箱 agent 实验每 1h 一张进度快照飞书卡。
+// 主流程 schedule 出错时不发通知,避免叠加噪音; Notifier 内部做 sandbox agent + Enable + 1h 闸门判定,
+// 非目标 case 静默。发送失败仅 log,不影响调度链。
+func (e *ExptSchedulerImpl) SandboxAgentHourlyNotify(next SchedulerEndPoint) SchedulerEndPoint {
+	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
+		if err := next(ctx, event); err != nil {
+			return err
+		}
+		if e.sandboxAgentNotifier == nil {
+			return nil
+		}
+		// GetDetail 会填 Target/NotificationConf/Name; GetByID 不填 Target,
+		// isSandboxAgentExperiment 会误判为 false。
+		exptDetail, err := e.Manager.GetDetail(ctx, event.ExptID, event.SpaceID, event.Session)
+		if err != nil {
+			logs.CtxWarn(ctx, "[SandboxAgentNotify] GetDetail fail, expt_id=%v, err=%v", event.ExptID, err)
+			return nil
+		}
+		if err := e.sandboxAgentNotifier.NotifyProgressIfDue(ctx, exptDetail); err != nil {
+			logs.CtxWarn(ctx, "[SandboxAgentNotify] progress notify err, expt_id=%v, err=%v", event.ExptID, err)
+		}
+		return nil
 	}
 }
 

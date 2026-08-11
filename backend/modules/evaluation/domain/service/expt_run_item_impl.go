@@ -41,8 +41,9 @@ func NewExptItemEvaluation(
 	evalAsyncRepo repo.IEvalAsyncRepo,
 	evalSetItemSvc EvaluationSetItemService,
 	itemCompletePublisher component.IItemCompletePublisher,
+	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 保持已有单测编译通过
 ) ExptItemEvaluation {
-	return &ExptItemEvalCtxExecutor{
+	exec := &ExptItemEvalCtxExecutor{
 		TurnResultRepo:         turnResultRepo,
 		ItemResultRepo:         itemResultRepo,
 		Configer:               configer,
@@ -55,6 +56,10 @@ func NewExptItemEvaluation(
 		evalSetItemSvc:         evalSetItemSvc,
 		itemCompletePublisher:  itemCompletePublisher,
 	}
+	if len(sandboxAgentNotifier) > 0 {
+		exec.sandboxAgentNotifier = sandboxAgentNotifier[0]
+	}
+	return exec
 }
 
 type ExptItemEvalCtxExecutor struct {
@@ -69,6 +74,7 @@ type ExptItemEvalCtxExecutor struct {
 	evalAsyncRepo          repo.IEvalAsyncRepo
 	evalSetItemSvc         EvaluationSetItemService
 	itemCompletePublisher  component.IItemCompletePublisher
+	sandboxAgentNotifier   ISandboxAgentNotifier // 沙箱 agent 实验单行失败飞书通知; 可空
 }
 
 const exptRunLogPersistTimeout = 5 * time.Second
@@ -442,6 +448,14 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 
 	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
 		return err
+	}
+
+	// 沙箱 agent 实验:单行走到终态失败,立即发一张飞书卡。Notifier 内部做 sandbox agent + Enable 判定,
+	// 非目标 case 静默返回。发送失败仅 log,不阻塞主流程。
+	if evalErr != nil && e.sandboxAgentNotifier != nil {
+		if nerr := e.sandboxAgentNotifier.NotifyItemFail(persistCtx, eiec.Expt, event.EvalSetItemID, evalErr); nerr != nil {
+			logs.CtxWarn(persistCtx, "[SandboxAgentNotify] item fail notify err, expt_id=%v, item_id=%v, err=%v", event.ExptID, event.EvalSetItemID, nerr)
+		}
 	}
 
 	// 仅 item 评测成功才推送 item-complete；失败不发（下游只消费成功行）。
