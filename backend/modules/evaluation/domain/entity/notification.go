@@ -76,3 +76,38 @@ type FeishuNotificationConf struct {
 	Enable bool    `json:"enable"`
 	UserID *string `json:"user_id,omitempty"`
 }
+
+// defaultSandboxAgentProgressNotifyIntervalSec 沙箱 agent 进度卡默认间隔（1h）。
+const defaultSandboxAgentProgressNotifyIntervalSec = 3600
+
+// SandboxAgentNotifyConf 沙箱 agent 通知相关配置。
+//
+// 结构对齐 ExptConsumerConf: 顶层 SandboxAgentNotifyConfItem 为全局默认,
+// SpaceConf 按 spaceID 覆盖 (只需要覆盖的字段, 缺失时回落全局默认)。
+type SandboxAgentNotifyConf struct {
+	// ProgressNotifyIntervalSec 进度卡间隔（秒）。<=0 时用 defaultSandboxAgentProgressNotifyIntervalSec 兜底。
+	ProgressNotifyIntervalSec int64 `json:"progress_notify_interval_sec" mapstructure:"progress_notify_interval_sec"`
+	// SpaceConf 按 spaceID 覆盖，key=spaceID；未命中时用外层字段。
+	SpaceConf map[int64]*SandboxAgentNotifyConf `json:"space_conf" mapstructure:"space_conf"`
+}
+
+// GetProgressNotifyIntervalSec 返回指定 space 的进度卡间隔（秒）。
+// 优先取 SpaceConf[spaceID].ProgressNotifyIntervalSec，其次全局默认，最后兜底常量。
+func (c *SandboxAgentNotifyConf) GetProgressNotifyIntervalSec(spaceID int64) int64 {
+	if c != nil {
+		if sc, ok := c.SpaceConf[spaceID]; ok && sc != nil && sc.ProgressNotifyIntervalSec > 0 {
+			return sc.ProgressNotifyIntervalSec
+		}
+		if c.ProgressNotifyIntervalSec > 0 {
+			return c.ProgressNotifyIntervalSec
+		}
+	}
+	return defaultSandboxAgentProgressNotifyIntervalSec
+}
+
+// DefaultSandboxAgentNotifyConf 全局默认配置：进度卡 1h。
+func DefaultSandboxAgentNotifyConf() *SandboxAgentNotifyConf {
+	return &SandboxAgentNotifyConf{
+		ProgressNotifyIntervalSec: defaultSandboxAgentProgressNotifyIntervalSec,
+	}
+}

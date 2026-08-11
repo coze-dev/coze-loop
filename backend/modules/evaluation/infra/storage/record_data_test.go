@@ -74,6 +74,10 @@ func (f *fakeConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, ex
 	return nil, false
 }
 
+func (f *fakeConfiger) GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf {
+	return nil
+}
+
 type nopReader struct{ buf *bytes.Reader }
 
 func newNopReader(b []byte) *nopReader                       { return &nopReader{buf: bytes.NewReader(b)} }

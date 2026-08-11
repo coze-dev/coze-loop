@@ -1284,7 +1284,9 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 
 	record.EvalTargetOutputData = param.OutputData
 	record.Status = gptr.Of(param.Status)
-	e.convEvalTargetRunErr(ctx, record)
+	if !param.SkipErrMsgConvert {
+		e.convEvalTargetRunErr(ctx, record)
+	}
 
 	if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, record, nil); err != nil {
 		return err
