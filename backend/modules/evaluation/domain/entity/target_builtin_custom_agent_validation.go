@@ -4,6 +4,7 @@
 package entity
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -49,11 +50,23 @@ var (
 		consts.EvalTargetOutputFieldKeyScreenRecordingURL: {},
 	}
 
-	// allowedCustomFieldScalarSchemaKeys 可声明的标量类型白名单。
+	// allowedCustomFieldScalarSchemaKeys 「显式带了 SchemaKey」时的标量白名单。
 	//
-	// 仅 String/Integer/Float/Bool 四类标量 + 多模态（由 ContentType == MultiPart 表达）。
+	// 【SchemaKey 在既有范式里的真实职责：只标记 Trajectory 一种特例，不是标量类型的载体】
+	// 实证前端既有实现 custom-field-schema-convert.ts:35-43 与
+	// field-convert.ts 的 convertDataTypeToSchema：
+	//   - String/Integer/Float/Boolean/Object/Array → content_type=text,       schema_key=**undefined**，
+	//     类型全部靠 text_schema 里的 JSON Schema 表达
+	//   - MultiPart                                → content_type=multi_part,  schema_key=**undefined**
+	//   - Trajectory                               → content_type=text,        schema_key=trajectory
+	// 后端既有消费侧 (buildOutputSchema, target_source_custom_rpc_server_impl.go) 完全吻合：
+	// 仅 SchemaKey != nil 时查 switch（该 switch 无 default、不报错），随后 TextSchema 非空即覆盖。
+	//
+	// 故这份白名单只在调用方显式带了 SchemaKey 时兜底生效（主要就是拦 Trajectory），
+	// **绝不能拿 SchemaKey == nil 当「类型缺失」的判据** —— 那会把前端正常提交的
+	// 全部标量字段误杀（本次 P0 的根因之一）。
+	//
 	// 显式不开放：
-	//   - Object / Array：无对应 SchemaKey，落到「缺少字段类型」或白名单外，均被拦截；
 	//   - Message(5) / SingleChoice(6) / MessageList(8)：非本链路语义；
 	//   - Trajectory(7)：必须拦。CustomAgent 已自动追加 trajectory 列
 	//     (target_source_custom_agent_impl.go)，报告侧 (expt_result_impl.go) 还会独立追加一次，
@@ -64,6 +77,25 @@ var (
 		SchemaKey_Integer: {},
 		SchemaKey_Float:   {},
 		SchemaKey_Bool:    {},
+	}
+
+	// allowedCustomFieldJSONSchemaTypes 非多模态字段 text_schema 顶层 "type" 的白名单。
+	//
+	// 对齐前端 TYPE_CONFIG (evaluate-components/src/utils/field-convert.ts) 对
+	// 长连接 5 项下拉 (custom-agent-data-type-options.ts) 的产出：
+	//   String  -> {"type":"string"}    Integer -> {"type":"integer"}
+	//   Float   -> {"type":"number"}    Boolean -> {"type":"boolean"}
+	// （注意 Float 的 JSON Schema type 是 number，不是 float。）
+	//
+	// 显式不含 object / array：这是原「不开放 Object / Array」意图在新范式下的落点 ——
+	// 既有范式里 Object/Array 与标量一样都是 schema_key=undefined，
+	// 已无法靠 SchemaKey 区分，只能看 text_schema 的顶层 type。
+	// 前端下拉已收窄为 5 项，这里是「前端拦得住、OpenAPI 绕得过」的后端防线。
+	allowedCustomFieldJSONSchemaTypes = map[string]struct{}{
+		"string":  {},
+		"integer": {},
+		"number":  {},
+		"boolean": {},
 	}
 )
 
@@ -77,8 +109,10 @@ var (
 //   - R5 字段名长度 <= 50（按 rune 计）
 //   - R6 不得使用系统保留字
 //   - R7 同批声明内不得重名
-//   - R8 类型必填且在白名单内（4 类标量 + 多模态）
-//   - R8b 显式拒绝 Object / Array / Trajectory
+//   - R8 类型可判定且在开放范围内（4 类标量 + 多模态）。判定方式对齐既有范式：
+//     ContentType == MultiPart 即多模态；否则以 text_schema 的 JSON Schema 顶层 type 为准；
+//     SchemaKey **不是必填**（既有范式下它只标记 Trajectory，标量恒为空）。
+//   - R8b 显式拒绝 Object / Array（text_schema type 为 object/array）与 Trajectory（SchemaKey）
 //
 // 错误一律为 CommonInvalidParamCode，且错误信息必含出错字段名，便于用户自查。
 func ValidateCustomFieldSchemas(schemas []*CustomFieldSchema) error {
@@ -131,27 +165,66 @@ func ValidateCustomFieldSchemas(schemas []*CustomFieldSchema) error {
 
 // validateCustomFieldSchemaType 校验单个声明的类型（R8 / R8b）。
 //
-// 多模态通过 ContentType == MultiPart 表达，此时 SchemaKey 允许为空；
-// 但若同时显式带了 SchemaKey，仍须落在标量白名单内，否则 Trajectory 等
-// 不开放的类型可以借 MultiPart 分支绕过白名单。
+// 【判定顺序严格对齐既有范式（前端 convertDataTypeToSchema + 后端 buildOutputSchema）】
+//  1. ContentType == MultiPart  → 多模态，类型即已确定，text_schema 按范式为空，放行
+//  2. SchemaKey != nil          → 特例标记（范式里只有 Trajectory 走这条），查白名单拦掉
+//  3. 其余                       → 标量，以 text_schema 的 JSON Schema 顶层 type 为准
+//
+// 【为什么 SchemaKey 不是必填】既有范式下标量的 schema_key 恒为 undefined，
+// 类型信息全在 text_schema。把 SchemaKey 当必填会把前端正常提交的
+// 全部标量字段误判成「缺少字段类型」——这正是本次 P0。
 func validateCustomFieldSchemaType(s *CustomFieldSchema) error {
-	switch {
-	case s.ContentType == ContentTypeMultipart:
-		if s.SchemaKey == nil {
-			return nil
-		}
-		if _, ok := allowedCustomFieldScalarSchemaKeys[*s.SchemaKey]; !ok {
-			return unsupportedCustomFieldType(s.Name, *s.SchemaKey)
-		}
-		return nil
-	case s.SchemaKey == nil:
-		return invalidParam(fmt.Sprintf("自定义输出字段 %q 缺少字段类型", s.Name))
-	default:
-		if _, ok := allowedCustomFieldScalarSchemaKeys[*s.SchemaKey]; !ok {
-			return unsupportedCustomFieldType(s.Name, *s.SchemaKey)
+	// 1. 多模态：ContentType 自身即类型载体。
+	if s.ContentType == ContentTypeMultipart {
+		// 多模态若还显式带了 SchemaKey，仍须落在标量白名单内，
+		// 否则 Trajectory 等不开放类型可借多模态分支绕过白名单。
+		if s.SchemaKey != nil {
+			if _, ok := allowedCustomFieldScalarSchemaKeys[*s.SchemaKey]; !ok {
+				return unsupportedCustomFieldType(s.Name, *s.SchemaKey)
+			}
 		}
 		return nil
 	}
+
+	// 2. 显式带 SchemaKey：范式里只有 Trajectory 会走到这，查白名单即拦掉。
+	if s.SchemaKey != nil {
+		if _, ok := allowedCustomFieldScalarSchemaKeys[*s.SchemaKey]; !ok {
+			return unsupportedCustomFieldType(s.Name, *s.SchemaKey)
+		}
+		// 白名单内的标量 key：前端不会产出（恒 undefined），但 OpenAPI 直连可能带，
+		// 与 buildOutputSchema 同范式接受它，类型由 SchemaKey 表达，无需再看 text_schema。
+		return nil
+	}
+
+	// 3. 标量：类型以 text_schema 的 JSON Schema 顶层 type 为准。
+	return validateCustomFieldTextSchema(s)
+}
+
+// validateCustomFieldTextSchema 校验标量字段的 text_schema。
+//
+// text_schema 是既有范式下标量类型的**唯一**载体（schema_key 恒 undefined），
+// 因此它缺失/非法/类型不在白名单，都等价于「类型没说清或不受支持」，必须拦。
+func validateCustomFieldTextSchema(s *CustomFieldSchema) error {
+	if strings.TrimSpace(s.TextSchema) == "" {
+		return invalidParam(fmt.Sprintf("自定义输出字段 %q 缺少字段类型", s.Name))
+	}
+
+	// 只解析顶层 "type"，不做完整 JSON Schema 校验：
+	// 既有消费侧 buildOutputSchema 也只是把 text_schema 原样透传给 JsonSchema，
+	// 这里做的是「类型是否在开放范围内」的准入判断，不是 schema 合法性审计。
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal([]byte(s.TextSchema), &probe); err != nil {
+		return invalidParam(fmt.Sprintf("自定义输出字段 %q 的类型定义不是合法 JSON Schema", s.Name))
+	}
+	if probe.Type == "" {
+		return invalidParam(fmt.Sprintf("自定义输出字段 %q 缺少字段类型", s.Name))
+	}
+	if _, ok := allowedCustomFieldJSONSchemaTypes[probe.Type]; !ok {
+		return invalidParam(fmt.Sprintf("自定义输出字段 %q 的类型 %s 不受支持，当前仅支持 文本/整数/浮点/布尔/多模态", s.Name, probe.Type))
+	}
+	return nil
 }
 
 func unsupportedCustomFieldType(name string, key SchemaKey) error {
