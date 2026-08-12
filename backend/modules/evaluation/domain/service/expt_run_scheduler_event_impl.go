@@ -461,7 +461,7 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 		}
 
 		// item-complete(success) 发送点: 每个 item 一进来先发, 仅发成功行(fail/zombie 不发, 下游只消费成功行)。
-		// 发送作为旁路, 只读不写 result_state, 发失败在 sendItemComplete 内 CtxWarn + return(仅本 item), 不阻断落库/后续。
+		// 发送作为旁路, 只读不写 result_state, 发失败在 sendItemComplete 内 CtxError + return(仅本 item), 不阻断落库/后续。
 		// 是否真正投递由 producer 依空间开关(item_complete_space_config) + 评测对象 enable_analysis 判定, 此处不重复判。
 		// 不追求消竞态: 下游侧 defer 投递已覆盖读侧就绪窗口, 本处只保障"成功行必发一次 MQ"。
 		if e.itemCompletePublisher != nil && item.State == entity.ItemRunState_Success {
@@ -596,7 +596,7 @@ func (e *ExptSchedulerImpl) resolveItemCompleteMeta(ctx context.Context, event *
 	return itemMeta, itemVer
 }
 
-// sendItemComplete 组装并发送单行 item-complete(success) 事件。发送失败只 CtxWarn 不阻断(靠下轮 tick / 下游幂等兜底)。
+// sendItemComplete 组装并发送单行 item-complete(success) 事件。发送失败打 CtxError 告警但不阻断(靠下游 defer/幂等兜底)。
 func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) {
 	if evalSetItem == nil {
 		logs.CtxWarn(ctx, "[ExptEval] item complete meta missing, skip publish, expt_id: %v, item_id: %v", event.ExptID, item.ItemID)
@@ -604,7 +604,7 @@ func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.
 	}
 	completeEvent := buildItemCompleteEventFromScheduler(event.SpaceID, event.ExptID, event.ExptRunID, expt, item, evalSetItem, evalSetVersionID)
 	if err := e.itemCompletePublisher.PublishItemComplete(ctx, completeEvent); err != nil {
-		logs.CtxWarn(ctx, "[ExptEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, item.ItemID, err)
+		logs.CtxError(ctx, "[ExptEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, item.ItemID, err)
 	}
 }
 
