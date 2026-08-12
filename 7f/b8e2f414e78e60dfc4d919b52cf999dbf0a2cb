@@ -1,0 +1,23 @@
+backend/modules/evaluation/domain/entity/target_builtin_custom_agent_validation.go
+  s_8fddfbe5986e8c::t_c80e2e80da6c4a 7,53-67,81-99,112-115,168-175,177-184,187-190,194-195,198-227
+backend/modules/evaluation/domain/entity/target_builtin_custom_agent_validation_test.go
+  s_8fddfbe5986e8c::t_d25fd0f94e3642 17-21,26,138,140,147,153-182,198-199,255,257,259-263,266,268,282,286-292,302-346
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7fb8e2f414e78e60dfc4d919b52cf999dbf0a2cb",
+  "prompts": {},
+  "sessions": {
+    "s_8fddfbe5986e8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_8fddfbe5986e8c",
+        "model": "unknown"
+      },
+      "human_author": "tangzhijie.kitauji <tangzhijie.kitauji@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
