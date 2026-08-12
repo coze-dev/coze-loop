@@ -961,6 +961,51 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget_AsyncEvaluatorReportRequiresTa
 	require.Nil(t, got)
 }
 
+func TestDefaultExptTurnEvaluationImpl_ResultSetAsyncEvaluatorReportSkipsTargetValidation(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	metric := metricsmocks.NewMockExptMetric(ctrl)
+	metric.EXPECT().EmitTurnExecEval(int64(2), gomock.Any())
+	metric.EXPECT().EmitTurnExecResult(int64(2), gomock.Any(), true, gomock.Any(), gomock.Any(), gomock.Any())
+
+	existingRecord := &entity.EvaluatorRecord{
+		ID:                 1001,
+		EvaluatorVersionID: 2001,
+		Status:             entity.EvaluatorRunStatusSuccess,
+	}
+	service := &DefaultExptTurnEvaluationImpl{metric: metric}
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt: &entity.Experiment{
+				TargetVersionID: 0,
+				ExptType:        entity.ExptType_Offline,
+				EvalConf: &entity.EvaluationConfiguration{ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{},
+				}},
+			},
+			Event: &entity.ExptItemEvalEvent{
+				SpaceID:                     2,
+				AsyncEvaluatorReportTrigger: true,
+				Session:                     &entity.Session{UserID: "u"},
+			},
+		},
+		ExptTurnRunResult: &entity.ExptTurnRunResult{
+			TargetResult:     nil,
+			EvaluatorResults: []*entity.EvaluatorRecord{existingRecord},
+		},
+	}
+
+	result := service.Eval(context.Background(), etec)
+
+	require.NoError(t, result.EvalErr)
+	require.NotNil(t, result.TargetResult)
+	require.NotNil(t, result.TargetResult.EvalTargetOutputData)
+	assert.Empty(t, result.TargetResult.EvalTargetOutputData.OutputFields)
+	require.Len(t, result.EvaluatorResults, 1)
+	assert.Same(t, existingRecord, result.EvaluatorResults[0])
+}
+
 func TestDefaultExptTurnEvaluationImpl_CallTarget_ExistedRecord_Status(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
