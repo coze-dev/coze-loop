@@ -2033,6 +2033,71 @@ func (e *EvalOpenAPIApplication) ListExperimentsOApi(ctx context.Context, req *o
 	}, nil
 }
 
+// defaultGroupIDsPageSize 是开放面按分组反查的默认分页大小。
+// ★ 这是 100 唯一出现的位置：开放接口不能无界返回，但内部面「不传分页 = 全量」必须逐字保持，
+// 故默认值只在开放面补齐，绝不下沉到内部面 application / domain service / repo / DAO。
+const defaultGroupIDsPageSize = int32(100)
+
+func (e *EvalOpenAPIApplication) GetExperimentIDsByGroupOApi(ctx context.Context, req *openapi.GetExperimentIDsByGroupOApiRequest) (r *openapi.GetExperimentIDsByGroupOApiResponse, err error) {
+	logs.CtxInfo(ctx, "GetExperimentIDsByGroupOApi request: %v", json.Jsonify(req))
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	// 开放面字段全 optional（对齐 ListExperimentsOApi 样板），必须手工校验；顺序在鉴权与查询之前。
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if !req.IsSetWorkspaceID() || req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	groupKey := strings.TrimSpace(req.GetExperimentGroupKey())
+	if groupKey == "" {
+		// 与内部面刻意分叉：内部面空 key 返回空成功（前端切换分组时依赖的容错），
+		// 开放面必须报参数非法 —— 否则调用方无法区分「分组真的没实验」与「参数没传对」。
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_group_key is required"))
+	}
+
+	// ★ 分页默认值：在构造内部 Request 之前补齐。
+	pageNumber := req.GetPageNumber()
+	if !req.IsSetPageNumber() {
+		pageNumber = 1
+	}
+	pageSize := req.GetPageSize()
+	if !req.IsSetPageSize() {
+		pageSize = defaultGroupIDsPageSize
+	}
+
+	innerReq := exptpb.NewGetExperimentIDsByGroupRequest()
+	innerReq.WorkspaceID = req.GetWorkspaceID()
+	innerReq.ExperimentGroupKey = groupKey
+	innerReq.SetPageNumber(gptr.Of(pageNumber))
+	innerReq.SetPageSize(gptr.Of(pageSize))
+	logs.CtxInfo(ctx, "GetExperimentIDsByGroupOApi GetExperimentIDsByGroup innerReq: %v", json.Jsonify(innerReq))
+	resp, err := e.experimentApp.GetExperimentIDsByGroup(ctx, innerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// 跨两套 Experiment 模型（domain / domain_openapi）枚举编号刻意不同，只能过既有转换函数，禁止手写字段赋值。
+	outExpts := make([]*experiment.Experiment, 0, len(resp.GetExperiments()))
+	for _, ex := range resp.GetExperiments() {
+		outExpts = append(outExpts, experiment_convertor.DomainExperimentDTO2OpenAPI(ex))
+	}
+
+	var total *int64
+	if resp.IsSetTotal() {
+		total = gptr.Of(int64(resp.GetTotal()))
+	}
+	return &openapi.GetExperimentIDsByGroupOApiResponse{
+		Data: &openapi.GetExperimentIDsByGroupOpenAPIData{
+			ExptIds:     resp.GetExptIds(),
+			Experiments: outExpts,
+			Total:       total,
+		},
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest) (r *openapi.ListExperimentResultOApiResponse, err error) {
 	logs.CtxInfo(ctx, "ListExperimentResultOApi request: %v", json.Jsonify(req))
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)

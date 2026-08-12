@@ -3362,6 +3362,10 @@ type fakeExperimentApp struct {
 	getExportRecordResp    *exptpb.GetExptResultExportRecordResponse
 	getExportRecordErr     error
 	lastGetExportRecordReq *exptpb.GetExptResultExportRecordRequest
+
+	groupIDsResp    *exptpb.GetExperimentIDsByGroupResponse
+	groupIDsErr     error
+	lastGroupIDsReq *exptpb.GetExperimentIDsByGroupRequest
 }
 
 func (f *fakeExperimentApp) SubmitExperiment(ctx context.Context, req *exptpb.SubmitExperimentRequest) (*exptpb.SubmitExperimentResponse, error) {
@@ -3412,6 +3416,18 @@ func (f *fakeExperimentApp) GetExptResultExportRecord(_ context.Context, req *ex
 		return f.getExportRecordResp, f.getExportRecordErr
 	}
 	return &exptpb.GetExptResultExportRecordResponse{}, nil
+}
+
+// GetExperimentIDsByGroup 记录下传的内部面入参，供开放面「默认值 100 / page 1」的断言使用。
+func (f *fakeExperimentApp) GetExperimentIDsByGroup(_ context.Context, req *exptpb.GetExperimentIDsByGroupRequest) (*exptpb.GetExperimentIDsByGroupResponse, error) {
+	f.lastGroupIDsReq = req
+	if f.groupIDsErr != nil {
+		return nil, f.groupIDsErr
+	}
+	if f.groupIDsResp != nil {
+		return f.groupIDsResp, nil
+	}
+	return &exptpb.GetExperimentIDsByGroupResponse{}, nil
 }
 
 var _ IExperimentApplication = (*fakeExperimentApp)(nil)
@@ -7510,6 +7526,198 @@ func TestEvalOpenAPIApplication_ListExperimentsOApi(t *testing.T) {
 
 			if tc.req != nil {
 				assert.True(t, metric.called)
+			}
+		})
+	}
+}
+
+// TestEvalOpenAPIApplication_GetExperimentIDsByGroupOApi 覆盖 tasks §7.3 / §7.4：
+// 参数校验（req nil / workspace 缺失或 0 / group_key 空或全空白）、分页默认值（page_size→100、page_number→1
+// —— 断言的是「下传到内部面的入参」，防止有人把默认值下沉到内部面/DAO）、三字段响应组装、轻量视图。
+func TestEvalOpenAPIApplication_GetExperimentIDsByGroupOApi(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		req     *openapi.GetExperimentIDsByGroupOApiRequest
+		setup   func(fakeApp *fakeExperimentApp)
+		wantErr int32
+		check   func(t *testing.T, resp *openapi.GetExperimentIDsByGroupOApiResponse, fakeApp *fakeExperimentApp)
+	}{
+		{
+			name:    "nil request",
+			req:     nil,
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name:    "missing workspace_id",
+			req:     &openapi.GetExperimentIDsByGroupOApiRequest{ExperimentGroupKey: gptr.Of("g1")},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "zero workspace_id",
+			req: &openapi.GetExperimentIDsByGroupOApiRequest{
+				WorkspaceID:        gptr.Of(int64(0)),
+				ExperimentGroupKey: gptr.Of("g1"),
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			// R4：开放面与内部面刻意分叉 —— 内部面空 key 是空成功，开放面必须报参数非法。
+			name:    "missing group key",
+			req:     &openapi.GetExperimentIDsByGroupOApiRequest{WorkspaceID: gptr.Of(int64(1))},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "empty group key",
+			req: &openapi.GetExperimentIDsByGroupOApiRequest{
+				WorkspaceID:        gptr.Of(int64(1)),
+				ExperimentGroupKey: gptr.Of(""),
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "blank group key",
+			req: &openapi.GetExperimentIDsByGroupOApiRequest{
+				WorkspaceID:        gptr.Of(int64(1)),
+				ExperimentGroupKey: gptr.Of(" \t\n "),
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "inner error propagates",
+			req: &openapi.GetExperimentIDsByGroupOApiRequest{
+				WorkspaceID:        gptr.Of(int64(1)),
+				ExperimentGroupKey: gptr.Of("g1"),
+			},
+			setup: func(fakeApp *fakeExperimentApp) {
+				fakeApp.groupIDsErr = errors.New("inner boom")
+			},
+			wantErr: -1,
+		},
+		{
+			// ★ 默认值断言：page_size 未传 → 100；page_number 未传 → 1。
+			name: "default page size 100 and page number 1",
+			req: &openapi.GetExperimentIDsByGroupOApiRequest{
+				WorkspaceID:        gptr.Of(int64(1)),
+				ExperimentGroupKey: gptr.Of("  g1  "),
+			},
+			setup: func(fakeApp *fakeExperimentApp) {
+				fakeApp.groupIDsResp = &exptpb.GetExperimentIDsByGroupResponse{}
+			},
+			check: func(t *testing.T, resp *openapi.GetExperimentIDsByGroupOApiResponse, fakeApp *fakeExperimentApp) {
+				require.NotNil(t, fakeApp.lastGroupIDsReq)
+				assert.EqualValues(t, 100, fakeApp.lastGroupIDsReq.GetPageSize(), "page_size 未传必须补 100")
+				assert.EqualValues(t, 1, fakeApp.lastGroupIDsReq.GetPageNumber(), "page_number 未传必须补 1")
+				// group_key 去空白后下传
+				assert.Equal(t, "g1", fakeApp.lastGroupIDsReq.GetExperimentGroupKey())
+				assert.EqualValues(t, 1, fakeApp.lastGroupIDsReq.GetWorkspaceID())
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				assert.Empty(t, resp.Data.ExptIds)
+			},
+		},
+		{
+			// 显式传分页时原样下传，不被默认值覆盖。
+			name: "explicit pagination passes through",
+			req: &openapi.GetExperimentIDsByGroupOApiRequest{
+				WorkspaceID:        gptr.Of(int64(1)),
+				ExperimentGroupKey: gptr.Of("g1"),
+				PageNumber:         gptr.Of(int32(3)),
+				PageSize:           gptr.Of(int32(7)),
+			},
+			setup: func(fakeApp *fakeExperimentApp) {
+				fakeApp.groupIDsResp = &exptpb.GetExperimentIDsByGroupResponse{}
+			},
+			check: func(t *testing.T, _ *openapi.GetExperimentIDsByGroupOApiResponse, fakeApp *fakeExperimentApp) {
+				require.NotNil(t, fakeApp.lastGroupIDsReq)
+				assert.EqualValues(t, 3, fakeApp.lastGroupIDsReq.GetPageNumber())
+				assert.EqualValues(t, 7, fakeApp.lastGroupIDsReq.GetPageSize())
+			},
+		},
+		{
+			// §7.3 ① 三字段齐全；§7.4 轻量视图（不含评测集/评测对象/评估器详情、无用户昵称）。
+			name: "success returns expt_ids experiments and total in lightweight view",
+			req: &openapi.GetExperimentIDsByGroupOApiRequest{
+				WorkspaceID:        gptr.Of(int64(1)),
+				ExperimentGroupKey: gptr.Of("g1"),
+				PageSize:           gptr.Of(int32(2)),
+				PageNumber:         gptr.Of(int32(1)),
+			},
+			setup: func(fakeApp *fakeExperimentApp) {
+				total := int32(57)
+				fakeApp.groupIDsResp = &exptpb.GetExperimentIDsByGroupResponse{
+					ExptIds: []int64{11, 12},
+					Experiments: []*domainexpt.Experiment{
+						{ID: gptr.Of(int64(11)), Name: gptr.Of("e11"), ExperimentGroupKey: gptr.Of("g1")},
+						{ID: gptr.Of(int64(12)), Name: gptr.Of("e12"), ExperimentGroupKey: gptr.Of("g1")},
+					},
+					Total: &total,
+				}
+			},
+			check: func(t *testing.T, resp *openapi.GetExperimentIDsByGroupOApiResponse, _ *fakeExperimentApp) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				assert.Equal(t, []int64{11, 12}, resp.Data.ExptIds)
+				require.Len(t, resp.Data.Experiments, 2)
+				require.NotNil(t, resp.Data.Total)
+				// total 是全量数，与当页条数不同
+				assert.EqualValues(t, 57, *resp.Data.Total)
+
+				for _, ex := range resp.Data.Experiments {
+					require.NotNil(t, ex)
+					assert.Equal(t, "g1", ex.GetExperimentGroupKey())
+					// 轻量视图：内部面 MGetBasicByID 走 PO2DO(po, nil)，不 join 三元组，
+					// 转换后这些详情字段必须为空；同时 BaseInfo 里不带用户昵称（无用户 RPC）。
+					assert.Nil(t, ex.EvalSet, "轻量视图不得含评测集详情")
+					assert.Nil(t, ex.EvalTarget, "轻量视图不得含评测对象详情")
+					assert.Empty(t, ex.EvaluatorFieldMapping, "轻量视图不得含评估器详情")
+					assert.Empty(t, ex.EvaluatorIDVersionList)
+					assert.Empty(t, ex.EvalSetDetails)
+					assert.Nil(t, ex.ExptStats)
+					if ex.BaseInfo != nil {
+						assert.Empty(t, ex.BaseInfo.GetCreatedBy().GetName(), "轻量视图不得含用户昵称")
+					}
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			metric := &fakeOpenAPIMetric{}
+			fakeApp := &fakeExperimentApp{}
+			app := &EvalOpenAPIApplication{
+				experimentApp: fakeApp,
+				metric:        metric,
+			}
+
+			if tc.setup != nil {
+				tc.setup(fakeApp)
+			}
+
+			resp, err := app.GetExperimentIDsByGroupOApi(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if tc.check != nil {
+					tc.check(t, resp, fakeApp)
+				}
+			}
+
+			if tc.req != nil {
+				assert.True(t, metric.called, "metric defer 必须触发")
 			}
 		})
 	}

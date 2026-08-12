@@ -22,7 +22,8 @@ type IExperimentRepo interface {
 	MGetByID(ctx context.Context, ids []int64, spaceID int64) ([]*entity.Experiment, error)
 	MGetBasicByID(ctx context.Context, ids []int64) ([]*entity.Experiment, error)
 	GetByName(ctx context.Context, name string, spaceID int64) (*entity.Experiment, bool, error)
-	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error)
+	// GetIDsByGroupKey 取该分组下的实验 ID + 总数。page/pageSize 均 >0 才分页，否则返回全量（total = 返回条数）。
+	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error)
 	// ExistGroupKey 判断 group key 是否已被“其它空间”占用（跨空间隔离）, 用于创建实验时校验。
 	ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error)
 	GetEvaluatorRefByExptIDs(ctx context.Context, exptID []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error)

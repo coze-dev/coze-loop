@@ -1167,13 +1167,17 @@ func (e *experimentApplication) GetExperimentIDsByGroup(ctx context.Context, req
 	if groupKey == "" {
 		return &expt.GetExperimentIDsByGroupResponse{BaseResp: base.NewBaseResp()}, nil
 	}
-	exptIDs, err := e.manager.GetIDsByGroupKey(ctx, req.GetWorkspaceID(), groupKey, session)
+	// 分页参数原样透传（未传即零值 → DAO 走全量分支）。
+	// ⚠️ 此处不得出现任何默认值：page_size 默认 100 只属开放面（eval_openapi_app.go），
+	// 落到这里会破坏「内部面不传分页 = 全量」的旧行为不变式。
+	exptIDs, total, err := e.manager.GetIDsByGroupKey(ctx, req.GetWorkspaceID(), groupKey, req.GetPageNumber(), req.GetPageSize(), session)
 	if err != nil {
 		return nil, err
 	}
 
 	// 反查实验基础信息（仅查 experiment 单表，不 join eval_set/target/evaluator，也不发用户 RPC），
 	// 携带 create_time 等基础字段返回；空列表跳过，避免无谓查询。
+	// 分页生效时 exptIDs 已是当页 ids，反查开销随之收敛。
 	var exptDTOs []*domain_expt.Experiment
 	if len(exptIDs) > 0 {
 		expts, err := e.manager.MGetBasicByID(ctx, exptIDs)
@@ -1186,6 +1190,7 @@ func (e *experimentApplication) GetExperimentIDsByGroup(ctx context.Context, req
 	return &expt.GetExperimentIDsByGroupResponse{
 		ExptIds:     exptIDs,
 		Experiments: exptDTOs,
+		Total:       gptr.Of(int32(total)),
 		BaseResp:    base.NewBaseResp(),
 	}, nil
 }
