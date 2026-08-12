@@ -8460,8 +8460,8 @@ func (p *BatchGetExperimentsResponse) Field255DeepEqual(src *base.BaseResp) bool
 }
 
 type GetExperimentIDsByGroupRequest struct {
-	WorkspaceID        int64  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ExperimentGroupKey string `thrift:"experiment_group_key,2,required" frugal:"2,required,string" json:"experiment_group_key" form:"experiment_group_key,required" `
+	WorkspaceID        int64  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
+	ExperimentGroupKey string `thrift:"experiment_group_key,2,required" frugal:"2,required,string" json:"experiment_group_key" form:"experiment_group_key,required" query:"experiment_group_key,required"`
 	// 分页（可选）。page_number / page_size 均不传 = 全量返回，与本次变更前行为一致。
 	PageNumber *int32     `thrift:"page_number,3,optional" frugal:"3,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
 	PageSize   *int32     `thrift:"page_size,4,optional" frugal:"4,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
@@ -8925,8 +8925,8 @@ func (p *GetExperimentIDsByGroupRequest) Field255DeepEqual(src *base.Base) bool 
 }
 
 type GetExperimentIDsByGroupResponse struct {
-	ExptIds     []int64            `thrift:"expt_ids,1,optional" frugal:"1,optional,list<i64>" json:"expt_ids" form:"expt_ids" `
-	Experiments []*expt.Experiment `thrift:"experiments,2,optional" frugal:"2,optional,list<expt.Experiment>" json:"experiments" form:"experiments" `
+	ExptIds     []int64            `thrift:"expt_ids,1,optional" frugal:"1,optional,list<i64>" json:"expt_ids" form:"expt_ids" query:"expt_ids"`
+	Experiments []*expt.Experiment `thrift:"experiments,2,optional" frugal:"2,optional,list<expt.Experiment>" json:"experiments" form:"experiments" query:"experiments"`
 	// 该分组下实验总数，不受当页裁剪影响；未启用分页时等于返回条数
 	Total    *int32         `thrift:"total,3,optional" frugal:"3,optional,i32" form:"total" json:"total,omitempty" query:"total"`
 	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
