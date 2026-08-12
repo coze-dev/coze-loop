@@ -521,6 +521,7 @@ enum FieldType {
     UpdatedBy = 72
     CronActivate = 73
     TriggerType = 74
+    ExptID = 75  // 按实验自身 ID(experiment.id 主键)过滤, value 为 expt_id 列表
 }
 
 // 字段过滤器

@@ -1925,6 +1925,86 @@ func TestExptFilterConvertor_Convert_WithFuzzyName(t *testing.T) {
 	assert.Equal(t, "hello", got.FuzzyName)
 }
 
+func TestExptFilterConvertor_ConvertFilters_ExptID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	conv := NewExptFilterConvertor(mockEvalTargetSvc)
+
+	t.Run("单个ID_In_写入Includes", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptID,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "100",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.Equal(t, []int64{100}, got.Includes.ExptIDs)
+	})
+
+	t.Run("多个ID_In_写入Includes", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptID,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "10,20,30",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{10, 20, 30}, got.Includes.ExptIDs)
+	})
+
+	t.Run("NotIn_写入Excludes", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptID,
+				},
+				Operator: domain_expt.FilterOperatorType_NotIn,
+				Value:    "5,6",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{5, 6}, got.Excludes.ExptIDs)
+	})
+
+	t.Run("空值_跳过", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptID,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.Empty(t, got.Includes.ExptIDs)
+	})
+}
+
 func TestExptFilterConvertor_ConvertFilters_SourceTarget_BatchGetError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

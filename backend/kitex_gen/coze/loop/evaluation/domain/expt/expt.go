@@ -670,6 +670,8 @@ const (
 	FieldType_UpdatedBy              FieldType = 72
 	FieldType_CronActivate           FieldType = 73
 	FieldType_TriggerType            FieldType = 74
+	// 按实验自身 ID(experiment.id 主键)过滤, value 为 expt_id 列表
+	FieldType_ExptID FieldType = 75
 )
 
 func (p FieldType) String() string {
@@ -746,6 +748,8 @@ func (p FieldType) String() string {
 		return "CronActivate"
 	case FieldType_TriggerType:
 		return "TriggerType"
+	case FieldType_ExptID:
+		return "ExptID"
 	}
 	return "<UNSET>"
 }
@@ -824,6 +828,8 @@ func FieldTypeFromString(s string) (FieldType, error) {
 		return FieldType_CronActivate, nil
 	case "TriggerType":
 		return FieldType_TriggerType, nil
+	case "ExptID":
+		return FieldType_ExptID, nil
 	}
 	return FieldType(0), fmt.Errorf("not a valid FieldType string")
 }

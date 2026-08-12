@@ -377,3 +377,65 @@ func TestExptTemplateDAOImpl_List_SQLShapes(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
+
+func newExptDryRunSQL(t *testing.T, conds []func(tx *gorm.DB) *gorm.DB) string {
+	t.Helper()
+
+	sqlDB, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer func() { _ = sqlDB.Close() }()
+
+	gormDB, err := gorm.Open(mysql.New(mysql.Config{
+		Conn:                      sqlDB,
+		SkipInitializeWithVersion: true,
+	}), &gorm.Config{DryRun: true})
+	if err != nil {
+		t.Fatalf("failed to open gorm db: %v", err)
+	}
+
+	tx := gormDB.Model(&model.Experiment{})
+	for _, cond := range conds {
+		tx = cond(tx)
+	}
+	tx = tx.Find(&[]model.Experiment{})
+	return tx.Statement.SQL.String()
+}
+
+func TestExptConds_ExptIDs(t *testing.T) {
+	t.Parallel()
+
+	dao := &exptDAOImpl{}
+
+	t.Run("includes renders id IN", func(t *testing.T) {
+		conds, ok := dao.toConditions(&entity.ExptListFilter{
+			Includes: &entity.ExptFilterFields{ExptIDs: []int64{1, 2}},
+		}, nil)
+		assert.True(t, ok)
+		sql := newExptDryRunSQL(t, conds)
+		assert.Contains(t, sql, "id IN (?")
+	})
+
+	t.Run("excludes renders id NOT IN", func(t *testing.T) {
+		conds, ok := dao.toConditions(&entity.ExptListFilter{
+			Excludes: &entity.ExptFilterFields{ExptIDs: []int64{3}},
+		}, nil)
+		assert.True(t, ok)
+		sql := newExptDryRunSQL(t, conds)
+		assert.Contains(t, sql, "id NOT IN (?")
+	})
+
+	t.Run("stacking ExptIDs with status produces both where clauses", func(t *testing.T) {
+		conds, ok := dao.toConditions(&entity.ExptListFilter{
+			Includes: &entity.ExptFilterFields{
+				ExptIDs: []int64{1, 2},
+				Status:  []int64{3},
+			},
+		}, nil)
+		assert.True(t, ok)
+		sql := newExptDryRunSQL(t, conds)
+		assert.Contains(t, sql, "id IN (?")
+		assert.Contains(t, sql, "status IN (?")
+	})
+}

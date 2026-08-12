@@ -559,3 +559,8 @@ func TestExptTurnResultFilterAccelerator_HasFilters_EvalTargetMetricsFilters(t *
 		})
 	}
 }
+
+func TestExptFilterFields_IsValid_ExptIDs(t *testing.T) {
+	assert.True(t, (&ExptFilterFields{ExptIDs: []int64{1, 2, 3}}).IsValid())
+	assert.False(t, (&ExptFilterFields{ExptIDs: []int64{-1}}).IsValid())
+}

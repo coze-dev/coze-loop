@@ -437,6 +437,8 @@ type ExptFilterFields struct {
 	SourceType      []int64
 	SourceID        []string
 	ExptTemplateIDs []int64
+	// ExptIDs 对应表字段 id，按实验自身主键 ID 列表过滤（IN/NOT IN）
+	ExptIDs []int64
 	// TriggerType 对应表字段 trigger_type，多值 IN 筛选（如 manual,openapi）
 	TriggerType []string
 }
@@ -445,7 +447,7 @@ func (e *ExptFilterFields) IsValid() bool {
 	if e == nil {
 		return true
 	}
-	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptTemplateIDs} {
+	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptTemplateIDs, e.ExptIDs} {
 		for _, item := range slice {
 			if item < 0 {
 				return false
