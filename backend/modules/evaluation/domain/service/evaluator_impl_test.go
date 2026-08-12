@@ -4900,6 +4900,40 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_UsesTerminalCAS(t *tes
 	assert.Equal(t, entity.ReportEvaluatorResultConflict, outcome)
 }
 
+func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_ClampsFallbackDurationToZero(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	s := &EvaluatorServiceImpl{evaluatorRecordRepo: recordRepo}
+	futureCreatedAt := time.Now().Add(time.Second).UnixMilli()
+
+	recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{
+		ID:      100,
+		SpaceID: 2,
+		Status:  entity.EvaluatorRunStatusAsyncInvoking,
+		BaseInfo: &entity.BaseInfo{
+			CreatedAt: gptr.Of(futureCreatedAt),
+		},
+	}, nil)
+	recordRepo.EXPECT().CompareAndSwapEvaluatorRecordResult(gomock.Any(), int64(100), int64(2), entity.EvaluatorRunStatusAsyncInvoking, entity.EvaluatorRunStatusSuccess, gomock.Any()).DoAndReturn(
+		func(_ context.Context, _, _ int64, _, _ entity.EvaluatorRunStatus, out *entity.EvaluatorOutputData) (bool, error) {
+			require.NotNil(t, out)
+			assert.Zero(t, out.TimeConsumingMS)
+			return true, nil
+		},
+	)
+
+	outcome, err := s.ReportEvaluatorInvokeResult(context.Background(), &entity.ReportEvaluatorRecordParam{
+		SpaceID:    2,
+		RecordID:   100,
+		Status:     entity.EvaluatorRunStatusSuccess,
+		OutputData: &entity.EvaluatorOutputData{},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, entity.ReportEvaluatorResultApplied, outcome)
+}
+
 func TestEvaluatorServiceImpl_ArmEvaluatorResume(t *testing.T) {
 	t.Parallel()
 

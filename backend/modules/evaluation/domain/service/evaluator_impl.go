@@ -1209,7 +1209,9 @@ func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, 
 		mergedOutputData = &entity.EvaluatorOutputData{}
 	}
 	if mergedOutputData.TimeConsumingMS == 0 && existingRecord.BaseInfo != nil && existingRecord.BaseInfo.CreatedAt != nil {
-		mergedOutputData.TimeConsumingMS = time.Now().UnixMilli() - gptr.Indirect(existingRecord.BaseInfo.CreatedAt)
+		if elapsedMS := time.Now().UnixMilli() - gptr.Indirect(existingRecord.BaseInfo.CreatedAt); elapsedMS > 0 {
+			mergedOutputData.TimeConsumingMS = elapsedMS
+		}
 	}
 	if existingRecord.EvaluatorOutputData != nil && existingRecord.EvaluatorOutputData.Ext != nil {
 		if mergedOutputData.Ext == nil {
