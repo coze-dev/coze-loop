@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -1223,6 +1224,99 @@ func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsAsyncEvaluatorAfterSave(
 		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
 	}}}
 	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmingHasIndependentTimeoutBudget(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+
+	var persistDeadline time.Time
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ []*entity.ExptTurnResultRunLog) error {
+			var ok bool
+			persistDeadline, ok = ctx.Deadline()
+			require.True(t, ok)
+			time.Sleep(20 * time.Millisecond)
+			return nil
+		},
+	)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).DoAndReturn(
+		func(ctx context.Context, _ int64) error {
+			resumeDeadline, ok := ctx.Deadline()
+			require.True(t, ok)
+			assert.True(t, resumeDeadline.After(persistDeadline), "arming must not consume the turn-log persistence timeout budget")
+			return nil
+		},
+	)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsPendingEvaluatorsConcurrently(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+
+	secondStarted := make(chan struct{})
+	firstObservedSecond := make(chan bool, 1)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).DoAndReturn(
+		func(context.Context, int64) error {
+			select {
+			case <-secondStarted:
+				firstObservedSecond <- true
+			case <-time.After(time.Second):
+				firstObservedSecond <- false
+			}
+			return nil
+		},
+	)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(200)).DoAndReturn(
+		func(context.Context, int64) error {
+			close(secondStarted)
+			return nil
+		},
+	)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{
+		{ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+		{ID: 200, EvaluatorVersionID: 201, Status: entity.EvaluatorRunStatusAsyncInvoking},
+	}}
+
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+	require.True(t, <-firstObservedSecond, "one slow arming operation must not delay the other pending evaluators")
 }
 
 func TestExptItemEvalCtxExecutor_storeTurnRunResult_DoesNotArmWhenSaveFails(t *testing.T) {

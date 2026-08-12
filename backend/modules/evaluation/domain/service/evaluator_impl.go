@@ -1247,7 +1247,25 @@ func (e *EvaluatorServiceImpl) ArmEvaluatorResume(ctx context.Context, recordID 
 		return errorx.New("eval async repo is nil")
 	}
 	asyncCtxKey := fmt.Sprintf("evaluator:%d", recordID)
-	actx, err := e.evalAsyncRepo.MarkEvalAsyncResumeReady(ctx, asyncCtxKey)
+	var (
+		actx *entity.EvalAsyncCtx
+		err  error
+	)
+	for _, delay := range []time.Duration{0, 50 * time.Millisecond, 100 * time.Millisecond} {
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return ctx.Err()
+			case <-timer.C:
+			}
+		}
+		actx, err = e.evalAsyncRepo.MarkEvalAsyncResumeReady(ctx, asyncCtxKey)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
 		return err
 	}

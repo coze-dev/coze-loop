@@ -3646,6 +3646,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	if outcome == entity.ReportEvaluatorResultConflict {
 		return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 	}
+	var resumeErr error
 	if actx.Event != nil {
 		if !actx.ResumeReady {
 			latestCtx, ctxErr := e.asyncRepo.GetEvalAsyncCtxStrong(ctx, asyncCtxKey)
@@ -3656,7 +3657,9 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 				actx = latestCtx
 			}
 		}
-		if actx.ResumeReady {
+		if !actx.ResumeReady {
+			resumeErr = errorx.New("evaluator resume is not ready, invoke_id: %v", req.GetInvokeID())
+		} else {
 			if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
 				event.AsyncEvaluatorReportTrigger = true
 			}); err != nil {
@@ -3681,6 +3684,9 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 				req.GetInvokeID(), actx.CallbackURL, derr)
 			// 不返回错误：回调失败不影响运行时回报接口成功
 		}
+	}
+	if resumeErr != nil {
+		return nil, resumeErr
 	}
 
 	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil

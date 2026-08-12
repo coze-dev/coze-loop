@@ -4963,6 +4963,23 @@ func TestEvaluatorServiceImpl_ArmEvaluatorResume_RetriesPublish(t *testing.T) {
 	require.NoError(t, s.ArmEvaluatorResume(context.Background(), 100))
 }
 
+func TestEvaluatorServiceImpl_ArmEvaluatorResume_RetriesResumeReadyMark(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	recordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	event := &entity.ExptItemEvalEvent{ExptID: 1}
+	gomock.InOrder(
+		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(nil, errors.New("redis unavailable")),
+		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(&entity.EvalAsyncCtx{Event: event, ResumeReady: true}, nil),
+	)
+	recordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil)
+
+	s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo, evaluatorRecordRepo: recordRepo}
+	require.NoError(t, s.ArmEvaluatorResume(context.Background(), 100))
+}
+
 func TestEvaluatorServiceImpl_ArmEvaluatorResume_Errors(t *testing.T) {
 	t.Parallel()
 
@@ -4976,7 +4993,7 @@ func TestEvaluatorServiceImpl_ArmEvaluatorResume_Errors(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
-		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(nil, errors.New("redis failed"))
+		asyncRepo.EXPECT().MarkEvalAsyncResumeReady(gomock.Any(), "evaluator:100").Return(nil, errors.New("redis failed")).Times(3)
 		s := &EvaluatorServiceImpl{evalAsyncRepo: asyncRepo}
 		require.Error(t, s.ArmEvaluatorResume(context.Background(), 100))
 	})

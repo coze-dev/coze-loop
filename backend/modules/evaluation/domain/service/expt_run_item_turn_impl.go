@@ -113,7 +113,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 
 	tr := etec.ExptTurnRunResult.GetTargetResult()
 
-	if etec.Event.AsyncReportTrigger {
+	if etec.Event.AsyncReportTrigger || etec.Event.AsyncEvaluatorReportTrigger {
 		etec.Event.WithCtxTargetCalled(ctx)
 		return tr, nil
 	}
@@ -137,7 +137,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 }
 
 func (e *DefaultExptTurnEvaluationImpl) validateEvalTargetCtx(etec *entity.ExptTurnEvalCtx) error {
-	if etec.Event.AsyncReportTrigger && etec.ExptTurnRunResult.GetTargetResult() == nil {
+	if (etec.Event.AsyncReportTrigger || etec.Event.AsyncEvaluatorReportTrigger) && etec.ExptTurnRunResult.GetTargetResult() == nil {
 		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result must not be nil in async reported event"))
 	}
 	return nil

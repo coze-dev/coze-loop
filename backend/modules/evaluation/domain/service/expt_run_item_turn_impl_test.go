@@ -893,6 +893,74 @@ func TestDefaultExptTurnEvaluationImpl_CallTarget_AsyncReport(t *testing.T) {
 	}
 }
 
+func TestDefaultExptTurnEvaluationImpl_CallTarget_AsyncEvaluatorReportReusesTarget(t *testing.T) {
+	t.Parallel()
+
+	for _, runMode := range []entity.ExptRunMode{
+		entity.EvaluationModeSubmit,
+		entity.EvaluationModeRetryAll,
+		entity.EvaluationModeRetryItems,
+	} {
+		runMode := runMode
+		t.Run(fmt.Sprintf("run_mode_%d", runMode), func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			benefitSvc := benefitmocks.NewMockIBenefitService(ctrl)
+			targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+			benefitSvc.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Times(0)
+			targetSvc.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			targetSvc.EXPECT().AsyncExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+			service := &DefaultExptTurnEvaluationImpl{benefitService: benefitSvc, evalTargetService: targetSvc}
+			status := entity.EvalTargetRunStatusSuccess
+			target := &entity.EvalTargetRecord{ID: 101, Status: &status}
+			etec := &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Expt: &entity.Experiment{ID: 1, TargetVersionID: 1},
+					Event: &entity.ExptItemEvalEvent{
+						ExptRunMode:                 runMode,
+						RetryTimes:                  0,
+						AsyncEvaluatorReportTrigger: true,
+						Session:                     &entity.Session{UserID: "u"},
+					},
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{TargetResult: target},
+			}
+
+			got, err := service.CallTarget(context.Background(), etec)
+
+			require.NoError(t, err)
+			require.Same(t, target, got)
+		})
+	}
+}
+
+func TestDefaultExptTurnEvaluationImpl_CallTarget_AsyncEvaluatorReportRequiresTarget(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	benefitSvc := benefitmocks.NewMockIBenefitService(ctrl)
+	targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	benefitSvc.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Times(0)
+	targetSvc.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	targetSvc.EXPECT().AsyncExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	service := &DefaultExptTurnEvaluationImpl{benefitService: benefitSvc, evalTargetService: targetSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:  &entity.Experiment{ID: 1, TargetVersionID: 1},
+			Event: &entity.ExptItemEvalEvent{AsyncEvaluatorReportTrigger: true, Session: &entity.Session{UserID: "u"}},
+		},
+		ExptTurnRunResult: &entity.ExptTurnRunResult{},
+	}
+
+	got, err := service.CallTarget(context.Background(), etec)
+
+	require.Error(t, err)
+	require.Nil(t, got)
+}
+
 func TestDefaultExptTurnEvaluationImpl_CallTarget_ExistedRecord_Status(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -5069,20 +5137,26 @@ func TestDefaultExptTurnEvaluationImpl_AsyncTargetCallbackRunsMixedEvaluators(t 
 		}},
 	}
 
-	newEvaluator := func(versionID int64, async bool) *entity.Evaluator {
-		if async {
-			code := fmt.Sprintf("async-%d", versionID)
-			return &entity.Evaluator{
-				ID: versionID, EvaluatorType: entity.EvaluatorTypeCustomRPC,
-				CustomRPCEvaluatorVersion: &entity.CustomRPCEvaluatorVersion{
-					ID: versionID, EvaluatorID: versionID, ProviderEvaluatorCode: &code,
-					AccessProtocol: entity.EvaluatorAccessProtocolRPC, IsAsync: true,
-				},
-			}
-		}
+	newSyncEvaluator := func(versionID int64) *entity.Evaluator {
 		return &entity.Evaluator{
 			ID: versionID, EvaluatorType: entity.EvaluatorTypePrompt,
 			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: versionID},
+		}
+	}
+	newAsyncCustomRPCEvaluator := func(versionID int64) *entity.Evaluator {
+		code := fmt.Sprintf("async-%d", versionID)
+		return &entity.Evaluator{
+			ID: versionID, EvaluatorType: entity.EvaluatorTypeCustomRPC,
+			CustomRPCEvaluatorVersion: &entity.CustomRPCEvaluatorVersion{
+				ID: versionID, EvaluatorID: versionID, ProviderEvaluatorCode: &code,
+				AccessProtocol: entity.EvaluatorAccessProtocolRPC, IsAsync: true,
+			},
+		}
+	}
+	newAgentEvaluator := func(versionID int64) *entity.Evaluator {
+		return &entity.Evaluator{
+			ID: versionID, EvaluatorType: entity.EvaluatorTypeAgent,
+			AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{ID: versionID, EvaluatorID: versionID},
 		}
 	}
 	newConf := func(versionID int64) *entity.EvaluatorConf {
@@ -5097,10 +5171,12 @@ func TestDefaultExptTurnEvaluationImpl_AsyncTargetCallbackRunsMixedEvaluators(t 
 	}
 
 	syncVersions := map[int64]struct{}{101: {}, 102: {}}
+	agentVersions := map[int64]struct{}{201: {}}
+	asyncCustomRPCVersions := map[int64]struct{}{202: {}, 203: {}}
 	asyncVersions := map[int64]struct{}{201: {}, 202: {}, 203: {}}
 	allEvaluators := []*entity.Evaluator{
-		newEvaluator(101, false), newEvaluator(102, false),
-		newEvaluator(201, true), newEvaluator(202, true), newEvaluator(203, true),
+		newSyncEvaluator(101), newSyncEvaluator(102),
+		newAgentEvaluator(201), newAsyncCustomRPCEvaluator(202), newAsyncCustomRPCEvaluator(203),
 	}
 	allConfs := []*entity.EvaluatorConf{
 		newConf(101), newConf(102), newConf(201), newConf(202), newConf(203),
@@ -5160,6 +5236,9 @@ func TestDefaultExptTurnEvaluationImpl_AsyncTargetCallbackRunsMixedEvaluators(t 
 			mu.Unlock()
 			_, ok := asyncVersions[req.EvaluatorVersionID]
 			require.True(t, ok, "unexpected async evaluator %d", req.EvaluatorVersionID)
+			_, isAgent := agentVersions[req.EvaluatorVersionID]
+			_, isCustomRPC := asyncCustomRPCVersions[req.EvaluatorVersionID]
+			require.True(t, isAgent || isCustomRPC, "async evaluator %d must be Agent or CustomRPC", req.EvaluatorVersionID)
 			require.Equal(t, "ppe_trae_work_async_evaluator", gptr.Indirect(req.EvaluatorRunConf.Env))
 			require.NotNil(t, req.AsyncCtx)
 			require.Same(t, event, req.AsyncCtx.Event)
