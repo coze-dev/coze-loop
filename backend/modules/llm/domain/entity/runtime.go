@@ -93,6 +93,7 @@ type ChatMessagePart struct {
 	Type     ChatMessagePartType  `json:"type"`
 	Text     string               `json:"text"`
 	ImageURL *ChatMessageImageURL `json:"image_url"`
+	VideoURL *ChatMessageVideoURL `json:"video_url"`
 }
 
 func (p *ChatMessagePart) IsMultiModal() bool {
@@ -127,6 +128,28 @@ type ChatMessageImageURL struct {
 
 	// MIMEType is the mime type of the image, eg. "image/png".
 	MIMEType string `json:"mime_type,omitempty"`
+}
+
+type ChatMessageVideoURL struct {
+	URL      string          `json:"url,omitempty"`
+	Detail   *VideoURLDetail `json:"detail,omitempty"`
+	MIMEType string          `json:"mime_type,omitempty"`
+}
+
+type VideoURLDetail struct {
+	FPS float64 `json:"fps,omitempty"`
+}
+
+func (m *Message) HasVideoContent() bool {
+	if m == nil {
+		return false
+	}
+	for _, part := range m.MultiModalContent {
+		if part != nil && part.Type == ChatMessagePartTypeVideoURL && part.VideoURL != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // ImageURLDetail is the detail of the image url.
