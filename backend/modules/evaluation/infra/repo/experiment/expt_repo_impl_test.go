@@ -635,3 +635,78 @@ func TestExptRepoImpl_GetEvaluatorRefByExptIDs(t *testing.T) {
 		})
 	}
 }
+
+// TestExptRepoImpl_GetIDsByGroupKey 覆盖 expt_repo_impl.go:202 —— 纯透传层。
+// 核心不变式: repo 层不得改写任何入参（尤其 page/pageSize 不允许被兜成默认值,
+// 默认值只允许存在于 open-API application 层），且 ids/total/error 原样冒泡。
+func TestExptRepoImpl_GetIDsByGroupKey(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo, mockExptDAO, _, _ := newRepo(ctrl)
+	ctx := context.Background()
+
+	type gotArgs struct {
+		spaceID  int64
+		groupKey string
+		page     int32
+		pageSize int32
+		calls    int
+	}
+
+	t.Run("带分页_入参逐字透传给DAO且返回值原样返回", func(t *testing.T) {
+		var got gotArgs
+		wantIDs := []int64{101, 102, 103}
+		mockExptDAO.EXPECT().
+			GetIDsByGroupKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error) {
+				got = gotArgs{spaceID: spaceID, groupKey: groupKey, page: page, pageSize: pageSize, calls: got.calls + 1}
+				return wantIDs, int64(37), nil
+			})
+
+		ids, total, err := repo.GetIDsByGroupKey(ctx, 7590, "gk-repo", 3, 25)
+
+		require.NoError(t, err)
+		assert.Equal(t, 1, got.calls, "必须且只调用一次 DAO")
+		assert.Equal(t, int64(7590), got.spaceID, "spaceID 不得被改写")
+		assert.Equal(t, "gk-repo", got.groupKey, "groupKey 不得被改写")
+		assert.Equal(t, int32(3), got.page, "page 不得被改写")
+		assert.Equal(t, int32(25), got.pageSize, "pageSize 不得被改写")
+		assert.Equal(t, wantIDs, ids, "ids 必须原样返回")
+		assert.Equal(t, int64(37), total, "total 必须原样返回")
+	})
+
+	t.Run("未传分页_零值必须原样下传不得兜默认值", func(t *testing.T) {
+		var got gotArgs
+		mockExptDAO.EXPECT().
+			GetIDsByGroupKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error) {
+				got = gotArgs{spaceID: spaceID, groupKey: groupKey, page: page, pageSize: pageSize, calls: got.calls + 1}
+				return nil, 0, nil
+			})
+
+		ids, total, err := repo.GetIDsByGroupKey(ctx, 8801, "gk-nopage", 0, 0)
+
+		require.NoError(t, err)
+		assert.Equal(t, 1, got.calls)
+		assert.Equal(t, int64(8801), got.spaceID)
+		assert.Equal(t, "gk-nopage", got.groupKey)
+		assert.Zero(t, got.page, "page=0 不得被兜成默认页码(默认值只属于 application 层)")
+		assert.Zero(t, got.pageSize, "pageSize=0 不得被兜成默认页长(默认值只属于 application 层)")
+		assert.Nil(t, ids)
+		assert.Zero(t, total)
+	})
+
+	t.Run("DAO报错_原样冒泡且不吞返回值", func(t *testing.T) {
+		daoErr := errors.New("expt dao get_ids_by_group_key error")
+		mockExptDAO.EXPECT().
+			GetIDsByGroupKey(gomock.Any(), int64(9902), "gk-err", int32(1), int32(10)).
+			Return(nil, int64(0), daoErr)
+
+		ids, total, err := repo.GetIDsByGroupKey(ctx, 9902, "gk-err", 1, 10)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, daoErr, "error 必须原样冒泡, 不得包装或替换")
+		assert.Nil(t, ids)
+		assert.Zero(t, total)
+	})
+}
