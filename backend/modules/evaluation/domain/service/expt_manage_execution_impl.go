@@ -631,7 +631,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 					logs.CtxWarn(ctx, "UpsertExptTurnResultFilter fail after terminateItemTurns, expt_id: %v, err: %v", exptID, err)
 				}
 				// SandboxAgent 评测对象：被取消的 turn 关联的 EvalTargetRecord 走 best-effort 销毁
-				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, exptID, exptRunID, terminatedItemIDs)
+				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, terminatedItemIDs)
 			}
 		default:
 			// **Failed 等其它终态也必须销毁沙箱**。此前清理只挂在 Terminated 一个 case 上, 于是
@@ -651,7 +651,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 					itemIDSet[itemTurnID.ItemID] = true
 				}
 				itemIDs := maps.ToSlice(itemIDSet, func(k int64, v bool) int64 { return k })
-				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, exptID, exptRunID, itemIDs)
+				e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, exptRunID, itemIDs)
 			}
 		}
 	}
@@ -849,7 +849,10 @@ func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, i
 //
 // 沿用 "ForCancelledItems" 这个名字是因为它已被多处引用；实际语义已扩为"所有终态"，
 // 传入的 itemIDs 在 Terminated 分支是被终止的 item、在其它终态分支是未完成的 item。
-func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.Context, spaceID, exptID int64, exptRunID *int64, terminatedItemIDs []int64) {
+//
+// targetSourceSpaceID: 跨空间共享场景下评测对象的来源空间 (Expt.TargetSpaceID, 0=同消费方空间);
+// EvalTargetRecord 落库时 SpaceID = 来源空间, 用消费方 spaceID 查会漏, 沙箱清不掉。
+func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.Context, spaceID, targetSourceSpaceID, exptID int64, exptRunID *int64, terminatedItemIDs []int64) {
 	if e.evalTargetService == nil || exptRunID == nil || *exptRunID <= 0 || len(terminatedItemIDs) == 0 {
 		return
 	}
@@ -872,9 +875,12 @@ func (e *ExptMangerImpl) terminateSandboxExecutesForCancelledItems(ctx context.C
 	for id := range recordIDSet {
 		recordIDs = append(recordIDs, id)
 	}
+	// 跨空间: EvalTargetRecord.SpaceID = 来源空间, TerminateAsyncRecordsAndDestroySandbox 的
+	// List/Version/Destroy 全链路都用它，否则 space 过滤把 record 过滤空、Destroy RPC 发不出。
+	targetSpaceID := resolveLoadSpaceID(spaceID, targetSourceSpaceID)
 	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
-		spaceID,
+		targetSpaceID,
 		recordIDs,
 		int32(errno.AsyncEvalTargetTerminatedCode),
 		"async eval target terminated: experiment cancelled",
