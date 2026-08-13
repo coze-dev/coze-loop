@@ -2248,3 +2248,27 @@ func Test_sendItemComplete_nilMeta(t *testing.T) {
 	svc.sendItemComplete(context.Background(), event, &entity.Experiment{}, item, nil /*evalSetItem*/, 100)
 	assert.Empty(t, stub.events) // meta nil, 跳过, 未 publish
 }
+
+// Test_sendItemComplete_publish 覆盖 publish 成功 / 失败(CtxError 不阻断) 两条路径。
+func Test_sendItemComplete_publish(t *testing.T) {
+	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+	item := &entity.ExptEvalItem{ItemID: 10, State: entity.ItemRunState_Success}
+	evalSetItem := &entity.EvaluationSetItem{ItemID: 10, ItemKey: "k", EvaluationSetID: 70}
+
+	t.Run("publish ok", func(t *testing.T) {
+		stub := &stubItemCompletePublisher{}
+		svc := &ExptSchedulerImpl{itemCompletePublisher: stub}
+		svc.sendItemComplete(context.Background(), event, &entity.Experiment{}, item, evalSetItem, 80)
+		assert.Len(t, stub.events, 1) // 组装并发送一次
+	})
+
+	t.Run("publish fail not blocking", func(t *testing.T) {
+		stub := &stubItemCompletePublisher{err: assert.AnError}
+		svc := &ExptSchedulerImpl{itemCompletePublisher: stub}
+		// 失败仅 CtxError, 不 panic / 不阻断
+		assert.NotPanics(t, func() {
+			svc.sendItemComplete(context.Background(), event, &entity.Experiment{}, item, evalSetItem, 80)
+		})
+		assert.Len(t, stub.events, 1) // 仍尝试发送一次
+	})
+}
