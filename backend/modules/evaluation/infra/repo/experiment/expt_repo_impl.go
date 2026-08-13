@@ -199,8 +199,8 @@ func (e *exptRepoImpl) GetByName(ctx context.Context, name string, spaceID int64
 	return do, true, nil
 }
 
-func (e *exptRepoImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error) {
-	return e.exptDAO.GetIDsByGroupKey(ctx, spaceID, groupKey)
+func (e *exptRepoImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error) {
+	return e.exptDAO.GetIDsByGroupKey(ctx, spaceID, groupKey, page, pageSize)
 }
 
 func (e *exptRepoImpl) ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error) {

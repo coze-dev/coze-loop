@@ -362,3 +362,19 @@ func ReportEvalTargetStepMetric(ctx context.Context, c *app.RequestContext) {
 func ListEvaluationSetTemplatesOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetTemplatesOApi)
 }
+
+// GetExperimentIDsByGroupOApi .
+// @router /v1/loop/evaluation/experiments/group_ids/batch_get [POST]
+func GetExperimentIDsByGroupOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.GetExperimentIDsByGroupOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.GetExperimentIDsByGroupOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

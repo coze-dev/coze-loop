@@ -1549,8 +1549,8 @@ func (e *ExptMangerImpl) MGet(ctx context.Context, exptIDs []int64, spaceID int6
 	return expts, nil
 }
 
-func (e *ExptMangerImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, session *entity.Session) ([]int64, error) {
-	return e.exptRepo.GetIDsByGroupKey(ctx, spaceID, groupKey)
+func (e *ExptMangerImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, page, pageSize int32, session *entity.Session) ([]int64, int64, error) {
+	return e.exptRepo.GetIDsByGroupKey(ctx, spaceID, groupKey, page, pageSize)
 }
 
 // MGetBasicByID 仅查 experiment 单表（PO2DO 传 nil refs，不 join eval_set/target/evaluator），返回基础字段。
