@@ -1602,7 +1602,11 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		// 若首次 Submit 是 Dual (=FornaxTraeEvalDoubleSandbox), 这里就会以错误 tenant 去 Init 已存在的沙箱任务,
 		// 触发 "cannot change tenant of active task"。故 Init 前显式补齐 target。
 		if got.Target == nil || got.Target.EvalTargetVersion == nil {
-			target, err := e.evalTargetService.GetEvalTargetVersion(ctx, req.GetWorkspaceID(), got.TargetVersionID, false)
+			targetSpaceID := req.GetWorkspaceID()
+			if got.TargetSpaceID > 0 {
+				targetSpaceID = got.TargetSpaceID
+			}
+			target, err := e.evalTargetService.GetEvalTargetVersion(ctx, targetSpaceID, got.TargetVersionID, false)
 			if err != nil {
 				return nil, err
 			}
