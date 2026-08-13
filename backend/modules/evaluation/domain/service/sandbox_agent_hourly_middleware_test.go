@@ -108,12 +108,12 @@ func TestNewExptSchedulerSvc_VariadicNotifier(t *testing.T) {
 	defer ctrl.Finish()
 	notifier := svcmocks.NewMockISandboxAgentNotifier(ctrl)
 
-	svc := NewExptSchedulerSvc(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, notifier)
+	svc := NewExptSchedulerSvc(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, notifier)
 	impl, ok := svc.(*ExptSchedulerImpl)
 	assert.True(t, ok)
 	assert.Same(t, notifier, impl.sandboxAgentNotifier)
 
-	svc2 := NewExptSchedulerSvc(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	svc2 := NewExptSchedulerSvc(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	impl2 := svc2.(*ExptSchedulerImpl)
 	assert.Nil(t, impl2.sandboxAgentNotifier)
 }
