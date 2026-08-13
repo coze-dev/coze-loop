@@ -7325,6 +7325,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	validRunID := int64(999)
 	itemRetryNum := 0
 	validTargetVersionID := int64(654)
+	sharedTargetSpaceID := int64(321)
 
 	baseExpt := &entity.Experiment{
 		ID:              validExptID,
@@ -7415,6 +7416,31 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 			// 本用例的 expt 不带 RunModeConfig → 旧链路租户（新旧链路按 run_mode 分流，
 			// 见 dualSandboxTenantByRunMode / entity.IsNewRunModeLink）
 			Tenant: rpc.SandboxTenantFornaxTraeEvalDualSandbox,
+		}).Return(&rpc.SandboxInitResponse{}, nil)
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("shared SandboxAgent retry loads target from source space", func(t *testing.T) {
+		sandboxExpt := *baseExpt
+		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
+		sandboxExpt.TargetSpaceID = sharedTargetSpaceID
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockEvalTargetSvc.EXPECT().GetEvalTargetVersion(gomock.Any(), sharedTargetSpaceID, validTargetVersionID, false).
+			Return(&entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{}}, nil)
+		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
+			TaskID:      strconv.FormatInt(validExptID, 10),
+			Concurrency: sandboxInitConcurrency(nil, false),
+			WorkspaceID: validWorkspaceID,
+			Tenant:      rpc.SandboxTenantDefault,
 		}).Return(&rpc.SandboxInitResponse{}, nil)
 		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
 		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
