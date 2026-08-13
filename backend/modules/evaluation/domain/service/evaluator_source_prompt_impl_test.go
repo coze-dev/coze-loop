@@ -1547,6 +1547,122 @@ func Test_parseContentOutput(t *testing.T) {
 		assert.Equal(t, content, output.EvaluatorResult.Reasoning) // 使用完整输出作为reason
 		assert.Nil(t, output.EvaluatorRunError)
 	})
+
+	t.Run("场景37: score为无数字字符串且reason含数字（策略4跨字段bug回归）", func(t *testing.T) {
+		// Bug回归：原策略4正则 `score[^0-9]*` 的lookahead会跨过整个reason字段值，
+		// 导致 `{"score": "优秀", "reason": "答案3个要点都覆盖了"}` 把reason里的"3"误解析为score（SCORE=3）。
+		// 修复后正则锚定到score字段值内，所有策略失败，函数返回错误，Score保持nil。
+		content := `{"score": "优秀", "reason": "答案3个要点都覆盖了"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 修复前Score被错误解析为3；修复后所有策略失败
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "All parsing strategies failed")
+		assert.Nil(t, output.EvaluatorResult.Score)
+	})
+
+	t.Run("场景38: score为无数字字符串且reason也无数字（本就不可解析）", func(t *testing.T) {
+		// 无数字字符串score在策略1-4全部失败是正确行为。与场景37区分：此处reason也不含数字，
+		// 旧正则在此同样失败——本场景锁定"无数字即失败"的基线，与场景37的"误抓reason数字"形成对照。
+		content := `{"score": "优秀", "reason": "reason only text"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 所有策略失败，函数返回错误
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "All parsing strategies failed")
+		assert.Nil(t, output.EvaluatorResult.Score)
+	})
+
+	t.Run("场景39: score字符串值内含单位（90分→90，策略4值内数字）", func(t *testing.T) {
+		// 守卫：锚定score值内数字不能过度限制——值内数字+单位后缀仍需解析。
+		content := `{"score": "90分", "reason": "回答正确"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: score值内数字被正确提取，reason正常提取
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 90.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, "回答正确", output.EvaluatorResult.Reasoning)
+		assert.Nil(t, output.EvaluatorRunError)
+	})
+
+	t.Run("场景40: reason值内含score: N子串（跨字段leak回归，审查发现）", func(t *testing.T) {
+		// 对抗性审查发现的第二类leak：reason值内若含字面 `score: N`（如 "请用score: 3作为答案"），
+		// 旧正则的lookahead仍会跨到reason里，把3误解析为score。新正则锚定score键位置：
+		// 带引号 `"score"` 键必须在内容开头或 `{`/`,` 后，裸 score 只能在内容开头——
+		// reason 字符串值内的 `score:` 子串（前有普通字符）永不匹配。
+		content := `{"score": "优秀", "reason": "请用score: 3作为答案"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 修复前Score=3（静默错误数据）；修复后所有策略失败，Score保持nil
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "All parsing strategies failed")
+		assert.Nil(t, output.EvaluatorResult.Score)
+	})
+
+	t.Run("场景41: score字符串值内中文前缀（得分8分→8，值内数字保留）", func(t *testing.T) {
+		// 守卫：键位锚定+`[^"]*?` 惰性匹配保留值内非数字前缀（中文单位），
+		// 被 `"` 边界约束不会跨到reason字段——中文前缀值仍能正确解析。
+		content := `{"score": "得分8分", "reason": "回答正确"}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 值内数字被提取，reason正常提取
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 8.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, "回答正确", output.EvaluatorResult.Reasoning)
+		assert.Nil(t, output.EvaluatorRunError)
+	})
+
+	t.Run("场景42: 策略4裸键+负数（-0.3保留符号，旧正则丢符号）", func(t *testing.T) {
+		// 守卫：策略4裸键路径下，`[+-]?` 保留显式符号。旧正则 `score[^0-9]*` 会把 `: -` 一并跨过，
+		// 把 -0.3 误解析为 +0.3——新正则修复了这一潜在bug，此处锁定。
+		content := `score: -0.3, reason: "negative score"`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 符号保留，reason通过传统方式提取
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, -0.3, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, "negative score", output.EvaluatorResult.Reasoning)
+		assert.Nil(t, output.EvaluatorRunError)
+	})
 }
 
 // TestEvaluatorSourcePromptServiceImpl_Run_DisableTracing 测试追踪控制核心逻辑
