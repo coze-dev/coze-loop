@@ -29,6 +29,7 @@ import (
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 // newTestExptManager is defined in expt_manage_impl_test.go
@@ -3799,5 +3800,108 @@ func TestExptMangerImpl_emitSandboxAgentExperimentFinished(t *testing.T) {
 			assert.False(t, endAt.Before(before))
 		})
 		mgr.emitSandboxAgentExperimentFinished(ctx, expt, entity.ExptStatus_Success, time.Time{})
+	})
+}
+
+// TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace 覆盖实验取消 / 终态时
+// 沙箱销毁传给 TerminateAsyncRecordsAndDestroySandbox 的 spaceID 解析：
+//   - targetSourceSpaceID > 0 → 用来源空间 (跨空间共享评测对象)
+//   - targetSourceSpaceID = 0 → 回退到消费方 spaceID (同空间/老数据)
+//   - 早退分支: evalTargetService = nil / exptRunID = nil or <=0 / len(itemIDs) = 0 均不发 RPC
+//   - record 全空 / MGet 出错 亦不发 RPC
+func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *testing.T) {
+	ctx := context.Background()
+	exptID := int64(1)
+	exptRunID := gptr.Of[int64](2)
+	consumerSpaceID := int64(3)
+	itemIDs := []int64{10}
+
+	t.Run("targetSourceSpaceID>0 → 用来源空间 (99)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+			EXPECT().MGetItemTurnRunLogs(ctx, exptID, *exptRunID, itemIDs, consumerSpaceID).
+			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
+		mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+			EXPECT().TerminateAsyncRecordsAndDestroySandbox(
+				gomock.Any(), int64(99), []int64{500}, int32(errno.AsyncEvalTargetTerminatedCode),
+				gomock.Any(), false,
+			).Times(1)
+
+		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
+	})
+
+	t.Run("targetSourceSpaceID=0 → 回退到消费方 (3)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+			EXPECT().MGetItemTurnRunLogs(ctx, exptID, *exptRunID, itemIDs, consumerSpaceID).
+			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
+		mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+			EXPECT().TerminateAsyncRecordsAndDestroySandbox(
+				gomock.Any(), int64(3), []int64{500}, int32(errno.AsyncEvalTargetTerminatedCode),
+				gomock.Any(), false,
+			).Times(1)
+
+		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 0, exptID, exptRunID, itemIDs)
+	})
+
+	t.Run("evalTargetService=nil → 立即返回, 不查库", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+		mgr.evalTargetService = nil
+		// turnResultRepo 上不 EXPECT 任何调用: gomock.Finish 会校验没有意外调用
+
+		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
+	})
+
+	t.Run("exptRunID=nil / <=0 → 立即返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, nil, itemIDs)
+		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, gptr.Of[int64](0), itemIDs)
+	})
+
+	t.Run("itemIDs 为空 → 立即返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, nil)
+	})
+
+	t.Run("MGetItemTurnRunLogs 出错 → best-effort 静默返回, 不发 Terminate RPC", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+			EXPECT().MGetItemTurnRunLogs(ctx, exptID, *exptRunID, itemIDs, consumerSpaceID).
+			Return(nil, errors.New("db err"))
+		// evalTargetService 上不 EXPECT Terminate: 出错后必须 return
+
+		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
+	})
+
+	t.Run("MGet 返回空 record / TargetResultID<=0 → 不发 Terminate RPC", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+			EXPECT().MGetItemTurnRunLogs(ctx, exptID, *exptRunID, itemIDs, consumerSpaceID).
+			Return([]*entity.ExptTurnResultRunLog{
+				{ItemID: 10, TargetResultID: 0}, // 0 值被过滤
+				nil,                             // nil 被过滤
+			}, nil)
+
+		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
 	})
 }
