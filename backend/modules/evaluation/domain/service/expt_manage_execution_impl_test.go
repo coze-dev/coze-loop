@@ -3826,9 +3826,9 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
 		mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
 			EXPECT().TerminateAsyncRecordsAndDestroySandbox(
-				gomock.Any(), int64(99), []int64{500}, int32(errno.AsyncEvalTargetTerminatedCode),
-				gomock.Any(), false,
-			).Times(1)
+			gomock.Any(), int64(99), []int64{500}, int32(errno.AsyncEvalTargetTerminatedCode),
+			gomock.Any(), false,
+		).Times(1)
 
 		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 99, exptID, exptRunID, itemIDs)
 	})
@@ -3843,9 +3843,9 @@ func TestExptMangerImpl_terminateSandboxExecutesForCancelledItems_CrossSpace(t *
 			Return([]*entity.ExptTurnResultRunLog{{ItemID: 10, TargetResultID: 500}}, nil)
 		mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
 			EXPECT().TerminateAsyncRecordsAndDestroySandbox(
-				gomock.Any(), int64(3), []int64{500}, int32(errno.AsyncEvalTargetTerminatedCode),
-				gomock.Any(), false,
-			).Times(1)
+			gomock.Any(), int64(3), []int64{500}, int32(errno.AsyncEvalTargetTerminatedCode),
+			gomock.Any(), false,
+		).Times(1)
 
 		mgr.terminateSandboxExecutesForCancelledItems(ctx, consumerSpaceID, 0, exptID, exptRunID, itemIDs)
 	})
