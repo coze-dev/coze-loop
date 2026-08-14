@@ -23,7 +23,7 @@ import (
 type EvaluatorRecordDAO interface {
 	CreateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
 	UpdateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
-	UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score float64, outputData string, opts ...db.Option) error
+	UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score *float64, outputData string, opts ...db.Option) error
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...db.Option) (*model.EvaluatorRecord, error)
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorRecord, error)
 	// BatchGetEvaluatorRecordForAggr 聚合专用窄查询: 只 SELECT id, score, status, 不取 input_data/output_data/ext
@@ -72,9 +72,11 @@ func (dao *EvaluatorRecordDAOImpl) UpdateEvaluatorRecord(ctx context.Context, ev
 		Save(evaluatorRecord).Error
 }
 
-func (dao *EvaluatorRecordDAOImpl) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score float64, outputData string, opts ...db.Option) error {
+func (dao *EvaluatorRecordDAOImpl) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score *float64, outputData string, opts ...db.Option) error {
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
+	// score 传 nil 时写 NULL(而非 0): 失败/无有效分数的 record 不应在 score 列留下 0,
+	// 否则聚合窄查询 (status=Success AND score IS NOT NULL) 无法区分"真 0 分"与"无分数", 会把无分数误算进均值/分布。
 	return dbsession.WithContext(ctx).
 		Model(&model.EvaluatorRecord{}).
 		Where("id = ? AND deleted_at IS NULL", recordID).
