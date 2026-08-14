@@ -877,7 +877,13 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		return items, nil, nil
 	}
 
-	terminatedRecordIDs, statusMap := e.evalTargetService.CheckSandboxTerminated(ctx, event.SpaceID, recordIDs)
+	// 跨空间共享: EvalTargetRecord.SpaceID 是来源空间, 用消费方 event.SpaceID 查会漏。
+	var targetSourceSpaceID int64
+	if expt != nil {
+		targetSourceSpaceID = expt.TargetSpaceID
+	}
+	targetSpaceID := resolveLoadSpaceID(event.SpaceID, targetSourceSpaceID)
+	terminatedRecordIDs, statusMap := e.evalTargetService.CheckSandboxTerminated(ctx, targetSpaceID, recordIDs)
 	if len(terminatedRecordIDs) == 0 {
 		return items, nil, nil
 	}
@@ -919,9 +925,10 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		event.ExptID, event.ExptRunID, terminatedItemIDs, firstStatus)
 
 	// 沙箱已经是终态，Destroy 不需要再发 EndCmd，zombieTimeout=false。
+	// targetSpaceID 复用上面 CheckSandboxTerminated 用的来源空间, 保持一致。
 	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
-		event.SpaceID,
+		targetSpaceID,
 		terminatedRecordIDs,
 		int32(errno.SandboxTerminatedBeforeReportCode),
 		fmt.Sprintf("sandbox execute reached terminal state (%s) before result was reported", firstStatus),
@@ -1037,9 +1044,17 @@ func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context
 		return nil
 	}
 
+	// 跨空间共享: EvalTargetRecord 落库时 SpaceID = 评测对象来源空间 (resolveLoadSpaceID 结果),
+	// 若这里仍用 event.SpaceID (消费方) 去查, DAO 的 SpaceID.Eq 过滤会返回空 → Destroy RPC 根本发不出,
+	// 导致沙箱在来源空间空跑到 session TTL 兜底才回收。与 expt_run_item_turn_impl.go:130 保持同一套解析。
+	var targetSourceSpaceID int64
+	if expt != nil {
+		targetSourceSpaceID = expt.TargetSpaceID
+	}
+	targetSpaceID := resolveLoadSpaceID(event.SpaceID, targetSourceSpaceID)
 	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
-		event.SpaceID,
+		targetSpaceID,
 		recordIDs,
 		int32(errno.AsyncEvalTargetZombieTimeoutCode),
 		"async eval target terminated: experiment item exceeded zombie timeout",
