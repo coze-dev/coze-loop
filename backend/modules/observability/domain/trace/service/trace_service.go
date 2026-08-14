@@ -140,6 +140,7 @@ type GetTraceReq struct {
 	Filters      *loop_span.FilterFields
 	Limit        int32
 	PageToken    string
+	TraceScene   loop_span.TraceScene
 }
 
 type GetTraceResp struct {
@@ -176,6 +177,7 @@ type SearchTraceOApiReq struct {
 	WithDetail            bool
 	Filters               *loop_span.FilterFields
 	PageToken             string
+	TraceScene            loop_span.TraceScene
 }
 
 type SearchTraceOApiResp struct {
@@ -641,11 +643,9 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	for _, p := range processors {
-		preAndCurrentSpans, err = p.Transform(ctx, preAndCurrentSpans)
-		if err != nil {
-			return nil, err
-		}
+	preAndCurrentSpans, err = runSpanProcessors(ctx, "ListPreSpan", processors, preAndCurrentSpans)
+	if err != nil {
+		return nil, err
 	}
 
 	// auth check
@@ -908,6 +908,23 @@ func (r *TraceServiceImpl) collectAllSpanIDs(
 	return allSpanIDs
 }
 
+// runSpanProcessors 链式执行 span 查询 processors，并为每个 processor 记录处理耗时日志
+// （scene 标识调用链，如 GetTrace/ListSpans/SearchTraceOApi），便于定位慢 processor。
+func runSpanProcessors(ctx context.Context, scene string, processors []span_processor.Processor, spans loop_span.SpanList) (loop_span.SpanList, error) {
+	for _, p := range processors {
+		start := time.Now()
+		out, err := p.Transform(ctx, spans)
+		cost := time.Since(start)
+		if err != nil {
+			logs.CtxError(ctx, "span processor chain failed, scene=%s, processor=%s, cost=%dms, err=%v", scene, p.GetName(), cost.Milliseconds(), err)
+			return nil, err
+		}
+		logs.CtxInfo(ctx, "span processor chain, scene=%s, processor=%s, cost=%dms, span_num=%d", scene, p.GetName(), cost.Milliseconds(), len(out))
+		spans = out
+	}
+	return spans, nil
+}
+
 // applyProcessors applies span processors to all spans at once
 func (r *TraceServiceImpl) applyProcessors(
 	ctx context.Context,
@@ -924,15 +941,7 @@ func (r *TraceServiceImpl) applyProcessors(
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 
-	processedSpans := spans
-	for _, p := range processors {
-		processedSpans, err = p.Transform(ctx, processedSpans)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return processedSpans, nil
+	return runSpanProcessors(ctx, "applyProcessors", processors, spans)
 }
 
 // buildSpanMap creates a map for quick span lookup by span_id
@@ -1269,6 +1278,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		OmitColumns:     omitColumns,
 		PageToken:       req.PageToken,
 		DescByStartTime: req.PageToken != "" || req.Limit > 0,
+		TraceScene:      req.TraceScene,
 	})
 	r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 	if err != nil {
@@ -1309,11 +1319,9 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	for _, p := range processors {
-		spans, err = p.Transform(ctx, spans)
-		if err != nil {
-			return nil, err
-		}
+	spans, err = runSpanProcessors(ctx, "GetTrace", processors, spans)
+	if err != nil {
+		return nil, err
 	}
 	spans.SortByStartTime(false)
 	return &GetTraceResp{
@@ -1427,11 +1435,9 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	for _, p := range processors {
-		spans, err = p.Transform(ctx, spans)
-		if err != nil {
-			return nil, err
-		}
+	spans, err = runSpanProcessors(ctx, "ListSpans", processors, spans)
+	if err != nil {
+		return nil, err
 	}
 	return &ListSpansResp{
 		Spans:         spans,
@@ -1466,6 +1472,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		OmitColumns:        omitColumns,
 		PageToken:          req.PageToken,
 		DescByStartTime:    true,
+		TraceScene:         req.TraceScene,
 	})
 	if err != nil {
 		return nil, err
@@ -1485,11 +1492,9 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	for _, p := range processors {
-		spans, err = p.Transform(ctx, spans)
-		if err != nil {
-			return nil, err
-		}
+	spans, err = runSpanProcessors(ctx, "SearchTraceOApi", processors, spans)
+	if err != nil {
+		return nil, err
 	}
 	spans.SortByStartTime(false)
 	return &SearchTraceOApiResp{
@@ -1542,11 +1547,9 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	for _, p := range processors {
-		spans, err = p.Transform(ctx, spans)
-		if err != nil {
-			return nil, err
-		}
+	spans, err = runSpanProcessors(ctx, "ListSpansOApi", processors, spans)
+	if err != nil {
+		return nil, err
 	}
 	return &ListSpansOApiResp{
 		Spans:         spans,
@@ -1583,11 +1586,9 @@ func (r *TraceServiceImpl) ListPreSpanOApi(ctx context.Context, req *ListPreSpan
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	for _, p := range processors {
-		preAndCurrentSpans, err = p.Transform(ctx, preAndCurrentSpans)
-		if err != nil {
-			return nil, err
-		}
+	preAndCurrentSpans, err = runSpanProcessors(ctx, "ListPreSpanOApi", processors, preAndCurrentSpans)
+	if err != nil {
+		return nil, err
 	}
 
 	// auth check
@@ -1698,12 +1699,10 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 				logs.CtxError(ctx, "Fail to build advance info processor, %v", err)
 				return err
 			}
-			for _, p := range processors {
-				spans, err = p.Transform(ctx, spans)
-				if err != nil {
-					logs.CtxWarn(ctx, "Fail to transform span, %v", err)
-					return nil
-				}
+			spans, err = runSpanProcessors(ctx, "GetTracesAdvanceInfo", processors, spans)
+			if err != nil {
+				logs.CtxWarn(ctx, "Fail to transform span, %v", err)
+				return nil
 			}
 			inputTokens, outputTokens, err := spans.Stat(ctx)
 			if err != nil {
@@ -2640,11 +2639,9 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	for _, p := range processors {
-		selectedSpans.Spans, err = p.Transform(ctx, selectedSpans.Spans)
-		if err != nil {
-			return nil, err
-		}
+	selectedSpans.Spans, err = runSpanProcessors(ctx, "GetTrajectories", processors, selectedSpans.Spans)
+	if err != nil {
+		return nil, err
 	}
 
 	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, ptr.Of(r.convertCustomNode(selectedSpans.Spans)), selectFilters, metaRules)
@@ -3008,11 +3005,9 @@ func (r *TraceServiceImpl) ListTraceChat(ctx context.Context, req *ListTraceChat
 	if err != nil {
 		return nil, err
 	}
-	for _, p := range processors {
-		spans, err = p.Transform(ctx, spans)
-		if err != nil {
-			return nil, err
-		}
+	spans, err = runSpanProcessors(ctx, "ListTraceChat", processors, spans)
+	if err != nil {
+		return nil, err
 	}
 
 	messages := r.buildChatMessages(ctx, spans, req.WithoutDetail)
@@ -3085,11 +3080,9 @@ func (r *TraceServiceImpl) ListThreadChat(ctx context.Context, req *ListThreadCh
 	if err != nil {
 		return nil, err
 	}
-	for _, p := range processors {
-		spans, err = p.Transform(ctx, spans)
-		if err != nil {
-			return nil, err
-		}
+	spans, err = runSpanProcessors(ctx, "ListThreadChat", processors, spans)
+	if err != nil {
+		return nil, err
 	}
 
 	messages := r.buildChatMessages(ctx, spans, false)
@@ -3229,11 +3222,9 @@ func (r *TraceServiceImpl) GetThreadStat(ctx context.Context, req *GetThreadStat
 	if err != nil {
 		return nil, err
 	}
-	for _, p := range processors {
-		spans, err = p.Transform(ctx, spans)
-		if err != nil {
-			return nil, err
-		}
+	spans, err = runSpanProcessors(ctx, "GetThreadStat", processors, spans)
+	if err != nil {
+		return nil, err
 	}
 
 	return r.buildThreadStat(ctx, req.ThreadID, spans), nil

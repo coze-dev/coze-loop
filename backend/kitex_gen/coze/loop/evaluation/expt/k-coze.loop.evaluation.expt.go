@@ -6331,6 +6331,34 @@ func (p *GetExperimentIDsByGroupRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -6402,6 +6430,34 @@ func (p *GetExperimentIDsByGroupRequest) FastReadField2(buf []byte) (int, error)
 	return offset, nil
 }
 
+func (p *GetExperimentIDsByGroupRequest) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PageNumber = _field
+	return offset, nil
+}
+
+func (p *GetExperimentIDsByGroupRequest) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PageSize = _field
+	return offset, nil
+}
+
 func (p *GetExperimentIDsByGroupRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -6422,6 +6478,8 @@ func (p *GetExperimentIDsByGroupRequest) FastWriteNocopy(buf []byte, w thrift.No
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -6434,6 +6492,8 @@ func (p *GetExperimentIDsByGroupRequest) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6451,6 +6511,24 @@ func (p *GetExperimentIDsByGroupRequest) fastWriteField2(buf []byte, w thrift.No
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.ExperimentGroupKey)
+	return offset
+}
+
+func (p *GetExperimentIDsByGroupRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPageNumber() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 3)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.PageNumber)
+	}
+	return offset
+}
+
+func (p *GetExperimentIDsByGroupRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPageSize() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 4)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.PageSize)
+	}
 	return offset
 }
 
@@ -6477,6 +6555,24 @@ func (p *GetExperimentIDsByGroupRequest) field2Length() int {
 	return l
 }
 
+func (p *GetExperimentIDsByGroupRequest) field3Length() int {
+	l := 0
+	if p.IsSetPageNumber() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *GetExperimentIDsByGroupRequest) field4Length() int {
+	l := 0
+	if p.IsSetPageSize() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *GetExperimentIDsByGroupRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -6496,6 +6592,16 @@ func (p *GetExperimentIDsByGroupRequest) DeepCopy(s interface{}) error {
 
 	if src.ExperimentGroupKey != "" {
 		p.ExperimentGroupKey = kutils.StringDeepCopy(src.ExperimentGroupKey)
+	}
+
+	if src.PageNumber != nil {
+		tmp := *src.PageNumber
+		p.PageNumber = &tmp
+	}
+
+	if src.PageSize != nil {
+		tmp := *src.PageSize
+		p.PageSize = &tmp
 	}
 
 	var _base *base.Base
@@ -6544,6 +6650,20 @@ func (p *GetExperimentIDsByGroupResponse) FastRead(buf []byte) (int, error) {
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField3(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -6636,6 +6756,20 @@ func (p *GetExperimentIDsByGroupResponse) FastReadField2(buf []byte) (int, error
 	return offset, nil
 }
 
+func (p *GetExperimentIDsByGroupResponse) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Total = _field
+	return offset, nil
+}
+
 func (p *GetExperimentIDsByGroupResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -6655,6 +6789,7 @@ func (p *GetExperimentIDsByGroupResponse) FastWrite(buf []byte) int {
 func (p *GetExperimentIDsByGroupResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -6668,6 +6803,7 @@ func (p *GetExperimentIDsByGroupResponse) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6706,6 +6842,15 @@ func (p *GetExperimentIDsByGroupResponse) fastWriteField2(buf []byte, w thrift.N
 	return offset
 }
 
+func (p *GetExperimentIDsByGroupResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTotal() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 3)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.Total)
+	}
+	return offset
+}
+
 func (p *GetExperimentIDsByGroupResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -6733,6 +6878,15 @@ func (p *GetExperimentIDsByGroupResponse) field2Length() int {
 			_ = v
 			l += v.BLength()
 		}
+	}
+	return l
+}
+
+func (p *GetExperimentIDsByGroupResponse) field3Length() int {
+	l := 0
+	if p.IsSetTotal() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -6772,6 +6926,11 @@ func (p *GetExperimentIDsByGroupResponse) DeepCopy(s interface{}) error {
 
 			p.Experiments = append(p.Experiments, _elem)
 		}
+	}
+
+	if src.Total != nil {
+		tmp := *src.Total
+		p.Total = &tmp
 	}
 
 	var _baseResp *base.BaseResp

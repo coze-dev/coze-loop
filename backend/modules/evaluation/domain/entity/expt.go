@@ -400,8 +400,7 @@ func IsNewRunModeLink(cfg *RunModeConfig) bool {
 
 // RunModeToInt 把 RunMode 字符串映射为 case-file experiment_info.run_mode 的整数枚举。
 //
-// 编号对齐 runtime (fornax_agent_eval_runtime internal/interfaces/platform
-// runModeFromInt, 亦即许强 feat/agent_runtime 分支的建模):
+// 编号必须与评测运行时解析 case-file 的那套编号逐一对应:
 //
 //	1 = single_turn
 //	2 = fixed_script_multi_turn

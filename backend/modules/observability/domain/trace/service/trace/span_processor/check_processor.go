@@ -16,6 +16,10 @@ type CheckProcessor struct {
 	workspaceId int64
 }
 
+func (c *CheckProcessor) GetName() string {
+	return "CheckProcessor"
+}
+
 func (c *CheckProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	workspaceIdStr := strconv.FormatInt(c.workspaceId, 10)
 	for _, span := range spans {

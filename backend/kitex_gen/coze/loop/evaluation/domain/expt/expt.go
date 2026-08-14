@@ -353,8 +353,8 @@ func (p *SourceType) Value() (driver.Value, error) {
 //
 // 因为 entity 侧把 sua_multi_turn 按 sua_mode 折叠成 sua_loop_multi_turn(3) /
 // sua_human_loop_multi_turn(4) 两个独立跑法, goal 被顶到 5。转换单点在
-// entity.RunModeToInt (backend/modules/evaluation/domain/entity/expt.go), runtime 侧对应
-// runModeFromInt (fornax_agent_eval_runtime/internal/interfaces/platform/casefile.go)。
+// entity.RunModeToInt (backend/modules/evaluation/domain/entity/expt.go); 评测运行时侧
+// 按 case-file 那套编号解析, 两侧必须逐一对应。
 // 排查时切勿用本枚举的 4 去对 case-file 日志里的 run_mode=4 —— 那是 sua_human_loop, 不是 goal。
 type ExptRunMode int64
 

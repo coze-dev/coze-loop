@@ -254,3 +254,7 @@ func TestNewChatProcessorFactory(t *testing.T) {
 	_, ok := processor.(*ChatProcessor)
 	assert.True(t, ok)
 }
+
+func TestChatProcessor_GetName(t *testing.T) {
+	assert.Equal(t, "ChatProcessor", (&ChatProcessor{}).GetName())
+}

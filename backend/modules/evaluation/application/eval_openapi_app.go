@@ -1353,6 +1353,8 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		Session:                 actx.Session,
 		EnableExtractTrajectory: actx.EnableExtractTrajectory,
 		AsyncUnixMS:             actx.AsyncUnixMS,
+		// 沙箱 agent 评测对象加白:直接沿用上报方提供的错误文案,不再经过 ExptErrCtrl 归一化。
+		SkipErrMsgConvert: actx.Callee == sandboxAgentAsyncCallee,
 	}); err != nil {
 		return nil, err
 	}
@@ -1375,12 +1377,22 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 
 // debugSandboxExecuteIDs 取调试态本次调用实际创建的 sandbox execution id 列表。
 //
-// 权威来源是 operator 在 AsyncExecute 回传、落在 record output ext 的
-// consts.OutputDataExtKeySandboxExecuteIDs（JSON 字符串数组）：双沙箱一次调用创建多个 execution，
-// id 命名规则（`<invokeID>-agent` / `-orch`）属 operator 实现细节，**平台侧不推断**。
+// 权威来源是 operator 在 AsyncExecute 回传、落在 record output ext 的两个 key：
 //
-// 读不到时退回裸 invokeID —— 那是单沙箱实现的 executeID，也是本函数引入前的唯一行为，
-// 所以退化路径与改动前完全一致，不会因为读 ext 失败而比原来更差。
+//	consts.OutputDataExtKeySandboxExecuteIDs   (JSON 字符串数组, 全部 execution)
+//	entity.SandboxAgentExtKeyExtraExecuteID    (裸字符串, 仅"额外"那个; 主 execution = invokeID)
+//
+// 双沙箱一次调用创建多个 execution，id 命名规则（`<invokeID>-agent` / `-orch`）属 operator
+// 实现细节，**平台侧不推断**。
+//
+// ⚠️ **两个 key 都要认**：双沙箱有两套 operator 实现并存、各写自己的 key（与 service 层
+// sandboxExecuteIDsOf 同一约定）。原来这里只读列表那个 key，于是写 extra key 的那套实现
+// 在调试态**静默漏掉从沙箱** —— 而调试态走不到 service 层的 destroySandboxExecuteIfNeeded
+// （那里按 record.TargetVersionID 查 version 判类型，调试用的 patchy target 从未落库），
+// 本函数是调试态唯一的清理来源，漏了就只能等平台侧 patrol。
+//
+// 两个 key 都读不到时退回裸 invokeID —— 那是单沙箱实现的 executeID，也是本函数引入前的
+// 唯一行为，所以退化路径与改动前完全一致，不会因为读 ext 失败而比原来更差。
 func (e *EvalOpenAPIApplication) debugSandboxExecuteIDs(ctx context.Context, spaceID, invokeID int64) []string {
 	fallback := []string{strconv.FormatInt(invokeID, 10)}
 	record, err := e.targetSvc.GetRecordByID(ctx, spaceID, invokeID)
@@ -1388,20 +1400,35 @@ func (e *EvalOpenAPIApplication) debugSandboxExecuteIDs(ctx context.Context, spa
 		logs.CtxWarn(ctx, "[SandboxDestroy] load debug record for execute ids fail, invoke_id=%d, err=%v", invokeID, err)
 		return fallback
 	}
-	raw := record.EvalTargetOutputData.Ext[consts.OutputDataExtKeySandboxExecuteIDs]
-	if raw == "" {
-		return fallback
-	}
-	var ids []string
-	if err := json.Unmarshal([]byte(raw), &ids); err != nil {
-		logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal debug sandbox execute ids fail, invoke_id=%d, raw=%s, err=%v", invokeID, raw, err)
-		return fallback
-	}
-	out := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if id != "" {
-			out = append(out, id)
+	ext := record.EvalTargetOutputData.Ext
+
+	seen := make(map[string]bool)
+	out := make([]string, 0, 2)
+	add := func(id string) {
+		if id == "" || seen[id] {
+			return
 		}
+		seen[id] = true
+		out = append(out, id)
+	}
+
+	// 形态一：完整列表。
+	if raw := ext[consts.OutputDataExtKeySandboxExecuteIDs]; raw != "" {
+		var ids []string
+		if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+			logs.CtxWarn(ctx, "[SandboxDestroy] unmarshal debug sandbox execute ids fail, invoke_id=%d, raw=%s, err=%v", invokeID, raw, err)
+		} else {
+			for _, id := range ids {
+				add(id)
+			}
+		}
+	}
+
+	// 形态二：主 execution (= invokeID) + 一个额外 id。
+	// 只有该 key 存在时才补主 id —— 否则会给形态一的结果凭空多加一个不存在的裸 id。
+	if extra := ext[entity.SandboxAgentExtKeyExtraExecuteID]; extra != "" {
+		add(strconv.FormatInt(invokeID, 10))
+		add(extra)
 	}
 	if len(out) == 0 {
 		return fallback
@@ -2000,6 +2027,71 @@ func (e *EvalOpenAPIApplication) ListExperimentsOApi(ctx context.Context, req *o
 	}
 	return &openapi.ListExperimentsOApiResponse{
 		Data: &openapi.ListExperimentsOpenAPIData{
+			Experiments: outExpts,
+			Total:       total,
+		},
+	}, nil
+}
+
+// defaultGroupIDsPageSize 是开放面按分组反查的默认分页大小。
+// ★ 这是 100 唯一出现的位置：开放接口不能无界返回，但内部面「不传分页 = 全量」必须逐字保持，
+// 故默认值只在开放面补齐，绝不下沉到内部面 application / domain service / repo / DAO。
+const defaultGroupIDsPageSize = int32(100)
+
+func (e *EvalOpenAPIApplication) GetExperimentIDsByGroupOApi(ctx context.Context, req *openapi.GetExperimentIDsByGroupOApiRequest) (r *openapi.GetExperimentIDsByGroupOApiResponse, err error) {
+	logs.CtxInfo(ctx, "GetExperimentIDsByGroupOApi request: %v", json.Jsonify(req))
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	// 开放面字段全 optional（对齐 ListExperimentsOApi 样板），必须手工校验；顺序在鉴权与查询之前。
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if !req.IsSetWorkspaceID() || req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	groupKey := strings.TrimSpace(req.GetExperimentGroupKey())
+	if groupKey == "" {
+		// 与内部面刻意分叉：内部面空 key 返回空成功（前端切换分组时依赖的容错），
+		// 开放面必须报参数非法 —— 否则调用方无法区分「分组真的没实验」与「参数没传对」。
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_group_key is required"))
+	}
+
+	// ★ 分页默认值：在构造内部 Request 之前补齐。
+	pageNumber := req.GetPageNumber()
+	if !req.IsSetPageNumber() {
+		pageNumber = 1
+	}
+	pageSize := req.GetPageSize()
+	if !req.IsSetPageSize() {
+		pageSize = defaultGroupIDsPageSize
+	}
+
+	innerReq := exptpb.NewGetExperimentIDsByGroupRequest()
+	innerReq.WorkspaceID = req.GetWorkspaceID()
+	innerReq.ExperimentGroupKey = groupKey
+	innerReq.SetPageNumber(gptr.Of(pageNumber))
+	innerReq.SetPageSize(gptr.Of(pageSize))
+	logs.CtxInfo(ctx, "GetExperimentIDsByGroupOApi GetExperimentIDsByGroup innerReq: %v", json.Jsonify(innerReq))
+	resp, err := e.experimentApp.GetExperimentIDsByGroup(ctx, innerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// 跨两套 Experiment 模型（domain / domain_openapi）枚举编号刻意不同，只能过既有转换函数，禁止手写字段赋值。
+	outExpts := make([]*experiment.Experiment, 0, len(resp.GetExperiments()))
+	for _, ex := range resp.GetExperiments() {
+		outExpts = append(outExpts, experiment_convertor.DomainExperimentDTO2OpenAPI(ex))
+	}
+
+	var total *int64
+	if resp.IsSetTotal() {
+		total = gptr.Of(int64(resp.GetTotal()))
+	}
+	return &openapi.GetExperimentIDsByGroupOApiResponse{
+		Data: &openapi.GetExperimentIDsByGroupOpenAPIData{
+			ExptIds:     resp.GetExptIds(),
 			Experiments: outExpts,
 			Total:       total,
 		},

@@ -16,6 +16,10 @@ const noQueryParsed = "no_query_parsed"
 
 type ChatProcessor struct{}
 
+func (c *ChatProcessor) GetName() string {
+	return "ChatProcessor"
+}
+
 func (c *ChatProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	for _, span := range spans {
 		if span == nil {

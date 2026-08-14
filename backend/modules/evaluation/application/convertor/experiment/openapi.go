@@ -414,11 +414,9 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EvaluatorsConcurNum = dto.EvaluatorsConcurNum
 	result.TotalItemCount = dto.TotalItemCount
 	result.EvalSetDetails = DomainEvalSetDetailsDTO2OpenAPI(dto.EvalSetDetails)
-	// ⚠️ run_mode_config 不回显, 是**已知缺口而非漏写**: OpenAPI 读模型
-	// (domain_openapi/experiment.thrift 的 struct Experiment) 压根没有这个字段, 无处可放 ——
-	// 写侧 SubmitExperimentRequest 47 号字段能配跑法, 读侧查不到; 内部 domain Experiment 有
-	// 115 号字段且 runModeConfigDO2DTO 已回显。补齐要一整轮 IDL 变更 + 代码生成, 另行排期。
-	// 缺口详情记在 domain_openapi/experiment.thrift 的 struct Experiment 注释里。
+	// 跑法配置回显 (115): 写侧 SubmitExperimentRequest 能配, 读侧此前无字段, OpenAPI 调用方
+	// 查不到自己配了什么跑法 —— 内部接口一直能回显, 属两套读模型的不对称, 2026-08 补齐。
+	result.RunModeConfig = RunModeConfigDomain2OpenAPI(dto.RunModeConfig)
 	return result
 }
 
@@ -785,6 +783,12 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
 		result.EvaluatorsConcurNum = gptr.Of(int32(*experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum))
+	}
+	// 跑法配置回显 (115)。走 entity → domain → openapi 两跳而不是直接 entity → openapi:
+	// runModeConfigDO2DTO 已经处理了 entity 侧"零值即未配"的判定 (值类型枚举, 空串不回显),
+	// 再套一层就够了; 另写一条 entity→openapi 直转会把那套零值判定复制一份, 两处迟早漂移。
+	if experiment.EvalConf != nil {
+		result.RunModeConfig = RunModeConfigDomain2OpenAPI(runModeConfigDO2DTO(experiment.EvalConf.RunModeConfig))
 	}
 
 	return result
@@ -3140,6 +3144,87 @@ func openAPISuaModeToDomain(s openapiExperiment.SuaMode) (domainExpt.SuaMode, bo
 		return domainExpt.SuaMode_Fixed, true
 	default:
 		return 0, false
+	}
+}
+
+// RunModeConfigDomain2OpenAPI 把内部 domain 的跑法配置转成 OpenAPI 读模型的形态, 供实验详情/
+// 列表回显。它是 OpenAPIRunModeConfigDTO2Domain 的反向。
+//
+// # 为什么必须显式转换而不能直接强转
+//
+// 两套 RunModeConfig 长得很像, 枚举在这一层也恰好一一对应, 但它们是两个**独立的 Go 类型**,
+// 各自的整数编号由自己的 IDL 决定 —— 今天相等是巧合, 不是契约 (domain 侧的 ExptRunMode 注释
+// 明确写了它与 case-file 那套编号刻意不同)。强转会在某一侧改号时静默把一个跑法显示成另一个。
+//
+// domain 侧多出来的两个折叠跑法 (sua_loop / sua_human_loop) 只存在于 entity 枚举, 到不了
+// 这一层 —— entity→domain 的 suaRunModeDO2DTO 已把它们折回 sua_multi_turn, 具体是哪一种由
+// 同结构里的 sua_mode 表达, 信息不丢。
+//
+// 认不出的枚举值**整个字段留空而不是猜一个**: 读路径不该替调用方编造配置, 空值至少能让人
+// 看出"这里没读到", 而错值会被当成真配置。
+func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment.RunModeConfig {
+	if c == nil {
+		return nil
+	}
+	out := &openapiExperiment.RunModeConfig{
+		MaxRunMinutes: c.MaxRunMinutes,
+		MaxTurns:      c.MaxTurns,
+		// SuaModelName 已弃用, 仅调试用; 原样回显便于排查"配了什么"。
+		// sua_model_id 在两套契约里都已移除, 无可回显。
+		SuaModelName:             c.SuaModelName,
+		SuaGoal:                  c.SuaGoal,
+		SuaPersona:               c.SuaPersona,
+		SuaBehavioralConstraints: c.SuaBehavioralConstraints,
+		SuaPeTemplate:            c.SuaPeTemplate,
+	}
+	if c.RunMode != nil {
+		if rm, ok := domainRunModeToOpenAPI(*c.RunMode); ok {
+			out.RunMode = gptr.Of(rm)
+		}
+	}
+	if c.SuaMode != nil {
+		if sm, ok := domainSuaModeToOpenAPI(*c.SuaMode); ok {
+			out.SuaMode = gptr.Of(sm)
+		}
+	}
+	return out
+}
+
+// domainRunModeToOpenAPI 是 openAPIRunModeToDomain 的反向映射。
+//
+// 两套枚举在**这一层**恰好一一对应 (都只有四个对外形态), 所以看起来像可以直接强转 ——
+// 但不能: 它们是两个独立的 Go 类型, 且各自的整数编号由自己的 IDL 决定, 今天相等是巧合而非
+// 契约。domain 侧多出来的两个折叠跑法 (sua_loop / sua_human_loop) 只存在于 entity 枚举,
+// 到不了这一层 (entity→domain 的 suaRunModeDO2DTO 已经把它们折回 sua_multi_turn),
+// 区分靠同结构里的 sua_mode。
+//
+// ok=false 只留给真正认不出的值: 读路径不该替调用方编造配置。
+func domainRunModeToOpenAPI(m domainExpt.ExptRunMode) (openapiExperiment.ExptRunMode, bool) {
+	switch m {
+	case domainExpt.ExptRunMode_SingleTurn:
+		return openapiExperiment.ExptRunModeSingleTurn, true
+	case domainExpt.ExptRunMode_FixedScriptMultiTurn:
+		return openapiExperiment.ExptRunModeFixedScriptMultiTurn, true
+	case domainExpt.ExptRunMode_SuaMultiTurn:
+		return openapiExperiment.ExptRunModeSuaMultiTurn, true
+	case domainExpt.ExptRunMode_Goal:
+		return openapiExperiment.ExptRunModeGoal, true
+	default:
+		return "", false
+	}
+}
+
+// domainSuaModeToOpenAPI 是 openAPISuaModeToDomain 的反向映射。
+func domainSuaModeToOpenAPI(m domainExpt.SuaMode) (openapiExperiment.SuaMode, bool) {
+	switch m {
+	case domainExpt.SuaMode_HumanLoop:
+		return openapiExperiment.SuaModeHumanLoop, true
+	case domainExpt.SuaMode_Loop:
+		return openapiExperiment.SuaModeLoop, true
+	case domainExpt.SuaMode_Fixed:
+		return openapiExperiment.SuaModeFixed, true
+	default:
+		return "", false
 	}
 }
 

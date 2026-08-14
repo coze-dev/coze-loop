@@ -14,6 +14,10 @@ type PlatformProcessor struct {
 	cfg loop_span.SpanTransCfgList
 }
 
+func (p *PlatformProcessor) GetName() string {
+	return "PlatformProcessor"
+}
+
 func (p *PlatformProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	return p.cfg.Transform(ctx, spans)
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	"github.com/mohae/deepcopy"
 
+	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -46,9 +47,19 @@ type EvalTargetServiceImpl struct {
 	// SandboxAgent 评测对象单行执行完成后用于销毁沙箱执行
 	sandboxSchedulerAdapter rpc.ISandboxSchedulerAdapter
 	exptRunLogRepo          repo.IExptRunLogRepo
+
+	// sandboxDestroyRetryBudget 是 destroySandboxExecute 重试的总时间预算；<=0 时取
+	// defaultSandboxDestroyRetryBudget。做成字段而非常量纯为可测：一条"Destroy 恒失败"的用例
+	// 若按线上预算跑就要真等十秒，压到毫秒级才能把"重试到用尽"确定性地断言完。
+	// 生产路径（wire 注入）从不设置它，走默认值。
+	sandboxDestroyRetryBudget time.Duration
 }
 
 const evalTargetRecordPersistTimeout = 5 * time.Second
+
+// defaultSandboxDestroyRetryBudget 是 destroySandboxExecute 重试的默认总时间预算。
+// 十秒的取舍见 destroySandboxExecute 注释「用 RetryTenSeconds 而非更长」。
+const defaultSandboxDestroyRetryBudget = 10 * time.Second
 
 // trajectoryStartTimeBufferMS 抽取 trajectory 时，时间下界额外向前预留的 buffer(1 分钟)，
 // 用于吸收请求发起时间与实际 span 上报时间之间可能的时钟/延迟误差，避免漏掉最早的 span。
@@ -434,6 +445,21 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 
 		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(recordCtx, record, nil)
 		if errCreate != nil {
+			// ★ 这里绝不能静默 return: 裸 return 时 err 仍是进 defer 时的值(执行成功场景下就是 nil),
+			// 上层会拿到「err=nil + record 非 nil」→ 打印 call target success 并把 record.ID 写进
+			// run_log/expt_turn_result.target_result_id, 而 MySQL 里根本没这行(典型触发: 落库前
+			// SaveEvalTargetRecordData 外传 TOS 大字段超时失败, 整条 record 都不落)。
+			// 后果: BatchGetRecordByIDs 查不到 → buildTargetOutput 走 stub 分支 → 该行 target 数据
+			// 永久丢失且全链路无任何错误留痕。异步路径(asyncExecuteTarget)本就是把 create 失败往外抛的,
+			// 同步路径对齐: 落库失败即视为本次执行失败, 交由 item 重试(TOS 抖动多为瞬时)。
+			logs.CtxError(ctx, "create eval target record fail, record will not be persisted, space_id=%v, target_id=%v, target_version_id=%v, record_id=%v, exec_err=%v, err=%v",
+				spaceID, targetID, targetVersionID, record.ID, execErr, errCreate)
+			if execErr != nil {
+				// 执行本身也失败: 保留原始执行错误语义(它才是用户要看的根因), 落库失败仅日志留痕
+				err = execErr
+			} else {
+				err = errCreate
+			}
 			return
 		}
 		err = nil
@@ -600,6 +626,27 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	// 仅 DebugTarget 传入 TruncateLargeContent，其他场景 nil 默认剪裁
 	truncateLargeContent := param.TruncateLargeContent
 	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record, truncateLargeContent); err != nil {
+		// ⚠️ 这里是**唯一的清理机会**：此刻 operator 已成功返回，沙箱确定在跑，ext 也已算好
+		// 落在 outputData.Ext 里；但 record 没落库，而平台侧三条兜底销毁链
+		// (destroySandboxExecuteIfNeeded / TerminateAsyncRecordsAndDestroySandbox /
+		// CheckSandboxTerminated) **全部以"按 recordID 从库里查出 record 再读 ext"为前提** ——
+		// 库里没这行，一条都命中不到。就这么 return 掉，沙箱只能等平台侧 patrol，
+		// 期间并发名额一直不归还 (配额耗尽后新 item 直接撞 601300702 且该错误不重试)。
+		//
+		// 用内存里已有的 record 直接销毁：sandboxExecuteIDsOf 只读 record.EvalTargetOutputData.Ext
+		// 与 record.ID，是纯内存操作、不查库，所以落库失败也拿得到正确的 execute id。
+		// taskID 同理不走 resolveSandboxTaskIDByRunID (它查 expt_run_log，多一跳且可能返回 "")
+		// —— 此刻手上直接有 param.ExperimentID，operator 侧的 taskID 也正是它。
+		//
+		// 类型守卫用手上的 target 直接判，比 destroySandboxExecuteIfNeeded 那种"查库反查
+		// version"更直接可靠 (destroySandboxExecute 自己不检查 target 类型，漏判会把非沙箱
+		// 场景也发一次 Destroy)。
+		if target.EvalTargetType == entity.EvalTargetTypeSandboxAgent {
+			executeIDs := sandboxExecuteIDsOf(ctx, record)
+			logs.CtxError(ctx, "[SandboxDestroy] create eval target record fail, destroying sandbox executes to avoid leak, invoke_id=%d, expt_id=%d, execute_ids=%v, err=%v",
+				record.ID, gptr.Indirect(param.ExperimentID), executeIDs, err)
+			e.destroySandboxExecute(ctx, strconv.FormatInt(gptr.Indirect(param.ExperimentID), 10), spaceID, executeIDs, false)
+		}
 		return nil, callee, err
 	}
 
@@ -864,11 +911,35 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 // mac_vm=taskID+"-macvm", 见 operator asyncExecuteMacVMPlusSandbox / macVMTaskID)。Destroy 是
 // task 级签名, 单 taskID 只能销一个, 另一个泄漏。故这里按 executeID 的 "-macvm" 后缀把 id 分组到
 // 各自的 task, 每组一次 Destroy。非 mac_vm 链路 (单/双沙箱) 全部落在基础 taskID 组, 行为不变。
+//
+// # 为什么要重试
+//
+// 这条路径是**正常完成时的主回收口** (ReportInvokeRecords → destroySandboxExecuteIfNeeded),
+// 但它此前是"一次 RPC + 失败只 warn": 一次网络抖动 (`remote or network error[remote]`) 就等于
+// 沙箱确定性泄漏, 而且**没有任何后续机制会重试** —— record 已被写成终态, 后续 tick 的
+// zombie/sweep 都以 `Status == AsyncInvoking` 为前提, 命中不到它。
+//
+// Destroy 天然幂等: 服务端对不存在/已终态的 executeID 只是不计入 affected_count, 不报错,
+// 所以重复销毁无副作用。这与 Run 路径的顾虑正好相反 (那边重试可能起第二个进程, 必须窄判),
+// 这里重试的唯一代价是多一次 RPC, 而不重试的代价是沙箱一直挂着 + 并发名额永不归还
+// (后续 item 全撞 601300702 且该错误不重试)。
+//
+// 用 RetryTenSeconds 而非更长: 本函数已在独立 goroutine 里, 拖长不阻塞调用方; 但沙箱侧
+// 真的不可用时再久也没用, 十秒足够吸收瞬时抖动。
+//
+// # 为什么重试要挂在 WithoutCancel 的 ctx 上
+//
+// 调用方 (ReportInvokeRecords) 是**请求态**: 它一 return, Hertz/Kitex 就取消请求 ctx。
+// 而本函数刻意异步 (goroutine.Go), 重试窗口 (十秒) 远长于调用方剩余寿命 —— 若直接用入参 ctx,
+// cenk/backoff 的 backOffContext.NextBackOff 见 ctx.Done() 立即返回 Stop, 于是**第一次
+// Destroy 失败后一次都不会重试**, 整个重试形同虚设 (恰是本函数要修的那个泄漏)。
+// 与 ReportInvokeRecords 里落 record 的 persistCtx 同款处置: 剥离取消信号, 保留 logID 等值。
 func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
 	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
 		return
 	}
 	// 按所属 task 分组: "-macvm" 后缀的 execution 属 mac_vm task, 其余属基础 sandbox task。
+	// 每组各自一个带重试的 destroy goroutine，避免单 taskID 只销一个、另一个泄漏。
 	byTask := make(map[string][]string, 2)
 	for _, id := range executeIDs {
 		t := taskID
@@ -877,20 +948,42 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 		}
 		byTask[t] = append(byTask[t], id)
 	}
+	// 先剥离取消信号再交给 goroutine: 见上"为什么重试要挂在 WithoutCancel 的 ctx 上"。
+	destroyCtx := context.WithoutCancel(ctx)
 	for t, ids := range byTask {
 		t, ids := t, ids
-		goroutine.Go(ctx, func() {
-			if _, err := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
-				TaskID:        t,
-				DestroyType:   rpc.SandboxDestroyTypeExecute,
-				ExecuteIDs:    ids,
-				WorkspaceID:   spaceID,
-				ZombieTimeout: zombieTimeout,
-			}); err != nil {
-				logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox execute fail, task_id=%s, execute_ids=%v, err=%v",
-					t, ids, err)
-			}
+		goroutine.Go(destroyCtx, func() {
+			e.destroySandboxExecuteSync(destroyCtx, t, spaceID, ids, zombieTimeout)
 		})
+	}
+}
+
+// destroySandboxExecuteSync 是 destroySandboxExecute 的同步本体（含重试与终局告警）。
+//
+// 拆出来只为可测: 重试逻辑若只能经 goroutine 触发, 测试就必须靠 channel/sleep 去等一个
+// **没有 join 点**的后台 goroutine —— 那正是本次 -race 失败的成因 (等到了第一次 Destroy 就
+// 返回, 后续重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf → panic
+// "Fail in goroutine after ... has completed")。同步入口让"重试到用尽"能被确定性地断言完,
+// 不留悬空 goroutine。
+func (e *EvalTargetServiceImpl) destroySandboxExecuteSync(ctx context.Context, taskID string, spaceID int64, executeIDs []string, zombieTimeout bool) {
+	budget := e.sandboxDestroyRetryBudget
+	if budget <= 0 {
+		budget = defaultSandboxDestroyRetryBudget
+	}
+	if err := backoff.RetryWithElapsedTime(ctx, budget, func() error {
+		_, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
+			TaskID:        taskID,
+			DestroyType:   rpc.SandboxDestroyTypeExecute,
+			ExecuteIDs:    executeIDs,
+			WorkspaceID:   spaceID,
+			ZombieTimeout: zombieTimeout,
+		})
+		return derr
+	}); err != nil {
+		// 重试用尽仍失败 = 沙箱确定性泄漏 + 并发名额不归还, 且没有下一次机会 (见上)。
+		// 故打 Error 而非 Warn: 它需要人介入, 不是"可能有问题"。
+		logs.CtxError(ctx, "[SandboxDestroy] destroy sandbox execute fail after retries, sandboxes may leak, task_id=%s, execute_ids=%v, err=%v",
+			taskID, executeIDs, err)
 	}
 }
 
@@ -1008,7 +1101,9 @@ const sandboxStatusCheckConcurrency = 8
 // 实现要点：
 //   - 只对 SandboxAgent 且仍处于 AsyncInvoking 的 record 发 sandbox.Get；避免在同步/非 sandbox record 上浪费 RPC。
 //   - Get 出错（含开源 stub 的 "not implement" / adapter 未注入）一律 warn + skip 该 record，让 zombie 兜底。
-//   - 只把 Failed / Canceled 视为"结束但没上报"命中；Succeeded 会有毫秒级 in-flight 回调窗口，交给 zombie 或后续 tick 兜底。
+//   - 只把 Failed / Canceled / Finished 视为"结束但没上报"命中；Succeeded 会有毫秒级 in-flight 回调窗口，交给 zombie 或后续 tick 兜底。
+//   - 查哪些 execute id 由 sandboxExecuteIDsOf 决定（与销毁同源），**不按 record.ID 约定推断** ——
+//     否则双沙箱那种"id 带 operator 后缀"的形态整条记录都判不出终态，只能等 3h zombie。
 func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spaceID int64, recordIDs []int64) ([]int64, map[int64]string) {
 	if e.sandboxSchedulerAdapter == nil || len(recordIDs) == 0 {
 		return nil, nil
@@ -1088,12 +1183,21 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 				<-sem
 				wg.Done()
 			}()
-			// 取该 record 本次调用实际创建的全部 sandbox execution id（单沙箱=裸 record.ID；
-			// 双沙箱=-agent/-orch；mac_vm=-orch/-macvm），与 destroy 侧同源（sandboxExecuteIDsOf）。
-			// 早先只查裸 record.ID：单沙箱能命中，但双沙箱/mac_vm 的 execution 全带后缀、裸 id 下无
-			// execution，导致对每个 item 永远 Get 601300702（execution not found），兜底轮询彻底失
-			// 效、实验空转到僵尸兜底。改为遍历所有 execution id，任一进终态即整条命中——与双沙箱
-			// 「配对关系，一挂另一边产出也没意义」的语义一致。
+			// execute id 一律走 sandboxExecuteIDsOf（与销毁同一个来源），**不按约定推断**。
+			//
+			// 这里曾把主沙箱硬编码成 `record.ID`（单沙箱约定），只从 ext 取"额外"那一个。
+			// 后果是双沙箱里"完整列表"那种形态（ext 只有 sandbox_execute_ids、没有 extra key，
+			// 其 id 带 operator 自己的后缀）**整条记录对本巡检完全不可见**：
+			// 主查询拿裸 record.ID 去问，沙箱侧根本没有这个 execution，只回
+			// "execution not found"，按 querySandboxTerminalStatus 的契约返回 (false, _)；
+			// 而 extra key 不存在，从查询直接跳过。于是 record 永远判不出终态，
+			// 这类实验拿不到本巡检的快速兜底，只能等 item 级 zombie 超时（异步默认 3h）。
+			//
+			// 现在与 destroySandboxExecuteIfNeeded / TerminateAsyncRecordsAndDestroySandbox
+			// 共用同一个取值函数（sandboxExecuteIDsOf）：单沙箱=裸 record.ID；双沙箱=-agent/-orch；
+			// mac_vm=-orch/-macvm。"id 怎么拼"只此一处知道，不再在巡检里复制一份约定。
+			//
+			// 任一 execution 进终态就算命中——双沙箱/mac_vm 是配对关系，一边挂了另一边的产出也没意义。
 			executeIDs := sandboxExecuteIDsOf(ctx, r)
 			var anyTerminal bool
 			labelParts := make([]string, 0, len(executeIDs))
@@ -1231,7 +1335,9 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 
 	record.EvalTargetOutputData = param.OutputData
 	record.Status = gptr.Of(param.Status)
-	e.convEvalTargetRunErr(ctx, record)
+	if !param.SkipErrMsgConvert {
+		e.convEvalTargetRunErr(ctx, record)
+	}
 
 	if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, record, nil); err != nil {
 		return err

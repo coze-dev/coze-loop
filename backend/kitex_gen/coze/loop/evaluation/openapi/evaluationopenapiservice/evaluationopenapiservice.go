@@ -209,6 +209,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetExperimentIDsByGroupOApi": kitex.NewMethodInfo(
+		getExperimentIDsByGroupOApiHandler,
+		newEvaluationOpenAPIServiceGetExperimentIDsByGroupOApiArgs,
+		newEvaluationOpenAPIServiceGetExperimentIDsByGroupOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListExperimentResultOApi": kitex.NewMethodInfo(
 		listExperimentResultOApiHandler,
 		newEvaluationOpenAPIServiceListExperimentResultOApiArgs,
@@ -968,6 +975,25 @@ func newEvaluationOpenAPIServiceListExperimentsOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceListExperimentsOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceListExperimentsOApiResult()
+}
+
+func getExperimentIDsByGroupOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetExperimentIDsByGroupOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetExperimentIDsByGroupOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetExperimentIDsByGroupOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceGetExperimentIDsByGroupOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetExperimentIDsByGroupOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceGetExperimentIDsByGroupOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetExperimentIDsByGroupOApiResult()
 }
 
 func listExperimentResultOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1789,6 +1815,16 @@ func (p *kClient) ListExperimentsOApi(ctx context.Context, req *openapi.ListExpe
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceListExperimentsOApiResult
 	if err = p.c.Call(ctx, "ListExperimentsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetExperimentIDsByGroupOApi(ctx context.Context, req *openapi.GetExperimentIDsByGroupOApiRequest) (r *openapi.GetExperimentIDsByGroupOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetExperimentIDsByGroupOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceGetExperimentIDsByGroupOApiResult
+	if err = p.c.Call(ctx, "GetExperimentIDsByGroupOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

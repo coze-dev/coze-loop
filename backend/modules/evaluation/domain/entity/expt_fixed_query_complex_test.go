@@ -24,7 +24,7 @@ const realFixedQueryListJSON = `{
     {"complex_query": {"parts": [{"content_type": "text", "text": "我的宣传渠道是抖音和视频号，先帮我列出 5 个适合短视频科普的选题方向。"}]}},
     {"complex_query": {"parts": [
       {"content_type": "text", "text": "参考这份资料改写。"},
-      {"content_type": "file", "file": {"file_name": "厄尔尼诺防灾.docx", "file_url": "https://tosv.byted.org/obj/fornax-static/a.docx"}}
+      {"content_type": "file", "file": {"file_name": "厄尔尼诺防灾.docx", "file_url": "https://example.com/obj/a.docx"}}
     ]}}
   ]
 }`
@@ -66,7 +66,7 @@ func TestFixedQuery_ComplexQuerySurvivesRoundTrip(t *testing.T) {
 	require.NotNil(t, third[1].File)
 	assert.Equal(t, "file", third[1].ContentType)
 	assert.Equal(t, "厄尔尼诺防灾.docx", third[1].File.FileName)
-	assert.Equal(t, "https://tosv.byted.org/obj/fornax-static/a.docx", third[1].File.FileURL)
+	assert.Equal(t, "https://example.com/obj/a.docx", third[1].File.FileURL)
 
 	// --- 序列化方向: case-file 那一趟 Marshal 后 wire 上不能出现空对象 ---
 	out, err := json.Marshal(&rc)

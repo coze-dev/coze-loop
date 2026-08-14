@@ -186,15 +186,20 @@ struct BatchGetExperimentsResponse {
 }
 
 struct GetExperimentIDsByGroupRequest {
-    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    2: required string experiment_group_key (api.body = 'experiment_group_key', go.tag = 'json:"experiment_group_key"')
+    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required string experiment_group_key (go.tag = 'json:"experiment_group_key"')
+    // 分页（可选）。page_number / page_size 均不传 = 全量返回，与本次变更前行为一致。
+    3: optional i32 page_number
+    4: optional i32 page_size
 
     255: optional base.Base Base
 }
 
 struct GetExperimentIDsByGroupResponse {
-    1: optional list<i64> expt_ids (api.body = 'expt_ids', api.js_conv = 'true', go.tag = 'json:"expt_ids"')
-    2: optional list<expt.Experiment> experiments (api.body = 'experiments', go.tag = 'json:"experiments"')
+    1: optional list<i64> expt_ids (api.js_conv = 'true', go.tag = 'json:"expt_ids"')
+    2: optional list<expt.Experiment> experiments (go.tag = 'json:"experiments"')
+    // 该分组下实验总数，不受当页裁剪影响；未启用分页时等于返回条数
+    3: optional i32 total
 
     255: base.BaseResp BaseResp
 }
@@ -977,9 +982,7 @@ service ExperimentService {
         api.post = '/api/evaluation/v1/experiments/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
-    GetExperimentIDsByGroupResponse GetExperimentIDsByGroup(1: GetExperimentIDsByGroupRequest req) (
-        api.post = '/api/evaluation/v1/experiments/group_ids/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
-    )
+    GetExperimentIDsByGroupResponse GetExperimentIDsByGroup(1: GetExperimentIDsByGroupRequest req)
 
     ListExperimentsResponse ListExperiments(1: ListExperimentsRequest req) (
         api.post = '/api/evaluation/v1/experiments/list', api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'experiment'

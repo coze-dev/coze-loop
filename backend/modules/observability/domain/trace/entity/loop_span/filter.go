@@ -21,6 +21,7 @@ type (
 	FieldType      string
 	PlatformType   string
 	SpanListType   string
+	TraceScene     string
 )
 
 const (
@@ -62,6 +63,9 @@ const (
 	SpanListTypeRootSpan SpanListType = "root_span"
 	SpanListTypeAllSpan  SpanListType = "all_span"
 	SpanListTypeLLMSpan  SpanListType = "llm_span"
+
+	TraceSceneDefault TraceScene = "default"
+	TraceSceneCached  TraceScene = "cached"
 )
 
 var validFieldComb = map[FieldType]map[QueryTypeEnum]bool{

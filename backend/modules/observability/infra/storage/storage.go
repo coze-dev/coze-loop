@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
 type TraceStorageProviderImpl struct{}
@@ -14,7 +15,7 @@ func NewTraceStorageProvider() storage.IStorageProvider {
 	return &TraceStorageProviderImpl{}
 }
 
-func (r *TraceStorageProviderImpl) GetTraceStorage(ctx context.Context, workspaceID string, tenants []string) storage.Storage {
+func (r *TraceStorageProviderImpl) GetTraceStorage(ctx context.Context, workspaceID string, tenants []string, scene loop_span.TraceScene) storage.Storage {
 	return storage.Storage{
 		StorageName: "ck",
 	}

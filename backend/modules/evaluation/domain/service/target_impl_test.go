@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -745,6 +746,103 @@ func TestEvalTargetServiceImpl_ExecuteTarget_PersistsFailRecordAfterContextCance
 	require.NotNil(t, record)
 	assert.Equal(t, int64(9999), record.ID)
 	assert.Equal(t, entity.EvalTargetRunStatusFail, gptr.Indirect(record.Status))
+}
+
+// TestEvalTargetServiceImpl_ExecuteTarget_CreateRecordFailPropagatesErr 回归: record 落库失败必须往外抛。
+// 此前 defer 里 errCreate != nil 是裸 return, err 仍是进 defer 时的 nil → 上层拿到「err=nil + record 非 nil」,
+// 把 record.ID 写进 expt_turn_result.target_result_id, 而 MySQL 里没这行(典型触发: 落库前 TOS 外传大字段超时),
+// 后续 BatchGetRecordByIDs 查不到 → buildTargetOutput 走 stub → target 数据永久丢失且全链路无错误留痕。
+func TestEvalTargetServiceImpl_ExecuteTarget_CreateRecordFailPropagatesErr(t *testing.T) {
+	evalTarget := &entity.EvalTarget{
+		ID:             200,
+		SpaceID:        100,
+		SourceTargetID: "src-id",
+		EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID:                  300,
+			SourceTargetVersion: "v1",
+			InputSchema:         []*entity.ArgsSchema{{Key: gptr.Of("field")}},
+		},
+	}
+	input := &entity.EvalTargetInputData{
+		InputFields: map[string]*entity.Content{
+			"field": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("hello")},
+		},
+	}
+	param := &entity.ExecuteTargetCtx{ExperimentRunID: gptr.Of(int64(555)), ItemID: 777, TurnID: 888}
+
+	tests := []struct {
+		name string
+		// execErr: target 执行本身是否失败
+		execErr     error
+		wantErrCode int32
+	}{
+		{
+			// 执行成功但落库失败: 必须抛落库错误, 绝不能返回 nil err
+			name:        "exec success but create fail",
+			execErr:     nil,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			// 执行失败 + 落库失败: 保留原始执行错误语义(用户要看的根因)
+			name:        "exec fail and create fail",
+			execErr:     errorx.NewByCode(errno.CommonInvalidParamCode),
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+	}
+
+	for _, tc := range tests {
+		tcase := tc
+		t.Run(tcase.name, func(t *testing.T) {
+			ctx := context.Background()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			deps := &evalTargetServiceTestDeps{
+				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
+				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
+				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
+				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+				configer: componentmocks.NewMockIConfiger(ctrl),
+			}
+
+			deps.repo.EXPECT().GetEvalTargetVersion(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.ID).Return(evalTarget, nil)
+			deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+			deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
+			deps.operator.EXPECT().ValidateInput(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.InputSchema, input).Return(nil)
+			deps.operator.EXPECT().Execute(ctx, evalTarget.SpaceID, gomock.Any()).DoAndReturn(
+				func(context.Context, int64, *entity.ExecuteEvalTargetParam) (*entity.EvalTargetOutputData, entity.EvalTargetRunStatus, error) {
+					if tcase.execErr != nil {
+						return nil, entity.EvalTargetRunStatusFail, tcase.execErr
+					}
+					return &entity.EvalTargetOutputData{
+						OutputFields:    map[string]*entity.Content{"answer": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("ok")}},
+						EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 1, OutputTokens: 2},
+					}, entity.EvalTargetRunStatusSuccess, nil
+				})
+			deps.idgen.EXPECT().GenID(gomock.Any()).Return(int64(9999), nil)
+			deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
+
+			svc := &EvalTargetServiceImpl{
+				evalTargetRepo: deps.repo,
+				idgen:          deps.idgen,
+				metric:         deps.metric,
+				typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+					evalTarget.EvalTargetType: deps.operator,
+				},
+				configer: deps.configer,
+			}
+
+			_, err := svc.ExecuteTarget(ctx, evalTarget.SpaceID, evalTarget.ID, evalTarget.EvalTargetVersion.ID, param, input)
+			require.Error(t, err, "落库失败必须往外抛, 否则上层会写下一个不存在的 target_result_id")
+			statusErr, ok := errorx.FromStatusError(err)
+			require.True(t, ok)
+			assert.Equal(t, tcase.wantErrCode, statusErr.Code())
+		})
+	}
 }
 
 func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) {
@@ -2974,19 +3072,75 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
-		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
-		done := make(chan struct{})
-		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).
+		// 重试预算压到毫秒级: 这条用例要断言的是"重试用尽后只记日志不 panic", 按线上
+		// 十秒预算跑要真等十秒。
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, sandboxDestroyRetryBudget: time.Millisecond}
+		var calls int32
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).AnyTimes().
 			DoAndReturn(func(_ context.Context, _ *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
-				close(done)
+				atomic.AddInt32(&calls, 1)
 				return nil, errors.New("boom")
 			})
-		svc.destroySandboxExecute(context.Background(), "T", 9, []string{"e"}, false)
+		// 走同步入口: 原来调异步的 destroySandboxExecute + 只等第一次 Destroy 就返回,
+		// 于是重试落在测试结束之后, 撞 gomock 在已完成的 *testing.T 上 Fatalf ——
+		// -race 下整包 exit=1 却没有任何 --- FAIL 行, 极难定位。同步调用天然无悬空 goroutine。
+		assert.NotPanics(t, func() {
+			svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+		})
+		assert.GreaterOrEqual(t, atomic.LoadInt32(&calls), int32(1), "至少尝试一次 Destroy")
+	})
+
+	// Destroy 瞬时失败后必须真的重试并最终成功 —— 这是加 backoff 的全部目的。
+	// 钉住"重试确实发生": 只断言 err 被吞掉的话, 把重试删掉测试依然绿。
+	t.Run("Destroy 瞬时失败后重试并成功", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, sandboxDestroyRetryBudget: 5 * time.Second}
+		var calls int32
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				if atomic.AddInt32(&calls, 1) == 1 {
+					// 模拟线上那次 `remote or network error[remote]`: 不重试就等于沙箱确定性泄漏。
+					return nil, errors.New("remote or network error[remote]")
+				}
+				assert.Equal(t, []string{"e"}, req.ExecuteIDs)
+				return &rpc.SandboxDestroyResponse{}, nil
+			})
+		svc.destroySandboxExecuteSync(context.Background(), "T", 9, []string{"e"}, false)
+		assert.Equal(t, int32(2), atomic.LoadInt32(&calls), "第一次失败后必须重试一次并成功")
+	})
+
+	// 调用方 ctx 已取消也必须照样销毁: 这条路径挂在请求态 ctx 上, 调用方 return 后 ctx 立即
+	// 被取消, 若沿用它则 backoff 见 ctx.Done() 直接 Stop —— 重试形同虚设, 正是要修的泄漏。
+	t.Run("调用方 ctx 已取消仍照常销毁并重试", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, sandboxDestroyRetryBudget: 5 * time.Second}
+		canceled, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		var calls int32
+		done := make(chan struct{})
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(rpcCtx context.Context, _ *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				// 下发给 adapter 的 ctx 也必须已剥离取消, 否则 RPC 自己会立刻 fail。
+				assert.NoError(t, rpcCtx.Err(), "Destroy 收到的 ctx 不能是已取消的请求 ctx")
+				if atomic.AddInt32(&calls, 1) == 1 {
+					return nil, errors.New("remote or network error[remote]")
+				}
+				close(done)
+				return &rpc.SandboxDestroyResponse{}, nil
+			})
+
+		svc.destroySandboxExecute(canceled, "T", 9, []string{"e"}, false)
 		select {
 		case <-done:
-		case <-time.After(2 * time.Second):
-			t.Fatal("destroy goroutine timeout")
+		case <-time.After(5 * time.Second):
+			t.Fatal("destroy goroutine timeout: ctx 取消后重试被 backoff 提前 Stop 了")
 		}
+		assert.Equal(t, int32(2), atomic.LoadInt32(&calls))
 	})
 }
 

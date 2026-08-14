@@ -1722,20 +1722,26 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 				}
 			}
 		}
+		// ★ 三层 nil 守卫不可省: buildTargetOutput 末尾会为「turn_result 有 target_result_id 但
+		// BatchGetRecordByIDs 未命中 record」的行构造 stub(仅 ID/SpaceID/ItemID/TurnID/Status,
+		// 无 EvalTargetOutputData)。只判 map 命中(ok)会在 stub 行直接 NPE 打挂整个调度器 goroutine
+		// → 实验被 HandleEventErr 置 Failed。stub 行本就没有 target 数据可填, 跳过即可。
 		evalTargetOutput, ok := exptResultBuilder.turnResultID2TargetOutput[exptTurnResult.ID]
-		if ok {
-			for outputFieldKey, outputFieldValue := range evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields {
+		if ok && evalTargetOutput != nil && evalTargetOutput.EvalTargetRecord != nil &&
+			evalTargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
+			outputData := evalTargetOutput.EvalTargetRecord.EvalTargetOutputData
+			for outputFieldKey, outputFieldValue := range outputData.OutputFields {
 				exptTurnResultFilter.EvalTargetData[outputFieldKey] = outputFieldValue.GetText()
 			}
 			// 填充 eval_target_metrics
-			if evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage != nil {
-				usage := evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage
+			if outputData.EvalTargetUsage != nil {
+				usage := outputData.EvalTargetUsage
 				exptTurnResultFilter.EvalTargetMetrics["input_tokens"] = usage.InputTokens
 				exptTurnResultFilter.EvalTargetMetrics["output_tokens"] = usage.OutputTokens
 				exptTurnResultFilter.EvalTargetMetrics["total_tokens"] = usage.TotalTokens
 			}
-			if evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS != nil {
-				exptTurnResultFilter.EvalTargetMetrics["total_latency"] = *evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS
+			if outputData.TimeConsumingMS != nil {
+				exptTurnResultFilter.EvalTargetMetrics["total_latency"] = *outputData.TimeConsumingMS
 			}
 		}
 		evaluatorScoreCorrected, ok := exptResultBuilder.turnResultID2ScoreCorrected[exptTurnResult.ID]

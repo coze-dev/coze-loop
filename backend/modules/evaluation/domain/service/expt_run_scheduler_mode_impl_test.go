@@ -3749,6 +3749,7 @@ func TestExptRetryAllExec_ExptStart_MultiSetConfig_ShouldUseItemRefs(t *testing.
 		f.evaluatorRecordService,
 		f.templateManager,
 		f.exptItemRefRepo,
+		nil, // resultSvc
 	)
 
 	err := exec.ExptStart(session.WithCtxUser(context.Background(), &session.User{ID: testUserID}), event, expt)
@@ -5265,6 +5266,8 @@ func TestNewExptRetryAllExec(t *testing.T) {
 		f.publisher,
 		f.evaluatorRecordService,
 		f.templateManager,
+		f.exptItemRefRepo,
+		nil, // resultSvc
 	)
 
 	assert.NotNil(t, exec)
@@ -5300,6 +5303,8 @@ func TestNewExptRetryItemsExec(t *testing.T) {
 		f.evaluatorRecordService,
 		f.templateManager,
 		f.exptRunLogRepo,
+		f.exptItemRefRepo,
+		nil, // resultSvc
 	)
 
 	assert.NotNil(t, exec)

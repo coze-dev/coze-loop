@@ -41,8 +41,9 @@ func NewExptItemEvaluation(
 	evalAsyncRepo repo.IEvalAsyncRepo,
 	evalSetItemSvc EvaluationSetItemService,
 	itemCompletePublisher component.IItemCompletePublisher,
+	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 保持已有单测编译通过
 ) ExptItemEvaluation {
-	return &ExptItemEvalCtxExecutor{
+	exec := &ExptItemEvalCtxExecutor{
 		TurnResultRepo:         turnResultRepo,
 		ItemResultRepo:         itemResultRepo,
 		Configer:               configer,
@@ -55,6 +56,10 @@ func NewExptItemEvaluation(
 		evalSetItemSvc:         evalSetItemSvc,
 		itemCompletePublisher:  itemCompletePublisher,
 	}
+	if len(sandboxAgentNotifier) > 0 {
+		exec.sandboxAgentNotifier = sandboxAgentNotifier[0]
+	}
+	return exec
 }
 
 type ExptItemEvalCtxExecutor struct {
@@ -69,6 +74,7 @@ type ExptItemEvalCtxExecutor struct {
 	evalAsyncRepo          repo.IEvalAsyncRepo
 	evalSetItemSvc         EvaluationSetItemService
 	itemCompletePublisher  component.IItemCompletePublisher
+	sandboxAgentNotifier   ISandboxAgentNotifier // 沙箱 agent 实验单行失败飞书通知; 可空
 }
 
 const exptRunLogPersistTimeout = 5 * time.Second
@@ -186,9 +192,16 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	if evalErr != nil {
 		var errMsg string
-		if se, ok := errorx.FromStatusError(evalErr); ok && (se.Code() == errno.CustomEvalTargetInvokeFailCode || se.Code() == errno.CustomRPCEvaluatorRunFailedCode) {
+		switch {
+		case isSandboxAgentExpt(etec.Expt):
+			// 沙箱 agent 评测对象加白:错误文案直接沿用异步上报方原文,不做 ConvertErrMsg 归一化。
 			errMsg = errorx.ErrorWithoutStack(evalErr)
-		} else {
+		case func() bool {
+			se, ok := errorx.FromStatusError(evalErr)
+			return ok && (se.Code() == errno.CustomEvalTargetInvokeFailCode || se.Code() == errno.CustomRPCEvaluatorRunFailedCode)
+		}():
+			errMsg = errorx.ErrorWithoutStack(evalErr)
+		default:
 			errMsg = e.Configer.GetErrCtrl(persistCtx).ConvertErrMsg(evalErr.Error())
 		}
 
@@ -437,25 +450,17 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		return err
 	}
 
-	// 仅 item 评测成功才推送 item-complete；失败不发（下游只消费成功行）。
-	if evalErr == nil && e.itemCompletePublisher != nil {
-		completeEvent := buildItemCompleteEvent(eiec)
-		// 记录 enable_analysis 的固化取值与来源链路：下游 gate 依赖此值，
-		// 便于排查"评测对象已开分析但 item-complete 未发"（EnableAnalysis 固化断点）。
-		var hasTarget, hasVersion, hasSandbox bool
-		if expt := eiec.Expt; expt != nil && expt.Target != nil {
-			hasTarget = true
-			if ver := expt.Target.EvalTargetVersion; ver != nil {
-				hasVersion = true
-				hasSandbox = ver.SandboxAgent != nil
-			}
-		}
-		logs.CtxInfo(ctx, "[ExptTurnEval] item complete enable_analysis resolved, expt_id: %v, item_id: %v, enable_analysis: %v, has_target: %v, has_version: %v, has_sandbox_agent: %v",
-			event.ExptID, event.EvalSetItemID, completeEvent.EnableAnalysis, hasTarget, hasVersion, hasSandbox)
-		if err := e.itemCompletePublisher.PublishItemComplete(ctx, completeEvent); err != nil {
-			logs.CtxWarn(ctx, "[ExptTurnEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, event.EvalSetItemID, err)
+	// 沙箱 agent 实验:单行走到终态失败,立即发一张飞书卡。Notifier 内部做 sandbox agent + Enable 判定,
+	// 非目标 case 静默返回。发送失败仅 log,不阻塞主流程。
+	if evalErr != nil && e.sandboxAgentNotifier != nil {
+		if nerr := e.sandboxAgentNotifier.NotifyItemFail(persistCtx, eiec.Expt, event.EvalSetItemID, evalErr); nerr != nil {
+			logs.CtxWarn(persistCtx, "[SandboxAgentNotify] item fail notify err, expt_id=%v, item_id=%v, err=%v", event.ExptID, event.EvalSetItemID, nerr)
 		}
 	}
+
+	// item-complete(success) MQ 发送点已后移到链路B(scheduler daemon 的 recordEvalItemRunLogs),
+	// 在 RecordItemRunLogs 写完读侧三张表后才发,消除"下游收到 success 反查读侧却未就绪"的竞态。
+	// 此处仅写 result_state=Logged,不再发 MQ。
 
 	if e.evalErrNeedTerminateExpt(persistCtx, event.SpaceID, evalErr) {
 		logs.CtxWarn(ctx, "[ExptTurnEval] found error which should terminate expt, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID, evalErr)
@@ -530,7 +535,7 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 	}
 
 	// version_name / dataset_key: 按 item 归属集从内存查找（GetDetail 已批量拉全所有集详情）。
-	if es := findEvalSetForItem(eiec, datasetID); es != nil {
+	if es := findEvalSetForItem(eiec.Expt, datasetID); es != nil {
 		ev.DatasetKey = es.DatasetKey
 		if ver := es.EvaluationSetVersion; ver != nil {
 			if ev.DatasetVersionID == "" {
@@ -543,13 +548,34 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 	return ev
 }
 
-// findEvalSetForItem 从实验详情里找 item 归属集的 EvaluationSet（含 version/dataset_key）。
+// buildItemCompleteEventFromScheduler 供链路B(scheduler daemon)组装 item-complete 事件。
+// 链路B 循环里只有 event(*ExptScheduleEvent) + item(*ExptEvalItem, 仅 ItemID 可信) + expt(全量详情),
+// 缺 ItemKey/归属集/per-item 版本; 调用方须在循环外用 expt_item_ref + BatchGetEvaluationSetItems 批量补出:
+//   - evalSetItem: 提供 ItemKey / SpaceID / EvaluationSetID(归属集);
+//   - evalSetVersionID: 该 item 归属集的 per-item 版本(来自 expt_item_ref, 多集非主集也正确)。
+//     切勿用 ExptEvalItem.EvalSetVersionID —— 那是 scanIncompleteAndComplete 硬编码的主集版本(张冠李戴)。
+//
+// 组装逻辑复用 buildItemCompleteEvent(构造最小 ExptItemEvalCtx), 与链路A 逐字段等价、单一实现不漂移。
+func buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID int64, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) *component.ItemCompleteEvent {
+	eiec := &entity.ExptItemEvalCtx{
+		Event: &entity.ExptItemEvalEvent{
+			SpaceID:       spaceID,
+			ExptID:        exptID,
+			ExptRunID:     exptRunID,
+			EvalSetItemID: item.ItemID,
+		},
+		Expt:             expt,
+		EvalSetItem:      evalSetItem,
+		EvalSetVersionID: evalSetVersionID,
+	}
+	return buildItemCompleteEvent(eiec)
+}
+
 // 按 experiment.eval_set_source_type 显式分流（权威分流开关，DB not null default 1）：
 //   - MultiSetConfig(2) 新实验: 从 EvalSetDetails 按 datasetID 匹配归属集（GetDetail 已批量填充所有集详情）；
 //     匹配不到即返回 nil，不回退主集，避免把主集版本误安到非主集 item 上（张冠李戴）。
 //   - SingleSet(1) 老实验/单评测集: 直接用主集单数字段 eiec.Expt.EvalSet。
-func findEvalSetForItem(eiec *entity.ExptItemEvalCtx, datasetID int64) *entity.EvaluationSet {
-	expt := eiec.Expt
+func findEvalSetForItem(expt *entity.Experiment, datasetID int64) *entity.EvaluationSet {
 	if expt == nil {
 		return nil
 	}

@@ -39,6 +39,7 @@ type Client interface {
 	GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentsOApiResponse, err error)
 	UpdateExptRunConfOApi(ctx context.Context, req *openapi.UpdateExptRunConfOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateExptRunConfOApiResponse, err error)
 	ListExperimentsOApi(ctx context.Context, req *openapi.ListExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentsOApiResponse, err error)
+	GetExperimentIDsByGroupOApi(ctx context.Context, req *openapi.GetExperimentIDsByGroupOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentIDsByGroupOApiResponse, err error)
 	ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentResultOApiResponse, err error)
 	GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentAggrResultOApiResponse, err error)
 	RetryExperimentOApi(ctx context.Context, req *openapi.RetryExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.RetryExperimentOApiResponse, err error)
@@ -236,6 +237,11 @@ func (p *kEvalOpenAPIServiceClient) UpdateExptRunConfOApi(ctx context.Context, r
 func (p *kEvalOpenAPIServiceClient) ListExperimentsOApi(ctx context.Context, req *openapi.ListExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentsOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListExperimentsOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) GetExperimentIDsByGroupOApi(ctx context.Context, req *openapi.GetExperimentIDsByGroupOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentIDsByGroupOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetExperimentIDsByGroupOApi(ctx, req)
 }
 
 func (p *kEvalOpenAPIServiceClient) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentResultOApiResponse, err error) {

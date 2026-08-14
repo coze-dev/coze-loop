@@ -668,6 +668,29 @@ func (l *LocalEvaluationOpenAPIService) ListExperimentsOApi(ctx context.Context,
 	return result.GetSuccess(), nil
 }
 
+// GetExperimentIDsByGroupOApi
+// 按实验分组反查实验
+func (l *LocalEvaluationOpenAPIService) GetExperimentIDsByGroupOApi(ctx context.Context, req *openapi.GetExperimentIDsByGroupOApiRequest, callOptions ...callopt.Option) (*openapi.GetExperimentIDsByGroupOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceGetExperimentIDsByGroupOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceGetExperimentIDsByGroupOApiResult)
+		resp, err := l.impl.GetExperimentIDsByGroupOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceGetExperimentIDsByGroupOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceGetExperimentIDsByGroupOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "GetExperimentIDsByGroupOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ListExperimentResultOApi
 // 查询评测实验结果
 func (l *LocalEvaluationOpenAPIService) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest, callOptions ...callopt.Option) (*openapi.ListExperimentResultOApiResponse, error) {

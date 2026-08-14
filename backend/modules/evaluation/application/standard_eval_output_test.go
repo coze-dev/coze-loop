@@ -130,7 +130,7 @@ func TestBuildItemStandardEvalOutput_ProcessingOnlyReturnsMetadata(t *testing.T)
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	item.SystemInfo.RunState = entity.ItemRunState_Processing
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	assert.Equal(t, int64(20), got.GetExptID())
 	assert.Equal(t, int64(10), got.GetItemID())
@@ -149,7 +149,7 @@ func TestBuildItemStandardEvalOutput_FailOnlyReturnsMetadata(t *testing.T) {
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	item.SystemInfo.RunState = entity.ItemRunState_Fail
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	assert.Equal(t, exptdomain.ItemRunState_Fail, got.GetStatus())
 	assert.Nil(t, got.Detail)
@@ -183,7 +183,7 @@ func TestBuildItemStandardEvalOutput_ItemEndTime(t *testing.T) {
 			item.SystemInfo.RunState = tt.runState
 			item.SystemInfo.EndTime = tt.endTime
 
-			got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+			got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 			require.NoError(t, err)
 			if !tt.wantItemEndTime {
 				assert.Nil(t, got.ItemEndTime)
@@ -458,7 +458,7 @@ func TestBuildItemStandardEvalOutput_FillsKeysFromEvalSetWhenExtMissing(t *testi
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	item.Ext = nil
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	assert.Equal(t, "dataset-from-data", got.GetDatasetKey())
 	assert.Equal(t, "case-from-data", got.GetItemKey())
@@ -480,7 +480,7 @@ func TestBuildItemStandardEvalOutput_ExtKeysTakePrecedence(t *testing.T) {
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	item.Ext = map[string]string{"dataset_key": "dataset-from-ext", "item_key": "case-from-ext"}
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	assert.Equal(t, "dataset-from-ext", got.GetDatasetKey())
 	assert.Equal(t, "case-from-ext", got.GetItemKey())
@@ -509,7 +509,7 @@ func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutput(t *testing.
 		}}}},
 	}
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	assert.Equal(t, "case-10", got.GetItemKey())
 	assert.Equal(t, "dataset-1", got.GetDatasetKey())
@@ -550,7 +550,7 @@ func TestBuildItemStandardEvalOutput_ParseReportedStandardEvalOutputFields(t *te
 		}}}},
 	}
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	assert.Equal(t, "case-10", got.GetItemKey())
 	assert.Equal(t, "dataset-1", got.GetDatasetKey())
@@ -568,7 +568,7 @@ func TestBuildItemStandardEvalOutput_DoesNotMisclassifyOrdinaryJSONActualOutput(
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	item.TurnResults[0].ExperimentResults[0].Payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyActualOutput] = &entity.Content{ContentType: &textType, Text: &reported}
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	require.NotNil(t, got.Output)
 	assert.Contains(t, got.Output.GetText(), "actual_output")
@@ -588,7 +588,7 @@ func injectFornaxField(item *entity.ItemResult, key, jsonText string) {
 func TestBuildItemStandardEvalOutput_NoFornaxFields_AllPlatform(t *testing.T) {
 	// 对象未报任何 FORNAX_ 字段 → 七字段全平台兜底（等价现状）。
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	require.NotNil(t, got.Eval)
 	var eval map[string]any
@@ -601,7 +601,7 @@ func TestBuildItemStandardEvalOutput_FornaxEvalOnly_OthersPlatform(t *testing.T)
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	injectFornaxField(item, "FORNAX_eval", `{"detail":{"eval_result":{"score":0.99}}}`)
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	// eval 深合并：对象的 score 覆盖，平台的 task_config 保留。
 	var eval map[string]any
@@ -621,7 +621,7 @@ func TestBuildItemStandardEvalOutput_SubfieldConflictObjectWins(t *testing.T) {
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	injectFornaxField(item, "FORNAX_output", `{"detail":{"custom":"from-object"}}`)
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	var output map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
@@ -639,7 +639,7 @@ func TestBuildItemStandardEvalOutput_ObjectRoundsWinsWholesale(t *testing.T) {
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	injectFornaxField(item, "FORNAX_rounds", `[{"round_id":"r-obj","extra_note":"obj"}]`)
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	var rounds []any
 	require.NoError(t, json.Unmarshal([]byte(got.GetRounds().GetText()), &rounds))
@@ -653,7 +653,7 @@ func TestBuildItemStandardEvalOutput_ObjectRoundsWinsWholesale(t *testing.T) {
 func TestBuildItemStandardEvalOutput_PlatformRoundIDIsTurnID(t *testing.T) {
 	// 对象未报 rounds → 平台补,每轮 round_id = TurnID(此处 turnID=1)。
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	var rounds []any
 	require.NoError(t, json.Unmarshal([]byte(got.GetRounds().GetText()), &rounds))
@@ -667,7 +667,7 @@ func TestBuildItemStandardEvalOutput_BareKeyFallback(t *testing.T) {
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	injectFornaxField(item, "output", `{"detail":{"custom":"bare-key"}}`)
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	var output map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
@@ -681,7 +681,7 @@ func TestBuildItemStandardEvalOutput_FornaxPrefixOverBareKey(t *testing.T) {
 	injectFornaxField(item, "output", `{"detail":{"src":"bare"}}`)
 	injectFornaxField(item, "FORNAX_output", `{"detail":{"src":"prefixed"}}`)
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	var output map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetOutput().GetText()), &output))
@@ -702,7 +702,7 @@ func TestBuildItemStandardEvalOutput_ContentOmittedNotMerged(t *testing.T) {
 		FullContent:    &entity.ObjectStorage{URI: gptr.Of("eval:record:field:uuid-1")},
 	}
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	require.NotNil(t, got.Output)
 	assert.True(t, got.Output.GetContentOmitted())
@@ -717,7 +717,7 @@ func TestBuildItemStandardEvalOutput_NonJSONFornaxFieldNoPanic(t *testing.T) {
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	injectFornaxField(item, "FORNAX_output", `this is not json`)
 
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	require.NotNil(t, got.Output)
 	assert.Equal(t, "this is not json", got.Output.GetText())
@@ -732,7 +732,7 @@ func TestBuildItemStandardEvalOutput_EvaluatorIDFilled(t *testing.T) {
 			101: {EvaluatorVersionID: 101, EvaluatorID: 9001, Name: gptr.Of("完整性"), Version: gptr.Of("0.0.1")},
 		},
 	}
-	got, err := buildItemStandardEvalOutput(item, opt)
+	got, err := buildItemStandardEvalOutput(context.Background(), item, opt)
 	require.NoError(t, err)
 	var eval map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
@@ -754,7 +754,7 @@ func TestBuildItemStandardEvalOutput_AgentOmitsEmptyKeys(t *testing.T) {
 	// agent 中无值字段不填 key（不出现空串占位）。
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
 	// runtime_param 为 {"model":"x"}，故 model_name 有值；agent_name/thinking_effort 等无值应缺席。
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 	var agent map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetAgent().GetText()), &agent))
@@ -838,7 +838,7 @@ func TestBuildItemStandardEvalOutput_SnowflakeI64StringifiedNoPrecisionLoss(t *t
 			bigVersionID: {EvaluatorVersionID: bigVersionID, EvaluatorID: bigEvaluatorID, Name: gptr.Of("n"), Version: gptr.Of("v")},
 		},
 	}
-	got, err := buildItemStandardEvalOutput(item, opt)
+	got, err := buildItemStandardEvalOutput(context.Background(), item, opt)
 	require.NoError(t, err)
 
 	// 断言 raw JSON 文本里对应字段是带引号的 string（雪花值完整、无精度丢失）。
@@ -964,7 +964,7 @@ func TestTokensFromPayload_NoUsage_EmptyMap(t *testing.T) {
 func TestBuildItemStandardEvalOutput_PlatformEvalOutputNoInnerRounds(t *testing.T) {
 	// 平台兜底的 eval / output 只补 detail，不再补内部 round 粒度 rounds（顶层 rounds 字段不受影响）。
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
-	got, err := buildItemStandardEvalOutput(item, standardEvalOutputBuildOptions{ExptID: 20})
+	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
 	require.NoError(t, err)
 
 	var eval map[string]any
