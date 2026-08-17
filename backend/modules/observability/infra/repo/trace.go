@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -78,9 +79,10 @@ func NewTraceRepoImpl(
 	spanProducer mq.ISpanProducer,
 	trajectoryConfDao mysql.ITrajectoryConfigDao,
 	idGenerator idgen.IIDGenerator,
+	workspaceProvider workspace.IWorkSpaceProvider,
 	opts ...TraceRepoOption,
 ) (repo.ITraceRepo, error) {
-	impl, err := newTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, opts...)
+	impl, err := newTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, workspaceProvider, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +95,7 @@ func NewTraceMetricCKRepoImpl(
 	storageProvider storage.IStorageProvider,
 	opts ...TraceRepoOption,
 ) (metric_repo.IMetricRepo, error) {
-	return newTraceRepoImpl(traceConfig, storageProvider, nil, nil, nil, idGenerator, opts...)
+	return newTraceRepoImpl(traceConfig, storageProvider, nil, nil, nil, idGenerator, nil, opts...)
 }
 
 func newTraceRepoImpl(
@@ -103,6 +105,7 @@ func newTraceRepoImpl(
 	spanProducer mq.ISpanProducer,
 	trajectoryConfDao mysql.ITrajectoryConfigDao,
 	idGenerator idgen.IIDGenerator,
+	workspaceProvider workspace.IWorkSpaceProvider,
 	opts ...TraceRepoOption,
 ) (*TraceRepoImpl, error) {
 	impl := &TraceRepoImpl{
@@ -114,6 +117,7 @@ func newTraceRepoImpl(
 		spanProducer:      spanProducer,
 		trajectoryConfDao: trajectoryConfDao,
 		idGenerator:       idGenerator,
+		workspaceProvider: workspaceProvider,
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -132,6 +136,7 @@ type TraceRepoImpl struct {
 	spanProducer      mq.ISpanProducer
 	trajectoryConfDao mysql.ITrajectoryConfigDao
 	idGenerator       idgen.IIDGenerator
+	workspaceProvider workspace.IWorkSpaceProvider
 }
 
 func (t *TraceRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error) {
@@ -221,7 +226,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 	if pageToken != nil {
 		filters = t.addPageTokenFilter(pageToken, req.Filters, req.AscByStartTime)
 	}
-	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
+	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +343,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
+	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, true)
 	if err != nil {
 		return nil, err
 	}
@@ -502,7 +507,7 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 	if param.SpanID == "" || param.TraceID == "" || param.WorkspaceId <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, false)
 	if err != nil {
 		return nil, err
 	} else if len(tableCfg.AnnoTables) == 0 {
@@ -534,7 +539,7 @@ func (t *TraceRepoImpl) ListWorkspaceAnnotations(ctx context.Context, param *rep
 	if annoDao == nil {
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, false)
 	if err != nil {
 		return nil, err
 	} else if len(tableCfg.AnnoTables) == 0 {
@@ -569,7 +574,7 @@ func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnota
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, false)
 	if err != nil {
 		return nil, err
 	} else if len(tableCfg.AnnoTables) == 0 {
@@ -635,7 +640,7 @@ func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMe
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -665,7 +670,7 @@ type queryTableCfg struct {
 	NeedQueryAnno bool
 }
 
-func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []string) (*queryTableCfg, error) {
+func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []string, workspaceID string, isGetTraceByID bool) (*queryTableCfg, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant table config, %v", err)
@@ -699,6 +704,10 @@ func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []stri
 	}
 	ret.SpanTables = lo.Uniq(ret.SpanTables)
 	ret.AnnoTables = lo.Uniq(ret.AnnoTables)
+	if t.workspaceProvider != nil {
+		ret.SpanTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.SpanTables, isGetTraceByID)
+		ret.AnnoTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.AnnoTables, isGetTraceByID)
+	}
 	return ret, nil
 }
 

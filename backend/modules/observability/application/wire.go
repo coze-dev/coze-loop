@@ -30,6 +30,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
+	workspace_component "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
@@ -184,12 +185,13 @@ func provideTraceRepo(
 	spanProducer mq3.ISpanProducer,
 	trajectoryConfDao mysqldao.ITrajectoryConfigDao,
 	idGenerator idgen.IIDGenerator,
+	workspaceProvider workspace_component.IWorkSpaceProvider,
 ) (repo.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, options...)
+	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, workspaceProvider, options...)
 }
 
 func provideTraceMetricRepo(
