@@ -10,8 +10,6 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 )
 
 // 长连接 Agent（CustomAgent）「自定义输出字段声明」的创建时前置校验。
@@ -27,6 +25,14 @@ const (
 	// 后端若比前端宽，会造成「前端拦得住、OpenAPI 绕得过」：脏数据一旦入库，
 	// 用户下次在页面编辑该 Agent 时会因前端校验不过而无法保存（死锁）。
 	customFieldNameMaxLen = 50
+
+	// customFieldSchemasMaxCount 单个 Agent 可声明的自定义输出字段数上限。
+	//
+	// 与 customFieldNameMaxLen 同一条铁律：对齐前端声明表单的 maxColumn = 20
+	// (evaluate-components/src/.../custom-field-schema-config/custom-field-schema-config.tsx)。
+	// 后端不设限则 OpenAPI 可写入远超 20 条的声明，用户下次在页面编辑该 Agent 时
+	// 会因前端上限而无法保存（同一类脏数据死锁）。
+	customFieldSchemasMaxCount = 20
 )
 
 var (
@@ -41,14 +47,6 @@ var (
 	//     下游评估器字段映射用 JSONPath 取值，`.` / `[` / `]` / `$` 会被当路径分隔符，
 	//     本正则已排除全部这些字符。
 	customFieldNameRegexp = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
-
-	// reservedCustomFieldNames 系统保留字段名，用户不得声明（引用常量，不写字面量）。
-	reservedCustomFieldNames = map[string]struct{}{
-		consts.EvalTargetOutputFieldKeyActualOutput:       {},
-		consts.EvalTargetOutputFieldKeyTrajectory:         {},
-		consts.EvalTargetOutputFieldKeyScreenRecordingURI: {},
-		consts.EvalTargetOutputFieldKeyScreenRecordingURL: {},
-	}
 
 	// allowedCustomFieldScalarSchemaKeys 「显式带了 SchemaKey」时的标量白名单。
 	//
@@ -103,11 +101,11 @@ var (
 //
 // 规则（失败即拦截，不 fallback、不静默去重、不以默认类型静默补全）：
 //   - R1 声明整体可空：nil / 空切片放行（OutputSchema 退化为仅 actual_output）
+//   - R1b 声明总数 <= 20（对齐前端 maxColumn，封 OpenAPI 绕过）
 //   - R2 字段名非空
 //   - R3 字段名不含任意 unicode 空白（含全角空格 U+3000）
 //   - R4 字段名匹配 ^[a-zA-Z][a-zA-Z0-9_]*$（不允许 `_` 开头）
 //   - R5 字段名长度 <= 50（按 rune 计）
-//   - R6 不得使用系统保留字
 //   - R7 同批声明内不得重名
 //   - R8 类型可判定且在开放范围内（4 类标量 + 多模态）。判定方式对齐既有范式：
 //     ContentType == MultiPart 即多模态；否则以 text_schema 的 JSON Schema 顶层 type 为准；
@@ -119,6 +117,10 @@ func ValidateCustomFieldSchemas(schemas []*CustomFieldSchema) error {
 	// R1：整体可空，最先短路。
 	if len(schemas) == 0 {
 		return nil
+	}
+	// R1b：总数上限，先于逐项校验（超限时不必逐项报错）。
+	if len(schemas) > customFieldSchemasMaxCount {
+		return invalidParam(fmt.Sprintf("自定义输出字段最多声明 %d 个，当前 %d 个", customFieldSchemasMaxCount, len(schemas)))
 	}
 
 	seen := make(map[string]struct{}, len(schemas))
@@ -143,10 +145,6 @@ func ValidateCustomFieldSchemas(schemas []*CustomFieldSchema) error {
 		// R5：长度上限（按 rune 计，避免多字节字符按 byte 误判）。
 		if utf8.RuneCountInString(s.Name) > customFieldNameMaxLen {
 			return invalidParam(fmt.Sprintf("自定义输出字段名 %q 超出长度限制（最多 %d 字符）", s.Name, customFieldNameMaxLen))
-		}
-		// R6：保留字冲突。
-		if _, ok := reservedCustomFieldNames[s.Name]; ok {
-			return invalidParam(fmt.Sprintf("自定义输出字段名 %q 为系统保留字，请更换", s.Name))
 		}
 		// R7：同批重名，不去重、不后者覆盖。
 		if _, ok := seen[s.Name]; ok {
@@ -173,6 +171,12 @@ func ValidateCustomFieldSchemas(schemas []*CustomFieldSchema) error {
 // 【为什么 SchemaKey 不是必填】既有范式下标量的 schema_key 恒为 undefined，
 // 类型信息全在 text_schema。把 SchemaKey 当必填会把前端正常提交的
 // 全部标量字段误判成「缺少字段类型」——这正是本次 P0。
+//
+// ⚠️ 前两条分支都**不能**在放行前跳过 text_schema 校验：消费侧
+// (target_source_custom_agent_impl.go 的 buildCustomAgentOutputSchema)
+// 对 TextSchema 非空即无条件覆盖 JsonSchema，与本字段走了哪条分支无关。
+// 若这里放过，object/array 就能借「带 MultiPart」或「带标量 SchemaKey」
+// 把 text_schema 夹带进 OutputSchema —— 即 R8b 的两条绕过路径。
 func validateCustomFieldSchemaType(s *CustomFieldSchema) error {
 	// 1. 多模态：ContentType 自身即类型载体。
 	if s.ContentType == ContentTypeMultipart {
@@ -183,7 +187,8 @@ func validateCustomFieldSchemaType(s *CustomFieldSchema) error {
 				return unsupportedCustomFieldType(s.Name, *s.SchemaKey)
 			}
 		}
-		return nil
+		// 范式下多模态的 text_schema 为空；非空则它会覆盖 JsonSchema，必须查白名单。
+		return validateCustomFieldTextSchemaIfPresent(s)
 	}
 
 	// 2. 显式带 SchemaKey：范式里只有 Trajectory 会走到这，查白名单即拦掉。
@@ -192,11 +197,23 @@ func validateCustomFieldSchemaType(s *CustomFieldSchema) error {
 			return unsupportedCustomFieldType(s.Name, *s.SchemaKey)
 		}
 		// 白名单内的标量 key：前端不会产出（恒 undefined），但 OpenAPI 直连可能带，
-		// 与 buildOutputSchema 同范式接受它，类型由 SchemaKey 表达，无需再看 text_schema。
-		return nil
+		// 与 buildOutputSchema 同范式接受它 —— 但 text_schema 一旦非空仍会覆盖
+		// JsonSchema，故不能因「类型已由 SchemaKey 表达」就跳过对它的校验。
+		return validateCustomFieldTextSchemaIfPresent(s)
 	}
 
 	// 3. 标量：类型以 text_schema 的 JSON Schema 顶层 type 为准。
+	return validateCustomFieldTextSchema(s)
+}
+
+// validateCustomFieldTextSchemaIfPresent 仅在 text_schema 非空时校验它。
+//
+// 用于「类型已由 ContentType / SchemaKey 确定」的分支：这些分支下 text_schema
+// 按范式应为空，但它非空时消费侧会用它覆盖 JsonSchema，故不能不查。
+func validateCustomFieldTextSchemaIfPresent(s *CustomFieldSchema) error {
+	if strings.TrimSpace(s.TextSchema) == "" {
+		return nil
+	}
 	return validateCustomFieldTextSchema(s)
 }
 
