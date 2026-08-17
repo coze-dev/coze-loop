@@ -110,6 +110,12 @@ type SandboxExecuteInfo struct {
 	Error         *SandboxExecuteError
 	Param         map[string]string
 	QueuePosition int32
+	// IP / IPv6 / Port session 网络地址，Get 时由调度侧从底座 SDK 的 AdvancedInfo 活取（不落库）；
+	// session 未就绪（Creating）或非 Running 时可能为空。用于 Remote-SSH IDE 场景把目标 sandbox
+	// 的 ip/port 透给上层填 RemoteSSHTarget（IDE 经 Remote-SSH 挂上来）。
+	IP   string
+	IPv6 string
+	Port string
 }
 
 // SandboxTaskInfo 任务整体状态。

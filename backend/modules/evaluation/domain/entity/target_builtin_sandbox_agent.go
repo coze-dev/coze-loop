@@ -19,12 +19,16 @@ const SandboxAgentExtKeyExtraExecuteID = "sandbox_agent_extra_execute_id"
 //   - Dual:            先起一个从属沙箱拿到 session id，再起一个主沙箱运行 sandbox-pipeline
 //   - MacVMPlusSandbox: 一次评测同时租借 1 台 Mac VM（跑被测桌面 agent）+ 1 台 Sandbox（跑 orchestrator），
 //     两者靠 runtime 侧 WebSocket 互联。下游用同一租户 + ResourceType 区分两个 task。
+//   - MacVMPlusSSH:     一次评测租借 3 台资源：1 台主控 orchestrator Sandbox + 1 台 SSH Sandbox
+//     （Runner 就地，跑 workspace/命令/评估，被 IDE 经 Remote-SSH 挂上来）+ 1 台 Mac VM（只跑 IDE 桌面，被 CUA 驱动）。
+//     控制面走 HTTP（复用双沙箱链路），触达 Mac VM 只经 AIC gexec→CUA，无新增 WebSocket。
 type SandboxCountMode string
 
 const (
 	SandboxCountModeSingle           SandboxCountMode = "single"
 	SandboxCountModeDual             SandboxCountMode = "dual"
 	SandboxCountModeMacVMPlusSandbox SandboxCountMode = "mac_vm_plus_sandbox"
+	SandboxCountModeMacVMPlusSSH     SandboxCountMode = "mac_vm_plus_ssh"
 )
 
 // ResolveSandboxCountMode 空/未识别值一律回退到 Single，保持默认行为。
@@ -34,6 +38,8 @@ func ResolveSandboxCountMode(mode SandboxCountMode) SandboxCountMode {
 		return SandboxCountModeDual
 	case SandboxCountModeMacVMPlusSandbox:
 		return SandboxCountModeMacVMPlusSandbox
+	case SandboxCountModeMacVMPlusSSH:
+		return SandboxCountModeMacVMPlusSSH
 	default:
 		return SandboxCountModeSingle
 	}
@@ -53,6 +59,15 @@ func (a *SandboxAgent) IsMacVMPlusSandbox() bool {
 		return false
 	}
 	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeMacVMPlusSandbox
+}
+
+// IsMacVMPlusSSH 判断 SandboxAgent 是否处于 Mac VM + SSH Sandbox 三资源模式（Remote-SSH IDE 评测）；
+// nil / 未填字段一律按 Single 处理。
+func (a *SandboxAgent) IsMacVMPlusSSH() bool {
+	if a == nil {
+		return false
+	}
+	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeMacVMPlusSSH
 }
 
 type SandboxEnvVar struct {
