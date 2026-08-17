@@ -1738,6 +1738,36 @@ func (mr *MockIEvalAsyncRepoMockRecorder) GetEvalAsyncCtx(arg0, arg1 any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalAsyncCtx", reflect.TypeOf((*MockIEvalAsyncRepo)(nil).GetEvalAsyncCtx), arg0, arg1)
 }
 
+// GetEvalAsyncCtxStrong mocks base method.
+func (m *MockIEvalAsyncRepo) GetEvalAsyncCtxStrong(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalAsyncCtxStrong", ctx, invokeID)
+	ret0, _ := ret[0].(*entity.EvalAsyncCtx)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvalAsyncCtxStrong indicates an expected call of GetEvalAsyncCtxStrong.
+func (mr *MockIEvalAsyncRepoMockRecorder) GetEvalAsyncCtxStrong(ctx, invokeID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalAsyncCtxStrong", reflect.TypeOf((*MockIEvalAsyncRepo)(nil).GetEvalAsyncCtxStrong), ctx, invokeID)
+}
+
+// MarkEvalAsyncResumeReady mocks base method.
+func (m *MockIEvalAsyncRepo) MarkEvalAsyncResumeReady(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkEvalAsyncResumeReady", ctx, invokeID)
+	ret0, _ := ret[0].(*entity.EvalAsyncCtx)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MarkEvalAsyncResumeReady indicates an expected call of MarkEvalAsyncResumeReady.
+func (mr *MockIEvalAsyncRepoMockRecorder) MarkEvalAsyncResumeReady(ctx, invokeID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkEvalAsyncResumeReady", reflect.TypeOf((*MockIEvalAsyncRepo)(nil).MarkEvalAsyncResumeReady), ctx, invokeID)
+}
+
 // SetEvalAsyncCtx mocks base method.
 func (m *MockIEvalAsyncRepo) SetEvalAsyncCtx(arg0 context.Context, arg1 string, arg2 *entity.EvalAsyncCtx) error {
 	m.ctrl.T.Helper()

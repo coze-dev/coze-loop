@@ -24,6 +24,8 @@ type EvaluatorRecordDAO interface {
 	CreateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
 	UpdateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
 	UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score float64, outputData string, opts ...db.Option) error
+	CompareAndSwapEvaluatorRecordResult(ctx context.Context, recordID, spaceID int64, fromStatus, toStatus int8, score float64, outputData string, opts ...db.Option) (int64, error)
+	UpdateEvaluatorRecordAsyncDispatch(ctx context.Context, recordID, spaceID int64, traceID, outputData string, opts ...db.Option) error
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...db.Option) (*model.EvaluatorRecord, error)
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorRecord, error)
 	// BatchGetEvaluatorRecordForAggr 聚合专用窄查询: 只 SELECT id, score, status, 不取 input_data/output_data/ext
@@ -85,6 +87,30 @@ func (dao *EvaluatorRecordDAOImpl) UpdateEvaluatorRecordResult(ctx context.Conte
 		}).Error
 }
 
+func (dao *EvaluatorRecordDAOImpl) CompareAndSwapEvaluatorRecordResult(ctx context.Context, recordID, spaceID int64, fromStatus, toStatus int8, score float64, outputData string, opts ...db.Option) (int64, error) {
+	dbsession := dao.provider.NewSession(ctx, opts...)
+	result := dbsession.WithContext(ctx).
+		Model(&model.EvaluatorRecord{}).
+		Where("id = ? AND space_id = ? AND status = ? AND deleted_at IS NULL", recordID, spaceID, fromStatus).
+		Updates(map[string]interface{}{
+			"status":      toStatus,
+			"score":       score,
+			"output_data": outputData,
+		})
+	return result.RowsAffected, result.Error
+}
+
+func (dao *EvaluatorRecordDAOImpl) UpdateEvaluatorRecordAsyncDispatch(ctx context.Context, recordID, spaceID int64, traceID, outputData string, opts ...db.Option) error {
+	dbsession := dao.provider.NewSession(ctx, opts...)
+	return dbsession.WithContext(ctx).
+		Model(&model.EvaluatorRecord{}).
+		Where("id = ? AND space_id = ? AND deleted_at IS NULL", recordID, spaceID).
+		Updates(map[string]interface{}{
+			"trace_id":    traceID,
+			"output_data": outputData,
+		}).Error
+}
+
 func (dao *EvaluatorRecordDAOImpl) GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...db.Option) (*model.EvaluatorRecord, error) {
 	po := &model.EvaluatorRecord{}
 
@@ -92,6 +118,9 @@ func (dao *EvaluatorRecordDAOImpl) GetEvaluatorRecord(ctx context.Context, evalu
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	query := dbsession.WithContext(ctx).Where("id = ?", evaluatorRecordID)
+	if contexts.CtxWriteDB(ctx) {
+		query = query.Clauses(dbresolver.Write)
+	}
 	if includeDeleted {
 		query = query.Unscoped() // 解除软删除过滤
 	}

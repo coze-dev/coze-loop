@@ -468,10 +468,17 @@ func TestOpenAPIEvaluatorContentDTO2DO(t *testing.T) {
 	})
 
 	t.Run("custom rpc type", func(t *testing.T) {
+		post := openapiEvaluator.EvaluatorHTTPMethodPost
+		asyncPath := "/async_invoke_evaluator"
 		dto := &openapiEvaluator.EvaluatorContent{
 			CustomRPCEvaluator: &openapiEvaluator.CustomRPCEvaluator{
 				ServiceName: gptr.Of("svc"),
 				Cluster:     gptr.Of("cls"),
+				IsAsync:     gptr.Of(true),
+				AsyncInvokeHTTPInfo: &openapiEvaluator.EvaluatorHTTPInfo{
+					Method: gptr.Of(post),
+					Path:   gptr.Of(asyncPath),
+				},
 			},
 		}
 		do, err := OpenAPIEvaluatorContentDTO2DO(dto, entity.EvaluatorTypeCustomRPC)
@@ -479,6 +486,8 @@ func TestOpenAPIEvaluatorContentDTO2DO(t *testing.T) {
 		assert.NotNil(t, do)
 		assert.Equal(t, "svc", *do.CustomRPCEvaluatorVersion.ServiceName)
 		assert.Equal(t, "cls", *do.CustomRPCEvaluatorVersion.Cluster)
+		assert.True(t, do.CustomRPCEvaluatorVersion.IsAsync)
+		assert.Equal(t, asyncPath, gptr.Indirect(do.CustomRPCEvaluatorVersion.AsyncInvokeHTTPInfo.Path))
 	})
 
 	t.Run("agent type", func(t *testing.T) {
@@ -637,15 +646,24 @@ func TestOpenAPIEvaluatorContentDO2DTO(t *testing.T) {
 	})
 
 	t.Run("custom rpc type", func(t *testing.T) {
+		post := entity.EvaluatorHTTPMethodPost
+		asyncPath := "/async_invoke_evaluator"
 		do := &entity.Evaluator{
 			EvaluatorType: entity.EvaluatorTypeCustomRPC,
 			CustomRPCEvaluatorVersion: &entity.CustomRPCEvaluatorVersion{
 				ServiceName: gptr.Of("svc"),
+				IsAsync:     true,
+				AsyncInvokeHTTPInfo: &entity.EvaluatorHTTPInfo{
+					Method: gptr.Of(post),
+					Path:   gptr.Of(asyncPath),
+				},
 			},
 		}
 		dto := OpenAPIEvaluatorContentDO2DTO(do)
 		assert.NotNil(t, dto)
 		assert.Equal(t, "svc", dto.CustomRPCEvaluator.GetServiceName())
+		assert.True(t, dto.CustomRPCEvaluator.GetIsAsync())
+		assert.Equal(t, asyncPath, dto.CustomRPCEvaluator.GetAsyncInvokeHTTPInfo().GetPath())
 	})
 
 	t.Run("agent type", func(t *testing.T) {

@@ -1362,6 +1362,8 @@ func TestConvertEvaluatorLangTags_SkipNilInnerMap(t *testing.T) {
 // TestConvertCustomRPCEvaluatorVersionDTO2DO 测试将 CustomRPC EvaluatorVersion DTO 转换为 DO
 func TestConvertCustomRPCEvaluatorVersionDTO2DO(t *testing.T) {
 	t.Parallel()
+	post := evaluatordo.EvaluatorHTTPMethodPost
+	asyncPath := "/async_invoke_evaluator"
 
 	tests := []struct {
 		name        string
@@ -1397,6 +1399,11 @@ func TestConvertCustomRPCEvaluatorVersionDTO2DO(t *testing.T) {
 						ServiceName:           gptr.Of("test_service"),
 						Cluster:               gptr.Of("test_cluster"),
 						Timeout:               gptr.Of(int64(5000)),
+						AsyncInvokeHTTPInfo: &evaluatordto.EvaluatorHTTPInfo{
+							Method: gptr.Of(post),
+							Path:   gptr.Of(asyncPath),
+						},
+						IsAsync: gptr.Of(true),
 					},
 					InputSchemas: []*commondto.ArgsSchema{
 						{
@@ -1432,6 +1439,10 @@ func TestConvertCustomRPCEvaluatorVersionDTO2DO(t *testing.T) {
 				assert.Equal(t, "test_cluster", *result.Cluster)
 				assert.NotNil(t, result.Timeout)
 				assert.Equal(t, int64(5000), *result.Timeout)
+				assert.True(t, result.IsAsync)
+				if assert.NotNil(t, result.AsyncInvokeHTTPInfo) {
+					assert.Equal(t, asyncPath, gptr.Indirect(result.AsyncInvokeHTTPInfo.Path))
+				}
 				assert.NotNil(t, result.InputSchemas)
 				assert.Len(t, result.InputSchemas, 1)
 				assert.NotNil(t, result.OutputSchemas)
@@ -1476,6 +1487,8 @@ func TestConvertCustomRPCEvaluatorVersionDTO2DO(t *testing.T) {
 // TestConvertCustomRPCEvaluatorVersionDO2DTO 测试将 CustomRPC EvaluatorVersion DO 转换为 DTO
 func TestConvertCustomRPCEvaluatorVersionDO2DTO(t *testing.T) {
 	t.Parallel()
+	post := evaluatordo.EvaluatorHTTPMethodPost
+	asyncPath := "/async_invoke_evaluator"
 
 	tests := []struct {
 		name        string
@@ -1505,6 +1518,11 @@ func TestConvertCustomRPCEvaluatorVersionDO2DTO(t *testing.T) {
 				ServiceName:           gptr.Of("test_service"),
 				Cluster:               gptr.Of("test_cluster"),
 				Timeout:               gptr.Of(int64(5000)),
+				AsyncInvokeHTTPInfo: &evaluatordo.EvaluatorHTTPInfo{
+					Method: &post,
+					Path:   &asyncPath,
+				},
+				IsAsync: true,
 				InputSchemas: []*evaluatordo.ArgsSchema{
 					{
 						Key:                 gptr.Of("input1"),
@@ -1532,6 +1550,8 @@ func TestConvertCustomRPCEvaluatorVersionDO2DTO(t *testing.T) {
 				assert.Equal(t, "test_service", *result.EvaluatorContent.CustomRPCEvaluator.ServiceName)
 				assert.Equal(t, "test_cluster", *result.EvaluatorContent.CustomRPCEvaluator.Cluster)
 				assert.Equal(t, int64(5000), *result.EvaluatorContent.CustomRPCEvaluator.Timeout)
+				assert.True(t, result.EvaluatorContent.CustomRPCEvaluator.GetIsAsync())
+				assert.Equal(t, asyncPath, result.EvaluatorContent.CustomRPCEvaluator.GetAsyncInvokeHTTPInfo().GetPath())
 				assert.NotNil(t, result.EvaluatorContent.InputSchemas)
 				assert.Len(t, result.EvaluatorContent.InputSchemas, 1)
 				assert.NotNil(t, result.EvaluatorContent.OutputSchemas)

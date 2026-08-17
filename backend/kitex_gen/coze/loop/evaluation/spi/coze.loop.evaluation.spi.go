@@ -7977,6 +7977,644 @@ func (p *InvokeEvaluatorResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
+// asynchronously invoke custom evaluator request
+type AsyncInvokeEvaluatorRequest struct {
+	WorkspaceID *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" form:"workspace_id" json:"workspace_id,string,omitempty" query:"workspace_id"`
+	// execution id, report result with the same id
+	InvokeID  *int64                    `thrift:"invoke_id,2,optional" frugal:"2,optional,i64" form:"invoke_id" json:"invoke_id,string,omitempty" query:"invoke_id"`
+	Evaluator *InvokeCustomEvaluator    `thrift:"evaluator,3,optional" frugal:"3,optional,InvokeCustomEvaluator" form:"evaluator" json:"evaluator,omitempty" query:"evaluator"`
+	InputData *InvokeEvaluatorInputData `thrift:"input_data,4,optional" frugal:"4,optional,InvokeEvaluatorInputData" form:"input_data" json:"input_data,omitempty" query:"input_data"`
+	Base      *base.Base                `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewAsyncInvokeEvaluatorRequest() *AsyncInvokeEvaluatorRequest {
+	return &AsyncInvokeEvaluatorRequest{}
+}
+
+func (p *AsyncInvokeEvaluatorRequest) InitDefault() {
+}
+
+var AsyncInvokeEvaluatorRequest_WorkspaceID_DEFAULT int64
+
+func (p *AsyncInvokeEvaluatorRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return AsyncInvokeEvaluatorRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var AsyncInvokeEvaluatorRequest_InvokeID_DEFAULT int64
+
+func (p *AsyncInvokeEvaluatorRequest) GetInvokeID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInvokeID() {
+		return AsyncInvokeEvaluatorRequest_InvokeID_DEFAULT
+	}
+	return *p.InvokeID
+}
+
+var AsyncInvokeEvaluatorRequest_Evaluator_DEFAULT *InvokeCustomEvaluator
+
+func (p *AsyncInvokeEvaluatorRequest) GetEvaluator() (v *InvokeCustomEvaluator) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluator() {
+		return AsyncInvokeEvaluatorRequest_Evaluator_DEFAULT
+	}
+	return p.Evaluator
+}
+
+var AsyncInvokeEvaluatorRequest_InputData_DEFAULT *InvokeEvaluatorInputData
+
+func (p *AsyncInvokeEvaluatorRequest) GetInputData() (v *InvokeEvaluatorInputData) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInputData() {
+		return AsyncInvokeEvaluatorRequest_InputData_DEFAULT
+	}
+	return p.InputData
+}
+
+var AsyncInvokeEvaluatorRequest_Base_DEFAULT *base.Base
+
+func (p *AsyncInvokeEvaluatorRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return AsyncInvokeEvaluatorRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *AsyncInvokeEvaluatorRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *AsyncInvokeEvaluatorRequest) SetInvokeID(val *int64) {
+	p.InvokeID = val
+}
+func (p *AsyncInvokeEvaluatorRequest) SetEvaluator(val *InvokeCustomEvaluator) {
+	p.Evaluator = val
+}
+func (p *AsyncInvokeEvaluatorRequest) SetInputData(val *InvokeEvaluatorInputData) {
+	p.InputData = val
+}
+func (p *AsyncInvokeEvaluatorRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_AsyncInvokeEvaluatorRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "invoke_id",
+	3:   "evaluator",
+	4:   "input_data",
+	255: "Base",
+}
+
+func (p *AsyncInvokeEvaluatorRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *AsyncInvokeEvaluatorRequest) IsSetInvokeID() bool {
+	return p.InvokeID != nil
+}
+
+func (p *AsyncInvokeEvaluatorRequest) IsSetEvaluator() bool {
+	return p.Evaluator != nil
+}
+
+func (p *AsyncInvokeEvaluatorRequest) IsSetInputData() bool {
+	return p.InputData != nil
+}
+
+func (p *AsyncInvokeEvaluatorRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *AsyncInvokeEvaluatorRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AsyncInvokeEvaluatorRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AsyncInvokeEvaluatorRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *AsyncInvokeEvaluatorRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InvokeID = _field
+	return nil
+}
+func (p *AsyncInvokeEvaluatorRequest) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewInvokeCustomEvaluator()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Evaluator = _field
+	return nil
+}
+func (p *AsyncInvokeEvaluatorRequest) ReadField4(iprot thrift.TProtocol) error {
+	_field := NewInvokeEvaluatorInputData()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.InputData = _field
+	return nil
+}
+func (p *AsyncInvokeEvaluatorRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *AsyncInvokeEvaluatorRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AsyncInvokeEvaluatorRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AsyncInvokeEvaluatorRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *AsyncInvokeEvaluatorRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvokeID() {
+		if err = oprot.WriteFieldBegin("invoke_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InvokeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *AsyncInvokeEvaluatorRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluator() {
+		if err = oprot.WriteFieldBegin("evaluator", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Evaluator.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *AsyncInvokeEvaluatorRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInputData() {
+		if err = oprot.WriteFieldBegin("input_data", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.InputData.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *AsyncInvokeEvaluatorRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *AsyncInvokeEvaluatorRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AsyncInvokeEvaluatorRequest(%+v)", *p)
+
+}
+
+func (p *AsyncInvokeEvaluatorRequest) DeepEqual(ano *AsyncInvokeEvaluatorRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.InvokeID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Evaluator) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.InputData) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *AsyncInvokeEvaluatorRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *AsyncInvokeEvaluatorRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.InvokeID == src {
+		return true
+	} else if p.InvokeID == nil || src == nil {
+		return false
+	}
+	if *p.InvokeID != *src {
+		return false
+	}
+	return true
+}
+func (p *AsyncInvokeEvaluatorRequest) Field3DeepEqual(src *InvokeCustomEvaluator) bool {
+
+	if !p.Evaluator.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *AsyncInvokeEvaluatorRequest) Field4DeepEqual(src *InvokeEvaluatorInputData) bool {
+
+	if !p.InputData.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *AsyncInvokeEvaluatorRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type AsyncInvokeEvaluatorResponse struct {
+	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewAsyncInvokeEvaluatorResponse() *AsyncInvokeEvaluatorResponse {
+	return &AsyncInvokeEvaluatorResponse{}
+}
+
+func (p *AsyncInvokeEvaluatorResponse) InitDefault() {
+}
+
+var AsyncInvokeEvaluatorResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *AsyncInvokeEvaluatorResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return AsyncInvokeEvaluatorResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *AsyncInvokeEvaluatorResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_AsyncInvokeEvaluatorResponse = map[int16]string{
+	255: "BaseResp",
+}
+
+func (p *AsyncInvokeEvaluatorResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *AsyncInvokeEvaluatorResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AsyncInvokeEvaluatorResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AsyncInvokeEvaluatorResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *AsyncInvokeEvaluatorResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AsyncInvokeEvaluatorResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AsyncInvokeEvaluatorResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *AsyncInvokeEvaluatorResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AsyncInvokeEvaluatorResponse(%+v)", *p)
+
+}
+
+func (p *AsyncInvokeEvaluatorResponse) DeepEqual(ano *AsyncInvokeEvaluatorResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *AsyncInvokeEvaluatorResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type EvaluationSPIService interface {
 	SearchEvalTarget(ctx context.Context, req *SearchEvalTargetRequest) (r *SearchEvalTargetResponse, err error)
 
@@ -7985,6 +8623,8 @@ type EvaluationSPIService interface {
 	AsyncInvokeEvalTarget(ctx context.Context, req *AsyncInvokeEvalTargetRequest) (r *AsyncInvokeEvalTargetResponse, err error)
 	// invoke custom evaluator
 	InvokeEvaluator(ctx context.Context, req *InvokeEvaluatorRequest) (r *InvokeEvaluatorResponse, err error)
+
+	AsyncInvokeEvaluator(ctx context.Context, req *AsyncInvokeEvaluatorRequest) (r *AsyncInvokeEvaluatorResponse, err error)
 }
 
 type EvaluationSPIServiceClient struct {
@@ -8049,6 +8689,15 @@ func (p *EvaluationSPIServiceClient) InvokeEvaluator(ctx context.Context, req *I
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvaluationSPIServiceClient) AsyncInvokeEvaluator(ctx context.Context, req *AsyncInvokeEvaluatorRequest) (r *AsyncInvokeEvaluatorResponse, err error) {
+	var _args EvaluationSPIServiceAsyncInvokeEvaluatorArgs
+	_args.Req = req
+	var _result EvaluationSPIServiceAsyncInvokeEvaluatorResult
+	if err = p.Client_().Call(ctx, "AsyncInvokeEvaluator", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type EvaluationSPIServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -8074,6 +8723,7 @@ func NewEvaluationSPIServiceProcessor(handler EvaluationSPIService) *EvaluationS
 	self.AddToProcessorMap("InvokeEvalTarget", &evaluationSPIServiceProcessorInvokeEvalTarget{handler: handler})
 	self.AddToProcessorMap("AsyncInvokeEvalTarget", &evaluationSPIServiceProcessorAsyncInvokeEvalTarget{handler: handler})
 	self.AddToProcessorMap("InvokeEvaluator", &evaluationSPIServiceProcessorInvokeEvaluator{handler: handler})
+	self.AddToProcessorMap("AsyncInvokeEvaluator", &evaluationSPIServiceProcessorAsyncInvokeEvaluator{handler: handler})
 	return self
 }
 func (p *EvaluationSPIServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -8269,6 +8919,54 @@ func (p *evaluationSPIServiceProcessorInvokeEvaluator) Process(ctx context.Conte
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("InvokeEvaluator", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluationSPIServiceProcessorAsyncInvokeEvaluator struct {
+	handler EvaluationSPIService
+}
+
+func (p *evaluationSPIServiceProcessorAsyncInvokeEvaluator) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationSPIServiceAsyncInvokeEvaluatorArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("AsyncInvokeEvaluator", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationSPIServiceAsyncInvokeEvaluatorResult{}
+	var retval *AsyncInvokeEvaluatorResponse
+	if retval, err2 = p.handler.AsyncInvokeEvaluator(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing AsyncInvokeEvaluator: "+err2.Error())
+		oprot.WriteMessageBegin("AsyncInvokeEvaluator", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("AsyncInvokeEvaluator", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -9655,6 +10353,350 @@ func (p *EvaluationSPIServiceInvokeEvaluatorResult) DeepEqual(ano *EvaluationSPI
 }
 
 func (p *EvaluationSPIServiceInvokeEvaluatorResult) Field0DeepEqual(src *InvokeEvaluatorResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationSPIServiceAsyncInvokeEvaluatorArgs struct {
+	Req *AsyncInvokeEvaluatorRequest `thrift:"req,1" frugal:"1,default,AsyncInvokeEvaluatorRequest"`
+}
+
+func NewEvaluationSPIServiceAsyncInvokeEvaluatorArgs() *EvaluationSPIServiceAsyncInvokeEvaluatorArgs {
+	return &EvaluationSPIServiceAsyncInvokeEvaluatorArgs{}
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) InitDefault() {
+}
+
+var EvaluationSPIServiceAsyncInvokeEvaluatorArgs_Req_DEFAULT *AsyncInvokeEvaluatorRequest
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) GetReq() (v *AsyncInvokeEvaluatorRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationSPIServiceAsyncInvokeEvaluatorArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) SetReq(val *AsyncInvokeEvaluatorRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationSPIServiceAsyncInvokeEvaluatorArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSPIServiceAsyncInvokeEvaluatorArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewAsyncInvokeEvaluatorRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AsyncInvokeEvaluator_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationSPIServiceAsyncInvokeEvaluatorArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) DeepEqual(ano *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorArgs) Field1DeepEqual(src *AsyncInvokeEvaluatorRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationSPIServiceAsyncInvokeEvaluatorResult struct {
+	Success *AsyncInvokeEvaluatorResponse `thrift:"success,0,optional" frugal:"0,optional,AsyncInvokeEvaluatorResponse"`
+}
+
+func NewEvaluationSPIServiceAsyncInvokeEvaluatorResult() *EvaluationSPIServiceAsyncInvokeEvaluatorResult {
+	return &EvaluationSPIServiceAsyncInvokeEvaluatorResult{}
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) InitDefault() {
+}
+
+var EvaluationSPIServiceAsyncInvokeEvaluatorResult_Success_DEFAULT *AsyncInvokeEvaluatorResponse
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) GetSuccess() (v *AsyncInvokeEvaluatorResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationSPIServiceAsyncInvokeEvaluatorResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) SetSuccess(x interface{}) {
+	p.Success = x.(*AsyncInvokeEvaluatorResponse)
+}
+
+var fieldIDToName_EvaluationSPIServiceAsyncInvokeEvaluatorResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSPIServiceAsyncInvokeEvaluatorResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewAsyncInvokeEvaluatorResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AsyncInvokeEvaluator_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationSPIServiceAsyncInvokeEvaluatorResult(%+v)", *p)
+
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) DeepEqual(ano *EvaluationSPIServiceAsyncInvokeEvaluatorResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationSPIServiceAsyncInvokeEvaluatorResult) Field0DeepEqual(src *AsyncInvokeEvaluatorResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

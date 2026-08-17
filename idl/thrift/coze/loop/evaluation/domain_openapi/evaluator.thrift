@@ -56,10 +56,12 @@ struct CustomRPCEvaluator {
     3: optional string service_name
     4: optional string cluster
     5: optional EvaluatorHTTPInfo invoke_http_info
+    6: optional EvaluatorHTTPInfo async_invoke_http_info
 
     10: optional i64 timeout    // ms
     11: optional common.RateLimit rate_limit
     12: optional map<string, string> ext
+    13: optional bool is_async
 }
 
 // Agent评估器Prompt配置输出规则
