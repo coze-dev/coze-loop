@@ -7,14 +7,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestProvideSandboxAgentNotifiers(t *testing.T) {
-	notifier := &sandboxAgentNotifier{}
+func TestProvideNoSandboxAgentNotifiers(t *testing.T) {
+	got := ProvideNoSandboxAgentNotifiers()
 
-	got := ProvideSandboxAgentNotifiers(notifier)
-
-	require.Len(t, got, 1)
-	assert.Same(t, notifier, got[0])
+	assert.Empty(t, got)
 }

@@ -42,7 +42,7 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	// 沙箱 agent 实验飞书通知 (每 1h 进度 + 单行失败)。open-source NotifyRPCAdapter 是 no-op 桩,
 	// 商业版 fork 通过自己的 wire set 覆盖为真实的 Lark send。
 	NewSandboxAgentNotifier,
-	ProvideSandboxAgentNotifiers,
+	ProvideNoSandboxAgentNotifiers,
 	// Infrastructure Sets
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,
@@ -58,8 +58,8 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	ProvideNilItemCompletePublisher,
 )
 
-func ProvideSandboxAgentNotifiers(notifier ISandboxAgentNotifier) []ISandboxAgentNotifier {
-	return []ISandboxAgentNotifier{notifier}
+func ProvideNoSandboxAgentNotifiers() []ISandboxAgentNotifier {
+	return nil
 }
 
 func ProvideNilItemCompletePublisher() component.IItemCompletePublisher {
