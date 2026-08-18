@@ -327,7 +327,10 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 			AccessProtocol:        content.CustomRPCEvaluator.AccessProtocol,
 			ServiceName:           content.CustomRPCEvaluator.ServiceName,
 			Cluster:               content.CustomRPCEvaluator.Cluster,
+			InvokeHTTPInfo:        ConvertEvaluatorHTTPInfoDTO2DO(content.CustomRPCEvaluator.InvokeHTTPInfo),
+			AsyncInvokeHTTPInfo:   ConvertEvaluatorHTTPInfoDTO2DO(content.CustomRPCEvaluator.AsyncInvokeHTTPInfo),
 			Timeout:               content.CustomRPCEvaluator.Timeout,
+			IsAsync:               content.CustomRPCEvaluator.GetIsAsync(),
 		}
 		if content.CustomRPCEvaluator.RateLimit != nil {
 			rateLimit, err := commonconvertor.ConvertRateLimitDTO2DO(content.CustomRPCEvaluator.RateLimit)
@@ -551,7 +554,9 @@ func ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *eva
 			customRPCEvaluatorVersion.ServiceName = dto.EvaluatorContent.CustomRPCEvaluator.ServiceName
 			customRPCEvaluatorVersion.Cluster = dto.EvaluatorContent.CustomRPCEvaluator.Cluster
 			customRPCEvaluatorVersion.InvokeHTTPInfo = ConvertEvaluatorHTTPInfoDTO2DO(dto.EvaluatorContent.CustomRPCEvaluator.InvokeHTTPInfo)
+			customRPCEvaluatorVersion.AsyncInvokeHTTPInfo = ConvertEvaluatorHTTPInfoDTO2DO(dto.EvaluatorContent.CustomRPCEvaluator.AsyncInvokeHTTPInfo)
 			customRPCEvaluatorVersion.Timeout = dto.EvaluatorContent.CustomRPCEvaluator.Timeout
+			customRPCEvaluatorVersion.IsAsync = dto.EvaluatorContent.CustomRPCEvaluator.GetIsAsync()
 			if dto.EvaluatorContent.CustomRPCEvaluator.RateLimit != nil {
 				rateLimit, err := commonconvertor.ConvertRateLimitDTO2DO(dto.EvaluatorContent.CustomRPCEvaluator.RateLimit)
 				if err != nil {
@@ -585,8 +590,10 @@ func ConvertCustomRPCEvaluatorVersionDO2DTO(do *evaluatordo.CustomRPCEvaluatorVe
 				Cluster:               do.Cluster,
 				Timeout:               do.Timeout,
 				InvokeHTTPInfo:        ConvertEvaluatorHTTPInfoDO2DTO(do.InvokeHTTPInfo),
+				AsyncInvokeHTTPInfo:   ConvertEvaluatorHTTPInfoDO2DTO(do.AsyncInvokeHTTPInfo),
 				RateLimit:             commonconvertor.ConvertRateLimitDO2DTO(do.RateLimit),
 				Ext:                   do.Ext,
+				IsAsync:               gptr.Of(do.IsAsync),
 			},
 		},
 	}

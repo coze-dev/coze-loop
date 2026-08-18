@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -1196,4 +1197,272 @@ func Test_buildItemCompleteEvent_LinkAB_Equivalence(t *testing.T) {
 	fromLinkB := buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID, expt, item, evalSetItem, datasetV)
 
 	require.Equal(t, fromLinkA, fromLinkB, "链路A与链路B的 item-complete 组装结果必须完全一致")
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsAsyncEvaluatorAfterSave(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).Return(nil)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmingHasIndependentTimeoutBudget(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+
+	var persistDeadline time.Time
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ []*entity.ExptTurnResultRunLog) error {
+			var ok bool
+			persistDeadline, ok = ctx.Deadline()
+			require.True(t, ok)
+			time.Sleep(20 * time.Millisecond)
+			return nil
+		},
+	)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).DoAndReturn(
+		func(ctx context.Context, _ int64) error {
+			resumeDeadline, ok := ctx.Deadline()
+			require.True(t, ok)
+			assert.True(t, resumeDeadline.After(persistDeadline), "arming must not consume the turn-log persistence timeout budget")
+			return nil
+		},
+	)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsPendingEvaluatorsConcurrently(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+
+	secondStarted := make(chan struct{})
+	firstObservedSecond := make(chan bool, 1)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).DoAndReturn(
+		func(context.Context, int64) error {
+			select {
+			case <-secondStarted:
+				firstObservedSecond <- true
+			case <-time.After(time.Second):
+				firstObservedSecond <- false
+			}
+			return nil
+		},
+	)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(200)).DoAndReturn(
+		func(context.Context, int64) error {
+			close(secondStarted)
+			return nil
+		},
+	)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{
+		{ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+		{ID: 200, EvaluatorVersionID: 201, Status: entity.EvaluatorRunStatusAsyncInvoking},
+	}}
+
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+	require.True(t, <-firstObservedSecond, "one slow arming operation must not delay the other pending evaluators")
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_DoesNotArmWhenSaveFails(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(errors.New("save failed"))
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), gomock.Any()).Times(0)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.Error(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmErrorKeepsAsyncProcessing(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).Return(errors.New("arm failed"))
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{AsyncAbort: true, EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsEveryPendingEvaluator(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
+			require.Len(t, logs, 1)
+			require.NotNil(t, logs[0].EvaluatorResultIds)
+			require.Len(t, logs[0].EvaluatorResultIds.Registered, 5)
+			seen := make(map[int64]int)
+			for _, ref := range logs[0].EvaluatorResultIds.Registered {
+				require.NotNil(t, ref)
+				seen[ref.VersionID]++
+			}
+			for _, versionID := range []int64{101, 102, 201, 202, 203} {
+				assert.Equal(t, 1, seen[versionID])
+			}
+			return nil
+		},
+	)
+	for _, recordID := range []int64{1201, 1202, 1203} {
+		evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), recordID).Return(nil)
+	}
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{
+		AsyncAbort: true,
+		EvaluatorResults: []*entity.EvaluatorRecord{
+			{ID: 1101, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1102, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1201, EvaluatorVersionID: 201, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			{ID: 1202, EvaluatorVersionID: 202, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			{ID: 1203, EvaluatorVersionID: 203, Status: entity.EvaluatorRunStatusAsyncInvoking},
+		},
+	}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_AllEvaluatorsTerminalCompletesWithoutArming(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
+			require.Len(t, logs, 1)
+			assert.Equal(t, entity.TurnRunState_Success, logs[0].Status)
+			require.NotNil(t, logs[0].EvaluatorResultIds)
+			require.Len(t, logs[0].EvaluatorResultIds.Registered, 5)
+			return nil
+		},
+	)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), gomock.Any()).Times(0)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1, Status: entity.TurnRunState_Processing},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{
+		EvaluatorResults: []*entity.EvaluatorRecord{
+			{ID: 1101, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1102, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1201, EvaluatorVersionID: 201, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1202, EvaluatorVersionID: 202, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1203, EvaluatorVersionID: 203, Status: entity.EvaluatorRunStatusSuccess},
+		},
+	}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
 }
