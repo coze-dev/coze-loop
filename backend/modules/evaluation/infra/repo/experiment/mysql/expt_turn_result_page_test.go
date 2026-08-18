@@ -51,8 +51,8 @@ func TestExptTurnResultDAO_ListTurnResultByItemIDs_FirstPageHasLimit(t *testing.
 
 	mock.ExpectQuery("SELECT count\\(\\*\\) FROM `expt_turn_result`").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(940))
-	// 关键断言：LIMIT 必须在，且不带 OFFSET（第一页 offset 为 0）
-	mock.ExpectQuery("SELECT \\* FROM `expt_turn_result` WHERE space_id = \\? AND expt_id = \\? AND `expt_turn_result`\\.`deleted_at` IS NULL LIMIT \\?$").
+	// 关键断言：LIMIT 必须在，且不带 OFFSET（第一页 offset 为 0）；ORDER BY 保证翻页确定性
+	mock.ExpectQuery("SELECT \\* FROM `expt_turn_result` WHERE space_id = \\? AND expt_id = \\? AND `expt_turn_result`\\.`deleted_at` IS NULL ORDER BY item_id,turn_id LIMIT \\?$").
 		WithArgs(int64(1), int64(2), 20).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
@@ -72,7 +72,7 @@ func TestExptTurnResultDAO_ListTurnResultByItemIDs_SecondPageHasLimitOffset(t *t
 
 	mock.ExpectQuery("SELECT count\\(\\*\\) FROM `expt_turn_result`").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(940))
-	mock.ExpectQuery("SELECT \\* FROM `expt_turn_result` WHERE space_id = \\? AND expt_id = \\? AND `expt_turn_result`\\.`deleted_at` IS NULL LIMIT \\? OFFSET \\?$").
+	mock.ExpectQuery("SELECT \\* FROM `expt_turn_result` WHERE space_id = \\? AND expt_id = \\? AND `expt_turn_result`\\.`deleted_at` IS NULL ORDER BY item_id,turn_id LIMIT \\? OFFSET \\?$").
 		WithArgs(int64(1), int64(2), 20, 20).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
@@ -94,12 +94,44 @@ func TestExptTurnResultDAO_ListTurnResultByItemIDs_ZeroPageNoLimit(t *testing.T)
 
 	mock.ExpectQuery("SELECT count\\(\\*\\) FROM `expt_turn_result`").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(3))
-	// 无 LIMIT / 无 OFFSET
+	// 无 LIMIT / 无 OFFSET / 也不加 ORDER BY（不分页就没有翻页一致性问题，
+	// 保持原 SQL 形状，避免给大结果集平白引入排序开销）
 	mock.ExpectQuery("SELECT \\* FROM `expt_turn_result` WHERE space_id = \\? AND expt_id = \\? AND item_id IN \\(\\?,\\?\\) AND `expt_turn_result`\\.`deleted_at` IS NULL$").
 		WithArgs(int64(1), int64(2), int64(10), int64(11)).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 	_, _, err := dao.ListTurnResultByItemIDs(context.Background(), 1, 2, []int64{10, 11}, entity.Page{}, false)
+	require.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestExptTurnResultDAO_ListTurnResultByItemIDs_PagedQueryIsOrdered
+// 钉死「分页必须带确定顺序」这个不变量。
+//
+// 回归背景：把第一页的 LIMIT 修回来之后，UpsertExptTurnResultFilter 里那个
+// `offset++` 循环才第一次真正开始逐页翻取（此前第一页无 LIMIT 拿到全量后就 break 了，
+// 循环形同虚设）。而本查询原先没有 ORDER BY —— 无序结果做 LIMIT/OFFSET 翻页，
+// 行序由执行计划决定、并发写入还会让行位移，会漏行/重复行。
+// 漏的 turn 落不进 CK 筛选表，后续筛选就永久查不到这些行 —— 又一个静默错数据。
+//
+// 排序键取 (item_id, turn_id)：与唯一键 uk_expt_item_turn 的后两段一致，
+// 前两段 space_id/expt_id 已在 WHERE 固定，因此走索引、不产生额外 filesort。
+func TestExptTurnResultDAO_ListTurnResultByItemIDs_PagedQueryIsOrdered(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	dao, mock, closeFn := newTurnResultTestDAO(t, ctrl)
+	defer closeFn()
+
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM `expt_turn_result`").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(940))
+	// ORDER BY 必须出现在 LIMIT 之前；缺了它本用例转红
+	mock.ExpectQuery("ORDER BY item_id,turn_id LIMIT \\? OFFSET \\?$").
+		WithArgs(int64(1), int64(2), 200, 400).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+
+	// offset=3, limit=200 → 对应 UpsertExptTurnResultFilter 循环的第三页
+	_, _, err := dao.ListTurnResultByItemIDs(context.Background(), 1, 2, nil, entity.NewPage(3, 200), false)
 	require.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
