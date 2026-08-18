@@ -302,7 +302,7 @@ func TestTraceApplication_ListViews(t *testing.T) {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConf := confmock.NewMockITraceConfig(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockRepo.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityView{}, nil)
+				mockRepo.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any(), int32(1)).Return([]*entity.ObservabilityView{}, nil)
 				mockConf.EXPECT().GetSystemViews(gomock.Any()).Return([]*config.SystemView{}, nil)
 				return fields{
 					repo: mockRepo,
@@ -322,13 +322,40 @@ func TestTraceApplication_ListViews(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "scope filter case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomock.NewMockIViewRepo(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockConf := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockRepo.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any(), int32(view.Scope_TraceDetailChat)).Return([]*entity.ObservabilityView{}, nil)
+				mockConf.EXPECT().GetSystemViews(gomock.Any()).Return([]*config.SystemView{}, nil)
+				return fields{
+					repo: mockRepo,
+					auth: mockAuth,
+					conf: mockConf,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "123"}),
+				req: &trace.ListViewsRequest{
+					WorkspaceID: 12,
+					Scope:       view.ScopePtr(view.Scope_TraceDetailChat),
+				},
+			},
+			want: &trace.ListViewsResponse{
+				Views: make([]*view.View, 0),
+			},
+			wantErr: false,
+		},
+		{
 			name: "error case",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockRepo := repomock.NewMockIViewRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockConf := confmock.NewMockITraceConfig(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockRepo.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				mockRepo.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				mockConf.EXPECT().GetSystemViews(gomock.Any()).Return([]*config.SystemView{}, nil)
 				return fields{
 					repo: mockRepo,
@@ -4054,7 +4081,9 @@ func TestTraceApplication_ListThreadChat(t *testing.T) {
 				},
 			},
 			want: &trace.ListThreadChatResponse{
-				Messages: []*trace.ChatMessage{},
+				Messages:      []*trace.ChatMessage{},
+				PrevPageToken: ptr.Of(""),
+				PrevHasMore:   ptr.Of(false),
 			},
 			wantErr: false,
 		},
@@ -4137,7 +4166,57 @@ func TestTraceApplication_ListThreadChat(t *testing.T) {
 				},
 			},
 			want: &trace.ListThreadChatResponse{
-				Messages: []*trace.ChatMessage{},
+				Messages:      []*trace.ChatMessage{},
+				PrevPageToken: ptr.Of(""),
+				PrevHasMore:   ptr.Of(false),
+			},
+			wantErr: false,
+		},
+		{
+			name: "anchor + filters + without_detail pass-through and prev echo",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().ListThreadChat(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, r *service.ListThreadChatRequest) (*service.ListThreadChatResponse, error) {
+						assert.Equal(t, "prev-in", r.PrevPageToken)
+						assert.Equal(t, int64(250), r.AnchorStartTime)
+						assert.Equal(t, "anchor-span", r.AnchorSpanID)
+						assert.True(t, r.WithoutDetail)
+						assert.NotNil(t, r.Filters)
+						return &service.ListThreadChatResponse{
+							Messages:      []*entity.ChatMessage{},
+							PrevPageToken: "prev-out",
+							PrevHasMore:   true,
+						}, nil
+					})
+				return fields{traceSvc: mockSvc, auth: mockAuth, traceCfg: mockCfg}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListThreadChatRequest{
+					WorkspaceID:     12,
+					ThreadID:        "thread-123",
+					StartTime:       ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:         ptr.Of(time.Now().UnixMilli()),
+					PrevPageToken:   ptr.Of("prev-in"),
+					WithoutDetail:   ptr.Of(true),
+					AnchorStartTime: ptr.Of(int64(250)),
+					AnchorSpanID:    ptr.Of("anchor-span"),
+					Filters: &filter.FilterFields{
+						FilterFields: []*filter.FilterField{
+							{FieldName: ptr.Of("output"), Values: []string{"kw"}},
+						},
+					},
+				},
+			},
+			want: &trace.ListThreadChatResponse{
+				Messages:      []*trace.ChatMessage{},
+				PrevPageToken: ptr.Of("prev-out"),
+				PrevHasMore:   ptr.Of(true),
 			},
 			wantErr: false,
 		},

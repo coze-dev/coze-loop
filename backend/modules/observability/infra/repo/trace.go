@@ -5,7 +5,6 @@ package repo
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
@@ -28,8 +27,8 @@ import (
 	model2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	redis_dao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/pagetoken"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
@@ -138,11 +137,6 @@ func (t *TraceRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpa
 	return t.spanRedisDao.GetPreSpans(ctx, param.PreRespID)
 }
 
-type PageToken struct {
-	StartTime int64  `json:"StartTime"`
-	SpanID    string `json:"SpanID"`
-}
-
 func (t *TraceRepoImpl) UpsertTrajectoryConfig(ctx context.Context, param *repo.UpsertTrajectoryConfigParam) error {
 	trajectoryConfig, err := t.trajectoryConfDao.GetTrajectoryConfig(ctx, param.WorkspaceId)
 	if err != nil {
@@ -213,13 +207,13 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	pageToken, err := parsePageToken(req.PageToken)
+	pageToken, err := pagetoken.Decode(req.PageToken)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid list spans request"))
 	}
 	filters := req.Filters
 	if pageToken != nil {
-		filters = t.addPageTokenFilter(pageToken, req.Filters, req.AscByStartTime)
+		filters = t.addPageTokenFilter(pageToken, req.Filters, req.AscByStartTime, req.PageTokenInclusive)
 	}
 	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
 	if err != nil {
@@ -275,12 +269,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 	}
 	if len(result.Spans) > 0 {
 		lastSpan := result.Spans[len(result.Spans)-1]
-		pageToken := &PageToken{
-			StartTime: lastSpan.StartTime,
-			SpanID:    lastSpan.SpanID,
-		}
-		pt, _ := json.Marshal(pageToken)
-		result.PageToken = base64.StdEncoding.EncodeToString(pt)
+		result.PageToken = pagetoken.Encode(lastSpan.StartTime, lastSpan.SpanID)
 	}
 	result.Spans = result.Spans.Uniq()
 	return result, nil
@@ -376,12 +365,12 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 	filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
 		SubFilter: req.Filters,
 	})
-	pageToken, err := parsePageToken(req.PageToken)
+	pageToken, err := pagetoken.Decode(req.PageToken)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid page token"))
 	}
 	if pageToken != nil {
-		filter = t.addPageTokenFilter(pageToken, filter, false)
+		filter = t.addPageTokenFilter(pageToken, filter, false, false)
 	}
 	st := time.Now()
 	queryLimit := req.Limit + 1
@@ -481,12 +470,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 	}
 	if len(result.Spans) > 0 {
 		lastSpan := result.Spans[len(result.Spans)-1]
-		pt := &PageToken{
-			StartTime: lastSpan.StartTime,
-			SpanID:    lastSpan.SpanID,
-		}
-		ptBytes, _ := json.Marshal(pt)
-		result.PageToken = base64.StdEncoding.EncodeToString(ptBytes)
+		result.PageToken = pagetoken.Encode(lastSpan.StartTime, lastSpan.SpanID)
 	}
 	result.Spans = result.Spans.Uniq()
 	return result, nil
@@ -732,11 +716,20 @@ func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, t
 	return tableCfg.AnnoTable, nil
 }
 
-func (t *TraceRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_span.FilterFields, asc bool) *loop_span.FilterFields {
+func (t *TraceRepoImpl) addPageTokenFilter(pageToken *pagetoken.PageToken, filter *loop_span.FilterFields, asc, inclusive bool) *loop_span.FilterFields {
 	timeStr := strconv.FormatInt(pageToken.StartTime, 10)
 	queryType := ptr.Of(loop_span.QueryTypeEnumLt)
 	if asc {
 		queryType = ptr.Of(loop_span.QueryTypeEnumGt)
+	}
+	// inclusive 时 span_id 子条件放宽为含等号(>= / <=)，使复合游标 (start_time, span_id) 含边界，锚点自身被查出。
+	// start_time 主条件保持严格：等号情形已由第二支 start_time == T 覆盖。
+	spanIDQueryType := queryType
+	if inclusive {
+		spanIDQueryType = ptr.Of(loop_span.QueryTypeEnumLte)
+		if asc {
+			spanIDQueryType = ptr.Of(loop_span.QueryTypeEnumGte)
+		}
 	}
 	filterFields := &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumOr),
@@ -760,7 +753,7 @@ func (t *TraceRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_sp
 							FieldName: loop_span.SpanFieldSpanId,
 							FieldType: loop_span.FieldTypeString,
 							Values:    []string{pageToken.SpanID},
-							QueryType: queryType,
+							QueryType: spanIDQueryType,
 						},
 					},
 				},
@@ -782,21 +775,6 @@ func (t *TraceRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_sp
 			},
 		}
 	}
-}
-
-func parsePageToken(pageToken string) (*PageToken, error) {
-	if pageToken == "" {
-		return nil, nil
-	}
-	ptStr, err := base64.StdEncoding.DecodeString(pageToken)
-	if err != nil {
-		return nil, fmt.Errorf("fail to decode pageToken %s, %v", pageToken, err)
-	}
-	pt := new(PageToken)
-	if err := json.Unmarshal(ptStr, pt); err != nil {
-		return nil, fmt.Errorf("fail to unmarshal pageToken %s, %v", string(ptStr), err)
-	}
-	return pt, nil
 }
 
 func spanTimeRange(spans []*dao.Span) (int64, int64) {

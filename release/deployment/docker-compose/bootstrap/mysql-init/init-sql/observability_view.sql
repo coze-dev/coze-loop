@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `observability_view`
     `is_deleted`     tinyint(1)                               NOT NULL DEFAULT '0' COMMENT '是否删除, 0 表示未删除, 1 表示已删除',
     `deleted_at`     datetime                                          DEFAULT NULL COMMENT '删除时间',
     `deleted_by`     varchar(128) COLLATE utf8mb4_general_ci  NOT NULL DEFAULT '' COMMENT '删除人',
+    `scope`          int unsigned                             NOT NULL DEFAULT '1' COMMENT '视图场景: 1-trace_list, 2-trace_detail_tree, 3-trace_detail_chat',
     PRIMARY KEY (`id`),
     KEY `idx_space_id_created_by` (`workspace_id`, `created_by`)
 ) ENGINE = InnoDB

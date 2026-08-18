@@ -47,6 +47,7 @@ type ListSpansParam struct {
 	DescByStartTime    bool
 	AscByStartTime     bool
 	PageToken          string
+	PageTokenInclusive bool // keyset 游标是否含边界(含等号)，锚点向后段用于把锚点自身查出；默认 false 为严格比较
 	NotQueryAnnotation bool
 	OmitColumns        []string // omit specific columns
 	SelectColumns      []string // select specific columns, default select all columns

@@ -33,8 +33,8 @@ func (v *ViewRepoImpl) GetView(ctx context.Context, id int64, workspaceID *int64
 	return convertor.ViewPO2DO(viewPo), nil
 }
 
-func (v *ViewRepoImpl) ListViews(ctx context.Context, workspaceID int64, userID string) ([]*entity.ObservabilityView, error) {
-	results, err := v.viewDao.ListViews(ctx, workspaceID, userID)
+func (v *ViewRepoImpl) ListViews(ctx context.Context, workspaceID int64, userID string, scope int32) ([]*entity.ObservabilityView, error) {
+	results, err := v.viewDao.ListViews(ctx, workspaceID, userID, scope)
 	if err != nil {
 		return nil, err
 	}

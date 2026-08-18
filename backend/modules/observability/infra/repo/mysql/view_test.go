@@ -61,7 +61,7 @@ func TestViewRepoImpl_ListViews(t *testing.T) {
 			v := &ViewDaoImpl{
 				dbMgr: fields.dbMgr,
 			}
-			_, err := v.ListViews(tt.args.ctx, tt.args.workspaceID, tt.args.userID)
+			_, err := v.ListViews(tt.args.ctx, tt.args.workspaceID, tt.args.userID, 1)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
 	}

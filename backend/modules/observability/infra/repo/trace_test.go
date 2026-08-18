@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	daomock "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao/mocks"
 	redis_dao_mock "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/pagetoken"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -1159,7 +1160,7 @@ func TestTraceRepoImpl_GetPreSpanIDs(t *testing.T) {
 
 func TestTraceRepoImpl_addPageTokenFilter(t *testing.T) {
 	type args struct {
-		pageToken *PageToken
+		pageToken *pagetoken.PageToken
 		filter    *loop_span.FilterFields
 	}
 	tests := []struct {
@@ -1170,7 +1171,7 @@ func TestTraceRepoImpl_addPageTokenFilter(t *testing.T) {
 		{
 			name: "add page token filter with nil filter",
 			args: args{
-				pageToken: &PageToken{
+				pageToken: &pagetoken.PageToken{
 					StartTime: 1234567890,
 					SpanID:    "span123",
 				},
@@ -1209,7 +1210,7 @@ func TestTraceRepoImpl_addPageTokenFilter(t *testing.T) {
 		{
 			name: "add page token filter with existing filter",
 			args: args{
-				pageToken: &PageToken{
+				pageToken: &pagetoken.PageToken{
 					StartTime: 1234567890,
 					SpanID:    "span123",
 				},
@@ -1279,66 +1280,8 @@ func TestTraceRepoImpl_addPageTokenFilter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &TraceRepoImpl{}
-			got := r.addPageTokenFilter(tt.args.pageToken, tt.args.filter, false)
+			got := r.addPageTokenFilter(tt.args.pageToken, tt.args.filter, false, false)
 			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func Test_parsePageToken(t *testing.T) {
-	type args struct {
-		pageToken string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *PageToken
-		wantErr bool
-	}{
-		{
-			name: "parse empty page token",
-			args: args{
-				pageToken: "",
-			},
-			want:    nil,
-			wantErr: false,
-		},
-		{
-			name: "parse valid page token",
-			args: args{
-				pageToken: "eyJTdGFydFRpbWUiOjEyMzQ1Njc4OTAsIlNwYW5JRCI6InNwYW4xMjMifQ==",
-			},
-			want: &PageToken{
-				StartTime: 1234567890,
-				SpanID:    "span123",
-			},
-			wantErr: false,
-		},
-		{
-			name: "parse invalid base64 page token",
-			args: args{
-				pageToken: "invalid-base64!",
-			},
-			wantErr: true,
-		},
-		{
-			name: "parse invalid json page token",
-			args: args{
-				pageToken: "eyJpbnZhbGlkIjogImpzb24ifQ==", // {"invalid": "json"}
-			},
-			want:    &PageToken{}, // Will unmarshal to empty struct
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parsePageToken(tt.args.pageToken)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, got)
-			}
 		})
 	}
 }

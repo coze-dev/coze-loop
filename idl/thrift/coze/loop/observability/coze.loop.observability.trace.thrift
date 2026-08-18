@@ -170,6 +170,7 @@ struct CreateViewRequest {
     4: required common.PlatformType platform_type (api.body="platform_type")
     5: required common.SpanListType span_list_type (api.body="span_list_type")
     6: required string filters (api.body="filters")
+    7: optional view.Scope scope (api.body="scope")
 
     255: optional base.Base Base
 }
@@ -210,6 +211,7 @@ struct ListViewsRequest {
     1: optional string enterprise_id (api.body="enterprise_id")
     2: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
     3: optional string view_name (api.body="view_name")
+    4: optional view.Scope scope (api.body="scope")
 
     255: optional base.Base Base
 }
@@ -552,6 +554,11 @@ struct ListThreadChatRequest {
     5: optional i32 page_size (go.tag='json:"page_size,omitempty"', api.body="page_size")
     6: optional string page_token (go.tag='json:"page_token,omitempty"', api.body="page_token")
     7: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
+    8: optional string prev_page_token (go.tag='json:"prev_page_token,omitempty"', api.body="prev_page_token")
+    9: optional filter.FilterFields filters (api.body="filters")
+    10: optional bool without_detail (go.tag='json:"without_detail,omitempty"', api.body="without_detail")
+    11: optional i64 anchor_start_time (api.js_conv='true', go.tag='json:"anchor_start_time,omitempty"', api.body="anchor_start_time")
+    12: optional string anchor_span_id (go.tag='json:"anchor_span_id,omitempty"', api.body="anchor_span_id")
 
     255: optional base.Base Base
 }
@@ -560,6 +567,8 @@ struct ListThreadChatResponse {
     1: required list<ChatMessage> messages (go.tag='json:"messages"')
     2: required string next_page_token (go.tag='json:"next_page_token"')
     3: required bool has_more (go.tag='json:"has_more"')
+    4: optional string prev_page_token (go.tag='json:"prev_page_token,omitempty"')
+    5: optional bool prev_has_more (go.tag='json:"prev_has_more,omitempty"')
 
     255: optional base.BaseResp BaseResp
 }

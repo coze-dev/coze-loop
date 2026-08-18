@@ -38,7 +38,7 @@ func TestViewRepoImpl_ListViews(t *testing.T) {
 			name: "list view",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				viewDao := mysqlmock.NewMockIViewDao(ctrl)
-				viewDao.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+				viewDao.EXPECT().ListViews(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 				return fields{
 					viewDao: viewDao,
 				}
@@ -58,7 +58,7 @@ func TestViewRepoImpl_ListViews(t *testing.T) {
 			v := &ViewRepoImpl{
 				viewDao: fields.viewDao,
 			}
-			_, err := v.ListViews(tt.args.ctx, tt.args.workspaceID, tt.args.userID)
+			_, err := v.ListViews(tt.args.ctx, tt.args.workspaceID, tt.args.userID, 1)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
 	}

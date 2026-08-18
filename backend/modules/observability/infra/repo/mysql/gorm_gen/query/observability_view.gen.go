@@ -41,6 +41,7 @@ func newObservabilityView(db *gorm.DB, opts ...gen.DOOption) observabilityView {
 	_observabilityView.IsDeleted = field.NewBool(tableName, "is_deleted")
 	_observabilityView.DeletedAt = field.NewField(tableName, "deleted_at")
 	_observabilityView.DeletedBy = field.NewString(tableName, "deleted_by")
+	_observabilityView.Scope = field.NewInt32(tableName, "scope")
 
 	_observabilityView.fillFieldMap()
 
@@ -66,6 +67,7 @@ type observabilityView struct {
 	IsDeleted    field.Bool   // 是否删除, 0 表示未删除, 1 表示已删除
 	DeletedAt    field.Field  // 删除时间
 	DeletedBy    field.String // 删除人
+	Scope        field.Int32  // 视图场景: 1-trace_list, 2-trace_detail_tree, 3-trace_detail_chat
 
 	fieldMap map[string]field.Expr
 }
@@ -96,6 +98,7 @@ func (o *observabilityView) updateTableName(table string) *observabilityView {
 	o.IsDeleted = field.NewBool(table, "is_deleted")
 	o.DeletedAt = field.NewField(table, "deleted_at")
 	o.DeletedBy = field.NewString(table, "deleted_by")
+	o.Scope = field.NewInt32(table, "scope")
 
 	o.fillFieldMap()
 
@@ -124,7 +127,7 @@ func (o *observabilityView) GetFieldByName(fieldName string) (field.OrderExpr, b
 }
 
 func (o *observabilityView) fillFieldMap() {
-	o.fieldMap = make(map[string]field.Expr, 14)
+	o.fieldMap = make(map[string]field.Expr, 15)
 	o.fieldMap["id"] = o.ID
 	o.fieldMap["enterprise_id"] = o.EnterpriseID
 	o.fieldMap["workspace_id"] = o.WorkspaceID
@@ -139,6 +142,7 @@ func (o *observabilityView) fillFieldMap() {
 	o.fieldMap["is_deleted"] = o.IsDeleted
 	o.fieldMap["deleted_at"] = o.DeletedAt
 	o.fieldMap["deleted_by"] = o.DeletedBy
+	o.fieldMap["scope"] = o.Scope
 }
 
 func (o observabilityView) clone(db *gorm.DB) observabilityView {

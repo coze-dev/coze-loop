@@ -8136,6 +8136,7 @@ type CreateViewRequest struct {
 	PlatformType common.PlatformType `thrift:"platform_type,4,required" frugal:"4,required,string" form:"platform_type,required" json:"platform_type,required"`
 	SpanListType common.SpanListType `thrift:"span_list_type,5,required" frugal:"5,required,string" form:"span_list_type,required" json:"span_list_type,required"`
 	Filters      string              `thrift:"filters,6,required" frugal:"6,required,string" form:"filters,required" json:"filters,required"`
+	Scope        *view.Scope         `thrift:"scope,7,optional" frugal:"7,optional,Scope" form:"scope" json:"scope,omitempty"`
 	Base         *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -8193,6 +8194,18 @@ func (p *CreateViewRequest) GetFilters() (v string) {
 	return
 }
 
+var CreateViewRequest_Scope_DEFAULT view.Scope
+
+func (p *CreateViewRequest) GetScope() (v view.Scope) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScope() {
+		return CreateViewRequest_Scope_DEFAULT
+	}
+	return *p.Scope
+}
+
 var CreateViewRequest_Base_DEFAULT *base.Base
 
 func (p *CreateViewRequest) GetBase() (v *base.Base) {
@@ -8222,6 +8235,9 @@ func (p *CreateViewRequest) SetSpanListType(val common.SpanListType) {
 func (p *CreateViewRequest) SetFilters(val string) {
 	p.Filters = val
 }
+func (p *CreateViewRequest) SetScope(val *view.Scope) {
+	p.Scope = val
+}
 func (p *CreateViewRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -8233,11 +8249,16 @@ var fieldIDToName_CreateViewRequest = map[int16]string{
 	4:   "platform_type",
 	5:   "span_list_type",
 	6:   "filters",
+	7:   "scope",
 	255: "Base",
 }
 
 func (p *CreateViewRequest) IsSetEnterpriseID() bool {
 	return p.EnterpriseID != nil
+}
+
+func (p *CreateViewRequest) IsSetScope() bool {
+	return p.Scope != nil
 }
 
 func (p *CreateViewRequest) IsSetBase() bool {
@@ -8317,6 +8338,14 @@ func (p *CreateViewRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetFilters = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -8449,6 +8478,18 @@ func (p *CreateViewRequest) ReadField6(iprot thrift.TProtocol) error {
 	p.Filters = _field
 	return nil
 }
+func (p *CreateViewRequest) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *view.Scope
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := view.Scope(v)
+		_field = &tmp
+	}
+	p.Scope = _field
+	return nil
+}
 func (p *CreateViewRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -8486,6 +8527,10 @@ func (p *CreateViewRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -8608,6 +8653,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *CreateViewRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScope() {
+		if err = oprot.WriteFieldBegin("scope", thrift.I32, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.Scope)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *CreateViewRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -8659,6 +8722,9 @@ func (p *CreateViewRequest) DeepEqual(ano *CreateViewRequest) bool {
 	if !p.Field6DeepEqual(ano.Filters) {
 		return false
 	}
+	if !p.Field7DeepEqual(ano.Scope) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -8708,6 +8774,18 @@ func (p *CreateViewRequest) Field5DeepEqual(src common.SpanListType) bool {
 func (p *CreateViewRequest) Field6DeepEqual(src string) bool {
 
 	if strings.Compare(p.Filters, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreateViewRequest) Field7DeepEqual(src *view.Scope) bool {
+
+	if p.Scope == src {
+		return true
+	} else if p.Scope == nil || src == nil {
+		return false
+	}
+	if *p.Scope != *src {
 		return false
 	}
 	return true
@@ -10237,10 +10315,11 @@ func (p *DeleteViewResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ListViewsRequest struct {
-	EnterpriseID *string    `thrift:"enterprise_id,1,optional" frugal:"1,optional,string" form:"enterprise_id" json:"enterprise_id,omitempty"`
-	WorkspaceID  int64      `thrift:"workspace_id,2,required" frugal:"2,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ViewName     *string    `thrift:"view_name,3,optional" frugal:"3,optional,string" form:"view_name" json:"view_name,omitempty"`
-	Base         *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	EnterpriseID *string     `thrift:"enterprise_id,1,optional" frugal:"1,optional,string" form:"enterprise_id" json:"enterprise_id,omitempty"`
+	WorkspaceID  int64       `thrift:"workspace_id,2,required" frugal:"2,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ViewName     *string     `thrift:"view_name,3,optional" frugal:"3,optional,string" form:"view_name" json:"view_name,omitempty"`
+	Scope        *view.Scope `thrift:"scope,4,optional" frugal:"4,optional,Scope" form:"scope" json:"scope,omitempty"`
+	Base         *base.Base  `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListViewsRequest() *ListViewsRequest {
@@ -10281,6 +10360,18 @@ func (p *ListViewsRequest) GetViewName() (v string) {
 	return *p.ViewName
 }
 
+var ListViewsRequest_Scope_DEFAULT view.Scope
+
+func (p *ListViewsRequest) GetScope() (v view.Scope) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScope() {
+		return ListViewsRequest_Scope_DEFAULT
+	}
+	return *p.Scope
+}
+
 var ListViewsRequest_Base_DEFAULT *base.Base
 
 func (p *ListViewsRequest) GetBase() (v *base.Base) {
@@ -10301,6 +10392,9 @@ func (p *ListViewsRequest) SetWorkspaceID(val int64) {
 func (p *ListViewsRequest) SetViewName(val *string) {
 	p.ViewName = val
 }
+func (p *ListViewsRequest) SetScope(val *view.Scope) {
+	p.Scope = val
+}
 func (p *ListViewsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -10309,6 +10403,7 @@ var fieldIDToName_ListViewsRequest = map[int16]string{
 	1:   "enterprise_id",
 	2:   "workspace_id",
 	3:   "view_name",
+	4:   "scope",
 	255: "Base",
 }
 
@@ -10318,6 +10413,10 @@ func (p *ListViewsRequest) IsSetEnterpriseID() bool {
 
 func (p *ListViewsRequest) IsSetViewName() bool {
 	return p.ViewName != nil
+}
+
+func (p *ListViewsRequest) IsSetScope() bool {
+	return p.Scope != nil
 }
 
 func (p *ListViewsRequest) IsSetBase() bool {
@@ -10363,6 +10462,14 @@ func (p *ListViewsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10444,6 +10551,18 @@ func (p *ListViewsRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.ViewName = _field
 	return nil
 }
+func (p *ListViewsRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *view.Scope
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := view.Scope(v)
+		_field = &tmp
+	}
+	p.Scope = _field
+	return nil
+}
 func (p *ListViewsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -10469,6 +10588,10 @@ func (p *ListViewsRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -10545,6 +10668,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ListViewsRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScope() {
+		if err = oprot.WriteFieldBegin("scope", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.Scope)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 func (p *ListViewsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -10587,6 +10728,9 @@ func (p *ListViewsRequest) DeepEqual(ano *ListViewsRequest) bool {
 	if !p.Field3DeepEqual(ano.ViewName) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.Scope) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -10620,6 +10764,18 @@ func (p *ListViewsRequest) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ViewName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListViewsRequest) Field4DeepEqual(src *view.Scope) bool {
+
+	if p.Scope == src {
+		return true
+	} else if p.Scope == nil || src == nil {
+		return false
+	}
+	if *p.Scope != *src {
 		return false
 	}
 	return true
@@ -27448,14 +27604,19 @@ func (p *ListTraceChatResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ListThreadChatRequest struct {
-	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ThreadID     string               `thrift:"thread_id,2,required" frugal:"2,required,string" json:"thread_id" form:"thread_id,required" `
-	StartTime    *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time,omitempty" form:"start_time" `
-	EndTime      *int64               `thrift:"end_time,4,optional" frugal:"4,optional,i64" json:"end_time,omitempty" form:"end_time" `
-	PageSize     *int32               `thrift:"page_size,5,optional" frugal:"5,optional,i32" json:"page_size,omitempty" form:"page_size" `
-	PageToken    *string              `thrift:"page_token,6,optional" frugal:"6,optional,string" json:"page_token,omitempty" form:"page_token" `
-	PlatformType *common.PlatformType `thrift:"platform_type,7,optional" frugal:"7,optional,string" json:"platform_type,omitempty" form:"platform_type" `
-	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID     int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ThreadID        string               `thrift:"thread_id,2,required" frugal:"2,required,string" json:"thread_id" form:"thread_id,required" `
+	StartTime       *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time,omitempty" form:"start_time" `
+	EndTime         *int64               `thrift:"end_time,4,optional" frugal:"4,optional,i64" json:"end_time,omitempty" form:"end_time" `
+	PageSize        *int32               `thrift:"page_size,5,optional" frugal:"5,optional,i32" json:"page_size,omitempty" form:"page_size" `
+	PageToken       *string              `thrift:"page_token,6,optional" frugal:"6,optional,string" json:"page_token,omitempty" form:"page_token" `
+	PlatformType    *common.PlatformType `thrift:"platform_type,7,optional" frugal:"7,optional,string" json:"platform_type,omitempty" form:"platform_type" `
+	PrevPageToken   *string              `thrift:"prev_page_token,8,optional" frugal:"8,optional,string" json:"prev_page_token,omitempty" form:"prev_page_token" `
+	Filters         *filter.FilterFields `thrift:"filters,9,optional" frugal:"9,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
+	WithoutDetail   *bool                `thrift:"without_detail,10,optional" frugal:"10,optional,bool" json:"without_detail,omitempty" form:"without_detail" `
+	AnchorStartTime *int64               `thrift:"anchor_start_time,11,optional" frugal:"11,optional,i64" json:"anchor_start_time,omitempty" form:"anchor_start_time" `
+	AnchorSpanID    *string              `thrift:"anchor_span_id,12,optional" frugal:"12,optional,string" json:"anchor_span_id,omitempty" form:"anchor_span_id" `
+	Base            *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListThreadChatRequest() *ListThreadChatRequest {
@@ -27539,6 +27700,66 @@ func (p *ListThreadChatRequest) GetPlatformType() (v common.PlatformType) {
 	return *p.PlatformType
 }
 
+var ListThreadChatRequest_PrevPageToken_DEFAULT string
+
+func (p *ListThreadChatRequest) GetPrevPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPrevPageToken() {
+		return ListThreadChatRequest_PrevPageToken_DEFAULT
+	}
+	return *p.PrevPageToken
+}
+
+var ListThreadChatRequest_Filters_DEFAULT *filter.FilterFields
+
+func (p *ListThreadChatRequest) GetFilters() (v *filter.FilterFields) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilters() {
+		return ListThreadChatRequest_Filters_DEFAULT
+	}
+	return p.Filters
+}
+
+var ListThreadChatRequest_WithoutDetail_DEFAULT bool
+
+func (p *ListThreadChatRequest) GetWithoutDetail() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWithoutDetail() {
+		return ListThreadChatRequest_WithoutDetail_DEFAULT
+	}
+	return *p.WithoutDetail
+}
+
+var ListThreadChatRequest_AnchorStartTime_DEFAULT int64
+
+func (p *ListThreadChatRequest) GetAnchorStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAnchorStartTime() {
+		return ListThreadChatRequest_AnchorStartTime_DEFAULT
+	}
+	return *p.AnchorStartTime
+}
+
+var ListThreadChatRequest_AnchorSpanID_DEFAULT string
+
+func (p *ListThreadChatRequest) GetAnchorSpanID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAnchorSpanID() {
+		return ListThreadChatRequest_AnchorSpanID_DEFAULT
+	}
+	return *p.AnchorSpanID
+}
+
 var ListThreadChatRequest_Base_DEFAULT *base.Base
 
 func (p *ListThreadChatRequest) GetBase() (v *base.Base) {
@@ -27571,6 +27792,21 @@ func (p *ListThreadChatRequest) SetPageToken(val *string) {
 func (p *ListThreadChatRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
+func (p *ListThreadChatRequest) SetPrevPageToken(val *string) {
+	p.PrevPageToken = val
+}
+func (p *ListThreadChatRequest) SetFilters(val *filter.FilterFields) {
+	p.Filters = val
+}
+func (p *ListThreadChatRequest) SetWithoutDetail(val *bool) {
+	p.WithoutDetail = val
+}
+func (p *ListThreadChatRequest) SetAnchorStartTime(val *int64) {
+	p.AnchorStartTime = val
+}
+func (p *ListThreadChatRequest) SetAnchorSpanID(val *string) {
+	p.AnchorSpanID = val
+}
 func (p *ListThreadChatRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -27583,6 +27819,11 @@ var fieldIDToName_ListThreadChatRequest = map[int16]string{
 	5:   "page_size",
 	6:   "page_token",
 	7:   "platform_type",
+	8:   "prev_page_token",
+	9:   "filters",
+	10:  "without_detail",
+	11:  "anchor_start_time",
+	12:  "anchor_span_id",
 	255: "Base",
 }
 
@@ -27604,6 +27845,26 @@ func (p *ListThreadChatRequest) IsSetPageToken() bool {
 
 func (p *ListThreadChatRequest) IsSetPlatformType() bool {
 	return p.PlatformType != nil
+}
+
+func (p *ListThreadChatRequest) IsSetPrevPageToken() bool {
+	return p.PrevPageToken != nil
+}
+
+func (p *ListThreadChatRequest) IsSetFilters() bool {
+	return p.Filters != nil
+}
+
+func (p *ListThreadChatRequest) IsSetWithoutDetail() bool {
+	return p.WithoutDetail != nil
+}
+
+func (p *ListThreadChatRequest) IsSetAnchorStartTime() bool {
+	return p.AnchorStartTime != nil
+}
+
+func (p *ListThreadChatRequest) IsSetAnchorSpanID() bool {
+	return p.AnchorSpanID != nil
 }
 
 func (p *ListThreadChatRequest) IsSetBase() bool {
@@ -27683,6 +27944,46 @@ func (p *ListThreadChatRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -27813,6 +28114,58 @@ func (p *ListThreadChatRequest) ReadField7(iprot thrift.TProtocol) error {
 	p.PlatformType = _field
 	return nil
 }
+func (p *ListThreadChatRequest) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PrevPageToken = _field
+	return nil
+}
+func (p *ListThreadChatRequest) ReadField9(iprot thrift.TProtocol) error {
+	_field := filter.NewFilterFields()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Filters = _field
+	return nil
+}
+func (p *ListThreadChatRequest) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WithoutDetail = _field
+	return nil
+}
+func (p *ListThreadChatRequest) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AnchorStartTime = _field
+	return nil
+}
+func (p *ListThreadChatRequest) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AnchorSpanID = _field
+	return nil
+}
 func (p *ListThreadChatRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -27854,6 +28207,26 @@ func (p *ListThreadChatRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -28000,6 +28373,96 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *ListThreadChatRequest) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPrevPageToken() {
+		if err = oprot.WriteFieldBegin("prev_page_token", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PrevPageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *ListThreadChatRequest) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilters() {
+		if err = oprot.WriteFieldBegin("filters", thrift.STRUCT, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Filters.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+func (p *ListThreadChatRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWithoutDetail() {
+		if err = oprot.WriteFieldBegin("without_detail", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.WithoutDetail); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *ListThreadChatRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAnchorStartTime() {
+		if err = oprot.WriteFieldBegin("anchor_start_time", thrift.I64, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.AnchorStartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+func (p *ListThreadChatRequest) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAnchorSpanID() {
+		if err = oprot.WriteFieldBegin("anchor_span_id", thrift.STRING, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AnchorSpanID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 func (p *ListThreadChatRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -28052,6 +28515,21 @@ func (p *ListThreadChatRequest) DeepEqual(ano *ListThreadChatRequest) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.PlatformType) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.PrevPageToken) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.Filters) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.WithoutDetail) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.AnchorStartTime) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.AnchorSpanID) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -28134,6 +28612,61 @@ func (p *ListThreadChatRequest) Field7DeepEqual(src *common.PlatformType) bool {
 	}
 	return true
 }
+func (p *ListThreadChatRequest) Field8DeepEqual(src *string) bool {
+
+	if p.PrevPageToken == src {
+		return true
+	} else if p.PrevPageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PrevPageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListThreadChatRequest) Field9DeepEqual(src *filter.FilterFields) bool {
+
+	if !p.Filters.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListThreadChatRequest) Field10DeepEqual(src *bool) bool {
+
+	if p.WithoutDetail == src {
+		return true
+	} else if p.WithoutDetail == nil || src == nil {
+		return false
+	}
+	if *p.WithoutDetail != *src {
+		return false
+	}
+	return true
+}
+func (p *ListThreadChatRequest) Field11DeepEqual(src *int64) bool {
+
+	if p.AnchorStartTime == src {
+		return true
+	} else if p.AnchorStartTime == nil || src == nil {
+		return false
+	}
+	if *p.AnchorStartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *ListThreadChatRequest) Field12DeepEqual(src *string) bool {
+
+	if p.AnchorSpanID == src {
+		return true
+	} else if p.AnchorSpanID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AnchorSpanID, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *ListThreadChatRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
@@ -28146,6 +28679,8 @@ type ListThreadChatResponse struct {
 	Messages      []*ChatMessage `thrift:"messages,1,required" frugal:"1,required,list<ChatMessage>" json:"messages" form:"messages,required" query:"messages,required"`
 	NextPageToken string         `thrift:"next_page_token,2,required" frugal:"2,required,string" json:"next_page_token" form:"next_page_token,required" query:"next_page_token,required"`
 	HasMore       bool           `thrift:"has_more,3,required" frugal:"3,required,bool" json:"has_more" form:"has_more,required" query:"has_more,required"`
+	PrevPageToken *string        `thrift:"prev_page_token,4,optional" frugal:"4,optional,string" json:"prev_page_token,omitempty" form:"prev_page_token" query:"prev_page_token"`
+	PrevHasMore   *bool          `thrift:"prev_has_more,5,optional" frugal:"5,optional,bool" json:"prev_has_more,omitempty" form:"prev_has_more" query:"prev_has_more"`
 	BaseResp      *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
@@ -28177,6 +28712,30 @@ func (p *ListThreadChatResponse) GetHasMore() (v bool) {
 	return
 }
 
+var ListThreadChatResponse_PrevPageToken_DEFAULT string
+
+func (p *ListThreadChatResponse) GetPrevPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPrevPageToken() {
+		return ListThreadChatResponse_PrevPageToken_DEFAULT
+	}
+	return *p.PrevPageToken
+}
+
+var ListThreadChatResponse_PrevHasMore_DEFAULT bool
+
+func (p *ListThreadChatResponse) GetPrevHasMore() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPrevHasMore() {
+		return ListThreadChatResponse_PrevHasMore_DEFAULT
+	}
+	return *p.PrevHasMore
+}
+
 var ListThreadChatResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *ListThreadChatResponse) GetBaseResp() (v *base.BaseResp) {
@@ -28197,6 +28756,12 @@ func (p *ListThreadChatResponse) SetNextPageToken(val string) {
 func (p *ListThreadChatResponse) SetHasMore(val bool) {
 	p.HasMore = val
 }
+func (p *ListThreadChatResponse) SetPrevPageToken(val *string) {
+	p.PrevPageToken = val
+}
+func (p *ListThreadChatResponse) SetPrevHasMore(val *bool) {
+	p.PrevHasMore = val
+}
 func (p *ListThreadChatResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -28205,7 +28770,17 @@ var fieldIDToName_ListThreadChatResponse = map[int16]string{
 	1:   "messages",
 	2:   "next_page_token",
 	3:   "has_more",
+	4:   "prev_page_token",
+	5:   "prev_has_more",
 	255: "BaseResp",
+}
+
+func (p *ListThreadChatResponse) IsSetPrevPageToken() bool {
+	return p.PrevPageToken != nil
+}
+
+func (p *ListThreadChatResponse) IsSetPrevHasMore() bool {
+	return p.PrevHasMore != nil
 }
 
 func (p *ListThreadChatResponse) IsSetBaseResp() bool {
@@ -28257,6 +28832,22 @@ func (p *ListThreadChatResponse) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetHasMore = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -28358,6 +28949,28 @@ func (p *ListThreadChatResponse) ReadField3(iprot thrift.TProtocol) error {
 	p.HasMore = _field
 	return nil
 }
+func (p *ListThreadChatResponse) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PrevPageToken = _field
+	return nil
+}
+func (p *ListThreadChatResponse) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PrevHasMore = _field
+	return nil
+}
 func (p *ListThreadChatResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -28383,6 +28996,14 @@ func (p *ListThreadChatResponse) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -28463,6 +29084,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ListThreadChatResponse) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPrevPageToken() {
+		if err = oprot.WriteFieldBegin("prev_page_token", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PrevPageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ListThreadChatResponse) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPrevHasMore() {
+		if err = oprot.WriteFieldBegin("prev_has_more", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.PrevHasMore); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *ListThreadChatResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
@@ -28505,6 +29162,12 @@ func (p *ListThreadChatResponse) DeepEqual(ano *ListThreadChatResponse) bool {
 	if !p.Field3DeepEqual(ano.HasMore) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.PrevPageToken) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.PrevHasMore) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -28534,6 +29197,30 @@ func (p *ListThreadChatResponse) Field2DeepEqual(src string) bool {
 func (p *ListThreadChatResponse) Field3DeepEqual(src bool) bool {
 
 	if p.HasMore != src {
+		return false
+	}
+	return true
+}
+func (p *ListThreadChatResponse) Field4DeepEqual(src *string) bool {
+
+	if p.PrevPageToken == src {
+		return true
+	} else if p.PrevPageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PrevPageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListThreadChatResponse) Field5DeepEqual(src *bool) bool {
+
+	if p.PrevHasMore == src {
+		return true
+	} else if p.PrevHasMore == nil || src == nil {
+		return false
+	}
+	if *p.PrevHasMore != *src {
 		return false
 	}
 	return true

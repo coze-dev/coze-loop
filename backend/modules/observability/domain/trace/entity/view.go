@@ -19,4 +19,5 @@ type ObservabilityView struct {
 	CreatedBy    string
 	UpdatedAt    time.Time
 	UpdatedBy    string
+	Scope        int32
 }

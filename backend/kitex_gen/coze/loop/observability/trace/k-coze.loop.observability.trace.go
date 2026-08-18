@@ -6154,6 +6154,20 @@ func (p *CreateViewRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -6296,6 +6310,22 @@ func (p *CreateViewRequest) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateViewRequest) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *view.Scope
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := view.Scope(v)
+		_field = &tmp
+	}
+	p.Scope = _field
+	return offset, nil
+}
+
 func (p *CreateViewRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -6321,6 +6351,7 @@ func (p *CreateViewRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -6336,6 +6367,7 @@ func (p *CreateViewRequest) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6383,6 +6415,15 @@ func (p *CreateViewRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) i
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.Filters)
+	return offset
+}
+
+func (p *CreateViewRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetScope() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 7)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.Scope))
+	}
 	return offset
 }
 
@@ -6439,6 +6480,15 @@ func (p *CreateViewRequest) field6Length() int {
 	return l
 }
 
+func (p *CreateViewRequest) field7Length() int {
+	l := 0
+	if p.IsSetScope() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *CreateViewRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -6474,6 +6524,11 @@ func (p *CreateViewRequest) DeepCopy(s interface{}) error {
 
 	if src.Filters != "" {
 		p.Filters = kutils.StringDeepCopy(src.Filters)
+	}
+
+	if src.Scope != nil {
+		tmp := *src.Scope
+		p.Scope = &tmp
 	}
 
 	var _base *base.Base
@@ -7630,6 +7685,20 @@ func (p *ListViewsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -7710,6 +7779,22 @@ func (p *ListViewsRequest) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListViewsRequest) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *view.Scope
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := view.Scope(v)
+		_field = &tmp
+	}
+	p.Scope = _field
+	return offset, nil
+}
+
 func (p *ListViewsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -7732,6 +7817,7 @@ func (p *ListViewsRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -7744,6 +7830,7 @@ func (p *ListViewsRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -7771,6 +7858,15 @@ func (p *ListViewsRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) in
 	if p.IsSetViewName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ViewName)
+	}
+	return offset
+}
+
+func (p *ListViewsRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetScope() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 4)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.Scope))
 	}
 	return offset
 }
@@ -7809,6 +7905,15 @@ func (p *ListViewsRequest) field3Length() int {
 	return l
 }
 
+func (p *ListViewsRequest) field4Length() int {
+	l := 0
+	if p.IsSetScope() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *ListViewsRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -7840,6 +7945,11 @@ func (p *ListViewsRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.ViewName)
 		}
 		p.ViewName = &tmp
+	}
+
+	if src.Scope != nil {
+		tmp := *src.Scope
+		p.Scope = &tmp
 	}
 
 	var _base *base.Base
@@ -20416,6 +20526,76 @@ func (p *ListThreadChatRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -20557,6 +20737,74 @@ func (p *ListThreadChatRequest) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListThreadChatRequest) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PrevPageToken = _field
+	return offset, nil
+}
+
+func (p *ListThreadChatRequest) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+	_field := filter.NewFilterFields()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Filters = _field
+	return offset, nil
+}
+
+func (p *ListThreadChatRequest) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WithoutDetail = _field
+	return offset, nil
+}
+
+func (p *ListThreadChatRequest) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.AnchorStartTime = _field
+	return offset, nil
+}
+
+func (p *ListThreadChatRequest) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.AnchorSpanID = _field
+	return offset, nil
+}
+
 func (p *ListThreadChatRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -20580,9 +20828,14 @@ func (p *ListThreadChatRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrite
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField9(buf[offset:], w)
+		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -20599,6 +20852,11 @@ func (p *ListThreadChatRequest) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
+		l += p.field10Length()
+		l += p.field11Length()
+		l += p.field12Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -20660,6 +20918,51 @@ func (p *ListThreadChatRequest) fastWriteField7(buf []byte, w thrift.NocopyWrite
 	if p.IsSetPlatformType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PlatformType)
+	}
+	return offset
+}
+
+func (p *ListThreadChatRequest) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPrevPageToken() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 8)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PrevPageToken)
+	}
+	return offset
+}
+
+func (p *ListThreadChatRequest) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilters() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 9)
+		offset += p.Filters.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ListThreadChatRequest) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWithoutDetail() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 10)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithoutDetail)
+	}
+	return offset
+}
+
+func (p *ListThreadChatRequest) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAnchorStartTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 11)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.AnchorStartTime)
+	}
+	return offset
+}
+
+func (p *ListThreadChatRequest) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAnchorSpanID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.AnchorSpanID)
 	}
 	return offset
 }
@@ -20732,6 +21035,51 @@ func (p *ListThreadChatRequest) field7Length() int {
 	return l
 }
 
+func (p *ListThreadChatRequest) field8Length() int {
+	l := 0
+	if p.IsSetPrevPageToken() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.PrevPageToken)
+	}
+	return l
+}
+
+func (p *ListThreadChatRequest) field9Length() int {
+	l := 0
+	if p.IsSetFilters() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Filters.BLength()
+	}
+	return l
+}
+
+func (p *ListThreadChatRequest) field10Length() int {
+	l := 0
+	if p.IsSetWithoutDetail() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *ListThreadChatRequest) field11Length() int {
+	l := 0
+	if p.IsSetAnchorStartTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ListThreadChatRequest) field12Length() int {
+	l := 0
+	if p.IsSetAnchorSpanID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.AnchorSpanID)
+	}
+	return l
+}
+
 func (p *ListThreadChatRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -20779,6 +21127,41 @@ func (p *ListThreadChatRequest) DeepCopy(s interface{}) error {
 	if src.PlatformType != nil {
 		tmp := *src.PlatformType
 		p.PlatformType = &tmp
+	}
+
+	if src.PrevPageToken != nil {
+		var tmp string
+		if *src.PrevPageToken != "" {
+			tmp = kutils.StringDeepCopy(*src.PrevPageToken)
+		}
+		p.PrevPageToken = &tmp
+	}
+
+	var _filters *filter.FilterFields
+	if src.Filters != nil {
+		_filters = &filter.FilterFields{}
+		if err := _filters.DeepCopy(src.Filters); err != nil {
+			return err
+		}
+	}
+	p.Filters = _filters
+
+	if src.WithoutDetail != nil {
+		tmp := *src.WithoutDetail
+		p.WithoutDetail = &tmp
+	}
+
+	if src.AnchorStartTime != nil {
+		tmp := *src.AnchorStartTime
+		p.AnchorStartTime = &tmp
+	}
+
+	if src.AnchorSpanID != nil {
+		var tmp string
+		if *src.AnchorSpanID != "" {
+			tmp = kutils.StringDeepCopy(*src.AnchorSpanID)
+		}
+		p.AnchorSpanID = &tmp
 	}
 
 	var _base *base.Base
@@ -20851,6 +21234,34 @@ func (p *ListThreadChatResponse) FastRead(buf []byte) (int, error) {
 					goto ReadFieldError
 				}
 				issetHasMore = true
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -20959,6 +21370,34 @@ func (p *ListThreadChatResponse) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListThreadChatResponse) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PrevPageToken = _field
+	return offset, nil
+}
+
+func (p *ListThreadChatResponse) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PrevHasMore = _field
+	return offset, nil
+}
+
 func (p *ListThreadChatResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -20979,8 +21418,10 @@ func (p *ListThreadChatResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -20993,6 +21434,8 @@ func (p *ListThreadChatResponse) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -21027,6 +21470,24 @@ func (p *ListThreadChatResponse) fastWriteField3(buf []byte, w thrift.NocopyWrit
 	return offset
 }
 
+func (p *ListThreadChatResponse) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPrevPageToken() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PrevPageToken)
+	}
+	return offset
+}
+
+func (p *ListThreadChatResponse) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPrevHasMore() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.PrevHasMore)
+	}
+	return offset
+}
+
 func (p *ListThreadChatResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBaseResp() {
@@ -21058,6 +21519,24 @@ func (p *ListThreadChatResponse) field3Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.BoolLength()
+	return l
+}
+
+func (p *ListThreadChatResponse) field4Length() int {
+	l := 0
+	if p.IsSetPrevPageToken() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.PrevPageToken)
+	}
+	return l
+}
+
+func (p *ListThreadChatResponse) field5Length() int {
+	l := 0
+	if p.IsSetPrevHasMore() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
 	return l
 }
 
@@ -21096,6 +21575,19 @@ func (p *ListThreadChatResponse) DeepCopy(s interface{}) error {
 	}
 
 	p.HasMore = src.HasMore
+
+	if src.PrevPageToken != nil {
+		var tmp string
+		if *src.PrevPageToken != "" {
+			tmp = kutils.StringDeepCopy(*src.PrevPageToken)
+		}
+		p.PrevPageToken = &tmp
+	}
+
+	if src.PrevHasMore != nil {
+		tmp := *src.PrevHasMore
+		p.PrevHasMore = &tmp
+	}
 
 	var _baseResp *base.BaseResp
 	if src.BaseResp != nil {

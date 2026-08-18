@@ -20,7 +20,7 @@ import (
 //go:generate mockgen -destination=mocks/view.go -package=mocks . IViewDao
 type IViewDao interface {
 	GetView(ctx context.Context, id int64, workspaceID *int64, userID *string) (*model.ObservabilityView, error)
-	ListViews(ctx context.Context, workspaceID int64, userID string) ([]*model.ObservabilityView, error)
+	ListViews(ctx context.Context, workspaceID int64, userID string, scope int32) ([]*model.ObservabilityView, error)
 	CreateView(ctx context.Context, po *model.ObservabilityView) (int64, error)
 	UpdateView(ctx context.Context, po *model.ObservabilityView) error
 	DeleteView(ctx context.Context, id int64, workspaceID int64, userID string) error
@@ -56,7 +56,7 @@ func (v *ViewDaoImpl) GetView(ctx context.Context, id int64, workspaceID *int64,
 	return viewPo, nil
 }
 
-func (v *ViewDaoImpl) ListViews(ctx context.Context, workspaceID int64, userID string) ([]*model.ObservabilityView, error) {
+func (v *ViewDaoImpl) ListViews(ctx context.Context, workspaceID int64, userID string, scope int32) ([]*model.ObservabilityView, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx, db.WithMaster())).ObservabilityView
 	qd := q.WithContext(ctx)
 	if workspaceID != 0 {
@@ -65,6 +65,7 @@ func (v *ViewDaoImpl) ListViews(ctx context.Context, workspaceID int64, userID s
 	if userID != "" {
 		qd = qd.Where(q.CreatedBy.Eq(userID))
 	}
+	qd = qd.Where(q.Scope.Eq(scope))
 	results, err := qd.Limit(100).Find()
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
