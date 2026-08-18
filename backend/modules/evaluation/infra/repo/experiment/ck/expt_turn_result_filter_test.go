@@ -921,3 +921,84 @@ func TestExptTurnResultFilterDAOImpl_buildMapFieldConditions_EvalTargetMetricsFi
 		})
 	}
 }
+
+func TestExptTurnResultFilterDAOImpl_appendItemSnapshotColumnCond(t *testing.T) {
+	d := &exptTurnResultFilterDAOImpl{}
+
+	t.Run("item_key 等于", func(t *testing.T) {
+		var whereSQL string
+		var args []interface{}
+		d.appendItemSnapshotColumnCond(&whereSQL, &args, &FieldFilter{Key: "item_key", Op: "=", Values: []any{"feature_x"}})
+		assert.Contains(t, whereSQL, "dis.item_key = ?")
+		assert.NotContains(t, whereSQL, "string_map")
+		assert.Equal(t, []interface{}{"feature_x"}, args)
+	})
+
+	t.Run("item_key 包含（LIKE 两侧加通配，字面下划线被转义）", func(t *testing.T) {
+		var whereSQL string
+		var args []interface{}
+		d.appendItemSnapshotColumnCond(&whereSQL, &args, &FieldFilter{Key: "item_key", Op: "LIKE", Values: []any{"vuelidate_pr_1066"}})
+		assert.Contains(t, whereSQL, "dis.item_key LIKE ?")
+		// item_key 里的 _ 是字面字符，不该被当成 LIKE 的单字符通配，故 escapeSpecialChars 转义它
+		assert.Equal(t, `%vuelidate\_pr\_1066%`, args[0])
+	})
+
+	t.Run("其余操作符", func(t *testing.T) {
+		for _, tt := range []struct {
+			op   string
+			want string
+		}{
+			{"!=", "dis.item_key != ?"},
+			{"NOT LIKE", "dis.item_key NOT LIKE ?"},
+			{"IN", "dis.item_key IN ?"},
+			{"NOT IN", "dis.item_key NOT IN ?"},
+		} {
+			var whereSQL string
+			var args []interface{}
+			d.appendItemSnapshotColumnCond(&whereSQL, &args, &FieldFilter{Key: "item_key", Op: tt.op, Values: []any{"v"}})
+			assert.Contains(t, whereSQL, tt.want, "op=%s", tt.op)
+		}
+	})
+
+	t.Run("非白名单 key 不拼进 SQL（列名位置无法参数化，必须白名单）", func(t *testing.T) {
+		var whereSQL string
+		var args []interface{}
+		d.appendItemSnapshotColumnCond(&whereSQL, &args, &FieldFilter{Key: "item_key; DROP TABLE x", Op: "=", Values: []any{"v"}})
+		assert.Empty(t, whereSQL)
+		assert.Empty(t, args)
+	})
+
+	t.Run("空值 / nil 不产生条件", func(t *testing.T) {
+		var whereSQL string
+		var args []interface{}
+		d.appendItemSnapshotColumnCond(&whereSQL, &args, nil)
+		d.appendItemSnapshotColumnCond(&whereSQL, &args, &FieldFilter{Key: "item_key", Op: "=", Values: nil})
+		assert.Empty(t, whereSQL)
+		assert.Empty(t, args)
+	})
+
+	t.Run("不支持的操作符不产生条件", func(t *testing.T) {
+		var whereSQL string
+		var args []interface{}
+		d.appendItemSnapshotColumnCond(&whereSQL, &args, &FieldFilter{Key: "item_key", Op: "BETWEEN", Values: []any{"a", "b"}})
+		assert.Empty(t, whereSQL)
+		assert.Empty(t, args)
+	})
+}
+
+// 只有独立列条件（无任何 map 条件）时，也必须被认作"有 item_snapshot 条件"，
+// 否则 buildBaseSQL 不会 join dis 表，dis.item_key 就成了未知列。
+func TestExptTurnResultFilterDAOImpl_ColumnOnlyTriggersJoin(t *testing.T) {
+	d := &exptTurnResultFilterDAOImpl{}
+	f := &ItemSnapshotFilter{
+		ColumnFilters: []*FieldFilter{{Key: "item_key", Op: "=", Values: []any{"v"}}},
+	}
+	assert.True(t, d.hasItemSnapshotFilters(f))
+
+	cond := &ExptTurnResultFilterQueryCond{ItemSnapshotCond: f}
+	var whereSQL string
+	var args []interface{}
+	d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+	assert.Contains(t, whereSQL, "dis.item_key = ?")
+	assert.Len(t, args, 1)
+}

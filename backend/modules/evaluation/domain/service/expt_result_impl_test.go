@@ -8301,3 +8301,89 @@ func TestNewPayloadBuilder_ItemZombieTimeoutErrParsing(t *testing.T) {
 		assert.Nil(t, builder.ItemResults[0].SystemInfo.Error)
 	})
 }
+
+// mapItemSnapshotFilter 里独立列条件必须绕过 mapping 查找原样保留。
+// 回归的是：item_key 不在 QueryItemSnapshotMappings 的返回里（那份 mapping 只由评测集
+// schema.AvailableFields() 构成），走 StringMapFilters 会命中 mapping miss 的 continue
+// 被静默丢弃，最终退化成无 item_id 约束、无 LIMIT 的全表扫描。
+func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(t *testing.T) {
+	newSvc := func(ctrl *gomock.Controller) ExptResultServiceImpl {
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		// mapping 里只有 schema 字段，故意不含 item_key —— 与线上真实返回一致
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			Return([]*entity.ItemSnapshotFieldMapping{
+				{FieldKey: "my_schema_field", MappingKey: "string_map", MappingSubKey: "string_key_0"},
+			}, "2026-08-18", nil).AnyTimes()
+		return ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+	}
+	baseExpt := &entity.Experiment{SpaceID: 1, EvalSetID: 2, EvalSetVersionID: 3, ExptType: entity.ExptType_Offline}
+
+	t.Run("item_key 独立列条件被保留", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := newSvc(ctrl)
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "LIKE", Values: []any{"pr_1066"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+
+		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
+		assert.Equal(t, "item_key", filter.ItemSnapshotCond.ColumnFilters[0].Key)
+		assert.Equal(t, "LIKE", filter.ItemSnapshotCond.ColumnFilters[0].Op)
+	})
+
+	t.Run("只有独立列条件时也要触发 mapping 查询并保留（不能提前 return 丢条件）", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := newSvc(ctrl)
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"exact"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
+	})
+
+	t.Run("schema 字段仍走 mapping 转成 subkey，与独立列共存互不干扰", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := newSvc(ctrl)
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
+				ColumnFilters:    []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"k"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+
+		require.Len(t, filter.ItemSnapshotCond.StringMapFilters, 1)
+		// mapping 把 field_key 换成了 CK 的 subkey
+		assert.Equal(t, "string_key_0", filter.ItemSnapshotCond.StringMapFilters[0].Key)
+		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
+		assert.Equal(t, "item_key", filter.ItemSnapshotCond.ColumnFilters[0].Key)
+	})
+
+	t.Run("keyword_search 的独立列条件同样保留", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := newSvc(ctrl)
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{
+				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "LIKE", Values: []any{"kw"}}},
+			}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+		require.Len(t, filter.KeywordSearch.ItemSnapshotFilter.ColumnFilters, 1)
+	})
+}

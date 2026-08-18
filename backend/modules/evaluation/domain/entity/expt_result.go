@@ -663,6 +663,27 @@ type ItemSnapshotFilter struct {
 	FloatMapFilters  []*FieldFilter
 	IntMapFilters    []*FieldFilter
 	StringMapFilters []*FieldFilter
+	// ColumnFilters 是 dataset_item_snapshot/draft 的**独立列**条件（如 item_key），
+	// 与上面四个 map 型条件并列但走不同的 SQL 形状：map 型出 dis.string_map['k'] Op ?，
+	// 这里出 dis.<column> Op ?。
+	//
+	// 必须单列一族的原因：map 型字段来自评测集 schema，key 要先经 QueryItemSnapshotMappings
+	// 查 mapping 才知道落在哪个 map 的哪个 subkey；而独立列是表结构固有的，压根不在 mapping 里
+	// （mapping 只由 schema.AvailableFields() 构成）。混进 StringMapFilters 会必然 mapping miss，
+	// 条件被静默丢弃并退化成全量扫描。
+	ColumnFilters []*FieldFilter
+}
+
+// ItemSnapshotColumnKeys 是允许作为独立列条件的白名单：key 为筛选侧字段名，value 为 CK 实际列名。
+// 白名单而非任意透传，避免上游 field_key 直接拼进 SQL 列名。
+var ItemSnapshotColumnKeys = map[string]string{
+	"item_key": "item_key",
+}
+
+// IsItemSnapshotColumnKey 判断某个 field_key 是否走独立列而非 schema 字段 mapping。
+func IsItemSnapshotColumnKey(fieldKey string) bool {
+	_, ok := ItemSnapshotColumnKeys[fieldKey]
+	return ok
 }
 
 type KeywordFilter struct {

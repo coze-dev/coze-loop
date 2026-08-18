@@ -41,6 +41,15 @@ type ItemSnapshotFilter struct {
 	FloatMapFilters  []*FieldFilter
 	IntMapFilters    []*FieldFilter
 	StringMapFilters []*FieldFilter
+	// ColumnFilters 是 dis 表独立列条件（如 item_key），出 dis.<column> Op ? 而非 map 取值。
+	ColumnFilters []*FieldFilter
+}
+
+// itemSnapshotColumnKeys 是 dis 表允许被筛选的独立列白名单：筛选侧 field_key → CK 列名。
+// 列名位置无法参数化，只能白名单后拼串；与 entity.ItemSnapshotColumnKeys 保持一致
+// （ck 层不反向依赖 domain，故各自持一份，改动时同步两处）。
+var itemSnapshotColumnKeys = map[string]string{
+	"item_key": "item_key",
 }
 
 type ExptTurnResultFilterMapCond struct {
@@ -468,6 +477,47 @@ func (d *exptTurnResultFilterDAOImpl) buildItemSnapshotConditions(cond *ExptTurn
 	for _, ff := range f.BoolMapFilters {
 		d.appendItemSnapshotMapCond(whereSQL, args, "bool_map", ff)
 	}
+	for _, ff := range f.ColumnFilters {
+		d.appendItemSnapshotColumnCond(whereSQL, args, ff)
+	}
+}
+
+// appendItemSnapshotColumnCond 拼 dis 表**独立列**条件（如 item_key），出 dis.<column> Op ?。
+// 与 appendItemSnapshotMapCond 的区别只在左值形状：那边是 map 取值 dis.string_map['k']。
+//
+// 列名必须过 entity.ItemSnapshotColumnKeys 白名单再拼进 SQL —— f.Key 来自上游 field_key，
+// 不校验就等于把外部输入拼进列名位置（该位置无法用占位符参数化）。
+func (d *exptTurnResultFilterDAOImpl) appendItemSnapshotColumnCond(whereSQL *string, args *[]interface{}, f *FieldFilter) {
+	if f == nil || len(f.Values) == 0 {
+		return
+	}
+	column, ok := itemSnapshotColumnKeys[f.Key]
+	if !ok {
+		logs.CtxWarn(context.Background(), "appendItemSnapshotColumnCond got non-whitelisted column key: %v", f.Key)
+		return
+	}
+	switch f.Op {
+	case "=":
+		*whereSQL += fmt.Sprintf(" AND dis.%s = ?", column)
+		*args = append(*args, f.Values[0])
+	case "!=":
+		*whereSQL += fmt.Sprintf(" AND dis.%s != ?", column)
+		*args = append(*args, f.Values[0])
+	case "LIKE":
+		*whereSQL += fmt.Sprintf(" AND dis.%s LIKE ?", column)
+		*args = append(*args, "%"+escapeSpecialChars(fmt.Sprintf("%v", f.Values[0]))+"%")
+	case "NOT LIKE":
+		*whereSQL += fmt.Sprintf(" AND dis.%s NOT LIKE ?", column)
+		*args = append(*args, "%"+escapeSpecialChars(fmt.Sprintf("%v", f.Values[0]))+"%")
+	case "in", "IN":
+		*whereSQL += fmt.Sprintf(" AND dis.%s IN ?", column)
+		*args = append(*args, f.Values)
+	case "NOT IN":
+		*whereSQL += fmt.Sprintf(" AND dis.%s NOT IN ?", column)
+		*args = append(*args, f.Values)
+	default:
+		return
+	}
 }
 
 func (d *exptTurnResultFilterDAOImpl) appendItemSnapshotMapCond(whereSQL *string, args *[]interface{}, mapKey string, f *FieldFilter) {
@@ -595,7 +645,8 @@ func (d *exptTurnResultFilterDAOImpl) hasItemSnapshotFilters(f *ItemSnapshotFilt
 		return false
 	}
 	return len(f.BoolMapFilters) > 0 || len(f.FloatMapFilters) > 0 ||
-		len(f.IntMapFilters) > 0 || len(f.StringMapFilters) > 0
+		len(f.IntMapFilters) > 0 || len(f.StringMapFilters) > 0 ||
+		len(f.ColumnFilters) > 0
 }
 
 // buildBaseSQL 构建基础SQL语句

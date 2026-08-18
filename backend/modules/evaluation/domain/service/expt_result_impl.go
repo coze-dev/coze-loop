@@ -2827,7 +2827,11 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 
 // 提取过滤器映射逻辑
 func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator, baseExpt *entity.Experiment, baseExptEvalSetVersionID int64) error {
-	if (filter.ItemSnapshotCond == nil || len(filter.ItemSnapshotCond.StringMapFilters) == 0) && (filter.KeywordSearch == nil || filter.KeywordSearch.ItemSnapshotFilter == nil || len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) == 0) {
+	hasCond := filter.ItemSnapshotCond != nil &&
+		(len(filter.ItemSnapshotCond.StringMapFilters) > 0 || len(filter.ItemSnapshotCond.ColumnFilters) > 0)
+	hasKeywordCond := filter.KeywordSearch != nil && filter.KeywordSearch.ItemSnapshotFilter != nil &&
+		(len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0 || len(filter.KeywordSearch.ItemSnapshotFilter.ColumnFilters) > 0)
+	if !hasCond && !hasKeywordCond {
 		return nil
 	}
 	req := &rpc.QueryItemSnapshotMappingRequest{
@@ -2850,6 +2854,8 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		FloatMapFilters:  make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.FloatMapFilters)),
 		IntMapFilters:    make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.IntMapFilters)),
 		StringMapFilters: make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.StringMapFilters)),
+		// 独立列条件不查 mapping（它们不来自评测集 schema），原样带到 DAO 层。
+		ColumnFilters: filter.ItemSnapshotCond.ColumnFilters,
 	}
 	for _, item := range filter.ItemSnapshotCond.StringMapFilters {
 		if itemSnapshotMappingsMap[item.Key] == nil {
@@ -2904,6 +2910,8 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		FloatMapFilters:  make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.FloatMapFilters)),
 		IntMapFilters:    make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.IntMapFilters)),
 		StringMapFilters: make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters)),
+		// 同上：独立列条件不查 mapping。
+		ColumnFilters: filter.KeywordSearch.ItemSnapshotFilter.ColumnFilters,
 	}
 	for _, item := range filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters {
 		if itemSnapshotMappingsMap[item.Key] == nil {
