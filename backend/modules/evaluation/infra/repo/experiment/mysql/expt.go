@@ -47,6 +47,13 @@ type IExptDAO interface {
 	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error)
 
 	ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error)
+
+	// ScanSchedulerQueue 跨空间扫描中心调度候选实验。
+	//
+	// 与 List 的关键差别：不带 space_id 条件 —— 中心调度按全局优先级排序，若按空间分别扫描，
+	// 低优空间的实验会先于高优空间被处理，全局优先级语义即失效。
+	// 走 idx_scheduler_queue，keyset 分页保证翻页不重不漏。
+	ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*model.Experiment, error)
 }
 
 func NewExptDAO(db db.Provider) IExptDAO {
@@ -461,4 +468,52 @@ func (d *exptDAOImpl) ExistGroupKey(ctx context.Context, groupKey string, spaceI
 		return false, errorx.Wrapf(err, "mysql exist experiment group key fail, group_key: %v", groupKey)
 	}
 	return cnt > 0, nil
+}
+
+// ScanSchedulerQueue 跨空间扫描中心调度候选实验，走 idx_scheduler_queue。
+//
+// 用裸 gorm 而非 gen DSL：keyset 的三元组比较是一段带括号 OR 的复合条件，
+// gen 的链式 API 表达它需要嵌套多层 Or(...)，可读性远差于一条 SQL 片段。
+//
+// FORCE INDEX 的取舍：status IN (...) 是 range 条件，MySQL 可能因此放弃用索引满足 ORDER BY 而
+// 走 filesort；灰度期数据量小可接受，故此处不 FORCE，留给 EXPLAIN 实测后再决定 ——
+// 过早 FORCE INDEX 会在数据分布变化后反而选到更差的计划。
+func (d *exptDAOImpl) ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*model.Experiment, error) {
+	if param == nil {
+		return nil, nil
+	}
+	limit := int(param.Limit)
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+
+	tx := d.db.NewSession(ctx).Model(&model.Experiment{}).
+		Where("scheduler_mode = ?", param.DispatchMode).
+		Where("deleted_at IS NULL").
+		// latest_run_id > 0 排除"只 Create 尚未 Run"的实验：它们没有 run 可供派发 item，
+		// 扫进来只会让每拍白跑一遍。
+		Where("latest_run_id > 0")
+
+	if len(param.Statuses) > 0 {
+		tx = tx.Where("status IN ?", param.Statuses)
+	}
+
+	if c := param.Cursor; c != nil {
+		// keyset：严格小于游标（按 priority DESC, created_at ASC, id ASC 的字典序）
+		tx = tx.Where(
+			"(priority_level < ?) OR (priority_level = ? AND created_at > FROM_UNIXTIME(?)) OR (priority_level = ? AND created_at = FROM_UNIXTIME(?) AND id > ?)",
+			c.PriorityLevel,
+			c.PriorityLevel, c.CreatedAtUnix,
+			c.PriorityLevel, c.CreatedAtUnix, c.ExptID,
+		)
+	}
+
+	var pos []*model.Experiment
+	if err := tx.
+		Order("priority_level DESC, created_at ASC, id ASC").
+		Limit(limit).
+		Find(&pos).Error; err != nil {
+		return nil, errorx.Wrapf(err, "mysql scan scheduler queue fail, mode: %v, statuses: %v", param.DispatchMode, param.Statuses)
+	}
+	return pos, nil
 }

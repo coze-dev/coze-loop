@@ -27,6 +27,10 @@ type IExperimentRepo interface {
 	// ExistGroupKey 判断 group key 是否已被“其它空间”占用（跨空间隔离）, 用于创建实验时校验。
 	ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error)
 	GetEvaluatorRefByExptIDs(ctx context.Context, exptID []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error)
+
+	// ScanSchedulerQueue 跨空间扫描中心调度候选实验（按 priority DESC, created_at ASC, id ASC）。
+	// 不接受 spaceID —— 中心调度按全局优先级排序，按空间分别扫描会使全局优先级失效。
+	ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*entity.Experiment, error)
 }
 
 type IExptStatsRepo interface {
