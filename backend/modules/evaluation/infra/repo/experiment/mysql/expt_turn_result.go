@@ -482,9 +482,13 @@ func (dao *ExptTurnResultDAOImpl) ListTurnResultByItemIDs(ctx context.Context, s
 
 	// 总记录数
 	db = db.Count(&total)
-	// 分页
-	if page.Offset() > 0 && page.Limit() > 0 {
-		db = db.Offset(page.Offset()).Limit(page.Limit())
+	// 分页：Limit 与 Offset 必须分开判定。第一页的 Offset() 恒为 0，
+	// 若与 Offset()>0 相 AND，第一页就退化成"无 LIMIT 全量返回"。
+	if page.Limit() > 0 {
+		db = db.Limit(page.Limit())
+	}
+	if page.Offset() > 0 {
+		db = db.Offset(page.Offset())
 	}
 
 	err := db.Find(&finds).Error

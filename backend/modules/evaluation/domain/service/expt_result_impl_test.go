@@ -8336,7 +8336,7 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 		assert.Equal(t, "LIKE", filter.ItemSnapshotCond.ColumnFilters[0].Op)
 	})
 
-	t.Run("只有独立列条件时也要触发 mapping 查询并保留（不能提前 return 丢条件）", func(t *testing.T) {
+	t.Run("只有独立列条件时不查 mapping，且条件被保留（不能提前 return 丢条件）", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		svc := newSvc(ctrl)
@@ -8349,6 +8349,45 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 		}
 		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
 		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
+	})
+
+	// 回归：评测集没有 fieldMapping 记录时（mlflow 返回 createdVersion fieldMapping not found），
+	// 只有独立列条件的请求不得因此失败——否则上游 errOccur=true，筛选被丢弃并退化成全量扫描。
+	t.Run("mapping RPC 报错时，只有独立列条件不受影响（不查 mapping 所以不会失败）", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		// 断言压根没调用 RPC
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Times(0)
+		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "LIKE", Values: []any{"pr_1066"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
+		assert.Equal(t, "item_key", filter.ItemSnapshotCond.ColumnFilters[0].Key)
+	})
+
+	// 反面：有 map 类条件时仍须查 mapping，RPC 失败要如实返回错误（不能吞）。
+	t.Run("有 schema 字段条件时 mapping RPC 报错须返回错误", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			Return(nil, "", errors.New("createdVersion fieldMapping not found")).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		assert.Error(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
 	})
 
 	t.Run("schema 字段仍走 mapping 转成 subkey，与独立列共存互不干扰", func(t *testing.T) {
