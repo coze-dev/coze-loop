@@ -676,15 +676,10 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 			case domain_expt.FieldType_AnnotationCategorical:
 				result.MapCond.AnnotationStringFilters = append(result.MapCond.AnnotationStringFilters, fieldFilter)
 			case domain_expt.FieldType_EvalSetColumn:
-				// 评测集列字段。前端对 item_key 这类 item 元信息也按 EvalSetColumn 提交
-				// （field_type=42 + field_key=item_key），但它是 dataset_item_snapshot 的独立列、
-				// 不在 schema 字段 mapping 里，落进 StringMapFilters 会 mapping miss 并退化全量。
-				// 故按白名单分流到独立列条件。
-				if entity.IsItemSnapshotColumnKey(fieldKey) {
-					result.ItemSnapshotCond.ColumnFilters = append(result.ItemSnapshotCond.ColumnFilters, fieldFilter)
-				} else {
-					result.ItemSnapshotCond.StringMapFilters = append(result.ItemSnapshotCond.StringMapFilters, fieldFilter)
-				}
+				// 评测集列字段，统一作为 item_snapshot 的 string_map 条件。
+				// 前端可筛列来自评测集 schema（getColumnEvalSetFieldsWithSource 只取
+				// EvaluationSetSchema.FieldSchemas），故必然有 field mapping，走 string_map 即可。
+				result.ItemSnapshotCond.StringMapFilters = append(result.ItemSnapshotCond.StringMapFilters, fieldFilter)
 			case domain_expt.FieldType_ActualOutput:
 				// 实际输出，通常为string类型
 				result.MapCond.EvalTargetDataFilters = append(result.MapCond.EvalTargetDataFilters, fieldFilter)
@@ -746,13 +741,8 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 			}
 			switch fieldType {
 			case domain_expt.FieldType_EvalSetColumn:
-				// 评测集列字段，统一作为item_snapshot的string_map条件；
-				// item_key 等独立列同 filter_conditions 分支按白名单分流。
-				if entity.IsItemSnapshotColumnKey(fieldKey) {
-					result.KeywordSearch.ItemSnapshotFilter.ColumnFilters = append(result.KeywordSearch.ItemSnapshotFilter.ColumnFilters, fieldFilter)
-				} else {
-					result.KeywordSearch.ItemSnapshotFilter.StringMapFilters = append(result.KeywordSearch.ItemSnapshotFilter.StringMapFilters, fieldFilter)
-				}
+				// 评测集列字段，统一作为item_snapshot的string_map条件。
+				result.KeywordSearch.ItemSnapshotFilter.StringMapFilters = append(result.KeywordSearch.ItemSnapshotFilter.StringMapFilters, fieldFilter)
 			case domain_expt.FieldType_ActualOutput:
 				// 实际输出，通常为string类型
 				result.KeywordSearch.EvalTargetDataFilters = append(result.KeywordSearch.EvalTargetDataFilters, fieldFilter)

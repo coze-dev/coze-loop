@@ -8303,14 +8303,13 @@ func TestNewPayloadBuilder_ItemZombieTimeoutErrParsing(t *testing.T) {
 	})
 }
 
-// mapItemSnapshotFilter 里独立列条件必须绕过 mapping 查找原样保留。
-// 回归的是：item_key 不在 QueryItemSnapshotMappings 的返回里（那份 mapping 只由评测集
-// schema.AvailableFields() 构成），走 StringMapFilters 会命中 mapping miss 的 continue
-// 被静默丢弃，最终退化成无 item_id 约束、无 LIMIT 的全表扫描。
-func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(t *testing.T) {
+// mapItemSnapshotFilter 的空间解析与 mapping 失败语义。
+//
+// 跨空间共享评测集时 field mapping 按 (space_id, version_id) 存在**评测集来源空间**下，
+// 用实验空间去查必然 not found，并连带丢掉快照表分区键 sync_ck_date。
+func TestExptResultServiceImpl_mapItemSnapshotFilter_SpaceResolution(t *testing.T) {
 	newSvc := func(ctrl *gomock.Controller) ExptResultServiceImpl {
 		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
-		// mapping 里只有 schema 字段，故意不含 item_key —— 与线上真实返回一致
 		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
 			Return([]*entity.ItemSnapshotFieldMapping{
 				{FieldKey: "my_schema_field", MappingKey: "string_map", MappingSubKey: "string_key_0"},
@@ -8319,82 +8318,28 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 	}
 	baseExpt := &entity.Experiment{SpaceID: 1, EvalSetID: 2, EvalSetVersionID: 3, ExptType: entity.ExptType_Offline}
 
-	t.Run("item_key 独立列条件被保留", func(t *testing.T) {
+	t.Run("schema 字段走 mapping 转成 CK subkey，并带出 sync_ck_date", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		svc := newSvc(ctrl)
 
 		filter := &entity.ExptTurnResultFilterAccelerator{
 			ItemSnapshotCond: &entity.ItemSnapshotFilter{
-				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "LIKE", Values: []any{"pr_1066"}}},
+				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
 			},
 			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
 		}
 		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
 
-		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
-		assert.Equal(t, "item_key", filter.ItemSnapshotCond.ColumnFilters[0].Key)
-		assert.Equal(t, "LIKE", filter.ItemSnapshotCond.ColumnFilters[0].Op)
-	})
-
-	t.Run("只有独立列条件时不查 mapping，且条件被保留（不能提前 return 丢条件）", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		svc := newSvc(ctrl)
-
-		filter := &entity.ExptTurnResultFilterAccelerator{
-			ItemSnapshotCond: &entity.ItemSnapshotFilter{
-				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"exact"}}},
-			},
-			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
-		}
-		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
-		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
-	})
-
-	// 回归：评测集没有 fieldMapping 记录时（mlflow 返回 createdVersion fieldMapping not found），
-	// 只有独立列条件的请求不得因此失败——否则上游 errOccur=true，筛选被丢弃并退化成全量扫描。
-	//
-	// 注意 RPC 仍会被调用（它顺带返回 sync_ck_date，快照表分区列，下游查 dis 表要用），
-	// 只是失败降级为告警而非报错。
-	t.Run("mapping RPC 报错时，只有独立列条件降级放行而不失败", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
-		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
-			Return(nil, "", errors.New("createdVersion fieldMapping not found")).Times(1)
-		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
-
-		filter := &entity.ExptTurnResultFilterAccelerator{
-			ItemSnapshotCond: &entity.ItemSnapshotFilter{
-				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "LIKE", Values: []any{"pr_1066"}}},
-			},
-			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
-		}
-		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
-		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
-		assert.Equal(t, "item_key", filter.ItemSnapshotCond.ColumnFilters[0].Key)
-	})
-
-	// 成功路径下 sync_ck_date 必须被带出来：commercial 侧查快照表要用它做分区裁剪，
-	// 丢了会让离线实验查询报错（进而又退化成全量）。
-	t.Run("独立列条件也要带出 sync_ck_date", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		svc := newSvc(ctrl)
-
-		filter := &entity.ExptTurnResultFilterAccelerator{
-			ItemSnapshotCond: &entity.ItemSnapshotFilter{
-				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"k"}}},
-			},
-			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
-		}
-		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+		require.Len(t, filter.ItemSnapshotCond.StringMapFilters, 1)
+		assert.Equal(t, "string_key_0", filter.ItemSnapshotCond.StringMapFilters[0].Key)
+		// sync_ck_date 是快照表分区列，丢了下游查询会被 force_index_by_date 拒绝
 		assert.Equal(t, "2026-08-18", filter.EvalSetSyncCkDate)
 	})
 
-	// 反面：有 map 类条件时仍须查 mapping，RPC 失败要如实返回错误（不能吞）。
-	t.Run("有 schema 字段条件时 mapping RPC 报错须返回错误", func(t *testing.T) {
+	// mapping 是 map 类条件的硬依赖：查不到就无法把 field_key 翻译成 subkey，必须报错
+	// 而不是静默丢条件（丢了会退化成不带条件的全量查询）。
+	t.Run("mapping RPC 报错须返回错误", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
@@ -8411,64 +8356,27 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 		assert.Error(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
 	})
 
-	t.Run("schema 字段仍走 mapping 转成 subkey，与独立列共存互不干扰", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		svc := newSvc(ctrl)
-
-		filter := &entity.ExptTurnResultFilterAccelerator{
-			ItemSnapshotCond: &entity.ItemSnapshotFilter{
-				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
-				ColumnFilters:    []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"k"}}},
-			},
-			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
-		}
-		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
-
-		require.Len(t, filter.ItemSnapshotCond.StringMapFilters, 1)
-		// mapping 把 field_key 换成了 CK 的 subkey
-		assert.Equal(t, "string_key_0", filter.ItemSnapshotCond.StringMapFilters[0].Key)
-		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
-		assert.Equal(t, "item_key", filter.ItemSnapshotCond.ColumnFilters[0].Key)
-	})
-
-	t.Run("keyword_search 的独立列条件同样保留", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		svc := newSvc(ctrl)
-
-		filter := &entity.ExptTurnResultFilterAccelerator{
-			ItemSnapshotCond: &entity.ItemSnapshotFilter{},
-			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{
-				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "LIKE", Values: []any{"kw"}}},
-			}},
-		}
-		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
-		require.Len(t, filter.KeywordSearch.ItemSnapshotFilter.ColumnFilters, 1)
-	})
-
-	// 回归：跨空间共享评测集时，field mapping 按 (space_id, version_id) 存在**来源空间**下。
-	// 用实验所在空间去查必然 not found → 丢掉 sync_ck_date → 下游查快照表拿不到分区谓词而失败。
+	// ★ 跨空间共享：mapping 必须用评测集来源空间查，否则 not found + 丢分区键。
 	t.Run("共享评测集用来源空间查 mapping", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
 		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
-				// 用的必须是来源空间 99，而非实验空间 1
+				// 必须是来源空间 99，而非实验空间 1
 				assert.Equal(t, int64(99), req.SpaceID)
 				return nil, "2026-08-12", nil
 			}).Times(1)
 		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
 
-		// 用实验冻结的 EvalSetSpaceID（而非 EvalSet.SharedInfo）——本链路 EvalSet 为 nil
+		// 用实验冻结的 EvalSetSpaceID（本链路 EvalSet 恒为 nil，不能用 SharedInfo）
 		sharedExpt := &entity.Experiment{
 			SpaceID: 1, EvalSetID: 2, EvalSetVersionID: 3, ExptType: entity.ExptType_Offline,
 			EvalSetSpaceID: 99,
 		}
 		filter := &entity.ExptTurnResultFilterAccelerator{
 			ItemSnapshotCond: &entity.ItemSnapshotFilter{
-				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"k"}}},
+				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
 			},
 			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
 		}
@@ -8476,7 +8384,7 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 		assert.Equal(t, "2026-08-12", filter.EvalSetSyncCkDate)
 	})
 
-	// 非共享（SharedInfo 为 nil）时仍用实验自身空间，不能被上面的改动带偏。
+	// 非共享（EvalSetSpaceID=0）时仍用实验自身空间，不能被上面的改动带偏。
 	t.Run("非共享评测集用实验空间查 mapping", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -8490,7 +8398,7 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 
 		filter := &entity.ExptTurnResultFilterAccelerator{
 			ItemSnapshotCond: &entity.ItemSnapshotFilter{
-				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"k"}}},
+				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
 			},
 			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
 		}

@@ -121,7 +121,6 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 			FloatMapFilters:  fieldFiltersEntityToCK(filter.ItemSnapshotCond.FloatMapFilters),
 			IntMapFilters:    fieldFiltersEntityToCK(filter.ItemSnapshotCond.IntMapFilters),
 			StringMapFilters: fieldFiltersEntityToCK(filter.ItemSnapshotCond.StringMapFilters),
-			ColumnFilters:    fieldFiltersEntityToCK(filter.ItemSnapshotCond.ColumnFilters),
 		}
 	}
 	if filter.KeywordSearch != nil {
@@ -131,7 +130,6 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 				FloatMapFilters:  fieldFiltersEntityToCK(filter.KeywordSearch.ItemSnapshotFilter.FloatMapFilters),
 				IntMapFilters:    fieldFiltersEntityToCK(filter.KeywordSearch.ItemSnapshotFilter.IntMapFilters),
 				StringMapFilters: fieldFiltersEntityToCK(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters),
-				ColumnFilters:    fieldFiltersEntityToCK(filter.KeywordSearch.ItemSnapshotFilter.ColumnFilters),
 			},
 			EvalTargetDataFilters: fieldFiltersEntityToCK(filter.KeywordSearch.EvalTargetDataFilters),
 			Keyword:               filter.KeywordSearch.Keyword,
