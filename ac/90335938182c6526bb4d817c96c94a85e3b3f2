@@ -1,0 +1,55 @@
+backend/modules/observability/application/convertor/trace/view.go
+  s_2bfcd945c9c6b9::t_0c5eb8a0042d36 28,44-47,59
+backend/modules/observability/application/convertor/trace/view_test.go
+  s_2bfcd945c9c6b9::t_e8b76d41b2fd7b 1-44
+backend/modules/observability/application/trace.go
+  s_2bfcd945c9c6b9::t_0627e1779bb8e1 816-820,1451-1462,1472-1473
+backend/modules/observability/application/trace_test.go
+  s_2bfcd945c9c6b9::t_8d388b2b224bf2 305,324-350,358,4084-4086,4169-4219
+backend/modules/observability/domain/trace/entity/view.go
+  s_2bfcd945c9c6b9::t_7197f24d45db34 22
+backend/modules/observability/domain/trace/repo/view.go
+  s_2bfcd945c9c6b9::t_1fdb64648e149f 15
+backend/modules/observability/infra/repo/mysql/convertor/view.go
+  s_2bfcd945c9c6b9::t_5609264732ddb8 24,41
+backend/modules/observability/infra/repo/mysql/gorm_gen/model/observability_view.gen.go
+  s_2bfcd945c9c6b9::t_e2d266c57cbf8c 17-31
+backend/modules/observability/infra/repo/mysql/gorm_gen/query/observability_view.gen.go
+  s_2bfcd945c9c6b9::t_b1909c4d6d7185 44,70,101,130,145
+backend/modules/observability/infra/repo/mysql/mocks/view.go
+  s_2bfcd945c9c6b9::t_887528f5072b52 89,91,98,100
+backend/modules/observability/infra/repo/mysql/view.go
+  s_2bfcd945c9c6b9::t_bc41d99e7aad8e 23,59,68
+backend/modules/observability/infra/repo/mysql/view_test.go
+  s_2bfcd945c9c6b9::t_a745be29e48a5f 64
+backend/modules/observability/infra/repo/view.go
+  s_2bfcd945c9c6b9::t_ebb28844484667 36-37
+backend/modules/observability/infra/repo/view_test.go
+  s_2bfcd945c9c6b9::t_52b019bb885447 41,61
+release/deployment/docker-compose/bootstrap/mysql-init/init-sql/observability_view.sql
+  s_2bfcd945c9c6b9::t_d3d5c6b073e5f7 17
+release/deployment/docker-compose/bootstrap/mysql-init/patch-sql/observability_view_alter.sql
+  s_2bfcd945c9c6b9::t_7cc373ae9e5e42 1
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/observability_view.sql
+  s_2bfcd945c9c6b9::t_5ca3650a883e9d 17
+release/deployment/helm-chart/charts/app/bootstrap/init/mysql/init-sql/observability_view_alter.sql
+  s_2bfcd945c9c6b9::t_b3c7ca7a59a106 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ac90335938182c6526bb4d817c96c94a85e3b3f2",
+  "prompts": {},
+  "sessions": {
+    "s_2bfcd945c9c6b9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8208f01cdec3188",
+        "model": "unknown"
+      },
+      "human_author": "taoyifan <taoyifan@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
