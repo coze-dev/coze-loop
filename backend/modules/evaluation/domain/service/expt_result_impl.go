@@ -2846,13 +2846,12 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		(filter.KeywordSearch != nil && filter.KeywordSearch.ItemSnapshotFilter != nil &&
 			len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0)
 	itemSnapshotMappingsMap := make(map[string]*entity.ItemSnapshotFieldMapping)
-	// 跨空间共享评测集：field mapping 按 (space_id, version_id) 存储在**评测集来源空间**下，
-	// 用实验所在空间去查必然 not found（进而丢掉 sync_ck_date）。与 expt_manage_impl.go
-	// 加载共享评测集同口径：SourceSpaceID>0 时用来源空间。
-	evalSetSpaceID := baseExpt.SpaceID
-	if baseExpt.EvalSet != nil && baseExpt.EvalSet.SharedInfo != nil && baseExpt.EvalSet.SharedInfo.SourceSpaceID > 0 {
-		evalSetSpaceID = baseExpt.EvalSet.SharedInfo.SourceSpaceID
-	}
+	// ★ 跨空间共享: item snapshot field mapping 按 (space_id, version_id) 存在**评测集来源空间**下，
+	// 用实验所在空间去查必然 not found，连带丢掉 sync_ck_date（快照表分区列，下游必需）。
+	// 用实验冻结的 EvalSetSpaceID（0=同空间）解析，与 expt_annotate_impl 读 item 同口径。
+	// 注意不能走 EvalSet.SharedInfo：本链路的实验来自 ExperimentRepo.MGetByID，只加载实验行 +
+	// 评估器 ref，EvalSet 为 nil。
+	evalSetSpaceID := resolveLoadSpaceID(baseExpt.SpaceID, baseExpt.EvalSetSpaceID)
 	req := &rpc.QueryItemSnapshotMappingRequest{
 		SpaceID:        evalSetSpaceID,
 		DatasetID:      baseExpt.EvalSetID,

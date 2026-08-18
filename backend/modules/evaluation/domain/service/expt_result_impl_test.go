@@ -8461,11 +8461,10 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 			}).Times(1)
 		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
 
+		// 用实验冻结的 EvalSetSpaceID（而非 EvalSet.SharedInfo）——本链路 EvalSet 为 nil
 		sharedExpt := &entity.Experiment{
 			SpaceID: 1, EvalSetID: 2, EvalSetVersionID: 3, ExptType: entity.ExptType_Offline,
-			EvalSet: &entity.EvaluationSet{
-				SharedInfo: &entity.SharedResourceInfo{IsShared: true, SourceSpaceID: 99},
-			},
+			EvalSetSpaceID: 99,
 		}
 		filter := &entity.ExptTurnResultFilterAccelerator{
 			ItemSnapshotCond: &entity.ItemSnapshotFilter{
