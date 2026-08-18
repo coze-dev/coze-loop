@@ -784,6 +784,8 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 		}
 		filterAccelerator.ExptID = baseExptID
 		filterAccelerator.SpaceID = spaceID
+		// ★ 跨空间共享: 评测集快照数据属来源空间，查 dis 表要用它（0=同空间）。
+		filterAccelerator.EvalSetSpaceID = expt.EvalSetSpaceID
 		filterAccelerator.CreatedDate = ptr.From(expt.StartAt)
 		filterAccelerator.Page = param.Page
 		filterAccelerator.IsOnlineExpt = expt.ExptType == entity.ExptType_Online
