@@ -215,3 +215,27 @@ func (e *exptRepoImpl) GetEvaluatorRefByExptIDs(ctx context.Context, exptIDs []i
 
 	return convert.NewExptEvaluatorRefConverter().PO2DO(pos), nil
 }
+
+// ScanSchedulerQueue 跨空间扫描中心调度候选实验。
+func (e *exptRepoImpl) ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*entity.Experiment, error) {
+	pos, err := e.exptDAO.ScanSchedulerQueue(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+
+	converter := convert.NewExptConverter()
+	dos := make([]*entity.Experiment, 0, len(pos))
+	for _, po := range pos {
+		// evaluator refs 传 nil：调度只需要 id/space/priority/mode/run_id 与冻结的 eval_conf，
+		// 逐条实验再查 refs 会把一次扫描放大成 N+1 次查询。
+		do, err := converter.PO2DO(po, nil)
+		if err != nil {
+			// 单条实验的 eval_conf 损坏不应让整拍调度失败：跳过该条继续，
+			// 否则一条脏数据会永久阻塞所有实验的调度。
+			logs.CtxWarn(ctx, "[SchedulerQueue] skip experiment with broken payload, expt_id: %v, err: %v", po.ID, err)
+			continue
+		}
+		dos = append(dos, do)
+	}
+	return dos, nil
+}
