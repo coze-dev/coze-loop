@@ -37,3 +37,14 @@ ALTER TABLE `experiment`
 
 ALTER TABLE `experiment`
     ADD COLUMN `eval_set_access_level` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '发起冻结的评测集访问级别(execute/readable/空=同空间)' AFTER `target_space_id`;
+
+ALTER TABLE `experiment`
+    ADD COLUMN `priority_level` int unsigned NOT NULL DEFAULT '1' COMMENT '实验调度优先级，1-99，数值越大越优先' AFTER `notification_conf`;
+
+ALTER TABLE `experiment`
+    ADD COLUMN `scheduler_mode` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'legacy' COMMENT '调度模式：legacy(旧per-experiment链路)/enforce(中心调度)' AFTER `priority_level`;
+
+-- 中心调度主扫描索引：scheduler_mode + status 定位候选，priority_level DESC/created_at/id 提供稳定排序
+-- 注意：降序索引需 MySQL 8.0+；低版本会静默忽略 DESC 退化为升序，上线前须确认实例版本并 EXPLAIN 验证
+ALTER TABLE `experiment`
+    ADD INDEX `idx_scheduler_queue` (`scheduler_mode`, `status`, `deleted_at`, `priority_level` DESC, `created_at`, `id`);
