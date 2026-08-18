@@ -202,7 +202,7 @@ type Experiment struct {
 	MaxAliveTime int64
 	SourceType   SourceType
 	SourceID     string
-	// TriggerType 实验触发方式，与表字段 trigger_type 一致：manual / openapi / schedule
+	// TriggerType 实验触发方式，与表字段 trigger_type 一致：manual / openapi / schedule / evalx
 	TriggerType string
 	// ExptSource 查询时填充：与一级字段 source_type/source_id 一致；Workflow 时由 Pipeline 补充 span_filter / scheduler / sampler
 	ExptSource        *ExptSource
@@ -216,6 +216,15 @@ type Experiment struct {
 	Visibility       Visibility            // 实验模板可见性，默认为空，可见
 	ThreadID         *string               // 关联的智能评测会话ID
 	NotificationConf *ExptNotificationConf // 通知配置（JSON序列化存储）
+
+	// PriorityLevel 调度优先级，1-99，数值越大越优先；与表字段 priority_level 一致，历史数据为 1。
+	// 仅中心化调度模式参与排序 (priority DESC, created_at ASC, id ASC)，legacy 模式不读该值。
+	PriorityLevel int32
+	// ExptDispatchMode 执行模式，与表字段 scheduler_mode 一致：legacy / enforce。
+	// 该 DB 列是唯一权威源：创建时按灰度白名单一次性冻结，Run/Retry/consumer 一律回查此列裁决，
+	// 配置热变更不得让存量实验在中心调度与旧 daemon 之间切换。
+	// 命名注意：本字段与 entity.ExptSchedulerMode (实验跑法调度器 interface) 是完全不同的概念，勿混用。
+	ExptDispatchMode string
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
@@ -348,6 +357,26 @@ type EvaluationConfiguration struct {
 	// RunModeConfig 实验级跑法配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)。
 	// 序列化进 experiment.eval_conf; 提交时展开到各 item 的 ItemTargetConf.RunConf 兜底默认值。
 	RunModeConfig *RunModeConfig `json:"run_mode_config,omitempty"`
+
+	// ExpectedQuotaConsumption 单 item 预期资源消耗向量 (中心化调度用)。
+	// 创建期一次性冻结进 experiment.eval_conf, 之后只读: 调度预占、释放、账本重建全部读这同一份快照,
+	// 运行期不再回查外部 RPC/缓存, 避免同一实验在不同时刻按不同规格扣额度。
+	// enforce 模式必填; legacy 模式为 nil。指针类型用于区分「未申报」与「申报了空列表」。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption `json:"expected_quota_consumption,omitempty"`
+}
+
+// ExpectedResourceConsumption 单 item 对一种具体资源的预期占用量。
+// amount 的单位由额度上限配置的 unit 定义 (seat / token_per_min / query_per_min ...), 调用方不申报 unit,
+// 避免伪造或与上限配置漂移。
+type ExpectedResourceConsumption struct {
+	Category    string `json:"category"`
+	ResourceKey string `json:"resource_key"`
+	Amount      int64  `json:"amount"`
+}
+
+// ExpectedQuotaConsumption 单 item 的多资源消耗向量。
+type ExpectedQuotaConsumption struct {
+	Resources []*ExpectedResourceConsumption `json:"resources,omitempty"`
 }
 
 // RunMode 实验级评测模式 (跑法)。与 runtime domain RunMode / IDL ExptRunMode 对齐。

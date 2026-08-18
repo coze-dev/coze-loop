@@ -128,6 +128,20 @@ typedef string ExptTriggerType (ts.enum="true")
 const ExptTriggerType Manual = "manual"
 const ExptTriggerType OpenAPI = "openapi"
 const ExptTriggerType Schedule = "schedule"
+const ExptTriggerType Evalx = "evalx"
+
+// ★ 中心化调度：单 item 预期资源消耗
+// 由创建方在 Create/Submit 时申报，服务端冻结进 eval_conf，供中心调度器预占额度使用。
+// category/resource_key 语义与额度上限配置一致；amount 的单位由上限配置的 unit 定义，调用方不传 unit。
+struct ExpectedResourceConsumption {
+    1: required string category      // 资源类别：sandbox / agent_account / model / evaluator
+    2: required string resource_key  // 具体资源：default / doubao_pro / gpt5.5 ...；不允许传 "*"（通配仅用于上限配置）
+    3: required i64 amount           // 单 item 的预期占用量，必须 > 0
+}
+
+struct ExpectedQuotaConsumption {
+    1: required list<ExpectedResourceConsumption> resources
+}
 
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
@@ -202,6 +216,12 @@ struct Experiment {
     // 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
     // 仅 SandboxAgent + MultiSetConfig 实验非空。SUA 模型的 api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
     115: optional RunModeConfig run_mode_config
+
+    // ★ 新增段位 116~119: 中心化调度读视图
+    // 调度优先级回显 (1-99, 越大越优先); 直读 experiment 表同名列, 历史数据为 1
+    116: optional i32 priority_level
+    // 执行模式回显: legacy(旧 per-experiment 链路) / enforce(中心调度); 直读 experiment 表同名列, 该列是唯一权威源
+    117: optional string scheduler_mode
 }
 
 // 实验模板基础信息

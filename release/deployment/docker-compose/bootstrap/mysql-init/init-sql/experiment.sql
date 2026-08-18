@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `trial_run_item_count`      bigint unsigned                                                   DEFAULT NULL COMMENT '试运行行数',
     `offline_expt_analysis_status` int unsigned                                         NOT NULL DEFAULT '0' COMMENT '离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)',
     `notification_conf`         blob COMMENT '通知配置，json格式存储webhook/飞书通知配置',
+    `priority_level`      int unsigned                                                   NOT NULL DEFAULT '1' COMMENT '实验调度优先级，1-99，数值越大越优先',
+    `scheduler_mode`      varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci   NOT NULL DEFAULT 'legacy' COMMENT '调度模式：legacy(旧per-experiment链路)/enforce(中心调度)',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_item_idx` (`space_id`, `name`, `deleted_at`),
     KEY `idx_space_deleted_created_by` (`space_id`, `created_by`, `deleted_at`),
@@ -46,7 +48,8 @@ CREATE TABLE IF NOT EXISTS `experiment`
     KEY `idx_source_type_source_id` (`source_type`, `source_id`),
     KEY `idx_space_expt_template_id_delete_at` (`space_id`, `expt_template_id`, `deleted_at`),
     KEY `idx_space_trigger_type_delete_at` (`space_id`, `trigger_type`, `deleted_at`),
-    KEY `idx_experiment_group_key_deleted_at` (`experiment_group_key`, `deleted_at`)
+    KEY `idx_experiment_group_key_deleted_at` (`experiment_group_key`, `deleted_at`),
+    KEY `idx_scheduler_queue` (`scheduler_mode`, `status`, `deleted_at`, `priority_level` DESC, `created_at`, `id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='experiment';
