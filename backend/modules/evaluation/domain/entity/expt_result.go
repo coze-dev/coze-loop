@@ -737,11 +737,13 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 	hasFilters = hasFilters || (e.ItemSnapshotCond != nil && (len(e.ItemSnapshotCond.BoolMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.FloatMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.IntMapFilters) > 0 ||
-		len(e.ItemSnapshotCond.StringMapFilters) > 0))
+		len(e.ItemSnapshotCond.StringMapFilters) > 0 ||
+		len(e.ItemSnapshotCond.ColumnFilters) > 0))
 	hasFilters = hasFilters || (e.KeywordSearch != nil && ((e.KeywordSearch.ItemSnapshotFilter != nil && (len(e.KeywordSearch.ItemSnapshotFilter.BoolMapFilters) > 0 ||
 		len(e.KeywordSearch.ItemSnapshotFilter.FloatMapFilters) > 0 ||
 		len(e.KeywordSearch.ItemSnapshotFilter.IntMapFilters) > 0 ||
-		len(e.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0)) ||
+		len(e.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0 ||
+		len(e.KeywordSearch.ItemSnapshotFilter.ColumnFilters) > 0)) ||
 		len(e.KeywordSearch.EvalTargetDataFilters) > 0))
 
 	return hasFilters

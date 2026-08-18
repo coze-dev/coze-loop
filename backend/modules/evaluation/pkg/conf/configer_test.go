@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -201,6 +202,101 @@ func TestConfiger_BuildEvalExt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := c.BuildEvalExt(ctx, tt.spaceID, tt.turn)
 			assert.Nil(t, got)
+		})
+	}
+}
+
+// GetEvalAsyncCtxTTL 打通「TCC 配置 → 空间级 conf → TTL」这条读取链。
+// 这是需求侧最关心的一环：在 TCC 里给某空间配长 async_zombie_second 后，
+// EvalAsyncCtx 的 Redis TTL 要真的跟着变长（而非仍取 12h 硬编码）。
+func TestConfiger_GetEvalAsyncCtxTTL(t *testing.T) {
+	const key = "expt_consumer_conf"
+	const spaceID int64 = 7590110994886651906
+
+	// 用真实 TCC 形状构造 conf：space_expt_exec_conf.<space_id>.expt_item_eval_conf
+	mkConf := func(itemEvalConf *entity.ExptItemEvalConf) func(_ context.Context, _ string, out any, _ ...conf.DecodeOptionFn) error {
+		return func(_ context.Context, _ string, out any, _ ...conf.DecodeOptionFn) error {
+			ptr := out.(**entity.ExptConsumerConf)
+			*ptr = &entity.ExptConsumerConf{
+				SpaceExptExecConf: map[int64]*entity.ExptExecConf{
+					spaceID: {ExptItemEvalConf: itemEvalConf},
+				},
+			}
+			return nil
+		}
+	}
+
+	tests := []struct {
+		name      string
+		spaceID   int64
+		mockSetup func(*mock_conf.MockIConfigLoader, context.Context)
+		expected  time.Duration
+	}{
+		{
+			name:    "空间配了 async_zombie_second=24h，TTL 跟随抬到 24h30min",
+			spaceID: spaceID,
+			mockSetup: func(l *mock_conf.MockIConfigLoader, ctx context.Context) {
+				l.EXPECT().UnmarshalKey(ctx, key, gomock.Any(), gomock.Any()).DoAndReturn(
+					mkConf(&entity.ExptItemEvalConf{AsyncZombieSecond: 86400}))
+			},
+			expected: 86400*time.Second + 30*time.Minute,
+		},
+		{
+			name:    "空间配了 async_zombie_second=5d，TTL 跟随抬到 5d30min",
+			spaceID: spaceID,
+			mockSetup: func(l *mock_conf.MockIConfigLoader, ctx context.Context) {
+				l.EXPECT().UnmarshalKey(ctx, key, gomock.Any(), gomock.Any()).DoAndReturn(
+					mkConf(&entity.ExptItemEvalConf{AsyncZombieSecond: 432000}))
+			},
+			expected: 432000*time.Second + 30*time.Minute,
+		},
+		{
+			name:    "空间显式配了 eval_async_ctx_ttl_second，优先于按僵尸阈值推导",
+			spaceID: spaceID,
+			mockSetup: func(l *mock_conf.MockIConfigLoader, ctx context.Context) {
+				l.EXPECT().UnmarshalKey(ctx, key, gomock.Any(), gomock.Any()).DoAndReturn(
+					mkConf(&entity.ExptItemEvalConf{AsyncZombieSecond: 86400, EvalAsyncCtxTTLSecond: 90000}))
+			},
+			expected: 90000 * time.Second,
+		},
+		{
+			name:    "该空间未配 async_zombie_second，取 12h 兜底",
+			spaceID: spaceID,
+			mockSetup: func(l *mock_conf.MockIConfigLoader, ctx context.Context) {
+				l.EXPECT().UnmarshalKey(ctx, key, gomock.Any(), gomock.Any()).DoAndReturn(
+					mkConf(&entity.ExptItemEvalConf{}))
+			},
+			expected: 12 * time.Hour,
+		},
+		{
+			name:    "其它空间（未在 TCC 里列出）取 12h 兜底，不串用别人的配置",
+			spaceID: 999,
+			mockSetup: func(l *mock_conf.MockIConfigLoader, ctx context.Context) {
+				l.EXPECT().UnmarshalKey(ctx, key, gomock.Any(), gomock.Any()).DoAndReturn(
+					mkConf(&entity.ExptItemEvalConf{AsyncZombieSecond: 86400}))
+			},
+			expected: 12 * time.Hour,
+		},
+		{
+			name:    "TCC 读取失败时回落默认 conf，仍给 12h 而非 0",
+			spaceID: spaceID,
+			mockSetup: func(l *mock_conf.MockIConfigLoader, ctx context.Context) {
+				l.EXPECT().UnmarshalKey(ctx, key, gomock.Any(), gomock.Any()).Return(errors.New("tcc unavailable"))
+			},
+			expected: 12 * time.Hour,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockLoader := mock_conf.NewMockIConfigLoader(ctrl)
+			c := &configer{loader: mockLoader}
+			ctx := context.Background()
+			tt.mockSetup(mockLoader, ctx)
+
+			assert.Equal(t, tt.expected, c.GetEvalAsyncCtxTTL(ctx, tt.spaceID))
 		})
 	}
 }

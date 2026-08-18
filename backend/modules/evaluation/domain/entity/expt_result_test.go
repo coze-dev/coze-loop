@@ -559,3 +559,52 @@ func TestExptTurnResultFilterAccelerator_HasFilters_EvalTargetMetricsFilters(t *
 		})
 	}
 }
+
+// HasFilters 必须把 ItemSnapshotCond.ColumnFilters 也算作"有筛选条件"。
+//
+// 这是线上真实翻车的回归：item_key 被分流到 ColumnFilters 后，HasFilters 若不认它就返回 false，
+// MGetExperimentResult 走进「无筛选」分支（日志 "filter accelerator has no filters"），
+// 筛选条件被静默忽略、按普通分页返回全部数据 —— 用户看到的是"筛选没生效但页面正常"，
+// 比卡死更难发现。
+func TestExptTurnResultFilterAccelerator_HasFilters_ColumnFilters(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter *ExptTurnResultFilterAccelerator
+		want   bool
+	}{
+		{
+			name: "仅 ItemSnapshotCond.ColumnFilters（item_key 筛选）应视为有筛选",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					ColumnFilters: []*FieldFilter{{Key: "item_key", Op: "LIKE", Values: []any{"pr_1066"}}},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "仅 KeywordSearch.ItemSnapshotFilter.ColumnFilters 应视为有筛选",
+			filter: &ExptTurnResultFilterAccelerator{
+				KeywordSearch: &KeywordFilter{
+					ItemSnapshotFilter: &ItemSnapshotFilter{
+						ColumnFilters: []*FieldFilter{{Key: "item_key", Op: "LIKE", Values: []any{"kw"}}},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "ColumnFilters 为空且无其它条件时仍是无筛选",
+			filter: &ExptTurnResultFilterAccelerator{
+				ItemSnapshotCond: &ItemSnapshotFilter{ColumnFilters: []*FieldFilter{}},
+				KeywordSearch:    &KeywordFilter{ItemSnapshotFilter: &ItemSnapshotFilter{}},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.filter.HasFilters())
+		})
+	}
+}
