@@ -1771,8 +1771,12 @@ func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant
 	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
 		return rpc.SandboxTenantDefault
 	}
-	// mac_vm_plus_sandbox: 两个 task（mac_vm + sandbox）共用 GUI 专用租户，靠 ResourceType 区分。
-	if expt.Target.EvalTargetVersion.SandboxAgent.IsMacVMPlusSandbox() {
+	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
+	// 共用 GUI 专用租户、靠 ResourceType 区分。mac_vm_plus_ssh 的 orchestrator+SSH sandbox
+	// 共用 sandbox task（同 ResourceType=Sandbox），mac_vm 走 -macvm task，与本分支的两 task
+	// Init 列表一致，故同样路由到 GUI 租户。
+	if expt.Target.EvalTargetVersion.SandboxAgent.IsMacVMPlusSandbox() ||
+		expt.Target.EvalTargetVersion.SandboxAgent.IsMacVMPlusSSH() {
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
 	}
 	if !expt.Target.EvalTargetVersion.SandboxAgent.IsDualSandbox() {
@@ -1796,8 +1800,9 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 		return rpc.SandboxTenantDefault
 	}
 	countMode := entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode()))
-	// mac_vm_plus_sandbox: 两个 task（mac_vm + sandbox）共用 GUI 专用租户，靠 ResourceType 区分。
-	if countMode == entity.SandboxCountModeMacVMPlusSandbox {
+	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
+	// 共用 GUI 专用租户、靠 ResourceType 区分（见 entity 版同处注释）。
+	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
 	}
 	if countMode != entity.SandboxCountModeDual {
