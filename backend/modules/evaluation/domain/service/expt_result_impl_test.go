@@ -22,6 +22,7 @@ import (
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
@@ -8444,5 +8445,57 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 		}
 		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
 		require.Len(t, filter.KeywordSearch.ItemSnapshotFilter.ColumnFilters, 1)
+	})
+
+	// 回归：跨空间共享评测集时，field mapping 按 (space_id, version_id) 存在**来源空间**下。
+	// 用实验所在空间去查必然 not found → 丢掉 sync_ck_date → 下游查快照表拿不到分区谓词而失败。
+	t.Run("共享评测集用来源空间查 mapping", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+				// 用的必须是来源空间 99，而非实验空间 1
+				assert.Equal(t, int64(99), req.SpaceID)
+				return nil, "2026-08-12", nil
+			}).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+
+		sharedExpt := &entity.Experiment{
+			SpaceID: 1, EvalSetID: 2, EvalSetVersionID: 3, ExptType: entity.ExptType_Offline,
+			EvalSet: &entity.EvaluationSet{
+				SharedInfo: &entity.SharedResourceInfo{IsShared: true, SourceSpaceID: 99},
+			},
+		}
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"k"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, sharedExpt, sharedExpt.EvalSetVersionID))
+		assert.Equal(t, "2026-08-12", filter.EvalSetSyncCkDate)
+	})
+
+	// 非共享（SharedInfo 为 nil）时仍用实验自身空间，不能被上面的改动带偏。
+	t.Run("非共享评测集用实验空间查 mapping", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+				assert.Equal(t, int64(1), req.SpaceID)
+				return nil, "2026-08-18", nil
+			}).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"k"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+		assert.Equal(t, "2026-08-18", filter.EvalSetSyncCkDate)
 	})
 }

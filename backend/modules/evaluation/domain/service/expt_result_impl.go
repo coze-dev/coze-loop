@@ -2846,8 +2846,15 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		(filter.KeywordSearch != nil && filter.KeywordSearch.ItemSnapshotFilter != nil &&
 			len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0)
 	itemSnapshotMappingsMap := make(map[string]*entity.ItemSnapshotFieldMapping)
+	// 跨空间共享评测集：field mapping 按 (space_id, version_id) 存储在**评测集来源空间**下，
+	// 用实验所在空间去查必然 not found（进而丢掉 sync_ck_date）。与 expt_manage_impl.go
+	// 加载共享评测集同口径：SourceSpaceID>0 时用来源空间。
+	evalSetSpaceID := baseExpt.SpaceID
+	if baseExpt.EvalSet != nil && baseExpt.EvalSet.SharedInfo != nil && baseExpt.EvalSet.SharedInfo.SourceSpaceID > 0 {
+		evalSetSpaceID = baseExpt.EvalSet.SharedInfo.SourceSpaceID
+	}
 	req := &rpc.QueryItemSnapshotMappingRequest{
-		SpaceID:        baseExpt.SpaceID,
+		SpaceID:        evalSetSpaceID,
 		DatasetID:      baseExpt.EvalSetID,
 		IsDraftVersion: baseExpt.ExptType == entity.ExptType_Online,
 		VersionID:      gcond.If(baseExpt.ExptType == entity.ExptType_Online, ptr.Of(int64(0)), ptr.Of(baseExpt.EvalSetVersionID)),
