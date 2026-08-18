@@ -2834,25 +2834,31 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 	if !hasCond && !hasKeywordCond {
 		return nil
 	}
-	// 只有 map 类条件（评测集 schema 字段，需 field_key → string_map/int_map/... 的映射）才依赖 mapping RPC。
-	// 独立列条件（item_key 等 dataset_item_snapshot 上的物理列）不来自 schema，无需 mapping；
-	// 此时必须跳过 RPC——否则评测集没有 fieldMapping 记录时会返回
+	// map 类条件（评测集 schema 字段）需要 field_key → string_map/int_map/... 的映射，
+	// 对 mapping 是硬依赖：查不到就无法翻译条件，必须报错。
+	// 独立列条件（item_key 等 dataset_item_snapshot 上的物理列）不来自 schema、不需要 mapping。
+	//
+	// 但 mapping RPC 还顺带返回 sync_ck_date（快照表的分区列，下游查 dis 表要用），
+	// 所以这里不是简单跳过：只有独立列条件时仍**尽力**调一次拿 sync_ck_date，
+	// 失败只告警不报错 —— 否则评测集没有 fieldMapping 记录时会返回
 	// "createdVersion fieldMapping not found"，整条筛选链路 errOccur 退化成全量扫描。
 	needMapping := (filter.ItemSnapshotCond != nil && len(filter.ItemSnapshotCond.StringMapFilters) > 0) ||
 		(filter.KeywordSearch != nil && filter.KeywordSearch.ItemSnapshotFilter != nil &&
 			len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0)
 	itemSnapshotMappingsMap := make(map[string]*entity.ItemSnapshotFieldMapping)
-	if needMapping {
-		req := &rpc.QueryItemSnapshotMappingRequest{
-			SpaceID:        baseExpt.SpaceID,
-			DatasetID:      baseExpt.EvalSetID,
-			IsDraftVersion: baseExpt.ExptType == entity.ExptType_Online,
-			VersionID:      gcond.If(baseExpt.ExptType == entity.ExptType_Online, ptr.Of(int64(0)), ptr.Of(baseExpt.EvalSetVersionID)),
-		}
-		itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, req)
-		if err != nil {
+	req := &rpc.QueryItemSnapshotMappingRequest{
+		SpaceID:        baseExpt.SpaceID,
+		DatasetID:      baseExpt.EvalSetID,
+		IsDraftVersion: baseExpt.ExptType == entity.ExptType_Online,
+		VersionID:      gcond.If(baseExpt.ExptType == entity.ExptType_Online, ptr.Of(int64(0)), ptr.Of(baseExpt.EvalSetVersionID)),
+	}
+	itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, req)
+	if err != nil {
+		if needMapping {
 			return err
 		}
+		logs.CtxWarn(ctx, "QueryItemSnapshotMappings failed, proceeding with column-only filters, err: %v", err)
+	} else {
 		filter.EvalSetSyncCkDate = syncCkDate
 		for _, item := range itemSnapshotMappings {
 			itemSnapshotMappingsMap[item.FieldKey] = item

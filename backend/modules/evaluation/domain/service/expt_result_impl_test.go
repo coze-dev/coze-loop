@@ -8353,12 +8353,15 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 
 	// 回归：评测集没有 fieldMapping 记录时（mlflow 返回 createdVersion fieldMapping not found），
 	// 只有独立列条件的请求不得因此失败——否则上游 errOccur=true，筛选被丢弃并退化成全量扫描。
-	t.Run("mapping RPC 报错时，只有独立列条件不受影响（不查 mapping 所以不会失败）", func(t *testing.T) {
+	//
+	// 注意 RPC 仍会被调用（它顺带返回 sync_ck_date，快照表分区列，下游查 dis 表要用），
+	// 只是失败降级为告警而非报错。
+	t.Run("mapping RPC 报错时，只有独立列条件降级放行而不失败", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
-		// 断言压根没调用 RPC
-		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Times(0)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			Return(nil, "", errors.New("createdVersion fieldMapping not found")).Times(1)
 		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
 
 		filter := &entity.ExptTurnResultFilterAccelerator{
@@ -8370,6 +8373,23 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_ColumnFiltersBypassMapping(
 		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
 		require.Len(t, filter.ItemSnapshotCond.ColumnFilters, 1)
 		assert.Equal(t, "item_key", filter.ItemSnapshotCond.ColumnFilters[0].Key)
+	})
+
+	// 成功路径下 sync_ck_date 必须被带出来：commercial 侧查快照表要用它做分区裁剪，
+	// 丢了会让离线实验查询报错（进而又退化成全量）。
+	t.Run("独立列条件也要带出 sync_ck_date", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := newSvc(ctrl)
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				ColumnFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"k"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+		assert.Equal(t, "2026-08-18", filter.EvalSetSyncCkDate)
 	})
 
 	// 反面：有 map 类条件时仍须查 mapping，RPC 失败要如实返回错误（不能吞）。
