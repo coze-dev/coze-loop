@@ -5,6 +5,7 @@ package component
 
 import (
 	"context"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -26,6 +27,10 @@ type IConfiger interface {
 	GetConsumerConf(ctx context.Context) *entity.ExptConsumerConf
 	GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl
 	GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf
+	// GetEvalAsyncCtxTTL 返回 invoke_id → EvalAsyncCtx 的 Redis TTL。
+	// 未显式配 eval_async_ctx_ttl_second 时按该空间的 async_zombie_second 推导，
+	// 保证 ctx 始终活得比行僵尸判定久。spaceID 为 0（调试等无空间上下文场景）时取全局默认。
+	GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration
 	GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf
 	GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg
 	GetCKDBName(ctx context.Context) *entity.CKDBConfig

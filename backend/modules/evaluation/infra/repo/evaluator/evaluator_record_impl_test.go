@@ -69,6 +69,10 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetExptExecConf(ctx context.Context
 	return nil
 }
 
+func (f *fakeEvaluatorRecordStorageConfiger) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
+	return 0
+}
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
 	return nil
 }
