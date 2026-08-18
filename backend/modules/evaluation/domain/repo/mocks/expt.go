@@ -130,6 +130,21 @@ func (mr *MockIExperimentRepoMockRecorder) GetEvaluatorRefByExptIDs(arg0, arg1, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorRefByExptIDs", reflect.TypeOf((*MockIExperimentRepo)(nil).GetEvaluatorRefByExptIDs), arg0, arg1, arg2)
 }
 
+// ScanSchedulerQueue mocks base method.
+func (m *MockIExperimentRepo) ScanSchedulerQueue(arg0 context.Context, arg1 *entity.SchedulerQueueScanParam) ([]*entity.Experiment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScanSchedulerQueue", arg0, arg1)
+	ret0, _ := ret[0].([]*entity.Experiment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ScanSchedulerQueue indicates an expected call of ScanSchedulerQueue.
+func (mr *MockIExperimentRepoMockRecorder) ScanSchedulerQueue(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanSchedulerQueue", reflect.TypeOf((*MockIExperimentRepo)(nil).ScanSchedulerQueue), arg0, arg1)
+}
+
 // GetIDsByGroupKey mocks base method.
 func (m *MockIExperimentRepo) GetIDsByGroupKey(arg0 context.Context, arg1 int64, arg2 string, arg3, arg4 int32) ([]int64, int64, error) {
 	m.ctrl.T.Helper()
