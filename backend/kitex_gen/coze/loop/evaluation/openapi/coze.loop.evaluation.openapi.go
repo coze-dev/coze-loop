@@ -22272,6 +22272,587 @@ func (p *ReportEvalTargetStepMetricResponse) Field255DeepEqual(src *base.BaseRes
 	return true
 }
 
+// StepEventMeta 阶段事件的身份维度。
+//
+// **为什么是子结构而不是 6 个平铺字段**：这 6 个字段是同一个东西的投影——上报侧 RunSpec 的身份
+// （哪个实验、哪条数据、哪次运行）。它们一起出现、一起为空、一起进 MQ 明细，没有任何一个会被单独
+// 使用。做成子结构后，将来加维度只动这一个 struct，不用在 request 里再挑一个不冲突的字段号。
+//
+// **为什么全是 string 而不是 i64**：这些值服务端只做透传（进 MQ 明细列），从不参与任何算术或
+// 反查。用 i64 会引入两个真实问题：(1) 未上报与真值 0 无法区分，而 dataset_version 缺失和
+// dataset_version=0 在离线分析里是两件事；(2) log_id 本身就不是数字。string 让「上报了什么就是
+// 什么」，服务端不做任何解释。
+//
+// **为什么不由服务端反查**：前人接口靠 invoke_id 去 Redis 反查 asyncCtx 补齐这些维度
+// （eval_openapi_app.go 的 GetEvalAsyncCtx），其自身注释就承认反查会失败、失败后 tag 退化成
+// 占位符。上报侧本来就持有这些值的权威版本，让它直接带上，既省一次 Redis 往返，也不会有「一半
+// 事件维度缺失」这种只在事后才发现的数据坑。
+type StepEventMeta struct {
+	ExperimentID   *string `thrift:"experiment_id,1,optional" frugal:"1,optional,string" form:"experiment_id" json:"experiment_id,omitempty" query:"experiment_id"`
+	LogID          *string `thrift:"log_id,2,optional" frugal:"2,optional,string" form:"log_id" json:"log_id,omitempty" query:"log_id"`
+	DatasetID      *string `thrift:"dataset_id,3,optional" frugal:"3,optional,string" form:"dataset_id" json:"dataset_id,omitempty" query:"dataset_id"`
+	DatasetVersion *string `thrift:"dataset_version,4,optional" frugal:"4,optional,string" form:"dataset_version" json:"dataset_version,omitempty" query:"dataset_version"`
+	ItemID         *string `thrift:"item_id,5,optional" frugal:"5,optional,string" form:"item_id" json:"item_id,omitempty" query:"item_id"`
+	ItemKey        *string `thrift:"item_key,6,optional" frugal:"6,optional,string" form:"item_key" json:"item_key,omitempty" query:"item_key"`
+}
+
+func NewStepEventMeta() *StepEventMeta {
+	return &StepEventMeta{}
+}
+
+func (p *StepEventMeta) InitDefault() {
+}
+
+var StepEventMeta_ExperimentID_DEFAULT string
+
+func (p *StepEventMeta) GetExperimentID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperimentID() {
+		return StepEventMeta_ExperimentID_DEFAULT
+	}
+	return *p.ExperimentID
+}
+
+var StepEventMeta_LogID_DEFAULT string
+
+func (p *StepEventMeta) GetLogID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLogID() {
+		return StepEventMeta_LogID_DEFAULT
+	}
+	return *p.LogID
+}
+
+var StepEventMeta_DatasetID_DEFAULT string
+
+func (p *StepEventMeta) GetDatasetID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetID() {
+		return StepEventMeta_DatasetID_DEFAULT
+	}
+	return *p.DatasetID
+}
+
+var StepEventMeta_DatasetVersion_DEFAULT string
+
+func (p *StepEventMeta) GetDatasetVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetVersion() {
+		return StepEventMeta_DatasetVersion_DEFAULT
+	}
+	return *p.DatasetVersion
+}
+
+var StepEventMeta_ItemID_DEFAULT string
+
+func (p *StepEventMeta) GetItemID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemID() {
+		return StepEventMeta_ItemID_DEFAULT
+	}
+	return *p.ItemID
+}
+
+var StepEventMeta_ItemKey_DEFAULT string
+
+func (p *StepEventMeta) GetItemKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemKey() {
+		return StepEventMeta_ItemKey_DEFAULT
+	}
+	return *p.ItemKey
+}
+func (p *StepEventMeta) SetExperimentID(val *string) {
+	p.ExperimentID = val
+}
+func (p *StepEventMeta) SetLogID(val *string) {
+	p.LogID = val
+}
+func (p *StepEventMeta) SetDatasetID(val *string) {
+	p.DatasetID = val
+}
+func (p *StepEventMeta) SetDatasetVersion(val *string) {
+	p.DatasetVersion = val
+}
+func (p *StepEventMeta) SetItemID(val *string) {
+	p.ItemID = val
+}
+func (p *StepEventMeta) SetItemKey(val *string) {
+	p.ItemKey = val
+}
+
+var fieldIDToName_StepEventMeta = map[int16]string{
+	1: "experiment_id",
+	2: "log_id",
+	3: "dataset_id",
+	4: "dataset_version",
+	5: "item_id",
+	6: "item_key",
+}
+
+func (p *StepEventMeta) IsSetExperimentID() bool {
+	return p.ExperimentID != nil
+}
+
+func (p *StepEventMeta) IsSetLogID() bool {
+	return p.LogID != nil
+}
+
+func (p *StepEventMeta) IsSetDatasetID() bool {
+	return p.DatasetID != nil
+}
+
+func (p *StepEventMeta) IsSetDatasetVersion() bool {
+	return p.DatasetVersion != nil
+}
+
+func (p *StepEventMeta) IsSetItemID() bool {
+	return p.ItemID != nil
+}
+
+func (p *StepEventMeta) IsSetItemKey() bool {
+	return p.ItemKey != nil
+}
+
+func (p *StepEventMeta) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StepEventMeta[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *StepEventMeta) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExperimentID = _field
+	return nil
+}
+func (p *StepEventMeta) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LogID = _field
+	return nil
+}
+func (p *StepEventMeta) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DatasetID = _field
+	return nil
+}
+func (p *StepEventMeta) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DatasetVersion = _field
+	return nil
+}
+func (p *StepEventMeta) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemID = _field
+	return nil
+}
+func (p *StepEventMeta) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemKey = _field
+	return nil
+}
+
+func (p *StepEventMeta) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("StepEventMeta"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *StepEventMeta) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperimentID() {
+		if err = oprot.WriteFieldBegin("experiment_id", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ExperimentID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *StepEventMeta) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLogID() {
+		if err = oprot.WriteFieldBegin("log_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LogID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *StepEventMeta) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetID() {
+		if err = oprot.WriteFieldBegin("dataset_id", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DatasetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *StepEventMeta) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetVersion() {
+		if err = oprot.WriteFieldBegin("dataset_version", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DatasetVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *StepEventMeta) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemID() {
+		if err = oprot.WriteFieldBegin("item_id", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ItemID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *StepEventMeta) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemKey() {
+		if err = oprot.WriteFieldBegin("item_key", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ItemKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *StepEventMeta) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("StepEventMeta(%+v)", *p)
+
+}
+
+func (p *StepEventMeta) DeepEqual(ano *StepEventMeta) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ExperimentID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.LogID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.DatasetID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.DatasetVersion) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ItemID) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.ItemKey) {
+		return false
+	}
+	return true
+}
+
+func (p *StepEventMeta) Field1DeepEqual(src *string) bool {
+
+	if p.ExperimentID == src {
+		return true
+	} else if p.ExperimentID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ExperimentID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StepEventMeta) Field2DeepEqual(src *string) bool {
+
+	if p.LogID == src {
+		return true
+	} else if p.LogID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.LogID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StepEventMeta) Field3DeepEqual(src *string) bool {
+
+	if p.DatasetID == src {
+		return true
+	} else if p.DatasetID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DatasetID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StepEventMeta) Field4DeepEqual(src *string) bool {
+
+	if p.DatasetVersion == src {
+		return true
+	} else if p.DatasetVersion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DatasetVersion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StepEventMeta) Field5DeepEqual(src *string) bool {
+
+	if p.ItemID == src {
+		return true
+	} else if p.ItemID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ItemID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *StepEventMeta) Field6DeepEqual(src *string) bool {
+
+	if p.ItemKey == src {
+		return true
+	} else if p.ItemKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ItemKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 // ReportEvalTargetStepEventRequest 评测链路阶段事件上报请求（agent eval runtime 侧沙箱调用）。
 //
 // **为什么新开接口而不是复用 ReportEvalTargetStepMetric**：
@@ -22297,6 +22878,9 @@ type ReportEvalTargetStepEventRequest struct {
 	// 阶段名。step 级为链路阶段名（install / setup / agent_run / evaluate ...）；
 	// case 级事件用上报侧约定的保留名，服务端不校验取值，只做透传与打点。
 	StepName *string `thrift:"step_name,4,optional" frugal:"4,optional,string" form:"step_name" json:"step_name,omitempty" query:"step_name"`
+	// 身份维度（experiment_id / log_id / dataset_id / dataset_version / item_id / item_key）。
+	// 全部是无界高基数标识，只进 MQ 明细，一个都不进 metric tag。
+	Meta *StepEventMeta `thrift:"meta,5,optional" frugal:"5,optional,StepEventMeta" form:"meta" json:"meta,omitempty" query:"meta"`
 	// 前人接口放不下、离线分析必需的维度
 	AgentType *string `thrift:"agent_type,10,optional" frugal:"10,optional,string" form:"agent_type" json:"agent_type,omitempty" query:"agent_type"`
 	// 轮次序号；trial 级阶段为 0
@@ -22370,6 +22954,18 @@ func (p *ReportEvalTargetStepEventRequest) GetStepName() (v string) {
 		return ReportEvalTargetStepEventRequest_StepName_DEFAULT
 	}
 	return *p.StepName
+}
+
+var ReportEvalTargetStepEventRequest_Meta_DEFAULT *StepEventMeta
+
+func (p *ReportEvalTargetStepEventRequest) GetMeta() (v *StepEventMeta) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMeta() {
+		return ReportEvalTargetStepEventRequest_Meta_DEFAULT
+	}
+	return p.Meta
 }
 
 var ReportEvalTargetStepEventRequest_AgentType_DEFAULT string
@@ -22515,6 +23111,9 @@ func (p *ReportEvalTargetStepEventRequest) SetEventType(val *EvalTargetStepEvent
 func (p *ReportEvalTargetStepEventRequest) SetStepName(val *string) {
 	p.StepName = val
 }
+func (p *ReportEvalTargetStepEventRequest) SetMeta(val *StepEventMeta) {
+	p.Meta = val
+}
 func (p *ReportEvalTargetStepEventRequest) SetAgentType(val *string) {
 	p.AgentType = val
 }
@@ -22554,6 +23153,7 @@ var fieldIDToName_ReportEvalTargetStepEventRequest = map[int16]string{
 	2:   "invoke_id",
 	3:   "event_type",
 	4:   "step_name",
+	5:   "meta",
 	10:  "agent_type",
 	11:  "round",
 	12:  "model_name",
@@ -22581,6 +23181,10 @@ func (p *ReportEvalTargetStepEventRequest) IsSetEventType() bool {
 
 func (p *ReportEvalTargetStepEventRequest) IsSetStepName() bool {
 	return p.StepName != nil
+}
+
+func (p *ReportEvalTargetStepEventRequest) IsSetMeta() bool {
+	return p.Meta != nil
 }
 
 func (p *ReportEvalTargetStepEventRequest) IsSetAgentType() bool {
@@ -22672,6 +23276,14 @@ func (p *ReportEvalTargetStepEventRequest) Read(iprot thrift.TProtocol) (err err
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -22839,6 +23451,14 @@ func (p *ReportEvalTargetStepEventRequest) ReadField4(iprot thrift.TProtocol) er
 	p.StepName = _field
 	return nil
 }
+func (p *ReportEvalTargetStepEventRequest) ReadField5(iprot thrift.TProtocol) error {
+	_field := NewStepEventMeta()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Meta = _field
+	return nil
+}
 func (p *ReportEvalTargetStepEventRequest) ReadField10(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -22977,6 +23597,10 @@ func (p *ReportEvalTargetStepEventRequest) Write(oprot thrift.TProtocol) (err er
 			fieldId = 4
 			goto WriteFieldError
 		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
 			goto WriteFieldError
@@ -23110,6 +23734,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepEventRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMeta() {
+		if err = oprot.WriteFieldBegin("meta", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Meta.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 func (p *ReportEvalTargetStepEventRequest) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAgentType() {
@@ -23336,6 +23978,9 @@ func (p *ReportEvalTargetStepEventRequest) DeepEqual(ano *ReportEvalTargetStepEv
 	if !p.Field4DeepEqual(ano.StepName) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.Meta) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.AgentType) {
 		return false
 	}
@@ -23416,6 +24061,13 @@ func (p *ReportEvalTargetStepEventRequest) Field4DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.StepName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepEventRequest) Field5DeepEqual(src *StepEventMeta) bool {
+
+	if !p.Meta.DeepEqual(src) {
 		return false
 	}
 	return true

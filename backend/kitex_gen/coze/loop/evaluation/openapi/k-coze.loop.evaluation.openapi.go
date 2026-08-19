@@ -15913,6 +15913,406 @@ func (p *ReportEvalTargetStepMetricResponse) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *StepEventMeta) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StepEventMeta[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *StepEventMeta) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ExperimentID = _field
+	return offset, nil
+}
+
+func (p *StepEventMeta) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.LogID = _field
+	return offset, nil
+}
+
+func (p *StepEventMeta) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.DatasetID = _field
+	return offset, nil
+}
+
+func (p *StepEventMeta) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.DatasetVersion = _field
+	return offset, nil
+}
+
+func (p *StepEventMeta) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ItemID = _field
+	return offset, nil
+}
+
+func (p *StepEventMeta) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ItemKey = _field
+	return offset, nil
+}
+
+func (p *StepEventMeta) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *StepEventMeta) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *StepEventMeta) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *StepEventMeta) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExperimentID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ExperimentID)
+	}
+	return offset
+}
+
+func (p *StepEventMeta) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLogID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.LogID)
+	}
+	return offset
+}
+
+func (p *StepEventMeta) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDatasetID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.DatasetID)
+	}
+	return offset
+}
+
+func (p *StepEventMeta) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDatasetVersion() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.DatasetVersion)
+	}
+	return offset
+}
+
+func (p *StepEventMeta) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetItemID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ItemID)
+	}
+	return offset
+}
+
+func (p *StepEventMeta) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetItemKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ItemKey)
+	}
+	return offset
+}
+
+func (p *StepEventMeta) field1Length() int {
+	l := 0
+	if p.IsSetExperimentID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ExperimentID)
+	}
+	return l
+}
+
+func (p *StepEventMeta) field2Length() int {
+	l := 0
+	if p.IsSetLogID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.LogID)
+	}
+	return l
+}
+
+func (p *StepEventMeta) field3Length() int {
+	l := 0
+	if p.IsSetDatasetID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.DatasetID)
+	}
+	return l
+}
+
+func (p *StepEventMeta) field4Length() int {
+	l := 0
+	if p.IsSetDatasetVersion() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.DatasetVersion)
+	}
+	return l
+}
+
+func (p *StepEventMeta) field5Length() int {
+	l := 0
+	if p.IsSetItemID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ItemID)
+	}
+	return l
+}
+
+func (p *StepEventMeta) field6Length() int {
+	l := 0
+	if p.IsSetItemKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ItemKey)
+	}
+	return l
+}
+
+func (p *StepEventMeta) DeepCopy(s interface{}) error {
+	src, ok := s.(*StepEventMeta)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.ExperimentID != nil {
+		var tmp string
+		if *src.ExperimentID != "" {
+			tmp = kutils.StringDeepCopy(*src.ExperimentID)
+		}
+		p.ExperimentID = &tmp
+	}
+
+	if src.LogID != nil {
+		var tmp string
+		if *src.LogID != "" {
+			tmp = kutils.StringDeepCopy(*src.LogID)
+		}
+		p.LogID = &tmp
+	}
+
+	if src.DatasetID != nil {
+		var tmp string
+		if *src.DatasetID != "" {
+			tmp = kutils.StringDeepCopy(*src.DatasetID)
+		}
+		p.DatasetID = &tmp
+	}
+
+	if src.DatasetVersion != nil {
+		var tmp string
+		if *src.DatasetVersion != "" {
+			tmp = kutils.StringDeepCopy(*src.DatasetVersion)
+		}
+		p.DatasetVersion = &tmp
+	}
+
+	if src.ItemID != nil {
+		var tmp string
+		if *src.ItemID != "" {
+			tmp = kutils.StringDeepCopy(*src.ItemID)
+		}
+		p.ItemID = &tmp
+	}
+
+	if src.ItemKey != nil {
+		var tmp string
+		if *src.ItemKey != "" {
+			tmp = kutils.StringDeepCopy(*src.ItemKey)
+		}
+		p.ItemKey = &tmp
+	}
+
+	return nil
+}
+
 func (p *ReportEvalTargetStepEventRequest) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -15975,6 +16375,20 @@ func (p *ReportEvalTargetStepEventRequest) FastRead(buf []byte) (int, error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField5(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -16216,6 +16630,18 @@ func (p *ReportEvalTargetStepEventRequest) FastReadField4(buf []byte) (int, erro
 	return offset, nil
 }
 
+func (p *ReportEvalTargetStepEventRequest) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+	_field := NewStepEventMeta()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Meta = _field
+	return offset, nil
+}
+
 func (p *ReportEvalTargetStepEventRequest) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 
@@ -16381,6 +16807,7 @@ func (p *ReportEvalTargetStepEventRequest) FastWriteNocopy(buf []byte, w thrift.
 		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField15(buf[offset:], w)
@@ -16400,6 +16827,7 @@ func (p *ReportEvalTargetStepEventRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
@@ -16448,6 +16876,15 @@ func (p *ReportEvalTargetStepEventRequest) fastWriteField4(buf []byte, w thrift.
 	if p.IsSetStepName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.StepName)
+	}
+	return offset
+}
+
+func (p *ReportEvalTargetStepEventRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMeta() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
+		offset += p.Meta.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -16587,6 +17024,15 @@ func (p *ReportEvalTargetStepEventRequest) field4Length() int {
 	return l
 }
 
+func (p *ReportEvalTargetStepEventRequest) field5Length() int {
+	l := 0
+	if p.IsSetMeta() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Meta.BLength()
+	}
+	return l
+}
+
 func (p *ReportEvalTargetStepEventRequest) field10Length() int {
 	l := 0
 	if p.IsSetAgentType() {
@@ -16714,6 +17160,15 @@ func (p *ReportEvalTargetStepEventRequest) DeepCopy(s interface{}) error {
 		}
 		p.StepName = &tmp
 	}
+
+	var _meta *StepEventMeta
+	if src.Meta != nil {
+		_meta = &StepEventMeta{}
+		if err := _meta.DeepCopy(src.Meta); err != nil {
+			return err
+		}
+	}
+	p.Meta = _meta
 
 	if src.AgentType != nil {
 		var tmp string

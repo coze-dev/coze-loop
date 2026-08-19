@@ -462,6 +462,30 @@ struct ReportEvalTargetStepMetricResponse {
     255: base.BaseResp BaseResp
 }
 
+// StepEventMeta 阶段事件的身份维度。
+//
+// **为什么是子结构而不是 6 个平铺字段**：这 6 个字段是同一个东西的投影——上报侧 RunSpec 的身份
+// （哪个实验、哪条数据、哪次运行）。它们一起出现、一起为空、一起进 MQ 明细，没有任何一个会被单独
+// 使用。做成子结构后，将来加维度只动这一个 struct，不用在 request 里再挑一个不冲突的字段号。
+//
+// **为什么全是 string 而不是 i64**：这些值服务端只做透传（进 MQ 明细列），从不参与任何算术或
+// 反查。用 i64 会引入两个真实问题：(1) 未上报与真值 0 无法区分，而 dataset_version 缺失和
+// dataset_version=0 在离线分析里是两件事；(2) log_id 本身就不是数字。string 让「上报了什么就是
+// 什么」，服务端不做任何解释。
+//
+// **为什么不由服务端反查**：前人接口靠 invoke_id 去 Redis 反查 asyncCtx 补齐这些维度
+// （eval_openapi_app.go 的 GetEvalAsyncCtx），其自身注释就承认反查会失败、失败后 tag 退化成
+// 占位符。上报侧本来就持有这些值的权威版本，让它直接带上，既省一次 Redis 往返，也不会有「一半
+// 事件维度缺失」这种只在事后才发现的数据坑。
+struct StepEventMeta {
+    1: optional string experiment_id
+    2: optional string log_id
+    3: optional string dataset_id
+    4: optional string dataset_version
+    5: optional string item_id
+    6: optional string item_key
+}
+
 // ReportEvalTargetStepEventRequest 评测链路阶段事件上报请求（agent eval runtime 侧沙箱调用）。
 //
 // **为什么新开接口而不是复用 ReportEvalTargetStepMetric**：
@@ -487,6 +511,9 @@ struct ReportEvalTargetStepEventRequest {
     // 阶段名。step 级为链路阶段名（install / setup / agent_run / evaluate ...）；
     // case 级事件用上报侧约定的保留名，服务端不校验取值，只做透传与打点。
     4: optional string step_name
+    // 身份维度（experiment_id / log_id / dataset_id / dataset_version / item_id / item_key）。
+    // 全部是无界高基数标识，只进 MQ 明细，一个都不进 metric tag。
+    5: optional StepEventMeta meta
 
     // 前人接口放不下、离线分析必需的维度
     10: optional string agent_type    // agent 名（claude_code / codex / ...）

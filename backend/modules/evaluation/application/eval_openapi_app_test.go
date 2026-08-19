@@ -2555,6 +2555,37 @@ func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent(t *testing.T) {
 			},
 		},
 		{
+			// 6 个身份维度由上报侧带上，服务端不反查 asyncCtx。
+			name: "meta_carries_identity_dimensions",
+			req: &openapi.ReportEvalTargetStepEventRequest{
+				WorkspaceID: gptr.Of(int64(1)),
+				InvokeID:    gptr.Of(int64(999)),
+				EventType:   &finished,
+				StepName:    gptr.Of("evaluate"),
+				Meta: &openapi.StepEventMeta{
+					ExperimentID:   gptr.Of("7001"),
+					LogID:          gptr.Of("20260819103000ABCDEF"),
+					DatasetID:      gptr.Of("8001"),
+					DatasetVersion: gptr.Of("8002"),
+					ItemID:         gptr.Of("9001"),
+					ItemKey:        gptr.Of("case-中文-key"),
+				},
+				DurationMs: gptr.Of(int64(300)),
+				Success:    gptr.Of(true),
+			},
+		},
+		{
+			// meta 缺失（老沙箱 / 部分字段没值）不能让接口崩：生成的 getter 是 nil-safe 的，
+			// 这条用例把它钉住。
+			name: "nil_meta_is_accepted",
+			req: &openapi.ReportEvalTargetStepEventRequest{
+				InvokeID:  gptr.Of(int64(999)),
+				EventType: &finished,
+				StepName:  gptr.Of("evaluate"),
+				Meta:      nil,
+			},
+		},
+		{
 			name: "explicit_unknown_event_type_is_accepted",
 			req: &openapi.ReportEvalTargetStepEventRequest{
 				InvokeID:  gptr.Of(int64(1)),

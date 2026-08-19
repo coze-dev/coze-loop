@@ -669,7 +669,15 @@ func (p *ReportEvalTargetStepMetricResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *StepEventMeta) IsValid() error {
+	return nil
+}
 func (p *ReportEvalTargetStepEventRequest) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)

@@ -1607,6 +1607,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 // 上报是 best-effort（沙箱侧不重试、不缓冲），排查"数据为什么少一条"只能 grep 它，所以它必须
 // 无条件打印、且打印请求全文。
 //
+// req.Meta 里的 6 个身份维度（experiment_id / log_id / dataset_id / dataset_version /
+// item_id / item_key）由上报侧直接给出，服务端不再像前人那样用 invoke_id 去 Redis 反查
+// asyncCtx——前人自己的注释就承认反查会失败、失败后维度退化成占位符，而上报侧本来就持有权威值。
+//
 // 后续扩展点（各自独立的 ticket，不在本实现内）：
 //   - metric 上报：在下面 STARTED / FINISHED 两个分支里挂 emit，tag 只用有界维度
 //     （step_name / success / error_type / error_code / agent_type / round）；
@@ -1630,15 +1634,19 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, 
 	// 排查锚点：请求全文。
 	logs.CtxInfo(ctx, "ReportEvalTargetStepEvent receive req: %v", json.Jsonify(req))
 
+	meta := req.GetMeta()
+
 	switch req.GetEventType() {
 	case openapi.EvalTargetStepEventType_STARTED:
 		// STARTED 不带耗时 / 成败 / 错误三件套：阶段刚开始时成败尚未发生，读这些字段即是读假数据。
-		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent started, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s",
-			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason())
-	case openapi.EvalTargetStepEventType_FINISHED:
-		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent finished, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, success=%v, duration_ms=%d, error_code=%d, error_message=%s",
+		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent started, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, experiment_id=%s, log_id=%s, dataset_id=%s, dataset_version=%s, item_id=%s, item_key=%s",
 			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason(),
-			req.GetSuccess(), req.GetDurationMs(), req.GetErrorCode(), req.GetErrorMessage())
+			meta.GetExperimentID(), meta.GetLogID(), meta.GetDatasetID(), meta.GetDatasetVersion(), meta.GetItemID(), meta.GetItemKey())
+	case openapi.EvalTargetStepEventType_FINISHED:
+		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent finished, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, success=%v, duration_ms=%d, error_code=%d, error_message=%s, experiment_id=%s, log_id=%s, dataset_id=%s, dataset_version=%s, item_id=%s, item_key=%s",
+			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason(),
+			req.GetSuccess(), req.GetDurationMs(), req.GetErrorCode(), req.GetErrorMessage(),
+			meta.GetExperimentID(), meta.GetLogID(), meta.GetDatasetID(), meta.GetDatasetVersion(), meta.GetItemID(), meta.GetItemKey())
 	default:
 		logs.CtxWarn(ctx, "ReportEvalTargetStepEvent unknown event_type=%v, workspace_id=%d, invoke_id=%d, step_name=%s",
 			req.GetEventType(), req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName())
