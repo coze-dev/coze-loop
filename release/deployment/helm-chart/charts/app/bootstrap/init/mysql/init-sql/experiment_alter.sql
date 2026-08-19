@@ -49,7 +49,19 @@ ALTER TABLE `experiment`
 ALTER TABLE `experiment`
     ADD COLUMN `scheduler_scope` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '中心调度所有权与Priority排序边界; legacy为空' AFTER `scheduler_mode`;
 
--- 中心调度主扫描索引：scheduler_mode + scheduler_scope + status 定位候选，priority_level DESC/created_at/id 提供稳定排序
--- 注意：降序索引需 MySQL 8.0+；低版本会静默忽略 DESC 退化为升序，上线前须确认实例版本并 EXPLAIN 验证
+-- 中心调度主扫描索引：四列只做过滤，**刻意不含排序列**。
+--
+-- 真实查询是 status IN (Pending,Processing)，这是 range 条件；MySQL 用索引满足 ORDER BY 的前提是
+-- 排序列不在 range 列之后，因此把 priority_level/created_at/id 放进本索引**不产生任何排序收益**，
+-- 只会让每个索引条目变宽、写放大更高。BOE 实测（MySQL 8.0.27）：
+--   status IN (2,3) → type=range, Extra="Using index condition; Using where; Using filesort"
+--   status=3 单值   → type=ref,   Extra 无 filesort
+-- 即索引本身没问题，filesort 来自查询里的 IN，改索引无法消除。
+--
+-- 排序开销可接受：候选集是"当前活跃的 enforce 实验"，量级在几十到几百，不是全表。
+-- 想彻底消掉 filesort 需把 IN 拆成两条等值查询再归并，但那要引入双流归并游标（spec §1.4 已否决）。
+--
+-- deleted_at 保留：查询含 deleted_at IS NULL，在索引内判掉可省回表。
+-- id 不写：InnoDB 二级索引条目天然带主键，显式写是冗余。
 ALTER TABLE `experiment`
-    ADD INDEX `idx_scheduler_queue` (`scheduler_mode`, `scheduler_scope`, `status`, `deleted_at`, `priority_level` DESC, `created_at`, `id`);
+    ADD INDEX `idx_scheduler_queue` (`scheduler_mode`, `scheduler_scope`, `status`, `deleted_at`);
