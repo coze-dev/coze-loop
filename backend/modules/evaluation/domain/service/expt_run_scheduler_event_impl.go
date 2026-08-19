@@ -417,7 +417,22 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
+	// ★ 中心化调度防双驱动：enforce 实验的新 item 派发权归中心调度器独有。
+	//
+	// 旧 per-experiment tick 在此**丢弃 toSubmit**，但保留其余全部职责 ——
+	// 完成 item 归档（上面的 recordEvalItemRunLogs 已执行）、zombie/sandbox terminated 处理、
+	// run/实验终态收口、NextTick 续跳。若这里直接 return，实验会因为没人收口而永远停在 Processing。
+	//
+	// 为什么必须丢弃而不是"让它也派"：旧链路按实验自己的配置并发补 item，既不看全局优先级
+	// 也不经额度账本，两个驱动并存会直接超发。
+	dispatchByCentral := entity.IsCentralDispatch(exptDetail.ExptDispatchMode)
+	if dispatchByCentral {
+		if len(toSubmit) > 0 {
+			logs.CtxInfo(ctx, "[CentralDispatch] legacy tick suppressed %d to-submit item(s) for enforce experiment, expt_id: %v, expt_run_id: %v",
+				len(toSubmit), event.ExptID, event.ExptRunID)
+		}
+		toSubmit = nil
+	} else if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
 		return err
 	}
 
