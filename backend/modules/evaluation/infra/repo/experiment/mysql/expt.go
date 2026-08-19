@@ -90,8 +90,26 @@ func (d *exptDAOImpl) Create(ctx context.Context, expt *model.Experiment) error 
 	return nil
 }
 
+// schedulingFrozenColumns 是创建时一次性冻结、此后任何 Update 都不得改写的调度列。
+//
+// 为什么必须显式 Omit：本方法用 struct 做 Updates，GORM 只跳过**零值**字段。
+// 而 DO2PO 会把未设置的调度字段 Normalize 成非零值（mode ""→"legacy"、priority 0→1，
+// 见 convert/expt.go），于是任何"只带 ID + 一两个业务字段"的部分更新（全仓 8 处，如
+// LogRun 写 latest_run_id、ScheduleStart 改 status）都会顺手把 enforce 实验改回 legacy、
+// 把申报的优先级重置为 1。
+//
+// 后果是静默且严重的：mode 变回 legacy 后中心调度再也扫不到它（扫描条件是
+// scheduler_mode='enforce'），而旧 daemon 的抑制判断读到 legacy 会**恢复自主派发** ——
+// 同一个 run 出现两个派发驱动、绕过全局额度账本，正是设计上明令禁止的情形。
+// 且 scope 是零值会被跳过，最终留下 mode=legacy + scope 非空 的不可能组合。
+//
+// 这三列的唯一合法写入点是 Create（见 expt_manage_impl.go 的冻结逻辑）。
+var schedulingFrozenColumns = []string{"priority_level", "scheduler_mode", "scheduler_scope"}
+
 func (d *exptDAOImpl) Update(ctx context.Context, expt *model.Experiment) error {
-	if err := d.db.NewSession(ctx).Model(&model.Experiment{}).Where("id = ?", expt.ID).Updates(expt).Error; err != nil {
+	if err := d.db.NewSession(ctx).Model(&model.Experiment{}).Where("id = ?", expt.ID).
+		Omit(schedulingFrozenColumns...).
+		Updates(expt).Error; err != nil {
 		return errorx.Wrapf(err, "update expt fail, expt_id: %v, updated: %v", expt.ID, json.Jsonify(expt))
 	}
 	return nil
