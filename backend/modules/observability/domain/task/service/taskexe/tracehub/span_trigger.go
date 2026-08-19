@@ -13,8 +13,10 @@ import (
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
+	traceEntity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	trace_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/hashicorp/go-multierror"
 	pkgerrors "github.com/pkg/errors"
@@ -335,7 +337,29 @@ func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span
 		if sub.t.TaskStatus != entity.TaskStatusRunning {
 			continue
 		}
-		if err := sub.AddSpan(ctx, span); err != nil {
+
+		processedSpan := span
+		processors, err := h.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
+			WorkspaceId:  sub.t.WorkspaceID,
+			PlatformType: sub.t.SpanFilter.PlatformType,
+			Scene:        traceEntity.SceneDataReflow,
+		})
+		if err == nil && len(processors) > 0 {
+			processed := []*loop_span.Span{span}
+			for _, p := range processors {
+				processed, err = p.Transform(ctx, processed)
+				if err != nil {
+					break
+				}
+			}
+			if err != nil {
+				logs.CtxWarn(ctx, "decrypt span failed in data reflow, task_id=%d, span_id=%s, err: %v", sub.taskID, span.SpanID, err)
+			} else if len(processed) > 0 {
+				processedSpan = processed[0]
+			}
+		}
+
+		if err := sub.AddSpan(ctx, processedSpan); err != nil {
 			merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "add span to subscriber, log_id=%s, trace_id=%s, span_id=%s, task_id=%d",
 				span.LogID, span.TraceID, span.SpanID, sub.taskID))
 		} else {

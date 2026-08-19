@@ -15,4 +15,5 @@ const (
 	SceneTraceChat       ProcessorScene = "trace_chat"
 	SceneThreadChat      ProcessorScene = "thread_chat"
 	SceneThreadStat      ProcessorScene = "thread_stat"
+	SceneDataReflow      ProcessorScene = "data_reflow"
 )
