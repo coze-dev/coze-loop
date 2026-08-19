@@ -75,6 +75,7 @@ type EvalOpenAPIApplication struct {
 	evaluationSetSchemaService  service.EvaluationSetSchemaService
 	metric                      metrics.OpenAPIEvaluationMetrics
 	sandboxAgentMetric          metrics.SandboxAgentMetrics
+	stepEventMetric             metrics.StepEventMetrics
 	userInfoService             userinfo.UserInfoService
 	experimentApp               IExperimentApplication
 	manager                     service.IExptManager
@@ -101,6 +102,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluationSetSchemaService service.EvaluationSetSchemaService,
 	metric metrics.OpenAPIEvaluationMetrics,
 	sandboxAgentMetric metrics.SandboxAgentMetrics,
+	stepEventMetric metrics.StepEventMetrics,
 	userInfoService userinfo.UserInfoService,
 	experimentApp IExperimentApplication,
 	manager service.IExptManager,
@@ -127,6 +129,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		evaluationSetSchemaService:  evaluationSetSchemaService,
 		metric:                      metric,
 		sandboxAgentMetric:          sandboxAgentMetric,
+		stepEventMetric:             stepEventMetric,
 		userInfoService:             userInfoService,
 		experimentApp:               experimentApp,
 		manager:                     manager,
@@ -1611,13 +1614,11 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 // item_id / item_key）由上报侧直接给出，服务端不再像前人那样用 invoke_id 去 Redis 反查
 // asyncCtx——前人自己的注释就承认反查会失败、失败后维度退化成占位符，而上报侧本来就持有权威值。
 //
-// 后续扩展点（各自独立的 ticket，不在本实现内）：
-//   - metric 上报：在下面 STARTED / FINISHED 两个分支里挂 emit，tag 只用有界维度
-//     （step_name / success / error_type / error_code / agent_type / round）；
-//     invoke_id / item_* / model_name / experiment_id / end_reason / trial_status 是
-//     无界或高基数维度，不进 tag。
-//   - MQ 明细投递：在返回前 best-effort 发一条消息（失败只 warn，接口照常返回成功），
-//     由数仓侧消费同步到 Hive 做离线分析。
+// 事件分两条去处，各自 best-effort、互不依赖：
+//   - metric（在线监控告警）：tag 只用 6 个有界维度（step_name / success / error_type /
+//     error_code / agent_type / round）。invoke_id / item_* / model_name / experiment_id /
+//     end_reason / trial_status 是无界或高基数维度，一个都不进 tag。
+//   - MQ 明细投递：见后续 ticket，由数仓侧消费同步到 Hive 做离线分析。
 //
 // success 由上报侧直接给出，服务端不从 trial_status 推导——那条推导规则属于 runtime 的领域
 // 语义，服务端不该知道。trial_status / end_reason 同理只做透传。
@@ -1635,6 +1636,12 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, 
 	logs.CtxInfo(ctx, "ReportEvalTargetStepEvent receive req: %v", json.Jsonify(req))
 
 	meta := req.GetMeta()
+	// metric tag 只取有界维度；明细维度（meta / invoke_id / model_name / ...）不进 tag。
+	metricTags := metrics.StepEventTags{
+		StepName:  req.GetStepName(),
+		AgentType: req.GetAgentType(),
+		Round:     req.GetRound(),
+	}
 
 	switch req.GetEventType() {
 	case openapi.EvalTargetStepEventType_STARTED:
@@ -1642,12 +1649,21 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, 
 		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent started, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, experiment_id=%s, log_id=%s, dataset_id=%s, dataset_version=%s, item_id=%s, item_key=%s",
 			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason(),
 			meta.GetExperimentID(), meta.GetLogID(), meta.GetDatasetID(), meta.GetDatasetVersion(), meta.GetItemID(), meta.GetItemKey())
+		if e.stepEventMetric != nil {
+			e.stepEventMetric.EmitStepStarted(metricTags)
+		}
 	case openapi.EvalTargetStepEventType_FINISHED:
 		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent finished, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, success=%v, duration_ms=%d, error_code=%d, error_message=%s, experiment_id=%s, log_id=%s, dataset_id=%s, dataset_version=%s, item_id=%s, item_key=%s",
 			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason(),
 			req.GetSuccess(), req.GetDurationMs(), req.GetErrorCode(), req.GetErrorMessage(),
 			meta.GetExperimentID(), meta.GetLogID(), meta.GetDatasetID(), meta.GetDatasetVersion(), meta.GetItemID(), meta.GetItemKey())
+		if e.stepEventMetric != nil {
+			// 耗时用沙箱上报的值，不用服务端接收时刻现算：服务端算不出阶段何时开始，
+			// 用接收时刻只会把网络与排队时间算进阶段耗时。负值由实现层 clamp 到 0。
+			e.stepEventMetric.EmitStepFinished(metricTags, req.GetSuccess(), req.GetErrorCode(), req.GetDurationMs())
+		}
 	default:
+		// 未识别的事件类型不打点：填不出 success / duration，打上去只会污染曲线。
 		logs.CtxWarn(ctx, "ReportEvalTargetStepEvent unknown event_type=%v, workspace_id=%d, invoke_id=%d, step_name=%s",
 			req.GetEventType(), req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName())
 	}

@@ -44,6 +44,7 @@ import (
 	experimentmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
 	openapimetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
 	sandboxagentmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/sandbox_agent"
+	stepeventmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/step_event"
 	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
 	agentrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent"
 	foundationrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
@@ -141,6 +142,7 @@ var (
 		experimentSet,
 		evalconf.NewConfiger,
 		openapimetrics.OpenAPIMetricsSet,
+		stepeventmetrics.StepEventMetricsSet,
 		domainservice.NewEvaluatorCallbackDispatcher,
 		wire.Bind(new(domainservice.IEvaluatorCallbackDispatcher), new(*domainservice.EvaluatorCallbackDispatcher)),
 	)

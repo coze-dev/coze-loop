@@ -2616,6 +2616,100 @@ func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent(t *testing.T) {
 	}
 }
 
+// TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_EmitsMetric 钉住 metric tag 的取值：
+// 只有 step_name / agent_type / round 三个来自请求的有界维度进 tag，
+// invoke_id / experiment_id / item_id / item_key / model_name 一个都不进。
+func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_EmitsMetric(t *testing.T) {
+	t.Parallel()
+
+	started := openapi.EvalTargetStepEventType_STARTED
+	finished := openapi.EvalTargetStepEventType_FINISHED
+	bogus := openapi.EvalTargetStepEventType(99)
+
+	// 高基数明细维度：请求里带满，但一个都不该出现在 metric tag 上。
+	fullMeta := &openapi.StepEventMeta{
+		ExperimentID:   gptr.Of("7001"),
+		LogID:          gptr.Of("20260819103000ABCDEF"),
+		DatasetID:      gptr.Of("8001"),
+		DatasetVersion: gptr.Of("8002"),
+		ItemID:         gptr.Of("9001"),
+		ItemKey:        gptr.Of("case-1"),
+	}
+
+	t.Run("started_emits_counter_only", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		metric := metricsmocks.NewMockStepEventMetrics(ctrl)
+		metric.EXPECT().EmitStepStarted(metrics.StepEventTags{
+			StepName:  "agent_run",
+			AgentType: "claude_code",
+			Round:     2,
+		}).Times(1)
+
+		app := &EvalOpenAPIApplication{stepEventMetric: metric}
+		resp, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+			WorkspaceID: gptr.Of(int64(1)),
+			InvokeID:    gptr.Of(int64(999)),
+			EventType:   &started,
+			StepName:    gptr.Of("agent_run"),
+			AgentType:   gptr.Of("claude_code"),
+			Round:       gptr.Of(int32(2)),
+			ModelName:   gptr.Of("doubao-pro"),
+			Meta:        fullMeta,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	t.Run("finished_forwards_sandbox_reported_duration_and_success", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		metric := metricsmocks.NewMockStepEventMetrics(ctrl)
+		metric.EXPECT().EmitStepFinished(metrics.StepEventTags{
+			StepName:  "install",
+			AgentType: "codex",
+			Round:     0,
+		}, false, int32(600123), int64(1500)).Times(1)
+
+		app := &EvalOpenAPIApplication{stepEventMetric: metric}
+		resp, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+			WorkspaceID:  gptr.Of(int64(1)),
+			InvokeID:     gptr.Of(int64(999)),
+			EventType:    &finished,
+			StepName:     gptr.Of("install"),
+			AgentType:    gptr.Of("codex"),
+			DurationMs:   gptr.Of(int64(1500)),
+			Success:      gptr.Of(false),
+			ErrorCode:    gptr.Of(int32(600123)),
+			ErrorMessage: gptr.Of("install script exited 3"),
+			Meta:         fullMeta,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+
+	t.Run("unknown_event_type_emits_nothing", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// 无 EXPECT：任何一次 emit 都会让 gomock 失败。
+		metric := metricsmocks.NewMockStepEventMetrics(ctrl)
+
+		app := &EvalOpenAPIApplication{stepEventMetric: metric}
+		resp, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+			EventType: &bogus,
+			StepName:  gptr.Of("agent_run"),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+}
+
 func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 	t.Parallel()
 
