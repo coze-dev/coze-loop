@@ -55,6 +55,16 @@ type ExptItemEventEvalServiceImpl struct {
 	evalAsyncRepo            repo.IEvalAsyncRepo
 	itemCompletePublisher    component.IItemCompletePublisher
 	sandboxAgentNotifier     ISandboxAgentNotifier // 传递给 ExptItemEvalCtxExecutor 用于失败行飞书通知
+	// centralGuard 中心化调度的额度预占校验闸。开源部署为 noop（enforce 消息 fail-closed），
+	// 商业版由 Wire 注入真实账本适配器。用 setter 而非构造参数注入：本构造函数已有一个
+	// variadic 参数，Go 不允许第二个，且它是可选依赖 —— 不注入时 legacy 行为完全不变。
+	centralGuard component.ICentralReservationGuard
+}
+
+// WithCentralReservationGuard 注入中心化调度额度闸。返回自身便于在 Wire provider 中链式调用。
+func (e *ExptItemEventEvalServiceImpl) WithCentralReservationGuard(guard component.ICentralReservationGuard) *ExptItemEventEvalServiceImpl {
+	e.centralGuard = guard
+	return e
 }
 
 func NewExptRecordEvalService(
@@ -113,6 +123,9 @@ func NewExptRecordEvalService(
 	i.endpoints = RecordEvalChain(
 		i.HandleEventErr,
 		i.HandleEventCheck,
+		// 额度闸放在 Check 之后、Lock 之前：Check 已排除掉终态 run（那些消息不需要额度校验），
+		// 而放在 Lock 之前可避免为一条注定要丢弃的消息去抢 item 锁。
+		i.HandleCentralReservation,
 		i.HandleEventLock,
 		i.HandleEventExec,
 	)(func(_ context.Context, _ *entity.ExptItemEvalEvent) error { return nil })
@@ -153,6 +166,48 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint)
 
 		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
 			logs.CtxInfo(ctx, "ExptRecordEvalConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+			return nil
+		}
+
+		return next(ctx, event)
+	}
+}
+
+// HandleCentralReservation 对中心调度纳管的实验校验额度预占。
+//
+// 模式判定**回查 experiment.scheduler_mode DB 列**，不看 event 上的任何标记：
+// 若模式随 event 传递，字段丢失或取默认零值时，一条实际为 central 的消息会被当作 legacy 处理，
+// 从而跳过本校验、静默绕过额度执行 —— 这个方向的失败是无声的，比多查一次 DB 危险得多。
+func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalEndPoint) RecordEvalEndPoint {
+	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		expt, err := e.experimentRepo.GetByID(ctx, event.ExptID, event.SpaceID)
+		if err != nil {
+			return err
+		}
+		if !entity.IsCentralDispatch(expt.ExptDispatchMode) {
+			// legacy 实验：完全不经额度闸，行为与改动前一致
+			return next(ctx, event)
+		}
+
+		guard := e.centralGuard
+		if guard == nil {
+			// 判定为 enforce 却没有注入闸门：fail-closed。
+			// 放行等于让实验在无额度约束下跑，静默且难以发现；停下来则可见。
+			logs.CtxWarn(ctx, "[CentralReservation] enforce experiment without guard, drop event, expt_id: %v, item_id: %v",
+				event.ExptID, event.EvalSetItemID)
+			return nil
+		}
+
+		ok, err := guard.ConfirmRunning(ctx, event.ExptRunID, event.EvalSetItemID)
+		if err != nil {
+			// 账本暂时不可用：返回错误让 MQ 重试，而不是丢弃 —— item 已被预占，
+			// 丢弃会让它停在 Queueing 直到 reservation 超时清理，白等一轮。
+			return err
+		}
+		if !ok {
+			// reservation 不存在：迟到消息、账本已重建、或已被释放。丢弃不执行。
+			logs.CtxInfo(ctx, "[CentralReservation] reservation absent, discard event, expt_run_id: %v, item_id: %v",
+				event.ExptRunID, event.EvalSetItemID)
 			return nil
 		}
 
