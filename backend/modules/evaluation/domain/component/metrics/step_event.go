@@ -28,5 +28,9 @@ type StepEventMetrics interface {
 	// success 由上报侧给出（runtime 侧按 trial_status 推导），服务端不做推导——那条规则属于
 	// runtime 的领域语义。durationMS 也取上报侧的值：服务端只知道收到事件的时刻，算不出阶段
 	// 何时开始，用接收时刻现算等于把网络抖动和排队时间算进阶段耗时。
-	EmitStepFinished(tags StepEventTags, success bool, errorCode int32, durationMS int64)
+	//
+	// errorType 由调用方分类好后传入（entity.ClassifyStepErrorType），而不是在这里分类：
+	// 分类要读运维配置，metric 实现不该拿配置依赖；且 MQ 明细的 error_type 列必须与本 tag
+	// 同源，两处各分类一次早晚会漂成两个答案。
+	EmitStepFinished(tags StepEventTags, success bool, errorType string, errorCode int32, durationMS int64)
 }

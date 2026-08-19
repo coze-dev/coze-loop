@@ -18,7 +18,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	eval_metrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -112,7 +111,7 @@ func (m *metricsImpl) EmitStepStarted(tags eval_metrics.StepEventTags) {
 		metrics.Counter(1, metrics.WithSuffix(suffixStarted)))
 }
 
-func (m *metricsImpl) EmitStepFinished(tags eval_metrics.StepEventTags, success bool, errorCode int32, durationMS int64) {
+func (m *metricsImpl) EmitStepFinished(tags eval_metrics.StepEventTags, success bool, errorType string, errorCode int32, durationMS int64) {
 	if m == nil || m.metric == nil {
 		return
 	}
@@ -121,7 +120,7 @@ func (m *metricsImpl) EmitStepFinished(tags eval_metrics.StepEventTags, success 
 	if durationMS < 0 {
 		durationMS = 0
 	}
-	m.metric.Emit(buildTags(tags, successTag(success), entity.ClassifyStepErrorType(success, errorCode), errorCode),
+	m.metric.Emit(buildTags(tags, successTag(success), errorType, errorCode),
 		metrics.Counter(1, metrics.WithSuffix(suffixFinished)),
 		metrics.Timer(durationMS, metrics.WithSuffix(suffixDuration)))
 }
@@ -176,5 +175,6 @@ func sanitizeTagValue(v string) string {
 
 type noopMetrics struct{}
 
-func (n *noopMetrics) EmitStepStarted(_ eval_metrics.StepEventTags)                            {}
-func (n *noopMetrics) EmitStepFinished(_ eval_metrics.StepEventTags, _ bool, _ int32, _ int64) {}
+func (n *noopMetrics) EmitStepStarted(_ eval_metrics.StepEventTags) {}
+func (n *noopMetrics) EmitStepFinished(_ eval_metrics.StepEventTags, _ bool, _ string, _ int32, _ int64) {
+}

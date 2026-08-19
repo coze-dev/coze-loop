@@ -2673,7 +2673,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_EmitsMetric(t *testing
 			StepName:  "install",
 			AgentType: "codex",
 			Round:     0,
-		}, false, int32(600123), int64(1500)).Times(1)
+		}, false, "engineering", int32(600123), int64(1500)).Times(1)
 
 		app := &EvalOpenAPIApplication{stepEventMetric: metric}
 		resp, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
@@ -2882,8 +2882,8 @@ func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_PublishesDetail(t *tes
 		defer ctrl.Finish()
 
 		metric := metricsmocks.NewMockStepEventMetrics(ctrl)
-		metric.EXPECT().EmitStepFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			Do(func(metrics.StepEventTags, bool, int32, int64) { panic("metric backend exploded") }).Times(1)
+		metric.EXPECT().EmitStepFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Do(func(metrics.StepEventTags, bool, string, int32, int64) { panic("metric backend exploded") }).Times(1)
 
 		app := &EvalOpenAPIApplication{stepEventMetric: metric}
 		resp, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
@@ -2895,6 +2895,74 @@ func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_PublishesDetail(t *tes
 		require.NotNil(t, resp)
 		assert.NotNil(t, resp.BaseResp)
 	})
+}
+
+// TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_ErrorTypeFromConfig 钉住错误分类的配置来源：
+// 配到 non_sla_code 的码算 non_engineering，其余（含配置读不到）算 engineering，
+// 且 metric tag 与 MQ 明细列必须是同一个值。
+func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_ErrorTypeFromConfig(t *testing.T) {
+	t.Parallel()
+
+	finished := openapi.EvalTargetStepEventType_FINISHED
+
+	tests := []struct {
+		name          string
+		conf          *entity.ExptSandboxStepMetricConf
+		errorCode     int32
+		wantErrorType string
+	}{
+		{
+			name:          "configured_code_is_non_engineering",
+			conf:          &entity.ExptSandboxStepMetricConf{NonSLACode: []int32{600100101, 600500101, 600200101}},
+			errorCode:     600500101,
+			wantErrorType: "non_engineering",
+		},
+		{
+			name:          "unconfigured_code_is_engineering",
+			conf:          &entity.ExptSandboxStepMetricConf{NonSLACode: []int32{600100101}},
+			errorCode:     600500101,
+			wantErrorType: "engineering",
+		},
+		{
+			// 配置读取失败 / 键不存在 → nil → 全部 engineering（误报可被发现，静默豁免不能）。
+			name:          "missing_config_is_engineering",
+			conf:          nil,
+			errorCode:     600500101,
+			wantErrorType: "engineering",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			configer := configermocks.NewMockIConfiger(ctrl)
+			configer.EXPECT().GetExptSandboxStepMetricConf(gomock.Any()).Return(tt.conf).Times(1)
+
+			metric := metricsmocks.NewMockStepEventMetrics(ctrl)
+			metric.EXPECT().EmitStepFinished(gomock.Any(), false, tt.wantErrorType, tt.errorCode, int64(10)).Times(1)
+
+			var got *entity.SandboxStepEventMessage
+			pub := eventmocks.NewMockStepEventPublisher(ctrl)
+			pub.EXPECT().PublishStepEvent(gomock.Any(), gomock.Any()).
+				Do(func(_ context.Context, msg *entity.SandboxStepEventMessage) { got = msg }).Times(1)
+
+			app := &EvalOpenAPIApplication{stepEventMetric: metric, stepEventPublisher: pub, configer: configer}
+			_, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+				EventType:  &finished,
+				StepName:   gptr.Of("install"),
+				Success:    gptr.Of(false),
+				ErrorCode:  gptr.Of(tt.errorCode),
+				DurationMs: gptr.Of(int64(10)),
+			})
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			assert.Equal(t, tt.wantErrorType, got.ErrorType)
+		})
+	}
 }
 
 func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {

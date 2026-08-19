@@ -204,3 +204,37 @@ func TestConfiger_BuildEvalExt(t *testing.T) {
 		})
 	}
 }
+
+func TestConfiger_GetExptSandboxStepMetricConf(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockLoader := mock_conf.NewMockIConfigLoader(ctrl)
+	c := &configer{loader: mockLoader}
+	ctx := context.Background()
+	const key = "expt_sandbox_step_metric_cfg"
+
+	t.Run("解析成功返回配置", func(t *testing.T) {
+		mockLoader.EXPECT().UnmarshalKey(ctx, key, gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ string, out any, _ ...conf.DecodeOptionFn) error {
+				ptr := out.(**entity.ExptSandboxStepMetricConf)
+				*ptr = &entity.ExptSandboxStepMetricConf{NonSLACode: []int32{600100101, 600500101, 600200101}}
+				return nil
+			},
+		)
+		result := c.GetExptSandboxStepMetricConf(ctx)
+		assert.Equal(t, []int32{600100101, 600500101, 600200101}, result.NonSLACode)
+		assert.True(t, result.IsNonSLACode(600200101))
+	})
+
+	// 读取失败与键不存在都返回 nil，分类逻辑据此把所有带码的失败判为 engineering。
+	t.Run("UnmarshalKey失败返回nil", func(t *testing.T) {
+		mockLoader.EXPECT().UnmarshalKey(ctx, key, gomock.Any()).Return(errors.New("parse fail"))
+		assert.Nil(t, c.GetExptSandboxStepMetricConf(ctx))
+	})
+
+	t.Run("键不存在返回nil", func(t *testing.T) {
+		mockLoader.EXPECT().UnmarshalKey(ctx, key, gomock.Any()).Return(nil)
+		assert.Nil(t, c.GetExptSandboxStepMetricConf(ctx))
+	})
+}

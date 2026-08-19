@@ -1675,6 +1675,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, 
 func (e *EvalOpenAPIApplication) instrumentStepEvent(ctx context.Context, req *openapi.ReportEvalTargetStepEventRequest, serverReceiveTimeMS int64) {
 	defer goroutine.Recovery(ctx)
 
+	// 错误分类**在这里算一次**，metric tag 与 MQ 明细列共用这一个结果：分类要读运维配置，
+	// 在两个下游各读各分类早晚会漂成两个答案，那时「在线看板说是工程错误、Hive 说不是」无从下手。
+	errorType := entity.ClassifyStepErrorType(req.GetSuccess(), req.GetErrorCode(), e.stepMetricConf(ctx))
+
 	if e.stepEventMetric != nil {
 		// metric tag 只取有界维度；明细维度（meta / invoke_id / model_name / ...）不进 tag。
 		tags := metrics.StepEventTags{
@@ -1688,7 +1692,7 @@ func (e *EvalOpenAPIApplication) instrumentStepEvent(ctx context.Context, req *o
 		case openapi.EvalTargetStepEventType_FINISHED:
 			// 耗时用沙箱上报的值，不用服务端接收时刻现算：服务端算不出阶段何时开始，
 			// 用接收时刻只会把网络与排队时间算进阶段耗时。负值由实现层 clamp 到 0。
-			e.stepEventMetric.EmitStepFinished(tags, req.GetSuccess(), req.GetErrorCode(), req.GetDurationMs())
+			e.stepEventMetric.EmitStepFinished(tags, req.GetSuccess(), errorType, req.GetErrorCode(), req.GetDurationMs())
 		default:
 			// 未识别的事件类型不打点：填不出 success / duration，打上去只会污染曲线。
 		}
@@ -1697,8 +1701,16 @@ func (e *EvalOpenAPIApplication) instrumentStepEvent(ctx context.Context, req *o
 	// MQ 明细：**未识别的事件类型也投递**。metric 那边不打是因为填不出曲线要的值，这边不同——
 	// 明细表的价值恰恰在于「新沙箱发了个老服务端不认识的东西」这件事本身在 Hive 里可查。
 	if e.stepEventPublisher != nil {
-		e.stepEventPublisher.PublishStepEvent(ctx, buildStepEventMessage(req, serverReceiveTimeMS))
+		e.stepEventPublisher.PublishStepEvent(ctx, buildStepEventMessage(req, errorType, serverReceiveTimeMS))
 	}
+}
+
+// stepMetricConf 读阶段埋点配置。configer 缺失时返回 nil，由分类逻辑落到默认的 engineering。
+func (e *EvalOpenAPIApplication) stepMetricConf(ctx context.Context) *entity.ExptSandboxStepMetricConf {
+	if e.configer == nil {
+		return nil
+	}
+	return e.configer.GetExptSandboxStepMetricConf(ctx)
 }
 
 // buildStepEventMessage 把上报请求摊平成一条 MQ 明细消息。
@@ -1706,7 +1718,7 @@ func (e *EvalOpenAPIApplication) instrumentStepEvent(ctx context.Context, req *o
 // success / duration_ms 只在 FINISHED 事件上取值，其余留 nil（在 Hive 里是 null）：
 // STARTED 事件写 success=false 会让「开始了」和「失败了」长得一样，写 duration_ms=0 会把
 // avg(duration_ms) 的分母算上 STARTED 行。
-func buildStepEventMessage(req *openapi.ReportEvalTargetStepEventRequest, serverReceiveTimeMS int64) *entity.SandboxStepEventMessage {
+func buildStepEventMessage(req *openapi.ReportEvalTargetStepEventRequest, errorType string, serverReceiveTimeMS int64) *entity.SandboxStepEventMessage {
 	meta := req.GetMeta()
 	msg := &entity.SandboxStepEventMessage{
 		EventType: req.GetEventType().String(),
@@ -1741,8 +1753,7 @@ func buildStepEventMessage(req *openapi.ReportEvalTargetStepEventRequest, server
 		msg.Success = &success
 		msg.DurationMs = &durationMS
 		msg.ErrorCode = req.GetErrorCode()
-		// 与 metric 侧共用同一条分类规则（entity 层），避免在线看板与 Hive 给出两个答案。
-		msg.ErrorType = entity.ClassifyStepErrorType(success, req.GetErrorCode())
+		msg.ErrorType = errorType
 		msg.ErrorMessage = req.GetErrorMessage()
 	}
 

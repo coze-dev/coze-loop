@@ -117,6 +117,7 @@ func TestEmitStepFinished(t *testing.T) {
 		name       string
 		tags       eval_metrics.StepEventTags
 		success    bool
+		errorType  string
 		errorCode  int32
 		durationMS int64
 
@@ -127,6 +128,7 @@ func TestEmitStepFinished(t *testing.T) {
 			name:       "success",
 			tags:       eval_metrics.StepEventTags{StepName: "install", AgentType: "codex", Round: 0},
 			success:    true,
+			errorType:  "-",
 			durationMS: 1500,
 			wantTags: map[string]string{
 				"step_name": "install", "agent_type": "codex", "round": "0",
@@ -135,10 +137,11 @@ func TestEmitStepFinished(t *testing.T) {
 			wantDuration: 1500,
 		},
 		{
-			// 默认分类是 engineering（spec D4 的默认值反转）。
-			name:       "failure_with_code_defaults_to_engineering",
+			// error_type 由调用方（application）分类后传入，本层只透传。
+			name:       "failure_carries_caller_classification",
 			tags:       eval_metrics.StepEventTags{StepName: "setup", AgentType: "codex", Round: 1},
 			success:    false,
+			errorType:  "engineering",
 			errorCode:  600123,
 			durationMS: 42,
 			wantTags: map[string]string{
@@ -148,9 +151,10 @@ func TestEmitStepFinished(t *testing.T) {
 			wantDuration: 42,
 		},
 		{
-			name:    "failure_without_code_is_unknown",
-			tags:    eval_metrics.StepEventTags{StepName: "evaluate", AgentType: "kimi_code", Round: 3},
-			success: false,
+			name:      "failure_without_code_is_unknown",
+			tags:      eval_metrics.StepEventTags{StepName: "evaluate", AgentType: "kimi_code", Round: 3},
+			success:   false,
+			errorType: "unknown",
 			wantTags: map[string]string{
 				"step_name": "evaluate", "agent_type": "kimi_code", "round": "3",
 				"success": "false", "error_type": "unknown", "error_code": "-",
@@ -161,6 +165,7 @@ func TestEmitStepFinished(t *testing.T) {
 			name:       "negative_duration_is_clamped",
 			tags:       eval_metrics.StepEventTags{StepName: "finish", AgentType: "nca"},
 			success:    true,
+			errorType:  "-",
 			durationMS: -5,
 			wantTags: map[string]string{
 				"step_name": "finish", "agent_type": "nca", "round": "0",
@@ -172,9 +177,10 @@ func TestEmitStepFinished(t *testing.T) {
 			// 外部来源的 tag 值过白名单：中文 / 空格 / 换行 → '_'；空值 → 占位符。
 			// 白名单是**按字节**做的（与前人一致），所以一个 3 字节的汉字变成 3 个 '_'：
 			// "阶段 名\n" = 3+3+1+3+1 = 11 字节。
-			name:    "external_tag_values_are_sanitized",
-			tags:    eval_metrics.StepEventTags{StepName: "阶段 名\n", AgentType: ""},
-			success: true,
+			name:      "external_tag_values_are_sanitized",
+			tags:      eval_metrics.StepEventTags{StepName: "阶段 名\n", AgentType: ""},
+			success:   true,
+			errorType: "-",
 			wantTags: map[string]string{
 				"step_name": "___________", "agent_type": "-", "round": "0",
 				"success": "true", "error_type": "-", "error_code": "-",
@@ -188,7 +194,7 @@ func TestEmitStepFinished(t *testing.T) {
 			t.Parallel()
 
 			impl, fm := newFakeImpl(t)
-			impl.EmitStepFinished(tt.tags, tt.success, tt.errorCode, tt.durationMS)
+			impl.EmitStepFinished(tt.tags, tt.success, tt.errorType, tt.errorCode, tt.durationMS)
 
 			require.Len(t, fm.records, 1)
 			rec := fm.records[0]
@@ -214,7 +220,7 @@ func TestNewStepEventMetrics_DegradesToNoop(t *testing.T) {
 	n := &noopMetrics{}
 	assert.NotPanics(t, func() {
 		n.EmitStepStarted(eval_metrics.StepEventTags{StepName: "install"})
-		n.EmitStepFinished(eval_metrics.StepEventTags{StepName: "install"}, false, 1, -1)
+		n.EmitStepFinished(eval_metrics.StepEventTags{StepName: "install"}, false, "engineering", 1, -1)
 	})
 
 	// once 版本同样不返回 nil interface。
@@ -235,12 +241,12 @@ func TestMetricsImpl_NilMetricIsSafe(t *testing.T) {
 	var impl *metricsImpl
 	assert.NotPanics(t, func() {
 		impl.EmitStepStarted(eval_metrics.StepEventTags{})
-		impl.EmitStepFinished(eval_metrics.StepEventTags{}, true, 0, 0)
+		impl.EmitStepFinished(eval_metrics.StepEventTags{}, true, "-", 0, 0)
 	})
 
 	empty := &metricsImpl{}
 	assert.NotPanics(t, func() {
 		empty.EmitStepStarted(eval_metrics.StepEventTags{})
-		empty.EmitStepFinished(eval_metrics.StepEventTags{}, true, 0, 0)
+		empty.EmitStepFinished(eval_metrics.StepEventTags{}, true, "-", 0, 0)
 	})
 }

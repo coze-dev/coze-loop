@@ -78,6 +78,10 @@ func (f *fakeConfiger) GetSandboxAgentNotifyConf(ctx context.Context) *entity.Sa
 	return nil
 }
 
+func (f *fakeConfiger) GetExptSandboxStepMetricConf(ctx context.Context) *entity.ExptSandboxStepMetricConf {
+	return nil
+}
+
 type nopReader struct{ buf *bytes.Reader }
 
 func newNopReader(b []byte) *nopReader                       { return &nopReader{buf: bytes.NewReader(b)} }

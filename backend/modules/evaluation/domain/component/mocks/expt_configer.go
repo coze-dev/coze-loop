@@ -168,6 +168,20 @@ func (mr *MockIConfigerMockRecorder) GetExptMultiSetWhiteList(ctx any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptMultiSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptMultiSetWhiteList), ctx)
 }
 
+// GetExptSandboxStepMetricConf mocks base method.
+func (m *MockIConfiger) GetExptSandboxStepMetricConf(ctx context.Context) *entity.ExptSandboxStepMetricConf {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExptSandboxStepMetricConf", ctx)
+	ret0, _ := ret[0].(*entity.ExptSandboxStepMetricConf)
+	return ret0
+}
+
+// GetExptSandboxStepMetricConf indicates an expected call of GetExptSandboxStepMetricConf.
+func (mr *MockIConfigerMockRecorder) GetExptSandboxStepMetricConf(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptSandboxStepMetricConf", reflect.TypeOf((*MockIConfiger)(nil).GetExptSandboxStepMetricConf), ctx)
+}
+
 // GetExptTemplateUpdateEvalSetWhiteList mocks base method.
 func (m *MockIConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	m.ctrl.T.Helper()
