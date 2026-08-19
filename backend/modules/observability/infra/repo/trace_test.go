@@ -152,7 +152,7 @@ func TestTraceRepoImpl_InsertSpans(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				WithTraceStorageSpanDao("ck", fields.spansDao),
+				nil, WithTraceStorageSpanDao("ck", fields.spansDao),
 			)
 			assert.NoError(t, err)
 			err = r.InsertSpans(tt.args.ctx, tt.args.param)
@@ -356,7 +356,7 @@ func TestTraceRepoImpl_ListSpans(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				WithTraceStorageDaos("ck", fields.spansDao, fields.annoDao),
+				nil, WithTraceStorageDaos("ck", fields.spansDao, fields.annoDao),
 			)
 			assert.NoError(t, err)
 			got, err := r.ListSpans(tt.args.ctx, tt.args.req)
@@ -643,7 +643,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				WithTraceStorageDaos("ck", fields.spansDao, fields.annoDao),
+				nil, WithTraceStorageDaos("ck", fields.spansDao, fields.annoDao),
 			)
 			assert.NoError(t, err)
 			got, err := r.GetTrace(tt.args.ctx, tt.args.req)
@@ -708,7 +708,7 @@ func TestTraceRepoImpl_GetMetrics(t *testing.T) {
 			traceConfigMock,
 			nil,
 			&mockStorageProvider{},
-			WithTraceStorageSpanDao("ck", spansDaoMock),
+			nil, WithTraceStorageSpanDao("ck", spansDaoMock),
 		)
 		assert.NoError(t, err)
 		result, err := repoImpl.GetMetrics(context.Background(), &metric_repo.GetMetricsParam{
@@ -736,7 +736,7 @@ func TestTraceRepoImpl_GetMetrics(t *testing.T) {
 			traceConfigMock,
 			nil,
 			&mockStorageProvider{},
-			WithTraceStorageSpanDao("ck", spansDaoMock),
+			nil, WithTraceStorageSpanDao("ck", spansDaoMock),
 		)
 		assert.NoError(t, err)
 		result, err := repoImpl.GetMetrics(context.Background(), &metric_repo.GetMetricsParam{
@@ -768,7 +768,7 @@ func TestTraceRepoImpl_GetMetrics(t *testing.T) {
 			traceConfigMock,
 			nil,
 			&mockStorageProvider{},
-			WithTraceStorageSpanDao("ck", spansDaoMock),
+			nil, WithTraceStorageSpanDao("ck", spansDaoMock),
 		)
 		assert.NoError(t, err)
 		result, err := repoImpl.GetMetrics(context.Background(), &metric_repo.GetMetricsParam{
@@ -877,7 +877,7 @@ func TestTraceRepoImpl_InsertAnnotation(t *testing.T) {
 				fields.spanProducer,
 				nil,
 				nil,
-				WithTraceStorageAnnotationDao("ck", fields.annoDao),
+				nil, WithTraceStorageAnnotationDao("ck", fields.annoDao),
 			)
 			assert.NoError(t, err)
 			err = r.InsertAnnotations(tt.args.ctx, tt.args.param)
@@ -976,7 +976,7 @@ func TestTraceRepoImpl_GetAnnotation(t *testing.T) {
 				fields.spanProducer,
 				nil,
 				nil,
-				WithTraceStorageAnnotationDao("ck", fields.annoDao),
+				nil, WithTraceStorageAnnotationDao("ck", fields.annoDao),
 			)
 			assert.NoError(t, err)
 			got, err := r.GetAnnotation(tt.args.ctx, tt.args.param)
@@ -1076,7 +1076,7 @@ func TestTraceRepoImpl_ListAnnotations(t *testing.T) {
 				fields.spanProducer,
 				nil,
 				nil,
-				WithTraceStorageAnnotationDao("ck", fields.annoDao),
+				nil, WithTraceStorageAnnotationDao("ck", fields.annoDao),
 			)
 			assert.NoError(t, err)
 			got, err := r.ListAnnotations(tt.args.ctx, tt.args.param)
@@ -1772,7 +1772,7 @@ func TestTraceRepoImpl_ListWorkspaceAnnotations(t *testing.T) {
 				fields.spanProducer,
 				nil,
 				nil,
-				WithTraceStorageAnnotationDao("ck", fields.annoDao),
+				nil, WithTraceStorageAnnotationDao("ck", fields.annoDao),
 			)
 			assert.NoError(t, err)
 			got, err := r.ListWorkspaceAnnotations(tt.args.ctx, tt.args.param)
@@ -1873,7 +1873,7 @@ func TestTraceRepoImpl_ListSpans_EmptySpans_SkipsAnnotationQuery(t *testing.T) {
 		traceConfigMock,
 		&mockStorageProvider{},
 		nil, nil, nil, nil,
-		WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+		nil, WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 	)
 	assert.NoError(t, err)
 	got, err := r.ListSpans(context.Background(), &repo.ListSpansParam{
@@ -1921,7 +1921,7 @@ func TestTraceRepoImpl_ListSpans_AnnotationUsesSpanTimeRange(t *testing.T) {
 		traceConfigMock,
 		&mockStorageProvider{},
 		nil, nil, nil, nil,
-		WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+		nil, WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 	)
 	assert.NoError(t, err)
 	got, err := r.ListSpans(context.Background(), &repo.ListSpansParam{
@@ -1960,7 +1960,7 @@ func TestTraceRepoImpl_GetTrace_EmptySpans_SkipsAnnotationQuery(t *testing.T) {
 		traceConfigMock,
 		&mockStorageProvider{},
 		nil, nil, nil, nil,
-		WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+		nil, WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 	)
 	assert.NoError(t, err)
 	got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
@@ -2009,7 +2009,7 @@ func TestTraceRepoImpl_GetTrace_AnnotationUsesSpanTimeRange(t *testing.T) {
 		traceConfigMock,
 		&mockStorageProvider{},
 		nil, nil, nil, nil,
-		WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+		nil, WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 	)
 	assert.NoError(t, err)
 	got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
@@ -2063,7 +2063,7 @@ func TestTraceRepoImpl_GetTrace_ParallelAnnotationQuery(t *testing.T) {
 			traceConfigMock,
 			&mockStorageProvider{},
 			nil, nil, nil, nil,
-			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+			nil, WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 		)
 		assert.NoError(t, err)
 		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
@@ -2110,7 +2110,7 @@ func TestTraceRepoImpl_GetTrace_ParallelAnnotationQuery(t *testing.T) {
 			traceConfigMock,
 			&mockStorageProvider{},
 			nil, nil, nil, nil,
-			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+			nil, WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 		)
 		assert.NoError(t, err)
 		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
@@ -2154,7 +2154,7 @@ func TestTraceRepoImpl_GetTrace_ParallelAnnotationQuery(t *testing.T) {
 			traceConfigMock,
 			&mockStorageProvider{},
 			nil, nil, nil, nil,
-			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+			nil, WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 		)
 		assert.NoError(t, err)
 		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
@@ -2198,7 +2198,7 @@ func TestTraceRepoImpl_GetTrace_ParallelAnnotationQuery(t *testing.T) {
 			traceConfigMock,
 			&mockStorageProvider{},
 			nil, nil, nil, nil,
-			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+			nil, WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 		)
 		assert.NoError(t, err)
 		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
@@ -2242,7 +2242,7 @@ func TestTraceRepoImpl_GetTrace_ParallelAnnotationQuery(t *testing.T) {
 			traceConfigMock,
 			&mockStorageProvider{},
 			nil, nil, nil, nil,
-			WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+			nil, WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 		)
 		assert.NoError(t, err)
 		got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
