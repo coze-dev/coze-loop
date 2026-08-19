@@ -5,6 +5,7 @@ package conf
 
 import (
 	"context"
+	"time"
 
 	"github.com/bytedance/gg/gslice"
 	"github.com/samber/lo"
@@ -62,6 +63,10 @@ func (c *configer) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerA
 
 func (c *configer) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
 	return c.GetConsumerConf(ctx).GetExptExecConf(spaceID)
+}
+
+func (c *configer) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
+	return c.GetExptExecConf(ctx, spaceID).GetExptItemEvalConf().GetEvalAsyncCtxTTL()
 }
 
 func (c *configer) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {

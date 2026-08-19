@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	component "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -124,6 +125,20 @@ func (m *MockIConfiger) GetEvaluationRecordStorage(ctx context.Context) *compone
 func (mr *MockIConfigerMockRecorder) GetEvaluationRecordStorage(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationRecordStorage", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluationRecordStorage), ctx)
+}
+
+// GetEvalAsyncCtxTTL mocks base method.
+func (m *MockIConfiger) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalAsyncCtxTTL", ctx, spaceID)
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// GetEvalAsyncCtxTTL indicates an expected call of GetEvalAsyncCtxTTL.
+func (mr *MockIConfigerMockRecorder) GetEvalAsyncCtxTTL(ctx, spaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalAsyncCtxTTL", reflect.TypeOf((*MockIConfiger)(nil).GetEvalAsyncCtxTTL), ctx, spaceID)
 }
 
 // GetExptExecConf mocks base method.

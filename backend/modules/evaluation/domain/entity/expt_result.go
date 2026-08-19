@@ -685,6 +685,11 @@ type ExptTurnResultFilterAccelerator struct {
 	SpaceID     int64     `json:"space_id"`
 	ExptID      int64     `json:"expt_id"`
 	CreatedDate time.Time `json:"created_date"`
+	// EvalSetSpaceID 评测集来源空间 (跨空间共享, 0=同 SpaceID)。
+	// 查评测集快照表 (dataset_item_snapshot / dataset_item_draft) 必须用它而非 SpaceID：
+	// 快照数据属评测集来源空间，用实验空间过滤会恒查不到、导致筛选静默返回 0 条。
+	// 实验结果表 (expt_turn_result_filter) 仍用 SpaceID。
+	EvalSetSpaceID int64 `json:"eval_set_space_id"`
 	// 基础查询
 	EvaluatorScoreCorrected *FieldFilter   `json:"evaluator_score_corrected"`
 	ItemIDs                 []*FieldFilter `json:"item_id"`

@@ -10,6 +10,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -36,6 +37,10 @@ func (f *fakeConfiger) GetConsumerConf(ctx context.Context) *entity.ExptConsumer
 func (f *fakeConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl           { return nil }
 func (f *fakeConfiger) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
 	return nil
+}
+
+func (f *fakeConfiger) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
+	return 0
 }
 
 func (f *fakeConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
