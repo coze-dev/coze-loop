@@ -189,6 +189,20 @@ struct InvokeEvaluatorResponse {
     255: base.BaseResp BaseResp
 }
 
+// asynchronously invoke custom evaluator request
+struct AsyncInvokeEvaluatorRequest {
+    1: optional i64 workspace_id (api.js_conv="true")
+    2: optional i64 invoke_id (api.js_conv="true") // execution id, report result with the same id
+    3: optional InvokeCustomEvaluator evaluator
+    4: optional InvokeEvaluatorInputData input_data
+
+    255: optional base.Base Base
+}
+
+struct AsyncInvokeEvaluatorResponse {
+    255: base.BaseResp BaseResp
+}
+
 service EvaluationSPIService {
     SearchEvalTargetResponse SearchEvalTarget(1: SearchEvalTargetRequest req)   // 搜索评测对象
     InvokeEvalTargetResponse InvokeEvalTarget(1: InvokeEvalTargetRequest req)   // 执行
@@ -196,4 +210,5 @@ service EvaluationSPIService {
 
     // invoke custom evaluator
     InvokeEvaluatorResponse InvokeEvaluator(1: InvokeEvaluatorRequest req)
+    AsyncInvokeEvaluatorResponse AsyncInvokeEvaluator(1: AsyncInvokeEvaluatorRequest req)
 }

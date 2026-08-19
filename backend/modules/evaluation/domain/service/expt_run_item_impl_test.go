@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -407,7 +408,10 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 	})
 }
 
-func Test_ExptItemEvalCtxExecutor_CompleteItemRun_ItemCompletePublisher(t *testing.T) {
+// item-complete(success) 发送点已从链路A(CompleteItemRun)后移到链路B(scheduler)。
+// 本测试固化"链路A 不再发送任何 item-complete"的行为, 无论成功/失败/是否接了 publisher;
+// 事件字段组装的正确性由 Test_buildItemCompleteEventFromScheduler 覆盖。
+func Test_ExptItemEvalCtxExecutor_CompleteItemRun_NoItemCompletePublish(t *testing.T) {
 	const (
 		exptID      = int64(1)
 		exptRunID   = int64(2)
@@ -418,42 +422,11 @@ func Test_ExptItemEvalCtxExecutor_CompleteItemRun_ItemCompletePublisher(t *testi
 	)
 
 	tests := []struct {
-		name         string
-		mutateExpt   func(*entity.Experiment)
-		publisherErr error
-		evalErr      error
-		wantPublish  bool
-		wantAnalysis bool
+		name    string
+		evalErr error
 	}{
-		{name: "complete target version and sandbox", wantPublish: true, wantAnalysis: true},
-		{
-			name: "nil target",
-			mutateExpt: func(expt *entity.Experiment) {
-				expt.Target = nil
-			},
-			wantPublish: true,
-		},
-		{
-			name: "nil target version",
-			mutateExpt: func(expt *entity.Experiment) {
-				expt.Target.EvalTargetVersion = nil
-			},
-			wantPublish: true,
-		},
-		{
-			name: "nil sandbox agent",
-			mutateExpt: func(expt *entity.Experiment) {
-				expt.Target.EvalTargetVersion.SandboxAgent = nil
-			},
-			wantPublish: true,
-		},
-		{
-			name:         "publisher error does not block completion",
-			publisherErr: errors.New("publish failed"),
-			wantPublish:  true,
-			wantAnalysis: true,
-		},
-		{name: "evaluation error skips publish", evalErr: errors.New("evaluation failed")},
+		{name: "success does not publish"},
+		{name: "evaluation error does not publish", evalErr: errors.New("evaluation failed")},
 	}
 
 	for _, tt := range tests {
@@ -463,7 +436,7 @@ func Test_ExptItemEvalCtxExecutor_CompleteItemRun_ItemCompletePublisher(t *testi
 			ctrl := gomock.NewController(t)
 			itemResultRepo := repomocks.NewMockIExptItemResultRepo(ctrl)
 			configer := configermocks.NewMockIConfiger(ctrl)
-			publisher := &stubItemCompletePublisher{err: tt.publisherErr}
+			publisher := &stubItemCompletePublisher{}
 			expt := &entity.Experiment{
 				CreatedBy:          "creator_user_id",
 				ExperimentGroupKey: "group-key",
@@ -475,9 +448,6 @@ func Test_ExptItemEvalCtxExecutor_CompleteItemRun_ItemCompletePublisher(t *testi
 						SandboxAgent: &entity.SandboxAgent{EnableAnalysis: true},
 					},
 				},
-			}
-			if tt.mutateExpt != nil {
-				tt.mutateExpt(expt)
 			}
 
 			execCtx := &entity.ExptItemEvalCtx{
@@ -511,20 +481,80 @@ func Test_ExptItemEvalCtxExecutor_CompleteItemRun_ItemCompletePublisher(t *testi
 			}
 			require.NoError(t, executor.CompleteItemRun(context.Background(), execCtx, tt.evalErr))
 
-			if !tt.wantPublish {
-				require.Empty(t, publisher.events)
-				return
+			// 链路A 已不再发送 item-complete, publisher 必为空。
+			require.Empty(t, publisher.events)
+		})
+	}
+}
+
+// Test_buildItemCompleteEventFromScheduler 覆盖链路B 组装函数的字段保真(承接原链路A 发送测试的字段断言)。
+func Test_buildItemCompleteEventFromScheduler(t *testing.T) {
+	const (
+		spaceID     = int64(1)
+		exptID      = int64(2)
+		exptRunID   = int64(3)
+		itemID      = int64(4)
+		targetID    = int64(5)
+		targetSpace = int64(6)
+		datasetID   = int64(7)
+		datasetVer  = int64(8)
+	)
+
+	tests := []struct {
+		name         string
+		mutateExpt   func(*entity.Experiment)
+		wantAnalysis bool
+	}{
+		{name: "sandbox agent enable analysis", wantAnalysis: true},
+		{name: "nil target", mutateExpt: func(e *entity.Experiment) { e.Target = nil }},
+		{name: "nil target version", mutateExpt: func(e *entity.Experiment) { e.Target.EvalTargetVersion = nil }},
+		{name: "nil sandbox agent", mutateExpt: func(e *entity.Experiment) { e.Target.EvalTargetVersion.SandboxAgent = nil }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expt := &entity.Experiment{
+				CreatedBy:          "creator_user_id",
+				ExperimentGroupKey: "group-key",
+				TargetID:           targetID,
+				EvalSetSourceType:  entity.ExptEvalSetSourceType_SingleSet,
+				EvalSet: &entity.EvaluationSet{
+					ID:                   datasetID,
+					EvaluationSetVersion: &entity.EvaluationSetVersion{ID: datasetVer, Version: "0.0.1"},
+				},
+				Target: &entity.EvalTarget{
+					SpaceID:        targetSpace,
+					SourceTargetID: "source-target-id",
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						SandboxAgent: &entity.SandboxAgent{EnableAnalysis: true},
+					},
+				},
 			}
-			require.Len(t, publisher.events, 1)
-			published := publisher.events[0]
-			require.Equal(t, "1", published.ExptID)
-			require.Equal(t, "2", published.ExptRunID)
-			require.Equal(t, "3", published.ItemID)
-			require.Equal(t, "creator_user_id", published.CreatedBy)
-			require.Equal(t, tt.wantAnalysis, published.EnableAnalysis)
+			if tt.mutateExpt != nil {
+				tt.mutateExpt(expt)
+			}
+			item := &entity.ExptEvalItem{ExptID: exptID, ItemID: itemID, State: entity.ItemRunState_Success}
+			evalSetItem := &entity.EvaluationSetItem{
+				ItemID:          itemID,
+				ItemKey:         "item-key",
+				SpaceID:         spaceID,
+				EvaluationSetID: datasetID,
+			}
+
+			ev := buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID, expt, item, evalSetItem, datasetVer)
+
+			require.Equal(t, "2", ev.ExptID)
+			require.Equal(t, "3", ev.ExptRunID)
+			require.Equal(t, "4", ev.ItemID)
+			require.Equal(t, "creator_user_id", ev.CreatedBy)
+			require.Equal(t, "group-key", ev.ExperimentGroupKey)
+			require.Equal(t, "item-key", ev.ItemKey)
+			require.Equal(t, "7", ev.DatasetID)
+			require.Equal(t, "8", ev.DatasetVersionID)
+			require.Equal(t, tt.wantAnalysis, ev.EnableAnalysis)
 			if tt.wantAnalysis {
-				require.Equal(t, "6", published.EvalTargetWorkspaceID)
-				require.Equal(t, "source-target-id", published.SourceTargetID)
+				require.Equal(t, "6", ev.EvalTargetWorkspaceID)
+				require.Equal(t, "source-target-id", ev.SourceTargetID)
 			}
 		})
 	}
@@ -1116,4 +1146,323 @@ func Test_buildItemCompleteEvent(t *testing.T) {
 			assert.Equal(t, "300", ev.ItemID)
 		})
 	}
+}
+
+// Test_buildItemCompleteEvent_LinkAB_Equivalence 钉死"发送内容与原链路A一致"契约:
+// 同一份输入, 原组装 buildItemCompleteEvent(链路A) 与 buildItemCompleteEventFromScheduler(链路B拆参)
+// 必须产出完全相等的 ItemCompleteEvent。任一函数改动导致漂移, 此测试立即失败。
+func Test_buildItemCompleteEvent_LinkAB_Equivalence(t *testing.T) {
+	const (
+		spaceID   = int64(1)
+		exptID    = int64(100)
+		exptRunID = int64(200)
+		itemID    = int64(300)
+		datasetID = int64(700)
+		datasetV  = int64(800)
+	)
+	expt := &entity.Experiment{
+		TargetID:           int64(9),
+		ExperimentGroupKey: "group-key",
+		CreatedBy:          "creator",
+		Target: &entity.EvalTarget{
+			SpaceID:        int64(6),
+			SourceTargetID: "source-target-id",
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				SandboxAgent: &entity.SandboxAgent{EnableAnalysis: true},
+			},
+		},
+		EvalSet: &entity.EvaluationSet{
+			ID:                   datasetID,
+			DatasetKey:           "ds-key",
+			EvaluationSetVersion: &entity.EvaluationSetVersion{ID: datasetV, Version: "0.0.1"},
+		},
+	}
+	evalSetItem := &entity.EvaluationSetItem{
+		SpaceID:         spaceID,
+		EvaluationSetID: datasetID,
+		ItemKey:         "item-key",
+	}
+
+	// 链路A: 原组装函数直接吃 eiec
+	eiec := &entity.ExptItemEvalCtx{
+		Event:            &entity.ExptItemEvalEvent{SpaceID: spaceID, ExptID: exptID, ExptRunID: exptRunID, EvalSetItemID: itemID},
+		Expt:             expt,
+		EvalSetItem:      evalSetItem,
+		EvalSetVersionID: datasetV,
+	}
+	fromLinkA := buildItemCompleteEvent(eiec)
+
+	// 链路B: scheduler 拆参入口
+	item := &entity.ExptEvalItem{ExptID: exptID, ItemID: itemID, State: entity.ItemRunState_Success}
+	fromLinkB := buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID, expt, item, evalSetItem, datasetV)
+
+	require.Equal(t, fromLinkA, fromLinkB, "链路A与链路B的 item-complete 组装结果必须完全一致")
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsAsyncEvaluatorAfterSave(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).Return(nil)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmingHasIndependentTimeoutBudget(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+
+	var persistDeadline time.Time
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ []*entity.ExptTurnResultRunLog) error {
+			var ok bool
+			persistDeadline, ok = ctx.Deadline()
+			require.True(t, ok)
+			time.Sleep(20 * time.Millisecond)
+			return nil
+		},
+	)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).DoAndReturn(
+		func(ctx context.Context, _ int64) error {
+			resumeDeadline, ok := ctx.Deadline()
+			require.True(t, ok)
+			assert.True(t, resumeDeadline.After(persistDeadline), "arming must not consume the turn-log persistence timeout budget")
+			return nil
+		},
+	)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsPendingEvaluatorsConcurrently(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+
+	secondStarted := make(chan struct{})
+	firstObservedSecond := make(chan bool, 1)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).DoAndReturn(
+		func(context.Context, int64) error {
+			select {
+			case <-secondStarted:
+				firstObservedSecond <- true
+			case <-time.After(time.Second):
+				firstObservedSecond <- false
+			}
+			return nil
+		},
+	)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(200)).DoAndReturn(
+		func(context.Context, int64) error {
+			close(secondStarted)
+			return nil
+		},
+	)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{
+		{ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking},
+		{ID: 200, EvaluatorVersionID: 201, Status: entity.EvaluatorRunStatusAsyncInvoking},
+	}}
+
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+	require.True(t, <-firstObservedSecond, "one slow arming operation must not delay the other pending evaluators")
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_DoesNotArmWhenSaveFails(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(errors.New("save failed"))
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), gomock.Any()).Times(0)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.Error(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmErrorKeepsAsyncProcessing(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), int64(100)).Return(errors.New("arm failed"))
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{AsyncAbort: true, EvaluatorResults: []*entity.EvaluatorRecord{{
+		ID: 100, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}}}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_ArmsEveryPendingEvaluator(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
+			require.Len(t, logs, 1)
+			require.NotNil(t, logs[0].EvaluatorResultIds)
+			require.Len(t, logs[0].EvaluatorResultIds.Registered, 5)
+			seen := make(map[int64]int)
+			for _, ref := range logs[0].EvaluatorResultIds.Registered {
+				require.NotNil(t, ref)
+				seen[ref.VersionID]++
+			}
+			for _, versionID := range []int64{101, 102, 201, 202, 203} {
+				assert.Equal(t, 1, seen[versionID])
+			}
+			return nil
+		},
+	)
+	for _, recordID := range []int64{1201, 1202, 1203} {
+		evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), recordID).Return(nil)
+	}
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{
+		AsyncAbort: true,
+		EvaluatorResults: []*entity.EvaluatorRecord{
+			{ID: 1101, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1102, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1201, EvaluatorVersionID: 201, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			{ID: 1202, EvaluatorVersionID: 202, Status: entity.EvaluatorRunStatusAsyncInvoking},
+			{ID: 1203, EvaluatorVersionID: 203, Status: entity.EvaluatorRunStatusAsyncInvoking},
+		},
+	}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+func TestExptItemEvalCtxExecutor_storeTurnRunResult_AllEvaluatorsTerminalCompletesWithoutArming(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	turnRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+
+	turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
+			require.Len(t, logs, 1)
+			assert.Equal(t, entity.TurnRunState_Success, logs[0].Status)
+			require.NotNil(t, logs[0].EvaluatorResultIds)
+			require.Len(t, logs[0].EvaluatorResultIds.Registered, 5)
+			return nil
+		},
+	)
+	evaluatorSvc.EXPECT().ArmEvaluatorResume(gomock.Any(), gomock.Any()).Times(0)
+
+	executor := &ExptItemEvalCtxExecutor{TurnResultRepo: turnRepo, evaluatorService: evaluatorSvc}
+	etec := &entity.ExptTurnEvalCtx{
+		Turn: &entity.Turn{ID: 1},
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt:        &entity.Experiment{ID: 1, SpaceID: 2},
+			Event:       &entity.ExptItemEvalEvent{ExptRunID: 3},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 4},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{
+				1: {ID: 5, TurnID: 1, Status: entity.TurnRunState_Processing},
+			}},
+		},
+	}
+	result := &entity.ExptTurnRunResult{
+		EvaluatorResults: []*entity.EvaluatorRecord{
+			{ID: 1101, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1102, EvaluatorVersionID: 102, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1201, EvaluatorVersionID: 201, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1202, EvaluatorVersionID: 202, Status: entity.EvaluatorRunStatusSuccess},
+			{ID: 1203, EvaluatorVersionID: 203, Status: entity.EvaluatorRunStatusSuccess},
+		},
+	}
+	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
 }

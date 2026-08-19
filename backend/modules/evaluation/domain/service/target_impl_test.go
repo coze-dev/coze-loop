@@ -748,6 +748,103 @@ func TestEvalTargetServiceImpl_ExecuteTarget_PersistsFailRecordAfterContextCance
 	assert.Equal(t, entity.EvalTargetRunStatusFail, gptr.Indirect(record.Status))
 }
 
+// TestEvalTargetServiceImpl_ExecuteTarget_CreateRecordFailPropagatesErr 回归: record 落库失败必须往外抛。
+// 此前 defer 里 errCreate != nil 是裸 return, err 仍是进 defer 时的 nil → 上层拿到「err=nil + record 非 nil」,
+// 把 record.ID 写进 expt_turn_result.target_result_id, 而 MySQL 里没这行(典型触发: 落库前 TOS 外传大字段超时),
+// 后续 BatchGetRecordByIDs 查不到 → buildTargetOutput 走 stub → target 数据永久丢失且全链路无错误留痕。
+func TestEvalTargetServiceImpl_ExecuteTarget_CreateRecordFailPropagatesErr(t *testing.T) {
+	evalTarget := &entity.EvalTarget{
+		ID:             200,
+		SpaceID:        100,
+		SourceTargetID: "src-id",
+		EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID:                  300,
+			SourceTargetVersion: "v1",
+			InputSchema:         []*entity.ArgsSchema{{Key: gptr.Of("field")}},
+		},
+	}
+	input := &entity.EvalTargetInputData{
+		InputFields: map[string]*entity.Content{
+			"field": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("hello")},
+		},
+	}
+	param := &entity.ExecuteTargetCtx{ExperimentRunID: gptr.Of(int64(555)), ItemID: 777, TurnID: 888}
+
+	tests := []struct {
+		name string
+		// execErr: target 执行本身是否失败
+		execErr     error
+		wantErrCode int32
+	}{
+		{
+			// 执行成功但落库失败: 必须抛落库错误, 绝不能返回 nil err
+			name:        "exec success but create fail",
+			execErr:     nil,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			// 执行失败 + 落库失败: 保留原始执行错误语义(用户要看的根因)
+			name:        "exec fail and create fail",
+			execErr:     errorx.NewByCode(errno.CommonInvalidParamCode),
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+	}
+
+	for _, tc := range tests {
+		tcase := tc
+		t.Run(tcase.name, func(t *testing.T) {
+			ctx := context.Background()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			deps := &evalTargetServiceTestDeps{
+				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
+				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
+				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
+				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+				configer: componentmocks.NewMockIConfiger(ctrl),
+			}
+
+			deps.repo.EXPECT().GetEvalTargetVersion(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.ID).Return(evalTarget, nil)
+			deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+			deps.configer.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+			deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
+			deps.operator.EXPECT().ValidateInput(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.InputSchema, input).Return(nil)
+			deps.operator.EXPECT().Execute(ctx, evalTarget.SpaceID, gomock.Any()).DoAndReturn(
+				func(context.Context, int64, *entity.ExecuteEvalTargetParam) (*entity.EvalTargetOutputData, entity.EvalTargetRunStatus, error) {
+					if tcase.execErr != nil {
+						return nil, entity.EvalTargetRunStatusFail, tcase.execErr
+					}
+					return &entity.EvalTargetOutputData{
+						OutputFields:    map[string]*entity.Content{"answer": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("ok")}},
+						EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 1, OutputTokens: 2},
+					}, entity.EvalTargetRunStatusSuccess, nil
+				})
+			deps.idgen.EXPECT().GenID(gomock.Any()).Return(int64(9999), nil)
+			deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
+
+			svc := &EvalTargetServiceImpl{
+				evalTargetRepo: deps.repo,
+				idgen:          deps.idgen,
+				metric:         deps.metric,
+				typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+					evalTarget.EvalTargetType: deps.operator,
+				},
+				configer: deps.configer,
+			}
+
+			_, err := svc.ExecuteTarget(ctx, evalTarget.SpaceID, evalTarget.ID, evalTarget.EvalTargetVersion.ID, param, input)
+			require.Error(t, err, "落库失败必须往外抛, 否则上层会写下一个不存在的 target_result_id")
+			statusErr, ok := errorx.FromStatusError(err)
+			require.True(t, ok)
+			assert.Equal(t, tcase.wantErrCode, statusErr.Code())
+		})
+	}
+}
+
 func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) {
 	// do not run in parallel, this test involves time.Sleep
 

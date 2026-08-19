@@ -30,6 +30,12 @@ const maxStandardEvalOutputMGetItemIDs = 100
 // 用于与用户自定义的普通 ext_output 字段区分、避免重名（见《PSM类评测对象Schema对齐》）。
 const standardEvalOutputFornaxPrefix = "FORNAX_"
 
+// standardEvalOutputSandboxLogURLKey 沙箱日志链接在评测对象 ext_output 里的 key。
+// 由 SandboxAgent 评测对象的内置 output schema 写入（commercial 侧
+// consts.SandboxAgentOutputSchemaKeyLogURL 同值）；小写 fornax_ 前缀标识平台元信息，
+// 与 FORNAX_ 大写的 standard output 协议字段区分开。
+const standardEvalOutputSandboxLogURLKey = "fornax_sandbox_log_url"
+
 // standardEvalOutputMergeableFields 平台组装 standard eval output 时，支持
 // “评测对象上报优先 + 平台兜底 + 子字段深合并” 的字段集合。
 // 不含 source：source 恒由平台生成，忽略任何 FORNAX_source 上报。
@@ -512,6 +518,12 @@ func newItemStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBu
 			}
 		}
 	}
+	// 沙箱日志链接刻意放在这里（即 isItemStandardEvalOutputContentReady 早退**之前**）：
+	// 那个门只放行 Success，而失败 item 恰恰最需要日志排障。
+	// item_id_only 精简查询下没加载 payload，取不到值自然为空、不填 key。
+	if logURL := sandboxLogURLFromItem(item, opt.ExptID); logURL != "" {
+		res.FornaxSandboxLogURL = gptr.Of(logURL)
+	}
 	fillStandardEvalOutputMQMeta(res, item, opt)
 	return res
 }
@@ -726,6 +738,36 @@ func itemKeyFromItem(item *entity.ItemResult) string {
 		return payload.EvalSet.ItemKey
 	}
 	return ""
+}
+
+// sandboxLogURLFromItem 从评测对象上报的 ext_output 里取沙箱日志链接，平铺到顶层字段。
+//
+// 该 key 由 SandboxAgent 评测对象的内置 output schema 提供（commercial 侧
+// consts.SandboxAgentOutputSchemaKeyLogURL），值是一个短 URL 字符串，所以顶层直接用
+// string、不套 StandardEvalOutputContent（用不上 full_content 大对象引用）。
+//
+// 只认小写裸 key、不走 lookupFornaxField：它是平台元信息而非 FORNAX_ 大写协议字段，
+// stripStandardEvalOutputSelfFields 也刻意放过这一类（见其注释）。因此 detail.output 里
+// 的同名字段仍原样保留，本函数只是额外往顶层提一份，不改变既有响应结构。
+//
+// 多轮取**最后一个非空**：与 standardOutput 兜底 detail.output 取 last payload 的口径一致，
+// 后面轮次的链接更贴近这条 item 的最终执行。
+func sandboxLogURLFromItem(item *entity.ItemResult, exptID int64) string {
+	logURL := ""
+	for _, payload := range standardPayloads(item, exptID) {
+		if payload == nil || payload.TargetOutput == nil || payload.TargetOutput.EvalTargetRecord == nil ||
+			payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData == nil {
+			continue
+		}
+		c, ok := payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[standardEvalOutputSandboxLogURLKey]
+		if !ok || c == nil {
+			continue
+		}
+		if text := c.GetText(); text != "" {
+			logURL = text
+		}
+	}
+	return logURL
 }
 
 func parseReportedStandardEvalOutput(item *entity.ItemResult, opt standardEvalOutputBuildOptions) (standardEvalOutputJSON, bool) {

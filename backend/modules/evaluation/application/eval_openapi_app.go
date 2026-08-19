@@ -1353,6 +1353,8 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		Session:                 actx.Session,
 		EnableExtractTrajectory: actx.EnableExtractTrajectory,
 		AsyncUnixMS:             actx.AsyncUnixMS,
+		// 沙箱 agent 评测对象加白:直接沿用上报方提供的错误文案,不再经过 ExptErrCtrl 归一化。
+		SkipErrMsgConvert: actx.Callee == sandboxAgentAsyncCallee,
 	}); err != nil {
 		return nil, err
 	}
@@ -2025,6 +2027,71 @@ func (e *EvalOpenAPIApplication) ListExperimentsOApi(ctx context.Context, req *o
 	}
 	return &openapi.ListExperimentsOApiResponse{
 		Data: &openapi.ListExperimentsOpenAPIData{
+			Experiments: outExpts,
+			Total:       total,
+		},
+	}, nil
+}
+
+// defaultGroupIDsPageSize 是开放面按分组反查的默认分页大小。
+// ★ 这是 100 唯一出现的位置：开放接口不能无界返回，但内部面「不传分页 = 全量」必须逐字保持，
+// 故默认值只在开放面补齐，绝不下沉到内部面 application / domain service / repo / DAO。
+const defaultGroupIDsPageSize = int32(100)
+
+func (e *EvalOpenAPIApplication) GetExperimentIDsByGroupOApi(ctx context.Context, req *openapi.GetExperimentIDsByGroupOApiRequest) (r *openapi.GetExperimentIDsByGroupOApiResponse, err error) {
+	logs.CtxInfo(ctx, "GetExperimentIDsByGroupOApi request: %v", json.Jsonify(req))
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	// 开放面字段全 optional（对齐 ListExperimentsOApi 样板），必须手工校验；顺序在鉴权与查询之前。
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if !req.IsSetWorkspaceID() || req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	groupKey := strings.TrimSpace(req.GetExperimentGroupKey())
+	if groupKey == "" {
+		// 与内部面刻意分叉：内部面空 key 返回空成功（前端切换分组时依赖的容错），
+		// 开放面必须报参数非法 —— 否则调用方无法区分「分组真的没实验」与「参数没传对」。
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_group_key is required"))
+	}
+
+	// ★ 分页默认值：在构造内部 Request 之前补齐。
+	pageNumber := req.GetPageNumber()
+	if !req.IsSetPageNumber() {
+		pageNumber = 1
+	}
+	pageSize := req.GetPageSize()
+	if !req.IsSetPageSize() {
+		pageSize = defaultGroupIDsPageSize
+	}
+
+	innerReq := exptpb.NewGetExperimentIDsByGroupRequest()
+	innerReq.WorkspaceID = req.GetWorkspaceID()
+	innerReq.ExperimentGroupKey = groupKey
+	innerReq.SetPageNumber(gptr.Of(pageNumber))
+	innerReq.SetPageSize(gptr.Of(pageSize))
+	logs.CtxInfo(ctx, "GetExperimentIDsByGroupOApi GetExperimentIDsByGroup innerReq: %v", json.Jsonify(innerReq))
+	resp, err := e.experimentApp.GetExperimentIDsByGroup(ctx, innerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// 跨两套 Experiment 模型（domain / domain_openapi）枚举编号刻意不同，只能过既有转换函数，禁止手写字段赋值。
+	outExpts := make([]*experiment.Experiment, 0, len(resp.GetExperiments()))
+	for _, ex := range resp.GetExperiments() {
+		outExpts = append(outExpts, experiment_convertor.DomainExperimentDTO2OpenAPI(ex))
+	}
+
+	var total *int64
+	if resp.IsSetTotal() {
+		total = gptr.Of(int64(resp.GetTotal()))
+	}
+	return &openapi.GetExperimentIDsByGroupOApiResponse{
+		Data: &openapi.GetExperimentIDsByGroupOpenAPIData{
+			ExptIds:     resp.GetExptIds(),
 			Experiments: outExpts,
 			Total:       total,
 		},
@@ -2999,21 +3066,14 @@ func (e *EvalOpenAPIApplication) AsyncRunEvaluatorOApi(ctx context.Context, req 
 		InputData:          inputData,
 		EvaluatorRunConf:   runConf,
 		Ext:                req.Ext,
+		AsyncCtx: &entity.EvalAsyncCtx{
+			Session:     &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
+			CallbackURL: req.GetCallbackURL(),
+			ResumeReady: true,
+			AsyncUnixMS: startTime.UnixMilli(),
+		},
 	})
 	if err != nil {
-		return nil, err
-	}
-
-	// 写入异步上下文供 ReportEvaluatorInvokeResult 回调读取；独立调用 Event 留空
-	asyncCtxKey := fmt.Sprintf("evaluator:%d", record.ID)
-	if err = e.asyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
-		RecordID:           record.ID,
-		AsyncUnixMS:        startTime.UnixMilli(),
-		Session:            &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
-		EvaluatorVersionID: req.GetEvaluatorVersionID(),
-		CallbackURL:        req.GetCallbackURL(),
-	}); err != nil {
-		logs.CtxError(ctx, "[AsyncRunEvaluatorOApi] SetEvalAsyncCtx fail, invokeID: %d, err: %v", record.ID, err)
 		return nil, err
 	}
 
@@ -3528,7 +3588,26 @@ func (e *EvalOpenAPIApplication) ListExptTemplatesOApi(ctx context.Context, req 
 }
 
 func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest) (r *openapi.ReportEvaluatorInvokeResultResponse, err error) {
-	logs.CtxInfo(ctx, "ReportEvaluatorInvokeResult receive req: %v", json.Jsonify(req))
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() <= 0 || req.GetInvokeID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id and invoke_id are required"))
+	}
+	if req.GetStatus() != spi.InvokeEvaluatorRunStatus_SUCCESS && req.GetStatus() != spi.InvokeEvaluatorRunStatus_FAILED {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("status must be SUCCESS or FAILED"))
+	}
+	if req.GetStatus() == spi.InvokeEvaluatorRunStatus_SUCCESS {
+		if req.Output == nil || req.Output.EvaluatorResult_ == nil || req.Output.EvaluatorResult_.Score == nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_result.score is required for SUCCESS"))
+		}
+	}
+	if req.GetStatus() == spi.InvokeEvaluatorRunStatus_FAILED {
+		if req.Output == nil || req.Output.EvaluatorRunError == nil || strings.TrimSpace(req.Output.EvaluatorRunError.GetMessage()) == "" {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_run_error.message is required for FAILED"))
+		}
+	}
+	logs.CtxInfo(ctx, "ReportEvaluatorInvokeResult receive, workspace_id: %d, invoke_id: %d, status: %v", req.GetWorkspaceID(), req.GetInvokeID(), req.GetStatus())
 
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
@@ -3540,7 +3619,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	asyncCtxKey := fmt.Sprintf("evaluator:%d", req.GetInvokeID())
-	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, asyncCtxKey)
+	actx, err := e.asyncRepo.GetEvalAsyncCtxStrong(ctx, asyncCtxKey)
 	if err != nil {
 		return nil, err
 	}
@@ -3553,29 +3632,43 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		req.GetInvokeID(), actx.EvaluatorVersionID, req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID(), req.GetStatus())
 
 	outputData := evaluator_convertor.ToInvokeEvaluatorOutputDataDO(req.GetOutput(), req.GetStatus())
-	if outputData != nil {
-		outputData.TimeConsumingMS = time.Now().UnixMilli() - actx.AsyncUnixMS
-	}
 
 	runStatus := evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus())
-	if err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
+	outcome, err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
 		SpaceID:    req.GetWorkspaceID(),
 		RecordID:   req.GetInvokeID(),
 		OutputData: outputData,
 		Status:     runStatus,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
-
+	if outcome == entity.ReportEvaluatorResultConflict {
+		return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
+	}
+	var resumeErr error
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
-			event.AsyncEvaluatorReportTrigger = true
-		}); err != nil {
-			return nil, err
+		if !actx.ResumeReady {
+			latestCtx, ctxErr := e.asyncRepo.GetEvalAsyncCtxStrong(ctx, asyncCtxKey)
+			if ctxErr != nil {
+				return nil, ctxErr
+			}
+			if latestCtx != nil {
+				actx = latestCtx
+			}
+		}
+		if !actx.ResumeReady {
+			resumeErr = errorx.New("evaluator resume is not ready, invoke_id: %v", req.GetInvokeID())
+		} else {
+			if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
+				event.AsyncEvaluatorReportTrigger = true
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	if actx.CallbackURL != "" {
+	if outcome == entity.ReportEvaluatorResultApplied && actx.CallbackURL != "" {
 		payload := &openapi.EvaluatorCallbackPayloadOApi{
 			InvokeID:           gptr.Of(req.GetInvokeID()),
 			WorkspaceID:        gptr.Of(req.GetWorkspaceID()),
@@ -3591,6 +3684,9 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 				req.GetInvokeID(), actx.CallbackURL, derr)
 			// 不返回错误：回调失败不影响运行时回报接口成功
 		}
+	}
+	if resumeErr != nil {
+		return nil, resumeErr
 	}
 
 	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil

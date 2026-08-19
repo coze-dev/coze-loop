@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	component "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -126,6 +127,20 @@ func (mr *MockIConfigerMockRecorder) GetEvaluationRecordStorage(ctx any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationRecordStorage", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluationRecordStorage), ctx)
 }
 
+// GetEvalAsyncCtxTTL mocks base method.
+func (m *MockIConfiger) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalAsyncCtxTTL", ctx, spaceID)
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// GetEvalAsyncCtxTTL indicates an expected call of GetEvalAsyncCtxTTL.
+func (mr *MockIConfigerMockRecorder) GetEvalAsyncCtxTTL(ctx, spaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalAsyncCtxTTL", reflect.TypeOf((*MockIConfiger)(nil).GetEvalAsyncCtxTTL), ctx, spaceID)
+}
+
 // GetExptExecConf mocks base method.
 func (m *MockIConfiger) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
 	m.ctrl.T.Helper()
@@ -154,20 +169,6 @@ func (mr *MockIConfigerMockRecorder) GetExptExportWhiteList(ctx any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExportWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptExportWhiteList), ctx)
 }
 
-// GetExptTemplateUpdateEvalSetWhiteList mocks base method.
-func (m *MockIConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptTemplateUpdateEvalSetWhiteList", ctx)
-	ret0, _ := ret[0].(*entity.ExptTemplateUpdateEvalSetWhiteList)
-	return ret0
-}
-
-// GetExptTemplateUpdateEvalSetWhiteList indicates an expected call of GetExptTemplateUpdateEvalSetWhiteList.
-func (mr *MockIConfigerMockRecorder) GetExptTemplateUpdateEvalSetWhiteList(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTemplateUpdateEvalSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptTemplateUpdateEvalSetWhiteList), ctx)
-}
-
 // GetExptMultiSetWhiteList mocks base method.
 func (m *MockIConfiger) GetExptMultiSetWhiteList(ctx context.Context) *entity.ExptMultiSetWhiteList {
 	m.ctrl.T.Helper()
@@ -180,6 +181,20 @@ func (m *MockIConfiger) GetExptMultiSetWhiteList(ctx context.Context) *entity.Ex
 func (mr *MockIConfigerMockRecorder) GetExptMultiSetWhiteList(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptMultiSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptMultiSetWhiteList), ctx)
+}
+
+// GetExptTemplateUpdateEvalSetWhiteList mocks base method.
+func (m *MockIConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExptTemplateUpdateEvalSetWhiteList", ctx)
+	ret0, _ := ret[0].(*entity.ExptTemplateUpdateEvalSetWhiteList)
+	return ret0
+}
+
+// GetExptTemplateUpdateEvalSetWhiteList indicates an expected call of GetExptTemplateUpdateEvalSetWhiteList.
+func (mr *MockIConfigerMockRecorder) GetExptTemplateUpdateEvalSetWhiteList(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTemplateUpdateEvalSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptTemplateUpdateEvalSetWhiteList), ctx)
 }
 
 // GetExptTurnResultFilterBmqProducerCfg mocks base method.
@@ -223,6 +238,20 @@ func (m *MockIConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]boo
 func (mr *MockIConfigerMockRecorder) GetMaintainerUserIDs(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaintainerUserIDs", reflect.TypeOf((*MockIConfiger)(nil).GetMaintainerUserIDs), ctx)
+}
+
+// GetSandboxAgentNotifyConf mocks base method.
+func (m *MockIConfiger) GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSandboxAgentNotifyConf", ctx)
+	ret0, _ := ret[0].(*entity.SandboxAgentNotifyConf)
+	return ret0
+}
+
+// GetSandboxAgentNotifyConf indicates an expected call of GetSandboxAgentNotifyConf.
+func (mr *MockIConfigerMockRecorder) GetSandboxAgentNotifyConf(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandboxAgentNotifyConf", reflect.TypeOf((*MockIConfiger)(nil).GetSandboxAgentNotifyConf), ctx)
 }
 
 // GetSchedulerAbortCtrl mocks base method.

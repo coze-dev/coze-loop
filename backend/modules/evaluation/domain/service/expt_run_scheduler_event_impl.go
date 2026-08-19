@@ -55,11 +55,20 @@ type ExptSchedulerImpl struct {
 	evaluationSetItemService EvaluationSetItemService
 	schedulerModeFactory     SchedulerModeFactory
 	evalTargetService        IEvalTargetService
+	// itemCompletePublisher 发送单行评测完成(item-complete)事件供下游离线分析。
+	// 发送点由链路A(CompleteItemRun)后移至此(recordEvalItemRunLogs, 读侧就绪后), 消除下游反查竞态。
+	// 允许为 nil: 开源侧 ProvideNilItemCompletePublisher 返回 nil, 循环内以非空守卫跳过发送。
+	itemCompletePublisher component.IItemCompletePublisher
+	// exptItemRefRepo 取每个 item 的 per-item 归属集/版本(expt_item_ref), 供 item-complete 事件组装。
+	// 多评测集下各 item 可属不同集/版本, 不能用 ExptEvalItem.EvalSetVersionID(主集硬编码)。
+	exptItemRefRepo repo.IExptItemRefRepo
 	// sandboxAgentMetrics 复用沙箱 agent 评测对象既有打点体系。
 	// sweep 命中沙箱提前终态时，对每个受影响 item 补一次 EmitInvokeFinished，
 	// 让终态命中路径与正常回调路径在同一 dashboard 上可比。
 	// 允许为 nil：开源部署 / 未接入 metrics 时静默 no-op。
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
+	// sandboxAgentNotifier 每 1h 进度快照飞书通知; 允许为 nil (未接入通知)。
+	sandboxAgentNotifier ISandboxAgentNotifier
 }
 
 func NewExptSchedulerSvc(
@@ -82,7 +91,10 @@ func NewExptSchedulerSvc(
 	evaluationSetItemService EvaluationSetItemService,
 	schedulerModeFactory SchedulerModeFactory,
 	evalTargetService IEvalTargetService,
+	itemCompletePublisher component.IItemCompletePublisher,
+	exptItemRefRepo repo.IExptItemRefRepo,
 	sandboxAgentMetrics metrics.SandboxAgentMetrics,
+	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容旧单测
 ) ExptSchedulerEvent {
 	i := &ExptSchedulerImpl{
 		Manager:                  manager,
@@ -104,7 +116,12 @@ func NewExptSchedulerSvc(
 		evaluationSetItemService: evaluationSetItemService,
 		schedulerModeFactory:     schedulerModeFactory,
 		evalTargetService:        evalTargetService,
+		itemCompletePublisher:    itemCompletePublisher,
+		exptItemRefRepo:          exptItemRefRepo,
 		sandboxAgentMetrics:      sandboxAgentMetrics,
+	}
+	if len(sandboxAgentNotifier) > 0 {
+		i.sandboxAgentNotifier = sandboxAgentNotifier[0]
 	}
 
 	i.Endpoints = SchedulerChain(
@@ -113,6 +130,7 @@ func NewExptSchedulerSvc(
 		i.HandleEventCheck,
 		i.HandleEventLock,
 		i.HandleEventEndpoint,
+		i.SandboxAgentHourlyNotify,
 	)(func(_ context.Context, _ *entity.ExptScheduleEvent) error { return nil })
 
 	return i
@@ -211,6 +229,31 @@ func (e *ExptSchedulerImpl) HandleEventEndpoint(next SchedulerEndPoint) Schedule
 		}
 
 		return next(ctx, event)
+	}
+}
+
+// SandboxAgentHourlyNotify 中间件: 沙箱 agent 实验每 1h 一张进度快照飞书卡。
+// 主流程 schedule 出错时不发通知,避免叠加噪音; Notifier 内部做 sandbox agent + Enable + 1h 闸门判定,
+// 非目标 case 静默。发送失败仅 log,不影响调度链。
+func (e *ExptSchedulerImpl) SandboxAgentHourlyNotify(next SchedulerEndPoint) SchedulerEndPoint {
+	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
+		if err := next(ctx, event); err != nil {
+			return err
+		}
+		if e.sandboxAgentNotifier == nil {
+			return nil
+		}
+		// GetDetail 会填 Target/NotificationConf/Name; GetByID 不填 Target,
+		// isSandboxAgentExperiment 会误判为 false。
+		exptDetail, err := e.Manager.GetDetail(ctx, event.ExptID, event.SpaceID, event.Session)
+		if err != nil {
+			logs.CtxWarn(ctx, "[SandboxAgentNotify] GetDetail fail, expt_id=%v, err=%v", event.ExptID, err)
+			return nil
+		}
+		if err := e.sandboxAgentNotifier.NotifyProgressIfDue(ctx, exptDetail); err != nil {
+			logs.CtxWarn(ctx, "[SandboxAgentNotify] progress notify err, expt_id=%v, err=%v", event.ExptID, err)
+		}
+		return nil
 	}
 }
 
@@ -403,10 +446,28 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 
 func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem, mode entity.ExptSchedulerMode, expt *entity.Experiment) error {
 	time.Sleep(time.Millisecond * 1000) // avoid master-slave delay caused by asynchronous and other factors
+
+	// 循环外批量补齐 item-complete 事件组装所需的 per-item 归属集/版本/ItemKey(供循环内 sendItemComplete 用)。
+	// 仅当接了 publisher(商业化真实 producer; 开源为 nil) 且有 item 时才做, 避免开源侧无谓 IO。
+	var itemMeta map[int64]*entity.EvaluationSetItem
+	var itemVer map[int64]int64
+	if e.itemCompletePublisher != nil && len(completeItems) > 0 {
+		itemMeta, itemVer = e.resolveItemCompleteMeta(ctx, event, completeItems, expt)
+	}
+
 	for _, item := range completeItems {
 		if item.State != entity.ItemRunState_Fail && item.State != entity.ItemRunState_Success {
 			return fmt.Errorf("recordEvalItemRunLogs found invalid item run state: %v", item.State)
 		}
+
+		// item-complete(success) 发送点: 每个 item 一进来先发, 仅发成功行(fail/zombie 不发, 下游只消费成功行)。
+		// 发送作为旁路, 只读不写 result_state, 发失败在 sendItemComplete 内 CtxError + return(仅本 item), 不阻断落库/后续。
+		// 是否真正投递由 producer 依空间开关(item_complete_space_config) + 评测对象 enable_analysis 判定, 此处不重复判。
+		// 不追求消竞态: 下游侧 defer 投递已覆盖读侧就绪窗口, 本处只保障"成功行必发一次 MQ"。
+		if e.itemCompletePublisher != nil && item.State == entity.ItemRunState_Success {
+			e.sendItemComplete(ctx, event, expt, item, itemMeta[item.ItemID], itemVer[item.ItemID])
+		}
+
 		var turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef
 		if err := backoff.RetryFiveMin(ctx, func() error {
 			var err error
@@ -416,6 +477,7 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 			return err
 		}
 		time.Sleep(time.Millisecond * 50)
+
 		logs.CtxInfo(ctx, "[ExptEval] recordEvalItemRunLogs publish result, expt_id: %v, event: %v, item_id: %v, turn_evaluator_refs: %v", event.ExptID, event, item.ItemID, json.Jsonify(turnEvaluatorRefs))
 		err := mode.PublishResult(ctx, turnEvaluatorRefs, event)
 		if err != nil {
@@ -448,6 +510,102 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 		return item.ItemID
 	}))
 	return nil
+}
+
+// resolveItemCompleteMeta 循环外批量补齐 item-complete 事件组装所需元数据。
+// 返回 itemID→EvaluationSetItem(提供 ItemKey/SpaceID/EvaluationSetID) 与 itemID→per-item 归属集版本。
+// per-item 版本必须来自 expt_item_ref(多集非主集也正确), 不能用 ExptEvalItem.EvalSetVersionID(主集硬编码)。
+// 任一步失败只 CtxWarn 不阻断: 组装侧对缺失 item 跳过发送, 不影响读侧写入与在线结果发布。
+func (e *ExptSchedulerImpl) resolveItemCompleteMeta(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem, expt *entity.Experiment) (map[int64]*entity.EvaluationSetItem, map[int64]int64) {
+	itemMeta := make(map[int64]*entity.EvaluationSetItem, len(completeItems))
+	itemVer := make(map[int64]int64, len(completeItems))
+
+	itemIDs := gslice.Map(completeItems, func(item *entity.ExptEvalItem) int64 { return item.ItemID })
+
+	// 按归属 (EvalSetID, EvalSetVersionID, EvalSetSourceSpaceID) 分组: 多集下各 item 可属不同集/版本,
+	// BatchGetEvaluationSetItems 一次只接受单集+单版本, 故须分组各查一次。
+	type setGroup struct {
+		evalSetID        int64
+		evalSetVersionID int64
+		sourceSpaceID    int64
+		itemIDs          []int64
+	}
+	groups := make(map[string]*setGroup)
+	addToGroup := func(itemID, evalSetID, evalSetVersionID, sourceSpaceID int64) {
+		key := fmt.Sprintf("%d:%d:%d", evalSetID, evalSetVersionID, sourceSpaceID)
+		g := groups[key]
+		if g == nil {
+			g = &setGroup{evalSetID: evalSetID, evalSetVersionID: evalSetVersionID, sourceSpaceID: sourceSpaceID}
+			groups[key] = g
+		}
+		g.itemIDs = append(g.itemIDs, itemID)
+		itemVer[itemID] = evalSetVersionID // per-item 归属集版本, 直接来自 ref/主集(单集)
+	}
+
+	if expt.EvalSetSourceType == entity.ExptEvalSetSourceType_MultiSetConfig && e.exptItemRefRepo != nil {
+		refs, err := e.exptItemRefRepo.MGetByExptIDAndItemIDs(ctx, event.SpaceID, event.ExptID, itemIDs)
+		if err != nil {
+			logs.CtxWarn(ctx, "[ExptEval] item complete resolve refs fail, skip publish batch, expt_id: %v, err: %v", event.ExptID, err)
+			return itemMeta, itemVer
+		}
+		refByItem := make(map[int64]*entity.ExptItemRef, len(refs))
+		for _, ref := range refs {
+			if ref != nil {
+				refByItem[ref.ItemID] = ref
+			}
+		}
+		for _, itemID := range itemIDs {
+			ref := refByItem[itemID]
+			if ref == nil || ref.EvalSetID <= 0 {
+				logs.CtxWarn(ctx, "[ExptEval] item complete ref missing, skip item, expt_id: %v, item_id: %v", event.ExptID, itemID)
+				continue
+			}
+			addToGroup(itemID, ref.EvalSetID, ref.EvalSetVersionID, ref.EvalSetSourceSpaceID)
+		}
+	} else {
+		// 单评测集/老实验: 全部 item 归属主集, 版本用主集版本, 来源空间取实验冻结列。
+		if expt.EvalSet == nil || expt.EvalSet.EvaluationSetVersion == nil {
+			logs.CtxWarn(ctx, "[ExptEval] item complete primary eval set missing, skip publish batch, expt_id: %v", event.ExptID)
+			return itemMeta, itemVer
+		}
+		evalSetID := expt.EvalSet.ID
+		evalSetVersionID := expt.EvalSet.EvaluationSetVersion.ID
+		for _, itemID := range itemIDs {
+			addToGroup(itemID, evalSetID, evalSetVersionID, expt.EvalSetSpaceID)
+		}
+	}
+
+	for _, g := range groups {
+		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
+			SpaceID:         resolveLoadSpaceID(event.SpaceID, g.sourceSpaceID),
+			EvaluationSetID: g.evalSetID,
+			VersionID:       resolveSetReadVersionID(g.evalSetID, g.evalSetVersionID),
+			ItemIDs:         g.itemIDs,
+		})
+		if err != nil {
+			logs.CtxWarn(ctx, "[ExptEval] item complete batch get items fail, skip group, expt_id: %v, eval_set_id: %v, err: %v", event.ExptID, g.evalSetID, err)
+			continue
+		}
+		for _, it := range items {
+			if it != nil {
+				itemMeta[it.ItemID] = it
+			}
+		}
+	}
+
+	return itemMeta, itemVer
+}
+
+// sendItemComplete 组装并发送单行 item-complete(success) 事件。发送失败打 CtxError 告警但不阻断(靠下游 defer/幂等兜底)。
+func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) {
+	if evalSetItem == nil {
+		logs.CtxWarn(ctx, "[ExptEval] item complete meta missing, skip publish, expt_id: %v, item_id: %v", event.ExptID, item.ItemID)
+		return
+	}
+	completeEvent := buildItemCompleteEventFromScheduler(event.SpaceID, event.ExptID, event.ExptRunID, expt, item, evalSetItem, evalSetVersionID)
+	if err := e.itemCompletePublisher.PublishItemComplete(ctx, completeEvent); err != nil {
+		logs.CtxError(ctx, "[ExptEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, item.ItemID, err)
+	}
 }
 
 func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.ExptScheduleEvent, toSubmits []*entity.ExptEvalItem) error {
@@ -582,6 +740,18 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 	// 「清 id」的语义只属于「重跑起点」（见 clearExptTurnRunLogResultRefsOnItems 其他调用点：
 	// FailRetry / rerunItems / 手动重跑），失败落地不应触发。
 
+	// 沙箱 agent 实验: 每个 zombie item 单独发一张飞书失败卡, 帮助用户第一时间感知卡死的行。
+	// notifier 内部会先判 enabled (非沙箱 agent / FeishuNotification.Enable=false 直接跳过),
+	// 所以这里不额外加类型判断; err 用 zombie timeout err, 让卡片 err_msg 明确表达超时原因。
+	if e.sandboxAgentNotifier != nil {
+		zombieNotifyErr := errno.NewItemZombieTimeoutErr(zombieSecond, asyncExec)
+		for _, itemID := range zombieItemIDs {
+			if nerr := e.sandboxAgentNotifier.NotifyItemFail(ctx, expt, itemID, zombieNotifyErr); nerr != nil {
+				logs.CtxWarn(ctx, "[ExptEval] sandbox agent notify zombie item fail err, expt_id: %v, item_id: %v, err: %v", event.ExptID, itemID, nerr)
+			}
+		}
+	}
+
 	time.Sleep(time.Millisecond * 1500)
 
 	return alives, zombies, nil
@@ -707,7 +877,13 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		return items, nil, nil
 	}
 
-	terminatedRecordIDs, statusMap := e.evalTargetService.CheckSandboxTerminated(ctx, event.SpaceID, recordIDs)
+	// 跨空间共享: EvalTargetRecord.SpaceID 是来源空间, 用消费方 event.SpaceID 查会漏。
+	var targetSourceSpaceID int64
+	if expt != nil {
+		targetSourceSpaceID = expt.TargetSpaceID
+	}
+	targetSpaceID := resolveLoadSpaceID(event.SpaceID, targetSourceSpaceID)
+	terminatedRecordIDs, statusMap := e.evalTargetService.CheckSandboxTerminated(ctx, targetSpaceID, recordIDs)
 	if len(terminatedRecordIDs) == 0 {
 		return items, nil, nil
 	}
@@ -749,9 +925,10 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		event.ExptID, event.ExptRunID, terminatedItemIDs, firstStatus)
 
 	// 沙箱已经是终态，Destroy 不需要再发 EndCmd，zombieTimeout=false。
+	// targetSpaceID 复用上面 CheckSandboxTerminated 用的来源空间, 保持一致。
 	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
-		event.SpaceID,
+		targetSpaceID,
 		terminatedRecordIDs,
 		int32(errno.SandboxTerminatedBeforeReportCode),
 		fmt.Sprintf("sandbox execute reached terminal state (%s) before result was reported", firstStatus),
@@ -867,9 +1044,17 @@ func (e *ExptSchedulerImpl) terminateZombieEvalTargetRecords(ctx context.Context
 		return nil
 	}
 
+	// 跨空间共享: EvalTargetRecord 落库时 SpaceID = 评测对象来源空间 (resolveLoadSpaceID 结果),
+	// 若这里仍用 event.SpaceID (消费方) 去查, DAO 的 SpaceID.Eq 过滤会返回空 → Destroy RPC 根本发不出,
+	// 导致沙箱在来源空间空跑到 session TTL 兜底才回收。与 expt_run_item_turn_impl.go:130 保持同一套解析。
+	var targetSourceSpaceID int64
+	if expt != nil {
+		targetSourceSpaceID = expt.TargetSpaceID
+	}
+	targetSpaceID := resolveLoadSpaceID(event.SpaceID, targetSourceSpaceID)
 	e.evalTargetService.TerminateAsyncRecordsAndDestroySandbox(
 		ctx,
-		event.SpaceID,
+		targetSpaceID,
 		recordIDs,
 		int32(errno.AsyncEvalTargetZombieTimeoutCode),
 		"async eval target terminated: experiment item exceeded zombie timeout",

@@ -2087,6 +2087,20 @@ func (p *CustomRPCEvaluator) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 10:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField10(buf[offset:])
@@ -2118,6 +2132,20 @@ func (p *CustomRPCEvaluator) FastRead(buf []byte) (int, error) {
 		case 12:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField13(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -2221,6 +2249,18 @@ func (p *CustomRPCEvaluator) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CustomRPCEvaluator) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+	_field := NewEvaluatorHTTPInfo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.AsyncInvokeHTTPInfo = _field
+	return offset, nil
+}
+
 func (p *CustomRPCEvaluator) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 
@@ -2279,6 +2319,20 @@ func (p *CustomRPCEvaluator) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CustomRPCEvaluator) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.IsAsync = _field
+	return offset, nil
+}
+
 func (p *CustomRPCEvaluator) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2287,11 +2341,13 @@ func (p *CustomRPCEvaluator) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 	}
@@ -2307,9 +2363,11 @@ func (p *CustomRPCEvaluator) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2358,6 +2416,15 @@ func (p *CustomRPCEvaluator) fastWriteField5(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
+func (p *CustomRPCEvaluator) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAsyncInvokeHTTPInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 6)
+		offset += p.AsyncInvokeHTTPInfo.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *CustomRPCEvaluator) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTimeout() {
@@ -2389,6 +2456,15 @@ func (p *CustomRPCEvaluator) fastWriteField12(buf []byte, w thrift.NocopyWriter)
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
 		}
 		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+	}
+	return offset
+}
+
+func (p *CustomRPCEvaluator) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetIsAsync() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 13)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsAsync)
 	}
 	return offset
 }
@@ -2436,6 +2512,15 @@ func (p *CustomRPCEvaluator) field5Length() int {
 	return l
 }
 
+func (p *CustomRPCEvaluator) field6Length() int {
+	l := 0
+	if p.IsSetAsyncInvokeHTTPInfo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.AsyncInvokeHTTPInfo.BLength()
+	}
+	return l
+}
+
 func (p *CustomRPCEvaluator) field10Length() int {
 	l := 0
 	if p.IsSetTimeout() {
@@ -2465,6 +2550,15 @@ func (p *CustomRPCEvaluator) field12Length() int {
 			l += thrift.Binary.StringLengthNocopy(k)
 			l += thrift.Binary.StringLengthNocopy(v)
 		}
+	}
+	return l
+}
+
+func (p *CustomRPCEvaluator) field13Length() int {
+	l := 0
+	if p.IsSetIsAsync() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
 	}
 	return l
 }
@@ -2510,6 +2604,15 @@ func (p *CustomRPCEvaluator) DeepCopy(s interface{}) error {
 	}
 	p.InvokeHTTPInfo = _invokeHTTPInfo
 
+	var _asyncInvokeHTTPInfo *EvaluatorHTTPInfo
+	if src.AsyncInvokeHTTPInfo != nil {
+		_asyncInvokeHTTPInfo = &EvaluatorHTTPInfo{}
+		if err := _asyncInvokeHTTPInfo.DeepCopy(src.AsyncInvokeHTTPInfo); err != nil {
+			return err
+		}
+	}
+	p.AsyncInvokeHTTPInfo = _asyncInvokeHTTPInfo
+
 	if src.Timeout != nil {
 		tmp := *src.Timeout
 		p.Timeout = &tmp
@@ -2539,6 +2642,11 @@ func (p *CustomRPCEvaluator) DeepCopy(s interface{}) error {
 
 			p.Ext[_key] = _val
 		}
+	}
+
+	if src.IsAsync != nil {
+		tmp := *src.IsAsync
+		p.IsAsync = &tmp
 	}
 
 	return nil

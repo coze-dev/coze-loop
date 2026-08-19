@@ -65,8 +65,10 @@ type EvaluatorService interface {
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error)
 	// ListEvaluatorTags 根据 tagType 聚合标签，并按字母序返回
 	ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error)
-	// ReportEvaluatorInvokeResult 上报评估器异步执行结果
-	ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) error
+	// ReportEvaluatorInvokeResult 上报评估器异步执行结果. Duplicate/conflicting terminal callbacks are ignored.
+	ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) (entity.ReportEvaluatorResultOutcome, error)
+	// ArmEvaluatorResume marks ResumeReady after turn refs are durable and republishes recovery when the record is already terminal.
+	ArmEvaluatorResume(ctx context.Context, recordID int64) error
 }
 
 //go:generate mockgen -destination mocks/evaluator_record_service_mock.go -package mocks . EvaluatorRecordService

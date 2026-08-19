@@ -10,6 +10,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -36,6 +37,10 @@ func (f *fakeConfiger) GetConsumerConf(ctx context.Context) *entity.ExptConsumer
 func (f *fakeConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl           { return nil }
 func (f *fakeConfiger) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
 	return nil
+}
+
+func (f *fakeConfiger) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
+	return 0
 }
 
 func (f *fakeConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
@@ -72,6 +77,10 @@ func (f *fakeConfiger) GetExptMultiSetWhiteList(ctx context.Context) *entity.Exp
 
 func (f *fakeConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	return nil, false
+}
+
+func (f *fakeConfiger) GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf {
+	return nil
 }
 
 type nopReader struct{ buf *bytes.Reader }

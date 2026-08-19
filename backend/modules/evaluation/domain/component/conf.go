@@ -5,6 +5,7 @@ package component
 
 import (
 	"context"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -26,6 +27,10 @@ type IConfiger interface {
 	GetConsumerConf(ctx context.Context) *entity.ExptConsumerConf
 	GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl
 	GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf
+	// GetEvalAsyncCtxTTL 返回 invoke_id → EvalAsyncCtx 的 Redis TTL。
+	// 未显式配 eval_async_ctx_ttl_second 时按该空间的 async_zombie_second 推导，
+	// 保证 ctx 始终活得比行僵尸判定久。spaceID 为 0（调试等无空间上下文场景）时取全局默认。
+	GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration
 	GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf
 	GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg
 	GetCKDBName(ctx context.Context) *entity.CKDBConfig
@@ -36,6 +41,9 @@ type IConfiger interface {
 	GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList
 	GetExptMultiSetWhiteList(ctx context.Context) *entity.ExptMultiSetWhiteList
 	GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool)
+	// GetSandboxAgentNotifyConf 沙箱 agent 通知配置（进度卡间隔等）。返回 nil 表示读取失败，
+	// 上层应回落到 entity.DefaultSandboxAgentNotifyConf。
+	GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf
 	// BuildEvalExt 构造评测记录（EvaluatorRecord/EvalTargetRecord/ExptTurnResultRunLog）落库时的 ext 扩展字段。
 	// turn 为评测集中的轮次数据（部分调用点不可用时为 nil），spaceID 为空间 id。默认空实现返回 nil。
 	BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string

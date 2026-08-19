@@ -442,3 +442,37 @@ func TestConvertEvaluatorVersionPO2DO(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertEvaluatorVersion_CustomRPCAsyncMetainfoRoundTrip(t *testing.T) {
+	method := evaluatordo.EvaluatorHTTPMethodPost
+	path := "/async_invoke_evaluator"
+	serviceName := "trae.work.evaluator"
+	original := &evaluatordo.Evaluator{
+		EvaluatorType: evaluatordo.EvaluatorTypeCustomRPC,
+		CustomRPCEvaluatorVersion: &evaluatordo.CustomRPCEvaluatorVersion{
+			ID:             101,
+			SpaceID:        202,
+			EvaluatorID:    303,
+			EvaluatorType:  evaluatordo.EvaluatorTypeCustomRPC,
+			Version:        "1.0.0",
+			AccessProtocol: evaluatordo.EvaluatorAccessProtocolFaasHTTP,
+			ServiceName:    &serviceName,
+			AsyncInvokeHTTPInfo: &evaluatordo.EvaluatorHTTPInfo{
+				Method: &method,
+				Path:   &path,
+			},
+			IsAsync: true,
+		},
+	}
+
+	po, err := ConvertEvaluatorVersionDO2PO(original)
+	require.NoError(t, err)
+	got, err := ConvertEvaluatorVersionPO2DO(po)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	require.NotNil(t, got.CustomRPCEvaluatorVersion)
+	assert.True(t, got.CustomRPCEvaluatorVersion.IsAsync)
+	require.NotNil(t, got.CustomRPCEvaluatorVersion.AsyncInvokeHTTPInfo)
+	assert.Equal(t, method, gptr.Indirect(got.CustomRPCEvaluatorVersion.AsyncInvokeHTTPInfo.Method))
+	assert.Equal(t, path, gptr.Indirect(got.CustomRPCEvaluatorVersion.AsyncInvokeHTTPInfo.Path))
+}

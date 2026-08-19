@@ -22,6 +22,7 @@ import (
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
@@ -6093,6 +6094,101 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 	})
 }
 
+// TestExptResultBuilder_FillExptTurnResultFilters_TargetOutputNilGuard 回归: buildTargetOutput 为
+// 「turn_result 有 target_result_id 但 record 未命中」的行构造的 stub 只带 ID/SpaceID/ItemID/TurnID/Status,
+// 没有 EvalTargetOutputData。fillExptTurnResultFilters 若只判 map 命中就解引用 .EvalTargetOutputData.OutputFields
+// 会 NPE 打挂调度器 goroutine → 实验被置 Failed(线上 expt 7590117239516698626 即此故障)。
+func TestExptResultBuilder_FillExptTurnResultFilters_TargetOutputNilGuard(t *testing.T) {
+	ctx := context.Background()
+
+	newBuilder := func(targetOutput *entity.TurnTargetOutput) *PayloadBuilder {
+		return &PayloadBuilder{
+			SpaceID:         100,
+			BaselineExptID:  1,
+			ScoreCalculator: NewEvaluatorScoreCalculator(nil, nil),
+			BaseExptItemResultDO: []*entity.ExptItemResult{
+				{ItemID: 1, ItemIdx: 1, Status: entity.ItemRunState_Success},
+			},
+			BaseExptTurnResultDO: []*entity.ExptTurnResult{
+				{ID: 1, ItemID: 1, TurnID: 0},
+			},
+			ExptResultBuilders: []*ExptResultBuilder{
+				{
+					exptDO: &entity.Experiment{ID: 1},
+					turnResultID2TargetOutput: map[int64]*entity.TurnTargetOutput{
+						1: targetOutput,
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("stub record 无 EvalTargetOutputData 时不 panic 且跳过 target 数据", func(t *testing.T) {
+		builder := newBuilder(&entity.TurnTargetOutput{
+			EvalTargetRecord: &entity.EvalTargetRecord{
+				ID:      999,
+				SpaceID: 100,
+				ItemID:  1,
+				TurnID:  0,
+				Status:  gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			},
+		})
+
+		assert.NotPanics(t, func() {
+			assert.NoError(t, builder.fillExptTurnResultFilters(ctx, nil, 0, 1))
+		})
+		assert.Len(t, builder.ExptTurnResultFilters, 1)
+		assert.Empty(t, builder.ExptTurnResultFilters[0].EvalTargetData)
+		assert.Empty(t, builder.ExptTurnResultFilters[0].EvalTargetMetrics)
+	})
+
+	t.Run("TurnTargetOutput 或 EvalTargetRecord 为 nil 时不 panic", func(t *testing.T) {
+		for name, output := range map[string]*entity.TurnTargetOutput{
+			"nil TurnTargetOutput": nil,
+			"nil EvalTargetRecord": {EvalTargetRecord: nil},
+		} {
+			builder := newBuilder(output)
+			assert.NotPanics(t, func() {
+				assert.NoError(t, builder.fillExptTurnResultFilters(ctx, nil, 0, 1))
+			}, name)
+			assert.Len(t, builder.ExptTurnResultFilters, 1, name)
+			assert.Empty(t, builder.ExptTurnResultFilters[0].EvalTargetData, name)
+		}
+	})
+
+	t.Run("正常 record 仍正确填充 target 数据与 metrics", func(t *testing.T) {
+		builder := newBuilder(&entity.TurnTargetOutput{
+			EvalTargetRecord: &entity.EvalTargetRecord{
+				ID:      999,
+				SpaceID: 100,
+				EvalTargetOutputData: &entity.EvalTargetOutputData{
+					OutputFields: map[string]*entity.Content{
+						"actual_output": {
+							ContentType: gptr.Of(entity.ContentTypeText),
+							Text:        gptr.Of("hello"),
+						},
+					},
+					EvalTargetUsage: &entity.EvalTargetUsage{
+						InputTokens:  3,
+						OutputTokens: 5,
+						TotalTokens:  8,
+					},
+					TimeConsumingMS: gptr.Of(int64(120)),
+				},
+			},
+		})
+
+		assert.NoError(t, builder.fillExptTurnResultFilters(ctx, nil, 0, 1))
+		assert.Len(t, builder.ExptTurnResultFilters, 1)
+		got := builder.ExptTurnResultFilters[0]
+		assert.Equal(t, "hello", got.EvalTargetData["actual_output"])
+		assert.Equal(t, int64(3), got.EvalTargetMetrics["input_tokens"])
+		assert.Equal(t, int64(5), got.EvalTargetMetrics["output_tokens"])
+		assert.Equal(t, int64(8), got.EvalTargetMetrics["total_tokens"])
+		assert.Equal(t, int64(120), got.EvalTargetMetrics["total_latency"])
+	})
+}
+
 // TestExptResultServiceImpl_RecalculateWeightedScore 测试 RecalculateWeightedScore 函数（2707-2802行）
 func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -8204,5 +8300,109 @@ func TestNewPayloadBuilder_ItemZombieTimeoutErrParsing(t *testing.T) {
 		require.Len(t, builder.ItemResults, 1)
 		require.NotNil(t, builder.ItemResults[0].SystemInfo)
 		assert.Nil(t, builder.ItemResults[0].SystemInfo.Error)
+	})
+}
+
+// mapItemSnapshotFilter 的空间解析与 mapping 失败语义。
+//
+// 跨空间共享评测集时 field mapping 按 (space_id, version_id) 存在**评测集来源空间**下，
+// 用实验空间去查必然 not found，并连带丢掉快照表分区键 sync_ck_date。
+func TestExptResultServiceImpl_mapItemSnapshotFilter_SpaceResolution(t *testing.T) {
+	newSvc := func(ctrl *gomock.Controller) ExptResultServiceImpl {
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			Return([]*entity.ItemSnapshotFieldMapping{
+				{FieldKey: "my_schema_field", MappingKey: "string_map", MappingSubKey: "string_key_0"},
+			}, "2026-08-18", nil).AnyTimes()
+		return ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+	}
+	baseExpt := &entity.Experiment{SpaceID: 1, EvalSetID: 2, EvalSetVersionID: 3, ExptType: entity.ExptType_Offline}
+
+	t.Run("schema 字段走 mapping 转成 CK subkey，并带出 sync_ck_date", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc := newSvc(ctrl)
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+
+		require.Len(t, filter.ItemSnapshotCond.StringMapFilters, 1)
+		assert.Equal(t, "string_key_0", filter.ItemSnapshotCond.StringMapFilters[0].Key)
+		// sync_ck_date 是快照表分区列，丢了下游查询会被 force_index_by_date 拒绝
+		assert.Equal(t, "2026-08-18", filter.EvalSetSyncCkDate)
+	})
+
+	// mapping 是 map 类条件的硬依赖：查不到就无法把 field_key 翻译成 subkey，必须报错
+	// 而不是静默丢条件（丢了会退化成不带条件的全量查询）。
+	t.Run("mapping RPC 报错须返回错误", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			Return(nil, "", errors.New("createdVersion fieldMapping not found")).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		assert.Error(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+	})
+
+	// ★ 跨空间共享：mapping 必须用评测集来源空间查，否则 not found + 丢分区键。
+	t.Run("共享评测集用来源空间查 mapping", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+				// 必须是来源空间 99，而非实验空间 1
+				assert.Equal(t, int64(99), req.SpaceID)
+				return nil, "2026-08-12", nil
+			}).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+
+		// 用实验冻结的 EvalSetSpaceID（本链路 EvalSet 恒为 nil，不能用 SharedInfo）
+		sharedExpt := &entity.Experiment{
+			SpaceID: 1, EvalSetID: 2, EvalSetVersionID: 3, ExptType: entity.ExptType_Offline,
+			EvalSetSpaceID: 99,
+		}
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, sharedExpt, sharedExpt.EvalSetVersionID))
+		assert.Equal(t, "2026-08-12", filter.EvalSetSyncCkDate)
+	})
+
+	// 非共享（EvalSetSpaceID=0）时仍用实验自身空间，不能被上面的改动带偏。
+	t.Run("非共享评测集用实验空间查 mapping", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+		mockEvalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+				assert.Equal(t, int64(1), req.SpaceID)
+				return nil, "2026-08-18", nil
+			}).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: mockEvalSetSvc}
+
+		filter := &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "my_schema_field", Op: "=", Values: []any{"v"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, baseExpt, baseExpt.EvalSetVersionID))
+		assert.Equal(t, "2026-08-18", filter.EvalSetSyncCkDate)
 	})
 }

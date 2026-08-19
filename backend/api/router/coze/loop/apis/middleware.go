@@ -2479,3 +2479,13 @@ func _listevaluationsettemplatesoapiMw(handler *apis.APIHandler) []app.HandlerFu
 	// your code...
 	return nil
 }
+
+func _group_ids0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getexperimentidsbygroupoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

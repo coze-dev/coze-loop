@@ -2904,3 +2904,100 @@ func TestExptMangerImpl_CreateExpt_SharedEvalSetVersionPolicy(t *testing.T) {
 		}
 	})
 }
+
+// TestExptMangerImpl_GetIDsByGroupKey 覆盖 expt_manage_impl.go:1552 —— 纯透传层。
+// 核心不变式:
+//  1. spaceID/groupKey/page/pageSize 逐字下传给 exptRepo, 一律不得改写;
+//     尤其 page/pageSize 不允许在本层兜默认值 —— 默认值只允许存在于 open-API application 层。
+//  2. session 按现状被丢弃: 传 nil 与传非 nil 时下传参数必须完全一致
+//     (防止将来有人借 session 改写分页/空间)。
+//  3. ids/total/error 原样返回。
+func TestExptMangerImpl_GetIDsByGroupKey(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+
+	type gotArgs struct {
+		spaceID  int64
+		groupKey string
+		page     int32
+		pageSize int32
+	}
+	// 捕获每次下传到 repo 的实参, 顺序与调用顺序一致。
+	var captured []gotArgs
+	repoMock := mgr.exptRepo.(*repoMocks.MockIExperimentRepo)
+
+	expectOnce := func(ids []int64, total int64, err error) {
+		repoMock.EXPECT().
+			GetIDsByGroupKey(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error) {
+				captured = append(captured, gotArgs{spaceID: spaceID, groupKey: groupKey, page: page, pageSize: pageSize})
+				return ids, total, err
+			})
+	}
+
+	t.Run("带分页_入参逐字透传且返回值原样返回", func(t *testing.T) {
+		captured = nil
+		wantIDs := []int64{11, 22, 33}
+		expectOnce(wantIDs, int64(58), nil)
+
+		ids, total, err := mgr.GetIDsByGroupKey(ctx, 7590, "gk-svc", 2, 20, &entity.Session{UserID: "u1"})
+
+		require.NoError(t, err)
+		require.Len(t, captured, 1, "必须且只调用一次 exptRepo")
+		assert.Equal(t, gotArgs{spaceID: 7590, groupKey: "gk-svc", page: 2, pageSize: 20}, captured[0],
+			"spaceID/groupKey/page/pageSize 必须逐字下传, 不得被改写")
+		assert.Equal(t, wantIDs, ids, "ids 必须原样返回")
+		assert.Equal(t, int64(58), total, "total 必须原样返回")
+	})
+
+	t.Run("未传分页_零值必须原样下传不得兜默认值", func(t *testing.T) {
+		captured = nil
+		expectOnce(nil, int64(0), nil)
+
+		ids, total, err := mgr.GetIDsByGroupKey(ctx, 8801, "gk-nopage", 0, 0, &entity.Session{UserID: "u1"})
+
+		require.NoError(t, err)
+		require.Len(t, captured, 1)
+		assert.Equal(t, gotArgs{spaceID: 8801, groupKey: "gk-nopage", page: 0, pageSize: 0}, captured[0],
+			"page/pageSize=0 不得在 service 层被兜成默认值(默认值只属于 application 层)")
+		assert.Nil(t, ids)
+		assert.Zero(t, total)
+	})
+
+	t.Run("session为nil与非nil时下传参数完全一致", func(t *testing.T) {
+		captured = nil
+		expectOnce([]int64{7}, int64(1), nil)
+		expectOnce([]int64{7}, int64(1), nil)
+
+		idsWithSession, totalWithSession, err := mgr.GetIDsByGroupKey(ctx, 6001, "gk-session", 5, 15,
+			&entity.Session{UserID: "someone"})
+		require.NoError(t, err)
+
+		idsNilSession, totalNilSession, err := mgr.GetIDsByGroupKey(ctx, 6001, "gk-session", 5, 15, nil)
+		require.NoError(t, err)
+
+		require.Len(t, captured, 2)
+		assert.Equal(t, gotArgs{spaceID: 6001, groupKey: "gk-session", page: 5, pageSize: 15}, captured[0])
+		assert.Equal(t, captured[0], captured[1],
+			"session 按现状被丢弃: 传 nil 与非 nil 时下传 repo 的实参必须完全相同")
+		assert.Equal(t, idsWithSession, idsNilSession)
+		assert.Equal(t, totalWithSession, totalNilSession)
+	})
+
+	t.Run("repo报错_原样冒泡且不吞返回值", func(t *testing.T) {
+		captured = nil
+		repoErr := errors.New("expt repo get_ids_by_group_key error")
+		expectOnce(nil, int64(0), repoErr)
+
+		ids, total, err := mgr.GetIDsByGroupKey(ctx, 9902, "gk-err", 1, 10, &entity.Session{UserID: "u1"})
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, repoErr, "error 必须原样冒泡, 不得包装或替换")
+		assert.Nil(t, ids)
+		assert.Zero(t, total)
+		require.Len(t, captured, 1)
+		assert.Equal(t, gotArgs{spaceID: 9902, groupKey: "gk-err", page: 1, pageSize: 10}, captured[0])
+	})
+}

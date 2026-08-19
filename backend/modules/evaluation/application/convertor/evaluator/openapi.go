@@ -170,9 +170,11 @@ func OpenAPIEvaluatorContentDO2DTO(do *entity.Evaluator) *openapiEvaluator.Evalu
 				ServiceName:           v.ServiceName,
 				Cluster:               v.Cluster,
 				InvokeHTTPInfo:        OpenAPIEvaluatorHTTPInfoDO2DTO(v.InvokeHTTPInfo),
+				AsyncInvokeHTTPInfo:   OpenAPIEvaluatorHTTPInfoDO2DTO(v.AsyncInvokeHTTPInfo),
 				Timeout:               v.Timeout,
 				RateLimit:             common_convertor.OpenAPIRateLimitDO2DTO(v.RateLimit),
 				Ext:                   v.Ext,
+				IsAsync:               gptr.Of(v.IsAsync),
 			}
 		}
 	case entity.EvaluatorTypeAgent:
@@ -529,9 +531,11 @@ func OpenAPIEvaluatorContentDTO2DO(dto *openapiEvaluator.EvaluatorContent, evalT
 			res.CustomRPCEvaluatorVersion.ServiceName = gptr.Of(c.GetServiceName())
 			res.CustomRPCEvaluatorVersion.Cluster = gptr.Of(c.GetCluster())
 			res.CustomRPCEvaluatorVersion.InvokeHTTPInfo = OpenAPIEvaluatorHTTPInfoDTO2DO(c.GetInvokeHTTPInfo())
+			res.CustomRPCEvaluatorVersion.AsyncInvokeHTTPInfo = OpenAPIEvaluatorHTTPInfoDTO2DO(c.GetAsyncInvokeHTTPInfo())
 			if c.IsSetTimeout() {
 				res.CustomRPCEvaluatorVersion.Timeout = gptr.Of(c.GetTimeout())
 			}
+			res.CustomRPCEvaluatorVersion.IsAsync = c.GetIsAsync()
 			if c.IsSetExt() && len(c.GetExt()) > 0 {
 				res.CustomRPCEvaluatorVersion.Ext = c.GetExt()
 			}

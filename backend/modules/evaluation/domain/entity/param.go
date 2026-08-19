@@ -326,6 +326,9 @@ type AsyncRunEvaluatorRequest struct {
 	// ★ alias 多实例: 同步与 RunEvaluatorRequest
 	Alias      string                    `json:"alias,omitempty"`
 	SourceType EvaluatorRecordSourceType `json:"source_type,omitempty"`
+	// AsyncCtx is persisted after the AsyncInvoking record is created and before the provider is dispatched.
+	// Experiment calls set ResumeReady=false; direct calls set it true.
+	AsyncCtx *EvalAsyncCtx `json:"-"`
 }
 
 type AsyncRunEvaluatorResponse struct {
@@ -356,6 +359,14 @@ type GetAsyncDebugEvaluatorInvokeResultResponse struct {
 	EvaluatorDO *Evaluator           `json:"evaluator_do,omitempty"`
 	InputData   *EvaluatorInputData  `json:"input_data,omitempty"`
 }
+
+type ReportEvaluatorResultOutcome int
+
+const (
+	ReportEvaluatorResultApplied ReportEvaluatorResultOutcome = iota + 1
+	ReportEvaluatorResultDuplicate
+	ReportEvaluatorResultConflict
+)
 
 type ReportEvaluatorRecordParam struct {
 	SpaceID    int64                `json:"space_id"`
@@ -556,6 +567,10 @@ type ReportTargetRecordParam struct {
 	// 用作抽取 trajectory 的时间下界:record.BaseInfo.CreatedAt 是异步返回后才 stamp 的,偏晚会漏掉
 	// 请求发起到返回之间的 span。为 0 时回退到 record.BaseInfo.CreatedAt。
 	AsyncUnixMS int64
+	// SkipErrMsgConvert 为 true 时,ReportInvokeRecords 不再对 EvalTargetRunError.Message
+	// 执行 ExptErrCtrl.ConvertErrMsg 归一化,直接落库上报方原文。用于沙箱 agent 等
+	// 需要保留调用方原始错误文案的异步评测对象。
+	SkipErrMsgConvert bool
 }
 
 type DebugTargetParam struct {

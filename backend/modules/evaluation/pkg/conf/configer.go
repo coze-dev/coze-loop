@@ -5,6 +5,7 @@ package conf
 
 import (
 	"context"
+	"time"
 
 	"github.com/bytedance/gg/gslice"
 	"github.com/samber/lo"
@@ -64,6 +65,10 @@ func (c *configer) GetExptExecConf(ctx context.Context, spaceID int64) *entity.E
 	return c.GetConsumerConf(ctx).GetExptExecConf(spaceID)
 }
 
+func (c *configer) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
+	return c.GetExptExecConf(ctx, spaceID).GetExptItemEvalConf().GetEvalAsyncCtxTTL()
+}
+
 func (c *configer) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
 	if rc := c.GetErrCtrl(ctx).GetErrRetryCtrl(spaceID).GetRetryConf(err); rc != nil {
 		return rc
@@ -108,6 +113,15 @@ func (c *configer) GetExptMultiSetWhiteList(ctx context.Context) (w *entity.Expt
 
 func (c *configer) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	return nil, false
+}
+
+func (c *configer) GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf {
+	const key = "sandbox_agent_notify_conf"
+	var cfg *entity.SandboxAgentNotifyConf
+	if c.loader.UnmarshalKey(ctx, key, &cfg) == nil && cfg != nil {
+		return cfg
+	}
+	return entity.DefaultSandboxAgentNotifyConf()
 }
 
 func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {

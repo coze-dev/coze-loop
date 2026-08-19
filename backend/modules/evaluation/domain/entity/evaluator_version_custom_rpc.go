@@ -57,8 +57,10 @@ type CustomRPCEvaluatorVersion struct {
 	ServiceName           *string                 `json:"service_name"`
 	Cluster               *string                 `json:"cluster"`
 	InvokeHTTPInfo        *EvaluatorHTTPInfo      `json:"invoke_http_info,omitempty"` // invoke http info
-	Timeout               *int64                  `json:"timeout"`                    // timeout duration in milliseconds(ms)
+	AsyncInvokeHTTPInfo   *EvaluatorHTTPInfo      `json:"async_invoke_http_info,omitempty"`
+	Timeout               *int64                  `json:"timeout"` // timeout duration in milliseconds(ms)
 	RateLimit             *RateLimit              `json:"rate_limit,omitempty"`
+	IsAsync               bool                    `json:"is_async,omitempty"`
 
 	// extra fields
 	Ext map[string]string `json:"ext,omitempty"`
@@ -149,6 +151,21 @@ func (do *CustomRPCEvaluatorVersion) ValidateBaseInfo() error {
 	}
 	if do.ServiceName == nil || lo.IsEmpty(*do.ServiceName) {
 		return errorx.NewByCode(errno.InvalidServiceNameCode, errorx.WithExtraMsg("service_name is empty"))
+	}
+	if do.IsAsync {
+		switch do.AccessProtocol {
+		case EvaluatorAccessProtocolRPC:
+			return nil
+		case EvaluatorAccessProtocolFaasHTTP:
+			if do.AsyncInvokeHTTPInfo == nil || do.AsyncInvokeHTTPInfo.Path == nil || lo.IsEmpty(*do.AsyncInvokeHTTPInfo.Path) {
+				return errorx.NewByCode(errno.InvalidEvaluatorConfigurationCode, errorx.WithExtraMsg("async_invoke_http_info.path is empty"))
+			}
+			return nil
+		case EvaluatorAccessProtocolRPCOld, EvaluatorAccessProtocolFaasHTTPOld:
+			return errorx.NewByCode(errno.InvalidAccessProtocolCode, errorx.WithExtraMsg("legacy access protocol does not support async evaluator"))
+		default:
+			return errorx.NewByCode(errno.InvalidAccessProtocolCode, errorx.WithExtraMsg("access protocol does not support async evaluator"))
+		}
 	}
 
 	return nil

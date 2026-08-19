@@ -2085,7 +2085,6 @@ func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *e
 }
 
 func (e *EvaluatorHandlerImpl) AsyncRunEvaluator(ctx context.Context, req *evaluatorservice.AsyncRunEvaluatorRequest) (r *evaluatorservice.AsyncRunEvaluatorResponse, err error) {
-	startTime := time.Now()
 	evaluatorDO, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, req.GetEvaluatorVersionID(), false, false)
 	if err != nil {
 		return nil, err
@@ -2103,19 +2102,13 @@ func (e *EvaluatorHandlerImpl) AsyncRunEvaluator(ctx context.Context, req *evalu
 			return nil, err
 		}
 	}
-	resp, err := e.evaluatorService.AsyncRunEvaluator(ctx, buildAsyncRunEvaluatorRequest(evaluatorDO.Name, req))
-	if err != nil {
-		return nil, err
+	asyncReq := buildAsyncRunEvaluatorRequest(evaluatorDO.Name, req)
+	asyncReq.AsyncCtx = &entity.EvalAsyncCtx{
+		Session:     &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
+		ResumeReady: true,
 	}
-
-	asyncCtxKey := fmt.Sprintf("evaluator:%d", resp.ID)
-	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
-		RecordID:           resp.ID,
-		AsyncUnixMS:        startTime.UnixMilli(),
-		Session:            &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
-		EvaluatorVersionID: req.GetEvaluatorVersionID(),
-	}); err != nil {
-		logs.CtxError(ctx, "[AsyncRunEvaluator] SetEvalAsyncCtx fail, invokeID: %d, err: %v", resp.ID, err)
+	resp, err := e.evaluatorService.AsyncRunEvaluator(ctx, asyncReq)
+	if err != nil {
 		return nil, err
 	}
 

@@ -382,3 +382,95 @@ func TestCustomRPCEvaluatorVersion_GettersAndSetters(t *testing.T) {
 	evaluator.SetBaseInfo(baseInfo)
 	assert.Equal(t, baseInfo, evaluator.GetBaseInfo())
 }
+
+func TestCustomRPCEvaluatorVersion_ValidateBaseInfo_Async(t *testing.T) {
+	t.Parallel()
+
+	post := EvaluatorHTTPMethodPost
+	path := "/async_invoke_evaluator"
+	tests := []struct {
+		name    string
+		version *CustomRPCEvaluatorVersion
+		wantErr bool
+	}{
+		{
+			name: "rpc async does not require http info",
+			version: &CustomRPCEvaluatorVersion{
+				AccessProtocol: EvaluatorAccessProtocolRPC,
+				ServiceName:    gptr.Of("trae.work.evaluator"),
+				IsAsync:        true,
+			},
+		},
+		{
+			name: "faas http async requires async http info",
+			version: &CustomRPCEvaluatorVersion{
+				AccessProtocol: EvaluatorAccessProtocolFaasHTTP,
+				ServiceName:    gptr.Of("trae.work.evaluator"),
+				IsAsync:        true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "faas http async accepts async http info",
+			version: &CustomRPCEvaluatorVersion{
+				AccessProtocol: EvaluatorAccessProtocolFaasHTTP,
+				ServiceName:    gptr.Of("trae.work.evaluator"),
+				IsAsync:        true,
+				AsyncInvokeHTTPInfo: &EvaluatorHTTPInfo{
+					Method: &post,
+					Path:   &path,
+				},
+			},
+		},
+		{
+			name: "old rpc async is rejected",
+			version: &CustomRPCEvaluatorVersion{
+				AccessProtocol: EvaluatorAccessProtocolRPCOld,
+				ServiceName:    gptr.Of("trae.work.evaluator"),
+				IsAsync:        true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "old http async is rejected",
+			version: &CustomRPCEvaluatorVersion{
+				AccessProtocol: EvaluatorAccessProtocolFaasHTTPOld,
+				ServiceName:    gptr.Of("trae.work.evaluator"),
+				IsAsync:        true,
+				AsyncInvokeHTTPInfo: &EvaluatorHTTPInfo{
+					Method: &post,
+					Path:   &path,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "unknown async protocol is rejected",
+			version: &CustomRPCEvaluatorVersion{
+				AccessProtocol: "unsupported",
+				ServiceName:    gptr.Of("trae.work.evaluator"),
+				IsAsync:        true,
+			},
+			wantErr: true,
+		},
+		{
+			name: "sync faas http keeps existing behavior",
+			version: &CustomRPCEvaluatorVersion{
+				AccessProtocol: EvaluatorAccessProtocolFaasHTTP,
+				ServiceName:    gptr.Of("trae.work.evaluator"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := tt.version.ValidateBaseInfo()
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}

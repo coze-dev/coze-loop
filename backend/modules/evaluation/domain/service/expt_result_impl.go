@@ -784,6 +784,8 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 		}
 		filterAccelerator.ExptID = baseExptID
 		filterAccelerator.SpaceID = spaceID
+		// ★ 跨空间共享: 评测集快照数据属来源空间，查 dis 表要用它（0=同空间）。
+		filterAccelerator.EvalSetSpaceID = expt.EvalSetSpaceID
 		filterAccelerator.CreatedDate = ptr.From(expt.StartAt)
 		filterAccelerator.Page = param.Page
 		filterAccelerator.IsOnlineExpt = expt.ExptType == entity.ExptType_Online
@@ -1722,20 +1724,26 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 				}
 			}
 		}
+		// ★ 三层 nil 守卫不可省: buildTargetOutput 末尾会为「turn_result 有 target_result_id 但
+		// BatchGetRecordByIDs 未命中 record」的行构造 stub(仅 ID/SpaceID/ItemID/TurnID/Status,
+		// 无 EvalTargetOutputData)。只判 map 命中(ok)会在 stub 行直接 NPE 打挂整个调度器 goroutine
+		// → 实验被 HandleEventErr 置 Failed。stub 行本就没有 target 数据可填, 跳过即可。
 		evalTargetOutput, ok := exptResultBuilder.turnResultID2TargetOutput[exptTurnResult.ID]
-		if ok {
-			for outputFieldKey, outputFieldValue := range evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields {
+		if ok && evalTargetOutput != nil && evalTargetOutput.EvalTargetRecord != nil &&
+			evalTargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
+			outputData := evalTargetOutput.EvalTargetRecord.EvalTargetOutputData
+			for outputFieldKey, outputFieldValue := range outputData.OutputFields {
 				exptTurnResultFilter.EvalTargetData[outputFieldKey] = outputFieldValue.GetText()
 			}
 			// 填充 eval_target_metrics
-			if evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage != nil {
-				usage := evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage
+			if outputData.EvalTargetUsage != nil {
+				usage := outputData.EvalTargetUsage
 				exptTurnResultFilter.EvalTargetMetrics["input_tokens"] = usage.InputTokens
 				exptTurnResultFilter.EvalTargetMetrics["output_tokens"] = usage.OutputTokens
 				exptTurnResultFilter.EvalTargetMetrics["total_tokens"] = usage.TotalTokens
 			}
-			if evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS != nil {
-				exptTurnResultFilter.EvalTargetMetrics["total_latency"] = *evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS
+			if outputData.TimeConsumingMS != nil {
+				exptTurnResultFilter.EvalTargetMetrics["total_latency"] = *outputData.TimeConsumingMS
 			}
 		}
 		evaluatorScoreCorrected, ok := exptResultBuilder.turnResultID2ScoreCorrected[exptTurnResult.ID]
@@ -2821,23 +2829,47 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 
 // 提取过滤器映射逻辑
 func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator, baseExpt *entity.Experiment, baseExptEvalSetVersionID int64) error {
-	if (filter.ItemSnapshotCond == nil || len(filter.ItemSnapshotCond.StringMapFilters) == 0) && (filter.KeywordSearch == nil || filter.KeywordSearch.ItemSnapshotFilter == nil || len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) == 0) {
+	hasCond := filter.ItemSnapshotCond != nil && len(filter.ItemSnapshotCond.StringMapFilters) > 0
+	hasKeywordCond := filter.KeywordSearch != nil && filter.KeywordSearch.ItemSnapshotFilter != nil &&
+		len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0
+	if !hasCond && !hasKeywordCond {
 		return nil
 	}
+	// map 类条件（评测集 schema 字段）需要 field_key → string_map/int_map/... 的映射，
+	// 对 mapping 是硬依赖：查不到就无法翻译条件，必须报错。
+	// 独立列条件（item_key 等 dataset_item_snapshot 上的物理列）不来自 schema、不需要 mapping。
+	//
+	// 但 mapping RPC 还顺带返回 sync_ck_date（快照表的分区列，下游查 dis 表要用），
+	// 所以这里不是简单跳过：只有独立列条件时仍**尽力**调一次拿 sync_ck_date，
+	// 失败只告警不报错 —— 否则评测集没有 fieldMapping 记录时会返回
+	// "createdVersion fieldMapping not found"，整条筛选链路 errOccur 退化成全量扫描。
+	needMapping := (filter.ItemSnapshotCond != nil && len(filter.ItemSnapshotCond.StringMapFilters) > 0) ||
+		(filter.KeywordSearch != nil && filter.KeywordSearch.ItemSnapshotFilter != nil &&
+			len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0)
+	itemSnapshotMappingsMap := make(map[string]*entity.ItemSnapshotFieldMapping)
+	// ★ 跨空间共享: item snapshot field mapping 按 (space_id, version_id) 存在**评测集来源空间**下，
+	// 用实验所在空间去查必然 not found，连带丢掉 sync_ck_date（快照表分区列，下游必需）。
+	// 用实验冻结的 EvalSetSpaceID（0=同空间）解析，与 expt_annotate_impl 读 item 同口径。
+	// 注意不能走 EvalSet.SharedInfo：本链路的实验来自 ExperimentRepo.MGetByID，只加载实验行 +
+	// 评估器 ref，EvalSet 为 nil。
+	evalSetSpaceID := resolveLoadSpaceID(baseExpt.SpaceID, baseExpt.EvalSetSpaceID)
 	req := &rpc.QueryItemSnapshotMappingRequest{
-		SpaceID:        baseExpt.SpaceID,
+		SpaceID:        evalSetSpaceID,
 		DatasetID:      baseExpt.EvalSetID,
 		IsDraftVersion: baseExpt.ExptType == entity.ExptType_Online,
 		VersionID:      gcond.If(baseExpt.ExptType == entity.ExptType_Online, ptr.Of(int64(0)), ptr.Of(baseExpt.EvalSetVersionID)),
 	}
 	itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, req)
 	if err != nil {
-		return err
-	}
-	filter.EvalSetSyncCkDate = syncCkDate
-	itemSnapshotMappingsMap := make(map[string]*entity.ItemSnapshotFieldMapping)
-	for _, item := range itemSnapshotMappings {
-		itemSnapshotMappingsMap[item.FieldKey] = item
+		if needMapping {
+			return err
+		}
+		logs.CtxWarn(ctx, "QueryItemSnapshotMappings failed, proceeding with column-only filters, err: %v", err)
+	} else {
+		filter.EvalSetSyncCkDate = syncCkDate
+		for _, item := range itemSnapshotMappings {
+			itemSnapshotMappingsMap[item.FieldKey] = item
+		}
 	}
 	itemSnapshotFilter := &entity.ItemSnapshotFilter{
 		BoolMapFilters:   make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.BoolMapFilters)),

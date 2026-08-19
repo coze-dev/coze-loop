@@ -436,6 +436,21 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 
 		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(recordCtx, record, nil)
 		if errCreate != nil {
+			// ★ 这里绝不能静默 return: 裸 return 时 err 仍是进 defer 时的值(执行成功场景下就是 nil),
+			// 上层会拿到「err=nil + record 非 nil」→ 打印 call target success 并把 record.ID 写进
+			// run_log/expt_turn_result.target_result_id, 而 MySQL 里根本没这行(典型触发: 落库前
+			// SaveEvalTargetRecordData 外传 TOS 大字段超时失败, 整条 record 都不落)。
+			// 后果: BatchGetRecordByIDs 查不到 → buildTargetOutput 走 stub 分支 → 该行 target 数据
+			// 永久丢失且全链路无任何错误留痕。异步路径(asyncExecuteTarget)本就是把 create 失败往外抛的,
+			// 同步路径对齐: 落库失败即视为本次执行失败, 交由 item 重试(TOS 抖动多为瞬时)。
+			logs.CtxError(ctx, "create eval target record fail, record will not be persisted, space_id=%v, target_id=%v, target_version_id=%v, record_id=%v, exec_err=%v, err=%v",
+				spaceID, targetID, targetVersionID, record.ID, execErr, errCreate)
+			if execErr != nil {
+				// 执行本身也失败: 保留原始执行错误语义(它才是用户要看的根因), 落库失败仅日志留痕
+				err = execErr
+			} else {
+				err = errCreate
+			}
 			return
 		}
 		err = nil
@@ -1284,7 +1299,9 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 
 	record.EvalTargetOutputData = param.OutputData
 	record.Status = gptr.Of(param.Status)
-	e.convEvalTargetRunErr(ctx, record)
+	if !param.SkipErrMsgConvert {
+		e.convEvalTargetRunErr(ctx, record)
+	}
 
 	if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, record, nil); err != nil {
 		return err

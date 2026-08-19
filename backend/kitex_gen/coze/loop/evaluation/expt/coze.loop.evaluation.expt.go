@@ -8460,9 +8460,12 @@ func (p *BatchGetExperimentsResponse) Field255DeepEqual(src *base.BaseResp) bool
 }
 
 type GetExperimentIDsByGroupRequest struct {
-	WorkspaceID        int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ExperimentGroupKey string     `thrift:"experiment_group_key,2,required" frugal:"2,required,string" json:"experiment_group_key" form:"experiment_group_key,required" `
-	Base               *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID        int64  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
+	ExperimentGroupKey string `thrift:"experiment_group_key,2,required" frugal:"2,required,string" json:"experiment_group_key" form:"experiment_group_key,required" query:"experiment_group_key,required"`
+	// 分页（可选）。page_number / page_size 均不传 = 全量返回，与本次变更前行为一致。
+	PageNumber *int32     `thrift:"page_number,3,optional" frugal:"3,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
+	PageSize   *int32     `thrift:"page_size,4,optional" frugal:"4,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
+	Base       *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetExperimentIDsByGroupRequest() *GetExperimentIDsByGroupRequest {
@@ -8486,6 +8489,30 @@ func (p *GetExperimentIDsByGroupRequest) GetExperimentGroupKey() (v string) {
 	return
 }
 
+var GetExperimentIDsByGroupRequest_PageNumber_DEFAULT int32
+
+func (p *GetExperimentIDsByGroupRequest) GetPageNumber() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageNumber() {
+		return GetExperimentIDsByGroupRequest_PageNumber_DEFAULT
+	}
+	return *p.PageNumber
+}
+
+var GetExperimentIDsByGroupRequest_PageSize_DEFAULT int32
+
+func (p *GetExperimentIDsByGroupRequest) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return GetExperimentIDsByGroupRequest_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
 var GetExperimentIDsByGroupRequest_Base_DEFAULT *base.Base
 
 func (p *GetExperimentIDsByGroupRequest) GetBase() (v *base.Base) {
@@ -8503,6 +8530,12 @@ func (p *GetExperimentIDsByGroupRequest) SetWorkspaceID(val int64) {
 func (p *GetExperimentIDsByGroupRequest) SetExperimentGroupKey(val string) {
 	p.ExperimentGroupKey = val
 }
+func (p *GetExperimentIDsByGroupRequest) SetPageNumber(val *int32) {
+	p.PageNumber = val
+}
+func (p *GetExperimentIDsByGroupRequest) SetPageSize(val *int32) {
+	p.PageSize = val
+}
 func (p *GetExperimentIDsByGroupRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -8510,7 +8543,17 @@ func (p *GetExperimentIDsByGroupRequest) SetBase(val *base.Base) {
 var fieldIDToName_GetExperimentIDsByGroupRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "experiment_group_key",
+	3:   "page_number",
+	4:   "page_size",
 	255: "Base",
+}
+
+func (p *GetExperimentIDsByGroupRequest) IsSetPageNumber() bool {
+	return p.PageNumber != nil
+}
+
+func (p *GetExperimentIDsByGroupRequest) IsSetPageSize() bool {
+	return p.PageSize != nil
 }
 
 func (p *GetExperimentIDsByGroupRequest) IsSetBase() bool {
@@ -8552,6 +8595,22 @@ func (p *GetExperimentIDsByGroupRequest) Read(iprot thrift.TProtocol) (err error
 					goto ReadFieldError
 				}
 				issetExperimentGroupKey = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -8625,6 +8684,28 @@ func (p *GetExperimentIDsByGroupRequest) ReadField2(iprot thrift.TProtocol) erro
 	p.ExperimentGroupKey = _field
 	return nil
 }
+func (p *GetExperimentIDsByGroupRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageNumber = _field
+	return nil
+}
+func (p *GetExperimentIDsByGroupRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
 func (p *GetExperimentIDsByGroupRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -8646,6 +8727,14 @@ func (p *GetExperimentIDsByGroupRequest) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -8702,6 +8791,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *GetExperimentIDsByGroupRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageNumber() {
+		if err = oprot.WriteFieldBegin("page_number", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageNumber); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *GetExperimentIDsByGroupRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 func (p *GetExperimentIDsByGroupRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -8741,6 +8866,12 @@ func (p *GetExperimentIDsByGroupRequest) DeepEqual(ano *GetExperimentIDsByGroupR
 	if !p.Field2DeepEqual(ano.ExperimentGroupKey) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.PageNumber) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.PageSize) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -8761,6 +8892,30 @@ func (p *GetExperimentIDsByGroupRequest) Field2DeepEqual(src string) bool {
 	}
 	return true
 }
+func (p *GetExperimentIDsByGroupRequest) Field3DeepEqual(src *int32) bool {
+
+	if p.PageNumber == src {
+		return true
+	} else if p.PageNumber == nil || src == nil {
+		return false
+	}
+	if *p.PageNumber != *src {
+		return false
+	}
+	return true
+}
+func (p *GetExperimentIDsByGroupRequest) Field4DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
 func (p *GetExperimentIDsByGroupRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
@@ -8770,9 +8925,11 @@ func (p *GetExperimentIDsByGroupRequest) Field255DeepEqual(src *base.Base) bool 
 }
 
 type GetExperimentIDsByGroupResponse struct {
-	ExptIds     []int64            `thrift:"expt_ids,1,optional" frugal:"1,optional,list<i64>" json:"expt_ids" form:"expt_ids" `
-	Experiments []*expt.Experiment `thrift:"experiments,2,optional" frugal:"2,optional,list<expt.Experiment>" json:"experiments" form:"experiments" `
-	BaseResp    *base.BaseResp     `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExptIds     []int64            `thrift:"expt_ids,1,optional" frugal:"1,optional,list<i64>" json:"expt_ids" form:"expt_ids" query:"expt_ids"`
+	Experiments []*expt.Experiment `thrift:"experiments,2,optional" frugal:"2,optional,list<expt.Experiment>" json:"experiments" form:"experiments" query:"experiments"`
+	// 该分组下实验总数，不受当页裁剪影响；未启用分页时等于返回条数
+	Total    *int32         `thrift:"total,3,optional" frugal:"3,optional,i32" form:"total" json:"total,omitempty" query:"total"`
+	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewGetExperimentIDsByGroupResponse() *GetExperimentIDsByGroupResponse {
@@ -8806,6 +8963,18 @@ func (p *GetExperimentIDsByGroupResponse) GetExperiments() (v []*expt.Experiment
 	return p.Experiments
 }
 
+var GetExperimentIDsByGroupResponse_Total_DEFAULT int32
+
+func (p *GetExperimentIDsByGroupResponse) GetTotal() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotal() {
+		return GetExperimentIDsByGroupResponse_Total_DEFAULT
+	}
+	return *p.Total
+}
+
 var GetExperimentIDsByGroupResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *GetExperimentIDsByGroupResponse) GetBaseResp() (v *base.BaseResp) {
@@ -8823,6 +8992,9 @@ func (p *GetExperimentIDsByGroupResponse) SetExptIds(val []int64) {
 func (p *GetExperimentIDsByGroupResponse) SetExperiments(val []*expt.Experiment) {
 	p.Experiments = val
 }
+func (p *GetExperimentIDsByGroupResponse) SetTotal(val *int32) {
+	p.Total = val
+}
 func (p *GetExperimentIDsByGroupResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -8830,6 +9002,7 @@ func (p *GetExperimentIDsByGroupResponse) SetBaseResp(val *base.BaseResp) {
 var fieldIDToName_GetExperimentIDsByGroupResponse = map[int16]string{
 	1:   "expt_ids",
 	2:   "experiments",
+	3:   "total",
 	255: "BaseResp",
 }
 
@@ -8839,6 +9012,10 @@ func (p *GetExperimentIDsByGroupResponse) IsSetExptIds() bool {
 
 func (p *GetExperimentIDsByGroupResponse) IsSetExperiments() bool {
 	return p.Experiments != nil
+}
+
+func (p *GetExperimentIDsByGroupResponse) IsSetTotal() bool {
+	return p.Total != nil
 }
 
 func (p *GetExperimentIDsByGroupResponse) IsSetBaseResp() bool {
@@ -8874,6 +9051,14 @@ func (p *GetExperimentIDsByGroupResponse) Read(iprot thrift.TProtocol) (err erro
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8962,6 +9147,17 @@ func (p *GetExperimentIDsByGroupResponse) ReadField2(iprot thrift.TProtocol) err
 	p.Experiments = _field
 	return nil
 }
+func (p *GetExperimentIDsByGroupResponse) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Total = _field
+	return nil
+}
 func (p *GetExperimentIDsByGroupResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -8983,6 +9179,10 @@ func (p *GetExperimentIDsByGroupResponse) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -9059,6 +9259,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *GetExperimentIDsByGroupResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotal() {
+		if err = oprot.WriteFieldBegin("total", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Total); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 func (p *GetExperimentIDsByGroupResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -9096,6 +9314,9 @@ func (p *GetExperimentIDsByGroupResponse) DeepEqual(ano *GetExperimentIDsByGroup
 	if !p.Field2DeepEqual(ano.Experiments) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.Total) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -9125,6 +9346,18 @@ func (p *GetExperimentIDsByGroupResponse) Field2DeepEqual(src []*expt.Experiment
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *GetExperimentIDsByGroupResponse) Field3DeepEqual(src *int32) bool {
+
+	if p.Total == src {
+		return true
+	} else if p.Total == nil || src == nil {
+		return false
+	}
+	if *p.Total != *src {
+		return false
 	}
 	return true
 }
@@ -17996,6 +18229,8 @@ type ItemStandardEvalOutput struct {
 	ItemEndTime *int64 `thrift:"item_end_time,17,optional" frugal:"17,optional,i64" json:"item_end_time" form:"item_end_time" query:"item_end_time"`
 	// 实验创建人 userID，来源 experiment.created_by（实验级恒定）
 	CreatedBy *string `thrift:"created_by,18,optional" frugal:"18,optional,string" json:"created_by" form:"created_by" query:"created_by"`
+	// 沙箱日志链接，来源 eval_target ext_output 的同名字段（SandboxAgent 内置 output schema）；detail.output 内的同名字段保留不动
+	FornaxSandboxLogURL *string `thrift:"fornax_sandbox_log_url,19,optional" frugal:"19,optional,string" json:"fornax_sandbox_log_url" form:"fornax_sandbox_log_url" query:"fornax_sandbox_log_url"`
 	// 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
 	Detail *StandardEvalOutputContent `thrift:"detail,30,optional" frugal:"30,optional,StandardEvalOutputContent" json:"detail" form:"detail" query:"detail"`
 	Rounds *StandardEvalOutputContent `thrift:"rounds,31,optional" frugal:"31,optional,StandardEvalOutputContent" json:"rounds" form:"rounds" query:"rounds"`
@@ -18228,6 +18463,18 @@ func (p *ItemStandardEvalOutput) GetCreatedBy() (v string) {
 	return *p.CreatedBy
 }
 
+var ItemStandardEvalOutput_FornaxSandboxLogURL_DEFAULT string
+
+func (p *ItemStandardEvalOutput) GetFornaxSandboxLogURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFornaxSandboxLogURL() {
+		return ItemStandardEvalOutput_FornaxSandboxLogURL_DEFAULT
+	}
+	return *p.FornaxSandboxLogURL
+}
+
 var ItemStandardEvalOutput_Detail_DEFAULT *StandardEvalOutputContent
 
 func (p *ItemStandardEvalOutput) GetDetail() (v *StandardEvalOutputContent) {
@@ -18353,6 +18600,9 @@ func (p *ItemStandardEvalOutput) SetItemEndTime(val *int64) {
 func (p *ItemStandardEvalOutput) SetCreatedBy(val *string) {
 	p.CreatedBy = val
 }
+func (p *ItemStandardEvalOutput) SetFornaxSandboxLogURL(val *string) {
+	p.FornaxSandboxLogURL = val
+}
 func (p *ItemStandardEvalOutput) SetDetail(val *StandardEvalOutputContent) {
 	p.Detail = val
 }
@@ -18391,6 +18641,7 @@ var fieldIDToName_ItemStandardEvalOutput = map[int16]string{
 	16: "experiment_create_time",
 	17: "item_end_time",
 	18: "created_by",
+	19: "fornax_sandbox_log_url",
 	30: "detail",
 	31: "rounds",
 	32: "agent",
@@ -18469,6 +18720,10 @@ func (p *ItemStandardEvalOutput) IsSetItemEndTime() bool {
 
 func (p *ItemStandardEvalOutput) IsSetCreatedBy() bool {
 	return p.CreatedBy != nil
+}
+
+func (p *ItemStandardEvalOutput) IsSetFornaxSandboxLogURL() bool {
+	return p.FornaxSandboxLogURL != nil
 }
 
 func (p *ItemStandardEvalOutput) IsSetDetail() bool {
@@ -18652,6 +18907,14 @@ func (p *ItemStandardEvalOutput) Read(iprot thrift.TProtocol) (err error) {
 		case 18:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 19:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField19(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18933,6 +19196,17 @@ func (p *ItemStandardEvalOutput) ReadField18(iprot thrift.TProtocol) error {
 	p.CreatedBy = _field
 	return nil
 }
+func (p *ItemStandardEvalOutput) ReadField19(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FornaxSandboxLogURL = _field
+	return nil
+}
 func (p *ItemStandardEvalOutput) ReadField30(iprot thrift.TProtocol) error {
 	_field := NewStandardEvalOutputContent()
 	if err := _field.Read(iprot); err != nil {
@@ -19058,6 +19332,10 @@ func (p *ItemStandardEvalOutput) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField18(oprot); err != nil {
 			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
 			goto WriteFieldError
 		}
 		if err = p.writeField30(oprot); err != nil {
@@ -19426,6 +19704,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
 }
+func (p *ItemStandardEvalOutput) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFornaxSandboxLogURL() {
+		if err = oprot.WriteFieldBegin("fornax_sandbox_log_url", thrift.STRING, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FornaxSandboxLogURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
 func (p *ItemStandardEvalOutput) writeField30(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDetail() {
 		if err = oprot.WriteFieldBegin("detail", thrift.STRUCT, 30); err != nil {
@@ -19601,6 +19897,9 @@ func (p *ItemStandardEvalOutput) DeepEqual(ano *ItemStandardEvalOutput) bool {
 		return false
 	}
 	if !p.Field18DeepEqual(ano.CreatedBy) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.FornaxSandboxLogURL) {
 		return false
 	}
 	if !p.Field30DeepEqual(ano.Detail) {
@@ -19836,6 +20135,18 @@ func (p *ItemStandardEvalOutput) Field18DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.CreatedBy, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ItemStandardEvalOutput) Field19DeepEqual(src *string) bool {
+
+	if p.FornaxSandboxLogURL == src {
+		return true
+	} else if p.FornaxSandboxLogURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FornaxSandboxLogURL, *src) != 0 {
 		return false
 	}
 	return true

@@ -2009,6 +2009,10 @@ func (f *fakeRecordStorageConfiger) GetExptExecConf(ctx context.Context, spaceID
 	return nil
 }
 
+func (f *fakeRecordStorageConfiger) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
+	return 0
+}
+
 func (f *fakeRecordStorageConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
 	return nil
 }
@@ -2047,6 +2051,10 @@ func (f *fakeRecordStorageConfiger) GetExptMultiSetWhiteList(ctx context.Context
 
 func (f *fakeRecordStorageConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	return nil, false
+}
+
+func (f *fakeRecordStorageConfiger) GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf {
+	return nil
 }
 
 func TestEvalTargetRepoImpl_SaveEvalTargetRecord(t *testing.T) {

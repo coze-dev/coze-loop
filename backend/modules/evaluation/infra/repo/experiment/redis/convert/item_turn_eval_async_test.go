@@ -26,3 +26,14 @@ func TestExptItemTurnEvalAsyncCtx_CallbackURLRoundTrip(t *testing.T) {
 	assert.Equal(t, "https://example.com/hook", out.CallbackURL)
 	assert.Equal(t, int64(123), out.RecordID)
 }
+
+func TestExptItemTurnEvalAsyncCtx_ResumeReadyRoundTrip(t *testing.T) {
+	c := NewExptItemTurnEvalAsyncCtx()
+	in := &entity.EvalAsyncCtx{RecordID: 123, ResumeReady: true}
+	b, err := c.FromDO(in)
+	assert.NoError(t, err)
+
+	out, err := c.ToDO(b)
+	assert.NoError(t, err)
+	assert.True(t, out.ResumeReady)
+}

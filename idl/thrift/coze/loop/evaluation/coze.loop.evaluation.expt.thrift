@@ -186,15 +186,20 @@ struct BatchGetExperimentsResponse {
 }
 
 struct GetExperimentIDsByGroupRequest {
-    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    2: required string experiment_group_key (api.body = 'experiment_group_key', go.tag = 'json:"experiment_group_key"')
+    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required string experiment_group_key (go.tag = 'json:"experiment_group_key"')
+    // 分页（可选）。page_number / page_size 均不传 = 全量返回，与本次变更前行为一致。
+    3: optional i32 page_number
+    4: optional i32 page_size
 
     255: optional base.Base Base
 }
 
 struct GetExperimentIDsByGroupResponse {
-    1: optional list<i64> expt_ids (api.body = 'expt_ids', api.js_conv = 'true', go.tag = 'json:"expt_ids"')
-    2: optional list<expt.Experiment> experiments (api.body = 'experiments', go.tag = 'json:"experiments"')
+    1: optional list<i64> expt_ids (api.js_conv = 'true', go.tag = 'json:"expt_ids"')
+    2: optional list<expt.Experiment> experiments (go.tag = 'json:"experiments"')
+    // 该分组下实验总数，不受当页裁剪影响；未启用分页时等于返回条数
+    3: optional i32 total
 
     255: base.BaseResp BaseResp
 }
@@ -412,6 +417,7 @@ struct ItemStandardEvalOutput {
     16: optional i64 experiment_create_time (api.js_conv = 'true', go.tag = 'json:"experiment_create_time"')  // 实验创建时间（秒），来源 experiment.created_at
     17: optional i64 item_end_time (api.js_conv = 'true', go.tag = 'json:"item_end_time"')  // item 执行结束时间（秒），来源 expt_item_result.updated_at
     18: optional string created_by (go.tag = 'json:"created_by"')  // 实验创建人 userID，来源 experiment.created_by（实验级恒定）
+    19: optional string fornax_sandbox_log_url (go.tag = 'json:"fornax_sandbox_log_url"')  // 沙箱日志链接，来源 eval_target ext_output 的同名字段（SandboxAgent 内置 output schema）；detail.output 内的同名字段保留不动
 
     // 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
     30: optional StandardEvalOutputContent detail (go.tag = 'json:"detail"')
@@ -977,9 +983,7 @@ service ExperimentService {
         api.post = '/api/evaluation/v1/experiments/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
-    GetExperimentIDsByGroupResponse GetExperimentIDsByGroup(1: GetExperimentIDsByGroupRequest req) (
-        api.post = '/api/evaluation/v1/experiments/group_ids/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
-    )
+    GetExperimentIDsByGroupResponse GetExperimentIDsByGroup(1: GetExperimentIDsByGroupRequest req)
 
     ListExperimentsResponse ListExperiments(1: ListExperimentsRequest req) (
         api.post = '/api/evaluation/v1/experiments/list', api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'experiment'

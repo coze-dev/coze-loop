@@ -12,6 +12,15 @@ expt_consumer_conf:
     "7483714249005793292":
       expt_item_eval_conf:
         concur_num: 20
+    # 异步评测对象/评估器：把行僵尸阈值放长时，invoke_id → EvalAsyncCtx 的 Redis TTL 会自动
+    # 跟着抬到 async_zombie_second + 30min（兜底不低于 12h），无需单独配 —— 避免出现
+    # 「ctx 已过期但行还没判僵尸」的真空区间（上报报 not found，行继续挂到僵尸阈值才失败）。
+    # 只有需要让 ctx 存活时长脱离僵尸阈值单独控制时，才显式填 eval_async_ctx_ttl_second。
+    # "7590110994886651906":
+    #   expt_zombie_second: 259200
+    #   expt_item_eval_conf:
+    #     async_zombie_second: 86400
+    #     eval_async_ctx_ttl_second: 90000
 expt_scheduler_event_rmq:
   addr: 'cozeloop-namesrv:9876'
   topic: 'evaluation_expt_scheduler_event'

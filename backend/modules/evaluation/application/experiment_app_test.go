@@ -1664,6 +1664,21 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 		userInfo *userinfomocks.MockUserInfoService
 	}
 
+	// >100 条数据，专门用于钉死「不传分页不被 100 截断」这条不变式。
+	bigIDs := make([]int64, 0, 137)
+	bigExpts := make([]*entity.Experiment, 0, 137)
+	for i := 0; i < 137; i++ {
+		id := int64(10000 + i)
+		bigIDs = append(bigIDs, id)
+		bigExpts = append(bigExpts, &entity.Experiment{
+			ID:                 id,
+			SpaceID:            workspaceID,
+			ExperimentGroupKey: groupKey,
+			CreatedBy:          "creator",
+			CreatedAt:          &createdAt1,
+		})
+	}
+
 	expectAuthorization := func(t *testing.T, auth *rpcmocks.MockIAuthProvider, retErr error) {
 		auth.EXPECT().
 			Authorization(gomock.Any(), gomock.Any()).
@@ -1683,6 +1698,8 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 	tests := []struct {
 		name       string
 		groupKey   string
+		pageNumber *int32
+		pageSize   *int32
 		setupMocks func(t *testing.T, mocks testMocks)
 		check      func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error)
 	}{
@@ -1734,8 +1751,8 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 			setupMocks: func(t *testing.T, mocks testMocks) {
 				expectAuthorization(t, mocks.auth, nil)
 				mocks.manager.EXPECT().
-					GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, &entity.Session{}).
-					Return(nil, getIDsErr)
+					GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, int32(0), int32(0), &entity.Session{}).
+					Return(nil, int64(0), getIDsErr)
 			},
 			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
 				require.ErrorIs(t, err, getIDsErr)
@@ -1748,8 +1765,8 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 			setupMocks: func(t *testing.T, mocks testMocks) {
 				expectAuthorization(t, mocks.auth, nil)
 				mocks.manager.EXPECT().
-					GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, &entity.Session{}).
-					Return([]int64{}, nil)
+					GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, int32(0), int32(0), &entity.Session{}).
+					Return([]int64{}, int64(0), nil)
 				// No MGetBasicByID or user-info expectation: any call must fail the test.
 			},
 			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
@@ -1758,6 +1775,7 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 				require.Empty(t, resp.GetExptIds())
 				require.Empty(t, resp.GetExperiments())
 				require.NotNil(t, resp.GetBaseResp())
+				require.EqualValues(t, 0, resp.GetTotal())
 			},
 		},
 		{
@@ -1767,8 +1785,8 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 				expectAuthorization(t, mocks.auth, nil)
 				gomock.InOrder(
 					mocks.manager.EXPECT().
-						GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, &entity.Session{}).
-						Return(exptIDs, nil),
+						GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, int32(0), int32(0), &entity.Session{}).
+						Return(exptIDs, int64(len(exptIDs)), nil),
 					mocks.manager.EXPECT().
 						MGetBasicByID(gomock.Any(), exptIDs).
 						Return(expts, nil),
@@ -1798,8 +1816,8 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 				expectAuthorization(t, mocks.auth, nil)
 				gomock.InOrder(
 					mocks.manager.EXPECT().
-						GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, &entity.Session{}).
-						Return(exptIDs, nil),
+						GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, int32(0), int32(0), &entity.Session{}).
+						Return(exptIDs, int64(len(exptIDs)), nil),
 					mocks.manager.EXPECT().
 						MGetBasicByID(gomock.Any(), exptIDs).
 						Return(nil, mGetBasicErr),
@@ -1808,6 +1826,57 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
 				require.ErrorIs(t, err, mGetBasicErr)
 				require.Nil(t, resp)
+			},
+		},
+		{
+			// ★ 旧行为不变式（tasks §7.2 ①③）：内部面不传分页 → 零值原样下传（不得被补成 100），
+			// 且返回全量不被截断。这里刻意用 >100 条数据，若哪天有人把默认值下沉到内部面/DAO，此用例必红。
+			name:     "no pagination passes zero downstream and returns full set beyond 100",
+			groupKey: groupKey,
+			setupMocks: func(t *testing.T, mocks testMocks) {
+				expectAuthorization(t, mocks.auth, nil)
+				gomock.InOrder(
+					mocks.manager.EXPECT().
+						// 断言下传的分页入参必须是零值：不是 100、不是 1。
+						GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, int32(0), int32(0), &entity.Session{}).
+						Return(bigIDs, int64(len(bigIDs)), nil),
+					mocks.manager.EXPECT().
+						MGetBasicByID(gomock.Any(), bigIDs).
+						Return(bigExpts, nil),
+				)
+			},
+			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.Len(t, resp.GetExptIds(), len(bigIDs), "不传分页必须返回全量，不得被 100 截断")
+				require.Greater(t, len(resp.GetExptIds()), 100)
+				require.Len(t, resp.GetExperiments(), len(bigExpts))
+				// total == 返回条数
+				require.EqualValues(t, len(resp.GetExptIds()), resp.GetTotal())
+			},
+		},
+		{
+			// 分页生效时 total 为全量数（≠ 当页条数），且当页 ids 原样透传给 MGetBasicByID（R10）。
+			name:       "pagination passes through and total is full count",
+			groupKey:   groupKey,
+			pageNumber: gptr.Of(int32(2)),
+			pageSize:   gptr.Of(int32(2)),
+			setupMocks: func(t *testing.T, mocks testMocks) {
+				expectAuthorization(t, mocks.auth, nil)
+				gomock.InOrder(
+					mocks.manager.EXPECT().
+						GetIDsByGroupKey(gomock.Any(), workspaceID, groupKey, int32(2), int32(2), &entity.Session{}).
+						Return(exptIDs, int64(57), nil),
+					mocks.manager.EXPECT().
+						MGetBasicByID(gomock.Any(), exptIDs).
+						Return(expts, nil),
+				)
+			},
+			check: func(t *testing.T, resp *exptpb.GetExperimentIDsByGroupResponse, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.Equal(t, exptIDs, resp.GetExptIds())
+				require.EqualValues(t, 57, resp.GetTotal())
 			},
 		},
 	}
@@ -1830,6 +1899,8 @@ func TestExperimentApplication_GetExperimentIDsByGroup(t *testing.T) {
 			resp, err := app.GetExperimentIDsByGroup(context.Background(), &exptpb.GetExperimentIDsByGroupRequest{
 				WorkspaceID:        workspaceID,
 				ExperimentGroupKey: tt.groupKey,
+				PageNumber:         tt.pageNumber,
+				PageSize:           tt.pageSize,
 			})
 
 			tt.check(t, resp, err)
@@ -7254,6 +7325,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 	validRunID := int64(999)
 	itemRetryNum := 0
 	validTargetVersionID := int64(654)
+	sharedTargetSpaceID := int64(321)
 
 	baseExpt := &entity.Experiment{
 		ID:              validExptID,
@@ -7344,6 +7416,31 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 			// 本用例的 expt 不带 RunModeConfig → 旧链路租户（新旧链路按 run_mode 分流，
 			// 见 dualSandboxTenantByRunMode / entity.IsNewRunModeLink）
 			Tenant: rpc.SandboxTenantFornaxTraeEvalDualSandbox,
+		}).Return(&rpc.SandboxInitResponse{}, nil)
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("shared SandboxAgent retry loads target from source space", func(t *testing.T) {
+		sandboxExpt := *baseExpt
+		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
+		sandboxExpt.TargetSpaceID = sharedTargetSpaceID
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockEvalTargetSvc.EXPECT().GetEvalTargetVersion(gomock.Any(), sharedTargetSpaceID, validTargetVersionID, false).
+			Return(&entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{}}, nil)
+		mockSandboxScheduler.EXPECT().Init(gomock.Any(), &rpc.SandboxInitRequest{
+			TaskID:      strconv.FormatInt(validExptID, 10),
+			Concurrency: sandboxInitConcurrency(nil, false),
+			WorkspaceID: validWorkspaceID,
+			Tenant:      rpc.SandboxTenantDefault,
 		}).Return(&rpc.SandboxInitResponse{}, nil)
 		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
 		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)

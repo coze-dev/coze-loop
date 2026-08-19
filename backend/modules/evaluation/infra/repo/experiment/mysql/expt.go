@@ -43,7 +43,8 @@ type IExptDAO interface {
 
 	MGetByID(ctx context.Context, ids []int64) ([]*model.Experiment, error)
 
-	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error)
+	// GetIDsByGroupKey 取该分组下的实验 ID + 总数。page/pageSize 均 >0 才分页，否则返回全量（total = 返回条数）。
+	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error)
 
 	ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error)
 }
@@ -398,23 +399,48 @@ func (d *exptDAOImpl) MGetByID(ctx context.Context, ids []int64) ([]*model.Exper
 	return sortedExperiments, nil
 }
 
-func (d *exptDAOImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string) ([]int64, error) {
+// GetIDsByGroupKey 按 group key 取该空间下的实验 ID 列表。
+//
+// 分页语义（关键，勿改成 defaultLimit 兜底）：
+//   - page > 0 且 pageSize > 0 → 启用分页：先在同一个查询上 Count() 得全量 total，再 Limit/Offset 取当页。
+//   - 否则（含零值、负数）→ 不分页，返回全量，total = len(ids)，且**不发** count 查询。
+//     内部面调用方（前端/内部服务）不感知分页、不传即零值，必须拿到全量，绝不能被隐式截断。
+//
+// 排序：无条件 ORDER BY id ASC —— 分页与否顺序一致，保证翻页不重不漏。
+func (d *exptDAOImpl) GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error) {
 	expt := d.query.Experiment
 	q := expt.WithContext(ctx)
 	if contexts.CtxWriteDB(ctx) {
 		q = q.WriteDB()
 	}
 
-	var ids []int64
-	err := q.Where(
+	// count 与 pluck 复用同一个 q（含 WriteDB 分支），避免主从不一致导致 total 与列表对不上。
+	q = q.Where(
 		expt.SpaceID.Eq(spaceID),
 		expt.ExperimentGroupKey.Eq(groupKey),
 		expt.DeletedAt.IsNull(),
-	).Pluck(expt.ID, &ids)
-	if err != nil {
-		return nil, errorx.Wrapf(err, "mysql get experiment ids by group key fail, space_id: %v, group_key: %v", spaceID, groupKey)
+	).Order(expt.ID)
+
+	paginated := page > 0 && pageSize > 0
+
+	var total int64
+	if paginated {
+		cnt, err := q.Count()
+		if err != nil {
+			return nil, 0, errorx.Wrapf(err, "mysql count experiment ids by group key fail, space_id: %v, group_key: %v", spaceID, groupKey)
+		}
+		total = cnt
+		q = q.Limit(int(pageSize)).Offset(int((page - 1) * pageSize))
 	}
-	return ids, nil
+
+	var ids []int64
+	if err := q.Pluck(expt.ID, &ids); err != nil {
+		return nil, 0, errorx.Wrapf(err, "mysql get experiment ids by group key fail, space_id: %v, group_key: %v, page: %v, page_size: %v", spaceID, groupKey, page, pageSize)
+	}
+	if !paginated {
+		total = int64(len(ids))
+	}
+	return ids, total, nil
 }
 
 // ExistGroupKey 判断 group key 是否已被“其它空间”占用（跨空间隔离）。
