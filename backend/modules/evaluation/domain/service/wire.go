@@ -46,6 +46,7 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	// 中心化调度额度闸：开源侧提供 noop（enforce 消息 fail-closed，legacy 不受影响）。
 	// 商业版在自己的 wire set 里注入真实账本适配器覆盖它。
 	component.NewNoopCentralReservationGuard,
+	component.NewNoopCentralSchedulerScopeOwner,
 	// Infrastructure Sets
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,

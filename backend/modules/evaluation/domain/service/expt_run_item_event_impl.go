@@ -60,6 +60,9 @@ type ExptItemEventEvalServiceImpl struct {
 	centralGuard component.ICentralReservationGuard
 	// dispatchRepo run log 派发投影读写，用于把 Queueing/reserved 兑现为 Processing/none。
 	dispatchRepo repo.IExptItemDispatchRepo
+	// centralScopeOwner 判定本进程是否拥有某实验的调度域。开源部署注入 noop（恒定拥有）。
+	// 防的是 item 消息跨环境投递后被错误的进程执行（详见该 port 的注释）。
+	centralScopeOwner component.ICentralSchedulerScopeOwner
 }
 
 func NewExptRecordEvalService(
@@ -87,6 +90,10 @@ func NewExptRecordEvalService(
 	itemCompletePublisher component.IItemCompletePublisher,
 	centralGuard component.ICentralReservationGuard,
 	dispatchRepo repo.IExptItemDispatchRepo,
+	// centralScopeOwner 放在 variadic 之前：Go 只要求 variadic 是最后一个参数。
+	// 不做 setter 注入 —— setter 会让 wire 构造出实例但无人调用 setter，字段恒为 nil，
+	// 而 nil 在本文件里被解释为"跳过校验"，等于静默关闭防护（此前 centralGuard 已踩过一次）。
+	centralScopeOwner component.ICentralSchedulerScopeOwner,
 	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容 wire_gen 未接入通知器
 ) ExptItemEvalEvent {
 	i := &ExptItemEventEvalServiceImpl{
@@ -113,6 +120,7 @@ func NewExptRecordEvalService(
 		evalAsyncRepo:            evalAsyncRepo,
 		itemCompletePublisher:    itemCompletePublisher,
 		centralGuard:             centralGuard,
+		centralScopeOwner:        centralScopeOwner,
 		dispatchRepo:             dispatchRepo,
 	}
 	if len(sandboxAgentNotifier) > 0 {
@@ -188,6 +196,39 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			return next(ctx, event)
 		}
 
+		// enforce 实验必须有冻结的 Scope。空 Scope 说明数据异常（DDL 未执行、或绕过
+		// Create 路径写入），fail-closed 丢弃：没有 Scope 就无法确定去哪本账查 reservation，
+		// 猜一本账等于用别人的额度跑这个 item。
+		if expt.SchedulerScope == "" {
+			logs.CtxError(ctx, "[CentralReservation] enforce experiment with empty scheduler_scope, drop event, expt_id: %v, item_id: %v",
+				event.ExptID, event.EvalSetItemID)
+			return nil
+		}
+
+		// 本进程必须拥有该实验的 Scope 才可执行。
+		//
+		// 这是"泳道不得执行线上 item"的最后一道闸。前面的调度侧闸门（ScanCandidates 带
+		// WHERE scheduler_scope）防的是"泳道去调度线上实验"；本闸防的是消息侧 ——
+		// item MQ 的泳道路由靠 producer 的 x_tt_env tag，而 tag 可能因环境变量缺失、
+		// 消息重投或 broker 配置而失效，导致一条 PPE 的 item 消息被线上 consumer 拿到
+		// （或反之）。届时若不校验归属，就会用一个环境的进程去跑另一个环境的 item，
+		// 结果写回共享库。
+		//
+		// 丢弃而非报错重试：Scope 不匹配是路由问题，重试只会在同一个错误进程上再失败一次；
+		// 正确的那个进程会从自己的队列里拿到这条消息（或由中心调度下一拍重新派发）。
+		if e.centralScopeOwner != nil {
+			owned, err := e.centralScopeOwner.OwnsSchedulerScope(ctx, expt.SchedulerScope)
+			if err != nil {
+				// 无法判定归属：返回错误重试，而不是赌一把放行。
+				return err
+			}
+			if !owned {
+				logs.CtxWarn(ctx, "[CentralReservation] scheduler scope not owned by this instance, discard event, expt_scope: %v, expt_id: %v, item_id: %v",
+					expt.SchedulerScope, event.ExptID, event.EvalSetItemID)
+				return nil
+			}
+		}
+
 		guard := e.centralGuard
 		if guard == nil {
 			// 判定为 enforce 却没有注入闸门：fail-closed。
@@ -197,7 +238,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			return nil
 		}
 
-		ok, err := guard.ConfirmRunning(ctx, event.ExptRunID, event.EvalSetItemID)
+		ok, err := guard.ConfirmRunning(ctx, expt.SchedulerScope, event.ExptRunID, event.EvalSetItemID)
 		if err != nil {
 			// 账本暂时不可用：返回错误让 MQ 重试，而不是丢弃 —— item 已被预占，
 			// 丢弃会让它停在 Queueing 直到 reservation 超时清理，白等一轮。
