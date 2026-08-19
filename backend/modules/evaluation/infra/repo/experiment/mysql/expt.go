@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
@@ -48,10 +49,11 @@ type IExptDAO interface {
 
 	ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error)
 
-	// ScanSchedulerQueue 跨空间扫描中心调度候选实验。
+	// ScanSchedulerQueue 在指定 scheduler_scope 内跨空间扫描中心调度候选实验。
 	//
-	// 与 List 的关键差别：不带 space_id 条件 —— 中心调度按全局优先级排序，若按空间分别扫描，
-	// 低优空间的实验会先于高优空间被处理，全局优先级语义即失效。
+	// 与 List 的关键差别：不带 space_id 条件 —— 中心调度在 Scope 内按全局优先级排序，若按空间
+	// 分别扫描，低优空间的实验会先于高优空间被处理，全局优先级语义即失效。
+	// 但 scheduler_scope 必须带：它是调度所有权边界（线上/各 PPE 泳道共库）。
 	// 走 idx_scheduler_queue，keyset 分页保证翻页不重不漏。
 	ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*model.Experiment, error)
 }
@@ -470,7 +472,7 @@ func (d *exptDAOImpl) ExistGroupKey(ctx context.Context, groupKey string, spaceI
 	return cnt > 0, nil
 }
 
-// ScanSchedulerQueue 跨空间扫描中心调度候选实验，走 idx_scheduler_queue。
+// ScanSchedulerQueue 在指定 scheduler_scope 内跨空间扫描中心调度候选实验，走 idx_scheduler_queue。
 //
 // 用裸 gorm 而非 gen DSL：keyset 的三元组比较是一段带括号 OR 的复合条件，
 // gen 的链式 API 表达它需要嵌套多层 Or(...)，可读性远差于一条 SQL 片段。
@@ -487,8 +489,19 @@ func (d *exptDAOImpl) ScanSchedulerQueue(ctx context.Context, param *entity.Sche
 		limit = defaultLimit
 	}
 
+	// Scope 为空时拒绝查询而非退化成扫全表。
+	//
+	// 这是"泳道不得调度线上实验"的物理闸门：一旦这里放行空 Scope，PPE 实例就会扫出
+	// 线上的 enforce 实验、为它们预占额度并派发 item（item 走泳道 topic、结果写回共享库），
+	// 而线上侧完全无感知。宁可这一拍报错（可见），也不能静默越界（不可见）。
+	if strings.TrimSpace(param.SchedulerScope) == "" {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+			errorx.WithExtraMsg("empty scheduler_scope for scheduler queue scan; refusing to scan across all scopes"))
+	}
+
 	tx := d.db.NewSession(ctx).Model(&model.Experiment{}).
 		Where("scheduler_mode = ?", param.DispatchMode).
+		Where("scheduler_scope = ?", param.SchedulerScope).
 		Where("deleted_at IS NULL").
 		// latest_run_id > 0 排除"只 Create 尚未 Run"的实验：它们没有 run 可供派发 item，
 		// 扫进来只会让每拍白跑一遍。
@@ -513,7 +526,8 @@ func (d *exptDAOImpl) ScanSchedulerQueue(ctx context.Context, param *entity.Sche
 		Order("priority_level DESC, created_at ASC, id ASC").
 		Limit(limit).
 		Find(&pos).Error; err != nil {
-		return nil, errorx.Wrapf(err, "mysql scan scheduler queue fail, mode: %v, statuses: %v", param.DispatchMode, param.Statuses)
+		return nil, errorx.Wrapf(err, "mysql scan scheduler queue fail, mode: %v, scope: %v, statuses: %v",
+			param.DispatchMode, param.SchedulerScope, param.Statuses)
 	}
 	return pos, nil
 }

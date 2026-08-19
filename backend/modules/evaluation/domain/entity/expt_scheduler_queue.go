@@ -12,6 +12,12 @@ package entity
 type SchedulerQueueScanParam struct {
 	// DispatchMode 目标调度模式，通常为 enforce。
 	DispatchMode string
+	// SchedulerScope 调度所有权边界，**必填**。只扫属于该 Scope 的实验。
+	//
+	// 为什么必填而非可选：线上与所有 PPE 泳道共用同一个库，缺了这个条件，泳道的调度器
+	// 会扫出线上实验并为其派发 item（结果写回共享库、线上侧无感知）。空值由 DAO 拒绝，
+	// 不退化成"扫所有 Scope"。
+	SchedulerScope string
 	// Statuses 候选状态，通常为 Pending + Processing。用单条 status IN (...) 查询而非按状态分别扫描，
 	// 避免双流归并游标与未消费 lookahead。
 	Statuses []int32

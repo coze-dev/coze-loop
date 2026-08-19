@@ -225,6 +225,18 @@ type Experiment struct {
 	// 配置热变更不得让存量实验在中心调度与旧 daemon 之间切换。
 	// 命名注意：本字段与 entity.ExptSchedulerMode (实验跑法调度器 interface) 是完全不同的概念，勿混用。
 	ExptDispatchMode string
+	// SchedulerScope 中心调度所有权与 Priority 排序边界，与表字段 scheduler_scope 一致。
+	//
+	// 服务端生成并在创建时冻结的**不透明稳定 ID**，回答"哪个中心调度器拥有这个实验、
+	// 它与哪些实验一起比较 Priority"。legacy 实验为空串。
+	//
+	// 为什么需要它：线上与各 PPE 泳道共用同一个库，而中心调度是跨空间扫全局的后台任务。
+	// 无此边界时泳道调度器会扫出线上实验并派发 item（结果写回共享库、线上侧无感知）。
+	//
+	// 业务代码**不得解析**该字符串：泳道 / 空间 / App / Region 都只是生成规则的输入，
+	// 未来改按空间拆分时只换生成规则，字段语义与查询结构不变。
+	// Retry 继承原值，不按当前运行环境重算。
+	SchedulerScope string
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
