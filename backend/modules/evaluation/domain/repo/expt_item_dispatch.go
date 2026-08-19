@@ -15,7 +15,14 @@ import (
 //
 // 与既有 IExptItemResultRepo 的分工：后者面向 item 执行结果的完整生命周期；本接口只关心
 // 「哪些 item 可被授予、哪些已占用并发」这一个问题，因此方法都围绕 run log 的
-// (status, quota_reservation_state) 二元组，且全部走 idx_expt_run_dispatch。
+// (status, quota_reservation_state) 二元组。
+//
+// 索引：本接口刻意**不依赖新增索引**。所有方法的 WHERE 恒以 (space_id, expt_id, expt_run_id)
+// 打头，该前缀已被既有 uk_expt_run_item_turn / idx_expt_run_result_state 覆盖；
+// 单个 run 的 run log 仅数百行（内场实测最大 914），status 与预占态的过滤是内存操作。
+// 本表内场 7800 万行，为此加复合索引收益接近零而写放大长期存在。
+// 新增方法时请保持这个前缀形状；若确实需要跨 run 扫描（如未来的超时 reservation 对账），
+// 按那个查询的真实形状单独评估索引，不要沿用本接口的假设。
 //
 // 为什么单独立一个窄接口而不是往 IExptItemResultRepo 加方法：那个接口已有 15+ 方法、被十余处
 // 依赖，调度只需其中极小一部分；混进去会让所有实现方和 mock 都被迫感知调度概念。

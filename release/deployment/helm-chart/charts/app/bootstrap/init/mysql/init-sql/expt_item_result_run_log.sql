@@ -17,8 +17,7 @@ CREATE TABLE IF NOT EXISTS `expt_item_result_run_log`
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_run_item_turn` (`space_id`, `expt_id`, `expt_run_id`, `item_id`),
     KEY `idx_expt_item_turn` (`space_id`, `expt_id`, `item_id`),
-    KEY `idx_expt_run_result_state` (`space_id`, `expt_id`, `expt_run_id`, `result_state`),
-    KEY `idx_expt_run_dispatch` (`space_id`, `expt_id`, `expt_run_id`, `status`, `quota_reservation_state`, `id`)
+    KEY `idx_expt_run_result_state` (`space_id`, `expt_id`, `expt_run_id`, `result_state`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='expt_item_result_run_log';
