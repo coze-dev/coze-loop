@@ -2298,7 +2298,7 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 			traceConfig:       traceConfigMock,
 			workspaceProvider: wsMock,
 		}
-		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", false)
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "", false)
 		assert.NoError(t, err)
 		assert.Equal(t, []string{"spans_3d"}, cfg.SpanTables)
 		assert.Equal(t, []string{"anno_3d"}, cfg.AnnoTables)
@@ -2309,7 +2309,7 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 			traceConfig:       traceConfigMock,
 			workspaceProvider: nil,
 		}
-		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", false)
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "", false)
 		assert.NoError(t, err)
 		assert.Len(t, cfg.SpanTables, 2)
 		assert.Len(t, cfg.AnnoTables, 2)
@@ -2330,7 +2330,29 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 			traceConfig:       traceConfigMock,
 			workspaceProvider: wsMock,
 		}
-		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws2", true)
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws2", "", true)
+		assert.NoError(t, err)
+		assert.Len(t, cfg.SpanTables, 2)
+		assert.Len(t, cfg.AnnoTables, 2)
+	})
+
+	t.Run("storageName abase replaces SpanTables with tenants", func(t *testing.T) {
+		r := &TraceRepoImpl{
+			traceConfig:       traceConfigMock,
+			workspaceProvider: nil,
+		}
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "abase", false)
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"tenant1"}, cfg.SpanTables)
+		assert.Len(t, cfg.AnnoTables, 2)
+	})
+
+	t.Run("storageName non-abase does not replace SpanTables", func(t *testing.T) {
+		r := &TraceRepoImpl{
+			traceConfig:       traceConfigMock,
+			workspaceProvider: nil,
+		}
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "clickhouse", false)
 		assert.NoError(t, err)
 		assert.Len(t, cfg.SpanTables, 2)
 		assert.Len(t, cfg.AnnoTables, 2)
