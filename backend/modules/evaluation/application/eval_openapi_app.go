@@ -43,6 +43,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -1644,36 +1645,53 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, 
 	serverReceiveTimeMS := time.Now().UnixMilli()
 
 	meta := req.GetMeta()
-	// metric tag 只取有界维度；明细维度（meta / invoke_id / model_name / ...）不进 tag。
-	metricTags := metrics.StepEventTags{
-		StepName:  req.GetStepName(),
-		AgentType: req.GetAgentType(),
-		Round:     req.GetRound(),
-	}
-
 	switch req.GetEventType() {
 	case openapi.EvalTargetStepEventType_STARTED:
 		// STARTED 不带耗时 / 成败 / 错误三件套：阶段刚开始时成败尚未发生，读这些字段即是读假数据。
 		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent started, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, experiment_id=%s, log_id=%s, dataset_id=%s, dataset_version=%s, item_id=%s, item_key=%s",
 			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason(),
 			meta.GetExperimentID(), meta.GetLogID(), meta.GetDatasetID(), meta.GetDatasetVersion(), meta.GetItemID(), meta.GetItemKey())
-		if e.stepEventMetric != nil {
-			e.stepEventMetric.EmitStepStarted(metricTags)
-		}
 	case openapi.EvalTargetStepEventType_FINISHED:
 		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent finished, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, success=%v, duration_ms=%d, error_code=%d, error_message=%s, experiment_id=%s, log_id=%s, dataset_id=%s, dataset_version=%s, item_id=%s, item_key=%s",
 			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason(),
 			req.GetSuccess(), req.GetDurationMs(), req.GetErrorCode(), req.GetErrorMessage(),
 			meta.GetExperimentID(), meta.GetLogID(), meta.GetDatasetID(), meta.GetDatasetVersion(), meta.GetItemID(), meta.GetItemKey())
-		if e.stepEventMetric != nil {
-			// 耗时用沙箱上报的值，不用服务端接收时刻现算：服务端算不出阶段何时开始，
-			// 用接收时刻只会把网络与排队时间算进阶段耗时。负值由实现层 clamp 到 0。
-			e.stepEventMetric.EmitStepFinished(metricTags, req.GetSuccess(), req.GetErrorCode(), req.GetDurationMs())
-		}
 	default:
-		// 未识别的事件类型不打点：填不出 success / duration，打上去只会污染曲线。
 		logs.CtxWarn(ctx, "ReportEvalTargetStepEvent unknown event_type=%v, workspace_id=%d, invoke_id=%d, step_name=%s",
 			req.GetEventType(), req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName())
+	}
+
+	e.instrumentStepEvent(ctx, req, serverReceiveTimeMS)
+
+	return resp, nil
+}
+
+// instrumentStepEvent 把一条阶段事件同时送去 metric 与 MQ。
+//
+// **整个函数被 recover 兜住**：两条都是旁路，任何 panic 都不该变成上报接口的失败。必须在这里
+// 拦下来——外层 invokeAndRender 的 recover 会把 panic 转成 HTTP 错误，那正是要避免的结果。
+// 单独成函数而不是在 ReportEvalTargetStepEvent 里 defer，是因为那个函数有命名返回值，
+// 在它里面 recover 会让 panic 之后返回一个 nil response。
+func (e *EvalOpenAPIApplication) instrumentStepEvent(ctx context.Context, req *openapi.ReportEvalTargetStepEventRequest, serverReceiveTimeMS int64) {
+	defer goroutine.Recovery(ctx)
+
+	if e.stepEventMetric != nil {
+		// metric tag 只取有界维度；明细维度（meta / invoke_id / model_name / ...）不进 tag。
+		tags := metrics.StepEventTags{
+			StepName:  req.GetStepName(),
+			AgentType: req.GetAgentType(),
+			Round:     req.GetRound(),
+		}
+		switch req.GetEventType() {
+		case openapi.EvalTargetStepEventType_STARTED:
+			e.stepEventMetric.EmitStepStarted(tags)
+		case openapi.EvalTargetStepEventType_FINISHED:
+			// 耗时用沙箱上报的值，不用服务端接收时刻现算：服务端算不出阶段何时开始，
+			// 用接收时刻只会把网络与排队时间算进阶段耗时。负值由实现层 clamp 到 0。
+			e.stepEventMetric.EmitStepFinished(tags, req.GetSuccess(), req.GetErrorCode(), req.GetDurationMs())
+		default:
+			// 未识别的事件类型不打点：填不出 success / duration，打上去只会污染曲线。
+		}
 	}
 
 	// MQ 明细：**未识别的事件类型也投递**。metric 那边不打是因为填不出曲线要的值，这边不同——
@@ -1681,8 +1699,6 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, 
 	if e.stepEventPublisher != nil {
 		e.stepEventPublisher.PublishStepEvent(ctx, buildStepEventMessage(req, serverReceiveTimeMS))
 	}
-
-	return resp, nil
 }
 
 // buildStepEventMessage 把上报请求摊平成一条 MQ 明细消息。

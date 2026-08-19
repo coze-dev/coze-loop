@@ -2873,6 +2873,28 @@ func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_PublishesDetail(t *tes
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 	})
+
+	// 埋点组件 panic 不能让上报接口失败，也不能返回 nil response
+	// （外层 invokeAndRender 会把 panic 转成 HTTP 错误，所以必须在 application 层拦下来）。
+	t.Run("panicking_instrumentation_cannot_fail_the_request", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		metric := metricsmocks.NewMockStepEventMetrics(ctrl)
+		metric.EXPECT().EmitStepFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Do(func(metrics.StepEventTags, bool, int32, int64) { panic("metric backend exploded") }).Times(1)
+
+		app := &EvalOpenAPIApplication{stepEventMetric: metric}
+		resp, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+			EventType: &finished,
+			StepName:  gptr.Of("install"),
+			Success:   gptr.Of(true),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		assert.NotNil(t, resp.BaseResp)
+	})
 }
 
 func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
