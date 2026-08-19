@@ -9,11 +9,16 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/convert"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 )
+
+// defaultEvalAsyncCtxTTL 是 configer 不可用时的兜底 TTL，与改造前的硬编码保持一致。
+// 正常路径的取值逻辑见 entity.ExptItemEvalConf.GetEvalAsyncCtxTTL。
+const defaultEvalAsyncCtxTTL = 12 * time.Hour
 
 type IEvalAsyncDAO interface {
 	SetEvalAsyncCtx(ctx context.Context, invokeID string, actx *entity.EvalAsyncCtx) error
@@ -22,18 +27,36 @@ type IEvalAsyncDAO interface {
 	MarkEvalAsyncResumeReady(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error)
 }
 
-func NewEvalAsyncDAO(cmdable redis.Cmdable) IEvalAsyncDAO {
+func NewEvalAsyncDAO(cmdable redis.Cmdable, configer component.IConfiger) IEvalAsyncDAO {
 	const table = "experiment"
-	return &evalAsyncDAOImpl{cmdable: cmdable, table: table}
+	return &evalAsyncDAOImpl{cmdable: cmdable, table: table, configer: configer}
 }
 
 type evalAsyncDAOImpl struct {
-	cmdable redis.Cmdable
-	table   string
+	cmdable  redis.Cmdable
+	table    string
+	configer component.IConfiger
 }
 
 func (e *evalAsyncDAOImpl) makeExptItemTurnEvalAsyncCtxKey(invokeID string) string {
 	return fmt.Sprintf("[%s]item_turn_eval_async_ctx:%s", e.table, invokeID)
+}
+
+// ttlOf 取该 ctx 应有的 Redis 存活时间。
+// spaceID 从 actx.Event 反查：实验链路一定有 Event，调试链路 (Event == nil) 没有空间上下文，
+// 传 0 让 configer 回落到全局默认。configer 缺省时兜底 12h，与改造前行为一致。
+func (e *evalAsyncDAOImpl) ttlOf(ctx context.Context, actx *entity.EvalAsyncCtx) time.Duration {
+	if e.configer == nil {
+		return defaultEvalAsyncCtxTTL
+	}
+	var spaceID int64
+	if actx != nil && actx.Event != nil {
+		spaceID = actx.Event.SpaceID
+	}
+	if ttl := e.configer.GetEvalAsyncCtxTTL(ctx, spaceID); ttl > 0 {
+		return ttl
+	}
+	return defaultEvalAsyncCtxTTL
 }
 
 func (e *evalAsyncDAOImpl) SetEvalAsyncCtx(ctx context.Context, invokeID string, actx *entity.EvalAsyncCtx) error {
@@ -42,7 +65,7 @@ func (e *evalAsyncDAOImpl) SetEvalAsyncCtx(ctx context.Context, invokeID string,
 		return err
 	}
 	key := e.makeExptItemTurnEvalAsyncCtxKey(invokeID)
-	if err := e.cmdable.Set(ctx, key, bytes, time.Hour*12).Err(); err != nil {
+	if err := e.cmdable.Set(ctx, key, bytes, e.ttlOf(ctx, actx)).Err(); err != nil {
 		return errorx.Wrapf(err, "redis set key: %v", key)
 	}
 	return nil
@@ -102,7 +125,10 @@ func (e *evalAsyncDAOImpl) MarkEvalAsyncResumeReady(ctx context.Context, invokeI
 	// Keep the raw JSON intact instead of decoding with Redis cjson (Lua numbers cannot safely represent i64 IDs).
 	// resume_ready is a root-level field emitted by Go's JSON encoder, so an anchored string replacement/insertion is safe.
 
-	updated, evalErr := e.cmdable.Eval(ctx, markResumeReadyScript, []string{key}, int64((12*time.Hour)/time.Second)).Int64()
+	// 脚本内是 SET ... EX，会重置 TTL。这里传的是与 SetEvalAsyncCtx 同源的配置值
+	// （actx 已在上面读到，可据其 Event 反查 spaceID），避免这里把一个按空间配长的 TTL 重置回旧的 12h 硬编码。
+	ttlSecond := int64(e.ttlOf(ctx, actx) / time.Second)
+	updated, evalErr := e.cmdable.Eval(ctx, markResumeReadyScript, []string{key}, ttlSecond).Int64()
 	if evalErr != nil {
 		return nil, errorx.Wrapf(evalErr, "redis mark resume ready fail, key: %v", key)
 	}

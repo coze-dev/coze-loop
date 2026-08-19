@@ -980,3 +980,90 @@ func TestBuildItemStandardEvalOutput_PlatformEvalOutputNoInnerRounds(t *testing.
 	// 顶层 rounds 字段仍由平台兜底产出（每轮 query/latency/context），不受影响。
 	require.NotNil(t, got.Rounds)
 }
+
+// sandboxLogItem 造一个带 N 轮 payload 的 item，每轮的 ext_output 里放指定的
+// fornax_sandbox_log_url 值（空串表示该轮不带这个 key）。
+func sandboxLogItem(runState entity.ItemRunState, logURLs ...string) *entity.ItemResult {
+	textType := entity.ContentTypeText
+	turnResults := make([]*entity.TurnResult, 0, len(logURLs))
+	for i, u := range logURLs {
+		fields := map[string]*entity.Content{}
+		if u != "" {
+			url := u
+			fields[standardEvalOutputSandboxLogURLKey] = &entity.Content{ContentType: &textType, Text: &url}
+		}
+		turnResults = append(turnResults, &entity.TurnResult{ExperimentResults: []*entity.ExperimentResult{{
+			ExperimentID: 20,
+			Payload: &entity.ExperimentTurnPayload{
+				TurnID: int64(i + 1),
+				TargetOutput: &entity.TurnTargetOutput{EvalTargetRecord: &entity.EvalTargetRecord{
+					EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: fields},
+				}},
+			},
+		}}})
+	}
+	return &entity.ItemResult{
+		ItemID:      10,
+		SystemInfo:  &entity.ItemSystemInfo{RunState: runState},
+		TurnResults: turnResults,
+	}
+}
+
+func TestBuildItemStandardEvalOutput_FornaxSandboxLogURL(t *testing.T) {
+	t.Run("从 ext_output 提到顶层", func(t *testing.T) {
+		item := sandboxLogItem(entity.ItemRunState_Success, "https://example.invalid/a.log")
+
+		got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
+		require.NoError(t, err)
+		assert.Equal(t, "https://example.invalid/a.log", got.GetFornaxSandboxLogURL())
+	})
+
+	t.Run("失败 item 也要有日志链接（排障刚需，不被 content-ready 门挡住）", func(t *testing.T) {
+		item := sandboxLogItem(entity.ItemRunState_Fail, "https://example.invalid/fail.log")
+
+		got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
+		require.NoError(t, err)
+		assert.Equal(t, "https://example.invalid/fail.log", got.GetFornaxSandboxLogURL())
+		// 失败 item 仍不产出内容块，确认早退语义没被破坏
+		assert.Nil(t, got.Detail)
+	})
+
+	t.Run("多轮取最后一个非空", func(t *testing.T) {
+		item := sandboxLogItem(entity.ItemRunState_Success,
+			"https://example.invalid/round1.log", "https://example.invalid/round2.log")
+
+		got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
+		require.NoError(t, err)
+		assert.Equal(t, "https://example.invalid/round2.log", got.GetFornaxSandboxLogURL())
+	})
+
+	t.Run("后续轮次没带该 key 时沿用前面轮次的值", func(t *testing.T) {
+		item := sandboxLogItem(entity.ItemRunState_Success, "https://example.invalid/round1.log", "")
+
+		got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
+		require.NoError(t, err)
+		assert.Equal(t, "https://example.invalid/round1.log", got.GetFornaxSandboxLogURL())
+	})
+
+	t.Run("未上报时不填该字段（不留空字符串占位）", func(t *testing.T) {
+		item := sandboxLogItem(entity.ItemRunState_Success, "")
+
+		got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
+		require.NoError(t, err)
+		assert.Nil(t, got.FornaxSandboxLogURL)
+	})
+
+	t.Run("detail.output 里的同名字段保留不动（本次只是额外往顶层提一份）", func(t *testing.T) {
+		item := sandboxLogItem(entity.ItemRunState_Success, "https://example.invalid/a.log")
+
+		got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
+		require.NoError(t, err)
+		require.NotNil(t, got.Output)
+		assert.Contains(t, got.GetOutput().GetText(), standardEvalOutputSandboxLogURLKey)
+		assert.Equal(t, "https://example.invalid/a.log", got.GetFornaxSandboxLogURL())
+	})
+
+	t.Run("item 为 nil 时不 panic", func(t *testing.T) {
+		assert.Empty(t, sandboxLogURLFromItem(nil, 20))
+	})
+}

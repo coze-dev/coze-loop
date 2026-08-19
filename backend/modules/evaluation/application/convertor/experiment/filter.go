@@ -676,7 +676,9 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 			case domain_expt.FieldType_AnnotationCategorical:
 				result.MapCond.AnnotationStringFilters = append(result.MapCond.AnnotationStringFilters, fieldFilter)
 			case domain_expt.FieldType_EvalSetColumn:
-				// 评测集列字段，统一作为item_snapshot的string_map条件
+				// 评测集列字段，统一作为 item_snapshot 的 string_map 条件。
+				// 前端可筛列来自评测集 schema（getColumnEvalSetFieldsWithSource 只取
+				// EvaluationSetSchema.FieldSchemas），故必然有 field mapping，走 string_map 即可。
 				result.ItemSnapshotCond.StringMapFilters = append(result.ItemSnapshotCond.StringMapFilters, fieldFilter)
 			case domain_expt.FieldType_ActualOutput:
 				// 实际输出，通常为string类型
@@ -739,7 +741,7 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 			}
 			switch fieldType {
 			case domain_expt.FieldType_EvalSetColumn:
-				// 评测集列字段，统一作为item_snapshot的string_map条件
+				// 评测集列字段，统一作为item_snapshot的string_map条件。
 				result.KeywordSearch.ItemSnapshotFilter.StringMapFilters = append(result.KeywordSearch.ItemSnapshotFilter.StringMapFilters, fieldFilter)
 			case domain_expt.FieldType_ActualOutput:
 				// 实际输出，通常为string类型

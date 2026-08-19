@@ -891,6 +891,56 @@ func TestExptItemEvalConf_GetItemZombieSecond(t *testing.T) {
 	}
 }
 
+func TestExptItemEvalConf_GetEvalAsyncCtxTTL(t *testing.T) {
+	tests := []struct {
+		name     string
+		conf     *ExptItemEvalConf
+		expected time.Duration
+	}{
+		{
+			name:     "conf为nil，返回12h兜底（异步僵尸默认3h+30min < 12h）",
+			conf:     nil,
+			expected: 12 * time.Hour,
+		},
+		{
+			name:     "未配任何值，返回12h兜底",
+			conf:     &ExptItemEvalConf{},
+			expected: 12 * time.Hour,
+		},
+		{
+			name:     "异步僵尸阈值小于12h，仍取12h兜底",
+			conf:     &ExptItemEvalConf{AsyncZombieSecond: 5 * 3600},
+			expected: 12 * time.Hour,
+		},
+		{
+			name:     "异步僵尸阈值24h，TTL跟随抬到24h+30min",
+			conf:     &ExptItemEvalConf{AsyncZombieSecond: 86400},
+			expected: 86400*time.Second + 30*time.Minute,
+		},
+		{
+			name:     "异步僵尸阈值5d，TTL跟随抬到5d+30min",
+			conf:     &ExptItemEvalConf{AsyncZombieSecond: 432000},
+			expected: 432000*time.Second + 30*time.Minute,
+		},
+		{
+			name:     "显式配TTL优先于按僵尸阈值推导",
+			conf:     &ExptItemEvalConf{AsyncZombieSecond: 86400, EvalAsyncCtxTTLSecond: 90000},
+			expected: 90000 * time.Second,
+		},
+		{
+			name:     "显式配TTL即使短于僵尸阈值也照用（运维显式意图）",
+			conf:     &ExptItemEvalConf{AsyncZombieSecond: 86400, EvalAsyncCtxTTLSecond: 3600},
+			expected: time.Hour,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.conf.GetEvalAsyncCtxTTL())
+		})
+	}
+}
+
 func TestIsTurnRunFinished(t *testing.T) {
 	tests := []struct {
 		name  string
