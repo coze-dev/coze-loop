@@ -43,17 +43,17 @@ func (m *MockIWorkSpaceProvider) EXPECT() *MockIWorkSpaceProviderMockRecorder {
 }
 
 // ClipTableByWorkspace mocks base method.
-func (m *MockIWorkSpaceProvider) ClipTableByWorkspace(ctx context.Context, workspaceID string, tenants []string, tables []string, isGetTraceByID bool) []string {
+func (m *MockIWorkSpaceProvider) ClipTableByWorkspace(ctx context.Context, workspaceID string, tables []string, isGetTraceByID bool) []string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClipTableByWorkspace", ctx, workspaceID, tenants, tables, isGetTraceByID)
+	ret := m.ctrl.Call(m, "ClipTableByWorkspace", ctx, workspaceID, tables, isGetTraceByID)
 	ret0, _ := ret[0].([]string)
 	return ret0
 }
 
 // ClipTableByWorkspace indicates an expected call of ClipTableByWorkspace.
-func (mr *MockIWorkSpaceProviderMockRecorder) ClipTableByWorkspace(ctx, workspaceID, tenants, tables, isGetTraceByID any) *gomock.Call {
+func (mr *MockIWorkSpaceProviderMockRecorder) ClipTableByWorkspace(ctx, workspaceID, tables, isGetTraceByID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClipTableByWorkspace", reflect.TypeOf((*MockIWorkSpaceProvider)(nil).ClipTableByWorkspace), ctx, workspaceID, tenants, tables, isGetTraceByID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClipTableByWorkspace", reflect.TypeOf((*MockIWorkSpaceProvider)(nil).ClipTableByWorkspace), ctx, workspaceID, tables, isGetTraceByID)
 }
 
 // GetIngestWorkSpaceID mocks base method.
