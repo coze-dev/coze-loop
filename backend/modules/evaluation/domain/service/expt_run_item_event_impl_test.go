@@ -53,6 +53,7 @@ func TestNewExptRecordEvalService(t *testing.T) {
 		nil, // itemCompletePublisher
 		nil, // sandboxAgentMetrics
 		component.NewNoopCentralReservationGuard(),
+		repoMocks.NewMockIExptItemDispatchRepo(ctrl),
 	)
 	assert.NotNil(t, service)
 }
