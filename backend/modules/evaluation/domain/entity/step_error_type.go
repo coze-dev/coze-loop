@@ -1,9 +1,13 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package step_event
+package entity
 
-// ClassifyErrorType 把一个阶段的结果归入错误分类看板类别。
+// ClassifyStepErrorType 把一个阶段的结果归入错误分类看板类别。
+//
+// 放在 domain 而不是 metric 实现里，是因为它有**两个**消费者：metric 的 error_type tag 和 MQ
+// 明细的 error_type 列。分类规则在两处各写一份，早晚会漂成两个答案，那时「在线看板说是工程错误、
+// Hive 说不是」这类问题无从下手。
 //
 //	success == true          → "-"                成功不带错误分类
 //	success == false, code=0 → "unknown"          失败但上报侧没给错误码
@@ -18,20 +22,20 @@ package step_event
 // 默认值必须指向「会被发现」的那一侧：漏配算成非工程错误 → 故障被静默豁免（最坏）；漏配算成
 // 工程错误 → 误报，但会有人发现并去补配置。
 //
-// nonEngineeringErrorCodes 当前**故意为空**：runtime errno 的「用户侧 / 平台侧」切分还没定，
+// nonEngineeringStepErrorCodes 当前**故意为空**：runtime errno 的「用户侧 / 平台侧」切分还没定，
 // 而在定下来之前，把所有带码的失败算成 engineering 正是上面那条默认值规则要的结果。这张表是
 // spec D4 的 TCC 化改造（另一张 ticket）要接进来的位置——届时它变成从 IConfiger 读取，本函数
 // 的分类逻辑不变。
-var nonEngineeringErrorCodes = map[int32]struct{}{}
+var nonEngineeringStepErrorCodes = map[int32]struct{}{}
 
-func ClassifyErrorType(success bool, code int32) string {
+func ClassifyStepErrorType(success bool, code int32) string {
 	if success {
 		return "-"
 	}
 	if code == 0 {
 		return "unknown"
 	}
-	if _, ok := nonEngineeringErrorCodes[code]; ok {
+	if _, ok := nonEngineeringStepErrorCodes[code]; ok {
 		return "non_engineering"
 	}
 	return "engineering"

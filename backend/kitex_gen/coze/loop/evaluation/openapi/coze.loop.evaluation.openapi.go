@@ -22881,6 +22881,12 @@ type ReportEvalTargetStepEventRequest struct {
 	// 身份维度（experiment_id / log_id / dataset_id / dataset_version / item_id / item_key）。
 	// 全部是无界高基数标识，只进 MQ 明细，一个都不进 metric tag。
 	Meta *StepEventMeta `thrift:"meta,5,optional" frugal:"5,optional,StepEventMeta" form:"meta" json:"meta,omitempty" query:"meta"`
+	// 事件在**沙箱侧**产生的时刻（unix 毫秒）。0 / 未设置表示上报侧没给。
+	//
+	// 服务端另有一个「接收时刻」，两者**基准不同**（不同机器的时钟，中间隔一次 HTTP），
+	// 因此在 MQ 明细里是两个不同名字的列，不能互相替代、更不能混用：拿接收时刻当事件时刻做
+	// 时序分析，得到的每个结论都掺了网络与排队时间。
+	EventTimeMs *int64 `thrift:"event_time_ms,6,optional" frugal:"6,optional,i64" form:"event_time_ms" json:"event_time_ms,omitempty" query:"event_time_ms"`
 	// 前人接口放不下、离线分析必需的维度
 	AgentType *string `thrift:"agent_type,10,optional" frugal:"10,optional,string" form:"agent_type" json:"agent_type,omitempty" query:"agent_type"`
 	// 轮次序号；trial 级阶段为 0
@@ -22966,6 +22972,18 @@ func (p *ReportEvalTargetStepEventRequest) GetMeta() (v *StepEventMeta) {
 		return ReportEvalTargetStepEventRequest_Meta_DEFAULT
 	}
 	return p.Meta
+}
+
+var ReportEvalTargetStepEventRequest_EventTimeMs_DEFAULT int64
+
+func (p *ReportEvalTargetStepEventRequest) GetEventTimeMs() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEventTimeMs() {
+		return ReportEvalTargetStepEventRequest_EventTimeMs_DEFAULT
+	}
+	return *p.EventTimeMs
 }
 
 var ReportEvalTargetStepEventRequest_AgentType_DEFAULT string
@@ -23114,6 +23132,9 @@ func (p *ReportEvalTargetStepEventRequest) SetStepName(val *string) {
 func (p *ReportEvalTargetStepEventRequest) SetMeta(val *StepEventMeta) {
 	p.Meta = val
 }
+func (p *ReportEvalTargetStepEventRequest) SetEventTimeMs(val *int64) {
+	p.EventTimeMs = val
+}
 func (p *ReportEvalTargetStepEventRequest) SetAgentType(val *string) {
 	p.AgentType = val
 }
@@ -23154,6 +23175,7 @@ var fieldIDToName_ReportEvalTargetStepEventRequest = map[int16]string{
 	3:   "event_type",
 	4:   "step_name",
 	5:   "meta",
+	6:   "event_time_ms",
 	10:  "agent_type",
 	11:  "round",
 	12:  "model_name",
@@ -23185,6 +23207,10 @@ func (p *ReportEvalTargetStepEventRequest) IsSetStepName() bool {
 
 func (p *ReportEvalTargetStepEventRequest) IsSetMeta() bool {
 	return p.Meta != nil
+}
+
+func (p *ReportEvalTargetStepEventRequest) IsSetEventTimeMs() bool {
+	return p.EventTimeMs != nil
 }
 
 func (p *ReportEvalTargetStepEventRequest) IsSetAgentType() bool {
@@ -23284,6 +23310,14 @@ func (p *ReportEvalTargetStepEventRequest) Read(iprot thrift.TProtocol) (err err
 		case 5:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -23459,6 +23493,17 @@ func (p *ReportEvalTargetStepEventRequest) ReadField5(iprot thrift.TProtocol) er
 	p.Meta = _field
 	return nil
 }
+func (p *ReportEvalTargetStepEventRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EventTimeMs = _field
+	return nil
+}
 func (p *ReportEvalTargetStepEventRequest) ReadField10(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -23599,6 +23644,10 @@ func (p *ReportEvalTargetStepEventRequest) Write(oprot thrift.TProtocol) (err er
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField10(oprot); err != nil {
@@ -23752,6 +23801,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ReportEvalTargetStepEventRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEventTimeMs() {
+		if err = oprot.WriteFieldBegin("event_time_ms", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EventTimeMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *ReportEvalTargetStepEventRequest) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAgentType() {
@@ -23981,6 +24048,9 @@ func (p *ReportEvalTargetStepEventRequest) DeepEqual(ano *ReportEvalTargetStepEv
 	if !p.Field5DeepEqual(ano.Meta) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.EventTimeMs) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.AgentType) {
 		return false
 	}
@@ -24068,6 +24138,18 @@ func (p *ReportEvalTargetStepEventRequest) Field4DeepEqual(src *string) bool {
 func (p *ReportEvalTargetStepEventRequest) Field5DeepEqual(src *StepEventMeta) bool {
 
 	if !p.Meta.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ReportEvalTargetStepEventRequest) Field6DeepEqual(src *int64) bool {
+
+	if p.EventTimeMs == src {
+		return true
+	} else if p.EventTimeMs == nil || src == nil {
+		return false
+	}
+	if *p.EventTimeMs != *src {
 		return false
 	}
 	return true

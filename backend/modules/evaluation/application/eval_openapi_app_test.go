@@ -2710,6 +2710,171 @@ func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_EmitsMetric(t *testing
 	})
 }
 
+// TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_PublishesDetail 钉住 MQ 明细：
+// 6 个 metric tag 之外的所有维度都要在消息里，两个时间戳基准不同、名字不同，
+// STARTED 事件的 success / duration 留 nil（Hive 里是 null）。
+func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent_PublishesDetail(t *testing.T) {
+	t.Parallel()
+
+	started := openapi.EvalTargetStepEventType_STARTED
+	finished := openapi.EvalTargetStepEventType_FINISHED
+	bogus := openapi.EvalTargetStepEventType(99)
+
+	fullMeta := func() *openapi.StepEventMeta {
+		return &openapi.StepEventMeta{
+			ExperimentID:   gptr.Of("7001"),
+			LogID:          gptr.Of("20260819103000ABCDEF"),
+			DatasetID:      gptr.Of("8001"),
+			DatasetVersion: gptr.Of("8002"),
+			ItemID:         gptr.Of("9001"),
+			ItemKey:        gptr.Of("case-1"),
+		}
+	}
+
+	t.Run("finished_carries_every_detail_dimension", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		var got *entity.SandboxStepEventMessage
+		pub := eventmocks.NewMockStepEventPublisher(ctrl)
+		pub.EXPECT().PublishStepEvent(gomock.Any(), gomock.Any()).
+			Do(func(_ context.Context, msg *entity.SandboxStepEventMessage) { got = msg }).Times(1)
+
+		app := &EvalOpenAPIApplication{stepEventPublisher: pub}
+		before := time.Now().UnixMilli()
+		_, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+			WorkspaceID:  gptr.Of(int64(1)),
+			InvokeID:     gptr.Of(int64(999)),
+			EventType:    &finished,
+			StepName:     gptr.Of("agent_run"),
+			AgentType:    gptr.Of("claude_code"),
+			Round:        gptr.Of(int32(2)),
+			ModelName:    gptr.Of("doubao-pro"),
+			TrialStatus:  gptr.Of("error"),
+			EndReason:    gptr.Of("agent_error"),
+			DurationMs:   gptr.Of(int64(1500)),
+			Success:      gptr.Of(false),
+			ErrorCode:    gptr.Of(int32(600123)),
+			ErrorMessage: gptr.Of("agent crashed"),
+			EventTimeMs:  gptr.Of(int64(1755000000000)),
+			Meta:         fullMeta(),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, got)
+
+		assert.Equal(t, "FINISHED", got.EventType)
+		assert.Equal(t, "agent_run", got.StepName)
+		assert.Equal(t, "claude_code", got.AgentType)
+		assert.Equal(t, int32(2), got.Round)
+		assert.Equal(t, "doubao-pro", got.ModelName)
+		assert.Equal(t, "error", got.TrialStatus)
+		assert.Equal(t, "agent_error", got.EndReason)
+
+		// metric 里进不去的高基数维度，明细里必须全在。
+		assert.Equal(t, int64(1), got.WorkspaceID)
+		assert.Equal(t, int64(999), got.InvokeID)
+		assert.Equal(t, "7001", got.ExperimentID)
+		assert.Equal(t, "20260819103000ABCDEF", got.LogID)
+		assert.Equal(t, "8001", got.DatasetID)
+		assert.Equal(t, "8002", got.DatasetVersion)
+		assert.Equal(t, "9001", got.ItemID)
+		assert.Equal(t, "case-1", got.ItemKey)
+
+		require.NotNil(t, got.Success)
+		assert.False(t, *got.Success)
+		require.NotNil(t, got.DurationMs)
+		assert.Equal(t, int64(1500), *got.DurationMs)
+		assert.Equal(t, int32(600123), got.ErrorCode)
+		assert.Equal(t, "engineering", got.ErrorType)
+		assert.Equal(t, "agent crashed", got.ErrorMessage)
+
+		// 两个时间戳基准不同：沙箱侧原样透传，服务端侧取本机 now。
+		assert.Equal(t, int64(1755000000000), got.SandboxEventTimeMs)
+		assert.GreaterOrEqual(t, got.ServerReceiveTimeMs, before)
+		assert.NotEqual(t, got.SandboxEventTimeMs, got.ServerReceiveTimeMs)
+	})
+
+	t.Run("started_leaves_outcome_fields_nil", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		var got *entity.SandboxStepEventMessage
+		pub := eventmocks.NewMockStepEventPublisher(ctrl)
+		pub.EXPECT().PublishStepEvent(gomock.Any(), gomock.Any()).
+			Do(func(_ context.Context, msg *entity.SandboxStepEventMessage) { got = msg }).Times(1)
+
+		app := &EvalOpenAPIApplication{stepEventPublisher: pub}
+		_, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+			InvokeID:  gptr.Of(int64(999)),
+			EventType: &started,
+			StepName:  gptr.Of("install"),
+			Meta:      fullMeta(),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, got)
+
+		assert.Equal(t, "STARTED", got.EventType)
+		// null 而不是零值：false 会和「失败了」撞车，0 会污染 avg(duration_ms)。
+		assert.Nil(t, got.Success)
+		assert.Nil(t, got.DurationMs)
+		assert.Equal(t, int32(0), got.ErrorCode)
+		assert.Empty(t, got.ErrorType)
+	})
+
+	t.Run("negative_sandbox_duration_is_clamped", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		var got *entity.SandboxStepEventMessage
+		pub := eventmocks.NewMockStepEventPublisher(ctrl)
+		pub.EXPECT().PublishStepEvent(gomock.Any(), gomock.Any()).
+			Do(func(_ context.Context, msg *entity.SandboxStepEventMessage) { got = msg }).Times(1)
+
+		app := &EvalOpenAPIApplication{stepEventPublisher: pub}
+		_, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+			EventType:  &finished,
+			StepName:   gptr.Of("finish"),
+			Success:    gptr.Of(true),
+			DurationMs: gptr.Of(int64(-5)),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, got.DurationMs)
+		assert.Equal(t, int64(0), *got.DurationMs)
+	})
+
+	t.Run("unknown_event_type_is_still_published", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// metric 那边不打（填不出曲线要的值），明细这边照发：
+		// 「新沙箱发了个老服务端不认识的东西」本身就是 Hive 里该能查到的事实。
+		pub := eventmocks.NewMockStepEventPublisher(ctrl)
+		pub.EXPECT().PublishStepEvent(gomock.Any(), gomock.Any()).Times(1)
+
+		app := &EvalOpenAPIApplication{stepEventPublisher: pub}
+		_, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+			EventType: &bogus,
+			StepName:  gptr.Of("agent_run"),
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("nil_publisher_is_a_no_op", func(t *testing.T) {
+		t.Parallel()
+		app := &EvalOpenAPIApplication{}
+		resp, err := app.ReportEvalTargetStepEvent(context.Background(), &openapi.ReportEvalTargetStepEventRequest{
+			EventType: &finished,
+			StepName:  gptr.Of("install"),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+	})
+}
+
 func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 	t.Parallel()
 

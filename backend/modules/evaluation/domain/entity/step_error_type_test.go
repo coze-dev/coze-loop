@@ -1,7 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package step_event
+package entity
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestClassifyErrorType(t *testing.T) {
+func TestClassifyStepErrorType(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -33,17 +33,17 @@ func TestClassifyErrorType(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, ClassifyErrorType(tt.success, tt.code))
+			assert.Equal(t, tt.want, ClassifyStepErrorType(tt.success, tt.code))
 		})
 	}
 }
 
-// TestNonEngineeringErrorCodes_TableIsRespected 用一个临时注入的码验证表命中分支可达，
+// TestNonEngineeringStepErrorCodes_TableIsRespected 用一个临时注入的码验证表命中分支可达，
 // 避免「表为空 → 分支永远走不到 → 没人知道它坏了」。
-func TestNonEngineeringErrorCodes_TableIsRespected(t *testing.T) {
+func TestNonEngineeringStepErrorCodes_TableIsRespected(t *testing.T) {
 	const probe int32 = 999999
-	nonEngineeringErrorCodes[probe] = struct{}{}
-	defer delete(nonEngineeringErrorCodes, probe)
+	nonEngineeringStepErrorCodes[probe] = struct{}{}
+	defer delete(nonEngineeringStepErrorCodes, probe)
 
-	assert.Equal(t, "non_engineering", ClassifyErrorType(false, probe))
+	assert.Equal(t, "non_engineering", ClassifyStepErrorType(false, probe))
 }

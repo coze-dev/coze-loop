@@ -514,6 +514,12 @@ struct ReportEvalTargetStepEventRequest {
     // 身份维度（experiment_id / log_id / dataset_id / dataset_version / item_id / item_key）。
     // 全部是无界高基数标识，只进 MQ 明细，一个都不进 metric tag。
     5: optional StepEventMeta meta
+    // 事件在**沙箱侧**产生的时刻（unix 毫秒）。0 / 未设置表示上报侧没给。
+    //
+    // 服务端另有一个「接收时刻」，两者**基准不同**（不同机器的时钟，中间隔一次 HTTP），
+    // 因此在 MQ 明细里是两个不同名字的列，不能互相替代、更不能混用：拿接收时刻当事件时刻做
+    // 时序分析，得到的每个结论都掺了网络与排队时间。
+    6: optional i64 event_time_ms
 
     // 前人接口放不下、离线分析必需的维度
     10: optional string agent_type    // agent 名（claude_code / codex / ...）

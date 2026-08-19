@@ -18,6 +18,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	eval_metrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -120,7 +121,7 @@ func (m *metricsImpl) EmitStepFinished(tags eval_metrics.StepEventTags, success 
 	if durationMS < 0 {
 		durationMS = 0
 	}
-	m.metric.Emit(buildTags(tags, successTag(success), ClassifyErrorType(success, errorCode), errorCode),
+	m.metric.Emit(buildTags(tags, successTag(success), entity.ClassifyStepErrorType(success, errorCode), errorCode),
 		metrics.Counter(1, metrics.WithSuffix(suffixFinished)),
 		metrics.Timer(durationMS, metrics.WithSuffix(suffixDuration)))
 }

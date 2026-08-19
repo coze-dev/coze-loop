@@ -76,6 +76,7 @@ type EvalOpenAPIApplication struct {
 	metric                      metrics.OpenAPIEvaluationMetrics
 	sandboxAgentMetric          metrics.SandboxAgentMetrics
 	stepEventMetric             metrics.StepEventMetrics
+	stepEventPublisher          events.StepEventPublisher
 	userInfoService             userinfo.UserInfoService
 	experimentApp               IExperimentApplication
 	manager                     service.IExptManager
@@ -103,6 +104,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	metric metrics.OpenAPIEvaluationMetrics,
 	sandboxAgentMetric metrics.SandboxAgentMetrics,
 	stepEventMetric metrics.StepEventMetrics,
+	stepEventPublisher events.StepEventPublisher,
 	userInfoService userinfo.UserInfoService,
 	experimentApp IExperimentApplication,
 	manager service.IExptManager,
@@ -130,6 +132,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		metric:                      metric,
 		sandboxAgentMetric:          sandboxAgentMetric,
 		stepEventMetric:             stepEventMetric,
+		stepEventPublisher:          stepEventPublisher,
 		userInfoService:             userInfoService,
 		experimentApp:               experimentApp,
 		manager:                     manager,
@@ -1618,7 +1621,8 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 //   - metric（在线监控告警）：tag 只用 6 个有界维度（step_name / success / error_type /
 //     error_code / agent_type / round）。invoke_id / item_* / model_name / experiment_id /
 //     end_reason / trial_status 是无界或高基数维度，一个都不进 tag。
-//   - MQ 明细投递：见后续 ticket，由数仓侧消费同步到 Hive 做离线分析。
+//   - MQ 明细投递（离线分析）：字段全带，扁平结构，由数仓侧消费同步到 Hive。metric 只留 6 个
+//     有界 tag，这条通道才是唯一能回答「为什么」的地方。发送失败只 warn，接口照常返回成功。
 //
 // success 由上报侧直接给出，服务端不从 trial_status 推导——那条推导规则属于 runtime 的领域
 // 语义，服务端不该知道。trial_status / end_reason 同理只做透传。
@@ -1634,6 +1638,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, 
 
 	// 排查锚点：请求全文。
 	logs.CtxInfo(ctx, "ReportEvalTargetStepEvent receive req: %v", json.Jsonify(req))
+
+	// 服务端接收时刻。与沙箱侧的 event_time_ms 基准不同（不同机器时钟 + 一次 HTTP），
+	// 在明细里是两列，不能互相替代。
+	serverReceiveTimeMS := time.Now().UnixMilli()
 
 	meta := req.GetMeta()
 	// metric tag 只取有界维度；明细维度（meta / invoke_id / model_name / ...）不进 tag。
@@ -1668,7 +1676,61 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, 
 			req.GetEventType(), req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName())
 	}
 
+	// MQ 明细：**未识别的事件类型也投递**。metric 那边不打是因为填不出曲线要的值，这边不同——
+	// 明细表的价值恰恰在于「新沙箱发了个老服务端不认识的东西」这件事本身在 Hive 里可查。
+	if e.stepEventPublisher != nil {
+		e.stepEventPublisher.PublishStepEvent(ctx, buildStepEventMessage(req, serverReceiveTimeMS))
+	}
+
 	return resp, nil
+}
+
+// buildStepEventMessage 把上报请求摊平成一条 MQ 明细消息。
+//
+// success / duration_ms 只在 FINISHED 事件上取值，其余留 nil（在 Hive 里是 null）：
+// STARTED 事件写 success=false 会让「开始了」和「失败了」长得一样，写 duration_ms=0 会把
+// avg(duration_ms) 的分母算上 STARTED 行。
+func buildStepEventMessage(req *openapi.ReportEvalTargetStepEventRequest, serverReceiveTimeMS int64) *entity.SandboxStepEventMessage {
+	meta := req.GetMeta()
+	msg := &entity.SandboxStepEventMessage{
+		EventType: req.GetEventType().String(),
+		StepName:  req.GetStepName(),
+		AgentType: req.GetAgentType(),
+		Round:     req.GetRound(),
+
+		TrialStatus: req.GetTrialStatus(),
+		EndReason:   req.GetEndReason(),
+
+		WorkspaceID:    req.GetWorkspaceID(),
+		InvokeID:       req.GetInvokeID(),
+		ExperimentID:   meta.GetExperimentID(),
+		LogID:          meta.GetLogID(),
+		DatasetID:      meta.GetDatasetID(),
+		DatasetVersion: meta.GetDatasetVersion(),
+		ItemID:         meta.GetItemID(),
+		ItemKey:        meta.GetItemKey(),
+		ModelName:      req.GetModelName(),
+
+		SandboxEventTimeMs:  req.GetEventTimeMs(),
+		ServerReceiveTimeMs: serverReceiveTimeMS,
+	}
+
+	if req.GetEventType() == openapi.EvalTargetStepEventType_FINISHED {
+		success := req.GetSuccess()
+		durationMS := req.GetDurationMs()
+		if durationMS < 0 {
+			// 与 metric 侧同一条 clamp 规则：跨机器时钟偏斜产出的负延迟比虚高更糟。
+			durationMS = 0
+		}
+		msg.Success = &success
+		msg.DurationMs = &durationMS
+		msg.ErrorCode = req.GetErrorCode()
+		// 与 metric 侧共用同一条分类规则（entity 层），避免在线看板与 Hive 给出两个答案。
+		msg.ErrorType = entity.ClassifyStepErrorType(success, req.GetErrorCode())
+		msg.ErrorMessage = req.GetErrorMessage()
+	}
+
+	return msg
 }
 
 func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {

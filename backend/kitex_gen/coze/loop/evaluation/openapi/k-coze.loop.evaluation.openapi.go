@@ -16400,6 +16400,20 @@ func (p *ReportEvalTargetStepEventRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 10:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField10(buf[offset:])
@@ -16642,6 +16656,20 @@ func (p *ReportEvalTargetStepEventRequest) FastReadField5(buf []byte) (int, erro
 	return offset, nil
 }
 
+func (p *ReportEvalTargetStepEventRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EventTimeMs = _field
+	return offset, nil
+}
+
 func (p *ReportEvalTargetStepEventRequest) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 
@@ -16801,6 +16829,7 @@ func (p *ReportEvalTargetStepEventRequest) FastWriteNocopy(buf []byte, w thrift.
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
@@ -16828,6 +16857,7 @@ func (p *ReportEvalTargetStepEventRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
@@ -16885,6 +16915,15 @@ func (p *ReportEvalTargetStepEventRequest) fastWriteField5(buf []byte, w thrift.
 	if p.IsSetMeta() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
 		offset += p.Meta.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ReportEvalTargetStepEventRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEventTimeMs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 6)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EventTimeMs)
 	}
 	return offset
 }
@@ -17033,6 +17072,15 @@ func (p *ReportEvalTargetStepEventRequest) field5Length() int {
 	return l
 }
 
+func (p *ReportEvalTargetStepEventRequest) field6Length() int {
+	l := 0
+	if p.IsSetEventTimeMs() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *ReportEvalTargetStepEventRequest) field10Length() int {
 	l := 0
 	if p.IsSetAgentType() {
@@ -17169,6 +17217,11 @@ func (p *ReportEvalTargetStepEventRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Meta = _meta
+
+	if src.EventTimeMs != nil {
+		tmp := *src.EventTimeMs
+		p.EventTimeMs = &tmp
+	}
 
 	if src.AgentType != nil {
 		var tmp string

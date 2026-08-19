@@ -64,6 +64,13 @@ expt_webhook_notify_event_rmq:
   consumer_group: 'expt_webhook_notify_event_cg'
   producer_group: 'expt_webhook_notify_event_pg'
   consume_timeout: 2m
+# 评测链路阶段事件明细，只生产不消费：消费方是数仓侧的同步任务（Dorado→Hive），不在本仓。
+# 因此这里没有 consumer_group，生产者也不用 RMQConf.Valid()（它会要求 consumer_group 非空）。
+# disable_produce: true 是止血开关，MQ 出问题拖累上报接口时改配置即可关掉生产，不用发版。
+expt_sandbox_step_event_rmq:
+  addr: 'cozeloop-namesrv:9876'
+  topic: 'evaluation_expt_sandbox_step_event'
+  producer_group: 'evaluation_expt_sandbox_step_event_pg'
 
 # ClickHouse table configuration
 clickhouse_table_config:
