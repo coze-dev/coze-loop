@@ -705,8 +705,8 @@ func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []stri
 	ret.SpanTables = lo.Uniq(ret.SpanTables)
 	ret.AnnoTables = lo.Uniq(ret.AnnoTables)
 	if t.workspaceProvider != nil {
-		ret.SpanTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.SpanTables, isGetTraceByID)
-		ret.AnnoTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.AnnoTables, isGetTraceByID)
+		ret.SpanTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, tenants, ret.SpanTables, isGetTraceByID)
+		ret.AnnoTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, tenants, ret.AnnoTables, isGetTraceByID)
 	}
 	return ret, nil
 }

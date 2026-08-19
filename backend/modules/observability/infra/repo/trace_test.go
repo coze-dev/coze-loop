@@ -2285,12 +2285,12 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 
 	t.Run("workspace provider filters tables", func(t *testing.T) {
 		wsMock := wsmock.NewMockIWorkSpaceProvider(ctrl)
-		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", gomock.Any(), false).
-			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool) []string {
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", []string{"tenant1"}, gomock.Any(), false).
+			DoAndReturn(func(ctx context.Context, wsID string, tenants []string, tables []string, isGetTraceByID bool) []string {
 				return []string{"spans_3d"}
 			})
-		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", gomock.Any(), false).
-			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool) []string {
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", []string{"tenant1"}, gomock.Any(), false).
+			DoAndReturn(func(ctx context.Context, wsID string, tenants []string, tables []string, isGetTraceByID bool) []string {
 				return []string{"anno_3d"}
 			})
 
@@ -2317,12 +2317,12 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 
 	t.Run("isGetTraceByID passed correctly", func(t *testing.T) {
 		wsMock := wsmock.NewMockIWorkSpaceProvider(ctrl)
-		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws2", gomock.Any(), true).
-			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool) []string {
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws2", []string{"tenant1"}, gomock.Any(), true).
+			DoAndReturn(func(ctx context.Context, wsID string, tenants []string, tables []string, isGetTraceByID bool) []string {
 				return tables
 			})
-		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws2", gomock.Any(), true).
-			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool) []string {
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws2", []string{"tenant1"}, gomock.Any(), true).
+			DoAndReturn(func(ctx context.Context, wsID string, tenants []string, tables []string, isGetTraceByID bool) []string {
 				return tables
 			})
 
