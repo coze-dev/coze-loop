@@ -55,16 +55,9 @@ type ExptItemEventEvalServiceImpl struct {
 	evalAsyncRepo            repo.IEvalAsyncRepo
 	itemCompletePublisher    component.IItemCompletePublisher
 	sandboxAgentNotifier     ISandboxAgentNotifier // 传递给 ExptItemEvalCtxExecutor 用于失败行飞书通知
-	// centralGuard 中心化调度的额度预占校验闸。开源部署为 noop（enforce 消息 fail-closed），
-	// 商业版由 Wire 注入真实账本适配器。用 setter 而非构造参数注入：本构造函数已有一个
-	// variadic 参数，Go 不允许第二个，且它是可选依赖 —— 不注入时 legacy 行为完全不变。
+	// centralGuard 中心化调度的额度预占校验闸。开源部署注入 noop（enforce 消息 fail-closed），
+	// 商业版由 Wire 注入真实账本适配器。legacy 实验不经过它，行为与引入前一致。
 	centralGuard component.ICentralReservationGuard
-}
-
-// WithCentralReservationGuard 注入中心化调度额度闸。返回自身便于在 Wire provider 中链式调用。
-func (e *ExptItemEventEvalServiceImpl) WithCentralReservationGuard(guard component.ICentralReservationGuard) *ExptItemEventEvalServiceImpl {
-	e.centralGuard = guard
-	return e
 }
 
 func NewExptRecordEvalService(
@@ -90,6 +83,7 @@ func NewExptRecordEvalService(
 	benefitService benefit.IBenefitService,
 	evalAsyncRepo repo.IEvalAsyncRepo,
 	itemCompletePublisher component.IItemCompletePublisher,
+	centralGuard component.ICentralReservationGuard,
 	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容 wire_gen 未接入通知器
 ) ExptItemEvalEvent {
 	i := &ExptItemEventEvalServiceImpl{
@@ -115,6 +109,7 @@ func NewExptRecordEvalService(
 		benefitService:           benefitService,
 		evalAsyncRepo:            evalAsyncRepo,
 		itemCompletePublisher:    itemCompletePublisher,
+		centralGuard:             centralGuard,
 	}
 	if len(sandboxAgentNotifier) > 0 {
 		i.sandboxAgentNotifier = sandboxAgentNotifier[0]
