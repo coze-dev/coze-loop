@@ -462,6 +462,58 @@ struct ReportEvalTargetStepMetricResponse {
     255: base.BaseResp BaseResp
 }
 
+// ReportEvalTargetStepEventRequest 评测链路阶段事件上报请求（agent eval runtime 侧沙箱调用）。
+//
+// **为什么新开接口而不是复用 ReportEvalTargetStepMetric**：
+//  1. 现有 request 放不下本接口必需的离线分析维度（agent_type / round / model_name /
+//     trial_status / end_reason）。把它们编码进 step_name 会被服务端 tag 白名单
+//     （a-zA-Z0-9._-/:%）把分隔符替换成 `_`，下游还得反解；
+//  2. 靠 extra.Src header 分流会把一个观测标签升级成隐式的 API 版本开关。全仓所有
+//     GetSrc() 用法都只把它当 metric tag 上报，无一处用它做逻辑分支；一旦用它选逻辑，
+//     header 漏传就静默走错分支，而本条链路 best-effort 永不返回错误，极难排查。
+//
+// 因此新老两条链路物理隔离：不同接口、不同 struct、不同指标名。
+//
+// **一个接口同时承载 step 级与 case 级事件**，靠 step_name 区分，不拆两个接口：两者字段集合
+// 高度重叠（invoke / 成败 / 耗时 / 错误三件套），拆开会让上报侧实现分叉。
+//
+// event_type 复用 EvalTargetStepEventType（同文件、语义完全一致的 started/finished + UNKNOWN
+// 兜底枚举）。用枚举而非 bool 的理由：bool 无法表达"收到一个我不认识的事件类型"，而新老版本
+// 沙箱共存时那正是会发生的事。服务端对未识别事件类型只记日志 + 返回成功。
+struct ReportEvalTargetStepEventRequest {
+    1: optional i64 workspace_id (api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 invoke_id (api.js_conv = "true", go.tag = 'json:"invoke_id"')
+    3: optional EvalTargetStepEventType event_type
+    // 阶段名。step 级为链路阶段名（install / setup / agent_run / evaluate ...）；
+    // case 级事件用上报侧约定的保留名，服务端不校验取值，只做透传与打点。
+    4: optional string step_name
+
+    // 前人接口放不下、离线分析必需的维度
+    10: optional string agent_type    // agent 名（claude_code / codex / ...）
+    11: optional i32 round            // 轮次序号；trial 级阶段为 0
+    12: optional string model_name
+
+    // 仅 case 级事件携带：runtime 侧的终态领域词汇，服务端只透传不解释
+    // （success 由上报侧按 trial_status 推导后直接传，服务端不推导——服务端不该知道
+    //  runtime 的领域枚举语义）
+    15: optional string trial_status
+    16: optional string end_reason
+
+    // 仅 FINISHED 事件携带。STARTED 事件带这些字段是语义错误：阶段刚开始时成败尚未发生，
+    // 填任何值都是假数据。
+    20: optional i64 duration_ms
+    21: optional bool success
+    22: optional i32 error_code
+    23: optional string error_message
+
+    254: optional extra.Extra extra (agw.source = "not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ReportEvalTargetStepEventResponse {
+    255: base.BaseResp BaseResp
+}
+
 // 按需查询评测对象输出中大对象的完整内容
 struct GetEvalTargetOutputFieldContentOApiRequest {
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = "true", go.tag = 'json:"workspace_id"')
@@ -1522,6 +1574,9 @@ service EvaluationOpenAPIService {
     ReportEvalTargetInvokeResultResponse ReportEvalTargetInvokeResult(1: ReportEvalTargetInvokeResultRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/result")
     // 沙箱内部 step 打点上报接口：沙箱侧在 step 开始/结束时调用，服务端转成 evaluation_target_sandbox_agent.step_* 指标
     ReportEvalTargetStepMetricResponse ReportEvalTargetStepMetric(1: ReportEvalTargetStepMetricRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/step_metric")
+    // 评测链路阶段事件上报接口（agent eval runtime 沙箱侧调用，step 级 + case 级共用一个接口）。
+    // 与上面的 step_metric 物理隔离：不同接口 / 不同 struct / 不同指标名，理由见 request 注释。
+    ReportEvalTargetStepEventResponse ReportEvalTargetStepEvent(1: ReportEvalTargetStepEventRequest req) (api.category = "openapi", api.post = "/v1/loop/eval_targets/step_event")
     // 按需查询评测对象输出中大对象的完整内容
     GetEvalTargetOutputFieldContentOApiResponse GetEvalTargetOutputFieldContentOApi(1: GetEvalTargetOutputFieldContentOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/eval_target_records/output_fields")
     // 异步调试评测对象

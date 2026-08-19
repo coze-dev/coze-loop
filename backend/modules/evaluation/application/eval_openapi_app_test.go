@@ -2490,6 +2490,101 @@ func TestEvalOpenAPIApplication_ReportEvalTargetStepMetric(t *testing.T) {
 	})
 }
 
+// TestEvalOpenAPIApplication_ReportEvalTargetStepEvent 覆盖阶段事件上报的契约行为：
+// 无论事件类型是否识别、无论有没有注入任何依赖，都必须返回成功且不返回 error
+// （上报链路 best-effort，返回错误只会刷满沙箱侧日志）。
+func TestEvalOpenAPIApplication_ReportEvalTargetStepEvent(t *testing.T) {
+	t.Parallel()
+
+	// 本接口当前不依赖任何注入组件（metric / MQ 是后续 ticket 的扩展点），
+	// 因此零值 application 就是最真实的被测对象。
+	app := &EvalOpenAPIApplication{}
+
+	started := openapi.EvalTargetStepEventType_STARTED
+	finished := openapi.EvalTargetStepEventType_FINISHED
+	unknown := openapi.EvalTargetStepEventType_UNKNOWN
+	bogus := openapi.EvalTargetStepEventType(99)
+
+	tests := []struct {
+		name string
+		req  *openapi.ReportEvalTargetStepEventRequest
+	}{
+		{name: "nil_req", req: nil},
+		{name: "empty_req_defaults_to_unknown", req: &openapi.ReportEvalTargetStepEventRequest{}},
+		{
+			// STARTED 不带耗时 / 成败 / 错误三件套。
+			name: "step_started",
+			req: &openapi.ReportEvalTargetStepEventRequest{
+				WorkspaceID: gptr.Of(int64(1)),
+				InvokeID:    gptr.Of(int64(999)),
+				EventType:   &started,
+				StepName:    gptr.Of("agent_run"),
+				AgentType:   gptr.Of("claude_code"),
+				Round:       gptr.Of(int32(2)),
+				ModelName:   gptr.Of("doubao-pro"),
+			},
+		},
+		{
+			name: "step_finished_failure_carries_error_triplet",
+			req: &openapi.ReportEvalTargetStepEventRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				InvokeID:     gptr.Of(int64(999)),
+				EventType:    &finished,
+				StepName:     gptr.Of("install"),
+				AgentType:    gptr.Of("codex"),
+				Round:        gptr.Of(int32(0)),
+				DurationMs:   gptr.Of(int64(1500)),
+				Success:      gptr.Of(false),
+				ErrorCode:    gptr.Of(int32(600001)),
+				ErrorMessage: gptr.Of("install script exited 3"),
+			},
+		},
+		{
+			// case 级事件与 step 级共用一个接口，只多带 trial_status / end_reason。
+			name: "case_level_finished_carries_trial_status_and_end_reason",
+			req: &openapi.ReportEvalTargetStepEventRequest{
+				WorkspaceID: gptr.Of(int64(1)),
+				InvokeID:    gptr.Of(int64(999)),
+				EventType:   &finished,
+				StepName:    gptr.Of("case"),
+				AgentType:   gptr.Of("codex"),
+				TrialStatus: gptr.Of("stopped"),
+				EndReason:   gptr.Of("sua_unavailable"),
+				DurationMs:  gptr.Of(int64(60000)),
+				Success:     gptr.Of(true),
+			},
+		},
+		{
+			name: "explicit_unknown_event_type_is_accepted",
+			req: &openapi.ReportEvalTargetStepEventRequest{
+				InvokeID:  gptr.Of(int64(1)),
+				EventType: &unknown,
+				StepName:  gptr.Of("agent_run"),
+			},
+		},
+		{
+			// 新沙箱发来老服务端不认识的事件类型：只记日志 + 返回成功。
+			name: "unrecognised_event_type_is_accepted",
+			req: &openapi.ReportEvalTargetStepEventRequest{
+				InvokeID:  gptr.Of(int64(1)),
+				EventType: &bogus,
+				StepName:  gptr.Of("agent_run"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			resp, err := app.ReportEvalTargetStepEvent(context.Background(), tt.req)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			assert.NotNil(t, resp.BaseResp)
+		})
+	}
+}
+
 func TestEvalOpenAPIApplication_SubmitExperimentOApi(t *testing.T) {
 	t.Parallel()
 

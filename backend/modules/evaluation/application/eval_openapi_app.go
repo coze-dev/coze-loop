@@ -1598,6 +1598,55 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 	return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
 }
 
+// ReportEvalTargetStepEvent 接收评测链路（agent eval runtime）的阶段事件上报。
+//
+// 本接口与 ReportEvalTargetStepMetric 物理隔离（不同接口 / struct / 指标名），理由见 IDL 注释。
+// 一个接口同时承载 step 级与 case 级事件，靠 step_name 区分。
+//
+// 当前实现只做「解析 + 打一条含请求全文的日志 + 返回成功」。这条日志是本条链路唯一的排查锚点：
+// 上报是 best-effort（沙箱侧不重试、不缓冲），排查"数据为什么少一条"只能 grep 它，所以它必须
+// 无条件打印、且打印请求全文。
+//
+// 后续扩展点（各自独立的 ticket，不在本实现内）：
+//   - metric 上报：在下面 STARTED / FINISHED 两个分支里挂 emit，tag 只用有界维度
+//     （step_name / success / error_type / error_code / agent_type / round）；
+//     invoke_id / item_* / model_name / experiment_id / end_reason / trial_status 是
+//     无界或高基数维度，不进 tag。
+//   - MQ 明细投递：在返回前 best-effort 发一条消息（失败只 warn，接口照常返回成功），
+//     由数仓侧消费同步到 Hive 做离线分析。
+//
+// success 由上报侧直接给出，服务端不从 trial_status 推导——那条推导规则属于 runtime 的领域
+// 语义，服务端不该知道。trial_status / end_reason 同理只做透传。
+//
+// 未识别的 event_type 只记日志并返回成功，绝不返回错误：老服务端遇到新沙箱发的新事件类型时
+// 返回错误，只会把沙箱侧日志刷满它自己也处理不了的失败。
+func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, req *openapi.ReportEvalTargetStepEventRequest) (r *openapi.ReportEvalTargetStepEventResponse, err error) {
+	resp := &openapi.ReportEvalTargetStepEventResponse{BaseResp: base.NewBaseResp()}
+	if req == nil {
+		logs.CtxWarn(ctx, "ReportEvalTargetStepEvent receive nil req")
+		return resp, nil
+	}
+
+	// 排查锚点：请求全文。
+	logs.CtxInfo(ctx, "ReportEvalTargetStepEvent receive req: %v", json.Jsonify(req))
+
+	switch req.GetEventType() {
+	case openapi.EvalTargetStepEventType_STARTED:
+		// STARTED 不带耗时 / 成败 / 错误三件套：阶段刚开始时成败尚未发生，读这些字段即是读假数据。
+		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent started, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s",
+			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason())
+	case openapi.EvalTargetStepEventType_FINISHED:
+		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent finished, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, success=%v, duration_ms=%d, error_code=%d, error_message=%s",
+			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason(),
+			req.GetSuccess(), req.GetDurationMs(), req.GetErrorCode(), req.GetErrorMessage())
+	default:
+		logs.CtxWarn(ctx, "ReportEvalTargetStepEvent unknown event_type=%v, workspace_id=%d, invoke_id=%d, step_name=%s",
+			req.GetEventType(), req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName())
+	}
+
+	return resp, nil
+}
+
 func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
