@@ -58,6 +58,8 @@ type ExptItemEventEvalServiceImpl struct {
 	// centralGuard 中心化调度的额度预占校验闸。开源部署注入 noop（enforce 消息 fail-closed），
 	// 商业版由 Wire 注入真实账本适配器。legacy 实验不经过它，行为与引入前一致。
 	centralGuard component.ICentralReservationGuard
+	// dispatchRepo run log 派发投影读写，用于把 Queueing/reserved 兑现为 Processing/none。
+	dispatchRepo repo.IExptItemDispatchRepo
 }
 
 func NewExptRecordEvalService(
@@ -84,6 +86,7 @@ func NewExptRecordEvalService(
 	evalAsyncRepo repo.IEvalAsyncRepo,
 	itemCompletePublisher component.IItemCompletePublisher,
 	centralGuard component.ICentralReservationGuard,
+	dispatchRepo repo.IExptItemDispatchRepo,
 	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容 wire_gen 未接入通知器
 ) ExptItemEvalEvent {
 	i := &ExptItemEventEvalServiceImpl{
@@ -110,6 +113,7 @@ func NewExptRecordEvalService(
 		evalAsyncRepo:            evalAsyncRepo,
 		itemCompletePublisher:    itemCompletePublisher,
 		centralGuard:             centralGuard,
+		dispatchRepo:             dispatchRepo,
 	}
 	if len(sandboxAgentNotifier) > 0 {
 		i.sandboxAgentNotifier = sandboxAgentNotifier[0]
@@ -204,6 +208,28 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			logs.CtxInfo(ctx, "[CentralReservation] reservation absent, discard event, expt_run_id: %v, item_id: %v",
 				event.ExptRunID, event.EvalSetItemID)
 			return nil
+		}
+
+		// 把 run log 投影从 Queueing/reserved 兑现为 Processing/none。
+		//
+		// 为什么必须在这里而不是留给下游 handleEventExec：投影是调度器算并发占用的依据，
+		// 若 item 已开始执行而投影仍停在 Queueing/reserved，下一拍会把它当"已预占未消费"
+		// 继续计入占用（这没错），但一旦 reservation 因超时被清理，它就变成"既不 Processing
+		// 也无 reservation"的孤儿，对账要多绕一圈才能修。就地兑现让两侧同步收敛。
+		//
+		// CAS 未命中（started=false）不阻断执行：可能是重复投递（已 Processing）或
+		// 投影已被 repair 修正。此时 reservation 校验已通过，说明额度是真的，继续执行是安全的。
+		if e.dispatchRepo != nil {
+			started, err := e.dispatchRepo.StartReservedItem(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
+			if err != nil {
+				// 投影写失败：返回错误让 MQ 重试。额度已预占且 reservation 已转 Running，
+				// 丢弃消息会让这份额度占着直到超时清理。
+				return err
+			}
+			if !started {
+				logs.CtxInfo(ctx, "[CentralReservation] run log projection not claimed (duplicate delivery or repaired), continue, expt_run_id: %v, item_id: %v",
+					event.ExptRunID, event.EvalSetItemID)
+			}
 		}
 
 		return next(ctx, event)

@@ -52,6 +52,7 @@ func TestNewExptRecordEvalService(t *testing.T) {
 		repoMocks.NewMockIEvalAsyncRepo(ctrl),
 		nil,
 		component.NewNoopCentralReservationGuard(),
+		repoMocks.NewMockIExptItemDispatchRepo(ctrl),
 	)
 	assert.NotNil(t, service)
 }
