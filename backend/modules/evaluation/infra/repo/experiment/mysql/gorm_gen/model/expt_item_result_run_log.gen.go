@@ -27,7 +27,7 @@ type ExptItemResultRunLog struct {
 	DeletedAt             gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                                                                                                                             // 删除时间
 	LogID                 string         `gorm:"column:log_id;type:varchar(128);not null;comment:日志 id" json:"log_id"`                                                                                                                                        // 日志 id
 	ResultState           *int32         `gorm:"column:result_state;type:int(11);index:idx_expt_run_result_state,priority:4;comment:回写结果表状态" json:"result_state"`                                                                                             // 回写结果表状态
-	QuotaReservationState int32          `gorm:"column:quota_reservation_state;type:tinyint(3) unsigned;not null;index:idx_expt_run_dispatch,priority:5;comment:中心调度额度预占投影: 0=none, 1=reserved" json:"quota_reservation_state"`                               // 中心调度额度预占投影
+	QuotaReservationState int32          `gorm:"column:quota_reservation_state;type:tinyint(3) unsigned;not null;comment:中心调度额度预占投影: 0=none, 1=reserved" json:"quota_reservation_state"`                                                                      // 中心调度额度预占投影
 }
 
 // TableName ExptItemResultRunLog's table name
