@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -503,6 +505,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 		nil, // itemCompletePublisher: 开源侧 nil, scheduler 循环内以非空守卫跳过发送
 		exptItemRefRepo,
 		metricsmocks.NewMockSandboxAgentMetrics(ctrl),
+		component.NewNoopCentralReservationGuard(),
 	)
 	assert.NotNil(t, svc)
 	assert.Implements(t, (*ExptSchedulerEvent)(nil), svc)

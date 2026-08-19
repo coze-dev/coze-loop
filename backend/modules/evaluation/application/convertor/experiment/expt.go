@@ -901,6 +901,16 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+
+	// ★ 中心化调度字段。
+	//
+	// priority 与 expected_quota_consumption 由调用方申报（EvalX 会带），透传即可。
+	// **scheduler_mode / scheduler_scope 刻意不从请求读取**：mode 由 trigger 派生、
+	// scope 由服务端按运行环境解析，两者都不接受调用方指定 —— 否则任何内部 RPC 调用方
+	// 都能自己声明 enforce 并伪造一个 scope，绕过额度管控、甚至去动别的环境的账本。
+	// IDL 里这两个字段不带 api.body 已挡住公网，但内部调用仍需这一层。
+	param.PriorityLevel = entity.NormalizeExptPriorityLevel(cer.GetPriorityLevel())
+	param.ExpectedQuotaConsumption = expectedQuotaConsumptionDTO2DO(cer.GetExpectedQuotaConsumption())
 	if cer.NotificationConf != nil {
 		notifConf, err := NotificationConfDTO2DO(cer.NotificationConf)
 		if err != nil {
@@ -1524,4 +1534,30 @@ func suaModeDO2DTO(m entity.SuaMode) domain_expt.SuaMode {
 	default:
 		return domain_expt.SuaMode_HumanLoop
 	}
+}
+
+// expectedQuotaConsumptionDTO2DO 把申报的资源消耗向量转成领域对象。
+//
+// 不在此处做合法性校验（非空 / amount>0 / 键唯一 / 禁通配）：校验属于领域规则，
+// 收口在 entity.ExpectedQuotaConsumption.Validate()，由 CreateExpt 在冻结前调用。
+// 转换层只负责搬运，否则同一套规则会散落在转换与领域两处、各自演化。
+func expectedQuotaConsumptionDTO2DO(dto *domain_expt.ExpectedQuotaConsumption) *entity.ExpectedQuotaConsumption {
+	if dto == nil || len(dto.GetResources()) == 0 {
+		return nil
+	}
+	resources := make([]*entity.ExpectedResourceConsumption, 0, len(dto.GetResources()))
+	for _, r := range dto.GetResources() {
+		if r == nil {
+			continue
+		}
+		resources = append(resources, &entity.ExpectedResourceConsumption{
+			Category:    r.GetCategory(),
+			ResourceKey: r.GetResourceKey(),
+			Amount:      r.GetAmount(),
+		})
+	}
+	if len(resources) == 0 {
+		return nil
+	}
+	return &entity.ExpectedQuotaConsumption{Resources: resources}
 }

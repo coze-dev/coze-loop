@@ -66,6 +66,10 @@ func NewExptManager(
 	pipelineListAdapter rpc.IPipelineListAdapter,
 	resourceAccessAuthorizer ResourceAccessAuthorizer,
 	sandboxAgentMetrics metrics.SandboxAgentMetrics,
+	// centralScopeProvider 创建 enforce 实验时解析要冻结的 scheduler_scope。
+	// 开源部署注入 noop（返回空 Scope），配合"仅 EvalX trigger 才 enforce"的 admission，
+	// 开源侧不会产生 enforce 实验，因此拿不到 Scope 无影响。
+	centralScopeProvider component.ICentralSchedulerScopeProvider,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -98,6 +102,7 @@ func NewExptManager(
 		pipelineListAdapter:         pipelineListAdapter,
 		resourceAccessAuthorizer:    resourceAccessAuthorizer,
 		sandboxAgentMetrics:         sandboxAgentMetrics,
+		centralScopeProvider:        centralScopeProvider,
 	}
 }
 
@@ -133,6 +138,8 @@ type ExptMangerImpl struct {
 	resourceAccessAuthorizer    ResourceAccessAuthorizer
 	// 沙箱 agent 稳定性打点，CompleteExpt 里上报 experiment_finished / experiment_duration
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
+	// centralScopeProvider 解析新建 enforce 实验要冻结的 scheduler_scope。
+	centralScopeProvider component.ICentralSchedulerScopeProvider
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -1292,6 +1299,40 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 		experimentGroupKey = refExpt.ExperimentGroupKey
 	}
+	// ★ 中心化调度模式在创建时一次性冻结。
+	//
+	// 只有 EvalX 发起的实验进入 enforce：它是内部平台，会按约定申报 priority 与
+	// expected_quota_consumption。其它入口（控制台手动、OpenAPI、定时）保持 legacy，
+	// 行为与引入中心调度前完全一致。
+	//
+	// 模式由 trigger 派生而非取请求字段：请求里的 scheduler_mode 不可信（任何内部调用方
+	// 都能声明 enforce），而 trigger_type 是上游身份的既有表达，已被其它逻辑依赖。
+	dispatchMode := entity.ExptDispatchModeLegacy
+	schedulerScope := ""
+	expectedQuota := req.ExpectedQuotaConsumption
+	if entity.ShouldEnforceByTrigger(triggerType) {
+		// enforce 实验必须有合法的资源消耗向量：没有向量就无法预占额度，
+		// 调度器只能永远跳过它 —— 表现为"实验建好了但一个 item 都不跑"，且那条分支静默。
+		// 因此在创建时就拒绝，把问题暴露在调用方能看到的地方。
+		if expectedQuota == nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+				errorx.WithExtraMsg("expected_quota_consumption is required for evalx-triggered experiment"))
+		}
+		expectedQuota = expectedQuota.Normalize()
+		if err := expectedQuota.Validate(); err != nil {
+			return nil, err
+		}
+
+		scope, err := e.resolveSchedulerScope(ctx, req.WorkspaceID)
+		if err != nil {
+			// Scope 解析失败不静默降级成 legacy：降级会让 EvalX 以为实验受中心调度管控，
+			// 实际却走旧链路自主派发、绕过全局额度。报错让调用方立刻知道。
+			return nil, err
+		}
+		dispatchMode = entity.ExptDispatchModeEnforce
+		schedulerScope = scope
+	}
+
 	do := &entity.Experiment{
 		ID:                  ids[0],
 		SpaceID:             req.WorkspaceID,
@@ -1312,6 +1353,13 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		TrialRunItemCount:   req.TrialRunItemCount,
 		TriggerType:         triggerType,
 
+		// 中心化调度冻结值。legacy 时 mode=legacy / scope="" / priority 仍落 1（DB 默认值语义）。
+		// expected_quota_consumption 不在此处 —— 它属于 EvalConf（序列化进 eval_conf 列），
+		// 见下方赋值；调度侧 frozenConsumptionOf 正是从 EvalConf 读取。
+		PriorityLevel:    entity.NormalizeExptPriorityLevel(req.PriorityLevel),
+		ExptDispatchMode: dispatchMode,
+		SchedulerScope:   schedulerScope,
+
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
@@ -1321,6 +1369,16 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		TargetSpaceID:      targetSpaceID,
 		EvalSetAccessLevel: evalSetAccessLevel,
 	}
+	// ★ 把消耗向量冻结进 eval_conf。
+	//
+	// 放在 EvalConf 而非 Experiment 顶层字段：调度侧 frozenConsumptionOf 读的是
+	// EvalConf.ExpectedQuotaConsumption，而 eval_conf 是既有的 JSON 列，加字段无需 DDL。
+	// 冻结后运行期只读这份快照，不回查外部 —— 否则同一实验在不同时刻可能按不同规格扣额度，
+	// 释放时也就对不上账（释放按 reservation 快照走，与此处一致）。
+	if expectedQuota != nil && do.EvalConf != nil {
+		do.EvalConf.ExpectedQuotaConsumption = expectedQuota
+	}
+
 	// 同空间语义归零: 落库 0/"" 表示同消费方空间 (向后兼容, 执行期 fallback 消费方空间)
 	if do.EvalSetSpaceID == req.WorkspaceID {
 		do.EvalSetSpaceID = 0
@@ -1701,4 +1759,25 @@ func (e *ExptMangerImpl) Clone(ctx context.Context, exptID, spaceID int64, sessi
 	expt.ID = id
 
 	return expt, e.Create(ctx, expt, session)
+}
+
+// resolveSchedulerScope 解析新建 enforce 实验应冻结的 scheduler_scope。
+//
+// 空 Scope 一律报错而非放行：enforce + 空 Scope 的实验不属于任何调度域，任何调度器的
+// 候选查询（WHERE scheduler_scope = ?）都扫不到它 —— 实验会永久停在 Pending，
+// 而现象是"提交成功但完全不动"，比创建时报错难查得多。
+func (e *ExptMangerImpl) resolveSchedulerScope(ctx context.Context, spaceID int64) (string, error) {
+	if e.centralScopeProvider == nil {
+		return "", errorx.NewByCode(errno.CommonInternalErrorCode,
+			errorx.WithExtraMsg("central scheduler scope provider not wired; refusing to create enforce experiment"))
+	}
+	scope, err := e.centralScopeProvider.ResolveSchedulerScope(ctx, spaceID)
+	if err != nil {
+		return "", err
+	}
+	if scope == "" {
+		return "", errorx.NewByCode(errno.CommonInternalErrorCode,
+			errorx.WithExtraMsg("resolved empty scheduler_scope; central scheduling is not available in this deployment"))
+	}
+	return scope, nil
 }

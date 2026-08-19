@@ -423,6 +423,17 @@ type CreateExptParam struct {
 	// 多评测集 MultiSetConfig 走 EvalSetConfigs 内每个元素的 shared_option。
 	EvalSetSharedOption *SharedResourceOption `json:"eval_set_shared_option,omitempty"`
 	TargetSharedOption  *SharedResourceOption `json:"target_shared_option,omitempty"`
+
+	// ★ 中心化调度 (仅 EvalX 发起的实验使用)：三个字段在创建时一次性冻结到 experiment 表。
+	//
+	// PriorityLevel 调度优先级 1-99，越大越优先；未申报按 1。
+	PriorityLevel int32 `json:"priority_level,omitempty"`
+	// SchedulerScope 调度所有权与排序边界，由服务端解析后写入，**不接受调用方指定**
+	// （见 ConvertCreateReq：请求里的同名字段被忽略）。legacy 实验为空串。
+	SchedulerScope string `json:"scheduler_scope,omitempty"`
+	// ExpectedQuotaConsumption 单 item 预期资源消耗向量，由 EvalX 申报。
+	// enforce 实验缺这个向量就无法预占额度，调度器只能跳过 —— 因此创建时即校验非空。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption `json:"expected_quota_consumption,omitempty"`
 }
 
 type ExptRunCheckOption struct {

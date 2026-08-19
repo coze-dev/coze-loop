@@ -8,6 +8,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -108,12 +110,12 @@ func TestNewExptSchedulerSvc_VariadicNotifier(t *testing.T) {
 	defer ctrl.Finish()
 	notifier := svcmocks.NewMockISandboxAgentNotifier(ctrl)
 
-	svc := NewExptSchedulerSvc(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, notifier)
+	svc := NewExptSchedulerSvc(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, component.NewNoopCentralReservationGuard(), notifier)
 	impl, ok := svc.(*ExptSchedulerImpl)
 	assert.True(t, ok)
 	assert.Same(t, notifier, impl.sandboxAgentNotifier)
 
-	svc2 := NewExptSchedulerSvc(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	svc2 := NewExptSchedulerSvc(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, component.NewNoopCentralReservationGuard())
 	impl2 := svc2.(*ExptSchedulerImpl)
 	assert.Nil(t, impl2.sandboxAgentNotifier)
 }

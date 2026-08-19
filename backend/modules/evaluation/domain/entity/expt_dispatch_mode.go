@@ -3,6 +3,8 @@
 
 package entity
 
+import "strings"
+
 // ExptDispatchMode 实验的 item 派发模式，对应 experiment.scheduler_mode 列。
 //
 // 该列是唯一权威源：创建实验时按灰度白名单一次性写入并冻结，Run / Retry / MQ consumer 一律回查此列裁决，
@@ -69,4 +71,26 @@ func NormalizeExptPriorityLevel(priority int32) int32 {
 	default:
 		return priority
 	}
+}
+
+// ExptTriggerTypeEvalx 是 EvalX 平台发起实验时携带的 trigger_type，与 IDL 常量
+// `const ExptTriggerType Evalx = "evalx"` 一致。
+//
+// 单独在 entity 层再声明一次而不 import kitex_gen：domain 层不依赖生成代码是本仓库的
+// 分层约束；两处值必须一致，由 TestExptTriggerTypeEvalxMatchesIDL 守住。
+const ExptTriggerTypeEvalx = "evalx"
+
+// ShouldEnforceByTrigger 判断某 trigger 来源的新实验是否应写 enforce。
+//
+// 本期规则：只有 EvalX 发起的实验进入中心调度。EvalX 是内部平台，会按约定携带
+// priority 与 expected_quota_consumption；其它入口（控制台手动、OpenAPI、定时任务）
+// 一律 legacy，行为与引入中心调度前完全一致。
+//
+// 为什么按 trigger 而不是按空间白名单：空间白名单会把同一空间里"人手点的实验"也拽进
+// enforce，而那些实验不会申报资源消耗向量 —— 没有向量就无法预占，调度器只能跳过，
+// 表现为"实验建好了但一个 item 都不跑"。按来源区分则天然对齐"谁申报、谁被管控"。
+//
+// 大小写与空白容忍：trigger_type 是跨系统传递的字符串字段，上游拼装方式不受本仓库控制。
+func ShouldEnforceByTrigger(triggerType string) bool {
+	return strings.EqualFold(strings.TrimSpace(triggerType), ExptTriggerTypeEvalx)
 }

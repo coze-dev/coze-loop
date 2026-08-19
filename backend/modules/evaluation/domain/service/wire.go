@@ -51,6 +51,7 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	// 商业版在自己的 wire set 里注入真实账本适配器覆盖它。
 	component.NewNoopCentralReservationGuard,
 	component.NewNoopCentralSchedulerScopeOwner,
+	component.NewNoopCentralSchedulerScopeProvider,
 	// Infrastructure Sets
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,
