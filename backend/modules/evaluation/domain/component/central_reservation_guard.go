@@ -89,3 +89,31 @@ type noopCentralSchedulerScopeOwner struct{}
 func (noopCentralSchedulerScopeOwner) OwnsSchedulerScope(ctx context.Context, schedulerScope string) (bool, error) {
 	return true, nil
 }
+
+//go:generate mockgen -destination=mocks/central_scope_provider.go -package=mocks . ICentralSchedulerScopeProvider
+
+// ICentralSchedulerScopeProvider 为新建实验解析要冻结的 scheduler_scope。
+//
+// 与 ICentralSchedulerScopeOwner 的分工：Provider 在**创建期**回答"这个实验该归哪个
+// Scope"，Owner 在**执行期**回答"这个 Scope 是不是我的"。分开是因为两者的失败语义相反：
+// Provider 解析不出来必须拒绝创建（否则实验冻结了空 Scope，永远不会被任何调度器扫到），
+// Owner 判不出来应当重试（可能只是环境探测抖动）。
+//
+// 开源部署注入 noop：返回空 Scope + nil error，配合 admission 只在 EvalX trigger 下
+// 才走 enforce，开源侧不会产生 enforce 实验，因此拿不到 Scope 也无影响。
+type ICentralSchedulerScopeProvider interface {
+	// ResolveSchedulerScope 返回该空间新建实验应冻结的 Scope。
+	// 返回空串且 err 为 nil 表示"本部署不启用中心调度"。
+	ResolveSchedulerScope(ctx context.Context, spaceID int64) (string, error)
+}
+
+// NewNoopCentralSchedulerScopeProvider 返回开源部署使用的 noop 实现。
+func NewNoopCentralSchedulerScopeProvider() ICentralSchedulerScopeProvider {
+	return noopCentralSchedulerScopeProvider{}
+}
+
+type noopCentralSchedulerScopeProvider struct{}
+
+func (noopCentralSchedulerScopeProvider) ResolveSchedulerScope(ctx context.Context, spaceID int64) (string, error) {
+	return "", nil
+}

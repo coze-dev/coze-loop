@@ -273,8 +273,79 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			}
 		}
 
-		return next(ctx, event)
+		// 执行链返回后释放额度：这是 consumer 侧唯一的释放点。
+		//
+		// 为什么放在这一层而不是 CompleteItemRun 等各个终态写库处：终态路径有四条
+		// （success / fail / 不可重试前置失败 / indebt 终止），每条都手动调一次释放
+		// 意味着以后任何人新增一条终态分支都可能漏掉，而漏掉的后果是额度永久泄漏
+		// —— 静默、且要等额度跑满才暴露。收在中间件出口只有一处，且天然覆盖
+		// panic recover 后的返回（HandleEventErr 在更外层，已把 panic 转成 err）。
+		//
+		// 为什么不能无条件释放：MQ 重试路径也会从这里返回。重试消息稍后会被重新投递并
+		// 再次执行同一 item，若此刻释放了额度，重投的消息在 ConfirmRunning 处会因
+		// reservation 不存在而被丢弃 —— item 永久停在 Processing。因此必须只在
+		// item 真的进入终态时释放，靠回查 run log 投影判定，不靠猜。
+		execErr := next(ctx, event)
+		e.releaseQuotaIfItemTerminal(ctx, event, expt.SchedulerScope, guard, execErr)
+		return execErr
 	}
+}
+
+// releaseQuotaIfItemTerminal 在 item 确已进入终态时释放其额度预占。
+//
+// 判定依据是 run log 的实际状态，而不是 execErr 是否为 nil：
+//   - execErr == nil 未必终态（asyncAbort 场景下 item 仍在异步执行中）；
+//   - execErr != nil 未必非终态（不可重试的前置失败已被兜底落成 Fail/Logged）。
+//
+// 用状态判定才能两个方向都不出错 —— 少释放会泄漏额度，多释放会让重投消息被丢弃、
+// item 卡死 Processing。
+//
+// 全程 best-effort：释放失败只告警。额度对账（spec §3.11）是最终防线，
+// 而让终态收口因为额度模块失败而报错会把"额度泄漏"升级成"实验不收敛"。
+func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
+	ctx context.Context,
+	event *entity.ExptItemEvalEvent,
+	schedulerScope string,
+	guard component.ICentralReservationGuard,
+	execErr error,
+) {
+	if guard == nil || e.dispatchRepo == nil {
+		return
+	}
+
+	// 用独立超时的 ctx：主 ctx 可能已因执行失败被取消，而释放必须尽力完成。
+	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	defer cancel()
+
+	obs, err := e.dispatchRepo.MGetDispatchObservations(relCtx, event.SpaceID, event.ExptID, event.ExptRunID,
+		[]int64{event.EvalSetItemID})
+	if err != nil {
+		logs.CtxWarn(relCtx, "[CentralReservation] load dispatch observation for release fail, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptRunID, event.EvalSetItemID, err)
+		return
+	}
+	if len(obs) == 0 {
+		// run log 查不到：item 记录已被清理（重跑清表等）。此时 reservation 也该走，
+		// 交由对账处理 —— 这里贸然释放可能释放的是新一轮 run 的额度。
+		return
+	}
+
+	if !entity.IsItemRunFinished(entity.ItemRunState(obs[0].Status)) {
+		// 仍在执行 / 等待重投：保留 reservation。
+		return
+	}
+
+	reason := "item success"
+	if execErr != nil {
+		reason = "item failed: " + execErr.Error()
+	}
+	if err := guard.Release(relCtx, schedulerScope, event.ExptRunID, event.EvalSetItemID, reason); err != nil {
+		logs.CtxWarn(relCtx, "[CentralReservation] release quota fail, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptRunID, event.EvalSetItemID, err)
+		return
+	}
+	logs.CtxInfo(relCtx, "[CentralReservation] quota released on item terminal, scope: %v, expt_run_id: %v, item_id: %v, reason: %v",
+		schedulerScope, event.ExptRunID, event.EvalSetItemID, reason)
 }
 
 func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) RecordEvalEndPoint {

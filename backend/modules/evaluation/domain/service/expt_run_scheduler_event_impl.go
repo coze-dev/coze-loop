@@ -69,6 +69,13 @@ type ExptSchedulerImpl struct {
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
 	// sandboxAgentNotifier 每 1h 进度快照飞书通知; 允许为 nil (未接入通知)。
 	sandboxAgentNotifier ISandboxAgentNotifier
+	// centralGuard 中心调度额度闸，用于 zombie / 沙箱提前终态这两条**不经 consumer** 的
+	// 终态路径释放额度。consumer 侧的释放在 HandleCentralReservation 出口统一处理。
+	//
+	// 为什么这两条必须单独接：它们由 daemon 直接把 item 判为 Fail 落库，consumer 那条
+	// 消息可能已经卡死或永不返回 —— 不在这里释放，这些 item 的额度会永久泄漏。
+	// 允许为 nil（开源部署注入 noop）。
+	centralGuard component.ICentralReservationGuard
 }
 
 func NewExptSchedulerSvc(
@@ -94,6 +101,10 @@ func NewExptSchedulerSvc(
 	itemCompletePublisher component.IItemCompletePublisher,
 	exptItemRefRepo repo.IExptItemRefRepo,
 	sandboxAgentMetrics metrics.SandboxAgentMetrics,
+	// centralGuard 放在 variadic 之前（Go 只要求 variadic 最后）。不做 setter 注入：
+	// setter 会让 wire 构造出实例但无人调用、字段恒 nil，而 nil 在此被解释为"跳过释放"，
+	// 等于静默恢复额度泄漏。
+	centralGuard component.ICentralReservationGuard,
 	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容旧单测
 ) ExptSchedulerEvent {
 	i := &ExptSchedulerImpl{
@@ -115,6 +126,7 @@ func NewExptSchedulerSvc(
 		IDGen:                    idGen,
 		evaluationSetItemService: evaluationSetItemService,
 		schedulerModeFactory:     schedulerModeFactory,
+		centralGuard:             centralGuard,
 		evalTargetService:        evalTargetService,
 		itemCompletePublisher:    itemCompletePublisher,
 		exptItemRefRepo:          exptItemRefRepo,
@@ -749,6 +761,10 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		return nil, nil, err
 	}
 
+	// item 已落终态 → 释放其额度预占。放在状态写库之后：先确保终态可见，
+	// 再释放额度，避免"额度已放但 item 仍显示 Processing"这一瞬间被下一拍读到而重复授予。
+	e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, zombieItemIDs, "item zombie timeout")
+
 	// 不清 run_log 的 target_result_id / evaluator_result_ids：
 	// zombie 场景是「终态失败」，需要保留已入库的 record id，
 	// 让 /results/batch_get 能返回 eval_target_record.id、evaluator_record.id 供用户查详情。
@@ -970,6 +986,10 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		return nil, nil, err
 	}
 
+	// item 已落终态 → 释放额度预占。沙箱已提前终止，对应 consumer 消息不会再回来，
+	// 不在此释放则这些 item 的额度永久泄漏。
+	e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, terminatedItemIDs, "sandbox terminated before report")
+
 	// 打点：复用沙箱 agent 评测对象的 EmitInvokeFinished，让"沙箱终态未回调 → 兜底失败"
 	// 与正常回调路径的 invoke_finished 在同一 dashboard 上可比。err_code 用
 	// SandboxTerminatedBeforeReportCode，classifier 归入 non_engineering。
@@ -1135,4 +1155,38 @@ func (e *ExptSchedulerImpl) emitSandboxZombieInvokeFinished(
 		}
 	}
 	logs.CtxInfo(ctx, "[ExptEval] sandbox zombie invoke_finished emitted, expt_id=%v, records=%d", event.ExptID, len(recordIDs))
+}
+
+// releaseCentralQuotaForItems 为一批已被判为终态的 item 释放中心调度额度预占。
+//
+// 用于 zombie 清理与沙箱提前终态两条 daemon 路径：它们直接把 item 落成 Fail，
+// 对应的 consumer 消息可能已经卡死或永不返回，因此必须在这里释放，否则额度永久泄漏
+// （现象是"额度跑满后再也调度不动"，且看起来像上限配小了，极易误判）。
+//
+// legacy 实验直接返回：它们从不预占额度，调用释放只是无谓的 Redis 往返。
+// 全程 best-effort：单个 item 释放失败只告警，不影响 zombie 清理本身 ——
+// 清理失败会让实验永不收敛，比额度泄漏更严重，而额度有对账兜底。
+func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, expt *entity.Experiment, exptRunID int64, itemIDs []int64, reason string) {
+	if e.centralGuard == nil || expt == nil || len(itemIDs) == 0 {
+		return
+	}
+	if !entity.IsCentralDispatch(expt.ExptDispatchMode) {
+		return
+	}
+	if expt.SchedulerScope == "" {
+		// enforce 却无 Scope：数据异常，无法确定去哪本账释放。告警交由对账处理，
+		// 不猜一本账 —— 猜错会归还别人的额度，比不归还更糟。
+		logs.CtxError(ctx, "[CentralReservation] enforce experiment without scheduler_scope, skip release, expt_id: %v, item_ids: %v",
+			expt.ID, itemIDs)
+		return
+	}
+
+	for _, itemID := range itemIDs {
+		if err := e.centralGuard.Release(ctx, expt.SchedulerScope, exptRunID, itemID, reason); err != nil {
+			logs.CtxWarn(ctx, "[CentralReservation] release quota fail, scope: %v, expt_run_id: %v, item_id: %v, reason: %v, err: %v",
+				expt.SchedulerScope, exptRunID, itemID, reason, err)
+		}
+	}
+	logs.CtxInfo(ctx, "[CentralReservation] quota released for daemon-terminated items, scope: %v, expt_run_id: %v, count: %v, reason: %v",
+		expt.SchedulerScope, exptRunID, len(itemIDs), reason)
 }

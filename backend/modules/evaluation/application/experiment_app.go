@@ -613,6 +613,12 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		// 否则 SubmitExperiment 路径丢失来源空间，发起鉴权/加载会退化成消费方空间。
 		EvalSetSharedOption: req.EvalSetSharedOption,
 		TargetSharedOption:  req.TargetSharedOption,
+		// ★ 中心化调度: priority 与消耗向量透传到 Create（EvalX 走 Submit 入口）。
+		// 不透传 scheduler_mode/scheduler_scope —— 两者由服务端按 trigger 派生与解析，
+		// 见 ConvertCreateReq 与 CreateExpt。缺这两个字段的透传会让 Submit 建出的实验
+		// 永远是 legacy，中心调度没有候选。
+		PriorityLevel:            req.PriorityLevel,
+		ExpectedQuotaConsumption: req.ExpectedQuotaConsumption,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
