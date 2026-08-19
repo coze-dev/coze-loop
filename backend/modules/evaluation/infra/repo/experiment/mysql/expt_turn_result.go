@@ -482,9 +482,19 @@ func (dao *ExptTurnResultDAOImpl) ListTurnResultByItemIDs(ctx context.Context, s
 
 	// 总记录数
 	db = db.Count(&total)
-	// 分页
-	if page.Offset() > 0 && page.Limit() > 0 {
-		db = db.Offset(page.Offset()).Limit(page.Limit())
+	// 分页：Limit 与 Offset 必须分开判定。第一页的 Offset() 恒为 0，
+	// 若与 Offset()>0 相 AND，第一页就退化成"无 LIMIT 全量返回"。
+	if page.Limit() > 0 {
+		// 分页必须有确定顺序：LIMIT/OFFSET 在无 ORDER BY 时行序由执行计划决定，
+		// 逐页翻取（UpsertExptTurnResultFilter 的 offset++ 循环）会漏行/重复行，
+		// 直接导致 CK 筛选表少落 turn。(space_id, expt_id, item_id, turn_id) 即
+		// 唯一键 uk_expt_item_turn，前两段已在 WHERE 固定，故此排序走索引不额外排序。
+		// 仅在分页时加，避免改变刻意不分页(page 零值=全量)调用方的 SQL 形状。
+		db = db.Order("item_id").Order("turn_id")
+		db = db.Limit(page.Limit())
+	}
+	if page.Offset() > 0 {
+		db = db.Offset(page.Offset())
 	}
 
 	err := db.Find(&finds).Error
