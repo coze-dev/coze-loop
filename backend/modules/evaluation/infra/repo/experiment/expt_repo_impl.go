@@ -25,6 +25,15 @@ func NewExptRepo(exptDAO mysql.IExptDAO, exptEvaluatorRefDAO mysql.IExptEvaluato
 	return &exptRepoImpl{exptDAO: exptDAO, exptEvaluatorRefDAO: exptEvaluatorRefDAO, idgen: idgen}
 }
 
+// NewExptSchedulerQueueRepo 返回中心调度候选扫描的窄接口实现。
+//
+// 与 NewExptRepo 共用同一个 exptRepoImpl（同表、同 DAO），拆的只是消费侧契约：
+// 中心调度只依赖"扫候选"这一个方法，不必因此感知 Create/Update/List 等十余个无关方法，
+// 反过来那十余处调用方（含大量手写 fake）也不必因为新增调度能力而被迫改动。
+func NewExptSchedulerQueueRepo(exptDAO mysql.IExptDAO, exptEvaluatorRefDAO mysql.IExptEvaluatorRefDAO, idgen idgen.IIDGenerator) repo.IExperimentSchedulerQueueRepo {
+	return &exptRepoImpl{exptDAO: exptDAO, exptEvaluatorRefDAO: exptEvaluatorRefDAO, idgen: idgen}
+}
+
 type exptRepoImpl struct {
 	idgen               idgen.IIDGenerator
 	exptDAO             mysql.IExptDAO
