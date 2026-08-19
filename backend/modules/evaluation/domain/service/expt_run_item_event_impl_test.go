@@ -14,6 +14,7 @@ import (
 	benefitmocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	lockmocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
@@ -51,6 +52,7 @@ func TestNewExptRecordEvalService(t *testing.T) {
 		repoMocks.NewMockIEvalAsyncRepo(ctrl),
 		nil, // itemCompletePublisher
 		nil, // sandboxAgentMetrics
+		component.NewNoopCentralReservationGuard(),
 	)
 	assert.NotNil(t, service)
 }
