@@ -117,3 +117,54 @@ type noopCentralSchedulerScopeProvider struct{}
 func (noopCentralSchedulerScopeProvider) ResolveSchedulerScope(ctx context.Context, spaceID int64) (string, error) {
 	return "", nil
 }
+
+//go:generate mockgen -destination=mocks/central_admission_policy.go -package=mocks . ICentralAdmissionPolicy
+
+// CentralAdmissionSubject 是 admission 判定的输入。
+//
+// 只带"这个实验是什么"，不带"该不该 enforce" —— 后者是 policy 的职责。
+// 字段刻意用基础类型而非 entity.EvalTarget：policy 实现在 commercial，
+// 让它依赖 OSS 的领域实体会把整个 target 模型拖进配置层。
+type CentralAdmissionSubject struct {
+	SpaceID int64
+	// TargetType 评测对象类型的配置名（entity.EvalTargetType.ConfigName()，如 "sandbox_agent"）。
+	// 空串表示该实验无评测对象（skip-target）或类型未登记配置名。
+	TargetType string
+	// TargetID 评测对象 ID。0 表示无评测对象。
+	TargetID int64
+}
+
+// ICentralAdmissionPolicy 在创建期收窄中心调度的准入范围。
+//
+// 它是 trigger 判据之上的**第二道闸**，语义是 AND 而非 OR：
+// 只有 trigger 已判定为 EvalX（因而调用方一定申报了 expected_quota_consumption）时
+// 才会咨询本 policy，由它决定"这个空间/这类评测对象是否纳入本轮灰度"。
+//
+// 为什么必须是收窄而不能扩大：enforce 实验强制要求资源消耗向量（缺向量在创建期即报错），
+// 而非 EvalX 入口（控制台手动、OpenAPI、定时）目前没有传向量的字段。若 policy 能把
+// 这些入口的实验也拽进 enforce，结果是要么创建报错、要么被调度器永远跳过 ——
+// 后者表现为"实验建好了但一个 item 都不跑"，且分支静默。等 OpenAPI 具备申报能力后，
+// 才可以考虑放宽成 OR。
+//
+// 开源部署注入 noop（恒定放行）：开源侧不产生 EvalX trigger，本 policy 不会被咨询到。
+type ICentralAdmissionPolicy interface {
+	// AllowCentralScheduling 报告该实验是否纳入中心调度。
+	//
+	// 返回 error 表示配置不可判定。调用方应拒绝创建 enforce 实验而非放行 ——
+	// 放行会让一个本该受额度管控的实验绕过管控，且无从发现。
+	AllowCentralScheduling(ctx context.Context, subject CentralAdmissionSubject) (bool, error)
+}
+
+// NewNoopCentralAdmissionPolicy 返回开源部署使用的 noop 实现：恒定放行。
+//
+// 取放行而非拒绝：本 policy 的职责是"在已申报向量的实验里再筛一遍"，
+// 缺省不筛等于保持 trigger 判据的原有行为，这是引入本 port 前的语义。
+func NewNoopCentralAdmissionPolicy() ICentralAdmissionPolicy {
+	return noopCentralAdmissionPolicy{}
+}
+
+type noopCentralAdmissionPolicy struct{}
+
+func (noopCentralAdmissionPolicy) AllowCentralScheduling(ctx context.Context, subject CentralAdmissionSubject) (bool, error) {
+	return true, nil
+}
