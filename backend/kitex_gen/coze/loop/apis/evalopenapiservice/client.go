@@ -31,7 +31,6 @@ type Client interface {
 	UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error)
 	ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetInvokeResultResponse, err error)
 	ReportEvalTargetStepMetric(ctx context.Context, req *openapi.ReportEvalTargetStepMetricRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetStepMetricResponse, err error)
-	ReportEvalTargetStepEvent(ctx context.Context, req *openapi.ReportEvalTargetStepEventRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetStepEventResponse, err error)
 	GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error)
 	AsyncDebugEvalTargetOApi(ctx context.Context, req *openapi.AsyncDebugEvalTargetOApiRequest, callOptions ...callopt.Option) (r *openapi.AsyncDebugEvalTargetOApiResponse, err error)
 	GetEvalTargetRecordOApi(ctx context.Context, req *openapi.GetEvalTargetRecordOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvalTargetRecordOApiResponse, err error)
@@ -198,11 +197,6 @@ func (p *kEvalOpenAPIServiceClient) ReportEvalTargetInvokeResult_(ctx context.Co
 func (p *kEvalOpenAPIServiceClient) ReportEvalTargetStepMetric(ctx context.Context, req *openapi.ReportEvalTargetStepMetricRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetStepMetricResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ReportEvalTargetStepMetric(ctx, req)
-}
-
-func (p *kEvalOpenAPIServiceClient) ReportEvalTargetStepEvent(ctx context.Context, req *openapi.ReportEvalTargetStepEventRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetStepEventResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.ReportEvalTargetStepEvent(ctx, req)
 }
 
 func (p *kEvalOpenAPIServiceClient) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {

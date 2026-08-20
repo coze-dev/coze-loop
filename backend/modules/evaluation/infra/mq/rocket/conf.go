@@ -23,9 +23,6 @@ const (
 	ExptAnalysisEventRMQKey         = "expt_analysis_event_rmq"
 	ExptLifecycleEventRMQKey        = "expt_lifecycle_event_rmq"
 	ExptWebhookNotifyEventRMQKey    = "expt_webhook_notify_event_rmq" // Deprecated: 已复用 lifecycle topic + TagWebhookRetry
-	// ExptSandboxStepEventRMQKey 评测链路阶段事件明细，生产端专用（消费方是数仓侧的同步任务，
-	// 本仓不起 consumer）。
-	ExptSandboxStepEventRMQKey = "expt_sandbox_step_event_rmq"
 
 	// Tag 常量，用于在同一 Topic 内区分消息类型
 	TagWebhookRetry = "webhook_retry"

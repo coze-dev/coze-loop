@@ -41,7 +41,6 @@ import (
 	metrics2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/sandbox_agent"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/step_event"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	mysql2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
@@ -338,7 +337,7 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService, nil
 }
 
-func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClientFactory func() taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (evaluation.EvalOpenAPIService, error) {
+func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider, plainLimiterFactory limiter.IPlainRateLimiterFactory, trajectoryAdapter rpc.ITrajectoryAdapter, fileClient fileservice.Client, taskClientFactory func() taskservice.Client, scheduleAdapter rpc.IExptScheduleAdapter) (IEvalOpenAPIApplication, error) {
 	iConfiger, err := conf2.NewConfiger(configFactory)
 	if err != nil {
 		return nil, err
@@ -370,8 +369,6 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	evaluationSetItemService := service.NewEvaluationSetItemServiceImpl(iDatasetRPCAdapter)
 	evaluationSetSchemaService := service.NewEvaluationSetSchemaServiceImpl(iDatasetRPCAdapter)
 	openAPIEvaluationMetrics := openapi.NewEvaluationOApiMetrics(meter)
-	stepEventMetrics := step_event.NewStepEventMetrics(meter)
-	stepEventPublisher := producer.NewStepEventPublisher(ctx, configFactory, rmqFactory)
 	iUserProvider := foundation.NewUserRPCProvider(userClient)
 	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
 	exptTurnResultDAO := mysql.NewExptTurnResultDAO(db2)
@@ -466,8 +463,8 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider, webhookDispatcher)
 	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler, sandboxSchedulerAdapter, sandboxAgentMetrics)
 	evaluatorCallbackDispatcher := service.NewEvaluatorCallbackDispatcher(noopWebhookSecretProvider)
-	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iEvalTargetRepo, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, sandboxAgentMetrics, stepEventMetrics, stepEventPublisher, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, sandboxSchedulerAdapter, iFileProvider, evaluatorCallbackDispatcher, resourceAccessAuthorizer)
-	return evalOpenAPIService, nil
+	v4 := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iEvalTargetRepo, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, sandboxAgentMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger, sandboxSchedulerAdapter, iFileProvider, evaluatorCallbackDispatcher, resourceAccessAuthorizer)
+	return v4, nil
 }
 
 // wire.go:
@@ -494,7 +491,7 @@ var (
 
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
-		experimentSet, conf2.NewConfiger, openapi.OpenAPIMetricsSet, step_event.StepEventMetricsSet, producer.StepEventPublisherSet, service.NewEvaluatorCallbackDispatcher, wire.Bind(new(service.IEvaluatorCallbackDispatcher), new(*service.EvaluatorCallbackDispatcher)),
+		experimentSet, conf2.NewConfiger, openapi.OpenAPIMetricsSet, service.NewEvaluatorCallbackDispatcher, wire.Bind(new(service.IEvaluatorCallbackDispatcher), new(*service.EvaluatorCallbackDispatcher)),
 	)
 )
 

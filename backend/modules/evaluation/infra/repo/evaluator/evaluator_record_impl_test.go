@@ -121,10 +121,6 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetSandboxAgentNotifyConf(ctx conte
 	return nil
 }
 
-func (f *fakeEvaluatorRecordStorageConfiger) GetExptSandboxStepMetricConf(ctx context.Context) *entity.ExptSandboxStepMetricConf {
-	return nil
-}
-
 func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

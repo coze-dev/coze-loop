@@ -2489,8 +2489,3 @@ func _getexperimentidsbygroupoapiMw(handler *apis.APIHandler) []app.HandlerFunc 
 	// your code...
 	return nil
 }
-
-func _reportevaltargetstepeventMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}

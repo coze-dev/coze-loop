@@ -124,15 +124,6 @@ func (c *configer) GetSandboxAgentNotifyConf(ctx context.Context) *entity.Sandbo
 	return entity.DefaultSandboxAgentNotifyConf()
 }
 
-func (c *configer) GetExptSandboxStepMetricConf(ctx context.Context) *entity.ExptSandboxStepMetricConf {
-	const key = "expt_sandbox_step_metric_cfg"
-	var cfg *entity.ExptSandboxStepMetricConf
-	if c.loader.UnmarshalKey(ctx, key, &cfg) == nil {
-		return cfg
-	}
-	return nil
-}
-
 func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	const key = "system_maintainer_conf"
 	var maintainerConf *entity.SystemMaintainerConf

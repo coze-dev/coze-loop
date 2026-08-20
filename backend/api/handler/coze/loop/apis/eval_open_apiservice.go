@@ -378,15 +378,3 @@ func GetExperimentIDsByGroupOApi(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
-
-// ReportEvalTargetStepEvent .
-// @router /v1/loop/eval_targets/step_event [POST]
-//
-// 注意与上面 ReportEvalTargetStepMetric 的差别：那个 handler 至今仍是 hz 生成的空 stub
-// （BindAndValidate 后返回空 resp），所以开源单体部署下它 200 但把事件丢掉，真实逻辑只在
-// 商业版部署里经 AGW → Kitex EvalOpenAPIService 走到 application 层。
-// 本接口刻意接上 invokeAndRender，使开源部署与商业版部署走同一份 application 实现，
-// 避免"只在开源仓 grep handler 就误判上报被静默丢弃"这个排查陷阱。
-func ReportEvalTargetStepEvent(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, localEvalOpenAPIClient.ReportEvalTargetStepEvent)
-}

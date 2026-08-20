@@ -44,9 +44,6 @@ type IConfiger interface {
 	// GetSandboxAgentNotifyConf 沙箱 agent 通知配置（进度卡间隔等）。返回 nil 表示读取失败，
 	// 上层应回落到 entity.DefaultSandboxAgentNotifyConf。
 	GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf
-	// GetExptSandboxStepMetricConf 评测链路阶段埋点配置。读取失败 / 键不存在 / 值为空一律返回 nil，
-	// 由 entity.ClassifyStepErrorType 把「查不到」判为工程错误（spec D4）。
-	GetExptSandboxStepMetricConf(ctx context.Context) *entity.ExptSandboxStepMetricConf
 	// BuildEvalExt 构造评测记录（EvaluatorRecord/EvalTargetRecord/ExptTurnResultRunLog）落库时的 ext 扩展字段。
 	// turn 为评测集中的轮次数据（部分调用点不可用时为 nil），spaceID 为空间 id。默认空实现返回 nil。
 	BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string

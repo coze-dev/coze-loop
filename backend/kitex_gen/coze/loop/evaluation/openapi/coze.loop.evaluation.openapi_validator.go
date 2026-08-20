@@ -669,35 +669,6 @@ func (p *ReportEvalTargetStepMetricResponse) IsValid() error {
 	}
 	return nil
 }
-func (p *StepEventMeta) IsValid() error {
-	return nil
-}
-func (p *ReportEvalTargetStepEventRequest) IsValid() error {
-	if p.Meta != nil {
-		if err := p.Meta.IsValid(); err != nil {
-			return fmt.Errorf("field Meta not valid, %w", err)
-		}
-	}
-	if p.Extra != nil {
-		if err := p.Extra.IsValid(); err != nil {
-			return fmt.Errorf("field Extra not valid, %w", err)
-		}
-	}
-	if p.Base != nil {
-		if err := p.Base.IsValid(); err != nil {
-			return fmt.Errorf("field Base not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *ReportEvalTargetStepEventResponse) IsValid() error {
-	if p.BaseResp != nil {
-		if err := p.BaseResp.IsValid(); err != nil {
-			return fmt.Errorf("field BaseResp not valid, %w", err)
-		}
-	}
-	return nil
-}
 func (p *GetEvalTargetOutputFieldContentOApiRequest) IsValid() error {
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {

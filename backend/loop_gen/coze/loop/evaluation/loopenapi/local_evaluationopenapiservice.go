@@ -483,30 +483,6 @@ func (l *LocalEvaluationOpenAPIService) ReportEvalTargetStepMetric(ctx context.C
 	return result.GetSuccess(), nil
 }
 
-// ReportEvalTargetStepEvent
-// 评测链路阶段事件上报接口（agent eval runtime 沙箱侧调用，step 级 + case 级共用一个接口）。
-// 与上面的 step_metric 物理隔离：不同接口 / 不同 struct / 不同指标名，理由见 request 注释。
-func (l *LocalEvaluationOpenAPIService) ReportEvalTargetStepEvent(ctx context.Context, req *openapi.ReportEvalTargetStepEventRequest, callOptions ...callopt.Option) (*openapi.ReportEvalTargetStepEventResponse, error) {
-	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*openapi.EvaluationOpenAPIServiceReportEvalTargetStepEventArgs)
-		result := out.(*openapi.EvaluationOpenAPIServiceReportEvalTargetStepEventResult)
-		resp, err := l.impl.ReportEvalTargetStepEvent(ctx, arg.Req)
-		if err != nil {
-			return err
-		}
-		result.SetSuccess(resp)
-		return nil
-	})
-
-	arg := &openapi.EvaluationOpenAPIServiceReportEvalTargetStepEventArgs{Req: req}
-	result := &openapi.EvaluationOpenAPIServiceReportEvalTargetStepEventResult{}
-	ctx = l.injectRPCInfo(ctx, "ReportEvalTargetStepEvent")
-	if err := chain(ctx, arg, result); err != nil {
-		return nil, err
-	}
-	return result.GetSuccess(), nil
-}
-
 // GetEvalTargetOutputFieldContentOApi
 // 按需查询评测对象输出中大对象的完整内容
 func (l *LocalEvaluationOpenAPIService) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest, callOptions ...callopt.Option) (*openapi.GetEvalTargetOutputFieldContentOApiResponse, error) {

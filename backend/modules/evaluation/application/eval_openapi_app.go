@@ -43,7 +43,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -76,8 +75,6 @@ type EvalOpenAPIApplication struct {
 	evaluationSetSchemaService  service.EvaluationSetSchemaService
 	metric                      metrics.OpenAPIEvaluationMetrics
 	sandboxAgentMetric          metrics.SandboxAgentMetrics
-	stepEventMetric             metrics.StepEventMetrics
-	stepEventPublisher          events.StepEventPublisher
 	userInfoService             userinfo.UserInfoService
 	experimentApp               IExperimentApplication
 	manager                     service.IExptManager
@@ -104,8 +101,6 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluationSetSchemaService service.EvaluationSetSchemaService,
 	metric metrics.OpenAPIEvaluationMetrics,
 	sandboxAgentMetric metrics.SandboxAgentMetrics,
-	stepEventMetric metrics.StepEventMetrics,
-	stepEventPublisher events.StepEventPublisher,
 	userInfoService userinfo.UserInfoService,
 	experimentApp IExperimentApplication,
 	manager service.IExptManager,
@@ -132,8 +127,6 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		evaluationSetSchemaService:  evaluationSetSchemaService,
 		metric:                      metric,
 		sandboxAgentMetric:          sandboxAgentMetric,
-		stepEventMetric:             stepEventMetric,
-		stepEventPublisher:          stepEventPublisher,
 		userInfoService:             userInfoService,
 		experimentApp:               experimentApp,
 		manager:                     manager,
@@ -1603,161 +1596,6 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetStepMetric(ctx context.Context,
 	}
 
 	return &openapi.ReportEvalTargetStepMetricResponse{BaseResp: base.NewBaseResp()}, nil
-}
-
-// ReportEvalTargetStepEvent 接收评测链路（agent eval runtime）的阶段事件上报。
-//
-// 本接口与 ReportEvalTargetStepMetric 物理隔离（不同接口 / struct / 指标名），理由见 IDL 注释。
-// 一个接口同时承载 step 级与 case 级事件，靠 step_name 区分。
-//
-// 当前实现只做「解析 + 打一条含请求全文的日志 + 返回成功」。这条日志是本条链路唯一的排查锚点：
-// 上报是 best-effort（沙箱侧不重试、不缓冲），排查"数据为什么少一条"只能 grep 它，所以它必须
-// 无条件打印、且打印请求全文。
-//
-// req.Meta 里的 6 个身份维度（experiment_id / log_id / dataset_id / dataset_version /
-// item_id / item_key）由上报侧直接给出，服务端不再像前人那样用 invoke_id 去 Redis 反查
-// asyncCtx——前人自己的注释就承认反查会失败、失败后维度退化成占位符，而上报侧本来就持有权威值。
-//
-// 事件分两条去处，各自 best-effort、互不依赖：
-//   - metric（在线监控告警）：tag 只用 6 个有界维度（step_name / success / error_type /
-//     error_code / agent_type / round）。invoke_id / item_* / model_name / experiment_id /
-//     end_reason / trial_status 是无界或高基数维度，一个都不进 tag。
-//   - MQ 明细投递（离线分析）：字段全带，扁平结构，由数仓侧消费同步到 Hive。metric 只留 6 个
-//     有界 tag，这条通道才是唯一能回答「为什么」的地方。发送失败只 warn，接口照常返回成功。
-//
-// success 由上报侧直接给出，服务端不从 trial_status 推导——那条推导规则属于 runtime 的领域
-// 语义，服务端不该知道。trial_status / end_reason 同理只做透传。
-//
-// 未识别的 event_type 只记日志并返回成功，绝不返回错误：老服务端遇到新沙箱发的新事件类型时
-// 返回错误，只会把沙箱侧日志刷满它自己也处理不了的失败。
-func (e *EvalOpenAPIApplication) ReportEvalTargetStepEvent(ctx context.Context, req *openapi.ReportEvalTargetStepEventRequest) (r *openapi.ReportEvalTargetStepEventResponse, err error) {
-	resp := &openapi.ReportEvalTargetStepEventResponse{BaseResp: base.NewBaseResp()}
-	if req == nil {
-		logs.CtxWarn(ctx, "ReportEvalTargetStepEvent receive nil req")
-		return resp, nil
-	}
-
-	// 排查锚点：请求全文。
-	logs.CtxInfo(ctx, "ReportEvalTargetStepEvent receive req: %v", json.Jsonify(req))
-
-	// 服务端接收时刻。与沙箱侧的 event_time_ms 基准不同（不同机器时钟 + 一次 HTTP），
-	// 在明细里是两列，不能互相替代。
-	serverReceiveTimeMS := time.Now().UnixMilli()
-
-	meta := req.GetMeta()
-	switch req.GetEventType() {
-	case openapi.EvalTargetStepEventType_STARTED:
-		// STARTED 不带耗时 / 成败 / 错误三件套：阶段刚开始时成败尚未发生，读这些字段即是读假数据。
-		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent started, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, experiment_id=%s, log_id=%s, dataset_id=%s, dataset_version=%s, item_id=%s, item_key=%s",
-			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason(),
-			meta.GetExperimentID(), meta.GetLogID(), meta.GetDatasetID(), meta.GetDatasetVersion(), meta.GetItemID(), meta.GetItemKey())
-	case openapi.EvalTargetStepEventType_FINISHED:
-		logs.CtxInfo(ctx, "ReportEvalTargetStepEvent finished, workspace_id=%d, invoke_id=%d, step_name=%s, agent_type=%s, round=%d, model_name=%s, trial_status=%s, end_reason=%s, success=%v, duration_ms=%d, error_code=%d, error_message=%s, experiment_id=%s, log_id=%s, dataset_id=%s, dataset_version=%s, item_id=%s, item_key=%s",
-			req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName(), req.GetAgentType(), req.GetRound(), req.GetModelName(), req.GetTrialStatus(), req.GetEndReason(),
-			req.GetSuccess(), req.GetDurationMs(), req.GetErrorCode(), req.GetErrorMessage(),
-			meta.GetExperimentID(), meta.GetLogID(), meta.GetDatasetID(), meta.GetDatasetVersion(), meta.GetItemID(), meta.GetItemKey())
-	default:
-		logs.CtxWarn(ctx, "ReportEvalTargetStepEvent unknown event_type=%v, workspace_id=%d, invoke_id=%d, step_name=%s",
-			req.GetEventType(), req.GetWorkspaceID(), req.GetInvokeID(), req.GetStepName())
-	}
-
-	e.instrumentStepEvent(ctx, req, serverReceiveTimeMS)
-
-	return resp, nil
-}
-
-// instrumentStepEvent 把一条阶段事件同时送去 metric 与 MQ。
-//
-// **整个函数被 recover 兜住**：两条都是旁路，任何 panic 都不该变成上报接口的失败。必须在这里
-// 拦下来——外层 invokeAndRender 的 recover 会把 panic 转成 HTTP 错误，那正是要避免的结果。
-// 单独成函数而不是在 ReportEvalTargetStepEvent 里 defer，是因为那个函数有命名返回值，
-// 在它里面 recover 会让 panic 之后返回一个 nil response。
-func (e *EvalOpenAPIApplication) instrumentStepEvent(ctx context.Context, req *openapi.ReportEvalTargetStepEventRequest, serverReceiveTimeMS int64) {
-	defer goroutine.Recovery(ctx)
-
-	// 错误分类**在这里算一次**，metric tag 与 MQ 明细列共用这一个结果：分类要读运维配置，
-	// 在两个下游各读各分类早晚会漂成两个答案，那时「在线看板说是工程错误、Hive 说不是」无从下手。
-	errorType := entity.ClassifyStepErrorType(req.GetSuccess(), req.GetErrorCode(), e.stepMetricConf(ctx))
-
-	if e.stepEventMetric != nil {
-		// metric tag 只取有界维度；明细维度（meta / invoke_id / model_name / ...）不进 tag。
-		tags := metrics.StepEventTags{
-			StepName:  req.GetStepName(),
-			AgentType: req.GetAgentType(),
-			Round:     req.GetRound(),
-		}
-		switch req.GetEventType() {
-		case openapi.EvalTargetStepEventType_STARTED:
-			e.stepEventMetric.EmitStepStarted(tags)
-		case openapi.EvalTargetStepEventType_FINISHED:
-			// 耗时用沙箱上报的值，不用服务端接收时刻现算：服务端算不出阶段何时开始，
-			// 用接收时刻只会把网络与排队时间算进阶段耗时。负值由实现层 clamp 到 0。
-			e.stepEventMetric.EmitStepFinished(tags, req.GetSuccess(), errorType, req.GetErrorCode(), req.GetDurationMs())
-		default:
-			// 未识别的事件类型不打点：填不出 success / duration，打上去只会污染曲线。
-		}
-	}
-
-	// MQ 明细：**未识别的事件类型也投递**。metric 那边不打是因为填不出曲线要的值，这边不同——
-	// 明细表的价值恰恰在于「新沙箱发了个老服务端不认识的东西」这件事本身在 Hive 里可查。
-	if e.stepEventPublisher != nil {
-		e.stepEventPublisher.PublishStepEvent(ctx, buildStepEventMessage(req, errorType, serverReceiveTimeMS))
-	}
-}
-
-// stepMetricConf 读阶段埋点配置。configer 缺失时返回 nil，由分类逻辑落到默认的 engineering。
-func (e *EvalOpenAPIApplication) stepMetricConf(ctx context.Context) *entity.ExptSandboxStepMetricConf {
-	if e.configer == nil {
-		return nil
-	}
-	return e.configer.GetExptSandboxStepMetricConf(ctx)
-}
-
-// buildStepEventMessage 把上报请求摊平成一条 MQ 明细消息。
-//
-// success / duration_ms 只在 FINISHED 事件上取值，其余留 nil（在 Hive 里是 null）：
-// STARTED 事件写 success=false 会让「开始了」和「失败了」长得一样，写 duration_ms=0 会把
-// avg(duration_ms) 的分母算上 STARTED 行。
-func buildStepEventMessage(req *openapi.ReportEvalTargetStepEventRequest, errorType string, serverReceiveTimeMS int64) *entity.SandboxStepEventMessage {
-	meta := req.GetMeta()
-	msg := &entity.SandboxStepEventMessage{
-		EventType: req.GetEventType().String(),
-		StepName:  req.GetStepName(),
-		AgentType: req.GetAgentType(),
-		Round:     req.GetRound(),
-
-		TrialStatus: req.GetTrialStatus(),
-		EndReason:   req.GetEndReason(),
-
-		WorkspaceID:    req.GetWorkspaceID(),
-		InvokeID:       req.GetInvokeID(),
-		ExperimentID:   meta.GetExperimentID(),
-		LogID:          meta.GetLogID(),
-		DatasetID:      meta.GetDatasetID(),
-		DatasetVersion: meta.GetDatasetVersion(),
-		ItemID:         meta.GetItemID(),
-		ItemKey:        meta.GetItemKey(),
-		ModelName:      req.GetModelName(),
-
-		SandboxEventTimeMs:  req.GetEventTimeMs(),
-		ServerReceiveTimeMs: serverReceiveTimeMS,
-	}
-
-	if req.GetEventType() == openapi.EvalTargetStepEventType_FINISHED {
-		success := req.GetSuccess()
-		durationMS := req.GetDurationMs()
-		if durationMS < 0 {
-			// 与 metric 侧同一条 clamp 规则：跨机器时钟偏斜产出的负延迟比虚高更糟。
-			durationMS = 0
-		}
-		msg.Success = &success
-		msg.DurationMs = &durationMS
-		msg.ErrorCode = req.GetErrorCode()
-		msg.ErrorType = errorType
-		msg.ErrorMessage = req.GetErrorMessage()
-	}
-
-	return msg
 }
 
 func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {
