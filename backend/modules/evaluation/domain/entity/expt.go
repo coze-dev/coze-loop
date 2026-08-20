@@ -391,6 +391,60 @@ type ExpectedQuotaConsumption struct {
 	Resources []*ExpectedResourceConsumption `json:"resources,omitempty"`
 }
 
+// 并发也是一种「单 item 占用一份、终态归还一份」的资源，因此不新造计数器，
+// 而是登记成额度体系里的一个维度，直接复用预占 / 释放 / 木桶 / 优先级排序。
+//
+// 为什么必须有这一维：资源向量（sandbox seat / model token）管的是"耗多少外部资源"，
+// 管不住"同时有多少 item 在跑"。若某类实验只申报 model token 不申报 sandbox，
+// 并发就完全失控 —— 实测中心调度只受单实验 deficit + 资源额度两道约束，
+// 全 Scope 在跑 item 总数没有任何上限。
+const (
+	// QuotaCategoryConcurrency 并发维度的 category。
+	QuotaCategoryConcurrency = "concurrency"
+	// QuotaResourceKeyItem 并发维度下的资源键：一个正在执行的 item 占一份。
+	QuotaResourceKeyItem = "item"
+	// concurrencyAmountPerItem 单 item 的并发占用量恒为 1。
+	// 抽成常量而非字面量，是为了让"一个 item 占一份并发"这条语义在代码里可搜到。
+	concurrencyAmountPerItem = 1
+)
+
+// WithConcurrencyDimension 返回在原向量基础上补齐并发维度的**新**向量。
+//
+// 幂等：若调用方已显式申报 concurrency|item（例如未来支持"重型 item 占 2 份并发"），
+// 保留其申报值不覆盖 —— 这正是把额度下沉到 item 粒度后要留的扩展口。
+//
+// 不原地改 receiver：ExpectedQuotaConsumption 是创建期冻结进 eval_conf 的快照，
+// 原地修改会让"冻结"语义失效（同一份快照在不同调用后变形）。
+func (c *ExpectedQuotaConsumption) WithConcurrencyDimension() *ExpectedQuotaConsumption {
+	if c == nil {
+		return &ExpectedQuotaConsumption{
+			Resources: []*ExpectedResourceConsumption{{
+				Category:    QuotaCategoryConcurrency,
+				ResourceKey: QuotaResourceKeyItem,
+				Amount:      concurrencyAmountPerItem,
+			}},
+		}
+	}
+
+	out := &ExpectedQuotaConsumption{Resources: make([]*ExpectedResourceConsumption, 0, len(c.Resources)+1)}
+	for _, r := range c.Resources {
+		if r == nil {
+			continue
+		}
+		if r.Category == QuotaCategoryConcurrency && r.ResourceKey == QuotaResourceKeyItem {
+			// 已显式申报：原样保留，返回的向量与入参等价（幂等）
+			return c
+		}
+		out.Resources = append(out.Resources, r)
+	}
+	out.Resources = append(out.Resources, &ExpectedResourceConsumption{
+		Category:    QuotaCategoryConcurrency,
+		ResourceKey: QuotaResourceKeyItem,
+		Amount:      concurrencyAmountPerItem,
+	})
+	return out
+}
+
 // RunMode 实验级评测模式 (跑法)。与 runtime domain RunMode / IDL ExptRunMode 对齐。
 type RunMode = string
 
@@ -915,6 +969,47 @@ type ExptItemConfig struct {
 	// 执行 target / hydrate 评测集大字段时据此切到各自来源空间; 0=同调用方空间。
 	EvalSetSourceSpaceID int64 `json:"eval_set_source_space_id,omitempty"` // 本行评测集来源空间
 	TargetSourceSpaceID  int64 `json:"target_source_space_id,omitempty"`   // 本行评测对象来源空间
+
+	// ExpectedQuotaConsumption 本行的资源消耗向量 (中心化调度用)。
+	//
+	// nil = 沿用实验级 eval_conf 里那份 (存量 item 全是 nil, 自动回落, 无需数据迁移)。
+	// 非 nil 时**完全覆盖**实验级向量, 不做逐维 merge —— 逐维 merge 会让"这行不用沙箱"
+	// 这类意图无法表达 (省略即继承, 无法显式清零)。
+	//
+	// 与 ItemTargetConf.RunConf 同构: 都是"首次调度冻结进 item_config、执行期只读"的
+	// 行级快照, 随既有 JSON 列走, 加字段无需 DDL。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption `json:"expected_quota_consumption,omitempty"`
+}
+
+// SameAs 判定两个向量是否**等价**(维度集合与各维用量完全一致, 不计顺序)。
+//
+// 中心调度按此把候选 item 分批预占: ReserveBatch 的 Requirements 是"同批共享"的,
+// Lua 侧靠 floor(available/amount) 一次除法算本批能放几个 —— 该算法要求同批各 item
+// 的 amount 严格相同, 否则除法失去意义。故只有等价向量才能进同一批。
+func (c *ExpectedQuotaConsumption) SameAs(other *ExpectedQuotaConsumption) bool {
+	toMap := func(v *ExpectedQuotaConsumption) map[string]int64 {
+		m := map[string]int64{}
+		if v == nil {
+			return m
+		}
+		for _, r := range v.Resources {
+			if r == nil {
+				continue
+			}
+			m[r.Category+"|"+r.ResourceKey] = r.Amount
+		}
+		return m
+	}
+	a, b := toMap(c), toMap(other)
+	if len(a) != len(b) {
+		return false
+	}
+	for k, av := range a {
+		if bv, ok := b[k]; !ok || bv != av {
+			return false
+		}
+	}
+	return true
 }
 
 // ItemTargetConf per-item target 运行配置
