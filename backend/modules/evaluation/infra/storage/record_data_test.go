@@ -54,6 +54,14 @@ func (f *fakeConfiger) GetCKDBName(ctx context.Context) *entity.CKDBConfig { ret
 func (f *fakeConfiger) GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList {
 	return nil
 }
+
+func (f *fakeConfiger) GetExptPriorityWhiteList(ctx context.Context) *entity.ExptPriorityWhiteList {
+	return nil
+}
+
+func (f *fakeConfiger) GetExptTriggerTrustConf(ctx context.Context) *entity.ExptTriggerTrustConf {
+	return nil
+}
 func (f *fakeConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool { return nil }
 func (f *fakeConfiger) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
 	return nil

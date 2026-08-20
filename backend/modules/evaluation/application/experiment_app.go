@@ -12,9 +12,11 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/cloudwego/kitex/pkg/utils/kitexutil"
 
 	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -206,6 +208,18 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 			errorx.WithExtraMsg(fmt.Sprintf("space %d is not allowed to create multi-set experiments", req.GetWorkspaceID())))
 	}
 
+	// ★ 调度优先级白名单闸：未获授权的调用方申报的 priority 一律丢弃、强制走缺省值。
+	//
+	// 放在这里（而不是 Authorization 层）有硬性原因：商业版的 auth allowlist decorator
+	// 对特定 caller+method 会直接跳过整个 Authorization，门控做在那一层会被整条绕过。
+	// CreateExperiment 是四个入口（EvalX / 控制台 / OpenAPI / 定时）的唯一汇聚点，
+	// SubmitExperiment 也是转成本请求后调进来的，卡在此处即全覆盖。
+	e.enforcePriorityWhiteList(ctx, req)
+
+	// ★ trigger 可信来源闸：不可信调用方自称 evalx 时，把 trigger 降级掉。
+	// 与上面同理放在此处 —— "谁被中心调度纳管"必须由我们的名单决定，不能靠调用方自报。
+	e.enforceTriggerTrust(ctx, req)
+
 	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）、runconfig 和 score weight
 	evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, err := e.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
 	if err != nil {
@@ -245,6 +259,82 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 		Experiment: experiment.ToExptDTO(createExpt),
 		BaseResp:   base.NewBaseResp(),
 	}, nil
+}
+
+// enforcePriorityWhiteList 未获授权的调用方申报的 priority 一律清空，改由下游按缺省值处理。
+//
+// 为什么需要这道闸：priority 在中心调度下参与严格优先级排序，高优实验持续抢占额度。
+// 该字段在 IDL 里带 json/form 绑定标签，任何有建实验权限的调用方都能填 —— 不设闸的话
+// 一个人把自己所有实验设成 99 就能让别人的实验饿死，且不违反任何校验、不报错。
+//
+// **静默降级而不报错**，这是刻意的取舍：
+//   - 报错的好处是调用方立刻知道无权限，但会破坏兼容 —— priority 字段已在 IDL 里存在一段时间，
+//     可能已有内部调用方在传（它们原本只是"传了个不生效的字段"），上线后突然报错会把它们打挂
+//   - 因此改为清空 + Warn 日志（带 user/space/caller/被丢弃的值）。灰度期从日志即可看出
+//     "谁在尝试指定 priority"，据此决定要不要加进白名单，而不是等对方来报障
+//
+// 清空而非改写成 DefaultExptPriorityLevel：缺省值的权威定义在下游
+// （entity.NormalizeExptPriorityLevel 会把 0 收敛为缺省），在此写死会多出一处需要同步的常量。
+func (e *experimentApplication) enforcePriorityWhiteList(ctx context.Context, req *expt.CreateExperimentRequest) {
+	// 没申报就无需判定：省掉一次配置读取，也避免给未使用该字段的调用方刷无关日志。
+	if req == nil || !req.IsSetPriorityLevel() {
+		return
+	}
+
+	// caller PSM 取自 RPC 框架填充的 caller 字段，调用方无法在业务参数里伪造。
+	// 这与 trigger_type 有本质区别 —— 后者是请求体里的普通字段，任何人都能自称 "evalx"，
+	// 因此绝不能拿 trigger_type 当授权判据。
+	callerPSM, _ := kitexutil.GetCaller(ctx)
+
+	// 邮箱取自已验证的 ByteTIM ticket claim（商业版 CtxUser 中间件写入），不是请求体字段，
+	// 因此可以当授权键用。用邮箱而非 user_id 是为了让这份名单人可读、便于 review。
+	userEmail := ""
+	if u, ok := session.UserInCtx(ctx); ok && u != nil {
+		userEmail = u.Email
+	}
+
+	subject := entity.ExptPrioritySubject{
+		UserEmail: userEmail,
+		SpaceID:   req.GetWorkspaceID(),
+		CallerPSM: callerPSM,
+	}
+	if e.configer.GetExptPriorityWhiteList(ctx).AllowSpecifyPriority(subject) {
+		return
+	}
+
+	logs.CtxWarn(ctx, "[ExptPriority] caller not allowed to specify priority_level, falling back to default; "+
+		"requested: %d, user_email: %v, space_id: %v, caller_psm: %v",
+		req.GetPriorityLevel(), userEmail, subject.SpaceID, callerPSM)
+	req.PriorityLevel = nil
+}
+
+// enforceTriggerTrust 不可信调用方自称 evalx 时，把 trigger_type 降级为 manual。
+//
+// 为什么需要：enforce 的第一道闸只比对请求体里的 trigger_type 字符串，而那是调用方
+// **自己填的普通字段** —— 任何人都能自称 "evalx" 从而让实验进入中心调度。也就是说
+// "谁被中心调度纳管"部分取决于调用方自报，而它本该完全由我们的名单决定。
+// 本闸把判据换成 RPC 框架填充的 caller，那个调用方无法在业务参数里伪造。
+//
+// 降级为 manual 而不是报错：与 priority 闸同样的兼容考虑 —— 报错会打挂已经在自报 evalx 的
+// 调用方（它们此前是被接受的）。降级后实验照常创建、只是走 legacy 链路，功能不受影响，
+// 而 Warn 日志让我们能在灰度期看清"谁在自称 evalx"，据此补名单。
+//
+// 只处理 evalx：其它 trigger（manual / openapi / schedule）不触发 enforce，
+// 伪造它们不产生特权，没必要为此增加一道可能误伤的校验。
+func (e *experimentApplication) enforceTriggerTrust(ctx context.Context, req *expt.CreateExperimentRequest) {
+	if req == nil || !entity.ShouldEnforceByTrigger(req.GetTriggerType()) {
+		return
+	}
+
+	callerPSM, _ := kitexutil.GetCaller(ctx)
+	if e.configer.GetExptTriggerTrustConf(ctx).TrustEvalxTrigger(callerPSM) {
+		return
+	}
+
+	logs.CtxWarn(ctx, "[ExptTrigger] caller not trusted to declare evalx trigger, downgrading to manual; "+
+		"declared: %v, space_id: %v, caller_psm: %v",
+		req.GetTriggerType(), req.GetWorkspaceID(), callerPSM)
+	req.TriggerType = gptr.Of(domain_expt.Manual)
 }
 
 func (e *experimentApplication) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest) (r *expt.CreateExperimentTemplateResponse, err error) {

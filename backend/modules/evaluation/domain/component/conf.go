@@ -35,6 +35,12 @@ type IConfiger interface {
 	GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg
 	GetCKDBName(ctx context.Context) *entity.CKDBConfig
 	GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList
+	// GetExptPriorityWhiteList 谁可以在发起实验时指定调度优先级（user / space / caller PSM 三维 OR）。
+	// 未命中者的申报值被忽略、强制走缺省优先级。读取失败时按"谁都不许"处理。
+	GetExptPriorityWhiteList(ctx context.Context) *entity.ExptPriorityWhiteList
+	// GetExptTriggerTrustConf 谁可以自称 EvalX 从而让实验进入 enforce（按 caller PSM 判定）。
+	// 缺省不启用校验 —— 一律拒绝会让全部 EvalX 实验静默退回 legacy，比"配了没生效"隐蔽。
+	GetExptTriggerTrustConf(ctx context.Context) *entity.ExptTriggerTrustConf
 	GetMaintainerUserIDs(ctx context.Context) map[string]bool
 	GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl
 	GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf

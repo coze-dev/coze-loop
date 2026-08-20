@@ -89,6 +89,14 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetExptExportWhiteList(ctx context.
 	return nil
 }
 
+func (f *fakeEvaluatorRecordStorageConfiger) GetExptPriorityWhiteList(ctx context.Context) *entity.ExptPriorityWhiteList {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetExptTriggerTrustConf(ctx context.Context) *entity.ExptTriggerTrustConf {
+	return nil
+}
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	return nil
 }
