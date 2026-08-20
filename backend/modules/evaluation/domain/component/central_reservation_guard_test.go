@@ -50,3 +50,25 @@ func TestNoopCentralSchedulerScopeOwner_AlwaysOwns(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, owned)
 }
+
+func TestNoopCentralAdmissionPolicy_AlwaysAllows(t *testing.T) {
+	t.Parallel()
+
+	policy := NewNoopCentralAdmissionPolicy()
+
+	// noop 取放行而非拒绝：本 policy 的职责是"在已申报向量的实验里再筛一遍"，
+	// 缺省不筛等于保持引入本闸之前的语义（trigger 判据单独生效）。
+	// 若取拒绝，开源部署一旦出现 EvalX trigger 就再也建不出 enforce 实验。
+	allowed, err := policy.AllowCentralScheduling(context.Background(), CentralAdmissionSubject{
+		SpaceID:    123,
+		TargetType: "sandbox_agent",
+		TargetID:   456,
+	})
+	require.NoError(t, err)
+	assert.True(t, allowed)
+
+	// 零值 subject（skip-target 实验：无评测对象类型与 ID）同样放行。
+	allowed, err = policy.AllowCentralScheduling(context.Background(), CentralAdmissionSubject{})
+	require.NoError(t, err)
+	assert.True(t, allowed)
+}
