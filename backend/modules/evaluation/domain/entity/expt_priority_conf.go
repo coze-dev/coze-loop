@@ -4,9 +4,6 @@
 package entity
 
 import (
-	"encoding/json"
-	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -45,8 +42,11 @@ type ExptPriorityWhiteList struct {
 	// 不是请求体里的字段，调用方无法伪造，因此可以当授权键用。
 	UserEmails []string `json:"user_emails" mapstructure:"user_emails"`
 	// SpaceIDs 整个空间放行。**只填管理员私有空间**，理由见类型注释。
-	// 类型见 ConfigIDList：数字与字符串两种写法都接受（19 位雪花 ID 建议写字符串）。
-	SpaceIDs ConfigIDList `json:"space_ids" mapstructure:"space_ids"`
+	//
+	// 用 []string 而非 []int64：19 位雪花 ID 超出 float64 安全整数范围，
+	// 任何把 JSON number 当 double 的环节都会静默截断低位（实测 bytedcli tcc 写入
+	// 7533128632407949313 会回读成 ...949000）。配置里一律写 ["7533..."]。
+	SpaceIDs []string `json:"space_ids" mapstructure:"space_ids"`
 	// CallerPSMs 可信调用方 PSM（如 EvalX 的服务名）。用于系统调用方 —— 它们没有自然人身份。
 	//
 	// ⚠️ 只能填**内部 RPC 直连**的 PSM。它取自 kitex 的 caller 字段，由框架按调用方身份填充，
@@ -55,62 +55,6 @@ type ExptPriorityWhiteList struct {
 	CallerPSMs []string `json:"caller_psms" mapstructure:"caller_psms"`
 	// AllowAll 全部放行。仅用于"暂时不限制"的过渡期，不建议长期开启。
 	AllowAll bool `json:"allow_all" mapstructure:"allow_all"`
-}
-
-// ConfigIDList 是人工维护配置里的 ID 列表，**数字与字符串两种写法都接受**。
-//
-// 为什么需要它：19 位雪花 ID（空间 ID / 用户 ID）超出 IEEE-754 float64 安全整数范围
-// （2^53 ≈ 9.007e15），而配置的读写两侧对"该写哪种形态"的要求恰好相反：
-//
-//	写入侧：`bytedcli tcc config update` 把 JSON number 当 double 处理，
-//	        7533128632407949313 会被静默截断成 7533128632407949000（实测）
-//	读取侧：服务端用 encoding/json 直接解到 []int64，裸数字精确无损，
-//	        但字符串形态会直接报 cannot unmarshal string into int64
-//
-// 也就是说：为了写得进去要用字符串，为了读得出来要用数字。任何一种单一形态都会在
-// 某一侧出问题，而两种失败都**不报错给运维**（写入侧静默截断、读取侧整份配置解析失败后
-// 回落到缺省值），现象都是"配了却不生效"，且截断后的 ID 与原值肉眼几乎一样，极难反推。
-//
-// 因此这里两种都吃：运维怎么写都对。
-type ConfigIDList []int64
-
-// UnmarshalJSON 用 strconv.ParseInt 而非 unmarshal 到 float64 再转，
-// 后者会在解析阶段就丢掉精度 —— 那正是本类型要防的问题。
-func (l *ConfigIDList) UnmarshalJSON(data []byte) error {
-	var raw []json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-
-	out := make(ConfigIDList, 0, len(raw))
-	for _, item := range raw {
-		s := strings.TrimSpace(string(item))
-		// 去掉字符串形态的引号；裸数字保持原样。
-		if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
-			s = strings.TrimSpace(s[1 : len(s)-1])
-		}
-		if s == "" {
-			continue
-		}
-		id, err := strconv.ParseInt(s, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid id %q in config id list: %w", s, err)
-		}
-		out = append(out, id)
-	}
-
-	*l = out
-	return nil
-}
-
-// MarshalJSON 统一输出字符串形态：服务若把配置回写或转发给下游，
-// 字符串能避免在那一跳再被某个把 JSON number 当 double 的工具截断。
-func (l ConfigIDList) MarshalJSON() ([]byte, error) {
-	out := make([]string, 0, len(l))
-	for _, id := range l {
-		out = append(out, strconv.FormatInt(id, 10))
-	}
-	return json.Marshal(out)
 }
 
 // DefaultExptPriorityWhiteList 配置缺失或解析失败时的兜底：**谁都不许指定**。
@@ -125,7 +69,7 @@ func DefaultExptPriorityWhiteList() *ExptPriorityWhiteList {
 // ExptPrioritySubject 是判定的输入：一次创建实验请求里与"能否指定 priority"有关的全部身份。
 //
 // 收成一个结构体而不是散着传：三者都是可选的（自然人调用时 CallerPSM 为空，
-// 系统调用时 UserID 可能为空），散着传容易在新增维度时漏掉调用点。
+// 系统调用时 UserEmail 为空），散着传容易在新增维度时漏掉调用点。
 type ExptPrioritySubject struct {
 	// UserEmail 已验证的用户邮箱（来自 session）。空串表示拿不到身份。
 	UserEmail string
@@ -146,12 +90,27 @@ func (w *ExptPriorityWhiteList) AllowSpecifyPriority(subject ExptPrioritySubject
 	if w.matchUserEmail(subject.UserEmail) {
 		return true
 	}
-	// spaceID=0 表示"无空间上下文"，一律不匹配 —— 否则运维在 space_ids 里误填 0
-	// 就会把所有无空间上下文的请求放行。
-	if subject.SpaceID != 0 && slices.Contains(w.SpaceIDs, subject.SpaceID) {
+	if w.matchSpaceID(subject.SpaceID) {
 		return true
 	}
 	return w.matchCallerPSM(subject.CallerPSM)
+}
+
+// matchSpaceID 把入参格式化成字符串再比。
+//
+// spaceID=0 表示"无空间上下文"，一律不匹配 —— 否则运维在 space_ids 里误填 "0"
+// 就会把所有无空间上下文的请求放行。
+func (w *ExptPriorityWhiteList) matchSpaceID(spaceID int64) bool {
+	if spaceID == 0 {
+		return false
+	}
+	want := strconv.FormatInt(spaceID, 10)
+	for _, id := range w.SpaceIDs {
+		if strings.TrimSpace(id) == want {
+			return true
+		}
+	}
+	return false
 }
 
 // matchUserEmail 忽略大小写与首尾空白比对（邮箱本身大小写不敏感，且名单由人手写）。

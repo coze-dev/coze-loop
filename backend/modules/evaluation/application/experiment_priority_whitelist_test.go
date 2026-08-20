@@ -73,7 +73,7 @@ func TestEnforcePriorityWhiteList_KeepsWhenSpaceAllowed(t *testing.T) {
 
 	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
 	mockConfiger.EXPECT().GetExptPriorityWhiteList(gomock.Any()).
-		Return(&entity.ExptPriorityWhiteList{SpaceIDs: []int64{456}})
+		Return(&entity.ExptPriorityWhiteList{SpaceIDs: []string{"456"}})
 
 	app := &experimentApplication{configer: mockConfiger}
 	req := &expt.CreateExperimentRequest{
