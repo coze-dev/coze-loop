@@ -29121,7 +29121,25 @@ type SubmitExperimentOApiRequest struct {
 	RunModeConfig *experiment.RunModeConfig `thrift:"run_mode_config,47,optional" frugal:"47,optional,experiment.RunModeConfig" form:"run_mode_config" json:"run_mode_config,omitempty"`
 	// 通知配置
 	NotificationConf *experiment.ExptNotificationConf `thrift:"notification_conf,50,optional" frugal:"50,optional,experiment.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
-	Ext              map[string]string                `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	// ★ 中心化调度特权参数 60~62
+	//
+	// ⚠️ 三者都是**特权申报**: 仅当调用方身份命中服务端白名单
+	// (TCC expt_scheduling_privilege_white_list 的 user_emails / space_ids / caller_psms)
+	// 时才生效。未授权的调用方传了**不报错**, 但会被静默丢弃 ——
+	// priority 走缺省值、向量丢弃、trigger 降级 manual (实验走 legacy 链路)。
+	// 不报错是为了兼容: 这几个字段可能已有调用方在传, 突然报错会打挂它们。
+	//
+	// 调度优先级: 1-99, 数值越大越优先; 缺省取服务端配置的 default_priority (未配则 1)。
+	// 仅在中心调度模式下参与排序, legacy 模式忽略。
+	PriorityLevel *int32 `thrift:"priority_level,60,optional" frugal:"60,optional,i32" form:"priority_level" json:"priority_level,omitempty"`
+	// 单 item 预期资源消耗向量: 进入中心调度 (enforce) 的实验必填且非空。
+	// 服务端校验 (category,resource_key) 唯一、amount>0、禁止 resource_key="*", 随后冻结进 eval_conf;
+	// Retry 继承不可覆盖。category/resource_key 须与服务端 TCC 资源配置对得上。
+	ExpectedQuotaConsumption *experiment.ExpectedQuotaConsumption `thrift:"expected_quota_consumption,61,optional" frugal:"61,optional,experiment.ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty"`
+	// 触发来源: 填 "evalx" 且身份获授权时, 实验可进入中心调度 (enforce);
+	// 其余取值或未授权一律走 legacy。不填则按 openapi 处理。
+	TriggerType *string           `thrift:"trigger_type,62,optional" frugal:"62,optional,string" form:"trigger_type" json:"trigger_type,omitempty"`
+	Ext         map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	// 实验分组 key 默认以实验 ID 兜底；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）。
 	// 引用分组实验 id: 填写时校验其为当前空间内的实验 id。
 	RefGroupExperimentID *int64       `thrift:"ref_group_experiment_id,102,optional" frugal:"102,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
@@ -29328,6 +29346,42 @@ func (p *SubmitExperimentOApiRequest) GetNotificationConf() (v *experiment.ExptN
 	return p.NotificationConf
 }
 
+var SubmitExperimentOApiRequest_PriorityLevel_DEFAULT int32
+
+func (p *SubmitExperimentOApiRequest) GetPriorityLevel() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriorityLevel() {
+		return SubmitExperimentOApiRequest_PriorityLevel_DEFAULT
+	}
+	return *p.PriorityLevel
+}
+
+var SubmitExperimentOApiRequest_ExpectedQuotaConsumption_DEFAULT *experiment.ExpectedQuotaConsumption
+
+func (p *SubmitExperimentOApiRequest) GetExpectedQuotaConsumption() (v *experiment.ExpectedQuotaConsumption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedQuotaConsumption() {
+		return SubmitExperimentOApiRequest_ExpectedQuotaConsumption_DEFAULT
+	}
+	return p.ExpectedQuotaConsumption
+}
+
+var SubmitExperimentOApiRequest_TriggerType_DEFAULT string
+
+func (p *SubmitExperimentOApiRequest) GetTriggerType() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTriggerType() {
+		return SubmitExperimentOApiRequest_TriggerType_DEFAULT
+	}
+	return *p.TriggerType
+}
+
 var SubmitExperimentOApiRequest_Ext_DEFAULT map[string]string
 
 func (p *SubmitExperimentOApiRequest) GetExt() (v map[string]string) {
@@ -29423,6 +29477,15 @@ func (p *SubmitExperimentOApiRequest) SetRunModeConfig(val *experiment.RunModeCo
 func (p *SubmitExperimentOApiRequest) SetNotificationConf(val *experiment.ExptNotificationConf) {
 	p.NotificationConf = val
 }
+func (p *SubmitExperimentOApiRequest) SetPriorityLevel(val *int32) {
+	p.PriorityLevel = val
+}
+func (p *SubmitExperimentOApiRequest) SetExpectedQuotaConsumption(val *experiment.ExpectedQuotaConsumption) {
+	p.ExpectedQuotaConsumption = val
+}
+func (p *SubmitExperimentOApiRequest) SetTriggerType(val *string) {
+	p.TriggerType = val
+}
 func (p *SubmitExperimentOApiRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -29453,6 +29516,9 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	46:  "enable_extract_trajectory",
 	47:  "run_mode_config",
 	50:  "notification_conf",
+	60:  "priority_level",
+	61:  "expected_quota_consumption",
+	62:  "trigger_type",
 	100: "ext",
 	102: "ref_group_experiment_id",
 	254: "extra",
@@ -29521,6 +29587,18 @@ func (p *SubmitExperimentOApiRequest) IsSetRunModeConfig() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetNotificationConf() bool {
 	return p.NotificationConf != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetPriorityLevel() bool {
+	return p.PriorityLevel != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetExpectedQuotaConsumption() bool {
+	return p.ExpectedQuotaConsumption != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetTriggerType() bool {
+	return p.TriggerType != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetExt() bool {
@@ -29680,6 +29758,30 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField50(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 60:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField60(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 61:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField61(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 62:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField62(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -29940,6 +30042,36 @@ func (p *SubmitExperimentOApiRequest) ReadField50(iprot thrift.TProtocol) error 
 	p.NotificationConf = _field
 	return nil
 }
+func (p *SubmitExperimentOApiRequest) ReadField60(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PriorityLevel = _field
+	return nil
+}
+func (p *SubmitExperimentOApiRequest) ReadField61(iprot thrift.TProtocol) error {
+	_field := experiment.NewExpectedQuotaConsumption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExpectedQuotaConsumption = _field
+	return nil
+}
+func (p *SubmitExperimentOApiRequest) ReadField62(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TriggerType = _field
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -30065,6 +30197,18 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField50(oprot); err != nil {
 			fieldId = 50
+			goto WriteFieldError
+		}
+		if err = p.writeField60(oprot); err != nil {
+			fieldId = 60
+			goto WriteFieldError
+		}
+		if err = p.writeField61(oprot); err != nil {
+			fieldId = 61
+			goto WriteFieldError
+		}
+		if err = p.writeField62(oprot); err != nil {
+			fieldId = 62
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -30413,6 +30557,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
 }
+func (p *SubmitExperimentOApiRequest) writeField60(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriorityLevel() {
+		if err = oprot.WriteFieldBegin("priority_level", thrift.I32, 60); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PriorityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 60 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 60 end error: ", p), err)
+}
+func (p *SubmitExperimentOApiRequest) writeField61(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedQuotaConsumption() {
+		if err = oprot.WriteFieldBegin("expected_quota_consumption", thrift.STRUCT, 61); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExpectedQuotaConsumption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 61 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 61 end error: ", p), err)
+}
+func (p *SubmitExperimentOApiRequest) writeField62(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTriggerType() {
+		if err = oprot.WriteFieldBegin("trigger_type", thrift.STRING, 62); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TriggerType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 62 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 62 end error: ", p), err)
+}
 func (p *SubmitExperimentOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -30557,6 +30755,15 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 		return false
 	}
 	if !p.Field50DeepEqual(ano.NotificationConf) {
+		return false
+	}
+	if !p.Field60DeepEqual(ano.PriorityLevel) {
+		return false
+	}
+	if !p.Field61DeepEqual(ano.ExpectedQuotaConsumption) {
+		return false
+	}
+	if !p.Field62DeepEqual(ano.TriggerType) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -30735,6 +30942,37 @@ func (p *SubmitExperimentOApiRequest) Field47DeepEqual(src *experiment.RunModeCo
 func (p *SubmitExperimentOApiRequest) Field50DeepEqual(src *experiment.ExptNotificationConf) bool {
 
 	if !p.NotificationConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field60DeepEqual(src *int32) bool {
+
+	if p.PriorityLevel == src {
+		return true
+	} else if p.PriorityLevel == nil || src == nil {
+		return false
+	}
+	if *p.PriorityLevel != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field61DeepEqual(src *experiment.ExpectedQuotaConsumption) bool {
+
+	if !p.ExpectedQuotaConsumption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field62DeepEqual(src *string) bool {
+
+	if p.TriggerType == src {
+		return true
+	} else if p.TriggerType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TriggerType, *src) != 0 {
 		return false
 	}
 	return true

@@ -3291,6 +3291,35 @@ func ExpectedQuotaConsumptionDomain2OpenAPI(c *domainExpt.ExpectedQuotaConsumpti
 	return &openapiExperiment.ExpectedQuotaConsumption{Resources: resources}
 }
 
+// ExpectedQuotaConsumptionOpenAPI2Domain 是 ExpectedQuotaConsumptionDomain2OpenAPI 的反向映射。
+//
+// 只做形态搬运，不做合法性校验 —— 校验（(category,resource_key) 唯一、amount>0、
+// 禁止 resource_key="*"）统一在创建期的 Validate 里做，那里能对内部与 OpenAPI 两条入口
+// 一视同仁。在此提前校验会让同一条规则散成两处、且两处的错误码可能不一致。
+//
+// 返回 nil 表示"没有申报"（空向量与未传等价）：下游据此判断 enforce 缺向量并报错，
+// 而 &ExpectedQuotaConsumption{Resources: nil} 会让"传了空数组"看起来像"申报过"。
+func ExpectedQuotaConsumptionOpenAPI2Domain(c *openapiExperiment.ExpectedQuotaConsumption) *domainExpt.ExpectedQuotaConsumption {
+	if c == nil || len(c.GetResources()) == 0 {
+		return nil
+	}
+	resources := make([]*domainExpt.ExpectedResourceConsumption, 0, len(c.GetResources()))
+	for _, r := range c.GetResources() {
+		if r == nil {
+			continue
+		}
+		resources = append(resources, &domainExpt.ExpectedResourceConsumption{
+			Category:    r.GetCategory(),
+			ResourceKey: r.GetResourceKey(),
+			Amount:      r.GetAmount(),
+		})
+	}
+	if len(resources) == 0 {
+		return nil
+	}
+	return &domainExpt.ExpectedQuotaConsumption{Resources: resources}
+}
+
 // domainRunModeToOpenAPI 是 openAPIRunModeToDomain 的反向映射。
 //
 // 两套枚举在**这一层**恰好一一对应 (都只有四个对外形态), 所以看起来像可以直接强转 ——
