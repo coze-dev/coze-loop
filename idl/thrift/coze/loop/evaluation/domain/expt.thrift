@@ -222,6 +222,13 @@ struct Experiment {
     116: optional i32 priority_level
     // 执行模式回显: legacy(旧 per-experiment 链路) / enforce(中心调度); 直读 experiment 表同名列, 该列是唯一权威源
     117: optional string scheduler_mode
+    // 单 item 预期资源消耗向量回显: 从 experiment.eval_conf 反序列化, 与 Create/Submit 入参同构。
+    // "有则回显、无则省略": legacy 实验确实没申报向量, 省略比返回空结构更如实。
+    118: optional ExpectedQuotaConsumption expected_quota_consumption
+
+    // 注: scheduler_scope **刻意不进读视图**。它是不透明调度域 ID (形如 fornax_cn_prod),
+    // 对调用方没有可用语义却泄露部署拓扑; 业务代码本就不允许解析该字符串, 回显只会诱使
+    // 调用方依赖这个不稳定契约。内部运维需要时直接查 experiment.scheduler_scope 列。
 }
 
 // 实验模板基础信息

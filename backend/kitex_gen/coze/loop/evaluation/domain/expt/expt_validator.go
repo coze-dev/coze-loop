@@ -86,6 +86,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field RunModeConfig not valid, %w", err)
 		}
 	}
+	if p.ExpectedQuotaConsumption != nil {
+		if err := p.ExpectedQuotaConsumption.IsValid(); err != nil {
+			return fmt.Errorf("field ExpectedQuotaConsumption not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {

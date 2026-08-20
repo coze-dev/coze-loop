@@ -723,3 +723,75 @@ func TestOpenAPIEvalSetConfigsDTO2Domain_EvaluatorFilter(t *testing.T) {
 	assert.False(t, ec2.IsSetFilterMode())
 	assert.Equal(t, int32(0), ec2.GetFilterMode())
 }
+
+// 中心化调度读视图在 OpenAPI 面的回显（IDL 116~118）。
+//
+// 补这三个字段的动因与 run_mode_config 相同：写侧能配、读侧没有，OpenAPI 调用方
+// 查不到自己的实验有没有被中心调度纳管、申报了多少额度 —— 两套读模型的不对称。
+func TestDomainExperimentDTO2OpenAPI_SchedulingReadView(t *testing.T) {
+	t.Parallel()
+
+	out := DomainExperimentDTO2OpenAPI(&domainExpt.Experiment{
+		ID:            gptr.Of(int64(1)),
+		PriorityLevel: gptr.Of(int32(9)),
+		SchedulerMode: gptr.Of("enforce"),
+		ExpectedQuotaConsumption: &domainExpt.ExpectedQuotaConsumption{
+			Resources: []*domainExpt.ExpectedResourceConsumption{
+				{Category: "sandbox", ResourceKey: "default", Amount: 1},
+				{Category: "model", ResourceKey: "gpt5.5", Amount: 1000},
+			},
+		},
+	})
+
+	assert.NotNil(t, out)
+	assert.Equal(t, int32(9), out.GetPriorityLevel())
+	assert.Equal(t, "enforce", out.GetSchedulerMode())
+
+	res := out.GetExpectedQuotaConsumption().GetResources()
+	assert.Len(t, res, 2)
+	assert.Equal(t, "sandbox", res[0].GetCategory())
+	assert.Equal(t, "default", res[0].GetResourceKey())
+	assert.Equal(t, int64(1), res[0].GetAmount())
+	assert.Equal(t, "model", res[1].GetCategory())
+	assert.Equal(t, int64(1000), res[1].GetAmount())
+}
+
+// legacy 实验也回显 mode/priority，向量省略。
+func TestDomainExperimentDTO2OpenAPI_SchedulingReadView_Legacy(t *testing.T) {
+	t.Parallel()
+
+	out := DomainExperimentDTO2OpenAPI(&domainExpt.Experiment{
+		ID:            gptr.Of(int64(2)),
+		PriorityLevel: gptr.Of(int32(1)),
+		SchedulerMode: gptr.Of("legacy"),
+	})
+
+	assert.NotNil(t, out)
+	assert.Equal(t, "legacy", out.GetSchedulerMode(),
+		"legacy 也要回显——'为什么我的实验没进中心调度'是最高频疑问，回显 legacy 可一眼确认")
+	assert.Equal(t, int32(1), out.GetPriorityLevel())
+	assert.Nil(t, out.ExpectedQuotaConsumption, "legacy 确实没申报向量，省略比返回空结构更如实")
+}
+
+func TestExpectedQuotaConsumptionDomain2OpenAPI(t *testing.T) {
+	t.Parallel()
+
+	// nil / 空 / 全 nil 元素都返回 nil，让 optional 字段省略。
+	assert.Nil(t, ExpectedQuotaConsumptionDomain2OpenAPI(nil))
+	assert.Nil(t, ExpectedQuotaConsumptionDomain2OpenAPI(&domainExpt.ExpectedQuotaConsumption{}))
+	assert.Nil(t, ExpectedQuotaConsumptionDomain2OpenAPI(&domainExpt.ExpectedQuotaConsumption{
+		Resources: []*domainExpt.ExpectedResourceConsumption{nil, nil},
+	}))
+
+	// 混入 nil 元素时跳过，不 panic 也不产出空壳资源。
+	got := ExpectedQuotaConsumptionDomain2OpenAPI(&domainExpt.ExpectedQuotaConsumption{
+		Resources: []*domainExpt.ExpectedResourceConsumption{
+			nil,
+			{Category: "evaluator", ResourceKey: "*", Amount: 3},
+		},
+	})
+	assert.NotNil(t, got)
+	assert.Len(t, got.GetResources(), 1)
+	assert.Equal(t, "evaluator", got.GetResources()[0].GetCategory())
+	assert.Equal(t, int64(3), got.GetResources()[0].GetAmount())
+}

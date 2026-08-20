@@ -2792,6 +2792,9 @@ type Experiment struct {
 	PriorityLevel *int32 `thrift:"priority_level,116,optional" frugal:"116,optional,i32" form:"priority_level" json:"priority_level,omitempty" query:"priority_level"`
 	// 执行模式回显: legacy(旧 per-experiment 链路) / enforce(中心调度); 直读 experiment 表同名列, 该列是唯一权威源
 	SchedulerMode *string `thrift:"scheduler_mode,117,optional" frugal:"117,optional,string" form:"scheduler_mode" json:"scheduler_mode,omitempty" query:"scheduler_mode"`
+	// 单 item 预期资源消耗向量回显: 从 experiment.eval_conf 反序列化, 与 Create/Submit 入参同构。
+	// "有则回显、无则省略": legacy 实验确实没申报向量, 省略比返回空结构更如实。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption `thrift:"expected_quota_consumption,118,optional" frugal:"118,optional,ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty" query:"expected_quota_consumption"`
 }
 
 func NewExperiment() *Experiment {
@@ -3388,6 +3391,18 @@ func (p *Experiment) GetSchedulerMode() (v string) {
 	}
 	return *p.SchedulerMode
 }
+
+var Experiment_ExpectedQuotaConsumption_DEFAULT *ExpectedQuotaConsumption
+
+func (p *Experiment) GetExpectedQuotaConsumption() (v *ExpectedQuotaConsumption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedQuotaConsumption() {
+		return Experiment_ExpectedQuotaConsumption_DEFAULT
+	}
+	return p.ExpectedQuotaConsumption
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -3535,6 +3550,9 @@ func (p *Experiment) SetPriorityLevel(val *int32) {
 func (p *Experiment) SetSchedulerMode(val *string) {
 	p.SchedulerMode = val
 }
+func (p *Experiment) SetExpectedQuotaConsumption(val *ExpectedQuotaConsumption) {
+	p.ExpectedQuotaConsumption = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:   "id",
@@ -3586,6 +3604,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	115: "run_mode_config",
 	116: "priority_level",
 	117: "scheduler_mode",
+	118: "expected_quota_consumption",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -3782,6 +3801,10 @@ func (p *Experiment) IsSetPriorityLevel() bool {
 
 func (p *Experiment) IsSetSchedulerMode() bool {
 	return p.SchedulerMode != nil
+}
+
+func (p *Experiment) IsSetExpectedQuotaConsumption() bool {
+	return p.ExpectedQuotaConsumption != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -4189,6 +4212,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 117:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField117(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 118:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField118(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4824,6 +4855,14 @@ func (p *Experiment) ReadField117(iprot thrift.TProtocol) error {
 	p.SchedulerMode = _field
 	return nil
 }
+func (p *Experiment) ReadField118(iprot thrift.TProtocol) error {
+	_field := NewExpectedQuotaConsumption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExpectedQuotaConsumption = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -5025,6 +5064,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField117(oprot); err != nil {
 			fieldId = 117
+			goto WriteFieldError
+		}
+		if err = p.writeField118(oprot); err != nil {
+			fieldId = 118
 			goto WriteFieldError
 		}
 	}
@@ -5986,6 +6029,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 117 end error: ", p), err)
 }
+func (p *Experiment) writeField118(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedQuotaConsumption() {
+		if err = oprot.WriteFieldBegin("expected_quota_consumption", thrift.STRUCT, 118); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExpectedQuotaConsumption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 118 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 118 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -6146,6 +6207,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field117DeepEqual(ano.SchedulerMode) {
+		return false
+	}
+	if !p.Field118DeepEqual(ano.ExpectedQuotaConsumption) {
 		return false
 	}
 	return true
@@ -6687,6 +6751,13 @@ func (p *Experiment) Field117DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.SchedulerMode, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field118DeepEqual(src *ExpectedQuotaConsumption) bool {
+
+	if !p.ExpectedQuotaConsumption.DeepEqual(src) {
 		return false
 	}
 	return true

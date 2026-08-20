@@ -417,6 +417,12 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	// 跑法配置回显 (115): 写侧 SubmitExperimentRequest 能配, 读侧此前无字段, OpenAPI 调用方
 	// 查不到自己配了什么跑法 —— 内部接口一直能回显, 属两套读模型的不对称, 2026-08 补齐。
 	result.RunModeConfig = RunModeConfigDomain2OpenAPI(dto.RunModeConfig)
+	// 中心化调度读视图 (116~118)。与 run_mode_config 同理: 内部读模型能回显, OpenAPI 侧此前没有,
+	// 调用方查不到自己的实验有没有被中心调度纳管、申报了多少额度。
+	// scheduler_scope 刻意不透出, 见 domain_openapi/experiment.thrift 的字段注释。
+	result.PriorityLevel = dto.PriorityLevel
+	result.SchedulerMode = dto.SchedulerMode
+	result.ExpectedQuotaConsumption = ExpectedQuotaConsumptionDomain2OpenAPI(dto.ExpectedQuotaConsumption)
 	return result
 }
 
@@ -789,6 +795,16 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	// 再套一层就够了; 另写一条 entity→openapi 直转会把那套零值判定复制一份, 两处迟早漂移。
 	if experiment.EvalConf != nil {
 		result.RunModeConfig = RunModeConfigDomain2OpenAPI(runModeConfigDO2DTO(experiment.EvalConf.RunModeConfig))
+	}
+
+	// 中心化调度读视图 (116~118)。同样走两跳复用 entity 侧的归一化 ——
+	// NormalizeExptPriorityLevel / NormalizeExptDispatchMode 负责把历史与异常取值收敛
+	// (0→1, 越界夹取, 非法模式→legacy), 直转会把这套规则复制一份。
+	result.PriorityLevel = gptr.Of(entity.NormalizeExptPriorityLevel(experiment.PriorityLevel))
+	result.SchedulerMode = gptr.Of(entity.NormalizeExptDispatchMode(experiment.ExptDispatchMode))
+	if experiment.EvalConf != nil {
+		result.ExpectedQuotaConsumption = ExpectedQuotaConsumptionDomain2OpenAPI(
+			expectedQuotaConsumptionDO2DTO(experiment.EvalConf.ExpectedQuotaConsumption))
 	}
 
 	return result
@@ -3244,6 +3260,35 @@ func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment
 		}
 	}
 	return out
+}
+
+// ExpectedQuotaConsumptionDomain2OpenAPI 把已冻结的资源消耗向量转成 OpenAPI 读模型。
+//
+// 与 RunModeConfigDomain2OpenAPI 同样另立一份结构而非 include domain/expt.thrift ——
+// OpenAPI 面与内部面刻意隔离（见 domain_openapi/experiment.thrift 的字段注释），
+// 直接 include 会撞符号。两套结构字段一一对应但类型不同，不能强转。
+//
+// nil 或空向量返回 nil，让 optional 字段在序列化时省略：调用方据此区分
+// "没申报"（legacy 实验）与"申报了空向量"（不应存在的数据异常）。
+func ExpectedQuotaConsumptionDomain2OpenAPI(c *domainExpt.ExpectedQuotaConsumption) *openapiExperiment.ExpectedQuotaConsumption {
+	if c == nil || len(c.GetResources()) == 0 {
+		return nil
+	}
+	resources := make([]*openapiExperiment.ExpectedResourceConsumption, 0, len(c.GetResources()))
+	for _, r := range c.GetResources() {
+		if r == nil {
+			continue
+		}
+		resources = append(resources, &openapiExperiment.ExpectedResourceConsumption{
+			Category:    gptr.Of(r.GetCategory()),
+			ResourceKey: gptr.Of(r.GetResourceKey()),
+			Amount:      gptr.Of(r.GetAmount()),
+		})
+	}
+	if len(resources) == 0 {
+		return nil
+	}
+	return &openapiExperiment.ExpectedQuotaConsumption{Resources: resources}
 }
 
 // domainRunModeToOpenAPI 是 openAPIRunModeToDomain 的反向映射。
