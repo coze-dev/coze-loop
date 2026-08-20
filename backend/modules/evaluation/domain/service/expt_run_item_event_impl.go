@@ -133,10 +133,12 @@ func NewExptRecordEvalService(
 	i.endpoints = RecordEvalChain(
 		i.HandleEventErr,
 		i.HandleEventCheck,
-		// 额度闸放在 Check 之后、Lock 之前：Check 已排除掉终态 run（那些消息不需要额度校验），
-		// 而放在 Lock 之前可避免为一条注定要丢弃的消息去抢 item 锁。
-		i.HandleCentralReservation,
+		// 额度准入放在 Check 之后、Lock 之前：Check 已排除掉终态 run（那些消息不需要额度校验），
+		// 而放在 Lock 之前可避免为一条注定要丢弃的消息（不归本进程 / 无 Scope）去抢 item 锁。
+		i.HandleCentralAdmission,
 		i.HandleEventLock,
+		// ★ 取执行权与兑现投影必须在锁内：见 HandleCentralReservation 注释。
+		i.HandleCentralReservation,
 		i.HandleEventExec,
 	)(func(_ context.Context, _ *entity.ExptItemEvalEvent) error { return nil })
 
@@ -183,12 +185,22 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint)
 	}
 }
 
-// HandleCentralReservation 对中心调度纳管的实验校验额度预占。
+// HandleCentralAdmission 判定该 item 消息是否该由本进程执行，并把实验挂到 ctx 供下游复用。
+//
+// 与 HandleCentralReservation 拆开、夹在 item 锁两侧，是为了让两类判断各就各位：
+//
+//	本层（锁外）：纯读，"这条消息该不该由我处理" —— 不该处理的消息不必去抢锁
+//	下层（锁内）：写，"取额度执行权 + 兑现投影" —— 必须与执行本身在同一临界区
+//
+// 反过来把归属校验也塞进锁内，会让一个路由错误的进程先抢到 item 锁再发现不归自己，
+// 白占一段临界区；而把 ConfirmRunning 留在锁外，则两条并发消息可以各自取到执行权
+// （Lua 对已 running 幂等返回 1），虽然靠幂等兜住了正确性，但会产生无谓的 Redis 写与
+// 一次注定失败的 CAS。
 //
 // 模式判定**回查 experiment.scheduler_mode DB 列**，不看 event 上的任何标记：
 // 若模式随 event 传递，字段丢失或取默认零值时，一条实际为 central 的消息会被当作 legacy 处理，
-// 从而跳过本校验、静默绕过额度执行 —— 这个方向的失败是无声的，比多查一次 DB 危险得多。
-func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalEndPoint) RecordEvalEndPoint {
+// 从而跳过额度校验、静默绕过额度执行 —— 这个方向的失败是无声的，比多查一次 DB 危险得多。
+func (e *ExptItemEventEvalServiceImpl) HandleCentralAdmission(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		expt, err := e.experimentRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 		if err != nil {
@@ -232,11 +244,42 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			}
 		}
 
-		guard := e.centralGuard
-		if guard == nil {
+		if e.centralGuard == nil {
 			// 判定为 enforce 却没有注入闸门：fail-closed。
 			// 放行等于让实验在无额度约束下跑，静默且难以发现；停下来则可见。
 			logs.CtxWarn(ctx, "[CentralReservation] enforce experiment without guard, drop event, expt_id: %v, item_id: %v",
+				event.ExptID, event.EvalSetItemID)
+			return nil
+		}
+
+		// 把已判定为"本进程纳管"的实验交给锁内那一层，省掉一次重复的 GetByID。
+		// 只在 enforce 且通过全部准入检查后写入 —— 下游据此判断"要不要走额度闸"，
+		// 缺失即视为不需要，与 legacy 直通的语义一致。
+		event.WithCtxCentralAdmittedExpt(ctx, expt)
+
+		return next(ctx, event)
+	}
+}
+
+// HandleCentralReservation 取得该 item 的额度执行权并兑现 run log 投影。
+//
+// ★ 必须在 item 锁**内**：ConfirmRunning（取执行权）+ StartReservedItem（CAS 投影）+ 执行本身
+// 是一个整体，锁外做前两步意味着两条并发消息可以各自"取到执行权"，之后靠 CAS 与 Lua 幂等
+// 兜住正确性 —— 兜得住，但多余的 Redis 写与注定失败的 CAS 都是白做的，且把"谁在执行"
+// 这个事实拆到了锁的两边，后续任何依赖它的改动都要重新推演一遍并发。
+func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalEndPoint) RecordEvalEndPoint {
+	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		expt, admitted := event.CtxCentralAdmittedExpt(ctx)
+		if !admitted {
+			// legacy 实验，或已在 admission 层被丢弃。不经额度闸。
+			return next(ctx, event)
+		}
+
+		guard := e.centralGuard
+		if guard == nil {
+			// admission 已挡过一次，走到这里说明 guard 在两层之间被置空 —— 不可能发生，
+			// 但保持 fail-closed 而不是让 nil 解引用把 consumer 打崩。
+			logs.CtxWarn(ctx, "[CentralReservation] guard absent inside lock, drop event, expt_id: %v, item_id: %v",
 				event.ExptID, event.EvalSetItemID)
 			return nil
 		}
@@ -263,6 +306,8 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 		//
 		// CAS 未命中（started=false）不阻断执行：可能是重复投递（已 Processing）或
 		// 投影已被 repair 修正。此时 reservation 校验已通过，说明额度是真的，继续执行是安全的。
+		// 现在本层在 item 锁内，同一 item 不会有并发的第二个执行者，未命中只剩"已 Processing
+		// 的重复投递"与"被 repair 修正"两种，两者继续执行都由 item 锁 + 幂等写兜住。
 		if e.dispatchRepo != nil {
 			started, err := e.dispatchRepo.StartReservedItem(ctx, event.SpaceID, event.ExptID, event.ExptRunID, event.EvalSetItemID)
 			if err != nil {
@@ -276,7 +321,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			}
 		}
 
-		// 执行链返回后释放额度：这是 consumer 侧唯一的释放点。
+		// 执行链返回后释放额度：这是 consumer 侧的主释放点。
 		//
 		// 为什么放在这一层而不是 CompleteItemRun 等各个终态写库处：终态路径有四条
 		// （success / fail / 不可重试前置失败 / indebt 终止），每条都手动调一次释放
@@ -288,6 +333,14 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 		// 再次执行同一 item，若此刻释放了额度，重投的消息在 ConfirmRunning 处会因
 		// reservation 不存在而被丢弃 —— item 永久停在 Processing。因此必须只在
 		// item 真的进入终态时释放，靠回查 run log 投影判定，不靠猜。
+		//
+		// ★ 把释放凭据挂到 ctx：本层判定"未终态、保留 reservation"之后，err 会继续冒到更外层的
+		// HandleEventErr，那里的 completeItemRunOnUnretriableErr 兜底把 item 落成 Fail
+		// —— 那一步发生在本层**之外**，本层再没有机会释放，reservation 就永久泄漏了
+		// （无 TTL 清理、无对账，见 §B1）。凭据让外层能在落 Fail 之后补一次释放，
+		// 而不必把 Scope / guard 这些中心调度概念泄进 HandleEventErr 的签名。
+		event.WithCtxCentralQuotaHeld(ctx, expt.SchedulerScope)
+
 		execErr := next(ctx, event)
 		e.releaseQuotaIfItemTerminal(ctx, event, expt.SchedulerScope, guard, execErr)
 		return execErr
@@ -391,6 +444,12 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 				return errorx.Wrapf(err, "complete expt fail, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			}
 
+			// ★ 欠费终止同样要归还额度：整个实验已 Terminated，这条 item 的 run log 却停在
+			// Processing（本分支不落 item 终态），内层额度闸按状态判定时又已经返回 —— 不补这一次
+			// 释放，该 item 的预占就跟着终止的实验一起永久留在账本里。
+			// 每条 item 消息都会各自走到这里（IsInDebt 是空间级配置），所以按 item 粒度释放即可覆盖全 run。
+			e.releaseCentralQuotaOutsideGate(ctx, event, nextErr, "expt terminated on indebt")
+
 			return nil
 		}
 
@@ -414,8 +473,57 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		// 此处按 CompleteItemRun 同样的字段兜底(status=Fail + err_msg + result_state=Logged), 幂等可重复写。
 		e.completeItemRunOnUnretriableErr(ctx, event, nextErr)
 
+		// ★ 顺序不能反：必须先落 Fail 再释放。
+		// 落 Fail 让 item 不再计入并发占用，此时归还额度才是守恒的；反过来先释放，
+		// 会出现"额度已归还但 item 仍算 Processing"的窗口，下一拍调度器按虚高的占用少派 item。
+		e.releaseCentralQuotaOutsideGate(ctx, event, nextErr, "item unretriable pre-exec failure")
+
 		return nil
 	}
+}
+
+// releaseCentralQuotaOutsideGate 在额度闸之外的终态路径上释放中心调度额度预占。
+//
+// 补的是 HandleCentralReservation 够不着的两条路径 —— 它们都在额度闸的**外层**把
+// item / 实验判成终态，而额度闸按 run log 状态判定时那些状态还没写下去：
+//
+//	① 不可重试的前置失败：BuildExptRecordEvalCtx 等阶段失败，item 由
+//	   completeItemRunOnUnretriableErr 兜底落 Fail
+//	② 欠费终止：整个实验落 Terminated，item run log 不动
+//
+// 没有这一步，这两条路径上的额度**永久泄漏**：既无 reservation TTL 清理，也还没有对账（§B1），
+// 现象是"额度慢慢跑满后整个 Scope 再也调度不动"，且看起来像上限配小了。
+//
+// 靠 ctx 凭据而非回查 DB 判定是否需要释放：凭据由额度闸在取得执行权后写入，
+// 天然排除掉 legacy 实验与在取得执行权之前就被丢弃的消息，也免去一次 experiment 查询。
+//
+// 与额度闸内的 releaseQuotaIfItemTerminal 重复释放是安全的：Release 落到 Redis 是
+// HDEL + used 递减，同一 field 二次删除不生效，不会把 used 扣成负数。
+//
+// best-effort：释放失败只告警。让"额度归还失败"阻断终态收口会把额度泄漏升级成实验不收敛。
+func (e *ExptItemEventEvalServiceImpl) releaseCentralQuotaOutsideGate(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error, reasonPrefix string) {
+	if event == nil || evalErr == nil || e.centralGuard == nil {
+		return
+	}
+
+	schedulerScope, held := event.CtxCentralQuotaHeldScope(ctx)
+	if !held {
+		// 没持有预占：legacy 实验，或消息在取得执行权之前就被丢弃/失败了。
+		return
+	}
+
+	// 独立超时的 ctx：主 ctx 可能已因执行失败被取消，而释放必须尽力完成。
+	relCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	defer cancel()
+
+	reason := reasonPrefix + ": " + evalErr.Error()
+	if err := e.centralGuard.Release(relCtx, schedulerScope, event.ExptRunID, event.EvalSetItemID, reason); err != nil {
+		logs.CtxWarn(relCtx, "[CentralReservation] release quota outside gate fail, scope: %v, expt_run_id: %v, item_id: %v, err: %v",
+			schedulerScope, event.ExptRunID, event.EvalSetItemID, err)
+		return
+	}
+	logs.CtxInfo(relCtx, "[CentralReservation] quota released outside gate, scope: %v, expt_run_id: %v, item_id: %v, reason: %v",
+		schedulerScope, event.ExptRunID, event.EvalSetItemID, reason)
 }
 
 // completeItemRunOnUnretriableErr 将 item 落为 Fail 并写入错误信息。
