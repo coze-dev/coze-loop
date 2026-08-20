@@ -1322,16 +1322,19 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	dispatchMode := entity.ExptDispatchModeLegacy
 	schedulerScope := ""
 	expectedQuota := req.ExpectedQuotaConsumption
+	// defaultPriority 未申报优先级时的缺省值。0 表示"没有意见"，由
+	// NormalizeExptPriorityLevelWithDefault 回落到 entity.DefaultExptPriorityLevel。
+	var defaultPriority int32
 	if entity.ShouldEnforceByTrigger(triggerType) {
 		// 灰度收窄闸。先判 policy 再校验向量：policy 不放行时该实验走 legacy，
 		// 此时缺向量是正常的（EvalX 对未纳管空间也可能不传），不该报错。
-		admitted, err := e.allowCentralScheduling(ctx, req.WorkspaceID, tuple)
+		decision, err := e.allowCentralScheduling(ctx, req.WorkspaceID, tuple)
 		if err != nil {
 			// 配置不可判定时拒绝创建 enforce 实验，而不是放行或降级 legacy：
 			// 放行会让本该受额度管控的实验绕过管控；静默降级会让 EvalX 以为受管控。
 			return nil, err
 		}
-		if admitted {
+		if decision.Admitted {
 			// enforce 实验必须有合法的资源消耗向量：没有向量就无法预占额度，
 			// 调度器只能永远跳过它 —— 表现为"实验建好了但一个 item 都不跑"，且那条分支静默。
 			// 因此在创建时就拒绝，把问题暴露在调用方能看到的地方。
@@ -1352,6 +1355,10 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			}
 			dispatchMode = entity.ExptDispatchModeEnforce
 			schedulerScope = scope
+			// 缺省优先级由灰度配置给出（commercial 的 default_priority）。
+			// 只在 enforce 分支采纳：legacy 实验不参与优先级排序，给它套一个非 1 的缺省
+			// 只会让 DB 里出现一堆没有意义的值，反而干扰排查。
+			defaultPriority = decision.DefaultPriority
 		}
 	}
 
@@ -1378,7 +1385,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		// 中心化调度冻结值。legacy 时 mode=legacy / scope="" / priority 仍落 1（DB 默认值语义）。
 		// expected_quota_consumption 不在此处 —— 它属于 EvalConf（序列化进 eval_conf 列），
 		// 见下方赋值；调度侧 frozenConsumptionOf 正是从 EvalConf 读取。
-		PriorityLevel:    entity.NormalizeExptPriorityLevel(req.PriorityLevel),
+		PriorityLevel:    entity.NormalizeExptPriorityLevelWithDefault(req.PriorityLevel, defaultPriority),
 		ExptDispatchMode: dispatchMode,
 		SchedulerScope:   schedulerScope,
 
@@ -1783,16 +1790,17 @@ func (e *ExptMangerImpl) Clone(ctx context.Context, exptID, spaceID int64, sessi
 	return expt, e.Create(ctx, expt, session)
 }
 
-// allowCentralScheduling 判定该实验是否落在中心调度的灰度范围内。
+// allowCentralScheduling 判定该实验是否落在中心调度的灰度范围内，并取回缺省优先级。
 //
 // 只在 trigger 已判定为 EvalX 后调用，因此它的语义是"收窄"而非"准入"：
-// 返回 false 表示该实验本轮不纳管，走 legacy —— 这是正常结果，不是错误。
+// Admitted=false 表示该实验本轮不纳管，走 legacy —— 这是正常结果，不是错误。
 //
 // policy 未注入时放行：保持引入本闸之前的行为（trigger 判据单独生效）。
-// 开源部署注入 noop 也是恒定放行，二者一致。
-func (e *ExptMangerImpl) allowCentralScheduling(ctx context.Context, spaceID int64, tuple *entity.ExptTuple) (bool, error) {
+// 开源部署注入 noop 也是恒定放行，二者一致。两种情况都不指定缺省优先级
+// （DefaultPriority=0 → 调用方按 1 处理），与引入 default_priority 之前的行为一致。
+func (e *ExptMangerImpl) allowCentralScheduling(ctx context.Context, spaceID int64, tuple *entity.ExptTuple) (component.CentralAdmissionDecision, error) {
 	if e.centralAdmissionPolicy == nil {
-		return true, nil
+		return component.CentralAdmissionDecision{Admitted: true}, nil
 	}
 
 	subject := component.CentralAdmissionSubject{SpaceID: spaceID}

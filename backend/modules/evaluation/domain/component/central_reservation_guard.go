@@ -134,6 +134,22 @@ type CentralAdmissionSubject struct {
 	TargetID int64
 }
 
+// CentralAdmissionDecision 是 admission 判定的结果。
+//
+// 为什么回结构体而不是 bool：缺省优先级也存放在 commercial 的同一份灰度配置里
+// （`central_expt_scheduler_space_config.default_priority`），而 OSS 拿不到那份配置。
+// 让它随准入结论一起回来，比再加一个 `GetDefaultPriority` 方法更安全 ——
+// 两次独立调用之间配置可能热变更，那样同一个实验就可能按"A 配置准入、B 配置定优先级"落库。
+type CentralAdmissionDecision struct {
+	// Admitted 该实验是否纳入中心调度。
+	Admitted bool
+	// DefaultPriority 未申报优先级时使用的缺省值（1-99）。
+	//
+	// 0 表示 policy 未给出意见，调用方按 entity.DefaultExptPriorityLevel（=1）处理。
+	// 这条约定让 noop 实现与"TCC 里没配这个字段"两种情况自然收敛到同一行为。
+	DefaultPriority int32
+}
+
 // ICentralAdmissionPolicy 在创建期收窄中心调度的准入范围。
 //
 // 它是 trigger 判据之上的**第二道闸**，语义是 AND 而非 OR：
@@ -148,11 +164,11 @@ type CentralAdmissionSubject struct {
 //
 // 开源部署注入 noop（恒定放行）：开源侧不产生 EvalX trigger，本 policy 不会被咨询到。
 type ICentralAdmissionPolicy interface {
-	// AllowCentralScheduling 报告该实验是否纳入中心调度。
+	// AllowCentralScheduling 报告该实验是否纳入中心调度，并给出缺省优先级。
 	//
 	// 返回 error 表示配置不可判定。调用方应拒绝创建 enforce 实验而非放行 ——
 	// 放行会让一个本该受额度管控的实验绕过管控，且无从发现。
-	AllowCentralScheduling(ctx context.Context, subject CentralAdmissionSubject) (bool, error)
+	AllowCentralScheduling(ctx context.Context, subject CentralAdmissionSubject) (CentralAdmissionDecision, error)
 }
 
 // NewNoopCentralAdmissionPolicy 返回开源部署使用的 noop 实现：恒定放行。
@@ -165,6 +181,7 @@ func NewNoopCentralAdmissionPolicy() ICentralAdmissionPolicy {
 
 type noopCentralAdmissionPolicy struct{}
 
-func (noopCentralAdmissionPolicy) AllowCentralScheduling(ctx context.Context, subject CentralAdmissionSubject) (bool, error) {
-	return true, nil
+// AllowCentralScheduling 放行，且不指定缺省优先级（DefaultPriority=0 → 调用方按 1 处理）。
+func (noopCentralAdmissionPolicy) AllowCentralScheduling(ctx context.Context, subject CentralAdmissionSubject) (CentralAdmissionDecision, error) {
+	return CentralAdmissionDecision{Admitted: true}, nil
 }
