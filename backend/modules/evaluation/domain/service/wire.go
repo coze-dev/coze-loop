@@ -48,6 +48,7 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	component.NewNoopCentralReservationGuard,
 	component.NewNoopCentralSchedulerScopeOwner,
 	component.NewNoopCentralSchedulerScopeProvider,
+	component.NewNoopCentralAdmissionPolicy,
 	// Infrastructure Sets
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,

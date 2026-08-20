@@ -70,6 +70,9 @@ func NewExptManager(
 	// 开源部署注入 noop（返回空 Scope），配合"仅 EvalX trigger 才 enforce"的 admission，
 	// 开源侧不会产生 enforce 实验，因此拿不到 Scope 无影响。
 	centralScopeProvider component.ICentralSchedulerScopeProvider,
+	// centralAdmissionPolicy 在 trigger 判据之上收窄 enforce 范围（按空间/评测对象类型/ID 灰度）。
+	// 开源部署注入 noop（恒定放行）。
+	centralAdmissionPolicy component.ICentralAdmissionPolicy,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -103,6 +106,7 @@ func NewExptManager(
 		resourceAccessAuthorizer:    resourceAccessAuthorizer,
 		sandboxAgentMetrics:         sandboxAgentMetrics,
 		centralScopeProvider:        centralScopeProvider,
+		centralAdmissionPolicy:      centralAdmissionPolicy,
 	}
 }
 
@@ -140,6 +144,8 @@ type ExptMangerImpl struct {
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
 	// centralScopeProvider 解析新建 enforce 实验要冻结的 scheduler_scope。
 	centralScopeProvider component.ICentralSchedulerScopeProvider
+	// centralAdmissionPolicy 在 trigger 判据之上收窄 enforce 范围。
+	centralAdmissionPolicy component.ICentralAdmissionPolicy
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -1301,9 +1307,15 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	}
 	// ★ 中心化调度模式在创建时一次性冻结。
 	//
-	// 只有 EvalX 发起的实验进入 enforce：它是内部平台，会按约定申报 priority 与
-	// expected_quota_consumption。其它入口（控制台手动、OpenAPI、定时）保持 legacy，
-	// 行为与引入中心调度前完全一致。
+	// 准入是两道闸的 AND：
+	//  ① trigger 判据 —— 只有 EvalX 发起的实验有资格，因为它是内部平台，会按约定申报
+	//     priority 与 expected_quota_consumption。其它入口（控制台手动、OpenAPI、定时）
+	//     保持 legacy，行为与引入中心调度前完全一致。
+	//  ② admission policy —— 在①的基础上按空间 / 评测对象类型 / 评测对象 ID 收窄灰度范围。
+	//
+	// 两道闸是 AND 而非 OR：policy 只能收窄、不能扩大。若 policy 能把非 EvalX 入口的实验
+	// 也拽进 enforce，那些实验没有申报向量的字段，结果要么在下面的向量校验处报错、
+	// 要么（若放宽校验）被调度器永远跳过 —— 后者表现为"实验建好了但一个 item 都不跑"。
 	//
 	// 模式由 trigger 派生而非取请求字段：请求里的 scheduler_mode 不可信（任何内部调用方
 	// 都能声明 enforce），而 trigger_type 是上游身份的既有表达，已被其它逻辑依赖。
@@ -1311,26 +1323,36 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	schedulerScope := ""
 	expectedQuota := req.ExpectedQuotaConsumption
 	if entity.ShouldEnforceByTrigger(triggerType) {
-		// enforce 实验必须有合法的资源消耗向量：没有向量就无法预占额度，
-		// 调度器只能永远跳过它 —— 表现为"实验建好了但一个 item 都不跑"，且那条分支静默。
-		// 因此在创建时就拒绝，把问题暴露在调用方能看到的地方。
-		if expectedQuota == nil {
-			return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
-				errorx.WithExtraMsg("expected_quota_consumption is required for evalx-triggered experiment"))
-		}
-		expectedQuota = expectedQuota.Normalize()
-		if err := expectedQuota.Validate(); err != nil {
-			return nil, err
-		}
-
-		scope, err := e.resolveSchedulerScope(ctx, req.WorkspaceID)
+		// 灰度收窄闸。先判 policy 再校验向量：policy 不放行时该实验走 legacy，
+		// 此时缺向量是正常的（EvalX 对未纳管空间也可能不传），不该报错。
+		admitted, err := e.allowCentralScheduling(ctx, req.WorkspaceID, tuple)
 		if err != nil {
-			// Scope 解析失败不静默降级成 legacy：降级会让 EvalX 以为实验受中心调度管控，
-			// 实际却走旧链路自主派发、绕过全局额度。报错让调用方立刻知道。
+			// 配置不可判定时拒绝创建 enforce 实验，而不是放行或降级 legacy：
+			// 放行会让本该受额度管控的实验绕过管控；静默降级会让 EvalX 以为受管控。
 			return nil, err
 		}
-		dispatchMode = entity.ExptDispatchModeEnforce
-		schedulerScope = scope
+		if admitted {
+			// enforce 实验必须有合法的资源消耗向量：没有向量就无法预占额度，
+			// 调度器只能永远跳过它 —— 表现为"实验建好了但一个 item 都不跑"，且那条分支静默。
+			// 因此在创建时就拒绝，把问题暴露在调用方能看到的地方。
+			if expectedQuota == nil {
+				return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+					errorx.WithExtraMsg("expected_quota_consumption is required for evalx-triggered experiment"))
+			}
+			expectedQuota = expectedQuota.Normalize()
+			if err := expectedQuota.Validate(); err != nil {
+				return nil, err
+			}
+
+			scope, err := e.resolveSchedulerScope(ctx, req.WorkspaceID)
+			if err != nil {
+				// Scope 解析失败不静默降级成 legacy：降级会让 EvalX 以为实验受中心调度管控，
+				// 实际却走旧链路自主派发、绕过全局额度。报错让调用方立刻知道。
+				return nil, err
+			}
+			dispatchMode = entity.ExptDispatchModeEnforce
+			schedulerScope = scope
+		}
 	}
 
 	do := &entity.Experiment{
@@ -1759,6 +1781,30 @@ func (e *ExptMangerImpl) Clone(ctx context.Context, exptID, spaceID int64, sessi
 	expt.ID = id
 
 	return expt, e.Create(ctx, expt, session)
+}
+
+// allowCentralScheduling 判定该实验是否落在中心调度的灰度范围内。
+//
+// 只在 trigger 已判定为 EvalX 后调用，因此它的语义是"收窄"而非"准入"：
+// 返回 false 表示该实验本轮不纳管，走 legacy —— 这是正常结果，不是错误。
+//
+// policy 未注入时放行：保持引入本闸之前的行为（trigger 判据单独生效）。
+// 开源部署注入 noop 也是恒定放行，二者一致。
+func (e *ExptMangerImpl) allowCentralScheduling(ctx context.Context, spaceID int64, tuple *entity.ExptTuple) (bool, error) {
+	if e.centralAdmissionPolicy == nil {
+		return true, nil
+	}
+
+	subject := component.CentralAdmissionSubject{SpaceID: spaceID}
+	// tuple.Target 为 nil 是合法场景：--skip-target 允许创建无评测对象的实验。
+	// 此时 TargetType/TargetID 保持零值，由 policy 决定这类实验算不算命中
+	// （通常不该命中按 target 维度配置的灰度规则）。
+	if tuple != nil && tuple.Target != nil {
+		subject.TargetType = tuple.Target.EvalTargetType.ConfigName()
+		subject.TargetID = tuple.Target.ID
+	}
+
+	return e.centralAdmissionPolicy.AllowCentralScheduling(ctx, subject)
 }
 
 // resolveSchedulerScope 解析新建 enforce 实验应冻结的 scheduler_scope。
