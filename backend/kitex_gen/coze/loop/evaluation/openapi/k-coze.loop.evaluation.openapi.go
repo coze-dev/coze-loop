@@ -21069,6 +21069,48 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 60:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField60(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 61:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField61(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 62:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField62(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -21388,6 +21430,46 @@ func (p *SubmitExperimentOApiRequest) FastReadField50(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentOApiRequest) FastReadField60(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PriorityLevel = _field
+	return offset, nil
+}
+
+func (p *SubmitExperimentOApiRequest) FastReadField61(buf []byte) (int, error) {
+	offset := 0
+	_field := experiment.NewExpectedQuotaConsumption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ExpectedQuotaConsumption = _field
+	return offset, nil
+}
+
+func (p *SubmitExperimentOApiRequest) FastReadField62(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TriggerType = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentOApiRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -21469,6 +21551,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField45(buf[offset:], w)
 		offset += p.fastWriteField46(buf[offset:], w)
+		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -21482,6 +21565,8 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField47(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
+		offset += p.fastWriteField61(buf[offset:], w)
+		offset += p.fastWriteField62(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -21509,6 +21594,9 @@ func (p *SubmitExperimentOApiRequest) BLength() int {
 		l += p.field46Length()
 		l += p.field47Length()
 		l += p.field50Length()
+		l += p.field60Length()
+		l += p.field61Length()
+		l += p.field62Length()
 		l += p.field100Length()
 		l += p.field102Length()
 		l += p.field254Length()
@@ -21679,6 +21767,33 @@ func (p *SubmitExperimentOApiRequest) fastWriteField50(buf []byte, w thrift.Noco
 	if p.IsSetNotificationConf() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 50)
 		offset += p.NotificationConf.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField60(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPriorityLevel() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 60)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.PriorityLevel)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField61(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExpectedQuotaConsumption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 61)
+		offset += p.ExpectedQuotaConsumption.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField62(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTriggerType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 62)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TriggerType)
 	}
 	return offset
 }
@@ -21883,6 +21998,33 @@ func (p *SubmitExperimentOApiRequest) field50Length() int {
 	return l
 }
 
+func (p *SubmitExperimentOApiRequest) field60Length() int {
+	l := 0
+	if p.IsSetPriorityLevel() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *SubmitExperimentOApiRequest) field61Length() int {
+	l := 0
+	if p.IsSetExpectedQuotaConsumption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ExpectedQuotaConsumption.BLength()
+	}
+	return l
+}
+
+func (p *SubmitExperimentOApiRequest) field62Length() int {
+	l := 0
+	if p.IsSetTriggerType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.TriggerType)
+	}
+	return l
+}
+
 func (p *SubmitExperimentOApiRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -22070,6 +22212,28 @@ func (p *SubmitExperimentOApiRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.NotificationConf = _notificationConf
+
+	if src.PriorityLevel != nil {
+		tmp := *src.PriorityLevel
+		p.PriorityLevel = &tmp
+	}
+
+	var _expectedQuotaConsumption *experiment.ExpectedQuotaConsumption
+	if src.ExpectedQuotaConsumption != nil {
+		_expectedQuotaConsumption = &experiment.ExpectedQuotaConsumption{}
+		if err := _expectedQuotaConsumption.DeepCopy(src.ExpectedQuotaConsumption); err != nil {
+			return err
+		}
+	}
+	p.ExpectedQuotaConsumption = _expectedQuotaConsumption
+
+	if src.TriggerType != nil {
+		var tmp string
+		if *src.TriggerType != "" {
+			tmp = kutils.StringDeepCopy(*src.TriggerType)
+		}
+		p.TriggerType = &tmp
+	}
 
 	if src.Ext != nil {
 		p.Ext = make(map[string]string, len(src.Ext))

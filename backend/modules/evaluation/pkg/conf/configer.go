@@ -101,23 +101,14 @@ func (c *configer) GetExptExportWhiteList(ctx context.Context) (eec *entity.Expt
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &eec) == nil, eec, entity.DefaultExptExportWhiteList())
 }
 
-// GetExptPriorityWhiteList 谁可以在发起实验时指定调度优先级（user / space / caller PSM 三维 OR）。
+// GetExptSchedulingPrivilegeWhiteList 谁可以申报中心调度的特权参数
+// （priority / expected_quota_consumption / trigger_type=evalx 三者同一判据）。
 //
-// 读取失败时回落到 DefaultExptPriorityWhiteList()（**谁都不许指定**）而不是放行：
-// priority 是插队能力，配置中心抖动时宁可让所有人退回 default，也不要静默放开插队。
-func (c *configer) GetExptPriorityWhiteList(ctx context.Context) (w *entity.ExptPriorityWhiteList) {
-	const key = "expt_priority_white_list"
-	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil, w, entity.DefaultExptPriorityWhiteList())
-}
-
-// GetExptTriggerTrustConf 谁可以自称 EvalX（按 caller PSM 判定）。
-//
-// 读取失败回落到 DefaultExptTriggerTrustConf()（**不启用校验**）。这与 priority 白名单的
-// 方向刻意相反：那边配不到就退回缺省优先级、无损；这边若配不到就一律拒绝，会让全部
-// EvalX 实验静默退回 legacy —— 中心调度突然没有候选，比"配了没生效"隐蔽得多。
-func (c *configer) GetExptTriggerTrustConf(ctx context.Context) (t *entity.ExptTriggerTrustConf) {
-	const key = "expt_trigger_trust_conf"
-	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &t) == nil, t, entity.DefaultExptTriggerTrustConf())
+// 读取失败时回落到"谁都没有特权"而不是放行：这三样被滥用的后果都是"悄悄多占资源/插队"，
+// 配置中心抖动时宁可让大家退回缺省行为（可见且无损），也不要静默放开特权。
+func (c *configer) GetExptSchedulingPrivilegeWhiteList(ctx context.Context) (w *entity.ExptSchedulingPrivilegeWhiteList) {
+	const key = "expt_scheduling_privilege_white_list"
+	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil, w, entity.DefaultExptSchedulingPrivilegeWhiteList())
 }
 
 func (c *configer) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) (w *entity.ExptTemplateUpdateEvalSetWhiteList) {

@@ -2025,11 +2025,7 @@ func (f *fakeRecordStorageConfiger) GetExptExportWhiteList(ctx context.Context) 
 	return nil
 }
 
-func (f *fakeRecordStorageConfiger) GetExptPriorityWhiteList(ctx context.Context) *entity.ExptPriorityWhiteList {
-	return nil
-}
-
-func (f *fakeRecordStorageConfiger) GetExptTriggerTrustConf(ctx context.Context) *entity.ExptTriggerTrustConf {
+func (f *fakeRecordStorageConfiger) GetExptSchedulingPrivilegeWhiteList(ctx context.Context) *entity.ExptSchedulingPrivilegeWhiteList {
 	return nil
 }
 

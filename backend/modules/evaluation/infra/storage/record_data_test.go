@@ -55,11 +55,7 @@ func (f *fakeConfiger) GetExptExportWhiteList(ctx context.Context) *entity.ExptE
 	return nil
 }
 
-func (f *fakeConfiger) GetExptPriorityWhiteList(ctx context.Context) *entity.ExptPriorityWhiteList {
-	return nil
-}
-
-func (f *fakeConfiger) GetExptTriggerTrustConf(ctx context.Context) *entity.ExptTriggerTrustConf {
+func (f *fakeConfiger) GetExptSchedulingPrivilegeWhiteList(ctx context.Context) *entity.ExptSchedulingPrivilegeWhiteList {
 	return nil
 }
 func (f *fakeConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool { return nil }

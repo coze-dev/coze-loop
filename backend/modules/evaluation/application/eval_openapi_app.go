@@ -1704,6 +1704,18 @@ func openapiSharedOptionDTO2Entity(opt *openapiCommon.SharedResourceOption) *ent
 	}
 }
 
+// openAPITriggerType 归一化 OpenAPI 侧申报的 trigger_type。
+//
+// 空值回落 openapi（与引入该字段之前的行为一致）；非空则原样透传 ——
+// 合法性不在此处判，因为"哪些 trigger 有特权"是服务端策略、会变，
+// 而这里若维护一份枚举白名单，每次策略调整都要改两个地方。
+func openAPITriggerType(declared string) string {
+	if strings.TrimSpace(declared) == "" {
+		return domain_expt.OpenAPI
+	}
+	return strings.TrimSpace(declared)
+}
+
 func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -1769,7 +1781,13 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		ItemConcurNum:           req.ItemConcurNum,
 		TargetRuntimeParam:      experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
 		ItemRetryNum:            req.ItemRetryNum,
-		TriggerType:             gptr.Of(domain_expt.OpenAPI),
+		// trigger_type 允许调用方申报（目前只有 "evalx" 有实际效果：进入中心调度）；
+		// 未传时按 openapi 处理，与改动前一致。
+		//
+		// ⚠️ 申报只是"请求"，不是"授权"：下游 CreateExperiment 的
+		// enforceSchedulingPrivilege 会按白名单裁决，未授权的 evalx 会被降级成 manual。
+		// 因此这里直接透传是安全的 —— 门控收在唯一汇聚点，不在每个入口各判一次。
+		TriggerType:             gptr.Of(openAPITriggerType(req.GetTriggerType())),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.GetExt(),
 		// ★ 透传分流依据: OpenAPI 字符串枚举 → kitex enum, 供下游平台层统一以 source_type 分流。
@@ -1777,6 +1795,9 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		// ★ 透传引用分组实验 id: 命中当前空间实验则复用其 group key(归入同一分组); 缺省则以实验 id 兜底。
 		RefGroupExperimentID: req.RefGroupExperimentID,
 		RunModeConfig:        runModeConfig,
+		// ★ 中心化调度特权参数：同上，透传后由下游按白名单裁决。
+		PriorityLevel:            req.PriorityLevel,
+		ExpectedQuotaConsumption: experiment_convertor.ExpectedQuotaConsumptionOpenAPI2Domain(req.ExpectedQuotaConsumption),
 	}
 
 	if isNewPath {

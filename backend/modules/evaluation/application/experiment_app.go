@@ -208,17 +208,14 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 			errorx.WithExtraMsg(fmt.Sprintf("space %d is not allowed to create multi-set experiments", req.GetWorkspaceID())))
 	}
 
-	// ★ 调度优先级白名单闸：未获授权的调用方申报的 priority 一律丢弃、强制走缺省值。
+	// ★ 中心调度特权参数闸：未获授权的调用方申报的 priority / quota 向量 / evalx trigger
+	// 一律丢弃或降级。
 	//
 	// 放在这里（而不是 Authorization 层）有硬性原因：商业版的 auth allowlist decorator
 	// 对特定 caller+method 会直接跳过整个 Authorization，门控做在那一层会被整条绕过。
 	// CreateExperiment 是四个入口（EvalX / 控制台 / OpenAPI / 定时）的唯一汇聚点，
-	// SubmitExperiment 也是转成本请求后调进来的，卡在此处即全覆盖。
-	e.enforcePriorityWhiteList(ctx, req)
-
-	// ★ trigger 可信来源闸：不可信调用方自称 evalx 时，把 trigger 降级掉。
-	// 与上面同理放在此处 —— "谁被中心调度纳管"必须由我们的名单决定，不能靠调用方自报。
-	e.enforceTriggerTrust(ctx, req)
+	// SubmitExperiment 与 OpenAPI 也都是转成本请求后调进来的，卡在此处即全覆盖。
+	e.enforceSchedulingPrivilege(ctx, req)
 
 	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）、runconfig 和 score weight
 	evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, err := e.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
@@ -261,80 +258,71 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}, nil
 }
 
-// enforcePriorityWhiteList 未获授权的调用方申报的 priority 一律清空，改由下游按缺省值处理。
+// enforceSchedulingPrivilege 未获授权的调用方申报的中心调度特权参数一律作废。
 //
-// 为什么需要这道闸：priority 在中心调度下参与严格优先级排序，高优实验持续抢占额度。
-// 该字段在 IDL 里带 json/form 绑定标签，任何有建实验权限的调用方都能填 —— 不设闸的话
-// 一个人把自己所有实验设成 99 就能让别人的实验饿死，且不违反任何校验、不报错。
+// 管三样（同一份名单判据）：
+//
+//	priority_level             → 清空，由下游按缺省优先级处理
+//	expected_quota_consumption → 清空，没有向量就进不了 enforce（创建期会校验）
+//	trigger_type = evalx       → 降级 manual，实验走 legacy 链路
+//
+// 为什么这三样必须同一判据：它们共同决定"这个实验拿多少资源、排在谁前面"。
+// 只挡其中一两样等于没挡 —— 例如只挡 priority 却放开 trigger，任何人仍能自称 evalx
+// 把实验塞进中心调度；只挡 trigger 却放开 quota，纳管范围内的实验仍能虚报消耗。
 //
 // **静默降级而不报错**，这是刻意的取舍：
-//   - 报错的好处是调用方立刻知道无权限，但会破坏兼容 —— priority 字段已在 IDL 里存在一段时间，
-//     可能已有内部调用方在传（它们原本只是"传了个不生效的字段"），上线后突然报错会把它们打挂
-//   - 因此改为清空 + Warn 日志（带 user/space/caller/被丢弃的值）。灰度期从日志即可看出
-//     "谁在尝试指定 priority"，据此决定要不要加进白名单，而不是等对方来报障
+//   - 报错的好处是调用方立刻知道无权限，但会破坏兼容 —— 这几个字段已在 IDL 里存在一段时间，
+//     可能已有内部调用方在传（它们原本只是"传了个不生效的字段"），上线后突然报错会打挂它们
+//   - 因此改为作废 + Warn 日志（带 user/space/caller 与被丢弃的值）。灰度期从日志即可看出
+//     "谁在尝试申报特权"，据此决定要不要加进白名单，而不是等对方来报障
 //
-// 清空而非改写成 DefaultExptPriorityLevel：缺省值的权威定义在下游
-// （entity.NormalizeExptPriorityLevel 会把 0 收敛为缺省），在此写死会多出一处需要同步的常量。
-func (e *experimentApplication) enforcePriorityWhiteList(ctx context.Context, req *expt.CreateExperimentRequest) {
-	// 没申报就无需判定：省掉一次配置读取，也避免给未使用该字段的调用方刷无关日志。
-	if req == nil || !req.IsSetPriorityLevel() {
+// priority 取清空而非改写成 DefaultExptPriorityLevel：缺省值的权威定义在下游
+// （NormalizeExptPriorityLevelWithDefault 会把 0 收敛为配置的缺省值），
+// 在此写死会多出一处需要同步的常量、还会盖掉 TCC 里配的 default_priority。
+func (e *experimentApplication) enforceSchedulingPrivilege(ctx context.Context, req *expt.CreateExperimentRequest) {
+	if req == nil {
+		return
+	}
+
+	declaresPriority := req.IsSetPriorityLevel()
+	declaresQuota := req.GetExpectedQuotaConsumption() != nil
+	declaresEvalxTrigger := entity.ShouldEnforceByTrigger(req.GetTriggerType())
+	if !declaresPriority && !declaresQuota && !declaresEvalxTrigger {
+		// 什么都没申报：省掉一次配置读取，也避免给未使用这些字段的调用方刷无关日志。
 		return
 	}
 
 	// caller PSM 取自 RPC 框架填充的 caller 字段，调用方无法在业务参数里伪造。
 	// 这与 trigger_type 有本质区别 —— 后者是请求体里的普通字段，任何人都能自称 "evalx"，
-	// 因此绝不能拿 trigger_type 当授权判据。
+	// 因此绝不能反过来拿 trigger_type 当授权判据。
 	callerPSM, _ := kitexutil.GetCaller(ctx)
 
-	// 邮箱取自已验证的 ByteTIM ticket claim（商业版 CtxUser 中间件写入），不是请求体字段，
-	// 因此可以当授权键用。用邮箱而非 user_id 是为了让这份名单人可读、便于 review。
+	// 邮箱取自已验证的 ByteTIM ticket claim（商业版 CtxUser 中间件写入），不是请求体字段。
 	userEmail := ""
 	if u, ok := session.UserInCtx(ctx); ok && u != nil {
 		userEmail = u.Email
 	}
 
-	subject := entity.ExptPrioritySubject{
+	subject := entity.ExptSchedulingPrivilegeSubject{
 		UserEmail: userEmail,
 		SpaceID:   req.GetWorkspaceID(),
 		CallerPSM: callerPSM,
 	}
-	if e.configer.GetExptPriorityWhiteList(ctx).AllowSpecifyPriority(subject) {
+	if e.configer.GetExptSchedulingPrivilegeWhiteList(ctx).AllowSchedulingPrivilege(subject) {
 		return
 	}
 
-	logs.CtxWarn(ctx, "[ExptPriority] caller not allowed to specify priority_level, falling back to default; "+
-		"requested: %d, user_email: %v, space_id: %v, caller_psm: %v",
-		req.GetPriorityLevel(), userEmail, subject.SpaceID, callerPSM)
+	logs.CtxWarn(ctx, "[ExptSchedulingPrivilege] caller not allowed to declare scheduling params, dropping them; "+
+		"priority: %v, has_quota: %v, trigger: %v, user_email: %v, space_id: %v, caller_psm: %v",
+		req.GetPriorityLevel(), declaresQuota, req.GetTriggerType(), userEmail, subject.SpaceID, callerPSM)
+
 	req.PriorityLevel = nil
-}
-
-// enforceTriggerTrust 不可信调用方自称 evalx 时，把 trigger_type 降级为 manual。
-//
-// 为什么需要：enforce 的第一道闸只比对请求体里的 trigger_type 字符串，而那是调用方
-// **自己填的普通字段** —— 任何人都能自称 "evalx" 从而让实验进入中心调度。也就是说
-// "谁被中心调度纳管"部分取决于调用方自报，而它本该完全由我们的名单决定。
-// 本闸把判据换成 RPC 框架填充的 caller，那个调用方无法在业务参数里伪造。
-//
-// 降级为 manual 而不是报错：与 priority 闸同样的兼容考虑 —— 报错会打挂已经在自报 evalx 的
-// 调用方（它们此前是被接受的）。降级后实验照常创建、只是走 legacy 链路，功能不受影响，
-// 而 Warn 日志让我们能在灰度期看清"谁在自称 evalx"，据此补名单。
-//
-// 只处理 evalx：其它 trigger（manual / openapi / schedule）不触发 enforce，
-// 伪造它们不产生特权，没必要为此增加一道可能误伤的校验。
-func (e *experimentApplication) enforceTriggerTrust(ctx context.Context, req *expt.CreateExperimentRequest) {
-	if req == nil || !entity.ShouldEnforceByTrigger(req.GetTriggerType()) {
-		return
+	req.ExpectedQuotaConsumption = nil
+	if declaresEvalxTrigger {
+		// 降级为 manual 而非清空：TriggerType 为空时下游会按 Manual 兜底，
+		// 但显式写入让落库值与日志一致、排查时不必再推导一层。
+		req.TriggerType = gptr.Of(domain_expt.Manual)
 	}
-
-	callerPSM, _ := kitexutil.GetCaller(ctx)
-	if e.configer.GetExptTriggerTrustConf(ctx).TrustEvalxTrigger(callerPSM) {
-		return
-	}
-
-	logs.CtxWarn(ctx, "[ExptTrigger] caller not trusted to declare evalx trigger, downgrading to manual; "+
-		"declared: %v, space_id: %v, caller_psm: %v",
-		req.GetTriggerType(), req.GetWorkspaceID(), callerPSM)
-	req.TriggerType = gptr.Of(domain_expt.Manual)
 }
 
 func (e *experimentApplication) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest) (r *expt.CreateExperimentTemplateResponse, err error) {

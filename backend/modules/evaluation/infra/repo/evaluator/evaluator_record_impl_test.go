@@ -89,11 +89,7 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetExptExportWhiteList(ctx context.
 	return nil
 }
 
-func (f *fakeEvaluatorRecordStorageConfiger) GetExptPriorityWhiteList(ctx context.Context) *entity.ExptPriorityWhiteList {
-	return nil
-}
-
-func (f *fakeEvaluatorRecordStorageConfiger) GetExptTriggerTrustConf(ctx context.Context) *entity.ExptTriggerTrustConf {
+func (f *fakeEvaluatorRecordStorageConfiger) GetExptSchedulingPrivilegeWhiteList(ctx context.Context) *entity.ExptSchedulingPrivilegeWhiteList {
 	return nil
 }
 
