@@ -171,8 +171,24 @@ func (e *DefaultExptTurnEvaluationImpl) skipEvaluatorNode(expt *entity.Experimen
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CheckBenefit(ctx context.Context, exptID, spaceID int64, freeCost bool, session *entity.Session) error {
+	// nil session 不再解引用 —— 这里曾经直接写 session.UserID 而 panic。
+	//
+	// 触发路径：item 事件的 Session 字段没被填（中心调度那条派发链路漏过一次）。
+	// 该 panic 发生在 item 执行链里、被 HandleEventErr 的 recover 转成 error，
+	// 表现为"每个 item 都失败"而不是进程崩溃，从现象极难反推到"某个字段没填"。
+	//
+	// 取空 UserID 继续而不是提前报错：权益校验拿到空 UserID 会按匿名处理并返回
+	// 明确的业务错误，那是可读的失败；而在此处自己造一个 error 会掩盖真实原因
+	// （调用方漏填），下次再有新链路漏填时同样难查。
+	userID := ""
+	if session != nil {
+		userID = session.UserID
+	} else {
+		logs.CtxError(ctx, "[CheckBenefit] nil session, falling back to anonymous; expt_id: %v, space_id: %v", exptID, spaceID)
+	}
+
 	req := &benefit.CheckAndDeductEvalBenefitParams{
-		ConnectorUID: session.UserID,
+		ConnectorUID: userID,
 		SpaceID:      spaceID,
 		ExperimentID: exptID,
 		Ext:          map[string]string{benefit.ExtKeyExperimentFreeCost: strconv.FormatBool(freeCost)},
@@ -181,7 +197,7 @@ func (e *DefaultExptTurnEvaluationImpl) CheckBenefit(ctx context.Context, exptID
 	result, err := e.benefitService.CheckAndDeductEvalBenefit(ctx, req)
 	logs.CtxInfo(ctx, "[CheckAndDeductEvalBenefit][req = %s] [res = %s] [err = %v]", json.Jsonify(req), json.Jsonify(result))
 	if err != nil {
-		return errorx.Wrapf(err, "CheckAndDeductEvalBenefit fail, expt_id: %v, user_id: %v", exptID, session.UserID)
+		return errorx.Wrapf(err, "CheckAndDeductEvalBenefit fail, expt_id: %v, user_id: %v", exptID, userID)
 	}
 
 	if result != nil && result.DenyReason != nil && result.DenyReason.ToErr() != nil {
