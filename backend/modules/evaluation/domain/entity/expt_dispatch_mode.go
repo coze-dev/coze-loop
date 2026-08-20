@@ -63,9 +63,33 @@ func NormalizeExptDispatchMode(mode ExptDispatchMode) ExptDispatchMode {
 // 0 值（未申报）收敛为缺省 1；越界值按边界截断而非报错，因为读路径不应因历史脏数据中断调度。
 // 写入路径的合法性校验在 application 层做，会显式返回参数错误。
 func NormalizeExptPriorityLevel(priority int32) int32 {
+	return NormalizeExptPriorityLevelWithDefault(priority, 0)
+}
+
+// NormalizeExptPriorityLevelWithDefault 同上，但允许调用方指定"未申报时用哪个缺省值"。
+//
+// 存在意义：缺省优先级是可运维配置的（commercial 的
+// `central_expt_scheduler_space_config.default_priority`），而这个收敛函数在 OSS entity 层、
+// 拿不到那份配置。让调用方把值传进来，避免在 entity 层反向依赖配置中心。
+//
+// defaultPriority 的三种取值都收敛到安全行为：
+//
+//	0 或越界   —— 视为"没有意见"，回落到 DefaultExptPriorityLevel（=1），
+//	              这同时覆盖了"TCC 里没配这个字段"与 noop policy 两种情况
+//	1-99      —— 采纳
+//
+// 为什么越界的 defaultPriority 也回落到 1 而不是截断到 99：它来自人工维护的配置，
+// 配成 999 更可能是笔误而非"想要最高优先级"，而截断到 99 会让一次笔误静默变成
+// "该空间所有实验都最高优"，那是最难发现的一类事故。
+func NormalizeExptPriorityLevelWithDefault(priority, defaultPriority int32) int32 {
+	fallback := DefaultExptPriorityLevel
+	if defaultPriority >= MinExptPriorityLevel && defaultPriority <= MaxExptPriorityLevel {
+		fallback = defaultPriority
+	}
+
 	switch {
 	case priority < MinExptPriorityLevel:
-		return DefaultExptPriorityLevel
+		return fallback
 	case priority > MaxExptPriorityLevel:
 		return MaxExptPriorityLevel
 	default:
