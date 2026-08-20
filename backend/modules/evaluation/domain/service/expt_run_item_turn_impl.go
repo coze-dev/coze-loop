@@ -324,6 +324,8 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		DatasetVersionID:        etec.EvalSetVersionID,
 		ItemKey:                 pickItemKey(etec),
 		DatasetKey:              pickDatasetKey(etec),
+		AgentName:               pickAgentName(etec),
+		ApplicationID:           pickApplicationID(etec),
 	}); err != nil {
 		return nil, err
 	}
@@ -379,6 +381,25 @@ func pickDatasetKey(etec *entity.ExptTurnEvalCtx) string {
 		return evalSet.DatasetKey
 	}
 	return ""
+}
+
+// pickAgentName 从沙箱 agent 评测对象的版本配置里取应用名称, 缺失返回空串。
+func pickAgentName(etec *entity.ExptTurnEvalCtx) string {
+	if etec == nil || etec.Expt == nil || etec.Expt.Target == nil || etec.Expt.Target.EvalTargetVersion == nil {
+		return ""
+	}
+	if sa := etec.Expt.Target.EvalTargetVersion.SandboxAgent; sa != nil {
+		return sa.Name
+	}
+	return ""
+}
+
+// pickApplicationID 沙箱 agent 应用 id: EvalTarget.SourceTargetID (即 AgentKit application_id)。
+func pickApplicationID(etec *entity.ExptTurnEvalCtx) string {
+	if etec == nil || etec.Expt == nil || etec.Expt.Target == nil {
+		return ""
+	}
+	return etec.Expt.Target.SourceTargetID
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec *entity.ExptTurnEvalCtx, targetResult *entity.EvalTargetRecord) ([]*entity.EvaluatorRecord, error) {

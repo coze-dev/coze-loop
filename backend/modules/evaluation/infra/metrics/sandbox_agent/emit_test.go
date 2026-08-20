@@ -77,11 +77,15 @@ func newFakeImpl(t *testing.T) (*metricsImpl, *fakeMetric) {
 func TestEmitInvokeStarted(t *testing.T) {
 	impl, fm := newFakeImpl(t)
 	impl.EmitInvokeStarted(eval_metrics.SandboxAgentInvokeTags{
-		ExperimentID:   100,
-		ItemID:         200,
-		InvokeID:       "300",
-		DatasetID:      400,
-		DatasetVersion: 500,
+		SpaceID:         7,
+		ExperimentID:    100,
+		ExperimentRunID: 101,
+		ItemID:          200,
+		InvokeID:        "300",
+		DatasetID:       400,
+		DatasetVersion:  500,
+		AgentName:       "my-agent",
+		ApplicationID:   "app-1",
 	})
 	if len(fm.records) != 1 {
 		t.Fatalf("expected 1 record, got %d", len(fm.records))
@@ -92,6 +96,12 @@ func TestEmitInvokeStarted(t *testing.T) {
 	}
 	if rec.tags["dataset_id"] != "400" || rec.tags["dataset_version"] != "500" {
 		t.Fatalf("dataset tags wrong: %+v", rec.tags)
+	}
+	if rec.tags["space_id"] != "7" || rec.tags["experiment_run_id"] != "101" {
+		t.Fatalf("space_id/experiment_run_id tags wrong: %+v", rec.tags)
+	}
+	if rec.tags["agent_name"] != "my-agent" || rec.tags["application_id"] != "app-1" {
+		t.Fatalf("agent_name/application_id tags wrong: %+v", rec.tags)
 	}
 	if rec.tags["success"] != "-" || rec.tags["error_type"] != "-" {
 		t.Fatalf("success/error_type should be placeholder on started, got: %+v", rec.tags)
@@ -107,13 +117,26 @@ func TestEmitInvokeStarted(t *testing.T) {
 func TestEmitInvokeFinished_Success(t *testing.T) {
 	impl, fm := newFakeImpl(t)
 	submitTime := time.Now().Add(-1500 * time.Millisecond)
-	impl.EmitInvokeFinished(eval_metrics.SandboxAgentInvokeTags{ExperimentID: 1, InvokeID: "x"}, nil, 0, submitTime)
+	impl.EmitInvokeFinished(eval_metrics.SandboxAgentInvokeTags{
+		SpaceID:         9,
+		ExperimentID:    1,
+		ExperimentRunID: 2,
+		InvokeID:        "x",
+		AgentName:       "agent-a",
+		ApplicationID:   "app-a",
+	}, nil, 0, submitTime)
 	if len(fm.records) != 1 {
 		t.Fatalf("want 1 record, got %d", len(fm.records))
 	}
 	rec := fm.records[0]
 	if rec.tags["success"] != "true" || rec.tags["error_type"] != "-" {
 		t.Fatalf("success/error_type wrong: %+v", rec.tags)
+	}
+	if rec.tags["space_id"] != "9" || rec.tags["experiment_run_id"] != "2" {
+		t.Fatalf("space_id/experiment_run_id tags wrong: %+v", rec.tags)
+	}
+	if rec.tags["agent_name"] != "agent-a" || rec.tags["application_id"] != "app-a" {
+		t.Fatalf("agent_name/application_id tags wrong: %+v", rec.tags)
 	}
 	if len(rec.values) != 2 {
 		t.Fatalf("want counter+timer, got %d", len(rec.values))
