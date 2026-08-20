@@ -34,7 +34,7 @@ func TestExptPriorityWhiteList_ThreeDimensionsAreOR(t *testing.T) {
 	// SpaceIDs 服务的是"管理员私有空间"。取 AND 会让这两条永远走不通。
 	w := &ExptPriorityWhiteList{
 		UserEmails: []string{"admin@bytedance.com"},
-		SpaceIDs:   []int64{222},
+		SpaceIDs:   []string{"222"},
 		CallerPSMs: []string{"stone.cozeloop.evalx"},
 	}
 
@@ -55,9 +55,9 @@ func TestExptPriorityWhiteList_ThreeDimensionsAreOR(t *testing.T) {
 // TestExptPriorityWhiteList_SpaceIDZeroNeverMatches spaceID=0 表示"无空间上下文"，
 // 绝不能因为运维在 space_ids 里误填 0 就把所有无空间请求放行。
 func TestExptPriorityWhiteList_SpaceIDZeroNeverMatches(t *testing.T) {
-	w := &ExptPriorityWhiteList{SpaceIDs: []int64{0}}
+	w := &ExptPriorityWhiteList{SpaceIDs: []string{"0"}}
 	assert.False(t, w.AllowSpecifyPriority(ExptPrioritySubject{SpaceID: 0}),
-		"空 spaceID 不得匹配，即使名单里误填了 0")
+		"空 spaceID 不得匹配，即使名单里误填了 \"0\"")
 }
 
 func TestExptPriorityWhiteList_UserEmailMatching(t *testing.T) {
@@ -142,62 +142,6 @@ func TestExptTriggerTrustConf_EnabledWithEmptyListDeniesAll(t *testing.T) {
 	assert.False(t, c.TrustEvalxTrigger("any.psm"))
 }
 
-// ---- ConfigIDList ----
-
-// TestConfigIDList_AcceptsBothFormsWithoutPrecisionLoss 19 位雪花 ID 两种写法都要精确。
-//
-// 这道回归钉住的是一个双向的坑：配置写入侧（bytedcli tcc）把 JSON number 当 double、
-// 会把 7533128632407949313 静默截断成 ...949000，所以运维倾向写字符串；
-// 而读取侧用 encoding/json 解到 []int64 时，字符串形态会直接报错、整份配置回落缺省值。
-// 两种失败都不报错给运维，现象都是"配了却不生效"。因此两种写法都必须吃下。
-func TestConfigIDList_AcceptsBothFormsWithoutPrecisionLoss(t *testing.T) {
-	const want int64 = 7533128632407949313 // 19 位，> 2^53
-
-	t.Run("裸数字", func(t *testing.T) {
-		var l ConfigIDList
-		require.NoError(t, json.Unmarshal([]byte(`[7533128632407949313]`), &l))
-		require.Len(t, l, 1)
-		assert.Equal(t, want, l[0], "低位不得被截断")
-	})
-
-	t.Run("字符串", func(t *testing.T) {
-		var l ConfigIDList
-		require.NoError(t, json.Unmarshal([]byte(`["7533128632407949313"]`), &l))
-		require.Len(t, l, 1)
-		assert.Equal(t, want, l[0])
-	})
-
-	t.Run("混合写法", func(t *testing.T) {
-		var l ConfigIDList
-		require.NoError(t, json.Unmarshal([]byte(`[7533128632407949313, "7590103974980812802"]`), &l))
-		assert.Equal(t, ConfigIDList{7533128632407949313, 7590103974980812802}, l)
-	})
-
-	t.Run("带空白的字符串", func(t *testing.T) {
-		var l ConfigIDList
-		require.NoError(t, json.Unmarshal([]byte(`[" 7533128632407949313 "]`), &l))
-		require.Len(t, l, 1)
-		assert.Equal(t, want, l[0])
-	})
-}
-
-func TestConfigIDList_SkipsEmptyAndRejectsGarbage(t *testing.T) {
-	var l ConfigIDList
-	require.NoError(t, json.Unmarshal([]byte(`["", 123]`), &l), "空串跳过而非报错，容忍配置里的空行")
-	assert.Equal(t, ConfigIDList{123}, l)
-
-	var bad ConfigIDList
-	assert.Error(t, json.Unmarshal([]byte(`["not-a-number"]`), &bad),
-		"非数字必须报错 —— 静默跳过会让运维以为配上了")
-}
-
-// TestConfigIDList_MarshalsAsStrings 回写统一输出字符串，避免下游再被 double 截断一次。
-func TestConfigIDList_MarshalsAsStrings(t *testing.T) {
-	out, err := json.Marshal(ConfigIDList{7533128632407949313})
-	require.NoError(t, err)
-	assert.JSONEq(t, `["7533128632407949313"]`, string(out))
-}
-
 // TestExptPriorityWhiteList_UnmarshalFullConfig 端到端解一份完整配置，
 // 确认字段名与运维实际会写的 JSON 一致（字段名写错的后果是静默不生效）。
 func TestExptPriorityWhiteList_UnmarshalFullConfig(t *testing.T) {
@@ -212,7 +156,8 @@ func TestExptPriorityWhiteList_UnmarshalFullConfig(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(raw), &w))
 
 	assert.True(t, w.AllowSpecifyPriority(ExptPrioritySubject{UserEmail: "admin@bytedance.com"}))
-	assert.True(t, w.AllowSpecifyPriority(ExptPrioritySubject{SpaceID: 7533128632407949313}))
+	assert.True(t, w.AllowSpecifyPriority(ExptPrioritySubject{SpaceID: 7533128632407949313}),
+		"19 位雪花 ID 从字符串配置解出后必须精确匹配")
 	assert.True(t, w.AllowSpecifyPriority(ExptPrioritySubject{CallerPSM: "stone.cozeloop.evalx"}))
 	assert.False(t, w.AllowSpecifyPriority(ExptPrioritySubject{UserEmail: "other@bytedance.com", SpaceID: 999}))
 }
