@@ -480,6 +480,26 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.RunModeConfig = runModeConfigDO2DTO(experiment.EvalConf.RunModeConfig)
 	}
 
+	// ★ 中心化调度读视图 (IDL 116~118)。
+	//
+	// priority_level / scheduler_mode **对 legacy 实验也回显**, 不做"仅 enforce 才给"的裁剪:
+	// 放量期最高频的疑问是"我这个实验为什么没进中心调度", 那时最需要看的恰恰是一个 legacy
+	// 实验的 scheduler_mode —— 回显 legacy 就一眼确认没纳管, 不必去猜是 trigger 没带 evalx、
+	// 灰度范围没命中还是代码没生效。若只有 enforce 才给, 调用方还无法分辨"这实验是 legacy"
+	// 与"这接口版本不支持该字段"。二者都有 DB 默认值 (legacy / 1), 天然非空。
+	//
+	// ⚠️ scheduler_scope **一律不回显** (内部运维查库即可): 它是不透明调度域 ID
+	// (形如 fornax_boe_boe), 对调用方没有可用语义, 却泄露部署拓扑与环境划分。
+	// 业务代码本就不允许解析 Scope 字符串, 回显它只会诱使调用方依赖这个不稳定契约。
+	res.PriorityLevel = gptr.Of(entity.NormalizeExptPriorityLevel(experiment.PriorityLevel))
+	res.SchedulerMode = gptr.Of(entity.NormalizeExptDispatchMode(experiment.ExptDispatchMode))
+
+	// expected_quota_consumption 采用"有则回显、无则省略"的 optional 语义:
+	// legacy 实验确实没申报向量 (nil), 省略比返回空结构更如实。
+	if experiment.EvalConf != nil && experiment.EvalConf.ExpectedQuotaConsumption != nil {
+		res.ExpectedQuotaConsumption = expectedQuotaConsumptionDO2DTO(experiment.EvalConf.ExpectedQuotaConsumption)
+	}
+
 	// ★ §2 老字段降级投影 (新实验 MultiSetConfig): 老字段 = 主集封面/去重投影, 仅当 flat 来源为空才兜底
 	projectLegacyFieldsFromPrimarySet(experiment, res)
 
@@ -1556,4 +1576,32 @@ func expectedQuotaConsumptionDTO2DO(dto *domain_expt.ExpectedQuotaConsumption) *
 		return nil
 	}
 	return &entity.ExpectedQuotaConsumption{Resources: resources}
+}
+
+// expectedQuotaConsumptionDO2DTO 把已冻结的资源消耗向量回显给调用方。
+//
+// 与 DTO2DO 同样只搬运不校验：回显的是创建时已通过校验并冻结的值，
+// 此处再校验一遍只会把"历史数据不合规"变成"读接口报错"，而读接口应当如实反映库里的状态。
+//
+// 全空时返回 nil 而非空结构：让 optional 字段在序列化时直接省略，
+// 调用方据此区分"没申报"（legacy 实验）与"申报了空向量"（不应存在的数据异常）。
+func expectedQuotaConsumptionDO2DTO(do *entity.ExpectedQuotaConsumption) *domain_expt.ExpectedQuotaConsumption {
+	if do == nil || len(do.Resources) == 0 {
+		return nil
+	}
+	resources := make([]*domain_expt.ExpectedResourceConsumption, 0, len(do.Resources))
+	for _, r := range do.Resources {
+		if r == nil {
+			continue
+		}
+		resources = append(resources, &domain_expt.ExpectedResourceConsumption{
+			Category:    r.Category,
+			ResourceKey: r.ResourceKey,
+			Amount:      r.Amount,
+		})
+	}
+	if len(resources) == 0 {
+		return nil
+	}
+	return &domain_expt.ExpectedQuotaConsumption{Resources: resources}
 }

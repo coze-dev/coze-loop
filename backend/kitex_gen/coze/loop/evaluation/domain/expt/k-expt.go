@@ -1687,6 +1687,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 118:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField118(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2462,6 +2476,18 @@ func (p *Experiment) FastReadField117(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField118(buf []byte) (int, error) {
+	offset := 0
+	_field := NewExpectedQuotaConsumption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ExpectedQuotaConsumption = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2518,6 +2544,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField112(buf[offset:], w)
 		offset += p.fastWriteField115(buf[offset:], w)
 		offset += p.fastWriteField117(buf[offset:], w)
+		offset += p.fastWriteField118(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2575,6 +2602,7 @@ func (p *Experiment) BLength() int {
 		l += p.field115Length()
 		l += p.field116Length()
 		l += p.field117Length()
+		l += p.field118Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -3071,6 +3099,15 @@ func (p *Experiment) fastWriteField117(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Experiment) fastWriteField118(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExpectedQuotaConsumption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 118)
+		offset += p.ExpectedQuotaConsumption.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *Experiment) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -3540,6 +3577,15 @@ func (p *Experiment) field117Length() int {
 	return l
 }
 
+func (p *Experiment) field118Length() int {
+	l := 0
+	if p.IsSetExpectedQuotaConsumption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ExpectedQuotaConsumption.BLength()
+	}
+	return l
+}
+
 func (p *Experiment) DeepCopy(s interface{}) error {
 	src, ok := s.(*Experiment)
 	if !ok {
@@ -3924,6 +3970,15 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		}
 		p.SchedulerMode = &tmp
 	}
+
+	var _expectedQuotaConsumption *ExpectedQuotaConsumption
+	if src.ExpectedQuotaConsumption != nil {
+		_expectedQuotaConsumption = &ExpectedQuotaConsumption{}
+		if err := _expectedQuotaConsumption.DeepCopy(src.ExpectedQuotaConsumption); err != nil {
+			return err
+		}
+	}
+	p.ExpectedQuotaConsumption = _expectedQuotaConsumption
 
 	return nil
 }
