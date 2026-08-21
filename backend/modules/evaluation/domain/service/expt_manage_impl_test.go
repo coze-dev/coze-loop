@@ -1788,6 +1788,7 @@ func TestNewExptManager(t *testing.T) {
 		nil,
 		component.NewNoopCentralSchedulerScopeProvider(),
 		component.NewNoopCentralAdmissionPolicy(),
+		component.NewNoopCentralReservationGuard(),
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)

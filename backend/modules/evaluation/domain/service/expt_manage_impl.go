@@ -73,6 +73,9 @@ func NewExptManager(
 	// centralAdmissionPolicy 在 trigger 判据之上收窄 enforce 范围（按空间/评测对象类型/ID 灰度）。
 	// 开源部署注入 noop（恒定放行）。
 	centralAdmissionPolicy component.ICentralAdmissionPolicy,
+	// centralGuard 额度闸。CompleteExpt 用它释放实验终态时仍未跑完的 item 预占。
+	// 开源部署注入 noop（Release 直接返回 nil）。
+	centralGuard component.ICentralReservationGuard,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -107,6 +110,7 @@ func NewExptManager(
 		sandboxAgentMetrics:         sandboxAgentMetrics,
 		centralScopeProvider:        centralScopeProvider,
 		centralAdmissionPolicy:      centralAdmissionPolicy,
+		centralGuard:                centralGuard,
 	}
 }
 
@@ -146,6 +150,12 @@ type ExptMangerImpl struct {
 	centralScopeProvider component.ICentralSchedulerScopeProvider
 	// centralAdmissionPolicy 在 trigger 判据之上收窄 enforce 范围。
 	centralAdmissionPolicy component.ICentralAdmissionPolicy
+	// centralGuard 中心调度额度闸，仅用于 CompleteExpt 释放"实验终态时仍未跑完"的 item 预占。
+	//
+	// 为什么这里必须有一份：Kill / Cancel / 实验级 Failed 都收口在 CompleteExpt，而那些
+	// item 的 consumer 消息可能永远不会到达（实验已终态，item 不再被执行），
+	// 于是 consumer 侧的释放点根本不会被触发 —— 不在这里释放就是永久泄漏。
+	centralGuard component.ICentralReservationGuard
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
