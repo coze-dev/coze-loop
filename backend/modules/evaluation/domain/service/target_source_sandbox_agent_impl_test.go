@@ -206,7 +206,7 @@ func TestSandboxAgentSourceEvalTargetServiceImpl_emitInvokeStarted(t *testing.T)
 		defer ctrl.Finish()
 		svc.sandboxAgentMetrics = nil
 		// 不 panic 即通过
-		svc.emitInvokeStarted(1, &entity.ExecuteEvalTargetParam{})
+		svc.emitInvokeStarted(5, 1, &entity.ExecuteEvalTargetParam{})
 	})
 
 	t.Run("nil param skips", func(t *testing.T) {
@@ -214,7 +214,7 @@ func TestSandboxAgentSourceEvalTargetServiceImpl_emitInvokeStarted(t *testing.T)
 		defer ctrl.Finish()
 		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
 		svc := &SandboxAgentSourceEvalTargetServiceImpl{sandboxAgentMetrics: mock}
-		svc.emitInvokeStarted(1, nil)
+		svc.emitInvokeStarted(5, 1, nil)
 	})
 
 	t.Run("param without ItemMeta emits with zero optional tags", func(t *testing.T) {
@@ -225,14 +225,18 @@ func TestSandboxAgentSourceEvalTargetServiceImpl_emitInvokeStarted(t *testing.T)
 		mock.EXPECT().EmitInvokeStarted(gomock.Any()).Do(func(tags metricscomp.SandboxAgentInvokeTags) {
 			assert.Equal(t, "42", tags.InvokeID)
 			assert.Equal(t, int64(1001), tags.ExperimentID)
+			assert.Equal(t, int64(5001), tags.ExperimentRunID)
+			assert.Equal(t, int64(88), tags.SpaceID)
 			assert.Equal(t, int64(2001), tags.TargetID)
 			assert.Zero(t, tags.DatasetID)
 			assert.Zero(t, tags.DatasetVersion)
 			assert.Equal(t, "", tags.ItemKey)
 			assert.Equal(t, "", tags.DatasetKey)
+			assert.Equal(t, "", tags.AgentName)
+			assert.Equal(t, "", tags.ApplicationID)
 			assert.Zero(t, tags.ItemID)
 		})
-		svc.emitInvokeStarted(42, &entity.ExecuteEvalTargetParam{ExptID: 1001, TargetID: 2001})
+		svc.emitInvokeStarted(88, 42, &entity.ExecuteEvalTargetParam{ExptID: 1001, ExptRunID: 5001, TargetID: 2001})
 	})
 
 	t.Run("full ItemMeta populates all tags", func(t *testing.T) {
@@ -244,17 +248,28 @@ func TestSandboxAgentSourceEvalTargetServiceImpl_emitInvokeStarted(t *testing.T)
 		mock.EXPECT().EmitInvokeStarted(gomock.Any()).Do(func(tags metricscomp.SandboxAgentInvokeTags) {
 			assert.Equal(t, "77", tags.InvokeID)
 			assert.Equal(t, int64(1001), tags.ExperimentID)
+			assert.Equal(t, int64(5001), tags.ExperimentRunID)
+			assert.Equal(t, int64(88), tags.SpaceID)
 			assert.Equal(t, int64(2001), tags.TargetID)
 			assert.Equal(t, int64(3001), tags.DatasetID)
 			assert.Equal(t, int64(4001), tags.DatasetVersion)
 			assert.Equal(t, "ik", tags.ItemKey)
 			assert.Equal(t, "dk", tags.DatasetKey)
+			assert.Equal(t, "my-agent", tags.AgentName)
+			assert.Equal(t, "app-1", tags.ApplicationID)
 			assert.Equal(t, itemID, tags.ItemID)
 		})
-		svc.emitInvokeStarted(77, &entity.ExecuteEvalTargetParam{
+		svc.emitInvokeStarted(88, 77, &entity.ExecuteEvalTargetParam{
 			ExptID:        1001,
+			ExptRunID:     5001,
 			TargetID:      2001,
 			EvalSetItemID: &itemID,
+			EvalTarget: &entity.EvalTarget{
+				SourceTargetID: "app-1",
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SandboxAgent: &entity.SandboxAgent{Name: "my-agent"},
+				},
+			},
 			ItemMeta: &entity.EvalSetItemMeta{
 				EvalSetID:        "3001",
 				EvalSetVersionID: "4001",

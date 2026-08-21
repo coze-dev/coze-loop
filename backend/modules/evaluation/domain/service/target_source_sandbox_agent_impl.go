@@ -57,20 +57,28 @@ func (t *SandboxAgentSourceEvalTargetServiceImpl) AsyncExecute(ctx context.Conte
 	if err != nil {
 		return 0, "", nil, err
 	}
-	t.emitInvokeStarted(invokeID, param)
+	t.emitInvokeStarted(spaceID, invokeID, param)
 	return invokeID, "sandbox_agent", nil, nil
 }
 
 // emitInvokeStarted 提交侧打点：evaluation_target_sandbox_agent.invoke_started
 // 触发时机：invokeID 生成成功后立即上报，代表"评测开始执行"。
-func (t *SandboxAgentSourceEvalTargetServiceImpl) emitInvokeStarted(invokeID int64, param *entity.ExecuteEvalTargetParam) {
+func (t *SandboxAgentSourceEvalTargetServiceImpl) emitInvokeStarted(spaceID, invokeID int64, param *entity.ExecuteEvalTargetParam) {
 	if t.sandboxAgentMetrics == nil || param == nil {
 		return
 	}
 	tags := metricscomp.SandboxAgentInvokeTags{
-		ExperimentID: param.ExptID,
-		InvokeID:     strconv.FormatInt(invokeID, 10),
-		TargetID:     param.TargetID,
+		SpaceID:         spaceID,
+		ExperimentID:    param.ExptID,
+		ExperimentRunID: param.ExptRunID,
+		InvokeID:        strconv.FormatInt(invokeID, 10),
+		TargetID:        param.TargetID,
+	}
+	if param.EvalTarget != nil {
+		tags.ApplicationID = param.EvalTarget.SourceTargetID
+		if v := param.EvalTarget.EvalTargetVersion; v != nil && v.SandboxAgent != nil {
+			tags.AgentName = v.SandboxAgent.Name
+		}
 	}
 	if param.ItemMeta != nil {
 		tags.DatasetID = parseInt64OrZero(param.ItemMeta.EvalSetID)

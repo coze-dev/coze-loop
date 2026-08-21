@@ -695,4 +695,8 @@ type EvalAsyncCtx struct {
 	DatasetVersionID int64
 	ItemKey          string
 	DatasetKey       string
+	// AgentName 沙箱 agent 应用名称 (SandboxAgent.Name), 供 invoke_finished 打点复用。
+	AgentName string
+	// ApplicationID 沙箱 agent 应用 id (即 EvalTarget.SourceTargetID, AgentKit application_id), 供 invoke_finished 打点复用。
+	ApplicationID string
 }
