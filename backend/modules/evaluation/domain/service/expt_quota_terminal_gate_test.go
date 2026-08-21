@@ -74,7 +74,7 @@ func TestReleaseQuotaIfItemTerminal_ReleasesOnEveryTerminalState(t *testing.T) {
 	}{
 		{"成功 → 释放", entity.ItemRunState_Success, nil, "item success"},
 		{"失败 → 同样释放", entity.ItemRunState_Fail, errors.New("evaluator boom"), "item failed"},
-		{"提前终止 → 同样释放", entity.ItemRunState_Terminal, nil, "item success"},
+		{"提前终止 → 同样释放", entity.ItemRunState_Terminal, nil, "item terminated"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newTerminalGateFixture(t, observation(tc.status))
@@ -170,4 +170,61 @@ func TestReleaseQuotaIfItemTerminal_ReleaseErrorIsSwallowed(t *testing.T) {
 		f.svc.releaseQuotaIfItemTerminal(context.Background(), f.event, testScope, f.guard, nil)
 	})
 	assert.Len(t, f.guard.releases(), 1, "失败也应记录已尝试释放")
+}
+
+// TestTerminalReleaseReason_DerivedFromStatusNotExecErr 矩阵 R2 的补强：
+// 释放原因必须由**回查到的 run log 终态**推导，不能由 execErr 推导。
+//
+// 这是一个真机踩出来的 bug：`CompleteItemRun` 对普通 item 失败 `return nil`
+// （只有 in-debt 错误才向上抛），`Eval` 又只透传其返回值，于是 execErr 恒为 nil。
+// 旧实现 `reason := "item success"; if execErr != nil {...}` 因此永远走第一行 ——
+// BOE 实测 129 条释放日志**全部**写着 item success，其中 104 个 item 的 DB 状态是 Fail。
+//
+// 后果不是额度算错（释放本身按 IsItemRunFinished 判定，是对的），而是**可观测性失真**：
+// 靠日志查"额度被谁吃了"会得到完全错误的图景，也发现不了实验在大面积失败。
+func TestTerminalReleaseReason_DerivedFromStatusNotExecErr(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		status  entity.ItemRunState
+		execErr error
+		want    string
+	}{
+		// ★ 核心：execErr 为 nil（普通失败被吞掉后的真实形态）时，Fail 仍须标成 failed。
+		{"Fail + execErr=nil（被吞掉的普通失败）", entity.ItemRunState_Fail, nil, "item failed"},
+		{"Success + execErr=nil", entity.ItemRunState_Success, nil, "item success"},
+		{"Terminal（提前终止）", entity.ItemRunState_Terminal, nil, "item terminated"},
+		// in-debt 一类会向上抛的错误：状态与错误文本都要带上。
+		{"Fail + execErr 非 nil（in-debt）", entity.ItemRunState_Fail, errors.New("in debt"), "item failed: in debt"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, terminalReleaseReason(tc.status, tc.execErr))
+		})
+	}
+}
+
+// TestTerminalReleaseReason_UnknownTerminalStateCarriesCode 终态集合扩展但本函数没跟上时，
+// 必须带出原始状态码而不是静默标成 success。
+//
+// 静默标 success 正是上一个 bug 的形态 —— 同样的错不该以另一种方式再犯一次。
+func TestTerminalReleaseReason_UnknownTerminalStateCarriesCode(t *testing.T) {
+	got := terminalReleaseReason(entity.ItemRunState(99), nil)
+	assert.Contains(t, got, "99", "未识别的终态必须带出状态码，便于反查是哪个新状态")
+	assert.NotContains(t, got, "success", "不得把未知终态静默标成成功")
+}
+
+// TestReleaseQuotaIfItemTerminal_FailedItemGetsFailedReason 端到端串起来：
+// 投影是 Fail、execErr 为 nil 时，实际传给 guard.Release 的 reason 必须能看出是失败。
+//
+// 单独测纯函数不够 —— 要防的是"函数改对了但调用点还在用 execErr"。
+func TestReleaseQuotaIfItemTerminal_FailedItemGetsFailedReason(t *testing.T) {
+	f := newTerminalGateFixture(t, observation(entity.ItemRunState_Fail))
+
+	// execErr 刻意传 nil：这正是普通 item 失败到达本层时的真实形态。
+	f.svc.releaseQuotaIfItemTerminal(context.Background(), f.event, testScope, f.guard, nil)
+
+	releases := f.guard.releases()
+	require.Len(t, releases, 1, "Fail 是终态，额度必须释放")
+	assert.Contains(t, releases[0].Reason, "failed",
+		"execErr 为 nil 但投影是 Fail 时，reason 仍须标成失败 —— 否则失败会伪装成成功")
+	assert.NotContains(t, releases[0].Reason, "success")
 }

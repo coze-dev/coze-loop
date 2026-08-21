@@ -356,8 +356,13 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 // 用状态判定才能两个方向都不出错 —— 少释放会泄漏额度，多释放会让重投消息被丢弃、
 // item 卡死 Processing。
 //
-// 全程 best-effort：释放失败只告警。额度对账（spec §3.11）是最终防线，
-// 而让终态收口因为额度模块失败而报错会把"额度泄漏"升级成"实验不收敛"。
+// 全程 best-effort：释放失败只告警 —— 让终态收口因为额度模块失败而报错，会把
+// "额度泄漏"升级成"实验不收敛"，后者严重得多。
+//
+// ⚠️ 此前这里写着"额度对账（spec §3.11）是最终防线"，那是**规划而非现状**：
+// 对账目前只有调度器每拍在 Reserve 前跑的一小段（只清"投影 none + 账本 reserved"、
+// 且只覆盖当前 LatestRunID）。本函数释放失败后的那条 reservation **没有任何兜底**，
+// 会一直占着额度。所以这里的 Warn 日志是唯一线索，排查额度异常时必须查它。
 func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 	ctx context.Context,
 	event *entity.ExptItemEvalEvent,
@@ -391,10 +396,7 @@ func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 		return
 	}
 
-	reason := "item success"
-	if execErr != nil {
-		reason = "item failed: " + execErr.Error()
-	}
+	reason := terminalReleaseReason(entity.ItemRunState(obs[0].Status), execErr)
 	if err := guard.Release(relCtx, schedulerScope, event.ExptRunID, event.EvalSetItemID, reason); err != nil {
 		logs.CtxWarn(relCtx, "[CentralReservation] release quota fail, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptRunID, event.EvalSetItemID, err)
@@ -402,6 +404,43 @@ func (e *ExptItemEventEvalServiceImpl) releaseQuotaIfItemTerminal(
 	}
 	logs.CtxInfo(relCtx, "[CentralReservation] quota released on item terminal, scope: %v, expt_run_id: %v, item_id: %v, reason: %v",
 		schedulerScope, event.ExptRunID, event.EvalSetItemID, reason)
+}
+
+// terminalReleaseReason 由**回查到的 run log 终态**推导释放原因，而不是由 execErr 推导。
+//
+// ★ 为什么不能用 execErr：`CompleteItemRun` 在写完 status=Fail + err_msg 之后，只有
+// in-debt 错误（evalErrNeedTerminateExpt）才 return evalErr，普通 item 失败一律 return nil；
+// 而 `Eval` 只透传它的返回值。于是普通失败对本层**完全不可见**，execErr 恒为 nil。
+//
+// 实测代价：BOE 129 条释放日志**全部**写着 `item success`，其中 104 个 item 的 DB 状态
+// 是 Fail —— 失败被伪装成成功，靠日志根本发现不了实验在大面积失败，
+// 而"额度都被谁吃了"这类排查会得到完全错误的图景。
+//
+// 用 status 推导后，标签与 DB 事实一致。execErr 仍然带上（非 nil 时附错误文本）：
+// 它在 in-debt 那条路径上是有信息量的，能区分"失败"与"失败且触发了实验终止"。
+//
+// 注意这**只修标签**，不改变释放行为（终态判定仍是 IsItemRunFinished），也没有让
+// HandleEventErr 的错误分支重新执行 —— 后者需要改 CompleteItemRun 的返回契约，
+// 影响面大得多（见 AUDIT-FINDINGS-2026-08-21.md P1-1 方向 2）。
+func terminalReleaseReason(status entity.ItemRunState, execErr error) string {
+	var reason string
+	switch status {
+	case entity.ItemRunState_Success:
+		reason = "item success"
+	case entity.ItemRunState_Fail:
+		reason = "item failed"
+	case entity.ItemRunState_Terminal:
+		reason = "item terminated"
+	default:
+		// 走到这里说明 IsItemRunFinished 的终态集合扩展了但本函数没跟上。
+		// 回落时带上原始状态码，便于反查是哪个新状态。
+		reason = fmt.Sprintf("item terminal(status=%d)", int32(status))
+	}
+	if execErr != nil {
+		// execErr 非 nil 说明是 in-debt 一类会向上抛的错误，附上文本便于定位。
+		reason += ": " + execErr.Error()
+	}
+	return reason
 }
 
 func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) RecordEvalEndPoint {
