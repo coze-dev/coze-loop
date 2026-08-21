@@ -17,7 +17,11 @@ import "context"
 // reservation 就执行，那么迟到的、重复的、账本已重建过的消息都会变成"无额度执行"，全局额度
 // 保护即失效。
 type ICentralReservationGuard interface {
-	// ConfirmRunning 取得该 item 的一次性执行权。
+	// ConfirmRunning 确认该 item 持有额度，取得执行资格。
+	//
+	// 注意它是**幂等**的而非"一次性"：实现只校验 reservation 存在、并把状态推进到 Running，
+	// 对已 Running 的重复调用同样返回 true（见下）。防止同一 item 被并发执行两次**不靠它**，
+	// 靠的是 consumer 侧的 item 锁（expt_item_eval_run_lock）。
 	//
 	// 返回 false 表示 reservation 不存在 —— 调用方**必须放弃执行并丢弃消息**，不得继续跑 item。
 	// 已是 Running 的重复投递返回 true：同一 item 的合法原地重试要继续持有原额度，
