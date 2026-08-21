@@ -2379,6 +2379,9 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 					assert.Equal(t, inputData, execParam.Input)
 					assert.Equal(t, entity.EvalTargetTypeLoopPrompt, execParam.TargetType)
 					assert.Equal(t, evalTarget, execParam.EvalTarget)
+					// AsyncExecuteTarget 需将 param.ExperimentRunID 透传到 operator, 供 SandboxAgent
+					// emitInvokeStarted 组 tag 使用。
+					assert.Equal(t, int64(555), execParam.ExptRunID)
 					return int64(999), "callee", nil, nil
 				})
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(999), nil)

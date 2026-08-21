@@ -1939,13 +1939,22 @@ func TestExptSchedulerImpl_sweepTerminatedSandboxItems(t *testing.T) {
 				assert.Equal(t, int64(99), tags.TargetID)
 				assert.Equal(t, int32(errno.SandboxTerminatedBeforeReportCode), errCode)
 				assert.Error(t, err) // classifier 分支需要 err != nil
+				// sweep 路径新增 tag: 从 event / expt.Target 反查填充。
+				assert.Equal(t, int64(3), tags.SpaceID)
+				assert.Equal(t, int64(2), tags.ExperimentRunID)
+				assert.Equal(t, "sweep-agent", tags.AgentName)
+				assert.Equal(t, "app-sweep", tags.ApplicationID)
 			}).Times(1)
 
 		expt := &entity.Experiment{
 			ID:       1,
 			TargetID: 99,
 			Target: &entity.EvalTarget{
-				EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+				SourceTargetID: "app-sweep",
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+					SandboxAgent:   &entity.SandboxAgent{Name: "sweep-agent"},
+				},
 			},
 			EvalSet: &entity.EvaluationSet{
 				ID:                   77,
@@ -1999,7 +2008,11 @@ func TestExptSchedulerImpl_terminateZombieEvalTargetRecords_Metric(t *testing.T)
 		ID:       1,
 		TargetID: 99,
 		Target: &entity.EvalTarget{
-			EvalTargetVersion: &entity.EvalTargetVersion{EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			SourceTargetID: "app-zombie",
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				SandboxAgent:   &entity.SandboxAgent{Name: "zombie-agent"},
+			},
 		},
 		EvalSet: &entity.EvaluationSet{
 			ID:                   77,
@@ -2040,6 +2053,11 @@ func TestExptSchedulerImpl_terminateZombieEvalTargetRecords_Metric(t *testing.T)
 				assert.Equal(t, int64(99), tags.TargetID)
 				assert.Equal(t, int32(errno.AsyncEvalTargetZombieTimeoutCode), errCode)
 				assert.Error(t, err)
+				// zombie 兜底路径同样携带四个新 tag。
+				assert.Equal(t, int64(3), tags.SpaceID)
+				assert.Equal(t, int64(2), tags.ExperimentRunID)
+				assert.Equal(t, "zombie-agent", tags.AgentName)
+				assert.Equal(t, "app-zombie", tags.ApplicationID)
 			}).Times(1)
 
 		err := svc.terminateZombieEvalTargetRecords(context.Background(), baseEvent, sandboxExpt, []int64{10})
@@ -2423,5 +2441,330 @@ func TestExptSchedulerImpl_sweepTerminatedSandboxItems_CrossSpace(t *testing.T) 
 		_, terminated, err := svc.sweepTerminatedSandboxItems(context.Background(), baseEvent, items, expt)
 		assert.NoError(t, err)
 		assert.Len(t, terminated, 1)
+	})
+}
+
+// TestSandboxAgentTargetTagsFromExpt 覆盖沙箱 agent target 反查 helper 的所有短路分支:
+// nil expt / nil Target / nil EvalTargetVersion / nil SandboxAgent 均返回空串,
+// 完整链路返回 Name + SourceTargetID (即 AgentKit application_id)。
+func TestSandboxAgentTargetTagsFromExpt(t *testing.T) {
+	// nil expt
+	name, appID := sandboxAgentTargetTagsFromExpt(nil)
+	assert.Equal(t, "", name)
+	assert.Equal(t, "", appID)
+
+	// nil Target
+	name, appID = sandboxAgentTargetTagsFromExpt(&entity.Experiment{})
+	assert.Equal(t, "", name)
+	assert.Equal(t, "", appID)
+
+	// SourceTargetID 有值但 EvalTargetVersion 为 nil: application_id 仍应返回, agent_name 留空
+	name, appID = sandboxAgentTargetTagsFromExpt(&entity.Experiment{Target: &entity.EvalTarget{
+		SourceTargetID: "app-only",
+	}})
+	assert.Equal(t, "", name)
+	assert.Equal(t, "app-only", appID)
+
+	// EvalTargetVersion 非 nil 但 SandboxAgent 为 nil (非沙箱 target)
+	name, appID = sandboxAgentTargetTagsFromExpt(&entity.Experiment{Target: &entity.EvalTarget{
+		SourceTargetID:    "app-x",
+		EvalTargetVersion: &entity.EvalTargetVersion{},
+	}})
+	assert.Equal(t, "", name)
+	assert.Equal(t, "app-x", appID)
+
+	// 完整链路
+	name, appID = sandboxAgentTargetTagsFromExpt(&entity.Experiment{Target: &entity.EvalTarget{
+		SourceTargetID: "app-full",
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			SandboxAgent: &entity.SandboxAgent{Name: "full-agent"},
+		},
+	}})
+	assert.Equal(t, "full-agent", name)
+	assert.Equal(t, "app-full", appID)
+}
+
+// TestExptSchedulerImpl_emitSandboxSweptInvokeFinished_ShortCircuits 直接覆盖 emit helper
+// 的三个短路场景, 独立于 sweepTerminatedSandboxItems 主流程:
+//   - sandboxAgentMetrics 未注入 → 直接 return
+//   - terminatedRecordIDs 为空 → 直接 return
+//   - recordIDToItemIDs 缺 mapping → 走 []int64{0} 保底遍历一条
+func TestExptSchedulerImpl_emitSandboxSweptInvokeFinished_ShortCircuits(t *testing.T) {
+	baseEvent := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+	expt := &entity.Experiment{
+		TargetID: 99,
+		Target: &entity.EvalTarget{
+			SourceTargetID: "app-1",
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				SandboxAgent: &entity.SandboxAgent{Name: "agent-1"},
+			},
+		},
+	}
+
+	t.Run("sandboxAgentMetrics 未注入 → no-op", func(t *testing.T) {
+		svc := &ExptSchedulerImpl{}
+		assert.NotPanics(t, func() {
+			svc.emitSandboxSweptInvokeFinished(context.Background(), baseEvent, expt, []int64{500}, nil)
+		})
+	})
+
+	t.Run("terminatedRecordIDs 为空 → no-op", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+		// 未 EXPECT EmitInvokeFinished, 被调则失败
+		svc.emitSandboxSweptInvokeFinished(context.Background(), baseEvent, expt, nil, nil)
+	})
+
+	t.Run("recordIDToItemIDs 缺 mapping → 用 itemID=0 保底", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+		mockMetric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(tags metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time) {
+				assert.Equal(t, int64(0), tags.ItemID)
+				assert.Equal(t, "500", tags.InvokeID)
+				assert.Equal(t, int64(3), tags.SpaceID)
+				assert.Equal(t, int64(2), tags.ExperimentRunID)
+				assert.Equal(t, "agent-1", tags.AgentName)
+				assert.Equal(t, "app-1", tags.ApplicationID)
+			}).Times(1)
+		svc.emitSandboxSweptInvokeFinished(context.Background(), baseEvent, expt, []int64{500}, map[int64][]int64{})
+	})
+
+	t.Run("expt 为 nil → datasetID/targetID 归零, 不 panic", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+		mockMetric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(tags metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time) {
+				assert.Equal(t, int64(0), tags.DatasetID)
+				assert.Equal(t, int64(0), tags.TargetID)
+				assert.Equal(t, "", tags.AgentName)
+				assert.Equal(t, "", tags.ApplicationID)
+			}).Times(1)
+		svc.emitSandboxSweptInvokeFinished(context.Background(), baseEvent, nil, []int64{600}, map[int64][]int64{600: {7}})
+	})
+}
+
+// TestExptSchedulerImpl_emitSandboxZombieInvokeFinished_ShortCircuits 直接覆盖 zombie
+// emit helper 的短路场景, 与 swept 版本对称。errCode 使用 AsyncEvalTargetZombieTimeoutCode。
+func TestExptSchedulerImpl_emitSandboxZombieInvokeFinished_ShortCircuits(t *testing.T) {
+	baseEvent := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+	expt := &entity.Experiment{
+		TargetID: 99,
+		Target: &entity.EvalTarget{
+			SourceTargetID: "app-z",
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				SandboxAgent: &entity.SandboxAgent{Name: "agent-z"},
+			},
+		},
+	}
+
+	t.Run("sandboxAgentMetrics 未注入 → no-op", func(t *testing.T) {
+		svc := &ExptSchedulerImpl{}
+		assert.NotPanics(t, func() {
+			svc.emitSandboxZombieInvokeFinished(context.Background(), baseEvent, expt, []int64{500}, nil)
+		})
+	})
+
+	t.Run("recordIDs 为空 → no-op", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+		svc.emitSandboxZombieInvokeFinished(context.Background(), baseEvent, expt, nil, nil)
+	})
+
+	t.Run("recordIDToItemIDs 缺 mapping → 用 itemID=0 保底", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+		mockMetric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(tags metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time) {
+				assert.Equal(t, int64(0), tags.ItemID)
+				assert.Equal(t, "500", tags.InvokeID)
+			}).Times(1)
+		svc.emitSandboxZombieInvokeFinished(context.Background(), baseEvent, expt, []int64{500}, map[int64][]int64{})
+	})
+
+	t.Run("多 item 展开: recordIDToItemIDs 一 record 对多 item, 逐条打点", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+		itemIDs := []int64{}
+		mockMetric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(tags metrics.SandboxAgentInvokeTags, _ error, errCode int32, _ time.Time) {
+				assert.Equal(t, int32(errno.AsyncEvalTargetZombieTimeoutCode), errCode)
+				assert.Equal(t, "agent-z", tags.AgentName)
+				assert.Equal(t, "app-z", tags.ApplicationID)
+				itemIDs = append(itemIDs, tags.ItemID)
+			}).Times(2)
+		svc.emitSandboxZombieInvokeFinished(context.Background(), baseEvent, expt, []int64{600},
+			map[int64][]int64{600: {11, 22}})
+		assert.ElementsMatch(t, []int64{11, 22}, itemIDs)
+	})
+}
+
+// TestExptSchedulerImpl_emitSandboxSweptInvokeFinished 覆盖 sweep 补打点 tag 组装:
+//   - sandboxAgentMetrics=nil / 空 record → no-op
+//   - 命中路径断言新增 5 tag (SpaceID / ExperimentRunID / AgentName / ApplicationID / TargetID) 落到 EmitInvokeFinished
+//   - recordIDToItemIDs 为空 → itemID=0 保底展开
+//   - 一个 record → 多 item 展开成 N 次
+//   - expt=nil → agent/application tag 空但 SpaceID 仍来自 event
+func TestExptSchedulerImpl_emitSandboxSweptInvokeFinished(t *testing.T) {
+	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+	sandboxExpt := &entity.Experiment{
+		TargetID: 99,
+		Target: &entity.EvalTarget{
+			SourceTargetID: "app-1",
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				SandboxAgent: &entity.SandboxAgent{Name: "my-agent"},
+			},
+		},
+		EvalSet: &entity.EvaluationSet{
+			ID:                   77,
+			EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 88},
+		},
+	}
+
+	t.Run("sandboxAgentMetrics=nil → no-op", func(t *testing.T) {
+		svc := &ExptSchedulerImpl{}
+		svc.emitSandboxSweptInvokeFinished(context.Background(), event, sandboxExpt, []int64{500}, map[int64][]int64{500: {10}})
+	})
+
+	t.Run("空 record → no-op", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+		svc.emitSandboxSweptInvokeFinished(context.Background(), event, sandboxExpt, nil, nil)
+	})
+
+	t.Run("单 record 单 item → 5 新 tag 完整落到 EmitInvokeFinished", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+
+		mockMetric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Do(func(tags metrics.SandboxAgentInvokeTags, _ error, errCode int32, _ time.Time) {
+				assert.Equal(t, int64(3), tags.SpaceID)
+				assert.Equal(t, int64(1), tags.ExperimentID)
+				assert.Equal(t, int64(2), tags.ExperimentRunID)
+				assert.Equal(t, "my-agent", tags.AgentName)
+				assert.Equal(t, "app-1", tags.ApplicationID)
+				assert.Equal(t, int64(10), tags.ItemID)
+				assert.Equal(t, "500", tags.InvokeID)
+				assert.Equal(t, int64(77), tags.DatasetID)
+				assert.Equal(t, int64(88), tags.DatasetVersion)
+				assert.Equal(t, int64(99), tags.TargetID)
+				assert.Equal(t, int32(errno.SandboxTerminatedBeforeReportCode), errCode)
+			}).Times(1)
+
+		svc.emitSandboxSweptInvokeFinished(context.Background(), event, sandboxExpt, []int64{500}, map[int64][]int64{500: {10}})
+	})
+
+	t.Run("recordID→itemIDs 缺失 → itemID=0 保底展开一次", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+
+		mockMetric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Do(func(tags metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time) {
+				assert.Equal(t, int64(0), tags.ItemID)
+				assert.Equal(t, "500", tags.InvokeID)
+			}).Times(1)
+
+		svc.emitSandboxSweptInvokeFinished(context.Background(), event, sandboxExpt, []int64{500}, nil)
+	})
+
+	t.Run("一个 record 关联多个 item → 展开成 N 次", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+
+		got := map[int64]bool{}
+		mockMetric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Do(func(tags metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time) {
+				got[tags.ItemID] = true
+			}).Times(2)
+
+		svc.emitSandboxSweptInvokeFinished(context.Background(), event, sandboxExpt, []int64{500}, map[int64][]int64{500: {10, 11}})
+		assert.True(t, got[10] && got[11])
+	})
+
+	t.Run("expt=nil → agent/application tag 为空, SpaceID 仍来自 event", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+
+		mockMetric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Do(func(tags metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time) {
+				assert.Equal(t, "", tags.AgentName)
+				assert.Equal(t, "", tags.ApplicationID)
+				assert.Equal(t, int64(0), tags.TargetID)
+				assert.Equal(t, int64(3), tags.SpaceID)
+			}).Times(1)
+
+		svc.emitSandboxSweptInvokeFinished(context.Background(), event, nil, []int64{500}, map[int64][]int64{500: {10}})
+	})
+}
+
+// TestExptSchedulerImpl_emitSandboxZombieInvokeFinished 与 sweep 版本对称:
+// zombie errCode + 同一套 5 新 tag 组装; 覆盖 metrics=nil / 空 record / 命中三条主路径。
+func TestExptSchedulerImpl_emitSandboxZombieInvokeFinished(t *testing.T) {
+	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+	sandboxExpt := &entity.Experiment{
+		TargetID: 99,
+		Target: &entity.EvalTarget{
+			SourceTargetID: "app-z",
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				SandboxAgent: &entity.SandboxAgent{Name: "zombie-agent"},
+			},
+		},
+		EvalSet: &entity.EvaluationSet{
+			ID:                   77,
+			EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 88},
+		},
+	}
+
+	t.Run("sandboxAgentMetrics=nil → no-op", func(t *testing.T) {
+		svc := &ExptSchedulerImpl{}
+		svc.emitSandboxZombieInvokeFinished(context.Background(), event, sandboxExpt, []int64{500}, map[int64][]int64{500: {10}})
+	})
+
+	t.Run("空 record → no-op", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+		svc.emitSandboxZombieInvokeFinished(context.Background(), event, sandboxExpt, nil, nil)
+	})
+
+	t.Run("命中: 5 新 tag + zombie errCode", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockMetric := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		svc := &ExptSchedulerImpl{sandboxAgentMetrics: mockMetric}
+
+		mockMetric.EXPECT().EmitInvokeFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Do(func(tags metrics.SandboxAgentInvokeTags, _ error, errCode int32, _ time.Time) {
+				assert.Equal(t, int64(3), tags.SpaceID)
+				assert.Equal(t, int64(2), tags.ExperimentRunID)
+				assert.Equal(t, "zombie-agent", tags.AgentName)
+				assert.Equal(t, "app-z", tags.ApplicationID)
+				assert.Equal(t, int32(errno.AsyncEvalTargetZombieTimeoutCode), errCode)
+			}).Times(1)
+
+		svc.emitSandboxZombieInvokeFinished(context.Background(), event, sandboxExpt, []int64{500}, map[int64][]int64{500: {10}})
 	})
 }

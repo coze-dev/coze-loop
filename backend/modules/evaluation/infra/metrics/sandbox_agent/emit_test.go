@@ -195,6 +195,12 @@ func TestEmitExperimentStartedFinished(t *testing.T) {
 	if start.tags["item_id"] != "-" || start.tags["invoke_id"] != "-" {
 		t.Fatalf("started should placeholder item/invoke, got %+v", start.tags)
 	}
+	// 实验层不携带 invoke-only 的四个 tag, 全部走占位符。
+	for _, k := range []string{"space_id", "experiment_run_id", "agent_name", "application_id"} {
+		if start.tags[k] != "-" {
+			t.Fatalf("experiment tag %s should be placeholder, got %q", k, start.tags[k])
+		}
+	}
 	if start.values[0].suffix != "experiment_started" {
 		t.Fatalf("want experiment_started, got %s", start.values[0].suffix)
 	}
@@ -248,6 +254,12 @@ func TestEmitStepStarted(t *testing.T) {
 	}
 	if rec.tags["target_id"] != "6" || rec.tags["item_key"] != "item-key" || rec.tags["dataset_key"] != "ds-key" {
 		t.Fatalf("new step tags wrong: %+v", rec.tags)
+	}
+	// Step 层同样不携带 invoke-only 的四个 tag。
+	for _, k := range []string{"space_id", "experiment_run_id", "agent_name", "application_id"} {
+		if rec.tags[k] != "-" {
+			t.Fatalf("step tag %s should be placeholder, got %q", k, rec.tags[k])
+		}
 	}
 	if rec.tags["success"] != "-" || rec.tags["error_type"] != "-" {
 		t.Fatalf("started should not carry success/error_type, got %+v", rec.tags)
