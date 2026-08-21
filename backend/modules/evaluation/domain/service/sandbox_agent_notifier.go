@@ -26,7 +26,7 @@ import (
 //   - 每行终态失败一张 (NotifyItemFail): CompleteItemRun fail 分支同步调用, 不限流。
 //
 // 两张卡都要求实验是沙箱 agent 类型, 且 NotificationConf.FeishuNotification.Enable == true。
-// 非沙箱 agent / Enable=false / 接收人无法解析 时, 方法内部静默返回 nil (不阻塞主流程)。
+// 非沙箱 agent / Enable=false / trigger_type=evalx / 接收人无法解析 时, 方法内部静默返回 nil (不阻塞主流程)。
 //
 // 日志前缀:
 //   - 进度卡路径统一 [SandboxAgentProgress]
@@ -171,6 +171,11 @@ func (s *sandboxAgentNotifier) enabled(expt *entity.Experiment, tag string) bool
 		return false
 	}
 	if expt == nil {
+		return false
+	}
+	// 触发来源闸：evalx 实验一律不发。放在沙箱判定之前 —— 抑制依据与实验类型无关。
+	if isFeishuNotifySuppressedByTrigger(expt) {
+		logs.CtxInfo(context.Background(), "%s skip: suppressed by trigger_type=%s, expt_id=%v", tag, expt.TriggerType, expt.ID)
 		return false
 	}
 	if !isSandboxAgentExperiment(expt) {
