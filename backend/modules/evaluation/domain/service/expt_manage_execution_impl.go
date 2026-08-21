@@ -608,6 +608,23 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 			return err
 		}
 
+		// ★ 实验终态时，未跑完的 item 的中心调度额度必须在这里释放。
+		//
+		// 为什么不能只靠 consumer 侧那个释放点：那个点在 item 执行链的出口，靠"item 到终态"
+		// 触发。而实验被 Kill / Cancel 或落 Failed 之后，这些 item **不会再被执行** ——
+		// 消息可能已被丢弃、可能压根还没投递、也可能 consumer 早已放弃，
+		// 于是那个出口永远不会被走到，reservation 就永久留在账本里。
+		//
+		// 实测确认过缺口：本文件此前 grep centralGuard 为 0 —— 用户取消一个正在跑 100 个 item
+		// 的 enforce 实验，那 100 份额度全部泄漏。而 running 态的悬挂连调度器每拍的对账都不碰
+		// （reapDanglingReservations 显式只处理 state=reserved），也就是说**没有任何兜底**。
+		// 取消实验是常规操作，这条路径在线上必然被走到。
+		//
+		// 放在这里而不是各终态分支内：Terminated 与 Failed(default) 两条分支都需要释放，
+		// 且都基于同一份 incompleteTurnIDs。放在分支外只写一次，将来新增终态分支也自动覆盖 ——
+		// 而"新增分支漏掉清理"正是本文件 default 分支注释里记录过的历史教训（沙箱曾因此漏回收）。
+		e.releaseCentralQuotaForIncompleteItems(ctx, got, exptRunID, incompleteTurnIDs, status)
+
 		switch status {
 		case entity.ExptStatus_Terminated:
 			terminatedItemIDSet := make(map[int64]bool)
@@ -819,6 +836,73 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 	}
 
 	return nil
+}
+
+// releaseCentralQuotaForIncompleteItems 在实验进入终态时，释放"仍未跑完"的 item 的中心调度额度。
+//
+// 与 daemon 侧 releaseCentralQuotaForItems（zombie / 沙箱提前终态）的分工：那两条按 item 粒度
+// 判定终态，这条按**实验**粒度 —— 实验一旦终态，未完成的 item 就再也不会被执行，
+// 它们的 reservation 也就再也不会被 consumer 侧的释放点碰到。
+//
+// legacy 实验直接返回：它们从不预占额度，调用释放只是无谓的 Redis 往返。
+//
+// 全程 best-effort：单个 item 释放失败只告警，不让实验收敛失败 ——
+// 实验不收敛（用户看到"取消了但状态不变"）比额度泄漏严重得多。
+// 但这里的 Warn 必须留：**目前没有任何对账会兜住释放失败的这条 reservation**。
+func (e *ExptMangerImpl) releaseCentralQuotaForIncompleteItems(
+	ctx context.Context,
+	expt *entity.Experiment,
+	exptRunID *int64,
+	incompleteTurnIDs []*entity.ItemTurnID,
+	status entity.ExptStatus,
+) {
+	if e.centralGuard == nil || expt == nil || len(incompleteTurnIDs) == 0 {
+		return
+	}
+	if !entity.IsCentralDispatch(expt.ExptDispatchMode) {
+		return
+	}
+	if expt.SchedulerScope == "" {
+		// enforce 却无 Scope：数据异常，无法确定去哪本账释放。宁可不释放也不猜一本 ——
+		// 猜错会归还别人的额度，那比不归还更糟（会导致超发）。
+		logs.CtxError(ctx, "[CentralReservation] enforce experiment without scheduler_scope on complete, skip release, expt_id: %v", expt.ID)
+		return
+	}
+
+	// exptRunID 为 nil 时回落 LatestRunID：账本 key 是 (run_id, item_id)，run 号错了就找不到
+	// 那条 reservation（释放变成静默 no-op）。CompleteExpt 的调用方并不总会传 run。
+	runID := gptr.Indirect(exptRunID)
+	if runID == 0 {
+		runID = expt.LatestRunID
+	}
+	if runID == 0 {
+		logs.CtxError(ctx, "[CentralReservation] cannot resolve expt_run_id on complete, skip release, expt_id: %v", expt.ID)
+		return
+	}
+
+	// 同一 item 可能有多个未完成 turn，而 reservation 是 item 粒度 —— 必须先去重，
+	// 否则会对同一条 reservation 发多次释放。Release 本身幂等（HDEL 后 field 不存在），
+	// 但重复调用会放大 Redis 往返，且日志里的计数会失真。
+	itemIDSet := make(map[int64]bool, len(incompleteTurnIDs))
+	for _, it := range incompleteTurnIDs {
+		if it == nil {
+			continue
+		}
+		itemIDSet[it.ItemID] = true
+	}
+	itemIDs := maps.ToSlice(itemIDSet, func(k int64, v bool) int64 { return k })
+
+	reason := fmt.Sprintf("experiment reached terminal status=%d with incomplete items", int32(status))
+	failed := 0
+	for _, itemID := range itemIDs {
+		if err := e.centralGuard.Release(ctx, expt.SchedulerScope, runID, itemID, reason); err != nil {
+			failed++
+			logs.CtxWarn(ctx, "[CentralReservation] release quota fail on expt complete, scope: %v, expt_run_id: %v, item_id: %v, err: %v",
+				expt.SchedulerScope, runID, itemID, err)
+		}
+	}
+	logs.CtxInfo(ctx, "[CentralReservation] quota released for incomplete items on expt complete, scope: %v, expt_id: %v, expt_run_id: %v, items: %v, failed: %v, status: %v",
+		expt.SchedulerScope, expt.ID, runID, len(itemIDs), failed, status)
 }
 
 func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, session *entity.Session) error {
