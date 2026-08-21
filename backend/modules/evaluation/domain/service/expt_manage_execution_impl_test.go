@@ -3301,6 +3301,83 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 	})
 }
 
+// TestExptMangerImpl_Run_NotifyCardTriggerGate Run 的老逻辑发卡分支(NotificationConf==nil)按
+// trigger_type 抑制：evalx 不发，manual 照发。
+func TestExptMangerImpl_Run_NotifyCardTriggerGate(t *testing.T) {
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+
+	// setupRun 装好 Run 走到发卡分支所需的全部依赖，返回构造好的 manager。
+	// 实验类型留默认(非 Online)以跳过心跳锁分支；NotificationConf 为 nil 以命中老逻辑发卡。
+	setupRun := func(ctrl *gomock.Controller, triggerType string) *ExptMangerImpl {
+		mgr := newTestExptManager(ctrl)
+
+		mgr.quotaRepo.(*repoMocks.MockQuotaRepo).
+			EXPECT().
+			CreateOrUpdate(ctx, int64(789), gomock.Any(), session).
+			Return(nil)
+		mgr.configer.(*componentMocks.MockIConfiger).
+			EXPECT().
+			GetExptExecConf(ctx, int64(789)).AnyTimes().
+			Return(&entity.ExptExecConf{SpaceExptConcurLimit: 10})
+		mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
+			EXPECT().
+			CheckWriteFlagByID(ctx, gomock.Any(), int64(123)).
+			Return(false).AnyTimes()
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+			EXPECT().
+			MGetByID(ctx, []int64{123}, int64(789)).
+			Return([]*entity.Experiment{{
+				ID:          123,
+				SpaceID:     789,
+				CreatedBy:   "user1@test.com",
+				TriggerType: triggerType,
+				StartAt:     gptr.Of(time.Now()),
+			}}, nil).AnyTimes()
+		mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
+			EXPECT().
+			GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+			Return(&entity.EvaluationSet{}, nil).AnyTimes()
+		mgr.exptResultService.(*svcMocks.MockExptResultService).
+			EXPECT().
+			MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptStats{}, nil).AnyTimes()
+		mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
+			EXPECT().
+			BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
+		mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+			EXPECT().
+			PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
+			Return(nil)
+
+		return mgr
+	}
+
+	t.Run("evalx trigger does not send notify card", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := setupRun(ctrl, "evalx")
+		// notifyRPCAdapter 不设 EXPECT：被调用即 gomock 失败。
+
+		err := mgr.Run(ctx, 123, 456, 789, 0, session, entity.EvaluationModeSubmit, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("manual trigger still sends notify card", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := setupRun(ctrl, "manual")
+		mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).
+			EXPECT().
+			SendMessageCard(ctx, "user1@test.com", "email", gomock.Any(), gomock.Any()).
+			Return(nil)
+
+		err := mgr.Run(ctx, 123, 456, 789, 0, session, entity.EvaluationModeSubmit, nil)
+		assert.NoError(t, err)
+	})
+}
+
 func TestExptMangerImpl_RecordExptData(t *testing.T) {
 	ctx := context.Background()
 	session := &entity.Session{UserID: "test_user"}

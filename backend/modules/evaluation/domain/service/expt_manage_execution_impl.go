@@ -338,6 +338,11 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 	if expt.NotificationConf == nil {
 		switch runMode {
 		case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
+			// 触发来源闸：evalx 实验一律不发飞书卡
+			if isFeishuNotifySuppressedByTrigger(expt) {
+				logs.CtxInfo(ctx, "NotifyCard suppressed by trigger_type=%s, expt_id: %v", expt.TriggerType, exptID)
+				break
+			}
 			if err := e.sendNotifyCard(ctx, expt); err != nil {
 				logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
 			}
