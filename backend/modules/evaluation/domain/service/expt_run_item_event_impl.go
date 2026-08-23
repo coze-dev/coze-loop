@@ -319,6 +319,27 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 				logs.CtxInfo(ctx, "[CentralReservation] run log projection not claimed (duplicate delivery or repaired), continue, expt_run_id: %v, item_id: %v",
 					event.ExptRunID, event.EvalSetItemID)
 			}
+
+			// 主表 expt_item_result 也要跟着推进到 Processing。
+			//
+			// run log 是执行真值，但**用户看到的是主表** —— MGetExperimentResult 走
+			// expt_item_result 构造 run_state。只写 run log 会让实验详情把正在执行的 item
+			// 一直显示成 Queueing（实测：5 个 item 已 Processing 14 小时，results 接口仍全部
+			// 报 queueing），现象是"实验看着没动"，而它其实跑得很正常。
+			//
+			// legacy 的 handleToSubmits 一直是成对写这两张表的
+			// （expt_run_scheduler_event_impl.go 的 UpdateItemRunLog + UpdateItemsResult），
+			// 中心调度这条新派发路径漏了后者 —— 平行实现漏字段的又一例。
+			//
+			// 失败只告警不阻断：主表是展示投影，写不进去不影响执行与额度正确性，
+			// 而这里返回错误会让已经拿到执行权的 item 被 MQ 重投一遍。
+			if e.exptItemResultRepo != nil {
+				if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID,
+					[]int64{event.EvalSetItemID}, map[string]any{"status": int32(entity.ItemRunState_Processing)}); err != nil {
+					logs.CtxWarn(ctx, "[CentralReservation] advance main table to Processing failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
+						event.ExptID, event.EvalSetItemID, err)
+				}
+			}
 		}
 
 		// 执行链返回后释放额度：这是 consumer 侧的主释放点。

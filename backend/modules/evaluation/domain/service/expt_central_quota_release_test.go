@@ -483,3 +483,63 @@ func (r *recordingGuard) Release(ctx context.Context, schedulerScope string, exp
 	*r.seq = append(*r.seq, "release")
 	return nil
 }
+
+// TestHandleCentralReservation_AdvancesMainTableForDisplay 中心调度取得执行权后，
+// **主表 expt_item_result 也必须推进到 Processing**，否则用户看到的状态是错的。
+//
+// ★ 这条守的是一个真实缺陷（2026-08-23 PPE 实测）：
+// run log 是执行真值，但用户看到的是主表 —— MGetExperimentResult 走 expt_item_result
+// 构造 run_state。中心调度这条新派发路径只写了 run log，于是 5 个已 Processing 14 小时的
+// item 在 results 接口里**全部显示 queueing**，现象是"实验看着没动"，而它跑得很正常。
+//
+// legacy 的 handleToSubmits 一直成对写这两张表（UpdateItemRunLog + UpdateItemsResult），
+// 新路径漏了后者 —— 平行实现漏字段的又一例，与团队记忆里
+// 「新增派发路径漏设 ExptRunMode」同族：**老路径对、新路径漏，且单测不断言就发现不了**。
+//
+// 断言的是"主表被推进到 Processing"这件事本身，而不只是"某个方法被调过"，
+// 所以把 ufields 的内容也钉住：只写别的字段不算修好。
+func TestHandleCentralReservation_AdvancesMainTableForDisplay(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	guard := &fakeGuard{confirmResult: true}
+	dispatchRepo := repoMocks.NewMockIExptItemDispatchRepo(ctrl)
+	dispatchRepo.EXPECT().StartReservedItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(true, nil)
+	dispatchRepo.EXPECT().MGetDispatchObservations(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*repo.ExptDispatchObservation{
+			{ItemID: 4, Status: int32(entity.ItemRunState_Success)},
+		}, nil)
+
+	var gotFields map[string]any
+	var gotItemIDs []int64
+	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	itemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ int64, itemIDs []int64, ufields map[string]any) error {
+			gotItemIDs = itemIDs
+			gotFields = ufields
+			return nil
+		})
+
+	svc := &ExptItemEventEvalServiceImpl{
+		centralGuard:       guard,
+		dispatchRepo:       dispatchRepo,
+		exptItemResultRepo: itemResultRepo,
+	}
+
+	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4}
+	ctx := ctxcache.Init(context.Background())
+	event.WithCtxCentralAdmittedExpt(ctx, &entity.Experiment{
+		ID: 1, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: testScope,
+	})
+
+	handler := svc.HandleCentralReservation(func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		return nil
+	})
+	assert.NoError(t, handler(ctx, event))
+
+	assert.NotNil(t, gotFields, "主表必须被推进 —— 只写 run log 会让用户一直看到 queueing")
+	assert.Equal(t, []int64{4}, gotItemIDs, "推进的必须是本次取得执行权的那个 item")
+	assert.Equal(t, int32(entity.ItemRunState_Processing), gotFields["status"],
+		"主表状态必须是 Processing，与 run log 一致")
+}
