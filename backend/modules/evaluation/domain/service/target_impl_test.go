@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -3071,6 +3072,42 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 		}
 	})
 
+	// mac_vm_plus_sandbox: 一次调用的两个 execution 分属两个 task（sandbox=taskID；
+	// mac_vm=taskID+"-macvm"）。destroySandboxExecute 必须按 "-macvm" 后缀把 id 分组，
+	// 每组各发一次 Destroy 到各自 task —— 单 taskID 只销一个会让另一个泄漏。
+	t.Run("mac_vm 链路: 按 -macvm 后缀分组各发一次 Destroy", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
+
+		var mu sync.Mutex
+		gotByTask := map[string][]string{}
+		done := make(chan struct{}, 2)
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				mu.Lock()
+				gotByTask[req.TaskID] = req.ExecuteIDs
+				mu.Unlock()
+				done <- struct{}{}
+				return &rpc.SandboxDestroyResponse{}, nil
+			})
+
+		svc.destroySandboxExecute(context.Background(), "T", 9, []string{"T-orch", "T-macvm"}, false)
+		for i := 0; i < 2; i++ {
+			select {
+			case <-done:
+			case <-time.After(2 * time.Second):
+				t.Fatal("destroy goroutine timeout")
+			}
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		// 基础 task 收 orch（无 -macvm 后缀），-macvm task 收 macvm
+		assert.Equal(t, []string{"T-orch"}, gotByTask["T"], "非 -macvm execution 落基础 task")
+		assert.Equal(t, []string{"T-macvm"}, gotByTask["T-macvm"], "-macvm execution 落 -macvm task")
+	})
+
 	t.Run("Destroy 报错也只记录日志不 panic", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -3651,6 +3688,31 @@ func TestSandboxStatusText(t *testing.T) {
 	}
 	for _, c := range cases {
 		assert.Equal(t, c.want, sandboxStatusText(c.in), "status=%v", c.in)
+	}
+}
+
+// TestSideForExecuteID 覆盖 executeID → 角色标签的全部分支：
+// 裸 record.ID→main、-macvm→mac_vm、-orch→orchestrator、-agent→agent、其余→subordinate。
+func TestSideForExecuteID(t *testing.T) {
+	const recordID int64 = 7590116637119703042
+	bare := strconv.FormatInt(recordID, 10)
+	cases := []struct {
+		name string
+		id   string
+		want string
+	}{
+		{name: "bare record.ID -> main", id: bare, want: "main"},
+		{name: "-macvm suffix -> mac_vm", id: bare + "-macvm", want: "mac_vm"},
+		{name: "-orch suffix -> orchestrator", id: bare + "-orch", want: "orchestrator"},
+		{name: "-agent suffix -> agent", id: bare + "-agent", want: "agent"},
+		{name: "unknown suffix -> subordinate", id: bare + "-extra", want: "subordinate"},
+		{name: "empty id -> subordinate", id: "", want: "subordinate"},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, sideForExecuteID(c.id, recordID))
+		})
 	}
 }
 

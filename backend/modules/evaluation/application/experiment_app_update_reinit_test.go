@@ -155,3 +155,57 @@ func TestUpdateExptRunConf_ReInitsSandboxTaskOnConcurrencyChange(t *testing.T) {
 		assert.NoError(t, err, "Init 失败不该让 UpdateExptRunConf 失败")
 	})
 }
+
+// TestInitSandboxTask 覆盖 initSandboxTask 的三条路径：
+//   - nil adapter：直接返回 nil，不触发任何 RPC；
+//   - GUI 租户（mac_vm_plus_sandbox）：Init 两个 task —— 基础 taskID(Sandbox) + taskID+"-macvm"(MacVM)，
+//     两者共用同一租户/并发；
+//   - GUI 租户下任一 Init 失败：整体返回 error。
+func TestInitSandboxTask(t *testing.T) {
+	const (
+		exptID      int64 = 42
+		workspaceID int64 = 7
+		concurrency int32 = 5
+	)
+
+	t.Run("nil adapter 不触发 RPC", func(t *testing.T) {
+		app := &experimentApplication{}
+		err := app.initSandboxTask(context.Background(), "test", exptID, concurrency, workspaceID, rpc.SandboxTenantFornaxEvalGeneralGUI)
+		assert.NoError(t, err)
+	})
+
+	t.Run("GUI 租户 Init 两个 task（sandbox + -macvm）", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSched := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
+
+		got := map[string]rpc.SandboxResourceType{}
+		mockSched.EXPECT().Init(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+				got[req.TaskID] = req.ResourceType
+				// 两个 task 必须共用 GUI 租户与同一并发
+				assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, req.Tenant)
+				assert.Equal(t, concurrency, req.Concurrency)
+				assert.Equal(t, workspaceID, req.WorkspaceID)
+				return &rpc.SandboxInitResponse{}, nil
+			})
+
+		app := &experimentApplication{sandboxSchedulerAdapter: mockSched}
+		err := app.initSandboxTask(context.Background(), "test", exptID, concurrency, workspaceID, rpc.SandboxTenantFornaxEvalGeneralGUI)
+		assert.NoError(t, err)
+		assert.Equal(t, rpc.SandboxResourceTypeSandbox, got["42"], "基础 taskID 落 Sandbox")
+		assert.Equal(t, rpc.SandboxResourceTypeMacVM, got["42-macvm"], "-macvm taskID 落 MacVM")
+	})
+
+	t.Run("GUI 租户任一 Init 失败即返回 error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSched := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
+
+		mockSched.EXPECT().Init(gomock.Any(), gomock.Any()).Return(nil, errors.New("scheduler down")).Times(1)
+
+		app := &experimentApplication{sandboxSchedulerAdapter: mockSched}
+		err := app.initSandboxTask(context.Background(), "test", exptID, concurrency, workspaceID, rpc.SandboxTenantFornaxEvalGeneralGUI)
+		assert.Error(t, err)
+	})
+}
