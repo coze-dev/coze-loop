@@ -181,3 +181,35 @@ func TestQuotaSpaceExpt_Clone(t *testing.T) {
 		assert.Equal(t, map[int64]int64{2: 200, 3: 300}, cloned.ExptID2RunTime)
 	})
 }
+
+// TestExpectedQuotaConsumption_Categories 去重 + TrimSpace + nil 安全。
+//
+// 去重是必需的：同 category 下申报多个具体资源是正常形态（model|A + model|B），
+// 不去重会让 admission policy 对同一 category 反复判定、错误信息里也重复列出。
+func TestExpectedQuotaConsumption_Categories(t *testing.T) {
+	t.Run("nil 与空返回 nil/空", func(t *testing.T) {
+		var nilC *ExpectedQuotaConsumption
+		assert.Nil(t, nilC.Categories(), "nil receiver 必须安全 —— 调用方在 policy 不放行时会传 nil")
+		assert.Empty(t, (&ExpectedQuotaConsumption{}).Categories())
+	})
+
+	t.Run("去重且保持首次出现顺序", func(t *testing.T) {
+		c := &ExpectedQuotaConsumption{Resources: []*ExpectedResourceConsumption{
+			{Category: "model", ResourceKey: "a", Amount: 1},
+			{Category: "sandbox", ResourceKey: "mac", Amount: 1},
+			{Category: "model", ResourceKey: "b", Amount: 1}, // 同 category 第二个资源
+		}}
+		assert.Equal(t, []string{"model", "sandbox"}, c.Categories())
+	})
+
+	t.Run("TrimSpace 且跳过空 category 与 nil 元素", func(t *testing.T) {
+		c := &ExpectedQuotaConsumption{Resources: []*ExpectedResourceConsumption{
+			{Category: "  model  ", ResourceKey: "a", Amount: 1},
+			nil,
+			{Category: "   ", ResourceKey: "b", Amount: 1},
+			{Category: "model", ResourceKey: "c", Amount: 1}, // trim 后与第一个同名，应去重
+		}}
+		assert.Equal(t, []string{"model"}, c.Categories(),
+			"trim 后同名必须去重 —— 否则 policy 会把同一 category 判两次")
+	})
+}

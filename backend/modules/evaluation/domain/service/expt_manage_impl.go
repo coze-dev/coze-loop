@@ -1338,7 +1338,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if entity.ShouldEnforceByTrigger(triggerType) {
 		// 灰度收窄闸。先判 policy 再校验向量：policy 不放行时该实验走 legacy，
 		// 此时缺向量是正常的（EvalX 对未纳管空间也可能不传），不该报错。
-		decision, err := e.allowCentralScheduling(ctx, req.WorkspaceID, tuple)
+		decision, err := e.allowCentralScheduling(ctx, req.WorkspaceID, tuple, expectedQuota)
 		if err != nil {
 			// 配置不可判定时拒绝创建 enforce 实验，而不是放行或降级 legacy：
 			// 放行会让本该受额度管控的实验绕过管控；静默降级会让 EvalX 以为受管控。
@@ -1808,12 +1808,18 @@ func (e *ExptMangerImpl) Clone(ctx context.Context, exptID, spaceID int64, sessi
 // policy 未注入时放行：保持引入本闸之前的行为（trigger 判据单独生效）。
 // 开源部署注入 noop 也是恒定放行，二者一致。两种情况都不指定缺省优先级
 // （DefaultPriority=0 → 调用方按 1 处理），与引入 default_priority 之前的行为一致。
-func (e *ExptMangerImpl) allowCentralScheduling(ctx context.Context, spaceID int64, tuple *entity.ExptTuple) (component.CentralAdmissionDecision, error) {
+func (e *ExptMangerImpl) allowCentralScheduling(ctx context.Context, spaceID int64, tuple *entity.ExptTuple, expectedQuota *entity.ExpectedQuotaConsumption) (component.CentralAdmissionDecision, error) {
 	if e.centralAdmissionPolicy == nil {
 		return component.CentralAdmissionDecision{Admitted: true}, nil
 	}
 
-	subject := component.CentralAdmissionSubject{SpaceID: spaceID}
+	subject := component.CentralAdmissionSubject{
+		SpaceID: spaceID,
+		// 申报的 category 交给 policy 校验：登记表在 commercial，OSS 只交出事实。
+		// expectedQuota 为 nil 时是空列表 —— 那种情况下 policy 不该因"没有 category"
+		// 而拒绝：缺向量本身由调用方在 Admitted 之后单独判（见 CreateExpt）。
+		QuotaCategories: expectedQuota.Categories(),
+	}
 	// tuple.Target 为 nil 是合法场景：--skip-target 允许创建无评测对象的实验。
 	// 此时 TargetType/TargetID 保持零值，由 policy 决定这类实验算不算命中
 	// （通常不该命中按 target 维度配置的灰度规则）。

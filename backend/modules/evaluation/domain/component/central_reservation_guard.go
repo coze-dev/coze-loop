@@ -136,6 +136,16 @@ type CentralAdmissionSubject struct {
 	TargetType string
 	// TargetID 评测对象 ID。0 表示无评测对象。
 	TargetID int64
+	// QuotaCategories 该实验申报的资源 category 去重列表（已 TrimSpace，顺序不保证）。
+	//
+	// 为什么 policy 需要它：category 的登记表在 commercial（额度维度是内部资源目录，
+	// 不进开源仓），而"申报了一个不存在的 category"必须在**创建期**就拒掉 ——
+	// 打错 category 时连类级 wildcard 都兜不住（`sanbox|*` 与 `sandbox|*` 在账本里
+	// 毫不相干），该 item 在那一维上完全不受限却真的会去占资源。
+	//
+	// 只带 category 不带 resource_key：后者的真源是平台侧资源目录（模型/机型清单），
+	// 迭代远快于本仓发版，刻意不做名称校验 —— 且它打错时 wildcard 仍然兜得住。
+	QuotaCategories []string
 }
 
 // CentralAdmissionDecision 是 admission 判定的结果。

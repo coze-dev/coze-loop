@@ -60,6 +60,37 @@ func (c *ExpectedQuotaConsumption) Validate() error {
 	return nil
 }
 
+// Categories 返回申报的 category 去重列表（已 TrimSpace）。
+//
+// 供 admission policy 校验 category 是否已登记 —— 登记表在 commercial（额度维度属内部
+// 资源目录），OSS 只负责把"申报了哪些维度"这个事实交出去。
+//
+// 顺序不保证：调用方只做集合判定，依赖顺序会引入一个没人声明的耦合。
+// 去重是必要的：同 category 下申报多个具体资源是正常形态（model|A + model|B），
+// 不去重会让 policy 对同一个 category 反复判定、错误信息里也会重复列出。
+func (c *ExpectedQuotaConsumption) Categories() []string {
+	if c == nil {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(c.Resources))
+	out := make([]string, 0, len(c.Resources))
+	for _, r := range c.Resources {
+		if r == nil {
+			continue
+		}
+		category := strings.TrimSpace(r.Category)
+		if category == "" {
+			continue
+		}
+		if _, dup := seen[category]; dup {
+			continue
+		}
+		seen[category] = struct{}{}
+		out = append(out, category)
+	}
+	return out
+}
+
 // Normalize 返回一份 category/resource_key 已去空白的副本，供落库前调用。
 // 冻结进 eval_conf 的值必须是规范形态：调度期按 category|resource_key 拼 constraint key 时不再 trim，
 // 若带前后空白会与上限配置中的同名资源匹配不上，静默变成"未登记资源"而被放行。
