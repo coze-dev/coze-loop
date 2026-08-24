@@ -251,6 +251,73 @@ func TestExptTemplateRepoImpl_GetByID(t *testing.T) {
 	}
 }
 
+func TestExptTemplateRepoImpl_GetBasicByID_DoesNotLoadEvaluatorRefs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	repo, mockTemplateDAO, _, _ := newTemplateRepo(ctrl)
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	templateConf := []byte(`{"expt_source":{"SourceType":3,"SourceID":"200"}}`)
+	mockTemplateDAO.EXPECT().GetByID(ctx, int64(1)).Return(&model.ExptTemplate{
+		ID:           1,
+		SpaceID:      spaceID,
+		ExptType:     int32(entity.ExptType_Online),
+		TemplateConf: &templateConf,
+	}, nil)
+
+	got, err := repo.GetBasicByID(ctx, 1, &spaceID)
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, entity.ExptType_Online, got.GetExptType())
+		if assert.NotNil(t, got.ExptSource) {
+			assert.Equal(t, entity.SourceType_Workflow, got.ExptSource.SourceType)
+			assert.Equal(t, "200", got.ExptSource.SourceID)
+		}
+	}
+}
+
+func TestExptTemplateRepoImpl_GetBasicByID_ErrorsAndEmptyResult(t *testing.T) {
+	t.Run("returns dao error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		repo, mockTemplateDAO, _, _ := newTemplateRepo(ctrl)
+		daoErr := errors.New("dao error")
+		mockTemplateDAO.EXPECT().GetByID(gomock.Any(), int64(1)).Return(nil, daoErr)
+
+		got, err := repo.GetBasicByID(context.Background(), 1, nil)
+
+		assert.Nil(t, got)
+		assert.ErrorIs(t, err, daoErr)
+	})
+
+	t.Run("returns nil when template does not exist", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		repo, mockTemplateDAO, _, _ := newTemplateRepo(ctrl)
+		mockTemplateDAO.EXPECT().GetByID(gomock.Any(), int64(1)).Return(nil, nil)
+
+		got, err := repo.GetBasicByID(context.Background(), 1, nil)
+
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("returns not found when workspace does not match", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		repo, mockTemplateDAO, _, _ := newTemplateRepo(ctrl)
+		spaceID := int64(100)
+		mockTemplateDAO.EXPECT().GetByID(gomock.Any(), int64(1)).Return(&model.ExptTemplate{
+			ID:      1,
+			SpaceID: 200,
+		}, nil)
+
+		got, err := repo.GetBasicByID(context.Background(), 1, &spaceID)
+
+		assert.Nil(t, got)
+		assert.ErrorContains(t, err, "template not found or access denied")
+	})
+}
+
 func TestExptTemplateRepoImpl_GetByName(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

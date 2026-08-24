@@ -46,6 +46,12 @@ func TestPipelineListAdapter_PipelineNodeFinishCallback(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestPipelineListAdapter_DeletePipeline(t *testing.T) {
+	adapter := NewPipelineListAdapter()
+	err := adapter.DeletePipeline(context.Background(), 1, 2)
+	assert.NoError(t, err)
+}
+
 func TestNewPipelineListAdapter(t *testing.T) {
 	adapter := NewPipelineListAdapter()
 	assert.NotNil(t, adapter)
