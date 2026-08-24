@@ -543,3 +543,113 @@ func TestHandleCentralReservation_AdvancesMainTableForDisplay(t *testing.T) {
 	assert.Equal(t, int32(entity.ItemRunState_Processing), gotFields["status"],
 		"主表状态必须是 Processing，与 run log 一致")
 }
+
+// TestHandleCentralReservation_AdvancesStatsToProcessing 中心调度取得执行权后，
+// **expt_stats 也必须记 Queueing→Processing**，否则计数会单向下溢。
+//
+// ★ 这条守的是一个真实缺陷（2026-08-24 PPE 长跑压测实测）：
+// 完成侧（expt_result_impl.go 的 statsCntOp）做的是「从 item 原状态减 1、往新状态加 1」，
+// 减的是 Processing 桶。legacy 在 handleToSubmits 派发时就把 item 计入 Processing，两边配对；
+// 中心调度的派发只把 run log CAS 成 Queueing/reserved（**status 仍是 Queueing**），
+// 从未有人往 Processing 桶加过 —— 完成时减一个从未加过的计数。
+// 实测一个 14 题 enforce 实验：fail 累到 4 时 processing = -4，pending 恒 14 从不下降。
+//
+// 断言 op 的内容而非"调过就行"：只加 Processing 不减 Queueing，pending 依旧不降。
+func TestHandleCentralReservation_AdvancesStatsToProcessing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	guard := &fakeGuard{confirmResult: true}
+	dispatchRepo := repoMocks.NewMockIExptItemDispatchRepo(ctrl)
+	dispatchRepo.EXPECT().StartReservedItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(true, nil)
+	dispatchRepo.EXPECT().MGetDispatchObservations(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*repo.ExptDispatchObservation{
+			{ItemID: 4, Status: int32(entity.ItemRunState_Success)},
+		}, nil)
+
+	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	itemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).AnyTimes()
+
+	var gotOp *entity.StatsCntArithOp
+	statsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ int64, op *entity.StatsCntArithOp) error {
+			gotOp = op
+			return nil
+		})
+
+	svc := &ExptItemEventEvalServiceImpl{
+		centralGuard:       guard,
+		dispatchRepo:       dispatchRepo,
+		exptItemResultRepo: itemResultRepo,
+		exptStatsRepo:      statsRepo,
+	}
+
+	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4}
+	ctx := ctxcache.Init(context.Background())
+	event.WithCtxCentralAdmittedExpt(ctx, &entity.Experiment{
+		ID: 1, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: testScope,
+	})
+
+	handler := svc.HandleCentralReservation(func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		return nil
+	})
+	assert.NoError(t, handler(ctx, event))
+
+	assert.NotNil(t, gotOp, "必须记 stats —— 不记会让完成侧减一个从未加过的计数")
+	assert.Equal(t, 1, gotOp.OpStatusCnt[entity.ItemRunState_Processing],
+		"Processing 必须 +1，与完成侧的 -1 配对")
+	assert.Equal(t, -1, gotOp.OpStatusCnt[entity.ItemRunState_Queueing],
+		"Queueing 必须 -1，否则 pending_turn_count 永不下降")
+}
+
+// TestHandleCentralReservation_SkipsStatsOnDuplicateDelivery 重复投递时**不得**再记 stats。
+//
+// started=false 表示 CAS 未命中 —— item 早已是 Processing（重复投递）或已被 repair 修正。
+// 此时再加一次就从"少计"变成"多计"，方向相反但同样是错的。
+// CAS 结果是这条路径上唯一的"恰好一次"信号，所以记账必须绑定它。
+//
+// ★ 这条是上一个用例的反面：只断言"会记"，把记账写在 started 判断之外也能通过。
+func TestHandleCentralReservation_SkipsStatsOnDuplicateDelivery(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	guard := &fakeGuard{confirmResult: true}
+	dispatchRepo := repoMocks.NewMockIExptItemDispatchRepo(ctrl)
+	// CAS 未命中：重复投递或已被 repair 修正
+	dispatchRepo.EXPECT().StartReservedItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(false, nil)
+	dispatchRepo.EXPECT().MGetDispatchObservations(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*repo.ExptDispatchObservation{
+			{ItemID: 4, Status: int32(entity.ItemRunState_Success)},
+		}, nil)
+
+	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	itemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).AnyTimes()
+
+	statsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+	// Times(0)：一次都不能调 —— 这是本用例的全部意义
+	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).Times(0)
+
+	svc := &ExptItemEventEvalServiceImpl{
+		centralGuard:       guard,
+		dispatchRepo:       dispatchRepo,
+		exptItemResultRepo: itemResultRepo,
+		exptStatsRepo:      statsRepo,
+	}
+
+	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4}
+	ctx := ctxcache.Init(context.Background())
+	event.WithCtxCentralAdmittedExpt(ctx, &entity.Experiment{
+		ID: 1, ExptDispatchMode: entity.ExptDispatchModeEnforce, SchedulerScope: testScope,
+	})
+
+	handler := svc.HandleCentralReservation(func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+		return nil
+	})
+	assert.NoError(t, handler(ctx, event))
+}

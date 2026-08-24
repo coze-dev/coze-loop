@@ -340,6 +340,32 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 						event.ExptID, event.EvalSetItemID, err)
 				}
 			}
+
+			// expt_stats 的 Queueing→Processing 也要在此记账，否则计数单向下溢。
+			//
+			// 完成侧（expt_result_impl.go 的 statsCntOp）做的是「从 item 原状态减 1、往新状态加 1」，
+			// 它减的是 Processing 桶。legacy 在 handleToSubmits 里派发时就把 item 计入了 Processing，
+			// 两边配对；中心调度的派发只把 run log CAS 成 Queueing/reserved（**status 仍是 Queueing**），
+			// 从未有人往 Processing 桶加过 —— 于是完成时减一个从未加过的计数，
+			// 表现为 processing_turn_count 走负、pending_turn_count 永不下降。
+			// 实测：一个 14 题 enforce 实验 fail 累到 4 时 processing = -4，pending 恒 14。
+			//
+			// ★ 必须绑定 started（CAS 真的把 Queueing/reserved 翻成了 Processing/none）。
+			// started=false 是重复投递或已被 repair 修正，此时 item 早已计入 Processing，
+			// 再加一次就从"少计"变成"多计"——CAS 是这里唯一的恰好一次信号。
+			//
+			// 与主表同为展示投影，失败只告警不阻断：返回错误会让已取得执行权的 item 被 MQ 重投。
+			if started && e.exptStatsRepo != nil {
+				if err := e.exptStatsRepo.ArithOperateCount(ctx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
+					OpStatusCnt: map[entity.ItemRunState]int{
+						entity.ItemRunState_Processing: 1,
+						entity.ItemRunState_Queueing:   -1,
+					},
+				}); err != nil {
+					logs.CtxWarn(ctx, "[CentralReservation] advance expt stats to Processing failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
+						event.ExptID, event.EvalSetItemID, err)
+				}
+			}
 		}
 
 		// 执行链返回后释放额度：这是 consumer 侧的主释放点。
