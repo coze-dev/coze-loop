@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -3071,6 +3072,42 @@ func TestEvalTargetServiceImpl_destroySandboxExecute_ListAndZombie(t *testing.T)
 		}
 	})
 
+	// mac_vm_plus_sandbox: 一次调用的两个 execution 分属两个 task（sandbox=taskID；
+	// mac_vm=taskID+"-macvm"）。destroySandboxExecute 必须按 "-macvm" 后缀把 id 分组，
+	// 每组各发一次 Destroy 到各自 task —— 单 taskID 只销一个会让另一个泄漏。
+	t.Run("mac_vm 链路: 按 -macvm 后缀分组各发一次 Destroy", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched}
+
+		var mu sync.Mutex
+		gotByTask := map[string][]string{}
+		done := make(chan struct{}, 2)
+		mockSched.EXPECT().Destroy(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+				mu.Lock()
+				gotByTask[req.TaskID] = req.ExecuteIDs
+				mu.Unlock()
+				done <- struct{}{}
+				return &rpc.SandboxDestroyResponse{}, nil
+			})
+
+		svc.destroySandboxExecute(context.Background(), "T", 9, []string{"T-orch", "T-macvm"}, false)
+		for i := 0; i < 2; i++ {
+			select {
+			case <-done:
+			case <-time.After(2 * time.Second):
+				t.Fatal("destroy goroutine timeout")
+			}
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		// 基础 task 收 orch（无 -macvm 后缀），-macvm task 收 macvm
+		assert.Equal(t, []string{"T-orch"}, gotByTask["T"], "非 -macvm execution 落基础 task")
+		assert.Equal(t, []string{"T-macvm"}, gotByTask["T-macvm"], "-macvm execution 落 -macvm task")
+	})
+
 	t.Run("Destroy 报错也只记录日志不 panic", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -3465,6 +3502,80 @@ func TestEvalTargetServiceImpl_CheckSandboxTerminated(t *testing.T) {
 		assert.Equal(t, "Failed (main)", statuses[10])
 	})
 
+	// mac_vm+sandbox 链路（回归 601300702 execution not found 死循环）：
+	// operator 登记的两个 execution 全带后缀（<id>-orch / <id>-macvm），ext 里写的是
+	// OutputDataExtKeySandboxExecuteIDs 完整列表、且**无裸 record.ID**。早先轮询只查裸
+	// record.ID → 永远 execution not found、兜底轮询失效、实验空转到僵尸兜底。
+	// 现改为遍历 sandboxExecuteIDsOf 的全部 id，任一终态即命中，且 side 标签按后缀推导。
+	t.Run("mac_vm: orch Failed + macvm Running 命中 (orchestrator)", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		record := &entity.EvalTargetRecord{
+			ID: 10, TargetVersionID: 20, SpaceID: 1,
+			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				Ext: map[string]string{consts.OutputDataExtKeySandboxExecuteIDs: `["10-orch","10-macvm"]`},
+			},
+		}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{record}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		// 裸 "10" 绝不应被查询（回归点）；只查带后缀的两个
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxGetRequest) (*rpc.SandboxGetResponse, error) {
+				switch req.ExecuteID {
+				case "10-orch":
+					return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: rpc.SandboxExecuteStatusFailed}}, nil
+				case "10-macvm":
+					return &rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: rpc.SandboxExecuteStatusRunning}}, nil
+				default:
+					t.Fatalf("unexpected ExecuteID %q (bare record.ID must not be queried)", req.ExecuteID)
+					return nil, nil
+				}
+			}).Times(2)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Equal(t, []int64{10}, got)
+		assert.Equal(t, "Failed (orchestrator)", statuses[10])
+	})
+
+	t.Run("mac_vm: orch + macvm 均 Running 不命中", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+		mockSched := trajectorymocks.NewMockISandboxSchedulerAdapter(ctrl)
+		svc := &EvalTargetServiceImpl{sandboxSchedulerAdapter: mockSched, evalTargetRepo: mockRepo}
+
+		record := &entity.EvalTargetRecord{
+			ID: 10, TargetVersionID: 20, SpaceID: 1,
+			Status: gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				Ext: map[string]string{consts.OutputDataExtKeySandboxExecuteIDs: `["10-orch","10-macvm"]`},
+			},
+		}
+		mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{10}).
+			Return([]*entity.EvalTargetRecord{record}, nil)
+		mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), gomock.Any()).
+			Return([]*entity.EvalTarget{{
+				EvalTargetType:    entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{ID: 20, EvalTargetType: entity.EvalTargetTypeSandboxAgent},
+			}}, nil)
+		mockSched.EXPECT().Get(gomock.Any(), gomock.Any()).
+			Return(&rpc.SandboxGetResponse{ExecuteInfo: &rpc.SandboxExecuteInfo{Status: rpc.SandboxExecuteStatusRunning}}, nil).Times(2)
+
+		got, statuses := svc.CheckSandboxTerminated(context.Background(), 1, []int64{10})
+		assert.Nil(t, got)
+		assert.Nil(t, statuses)
+	})
+
 	// Finished(13) 是评测终态，与 Failed/Canceled 一样必须视为命中，
 	// 否则会与 3h zombie 兜底冲突（对应 commit 91e5eed20 "treat sandbox Finished(13) as terminal in status sweep"）。
 	t.Run("Finished 命中 (视为终态)", func(t *testing.T) {
@@ -3577,6 +3688,31 @@ func TestSandboxStatusText(t *testing.T) {
 	}
 	for _, c := range cases {
 		assert.Equal(t, c.want, sandboxStatusText(c.in), "status=%v", c.in)
+	}
+}
+
+// TestSideForExecuteID 覆盖 executeID → 角色标签的全部分支：
+// 裸 record.ID→main、-macvm→mac_vm、-orch→orchestrator、-agent→agent、其余→subordinate。
+func TestSideForExecuteID(t *testing.T) {
+	const recordID int64 = 7590116637119703042
+	bare := strconv.FormatInt(recordID, 10)
+	cases := []struct {
+		name string
+		id   string
+		want string
+	}{
+		{name: "bare record.ID -> main", id: bare, want: "main"},
+		{name: "-macvm suffix -> mac_vm", id: bare + "-macvm", want: "mac_vm"},
+		{name: "-orch suffix -> orchestrator", id: bare + "-orch", want: "orchestrator"},
+		{name: "-agent suffix -> agent", id: bare + "-agent", want: "agent"},
+		{name: "unknown suffix -> subordinate", id: bare + "-extra", want: "subordinate"},
+		{name: "empty id -> subordinate", id: "", want: "subordinate"},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, sideForExecuteID(c.id, recordID))
+		})
 	}
 }
 

@@ -155,6 +155,26 @@ func TestSandboxTenantForExperimentEntity(t *testing.T) {
 			}},
 			want: rpc.SandboxTenantDefault,
 		},
+		{
+			// mac_vm_plus_sandbox → GUI 专用租户（两 task 共用、靠 ResourceType 区分）
+			name: "mac_vm_plus_sandbox -> GUI tenant",
+			in: &entity.Experiment{Target: &entity.EvalTarget{
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeMacVMPlusSandbox},
+				},
+			}},
+			want: rpc.SandboxTenantFornaxEvalGeneralGUI,
+		},
+		{
+			// mac_vm_plus_ssh 同样落 GUI 租户
+			name: "mac_vm_plus_ssh -> GUI tenant",
+			in: &entity.Experiment{Target: &entity.EvalTarget{
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeMacVMPlusSSH},
+				},
+			}},
+			want: rpc.SandboxTenantFornaxEvalGeneralGUI,
+		},
 	}
 	for _, c := range cases {
 		c := c
@@ -243,6 +263,15 @@ func TestSandboxTenantForExperimentDTO(t *testing.T) {
 
 	t.Run("unrecognized mode -> Default", func(t *testing.T) {
 		assert.Equal(t, rpc.SandboxTenantDefault, sandboxTenantForExperimentDTO(dtoWithMode("triple")))
+	})
+
+	// mac_vm_plus_sandbox / mac_vm_plus_ssh → GUI 专用租户（无需 run_mode_config）。
+	t.Run("mac_vm_plus_sandbox -> GUI tenant", func(t *testing.T) {
+		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, sandboxTenantForExperimentDTO(dtoWithMode(string(entity.SandboxCountModeMacVMPlusSandbox))))
+	})
+
+	t.Run("mac_vm_plus_ssh -> GUI tenant", func(t *testing.T) {
+		assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, sandboxTenantForExperimentDTO(dtoWithMode(string(entity.SandboxCountModeMacVMPlusSSH))))
 	})
 }
 

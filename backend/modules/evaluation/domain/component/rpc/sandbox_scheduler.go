@@ -72,6 +72,22 @@ const (
 	// 不注入平台 env、不写 case-file、无默认 start_cmd，全部由调用方显式下发）。
 	// 双沙箱链路现用此租户：编排完全由 operator 侧完成，调度侧只需提供裸沙箱。
 	SandboxTenantFornaxEvalGeneral SandboxTenant = 4
+	// SandboxTenantFornaxEvalGeneralGUI = FornaxEvalGeneralGUI，Mac VM GUI 评测专用租户（能力同 GeneralAgent 最小集）。
+	// mac_vm_plus_sandbox 链路的两个 task（mac_vm + sandbox）共用此租户，靠 ResourceType 区分落到哪种 backend。
+	SandboxTenantFornaxEvalGeneralGUI SandboxTenant = 5
+)
+
+// SandboxResourceType 标识 task 落到哪种计算资源，与 stone.cozeloop.agent_studio 的
+// sandbox_scheduler.ResourceType 枚举保持数值一致。与 SandboxTenant 正交：Tenant 管能力门控/配额，
+// ResourceType 管路由到哪种 backend。task 级属性，Init 时下发，同一 task 只能配置一次；
+// per-op（Run/RunCommand/WriteFile/Destroy）不携带，调度侧从 task 反查。
+type SandboxResourceType int32
+
+const (
+	// SandboxResourceTypeSandbox = sandbox(0)，默认，Linux 沙箱；未显式设置即此值，保持原行为不变。
+	SandboxResourceTypeSandbox SandboxResourceType = 0
+	// SandboxResourceTypeMacVM = mac_vm(1)，从 warm pool 租借的 Mac VM。
+	SandboxResourceTypeMacVM SandboxResourceType = 1
 )
 
 // ---------- Domain ----------
@@ -94,6 +110,12 @@ type SandboxExecuteInfo struct {
 	Error         *SandboxExecuteError
 	Param         map[string]string
 	QueuePosition int32
+	// IP / IPv6 / Port session 网络地址，Get 时由调度侧从底座 SDK 的 AdvancedInfo 活取（不落库）；
+	// session 未就绪（Creating）或非 Running 时可能为空。用于 Remote-SSH IDE 场景把目标 sandbox
+	// 的 ip/port 透给上层填 RemoteSSHTarget（IDE 经 Remote-SSH 挂上来）。
+	IP   string
+	IPv6 string
+	Port string
 }
 
 // SandboxTaskInfo 任务整体状态。
@@ -104,6 +126,8 @@ type SandboxTaskInfo struct {
 	PendingCount   int32
 	TotalCount     int32
 	CompletedCount int32
+	// ResourceType 该 task 落到的计算资源类型（调度侧回显）；缺省为 sandbox。
+	ResourceType SandboxResourceType
 }
 
 // ---------- Requests / Responses ----------
@@ -117,6 +141,9 @@ type SandboxInitRequest struct {
 	// Tenant 沙箱租户；未显式设置（值为 SandboxTenantDefault）时沿用调度侧默认租户 FornaxTraeEval。
 	// 双沙箱模式的评测对象必须传 SandboxTenantFornaxEvalGeneral。
 	Tenant SandboxTenant
+	// ResourceType 计算资源类型；未显式设置（值为 SandboxResourceTypeSandbox）时落 Linux 沙箱，保持原行为。
+	// mac_vm + sandbox 双资源实验中，两个 task 用同一租户、靠本字段区分落到哪种 backend。
+	ResourceType SandboxResourceType
 }
 
 // SandboxInitResponse 初始化任务响应。
@@ -228,6 +255,9 @@ type SandboxRunCommandRequest struct {
 	TimeoutMS int64
 	// Async 为 true 时后台执行、立即返回（不回 stdout/stderr）；默认同步。
 	Async bool
+	// Env 注入被执行命令的环境变量（不上命令行）。mac_vm 场景下 runner 拉起靠它注入
+	// FORNAX_ORCHESTRATOR_WS_LISTEN / FORNAX_RUNNER_SESSION_ID 等及凭据；调度侧经 guest-exec env 数组下发。
+	Env map[string]string
 }
 
 // SandboxRunCommandResponse 执行命令响应。
