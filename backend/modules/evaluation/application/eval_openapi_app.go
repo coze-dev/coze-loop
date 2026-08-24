@@ -1778,13 +1778,13 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	}
 
 	createReq := &exptpb.SubmitExperimentRequest{
-		WorkspaceID:             req.GetWorkspaceID(),
-		Name:                    req.Name,
-		Desc:                    req.Description,
-		TargetFieldMapping:      experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
-		ItemConcurNum:           req.ItemConcurNum,
-		TargetRuntimeParam:      experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
-		ItemRetryNum:            req.ItemRetryNum,
+		WorkspaceID:        req.GetWorkspaceID(),
+		Name:               req.Name,
+		Desc:               req.Description,
+		TargetFieldMapping: experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
+		ItemConcurNum:      req.ItemConcurNum,
+		TargetRuntimeParam: experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
+		ItemRetryNum:       req.ItemRetryNum,
 		// trigger_type 允许调用方申报（目前只有 "evalx" 有实际效果：进入中心调度）；
 		// 未传时按 openapi 处理，与改动前一致。
 		//

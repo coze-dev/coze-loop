@@ -115,4 +115,3 @@ func TestExptSchedulingPrivilegeWhiteList_UnmarshalFullConfig(t *testing.T) {
 	assert.True(t, w.AllowSchedulingPrivilege(ExptSchedulingPrivilegeSubject{CallerPSM: "stone.cozeloop.evalx"}))
 	assert.False(t, w.AllowSchedulingPrivilege(ExptSchedulingPrivilegeSubject{UserEmail: "other@bytedance.com", SpaceID: 999}))
 }
-

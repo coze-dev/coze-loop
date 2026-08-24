@@ -103,8 +103,10 @@ func TestReleaseCentralQuotaForIncompleteItems_ReleasesOnTerminal(t *testing.T) 
 //
 // 旧实现用 GetIncompleteTurns（只收 turn_status ∈ {Queueing, Processing}）反推待释放 item，
 // 于是这一格拿到空列表、一条都不释放。而此时 Redis 侧 state 已是 running：
-//   reap 只处理 reserved；对账的 isReleasableWithoutEvidence 刻意排除 running；
-//   zombie 只扫 Processing，但实验已终态、daemon 不再跳。
+//
+//	reap 只处理 reserved；对账的 isReleasableWithoutEvidence 刻意排除 running；
+//	zombie 只扫 Processing，但实验已终态、daemon 不再跳。
+//
 // 三条兜底全不接 ⇒ 永久泄漏。
 //
 // 这条用例的构造刻意让 **turn 侧完全没有可用信息**（GetIncompleteTurns 若被调用会回空），

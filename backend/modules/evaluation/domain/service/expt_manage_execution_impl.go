@@ -944,6 +944,7 @@ func (e *ExptMangerImpl) releaseCentralQuotaForIncompleteItems(
 // 口径就是 `!IsItemRunFinished(status)`，即 Queueing ∪ Processing：
 //   - Queueing：已预占未开跑，或已投递但 consumer 没接管
 //   - Processing：consumer 接管过（Redis 侧已是 running），但执行可能已经死了
+//
 // 两者的额度都还挂在账本上，实验既已终态、它们都不会再被执行，必须归还。
 //
 // 终态（Success/Fail/Terminal）刻意排除：它们的额度已由 consumer 侧释放点归还过，
