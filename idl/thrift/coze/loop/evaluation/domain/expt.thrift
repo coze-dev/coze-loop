@@ -137,6 +137,11 @@ struct ExpectedResourceConsumption {
     1: required string category      // 资源类别：sandbox / agent_account / model / evaluator
     2: required string resource_key  // 具体资源：default / doubao_pro / gpt5.5 ...；不允许传 "*"（通配仅用于上限配置）
     3: required i64 amount           // 单 item 的预期占用量，必须 > 0
+    // 资源来源/提供方（如 "litellm"、业务方自定义标识）。可选。
+    // 同一 resource_key 经不同来源可能是不同的池子（同一模型走 LiteLLM 与走业务方
+    // 自备通道，配额各自独立），带上它才能分开记账。
+    // 不填等于"不区分来源"，行为与该字段引入之前完全一致。不允许传 "*"。
+    4: optional string source
 }
 
 struct ExpectedQuotaConsumption {

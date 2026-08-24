@@ -385,6 +385,19 @@ type ExpectedResourceConsumption struct {
 	Category    string `json:"category"`
 	ResourceKey string `json:"resource_key"`
 	Amount      int64  `json:"amount"`
+	// Source 该资源的来源/提供方（如 "litellm"、业务方自定义标识）。**可选**。
+	//
+	// 为什么需要它：同一个 resource_key 经不同来源拿到的可能是**不同的池子** ——
+	// 同一个模型走 LiteLLM 与走业务方自备通道，配额是各自独立的，
+	// 混在一个账本条目里记账会让两边互相挤占。
+	//
+	// ★ **空 source 不参与 key、不改变任何既有行为**（见 BuildQuotaConstraintKey 的论证）：
+	// 这是本字段能安全加进已有账本的前提 —— 存量 reservation 与存量上限配置都没有 source，
+	// 它们的 key 必须保持字节级不变，否则释放会找不到条目、上限会查不到登记。
+	//
+	// omitempty：不申报时不要在冻结进 eval_conf 的 JSON 里写空串 ——
+	// 让"没有 source"在数据里可区分，也让存量快照的字节形态不变。
+	Source string `json:"source,omitempty"`
 }
 
 // ExpectedQuotaConsumption 单 item 的多资源消耗向量。

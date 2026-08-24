@@ -213,3 +213,66 @@ func TestExpectedQuotaConsumption_Categories(t *testing.T) {
 			"trim 后同名必须去重 —— 否则 policy 会把同一 category 判两次")
 	})
 }
+
+// ---------------------------------------------------------------------------
+// source
+// ---------------------------------------------------------------------------
+
+// TestValidate_SourceRules source 可选、不得为通配、去重键必须含它。
+//
+// ★ 去重键含 source 是本组最要紧的一条：同一 (category, resource_key) 经不同来源是
+// **两个独立的池子**（同一模型走 LiteLLM 与走业务方自备通道，配额各自独立）。
+// 去重键不带 source 会把这个合法形态误判成"重复键"而拒绝创建 —— 那正是加该字段要支持的用法。
+func TestValidate_SourceRules(t *testing.T) {
+	t.Run("同资源分来源申报是合法的", func(t *testing.T) {
+		c := &ExpectedQuotaConsumption{Resources: []*ExpectedResourceConsumption{
+			{Category: "model", ResourceKey: "kimi-k3", Amount: 6, Source: "litellm"},
+			{Category: "model", ResourceKey: "kimi-k3", Amount: 6, Source: "self-hosted"},
+		}}
+		assert.NoError(t, c.Validate(), "同一模型不同来源是两个池子，不得判成重复键")
+	})
+
+	t.Run("有无 source 也算不同键", func(t *testing.T) {
+		c := &ExpectedQuotaConsumption{Resources: []*ExpectedResourceConsumption{
+			{Category: "model", ResourceKey: "kimi-k3", Amount: 6},
+			{Category: "model", ResourceKey: "kimi-k3", Amount: 6, Source: "litellm"},
+		}}
+		assert.NoError(t, c.Validate())
+	})
+
+	t.Run("同来源重复仍要拒绝", func(t *testing.T) {
+		c := &ExpectedQuotaConsumption{Resources: []*ExpectedResourceConsumption{
+			{Category: "model", ResourceKey: "kimi-k3", Amount: 6, Source: "litellm"},
+			{Category: "model", ResourceKey: "kimi-k3", Amount: 6, Source: "litellm"},
+		}}
+		err := c.Validate()
+		require.Error(t, err, "完全相同的三元组必须判重 —— 否则按 key 聚合会双计、释放只释放一份")
+		assert.Contains(t, err.Error(), "litellm", "错误信息要能定位到是哪个键重复")
+	})
+
+	t.Run("source 不得为通配", func(t *testing.T) {
+		c := &ExpectedQuotaConsumption{Resources: []*ExpectedResourceConsumption{
+			{Category: "model", ResourceKey: "kimi-k3", Amount: 6, Source: WildcardResourceKey},
+		}}
+		require.Error(t, c.Validate(), "申报了通配来源就无从按 key 释放")
+	})
+
+	t.Run("空 source 合法（等于不区分来源）", func(t *testing.T) {
+		c := &ExpectedQuotaConsumption{Resources: []*ExpectedResourceConsumption{
+			{Category: "model", ResourceKey: "kimi-k3", Amount: 6},
+		}}
+		assert.NoError(t, c.Validate())
+	})
+}
+
+// TestNormalize_TrimsSource source 进账本 key，带空白会与上限配置里的同名来源匹配不上。
+func TestNormalize_TrimsSource(t *testing.T) {
+	c := &ExpectedQuotaConsumption{Resources: []*ExpectedResourceConsumption{
+		{Category: " model ", ResourceKey: " kimi-k3 ", Amount: 6, Source: "  litellm  "},
+	}}
+	got := c.Normalize()
+	require.Len(t, got.Resources, 1)
+	assert.Equal(t, "model", got.Resources[0].Category)
+	assert.Equal(t, "kimi-k3", got.Resources[0].ResourceKey)
+	assert.Equal(t, "litellm", got.Resources[0].Source)
+}

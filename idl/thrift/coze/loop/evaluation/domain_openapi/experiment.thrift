@@ -331,6 +331,10 @@ struct ExpectedResourceConsumption {
     2: optional string resource_key
     // 单 item 预期占用量; 单位由服务端 TCC 资源配置定义, 不由调用方指定
     3: optional i64 amount (api.js_conv = 'true', go.tag = 'json:"amount"')
+    // 资源来源/提供方 (如 "litellm"、业务方自定义标识)。可选。
+    // 同一 resource_key 经不同来源可能是不同的池子, 带上它才能分开记账。
+    // 不填等于"不区分来源", 行为与该字段引入之前完全一致。不允许传 "*"。
+    4: optional string source
 }
 
 // 单 item 的多资源预期消耗向量。

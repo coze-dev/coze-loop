@@ -22,7 +22,9 @@ const WildcardResourceKey = "*"
 //   - category / resource_key 去空白后非空：空串会污染 constraint key，导致账本 key 冲撞
 //   - resource_key != "*"：见 WildcardResourceKey
 //   - amount > 0：0 或负数会让 maxGrant 的木桶计算失去意义（除零 / 负额度）
-//   - (category, resource_key) 唯一：重复键在按 constraint key 聚合时会双计，释放时又只释放一份
+//   - source 可选，但不得为 "*"（同 resource_key）
+//   - (category, resource_key, source) 唯一：重复键在按 constraint key 聚合时会双计，
+//     释放时又只释放一份。**注意去重键含 source** —— 同一资源分来源申报是合法形态
 func (c *ExpectedQuotaConsumption) Validate() error {
 	if c == nil || len(c.Resources) == 0 {
 		return fmt.Errorf("expected_quota_consumption is required and must not be empty")
@@ -50,9 +52,22 @@ func (c *ExpectedQuotaConsumption) Validate() error {
 			return fmt.Errorf("expected_quota_consumption.resources[%d].amount must be positive, got %d", i, r.Amount)
 		}
 
+		// source 可选。为空表示"不区分来源"，此时行为与引入该字段之前完全一致。
+		source := strings.TrimSpace(r.Source)
+		if source == WildcardResourceKey {
+			// 与 resource_key 同理：通配只允许出现在上限配置里。申报了通配就无从按 key 释放。
+			return fmt.Errorf("expected_quota_consumption.resources[%d].source must not be %q", i, WildcardResourceKey)
+		}
+
+		// ★ 去重键**必须带上 source**：同一 (category, resource_key) 经不同来源是
+		// 两个独立的池子（同一模型走 LiteLLM 与走业务方自备通道，配额各自独立），
+		// 不带 source 会把合法的分来源申报误判成重复键而拒绝创建。
 		dedupKey := category + "|" + resourceKey
+		if source != "" {
+			dedupKey += "@" + source
+		}
 		if _, dup := seen[dedupKey]; dup {
-			return fmt.Errorf("expected_quota_consumption has duplicated (category,resource_key): %s", dedupKey)
+			return fmt.Errorf("expected_quota_consumption has duplicated (category,resource_key,source): %s", dedupKey)
 		}
 		seen[dedupKey] = struct{}{}
 	}
@@ -107,6 +122,8 @@ func (c *ExpectedQuotaConsumption) Normalize() *ExpectedQuotaConsumption {
 			Category:    strings.TrimSpace(r.Category),
 			ResourceKey: strings.TrimSpace(r.ResourceKey),
 			Amount:      r.Amount,
+			// source 同样要 trim：它进账本 key，带空白会与上限配置里的同名来源匹配不上。
+			Source: strings.TrimSpace(r.Source),
 		})
 	}
 	return normalized
