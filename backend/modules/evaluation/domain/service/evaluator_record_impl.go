@@ -17,6 +17,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -65,6 +67,12 @@ type EvaluatorRecordServiceImpl struct {
 
 // CorrectEvaluatorRecord 创建 evaluator_version 运行结果
 func (s *EvaluatorRecordServiceImpl) CorrectEvaluatorRecord(ctx context.Context, evaluatorRecordDO *entity.EvaluatorRecord, correctionDO *entity.Correction) error {
+	if evaluatorRecordDO == nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator record is nil"))
+	}
+	if correctionDO == nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("correction is nil"))
+	}
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	correctionDO.UpdatedBy = userIDInContext
 	if evaluatorRecordDO.EvaluatorOutputData == nil {
