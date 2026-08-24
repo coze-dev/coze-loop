@@ -134,9 +134,9 @@ const ExptTriggerType Evalx = "evalx"
 // 由创建方在 Create/Submit 时申报，服务端冻结进 eval_conf，供中心调度器预占额度使用。
 // category/resource_key 语义与额度上限配置一致；amount 的单位由上限配置的 unit 定义，调用方不传 unit。
 struct ExpectedResourceConsumption {
-    1: required string category      // 资源类别：sandbox / agent_account / model / evaluator
-    2: required string resource_key  // 具体资源：default / doubao_pro / gpt5.5 ...；不允许传 "*"（通配仅用于上限配置）
-    3: required i64 amount           // 单 item 的预期占用量，必须 > 0
+    1: optional string category      // 资源类别：sandbox / agent_account / model / evaluator
+    2: optional string resource_key  // 具体资源：default / doubao_pro / gpt5.5 ...；不允许传 "*"（通配仅用于上限配置）
+    3: optional i64 amount           // 单 item 的预期占用量，必须 > 0
     // 资源来源/提供方（如 "litellm"、业务方自定义标识）。可选。
     // 同一 resource_key 经不同来源可能是不同的池子（同一模型走 LiteLLM 与走业务方
     // 自备通道，配额各自独立），带上它才能分开记账。
@@ -145,7 +145,7 @@ struct ExpectedResourceConsumption {
 }
 
 struct ExpectedQuotaConsumption {
-    1: required list<ExpectedResourceConsumption> resources
+    1: optional list<ExpectedResourceConsumption> resources
 }
 
 struct Experiment {
