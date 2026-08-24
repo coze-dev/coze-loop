@@ -31,18 +31,31 @@ import (
 // 更糟的是 running 态的悬挂连调度器每拍的对账都不碰
 // （reapDanglingReservations 显式 `if !view.IsReserved() { continue }`）——
 // 也就是说这条路径**没有任何兜底**。审计前本文件 grep centralGuard 为 0。
+//
+// ★★ 2026-08-24 修正了判据维度：待释放集合改由 **item run log 状态**决定，
+// 不再用"未完成 turn"反推。原因见 TestReleaseCentralQuota_ReleasesWhenTurnTerminalButItemNot。
 
-func incompleteTurns(itemIDs ...int64) []*entity.ItemTurnID {
-	out := make([]*entity.ItemTurnID, 0, len(itemIDs))
+// stubIncompleteItems 让 itemResultRepo 返回指定 item 的未终态 run log。
+//
+// 判据从 turn 换成 item 之后，这些用例必须经 repo 注入数据 —— 这本身就是一层保障：
+// 谁把实现改回按 turn 判，这些 mock 期望就不会被满足（gomock 报 missing call）。
+func stubIncompleteItems(t *testing.T, ctrl *gomock.Controller, itemIDs ...int64) *repoMocks.MockIExptItemResultRepo {
+	t.Helper()
+	repo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	logs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDs))
 	for _, id := range itemIDs {
-		out = append(out, &entity.ItemTurnID{ItemID: id, TurnID: id * 10})
+		logs = append(logs, &entity.ExptItemResultRunLog{ItemID: id})
 	}
-	return out
+	repo.EXPECT().
+		ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(logs, int64(len(logs)), nil).AnyTimes()
+	return repo
 }
 
 func enforceExpt() *entity.Experiment {
 	return &entity.Experiment{
 		ID:               100,
+		SpaceID:          7,
 		LatestRunID:      200,
 		SchedulerScope:   testScope,
 		ExptDispatchMode: entity.ExptDispatchModeEnforce,
@@ -61,11 +74,13 @@ func TestReleaseCentralQuotaForIncompleteItems_ReleasesOnTerminal(t *testing.T) 
 		{"Success（正常完成但仍有未完成 item）", entity.ExptStatus_Success},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 			guard := &fakeGuard{}
-			svc := &ExptMangerImpl{centralGuard: guard}
+			svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: stubIncompleteItems(t, ctrl, 11, 12, 13)}
 
 			svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-				enforceExpt(), gptr.Of(int64(200)), incompleteTurns(11, 12, 13), tc.status)
+				enforceExpt(), gptr.Of(int64(200)), tc.status)
 
 			releases := guard.releases()
 			require.Len(t, releases, 3, "三个未完成 item 的额度都必须释放，否则永久泄漏")
@@ -79,27 +94,80 @@ func TestReleaseCentralQuotaForIncompleteItems_ReleasesOnTerminal(t *testing.T) 
 	}
 }
 
-// TestReleaseCentralQuotaForIncompleteItems_DedupesItemIDs 同一 item 的多个未完成 turn
-// 只能释放一次。
+// ★★★ TestReleaseCentralQuota_ReleasesWhenTurnTerminalButItemNot 本次修复的核心回归。
 //
-// reservation 是 **item 粒度**而 incompleteTurnIDs 是 **turn 粒度**：一个 item 有 5 个
-// 未完成 turn 时，不去重就会对同一条 reservation 发 5 次释放。Release 本身幂等
-// （HDEL 后 field 不存在），但会放大 Redis 往返、且日志计数失真（看起来泄漏了 5 份）。
-func TestReleaseCentralQuotaForIncompleteItems_DedupesItemIDs(t *testing.T) {
-	guard := &fakeGuard{}
-	svc := &ExptMangerImpl{centralGuard: guard}
+// 场景：**turn 已经落终态，而 item 的 run log 仍停在 Processing。**
+// 这不是边缘情形，而是沙箱执行进程死亡的典型形态 —— turn 被判完（超时/失败），
+// item 那一行却没人去改。2026-08-24 PPE 实测：9 个实验 45 条 reservation
+// 就是这么卡住的（11~19 小时），kill 实验完全无效。
+//
+// 旧实现用 GetIncompleteTurns（只收 turn_status ∈ {Queueing, Processing}）反推待释放 item，
+// 于是这一格拿到空列表、一条都不释放。而此时 Redis 侧 state 已是 running：
+//   reap 只处理 reserved；对账的 isReleasableWithoutEvidence 刻意排除 running；
+//   zombie 只扫 Processing，但实验已终态、daemon 不再跳。
+// 三条兜底全不接 ⇒ 永久泄漏。
+//
+// 这条用例的构造刻意让 **turn 侧完全没有可用信息**（GetIncompleteTurns 若被调用会回空），
+// 只有 item run log 有数据 —— 谁把判据改回 turn，这里必然变红。
+func TestReleaseCentralQuota_ReleasesWhenTurnTerminalButItemNot(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	// item 11 有三个未完成 turn，item 12 有两个。
-	turns := []*entity.ItemTurnID{
-		{ItemID: 11, TurnID: 1}, {ItemID: 11, TurnID: 2}, {ItemID: 11, TurnID: 3},
-		{ItemID: 12, TurnID: 4}, {ItemID: 12, TurnID: 5},
-	}
+	guard := &fakeGuard{}
+	// item run log 说有两个 item 未终态；turn 侧（若有人去查）什么都给不出来。
+	svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: stubIncompleteItems(t, ctrl, 21, 22)}
 
 	svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-		enforceExpt(), gptr.Of(int64(200)), turns, entity.ExptStatus_Terminated)
+		enforceExpt(), gptr.Of(int64(200)), entity.ExptStatus_Terminated)
 
 	releases := guard.releases()
-	assert.Len(t, releases, 2, "5 个 turn 只对应 2 个 item，必须按 item 去重")
+	require.Len(t, releases, 2,
+		"★ turn 已终态、item 仍 Processing 时**必须**按 item 释放 —— "+
+			"用 turn 反推会拿到空列表，那正是 PPE 上 45 条额度卡死 11~19 小时的原因")
+	assert.ElementsMatch(t, []int64{21, 22},
+		[]int64{releases[0].ItemID, releases[1].ItemID})
+}
+
+// TestReleaseCentralQuota_ScanFailDoesNotGuessItems 查不到未终态 item 时不得瞎释放。
+//
+// 方向很关键：宁可这次不释放（留给对账/人工），也不能凭空构造 item 列表 ——
+// 释放不属于本实验的 item 会归还**别人的**额度，那是超发，比泄漏严重。
+func TestReleaseCentralQuota_ScanFailDoesNotGuessItems(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	repo.EXPECT().
+		ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, int64(0), assert.AnError).AnyTimes()
+
+	guard := &fakeGuard{}
+	svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: repo}
+
+	assert.NotPanics(t, func() {
+		svc.releaseCentralQuotaForIncompleteItems(context.Background(),
+			enforceExpt(), gptr.Of(int64(200)), entity.ExptStatus_Terminated)
+	})
+	assert.Empty(t, guard.releases(), "扫描失败时必须跳过释放，不能猜 item")
+}
+
+// TestReleaseCentralQuotaForIncompleteItems_DedupesItemIDs 同一 item 只释放一次。
+//
+// reservation 是 **item 粒度**，重复释放虽幂等（HDEL 后 field 不存在），
+// 但会放大 Redis 往返、且日志计数失真（看起来泄漏了多份）。
+func TestReleaseCentralQuotaForIncompleteItems_DedupesItemIDs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	guard := &fakeGuard{}
+	// 同一 item 出现多行（重复投递等异常形态），必须去重。
+	svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: stubIncompleteItems(t, ctrl, 11, 11, 11, 12, 12)}
+
+	svc.releaseCentralQuotaForIncompleteItems(context.Background(),
+		enforceExpt(), gptr.Of(int64(200)), entity.ExptStatus_Terminated)
+
+	releases := guard.releases()
+	assert.Len(t, releases, 2, "5 行只对应 2 个 item，必须按 item 去重")
 	got := []int64{releases[0].ItemID, releases[1].ItemID}
 	assert.ElementsMatch(t, []int64{11, 12}, got)
 }
@@ -108,15 +176,22 @@ func TestReleaseCentralQuotaForIncompleteItems_DedupesItemIDs(t *testing.T) {
 //
 // 它们从不预占额度，调用释放只是无谓的 Redis 往返 —— 而 CompleteExpt 是所有实验
 // （含大量 legacy）的公共收口，白打往返会按实验数放大。
+//
+// ⚠️ 这条还额外保证：legacy 实验**连 run log 都不该去扫**（省一次大表查询）。
+// 所以这里刻意用一个"任何调用都会失败"的 repo —— 谁把 legacy 判断挪到扫描之后，
+// gomock 会因为出现未预期的调用而报错。
 func TestReleaseCentralQuotaForIncompleteItems_SkipsLegacy(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	guard := &fakeGuard{}
-	svc := &ExptMangerImpl{centralGuard: guard}
+	svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: repoMocks.NewMockIExptItemResultRepo(ctrl)}
 
 	legacy := enforceExpt()
 	legacy.ExptDispatchMode = entity.ExptDispatchModeLegacy
 
 	svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-		legacy, gptr.Of(int64(200)), incompleteTurns(11), entity.ExptStatus_Terminated)
+		legacy, gptr.Of(int64(200)), entity.ExptStatus_Terminated)
 
 	assert.Empty(t, guard.releases(), "legacy 实验从不预占，不该发释放请求")
 }
@@ -128,11 +203,14 @@ func TestReleaseCentralQuotaForIncompleteItems_SkipsLegacy(t *testing.T) {
 // 释放变成**静默 no-op** —— 比报错更糟，因为看起来成功了。
 // 而 CompleteExpt 的调用方并不总会传 exptRunID（Kill 的签名里它是 *int64）。
 func TestReleaseCentralQuotaForIncompleteItems_FallsBackToLatestRunID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	guard := &fakeGuard{}
-	svc := &ExptMangerImpl{centralGuard: guard}
+	svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: stubIncompleteItems(t, ctrl, 11)}
 
 	svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-		enforceExpt(), nil, incompleteTurns(11), entity.ExptStatus_Terminated)
+		enforceExpt(), nil, entity.ExptStatus_Terminated)
 
 	releases := guard.releases()
 	require.Len(t, releases, 1)
@@ -143,15 +221,20 @@ func TestReleaseCentralQuotaForIncompleteItems_FallsBackToLatestRunID(t *testing
 // enforce 却无 Scope 时不得瞎猜一本账。
 //
 // 猜错会归还**别人的**额度 —— 那比不归还严重得多（直接导致超发，且静默）。
+//
+// ⚠️ 同 legacy 那条：无 Scope 时也不该去扫 run log。用零期望的 mock 保证这一点。
 func TestReleaseCentralQuotaForIncompleteItems_SkipsWhenScopeMissing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	guard := &fakeGuard{}
-	svc := &ExptMangerImpl{centralGuard: guard}
+	svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: repoMocks.NewMockIExptItemResultRepo(ctrl)}
 
 	noScope := enforceExpt()
 	noScope.SchedulerScope = ""
 
 	svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-		noScope, gptr.Of(int64(200)), incompleteTurns(11), entity.ExptStatus_Terminated)
+		noScope, gptr.Of(int64(200)), entity.ExptStatus_Terminated)
 
 	assert.Empty(t, guard.releases(), "无 Scope 时释放会归还别人的额度，必须跳过")
 }
@@ -166,15 +249,18 @@ func TestReleaseCentralQuotaForIncompleteItems_NoopOnEmptyInputs(t *testing.T) {
 		svc := &ExptMangerImpl{}
 		assert.NotPanics(t, func() {
 			svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-				enforceExpt(), gptr.Of(int64(200)), incompleteTurns(11), entity.ExptStatus_Terminated)
+				enforceExpt(), gptr.Of(int64(200)), entity.ExptStatus_Terminated)
 		})
 	})
 
 	t.Run("无未完成 item", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 		guard := &fakeGuard{}
-		svc := &ExptMangerImpl{centralGuard: guard}
+		// 扫描成功但结果为空 —— 全部 item 都已终态，无需释放。
+		svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: stubIncompleteItems(t, ctrl)}
 		svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-			enforceExpt(), gptr.Of(int64(200)), nil, entity.ExptStatus_Success)
+			enforceExpt(), gptr.Of(int64(200)), entity.ExptStatus_Success)
 		assert.Empty(t, guard.releases())
 	})
 
@@ -183,18 +269,24 @@ func TestReleaseCentralQuotaForIncompleteItems_NoopOnEmptyInputs(t *testing.T) {
 		svc := &ExptMangerImpl{centralGuard: guard}
 		assert.NotPanics(t, func() {
 			svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-				nil, gptr.Of(int64(200)), incompleteTurns(11), entity.ExptStatus_Terminated)
+				nil, gptr.Of(int64(200)), entity.ExptStatus_Terminated)
 		})
 		assert.Empty(t, guard.releases())
 	})
 
-	t.Run("turn 列表含 nil 项", func(t *testing.T) {
+	t.Run("run log 列表含 nil 项", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		repo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+		repo.EXPECT().
+			ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptItemResultRunLog{nil, {ItemID: 11}, nil}, int64(3), nil).AnyTimes()
+
 		guard := &fakeGuard{}
-		svc := &ExptMangerImpl{centralGuard: guard}
-		turns := []*entity.ItemTurnID{nil, {ItemID: 11, TurnID: 1}, nil}
+		svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: repo}
 		assert.NotPanics(t, func() {
 			svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-				enforceExpt(), gptr.Of(int64(200)), turns, entity.ExptStatus_Terminated)
+				enforceExpt(), gptr.Of(int64(200)), entity.ExptStatus_Terminated)
 		})
 		assert.Len(t, guard.releases(), 1, "nil 项应被跳过，有效项仍要释放")
 	})
@@ -206,12 +298,15 @@ func TestReleaseCentralQuotaForIncompleteItems_NoopOnEmptyInputs(t *testing.T) {
 // best-effort 的方向很关键：一个 item 释放失败就放弃剩下 99 个，等于把"泄漏 1 份"
 // 放大成"泄漏 100 份"。
 func TestReleaseCentralQuotaForIncompleteItems_ReleaseErrorDoesNotPanic(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	guard := &fakeGuard{releaseErr: assert.AnError}
-	svc := &ExptMangerImpl{centralGuard: guard}
+	svc := &ExptMangerImpl{centralGuard: guard, itemResultRepo: stubIncompleteItems(t, ctrl, 11, 12, 13)}
 
 	assert.NotPanics(t, func() {
 		svc.releaseCentralQuotaForIncompleteItems(context.Background(),
-			enforceExpt(), gptr.Of(int64(200)), incompleteTurns(11, 12, 13), entity.ExptStatus_Terminated)
+			enforceExpt(), gptr.Of(int64(200)), entity.ExptStatus_Terminated)
 	})
 	assert.Len(t, guard.releases(), 3, "前一个失败不该阻断后续 item 的释放尝试")
 }
@@ -251,10 +346,19 @@ func TestCompleteExpt_ReleasesCentralQuotaForIncompleteItems(t *testing.T) {
 		CalculateStats(ctx, exptID, spaceID, session).
 		Return(&entity.ExptCalculateStats{ProcessingItemCnt: 2}, nil)
 
-	// 两个 item 尚未跑完 —— 实验被终止后它们永远不会执行，额度必须在这里归还。
+	// ★★ turn 侧**刻意返回空**：模拟"turn 已全部落终态、item 仍 Processing"。
+	//
+	// 这是本次修复的核心场景（沙箱进程死亡的典型形态）。旧实现拿这个空列表去释放，
+	// 于是一条都不放；改成按 item run log 查之后，下面的 ScanItemRunLogs 才是真值来源。
+	// 谁把判据改回 turn，这条用例会因为 releases 为空而变红。
 	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 		GetIncompleteTurns(ctx, exptID, spaceID, session).
-		Return([]*entity.ItemTurnID{{ItemID: 11, TurnID: 1}, {ItemID: 12, TurnID: 2}}, nil)
+		Return(nil, nil).AnyTimes()
+
+	// item run log 才是待释放集合的真值：两个 item 未终态 → 两份额度必须归还。
+	mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().
+		ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{{ItemID: 11}, {ItemID: 12}}, int64(2), nil).AnyTimes()
 
 	mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).EXPECT().
 		UpdateByExptID(ctx, exptID, spaceID, gomock.Any()).Return(nil)
