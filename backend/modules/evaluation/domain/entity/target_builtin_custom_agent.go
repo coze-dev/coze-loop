@@ -11,7 +11,7 @@ type CustomAgent struct {
 	// DTO使用，不存数据库
 	Description string `json:"-"`
 
-	// 自定义输出结果
+	// Declared custom output field schemas (DTO only).
 	CustomFieldSchemas []*CustomFieldSchema `json:"custom_field_schemas,omitempty"`
 
 	ExecRegion          Region           // 执行区域
