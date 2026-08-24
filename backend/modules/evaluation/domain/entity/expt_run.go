@@ -107,6 +107,15 @@ const (
 	defaultItemZombieSecond      = 60 * 20
 	defaultItemAsyncZombieSecond = 60 * 60 * 3
 	defaultMaxItemConcurNum      = 200
+
+	// defaultEvalAsyncCtxTTLSecond 是 invoke_id → EvalAsyncCtx 的 Redis 存活时间兜底值 (12h)，
+	// 与历史硬编码保持一致。真正生效的值见 GetEvalAsyncCtxTTL：它会跟随本空间的僵尸阈值抬高，
+	// 避免出现「ctx 已过期但行还没被判僵尸」的真空区间 (上报报 not found，行继续挂着直到僵尸阈值)。
+	defaultEvalAsyncCtxTTLSecond = 60 * 60 * 12
+	// evalAsyncCtxTTLBufferSecond 是 TTL 相对僵尸阈值的安全余量。
+	// 僵尸判定读的是 expt_item_result_run_log.updated_at (ON UPDATE CURRENT_TIMESTAMP)，
+	// 计时会被行更新重置；而 Redis TTL 从 invoke 发出即定死、不续期。留一段余量让 TTL 稳定晚于僵尸判定。
+	evalAsyncCtxTTLBufferSecond = 60 * 30
 )
 
 type ExptConsumerConf struct {
@@ -248,6 +257,10 @@ type ExptItemEvalConf struct {
 	ZombieSecond      int `json:"zombie_second" mapstructure:"zombie_second"`
 	AsyncZombieSecond int `json:"async_zombie_second" mapstructure:"async_zombie_second"`
 	MaxItemConcurNum  int `json:"max_item_concur_num" mapstructure:"max_item_concur_num"`
+	// EvalAsyncCtxTTLSecond 显式指定 invoke_id → EvalAsyncCtx 的 Redis TTL (秒)。
+	// 留空 (0) 时不需要单独配：GetEvalAsyncCtxTTL 会自动按 async_zombie_second 推导，
+	// 只在需要脱离僵尸阈值单独控制 ctx 存活时长时才填。
+	EvalAsyncCtxTTLSecond int `json:"eval_async_ctx_ttl_second" mapstructure:"eval_async_ctx_ttl_second"`
 }
 
 func (e *ExptItemEvalConf) GetConcurNum() int {
@@ -290,6 +303,30 @@ func (e *ExptItemEvalConf) GetItemZombieSecond(isAsync bool) int {
 		return e.getAsyncZombieSecond()
 	}
 	return e.getZombieSecond()
+}
+
+// GetEvalAsyncCtxTTL 返回 invoke_id → EvalAsyncCtx 的 Redis TTL。
+//
+// 取值优先级：
+//  1. 显式配置 eval_async_ctx_ttl_second（需要脱离僵尸阈值单独控制时用）
+//  2. 否则取 max(async_zombie_second + buffer, 12h 兜底)
+//
+// 之所以要跟 async_zombie_second 挂钩：这两个值粒度不同，容易配出真空区间。
+// TTL 是「单次 invoke」维度、从 AsyncInvoke 发出即定死、不续期；
+// async_zombie_second 是「item 行」维度、基准是 updated_at (ON UPDATE CURRENT_TIMESTAMP)、
+// 会被任何一次行更新重置。TTL 一旦短于僵尸阈值，用户在中间区段上报会拿到
+// eval async context not found，而行本身还是 Processing、要一直挂到僵尸阈值才失败。
+// 所以这里让 TTL 始终不低于僵尸阈值 + 余量，把那段真空消掉。
+func (e *ExptItemEvalConf) GetEvalAsyncCtxTTL() time.Duration {
+	if e != nil && e.EvalAsyncCtxTTLSecond > 0 {
+		return time.Duration(e.EvalAsyncCtxTTLSecond) * time.Second
+	}
+
+	ttlSecond := e.getAsyncZombieSecond() + evalAsyncCtxTTLBufferSecond
+	if ttlSecond < defaultEvalAsyncCtxTTLSecond {
+		ttlSecond = defaultEvalAsyncCtxTTLSecond
+	}
+	return time.Duration(ttlSecond) * time.Second
 }
 
 func DefaultExptConsumerConf() *ExptConsumerConf {
@@ -649,6 +686,7 @@ type EvalAsyncCtx struct {
 	Callee                  string
 	EvaluatorVersionID      int64 // evaluator version id, used for evaluator async scenario
 	EnableExtractTrajectory *bool
+	ResumeReady             bool   `json:"resume_ready,omitempty"` // experiment turn refs are durable and callback may resume scheduling
 	CallbackURL             string `json:"callback_url,omitempty"` // 异步执行完成后回调通知的 URL，为空则不回调
 	// 下述字段用于沙箱内部 step 上报的 tag 反查, 由 target async 写入位点从 etec 填充,
 	// 调试场景 (无实验上下文) 保留零值, 由上报侧回退为占位符.
@@ -657,4 +695,8 @@ type EvalAsyncCtx struct {
 	DatasetVersionID int64
 	ItemKey          string
 	DatasetKey       string
+	// AgentName 沙箱 agent 应用名称 (SandboxAgent.Name), 供 invoke_finished 打点复用。
+	AgentName string
+	// ApplicationID 沙箱 agent 应用 id (即 EvalTarget.SourceTargetID, AgentKit application_id), 供 invoke_finished 打点复用。
+	ApplicationID string
 }

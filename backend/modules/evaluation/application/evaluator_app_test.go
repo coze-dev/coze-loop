@@ -9028,7 +9028,6 @@ func TestEvaluatorHandlerImpl_AsyncRunEvaluator(t *testing.T) {
 				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, int64(101), false, false).Return(evaluatorDO, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 999}, nil)
-				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
 			},
 			wantErr: false,
 		},
@@ -9058,12 +9057,11 @@ func TestEvaluatorHandlerImpl_AsyncRunEvaluator(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "失败 - SetEvalAsyncCtx失败",
+			name: "失败 - coordinator context setup失败",
 			setupMocks: func() {
 				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, int64(101), false, false).Return(evaluatorDO, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 999}, nil)
-				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(errors.New("set ctx failed"))
+				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 999, Status: entity.EvaluatorRunStatusFail}, errors.New("set ctx failed"))
 			},
 			wantErr: true,
 		},
@@ -9257,7 +9255,6 @@ func TestEvaluatorHandlerImpl_AsyncRunEvaluator_Builtin_Agent(t *testing.T) {
 		mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, int64(101), false, false).Return(evaluatorDO, nil)
 		// 不调用 Authorization
 		mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 999}, nil)
-		mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:999", gomock.Any()).Return(nil)
 
 		resp, err := handler.AsyncRunEvaluator(ctx, req)
 		assert.NoError(t, err)

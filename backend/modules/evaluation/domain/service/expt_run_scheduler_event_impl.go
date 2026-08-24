@@ -989,6 +989,7 @@ func (e *ExptSchedulerImpl) emitSandboxSweptInvokeFinished(
 	if expt != nil {
 		targetID = expt.TargetID
 	}
+	agentName, applicationID := sandboxAgentTargetTagsFromExpt(expt)
 	// submitTime 无法从 sweep 上下文精确得到 (record 上有 CreatedAt, 但获取要额外 RPC);
 	// 传 zero time, emit 侧会把 duration 归 0, 与开源 stub 保持一致语义。
 	var zero time.Time
@@ -1002,12 +1003,16 @@ func (e *ExptSchedulerImpl) emitSandboxSweptInvokeFinished(
 		}
 		for _, itemID := range itemIDs {
 			tags := metrics.SandboxAgentInvokeTags{
-				ExperimentID:   event.ExptID,
-				ItemID:         itemID,
-				InvokeID:       strconv.FormatInt(recordID, 10),
-				DatasetID:      datasetID,
-				DatasetVersion: datasetVersion,
-				TargetID:       targetID,
+				SpaceID:         event.SpaceID,
+				ExperimentID:    event.ExptID,
+				ExperimentRunID: event.ExptRunID,
+				ItemID:          itemID,
+				InvokeID:        strconv.FormatInt(recordID, 10),
+				DatasetID:       datasetID,
+				DatasetVersion:  datasetVersion,
+				TargetID:        targetID,
+				AgentName:       agentName,
+				ApplicationID:   applicationID,
 			}
 			e.sandboxAgentMetrics.EmitInvokeFinished(tags, reportErr, errCode, zero)
 		}
@@ -1099,6 +1104,7 @@ func (e *ExptSchedulerImpl) emitSandboxZombieInvokeFinished(
 	if expt != nil {
 		targetID = expt.TargetID
 	}
+	agentName, applicationID := sandboxAgentTargetTagsFromExpt(expt)
 	var zero time.Time
 	reportErr := errno.NewItemZombieTimeoutErr(0, true)
 	errCode := int32(errno.AsyncEvalTargetZombieTimeoutCode)
@@ -1109,15 +1115,32 @@ func (e *ExptSchedulerImpl) emitSandboxZombieInvokeFinished(
 		}
 		for _, itemID := range itemIDs {
 			tags := metrics.SandboxAgentInvokeTags{
-				ExperimentID:   event.ExptID,
-				ItemID:         itemID,
-				InvokeID:       strconv.FormatInt(recordID, 10),
-				DatasetID:      datasetID,
-				DatasetVersion: datasetVersion,
-				TargetID:       targetID,
+				SpaceID:         event.SpaceID,
+				ExperimentID:    event.ExptID,
+				ExperimentRunID: event.ExptRunID,
+				ItemID:          itemID,
+				InvokeID:        strconv.FormatInt(recordID, 10),
+				DatasetID:       datasetID,
+				DatasetVersion:  datasetVersion,
+				TargetID:        targetID,
+				AgentName:       agentName,
+				ApplicationID:   applicationID,
 			}
 			e.sandboxAgentMetrics.EmitInvokeFinished(tags, reportErr, errCode, zero)
 		}
 	}
 	logs.CtxInfo(ctx, "[ExptEval] sandbox zombie invoke_finished emitted, expt_id=%v, records=%d", event.ExptID, len(recordIDs))
+}
+
+// sandboxAgentTargetTagsFromExpt 从实验的沙箱 agent 评测对象上取应用名称/id, 供 invoke_finished 打点使用。
+// 与 pickAgentName / pickApplicationID (etec 版本) 语义一致, 兼容 expt/target/version 任一层缺失。
+func sandboxAgentTargetTagsFromExpt(expt *entity.Experiment) (agentName string, applicationID string) {
+	if expt == nil || expt.Target == nil {
+		return "", ""
+	}
+	applicationID = expt.Target.SourceTargetID
+	if expt.Target.EvalTargetVersion != nil && expt.Target.EvalTargetVersion.SandboxAgent != nil {
+		agentName = expt.Target.EvalTargetVersion.SandboxAgent.Name
+	}
+	return
 }

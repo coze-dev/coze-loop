@@ -8,14 +8,20 @@ import "time"
 // InvokeTags 一次沙箱 agent 评测对象执行涉及的可枚举与非枚举 tag 集合。
 // 缺失字段由实现层统一填充为 "-"。
 type SandboxAgentInvokeTags struct {
-	ExperimentID   int64
-	ItemID         int64
-	InvokeID       string
-	DatasetID      int64
-	DatasetVersion int64
-	TargetID       int64
-	ItemKey        string
-	DatasetKey     string
+	SpaceID         int64
+	ExperimentID    int64
+	ExperimentRunID int64
+	ItemID          int64
+	InvokeID        string
+	DatasetID       int64
+	DatasetVersion  int64
+	TargetID        int64
+	ItemKey         string
+	DatasetKey      string
+	// AgentName 沙箱 agent 应用名称 (SandboxAgent.Name), 供看板反查/筛选。
+	AgentName string
+	// ApplicationID 沙箱 agent 应用 id (即 EvalTarget.SourceTargetID, AgentKit application_id)。
+	ApplicationID string
 }
 
 // SandboxAgentExperimentTags 沙箱 agent 评测实验级 tag 集合。

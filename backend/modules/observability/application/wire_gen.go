@@ -30,6 +30,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
 	storage2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
+	workspace2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 	entity2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	repo3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
@@ -100,7 +101,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2, workspace.NewWorkspaceProvider())
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +164,7 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2, workspace.NewWorkspaceProvider())
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +251,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, stor
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, storageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idGenerator)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, storageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idGenerator, workspace.NewWorkspaceProvider())
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +303,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2, workspace.NewWorkspaceProvider())
 	if err != nil {
 		return nil, err
 	}
@@ -369,12 +370,13 @@ func provideTraceRepo(
 	spanProducer mq2.ISpanProducer,
 	trajectoryConfDao mysql.ITrajectoryConfigDao,
 	idGenerator idgen.IIDGenerator,
+	workspaceProvider workspace2.IWorkSpaceProvider,
 ) (repo2.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return repo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, options...)
+	return repo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, workspaceProvider, options...)
 }
 
 func provideTraceMetricRepo(

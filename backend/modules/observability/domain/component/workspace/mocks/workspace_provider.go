@@ -42,6 +42,20 @@ func (m *MockIWorkSpaceProvider) EXPECT() *MockIWorkSpaceProviderMockRecorder {
 	return m.recorder
 }
 
+// ClipTableByWorkspace mocks base method.
+func (m *MockIWorkSpaceProvider) ClipTableByWorkspace(ctx context.Context, workspaceID string, tables []string, isGetTraceByID bool) []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClipTableByWorkspace", ctx, workspaceID, tables, isGetTraceByID)
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// ClipTableByWorkspace indicates an expected call of ClipTableByWorkspace.
+func (mr *MockIWorkSpaceProviderMockRecorder) ClipTableByWorkspace(ctx, workspaceID, tables, isGetTraceByID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClipTableByWorkspace", reflect.TypeOf((*MockIWorkSpaceProvider)(nil).ClipTableByWorkspace), ctx, workspaceID, tables, isGetTraceByID)
+}
+
 // GetIngestWorkSpaceID mocks base method.
 func (m *MockIWorkSpaceProvider) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, claim *rpc.Claim) string {
 	m.ctrl.T.Helper()

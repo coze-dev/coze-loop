@@ -215,3 +215,29 @@ func (p *InvokeEvaluatorResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *AsyncInvokeEvaluatorRequest) IsValid() error {
+	if p.Evaluator != nil {
+		if err := p.Evaluator.IsValid(); err != nil {
+			return fmt.Errorf("field Evaluator not valid, %w", err)
+		}
+	}
+	if p.InputData != nil {
+		if err := p.InputData.IsValid(); err != nil {
+			return fmt.Errorf("field InputData not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AsyncInvokeEvaluatorResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
