@@ -402,3 +402,171 @@ func TestCompleteExpt_ReleasesCentralQuotaForIncompleteItems(t *testing.T) {
 		assert.Equal(t, runID, r.RunID)
 	}
 }
+
+// ============================================================================
+// 删除路径的额度释放（P0-2）
+//
+// 删除是**独立于 CompleteExpt 的一条泄漏路径**，三条独立原因：
+//   ① 实验软删后 consumer 侧 GetByID 拿不到实验、直接退出 ⇒ 那些 item 永不执行，
+//      "item 到终态才释放"的出口永远不会被走到；
+//   ② 删除压根不经过 CompleteExpt，那里的释放不在这条路径上；而 CompleteExpt 对已删实验
+//      还有一条 early return，所以"先删再 kill"同样救不回来；
+//   ③ 软删后 ScanSchedulerQueue 带 deleted_at IS NULL ⇒ **连 full recovery 都扫不到**，
+//      这些 reservation 会永久留在账本里。
+//
+// 两个删除入口（Delete / MDelete）都要有防线 —— 只守一个等于留一半泄漏。
+// ============================================================================
+
+// stubDeletableExpt 造一个"仍有未跑完 item"的 enforce 实验，供删除路径用例复用。
+func stubDeletableExpt(exptID, runID int64) *entity.Experiment {
+	return &entity.Experiment{
+		ID:               exptID,
+		SpaceID:          7,
+		LatestRunID:      runID,
+		SchedulerScope:   testScope,
+		ExptDispatchMode: entity.ExptDispatchModeEnforce,
+	}
+}
+
+// TestDelete_ReleasesCentralQuota 单实验删除必须归还额度。
+func TestDelete_ReleasesCentralQuota(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+
+	guard := &fakeGuard{}
+	mgr.centralGuard = guard
+
+	ctx := context.Background()
+	const exptID, spaceID, runID = int64(321), int64(7), int64(654)
+
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+		GetByID(ctx, exptID, spaceID).Return(stubDeletableExpt(exptID, runID), nil)
+	mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().
+		ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{{ItemID: 31}, {ItemID: 32}}, int64(2), nil).AnyTimes()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+		Delete(ctx, exptID, spaceID).Return(nil)
+
+	require.NoError(t, mgr.Delete(ctx, exptID, spaceID, &entity.Session{UserID: "u"}))
+
+	releases := guard.releases()
+	require.Len(t, releases, 2,
+		"删除实验必须归还未跑完 item 的额度 —— 软删后 full recovery 都扫不到它们（deleted_at IS NULL），"+
+			"不在这里放就是永久泄漏")
+	assert.ElementsMatch(t, []int64{31, 32}, []int64{releases[0].ItemID, releases[1].ItemID})
+	for _, r := range releases {
+		assert.Equal(t, testScope, r.Scope)
+		assert.Equal(t, runID, r.RunID, "exptRunID 传 nil 时应回落 LatestRunID")
+	}
+}
+
+// TestMDelete_ReleasesCentralQuotaForEachExpt 批量删除要对**每个**实验都释放。
+//
+// 单独测批量版：它与 Delete 是两份独立实现（一个 GetByID + Delete、一个 MGetByID + MDelete），
+// 只改一处会留一半泄漏，而"批量入口漏了"在线上更常见（用户多选删除）。
+func TestMDelete_ReleasesCentralQuotaForEachExpt(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+
+	guard := &fakeGuard{}
+	mgr.centralGuard = guard
+
+	ctx := context.Background()
+	const spaceID = int64(7)
+	exptIDs := []int64{401, 402}
+
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+		MGetByID(ctx, exptIDs, spaceID).
+		Return([]*entity.Experiment{
+			stubDeletableExpt(401, 4010),
+			stubDeletableExpt(402, 4020),
+		}, nil)
+	// 每个实验各有一个未跑完 item。
+	mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().
+		ScanItemRunLogs(gomock.Any(), int64(401), int64(4010), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{{ItemID: 41}}, int64(1), nil)
+	mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().
+		ScanItemRunLogs(gomock.Any(), int64(402), int64(4020), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{{ItemID: 42}}, int64(1), nil)
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+		MDelete(ctx, exptIDs, spaceID).Return(nil)
+
+	require.NoError(t, mgr.MDelete(ctx, exptIDs, spaceID, &entity.Session{UserID: "u"}))
+
+	releases := guard.releases()
+	require.Len(t, releases, 2, "批量删除必须逐个实验释放，漏一个就是那个实验的额度永久泄漏")
+	assert.ElementsMatch(t, []int64{41, 42}, []int64{releases[0].ItemID, releases[1].ItemID})
+	// run 号必须各归各的 —— 账本 key 是 (run_id, item_id)，串了就找不到那条 reservation。
+	byItem := map[int64]int64{}
+	for _, r := range releases {
+		byItem[r.ItemID] = r.RunID
+	}
+	assert.Equal(t, int64(4010), byItem[41])
+	assert.Equal(t, int64(4020), byItem[42])
+}
+
+// ★ TestMDelete_ReleasesBeforeSoftDelete 释放必须发生在软删**之前**。
+//
+// 顺序不是风格问题：删完再释放的话，中途任何失败都让额度彻底失去归还机会
+// （实验已不可查，SchedulerScope / LatestRunID 都拿不到了）。反过来"先释放但删除失败"
+// 只是让一个仍存在的实验少占额度，下一拍调度会重新预占，无损。
+//
+// 用 gomock 的调用顺序断言钉死它 —— 只测"释放了几条"是测不出顺序的。
+func TestMDelete_ReleasesBeforeSoftDelete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+
+	guard := &fakeGuard{}
+	mgr.centralGuard = guard
+
+	ctx := context.Background()
+	const spaceID = int64(7)
+	exptIDs := []int64{501}
+
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+		MGetByID(ctx, exptIDs, spaceID).
+		Return([]*entity.Experiment{stubDeletableExpt(501, 5010)}, nil)
+
+	scan := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().
+		ScanItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{{ItemID: 51}}, int64(1), nil)
+
+	// ★ After(scan)：软删必须在扫描（= 释放的前置步骤）之后发生。
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+		MDelete(ctx, exptIDs, spaceID).Return(nil).After(scan)
+
+	require.NoError(t, mgr.MDelete(ctx, exptIDs, spaceID, &entity.Session{UserID: "u"}))
+	assert.Len(t, guard.releases(), 1)
+}
+
+// TestMDelete_LegacyExptSkipsRelease legacy 实验删除时不该产生任何额度调用。
+//
+// 删除是全量实验（含大量 legacy）的公共入口，白打 Redis 往返会按删除量放大。
+// 这里用零期望的 itemResultRepo mock：legacy 判断必须在扫 run log **之前**短路，
+// 否则 gomock 会因未预期的 ScanItemRunLogs 调用而报错。
+func TestMDelete_LegacyExptSkipsRelease(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+
+	guard := &fakeGuard{}
+	mgr.centralGuard = guard
+
+	ctx := context.Background()
+	const spaceID = int64(7)
+	exptIDs := []int64{601}
+
+	legacy := stubDeletableExpt(601, 6010)
+	legacy.ExptDispatchMode = entity.ExptDispatchModeLegacy
+
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+		MGetByID(ctx, exptIDs, spaceID).Return([]*entity.Experiment{legacy}, nil)
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+		MDelete(ctx, exptIDs, spaceID).Return(nil)
+
+	require.NoError(t, mgr.MDelete(ctx, exptIDs, spaceID, &entity.Session{UserID: "u"}))
+	assert.Empty(t, guard.releases(), "legacy 实验从不预占，删除时不该发释放请求")
+}

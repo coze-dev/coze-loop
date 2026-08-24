@@ -440,6 +440,30 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 		return err
 	}
 
+	// ★ 删除前必须归还中心调度额度，且**必须在 MDelete 之前**。
+	//
+	// 为什么删除是一条独立的泄漏路径（不能指望别处兜住）：
+	//   ① 实验被软删后 consumer 侧 GetByID 拿不到实验、直接退出，那些 item **永不执行**，
+	//      于是"item 到终态才释放"的出口永远不会被走到；
+	//   ② 删除**不经过** CompleteExpt —— 那里的释放（见 releaseCentralQuotaForIncompleteItems）
+	//      压根不在这条路径上。而 CompleteExpt 自己对已删实验还有一条 early return，
+	//      所以"先删再 kill"同样救不回来；
+	//   ③ 软删后 `ScanSchedulerQueue` 带 `deleted_at IS NULL`，**连 full recovery 都扫不到它** ——
+	//      也就是说这些 reservation 会永久留在账本里，比其它泄漏更彻底。
+	//
+	// 顺序放在删除之前而不是之后：删完再释放的话，中途任何失败都让额度彻底失去归还机会
+	// （实验已不可查，`SchedulerScope` / `LatestRunID` 都拿不到了）。
+	// 反过来"先释放但删除失败"只是让一个仍存在的实验少占额度，下一拍调度会重新预占，无损。
+	//
+	// best-effort：释放失败只告警不阻断删除 —— 让"额度归还失败"挡住用户删实验，
+	// 是把一个后台问题升级成前台故障。
+	for _, expt := range expts {
+		if expt == nil {
+			continue
+		}
+		e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
+	}
+
 	// 批量删除实验
 	if err := e.exptRepo.MDelete(ctx, exptIDs, spaceID); err != nil {
 		return err
@@ -1766,6 +1790,11 @@ func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, sess
 	if err != nil {
 		return err
 	}
+
+	// ★ 与 MDelete 同理：软删前必须归还中心调度额度，且必须在删除之前。
+	// 完整论证见 MDelete 里那段注释（三条独立原因 + 为什么顺序不能反）。
+	// 两个删除入口都要改 —— 只改一个等于留一半泄漏。
+	e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
 
 	// 删除实验
 	if err := e.exptRepo.Delete(ctx, exptID, spaceID); err != nil {

@@ -577,6 +577,14 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	got, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
 	if err != nil {
 		if se, ok := errorx.FromStatusError(err); ok && se.Code() == errno.ResourceNotFoundCode {
+			// 实验已被删除。这里**刻意不补释放额度**：拿不到实验就拿不到
+			// SchedulerScope / LatestRunID，硬释放只能瞎猜一本账，而猜错会归还
+			// 别人的额度（超发，比泄漏严重）。
+			//
+			// 这条路径不再是泄漏点的前提是：**删除自己会释放**（见 MDelete 里的
+			// releaseCentralQuotaForIncompleteItems 调用，且它放在软删之前执行）。
+			// 谁把那处删掉，"先删实验再收口"就会重新变成永久泄漏 ——
+			// 而且软删后 ScanSchedulerQueue 带 deleted_at IS NULL，连 full recovery 都扫不到。
 			logs.CtxInfo(ctx, "[ExptEval] CompleteExpt abort with deleted expt, expt_id: %v", exptID)
 			return nil
 		}
