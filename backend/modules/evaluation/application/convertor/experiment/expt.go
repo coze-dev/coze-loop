@@ -1574,6 +1574,7 @@ func expectedQuotaConsumptionDTO2DO(dto *domain_expt.ExpectedQuotaConsumption) *
 			Category:    r.GetCategory(),
 			ResourceKey: r.GetResourceKey(),
 			Amount:      r.GetAmount(),
+			Source:      r.GetSource(),
 		})
 	}
 	if len(resources) == 0 {
@@ -1602,6 +1603,9 @@ func expectedQuotaConsumptionDO2DTO(do *entity.ExpectedQuotaConsumption) *domain
 			Category:    r.Category,
 			ResourceKey: r.ResourceKey,
 			Amount:      r.Amount,
+			// 空 source 序列化时省略（IDL optional + entity omitempty），
+			// 让"没申报来源"与"申报了空来源"在回显里不可混淆。
+			Source: gptr.Of(r.Source),
 		})
 	}
 	if len(resources) == 0 {

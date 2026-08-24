@@ -795,3 +795,52 @@ func TestExpectedQuotaConsumptionDomain2OpenAPI(t *testing.T) {
 	assert.Equal(t, "evaluator", got.GetResources()[0].GetCategory())
 	assert.Equal(t, int64(3), got.GetResources()[0].GetAmount())
 }
+
+// TestExpectedQuotaConsumption_SourceSurvivesRoundTrip
+// ★ source 必须在四个转换点上都不丢。
+//
+// 为什么值得端到端钉：转换层有**四个**独立的搬运点（内部 DTO↔DO 两个、OpenAPI↔domain 两个），
+// 每个都是逐字段手写赋值。漏掉 source 的后果极隐蔽 —— 申报方明明传了来源，
+// 落库时被吞掉，于是不同来源的用量记进同一个账本条目、互相挤占，
+// 而接口回显看起来"没申报过来源"，与调用方真的没传完全一样。
+func TestExpectedQuotaConsumption_SourceSurvivesRoundTrip(t *testing.T) {
+	t.Run("内部 DTO→DO→DTO", func(t *testing.T) {
+		dto := &domainExpt.ExpectedQuotaConsumption{
+			Resources: []*domainExpt.ExpectedResourceConsumption{
+				{Category: "model", ResourceKey: "kimi-k3", Amount: 6, Source: gptr.Of("litellm")},
+				{Category: "model", ResourceKey: "kimi-k3", Amount: 6}, // 同资源、无来源
+			},
+		}
+
+		do := expectedQuotaConsumptionDTO2DO(dto)
+		if assert.NotNil(t, do) && assert.Len(t, do.Resources, 2) {
+			assert.Equal(t, "litellm", do.Resources[0].Source, "source 必须搬进 DO")
+			assert.Empty(t, do.Resources[1].Source, "没申报来源时 DO 侧应为空串，不得凭空造值")
+		}
+
+		back := expectedQuotaConsumptionDO2DTO(do)
+		if assert.NotNil(t, back) && assert.Len(t, back.Resources, 2) {
+			assert.Equal(t, "litellm", back.Resources[0].GetSource(), "source 必须回显")
+			assert.Empty(t, back.Resources[1].GetSource())
+		}
+	})
+
+	t.Run("OpenAPI↔domain 双向", func(t *testing.T) {
+		domainDTO := &domainExpt.ExpectedQuotaConsumption{
+			Resources: []*domainExpt.ExpectedResourceConsumption{
+				{Category: "sandbox", ResourceKey: "mac", Amount: 1, Source: gptr.Of("self-hosted")},
+			},
+		}
+
+		openapiDTO := ExpectedQuotaConsumptionDomain2OpenAPI(domainDTO)
+		if assert.NotNil(t, openapiDTO) && assert.Len(t, openapiDTO.GetResources(), 1) {
+			assert.Equal(t, "self-hosted", openapiDTO.GetResources()[0].GetSource(),
+				"source 必须搬到 OpenAPI DTO —— sandbox 也能有来源，本字段不是模型专用")
+		}
+
+		back := ExpectedQuotaConsumptionOpenAPI2Domain(openapiDTO)
+		if assert.NotNil(t, back) && assert.Len(t, back.GetResources(), 1) {
+			assert.Equal(t, "self-hosted", back.GetResources()[0].GetSource())
+		}
+	})
+}

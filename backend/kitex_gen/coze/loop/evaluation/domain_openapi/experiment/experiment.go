@@ -10056,6 +10056,10 @@ type ExpectedResourceConsumption struct {
 	ResourceKey *string `thrift:"resource_key,2,optional" frugal:"2,optional,string" form:"resource_key" json:"resource_key,omitempty" query:"resource_key"`
 	// 单 item 预期占用量; 单位由服务端 TCC 资源配置定义, 不由调用方指定
 	Amount *int64 `thrift:"amount,3,optional" frugal:"3,optional,i64" json:"amount" form:"amount" query:"amount"`
+	// 资源来源/提供方 (如 "litellm"、业务方自定义标识)。可选。
+	// 同一 resource_key 经不同来源可能是不同的池子, 带上它才能分开记账。
+	// 不填等于"不区分来源", 行为与该字段引入之前完全一致。不允许传 "*"。
+	Source *string `thrift:"source,4,optional" frugal:"4,optional,string" form:"source" json:"source,omitempty" query:"source"`
 }
 
 func NewExpectedResourceConsumption() *ExpectedResourceConsumption {
@@ -10100,6 +10104,18 @@ func (p *ExpectedResourceConsumption) GetAmount() (v int64) {
 	}
 	return *p.Amount
 }
+
+var ExpectedResourceConsumption_Source_DEFAULT string
+
+func (p *ExpectedResourceConsumption) GetSource() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSource() {
+		return ExpectedResourceConsumption_Source_DEFAULT
+	}
+	return *p.Source
+}
 func (p *ExpectedResourceConsumption) SetCategory(val *string) {
 	p.Category = val
 }
@@ -10109,11 +10125,15 @@ func (p *ExpectedResourceConsumption) SetResourceKey(val *string) {
 func (p *ExpectedResourceConsumption) SetAmount(val *int64) {
 	p.Amount = val
 }
+func (p *ExpectedResourceConsumption) SetSource(val *string) {
+	p.Source = val
+}
 
 var fieldIDToName_ExpectedResourceConsumption = map[int16]string{
 	1: "category",
 	2: "resource_key",
 	3: "amount",
+	4: "source",
 }
 
 func (p *ExpectedResourceConsumption) IsSetCategory() bool {
@@ -10126,6 +10146,10 @@ func (p *ExpectedResourceConsumption) IsSetResourceKey() bool {
 
 func (p *ExpectedResourceConsumption) IsSetAmount() bool {
 	return p.Amount != nil
+}
+
+func (p *ExpectedResourceConsumption) IsSetSource() bool {
+	return p.Source != nil
 }
 
 func (p *ExpectedResourceConsumption) Read(iprot thrift.TProtocol) (err error) {
@@ -10165,6 +10189,14 @@ func (p *ExpectedResourceConsumption) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10232,6 +10264,17 @@ func (p *ExpectedResourceConsumption) ReadField3(iprot thrift.TProtocol) error {
 	p.Amount = _field
 	return nil
 }
+func (p *ExpectedResourceConsumption) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Source = _field
+	return nil
+}
 
 func (p *ExpectedResourceConsumption) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -10249,6 +10292,10 @@ func (p *ExpectedResourceConsumption) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -10323,6 +10370,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ExpectedResourceConsumption) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSource() {
+		if err = oprot.WriteFieldBegin("source", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Source); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *ExpectedResourceConsumption) String() string {
 	if p == nil {
@@ -10345,6 +10410,9 @@ func (p *ExpectedResourceConsumption) DeepEqual(ano *ExpectedResourceConsumption
 		return false
 	}
 	if !p.Field3DeepEqual(ano.Amount) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Source) {
 		return false
 	}
 	return true
@@ -10382,6 +10450,18 @@ func (p *ExpectedResourceConsumption) Field3DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.Amount != *src {
+		return false
+	}
+	return true
+}
+func (p *ExpectedResourceConsumption) Field4DeepEqual(src *string) bool {
+
+	if p.Source == src {
+		return true
+	} else if p.Source == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Source, *src) != 0 {
 		return false
 	}
 	return true

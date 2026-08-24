@@ -7135,6 +7135,20 @@ func (p *ExpectedResourceConsumption) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -7195,6 +7209,20 @@ func (p *ExpectedResourceConsumption) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExpectedResourceConsumption) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Source = _field
+	return offset, nil
+}
+
 func (p *ExpectedResourceConsumption) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -7205,6 +7233,7 @@ func (p *ExpectedResourceConsumption) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -7216,6 +7245,7 @@ func (p *ExpectedResourceConsumption) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -7248,6 +7278,15 @@ func (p *ExpectedResourceConsumption) fastWriteField3(buf []byte, w thrift.Nocop
 	return offset
 }
 
+func (p *ExpectedResourceConsumption) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSource() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Source)
+	}
+	return offset
+}
+
 func (p *ExpectedResourceConsumption) field1Length() int {
 	l := 0
 	if p.IsSetCategory() {
@@ -7271,6 +7310,15 @@ func (p *ExpectedResourceConsumption) field3Length() int {
 	if p.IsSetAmount() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ExpectedResourceConsumption) field4Length() int {
+	l := 0
+	if p.IsSetSource() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Source)
 	}
 	return l
 }
@@ -7300,6 +7348,14 @@ func (p *ExpectedResourceConsumption) DeepCopy(s interface{}) error {
 	if src.Amount != nil {
 		tmp := *src.Amount
 		p.Amount = &tmp
+	}
+
+	if src.Source != nil {
+		var tmp string
+		if *src.Source != "" {
+			tmp = kutils.StringDeepCopy(*src.Source)
+		}
+		p.Source = &tmp
 	}
 
 	return nil
