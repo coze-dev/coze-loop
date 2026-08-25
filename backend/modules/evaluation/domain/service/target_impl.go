@@ -65,6 +65,15 @@ const defaultSandboxDestroyRetryBudget = 10 * time.Second
 // 用于吸收请求发起时间与实际 span 上报时间之间可能的时钟/延迟误差，避免漏掉最早的 span。
 const trajectoryStartTimeBufferMS = int64(60 * 1000)
 
+// sandbox mac_vm_plus_sandbox 链路: operator 给 mac_vm 那台的 execution id 加 "-macvm" 后缀
+// (invokeID+"-macvm"), 且其 task 是 <expt_id>+"-macvm" (见 commercial operator macVMTaskID)。
+// Destroy 收尾据此把 execution 分回各自 task。两者字面量相同但语义不同 (一个是 execute id 后缀、
+// 一个是 task id 后缀), 分开命名避免误当同一概念。
+const (
+	sandboxMacVMExecuteIDSuffix = "-macvm"
+	sandboxMacVMTaskIDSuffix    = "-macvm"
+)
+
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
 	metric metrics.EvalTargetMetrics,
@@ -562,6 +571,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 
 	invokeID, callee, ext, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		ExptID:              gptr.Indirect(param.ExperimentID),
+		ExptRunID:           gptr.Indirect(param.ExperimentRunID),
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
 		SourceTargetID:      target.SourceTargetID,
@@ -898,6 +908,11 @@ func (e *EvalTargetServiceImpl) resolveSandboxTaskIDByRunID(ctx context.Context,
 // record.ID 那样的纯数字), 所以这里只接受 operator 给出的字符串 id 列表, 不做格式假定。
 // zombieTimeout=true 时透传给下游适配器，由适配器决定是否附带 SandboxAgent 收尾命令。
 //
+// mac_vm_plus_sandbox 链路: 一次调用的两个 execution 分属**两个 task** (sandbox=taskID;
+// mac_vm=taskID+"-macvm", 见 operator asyncExecuteMacVMPlusSandbox / macVMTaskID)。Destroy 是
+// task 级签名, 单 taskID 只能销一个, 另一个泄漏。故这里按 executeID 的 "-macvm" 后缀把 id 分组到
+// 各自的 task, 每组一次 Destroy。非 mac_vm 链路 (单/双沙箱) 全部落在基础 taskID 组, 行为不变。
+//
 // # 为什么要重试
 //
 // 这条路径是**正常完成时的主回收口** (ReportInvokeRecords → destroySandboxExecuteIfNeeded),
@@ -924,11 +939,24 @@ func (e *EvalTargetServiceImpl) destroySandboxExecute(ctx context.Context, taskI
 	if e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
 		return
 	}
+	// 按所属 task 分组: "-macvm" 后缀的 execution 属 mac_vm task, 其余属基础 sandbox task。
+	// 每组各自一个带重试的 destroy goroutine，避免单 taskID 只销一个、另一个泄漏。
+	byTask := make(map[string][]string, 2)
+	for _, id := range executeIDs {
+		t := taskID
+		if strings.HasSuffix(id, sandboxMacVMExecuteIDSuffix) {
+			t = taskID + sandboxMacVMTaskIDSuffix
+		}
+		byTask[t] = append(byTask[t], id)
+	}
 	// 先剥离取消信号再交给 goroutine: 见上"为什么重试要挂在 WithoutCancel 的 ctx 上"。
 	destroyCtx := context.WithoutCancel(ctx)
-	goroutine.Go(destroyCtx, func() {
-		e.destroySandboxExecuteSync(destroyCtx, taskID, spaceID, executeIDs, zombieTimeout)
-	})
+	for t, ids := range byTask {
+		t, ids := t, ids
+		goroutine.Go(destroyCtx, func() {
+			e.destroySandboxExecuteSync(destroyCtx, t, spaceID, ids, zombieTimeout)
+		})
+	}
 }
 
 // destroySandboxExecuteSync 是 destroySandboxExecute 的同步本体（含重试与终局告警）。
@@ -1167,36 +1195,26 @@ func (e *EvalTargetServiceImpl) CheckSandboxTerminated(ctx context.Context, spac
 			// 这类实验拿不到本巡检的快速兜底，只能等 item 级 zombie 超时（异步默认 3h）。
 			//
 			// 现在与 destroySandboxExecuteIfNeeded / TerminateAsyncRecordsAndDestroySandbox
-			// 共用同一个取值函数：两个 ext key 都认、都缺才退回裸 record.ID。
-			// "id 怎么拼"只此一处知道，不再在巡检里复制一份约定。
+			// 共用同一个取值函数（sandboxExecuteIDsOf）：单沙箱=裸 record.ID；双沙箱=-agent/-orch；
+			// mac_vm=-orch/-macvm。"id 怎么拼"只此一处知道，不再在巡检里复制一份约定。
 			//
-			// 任一 execution 进终态就算命中——双沙箱是配对关系，一边挂了另一边的产出也没意义。
-			ids := sandboxExecuteIDsOf(ctx, r)
-			var (
-				mainTerminal bool
-				mainStatus   rpc.SandboxExecuteStatus
-				subTerminal  bool
-				subStatus    rpc.SandboxExecuteStatus
-			)
-			for i, id := range ids {
-				// 列表首个即"主"（单沙箱下就是 record.ID；双沙箱下是 operator 回传的第一个），
-				// 其余归入"从"。side 只用于 err_msg 与日志可读性，不参与命中判定。
-				if i == 0 {
-					mainTerminal, mainStatus = e.querySandboxTerminalStatus(ctx, id, spaceID, r.ID, "main")
-					continue
-				}
-				terminal, status := e.querySandboxTerminalStatus(ctx, id, spaceID, r.ID, "subordinate")
-				// 多个从沙箱时取**第一个进终态**的那个做标签，避免被后面仍 Running 的覆盖掉。
-				if terminal && !subTerminal {
-					subTerminal, subStatus = terminal, status
+			// 任一 execution 进终态就算命中——双沙箱/mac_vm 是配对关系，一边挂了另一边的产出也没意义。
+			executeIDs := sandboxExecuteIDsOf(ctx, r)
+			var anyTerminal bool
+			labelParts := make([]string, 0, len(executeIDs))
+			for _, eid := range executeIDs {
+				terminal, status := e.querySandboxTerminalStatus(ctx, eid, spaceID, r.ID, sideForExecuteID(eid, r.ID))
+				if terminal {
+					anyTerminal = true
+					labelParts = append(labelParts, sandboxStatusText(status)+" ("+sideForExecuteID(eid, r.ID)+")")
 				}
 			}
-			if !mainTerminal && !subTerminal {
+			if !anyTerminal {
 				return
 			}
 			mu.Lock()
 			terminated = append(terminated, r.ID)
-			statusMap[r.ID] = combineSandboxStatusLabel(mainTerminal, mainStatus, subTerminal, subStatus)
+			statusMap[r.ID] = strings.Join(labelParts, ", ")
 			mu.Unlock()
 		})
 	}
@@ -1227,6 +1245,25 @@ func (e *EvalTargetServiceImpl) querySandboxTerminalStatus(ctx context.Context, 
 		return false, status
 	}
 	return true, status
+}
+
+// sideForExecuteID 按 executeID 给出人类可读的沙箱角色标签，写进 err_msg 辅助定位。
+// 优先精确匹配裸 record.ID → "main"（单沙箱，以及双沙箱/mac_vm 里恰为 record.ID 的那台）；
+// 其余按 operator 命名后缀区分（mac_vm=-orch/-macvm，双沙箱=-agent/-orch）；
+// 都不匹配则是"额外 execution"（旧双沙箱 extra，命名由 operator 定），记为 "subordinate"。
+func sideForExecuteID(id string, recordID int64) string {
+	switch {
+	case id == strconv.FormatInt(recordID, 10):
+		return "main"
+	case strings.HasSuffix(id, "-macvm"):
+		return "mac_vm"
+	case strings.HasSuffix(id, "-orch"):
+		return "orchestrator"
+	case strings.HasSuffix(id, "-agent"):
+		return "agent"
+	default:
+		return "subordinate"
+	}
 }
 
 // combineSandboxStatusLabel 生成"哪一侧沙箱进入终态"的人类可读标签，写进 err_msg 辅助定位。

@@ -5100,6 +5100,37 @@ func TestPickHelpers(t *testing.T) {
 		}}
 		assert.Equal(t, "sub-key", pickDatasetKey(etec))
 	})
+
+	t.Run("pickAgentName", func(t *testing.T) {
+		// nil / 各层缺失均返回空串。
+		assert.Equal(t, "", pickAgentName(nil))
+		assert.Equal(t, "", pickAgentName(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}))
+		assert.Equal(t, "", pickAgentName(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{Expt: &entity.Experiment{}}}))
+		assert.Equal(t, "", pickAgentName(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt: &entity.Experiment{Target: &entity.EvalTarget{}},
+		}}))
+		// EvalTargetVersion 非 nil 但 SandboxAgent 为 nil (非沙箱 target 情况)。
+		assert.Equal(t, "", pickAgentName(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt: &entity.Experiment{Target: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{}}},
+		}}))
+		// 完整路径。
+		assert.Equal(t, "my-agent", pickAgentName(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt: &entity.Experiment{Target: &entity.EvalTarget{EvalTargetVersion: &entity.EvalTargetVersion{
+				SandboxAgent: &entity.SandboxAgent{Name: "my-agent"},
+			}}},
+		}}))
+	})
+
+	t.Run("pickApplicationID", func(t *testing.T) {
+		// nil / 各层缺失均返回空串。
+		assert.Equal(t, "", pickApplicationID(nil))
+		assert.Equal(t, "", pickApplicationID(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}))
+		assert.Equal(t, "", pickApplicationID(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{Expt: &entity.Experiment{}}}))
+		// 完整路径 (SourceTargetID 即 AgentKit application_id)。
+		assert.Equal(t, "app-42", pickApplicationID(&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Expt: &entity.Experiment{Target: &entity.EvalTarget{SourceTargetID: "app-42"}},
+		}}))
+	})
 }
 
 func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluatorWithAlias_CustomRPC(t *testing.T) {

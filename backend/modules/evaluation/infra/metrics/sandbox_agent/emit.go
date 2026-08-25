@@ -36,18 +36,22 @@ const (
 	suffixStepFinished = "step_finished"
 	suffixStepDuration = "step_duration"
 
-	tagExperimentID   = "experiment_id"
-	tagItemID         = "item_id"
-	tagInvokeID       = "invoke_id"
-	tagDatasetID      = "dataset_id"
-	tagDatasetVersion = "dataset_version"
-	tagStepName       = "step_name"
-	tagTargetID       = "target_id"
-	tagItemKey        = "item_key"
-	tagDatasetKey     = "dataset_key"
-	tagSuccess        = "success"
-	tagErrorType      = "error_type"
-	tagErrorCode      = "error_code"
+	tagExperimentID    = "experiment_id"
+	tagExperimentRunID = "experiment_run_id"
+	tagSpaceID         = "space_id"
+	tagItemID          = "item_id"
+	tagInvokeID        = "invoke_id"
+	tagDatasetID       = "dataset_id"
+	tagDatasetVersion  = "dataset_version"
+	tagStepName        = "step_name"
+	tagTargetID        = "target_id"
+	tagAgentName       = "agent_name"
+	tagApplicationID   = "application_id"
+	tagItemKey         = "item_key"
+	tagDatasetKey      = "dataset_key"
+	tagSuccess         = "success"
+	tagErrorType       = "error_type"
+	tagErrorCode       = "error_code"
 
 	// tag 空值占位，遵循 fornax 平台约定
 	tagValuePlaceholder = "-"
@@ -55,13 +59,17 @@ const (
 
 func metricTagNames() []string {
 	return []string{
+		tagSpaceID,
 		tagExperimentID,
+		tagExperimentRunID,
 		tagItemID,
 		tagInvokeID,
 		tagDatasetID,
 		tagDatasetVersion,
 		tagStepName,
 		tagTargetID,
+		tagAgentName,
+		tagApplicationID,
 		tagItemKey,
 		tagDatasetKey,
 		tagSuccess,
@@ -166,13 +174,17 @@ func (m *metricsImpl) EmitStepFinished(tags eval_metrics.SandboxAgentStepTags, e
 
 func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, success, errType string, errCode int32) []metrics.T {
 	return []metrics.T{
+		{Name: tagSpaceID, Value: int64Tag(t.SpaceID)},
 		{Name: tagExperimentID, Value: int64Tag(t.ExperimentID)},
+		{Name: tagExperimentRunID, Value: int64Tag(t.ExperimentRunID)},
 		{Name: tagItemID, Value: int64Tag(t.ItemID)},
 		{Name: tagInvokeID, Value: stringTag(t.InvokeID)},
 		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
 		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
 		{Name: tagStepName, Value: tagValuePlaceholder},
 		{Name: tagTargetID, Value: int64Tag(t.TargetID)},
+		{Name: tagAgentName, Value: sanitizeTagValue(t.AgentName)},
+		{Name: tagApplicationID, Value: sanitizeTagValue(t.ApplicationID)},
 		{Name: tagItemKey, Value: sanitizeTagValue(t.ItemKey)},
 		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
 		{Name: tagSuccess, Value: fallback(success)},
@@ -183,13 +195,17 @@ func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, suc
 
 func (m *metricsImpl) buildExperimentTags(t eval_metrics.SandboxAgentExperimentTags, success, errType string, errCode int32) []metrics.T {
 	return []metrics.T{
+		{Name: tagSpaceID, Value: tagValuePlaceholder},
 		{Name: tagExperimentID, Value: int64Tag(t.ExperimentID)},
+		{Name: tagExperimentRunID, Value: tagValuePlaceholder},
 		{Name: tagItemID, Value: tagValuePlaceholder},
 		{Name: tagInvokeID, Value: tagValuePlaceholder},
 		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
 		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
 		{Name: tagStepName, Value: tagValuePlaceholder},
 		{Name: tagTargetID, Value: int64Tag(t.TargetID)},
+		{Name: tagAgentName, Value: tagValuePlaceholder},
+		{Name: tagApplicationID, Value: tagValuePlaceholder},
 		{Name: tagItemKey, Value: tagValuePlaceholder},
 		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
 		{Name: tagSuccess, Value: fallback(success)},
@@ -200,13 +216,17 @@ func (m *metricsImpl) buildExperimentTags(t eval_metrics.SandboxAgentExperimentT
 
 func (m *metricsImpl) buildStepTags(t eval_metrics.SandboxAgentStepTags, success, errType string, errCode int32) []metrics.T {
 	return []metrics.T{
+		{Name: tagSpaceID, Value: tagValuePlaceholder},
 		{Name: tagExperimentID, Value: int64Tag(t.ExperimentID)},
+		{Name: tagExperimentRunID, Value: tagValuePlaceholder},
 		{Name: tagItemID, Value: int64Tag(t.ItemID)},
 		{Name: tagInvokeID, Value: stringTag(t.InvokeID)},
 		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
 		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
 		{Name: tagStepName, Value: sanitizeTagValue(t.StepName)},
 		{Name: tagTargetID, Value: int64Tag(t.TargetID)},
+		{Name: tagAgentName, Value: tagValuePlaceholder},
+		{Name: tagApplicationID, Value: tagValuePlaceholder},
 		{Name: tagItemKey, Value: sanitizeTagValue(t.ItemKey)},
 		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
 		{Name: tagSuccess, Value: fallback(success)},

@@ -227,6 +227,7 @@ func WithSandboxAgent(sandboxAgent *SandboxAgent) Option {
 
 type ExecuteEvalTargetParam struct {
 	ExptID              int64
+	ExptRunID           int64
 	TargetID            int64
 	VersionID           int64
 	SourceTargetID      string

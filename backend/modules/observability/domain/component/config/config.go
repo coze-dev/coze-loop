@@ -66,10 +66,17 @@ type TableCfg struct {
 	AnnoTable string `mapstructure:"anno_table" json:"anno_table"`
 }
 
+type ClipConfig struct {
+	SupportTenantFilter bool `mapstructure:"support_tenant_filter" json:"support_tenant_filter"`
+	SupportTableFilter  bool `mapstructure:"support_table_filter" json:"support_table_filter"`
+	SupportShardFilter  bool `mapstructure:"support_shard_filter" json:"support_shard_filter"`
+}
+
 type TenantCfg struct {
 	TenantTables             map[string]map[loop_span.TTL]TableCfg `mapstructure:"tenant_table" json:"tenant_table"`
 	DefaultIngestTenant      string                                `mapstructure:"default_ingest_tenant" json:"default_ingest_tenant"`
 	TenantsSupportAnnotation map[string]bool                       `mapstructure:"tenants_support_annotation" json:"tenants_support_annotation"`
+	ClipConfig               *ClipConfig                           `mapstructure:"clip_config" json:"clip_config"`
 }
 
 type FieldMeta struct {

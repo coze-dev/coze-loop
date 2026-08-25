@@ -87,6 +87,19 @@ func TestEvalTargetRecordConversions(t *testing.T) {
 	assert.False(t, UnixMsPtr2Time(gptr.Of(int64(123))).IsZero())
 }
 
+// TestEvalTargetRecordDO2DTO_NilBaseInfo 覆盖 BaseInfo 为 nil 的记录：
+// 历史实现直接访问 src.BaseInfo.CreatedAt，会 panic 并把 BatchGetExperimentResult 打挂成 502。
+func TestEvalTargetRecordDO2DTO_NilBaseInfo(t *testing.T) {
+	assert.NotPanics(t, func() {
+		dto := EvalTargetRecordDO2DTO(&entity.EvalTargetRecord{ID: 1, BaseInfo: nil})
+		assert.NotNil(t, dto)
+		assert.NotNil(t, dto.BaseInfo)
+		assert.Nil(t, dto.BaseInfo.CreatedAt)
+		assert.Nil(t, dto.BaseInfo.UpdatedAt)
+		assert.Nil(t, dto.BaseInfo.DeletedAt)
+	})
+}
+
 func TestToInvokeOutputDataDO(t *testing.T) {
 	successStatus := spi.InvokeEvalTargetStatus_SUCCESS
 	contentType := spi.ContentTypeText

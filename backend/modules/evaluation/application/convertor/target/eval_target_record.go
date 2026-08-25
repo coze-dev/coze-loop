@@ -34,16 +34,14 @@ func EvalTargetRecordDO2DTO(src *entity.EvalTargetRecord) *eval_target.EvalTarge
 		EvalTargetInputData:  InputDO2DTO(src.EvalTargetInputData),
 		EvalTargetOutputData: OutputDO2DTO(src.EvalTargetOutputData),
 		Status:               StatusDO2DTO(src.Status),
-		BaseInfo: &common.BaseInfo{
-			// TODO
-			// CreatedBy: src.BaseInfo.CreatedBy,
-			// UpdatedBy: src.BaseInfo.UpdatedBy,
-			CreatedAt: src.BaseInfo.CreatedAt,
-			UpdatedAt: src.BaseInfo.UpdatedAt,
-			DeletedAt: src.BaseInfo.DeletedAt,
-		},
+		BaseInfo:             &common.BaseInfo{},
 	}
+	// src.BaseInfo 可能为 nil（线上 SG 已出现此类 target record），必须判空后再取字段，
+	// 否则 BatchGetExperimentResult 会因单条记录 panic 整次请求，网关侧表现为 502。
 	if src.BaseInfo != nil {
+		// TODO
+		// res.BaseInfo.CreatedBy = src.BaseInfo.CreatedBy
+		// res.BaseInfo.UpdatedBy = src.BaseInfo.UpdatedBy
 		res.BaseInfo.CreatedAt = src.BaseInfo.CreatedAt
 		res.BaseInfo.UpdatedAt = src.BaseInfo.UpdatedAt
 		res.BaseInfo.DeletedAt = src.BaseInfo.DeletedAt

@@ -14,4 +14,5 @@ import (
 type IWorkSpaceProvider interface {
 	GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, claim *rpc.Claim) string
 	GetThirdPartyQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string
+	ClipTableByWorkspace(ctx context.Context, workspaceID string, tables []string, isGetTraceByID bool) []string
 }

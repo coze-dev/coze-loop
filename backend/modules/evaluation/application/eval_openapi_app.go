@@ -1463,7 +1463,9 @@ func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Cont
 	}
 	if actx != nil {
 		if actx.Event != nil {
+			tags.SpaceID = actx.Event.SpaceID
 			tags.ExperimentID = actx.Event.ExptID
+			tags.ExperimentRunID = actx.Event.ExptRunID
 			tags.ItemID = actx.Event.EvalSetItemID
 		}
 		tags.DatasetID = actx.DatasetID
@@ -1471,6 +1473,8 @@ func (e *EvalOpenAPIApplication) emitSandboxAgentInvokeFinished(ctx context.Cont
 		tags.TargetID = actx.TargetID
 		tags.ItemKey = actx.ItemKey
 		tags.DatasetKey = actx.DatasetKey
+		tags.AgentName = actx.AgentName
+		tags.ApplicationID = actx.ApplicationID
 	}
 	var submitTime time.Time
 	if actx != nil && actx.AsyncUnixMS > 0 {
@@ -3159,6 +3163,9 @@ func (e *EvalOpenAPIApplication) CorrectEvaluatorRecordOApi(ctx context.Context,
 
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.Correction == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("correction is nil"))
 	}
 
 	record, err := e.evaluatorRecordService.GetEvaluatorRecord(ctx, req.GetEvaluatorRecordID(), false)

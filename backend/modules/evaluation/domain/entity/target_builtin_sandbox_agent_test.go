@@ -19,6 +19,8 @@ func TestResolveSandboxCountMode(t *testing.T) {
 		{name: "empty -> Single", in: "", want: SandboxCountModeSingle},
 		{name: "single -> Single", in: SandboxCountModeSingle, want: SandboxCountModeSingle},
 		{name: "dual preserved", in: SandboxCountModeDual, want: SandboxCountModeDual},
+		{name: "mac_vm_plus_sandbox preserved", in: SandboxCountModeMacVMPlusSandbox, want: SandboxCountModeMacVMPlusSandbox},
+		{name: "mac_vm_plus_ssh preserved", in: SandboxCountModeMacVMPlusSSH, want: SandboxCountModeMacVMPlusSSH},
 		{name: "unknown value -> Single", in: SandboxCountMode("triple"), want: SandboxCountModeSingle},
 	}
 	for _, c := range cases {
@@ -46,6 +48,50 @@ func TestSandboxAgent_IsDualSandbox(t *testing.T) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			assert.Equal(t, c.want, c.agent.IsDualSandbox())
+		})
+	}
+}
+
+// TestSandboxAgent_IsMacVMPlusSandbox nil / 空 mode / 其它 mode 均返回 false，只有显式 mac_vm_plus_sandbox 返回 true。
+func TestSandboxAgent_IsMacVMPlusSandbox(t *testing.T) {
+	cases := []struct {
+		name  string
+		agent *SandboxAgent
+		want  bool
+	}{
+		{name: "nil receiver", agent: nil, want: false},
+		{name: "zero-value mode", agent: &SandboxAgent{}, want: false},
+		{name: "dual is not mac_vm_plus_sandbox", agent: &SandboxAgent{SandboxCountMode: SandboxCountModeDual}, want: false},
+		{name: "mac_vm_plus_ssh is not mac_vm_plus_sandbox", agent: &SandboxAgent{SandboxCountMode: SandboxCountModeMacVMPlusSSH}, want: false},
+		{name: "unknown mode falls back", agent: &SandboxAgent{SandboxCountMode: SandboxCountMode("triple")}, want: false},
+		{name: "explicit mac_vm_plus_sandbox", agent: &SandboxAgent{SandboxCountMode: SandboxCountModeMacVMPlusSandbox}, want: true},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, c.agent.IsMacVMPlusSandbox())
+		})
+	}
+}
+
+// TestSandboxAgent_IsMacVMPlusSSH nil / 空 mode / 其它 mode 均返回 false，只有显式 mac_vm_plus_ssh 返回 true。
+func TestSandboxAgent_IsMacVMPlusSSH(t *testing.T) {
+	cases := []struct {
+		name  string
+		agent *SandboxAgent
+		want  bool
+	}{
+		{name: "nil receiver", agent: nil, want: false},
+		{name: "zero-value mode", agent: &SandboxAgent{}, want: false},
+		{name: "dual is not mac_vm_plus_ssh", agent: &SandboxAgent{SandboxCountMode: SandboxCountModeDual}, want: false},
+		{name: "mac_vm_plus_sandbox is not mac_vm_plus_ssh", agent: &SandboxAgent{SandboxCountMode: SandboxCountModeMacVMPlusSandbox}, want: false},
+		{name: "unknown mode falls back", agent: &SandboxAgent{SandboxCountMode: SandboxCountMode("triple")}, want: false},
+		{name: "explicit mac_vm_plus_ssh", agent: &SandboxAgent{SandboxCountMode: SandboxCountModeMacVMPlusSSH}, want: true},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, c.agent.IsMacVMPlusSSH())
 		})
 	}
 }
