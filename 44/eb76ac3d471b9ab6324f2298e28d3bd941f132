@@ -1,0 +1,23 @@
+backend/modules/observability/domain/trace/entity/processor_scene.go
+  s_c920f361402528::t_c6c8fa3054f811 18
+backend/modules/observability/domain/trace/service/trace_service.go
+  s_c920f361402528::t_9b6f641641bec2 642-645
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "44eb76ac3d471b9ab6324f2298e28d3bd941f132",
+  "prompts": {},
+  "sessions": {
+    "s_c920f361402528": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_c920f361402528",
+        "model": "unknown"
+      },
+      "human_author": "lizhanpeng <lizhanpeng@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
