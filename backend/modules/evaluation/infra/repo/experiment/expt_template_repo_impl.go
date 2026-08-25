@@ -87,6 +87,22 @@ func (e *exptTemplateRepoImpl) GetByID(ctx context.Context, id int64, spaceID *i
 	return convert.NewExptTemplateConverter().PO2DO(po, refs)
 }
 
+func (e *exptTemplateRepoImpl) GetBasicByID(ctx context.Context, id int64, spaceID *int64) (*entity.ExptTemplate, error) {
+	po, err := e.templateDAO.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if po == nil {
+		return nil, nil
+	}
+	// 仅在 spaceID 非空时进行空间校验；spaceID 为空则不校验
+	if spaceID != nil && po.SpaceID != *spaceID {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("template not found or access denied"))
+	}
+
+	return convert.NewExptTemplateConverter().PO2DO(po, nil)
+}
+
 func (e *exptTemplateRepoImpl) GetByName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType) (*entity.ExptTemplate, bool, error) {
 	po, err := e.templateDAO.GetByName(ctx, name, spaceID, int32(exptType))
 	if err != nil {

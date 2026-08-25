@@ -14,6 +14,8 @@ type IExptTemplateRepo interface {
 	Create(ctx context.Context, template *entity.ExptTemplate, refs []*entity.ExptTemplateEvaluatorRef) error
 	// GetByID 按模板ID获取模板，如果 spaceID 非空则校验空间ID；spaceID 为空时不校验空间ID
 	GetByID(ctx context.Context, id int64, spaceID *int64) (*entity.ExptTemplate, error)
+	// GetBasicByID 按模板ID获取基础信息，不查询评估器引用；spaceID 校验语义与 GetByID 一致。
+	GetBasicByID(ctx context.Context, id int64, spaceID *int64) (*entity.ExptTemplate, error)
 	// GetByName 按空间 + 名称查询模板；exptType > 0 时按 expt_type 隔离判重，
 	// 在线/离线模板互不影响；exptType = 0 时跨类型查询，保留旧调用兼容性。
 	GetByName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType) (*entity.ExptTemplate, bool, error)

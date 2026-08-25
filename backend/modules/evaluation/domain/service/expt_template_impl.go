@@ -707,6 +707,19 @@ func (e *ExptTemplateManagerImpl) UpdateExptInfo(ctx context.Context, templateID
 }
 
 func (e *ExptTemplateManagerImpl) Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error {
+	template, err := e.templateRepo.GetBasicByID(ctx, templateID, &spaceID)
+	if err != nil {
+		return err
+	} else if template != nil && template.GetExptType() == entity.ExptType_Online && template.ExptSource != nil && template.ExptSource.SourceType == entity.SourceType_Workflow {
+		pipelineID, parseErr := strconv.ParseInt(template.ExptSource.SourceID, 10, 64)
+		if parseErr == nil && pipelineID > 0 && e.pipelineRPCAdapter != nil {
+			if deleteErr := e.pipelineRPCAdapter.DeletePipeline(ctx, pipelineID, spaceID); deleteErr != nil {
+				logs.CtxWarn(ctx, "[expt_template] delete pipeline before template failed, template_id=%d, pipeline_id=%d, space_id=%d, err=%v", templateID, pipelineID, spaceID, deleteErr)
+				return deleteErr
+			}
+		}
+	}
+
 	if err := e.templateRepo.Delete(ctx, templateID, spaceID); err != nil {
 		return err
 	}
