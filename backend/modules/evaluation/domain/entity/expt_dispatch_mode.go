@@ -16,11 +16,15 @@ import "strings"
 type ExptDispatchMode = string
 
 const (
-	// ExptDispatchModeLegacy 旧链路：每实验一条 MQ 自循环，按配置并发自主补 item，受空间运行实验数闸约束。
+	// ExptDispatchModeLegacy 旧链路：每实验一条 MQ 自循环，按配置并发自主补 item。
 	// 历史数据与非灰度空间的新实验都是该值（DB 列默认值）。
 	ExptDispatchModeLegacy ExptDispatchMode = "legacy"
-	// ExptDispatchModeEnforce 中心调度：由中心调度器按全局优先级 + 资源额度决定派发，跳过空间运行实验数闸。
+	// ExptDispatchModeEnforce 中心调度：由中心调度器按全局优先级 + 资源额度决定派发。
 	// 旧 per-experiment tick 对该模式实验只做初始化与生命周期维护，不得启动新 item。
+	//
+	// 跳过的**只是自主补 item 这一段**。实验级的闸不受影响：`AllowExptRun`
+	// （空间同时运行实验数，默认 200）在 `Run` / `RetryItems` 里无条件调用，
+	// 两种模式都要过。
 	ExptDispatchModeEnforce ExptDispatchMode = "enforce"
 )
 
@@ -117,4 +121,32 @@ const ExptTriggerTypeEvalx = "evalx"
 // 大小写与空白容忍：trigger_type 是跨系统传递的字符串字段，上游拼装方式不受本仓库控制。
 func ShouldEnforceByTrigger(triggerType string) bool {
 	return strings.EqualFold(strings.TrimSpace(triggerType), ExptTriggerTypeEvalx)
+}
+
+// ShouldEnforceByTriggerAndType 在 trigger 判定之外再排除在线实验。
+//
+// ★ 为什么在线实验必须挡在中心调度之外（这不是保守，是它缺一道兜底）：
+//
+// 中心调度里 item 的最后一道兜底是「实验级 36h zombie 超时 → 实验判失败 → 归还未跑完
+// item 的额度」，判据是 `now - event.CreatedAt >= ZombieIntervalSecond`。
+// 而在线实验的 daemon（ExptAppendExec.NextTick）每转一圈就把 event.CreatedAt 刷成当前
+// 时间 —— 那是它该有的行为（在线实验本就长期存活、不断追加 item），但副作用是
+// **这个绝对时钟永远不会到期**。离线四种 mode 都不刷，所以只有在线这一支没有兜底。
+//
+// 后果不只是额度多占：投递结果不明的 item 投影停在 Queueing/reserved，
+// 而那个形态被调度候选（只取 Queueing/none）、item zombie（只扫 Processing）、
+// reap（只处理 reserved）同时漏掉。对账器的退回队列机制是它唯一的出路，
+// 而在线实验一旦连实验级兜底也没有，任何一个未被对账覆盖的窗口都会变成永久泄漏。
+//
+// 为什么用 ExptType 而不是 ExptRunMode：run mode 是 Run 时才确定的，而这道闸必须在
+// **创建期**生效（dispatch_mode 一次性冻结进 DB 列，之后 Run/Retry 一律回查该列）。
+// ExptType 在 CreateExptParam 里就有，是创建期唯一可用且权威的判据。
+//
+// 本期在线实验不走 evalx trigger，所以这道闸目前不改变任何行为 —— 它挡的是
+// "哪天在线实验开始发 evalx" 那个未来。在此之前那条约定只存在于口头，代码里没有拦点。
+func ShouldEnforceByTriggerAndType(triggerType string, exptType ExptType) bool {
+	if exptType == ExptType_Online {
+		return false
+	}
+	return ShouldEnforceByTrigger(triggerType)
 }

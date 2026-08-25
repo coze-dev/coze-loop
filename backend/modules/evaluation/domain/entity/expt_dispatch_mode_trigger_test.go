@@ -41,6 +41,43 @@ func TestShouldEnforceByTrigger(t *testing.T) {
 	}
 }
 
+// TestShouldEnforceByTriggerAndType 在线实验必须被挡在 enforce 之外。
+//
+// 为什么这条不能只靠"在线实验不发 evalx trigger"这个约定：约定不在代码里，
+// 而一旦破了，在线实验会进 enforce 并且**丢掉实验级 36h 超时兜底**
+// （daemon 每拍刷 event.CreatedAt，那个绝对时钟永不到期）。
+// 那意味着任何未被对账覆盖的窗口都会变成永久的额度泄漏 + item 丢失。
+func TestShouldEnforceByTriggerAndType(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]struct {
+		trigger  string
+		exptType ExptType
+		want     bool
+	}{
+		// 离线 + evalx 是唯一进 enforce 的组合。
+		"offline evalx": {trigger: "evalx", exptType: ExptType_Offline, want: true},
+
+		// ★ 本次新增的闸：在线实验即使带 evalx 也不进（含大小写/空白变体，
+		// 防止有人以为绕过 trim 就能进来）。
+		"online evalx":        {trigger: "evalx", exptType: ExptType_Online, want: false},
+		"online evalx spaces": {trigger: "  evalx  ", exptType: ExptType_Online, want: false},
+		"online evalx mixed":  {trigger: "EvalX", exptType: ExptType_Online, want: false},
+		"online non-evalx":    {trigger: "manual", exptType: ExptType_Online, want: false},
+		"offline non-evalx":   {trigger: "manual", exptType: ExptType_Offline, want: false},
+		// 零值 ExptType（未显式设置）不等于 Online，不该被这道闸挡掉 ——
+		// 否则一批没填 expt_type 的调用方会静默失去中心调度。
+		"zero type evalx": {trigger: "evalx", exptType: 0, want: true},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, c.want, ShouldEnforceByTriggerAndType(c.trigger, c.exptType))
+		})
+	}
+}
+
 func TestExptTriggerTypeEvalxValue(t *testing.T) {
 	t.Parallel()
 

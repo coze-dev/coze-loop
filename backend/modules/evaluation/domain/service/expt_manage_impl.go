@@ -1341,25 +1341,28 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	}
 	// ★ 中心化调度模式在创建时一次性冻结。
 	//
-	// 准入是两道闸的 AND：
+	// 准入是三道闸的 AND：
 	//  ① trigger 判据 —— 只有 EvalX 发起的实验有资格，因为它是内部平台，会按约定申报
 	//     priority 与 expected_quota_consumption。其它入口（控制台手动、OpenAPI、定时）
 	//     保持 legacy，行为与引入中心调度前完全一致。
-	//  ② admission policy —— 在①的基础上按空间 / 评测对象类型 / 评测对象 ID 收窄灰度范围。
+	//  ② 实验类型判据 —— 在线实验一律排除，它缺"实验级 36h 超时"这道兜底
+	//     （daemon 每拍刷 event.CreatedAt，绝对时钟永不到期）。详见
+	//     entity.ShouldEnforceByTriggerAndType 的注释。
+	//  ③ admission policy —— 在①②的基础上按空间 / 评测对象类型 / 评测对象 ID 收窄灰度范围。
 	//
-	// 两道闸是 AND 而非 OR：policy 只能收窄、不能扩大。若 policy 能把非 EvalX 入口的实验
+	// 三道闸是 AND 而非 OR：policy 只能收窄、不能扩大。若 policy 能把非 EvalX 入口的实验
 	// 也拽进 enforce，那些实验没有申报向量的字段，结果要么在下面的向量校验处报错、
 	// 要么（若放宽校验）被调度器永远跳过 —— 后者表现为"实验建好了但一个 item 都不跑"。
 	//
-	// 模式由 trigger 派生而非取请求字段：请求里的 scheduler_mode 不可信（任何内部调用方
-	// 都能声明 enforce），而 trigger_type 是上游身份的既有表达，已被其它逻辑依赖。
+	// 模式由 trigger + 类型派生而非取请求字段：请求里的 scheduler_mode 不可信（任何内部
+	// 调用方都能声明 enforce），而 trigger_type 是上游身份的既有表达，已被其它逻辑依赖。
 	dispatchMode := entity.ExptDispatchModeLegacy
 	schedulerScope := ""
 	expectedQuota := req.ExpectedQuotaConsumption
 	// defaultPriority 未申报优先级时的缺省值。0 表示"没有意见"，由
 	// NormalizeExptPriorityLevelWithDefault 回落到 entity.DefaultExptPriorityLevel。
 	var defaultPriority int32
-	if entity.ShouldEnforceByTrigger(triggerType) {
+	if entity.ShouldEnforceByTriggerAndType(triggerType, req.ExptType) {
 		// 灰度收窄闸。先判 policy 再校验向量：policy 不放行时该实验走 legacy，
 		// 此时缺向量是正常的（EvalX 对未纳管空间也可能不传），不该报错。
 		decision, err := e.allowCentralScheduling(ctx, req.WorkspaceID, tuple, expectedQuota)
