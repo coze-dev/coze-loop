@@ -732,7 +732,14 @@ func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EFinishedIfTerminal(ctx cont
 	if event.CreateAt > 0 {
 		startTime = time.Unix(event.CreateAt, 0)
 	}
-	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit e2e_finished, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, success=%v",
-		tags.ExperimentID, tags.ExperimentRunID, tags.ItemID, tags.TurnID, evalErr == nil)
-	e.sandboxAgentMetrics.EmitE2EFinished(tags, evalErr, startTime)
+	// 从 evalErr 中抽 status code 作为 error_code tag; 非 StatusError 或 nil 时为 0 走占位符 `-`.
+	var errCode int32
+	if evalErr != nil {
+		if se, ok := errorx.FromStatusError(evalErr); ok {
+			errCode = se.Code()
+		}
+	}
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit e2e_finished, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, success=%v, err_code=%v",
+		tags.ExperimentID, tags.ExperimentRunID, tags.ItemID, tags.TurnID, evalErr == nil, errCode)
+	e.sandboxAgentMetrics.EmitE2EFinished(tags, evalErr, errCode, startTime)
 }

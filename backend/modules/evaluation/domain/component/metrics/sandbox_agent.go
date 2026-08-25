@@ -89,6 +89,6 @@ type SandboxAgentMetrics interface {
 	EmitE2EStarted(tags SandboxAgentE2ETags)
 	// EmitE2EFinished 单个 turn 的端到端终态打点，counter + duration。
 	// 仅在 CompleteItemRun 判定不再重试的终态分支 emit；startTime 传入 event.CreateAt 转成的
-	// time.Time（若为零值则 duration=0）。err 用于 success / error_type 分类。
-	EmitE2EFinished(tags SandboxAgentE2ETags, err error, startTime time.Time)
+	// time.Time（若为零值则 duration=0）。err / errCode 用于 success / error_type / error_code 分类。
+	EmitE2EFinished(tags SandboxAgentE2ETags, err error, errCode int32, startTime time.Time)
 }

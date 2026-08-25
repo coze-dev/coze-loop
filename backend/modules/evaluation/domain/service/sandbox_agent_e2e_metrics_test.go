@@ -286,8 +286,8 @@ func TestEmitE2EFinished_ErrorTerminal(t *testing.T) {
 	etec := sandboxTurnCtx(2, false, false)
 	etec.Event.CreateAt = time.Now().Add(-2 * time.Second).Unix()
 
-	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any()).
-		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, startTime time.Time) {
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, _ int32, startTime time.Time) {
 			require.NotNil(t, err)
 			require.False(t, startTime.IsZero(), "startTime should be non-zero when CreateAt>0")
 			// startTime 应在最近的合理范围而不是 1970
@@ -306,9 +306,10 @@ func TestEmitE2EFinished_SuccessTerminal(t *testing.T) {
 	etec := sandboxTurnCtx(0, false, false)
 	etec.Event.CreateAt = time.Now().Add(-1 * time.Second).Unix()
 
-	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any()).
-		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, startTime time.Time) {
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, errCode int32, startTime time.Time) {
 			require.Nil(t, err)
+			require.Equal(t, int32(0), errCode, "success path should carry errCode=0")
 			require.False(t, startTime.IsZero())
 			// 用 time.Unix(sec, 0) 正确反序列化: startTime 在 1970 之后的合理范围内
 			require.True(t, time.Since(startTime) < 24*time.Hour, "should not be ~55 years ago")
@@ -326,8 +327,8 @@ func TestEmitE2EFinished_ZeroCreateAt(t *testing.T) {
 	etec := sandboxTurnCtx(0, false, false)
 	etec.Event.CreateAt = 0
 
-	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any()).
-		Do(func(_ eval_metrics.SandboxAgentE2ETags, _ error, startTime time.Time) {
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, _ error, _ int32, startTime time.Time) {
 			require.True(t, startTime.IsZero())
 		}).Times(1)
 
@@ -343,8 +344,8 @@ func TestEmitE2EFinished_NegativeCreateAt(t *testing.T) {
 	etec := sandboxTurnCtx(0, false, false)
 	etec.Event.CreateAt = -100
 
-	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any()).
-		Do(func(_ eval_metrics.SandboxAgentE2ETags, _ error, startTime time.Time) {
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, _ error, _ int32, startTime time.Time) {
 			require.True(t, startTime.IsZero())
 		}).Times(1)
 
