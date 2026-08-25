@@ -54,7 +54,7 @@ type ExptItemEventEvalServiceImpl struct {
 	benefitService           benefit.IBenefitService
 	evalAsyncRepo            repo.IEvalAsyncRepo
 	itemCompletePublisher    component.IItemCompletePublisher
-	sandboxAgentNotifier     ISandboxAgentNotifier // 传递给 ExptItemEvalCtxExecutor 用于失败行飞书通知
+	sandboxAgentNotifier     ISandboxAgentNotifier       // 传递给 ExptItemEvalCtxExecutor 用于失败行飞书通知
 	sandboxAgentMetrics      metrics.SandboxAgentMetrics // 沙箱 agent 端到端 (turn 粒度) 打点; 可空 → 走 noop
 }
 
