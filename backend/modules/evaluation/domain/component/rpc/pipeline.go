@@ -16,6 +16,8 @@ type IPipelineListAdapter interface {
 	ListPipelineFlow(ctx context.Context, req *ListPipelineFlowRequest) (*ListPipelineFlowResponse, error)
 	// PipelineNodeFinishCallback Pipeline 节点完成时回调 ml_flow（例如同步节点状态）；首参为评测实验 ID（ExperimentID）
 	PipelineNodeFinishCallback(ctx context.Context, experimentID, spaceID int64) error
+	// DeletePipeline 删除指定工作流。
+	DeletePipeline(ctx context.Context, pipelineID, spaceID int64) error
 }
 
 // ListPipelineFlowRequest ListPipeline 查询请求参数

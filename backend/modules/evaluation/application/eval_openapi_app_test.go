@@ -5734,10 +5734,27 @@ func TestEvalOpenAPIApplication_CorrectEvaluatorRecordOApi(t *testing.T) {
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
+			name: "nil correction",
+			req: &openapi.CorrectEvaluatorRecordOApiRequest{
+				WorkspaceID:       gptr.Of(workspaceID),
+				EvaluatorRecordID: gptr.Of(recordID),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, recordSvc *servicemocks.MockEvaluatorRecordService) {
+				// correction 缺失应在任何下游调用前返回结构化参数错误，而不是透传到领域层 panic
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
+				recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				recordSvc.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
 			name: "record not found",
 			req: &openapi.CorrectEvaluatorRecordOApiRequest{
 				WorkspaceID:       gptr.Of(workspaceID),
 				EvaluatorRecordID: gptr.Of(recordID),
+				Correction: &openapiEvaluator.Correction{
+					Score: gptr.Of(0.8),
+				},
 			},
 			setup: func(_ *rpcmocks.MockIAuthProvider, recordSvc *servicemocks.MockEvaluatorRecordService) {
 				recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(nil, nil)
@@ -5749,6 +5766,9 @@ func TestEvalOpenAPIApplication_CorrectEvaluatorRecordOApi(t *testing.T) {
 			req: &openapi.CorrectEvaluatorRecordOApiRequest{
 				WorkspaceID:       gptr.Of(workspaceID),
 				EvaluatorRecordID: gptr.Of(recordID),
+				Correction: &openapiEvaluator.Correction{
+					Score: gptr.Of(0.8),
+				},
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, recordSvc *servicemocks.MockEvaluatorRecordService) {
 				record := &entity.EvaluatorRecord{
@@ -9164,12 +9184,14 @@ func TestEvalOpenAPIApplication_emitSandboxAgentInvokeFinished(t *testing.T) {
 		actx := &entity.EvalAsyncCtx{
 			Callee:           sandboxAgentAsyncCallee,
 			AsyncUnixMS:      submitMS,
-			Event:            &entity.ExptItemEvalEvent{ExptID: 100, EvalSetItemID: 200},
+			Event:            &entity.ExptItemEvalEvent{ExptID: 100, ExptRunID: 111, SpaceID: 222, EvalSetItemID: 200},
 			DatasetID:        300,
 			DatasetVersionID: 400,
 			TargetID:         500,
 			ItemKey:          "ik",
 			DatasetKey:       "dk",
+			AgentName:        "callback-agent",
+			ApplicationID:    "app-cb",
 		}
 		mock.EXPECT().EmitInvokeFinished(gomock.Any(), nil, int32(0), gomock.Any()).Do(func(tags metrics.SandboxAgentInvokeTags, err error, code int32, submit time.Time) {
 			assert.Equal(t, "9001", tags.InvokeID)
@@ -9181,6 +9203,34 @@ func TestEvalOpenAPIApplication_emitSandboxAgentInvokeFinished(t *testing.T) {
 			assert.Equal(t, "ik", tags.ItemKey)
 			assert.Equal(t, "dk", tags.DatasetKey)
 			assert.Equal(t, submitMS, submit.UnixMilli())
+			// 新增四个 tag: space_id / experiment_run_id 来自 actx.Event, agent_name / application_id 来自 actx (async 写入位点填的)。
+			assert.Equal(t, int64(222), tags.SpaceID)
+			assert.Equal(t, int64(111), tags.ExperimentRunID)
+			assert.Equal(t, "callback-agent", tags.AgentName)
+			assert.Equal(t, "app-cb", tags.ApplicationID)
+		})
+		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), actx)
+	})
+
+	t.Run("actx.Event 为 nil → space/run tag 落零值", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mock := metricsmocks.NewMockSandboxAgentMetrics(ctrl)
+		app := &EvalOpenAPIApplication{sandboxAgentMetric: mock}
+		// Event 为 nil 时 SpaceID / ExperimentRunID / ItemID / ExperimentID 都应为零值,
+		// AgentName / ApplicationID 仍从 actx 顶层字段拿。
+		actx := &entity.EvalAsyncCtx{
+			Callee:        sandboxAgentAsyncCallee,
+			AgentName:     "no-event-agent",
+			ApplicationID: "app-ne",
+		}
+		mock.EXPECT().EmitInvokeFinished(gomock.Any(), nil, int32(0), gomock.Any()).Do(func(tags metrics.SandboxAgentInvokeTags, _ error, _ int32, _ time.Time) {
+			assert.Equal(t, int64(0), tags.SpaceID)
+			assert.Equal(t, int64(0), tags.ExperimentRunID)
+			assert.Equal(t, int64(0), tags.ExperimentID)
+			assert.Equal(t, int64(0), tags.ItemID)
+			assert.Equal(t, "no-event-agent", tags.AgentName)
+			assert.Equal(t, "app-ne", tags.ApplicationID)
 		})
 		app.emitSandboxAgentInvokeFinished(context.Background(), buildReq(spi.InvokeEvalTargetStatus_SUCCESS, 0), actx)
 	})

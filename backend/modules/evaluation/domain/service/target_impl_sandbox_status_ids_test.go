@@ -95,10 +95,10 @@ func TestCheckSandboxTerminated_DualSandboxListExt_QueriesRealIDs(t *testing.T) 
 		"必须按 ext 回传的真实 execute id 查询；裸 record.ID 在沙箱侧不存在（execution not found）")
 	assert.NotContains(t, *asked, bareID, "不得按单沙箱约定推断出裸 record.ID")
 	assert.Equal(t, []int64{7590116637119703042}, got, "agent 侧已 Failed，必须判为终态命中")
-	assert.Equal(t, "Failed (main)", statuses[7590116637119703042])
+	assert.Equal(t, "Failed (agent)", statuses[7590116637119703042])
 }
 
-// 从沙箱（列表里的非首个）单独进终态也必须命中，标签落在 subordinate 一侧。
+// 从沙箱（列表里的非首个）单独进终态也必须命中，标签按 executeID 后缀落到对应角色（orch→orchestrator）。
 func TestCheckSandboxTerminated_DualSandboxListExt_SubordinateTerminal(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
@@ -123,7 +123,7 @@ func TestCheckSandboxTerminated_DualSandboxListExt_SubordinateTerminal(t *testin
 
 	assert.ElementsMatch(t, []string{agentID, orchID}, *asked)
 	assert.Equal(t, []int64{7590116637119703042}, got, "orchestrator 侧已 Canceled，必须判为终态命中")
-	assert.Equal(t, "Canceled (subordinate)", statuses[7590116637119703042])
+	assert.Equal(t, "Canceled (orchestrator)", statuses[7590116637119703042])
 }
 
 // 单沙箱（ext 两个 key 都缺）必须保持原行为：仍按裸 record.ID 查一次，不多查也不少查。

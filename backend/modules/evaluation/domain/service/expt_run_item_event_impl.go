@@ -54,7 +54,8 @@ type ExptItemEventEvalServiceImpl struct {
 	benefitService           benefit.IBenefitService
 	evalAsyncRepo            repo.IEvalAsyncRepo
 	itemCompletePublisher    component.IItemCompletePublisher
-	sandboxAgentNotifier     ISandboxAgentNotifier // 传递给 ExptItemEvalCtxExecutor 用于失败行飞书通知
+	sandboxAgentNotifier     ISandboxAgentNotifier       // 传递给 ExptItemEvalCtxExecutor 用于失败行飞书通知
+	sandboxAgentMetrics      metrics.SandboxAgentMetrics // 沙箱 agent 端到端 (turn 粒度) 打点; 可空 → 走 noop
 }
 
 func NewExptRecordEvalService(
@@ -80,6 +81,7 @@ func NewExptRecordEvalService(
 	benefitService benefit.IBenefitService,
 	evalAsyncRepo repo.IEvalAsyncRepo,
 	itemCompletePublisher component.IItemCompletePublisher,
+	sandboxAgentMetrics metrics.SandboxAgentMetrics, // 沙箱 agent 端到端 turn 打点; 可空 (走 noop)
 	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容 wire_gen 未接入通知器
 ) ExptItemEvalEvent {
 	i := &ExptItemEventEvalServiceImpl{
@@ -105,6 +107,7 @@ func NewExptRecordEvalService(
 		benefitService:           benefitService,
 		evalAsyncRepo:            evalAsyncRepo,
 		itemCompletePublisher:    itemCompletePublisher,
+		sandboxAgentMetrics:      sandboxAgentMetrics,
 	}
 	if len(sandboxAgentNotifier) > 0 {
 		i.sandboxAgentNotifier = sandboxAgentNotifier[0]
@@ -326,7 +329,7 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		return err
 	}
 
-	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evaluationSetItemService, e.itemCompletePublisher, e.sandboxAgentNotifier).
+	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evaluationSetItemService, e.itemCompletePublisher, e.sandboxAgentMetrics, e.sandboxAgentNotifier).
 		Eval(ctx, eiec); err != nil {
 		return err
 	}

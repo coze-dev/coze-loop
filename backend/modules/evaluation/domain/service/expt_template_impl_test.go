@@ -1063,24 +1063,192 @@ func TestExptTemplateManagerImpl_buildFieldMappingConfigAndEnableScoreWeight(t *
 	}
 }
 
-func TestExptTemplateManagerImpl_Delete(t *testing.T) {
+type deletePipelineCall struct {
+	pipelineID int64
+	spaceID    int64
+}
+
+type recordingPipelineAdapter struct {
+	deleteCalls []deletePipelineCall
+	deleteErr   error
+	events      *[]string
+}
+
+func (a *recordingPipelineAdapter) ListPipelineFlow(context.Context, *rpc.ListPipelineFlowRequest) (*rpc.ListPipelineFlowResponse, error) {
+	return &rpc.ListPipelineFlowResponse{}, nil
+}
+
+func (a *recordingPipelineAdapter) PipelineNodeFinishCallback(context.Context, int64, int64) error {
+	return nil
+}
+
+func (a *recordingPipelineAdapter) DeletePipeline(_ context.Context, pipelineID, spaceID int64) error {
+	a.deleteCalls = append(a.deleteCalls, deletePipelineCall{pipelineID: pipelineID, spaceID: spaceID})
+	if a.events != nil {
+		*a.events = append(*a.events, "pipeline")
+	}
+	return a.deleteErr
+}
+
+func TestExptTemplateManagerImpl_Delete_OnlineWorkflowDeletesPipelineBeforeTemplate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
-
-	mgr := &ExptTemplateManagerImpl{
-		templateRepo: mockRepo,
-	}
 
 	ctx := context.Background()
 	spaceID := int64(100)
 	templateID := int64(1)
+	pipelineID := int64(200)
+	events := make([]string, 0, 3)
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+	mockScheduleAdapter := mocks.NewMockIExptScheduleAdapter(ctrl)
+	pipelineAdapter := &recordingPipelineAdapter{events: &events}
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo:       mockRepo,
+		pipelineRPCAdapter: pipelineAdapter,
+		scheduleAdapter:    mockScheduleAdapter,
+	}
 
-	mockRepo.EXPECT().Delete(ctx, templateID, spaceID).Return(nil)
+	mockRepo.EXPECT().GetBasicByID(ctx, templateID, gomock.Eq(&spaceID)).Return(&entity.ExptTemplate{
+		Meta:       &entity.ExptTemplateMeta{ID: templateID, WorkspaceID: spaceID, ExptType: entity.ExptType_Online},
+		ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "200"},
+	}, nil)
+	mockRepo.EXPECT().Delete(ctx, templateID, spaceID).DoAndReturn(func(context.Context, int64, int64) error {
+		events = append(events, "template")
+		return nil
+	})
+	mockScheduleAdapter.EXPECT().CloseJob(ctx, "expt_template_schedule:100:1").DoAndReturn(func(context.Context, string) error {
+		events = append(events, "scheduler")
+		return nil
+	})
 
 	err := mgr.Delete(ctx, templateID, spaceID, &entity.Session{UserID: "u1"})
+
 	assert.NoError(t, err)
+	assert.Equal(t, []deletePipelineCall{{pipelineID: pipelineID, spaceID: spaceID}}, pipelineAdapter.deleteCalls)
+	assert.Equal(t, []string{"pipeline", "template", "scheduler"}, events)
+}
+
+func TestExptTemplateManagerImpl_Delete_DoesNotDeletePipelineForOtherTemplateTypes(t *testing.T) {
+	tests := []struct {
+		name     string
+		template *entity.ExptTemplate
+	}{
+		{
+			name: "online non-workflow source",
+			template: &entity.ExptTemplate{
+				Meta:       &entity.ExptTemplateMeta{ExptType: entity.ExptType_Online},
+				ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Evaluation, SourceID: "200"},
+			},
+		},
+		{
+			name: "offline workflow source",
+			template: &entity.ExptTemplate{
+				Meta:       &entity.ExptTemplateMeta{ExptType: entity.ExptType_Offline},
+				ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "200"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+			spaceID := int64(100)
+			templateID := int64(1)
+			mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+			mockScheduleAdapter := mocks.NewMockIExptScheduleAdapter(ctrl)
+			pipelineAdapter := &recordingPipelineAdapter{}
+			mgr := &ExptTemplateManagerImpl{
+				templateRepo:       mockRepo,
+				pipelineRPCAdapter: pipelineAdapter,
+				scheduleAdapter:    mockScheduleAdapter,
+			}
+
+			mockRepo.EXPECT().GetBasicByID(ctx, templateID, gomock.Eq(&spaceID)).Return(tt.template, nil)
+			mockRepo.EXPECT().Delete(ctx, templateID, spaceID).Return(nil)
+			mockScheduleAdapter.EXPECT().CloseJob(ctx, "expt_template_schedule:100:1").Return(nil)
+
+			err := mgr.Delete(ctx, templateID, spaceID, &entity.Session{UserID: "u1"})
+
+			assert.NoError(t, err)
+			assert.Empty(t, pipelineAdapter.deleteCalls)
+		})
+	}
+}
+
+func TestExptTemplateManagerImpl_Delete_DoesNotDeletePipelineForInvalidSourceID(t *testing.T) {
+	for _, sourceID := range []string{"", "invalid", "0", "-1"} {
+		t.Run(sourceID, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+			spaceID := int64(100)
+			templateID := int64(1)
+			mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+			pipelineAdapter := &recordingPipelineAdapter{}
+			mgr := &ExptTemplateManagerImpl{templateRepo: mockRepo, pipelineRPCAdapter: pipelineAdapter}
+
+			mockRepo.EXPECT().GetBasicByID(ctx, templateID, gomock.Eq(&spaceID)).Return(&entity.ExptTemplate{
+				Meta:       &entity.ExptTemplateMeta{ExptType: entity.ExptType_Online},
+				ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: sourceID},
+			}, nil)
+			mockRepo.EXPECT().Delete(ctx, templateID, spaceID).Return(nil)
+
+			err := mgr.Delete(ctx, templateID, spaceID, &entity.Session{UserID: "u1"})
+
+			assert.NoError(t, err)
+			assert.Empty(t, pipelineAdapter.deleteCalls)
+		})
+	}
+}
+
+func TestExptTemplateManagerImpl_Delete_PipelineFailureStopsTemplateDelete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	templateID := int64(1)
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+	pipelineAdapter := &recordingPipelineAdapter{deleteErr: errors.New("delete pipeline failed")}
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo:       mockRepo,
+		pipelineRPCAdapter: pipelineAdapter,
+	}
+
+	mockRepo.EXPECT().GetBasicByID(ctx, templateID, gomock.Eq(&spaceID)).Return(&entity.ExptTemplate{
+		Meta:       &entity.ExptTemplateMeta{ExptType: entity.ExptType_Online},
+		ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "200"},
+	}, nil)
+	err := mgr.Delete(ctx, templateID, spaceID, &entity.Session{UserID: "u1"})
+
+	assert.EqualError(t, err, "delete pipeline failed")
+	assert.Equal(t, []deletePipelineCall{{pipelineID: 200, spaceID: spaceID}}, pipelineAdapter.deleteCalls)
+}
+
+func TestExptTemplateManagerImpl_Delete_TemplateQueryFailureStopsDelete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	templateID := int64(1)
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+	pipelineAdapter := &recordingPipelineAdapter{}
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo:       mockRepo,
+		pipelineRPCAdapter: pipelineAdapter,
+	}
+
+	mockRepo.EXPECT().GetBasicByID(ctx, templateID, gomock.Eq(&spaceID)).Return(nil, errors.New("get template failed"))
+
+	err := mgr.Delete(ctx, templateID, spaceID, &entity.Session{UserID: "u1"})
+
+	assert.EqualError(t, err, "get template failed")
+	assert.Empty(t, pipelineAdapter.deleteCalls)
 }
 
 func TestExptTemplateManagerImpl_List_Empty(t *testing.T) {

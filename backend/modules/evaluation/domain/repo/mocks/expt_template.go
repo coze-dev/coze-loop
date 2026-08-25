@@ -69,6 +69,21 @@ func (mr *MockIExptTemplateRepoMockRecorder) Delete(ctx, id, spaceID any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockIExptTemplateRepo)(nil).Delete), ctx, id, spaceID)
 }
 
+// GetBasicByID mocks base method.
+func (m *MockIExptTemplateRepo) GetBasicByID(ctx context.Context, id int64, spaceID *int64) (*entity.ExptTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBasicByID", ctx, id, spaceID)
+	ret0, _ := ret[0].(*entity.ExptTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBasicByID indicates an expected call of GetBasicByID.
+func (mr *MockIExptTemplateRepoMockRecorder) GetBasicByID(ctx, id, spaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBasicByID", reflect.TypeOf((*MockIExptTemplateRepo)(nil).GetBasicByID), ctx, id, spaceID)
+}
+
 // GetByID mocks base method.
 func (m *MockIExptTemplateRepo) GetByID(ctx context.Context, id int64, spaceID *int64) (*entity.ExptTemplate, error) {
 	m.ctrl.T.Helper()

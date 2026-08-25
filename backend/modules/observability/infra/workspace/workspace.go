@@ -28,3 +28,7 @@ func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans 
 func (t *WorkspaceProviderImpl) GetThirdPartyQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string {
 	return strconv.FormatInt(requestWorkspaceID, 10)
 }
+
+func (t *WorkspaceProviderImpl) ClipTableByWorkspace(ctx context.Context, workspaceID string, tables []string, isGetTraceByID bool) []string {
+	return tables
+}

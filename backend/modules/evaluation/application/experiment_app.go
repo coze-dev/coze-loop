@@ -1662,6 +1662,35 @@ func (e *experimentApplication) initSandboxTask(ctx context.Context, scene strin
 
 	initCtx, cancel := context.WithTimeout(ctx, sandboxSchedulerInitTimeout)
 	defer cancel()
+
+	// mac_vm_plus_sandbox 链路：一次实验 Init 两个 task，共用 GUI 租户、同一并发，靠 ResourceType 区分：
+	//   - sandbox task：TaskID=expt_id，ResourceType=Sandbox（orchestrator 落 Linux 沙箱）
+	//   - mac_vm task ：TaskID=expt_id+"-macvm"，ResourceType=MacVM（被测桌面 agent 落 Mac VM warm pool）
+	// taskID 后缀必须与 operator 侧 macVMTaskID 一致（target_source_sandbox_agent_impl.go）。
+	if tenant == rpc.SandboxTenantFornaxEvalGeneralGUI {
+		tasks := []struct {
+			taskID       string
+			resourceType rpc.SandboxResourceType
+		}{
+			{strconv.FormatInt(exptID, 10), rpc.SandboxResourceTypeSandbox},
+			{strconv.FormatInt(exptID, 10) + "-macvm", rpc.SandboxResourceTypeMacVM},
+		}
+		for _, t := range tasks {
+			if _, initErr := e.sandboxSchedulerAdapter.Init(initCtx, &rpc.SandboxInitRequest{
+				TaskID:       t.taskID,
+				Concurrency:  concurrency,
+				WorkspaceID:  workspaceID,
+				Tenant:       tenant,
+				ResourceType: t.resourceType,
+			}); initErr != nil {
+				logs.CtxWarn(initCtx, "init mac_vm+sandbox task fail, scene=%s, expt_id=%d, task_id=%s, resource_type=%d, err=%v", scene, exptID, t.taskID, t.resourceType, initErr)
+				return errorx.Wrapf(initErr, "init mac_vm+sandbox task fail, scene=%s, expt_id=%d, task_id=%s", scene, exptID, t.taskID)
+			}
+		}
+		logs.CtxInfo(initCtx, "init mac_vm+sandbox tasks success, scene=%s, expt_id=%d, workspace_id=%d, concurrency=%d", scene, exptID, workspaceID, concurrency)
+		return nil
+	}
+
 	if _, initErr := e.sandboxSchedulerAdapter.Init(initCtx, &rpc.SandboxInitRequest{
 		TaskID:      strconv.FormatInt(exptID, 10),
 		Concurrency: concurrency,
@@ -1742,6 +1771,14 @@ func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant
 	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
 		return rpc.SandboxTenantDefault
 	}
+	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
+	// 共用 GUI 专用租户、靠 ResourceType 区分。mac_vm_plus_ssh 的 orchestrator+SSH sandbox
+	// 共用 sandbox task（同 ResourceType=Sandbox），mac_vm 走 -macvm task，与本分支的两 task
+	// Init 列表一致，故同样路由到 GUI 租户。
+	if expt.Target.EvalTargetVersion.SandboxAgent.IsMacVMPlusSandbox() ||
+		expt.Target.EvalTargetVersion.SandboxAgent.IsMacVMPlusSSH() {
+		return rpc.SandboxTenantFornaxEvalGeneralGUI
+	}
 	if !expt.Target.EvalTargetVersion.SandboxAgent.IsDualSandbox() {
 		return rpc.SandboxTenantDefault
 	}
@@ -1762,7 +1799,13 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 	if agent == nil {
 		return rpc.SandboxTenantDefault
 	}
-	if entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) != entity.SandboxCountModeDual {
+	countMode := entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode()))
+	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
+	// 共用 GUI 专用租户、靠 ResourceType 区分（见 entity 版同处注释）。
+	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
+		return rpc.SandboxTenantFornaxEvalGeneralGUI
+	}
+	if countMode != entity.SandboxCountModeDual {
 		return rpc.SandboxTenantDefault
 	}
 	// DTO 侧 run_mode 是 ExptRunMode 整数枚举, 不能强转成 entity.RunMode 字符串。

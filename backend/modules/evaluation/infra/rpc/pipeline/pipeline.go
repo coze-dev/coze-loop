@@ -33,3 +33,7 @@ func (a *PipelineListAdapter) ListPipelineFlow(ctx context.Context, req *rpc.Lis
 func (a *PipelineListAdapter) PipelineNodeFinishCallback(ctx context.Context, experimentID, spaceID int64) error {
 	return nil
 }
+
+func (a *PipelineListAdapter) DeletePipeline(ctx context.Context, pipelineID, spaceID int64) error {
+	return nil
+}

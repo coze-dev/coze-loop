@@ -254,6 +254,50 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 	}
 }
 
+// TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord_NilParams 覆盖入参为 nil 的场景：
+// 历史实现直接执行 correctionDO.UpdatedBy = ...，correction 缺失时会 panic（CorrectEvaluatorRecordOApi 线上已复现）。
+// 期望返回参数错误，且不触碰 repo / publisher。
+func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord_NilParams(t *testing.T) {
+	cases := []struct {
+		name         string
+		recordDO     *entity.EvaluatorRecord
+		correctionDO *entity.Correction
+	}{
+		{name: "correction 为 nil", recordDO: &entity.EvaluatorRecord{ID: 1}, correctionDO: nil},
+		{name: "record 为 nil", recordDO: nil, correctionDO: &entity.Correction{}},
+		{name: "两者都为 nil", recordDO: nil, correctionDO: nil},
+	}
+
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := repo_mocks.NewMockIEvaluatorRecordRepo(ctrl)
+			mockExptPublisher := mocks.NewMockExptEventPublisher(ctrl)
+			mockEvaluatorPublisher := mocks.NewMockEvaluatorEventPublisher(ctrl)
+			mockExptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
+			// 参数校验应在任何下游调用之前拦截
+			mockRepo.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any()).Times(0)
+			mockExptRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+			s := &EvaluatorRecordServiceImpl{
+				evaluatorRecordRepo: mockRepo,
+				exptPublisher:       mockExptPublisher,
+				evaluatorPublisher:  mockEvaluatorPublisher,
+				exptRepo:            mockExptRepo,
+			}
+
+			var err error
+			assert.NotPanics(t, func() {
+				err = s.CorrectEvaluatorRecord(session.WithCtxUser(context.Background(), &session.User{ID: "u1"}), c.recordDO, c.correctionDO)
+			})
+			assert.Error(t, err)
+		})
+	}
+}
+
 // TestNewEvaluatorRecordServiceImpl 测试构造函数
 func TestNewEvaluatorRecordServiceImpl(t *testing.T) {
 	ctrl := gomock.NewController(t)

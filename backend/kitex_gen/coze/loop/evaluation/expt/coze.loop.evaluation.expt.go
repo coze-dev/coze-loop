@@ -18229,6 +18229,8 @@ type ItemStandardEvalOutput struct {
 	ItemEndTime *int64 `thrift:"item_end_time,17,optional" frugal:"17,optional,i64" json:"item_end_time" form:"item_end_time" query:"item_end_time"`
 	// 实验创建人 userID，来源 experiment.created_by（实验级恒定）
 	CreatedBy *string `thrift:"created_by,18,optional" frugal:"18,optional,string" json:"created_by" form:"created_by" query:"created_by"`
+	// 沙箱日志链接，来源 eval_target ext_output 的同名字段（SandboxAgent 内置 output schema）；detail.output 内的同名字段保留不动
+	FornaxSandboxLogURL *string `thrift:"fornax_sandbox_log_url,19,optional" frugal:"19,optional,string" json:"fornax_sandbox_log_url" form:"fornax_sandbox_log_url" query:"fornax_sandbox_log_url"`
 	// 标准化评测输出内容块：小内容 inline，大内容通过各 section 的 full_content 引用。
 	Detail *StandardEvalOutputContent `thrift:"detail,30,optional" frugal:"30,optional,StandardEvalOutputContent" json:"detail" form:"detail" query:"detail"`
 	Rounds *StandardEvalOutputContent `thrift:"rounds,31,optional" frugal:"31,optional,StandardEvalOutputContent" json:"rounds" form:"rounds" query:"rounds"`
@@ -18461,6 +18463,18 @@ func (p *ItemStandardEvalOutput) GetCreatedBy() (v string) {
 	return *p.CreatedBy
 }
 
+var ItemStandardEvalOutput_FornaxSandboxLogURL_DEFAULT string
+
+func (p *ItemStandardEvalOutput) GetFornaxSandboxLogURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFornaxSandboxLogURL() {
+		return ItemStandardEvalOutput_FornaxSandboxLogURL_DEFAULT
+	}
+	return *p.FornaxSandboxLogURL
+}
+
 var ItemStandardEvalOutput_Detail_DEFAULT *StandardEvalOutputContent
 
 func (p *ItemStandardEvalOutput) GetDetail() (v *StandardEvalOutputContent) {
@@ -18586,6 +18600,9 @@ func (p *ItemStandardEvalOutput) SetItemEndTime(val *int64) {
 func (p *ItemStandardEvalOutput) SetCreatedBy(val *string) {
 	p.CreatedBy = val
 }
+func (p *ItemStandardEvalOutput) SetFornaxSandboxLogURL(val *string) {
+	p.FornaxSandboxLogURL = val
+}
 func (p *ItemStandardEvalOutput) SetDetail(val *StandardEvalOutputContent) {
 	p.Detail = val
 }
@@ -18624,6 +18641,7 @@ var fieldIDToName_ItemStandardEvalOutput = map[int16]string{
 	16: "experiment_create_time",
 	17: "item_end_time",
 	18: "created_by",
+	19: "fornax_sandbox_log_url",
 	30: "detail",
 	31: "rounds",
 	32: "agent",
@@ -18702,6 +18720,10 @@ func (p *ItemStandardEvalOutput) IsSetItemEndTime() bool {
 
 func (p *ItemStandardEvalOutput) IsSetCreatedBy() bool {
 	return p.CreatedBy != nil
+}
+
+func (p *ItemStandardEvalOutput) IsSetFornaxSandboxLogURL() bool {
+	return p.FornaxSandboxLogURL != nil
 }
 
 func (p *ItemStandardEvalOutput) IsSetDetail() bool {
@@ -18885,6 +18907,14 @@ func (p *ItemStandardEvalOutput) Read(iprot thrift.TProtocol) (err error) {
 		case 18:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 19:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField19(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -19166,6 +19196,17 @@ func (p *ItemStandardEvalOutput) ReadField18(iprot thrift.TProtocol) error {
 	p.CreatedBy = _field
 	return nil
 }
+func (p *ItemStandardEvalOutput) ReadField19(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FornaxSandboxLogURL = _field
+	return nil
+}
 func (p *ItemStandardEvalOutput) ReadField30(iprot thrift.TProtocol) error {
 	_field := NewStandardEvalOutputContent()
 	if err := _field.Read(iprot); err != nil {
@@ -19291,6 +19332,10 @@ func (p *ItemStandardEvalOutput) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField18(oprot); err != nil {
 			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
 			goto WriteFieldError
 		}
 		if err = p.writeField30(oprot); err != nil {
@@ -19659,6 +19704,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
 }
+func (p *ItemStandardEvalOutput) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFornaxSandboxLogURL() {
+		if err = oprot.WriteFieldBegin("fornax_sandbox_log_url", thrift.STRING, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FornaxSandboxLogURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
 func (p *ItemStandardEvalOutput) writeField30(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDetail() {
 		if err = oprot.WriteFieldBegin("detail", thrift.STRUCT, 30); err != nil {
@@ -19834,6 +19897,9 @@ func (p *ItemStandardEvalOutput) DeepEqual(ano *ItemStandardEvalOutput) bool {
 		return false
 	}
 	if !p.Field18DeepEqual(ano.CreatedBy) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.FornaxSandboxLogURL) {
 		return false
 	}
 	if !p.Field30DeepEqual(ano.Detail) {
@@ -20069,6 +20135,18 @@ func (p *ItemStandardEvalOutput) Field18DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.CreatedBy, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ItemStandardEvalOutput) Field19DeepEqual(src *string) bool {
+
+	if p.FornaxSandboxLogURL == src {
+		return true
+	} else if p.FornaxSandboxLogURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FornaxSandboxLogURL, *src) != 0 {
 		return false
 	}
 	return true

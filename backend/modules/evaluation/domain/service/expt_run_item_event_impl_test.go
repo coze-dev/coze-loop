@@ -49,7 +49,8 @@ func TestNewExptRecordEvalService(t *testing.T) {
 		idgenmocks.NewMockIIDGenerator(ctrl),
 		benefitmocks.NewMockIBenefitService(ctrl),
 		repoMocks.NewMockIEvalAsyncRepo(ctrl),
-		nil,
+		nil, // itemCompletePublisher
+		nil, // sandboxAgentMetrics
 	)
 	assert.NotNil(t, service)
 }

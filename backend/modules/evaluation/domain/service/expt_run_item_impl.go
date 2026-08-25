@@ -42,6 +42,7 @@ func NewExptItemEvaluation(
 	evalAsyncRepo repo.IEvalAsyncRepo,
 	evalSetItemSvc EvaluationSetItemService,
 	itemCompletePublisher component.IItemCompletePublisher,
+	sandboxAgentMetrics metrics.SandboxAgentMetrics, // 沙箱 agent 端到端 (turn 粒度) 打点; 可空
 	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 保持已有单测编译通过
 ) ExptItemEvaluation {
 	exec := &ExptItemEvalCtxExecutor{
@@ -56,6 +57,7 @@ func NewExptItemEvaluation(
 		evalAsyncRepo:          evalAsyncRepo,
 		evalSetItemSvc:         evalSetItemSvc,
 		itemCompletePublisher:  itemCompletePublisher,
+		sandboxAgentMetrics:    sandboxAgentMetrics,
 	}
 	if len(sandboxAgentNotifier) > 0 {
 		exec.sandboxAgentNotifier = sandboxAgentNotifier[0]
@@ -75,7 +77,8 @@ type ExptItemEvalCtxExecutor struct {
 	evalAsyncRepo          repo.IEvalAsyncRepo
 	evalSetItemSvc         EvaluationSetItemService
 	itemCompletePublisher  component.IItemCompletePublisher
-	sandboxAgentNotifier   ISandboxAgentNotifier // 沙箱 agent 实验单行失败飞书通知; 可空
+	sandboxAgentNotifier   ISandboxAgentNotifier       // 沙箱 agent 实验单行失败飞书通知; 可空
+	sandboxAgentMetrics    metrics.SandboxAgentMetrics // 沙箱 agent 端到端 turn 打点; 可空 (nil 时不打点)
 }
 
 const exptRunLogPersistTimeout = 5 * time.Second
@@ -112,6 +115,11 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 
 		ctx = context.WithValue(ctx, consts.CtxKeyLogID, etec.GetTurnEvalLogID(ctx, turn.ID)) //nolint:staticcheck
 
+		// [sandbox_agent_metrics] 端到端 started: 只在该 turn 首次入调度且非 async 回调重进时打点。
+		// 后续重试事件 (RetryTimes>0) / async 回调 (AsyncReport(Evaluator)Trigger) 不再重复计数，
+		// 保证「一 turn 一次 e2e_started」语义。
+		e.emitSandboxAgentE2EStarted(ctx, etec)
+
 		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evalSetItemSvc, e.evaluatorRecordService).Eval(ctx, etec)
 
 		if err := e.storeTurnRunResult(ctx, etec, turnRunRes); err != nil {
@@ -123,9 +131,15 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 			return true, nil
 		}
 
-		if err := turnRunRes.GetEvalErr(); err != nil {
-			return false, err
+		// [sandbox_agent_metrics] 端到端 finished: 该 turn 走到终态才 emit。
+		// 终态判定: evalErr==nil (成功), 或 evalErr 存在但 evalErrNeedRetry 判为不再重试 (最后一次失败)。
+		// 中间失败重试轮次不 emit, 由下次事件重进时的终态轮次统一 emit; duration 起点 = event.CreateAt,
+		// 横跨所有重试。
+		if turnErr := turnRunRes.GetEvalErr(); turnErr != nil {
+			e.emitSandboxAgentE2EFinishedIfTerminal(ctx, etec, eiec.Event, turnErr)
+			return false, turnErr
 		}
+		e.emitSandboxAgentE2EFinishedIfTerminal(ctx, etec, eiec.Event, nil)
 
 		history = append(history, buildHistoryMessage(ctx, turnRunRes)...)
 	}
@@ -641,4 +655,84 @@ func (e *ExptItemEvalCtxExecutor) evalErrNeedTerminateExpt(ctx context.Context, 
 
 func buildHistoryMessage(ctx context.Context, turnRunResult *entity.ExptTurnRunResult) []*entity.Message {
 	return nil
+}
+
+// buildSandboxAgentE2ETags 从 turn 上下文拼装端到端打点 tag; 与 pick* 系列语义一致, 缺失字段占位交由 emit 层。
+func buildSandboxAgentE2ETags(etec *entity.ExptTurnEvalCtx) metrics.SandboxAgentE2ETags {
+	if etec == nil || etec.Event == nil {
+		return metrics.SandboxAgentE2ETags{}
+	}
+	var turnID int64
+	if etec.Turn != nil {
+		turnID = etec.Turn.ID
+	}
+	var itemID int64
+	if etec.EvalSetItem != nil {
+		itemID = etec.EvalSetItem.ItemID
+	}
+	return metrics.SandboxAgentE2ETags{
+		SpaceID:         etec.Event.SpaceID,
+		ExperimentID:    etec.Event.ExptID,
+		ExperimentRunID: etec.Event.ExptRunID,
+		ItemID:          itemID,
+		TurnID:          turnID,
+		DatasetID:       pickDatasetID(etec),
+		DatasetVersion:  etec.EvalSetVersionID,
+		TargetID:        pickTargetID(etec),
+		ItemKey:         pickItemKey(etec),
+		DatasetKey:      pickDatasetKey(etec),
+		AgentName:       pickAgentName(etec),
+		ApplicationID:   pickApplicationID(etec),
+	}
+}
+
+// emitSandboxAgentE2EStarted 只在满足「首次入调度 && 非 async 回调重进 && 沙箱 agent 实验」时打点 e2e_started。
+// 后续重试事件 / async 回调重进都不再计数, 保证一 turn 一次 started 语义。sandboxAgentMetrics 为空时静默返回。
+func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EStarted(ctx context.Context, etec *entity.ExptTurnEvalCtx) {
+	if e == nil || e.sandboxAgentMetrics == nil {
+		return
+	}
+	if etec == nil || etec.Event == nil || etec.Expt == nil {
+		return
+	}
+	if !isSandboxAgentExpt(etec.Expt) {
+		return
+	}
+	if etec.Event.RetryTimes != 0 || etec.Event.AsyncReportTrigger || etec.Event.AsyncEvaluatorReportTrigger {
+		return
+	}
+	tags := buildSandboxAgentE2ETags(etec)
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit e2e_started, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v",
+		tags.ExperimentID, tags.ExperimentRunID, tags.ItemID, tags.TurnID)
+	e.sandboxAgentMetrics.EmitE2EStarted(tags)
+}
+
+// emitSandboxAgentE2EFinishedIfTerminal 只在该 turn 达到终态时打点 e2e_finished + e2e_duration。
+// 终态 = evalErr==nil (成功) 或 evalErrNeedRetry 判为不再重试 (最后一次失败)。中间失败重试轮次不打点。
+// duration 起点 = event.CreateAt (首次入库时间, 跨所有重试保持不变), 因此终态一次 duration 涵盖整条端到端链路。
+func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EFinishedIfTerminal(ctx context.Context, etec *entity.ExptTurnEvalCtx, event *entity.ExptItemEvalEvent, evalErr error) {
+	if e == nil || e.sandboxAgentMetrics == nil {
+		return
+	}
+	if etec == nil || etec.Expt == nil || event == nil {
+		return
+	}
+	if !isSandboxAgentExpt(etec.Expt) {
+		return
+	}
+	if evalErr != nil {
+		if retry, _ := e.evalErrNeedRetry(ctx, event, evalErr); retry {
+			return
+		}
+	}
+	tags := buildSandboxAgentE2ETags(etec)
+	// event.CreateAt 单位是 Unix 秒 (由 expt_run_scheduler_event_impl.go 用 time.Now().Unix() 赋值),
+	// 用 time.Unix(sec, 0) 反序列化; 用 UnixMilli 会把秒当毫秒 → duration 变成 1970 至今的差值 (~1.78e12ms).
+	var startTime time.Time
+	if event.CreateAt > 0 {
+		startTime = time.Unix(event.CreateAt, 0)
+	}
+	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit e2e_finished, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, success=%v",
+		tags.ExperimentID, tags.ExperimentRunID, tags.ItemID, tags.TurnID, evalErr == nil)
+	e.sandboxAgentMetrics.EmitE2EFinished(tags, evalErr, startTime)
 }
