@@ -71,8 +71,13 @@ func TestWithConcurrencyDimension_IdempotentOnExplicitDeclaration(t *testing.T) 
 	assert.Equal(t, int64(2), findResource(again, QuotaCategoryConcurrency, QuotaResourceKeyItem).Amount)
 }
 
-// TestWithConcurrencyDimension_NilReceiver nil 向量也要产出并发维度。
-// 若返回 nil，调度器会把该实验当"无向量"跳过，enforce 实验永远不跑。
+// TestWithConcurrencyDimension_NilReceiver 守的是**本方法自身的 nil 安全契约**，
+// 不是调度器的不变量：两个生产调用点（商业版 toRequirements / frozenConstraintsOf）
+// 都先挡了 nil，所以这条路径不会被生产触达。
+//
+// 之所以仍要钉：nil 分支是本方法唯一的 nil 安全保障，删掉它方法就变成 nil 直接 panic。
+// 本用例是唯一能抓住那次删除的防线（实测：把该分支改成 return nil，全 evaluation 模块
+// 只有本用例 FAIL，商业版 51 个包零失败 —— 即它护的确实只是契约本身）。
 func TestWithConcurrencyDimension_NilReceiver(t *testing.T) {
 	var in *ExpectedQuotaConsumption
 

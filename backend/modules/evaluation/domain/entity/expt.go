@@ -424,12 +424,16 @@ const (
 
 // WithConcurrencyDimension 返回在原向量基础上补齐并发维度的**新**向量。
 //
-// 幂等：若调用方已显式申报 concurrency|item（例如未来支持"重型 item 占 2 份并发"），
-// 保留其申报值不覆盖 —— 这正是把额度下沉到 item 粒度后要留的扩展口。
+// 幂等：若调用方已显式申报 concurrency|item，保留其申报值不覆盖。
+// 这条路径**当前就能走通**（concurrency 在商业版 category 白名单内、Validate 也不拦），
+// 所以"重型 item 占 2 份并发"这类用法不需要改代码，申报即生效。
 //
 // 不原地改 receiver：ExpectedQuotaConsumption 是创建期冻结进 eval_conf 的快照，
 // 原地修改会让"冻结"语义失效（同一份快照在不同调用后变形）。
 func (c *ExpectedQuotaConsumption) WithConcurrencyDimension() *ExpectedQuotaConsumption {
+	// nil receiver 不会被生产触达（两个调用点都先挡了 nil：商业版 toRequirements 与
+	// frozenConstraintsOf），但这个分支必须留 —— 它是本方法唯一的 nil 安全保障，
+	// 删掉会让方法从"nil 安全"变成"nil 直接 panic"。
 	if c == nil {
 		return &ExpectedQuotaConsumption{
 			Resources: []*ExpectedResourceConsumption{{
