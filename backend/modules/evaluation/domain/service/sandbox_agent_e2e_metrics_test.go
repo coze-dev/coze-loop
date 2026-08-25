@@ -17,6 +17,8 @@ import (
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	configermocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 // ============================================================================
@@ -350,6 +352,55 @@ func TestEmitE2EFinished_NegativeCreateAt(t *testing.T) {
 		}).Times(1)
 
 	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil)
+}
+
+// 失败终态 + StatusError: errCode 应从 err 中抽出并透传给 EmitE2EFinished
+func TestEmitE2EFinished_StatusErrorCodeExtracted(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exec, m := newSandboxE2EExecutor(t, ctrl)
+
+	configer := configermocks.NewMockIConfiger(ctrl)
+	configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.RetryConf{RetryTimes: 1}).AnyTimes()
+	exec.Configer = configer
+
+	etec := sandboxTurnCtx(2, false, false) // RetryTimes >= max → 终态
+	etec.Event.CreateAt = time.Now().Add(-1 * time.Second).Unix()
+
+	statusErr := errorx.NewByCode(errno.CommonInternalErrorCode)
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, errCode int32, _ time.Time) {
+			require.NotNil(t, err)
+			require.Equal(t, int32(errno.CommonInternalErrorCode), errCode,
+				"errCode should be extracted from StatusError")
+		}).Times(1)
+
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, statusErr)
+}
+
+// 失败终态 + 非 StatusError (plain errors.New): errCode 走 0 (由 emit 层转占位符 `-`)
+func TestEmitE2EFinished_PlainErrorZeroCode(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exec, m := newSandboxE2EExecutor(t, ctrl)
+
+	configer := configermocks.NewMockIConfiger(ctrl)
+	configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.RetryConf{RetryTimes: 1}).AnyTimes()
+	exec.Configer = configer
+
+	etec := sandboxTurnCtx(2, false, false)
+	etec.Event.CreateAt = time.Now().Add(-500 * time.Millisecond).Unix()
+
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, errCode int32, _ time.Time) {
+			require.NotNil(t, err)
+			require.Equal(t, int32(0), errCode,
+				"plain error (not StatusError) should carry errCode=0")
+		}).Times(1)
+
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, errors.New("plain-boom"))
 }
 
 // ============================================================================
