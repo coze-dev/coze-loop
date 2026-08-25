@@ -726,9 +726,11 @@ func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EFinishedIfTerminal(ctx cont
 		}
 	}
 	tags := buildSandboxAgentE2ETags(etec)
-	startTime := time.UnixMilli(event.CreateAt)
-	if event.CreateAt <= 0 {
-		startTime = time.Time{}
+	// event.CreateAt 单位是 Unix 秒 (由 expt_run_scheduler_event_impl.go 用 time.Now().Unix() 赋值),
+	// 用 time.Unix(sec, 0) 反序列化; 用 UnixMilli 会把秒当毫秒 → duration 变成 1970 至今的差值 (~1.78e12ms).
+	var startTime time.Time
+	if event.CreateAt > 0 {
+		startTime = time.Unix(event.CreateAt, 0)
 	}
 	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit e2e_finished, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, success=%v",
 		tags.ExperimentID, tags.ExperimentRunID, tags.ItemID, tags.TurnID, evalErr == nil)
