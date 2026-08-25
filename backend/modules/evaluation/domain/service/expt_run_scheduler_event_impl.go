@@ -772,8 +772,9 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		return nil, nil, err
 	}
 
-	// item 已落终态 → 释放其额度预占。放在状态写库之后：先确保终态可见，
-	// 再释放额度，避免"额度已放但 item 仍显示 Processing"这一瞬间被下一拍读到而重复授予。
+	// item 已落终态 → 释放其额度预占。放在 run log 写库之后：调度侧判占用读的是
+	// run log（LoadDispatchRuntime 按 status IN (Queueing, Processing) 扫），
+	// 先落 Fail 再放额度，才不会留下"额度已归还、run log 仍算占用"的窗口。
 	e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, zombieItemIDs, "item zombie timeout")
 
 	// 不清 run_log 的 target_result_id / evaluator_result_ids：
@@ -977,7 +978,7 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		false,
 	)
 
-	// 与 handleZombies 一致的写库形状，保证 UI (MGetExperimentResult) 拿到一致的 err_msg。
+	// 与 handleZombies 一致的写库形状（含只写 err_msg 不写 status 的理由，见那边注释）。
 	errBytes := []byte(errno.SerializeErr(errno.NewSandboxTerminatedBeforeReportErr(firstStatus)))
 
 	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, terminatedItemIDs, map[string]any{

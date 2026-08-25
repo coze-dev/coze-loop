@@ -2483,7 +2483,15 @@ func TestExptSchedulerImpl_sweepTerminatedSandboxItems_CrossSpace(t *testing.T) 
 		).Times(1)
 		// 消费方侧写库仍然用 event.SpaceID=3
 		mockItemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{10}, gomock.Any(), int64(3)).Return(nil)
-		mockItemRepo.EXPECT().UpdateItemsResult(gomock.Any(), int64(3), int64(1), []int64{10}, gomock.Any()).Return(nil)
+		// ★ 与 handleZombies 同一条不变量：主表只写 err_msg，status 归 RecordItemRunLogs。
+		// 本处曾照抄 handleZombies 的写库形状（连 status 一起抄），把同一个净零 bug 复制了一份。
+		mockItemRepo.EXPECT().UpdateItemsResult(gomock.Any(), int64(3), int64(1), []int64{10}, gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any) error {
+				_, hasStatus := ufields["status"]
+				assert.False(t, hasStatus, "sandbox sweep 路径不得抢先写主表 status")
+				assert.NotNil(t, ufields["err_msg"])
+				return nil
+			})
 		mockTurnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), int64(3), int64(1), int64(2), []int64{10}, entity.TurnRunState_Fail).Return(nil)
 
 		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
