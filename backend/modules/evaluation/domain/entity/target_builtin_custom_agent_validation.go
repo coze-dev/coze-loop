@@ -97,15 +97,9 @@ func ValidateCustomFieldSchemas(schemas []*CustomFieldSchema) error {
 // overwrites JsonSchema with it regardless of branch, so object/array must not
 // be smuggled in via the multipart or SchemaKey branches.
 func validateCustomFieldSchemaType(s *CustomFieldSchema) error {
-	// The preset trajectory row arrives on the wire as
-	// name=trajectory + SchemaKey=Trajectory(7); downstream output-schema
-	// building skips it by name (the report side appends trajectory itself),
-	// so the validator must accept it instead of rejecting it as an
-	// unsupported scalar type. Any other name declaring Trajectory is still
-	// rejected: it would be silently dropped downstream.
-	if s.Name == common.ArgSchemaKeyTrajectory &&
-		s.SchemaKey != nil &&
-		*s.SchemaKey == SchemaKey_Trajectory {
+	// Same as downstream buildCustomAgentOutputSchema / custom_psm: the
+	// trajectory row is appended by the report side, so skip it by name.
+	if s.Name == common.ArgSchemaKeyTrajectory {
 		return nil
 	}
 

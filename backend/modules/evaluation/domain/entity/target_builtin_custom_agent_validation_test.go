@@ -229,9 +229,8 @@ func TestValidateCustomFieldSchemas_Valid(t *testing.T) {
 			schemas: []*CustomFieldSchema{scalarField(consts.EvalTargetOutputFieldKeyActualOutput)},
 		},
 		{
-			// The preset trajectory row arrives as name=trajectory + SchemaKey=Trajectory(7);
-			// downstream skips it by name, so the validator accepts this exact shape.
-			name: "preset trajectory row allowed (name=trajectory, SchemaKey=Trajectory)",
+			// Trajectory rows are skipped by name; the wire form carries SchemaKey=Trajectory.
+			name: "trajectory row with SchemaKey=Trajectory allowed",
 			schemas: []*CustomFieldSchema{
 				{
 					Name:        consts.EvalTargetOutputFieldKeyTrajectory,
@@ -241,7 +240,6 @@ func TestValidateCustomFieldSchemas_Valid(t *testing.T) {
 			},
 		},
 		{
-			// trajectory is allowed as a name; the Trajectory type is what is rejected.
 			name:    "trajectory field name allowed (the Trajectory type is what is rejected, not this name)",
 			schemas: []*CustomFieldSchema{scalarField(consts.EvalTargetOutputFieldKeyTrajectory)},
 		},
