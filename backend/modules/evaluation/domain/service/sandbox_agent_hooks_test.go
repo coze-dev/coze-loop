@@ -132,14 +132,14 @@ func TestNewExptItemEvaluation_VariadicNotifier(t *testing.T) {
 	defer ctrl.Finish()
 
 	notifier := servicemocks.NewMockISandboxAgentNotifier(ctrl)
-	inst := NewExptItemEvaluation(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, notifier)
+	inst := NewExptItemEvaluation(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, notifier)
 	require.NotNil(t, inst)
 	exec, ok := inst.(*ExptItemEvalCtxExecutor)
 	require.True(t, ok)
 	assert.Same(t, notifier, exec.sandboxAgentNotifier)
 
 	// 不传时应为 nil (兼容旧调用点)
-	inst2 := NewExptItemEvaluation(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	inst2 := NewExptItemEvaluation(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	exec2 := inst2.(*ExptItemEvalCtxExecutor)
 	assert.Nil(t, exec2.sandboxAgentNotifier)
 }

@@ -48,6 +48,24 @@ type SandboxAgentStepTags struct {
 	DatasetKey     string
 }
 
+// SandboxAgentE2ETags 沙箱 agent 评测对象「端到端一行」tag 集合。
+// 端到端语义：一次实验运行内单个 turn 从首次入队到达到终态（含中间失败重试、含 async 回调重进）
+// 的完整耗时；tag 覆盖与 invoke 一致，另附 turn_id 便于按 turn 反查。
+type SandboxAgentE2ETags struct {
+	SpaceID         int64
+	ExperimentID    int64
+	ExperimentRunID int64
+	ItemID          int64
+	TurnID          int64
+	DatasetID       int64
+	DatasetVersion  int64
+	TargetID        int64
+	ItemKey         string
+	DatasetKey      string
+	AgentName       string
+	ApplicationID   string
+}
+
 //go:generate mockgen -destination=mocks/sandbox_agent.go -package=mocks . SandboxAgentMetrics
 type SandboxAgentMetrics interface {
 	// EmitInvokeStarted 一次 target invocation 提交时打点，仅 counter。
@@ -65,4 +83,12 @@ type SandboxAgentMetrics interface {
 	// EmitStepFinished 沙箱内部 step 结束事件，counter + duration，来源同上。
 	// durationMS 由沙箱侧上报（step 内计时更准确）；err/errCode 用于分类。
 	EmitStepFinished(tags SandboxAgentStepTags, err error, errCode int32, durationMS int64)
+	// EmitE2EStarted 单个 turn 的端到端起点打点，仅 counter。
+	// 仅在该 turn 首次进入调度（event.RetryTimes==0 && 非 async 回调重进）时 emit 一次；
+	// async 回调重进 Eval 不视为新的 e2e。
+	EmitE2EStarted(tags SandboxAgentE2ETags)
+	// EmitE2EFinished 单个 turn 的端到端终态打点，counter + duration。
+	// 仅在 CompleteItemRun 判定不再重试的终态分支 emit；startTime 传入 event.CreateAt 转成的
+	// time.Time（若为零值则 duration=0）。err 用于 success / error_type 分类。
+	EmitE2EFinished(tags SandboxAgentE2ETags, err error, startTime time.Time)
 }
