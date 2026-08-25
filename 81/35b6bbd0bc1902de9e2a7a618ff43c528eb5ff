@@ -1,0 +1,21 @@
+backend/modules/observability/domain/trace/service/trace_service_test.go
+  s_256352982a30ea::t_22f2f88435f95a 114,210,269,341,427,457,552,583,625,673,761,795,821,913,961,996,1025,1121,1155,1184,1220,1268,1373,1419,1494,1540,1675,1705,1748,1797,1900,1931,1963,2001,2052,2113,2158,2258,2315,2358,2574,2603,2807,2943,2982,3020,3058,3101,3479,3516,3576,3646,3709,3741,3784,3839,3907,5321,5373,5401,5435,5477-5553,5913,6004,6165,6223,6299,6462,6491,6563,6598
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8135b6bbd0bc1902de9e2a7a618ff43c528eb5ff",
+  "prompts": {},
+  "sessions": {
+    "s_256352982a30ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_256352982a30ea",
+        "model": "unknown"
+      },
+      "human_author": "lizhanpeng <lizhanpeng@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
