@@ -461,11 +461,14 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 		}
 
 		// item-complete(success) 发送点: 每个 item 一进来先发, 仅发成功行(fail/zombie 不发, 下游只消费成功行)。
-		// 发送作为旁路, 只读不写 result_state, 发失败在 sendItemComplete 内 CtxError + return(仅本 item), 不阻断落库/后续。
-		// 是否真正投递由 producer 依空间开关(item_complete_space_config) + 评测对象 enable_analysis 判定, 此处不重复判。
-		// 不追求消竞态: 下游侧 defer 投递已覆盖读侧就绪窗口, 本处只保障"成功行必发一次 MQ"。
+		// 发失败必须 return 中断本次调度: 此处在 RecordItemRunLogs 落库之前, item 落库状态仍为 complete,
+		// 下次调度会重新扫入 completeItems 再次驱动发送, 从而保障"成功行必发一次 MQ"(发失败靠下次调度补发)。
+		// 是否真正投递由 producer 依空间开关(item_complete_space_config) + 评测对象 enable_analysis 判定, 此处不重复判;
+		// 条件不满足时 producer 返回 nil(skip, 非失败), 不会触发 return。
 		if e.itemCompletePublisher != nil && item.State == entity.ItemRunState_Success {
-			e.sendItemComplete(ctx, event, expt, item, itemMeta[item.ItemID], itemVer[item.ItemID])
+			if err := e.sendItemComplete(ctx, event, expt, item, itemMeta[item.ItemID], itemVer[item.ItemID]); err != nil {
+				return err
+			}
 		}
 
 		var turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef
@@ -596,16 +599,20 @@ func (e *ExptSchedulerImpl) resolveItemCompleteMeta(ctx context.Context, event *
 	return itemMeta, itemVer
 }
 
-// sendItemComplete 组装并发送单行 item-complete(success) 事件。发送失败打 CtxError 告警但不阻断(靠下游 defer/幂等兜底)。
-func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) {
+// sendItemComplete 组装并发送单行 item-complete(success) 事件。
+// 发送失败返回 error, 由调用方中断本次调度、靠下次调度重扫 completeItems 补发; 元数据缺失属组装侧问题, 跳过不阻断。
+func (e *ExptSchedulerImpl) sendItemComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) error {
+	// 元数据缺失(resolveItemCompleteMeta 已 CtxWarn)无法靠重试恢复, 跳过不阻断本次调度。
 	if evalSetItem == nil {
 		logs.CtxWarn(ctx, "[ExptEval] item complete meta missing, skip publish, expt_id: %v, item_id: %v", event.ExptID, item.ItemID)
-		return
+		return nil
 	}
 	completeEvent := buildItemCompleteEventFromScheduler(event.SpaceID, event.ExptID, event.ExptRunID, expt, item, evalSetItem, evalSetVersionID)
 	if err := e.itemCompletePublisher.PublishItemComplete(ctx, completeEvent); err != nil {
 		logs.CtxError(ctx, "[ExptEval] publish item complete event failed, expt_id: %v, item_id: %v, err: %v", event.ExptID, item.ItemID, err)
+		return err
 	}
+	return nil
 }
 
 func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.ExptScheduleEvent, toSubmits []*entity.ExptEvalItem) error {

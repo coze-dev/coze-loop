@@ -2269,7 +2269,7 @@ func Test_findEvalSetForItem(t *testing.T) {
 	assert.Nil(t, findEvalSetForItem(multi, 72))                 // 多集未命中, 不回退主集
 }
 
-// Test_sendItemComplete_nilMeta 覆盖 evalSetItem==nil 时 sendItemComplete 直接跳过、不 publish。
+// Test_sendItemComplete_nilMeta 覆盖 evalSetItem==nil 时 sendItemComplete 直接跳过、不 publish、返回 nil(不阻断调度)。
 func Test_sendItemComplete_nilMeta(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2277,11 +2277,12 @@ func Test_sendItemComplete_nilMeta(t *testing.T) {
 	svc := &ExptSchedulerImpl{itemCompletePublisher: stub}
 	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
 	item := &entity.ExptEvalItem{ItemID: 10, State: entity.ItemRunState_Success}
-	svc.sendItemComplete(context.Background(), event, &entity.Experiment{}, item, nil /*evalSetItem*/, 100)
-	assert.Empty(t, stub.events) // meta nil, 跳过, 未 publish
+	err := svc.sendItemComplete(context.Background(), event, &entity.Experiment{}, item, nil /*evalSetItem*/, 100)
+	assert.NoError(t, err)       // meta nil 属组装侧问题, 跳过不阻断, 返回 nil
+	assert.Empty(t, stub.events) // 未 publish
 }
 
-// Test_sendItemComplete_publish 覆盖 publish 成功 / 失败(CtxError 不阻断) 两条路径。
+// Test_sendItemComplete_publish 覆盖 publish 成功(返回 nil) / 失败(返回 error, 由调用方中断本次调度靠下次调度补发) 两条路径。
 func Test_sendItemComplete_publish(t *testing.T) {
 	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
 	item := &entity.ExptEvalItem{ItemID: 10, State: entity.ItemRunState_Success}
@@ -2290,17 +2291,17 @@ func Test_sendItemComplete_publish(t *testing.T) {
 	t.Run("publish ok", func(t *testing.T) {
 		stub := &stubItemCompletePublisher{}
 		svc := &ExptSchedulerImpl{itemCompletePublisher: stub}
-		svc.sendItemComplete(context.Background(), event, &entity.Experiment{}, item, evalSetItem, 80)
+		err := svc.sendItemComplete(context.Background(), event, &entity.Experiment{}, item, evalSetItem, 80)
+		assert.NoError(t, err)        // 发送成功返回 nil
 		assert.Len(t, stub.events, 1) // 组装并发送一次
 	})
 
-	t.Run("publish fail not blocking", func(t *testing.T) {
+	t.Run("publish fail returns error", func(t *testing.T) {
 		stub := &stubItemCompletePublisher{err: assert.AnError}
 		svc := &ExptSchedulerImpl{itemCompletePublisher: stub}
-		// 失败仅 CtxError, 不 panic / 不阻断
-		assert.NotPanics(t, func() {
-			svc.sendItemComplete(context.Background(), event, &entity.Experiment{}, item, evalSetItem, 80)
-		})
+		// 发失败返回 error, 由调用方中断本次调度, 下次调度重扫 completeItems 补发
+		err := svc.sendItemComplete(context.Background(), event, &entity.Experiment{}, item, evalSetItem, 80)
+		assert.Error(t, err)
 		assert.Len(t, stub.events, 1) // 仍尝试发送一次
 	})
 }
