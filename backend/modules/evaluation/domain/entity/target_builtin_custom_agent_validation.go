@@ -10,6 +10,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 )
 
 // Create-time validation of a CustomAgent's declared custom output fields.
@@ -95,6 +97,12 @@ func ValidateCustomFieldSchemas(schemas []*CustomFieldSchema) error {
 // overwrites JsonSchema with it regardless of branch, so object/array must not
 // be smuggled in via the multipart or SchemaKey branches.
 func validateCustomFieldSchemaType(s *CustomFieldSchema) error {
+	// Same as downstream buildCustomAgentOutputSchema / custom_psm: the
+	// trajectory row is appended by the report side, so skip it by name.
+	if s.Name == common.ArgSchemaKeyTrajectory {
+		return nil
+	}
+
 	if s.ContentType == ContentTypeMultipart {
 		if s.SchemaKey != nil {
 			if _, ok := allowedCustomFieldScalarSchemaKeys[*s.SchemaKey]; !ok {
