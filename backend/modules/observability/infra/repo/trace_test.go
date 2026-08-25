@@ -1485,7 +1485,7 @@ func TestTraceRepoImpl_getSpanInsertTable(t *testing.T) {
 			r := &TraceRepoImpl{
 				traceConfig: fields.traceConfig,
 			}
-			got, err := r.getSpanInsertTable(tt.args.ctx, tt.args.tenant, tt.args.ttl)
+			got, err := r.getSpanInsertTable(tt.args.ctx, tt.args.tenant, tt.args.ttl, "")
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {

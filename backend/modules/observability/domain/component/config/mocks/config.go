@@ -321,6 +321,21 @@ func (mr *MockITraceConfigMockRecorder) GetTenantConfig(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTenantConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetTenantConfig), ctx)
 }
 
+// GetTenantShardConfig mocks base method.
+func (m *MockITraceConfig) GetTenantShardConfig(ctx context.Context) (config.TenantShardConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTenantShardConfig", ctx)
+	ret0, _ := ret[0].(config.TenantShardConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTenantShardConfig indicates an expected call of GetTenantShardConfig.
+func (mr *MockITraceConfigMockRecorder) GetTenantShardConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTenantShardConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetTenantShardConfig), ctx)
+}
+
 // GetTraceCkCfg mocks base method.
 func (m *MockITraceConfig) GetTraceCkCfg(ctx context.Context) (*config.TraceCKCfg, error) {
 	m.ctrl.T.Helper()

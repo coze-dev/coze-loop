@@ -35,6 +35,7 @@ const (
 	reflowInsertCfgKey                 = "reflow_insert_config"
 	trajectoryMetadataCfgKey           = "trajectory_metadata_config"
 	traceTimeRangeCfgKey               = "trace_time_range"
+	tenantShardCfgKey                  = "tenant_shard_config"
 
 	defaultBackfillDispatchBatchSize  = 10
 	defaultBackfillDispatchIntervalMs = 1000
@@ -290,6 +291,14 @@ func (t *TraceConfigCenter) GetTrajectoryMetadataConfig(ctx context.Context) *co
 		return nil
 	}
 	return cfg
+}
+
+func (t *TraceConfigCenter) GetTenantShardConfig(ctx context.Context) (config.TenantShardConfig, error) {
+	cfg := make(config.TenantShardConfig)
+	if err := t.UnmarshalKey(ctx, tenantShardCfgKey, &cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {

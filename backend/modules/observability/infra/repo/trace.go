@@ -186,7 +186,7 @@ func (t *TraceRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTrace
 	if spanDao == nil {
 		return errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	table, err := t.getSpanInsertTable(ctx, param.Tenant, param.TTL)
+	table, err := t.getSpanInsertTable(ctx, param.Tenant, param.TTL, param.WorkSpaceID)
 	if err != nil {
 		return err
 	}
@@ -587,7 +587,7 @@ func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Inser
 		return errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	table, err := t.getAnnoInsertTable(ctx, param.Tenant, param.TTL)
+	table, err := t.getAnnoInsertTable(ctx, param.Tenant, param.TTL, param.WorkSpaceID)
 	if err != nil {
 		return err
 	}
@@ -673,10 +673,20 @@ func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []stri
 			continue
 		}
 		for _, tableCfg := range tables {
-			ret.SpanTables = append(ret.SpanTables, tableCfg.SpanTable)
+			spanTables := expandShardTables(tableCfg.SpanTable, tableCfg.SupportShard, tableCfg.ShardList)
+			annoTables := expandShardTables(tableCfg.AnnoTable, tableCfg.SupportShard, tableCfg.ShardList)
+			ret.SpanTables = append(ret.SpanTables, spanTables...)
+			for _, at := range annoTables {
+				if at != "" {
+					ret.AnnoTables = append(ret.AnnoTables, at)
+				}
+			}
 			if tableCfg.AnnoTable != "" {
-				ret.AnnoTables = append(ret.AnnoTables, tableCfg.AnnoTable)
-				ret.AnnoTableMap[tableCfg.SpanTable] = tableCfg.AnnoTable
+				for _, st := range spanTables {
+					for _, at := range annoTables {
+						ret.AnnoTableMap[st] = at
+					}
+				}
 			}
 		}
 	}
@@ -698,7 +708,7 @@ func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []stri
 	return ret, nil
 }
 
-func (t *TraceRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL) (string, error) {
+func (t *TraceRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL, workspaceID string) (string, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant config, %v", err)
@@ -710,10 +720,17 @@ func (t *TraceRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, t
 	} else if tableCfg.SpanTable == "" {
 		return "", fmt.Errorf("no table config found for tenant %s with ttl %s", tenant, ttl)
 	}
+	if tableCfg.SupportShard {
+		shard, err := t.resolveShardForSpace(ctx, tenant, workspaceID)
+		if err != nil {
+			return "", err
+		}
+		return shardTableName(tableCfg.SpanTable, shard), nil
+	}
 	return tableCfg.SpanTable, nil
 }
 
-func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL) (string, error) {
+func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL, workspaceID string) (string, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant config, %v", err)
@@ -724,6 +741,13 @@ func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, t
 		return "", nil
 	} else if tableCfg.AnnoTable == "" {
 		return "", nil
+	}
+	if tableCfg.SupportShard {
+		shard, err := t.resolveShardForSpace(ctx, tenant, workspaceID)
+		if err != nil {
+			return "", err
+		}
+		return shardTableName(tableCfg.AnnoTable, shard), nil
 	}
 	return tableCfg.AnnoTable, nil
 }
@@ -801,4 +825,42 @@ func spanTimeRange(spans []*dao.Span) (int64, int64) {
 		}
 	}
 	return minStart, maxStart
+}
+
+func expandShardTables(baseTable string, supportShard bool, shardList []string) []string {
+	if !supportShard || len(shardList) == 0 {
+		return []string{baseTable}
+	}
+	tables := make([]string, 0, len(shardList))
+	for _, shard := range shardList {
+		tables = append(tables, shardTableName(baseTable, shard))
+	}
+	return tables
+}
+
+func shardTableName(baseTable, shard string) string {
+	if shard == "" {
+		return baseTable
+	}
+	return baseTable + "_" + shard
+}
+
+func (t *TraceRepoImpl) resolveShardForSpace(ctx context.Context, tenant, workspaceID string) (string, error) {
+	shardCfg, err := t.traceConfig.GetTenantShardConfig(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "fail to get tenant shard config, %v", err)
+		return "", err
+	}
+	tenantShards, ok := shardCfg[tenant]
+	if !ok {
+		return "", nil
+	}
+	for shardID, entries := range tenantShards {
+		for _, entry := range entries {
+			if entry.SpaceID == workspaceID {
+				return shardID, nil
+			}
+		}
+	}
+	return "", nil
 }
