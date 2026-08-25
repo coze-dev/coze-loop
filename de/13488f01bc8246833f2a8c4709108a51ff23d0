@@ -1,0 +1,25 @@
+backend/modules/evaluation/domain/entity/target_builtin_custom_agent.go
+  s_db2fdbbb1f64ac::t_4266eb0c5f1ac8 14
+backend/modules/evaluation/domain/entity/target_builtin_custom_agent_validation.go
+  s_db2fdbbb1f64ac::t_70f64e1bbbd714 15,18,23-24,27-28,36,45-51,57,67,70,73,75,77,80,92-96,124-126,129,136,139,142,148
+backend/modules/evaluation/domain/entity/target_builtin_custom_agent_validation_test.go
+  s_db2fdbbb1f64ac::t_0f607c9463fc12 17-18,27-28,35-36,39,41,45,47,49,52,54,56,58,63,65,68,70,72,74,79,84,89,94,99,103,105,109,111,113,115,117,124,131,138,144,146,153,159,161,168,175-176,183,190,203,208,216-228,232-233,237,243,245,249,254,256,262,268,274,276,291-293,295,303,306,308-309,311,313,316-318,322,326-327,336-338,340,342,345,347-348,354-357,362-363,366,368,375,381,383,390,402-403,407,416-417,423-424
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "de13488f01bc8246833f2a8c4709108a51ff23d0",
+  "prompts": {},
+  "sessions": {
+    "s_db2fdbbb1f64ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_db2fdbbb1f64ac",
+        "model": "unknown"
+      },
+      "human_author": "tangzhijie.kitauji <tangzhijie.kitauji@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

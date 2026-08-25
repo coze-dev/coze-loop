@@ -1,0 +1,21 @@
+saas/coze/loop/eval_analysis_platform/execution.thrift
+  s_000c10886dc9fa::t_494290fdb28c06 80,83-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e6df221aae75c64c889535c4bca2108c043e5ec9",
+  "prompts": {},
+  "sessions": {
+    "s_000c10886dc9fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_000c10886dc9fa",
+        "model": "unknown"
+      },
+      "human_author": "lizhanpeng <lizhanpeng@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

@@ -1,0 +1,63 @@
+backend/kitex_gen/coze/loop/data/dataset/coze.loop.data.dataset.go
+  s_9d2aa5342279f2::t_f9524971f4f520 3816-3817,3914-3925,4006-4008,4033,4065-4068,4165-4172,4374-4384,4484-4487,4682-4699,4834-4836,4938-4949
+backend/kitex_gen/coze/loop/data/dataset/coze.loop.data.dataset_validator.go
+  s_9d2aa5342279f2::t_4f413d4ce1555e 224-228
+backend/kitex_gen/coze/loop/data/dataset/k-coze.loop.data.dataset.go
+  s_9d2aa5342279f2::t_5bec694ffff801 2878-2891,3126-3139,3235,3254,3354-3362,3490-3498,3611-3618
+backend/kitex_gen/coze/loop/evaluation/eval_set/coze.loop.evaluation.eval_set.go
+  s_9d2aa5342279f2::t_834be8e412cf70 5702-5705,5800-5811,5892-5894,5919,5951-5954,6051-6058,6244-6254,6354-6357,6544-6561,6696-6698,6794-6805
+backend/kitex_gen/coze/loop/evaluation/eval_set/coze.loop.evaluation.eval_set_validator.go
+  s_9d2aa5342279f2::t_30e0cfc6aa54e4 279-283
+backend/kitex_gen/coze/loop/evaluation/eval_set/k-coze.loop.evaluation.eval_set.go
+  s_9d2aa5342279f2::t_a248a76b6476cb 4346-4359,4580-4593,4689,4708,4801-4809,4933-4941,5052-5059
+backend/modules/data/application/dataset_app.go
+  s_9d2aa5342279f2::t_80eff3739119f2 203
+backend/modules/data/domain/dataset/repo/types.go
+  s_9d2aa5342279f2::t_91ac24ae23deb7 17-24
+backend/modules/data/domain/dataset/service/dataset.go
+  s_9d2aa5342279f2::t_eeda55ddcd3dac 162-169
+backend/modules/data/domain/dataset/service/types.go
+  s_9d2aa5342279f2::t_0b89b29d8b27f4 43-45
+backend/modules/data/infra/repo/dataset/dataset_repo_impl.go
+  s_9d2aa5342279f2::t_55262650acb579 138-145,159-166
+backend/modules/data/infra/repo/dataset/dataset_repo_impl_test.go
+  s_9d2aa5342279f2::t_3aef9351957142 14,17,21,498-542
+backend/modules/data/infra/repo/dataset/mysql/dataset_dao.go
+  s_9d2aa5342279f2::t_1957586b24ef06 50-57,73
+backend/modules/data/infra/repo/dataset/mysql/dataset_dao_test.go
+  s_9d2aa5342279f2::t_336dd3ce8e685b 1-92
+backend/modules/evaluation/application/evaluation_set_app.go
+  s_9d2aa5342279f2::t_ffc440f6200d6b 381
+backend/modules/evaluation/application/evaluation_set_app_test.go
+  s_9d2aa5342279f2::t_ded53c14e9a992 23,590-650
+backend/modules/evaluation/domain/component/rpc/dataset.go
+  s_9d2aa5342279f2::t_c25bd267823b14 105
+backend/modules/evaluation/domain/entity/param.go
+  s_9d2aa5342279f2::t_c88bf874c9bf85 48
+backend/modules/evaluation/domain/service/evaluation_set_impl.go
+  s_9d2aa5342279f2::t_d04d0663f2505c 114
+backend/modules/evaluation/infra/rpc/data/dataset.go
+  s_9d2aa5342279f2::t_c5bf5e1e8ffae4 196
+idl/thrift/coze/loop/data/coze.loop.data.dataset.thrift
+  s_9d2aa5342279f2::t_3be2ca87f41cc3 83
+idl/thrift/coze/loop/evaluation/coze.loop.evaluation.eval_set.thrift
+  s_9d2aa5342279f2::t_84d1333b65db58 131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "71bb33c54c42c4f5b0e35106d36bad5374c67997",
+  "prompts": {},
+  "sessions": {
+    "s_9d2aa5342279f2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "509a5e2a-5ec1-498e-a9d5-133eaa1bbe5a",
+        "model": "unknown"
+      },
+      "human_author": "yangfeng.alanyf <yangfeng.alanyf@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

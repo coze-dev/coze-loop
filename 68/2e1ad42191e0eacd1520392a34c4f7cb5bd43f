@@ -1,0 +1,14 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "682e1ad42191e0eacd1520392a34c4f7cb5bd43f",
+  "prompts": {},
+  "humans": {
+    "h_8983d71e230e92": {
+      "author": "liyunkun <liyunkun@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
