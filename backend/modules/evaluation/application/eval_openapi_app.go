@@ -3164,6 +3164,9 @@ func (e *EvalOpenAPIApplication) CorrectEvaluatorRecordOApi(ctx context.Context,
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
+	if req.Correction == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("correction is nil"))
+	}
 
 	record, err := e.evaluatorRecordService.GetEvaluatorRecord(ctx, req.GetEvaluatorRecordID(), false)
 	if err != nil {

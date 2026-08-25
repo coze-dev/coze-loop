@@ -5734,10 +5734,27 @@ func TestEvalOpenAPIApplication_CorrectEvaluatorRecordOApi(t *testing.T) {
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
+			name: "nil correction",
+			req: &openapi.CorrectEvaluatorRecordOApiRequest{
+				WorkspaceID:       gptr.Of(workspaceID),
+				EvaluatorRecordID: gptr.Of(recordID),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, recordSvc *servicemocks.MockEvaluatorRecordService) {
+				// correction 缺失应在任何下游调用前返回结构化参数错误，而不是透传到领域层 panic
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
+				recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				recordSvc.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
 			name: "record not found",
 			req: &openapi.CorrectEvaluatorRecordOApiRequest{
 				WorkspaceID:       gptr.Of(workspaceID),
 				EvaluatorRecordID: gptr.Of(recordID),
+				Correction: &openapiEvaluator.Correction{
+					Score: gptr.Of(0.8),
+				},
 			},
 			setup: func(_ *rpcmocks.MockIAuthProvider, recordSvc *servicemocks.MockEvaluatorRecordService) {
 				recordSvc.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(nil, nil)
@@ -5749,6 +5766,9 @@ func TestEvalOpenAPIApplication_CorrectEvaluatorRecordOApi(t *testing.T) {
 			req: &openapi.CorrectEvaluatorRecordOApiRequest{
 				WorkspaceID:       gptr.Of(workspaceID),
 				EvaluatorRecordID: gptr.Of(recordID),
+				Correction: &openapiEvaluator.Correction{
+					Score: gptr.Of(0.8),
+				},
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, recordSvc *servicemocks.MockEvaluatorRecordService) {
 				record := &entity.EvaluatorRecord{
