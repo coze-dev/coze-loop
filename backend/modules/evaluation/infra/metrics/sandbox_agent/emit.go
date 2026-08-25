@@ -36,6 +36,11 @@ const (
 	suffixStepFinished = "step_finished"
 	suffixStepDuration = "step_duration"
 
+	// e2e suffixes — 单 turn「一行数据」端到端生命周期，含失败重试与 async 回调重进
+	suffixE2EStarted  = "e2e_started"
+	suffixE2EFinished = "e2e_finished"
+	suffixE2EDuration = "e2e_duration"
+
 	tagExperimentID    = "experiment_id"
 	tagExperimentRunID = "experiment_run_id"
 	tagSpaceID         = "space_id"
@@ -49,6 +54,7 @@ const (
 	tagApplicationID   = "application_id"
 	tagItemKey         = "item_key"
 	tagDatasetKey      = "dataset_key"
+	tagTurnID          = "turn_id"
 	tagSuccess         = "success"
 	tagErrorType       = "error_type"
 	tagErrorCode       = "error_code"
@@ -72,6 +78,7 @@ func metricTagNames() []string {
 		tagApplicationID,
 		tagItemKey,
 		tagDatasetKey,
+		tagTurnID,
 		tagSuccess,
 		tagErrorType,
 		tagErrorCode,
@@ -172,6 +179,26 @@ func (m *metricsImpl) EmitStepFinished(tags eval_metrics.SandboxAgentStepTags, e
 		metrics.Timer(durationMS, metrics.WithSuffix(suffixStepDuration)))
 }
 
+func (m *metricsImpl) EmitE2EStarted(tags eval_metrics.SandboxAgentE2ETags) {
+	if m == nil || m.metric == nil {
+		return
+	}
+	m.metric.Emit(m.buildE2ETags(tags, "", "", 0),
+		metrics.Counter(1, metrics.WithSuffix(suffixE2EStarted)))
+}
+
+func (m *metricsImpl) EmitE2EFinished(tags eval_metrics.SandboxAgentE2ETags, err error, startTime time.Time) {
+	if m == nil || m.metric == nil {
+		return
+	}
+	success := successTag(err, 0)
+	errType := ClassifyErrorType(err, 0)
+	durMS := durationMS(startTime)
+	m.metric.Emit(m.buildE2ETags(tags, success, errType, 0),
+		metrics.Counter(1, metrics.WithSuffix(suffixE2EFinished)),
+		metrics.Timer(durMS, metrics.WithSuffix(suffixE2EDuration)))
+}
+
 func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, success, errType string, errCode int32) []metrics.T {
 	return []metrics.T{
 		{Name: tagSpaceID, Value: int64Tag(t.SpaceID)},
@@ -187,6 +214,7 @@ func (m *metricsImpl) buildInvokeTags(t eval_metrics.SandboxAgentInvokeTags, suc
 		{Name: tagApplicationID, Value: sanitizeTagValue(t.ApplicationID)},
 		{Name: tagItemKey, Value: sanitizeTagValue(t.ItemKey)},
 		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
+		{Name: tagTurnID, Value: tagValuePlaceholder},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
 		{Name: tagErrorCode, Value: errCodeTag(errCode)},
@@ -208,6 +236,7 @@ func (m *metricsImpl) buildExperimentTags(t eval_metrics.SandboxAgentExperimentT
 		{Name: tagApplicationID, Value: tagValuePlaceholder},
 		{Name: tagItemKey, Value: tagValuePlaceholder},
 		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
+		{Name: tagTurnID, Value: tagValuePlaceholder},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
 		{Name: tagErrorCode, Value: errCodeTag(errCode)},
@@ -229,6 +258,29 @@ func (m *metricsImpl) buildStepTags(t eval_metrics.SandboxAgentStepTags, success
 		{Name: tagApplicationID, Value: tagValuePlaceholder},
 		{Name: tagItemKey, Value: sanitizeTagValue(t.ItemKey)},
 		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
+		{Name: tagTurnID, Value: tagValuePlaceholder},
+		{Name: tagSuccess, Value: fallback(success)},
+		{Name: tagErrorType, Value: fallback(errType)},
+		{Name: tagErrorCode, Value: errCodeTag(errCode)},
+	}
+}
+
+func (m *metricsImpl) buildE2ETags(t eval_metrics.SandboxAgentE2ETags, success, errType string, errCode int32) []metrics.T {
+	return []metrics.T{
+		{Name: tagSpaceID, Value: int64Tag(t.SpaceID)},
+		{Name: tagExperimentID, Value: int64Tag(t.ExperimentID)},
+		{Name: tagExperimentRunID, Value: int64Tag(t.ExperimentRunID)},
+		{Name: tagItemID, Value: int64Tag(t.ItemID)},
+		{Name: tagInvokeID, Value: tagValuePlaceholder},
+		{Name: tagDatasetID, Value: int64Tag(t.DatasetID)},
+		{Name: tagDatasetVersion, Value: int64Tag(t.DatasetVersion)},
+		{Name: tagStepName, Value: tagValuePlaceholder},
+		{Name: tagTargetID, Value: int64Tag(t.TargetID)},
+		{Name: tagAgentName, Value: sanitizeTagValue(t.AgentName)},
+		{Name: tagApplicationID, Value: sanitizeTagValue(t.ApplicationID)},
+		{Name: tagItemKey, Value: sanitizeTagValue(t.ItemKey)},
+		{Name: tagDatasetKey, Value: sanitizeTagValue(t.DatasetKey)},
+		{Name: tagTurnID, Value: int64Tag(t.TurnID)},
 		{Name: tagSuccess, Value: fallback(success)},
 		{Name: tagErrorType, Value: fallback(errType)},
 		{Name: tagErrorCode, Value: errCodeTag(errCode)},
@@ -324,3 +376,5 @@ func (n *noopMetrics) EmitExperimentFinished(_ eval_metrics.SandboxAgentExperime
 func (n *noopMetrics) EmitStepStarted(_ eval_metrics.SandboxAgentStepTags) {}
 func (n *noopMetrics) EmitStepFinished(_ eval_metrics.SandboxAgentStepTags, _ error, _ int32, _ int64) {
 }
+func (n *noopMetrics) EmitE2EStarted(_ eval_metrics.SandboxAgentE2ETags)                        {}
+func (n *noopMetrics) EmitE2EFinished(_ eval_metrics.SandboxAgentE2ETags, _ error, _ time.Time) {}

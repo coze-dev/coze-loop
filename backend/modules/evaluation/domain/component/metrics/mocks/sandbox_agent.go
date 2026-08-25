@@ -21,6 +21,7 @@ import (
 type MockSandboxAgentMetrics struct {
 	ctrl     *gomock.Controller
 	recorder *MockSandboxAgentMetricsMockRecorder
+	isgomock struct{}
 }
 
 // MockSandboxAgentMetricsMockRecorder is the mock recorder for MockSandboxAgentMetrics.
@@ -40,74 +41,98 @@ func (m *MockSandboxAgentMetrics) EXPECT() *MockSandboxAgentMetricsMockRecorder 
 	return m.recorder
 }
 
-// EmitExperimentFinished mocks base method.
-func (m *MockSandboxAgentMetrics) EmitExperimentFinished(arg0 metrics.SandboxAgentExperimentTags, arg1 error, arg2, arg3 time.Time) {
+// EmitE2EFinished mocks base method.
+func (m *MockSandboxAgentMetrics) EmitE2EFinished(tags metrics.SandboxAgentE2ETags, err error, startTime time.Time) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EmitExperimentFinished", arg0, arg1, arg2, arg3)
+	m.ctrl.Call(m, "EmitE2EFinished", tags, err, startTime)
+}
+
+// EmitE2EFinished indicates an expected call of EmitE2EFinished.
+func (mr *MockSandboxAgentMetricsMockRecorder) EmitE2EFinished(tags, err, startTime any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitE2EFinished", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitE2EFinished), tags, err, startTime)
+}
+
+// EmitE2EStarted mocks base method.
+func (m *MockSandboxAgentMetrics) EmitE2EStarted(tags metrics.SandboxAgentE2ETags) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EmitE2EStarted", tags)
+}
+
+// EmitE2EStarted indicates an expected call of EmitE2EStarted.
+func (mr *MockSandboxAgentMetricsMockRecorder) EmitE2EStarted(tags any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitE2EStarted", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitE2EStarted), tags)
+}
+
+// EmitExperimentFinished mocks base method.
+func (m *MockSandboxAgentMetrics) EmitExperimentFinished(tags metrics.SandboxAgentExperimentTags, err error, startTime, endTime time.Time) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EmitExperimentFinished", tags, err, startTime, endTime)
 }
 
 // EmitExperimentFinished indicates an expected call of EmitExperimentFinished.
-func (mr *MockSandboxAgentMetricsMockRecorder) EmitExperimentFinished(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockSandboxAgentMetricsMockRecorder) EmitExperimentFinished(tags, err, startTime, endTime any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitExperimentFinished", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitExperimentFinished), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitExperimentFinished", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitExperimentFinished), tags, err, startTime, endTime)
 }
 
 // EmitExperimentStarted mocks base method.
-func (m *MockSandboxAgentMetrics) EmitExperimentStarted(arg0 metrics.SandboxAgentExperimentTags) {
+func (m *MockSandboxAgentMetrics) EmitExperimentStarted(tags metrics.SandboxAgentExperimentTags) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EmitExperimentStarted", arg0)
+	m.ctrl.Call(m, "EmitExperimentStarted", tags)
 }
 
 // EmitExperimentStarted indicates an expected call of EmitExperimentStarted.
-func (mr *MockSandboxAgentMetricsMockRecorder) EmitExperimentStarted(arg0 any) *gomock.Call {
+func (mr *MockSandboxAgentMetricsMockRecorder) EmitExperimentStarted(tags any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitExperimentStarted", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitExperimentStarted), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitExperimentStarted", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitExperimentStarted), tags)
 }
 
 // EmitInvokeFinished mocks base method.
-func (m *MockSandboxAgentMetrics) EmitInvokeFinished(arg0 metrics.SandboxAgentInvokeTags, arg1 error, arg2 int32, arg3 time.Time) {
+func (m *MockSandboxAgentMetrics) EmitInvokeFinished(tags metrics.SandboxAgentInvokeTags, err error, errCode int32, submitTime time.Time) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EmitInvokeFinished", arg0, arg1, arg2, arg3)
+	m.ctrl.Call(m, "EmitInvokeFinished", tags, err, errCode, submitTime)
 }
 
 // EmitInvokeFinished indicates an expected call of EmitInvokeFinished.
-func (mr *MockSandboxAgentMetricsMockRecorder) EmitInvokeFinished(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockSandboxAgentMetricsMockRecorder) EmitInvokeFinished(tags, err, errCode, submitTime any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitInvokeFinished", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitInvokeFinished), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitInvokeFinished", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitInvokeFinished), tags, err, errCode, submitTime)
 }
 
 // EmitInvokeStarted mocks base method.
-func (m *MockSandboxAgentMetrics) EmitInvokeStarted(arg0 metrics.SandboxAgentInvokeTags) {
+func (m *MockSandboxAgentMetrics) EmitInvokeStarted(tags metrics.SandboxAgentInvokeTags) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EmitInvokeStarted", arg0)
+	m.ctrl.Call(m, "EmitInvokeStarted", tags)
 }
 
 // EmitInvokeStarted indicates an expected call of EmitInvokeStarted.
-func (mr *MockSandboxAgentMetricsMockRecorder) EmitInvokeStarted(arg0 any) *gomock.Call {
+func (mr *MockSandboxAgentMetricsMockRecorder) EmitInvokeStarted(tags any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitInvokeStarted", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitInvokeStarted), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitInvokeStarted", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitInvokeStarted), tags)
 }
 
 // EmitStepFinished mocks base method.
-func (m *MockSandboxAgentMetrics) EmitStepFinished(arg0 metrics.SandboxAgentStepTags, arg1 error, arg2 int32, arg3 int64) {
+func (m *MockSandboxAgentMetrics) EmitStepFinished(tags metrics.SandboxAgentStepTags, err error, errCode int32, durationMS int64) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EmitStepFinished", arg0, arg1, arg2, arg3)
+	m.ctrl.Call(m, "EmitStepFinished", tags, err, errCode, durationMS)
 }
 
 // EmitStepFinished indicates an expected call of EmitStepFinished.
-func (mr *MockSandboxAgentMetricsMockRecorder) EmitStepFinished(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockSandboxAgentMetricsMockRecorder) EmitStepFinished(tags, err, errCode, durationMS any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitStepFinished", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitStepFinished), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitStepFinished", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitStepFinished), tags, err, errCode, durationMS)
 }
 
 // EmitStepStarted mocks base method.
-func (m *MockSandboxAgentMetrics) EmitStepStarted(arg0 metrics.SandboxAgentStepTags) {
+func (m *MockSandboxAgentMetrics) EmitStepStarted(tags metrics.SandboxAgentStepTags) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EmitStepStarted", arg0)
+	m.ctrl.Call(m, "EmitStepStarted", tags)
 }
 
 // EmitStepStarted indicates an expected call of EmitStepStarted.
-func (mr *MockSandboxAgentMetricsMockRecorder) EmitStepStarted(arg0 any) *gomock.Call {
+func (mr *MockSandboxAgentMetricsMockRecorder) EmitStepStarted(tags any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitStepStarted", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitStepStarted), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitStepStarted", reflect.TypeOf((*MockSandboxAgentMetrics)(nil).EmitStepStarted), tags)
 }

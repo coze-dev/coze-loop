@@ -120,6 +120,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 				tt.evalAsyncRepo,
 				tt.evalSetItemSvc,
 				nil,
+				nil,
 			)
 			assert.NotNil(t, inst)
 		})
