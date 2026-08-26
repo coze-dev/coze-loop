@@ -822,6 +822,51 @@ func (e *EvaluatorServiceImpl) CreateSkippedEvaluatorRecord(ctx context.Context,
 	return recordDO, nil
 }
 
+// resolveEvaluatorSpaceID 返回评估器执行与落库所用的空间: 非 builtin 评估器恒用它自己的归属空间
+// (跨空间调用时即来源空间; 模型 / Skill / 沙箱配置 / 空间服务账号与异步回写身份必须同属一个空间,
+// 否则沙箱或用户 PSM 回写时的 workspace_id 与记录空间不符, 记录会永久停在 AsyncInvoking);
+// builtin 预置评估器仍用调用方空间, 它的模型须在调用方空间解析。
+// 同空间调用与 builtin 场景取值等于 callerSpaceID, 故存量行为不变。
+func resolveEvaluatorSpaceID(evaluator *entity.Evaluator, callerSpaceID int64) int64 {
+	if evaluator == nil || evaluator.Builtin {
+		return callerSpaceID
+	}
+	return evaluator.SpaceID
+}
+
+// checkEvaluatorSpaceAccess 领域层的来源空间一致性校验: 未声明共享时要求评估器属于调用方空间;
+// 声明共享时要求它属于所声明的来源空间。白名单授权由 app 层 AuthorizeRead 完成,
+// 这里只保证"声明"与"事实"一致, 避免绕过 app 层的调用方拿到跨空间执行能力。
+func checkEvaluatorSpaceAccess(evaluator *entity.Evaluator, callerSpaceID int64, opt *entity.SharedResourceOption) error {
+	if evaluator == nil || evaluator.Builtin {
+		return nil
+	}
+	if opt.Enabled() {
+		if evaluator.SpaceID == *opt.SourceSpaceID {
+			return nil
+		}
+		return errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg("evaluator_version does not belong to declared source space"))
+	}
+	if evaluator.SpaceID != callerSpaceID {
+		return errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version not found in current space"))
+	}
+	return nil
+}
+
+// withCallerSpaceExt 跨空间调用时在记录 ext 里留下调用方空间: 记录归资源空间,
+// 资源方排障的第一个问题是"这是谁跑的", 而这个信息事后无从反查。
+func withCallerSpaceExt(ext map[string]string, callerSpaceID, resourceSpaceID int64) map[string]string {
+	if callerSpaceID == resourceSpaceID {
+		return ext
+	}
+	merged := make(map[string]string, len(ext)+1)
+	for k, v := range ext {
+		merged[k] = v
+	}
+	merged[consts.EvaluatorRecordExtKeyCallerSpaceID] = strconv.FormatInt(callerSpaceID, 10)
+	return merged
+}
+
 // RunEvaluator evaluator_version 运行
 func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 	logs.CtxInfo(ctx, "[RunEvaluator] RunEvaluator request: %v", request)
@@ -834,15 +879,18 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version version not found"))
 	}
 	evaluatorDO := evaluatorDOList[0]
-	// 如果是预置评估器（Builtin），直接执行后续流程
-	// 如果不是预置评估器，则根据 space_id 判断是否当前空间的 Evaluator
-	if !evaluatorDO.Builtin {
-		if evaluatorDO.SpaceID != request.SpaceID {
-			return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version not found in current space"))
-		}
+	if err := checkEvaluatorSpaceAccess(evaluatorDO, request.SpaceID, request.SharedOption); err != nil {
+		return nil, err
 	}
+	resourceSpaceID := resolveEvaluatorSpaceID(evaluatorDO, request.SpaceID)
 	if allow := e.limiter.AllowInvoke(ctx, request.SpaceID); !allow {
 		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
+	}
+	// 资源空间自己的闸门: 评估器级限流按单个 evaluator.ID 计, 调用方并发打多个评估器可以绕过它
+	if resourceSpaceID != request.SpaceID {
+		if allow := e.limiter.AllowInvoke(ctx, resourceSpaceID); !allow {
+			return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to resource space rate limit"))
+		}
 	}
 	if allow := e.plainRateLimiter.AllowInvokeWithKeyLimit(ctx, fmt.Sprintf("run_evaluator:%v", evaluatorDO.ID), evaluatorDO.GetRateLimit()); !allow {
 		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to evaluator-level rate limit"))
@@ -854,7 +902,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 	if err = evaluatorSourceService.PreHandle(ctx, evaluatorDO); err != nil {
 		return nil, err
 	}
-	outputData, runStatus, traceID := evaluatorSourceService.Run(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, request.DisableTracing)
+	outputData, runStatus, traceID := evaluatorSourceService.Run(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, resourceSpaceID, request.DisableTracing)
 	// 统一处理评估器输出数据中的分数，保留两位小数
 	roundEvaluatorOutputScore(outputData)
 	if runStatus == entity.EvaluatorRunStatusFail {
@@ -868,7 +916,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 	logID := logs.GetLogID(ctx)
 	recordDO := &entity.EvaluatorRecord{
 		ID:                  recordID,
-		SpaceID:             request.SpaceID,
+		SpaceID:             resourceSpaceID,
 		ExperimentID:        request.ExperimentID,
 		ExperimentRunID:     request.ExperimentRunID,
 		ItemID:              request.ItemID,
@@ -881,7 +929,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 		EvaluatorInputData:  request.InputData,
 		EvaluatorOutputData: outputData,
 		Status:              runStatus,
-		Ext:                 request.Ext,
+		Ext:                 withCallerSpaceExt(request.Ext, request.SpaceID, resourceSpaceID),
 
 		BaseInfo: &entity.BaseInfo{
 			CreatedBy: &entity.UserInfo{
@@ -980,11 +1028,18 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 	if !evaluatorDO.IsAsync() {
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator does not support async run"))
 	}
-	if !evaluatorDO.Builtin && evaluatorDO.SpaceID != request.SpaceID {
-		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version not found in current space"))
+	if err := checkEvaluatorSpaceAccess(evaluatorDO, request.SpaceID, request.SharedOption); err != nil {
+		return nil, err
 	}
+	resourceSpaceID := resolveEvaluatorSpaceID(evaluatorDO, request.SpaceID)
 	if allow := e.limiter.AllowInvoke(ctx, request.SpaceID); !allow {
 		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
+	}
+	// 资源空间自己的闸门: 评估器级限流按单个 evaluator.ID 计, 调用方并发打多个评估器可以绕过它
+	if resourceSpaceID != request.SpaceID {
+		if allow := e.limiter.AllowInvoke(ctx, resourceSpaceID); !allow {
+			return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to resource space rate limit"))
+		}
 	}
 	if allow := e.plainRateLimiter.AllowInvokeWithKeyLimit(ctx, fmt.Sprintf("async_run_evaluator:%v", evaluatorDO.ID), evaluatorDO.GetRateLimit()); !allow {
 		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to evaluator-level rate limit"))
@@ -1002,7 +1057,7 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	recordDO := &entity.EvaluatorRecord{
 		ID:                  invokeID,
-		SpaceID:             request.SpaceID,
+		SpaceID:             resourceSpaceID,
 		ExperimentID:        request.ExperimentID,
 		ExperimentRunID:     request.ExperimentRunID,
 		ItemID:              request.ItemID,
@@ -1014,7 +1069,7 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		EvaluatorInputData:  request.InputData,
 		EvaluatorOutputData: &entity.EvaluatorOutputData{},
 		Status:              entity.EvaluatorRunStatusAsyncInvoking,
-		Ext:                 request.Ext,
+		Ext:                 withCallerSpaceExt(request.Ext, request.SpaceID, resourceSpaceID),
 		BaseInfo: &entity.BaseInfo{
 			CreatedBy: &entity.UserInfo{UserID: gptr.Of(userIDInContext)},
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(userIDInContext)},
@@ -1054,7 +1109,7 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		return e.failAsyncEvaluatorRecord(ctx, recordDO, err)
 	}
 
-	asyncRunExt, traceID, err := evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+	asyncRunExt, traceID, err := evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, resourceSpaceID, invokeID)
 	if err != nil {
 		logs.CtxError(ctx, "[AsyncRunEvaluator] AsyncRun fail, invokeID: %d, err: %v", invokeID, err)
 		return e.failAsyncEvaluatorRecord(ctx, recordDO, err)

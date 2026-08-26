@@ -1551,6 +1551,11 @@ func (p *ListEvaluatorVersionsOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *BatchGetEvaluatorVersionsOApiRequest) IsValid() error {
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -1624,6 +1629,11 @@ func (p *RunEvaluatorOApiRequest) IsValid() error {
 			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
 		}
 	}
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -1666,6 +1676,11 @@ func (p *AsyncRunEvaluatorOApiRequest) IsValid() error {
 	if p.EvaluatorRunConf != nil {
 		if err := p.EvaluatorRunConf.IsValid(); err != nil {
 			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
+		}
+	}
+	if p.SharedOption != nil {
+		if err := p.SharedOption.IsValid(); err != nil {
+			return fmt.Errorf("field SharedOption not valid, %w", err)
 		}
 	}
 	if p.Extra != nil {

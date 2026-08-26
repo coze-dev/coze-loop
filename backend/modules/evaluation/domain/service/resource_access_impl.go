@@ -195,6 +195,8 @@ func mapAuthEntityType(resourceType string) (rpc.AuthEntityType, error) {
 		return rpc.AuthEntityType_EvaluationSet, nil
 	case entity.SharedResourceTypeEvalTarget:
 		return rpc.AuthEntityType_EvaluationTarget, nil
+	case entity.SharedResourceTypeEvaluator:
+		return rpc.AuthEntityType_Evaluator, nil
 	default:
 		return "", errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported resource type"))
 	}

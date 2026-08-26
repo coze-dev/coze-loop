@@ -47,4 +47,7 @@ type IConfiger interface {
 	// BuildEvalExt 构造评测记录（EvaluatorRecord/EvalTargetRecord/ExptTurnResultRunLog）落库时的 ext 扩展字段。
 	// turn 为评测集中的轮次数据（部分调用点不可用时为 nil），spaceID 为空间 id。默认空实现返回 nil。
 	BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string
+	// GetCrossSpaceRecordReadEnforce 跨空间读取评估记录且未命中共享白名单时是否拒绝。
+	// 未配置默认 false：只告警放行，用于观察存量调用后再收紧。
+	GetCrossSpaceRecordReadEnforce(ctx context.Context) bool
 }
