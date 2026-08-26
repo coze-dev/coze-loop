@@ -61,6 +61,7 @@ func newListSpansRepo(t *testing.T, ctrl *gomock.Controller, spansDao dao.ISpans
 		traceConfigMock,
 		&mockStorageProvider{},
 		nil, nil, nil, nil,
+		nil,
 		WithTraceStorageDaos("ck", spansDao, daomock.NewMockIAnnotationDao(ctrl)),
 	)
 	assert.NoError(t, err)
