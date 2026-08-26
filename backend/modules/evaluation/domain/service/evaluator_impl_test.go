@@ -849,6 +849,30 @@ func TestEvaluatorServiceImpl_ListEvaluator(t *testing.T) {
 			expectedTotal: 0,
 			expectedErr:   nil,
 		},
+		{
+			name: "成功 - SearchDescription 透传到 repo 请求",
+			request: &entity.ListEvaluatorRequest{
+				SpaceID:           1,
+				SearchDescription: "desc-kw",
+				WithVersion:       false,
+			},
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				expectedRepoReq := &repo.ListEvaluatorRequest{
+					SpaceID:           1,
+					SearchDescription: "desc-kw",
+					EvaluatorType:     []entity.EvaluatorType{},
+					OrderBy:           []*entity.OrderBy{{Field: ptr.Of("updated_at"), IsAsc: ptr.Of(false)}},
+				}
+				mockRepo.EXPECT().ListEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
+					&repo.ListEvaluatorResponse{
+						Evaluators: []*entity.Evaluator{},
+						TotalCount: 0,
+					}, nil)
+			},
+			expectedList:  []*entity.Evaluator{},
+			expectedTotal: 0,
+			expectedErr:   nil,
+		},
 	}
 
 	for _, tc := range testCases {

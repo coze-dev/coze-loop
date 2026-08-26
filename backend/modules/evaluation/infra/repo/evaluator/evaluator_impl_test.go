@@ -1797,6 +1797,63 @@ func TestEvaluatorRepoImpl_ListEvaluator(t *testing.T) {
 			expectedResult: nil,
 			expectedError:  assert.AnError,
 		},
+		{
+			name: "SearchDescription 透传到 DAO",
+			request: &repo.ListEvaluatorRequest{
+				SpaceID:           1,
+				SearchName:        "test",
+				SearchDescription: "desc-kw",
+				CreatorIDs:        []int64{1},
+				EvaluatorType:     []entity.EvaluatorType{entity.EvaluatorTypePrompt},
+				PageSize:          10,
+				PageNum:           1,
+				OrderBy: []*entity.OrderBy{
+					{
+						Field: gptr.Of("updated_at"),
+						IsAsc: gptr.Of(false),
+					},
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorDAO.EXPECT().
+					ListEvaluator(gomock.Any(), &mysql.ListEvaluatorRequest{
+						SpaceID:           1,
+						SearchName:        "test",
+						SearchDescription: "desc-kw",
+						CreatorIDs:        []int64{1},
+						EvaluatorType:     []int32{int32(entity.EvaluatorTypePrompt)},
+						PageSize:          10,
+						PageNum:           1,
+						OrderBy: []*mysql.OrderBy{
+							{
+								Field:  "updated_at",
+								ByDesc: true,
+							},
+						},
+					}).
+					Return(&mysql.ListEvaluatorResponse{
+						TotalCount: 1,
+						Evaluators: []*model.Evaluator{
+							{
+								ID:            1,
+								EvaluatorType: int32(entity.EvaluatorTypePrompt),
+								Name:          gptr.Of("test"),
+							},
+						},
+					}, nil)
+			},
+			expectedResult: &repo.ListEvaluatorResponse{
+				TotalCount: 1,
+				Evaluators: []*entity.Evaluator{
+					{
+						ID:            1,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						Name:          "test",
+					},
+				},
+			},
+			expectedError: nil,
+		},
 	}
 
 	for _, tt := range tests {
