@@ -62,18 +62,17 @@ type TraceCKCfg struct {
 }
 
 type TableCfg struct {
-	SpanTable    string   `mapstructure:"span_table" json:"span_table"`
-	AnnoTable    string   `mapstructure:"anno_table" json:"anno_table"`
-	SupportShard bool     `mapstructure:"support_shard" json:"support_shard"`
-	ShardList    []string `mapstructure:"shard_list" json:"shard_list"`
+	SpanTable    string                      `mapstructure:"span_table" json:"span_table"`
+	AnnoTable    string                      `mapstructure:"anno_table" json:"anno_table"`
+	SupportShard bool                        `mapstructure:"support_shard" json:"support_shard"`
+	ShardList    []string                    `mapstructure:"shard_list" json:"shard_list"`
+	ShardConfig  map[string][]ShardEntry     `mapstructure:"shard_config" json:"shard_config"`
 }
 
 type ShardEntry struct {
 	SpaceID    string `mapstructure:"space_id" json:"space_id"`
 	CreateTime string `mapstructure:"create_time" json:"create_time"`
 }
-
-type TenantShardConfig map[string]map[string][]ShardEntry
 
 type ClipConfig struct {
 	SupportTenantFilter bool `mapstructure:"support_tenant_filter" json:"support_tenant_filter"`
@@ -276,7 +275,6 @@ type ITraceConfig interface {
 	GetBackfillConfig(ctx context.Context) *BackfillConfig
 	GetReflowInsertConfig(ctx context.Context) *ReflowInsertConfig
 	GetTrajectoryMetadataConfig(ctx context.Context) *TrajectoryMetadataConfig
-	GetTenantShardConfig(ctx context.Context) (TenantShardConfig, error)
 	GetTraceTimeRangeConfig(ctx context.Context) map[string]string
 
 	conf.IConfigLoader

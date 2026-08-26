@@ -721,10 +721,7 @@ func (t *TraceRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, t
 		return "", fmt.Errorf("no table config found for tenant %s with ttl %s", tenant, ttl)
 	}
 	if tableCfg.SupportShard {
-		shard, err := t.resolveShardForSpace(ctx, tenant, workspaceID)
-		if err != nil {
-			return "", err
-		}
+		shard := resolveShardForSpace(tableCfg, workspaceID)
 		return shardTableName(tableCfg.SpanTable, shard), nil
 	}
 	return tableCfg.SpanTable, nil
@@ -743,10 +740,7 @@ func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, t
 		return "", nil
 	}
 	if tableCfg.SupportShard {
-		shard, err := t.resolveShardForSpace(ctx, tenant, workspaceID)
-		if err != nil {
-			return "", err
-		}
+		shard := resolveShardForSpace(tableCfg, workspaceID)
 		return shardTableName(tableCfg.AnnoTable, shard), nil
 	}
 	return tableCfg.AnnoTable, nil
@@ -845,22 +839,16 @@ func shardTableName(baseTable, shard string) string {
 	return baseTable + "_" + shard
 }
 
-func (t *TraceRepoImpl) resolveShardForSpace(ctx context.Context, tenant, workspaceID string) (string, error) {
-	shardCfg, err := t.traceConfig.GetTenantShardConfig(ctx)
-	if err != nil {
-		logs.CtxError(ctx, "fail to get tenant shard config, %v", err)
-		return "", err
+func resolveShardForSpace(tableCfg config.TableCfg, workspaceID string) string {
+	if len(tableCfg.ShardConfig) == 0 {
+		return ""
 	}
-	tenantShards, ok := shardCfg[tenant]
-	if !ok {
-		return "", nil
-	}
-	for shardID, entries := range tenantShards {
+	for shardID, entries := range tableCfg.ShardConfig {
 		for _, entry := range entries {
 			if entry.SpaceID == workspaceID {
-				return shardID, nil
+				return shardID
 			}
 		}
 	}
-	return "", nil
+	return ""
 }
