@@ -2306,6 +2306,61 @@ func Test_sendItemComplete_publish(t *testing.T) {
 	})
 }
 
+// Test_recordEvalItemRunLogs_publishFailInterrupts 锁定本次 fix 的核心不变量:
+// item-complete(success) 发送失败时, recordEvalItemRunLogs 循环必须在落库之前 return err 中断本次调度,
+// 使 item 停留在 complete(未推进到 Resulted), 下次调度重扫 completeItems 补发。
+// 因此断言发失败时 RecordItemRunLogs(落库/推进状态) 调用 0 次; 对照发成功时正常落库 1 次。
+// 防回归: 未来若把 return err 改成 continue、或调换"先发送后落库"顺序, 本用例会失败。
+func Test_recordEvalItemRunLogs_publishFailInterrupts(t *testing.T) {
+	// 单集实验, resolveItemCompleteMeta 走主集路径, 需 evaluationSetItemService 返回该 item 的 meta(非 nil), 才会真正触发发送。
+	newSvc := func(ctrl *gomock.Controller, pubErr error) (*ExptSchedulerImpl, *svcmocks.MockExptResultService, *entitymocks.MockExptSchedulerMode) {
+		setItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+		setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).
+			Return([]*entity.EvaluationSetItem{{ItemID: 10, ItemKey: "k10", EvaluationSetID: 70}}, nil)
+		resultSvc := svcmocks.NewMockExptResultService(ctrl)
+		publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+		mode := entitymocks.NewMockExptSchedulerMode(ctrl)
+		return &ExptSchedulerImpl{
+			itemCompletePublisher:    &stubItemCompletePublisher{err: pubErr},
+			evaluationSetItemService: setItemSvc,
+			exptItemRefRepo:          mock_repo.NewMockIExptItemRefRepo(ctrl),
+			ResultSvc:                resultSvc,
+			Publisher:                publisher,
+		}, resultSvc, mode
+	}
+
+	expt := &entity.Experiment{EvalSet: &entity.EvaluationSet{ID: 70, EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 80}}}
+	event := &entity.ExptScheduleEvent{SpaceID: 9, ExptID: 100, ExptRunID: 200}
+	items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Success}}
+
+	t.Run("publish fail -> 落库前中断, RecordItemRunLogs 0 次", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc, resultSvc, mode := newSvc(ctrl, assert.AnError)
+		resultSvc.EXPECT().RecordItemRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		mode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+		err := svc.recordEvalItemRunLogs(context.Background(), event, items, mode, expt)
+		assert.Error(t, err) // 发失败 error 上抛, 调用方据此中断本次调度
+	})
+
+	t.Run("publish ok -> 正常落库, RecordItemRunLogs 1 次", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc, resultSvc, mode := newSvc(ctrl, nil)
+		resultSvc.EXPECT().RecordItemRunLogs(gomock.Any(), int64(100), int64(200), int64(10), int64(9), gomock.Any()).
+			Return(nil, nil).Times(1)
+		mode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+		// 循环结束后的批量收尾
+		resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+		svc.Publisher.(*eventmocks.MockExptEventPublisher).EXPECT().
+			PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+		err := svc.recordEvalItemRunLogs(context.Background(), event, items, mode, expt)
+		assert.NoError(t, err)
+	})
+}
+
 // TestExptSchedulerImpl_terminateZombieEvalTargetRecords_CrossSpace 覆盖 zombie 兜底销毁沙箱时
 // 传入 TerminateAsyncRecordsAndDestroySandbox 的 spaceID 解析：
 //   - Expt.TargetSpaceID > 0 → 用来源空间 (跨空间共享评测对象), 避免 DAO SpaceID.Eq 过滤把 record 过滤空
