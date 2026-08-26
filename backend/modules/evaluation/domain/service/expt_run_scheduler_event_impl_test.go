@@ -891,7 +891,14 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					[]int64{1, 3},
 					gomock.Any(),
-				).Return(nil).Times(1)
+				).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any) error {
+					// 与 sweep 路径同理: 主表只补 err_msg, 不预写 status=Fail,
+					// 让 RecordItemRunLogs 走正常 statsCntOp diff.
+					_, hasStatus := ufields["status"]
+					assert.False(t, hasStatus, "UpdateItemsResult must not pre-write status on zombie path")
+					assert.NotNil(t, ufields["err_msg"])
+					return nil
+				}).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
 					gomock.Any(),
 					int64(3),
@@ -1883,7 +1890,14 @@ func TestExptSchedulerImpl_sweepTerminatedSandboxItems(t *testing.T) {
 				return nil
 			})
 		mockItemRepo.EXPECT().UpdateItemsResult(gomock.Any(), int64(3), int64(1), []int64{10}, gomock.Any()).
-			Return(nil)
+			DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any) error {
+				// 主表只补 err_msg, 不预写 status=Fail; status 由后续 RecordItemRunLogs
+				// 从 itemRunLog.Status 统一写入, 保证 statsCntOp 里 Processing 的减项不丢.
+				_, hasStatus := ufields["status"]
+				assert.False(t, hasStatus, "UpdateItemsResult must not pre-write status on sweep-terminated path")
+				assert.NotEmpty(t, ufields["err_msg"])
+				return nil
+			})
 		mockTurnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), int64(3), int64(1), int64(2), []int64{10}, entity.TurnRunState_Fail).
 			Return(nil)
 
