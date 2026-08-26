@@ -136,10 +136,10 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 		// 中间失败重试轮次不 emit, 由下次事件重进时的终态轮次统一 emit; duration 起点 = event.CreateAt,
 		// 横跨所有重试。
 		if turnErr := turnRunRes.GetEvalErr(); turnErr != nil {
-			e.emitSandboxAgentE2EFinishedIfTerminal(ctx, etec, eiec.Event, turnErr)
+			e.emitSandboxAgentE2EFinishedIfTerminal(ctx, etec, eiec.Event, turnRunRes, turnErr)
 			return false, turnErr
 		}
-		e.emitSandboxAgentE2EFinishedIfTerminal(ctx, etec, eiec.Event, nil)
+		e.emitSandboxAgentE2EFinishedIfTerminal(ctx, etec, eiec.Event, turnRunRes, nil)
 
 		history = append(history, buildHistoryMessage(ctx, turnRunRes)...)
 	}
@@ -710,7 +710,7 @@ func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EStarted(ctx context.Context
 // emitSandboxAgentE2EFinishedIfTerminal 只在该 turn 达到终态时打点 e2e_finished + e2e_duration。
 // 终态 = evalErr==nil (成功) 或 evalErrNeedRetry 判为不再重试 (最后一次失败)。中间失败重试轮次不打点。
 // duration 起点 = event.CreateAt (首次入库时间, 跨所有重试保持不变), 因此终态一次 duration 涵盖整条端到端链路。
-func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EFinishedIfTerminal(ctx context.Context, etec *entity.ExptTurnEvalCtx, event *entity.ExptItemEvalEvent, evalErr error) {
+func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EFinishedIfTerminal(ctx context.Context, etec *entity.ExptTurnEvalCtx, event *entity.ExptItemEvalEvent, turnRunRes *entity.ExptTurnRunResult, evalErr error) {
 	if e == nil || e.sandboxAgentMetrics == nil {
 		return
 	}
@@ -732,14 +732,41 @@ func (e *ExptItemEvalCtxExecutor) emitSandboxAgentE2EFinishedIfTerminal(ctx cont
 	if event.CreateAt > 0 {
 		startTime = time.Unix(event.CreateAt, 0)
 	}
-	// 从 evalErr 中抽 status code 作为 error_code tag; 非 StatusError 或 nil 时为 0 走占位符 `-`.
-	var errCode int32
-	if evalErr != nil {
-		if se, ok := errorx.FromStatusError(evalErr); ok {
-			errCode = se.Code()
-		}
-	}
+	// 抽 error_code tag:
+	//   1) 优先从 evalErr 走 FromStatusError (CallTarget / CallEvaluators 直接返回 StatusError 的路径).
+	//   2) 否则回落到 turnRunRes.TargetResult.EvalTargetRunError.Code —— storeTurnRunResult 里
+	//      target 失败会被包成 errno.NewTargetResultErr (ErrImpl code=11) 丢掉真实码, 只有原始 record 里还留着.
+	//   3) 再否则查 turnRunRes.EvaluatorResults[*].EvaluatorRunError.Code (评估器失败同理丢码).
+	//   均无 → 走 0 (占位符 `-`).
+	errCode := extractSandboxAgentErrCode(evalErr, turnRunRes)
 	logs.CtxInfo(ctx, "[sandbox_agent_metrics] emit e2e_finished, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, success=%v, err_code=%v",
 		tags.ExperimentID, tags.ExperimentRunID, tags.ItemID, tags.TurnID, evalErr == nil, errCode)
 	e.sandboxAgentMetrics.EmitE2EFinished(tags, evalErr, errCode, startTime)
+}
+
+// extractSandboxAgentErrCode 从 evalErr / turnRunRes 中抽出用于打点的错误码.
+// 见 emitSandboxAgentE2EFinishedIfTerminal 中的三段回落说明.
+func extractSandboxAgentErrCode(evalErr error, turnRunRes *entity.ExptTurnRunResult) int32 {
+	if evalErr != nil {
+		if se, ok := errorx.FromStatusError(evalErr); ok {
+			return se.Code()
+		}
+	}
+	if turnRunRes == nil {
+		return 0
+	}
+	if tr := turnRunRes.TargetResult; tr != nil && tr.EvalTargetOutputData != nil && tr.EvalTargetOutputData.EvalTargetRunError != nil {
+		if code := tr.EvalTargetOutputData.EvalTargetRunError.Code; code != 0 {
+			return code
+		}
+	}
+	for _, er := range turnRunRes.EvaluatorResults {
+		if er == nil || er.EvaluatorOutputData == nil || er.EvaluatorOutputData.EvaluatorRunError == nil {
+			continue
+		}
+		if code := er.EvaluatorOutputData.EvaluatorRunError.Code; code != 0 {
+			return code
+		}
+	}
+	return 0
 }
