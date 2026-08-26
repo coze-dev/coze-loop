@@ -3177,10 +3177,15 @@ func (r *TraceServiceImpl) listThreadChatSpans(ctx context.Context, req *ListThr
 			return nil, nil, err
 		}
 		spans := reverseSpanList(listResp.Spans)
-		return spans, &ListThreadChatResponse{
+		resp := &ListThreadChatResponse{
 			PrevPageToken: listResp.PageToken,
 			PrevHasMore:   listResp.HasMore,
-		}, nil
+		}
+		if len(spans) > 0 {
+			newest := spans[len(spans)-1]
+			resp.NextPageToken = pagetoken.Encode(newest.StartTime, newest.SpanID)
+		}
+		return spans, resp, nil
 	}
 
 	// 普通首页 / 向后翻页（asc keyset，现状行为）。
@@ -3195,6 +3200,12 @@ func (r *TraceServiceImpl) listThreadChatSpans(ctx context.Context, req *ListThr
 	resp := &ListThreadChatResponse{
 		NextPageToken: listResp.PageToken,
 		HasMore:       listResp.HasMore,
+	}
+	// 向后翻页（消费了 PageToken）说明前方有历史；首端(时间序最早)编码为 prev 游标。首页无 PageToken 则不给 prev。
+	if req.PageToken != "" && len(listResp.Spans) > 0 {
+		oldest := listResp.Spans[0]
+		resp.PrevPageToken = pagetoken.Encode(oldest.StartTime, oldest.SpanID)
+		resp.PrevHasMore = true
 	}
 
 	return listResp.Spans, resp, nil
