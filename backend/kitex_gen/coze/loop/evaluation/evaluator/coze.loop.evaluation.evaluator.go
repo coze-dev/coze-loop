@@ -22,10 +22,12 @@ type ListEvaluatorsRequest struct {
 	Builtin *bool `thrift:"builtin,11,optional" frugal:"11,optional,bool" form:"builtin" json:"builtin,omitempty"`
 	// 筛选器选项
 	FilterOption *evaluator.EvaluatorFilterOption `thrift:"filter_option,12,optional" frugal:"12,optional,evaluator.EvaluatorFilterOption" json:"filter_option" form:"filter_option" `
-	PageSize     *int32                           `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
-	PageNumber   *int32                           `thrift:"page_number,102,optional" frugal:"102,optional,i32" form:"page_number" json:"page_number,omitempty"`
-	OrderBys     []*common.OrderBy                `thrift:"order_bys,103,optional" frugal:"103,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty"`
-	Base         *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 按描述模糊搜索（忽略大小写 LIKE）
+	SearchDescription *string           `thrift:"search_description,13,optional" frugal:"13,optional,string" form:"search_description" json:"search_description,omitempty"`
+	PageSize          *int32            `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	PageNumber        *int32            `thrift:"page_number,102,optional" frugal:"102,optional,i32" form:"page_number" json:"page_number,omitempty"`
+	OrderBys          []*common.OrderBy `thrift:"order_bys,103,optional" frugal:"103,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty"`
+	Base              *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListEvaluatorsRequest() *ListEvaluatorsRequest {
@@ -114,6 +116,18 @@ func (p *ListEvaluatorsRequest) GetFilterOption() (v *evaluator.EvaluatorFilterO
 	return p.FilterOption
 }
 
+var ListEvaluatorsRequest_SearchDescription_DEFAULT string
+
+func (p *ListEvaluatorsRequest) GetSearchDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSearchDescription() {
+		return ListEvaluatorsRequest_SearchDescription_DEFAULT
+	}
+	return *p.SearchDescription
+}
+
 var ListEvaluatorsRequest_PageSize_DEFAULT int32
 
 func (p *ListEvaluatorsRequest) GetPageSize() (v int32) {
@@ -182,6 +196,9 @@ func (p *ListEvaluatorsRequest) SetBuiltin(val *bool) {
 func (p *ListEvaluatorsRequest) SetFilterOption(val *evaluator.EvaluatorFilterOption) {
 	p.FilterOption = val
 }
+func (p *ListEvaluatorsRequest) SetSearchDescription(val *string) {
+	p.SearchDescription = val
+}
 func (p *ListEvaluatorsRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
@@ -203,6 +220,7 @@ var fieldIDToName_ListEvaluatorsRequest = map[int16]string{
 	5:   "with_version",
 	11:  "builtin",
 	12:  "filter_option",
+	13:  "search_description",
 	101: "page_size",
 	102: "page_number",
 	103: "order_bys",
@@ -231,6 +249,10 @@ func (p *ListEvaluatorsRequest) IsSetBuiltin() bool {
 
 func (p *ListEvaluatorsRequest) IsSetFilterOption() bool {
 	return p.FilterOption != nil
+}
+
+func (p *ListEvaluatorsRequest) IsSetSearchDescription() bool {
+	return p.SearchDescription != nil
 }
 
 func (p *ListEvaluatorsRequest) IsSetPageSize() bool {
@@ -320,6 +342,14 @@ func (p *ListEvaluatorsRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -490,6 +520,17 @@ func (p *ListEvaluatorsRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.FilterOption = _field
 	return nil
 }
+func (p *ListEvaluatorsRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SearchDescription = _field
+	return nil
+}
 func (p *ListEvaluatorsRequest) ReadField101(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -576,6 +617,10 @@ func (p *ListEvaluatorsRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 		if err = p.writeField101(oprot); err != nil {
@@ -752,6 +797,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *ListEvaluatorsRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSearchDescription() {
+		if err = oprot.WriteFieldBegin("search_description", thrift.STRING, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SearchDescription); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
 func (p *ListEvaluatorsRequest) writeField101(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageSize() {
 		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 101); err != nil {
@@ -868,6 +931,9 @@ func (p *ListEvaluatorsRequest) DeepEqual(ano *ListEvaluatorsRequest) bool {
 	if !p.Field12DeepEqual(ano.FilterOption) {
 		return false
 	}
+	if !p.Field13DeepEqual(ano.SearchDescription) {
+		return false
+	}
 	if !p.Field101DeepEqual(ano.PageSize) {
 		return false
 	}
@@ -955,6 +1021,18 @@ func (p *ListEvaluatorsRequest) Field11DeepEqual(src *bool) bool {
 func (p *ListEvaluatorsRequest) Field12DeepEqual(src *evaluator.EvaluatorFilterOption) bool {
 
 	if !p.FilterOption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluatorsRequest) Field13DeepEqual(src *string) bool {
+
+	if p.SearchDescription == src {
+		return true
+	} else if p.SearchDescription == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SearchDescription, *src) != 0 {
 		return false
 	}
 	return true

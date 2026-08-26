@@ -13,6 +13,7 @@ struct ListEvaluatorsRequest {
 
     11: optional bool builtin (api.body='builtin') // 是否查询预置评估器
     12: optional evaluator.EvaluatorFilterOption filter_option (api.body='filter_option', go.tag='json:"filter_option"') // 筛选器选项
+    13: optional string search_description (api.body='search_description') // 按描述模糊搜索（忽略大小写 LIKE）
 
     101: optional i32 page_size (api.body='page_size', vt.gt='0')
     102: optional i32 page_number (api.body='page_number', vt.gt='0')
