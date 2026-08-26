@@ -220,7 +220,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 	if pageToken != nil {
 		filters = t.addPageTokenFilter(pageToken, req.Filters, req.AscByStartTime, req.PageTokenInclusive)
 	}
-	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, "", false, req.StartAt)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, "", true)
+	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, "", true, req.StartAt)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +491,7 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 	if param.SpanID == "" || param.TraceID == "" || param.WorkspaceId <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false, param.StartAt)
 	if err != nil {
 		return nil, err
 	} else if len(tableCfg.AnnoTables) == 0 {
@@ -523,7 +523,7 @@ func (t *TraceRepoImpl) ListWorkspaceAnnotations(ctx context.Context, param *rep
 	if annoDao == nil {
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false, param.StartAt)
 	if err != nil {
 		return nil, err
 	} else if len(tableCfg.AnnoTables) == 0 {
@@ -558,7 +558,7 @@ func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnota
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false, param.StartAt)
 	if err != nil {
 		return nil, err
 	} else if len(tableCfg.AnnoTables) == 0 {
@@ -624,7 +624,7 @@ func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMe
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false, param.StartAt)
 	if err != nil {
 		return nil, err
 	}
@@ -654,7 +654,7 @@ type queryTableCfg struct {
 	NeedQueryAnno bool
 }
 
-func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []string, workspaceID string, storageName string, isGetTraceByID bool) (*queryTableCfg, error) {
+func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []string, workspaceID string, storageName string, isGetTraceByID bool, queryStartTimeMs int64) (*queryTableCfg, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant table config, %v", err)
@@ -702,8 +702,8 @@ func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []stri
 		ret.SpanTables = tenants
 	}
 	if t.workspaceProvider != nil {
-		ret.SpanTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.SpanTables, isGetTraceByID)
-		ret.AnnoTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.AnnoTables, isGetTraceByID)
+		ret.SpanTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.SpanTables, isGetTraceByID, queryStartTimeMs)
+		ret.AnnoTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.AnnoTables, isGetTraceByID, queryStartTimeMs)
 	}
 	return ret, nil
 }
