@@ -258,7 +258,7 @@ func (d *exptTemplateDAOImpl) toConditions(f *entity.ExptTemplateListFilter, ord
 	ordered := false
 	for _, orderBy := range orders {
 		column := gptr.Indirect(orderBy.Field)
-		if len(column) == 0 {
+		if !exptTemplateSortColumns[column] {
 			continue
 		}
 
@@ -282,4 +282,22 @@ func (d *exptTemplateDAOImpl) toConditions(f *entity.ExptTemplateListFilter, ord
 	}
 
 	return conditions, true
+}
+
+// ORDER BY 的列名直接拼进 SQL，只放行 expt_template 的真实列，其余一律忽略
+var exptTemplateSortColumns = map[string]bool{
+	"id":                  true,
+	"space_id":            true,
+	"name":                true,
+	"description":         true,
+	"eval_set_id":         true,
+	"eval_set_version_id": true,
+	"target_id":           true,
+	"target_type":         true,
+	"target_version_id":   true,
+	"expt_type":           true,
+	"created_by":          true,
+	"updated_by":          true,
+	"created_at":          true,
+	"updated_at":          true,
 }
