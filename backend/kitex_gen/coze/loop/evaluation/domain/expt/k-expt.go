@@ -9380,6 +9380,20 @@ func (p *ItemSystemInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9440,6 +9454,20 @@ func (p *ItemSystemInfo) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ItemSystemInfo) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TotalRuns = _field
+	return offset, nil
+}
+
 func (p *ItemSystemInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -9447,6 +9475,7 @@ func (p *ItemSystemInfo) FastWrite(buf []byte) int {
 func (p *ItemSystemInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -9461,6 +9490,7 @@ func (p *ItemSystemInfo) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -9493,6 +9523,15 @@ func (p *ItemSystemInfo) fastWriteField3(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *ItemSystemInfo) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTotalRuns() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 4)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.TotalRuns)
+	}
+	return offset
+}
+
 func (p *ItemSystemInfo) field1Length() int {
 	l := 0
 	if p.IsSetRunState() {
@@ -9516,6 +9555,15 @@ func (p *ItemSystemInfo) field3Length() int {
 	if p.IsSetError() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.Error.BLength()
+	}
+	return l
+}
+
+func (p *ItemSystemInfo) field4Length() int {
+	l := 0
+	if p.IsSetTotalRuns() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -9547,6 +9595,11 @@ func (p *ItemSystemInfo) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Error = _error
+
+	if src.TotalRuns != nil {
+		tmp := *src.TotalRuns
+		p.TotalRuns = &tmp
+	}
 
 	return nil
 }

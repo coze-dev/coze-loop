@@ -385,6 +385,7 @@ struct ItemSystemInfo {
     1: optional ItemRunState run_state
     2: optional string log_id
     3: optional RunError error
+    4: optional i32 total_runs // 该 item 在本实验的运行次数（含重试）
 }
 
 // ===============================

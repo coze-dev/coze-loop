@@ -14191,6 +14191,8 @@ type ItemSystemInfo struct {
 	RunState *ItemRunState `thrift:"run_state,1,optional" frugal:"1,optional,ItemRunState" form:"run_state" json:"run_state,omitempty" query:"run_state"`
 	LogID    *string       `thrift:"log_id,2,optional" frugal:"2,optional,string" form:"log_id" json:"log_id,omitempty" query:"log_id"`
 	Error    *RunError     `thrift:"error,3,optional" frugal:"3,optional,RunError" form:"error" json:"error,omitempty" query:"error"`
+	// 该 item 在本实验的运行次数（含重试）；来自 expt_item_result_run_log 按 (expt_id,item_id) 聚合
+	TotalRuns *int32 `thrift:"total_runs,4,optional" frugal:"4,optional,i32" form:"total_runs" json:"total_runs,omitempty" query:"total_runs"`
 }
 
 func NewItemSystemInfo() *ItemSystemInfo {
@@ -14235,6 +14237,18 @@ func (p *ItemSystemInfo) GetError() (v *RunError) {
 	}
 	return p.Error
 }
+
+var ItemSystemInfo_TotalRuns_DEFAULT int32
+
+func (p *ItemSystemInfo) GetTotalRuns() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotalRuns() {
+		return ItemSystemInfo_TotalRuns_DEFAULT
+	}
+	return *p.TotalRuns
+}
 func (p *ItemSystemInfo) SetRunState(val *ItemRunState) {
 	p.RunState = val
 }
@@ -14244,11 +14258,15 @@ func (p *ItemSystemInfo) SetLogID(val *string) {
 func (p *ItemSystemInfo) SetError(val *RunError) {
 	p.Error = val
 }
+func (p *ItemSystemInfo) SetTotalRuns(val *int32) {
+	p.TotalRuns = val
+}
 
 var fieldIDToName_ItemSystemInfo = map[int16]string{
 	1: "run_state",
 	2: "log_id",
 	3: "error",
+	4: "total_runs",
 }
 
 func (p *ItemSystemInfo) IsSetRunState() bool {
@@ -14261,6 +14279,10 @@ func (p *ItemSystemInfo) IsSetLogID() bool {
 
 func (p *ItemSystemInfo) IsSetError() bool {
 	return p.Error != nil
+}
+
+func (p *ItemSystemInfo) IsSetTotalRuns() bool {
+	return p.TotalRuns != nil
 }
 
 func (p *ItemSystemInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -14300,6 +14322,14 @@ func (p *ItemSystemInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14365,6 +14395,17 @@ func (p *ItemSystemInfo) ReadField3(iprot thrift.TProtocol) error {
 	p.Error = _field
 	return nil
 }
+func (p *ItemSystemInfo) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TotalRuns = _field
+	return nil
+}
 
 func (p *ItemSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -14382,6 +14423,10 @@ func (p *ItemSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -14456,6 +14501,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ItemSystemInfo) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotalRuns() {
+		if err = oprot.WriteFieldBegin("total_runs", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.TotalRuns); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *ItemSystemInfo) String() string {
 	if p == nil {
@@ -14478,6 +14541,9 @@ func (p *ItemSystemInfo) DeepEqual(ano *ItemSystemInfo) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.Error) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.TotalRuns) {
 		return false
 	}
 	return true
@@ -14510,6 +14576,18 @@ func (p *ItemSystemInfo) Field2DeepEqual(src *string) bool {
 func (p *ItemSystemInfo) Field3DeepEqual(src *RunError) bool {
 
 	if !p.Error.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ItemSystemInfo) Field4DeepEqual(src *int32) bool {
+
+	if p.TotalRuns == src {
+		return true
+	} else if p.TotalRuns == nil || src == nil {
+		return false
+	}
+	if *p.TotalRuns != *src {
 		return false
 	}
 	return true
