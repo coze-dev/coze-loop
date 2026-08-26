@@ -36,7 +36,8 @@ echo ""
 
 if ! command -v "$SCHEMADIFF" &>/dev/null; then
     log_info "schemadiff not found, installing..."
-    go install github.com/planetscale/schemadiff/cmd/schemadiff@latest
+    # pinned: schemadiff main requires Go >= 1.25.3 (bundles a vitess that fails to compile on Go 1.24)
+    go install github.com/planetscale/schemadiff/cmd/schemadiff@04206203adeb5afa4123cd757318219f6ffd94e6
     SCHEMADIFF="$(go env GOPATH)/bin/schemadiff"
 fi
 
