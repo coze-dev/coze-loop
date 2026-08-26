@@ -376,5 +376,6 @@ func (n *noopMetrics) EmitExperimentFinished(_ eval_metrics.SandboxAgentExperime
 func (n *noopMetrics) EmitStepStarted(_ eval_metrics.SandboxAgentStepTags) {}
 func (n *noopMetrics) EmitStepFinished(_ eval_metrics.SandboxAgentStepTags, _ error, _ int32, _ int64) {
 }
-func (n *noopMetrics) EmitE2EStarted(_ eval_metrics.SandboxAgentE2ETags)                                     {}
-func (n *noopMetrics) EmitE2EFinished(_ eval_metrics.SandboxAgentE2ETags, _ error, _ int32, _ time.Time) {}
+func (n *noopMetrics) EmitE2EStarted(_ eval_metrics.SandboxAgentE2ETags) {}
+func (n *noopMetrics) EmitE2EFinished(_ eval_metrics.SandboxAgentE2ETags, _ error, _ int32, _ time.Time) {
+}
