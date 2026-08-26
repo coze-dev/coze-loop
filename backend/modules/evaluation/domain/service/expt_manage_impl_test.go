@@ -342,6 +342,7 @@ func TestExptMangerImpl_CreateExpt_WithExistingTarget(t *testing.T) {
 		GetEvalTargetVersion(ctx, int64(1), targetVersionID, true).
 		Return(&entity.EvalTarget{
 			ID:             targetID,
+			SpaceID:        1,
 			EvalTargetType: 0,
 			EvalTargetVersion: &entity.EvalTargetVersion{
 				ID:             targetVersionID,
@@ -359,15 +360,17 @@ func TestExptMangerImpl_CreateExpt_WithExistingTarget(t *testing.T) {
 	mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
 		EXPECT().
 		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(version, &entity.EvaluationSet{ID: 2}, nil)
+		Return(version, &entity.EvaluationSet{ID: 2, SpaceID: 1}, nil)
 	mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
 		EXPECT().
 		BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return([]*entity.Evaluator{{
 			ID:            10,
+			SpaceID:       1,
 			EvaluatorType: entity.EvaluatorTypePrompt,
 			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
 				ID:          10,
+				SpaceID:     1,
 				EvaluatorID: 10,
 			},
 		}}, nil)
