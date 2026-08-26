@@ -1181,6 +1181,7 @@ func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.I
 			res.SystemInfo = &openapiExperiment.ItemSystemInfo{
 				RunState: ItemRunStateDO2DTO(item.SystemInfo.RunState),
 			}
+			res.SystemInfo.SetTotalRuns(gptr.Of(item.SystemInfo.TotalRuns))
 			if item.SystemInfo.LogID != nil && *item.SystemInfo.LogID != "" {
 				res.SystemInfo.SetLogID(gptr.Of(*item.SystemInfo.LogID))
 			}

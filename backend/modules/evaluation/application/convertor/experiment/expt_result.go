@@ -335,9 +335,10 @@ func ItemSystemInfoDO2DTO(from *entity.ItemSystemInfo) *domain_expt.ItemSystemIn
 		return &domain_expt.ItemSystemInfo{}
 	}
 	return &domain_expt.ItemSystemInfo{
-		RunState: domain_expt.ItemRunStatePtr(domain_expt.ItemRunState(from.RunState)),
-		LogID:    from.LogID,
-		Error:    RunErrorDO2DTO(from.Error),
+		RunState:  domain_expt.ItemRunStatePtr(domain_expt.ItemRunState(from.RunState)),
+		LogID:     from.LogID,
+		Error:     RunErrorDO2DTO(from.Error),
+		TotalRuns: gptr.Of(from.TotalRuns),
 	}
 }
 

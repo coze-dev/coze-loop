@@ -328,6 +328,10 @@ func (e *EvalTargetRepoImpl) GetEvalTargetRecordByRunItemTurn(ctx context.Contex
 	return do, nil
 }
 
+func (e *EvalTargetRepoImpl) CountItemRunsByRun(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64]int32, error) {
+	return e.evalTargetRecordDao.CountRunsByRunItems(ctx, spaceID, experimentRunID, itemIDs)
+}
+
 func (e *EvalTargetRepoImpl) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error) {
 	recordPOList, err := e.evalTargetRecordDao.ListByIDsAndSpaceID(ctx, recordIDs, spaceID)
 	if err != nil {

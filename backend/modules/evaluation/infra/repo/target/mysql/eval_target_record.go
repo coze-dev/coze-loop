@@ -31,6 +31,11 @@ type EvalTargetRecordDAO interface {
 	// mutate 返回新的 output_data JSON（[]byte）。传入 record 已加行锁，可安全修改。
 	// record 不存在时 mutate 不会被调用，方法返回 nil（best-effort）。
 	AppendStep(ctx context.Context, invokeID int64, mutate func(current []byte) ([]byte, error)) error
+	// CountRunsByRunItems 统计给定 item 在指定实验运行(experiment_run_id)内被评测对象调用的次数（含系统自动重试）。
+	// 实现: WHERE space_id/experiment_run_id/item_id IN GROUP BY item_id,turn_id 先得每个 (item,turn) 的调用次数，
+	// 再在 Go 侧对每个 item 取其各 turn 的 MAX 作为该 item 的运行次数（多轮题每 turn 一次调用，取重试最多的那轮代表该 item；
+	// 单轮题 turn_id=0 时即该 item 的调用次数）。返回 map[item_id]maxCount，无记录的 item 不在 map 中。空 itemIDs 短路。
+	CountRunsByRunItems(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64]int32, error)
 }
 
 type EvalTargetRecordDAOImpl struct {
@@ -147,4 +152,40 @@ func (e *EvalTargetRecordDAOImpl) AppendStep(ctx context.Context, invokeID int64
 		}
 		return nil
 	})
+}
+
+// CountRunsByRunItems 统计给定 item 在指定实验运行(experiment_run_id)内被评测对象调用的次数（含系统自动重试）。
+// 先按 (item_id, turn_id) 分组 COUNT(*) 得到每个 (item,turn) 的调用次数，再在 Go 侧对每个 item 取其各 turn 的 MAX。
+func (e *EvalTargetRecordDAOImpl) CountRunsByRunItems(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64]int32, error) {
+	if len(itemIDs) == 0 {
+		return map[int64]int32{}, nil
+	}
+	q := e.query.TargetRecord
+
+	var rows []struct {
+		ItemID int64 `gorm:"column:item_id"`
+		TurnID int64 `gorm:"column:turn_id"`
+		Cnt    int32 `gorm:"column:cnt"`
+	}
+	err := e.query.WithContext(ctx).TargetRecord.
+		Select(q.ItemID.As("item_id"), q.TurnID.As("turn_id"), q.ID.Count().As("cnt")).
+		Where(
+			q.SpaceID.Eq(spaceID),
+			q.ExperimentRunID.Eq(experimentRunID),
+			q.ItemID.In(itemIDs...),
+			q.DeletedAt.IsNull(),
+		).
+		Group(q.ItemID, q.TurnID).
+		Scan(&rows)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
+	}
+
+	res := make(map[int64]int32, len(rows))
+	for _, r := range rows {
+		if r.Cnt > res[r.ItemID] {
+			res[r.ItemID] = r.Cnt
+		}
+	}
+	return res, nil
 }

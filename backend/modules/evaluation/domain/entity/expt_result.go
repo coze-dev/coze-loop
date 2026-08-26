@@ -799,6 +799,8 @@ type ItemSystemInfo struct {
 	Error    *RunError
 	// EndTime item 执行结束时间，来源 expt_item_result.updated_at（item 到终态时最后一次更新）。
 	EndTime *time.Time
+	// TotalRuns item 在本实验中的运行次数（含重试），来源 expt_item_result_run_log 行数聚合；无记录时为 0。
+	TotalRuns int32
 }
 
 type RunError struct {

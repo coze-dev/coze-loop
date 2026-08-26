@@ -277,3 +277,18 @@ func (mr *MockIEvalTargetRepoMockRecorder) UpdateEvalTargetRecord(ctx, record, t
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvalTargetRecord", reflect.TypeOf((*MockIEvalTargetRepo)(nil).UpdateEvalTargetRecord), ctx, record, truncateLargeContent)
 }
+
+// CountItemRunsByRun mocks base method.
+func (m *MockIEvalTargetRepo) CountItemRunsByRun(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64]int32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountItemRunsByRun", ctx, spaceID, experimentRunID, itemIDs)
+	ret0, _ := ret[0].(map[int64]int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountItemRunsByRun indicates an expected call of CountItemRunsByRun.
+func (mr *MockIEvalTargetRepoMockRecorder) CountItemRunsByRun(ctx, spaceID, experimentRunID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountItemRunsByRun", reflect.TypeOf((*MockIEvalTargetRepo)(nil).CountItemRunsByRun), ctx, spaceID, experimentRunID, itemIDs)
+}
