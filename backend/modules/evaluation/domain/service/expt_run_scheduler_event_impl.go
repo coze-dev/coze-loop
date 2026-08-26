@@ -722,9 +722,11 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		return nil, nil, err
 	}
 
-	// 主表 expt_item_result 也带上 err_msg，供 MGetExperimentResult 构造 ItemSystemInfo 时读取
+	// 主表 expt_item_result 只补 err_msg，供 MGetExperimentResult 构造 ItemSystemInfo 时读取。
+	// **不**预写 status=Fail: RecordItemRunLogs 里 statsCntOp 会读当前 items_result.Status
+	// 做「-1」，若这里预写 Fail，Processing 的减项就丢了，实验 stats 上 Processing 永远归不了零。
+	// status 由后续 RecordItemRunLogs 从 itemRunLog.Status 统一写入。
 	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, zombieItemIDs, map[string]any{
-		"status":  int32(entity.ItemRunState_Fail),
 		"err_msg": zombieErrBytes,
 	}); err != nil {
 		logs.CtxError(ctx, "[ExptEval] update zombie items main table err_msg fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
@@ -946,7 +948,6 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		return nil, nil, err
 	}
 	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, terminatedItemIDs, map[string]any{
-		"status":  int32(entity.ItemRunState_Fail),
 		"err_msg": errBytes,
 	}); err != nil {
 		logs.CtxError(ctx, "[ExptEval] update sandbox-terminated items main table err_msg fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, terminatedItemIDs, err)

@@ -238,12 +238,12 @@ func TestNoopWhenMeterNil(t *testing.T) {
 	empty.EmitStepStarted(eval_metrics.SandboxAgentStepTags{})
 	empty.EmitStepFinished(eval_metrics.SandboxAgentStepTags{}, nil, 0, 0)
 	empty.EmitE2EStarted(eval_metrics.SandboxAgentE2ETags{})
-	empty.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{}, nil, time.Now())
+	empty.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{}, nil, 0, time.Now())
 
 	// nil receiver 也不 panic
 	var nilImpl *metricsImpl
 	nilImpl.EmitE2EStarted(eval_metrics.SandboxAgentE2ETags{})
-	nilImpl.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{}, nil, time.Now())
+	nilImpl.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{}, nil, 0, time.Now())
 
 	// noop 实现完整覆盖(不 panic 即可)
 	n := &noopMetrics{}
@@ -254,7 +254,7 @@ func TestNoopWhenMeterNil(t *testing.T) {
 	n.EmitStepStarted(eval_metrics.SandboxAgentStepTags{})
 	n.EmitStepFinished(eval_metrics.SandboxAgentStepTags{}, nil, 0, 0)
 	n.EmitE2EStarted(eval_metrics.SandboxAgentE2ETags{})
-	n.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{}, nil, time.Time{})
+	n.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{}, nil, 0, time.Time{})
 }
 
 func TestEmitStepStarted(t *testing.T) {
@@ -424,7 +424,7 @@ func TestEmitE2EFinished_Success(t *testing.T) {
 		TurnID:          20,
 		AgentName:       "agent-a",
 		ApplicationID:   "app-a",
-	}, nil, start)
+	}, nil, 0, start)
 	if len(fm.records) != 1 {
 		t.Fatalf("want 1 record, got %d", len(fm.records))
 	}
@@ -461,7 +461,7 @@ func TestEmitE2EFinished_Success(t *testing.T) {
 // startTime 为零值: duration 应记 0
 func TestEmitE2EFinished_ZeroStart(t *testing.T) {
 	impl, fm := newFakeImpl(t)
-	impl.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{TurnID: 1}, nil, time.Time{})
+	impl.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{TurnID: 1}, nil, 0, time.Time{})
 	rec := fm.records[0]
 	for _, v := range rec.values {
 		if v.suffix == "e2e_duration" && v.v != 0 {
@@ -473,7 +473,7 @@ func TestEmitE2EFinished_ZeroStart(t *testing.T) {
 // 未来时间: duration 应 clamp 到 0
 func TestEmitE2EFinished_FutureStartClamped(t *testing.T) {
 	impl, fm := newFakeImpl(t)
-	impl.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{}, nil, time.Now().Add(5*time.Second))
+	impl.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{}, nil, 0, time.Now().Add(5*time.Second))
 	rec := fm.records[0]
 	for _, v := range rec.values {
 		if v.suffix == "e2e_duration" && v.v != 0 {
@@ -485,13 +485,26 @@ func TestEmitE2EFinished_FutureStartClamped(t *testing.T) {
 // 失败场景: error_type 走 ClassifyErrorType, success=false
 func TestEmitE2EFinished_Failure(t *testing.T) {
 	impl, fm := newFakeImpl(t)
-	impl.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{TurnID: 5}, &noopMetricsErr{}, time.Now().Add(-10*time.Millisecond))
+	impl.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{TurnID: 5}, &noopMetricsErr{}, 601200701, time.Now().Add(-10*time.Millisecond))
 	rec := fm.records[0]
 	if rec.tags["success"] != "false" {
 		t.Fatalf("want success=false, got %q", rec.tags["success"])
 	}
 	if rec.tags["error_type"] == "-" || rec.tags["error_type"] == "" {
 		t.Fatalf("failure should classify error_type, got %q", rec.tags["error_type"])
+	}
+	if rec.tags["error_code"] != "601200701" {
+		t.Fatalf("error_code should be filled, got %q", rec.tags["error_code"])
+	}
+}
+
+// errCode=0 (nil err 或未识别 code) 时, error_code tag 走占位符 `-`
+func TestEmitE2EFinished_ZeroErrCodePlaceholder(t *testing.T) {
+	impl, fm := newFakeImpl(t)
+	impl.EmitE2EFinished(eval_metrics.SandboxAgentE2ETags{TurnID: 1}, nil, 0, time.Now().Add(-time.Millisecond))
+	rec := fm.records[0]
+	if rec.tags["error_code"] != "-" {
+		t.Fatalf("errCode=0 should give placeholder, got %q", rec.tags["error_code"])
 	}
 }
 

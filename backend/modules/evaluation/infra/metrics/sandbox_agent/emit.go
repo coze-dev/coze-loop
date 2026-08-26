@@ -187,14 +187,14 @@ func (m *metricsImpl) EmitE2EStarted(tags eval_metrics.SandboxAgentE2ETags) {
 		metrics.Counter(1, metrics.WithSuffix(suffixE2EStarted)))
 }
 
-func (m *metricsImpl) EmitE2EFinished(tags eval_metrics.SandboxAgentE2ETags, err error, startTime time.Time) {
+func (m *metricsImpl) EmitE2EFinished(tags eval_metrics.SandboxAgentE2ETags, err error, errCode int32, startTime time.Time) {
 	if m == nil || m.metric == nil {
 		return
 	}
-	success := successTag(err, 0)
-	errType := ClassifyErrorType(err, 0)
+	success := successTag(err, errCode)
+	errType := ClassifyErrorType(err, errCode)
 	durMS := durationMS(startTime)
-	m.metric.Emit(m.buildE2ETags(tags, success, errType, 0),
+	m.metric.Emit(m.buildE2ETags(tags, success, errType, errCode),
 		metrics.Counter(1, metrics.WithSuffix(suffixE2EFinished)),
 		metrics.Timer(durMS, metrics.WithSuffix(suffixE2EDuration)))
 }
@@ -376,5 +376,6 @@ func (n *noopMetrics) EmitExperimentFinished(_ eval_metrics.SandboxAgentExperime
 func (n *noopMetrics) EmitStepStarted(_ eval_metrics.SandboxAgentStepTags) {}
 func (n *noopMetrics) EmitStepFinished(_ eval_metrics.SandboxAgentStepTags, _ error, _ int32, _ int64) {
 }
-func (n *noopMetrics) EmitE2EStarted(_ eval_metrics.SandboxAgentE2ETags)                        {}
-func (n *noopMetrics) EmitE2EFinished(_ eval_metrics.SandboxAgentE2ETags, _ error, _ time.Time) {}
+func (n *noopMetrics) EmitE2EStarted(_ eval_metrics.SandboxAgentE2ETags) {}
+func (n *noopMetrics) EmitE2EFinished(_ eval_metrics.SandboxAgentE2ETags, _ error, _ int32, _ time.Time) {
+}

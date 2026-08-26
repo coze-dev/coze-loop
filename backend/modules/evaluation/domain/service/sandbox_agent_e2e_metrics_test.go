@@ -17,6 +17,8 @@ import (
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	configermocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 // ============================================================================
@@ -226,10 +228,10 @@ func TestEmitE2EStarted_HappyPathTagsCorrect(t *testing.T) {
 func TestEmitE2EFinished_NilReceiverAndMetrics(t *testing.T) {
 	var nilExec *ExptItemEvalCtxExecutor
 	etec := sandboxTurnCtx(0, false, false)
-	nilExec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil)
+	nilExec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, nil)
 
 	exec := &ExptItemEvalCtxExecutor{}
-	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil)
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, nil)
 }
 
 func TestEmitE2EFinished_NilInputs(t *testing.T) {
@@ -238,11 +240,11 @@ func TestEmitE2EFinished_NilInputs(t *testing.T) {
 	exec, _ := newSandboxE2EExecutor(t, ctrl)
 
 	// etec nil / event nil / Expt nil → 静默返回
-	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), nil, &entity.ExptItemEvalEvent{}, nil)
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), nil, &entity.ExptItemEvalEvent{}, nil, nil)
 	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(),
-		&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}, nil, nil)
+		&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}, nil, nil, nil)
 	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(),
-		&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}, &entity.ExptItemEvalEvent{}, nil)
+		&entity.ExptTurnEvalCtx{ExptItemEvalCtx: &entity.ExptItemEvalCtx{}}, &entity.ExptItemEvalEvent{}, nil, nil)
 }
 
 func TestEmitE2EFinished_NonSandboxGated(t *testing.T) {
@@ -252,7 +254,7 @@ func TestEmitE2EFinished_NonSandboxGated(t *testing.T) {
 
 	etec := sandboxTurnCtx(0, false, false)
 	etec.Expt.Target.EvalTargetVersion.EvalTargetType = entity.EvalTargetTypeLoopPrompt
-	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil)
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, nil)
 }
 
 // 失败但仍可重试 → 不 emit (中间失败轮次)
@@ -268,7 +270,7 @@ func TestEmitE2EFinished_ErrorNeedRetryGated(t *testing.T) {
 
 	// RetryTimes=0 < max=3 → needRetry=true → 不 emit
 	etec := sandboxTurnCtx(0, false, false)
-	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, errors.New("boom"))
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, errors.New("boom"))
 }
 
 // 失败且已达最大重试次数 → emit (终态失败)
@@ -286,15 +288,15 @@ func TestEmitE2EFinished_ErrorTerminal(t *testing.T) {
 	etec := sandboxTurnCtx(2, false, false)
 	etec.Event.CreateAt = time.Now().Add(-2 * time.Second).Unix()
 
-	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any()).
-		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, startTime time.Time) {
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, _ int32, startTime time.Time) {
 			require.NotNil(t, err)
 			require.False(t, startTime.IsZero(), "startTime should be non-zero when CreateAt>0")
 			// startTime 应在最近的合理范围而不是 1970
 			require.True(t, time.Since(startTime) < 24*time.Hour)
 		}).Times(1)
 
-	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, errors.New("boom"))
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, errors.New("boom"))
 }
 
 // 成功终态: evalErr==nil → 直接 emit
@@ -306,15 +308,16 @@ func TestEmitE2EFinished_SuccessTerminal(t *testing.T) {
 	etec := sandboxTurnCtx(0, false, false)
 	etec.Event.CreateAt = time.Now().Add(-1 * time.Second).Unix()
 
-	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any()).
-		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, startTime time.Time) {
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, errCode int32, startTime time.Time) {
 			require.Nil(t, err)
+			require.Equal(t, int32(0), errCode, "success path should carry errCode=0")
 			require.False(t, startTime.IsZero())
 			// 用 time.Unix(sec, 0) 正确反序列化: startTime 在 1970 之后的合理范围内
 			require.True(t, time.Since(startTime) < 24*time.Hour, "should not be ~55 years ago")
 		}).Times(1)
 
-	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil)
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, nil)
 }
 
 // CreateAt=0 → startTime 保持零值传给 emit 层
@@ -326,12 +329,12 @@ func TestEmitE2EFinished_ZeroCreateAt(t *testing.T) {
 	etec := sandboxTurnCtx(0, false, false)
 	etec.Event.CreateAt = 0
 
-	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any()).
-		Do(func(_ eval_metrics.SandboxAgentE2ETags, _ error, startTime time.Time) {
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, _ error, _ int32, startTime time.Time) {
 			require.True(t, startTime.IsZero())
 		}).Times(1)
 
-	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil)
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, nil)
 }
 
 // 负 CreateAt → startTime 保持零值 (CreateAt>0 gate 不满足)
@@ -343,12 +346,165 @@ func TestEmitE2EFinished_NegativeCreateAt(t *testing.T) {
 	etec := sandboxTurnCtx(0, false, false)
 	etec.Event.CreateAt = -100
 
-	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any()).
-		Do(func(_ eval_metrics.SandboxAgentE2ETags, _ error, startTime time.Time) {
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, _ error, _ int32, startTime time.Time) {
 			require.True(t, startTime.IsZero())
 		}).Times(1)
 
-	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil)
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, nil)
+}
+
+// 失败终态 + StatusError: errCode 应从 err 中抽出并透传给 EmitE2EFinished
+func TestEmitE2EFinished_StatusErrorCodeExtracted(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exec, m := newSandboxE2EExecutor(t, ctrl)
+
+	configer := configermocks.NewMockIConfiger(ctrl)
+	configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.RetryConf{RetryTimes: 1}).AnyTimes()
+	exec.Configer = configer
+
+	etec := sandboxTurnCtx(2, false, false) // RetryTimes >= max → 终态
+	etec.Event.CreateAt = time.Now().Add(-1 * time.Second).Unix()
+
+	statusErr := errorx.NewByCode(errno.CommonInternalErrorCode)
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, errCode int32, _ time.Time) {
+			require.NotNil(t, err)
+			require.Equal(t, int32(errno.CommonInternalErrorCode), errCode,
+				"errCode should be extracted from StatusError")
+		}).Times(1)
+
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, statusErr)
+}
+
+// 失败终态 + 非 StatusError (plain errors.New): errCode 走 0 (由 emit 层转占位符 `-`)
+func TestEmitE2EFinished_PlainErrorZeroCode(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exec, m := newSandboxE2EExecutor(t, ctrl)
+
+	configer := configermocks.NewMockIConfiger(ctrl)
+	configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.RetryConf{RetryTimes: 1}).AnyTimes()
+	exec.Configer = configer
+
+	etec := sandboxTurnCtx(2, false, false)
+	etec.Event.CreateAt = time.Now().Add(-500 * time.Millisecond).Unix()
+
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, errCode int32, _ time.Time) {
+			require.NotNil(t, err)
+			require.Equal(t, int32(0), errCode,
+				"plain error (not StatusError) should carry errCode=0")
+		}).Times(1)
+
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, nil, errors.New("plain-boom"))
+}
+
+// 失败终态 + evalErr 是 errno.NewTargetResultErr (ErrImpl 而非 StatusError, 真实 code 被丢弃):
+// 应从 turnRunRes.TargetResult.EvalTargetRunError.Code 兜底抽出打点码.
+// 这是修复"e2e_finished 打点 error_code 恒 0"的核心场景.
+func TestEmitE2EFinished_TargetRunErrorFallback(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exec, m := newSandboxE2EExecutor(t, ctrl)
+
+	configer := configermocks.NewMockIConfiger(ctrl)
+	configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.RetryConf{RetryTimes: 1}).AnyTimes()
+	exec.Configer = configer
+
+	etec := sandboxTurnCtx(2, false, false)
+	etec.Event.CreateAt = time.Now().Add(-1 * time.Second).Unix()
+
+	trr := &entity.ExptTurnRunResult{
+		TargetResult: &entity.EvalTargetRecord{
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				EvalTargetRunError: &entity.EvalTargetRunError{Code: 5073, Message: "sandbox timeout"},
+			},
+		},
+	}
+	// storeTurnRunResult 会把 EvalTargetRunError 包成 NewTargetResultErr (ErrImpl code=11, 丢真实码)
+	wrappedErr := errno.NewTargetResultErr("sandbox timeout")
+
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, errCode int32, _ time.Time) {
+			require.NotNil(t, err)
+			require.Equal(t, int32(5073), errCode,
+				"errCode should be recovered from TargetResult.EvalTargetRunError.Code when evalErr is not a StatusError")
+		}).Times(1)
+
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, trr, wrappedErr)
+}
+
+// 同上, 但错误来自 evaluator: 应从 turnRunRes.EvaluatorResults[*].EvaluatorRunError.Code 兜底抽出.
+func TestEmitE2EFinished_EvaluatorRunErrorFallback(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exec, m := newSandboxE2EExecutor(t, ctrl)
+
+	configer := configermocks.NewMockIConfiger(ctrl)
+	configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.RetryConf{RetryTimes: 1}).AnyTimes()
+	exec.Configer = configer
+
+	etec := sandboxTurnCtx(2, false, false)
+	etec.Event.CreateAt = time.Now().Add(-1 * time.Second).Unix()
+
+	trr := &entity.ExptTurnRunResult{
+		EvaluatorResults: []*entity.EvaluatorRecord{
+			{
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorRunError: &entity.EvaluatorRunError{Code: 6001, Message: "evaluator fail"},
+				},
+			},
+		},
+	}
+	wrappedErr := errno.NewEvaluatorResultErr("evaluator fail")
+
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, err error, errCode int32, _ time.Time) {
+			require.NotNil(t, err)
+			require.Equal(t, int32(6001), errCode,
+				"errCode should be recovered from EvaluatorResults[*].EvaluatorRunError.Code")
+		}).Times(1)
+
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, trr, wrappedErr)
+}
+
+// evalErr 是 StatusError 时优先走 FromStatusError, 即便 turnRunRes 里也带 target run error,
+// 也用 StatusError 的 code (StatusError 上下文更精确).
+func TestEmitE2EFinished_StatusErrorPreferredOverTurnRunRes(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exec, m := newSandboxE2EExecutor(t, ctrl)
+
+	configer := configermocks.NewMockIConfiger(ctrl)
+	configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.RetryConf{RetryTimes: 1}).AnyTimes()
+	exec.Configer = configer
+
+	etec := sandboxTurnCtx(2, false, false)
+	etec.Event.CreateAt = time.Now().Add(-1 * time.Second).Unix()
+
+	trr := &entity.ExptTurnRunResult{
+		TargetResult: &entity.EvalTargetRecord{
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				EvalTargetRunError: &entity.EvalTargetRunError{Code: 5073},
+			},
+		},
+	}
+	statusErr := errorx.NewByCode(errno.CommonInternalErrorCode)
+
+	m.EXPECT().EmitE2EFinished(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Do(func(_ eval_metrics.SandboxAgentE2ETags, _ error, errCode int32, _ time.Time) {
+			require.Equal(t, int32(errno.CommonInternalErrorCode), errCode,
+				"StatusError code should take priority over turnRunRes fallback")
+		}).Times(1)
+
+	exec.emitSandboxAgentE2EFinishedIfTerminal(context.Background(), etec, etec.Event, trr, statusErr)
 }
 
 // ============================================================================
