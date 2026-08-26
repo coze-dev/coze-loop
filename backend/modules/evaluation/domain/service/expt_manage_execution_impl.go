@@ -638,6 +638,11 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	// 那正是沙箱执行进程死亡的典型形态（2026-08-24 PPE 实测 45 条卡住）。
 	e.releaseCentralQuotaForIncompleteItems(ctx, got, exptRunID, status)
 
+	// ★ 紧跟在释放之后：把 item run log 里仍未终态的行一并置终态。
+	// 顺序不可调换 —— 上面那行靠 run log 的 Queueing/Processing 反查待释放集合，
+	// 先置终态它就一条都查不到（静默不释放）。理由见 terminateIncompleteItemRunLogs。
+	e.terminateIncompleteItemRunLogs(ctx, got, exptRunID)
+
 	if !opt.NoCompleteItemTurn {
 		incompleteTurnIDs, err := e.exptResultService.GetIncompleteTurns(ctx, exptID, spaceID, session)
 		if err != nil {
@@ -874,6 +879,25 @@ func (e *ExptMangerImpl) releaseCentralQuotaForIncompleteItems(
 	exptRunID *int64,
 	status entity.ExptStatus,
 ) {
+	e.releaseCentralQuotaForRun(ctx, expt, exptRunID,
+		fmt.Sprintf("experiment reached terminal status=%d with incomplete items", int32(status)), "expt complete")
+}
+
+// releaseCentralQuotaForRun 释放 (runID, item) 这批仍挂在账本上的预占。
+//
+// 从 releaseCentralQuotaForIncompleteItems 抽出来，是因为**重试路径也要用同一套判据**：
+// 它要释放的是"被新 run 顶替掉的那个旧 run"的残留（见 releaseSupersededRunQuota），
+// 与"实验终态"只差一个 reason。判据（按 item run log 反查）必须两边完全一致 ——
+// 各写一份迟早会分叉。
+//
+// occasion 只进日志，用来区分调用场合（expt complete / retry）。
+func (e *ExptMangerImpl) releaseCentralQuotaForRun(
+	ctx context.Context,
+	expt *entity.Experiment,
+	exptRunID *int64,
+	reason string,
+	occasion string,
+) {
 	if e.centralGuard == nil || expt == nil {
 		return
 	}
@@ -883,7 +907,7 @@ func (e *ExptMangerImpl) releaseCentralQuotaForIncompleteItems(
 	if expt.SchedulerScope == "" {
 		// enforce 却无 Scope：数据异常，无法确定去哪本账释放。宁可不释放也不猜一本 ——
 		// 猜错会归还别人的额度，那比不归还更糟（会导致超发）。
-		logs.CtxError(ctx, "[CentralReservation] enforce experiment without scheduler_scope on complete, skip release, expt_id: %v", expt.ID)
+		logs.CtxError(ctx, "[CentralReservation] enforce experiment without scheduler_scope on %s, skip release, expt_id: %v", occasion, expt.ID)
 		return
 	}
 
@@ -894,7 +918,7 @@ func (e *ExptMangerImpl) releaseCentralQuotaForIncompleteItems(
 		runID = expt.LatestRunID
 	}
 	if runID == 0 {
-		logs.CtxError(ctx, "[CentralReservation] cannot resolve expt_run_id on complete, skip release, expt_id: %v", expt.ID)
+		logs.CtxError(ctx, "[CentralReservation] cannot resolve expt_run_id on %s, skip release, expt_id: %v", occasion, expt.ID)
 		return
 	}
 
@@ -918,25 +942,69 @@ func (e *ExptMangerImpl) releaseCentralQuotaForIncompleteItems(
 	itemIDs, err := e.incompleteItemIDsForRelease(ctx, expt.ID, runID, expt.SpaceID)
 	if err != nil {
 		// 查不到就不猜：宁可这次不释放（留给对账/人工），也不能凭空构造 item 列表。
-		logs.CtxError(ctx, "[CentralReservation] scan incomplete items fail on expt complete, skip release, expt_id: %v, expt_run_id: %v, err: %v",
-			expt.ID, runID, err)
+		logs.CtxError(ctx, "[CentralReservation] scan incomplete items fail on %s, skip release, expt_id: %v, expt_run_id: %v, err: %v",
+			occasion, expt.ID, runID, err)
 		return
 	}
 	if len(itemIDs) == 0 {
 		return
 	}
 
-	reason := fmt.Sprintf("experiment reached terminal status=%d with incomplete items", int32(status))
 	failed := 0
 	for _, itemID := range itemIDs {
 		if err := e.centralGuard.Release(ctx, expt.SchedulerScope, runID, itemID, reason); err != nil {
 			failed++
-			logs.CtxWarn(ctx, "[CentralReservation] release quota fail on expt complete, scope: %v, expt_run_id: %v, item_id: %v, err: %v",
-				expt.SchedulerScope, runID, itemID, err)
+			logs.CtxWarn(ctx, "[CentralReservation] release quota fail on %s, scope: %v, expt_run_id: %v, item_id: %v, err: %v",
+				occasion, expt.SchedulerScope, runID, itemID, err)
 		}
 	}
-	logs.CtxInfo(ctx, "[CentralReservation] quota released for incomplete items on expt complete, scope: %v, expt_id: %v, expt_run_id: %v, items: %v, failed: %v, status: %v",
-		expt.SchedulerScope, expt.ID, runID, len(itemIDs), failed, status)
+	logs.CtxInfo(ctx, "[CentralReservation] quota released for incomplete items on %s, scope: %v, expt_id: %v, expt_run_id: %v, items: %v, failed: %v, reason: %v",
+		occasion, expt.SchedulerScope, expt.ID, runID, len(itemIDs), failed, reason)
+}
+
+// releaseSupersededRunQuota 在重试新建 run 之前，释放**被顶替的上一个 run** 仍挂在账本上的预占。
+//
+// ★ 为什么对账兜不住、非得在这里显式释放：重试会把 expt_item_result 那批行的 expt_run_id
+// 直接改写成新 run（expt_run_scheduler_mode_impl.go 里 FailRetry / RetryAll / RetryItems 三处
+// reset 都是 UpdateItemsResult{expt_run_id: 新值} → BatchCreateNXRunLogs，中间零 Release）。
+// 改完之后 **DB 里不再存在携带旧 runID 的主表行**，而增量对账只按 LatestRunID 建投影 ⇒
+// res:<旧runID>:<itemID> 观测不到 ⇒ obs == nil ⇒ ActionReportOnly，
+// 只有全量 recovery 才可能碰到它 —— 增量对账永远够不着。
+//
+// ★ 必须排在 LatestRunID 被改写之前：账本 key 是 (run_id, item_id)，
+// 旧 run 号一旦丢失，那些 field 就再也拼不出来了。
+//
+// 只对重试模式生效：Submit / TrialRun 没有"上一个 run"，Append 则可能在旧 run 仍有 item
+// 在飞时追加，按旧 run 释放会把正在跑的额度还回去（真超发）。
+//
+// 调用点已在 mutex 保护内：拿到 expt 级锁才说明没有活着的 run 在跑，
+// 此时旧 run 的 Queueing/Processing 残留一定是不会再被执行的。
+func (e *ExptMangerImpl) releaseSupersededRunQuota(ctx context.Context, exptID, spaceID, newRunID int64, mode entity.ExptRunMode) {
+	if e.centralGuard == nil || !isRetryRunMode(mode) {
+		return
+	}
+	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
+	if err != nil || expt == nil {
+		// 查不到就不猜：宁可这次不释放（留给全量 recovery / 人工），也不能凭空构造 scope 或 run 号。
+		logs.CtxWarn(ctx, "[CentralReservation] load expt fail before retry, skip superseded release, expt_id: %v, err: %v", exptID, err)
+		return
+	}
+	oldRunID := expt.LatestRunID
+	if oldRunID == 0 || oldRunID == newRunID {
+		return
+	}
+	e.releaseCentralQuotaForRun(ctx, expt, gptr.Of(oldRunID),
+		fmt.Sprintf("superseded by retry run=%d", newRunID), "retry")
+}
+
+// isRetryRunMode 判断该模式是否"顶替上一个 run"。
+func isRetryRunMode(mode entity.ExptRunMode) bool {
+	switch mode {
+	case entity.EvaluationModeFailRetry, entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems:
+		return true
+	default:
+		return false
+	}
 }
 
 // incompleteItemIDsForRelease 取该 run 下**仍未走到终态**的 item id（去重）。
@@ -967,6 +1035,72 @@ func (e *ExptMangerImpl) incompleteItemIDsForRelease(ctx context.Context, exptID
 		itemIDSet[rl.ItemID] = true
 	}
 	return maps.ToSlice(itemIDSet, func(k int64, v bool) int64 { return k }), nil
+}
+
+// terminateIncompleteItemRunLogs 实验终态时，把 expt_item_result_run_log 里仍未终态的行
+// 一并置 Terminal。
+//
+// ★ 为什么必须写这张表：它和主表 expt_item_result 是两张表，而**调度侧的判据全读 run log**。
+// kill 只写了主表（terminateItemTurns），run log 留在 Processing，于是那些正在飞行的 item：
+//
+//	释放判据    IsItemRunFinished(run log status) 永远 false ⇒ 永不释放；
+//	对账        见 Processing 判「有执行证据、绝不可释放」⇒ 每拍主动判 none（不是它有 bug，
+//	            是我们喂了它一个假事实）；
+//	zombie 兜底 只扫 Processing，但实验已终态、daemon 不再跳 ⇒ 永不再扫。
+//
+// 三条路都不接 ⇒ 额度永久泄漏。2026-08-26 PPE 实测 6 条 48h+ 僵尸就是这么来的
+// （主表 status=5 Terminal、run log status=1 Processing，持有者是 status=13 已终止的实验），
+// 吃掉 sandbox|default 8 里的 6，把 prio 99 实验的有效并发压到 2、造成结果层优先级倒挂。
+// 对照：同一实验里**未派发**的行 run log 停在 Queueing，不占额度所以不漏 —— 漏的只有飞行中的。
+//
+// 置终态之后对账会按 terminal_leftover 正常归还（实测该路径本身是好的），
+// 所以这行不只是修数据，也是上面那次 best-effort 释放万一失败时唯一的兜底。
+//
+// 只改 Queueing/Processing 两态（经 incompleteItemIDsForRelease 反查），不碰已终态的行：
+// 覆盖一条已 Success 的 run log 会让它与主表/统计对不上。
+//
+// 只对中心调度实验生效：run log 的 status **不是**用户可见字段（结果页只从 run log 取 log_id，
+// 见 expt_result_impl.go MGetItemRunLog 那段），实验终态后读它的只有额度释放判据、对账、
+// zombie 三条中心调度链路。legacy 实验一条都不走 ⇒ 那次全量 scan 对它是纯开销、零收益，
+// 而 CompleteExpt 是每个实验必经的路径。
+// 全程 best-effort：失败只告警，不让实验收敛失败。
+func (e *ExptMangerImpl) terminateIncompleteItemRunLogs(ctx context.Context, expt *entity.Experiment, exptRunID *int64) {
+	if expt == nil || !entity.IsCentralDispatch(expt.ExptDispatchMode) {
+		return
+	}
+	runID := gptr.Indirect(exptRunID)
+	if runID == 0 {
+		runID = expt.LatestRunID
+	}
+	if runID == 0 {
+		logs.CtxWarn(ctx, "[ExptEval] cannot resolve expt_run_id on complete, skip run log terminate, expt_id: %v", expt.ID)
+		return
+	}
+
+	itemIDs, err := e.incompleteItemIDsForRelease(ctx, expt.ID, runID, expt.SpaceID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] scan incomplete item run logs fail on complete, expt_id: %v, expt_run_id: %v, err: %v",
+			expt.ID, runID, err)
+		return
+	}
+	if len(itemIDs) == 0 {
+		return
+	}
+
+	// 分批：待终态集合可以是整份评测集（万级），一次 IN 会把 SQL 撑到几百 KB。
+	// 单批失败不放弃其余批 —— 少写一批就是少还一批额度。
+	failed := 0
+	for _, chunk := range gslice.Chunk(itemIDs, 100) {
+		if err := e.itemResultRepo.UpdateItemRunLog(ctx, expt.ID, runID, chunk, map[string]any{
+			"status": int32(entity.ItemRunState_Terminal),
+		}, expt.SpaceID); err != nil {
+			failed += len(chunk)
+			logs.CtxWarn(ctx, "[ExptEval] terminate incomplete item run logs fail, expt_id: %v, expt_run_id: %v, items: %v, err: %v",
+				expt.ID, runID, len(chunk), err)
+		}
+	}
+	logs.CtxInfo(ctx, "[ExptEval] incomplete item run logs terminated on expt complete, expt_id: %v, expt_run_id: %v, items: %v, failed: %v",
+		expt.ID, runID, len(itemIDs), failed)
 }
 
 func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, session *entity.Session) error {
@@ -1358,6 +1492,9 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 		return err
 	}
 
+	// 重试顶替旧 run：必须赶在下面改写 LatestRunID 之前释放旧 run 的残留预占。
+	e.releaseSupersededRunQuota(ctx, exptID, spaceID, exptRunID, mode)
+
 	if err := e.exptRepo.Update(ctx, &entity.Experiment{
 		ID:          exptID,
 		LatestRunID: exptRunID,
@@ -1430,7 +1567,11 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		return 0, false, err
 	}
 
+	// retried 分支刻意不释放：那说明锁被一个**活着的 run** 持有，runID 是它的号、
+	// LatestRunID 也还是它 —— 此时释放等于把正在跑的 item 的额度还回去。
 	if !retried {
+		e.releaseSupersededRunQuota(ctx, exptID, spaceID, runID, mode)
+
 		if err := e.exptRepo.Update(ctx, &entity.Experiment{ID: exptID, LatestRunID: runID}); err != nil {
 			return 0, false, err
 		}
