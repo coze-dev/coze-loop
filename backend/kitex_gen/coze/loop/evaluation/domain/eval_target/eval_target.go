@@ -7,6 +7,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"strings"
 )
@@ -382,6 +383,423 @@ type SandboxAgentType = string
 
 // 单/双沙箱模式；未填 / 未识别一律按 Single 处理。
 type SandboxCountMode = string
+
+// 沙箱 Agent 自定义输出字段 schema。DO 侧 entity.CustomFieldSchema 的对外投影，
+// 用于让评估器字段映射步骤能识别 SandboxAgent 的输出字段。
+type CustomFieldSchema struct {
+	Name        *string             `thrift:"name,1,optional" frugal:"1,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	ContentType *common.ContentType `thrift:"content_type,2,optional" frugal:"2,optional,string" form:"content_type" json:"content_type,omitempty" query:"content_type"`
+	// 非必须，对应内置 schema
+	SchemaKey *dataset.SchemaKey `thrift:"schema_key,3,optional" frugal:"3,optional,SchemaKey" form:"schema_key" json:"schema_key,omitempty" query:"schema_key"`
+	// 文本内容格式限制
+	TextSchema *string `thrift:"text_schema,4,optional" frugal:"4,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
+}
+
+func NewCustomFieldSchema() *CustomFieldSchema {
+	return &CustomFieldSchema{}
+}
+
+func (p *CustomFieldSchema) InitDefault() {
+}
+
+var CustomFieldSchema_Name_DEFAULT string
+
+func (p *CustomFieldSchema) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return CustomFieldSchema_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var CustomFieldSchema_ContentType_DEFAULT common.ContentType
+
+func (p *CustomFieldSchema) GetContentType() (v common.ContentType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetContentType() {
+		return CustomFieldSchema_ContentType_DEFAULT
+	}
+	return *p.ContentType
+}
+
+var CustomFieldSchema_SchemaKey_DEFAULT dataset.SchemaKey
+
+func (p *CustomFieldSchema) GetSchemaKey() (v dataset.SchemaKey) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchemaKey() {
+		return CustomFieldSchema_SchemaKey_DEFAULT
+	}
+	return *p.SchemaKey
+}
+
+var CustomFieldSchema_TextSchema_DEFAULT string
+
+func (p *CustomFieldSchema) GetTextSchema() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTextSchema() {
+		return CustomFieldSchema_TextSchema_DEFAULT
+	}
+	return *p.TextSchema
+}
+func (p *CustomFieldSchema) SetName(val *string) {
+	p.Name = val
+}
+func (p *CustomFieldSchema) SetContentType(val *common.ContentType) {
+	p.ContentType = val
+}
+func (p *CustomFieldSchema) SetSchemaKey(val *dataset.SchemaKey) {
+	p.SchemaKey = val
+}
+func (p *CustomFieldSchema) SetTextSchema(val *string) {
+	p.TextSchema = val
+}
+
+var fieldIDToName_CustomFieldSchema = map[int16]string{
+	1: "name",
+	2: "content_type",
+	3: "schema_key",
+	4: "text_schema",
+}
+
+func (p *CustomFieldSchema) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *CustomFieldSchema) IsSetContentType() bool {
+	return p.ContentType != nil
+}
+
+func (p *CustomFieldSchema) IsSetSchemaKey() bool {
+	return p.SchemaKey != nil
+}
+
+func (p *CustomFieldSchema) IsSetTextSchema() bool {
+	return p.TextSchema != nil
+}
+
+func (p *CustomFieldSchema) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomFieldSchema[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *CustomFieldSchema) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *CustomFieldSchema) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *common.ContentType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ContentType = _field
+	return nil
+}
+func (p *CustomFieldSchema) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *dataset.SchemaKey
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset.SchemaKey(v)
+		_field = &tmp
+	}
+	p.SchemaKey = _field
+	return nil
+}
+func (p *CustomFieldSchema) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TextSchema = _field
+	return nil
+}
+
+func (p *CustomFieldSchema) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CustomFieldSchema"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CustomFieldSchema) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CustomFieldSchema) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetContentType() {
+		if err = oprot.WriteFieldBegin("content_type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ContentType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CustomFieldSchema) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchemaKey() {
+		if err = oprot.WriteFieldBegin("schema_key", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SchemaKey)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *CustomFieldSchema) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTextSchema() {
+		if err = oprot.WriteFieldBegin("text_schema", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TextSchema); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *CustomFieldSchema) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CustomFieldSchema(%+v)", *p)
+
+}
+
+func (p *CustomFieldSchema) DeepEqual(ano *CustomFieldSchema) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ContentType) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SchemaKey) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.TextSchema) {
+		return false
+	}
+	return true
+}
+
+func (p *CustomFieldSchema) Field1DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomFieldSchema) Field2DeepEqual(src *common.ContentType) bool {
+
+	if p.ContentType == src {
+		return true
+	} else if p.ContentType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ContentType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomFieldSchema) Field3DeepEqual(src *dataset.SchemaKey) bool {
+
+	if p.SchemaKey == src {
+		return true
+	} else if p.SchemaKey == nil || src == nil {
+		return false
+	}
+	if *p.SchemaKey != *src {
+		return false
+	}
+	return true
+}
+func (p *CustomFieldSchema) Field4DeepEqual(src *string) bool {
+
+	if p.TextSchema == src {
+		return true
+	} else if p.TextSchema == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TextSchema, *src) != 0 {
+		return false
+	}
+	return true
+}
 
 type EvalTarget struct {
 	// 基本信息
@@ -10858,6 +11276,9 @@ type SandboxAgent struct {
 	EnableAnalysis *bool `thrift:"enable_analysis,9,optional" frugal:"9,optional,bool" form:"enable_analysis" json:"enable_analysis,omitempty" query:"enable_analysis"`
 	// 单/双沙箱模式；空值按 Single 处理
 	SandboxCountMode *SandboxCountMode `thrift:"sandbox_count_mode,10,optional" frugal:"10,optional,string" form:"sandbox_count_mode" json:"sandbox_count_mode,omitempty" query:"sandbox_count_mode"`
+	// 自定义输出字段 schema，创建评测对象时从 application.custom_field_schemas 反查固化。
+	// 供实验创建流程中评估器字段映射步骤读取，标识 sandbox agent 可用的输出字段。
+	CustomFieldSchemas []*CustomFieldSchema `thrift:"custom_field_schemas,11,optional" frugal:"11,optional,list<CustomFieldSchema>" form:"custom_field_schemas" json:"custom_field_schemas,omitempty" query:"custom_field_schemas"`
 }
 
 func NewSandboxAgent() *SandboxAgent {
@@ -10986,6 +11407,18 @@ func (p *SandboxAgent) GetSandboxCountMode() (v SandboxCountMode) {
 	}
 	return *p.SandboxCountMode
 }
+
+var SandboxAgent_CustomFieldSchemas_DEFAULT []*CustomFieldSchema
+
+func (p *SandboxAgent) GetCustomFieldSchemas() (v []*CustomFieldSchema) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomFieldSchemas() {
+		return SandboxAgent_CustomFieldSchemas_DEFAULT
+	}
+	return p.CustomFieldSchemas
+}
 func (p *SandboxAgent) SetName(val *string) {
 	p.Name = val
 }
@@ -11016,6 +11449,9 @@ func (p *SandboxAgent) SetEnableAnalysis(val *bool) {
 func (p *SandboxAgent) SetSandboxCountMode(val *SandboxCountMode) {
 	p.SandboxCountMode = val
 }
+func (p *SandboxAgent) SetCustomFieldSchemas(val []*CustomFieldSchema) {
+	p.CustomFieldSchemas = val
+}
 
 var fieldIDToName_SandboxAgent = map[int16]string{
 	1:  "name",
@@ -11028,6 +11464,7 @@ var fieldIDToName_SandboxAgent = map[int16]string{
 	8:  "image",
 	9:  "enable_analysis",
 	10: "sandbox_count_mode",
+	11: "custom_field_schemas",
 }
 
 func (p *SandboxAgent) IsSetName() bool {
@@ -11068,6 +11505,10 @@ func (p *SandboxAgent) IsSetEnableAnalysis() bool {
 
 func (p *SandboxAgent) IsSetSandboxCountMode() bool {
 	return p.SandboxCountMode != nil
+}
+
+func (p *SandboxAgent) IsSetCustomFieldSchemas() bool {
+	return p.CustomFieldSchemas != nil
 }
 
 func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
@@ -11163,6 +11604,14 @@ func (p *SandboxAgent) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11319,6 +11768,29 @@ func (p *SandboxAgent) ReadField10(iprot thrift.TProtocol) error {
 	p.SandboxCountMode = _field
 	return nil
 }
+func (p *SandboxAgent) ReadField11(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*CustomFieldSchema, 0, size)
+	values := make([]CustomFieldSchema, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.CustomFieldSchemas = _field
+	return nil
+}
 
 func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -11364,6 +11836,10 @@ func (p *SandboxAgent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -11572,6 +12048,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *SandboxAgent) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomFieldSchemas() {
+		if err = oprot.WriteFieldBegin("custom_field_schemas", thrift.LIST, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.CustomFieldSchemas)); err != nil {
+			return err
+		}
+		for _, v := range p.CustomFieldSchemas {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 
 func (p *SandboxAgent) String() string {
 	if p == nil {
@@ -11615,6 +12117,9 @@ func (p *SandboxAgent) DeepEqual(ano *SandboxAgent) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.SandboxCountMode) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.CustomFieldSchemas) {
 		return false
 	}
 	return true
@@ -11738,6 +12243,19 @@ func (p *SandboxAgent) Field10DeepEqual(src *SandboxCountMode) bool {
 	}
 	if strings.Compare(*p.SandboxCountMode, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *SandboxAgent) Field11DeepEqual(src []*CustomFieldSchema) bool {
+
+	if len(p.CustomFieldSchemas) != len(src) {
+		return false
+	}
+	for i, v := range p.CustomFieldSchemas {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

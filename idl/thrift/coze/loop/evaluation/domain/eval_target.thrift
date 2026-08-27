@@ -1,6 +1,16 @@
 namespace go coze.loop.evaluation.domain.eval_target
 
 include "common.thrift"
+include "../../data/domain/dataset.thrift"
+
+// 沙箱 Agent 自定义输出字段 schema。DO 侧 entity.CustomFieldSchema 的对外投影，
+// 用于让评估器字段映射步骤能识别 SandboxAgent 的输出字段。
+struct CustomFieldSchema {
+    1: optional string name
+    2: optional common.ContentType content_type
+    3: optional dataset.SchemaKey schema_key // 非必须，对应内置 schema
+    4: optional string text_schema           // 文本内容格式限制
+}
 
 struct EvalTarget {
     // 基本信息
@@ -319,6 +329,10 @@ struct SandboxAgent {
 
     // 单/双沙箱模式；空值按 Single 处理
     10: optional SandboxCountMode sandbox_count_mode
+
+    // 自定义输出字段 schema，创建评测对象时从 application.custom_field_schemas 反查固化。
+    // 供实验创建流程中评估器字段映射步骤读取，标识 sandbox agent 可用的输出字段。
+    11: optional list<CustomFieldSchema> custom_field_schemas
 }
 
 struct AgentConnection {

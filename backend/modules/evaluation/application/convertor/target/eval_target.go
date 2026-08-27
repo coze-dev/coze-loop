@@ -6,6 +6,7 @@ package target
 import (
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	dto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	commonconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
@@ -644,6 +645,7 @@ func SandboxAgentDTO2DO(dtoObj *dto.SandboxAgent) *do.SandboxAgent {
 		Image:            gptr.Indirect(dtoObj.Image),
 		EnableAnalysis:   gptr.Indirect(dtoObj.EnableAnalysis),
 		SandboxCountMode: do.SandboxCountMode(gptr.Indirect(dtoObj.SandboxCountMode)),
+		CustomFieldSchemas: CustomFieldSchemasDTO2DO(dtoObj.CustomFieldSchemas),
 	}
 }
 
@@ -661,6 +663,7 @@ func SandboxAgentDO2DTO(doObj *do.SandboxAgent) *dto.SandboxAgent {
 		Envs:           SandboxEnvVarsDO2DTO(doObj.Envs),
 		Image:          gptr.Of(doObj.Image),
 		EnableAnalysis: gptr.Of(doObj.EnableAnalysis),
+		CustomFieldSchemas: CustomFieldSchemasDO2DTO(doObj.CustomFieldSchemas),
 	}
 	// 历史记录里没有 SandboxCountMode 字段，entity 为空串；此时保持 DTO 为 nil，
 	// 保留旧的 wire 语义（消费者 IsSet 为 false），避免误让老客户端认为该字段被显式设置为 ""。
@@ -700,6 +703,50 @@ func SandboxEnvVarsDO2DTO(doObjs []*do.SandboxEnvVar) []*dto.SandboxEnvVar {
 			Key:   gptr.Of(e.Key),
 			Value: gptr.Of(e.Value),
 		})
+	}
+	return res
+}
+
+func CustomFieldSchemasDO2DTO(doObjs []*do.CustomFieldSchema) []*dto.CustomFieldSchema {
+	if doObjs == nil {
+		return nil
+	}
+	res := make([]*dto.CustomFieldSchema, 0, len(doObjs))
+	for _, s := range doObjs {
+		if s == nil {
+			continue
+		}
+		item := &dto.CustomFieldSchema{
+			Name:        gptr.Of(s.Name),
+			ContentType: gptr.Of(commonconvertor.ConvertContentTypeDO2DTO(s.ContentType)),
+			TextSchema:  gptr.Of(s.TextSchema),
+		}
+		if s.SchemaKey != nil {
+			item.SchemaKey = gptr.Of(dataset.SchemaKey(*s.SchemaKey))
+		}
+		res = append(res, item)
+	}
+	return res
+}
+
+func CustomFieldSchemasDTO2DO(dtoObjs []*dto.CustomFieldSchema) []*do.CustomFieldSchema {
+	if dtoObjs == nil {
+		return nil
+	}
+	res := make([]*do.CustomFieldSchema, 0, len(dtoObjs))
+	for _, s := range dtoObjs {
+		if s == nil {
+			continue
+		}
+		item := &do.CustomFieldSchema{
+			Name:        gptr.Indirect(s.Name),
+			ContentType: commonconvertor.ConvertContentTypeDTO2DO(string(gptr.Indirect(s.ContentType))),
+			TextSchema:  gptr.Indirect(s.TextSchema),
+		}
+		if s.SchemaKey != nil {
+			item.SchemaKey = gptr.Of(do.SchemaKey(*s.SchemaKey))
+		}
+		res = append(res, item)
 	}
 	return res
 }

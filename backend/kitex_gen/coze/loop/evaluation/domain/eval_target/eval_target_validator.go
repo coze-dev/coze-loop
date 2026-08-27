@@ -21,6 +21,9 @@ var (
 	_ = time.Nanosecond
 )
 
+func (p *CustomFieldSchema) IsValid() error {
+	return nil
+}
 func (p *EvalTarget) IsValid() error {
 	if p.EvalTargetVersion != nil {
 		if err := p.EvalTargetVersion.IsValid(); err != nil {
