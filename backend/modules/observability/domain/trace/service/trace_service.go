@@ -647,6 +647,10 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 		QueryStartTime: req.StartTime - timeutil.Day2MillSec(30), // past 30 days
 		QueryEndTime:   req.StartTime,
 		QueryTenants:   tenants,
+		// ListPreSpan 拉的是历史轮次上下文 span（可能跨 trace），解密鉴权须锚定主 Trace，
+		// 故用独立 Scene + 主 TraceID，而非复用 GetTrace 的逐 span 自身 traceid。
+		Scene:        entity.SceneListPreSpan,
+		QueryTraceID: req.TraceID,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
