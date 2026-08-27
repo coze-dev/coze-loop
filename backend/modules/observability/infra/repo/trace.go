@@ -721,7 +721,7 @@ func (t *TraceRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, t
 		return "", fmt.Errorf("no table config found for tenant %s with ttl %s", tenant, ttl)
 	}
 	if tableCfg.SupportShard {
-		shard := resolveShardForSpace(tableCfg, workspaceID)
+		shard := resolveShardForSpace(tenantTableCfg.ShardConfig, tableCfg, workspaceID)
 		return shardTableName(tableCfg.SpanTable, shard), nil
 	}
 	return tableCfg.SpanTable, nil
@@ -740,7 +740,7 @@ func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, t
 		return "", nil
 	}
 	if tableCfg.SupportShard {
-		shard := resolveShardForSpace(tableCfg, workspaceID)
+		shard := resolveShardForSpace(tenantTableCfg.ShardConfig, tableCfg, workspaceID)
 		return shardTableName(tableCfg.AnnoTable, shard), nil
 	}
 	return tableCfg.AnnoTable, nil
@@ -839,14 +839,21 @@ func shardTableName(baseTable, shard string) string {
 	return baseTable + "_" + shard
 }
 
-func resolveShardForSpace(tableCfg config.TableCfg, workspaceID string) string {
-	if len(tableCfg.ShardConfig) == 0 {
+func resolveShardForSpace(shardConfig map[string][]config.ShardEntry, tableCfg config.TableCfg, workspaceID string) string {
+	if len(shardConfig) == 0 {
 		return ""
 	}
-	for shardID, entries := range tableCfg.ShardConfig {
+	for shardID, entries := range shardConfig {
 		for _, entry := range entries {
 			if entry.SpaceID == workspaceID {
-				return shardID
+				// 空间属于 shardID，但需要检查该 TTL 表是否支持此 shard
+				for _, s := range tableCfg.ShardList {
+					if s == shardID {
+						return shardID
+					}
+				}
+				// shard 不在此 TTL 的 ShardList 中，用原表
+				return ""
 			}
 		}
 	}

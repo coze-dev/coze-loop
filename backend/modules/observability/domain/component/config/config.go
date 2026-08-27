@@ -62,11 +62,10 @@ type TraceCKCfg struct {
 }
 
 type TableCfg struct {
-	SpanTable    string                      `mapstructure:"span_table" json:"span_table"`
-	AnnoTable    string                      `mapstructure:"anno_table" json:"anno_table"`
-	SupportShard bool                        `mapstructure:"support_shard" json:"support_shard"`
-	ShardList    []string                    `mapstructure:"shard_list" json:"shard_list"`
-	ShardConfig  map[string][]ShardEntry     `mapstructure:"shard_config" json:"shard_config"`
+	SpanTable    string   `mapstructure:"span_table" json:"span_table"`
+	AnnoTable    string   `mapstructure:"anno_table" json:"anno_table"`
+	SupportShard bool     `mapstructure:"support_shard" json:"support_shard"`
+	ShardList    []string `mapstructure:"shard_list" json:"shard_list"`
 }
 
 type ShardEntry struct {
@@ -85,6 +84,7 @@ type TenantCfg struct {
 	DefaultIngestTenant      string                                `mapstructure:"default_ingest_tenant" json:"default_ingest_tenant"`
 	TenantsSupportAnnotation map[string]bool                       `mapstructure:"tenants_support_annotation" json:"tenants_support_annotation"`
 	ClipConfig               *ClipConfig                           `mapstructure:"clip_config" json:"clip_config"`
+	ShardConfig              map[string][]ShardEntry               `mapstructure:"shard_config" json:"shard_config"`
 }
 
 type FieldMeta struct {
