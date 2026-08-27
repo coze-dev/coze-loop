@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	dto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	do "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -1380,4 +1381,257 @@ func TestSandboxEnvVarsDO2DTO(t *testing.T) {
 			assert.Equal(t, "V2", gptr.Indirect(got[1].Value))
 		}
 	})
+}
+
+// TestCustomFieldSchemasDO2DTO 覆盖 DO→DTO：nil / 空数组 / 含 nil 元素 / SchemaKey 有无 / MultiPart 透传。
+func TestCustomFieldSchemasDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil 返回 nil", func(t *testing.T) {
+		assert.Nil(t, CustomFieldSchemasDO2DTO(nil))
+	})
+
+	t.Run("空数组返回空数组", func(t *testing.T) {
+		got := CustomFieldSchemasDO2DTO([]*do.CustomFieldSchema{})
+		if assert.NotNil(t, got) {
+			assert.Len(t, got, 0)
+		}
+	})
+
+	t.Run("nil 元素被过滤", func(t *testing.T) {
+		got := CustomFieldSchemasDO2DTO([]*do.CustomFieldSchema{nil, nil})
+		if assert.NotNil(t, got) {
+			assert.Len(t, got, 0)
+		}
+	})
+
+	t.Run("完整字段透传含 SchemaKey", func(t *testing.T) {
+		key := do.SchemaKey_String
+		in := []*do.CustomFieldSchema{
+			{
+				Name:        "field_a",
+				ContentType: do.ContentTypeText,
+				SchemaKey:   &key,
+				TextSchema:  `{"type":"string"}`,
+			},
+		}
+		got := CustomFieldSchemasDO2DTO(in)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, "field_a", gptr.Indirect(got[0].Name))
+			assert.Equal(t, string(do.ContentTypeText), gptr.Indirect(got[0].ContentType))
+			assert.Equal(t, `{"type":"string"}`, gptr.Indirect(got[0].TextSchema))
+			if assert.NotNil(t, got[0].SchemaKey) {
+				assert.Equal(t, dataset.SchemaKey_String, *got[0].SchemaKey)
+			}
+		}
+	})
+
+	t.Run("SchemaKey 为 nil 时 DTO 保持 nil", func(t *testing.T) {
+		in := []*do.CustomFieldSchema{
+			{Name: "field_b", ContentType: do.ContentTypeImage, SchemaKey: nil, TextSchema: ""},
+		}
+		got := CustomFieldSchemasDO2DTO(in)
+		if assert.Len(t, got, 1) {
+			assert.Nil(t, got[0].SchemaKey)
+			assert.Equal(t, string(do.ContentTypeImage), gptr.Indirect(got[0].ContentType))
+			assert.Equal(t, "", gptr.Indirect(got[0].TextSchema))
+		}
+	})
+
+	t.Run("MultiPart ContentType 不丢失", func(t *testing.T) {
+		in := []*do.CustomFieldSchema{
+			{Name: "mp", ContentType: do.ContentType("MultiPart")},
+		}
+		got := CustomFieldSchemasDO2DTO(in)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, "MultiPart", gptr.Indirect(got[0].ContentType))
+		}
+	})
+
+	t.Run("多元素按序返回且跳过 nil", func(t *testing.T) {
+		k1 := do.SchemaKey_Integer
+		k2 := do.SchemaKey_Bool
+		in := []*do.CustomFieldSchema{
+			nil,
+			{Name: "n1", ContentType: do.ContentTypeText, SchemaKey: &k1},
+			nil,
+			{Name: "n2", ContentType: do.ContentTypeText, SchemaKey: &k2},
+		}
+		got := CustomFieldSchemasDO2DTO(in)
+		if assert.Len(t, got, 2) {
+			assert.Equal(t, "n1", gptr.Indirect(got[0].Name))
+			assert.Equal(t, dataset.SchemaKey_Integer, *got[0].SchemaKey)
+			assert.Equal(t, "n2", gptr.Indirect(got[1].Name))
+			assert.Equal(t, dataset.SchemaKey_Bool, *got[1].SchemaKey)
+		}
+	})
+}
+
+// TestCustomFieldSchemasDTO2DO 覆盖 DTO→DO：nil / 空 / 含 nil 元素 / SchemaKey 有无 / 完整字段透传。
+func TestCustomFieldSchemasDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil 返回 nil", func(t *testing.T) {
+		assert.Nil(t, CustomFieldSchemasDTO2DO(nil))
+	})
+
+	t.Run("空数组返回空数组", func(t *testing.T) {
+		got := CustomFieldSchemasDTO2DO([]*dto.CustomFieldSchema{})
+		if assert.NotNil(t, got) {
+			assert.Len(t, got, 0)
+		}
+	})
+
+	t.Run("nil 元素被过滤", func(t *testing.T) {
+		got := CustomFieldSchemasDTO2DO([]*dto.CustomFieldSchema{nil, nil})
+		if assert.NotNil(t, got) {
+			assert.Len(t, got, 0)
+		}
+	})
+
+	t.Run("完整字段透传含 SchemaKey", func(t *testing.T) {
+		ct := commondto.ContentType(do.ContentTypeText)
+		sk := dataset.SchemaKey_String
+		in := []*dto.CustomFieldSchema{
+			{
+				Name:        gptr.Of("field_a"),
+				ContentType: &ct,
+				SchemaKey:   &sk,
+				TextSchema:  gptr.Of(`{"type":"string"}`),
+			},
+		}
+		got := CustomFieldSchemasDTO2DO(in)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, "field_a", got[0].Name)
+			assert.Equal(t, do.ContentTypeText, got[0].ContentType)
+			assert.Equal(t, `{"type":"string"}`, got[0].TextSchema)
+			if assert.NotNil(t, got[0].SchemaKey) {
+				assert.Equal(t, do.SchemaKey_String, *got[0].SchemaKey)
+			}
+		}
+	})
+
+	t.Run("SchemaKey 为 nil 时 DO 保持 nil", func(t *testing.T) {
+		ct := commondto.ContentType(do.ContentTypeImage)
+		in := []*dto.CustomFieldSchema{
+			{Name: gptr.Of("field_b"), ContentType: &ct},
+		}
+		got := CustomFieldSchemasDTO2DO(in)
+		if assert.Len(t, got, 1) {
+			assert.Nil(t, got[0].SchemaKey)
+			assert.Equal(t, do.ContentTypeImage, got[0].ContentType)
+			assert.Equal(t, "", got[0].TextSchema)
+		}
+	})
+
+	t.Run("Name/ContentType 都为 nil 也能得到零值", func(t *testing.T) {
+		in := []*dto.CustomFieldSchema{{}}
+		got := CustomFieldSchemasDTO2DO(in)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, "", got[0].Name)
+			assert.Equal(t, do.ContentType(""), got[0].ContentType)
+			assert.Nil(t, got[0].SchemaKey)
+			assert.Equal(t, "", got[0].TextSchema)
+		}
+	})
+}
+
+// TestSandboxAgentDO2DTO_CustomFieldSchemas 覆盖 SandboxAgent 转换中 CustomFieldSchemas 字段。
+func TestSandboxAgentDO2DTO_CustomFieldSchemas(t *testing.T) {
+	t.Parallel()
+
+	t.Run("DO 无 CustomFieldSchemas 时 DTO 为 nil", func(t *testing.T) {
+		got := SandboxAgentDO2DTO(&do.SandboxAgent{Name: "a"})
+		if assert.NotNil(t, got) {
+			assert.Nil(t, got.CustomFieldSchemas)
+		}
+	})
+
+	t.Run("DO 中的 CustomFieldSchemas 会被拷到 DTO", func(t *testing.T) {
+		key := do.SchemaKey_Trajectory
+		in := &do.SandboxAgent{
+			Name: "sbx",
+			CustomFieldSchemas: []*do.CustomFieldSchema{
+				{Name: "traj", ContentType: do.ContentTypeText, SchemaKey: &key, TextSchema: "s"},
+			},
+		}
+		got := SandboxAgentDO2DTO(in)
+		if assert.NotNil(t, got) && assert.Len(t, got.CustomFieldSchemas, 1) {
+			assert.Equal(t, "traj", gptr.Indirect(got.CustomFieldSchemas[0].Name))
+			assert.Equal(t, string(do.ContentTypeText), gptr.Indirect(got.CustomFieldSchemas[0].ContentType))
+			if assert.NotNil(t, got.CustomFieldSchemas[0].SchemaKey) {
+				assert.Equal(t, dataset.SchemaKey_Trajectory, *got.CustomFieldSchemas[0].SchemaKey)
+			}
+			assert.Equal(t, "s", gptr.Indirect(got.CustomFieldSchemas[0].TextSchema))
+		}
+	})
+}
+
+// TestSandboxAgentDTO2DO_CustomFieldSchemas 覆盖反向 SandboxAgent 转换中 CustomFieldSchemas 字段。
+func TestSandboxAgentDTO2DO_CustomFieldSchemas(t *testing.T) {
+	t.Parallel()
+
+	t.Run("DTO 无 CustomFieldSchemas 时 DO 为 nil", func(t *testing.T) {
+		got := SandboxAgentDTO2DO(&dto.SandboxAgent{Name: gptr.Of("a")})
+		if assert.NotNil(t, got) {
+			assert.Nil(t, got.CustomFieldSchemas)
+		}
+	})
+
+	t.Run("DTO 中的 CustomFieldSchemas 会被拷到 DO", func(t *testing.T) {
+		ct := commondto.ContentType(do.ContentTypeText)
+		sk := dataset.SchemaKey_MessageList
+		in := &dto.SandboxAgent{
+			Name: gptr.Of("sbx"),
+			CustomFieldSchemas: []*dto.CustomFieldSchema{
+				{Name: gptr.Of("msgs"), ContentType: &ct, SchemaKey: &sk, TextSchema: gptr.Of("s")},
+			},
+		}
+		got := SandboxAgentDTO2DO(in)
+		if assert.NotNil(t, got) && assert.Len(t, got.CustomFieldSchemas, 1) {
+			assert.Equal(t, "msgs", got.CustomFieldSchemas[0].Name)
+			assert.Equal(t, do.ContentTypeText, got.CustomFieldSchemas[0].ContentType)
+			if assert.NotNil(t, got.CustomFieldSchemas[0].SchemaKey) {
+				assert.Equal(t, do.SchemaKey_MessageList, *got.CustomFieldSchemas[0].SchemaKey)
+			}
+			assert.Equal(t, "s", got.CustomFieldSchemas[0].TextSchema)
+		}
+	})
+}
+
+// TestSandboxAgent_CustomFieldSchemas_RoundTrip 校验 DO↔DTO 双向回环 CustomFieldSchemas 数据不丢失。
+func TestSandboxAgent_CustomFieldSchemas_RoundTrip(t *testing.T) {
+	t.Parallel()
+
+	k1 := do.SchemaKey_String
+	k2 := do.SchemaKey_Bool
+	original := &do.SandboxAgent{
+		Name: "sbx",
+		CustomFieldSchemas: []*do.CustomFieldSchema{
+			{Name: "a", ContentType: do.ContentTypeText, SchemaKey: &k1, TextSchema: `{"type":"string"}`},
+			{Name: "b", ContentType: do.ContentTypeImage, SchemaKey: nil, TextSchema: ""},
+			{Name: "c", ContentType: do.ContentType("MultiPart"), SchemaKey: &k2, TextSchema: "x"},
+		},
+	}
+	roundTrip := SandboxAgentDTO2DO(SandboxAgentDO2DTO(original))
+	require.NotNil(t, roundTrip)
+	require.Len(t, roundTrip.CustomFieldSchemas, 3)
+
+	assert.Equal(t, "a", roundTrip.CustomFieldSchemas[0].Name)
+	assert.Equal(t, do.ContentTypeText, roundTrip.CustomFieldSchemas[0].ContentType)
+	if assert.NotNil(t, roundTrip.CustomFieldSchemas[0].SchemaKey) {
+		assert.Equal(t, do.SchemaKey_String, *roundTrip.CustomFieldSchemas[0].SchemaKey)
+	}
+	assert.Equal(t, `{"type":"string"}`, roundTrip.CustomFieldSchemas[0].TextSchema)
+
+	assert.Equal(t, "b", roundTrip.CustomFieldSchemas[1].Name)
+	assert.Equal(t, do.ContentTypeImage, roundTrip.CustomFieldSchemas[1].ContentType)
+	assert.Nil(t, roundTrip.CustomFieldSchemas[1].SchemaKey)
+
+	assert.Equal(t, "c", roundTrip.CustomFieldSchemas[2].Name)
+	assert.Equal(t, do.ContentType("MultiPart"), roundTrip.CustomFieldSchemas[2].ContentType)
+	if assert.NotNil(t, roundTrip.CustomFieldSchemas[2].SchemaKey) {
+		assert.Equal(t, do.SchemaKey_Bool, *roundTrip.CustomFieldSchemas[2].SchemaKey)
+	}
+	assert.Equal(t, "x", roundTrip.CustomFieldSchemas[2].TextSchema)
 }
