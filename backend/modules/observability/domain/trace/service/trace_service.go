@@ -38,6 +38,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/pagetoken"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/size_util"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -458,19 +459,26 @@ type ListTraceChatResponse struct {
 }
 
 type ListThreadChatRequest struct {
-	PlatformType loop_span.PlatformType
-	WorkspaceID  int64
-	ThreadID     string
-	StartTime    int64
-	EndTime      int64
-	PageSize     int32
-	PageToken    string
+	PlatformType    loop_span.PlatformType
+	WorkspaceID     int64
+	ThreadID        string
+	StartTime       int64
+	EndTime         int64
+	PageSize        int32
+	PageToken       string
+	PrevPageToken   string
+	Filters         *loop_span.FilterFields
+	WithoutDetail   bool
+	AnchorStartTime int64
+	AnchorSpanID    string
 }
 
 type ListThreadChatResponse struct {
 	Messages      []*entity.ChatMessage
 	NextPageToken string
 	HasMore       bool
+	PrevPageToken string
+	PrevHasMore   bool
 }
 
 type GetThreadStatRequest struct {
@@ -3025,51 +3033,64 @@ func (r *TraceServiceImpl) ListThreadChat(ctx context.Context, req *ListThreadCh
 		return nil, err
 	}
 
-	pageSize := defaultChatPageSize
-	if req.PageSize > 0 && req.PageSize <= maxChatPageSize {
-		pageSize = req.PageSize
+	var pageSize int32
+	if req.WithoutDetail {
+		pageSize = maxChatPageSizeWithoutDetail
+	} else {
+		pageSize = defaultChatPageSize
+		if req.PageSize > 0 && req.PageSize <= maxChatPageSize {
+			pageSize = req.PageSize
+		}
 	}
 
-	filters := &loop_span.FilterFields{
-		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
-		FilterFields: []*loop_span.FilterField{
-			{
-				FieldName: loop_span.SpanFieldThreadId,
-				FieldType: loop_span.FieldTypeString,
-				Values:    []string{req.ThreadID},
-				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-			},
-			{
-				FieldName: loop_span.SpanFieldSpanType,
-				FieldType: loop_span.FieldTypeString,
-				Values:    []string{loop_span.SpanTypeModel},
-				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-			},
-			{
-				FieldName: loop_span.SpanFieldSpaceId,
-				FieldType: loop_span.FieldTypeString,
-				Values:    []string{strconv.FormatInt(req.WorkspaceID, 10)},
-				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-			},
+	filterFields := []*loop_span.FilterField{
+		{
+			FieldName: loop_span.SpanFieldThreadId,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{req.ThreadID},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+		},
+		{
+			FieldName: loop_span.SpanFieldSpanType,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{loop_span.SpanTypeModel},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+		},
+		{
+			FieldName: loop_span.SpanFieldSpaceId,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{strconv.FormatInt(req.WorkspaceID, 10)},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		},
 	}
+	if req.Filters != nil {
+		filterFields = append(filterFields, &loop_span.FilterField{SubFilter: req.Filters})
+	}
+	filters := &loop_span.FilterFields{
+		QueryAndOr:   lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+		FilterFields: filterFields,
+	}
 
-	listResp, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+	var omitColumns []string
+	if req.WithoutDetail {
+		omitColumns = []string{"input", "output"}
+	}
+
+	baseParam := &repo.ListSpansParam{
 		WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:            tenants,
 		Filters:            filters,
 		StartAt:            req.StartTime,
 		EndAt:              req.EndTime,
-		PageToken:          req.PageToken,
-		Limit:              pageSize,
-		AscByStartTime:     true,
 		NotQueryAnnotation: true,
-	})
+		OmitColumns:        omitColumns,
+	}
+
+	spans, resp, err := r.listThreadChatSpans(ctx, req, baseParam, pageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	spans := listResp.Spans
 	processors, err := r.buildHelper.BuildThreadChatProcessors(ctx, span_processor.Settings{
 		WorkspaceId:    req.WorkspaceID,
 		PlatformType:   req.PlatformType,
@@ -3085,13 +3106,117 @@ func (r *TraceServiceImpl) ListThreadChat(ctx context.Context, req *ListThreadCh
 		return nil, err
 	}
 
-	messages := r.buildChatMessages(ctx, spans, false)
+	resp.Messages = r.buildChatMessages(ctx, spans, req.WithoutDetail)
+	return resp, nil
+}
 
-	return &ListThreadChatResponse{
-		Messages:      messages,
+// listThreadChatSpans 按入参分流四种模式，返回时间序 span 与已回填分页游标的响应（Messages 待填）。
+// 方向与 keyset 游标语义全在 service：锚点坐标由 service 编码成 PageToken 下发，repo 只认 PageToken；
+// prev/next 两端游标由 service 从结果首/尾 span 自行编码，repo 不感知 prev。
+func (r *TraceServiceImpl) listThreadChatSpans(ctx context.Context, req *ListThreadChatRequest, baseParam *repo.ListSpansParam, pageSize int32) (loop_span.SpanList, *ListThreadChatResponse, error) {
+	// 锚点定位：以锚点坐标为中心，往前 desc 取 half、往后 asc 取 half，两次查询并发，合并为时间序。
+	// 向后段(asc)用 inclusive 含锚点自身、向前段(desc)严格 <，故锚点只出现一次；AnchorSpanID 非空保证坐标 (start_time, span_id) 全序唯一，不重复不遗漏。
+	if req.AnchorSpanID != "" {
+		half := pageSize / 2
+		if half < 1 {
+			half = 1
+		}
+		anchorToken := pagetoken.Encode(timeutil.MillSec2MicroSec(req.AnchorStartTime), req.AnchorSpanID)
+
+		backParam := *baseParam
+		backParam.Limit = half
+		backParam.DescByStartTime = true
+		backParam.PageToken = anchorToken
+
+		fwdParam := *baseParam
+		fwdParam.Limit = half
+		fwdParam.AscByStartTime = true
+		fwdParam.PageToken = anchorToken
+		fwdParam.PageTokenInclusive = true // 锚点自身归向后段(asc)头部，只出现一次
+
+		var backResp, fwdResp *repo.ListSpansResult
+		g, gctx := errgroup.WithContext(ctx)
+		g.Go(func() error {
+			resp, err := r.traceRepo.ListSpans(gctx, &backParam)
+			if err != nil {
+				return err
+			}
+			backResp = resp
+			return nil
+		})
+		g.Go(func() error {
+			resp, err := r.traceRepo.ListSpans(gctx, &fwdParam)
+			if err != nil {
+				return err
+			}
+			fwdResp = resp
+			return nil
+		})
+		if err := g.Wait(); err != nil {
+			return nil, nil, err
+		}
+
+		back := reverseSpanList(backResp.Spans)
+		spans := append(back, fwdResp.Spans...)
+		return spans, &ListThreadChatResponse{
+			NextPageToken: fwdResp.PageToken,
+			HasMore:       fwdResp.HasMore,
+			PrevPageToken: backResp.PageToken,
+			PrevHasMore:   backResp.HasMore,
+		}, nil
+	}
+
+	// 向前翻页：desc 取一页再反转成时间序；结果末端(时间序最早)编码为 prev 游标，首端(时间序最新)编码为 next 游标。
+	if req.PrevPageToken != "" {
+		param := *baseParam
+		param.Limit = pageSize
+		param.DescByStartTime = true
+		param.PageToken = req.PrevPageToken
+		listResp, err := r.traceRepo.ListSpans(ctx, &param)
+		if err != nil {
+			return nil, nil, err
+		}
+		spans := reverseSpanList(listResp.Spans)
+		resp := &ListThreadChatResponse{
+			PrevPageToken: listResp.PageToken,
+			PrevHasMore:   listResp.HasMore,
+		}
+		if len(spans) > 0 {
+			newest := spans[len(spans)-1]
+			resp.NextPageToken = pagetoken.Encode(newest.StartTime, newest.SpanID)
+		}
+		return spans, resp, nil
+	}
+
+	// 普通首页 / 向后翻页（asc keyset，现状行为）。
+	param := *baseParam
+	param.Limit = pageSize
+	param.AscByStartTime = true
+	param.PageToken = req.PageToken
+	listResp, err := r.traceRepo.ListSpans(ctx, &param)
+	if err != nil {
+		return nil, nil, err
+	}
+	resp := &ListThreadChatResponse{
 		NextPageToken: listResp.PageToken,
 		HasMore:       listResp.HasMore,
-	}, nil
+	}
+	// 向后翻页（消费了 PageToken）说明前方有历史；首端(时间序最早)编码为 prev 游标。首页无 PageToken 则不给 prev。
+	if req.PageToken != "" && len(listResp.Spans) > 0 {
+		oldest := listResp.Spans[0]
+		resp.PrevPageToken = pagetoken.Encode(oldest.StartTime, oldest.SpanID)
+		resp.PrevHasMore = true
+	}
+
+	return listResp.Spans, resp, nil
+}
+
+func reverseSpanList(spans loop_span.SpanList) loop_span.SpanList {
+	out := make(loop_span.SpanList, len(spans))
+	for i, s := range spans {
+		out[len(spans)-1-i] = s
+	}
+	return out
 }
 
 // GetAdjacentTrace 以锚点 trace 为中心，在同 thread 内按方向取相邻的一条 trace。

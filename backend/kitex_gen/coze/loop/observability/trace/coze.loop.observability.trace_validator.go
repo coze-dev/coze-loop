@@ -730,6 +730,11 @@ func (p *ListThreadChatRequest) IsValid() error {
 	if len(p.ThreadID) < int(1) {
 		return fmt.Errorf("field ThreadID min_len rule failed, current value: %d", len(p.ThreadID))
 	}
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

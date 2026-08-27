@@ -813,7 +813,11 @@ func (t *TraceApplication) ListViews(ctx context.Context, req *trace.ListViewsRe
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
 	logs.CtxInfo(ctx, "List views for %s at %d", userID, req.GetWorkspaceID())
-	viewList, err := t.viewRepo.ListViews(ctx, req.WorkspaceID, userID)
+	scope := int32(req.GetScope())
+	if scope == 0 {
+		scope = int32(view.Scope_TraceList)
+	}
+	viewList, err := t.viewRepo.ListViews(ctx, req.WorkspaceID, userID, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -1444,13 +1448,18 @@ func (t *TraceApplication) ListThreadChat(ctx context.Context, req *trace.ListTh
 	}
 
 	sResp, err := t.traceService.ListThreadChat(ctx, &service.ListThreadChatRequest{
-		PlatformType: platformType,
-		WorkspaceID:  req.GetWorkspaceID(),
-		ThreadID:     req.GetThreadID(),
-		StartTime:    startTime,
-		EndTime:      endTime,
-		PageSize:     req.GetPageSize(),
-		PageToken:    req.GetPageToken(),
+		PlatformType:    platformType,
+		WorkspaceID:     req.GetWorkspaceID(),
+		ThreadID:        req.GetThreadID(),
+		StartTime:       startTime,
+		EndTime:         endTime,
+		PageSize:        req.GetPageSize(),
+		PageToken:       req.GetPageToken(),
+		PrevPageToken:   req.GetPrevPageToken(),
+		Filters:         tconv.FilterFieldsDTO2DO(req.Filters),
+		WithoutDetail:   req.GetWithoutDetail(),
+		AnchorStartTime: req.GetAnchorStartTime(),
+		AnchorSpanID:    req.GetAnchorSpanID(),
 	})
 	if err != nil {
 		return nil, err
@@ -1460,6 +1469,8 @@ func (t *TraceApplication) ListThreadChat(ctx context.Context, req *trace.ListTh
 		Messages:      tconv.ChatMessagesDO2DTO(sResp.Messages),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
+		PrevPageToken: ptr.Of(sResp.PrevPageToken),
+		PrevHasMore:   ptr.Of(sResp.PrevHasMore),
 	}, nil
 }
 

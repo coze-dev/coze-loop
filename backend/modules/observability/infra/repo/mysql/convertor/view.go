@@ -21,6 +21,7 @@ func ViewDO2PO(view *entity.ObservabilityView) *model.ObservabilityView {
 		CreatedBy:    view.CreatedBy,
 		UpdatedAt:    view.UpdatedAt,
 		UpdatedBy:    view.UpdatedBy,
+		Scope:        view.Scope,
 	}
 }
 
@@ -37,5 +38,6 @@ func ViewPO2DO(view *model.ObservabilityView) *entity.ObservabilityView {
 		CreatedBy:    view.CreatedBy,
 		UpdatedAt:    view.UpdatedAt,
 		UpdatedBy:    view.UpdatedBy,
+		Scope:        view.Scope,
 	}
 }

@@ -86,18 +86,18 @@ func (mr *MockIViewDaoMockRecorder) GetView(ctx, id, workspaceID, userID any) *g
 }
 
 // ListViews mocks base method.
-func (m *MockIViewDao) ListViews(ctx context.Context, workspaceID int64, userID string) ([]*model.ObservabilityView, error) {
+func (m *MockIViewDao) ListViews(ctx context.Context, workspaceID int64, userID string, scope int32) ([]*model.ObservabilityView, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListViews", ctx, workspaceID, userID)
+	ret := m.ctrl.Call(m, "ListViews", ctx, workspaceID, userID, scope)
 	ret0, _ := ret[0].([]*model.ObservabilityView)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListViews indicates an expected call of ListViews.
-func (mr *MockIViewDaoMockRecorder) ListViews(ctx, workspaceID, userID any) *gomock.Call {
+func (mr *MockIViewDaoMockRecorder) ListViews(ctx, workspaceID, userID, scope any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListViews", reflect.TypeOf((*MockIViewDao)(nil).ListViews), ctx, workspaceID, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListViews", reflect.TypeOf((*MockIViewDao)(nil).ListViews), ctx, workspaceID, userID, scope)
 }
 
 // UpdateView mocks base method.

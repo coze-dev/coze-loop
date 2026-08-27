@@ -25,6 +25,7 @@ func ViewPO2DTO(v *entity.ObservabilityView) *view.View {
 		SpanListType: ptr.Of(v.SpanListType),
 		Filters:      v.Filters,
 		IsSystem:     false,
+		Scope:        ptr.Of(view.Scope(v.Scope)),
 	}
 }
 
@@ -40,6 +41,10 @@ func CreateViewDTO2PO(req *trace.CreateViewRequest, userID string) *entity.Obser
 	if req == nil {
 		return nil
 	}
+	scope := int32(req.GetScope())
+	if scope == 0 {
+		scope = int32(view.Scope_TraceList)
+	}
 	return &entity.ObservabilityView{
 		EnterpriseID: req.GetEnterpriseID(),
 		WorkspaceID:  req.GetWorkspaceID(),
@@ -51,5 +56,6 @@ func CreateViewDTO2PO(req *trace.CreateViewRequest, userID string) *entity.Obser
 		CreatedBy:    userID,
 		UpdatedAt:    time.Now(),
 		UpdatedBy:    userID,
+		Scope:        scope,
 	}
 }

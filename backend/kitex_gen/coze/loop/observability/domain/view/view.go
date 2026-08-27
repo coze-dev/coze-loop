@@ -3,11 +3,63 @@
 package view
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"strings"
 )
+
+type Scope int64
+
+const (
+	// trace_list（列表页）
+	Scope_TraceList Scope = 1
+	// trace_detail_tree（详情页-tree）
+	Scope_TraceDetailTree Scope = 2
+	// trace_detail_chat（详情页-chat）
+	Scope_TraceDetailChat Scope = 3
+)
+
+func (p Scope) String() string {
+	switch p {
+	case Scope_TraceList:
+		return "TraceList"
+	case Scope_TraceDetailTree:
+		return "TraceDetailTree"
+	case Scope_TraceDetailChat:
+		return "TraceDetailChat"
+	}
+	return "<UNSET>"
+}
+
+func ScopeFromString(s string) (Scope, error) {
+	switch s {
+	case "TraceList":
+		return Scope_TraceList, nil
+	case "TraceDetailTree":
+		return Scope_TraceDetailTree, nil
+	case "TraceDetailChat":
+		return Scope_TraceDetailChat, nil
+	}
+	return Scope(0), fmt.Errorf("not a valid Scope string")
+}
+
+func ScopePtr(v Scope) *Scope { return &v }
+func (p *Scope) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = Scope(result.Int64)
+	return
+}
+
+func (p *Scope) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
 
 type View struct {
 	ID           int64                `thrift:"id,1,required" frugal:"1,required,i64" json:"id" form:"id,required" query:"id,required"`
@@ -18,6 +70,7 @@ type View struct {
 	SpanListType *common.SpanListType `thrift:"spanList_type,6,optional" frugal:"6,optional,string" form:"spanList_type" json:"spanList_type,omitempty" query:"spanList_type"`
 	Filters      string               `thrift:"filters,7,required" frugal:"7,required,string" form:"filters,required" json:"filters,required" query:"filters,required"`
 	IsSystem     bool                 `thrift:"is_system,8,required" frugal:"8,required,bool" form:"is_system,required" json:"is_system,required" query:"is_system,required"`
+	Scope        *Scope               `thrift:"scope,9,optional" frugal:"9,optional,Scope" form:"scope" json:"scope,omitempty" query:"scope"`
 }
 
 func NewView() *View {
@@ -102,6 +155,18 @@ func (p *View) GetIsSystem() (v bool) {
 	}
 	return
 }
+
+var View_Scope_DEFAULT Scope
+
+func (p *View) GetScope() (v Scope) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScope() {
+		return View_Scope_DEFAULT
+	}
+	return *p.Scope
+}
 func (p *View) SetID(val int64) {
 	p.ID = val
 }
@@ -126,6 +191,9 @@ func (p *View) SetFilters(val string) {
 func (p *View) SetIsSystem(val bool) {
 	p.IsSystem = val
 }
+func (p *View) SetScope(val *Scope) {
+	p.Scope = val
+}
 
 var fieldIDToName_View = map[int16]string{
 	1: "id",
@@ -136,6 +204,7 @@ var fieldIDToName_View = map[int16]string{
 	6: "spanList_type",
 	7: "filters",
 	8: "is_system",
+	9: "scope",
 }
 
 func (p *View) IsSetEnterpriseID() bool {
@@ -152,6 +221,10 @@ func (p *View) IsSetPlatformType() bool {
 
 func (p *View) IsSetSpanListType() bool {
 	return p.SpanListType != nil
+}
+
+func (p *View) IsSetScope() bool {
+	return p.Scope != nil
 }
 
 func (p *View) Read(iprot thrift.TProtocol) (err error) {
@@ -241,6 +314,14 @@ func (p *View) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetIsSystem = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -382,6 +463,18 @@ func (p *View) ReadField8(iprot thrift.TProtocol) error {
 	p.IsSystem = _field
 	return nil
 }
+func (p *View) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *Scope
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := Scope(v)
+		_field = &tmp
+	}
+	p.Scope = _field
+	return nil
+}
 
 func (p *View) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -419,6 +512,10 @@ func (p *View) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -575,6 +672,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *View) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScope() {
+		if err = oprot.WriteFieldBegin("scope", thrift.I32, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.Scope)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
 
 func (p *View) String() string {
 	if p == nil {
@@ -612,6 +727,9 @@ func (p *View) DeepEqual(ano *View) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.IsSystem) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.Scope) {
 		return false
 	}
 	return true
@@ -689,6 +807,18 @@ func (p *View) Field7DeepEqual(src string) bool {
 func (p *View) Field8DeepEqual(src bool) bool {
 
 	if p.IsSystem != src {
+		return false
+	}
+	return true
+}
+func (p *View) Field9DeepEqual(src *Scope) bool {
+
+	if p.Scope == src {
+		return true
+	} else if p.Scope == nil || src == nil {
+		return false
+	}
+	if *p.Scope != *src {
 		return false
 	}
 	return true
