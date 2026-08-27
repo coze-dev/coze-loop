@@ -292,7 +292,6 @@ func (t *TraceConfigCenter) GetTrajectoryMetadataConfig(ctx context.Context) *co
 	return cfg
 }
 
-
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {
 	ret := &TraceConfigCenter{
 		IConfigLoader: confP,
