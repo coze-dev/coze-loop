@@ -1418,7 +1418,7 @@ func TestCustomFieldSchemasDO2DTO(t *testing.T) {
 		got := CustomFieldSchemasDO2DTO(in)
 		if assert.Len(t, got, 1) {
 			assert.Equal(t, "field_a", gptr.Indirect(got[0].Name))
-			assert.Equal(t, string(do.ContentTypeText), string(gptr.Indirect(got[0].ContentType)))
+			assert.Equal(t, string(do.ContentTypeText), gptr.Indirect(got[0].ContentType))
 			assert.Equal(t, `{"type":"string"}`, gptr.Indirect(got[0].TextSchema))
 			if assert.NotNil(t, got[0].SchemaKey) {
 				assert.Equal(t, dataset.SchemaKey_String, *got[0].SchemaKey)
@@ -1433,7 +1433,7 @@ func TestCustomFieldSchemasDO2DTO(t *testing.T) {
 		got := CustomFieldSchemasDO2DTO(in)
 		if assert.Len(t, got, 1) {
 			assert.Nil(t, got[0].SchemaKey)
-			assert.Equal(t, string(do.ContentTypeImage), string(gptr.Indirect(got[0].ContentType)))
+			assert.Equal(t, string(do.ContentTypeImage), gptr.Indirect(got[0].ContentType))
 			assert.Equal(t, "", gptr.Indirect(got[0].TextSchema))
 		}
 	})
@@ -1444,7 +1444,7 @@ func TestCustomFieldSchemasDO2DTO(t *testing.T) {
 		}
 		got := CustomFieldSchemasDO2DTO(in)
 		if assert.Len(t, got, 1) {
-			assert.Equal(t, "MultiPart", string(gptr.Indirect(got[0].ContentType)))
+			assert.Equal(t, "MultiPart", gptr.Indirect(got[0].ContentType))
 		}
 	})
 
@@ -1558,7 +1558,7 @@ func TestSandboxAgentDO2DTO_CustomFieldSchemas(t *testing.T) {
 		got := SandboxAgentDO2DTO(in)
 		if assert.NotNil(t, got) && assert.Len(t, got.CustomFieldSchemas, 1) {
 			assert.Equal(t, "traj", gptr.Indirect(got.CustomFieldSchemas[0].Name))
-			assert.Equal(t, string(do.ContentTypeText), string(gptr.Indirect(got.CustomFieldSchemas[0].ContentType)))
+			assert.Equal(t, string(do.ContentTypeText), gptr.Indirect(got.CustomFieldSchemas[0].ContentType))
 			if assert.NotNil(t, got.CustomFieldSchemas[0].SchemaKey) {
 				assert.Equal(t, dataset.SchemaKey_Trajectory, *got.CustomFieldSchemas[0].SchemaKey)
 			}

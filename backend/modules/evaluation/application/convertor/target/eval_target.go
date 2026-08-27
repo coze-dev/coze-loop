@@ -740,7 +740,7 @@ func CustomFieldSchemasDTO2DO(dtoObjs []*dto.CustomFieldSchema) []*do.CustomFiel
 		}
 		item := &do.CustomFieldSchema{
 			Name:        gptr.Indirect(s.Name),
-			ContentType: commonconvertor.ConvertContentTypeDTO2DO(string(gptr.Indirect(s.ContentType))),
+			ContentType: commonconvertor.ConvertContentTypeDTO2DO(gptr.Indirect(s.ContentType)),
 			TextSchema:  gptr.Indirect(s.TextSchema),
 		}
 		if s.SchemaKey != nil {
