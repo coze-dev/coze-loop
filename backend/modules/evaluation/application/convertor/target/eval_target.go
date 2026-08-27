@@ -635,16 +635,16 @@ func SandboxAgentDTO2DO(dtoObj *dto.SandboxAgent) *do.SandboxAgent {
 		return nil
 	}
 	return &do.SandboxAgent{
-		Name:             gptr.Indirect(dtoObj.Name),
-		Type:             do.SandboxAgentType(gptr.Indirect(dtoObj.Type)),
-		ModelName:        gptr.Indirect(dtoObj.ModelName),
-		ModelID:          gptr.Indirect(dtoObj.ModelID),
-		AgentSetupCmd:    gptr.Indirect(dtoObj.AgentSetupCmd),
-		AgentRunCmd:      gptr.Indirect(dtoObj.AgentRunCmd),
-		Envs:             SandboxEnvVarsDTO2DO(dtoObj.Envs),
-		Image:            gptr.Indirect(dtoObj.Image),
-		EnableAnalysis:   gptr.Indirect(dtoObj.EnableAnalysis),
-		SandboxCountMode: do.SandboxCountMode(gptr.Indirect(dtoObj.SandboxCountMode)),
+		Name:               gptr.Indirect(dtoObj.Name),
+		Type:               do.SandboxAgentType(gptr.Indirect(dtoObj.Type)),
+		ModelName:          gptr.Indirect(dtoObj.ModelName),
+		ModelID:            gptr.Indirect(dtoObj.ModelID),
+		AgentSetupCmd:      gptr.Indirect(dtoObj.AgentSetupCmd),
+		AgentRunCmd:        gptr.Indirect(dtoObj.AgentRunCmd),
+		Envs:               SandboxEnvVarsDTO2DO(dtoObj.Envs),
+		Image:              gptr.Indirect(dtoObj.Image),
+		EnableAnalysis:     gptr.Indirect(dtoObj.EnableAnalysis),
+		SandboxCountMode:   do.SandboxCountMode(gptr.Indirect(dtoObj.SandboxCountMode)),
 		CustomFieldSchemas: CustomFieldSchemasDTO2DO(dtoObj.CustomFieldSchemas),
 	}
 }
@@ -654,15 +654,15 @@ func SandboxAgentDO2DTO(doObj *do.SandboxAgent) *dto.SandboxAgent {
 		return nil
 	}
 	res := &dto.SandboxAgent{
-		Name:           gptr.Of(doObj.Name),
-		Type:           gptr.Of(dto.SandboxAgentType(doObj.Type)),
-		ModelName:      gptr.Of(doObj.ModelName),
-		ModelID:        gptr.Of(doObj.ModelID),
-		AgentSetupCmd:  gptr.Of(doObj.AgentSetupCmd),
-		AgentRunCmd:    gptr.Of(doObj.AgentRunCmd),
-		Envs:           SandboxEnvVarsDO2DTO(doObj.Envs),
-		Image:          gptr.Of(doObj.Image),
-		EnableAnalysis: gptr.Of(doObj.EnableAnalysis),
+		Name:               gptr.Of(doObj.Name),
+		Type:               gptr.Of(dto.SandboxAgentType(doObj.Type)),
+		ModelName:          gptr.Of(doObj.ModelName),
+		ModelID:            gptr.Of(doObj.ModelID),
+		AgentSetupCmd:      gptr.Of(doObj.AgentSetupCmd),
+		AgentRunCmd:        gptr.Of(doObj.AgentRunCmd),
+		Envs:               SandboxEnvVarsDO2DTO(doObj.Envs),
+		Image:              gptr.Of(doObj.Image),
+		EnableAnalysis:     gptr.Of(doObj.EnableAnalysis),
 		CustomFieldSchemas: CustomFieldSchemasDO2DTO(doObj.CustomFieldSchemas),
 	}
 	// 历史记录里没有 SandboxCountMode 字段，entity 为空串；此时保持 DTO 为 nil，
