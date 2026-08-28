@@ -353,15 +353,13 @@ func RetryRecordsDO2DTOs(from []*entity.RetryRecord) []*domain_expt.RetryRecord 
 			continue
 		}
 		res = append(res, &domain_expt.RetryRecord{
-			RecordID:           gptr.Of(r.RecordID),
-			TraceID:            gptr.Of(r.TraceID),
-			Status:             gptr.Of(r.Status),
-			CreatedAt:          gptr.Of(r.CreatedAtMS),
-			IsFinal:            gptr.Of(r.IsFinal),
-			TurnID:             gptr.Of(r.TurnID),
-			ReplayLogURL:       gptr.Of(r.ReplayLogURL),
-			OrchestratorLogURL: gptr.Of(r.OrchestratorLogURL),
-			AgentLogURL:        gptr.Of(r.AgentLogURL),
+			RecordID:            gptr.Of(r.RecordID),
+			TraceID:             gptr.Of(r.TraceID),
+			Status:              gptr.Of(r.Status),
+			CreatedAt:           gptr.Of(r.CreatedAtMS),
+			IsFinal:             gptr.Of(r.IsFinal),
+			TurnID:              gptr.Of(r.TurnID),
+			FornaxSandboxLogURL: gptr.Of(r.FornaxSandboxLogURL),
 		})
 	}
 	return res

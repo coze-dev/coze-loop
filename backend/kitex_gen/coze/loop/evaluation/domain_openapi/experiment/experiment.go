@@ -13798,15 +13798,14 @@ func (p *ItemSystemInfo) Field5DeepEqual(src []*RetryRecord) bool {
 
 // 评测对象历次调用记录（每次调用/自动重试一条）
 type RetryRecord struct {
-	RecordID           *int64  `thrift:"record_id,1,optional" frugal:"1,optional,i64" json:"record_id" form:"record_id" query:"record_id"`
-	TraceID            *string `thrift:"trace_id,2,optional" frugal:"2,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
-	Status             *int32  `thrift:"status,3,optional" frugal:"3,optional,i32" form:"status" json:"status,omitempty" query:"status"`
-	CreatedAt          *int64  `thrift:"created_at,4,optional" frugal:"4,optional,i64" json:"created_at" form:"created_at" query:"created_at"`
-	IsFinal            *bool   `thrift:"is_final,5,optional" frugal:"5,optional,bool" form:"is_final" json:"is_final,omitempty" query:"is_final"`
-	TurnID             *int64  `thrift:"turn_id,6,optional" frugal:"6,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
-	ReplayLogURL       *string `thrift:"replay_log_url,7,optional" frugal:"7,optional,string" form:"replay_log_url" json:"replay_log_url,omitempty" query:"replay_log_url"`
-	OrchestratorLogURL *string `thrift:"orchestrator_log_url,8,optional" frugal:"8,optional,string" form:"orchestrator_log_url" json:"orchestrator_log_url,omitempty" query:"orchestrator_log_url"`
-	AgentLogURL        *string `thrift:"agent_log_url,9,optional" frugal:"9,optional,string" form:"agent_log_url" json:"agent_log_url,omitempty" query:"agent_log_url"`
+	RecordID  *int64  `thrift:"record_id,1,optional" frugal:"1,optional,i64" json:"record_id" form:"record_id" query:"record_id"`
+	TraceID   *string `thrift:"trace_id,2,optional" frugal:"2,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
+	Status    *int32  `thrift:"status,3,optional" frugal:"3,optional,i32" form:"status" json:"status,omitempty" query:"status"`
+	CreatedAt *int64  `thrift:"created_at,4,optional" frugal:"4,optional,i64" json:"created_at" form:"created_at" query:"created_at"`
+	IsFinal   *bool   `thrift:"is_final,5,optional" frugal:"5,optional,bool" form:"is_final" json:"is_final,omitempty" query:"is_final"`
+	TurnID    *int64  `thrift:"turn_id,6,optional" frugal:"6,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
+	// 沙箱日志 URL 集合(JSON 串)：{orchestrator,agent,replay}
+	FornaxSandboxLogURL *string `thrift:"fornax_sandbox_log_url,7,optional" frugal:"7,optional,string" form:"fornax_sandbox_log_url" json:"fornax_sandbox_log_url,omitempty" query:"fornax_sandbox_log_url"`
 }
 
 func NewRetryRecord() *RetryRecord {
@@ -13888,40 +13887,16 @@ func (p *RetryRecord) GetTurnID() (v int64) {
 	return *p.TurnID
 }
 
-var RetryRecord_ReplayLogURL_DEFAULT string
+var RetryRecord_FornaxSandboxLogURL_DEFAULT string
 
-func (p *RetryRecord) GetReplayLogURL() (v string) {
+func (p *RetryRecord) GetFornaxSandboxLogURL() (v string) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetReplayLogURL() {
-		return RetryRecord_ReplayLogURL_DEFAULT
+	if !p.IsSetFornaxSandboxLogURL() {
+		return RetryRecord_FornaxSandboxLogURL_DEFAULT
 	}
-	return *p.ReplayLogURL
-}
-
-var RetryRecord_OrchestratorLogURL_DEFAULT string
-
-func (p *RetryRecord) GetOrchestratorLogURL() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetOrchestratorLogURL() {
-		return RetryRecord_OrchestratorLogURL_DEFAULT
-	}
-	return *p.OrchestratorLogURL
-}
-
-var RetryRecord_AgentLogURL_DEFAULT string
-
-func (p *RetryRecord) GetAgentLogURL() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetAgentLogURL() {
-		return RetryRecord_AgentLogURL_DEFAULT
-	}
-	return *p.AgentLogURL
+	return *p.FornaxSandboxLogURL
 }
 func (p *RetryRecord) SetRecordID(val *int64) {
 	p.RecordID = val
@@ -13941,14 +13916,8 @@ func (p *RetryRecord) SetIsFinal(val *bool) {
 func (p *RetryRecord) SetTurnID(val *int64) {
 	p.TurnID = val
 }
-func (p *RetryRecord) SetReplayLogURL(val *string) {
-	p.ReplayLogURL = val
-}
-func (p *RetryRecord) SetOrchestratorLogURL(val *string) {
-	p.OrchestratorLogURL = val
-}
-func (p *RetryRecord) SetAgentLogURL(val *string) {
-	p.AgentLogURL = val
+func (p *RetryRecord) SetFornaxSandboxLogURL(val *string) {
+	p.FornaxSandboxLogURL = val
 }
 
 var fieldIDToName_RetryRecord = map[int16]string{
@@ -13958,9 +13927,7 @@ var fieldIDToName_RetryRecord = map[int16]string{
 	4: "created_at",
 	5: "is_final",
 	6: "turn_id",
-	7: "replay_log_url",
-	8: "orchestrator_log_url",
-	9: "agent_log_url",
+	7: "fornax_sandbox_log_url",
 }
 
 func (p *RetryRecord) IsSetRecordID() bool {
@@ -13987,16 +13954,8 @@ func (p *RetryRecord) IsSetTurnID() bool {
 	return p.TurnID != nil
 }
 
-func (p *RetryRecord) IsSetReplayLogURL() bool {
-	return p.ReplayLogURL != nil
-}
-
-func (p *RetryRecord) IsSetOrchestratorLogURL() bool {
-	return p.OrchestratorLogURL != nil
-}
-
-func (p *RetryRecord) IsSetAgentLogURL() bool {
-	return p.AgentLogURL != nil
+func (p *RetryRecord) IsSetFornaxSandboxLogURL() bool {
+	return p.FornaxSandboxLogURL != nil
 }
 
 func (p *RetryRecord) Read(iprot thrift.TProtocol) (err error) {
@@ -14068,22 +14027,6 @@ func (p *RetryRecord) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField7(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 8:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField8(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 9:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14192,29 +14135,7 @@ func (p *RetryRecord) ReadField7(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.ReplayLogURL = _field
-	return nil
-}
-func (p *RetryRecord) ReadField8(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.OrchestratorLogURL = _field
-	return nil
-}
-func (p *RetryRecord) ReadField9(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.AgentLogURL = _field
+	p.FornaxSandboxLogURL = _field
 	return nil
 }
 
@@ -14250,14 +14171,6 @@ func (p *RetryRecord) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
-			goto WriteFieldError
-		}
-		if err = p.writeField8(oprot); err != nil {
-			fieldId = 8
-			goto WriteFieldError
-		}
-		if err = p.writeField9(oprot); err != nil {
-			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -14387,11 +14300,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *RetryRecord) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetReplayLogURL() {
-		if err = oprot.WriteFieldBegin("replay_log_url", thrift.STRING, 7); err != nil {
+	if p.IsSetFornaxSandboxLogURL() {
+		if err = oprot.WriteFieldBegin("fornax_sandbox_log_url", thrift.STRING, 7); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.ReplayLogURL); err != nil {
+		if err := oprot.WriteString(*p.FornaxSandboxLogURL); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -14403,42 +14316,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
-}
-func (p *RetryRecord) writeField8(oprot thrift.TProtocol) (err error) {
-	if p.IsSetOrchestratorLogURL() {
-		if err = oprot.WriteFieldBegin("orchestrator_log_url", thrift.STRING, 8); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.OrchestratorLogURL); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
-}
-func (p *RetryRecord) writeField9(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAgentLogURL() {
-		if err = oprot.WriteFieldBegin("agent_log_url", thrift.STRING, 9); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.AgentLogURL); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
 func (p *RetryRecord) String() string {
@@ -14473,13 +14350,7 @@ func (p *RetryRecord) DeepEqual(ano *RetryRecord) bool {
 	if !p.Field6DeepEqual(ano.TurnID) {
 		return false
 	}
-	if !p.Field7DeepEqual(ano.ReplayLogURL) {
-		return false
-	}
-	if !p.Field8DeepEqual(ano.OrchestratorLogURL) {
-		return false
-	}
-	if !p.Field9DeepEqual(ano.AgentLogURL) {
+	if !p.Field7DeepEqual(ano.FornaxSandboxLogURL) {
 		return false
 	}
 	return true
@@ -14559,36 +14430,12 @@ func (p *RetryRecord) Field6DeepEqual(src *int64) bool {
 }
 func (p *RetryRecord) Field7DeepEqual(src *string) bool {
 
-	if p.ReplayLogURL == src {
+	if p.FornaxSandboxLogURL == src {
 		return true
-	} else if p.ReplayLogURL == nil || src == nil {
+	} else if p.FornaxSandboxLogURL == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.ReplayLogURL, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *RetryRecord) Field8DeepEqual(src *string) bool {
-
-	if p.OrchestratorLogURL == src {
-		return true
-	} else if p.OrchestratorLogURL == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.OrchestratorLogURL, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *RetryRecord) Field9DeepEqual(src *string) bool {
-
-	if p.AgentLogURL == src {
-		return true
-	} else if p.AgentLogURL == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.AgentLogURL, *src) != 0 {
+	if strings.Compare(*p.FornaxSandboxLogURL, *src) != 0 {
 		return false
 	}
 	return true

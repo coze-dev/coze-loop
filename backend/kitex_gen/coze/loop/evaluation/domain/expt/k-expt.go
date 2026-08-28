@@ -9804,34 +9804,6 @@ func (p *RetryRecord) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 8:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField8(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 9:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField9(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9944,35 +9916,7 @@ func (p *RetryRecord) FastReadField7(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.ReplayLogURL = _field
-	return offset, nil
-}
-
-func (p *RetryRecord) FastReadField8(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.OrchestratorLogURL = _field
-	return offset, nil
-}
-
-func (p *RetryRecord) FastReadField9(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.AgentLogURL = _field
+	p.FornaxSandboxLogURL = _field
 	return offset, nil
 }
 
@@ -9990,8 +9934,6 @@ func (p *RetryRecord) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
-		offset += p.fastWriteField8(buf[offset:], w)
-		offset += p.fastWriteField9(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -10007,8 +9949,6 @@ func (p *RetryRecord) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
-		l += p.field8Length()
-		l += p.field9Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -10070,27 +10010,9 @@ func (p *RetryRecord) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *RetryRecord) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetReplayLogURL() {
+	if p.IsSetFornaxSandboxLogURL() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ReplayLogURL)
-	}
-	return offset
-}
-
-func (p *RetryRecord) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetOrchestratorLogURL() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 8)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.OrchestratorLogURL)
-	}
-	return offset
-}
-
-func (p *RetryRecord) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetAgentLogURL() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 9)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.AgentLogURL)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.FornaxSandboxLogURL)
 	}
 	return offset
 }
@@ -10151,27 +10073,9 @@ func (p *RetryRecord) field6Length() int {
 
 func (p *RetryRecord) field7Length() int {
 	l := 0
-	if p.IsSetReplayLogURL() {
+	if p.IsSetFornaxSandboxLogURL() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.ReplayLogURL)
-	}
-	return l
-}
-
-func (p *RetryRecord) field8Length() int {
-	l := 0
-	if p.IsSetOrchestratorLogURL() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.OrchestratorLogURL)
-	}
-	return l
-}
-
-func (p *RetryRecord) field9Length() int {
-	l := 0
-	if p.IsSetAgentLogURL() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.AgentLogURL)
+		l += thrift.Binary.StringLengthNocopy(*p.FornaxSandboxLogURL)
 	}
 	return l
 }
@@ -10215,28 +10119,12 @@ func (p *RetryRecord) DeepCopy(s interface{}) error {
 		p.TurnID = &tmp
 	}
 
-	if src.ReplayLogURL != nil {
+	if src.FornaxSandboxLogURL != nil {
 		var tmp string
-		if *src.ReplayLogURL != "" {
-			tmp = kutils.StringDeepCopy(*src.ReplayLogURL)
+		if *src.FornaxSandboxLogURL != "" {
+			tmp = kutils.StringDeepCopy(*src.FornaxSandboxLogURL)
 		}
-		p.ReplayLogURL = &tmp
-	}
-
-	if src.OrchestratorLogURL != nil {
-		var tmp string
-		if *src.OrchestratorLogURL != "" {
-			tmp = kutils.StringDeepCopy(*src.OrchestratorLogURL)
-		}
-		p.OrchestratorLogURL = &tmp
-	}
-
-	if src.AgentLogURL != nil {
-		var tmp string
-		if *src.AgentLogURL != "" {
-			tmp = kutils.StringDeepCopy(*src.AgentLogURL)
-		}
-		p.AgentLogURL = &tmp
+		p.FornaxSandboxLogURL = &tmp
 	}
 
 	return nil

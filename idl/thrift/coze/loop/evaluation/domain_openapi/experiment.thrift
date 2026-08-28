@@ -397,9 +397,7 @@ struct RetryRecord {
     4: optional i64 created_at (api.js_conv='true', go.tag='json:"created_at"')
     5: optional bool is_final
     6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"')
-    7: optional string replay_log_url
-    8: optional string orchestrator_log_url
-    9: optional string agent_log_url
+    7: optional string fornax_sandbox_log_url // 沙箱日志 URL 集合(JSON 串)：{orchestrator,agent,replay}
 }
 
 // ===============================

@@ -820,12 +820,8 @@ type RetryRecord struct {
 	IsFinal bool
 	// TurnID 多轮题区分轮次
 	TurnID int64
-	// ReplayLogURL 回放日志 agent_replay_<id>.tar.gz（用户最关心）
-	ReplayLogURL string
-	// OrchestratorLogURL 编排日志
-	OrchestratorLogURL string
-	// AgentLogURL agent 沙箱日志
-	AgentLogURL string
+	// FornaxSandboxLogURL 沙箱日志 URL 集合（原样透出的 JSON 串）：{orchestrator,agent,replay}
+	FornaxSandboxLogURL string
 }
 
 type RunError struct {

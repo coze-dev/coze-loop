@@ -415,13 +415,11 @@ struct ItemSystemInfo {
 struct RetryRecord {
     1: optional i64 record_id (api.js_conv='true', go.tag='json:"record_id"') // eval_target_record.id
     2: optional string trace_id
-    3: optional i32 status // 对齐 eval_target_record.status
+    3: optional i32 status // 对齐 eval_target_record.status（1=成功 2=失败）
     4: optional i64 created_at (api.js_conv='true', go.tag='json:"created_at"') // 毫秒时间戳
     5: optional bool is_final // 是否为最终采用的那次（= expt_turn_result.target_result_id 指向）
     6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 多轮题区分轮次
-    7: optional string replay_log_url // 回放日志 agent_replay_<id>.tar.gz（用户最关心）
-    8: optional string orchestrator_log_url // 编排日志 orchestrator_<id>.tar.gz
-    9: optional string agent_log_url // agent 沙箱日志 agent_sandbox_<id>.tar.gz
+    7: optional string fornax_sandbox_log_url // 沙箱日志 URL 集合(原样透出的 JSON 串)：{orchestrator,agent,replay}，replay 为回放日志
 }
 
 struct ExptColumnEvaluator {
