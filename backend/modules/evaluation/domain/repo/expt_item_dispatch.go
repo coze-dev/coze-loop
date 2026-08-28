@@ -56,6 +56,21 @@ type IExptItemDispatchRepo interface {
 	// 调用方据此决定是否继续执行 item。
 	StartReservedItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (started bool, err error)
 
+	// RequeueProcessingItem 把 Processing/none 的 item 退回 Queueing/none，让它重新进入授予候选。
+	//
+	// 唯一调用场景：consumer 取执行权时发现 reservation 已不存在（ConfirmRunning=false），
+	// 而 run log 投影却已经是 Processing —— 该 item 既没有额度、也没有执行者，属于孤儿态。
+	// 不退回的后果不是"少跑一个 item"，而是**整个实验停摆**：Processing 计入 item_concur_num，
+	// ScanEvalItems 与 LoadDispatchRuntime 都把它当"在跑"，于是既不派新 item 也等不到它完成，
+	// 直到异步僵尸阈值（默认 3h）才被判 Fail。实测踩过：两个实验各 20 个 item 卡满槽位 77 分钟。
+	//
+	// 为什么退回 Queueing 而不是落 Fail：这类 item 是在创建 turn 之前被丢弃的（turn 表无记录），
+	// 从未真正执行，判失败会凭空吃掉一道题；退回队列它能被重新授予并真正跑完。
+	//
+	// 安全性依赖调用点在 item 锁内：锁保证同一 item 没有并发执行者，
+	// 加上「非终态 + 账本无 reservation」，可断定没有在途执行会被这次退回打断。
+	RequeueProcessingItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (requeued bool, err error)
+
 	// MGetDispatchObservations 供分钟级对账使用：批量读取指定 item 的 (status, 预占态)。
 	// 对账据此与 Redis reservation 比对，识别四类漂移（Terminal 遗留、Processing 缺 reservation、
 	// Queueing/reserved 超时未消费、Queueing/none 却有 reservation）。

@@ -95,6 +95,21 @@ func (mr *MockIExptItemDispatchRepoMockRecorder) ResetQuotaReserved(arg0, arg1, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetQuotaReserved", reflect.TypeOf((*MockIExptItemDispatchRepo)(nil).ResetQuotaReserved), arg0, arg1, arg2, arg3, arg4)
 }
 
+// RequeueProcessingItem mocks base method.
+func (m *MockIExptItemDispatchRepo) RequeueProcessingItem(arg0 context.Context, arg1, arg2, arg3, arg4 int64) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequeueProcessingItem", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RequeueProcessingItem indicates an expected call of RequeueProcessingItem.
+func (mr *MockIExptItemDispatchRepoMockRecorder) RequeueProcessingItem(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequeueProcessingItem", reflect.TypeOf((*MockIExptItemDispatchRepo)(nil).RequeueProcessingItem), arg0, arg1, arg2, arg3, arg4)
+}
+
 // StartReservedItem mocks base method.
 func (m *MockIExptItemDispatchRepo) StartReservedItem(arg0 context.Context, arg1, arg2, arg3, arg4 int64) (bool, error) {
 	m.ctrl.T.Helper()

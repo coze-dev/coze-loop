@@ -21,6 +21,7 @@ type IExptItemDispatchDAO interface {
 	ResetQuotaReserved(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64) ([]int64, error)
 	LoadDispatchRuntime(ctx context.Context, spaceID, exptID, exptRunID int64, candidateLimit int) (*repo.ExptDispatchRuntime, error)
 	StartReservedItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (bool, error)
+	RequeueProcessingItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (bool, error)
 	MGetDispatchObservations(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64) ([]*repo.ExptDispatchObservation, error)
 }
 
@@ -174,6 +175,25 @@ func (d *exptItemDispatchDAOImpl) StartReservedItem(ctx context.Context, spaceID
 		})
 	if res.Error != nil {
 		return false, errorx.Wrapf(res.Error, "start reserved item fail, expt_run_id: %v, item_id: %v", exptRunID, itemID)
+	}
+	return res.RowsAffected > 0, nil
+}
+
+func (d *exptItemDispatchDAOImpl) RequeueProcessingItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (bool, error) {
+	// Processing/none → Queueing/none：孤儿 item 退回授予候选。
+	//
+	// 条件里同时钉住 status=Processing 与 quota_reservation_state=none，是为了让这次退回
+	// 只作用于「已兑现执行但额度已消失」这一种形状：
+	//   - status 若已是终态，说明消息只是迟到，item 早就跑完了，不能退回（会重复执行）；
+	//   - qrs 若是 reserved，说明它还没被 StartReservedItem 兑现，该走 ResetQuotaReserved。
+	res := d.db.NewSession(ctx).Model(&model.ExptItemResultRunLog{}).
+		Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ?",
+			spaceID, exptID, exptRunID, itemID).
+		Where("status = ?", int32(entity.ItemRunState_Processing)).
+		Where("quota_reservation_state = ?", int32(entity.QuotaReservationStateNone)).
+		Update("status", int32(entity.ItemRunState_Queueing))
+	if res.Error != nil {
+		return false, errorx.Wrapf(res.Error, "requeue processing item fail, expt_run_id: %v, item_id: %v", exptRunID, itemID)
 	}
 	return res.RowsAffected > 0, nil
 }

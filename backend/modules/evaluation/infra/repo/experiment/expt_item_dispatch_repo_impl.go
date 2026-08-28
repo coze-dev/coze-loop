@@ -36,6 +36,10 @@ func (e *ExptItemDispatchRepoImpl) StartReservedItem(ctx context.Context, spaceI
 	return e.dispatchDAO.StartReservedItem(ctx, spaceID, exptID, exptRunID, itemID)
 }
 
+func (e *ExptItemDispatchRepoImpl) RequeueProcessingItem(ctx context.Context, spaceID, exptID, exptRunID, itemID int64) (bool, error) {
+	return e.dispatchDAO.RequeueProcessingItem(ctx, spaceID, exptID, exptRunID, itemID)
+}
+
 func (e *ExptItemDispatchRepoImpl) MGetDispatchObservations(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64) ([]*repo.ExptDispatchObservation, error) {
 	return e.dispatchDAO.MGetDispatchObservations(ctx, spaceID, exptID, exptRunID, itemIDs)
 }
