@@ -157,3 +157,18 @@ func (mr *MockEvalTargetRecordDAOMockRecorder) CountRunsByRunItems(ctx, spaceID,
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountRunsByRunItems", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).CountRunsByRunItems), ctx, spaceID, experimentRunID, itemIDs)
 }
+
+// ListRecordsByRunItems mocks base method.
+func (m *MockEvalTargetRecordDAO) ListRecordsByRunItems(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) ([]*model.TargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRecordsByRunItems", ctx, spaceID, experimentRunID, itemIDs)
+	ret0, _ := ret[0].([]*model.TargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRecordsByRunItems indicates an expected call of ListRecordsByRunItems.
+func (mr *MockEvalTargetRecordDAOMockRecorder) ListRecordsByRunItems(ctx, spaceID, experimentRunID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRecordsByRunItems", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).ListRecordsByRunItems), ctx, spaceID, experimentRunID, itemIDs)
+}

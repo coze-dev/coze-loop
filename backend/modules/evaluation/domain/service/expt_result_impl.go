@@ -1420,6 +1420,30 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		}
 	}
 
+	// 批量拉取本页 item 的历次调用明细（含 replay 等日志 URL），供详情逐次查看；失败降级为空，不中断（对齐 total_runs 容错）。
+	itemID2RetryRecords := make(map[int64][]*entity.RetryRecord)
+	// finalRecordIDSet: expt_turn_result.target_result_id 指向的那条 record 即为最终采用的调用，用于标记 is_final。
+	finalRecordIDSet := make(map[int64]bool)
+	for _, tr := range builder.BaseExptTurnResultDO {
+		if tr != nil && tr.TargetResultID > 0 {
+			finalRecordIDSet[tr.TargetResultID] = true
+		}
+	}
+	if builder.EvalTargetRepo != nil && latestExptRunID > 0 && len(itemIDs) > 0 {
+		if records, err := builder.EvalTargetRepo.ListItemRetryRecordsByRun(ctx, builder.SpaceID, latestExptRunID, itemIDs); err != nil {
+			logs.CtxWarn(ctx, "ListItemRetryRecordsByRun fail, spaceID=%d, exptRunID=%d, err=%v", builder.SpaceID, latestExptRunID, err)
+		} else {
+			itemID2RetryRecords = records
+			for _, rrs := range itemID2RetryRecords {
+				for _, rr := range rrs {
+					if rr != nil {
+						rr.IsFinal = finalRecordIDSet[rr.RecordID]
+					}
+				}
+			}
+		}
+	}
+
 	// 初始化payload结构
 	for _, itemID := range itemIDs {
 		if itemIDItemResultPO[itemID] == nil {
@@ -1438,15 +1462,17 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		}
 		if state, ok := itemID2ItemRunState[itemID]; ok {
 			itemResult.SystemInfo = &entity.ItemSystemInfo{
-				RunState:  state,
-				EndTime:   itemResultPO.UpdatedAt,
-				TotalRuns: itemID2TotalRuns[itemID],
+				RunState:     state,
+				EndTime:      itemResultPO.UpdatedAt,
+				TotalRuns:    itemID2TotalRuns[itemID],
+				RetryRecords: itemID2RetryRecords[itemID],
 			}
 		} else {
 			itemResult.SystemInfo = &entity.ItemSystemInfo{
-				RunState:  itemResultPO.Status,
-				EndTime:   itemResultPO.UpdatedAt,
-				TotalRuns: itemID2TotalRuns[itemID],
+				RunState:     itemResultPO.Status,
+				EndTime:      itemResultPO.UpdatedAt,
+				TotalRuns:    itemID2TotalRuns[itemID],
+				RetryRecords: itemID2RetryRecords[itemID],
 			}
 		}
 		// 从 err_msg 反解出用户可见的 item 级错误（当前仅识别 item 僵尸超时；其他类型未来可扩展）

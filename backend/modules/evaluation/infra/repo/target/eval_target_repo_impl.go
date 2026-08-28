@@ -332,6 +332,72 @@ func (e *EvalTargetRepoImpl) CountItemRunsByRun(ctx context.Context, spaceID, ex
 	return e.evalTargetRecordDao.CountRunsByRunItems(ctx, spaceID, experimentRunID, itemIDs)
 }
 
+// sandboxLogURLOutputFieldKey 沙箱日志链接在评测对象 output_fields 里的 key。
+// 权威定义见 application/standard_eval_output.go 的 standardEvalOutputSandboxLogURLKey；
+// repo 层不 import application，此处本地复制一份保持一致。
+const sandboxLogURLOutputFieldKey = "fornax_sandbox_log_url"
+
+const (
+	sandboxLogKeyReplay       = "replay"       // 回放日志 agent_replay_<id>.tar.gz（用户最关心）
+	sandboxLogKeyOrchestrator = "orchestrator" // 编排日志
+	sandboxLogKeyAgent        = "agent"        // agent 沙箱日志
+)
+
+// ListItemRetryRecordsByRun 列出各 item 在最新一轮运行内评测对象的历次调用记录，并解析 replay 等日志 URL。
+func (e *EvalTargetRepoImpl) ListItemRetryRecordsByRun(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64][]*entity.RetryRecord, error) {
+	poList, err := e.evalTargetRecordDao.ListRecordsByRunItems(ctx, spaceID, experimentRunID, itemIDs)
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[int64][]*entity.RetryRecord, len(poList))
+	for _, po := range poList {
+		if po == nil {
+			continue
+		}
+		rr := &entity.RetryRecord{
+			RecordID:    po.ID,
+			TraceID:     po.TraceID,
+			Status:      po.Status,
+			CreatedAtMS: po.CreatedAt.UnixMilli(),
+			TurnID:      po.TurnID,
+		}
+		// best-effort 解析 output_data 中的沙箱日志 URL。任何一层失败都留空并继续，不影响其余记录。
+		replay, orchestrator, agent := parseSandboxLogURLs(po)
+		rr.ReplayLogURL = replay
+		rr.OrchestratorLogURL = orchestrator
+		rr.AgentLogURL = agent
+
+		res[po.ItemID] = append(res[po.ItemID], rr)
+	}
+	return res, nil
+}
+
+// parseSandboxLogURLs 从 record 的 output_data 里解析出 replay/orchestrator/agent 三个日志 URL。
+// 结构（双层转义）：output_data(json) → EvalTargetOutputData.OutputFields["fornax_sandbox_log_url"].Text
+//   → 该 Text 本身又是一层 JSON 字符串，Unmarshal 成 map[string]string，内含最多 replay/orchestrator/agent 三 key。
+// 容错：OutputFields 可能为 nil（僵尸超时夭折）→ 三者全空；内层 key 不固定（早期失败可能只有 orchestrator）→ 缺哪个哪个空；
+// 任何一层（PO2DO / GetText / 内层 Unmarshal）失败都不报错，返回空串继续。
+func parseSandboxLogURLs(po *model.TargetRecord) (replay, orchestrator, agent string) {
+	do, err := convertor.EvalTargetRecordPO2DO(po)
+	if err != nil || do == nil || do.EvalTargetOutputData == nil {
+		return "", "", ""
+	}
+	fields := do.EvalTargetOutputData.OutputFields
+	if len(fields) == 0 {
+		return "", "", ""
+	}
+	content := fields[sandboxLogURLOutputFieldKey]
+	inner := content.GetText() // Content.GetText 对 nil 安全
+	if inner == "" {
+		return "", "", ""
+	}
+	var urls map[string]string
+	if err := jsonPkg.Unmarshal([]byte(inner), &urls); err != nil {
+		return "", "", ""
+	}
+	return urls[sandboxLogKeyReplay], urls[sandboxLogKeyOrchestrator], urls[sandboxLogKeyAgent]
+}
+
 func (e *EvalTargetRepoImpl) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error) {
 	recordPOList, err := e.evalTargetRecordDao.ListByIDsAndSpaceID(ctx, recordIDs, spaceID)
 	if err != nil {

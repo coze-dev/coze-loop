@@ -257,6 +257,9 @@ func (p *ItemSystemInfo) IsValid() error {
 	}
 	return nil
 }
+func (p *RetryRecord) IsValid() error {
+	return nil
+}
 func (p *ExptColumnEvaluator) IsValid() error {
 	return nil
 }

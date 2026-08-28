@@ -335,11 +335,36 @@ func ItemSystemInfoDO2DTO(from *entity.ItemSystemInfo) *domain_expt.ItemSystemIn
 		return &domain_expt.ItemSystemInfo{}
 	}
 	return &domain_expt.ItemSystemInfo{
-		RunState:  domain_expt.ItemRunStatePtr(domain_expt.ItemRunState(from.RunState)),
-		LogID:     from.LogID,
-		Error:     RunErrorDO2DTO(from.Error),
-		TotalRuns: gptr.Of(from.TotalRuns),
+		RunState:     domain_expt.ItemRunStatePtr(domain_expt.ItemRunState(from.RunState)),
+		LogID:        from.LogID,
+		Error:        RunErrorDO2DTO(from.Error),
+		TotalRuns:    gptr.Of(from.TotalRuns),
+		RetryRecords: RetryRecordsDO2DTOs(from.RetryRecords),
 	}
+}
+
+func RetryRecordsDO2DTOs(from []*entity.RetryRecord) []*domain_expt.RetryRecord {
+	if len(from) == 0 {
+		return nil
+	}
+	res := make([]*domain_expt.RetryRecord, 0, len(from))
+	for _, r := range from {
+		if r == nil {
+			continue
+		}
+		res = append(res, &domain_expt.RetryRecord{
+			RecordID:           gptr.Of(r.RecordID),
+			TraceID:            gptr.Of(r.TraceID),
+			Status:             gptr.Of(r.Status),
+			CreatedAt:          gptr.Of(r.CreatedAtMS),
+			IsFinal:            gptr.Of(r.IsFinal),
+			TurnID:             gptr.Of(r.TurnID),
+			ReplayLogURL:       gptr.Of(r.ReplayLogURL),
+			OrchestratorLogURL: gptr.Of(r.OrchestratorLogURL),
+			AgentLogURL:        gptr.Of(r.AgentLogURL),
+		})
+	}
+	return res
 }
 
 func CSVExportStatusDO2DTO(from entity.CSVExportStatus) domain_expt.CSVExportStatus {

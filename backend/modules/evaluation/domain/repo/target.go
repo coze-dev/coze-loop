@@ -37,6 +37,10 @@ type IEvalTargetRepo interface {
 	// 数据源 eval_target_record；按 (item_id,turn_id) 分组计数后对每个 item 取各 turn 的 MAX。
 	// 返回 map[item_id]count，无记录的 item 不在 map 中。空 itemIDs 短路。
 	CountItemRunsByRun(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64]int32, error)
+	// ListItemRetryRecordsByRun 列出给定 item 在指定实验运行(experimentRunID)内的历次调用记录（含系统自动重试）。
+	// 数据源 eval_target_record；每次调用一条，解析 output_data 中的 sandbox 日志（replay/orchestrator/agent）URL。
+	// 返回 map[item_id][]*RetryRecord，按 (turn_id,id) 升序；无记录的 item 不在 map 中。空 itemIDs 短路。
+	ListItemRetryRecordsByRun(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64][]*entity.RetryRecord, error)
 	// target record end
 }
 

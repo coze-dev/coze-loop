@@ -407,7 +407,21 @@ struct ItemSystemInfo {
     1: optional ItemRunState run_state
     2: optional string log_id
     3: optional RunError error
-    4: optional i32 total_runs // 该 item 在本实验的运行次数（含重试）；来自 expt_item_result_run_log 按 (expt_id,item_id) 聚合
+    4: optional i32 total_runs // 该 item 在最新一轮运行内评测对象的调用次数（含系统自动重试）；来自 eval_target_record 按 (run,item,turn) 聚合
+    5: optional list<RetryRecord> retry_records // 历次调用明细（含自动重试），供详情逐次查看 replay 等日志
+}
+
+// 评测对象历次调用记录（每次调用/自动重试一条）
+struct RetryRecord {
+    1: optional i64 record_id (api.js_conv='true', go.tag='json:"record_id"') // eval_target_record.id
+    2: optional string trace_id
+    3: optional i32 status // 对齐 eval_target_record.status
+    4: optional i64 created_at (api.js_conv='true', go.tag='json:"created_at"') // 毫秒时间戳
+    5: optional bool is_final // 是否为最终采用的那次（= expt_turn_result.target_result_id 指向）
+    6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 多轮题区分轮次
+    7: optional string replay_log_url // 回放日志 agent_replay_<id>.tar.gz（用户最关心）
+    8: optional string orchestrator_log_url // 编排日志 orchestrator_<id>.tar.gz
+    9: optional string agent_log_url // agent 沙箱日志 agent_sandbox_<id>.tar.gz
 }
 
 struct ExptColumnEvaluator {

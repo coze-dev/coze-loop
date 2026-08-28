@@ -36,6 +36,10 @@ type EvalTargetRecordDAO interface {
 	// 再在 Go 侧对每个 item 取其各 turn 的 MAX 作为该 item 的运行次数（多轮题每 turn 一次调用，取重试最多的那轮代表该 item；
 	// 单轮题 turn_id=0 时即该 item 的调用次数）。返回 map[item_id]maxCount，无记录的 item 不在 map 中。空 itemIDs 短路。
 	CountRunsByRunItems(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64]int32, error)
+	// ListRecordsByRunItems 列出给定 item 在指定实验运行(experiment_run_id)内的历次调用记录（含系统自动重试，每次调用一行）。
+	// 仅 Select 详情所需列（含 output_data 以解析 replay 等日志 URL），显式排除 input_data 大 blob 以省带宽。
+	// 结果按 (item_id, turn_id, id) 升序，便于上层按 item 聚合并保持调用先后顺序。空 itemIDs 短路返回 nil。
+	ListRecordsByRunItems(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) ([]*model.TargetRecord, error)
 }
 
 type EvalTargetRecordDAOImpl struct {
@@ -188,4 +192,38 @@ func (e *EvalTargetRecordDAOImpl) CountRunsByRunItems(ctx context.Context, space
 		}
 	}
 	return res, nil
+}
+
+// ListRecordsByRunItems 列出给定 item 在指定实验运行内的历次调用记录。
+// 显式 Select 详情所需列（排除 input_data 大 blob），按 (item_id, turn_id, id) 升序返回。
+func (e *EvalTargetRecordDAOImpl) ListRecordsByRunItems(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) ([]*model.TargetRecord, error) {
+	if len(itemIDs) == 0 {
+		return nil, nil
+	}
+	q := e.query.TargetRecord
+	records, err := e.query.WithContext(ctx).TargetRecord.
+		Select(
+			q.ID,
+			q.ItemID,
+			q.TurnID,
+			q.TraceID,
+			q.Status,
+			q.CreatedAt,
+			q.OutputData,
+		).
+		Where(
+			q.SpaceID.Eq(spaceID),
+			q.ExperimentRunID.Eq(experimentRunID),
+			q.ItemID.In(itemIDs...),
+			q.DeletedAt.IsNull(),
+		).
+		Order(q.ItemID, q.TurnID, q.ID).
+		Find()
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
+	}
+	return records, nil
 }

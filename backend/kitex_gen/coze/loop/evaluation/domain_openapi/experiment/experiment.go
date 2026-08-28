@@ -13296,8 +13296,10 @@ type ItemSystemInfo struct {
 	RunState *ItemRunState `thrift:"run_state,1,optional" frugal:"1,optional,string" form:"run_state" json:"run_state,omitempty" query:"run_state"`
 	LogID    *string       `thrift:"log_id,2,optional" frugal:"2,optional,string" form:"log_id" json:"log_id,omitempty" query:"log_id"`
 	Error    *RunError     `thrift:"error,3,optional" frugal:"3,optional,RunError" form:"error" json:"error,omitempty" query:"error"`
-	// 该 item 在本实验的运行次数（含重试）
+	// 该 item 在最新一轮运行内评测对象的调用次数（含系统自动重试）
 	TotalRuns *int32 `thrift:"total_runs,4,optional" frugal:"4,optional,i32" form:"total_runs" json:"total_runs,omitempty" query:"total_runs"`
+	// 历次调用明细（含自动重试），供详情逐次查看 replay 等日志
+	RetryRecords []*RetryRecord `thrift:"retry_records,5,optional" frugal:"5,optional,list<RetryRecord>" form:"retry_records" json:"retry_records,omitempty" query:"retry_records"`
 }
 
 func NewItemSystemInfo() *ItemSystemInfo {
@@ -13354,6 +13356,18 @@ func (p *ItemSystemInfo) GetTotalRuns() (v int32) {
 	}
 	return *p.TotalRuns
 }
+
+var ItemSystemInfo_RetryRecords_DEFAULT []*RetryRecord
+
+func (p *ItemSystemInfo) GetRetryRecords() (v []*RetryRecord) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRetryRecords() {
+		return ItemSystemInfo_RetryRecords_DEFAULT
+	}
+	return p.RetryRecords
+}
 func (p *ItemSystemInfo) SetRunState(val *ItemRunState) {
 	p.RunState = val
 }
@@ -13366,12 +13380,16 @@ func (p *ItemSystemInfo) SetError(val *RunError) {
 func (p *ItemSystemInfo) SetTotalRuns(val *int32) {
 	p.TotalRuns = val
 }
+func (p *ItemSystemInfo) SetRetryRecords(val []*RetryRecord) {
+	p.RetryRecords = val
+}
 
 var fieldIDToName_ItemSystemInfo = map[int16]string{
 	1: "run_state",
 	2: "log_id",
 	3: "error",
 	4: "total_runs",
+	5: "retry_records",
 }
 
 func (p *ItemSystemInfo) IsSetRunState() bool {
@@ -13388,6 +13406,10 @@ func (p *ItemSystemInfo) IsSetError() bool {
 
 func (p *ItemSystemInfo) IsSetTotalRuns() bool {
 	return p.TotalRuns != nil
+}
+
+func (p *ItemSystemInfo) IsSetRetryRecords() bool {
+	return p.RetryRecords != nil
 }
 
 func (p *ItemSystemInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -13435,6 +13457,14 @@ func (p *ItemSystemInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13510,6 +13540,29 @@ func (p *ItemSystemInfo) ReadField4(iprot thrift.TProtocol) error {
 	p.TotalRuns = _field
 	return nil
 }
+func (p *ItemSystemInfo) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*RetryRecord, 0, size)
+	values := make([]RetryRecord, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.RetryRecords = _field
+	return nil
+}
 
 func (p *ItemSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -13531,6 +13584,10 @@ func (p *ItemSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -13623,6 +13680,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ItemSystemInfo) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRetryRecords() {
+		if err = oprot.WriteFieldBegin("retry_records", thrift.LIST, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.RetryRecords)); err != nil {
+			return err
+		}
+		for _, v := range p.RetryRecords {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *ItemSystemInfo) String() string {
 	if p == nil {
@@ -13648,6 +13731,9 @@ func (p *ItemSystemInfo) DeepEqual(ano *ItemSystemInfo) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.TotalRuns) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.RetryRecords) {
 		return false
 	}
 	return true
@@ -13692,6 +13778,817 @@ func (p *ItemSystemInfo) Field4DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.TotalRuns != *src {
+		return false
+	}
+	return true
+}
+func (p *ItemSystemInfo) Field5DeepEqual(src []*RetryRecord) bool {
+
+	if len(p.RetryRecords) != len(src) {
+		return false
+	}
+	for i, v := range p.RetryRecords {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
+// 评测对象历次调用记录（每次调用/自动重试一条）
+type RetryRecord struct {
+	RecordID           *int64  `thrift:"record_id,1,optional" frugal:"1,optional,i64" json:"record_id" form:"record_id" query:"record_id"`
+	TraceID            *string `thrift:"trace_id,2,optional" frugal:"2,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
+	Status             *int32  `thrift:"status,3,optional" frugal:"3,optional,i32" form:"status" json:"status,omitempty" query:"status"`
+	CreatedAt          *int64  `thrift:"created_at,4,optional" frugal:"4,optional,i64" json:"created_at" form:"created_at" query:"created_at"`
+	IsFinal            *bool   `thrift:"is_final,5,optional" frugal:"5,optional,bool" form:"is_final" json:"is_final,omitempty" query:"is_final"`
+	TurnID             *int64  `thrift:"turn_id,6,optional" frugal:"6,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
+	ReplayLogURL       *string `thrift:"replay_log_url,7,optional" frugal:"7,optional,string" form:"replay_log_url" json:"replay_log_url,omitempty" query:"replay_log_url"`
+	OrchestratorLogURL *string `thrift:"orchestrator_log_url,8,optional" frugal:"8,optional,string" form:"orchestrator_log_url" json:"orchestrator_log_url,omitempty" query:"orchestrator_log_url"`
+	AgentLogURL        *string `thrift:"agent_log_url,9,optional" frugal:"9,optional,string" form:"agent_log_url" json:"agent_log_url,omitempty" query:"agent_log_url"`
+}
+
+func NewRetryRecord() *RetryRecord {
+	return &RetryRecord{}
+}
+
+func (p *RetryRecord) InitDefault() {
+}
+
+var RetryRecord_RecordID_DEFAULT int64
+
+func (p *RetryRecord) GetRecordID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRecordID() {
+		return RetryRecord_RecordID_DEFAULT
+	}
+	return *p.RecordID
+}
+
+var RetryRecord_TraceID_DEFAULT string
+
+func (p *RetryRecord) GetTraceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceID() {
+		return RetryRecord_TraceID_DEFAULT
+	}
+	return *p.TraceID
+}
+
+var RetryRecord_Status_DEFAULT int32
+
+func (p *RetryRecord) GetStatus() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatus() {
+		return RetryRecord_Status_DEFAULT
+	}
+	return *p.Status
+}
+
+var RetryRecord_CreatedAt_DEFAULT int64
+
+func (p *RetryRecord) GetCreatedAt() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCreatedAt() {
+		return RetryRecord_CreatedAt_DEFAULT
+	}
+	return *p.CreatedAt
+}
+
+var RetryRecord_IsFinal_DEFAULT bool
+
+func (p *RetryRecord) GetIsFinal() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsFinal() {
+		return RetryRecord_IsFinal_DEFAULT
+	}
+	return *p.IsFinal
+}
+
+var RetryRecord_TurnID_DEFAULT int64
+
+func (p *RetryRecord) GetTurnID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTurnID() {
+		return RetryRecord_TurnID_DEFAULT
+	}
+	return *p.TurnID
+}
+
+var RetryRecord_ReplayLogURL_DEFAULT string
+
+func (p *RetryRecord) GetReplayLogURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReplayLogURL() {
+		return RetryRecord_ReplayLogURL_DEFAULT
+	}
+	return *p.ReplayLogURL
+}
+
+var RetryRecord_OrchestratorLogURL_DEFAULT string
+
+func (p *RetryRecord) GetOrchestratorLogURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOrchestratorLogURL() {
+		return RetryRecord_OrchestratorLogURL_DEFAULT
+	}
+	return *p.OrchestratorLogURL
+}
+
+var RetryRecord_AgentLogURL_DEFAULT string
+
+func (p *RetryRecord) GetAgentLogURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentLogURL() {
+		return RetryRecord_AgentLogURL_DEFAULT
+	}
+	return *p.AgentLogURL
+}
+func (p *RetryRecord) SetRecordID(val *int64) {
+	p.RecordID = val
+}
+func (p *RetryRecord) SetTraceID(val *string) {
+	p.TraceID = val
+}
+func (p *RetryRecord) SetStatus(val *int32) {
+	p.Status = val
+}
+func (p *RetryRecord) SetCreatedAt(val *int64) {
+	p.CreatedAt = val
+}
+func (p *RetryRecord) SetIsFinal(val *bool) {
+	p.IsFinal = val
+}
+func (p *RetryRecord) SetTurnID(val *int64) {
+	p.TurnID = val
+}
+func (p *RetryRecord) SetReplayLogURL(val *string) {
+	p.ReplayLogURL = val
+}
+func (p *RetryRecord) SetOrchestratorLogURL(val *string) {
+	p.OrchestratorLogURL = val
+}
+func (p *RetryRecord) SetAgentLogURL(val *string) {
+	p.AgentLogURL = val
+}
+
+var fieldIDToName_RetryRecord = map[int16]string{
+	1: "record_id",
+	2: "trace_id",
+	3: "status",
+	4: "created_at",
+	5: "is_final",
+	6: "turn_id",
+	7: "replay_log_url",
+	8: "orchestrator_log_url",
+	9: "agent_log_url",
+}
+
+func (p *RetryRecord) IsSetRecordID() bool {
+	return p.RecordID != nil
+}
+
+func (p *RetryRecord) IsSetTraceID() bool {
+	return p.TraceID != nil
+}
+
+func (p *RetryRecord) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *RetryRecord) IsSetCreatedAt() bool {
+	return p.CreatedAt != nil
+}
+
+func (p *RetryRecord) IsSetIsFinal() bool {
+	return p.IsFinal != nil
+}
+
+func (p *RetryRecord) IsSetTurnID() bool {
+	return p.TurnID != nil
+}
+
+func (p *RetryRecord) IsSetReplayLogURL() bool {
+	return p.ReplayLogURL != nil
+}
+
+func (p *RetryRecord) IsSetOrchestratorLogURL() bool {
+	return p.OrchestratorLogURL != nil
+}
+
+func (p *RetryRecord) IsSetAgentLogURL() bool {
+	return p.AgentLogURL != nil
+}
+
+func (p *RetryRecord) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RetryRecord[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *RetryRecord) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RecordID = _field
+	return nil
+}
+func (p *RetryRecord) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceID = _field
+	return nil
+}
+func (p *RetryRecord) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Status = _field
+	return nil
+}
+func (p *RetryRecord) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CreatedAt = _field
+	return nil
+}
+func (p *RetryRecord) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsFinal = _field
+	return nil
+}
+func (p *RetryRecord) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TurnID = _field
+	return nil
+}
+func (p *RetryRecord) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ReplayLogURL = _field
+	return nil
+}
+func (p *RetryRecord) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.OrchestratorLogURL = _field
+	return nil
+}
+func (p *RetryRecord) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AgentLogURL = _field
+	return nil
+}
+
+func (p *RetryRecord) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("RetryRecord"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *RetryRecord) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRecordID() {
+		if err = oprot.WriteFieldBegin("record_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RecordID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *RetryRecord) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceID() {
+		if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *RetryRecord) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Status); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *RetryRecord) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCreatedAt() {
+		if err = oprot.WriteFieldBegin("created_at", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CreatedAt); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *RetryRecord) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsFinal() {
+		if err = oprot.WriteFieldBegin("is_final", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsFinal); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *RetryRecord) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTurnID() {
+		if err = oprot.WriteFieldBegin("turn_id", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TurnID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *RetryRecord) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReplayLogURL() {
+		if err = oprot.WriteFieldBegin("replay_log_url", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ReplayLogURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *RetryRecord) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOrchestratorLogURL() {
+		if err = oprot.WriteFieldBegin("orchestrator_log_url", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.OrchestratorLogURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *RetryRecord) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentLogURL() {
+		if err = oprot.WriteFieldBegin("agent_log_url", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AgentLogURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *RetryRecord) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RetryRecord(%+v)", *p)
+
+}
+
+func (p *RetryRecord) DeepEqual(ano *RetryRecord) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.RecordID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TraceID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.CreatedAt) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.IsFinal) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.TurnID) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.ReplayLogURL) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.OrchestratorLogURL) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.AgentLogURL) {
+		return false
+	}
+	return true
+}
+
+func (p *RetryRecord) Field1DeepEqual(src *int64) bool {
+
+	if p.RecordID == src {
+		return true
+	} else if p.RecordID == nil || src == nil {
+		return false
+	}
+	if *p.RecordID != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryRecord) Field2DeepEqual(src *string) bool {
+
+	if p.TraceID == src {
+		return true
+	} else if p.TraceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *RetryRecord) Field3DeepEqual(src *int32) bool {
+
+	if p.Status == src {
+		return true
+	} else if p.Status == nil || src == nil {
+		return false
+	}
+	if *p.Status != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryRecord) Field4DeepEqual(src *int64) bool {
+
+	if p.CreatedAt == src {
+		return true
+	} else if p.CreatedAt == nil || src == nil {
+		return false
+	}
+	if *p.CreatedAt != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryRecord) Field5DeepEqual(src *bool) bool {
+
+	if p.IsFinal == src {
+		return true
+	} else if p.IsFinal == nil || src == nil {
+		return false
+	}
+	if *p.IsFinal != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryRecord) Field6DeepEqual(src *int64) bool {
+
+	if p.TurnID == src {
+		return true
+	} else if p.TurnID == nil || src == nil {
+		return false
+	}
+	if *p.TurnID != *src {
+		return false
+	}
+	return true
+}
+func (p *RetryRecord) Field7DeepEqual(src *string) bool {
+
+	if p.ReplayLogURL == src {
+		return true
+	} else if p.ReplayLogURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ReplayLogURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *RetryRecord) Field8DeepEqual(src *string) bool {
+
+	if p.OrchestratorLogURL == src {
+		return true
+	} else if p.OrchestratorLogURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.OrchestratorLogURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *RetryRecord) Field9DeepEqual(src *string) bool {
+
+	if p.AgentLogURL == src {
+		return true
+	} else if p.AgentLogURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AgentLogURL, *src) != 0 {
 		return false
 	}
 	return true
