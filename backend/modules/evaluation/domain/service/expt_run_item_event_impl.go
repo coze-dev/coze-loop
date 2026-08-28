@@ -460,7 +460,14 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 		}
 
 		// 主表同为展示投影，跟着退回，避免详情页把已回队列的 item 一直显示成执行中。
-		if e.exptItemResultRepo != nil {
+		//
+		// ★ 必须与 stats 一样绑定 requeued：主表 status 不是纯展示字段，而是 stats 的锚点 ——
+		// 完成侧 statsCntOp 读 items_result.Status 做「-1」（expt_result_impl.go），
+		// 若 CAS 未命中（并发 zombie / sandbox sweep 抢先落终态）却把主表改成 Queueing，
+		// stats 上那笔 Processing 就再也减不掉，processing_turn_count 永远归不了零。
+		// 同仓 expt_run_scheduler_event_impl.go 的 zombie 路径已就此写过警示、
+		// c4a6a953 也已就此修过一次，这里不能再踩。
+		if requeued && e.exptItemResultRepo != nil {
 			if uerr := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID,
 				[]int64{event.EvalSetItemID}, map[string]any{"status": int32(entity.ItemRunState_Queueing)}); uerr != nil {
 				logs.CtxWarn(ctx, "[CentralReservation] rollback main table to Queueing failed (display only), expt_id: %v, item_id: %v: %v",

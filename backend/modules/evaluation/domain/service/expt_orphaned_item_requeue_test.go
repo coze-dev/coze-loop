@@ -163,3 +163,52 @@ func TestReservationAbsent_KeepsProjectionWhenLoadFails(t *testing.T) {
 		return nil
 	})(admittedEnforceCtx(event), event))
 }
+
+// TestReservationAbsent_CASMissLeavesStatsAndMainTableUntouched CAS 未命中时，
+// stats 与主表都不能动。
+//
+// 触发场景：读投影与 CAS 之间有一个无锁窗口，`handleZombies` / `sweepTerminatedSandboxItems`
+// 跑在**实验锁**下、不持 item 锁，可以在这个窗口把 run log 抢先改成终态 —— 于是 CAS 落空。
+//
+// 为什么这条必须单独守：主表 status 不是纯展示字段，而是 stats 的锚点（完成侧 statsCntOp
+// 读 items_result.Status 做「-1」）。CAS 落空却把主表改成 Queueing，会让 stats 上那笔
+// Processing 永远减不掉，processing_turn_count 归不了零 —— 同仓已就此修过一次（c4a6a953）。
+func TestReservationAbsent_CASMissLeavesStatsAndMainTableUntouched(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dispatchRepo := repoMocks.NewMockIExptItemDispatchRepo(ctrl)
+	dispatchRepo.EXPECT().MGetDispatchObservations(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*repo.ExptDispatchObservation{
+			{ItemID: 4, Status: int32(entity.ItemRunState_Processing), QuotaReservationState: entity.QuotaReservationStateNone},
+		}, nil)
+	// CAS 未命中：并发路径已经把这条 run log 改走了。
+	dispatchRepo.EXPECT().RequeueProcessingItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(false, nil)
+
+	// 两个 mock 都不 EXPECT 任何调用 —— gomock 会让意外调用直接失败，这正是本用例的断言。
+	statsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+
+	svc := &ExptItemEventEvalServiceImpl{
+		centralGuard:       &fakeGuard{confirmResult: false},
+		dispatchRepo:       dispatchRepo,
+		exptStatsRepo:      statsRepo,
+		exptItemResultRepo: itemResultRepo,
+	}
+	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4}
+	assert.NoError(t, svc.HandleCentralReservation(func(context.Context, *entity.ExptItemEvalEvent) error {
+		t.Fatal("CAS 未命中时不得执行 item")
+		return nil
+	})(admittedEnforceCtx(event), event))
+}
+
+// TestReservationAbsent_NoDispatchRepoIsSafe dispatchRepo 缺失时不得执行 item，也不得 panic。
+func TestReservationAbsent_NoDispatchRepoIsSafe(t *testing.T) {
+	svc := &ExptItemEventEvalServiceImpl{centralGuard: &fakeGuard{confirmResult: false}}
+	event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 4}
+	assert.NoError(t, svc.HandleCentralReservation(func(context.Context, *entity.ExptItemEvalEvent) error {
+		t.Fatal("无法修正投影时不得执行 item")
+		return nil
+	})(admittedEnforceCtx(event), event))
+}

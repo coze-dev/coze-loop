@@ -186,12 +186,20 @@ func (d *exptItemDispatchDAOImpl) RequeueProcessingItem(ctx context.Context, spa
 	// 只作用于「已兑现执行但额度已消失」这一种形状：
 	//   - status 若已是终态，说明消息只是迟到，item 早就跑完了，不能退回（会重复执行）；
 	//   - qrs 若是 reserved，说明它还没被 StartReservedItem 兑现，该走 ResetQuotaReserved。
+	// ★ 用 UpdateColumn 而非 Update：**刻意不刷新 `updated_at`**。
+	//
+	// 僵尸兜底的判据是 `Processing 且 time.Since(updated_at) > zombieSecond`。若这里刷新时间戳，
+	// 而"reservation 消失"是个持续性成因（账本损坏、reap 竞态反复触发），item 就会在
+	// Queueing ↔ Processing 之间无限往返、每次都把僵尸时钟拨回零，实验永不收敛 ——
+	// 那是把「3 小时后必定收敛」的有界故障换成了无界故障。
+	// 保留原始 updated_at 让僵尸时钟继续走：一次性成因下 item 正常重跑，
+	// 持续性成因下它仍会在原定的 3 小时被判 Fail，最坏情况不劣于修复前。
 	res := d.db.NewSession(ctx).Model(&model.ExptItemResultRunLog{}).
 		Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ?",
 			spaceID, exptID, exptRunID, itemID).
 		Where("status = ?", int32(entity.ItemRunState_Processing)).
 		Where("quota_reservation_state = ?", int32(entity.QuotaReservationStateNone)).
-		Update("status", int32(entity.ItemRunState_Queueing))
+		UpdateColumn("status", int32(entity.ItemRunState_Queueing))
 	if res.Error != nil {
 		return false, errorx.Wrapf(res.Error, "requeue processing item fail, expt_run_id: %v, item_id: %v", exptRunID, itemID)
 	}
