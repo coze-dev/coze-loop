@@ -105,6 +105,10 @@ func (f *fakeEvaluatorRecordStorageConfiger) BuildEvalExt(ctx context.Context, s
 	return nil
 }
 
+func (f *fakeEvaluatorRecordStorageConfiger) GetCrossSpaceRecordReadEnforce(ctx context.Context) bool {
+	return false
+}
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	return nil
 }

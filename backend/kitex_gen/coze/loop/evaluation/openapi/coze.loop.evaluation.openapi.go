@@ -52449,11 +52449,13 @@ func (p *ListEvaluatorVersionsOpenAPIData) Field2DeepEqual(src *int64) bool {
 
 // 3.8 批量查询评估器版本
 type BatchGetEvaluatorVersionsOApiRequest struct {
-	WorkspaceID         *int64       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	EvaluatorVersionIds []int64      `thrift:"evaluator_version_ids,2,optional" frugal:"2,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" `
-	IncludeDeleted      *bool        `thrift:"include_deleted,3,optional" frugal:"3,optional,bool" form:"include_deleted" json:"include_deleted,omitempty"`
-	Extra               *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base                *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID         *int64  `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	EvaluatorVersionIds []int64 `thrift:"evaluator_version_ids,2,optional" frugal:"2,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" `
+	IncludeDeleted      *bool   `thrift:"include_deleted,3,optional" frugal:"3,optional,bool" form:"include_deleted" json:"include_deleted,omitempty"`
+	// 跨空间共享: 评估器来源空间
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,4,optional" frugal:"4,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty"`
+	Extra        *extra.Extra                 `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchGetEvaluatorVersionsOApiRequest() *BatchGetEvaluatorVersionsOApiRequest {
@@ -52499,6 +52501,18 @@ func (p *BatchGetEvaluatorVersionsOApiRequest) GetIncludeDeleted() (v bool) {
 	return *p.IncludeDeleted
 }
 
+var BatchGetEvaluatorVersionsOApiRequest_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *BatchGetEvaluatorVersionsOApiRequest) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return BatchGetEvaluatorVersionsOApiRequest_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
+
 var BatchGetEvaluatorVersionsOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *BatchGetEvaluatorVersionsOApiRequest) GetExtra() (v *extra.Extra) {
@@ -52531,6 +52545,9 @@ func (p *BatchGetEvaluatorVersionsOApiRequest) SetEvaluatorVersionIds(val []int6
 func (p *BatchGetEvaluatorVersionsOApiRequest) SetIncludeDeleted(val *bool) {
 	p.IncludeDeleted = val
 }
+func (p *BatchGetEvaluatorVersionsOApiRequest) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 func (p *BatchGetEvaluatorVersionsOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -52542,6 +52559,7 @@ var fieldIDToName_BatchGetEvaluatorVersionsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluator_version_ids",
 	3:   "include_deleted",
+	4:   "shared_option",
 	254: "extra",
 	255: "Base",
 }
@@ -52556,6 +52574,10 @@ func (p *BatchGetEvaluatorVersionsOApiRequest) IsSetEvaluatorVersionIds() bool {
 
 func (p *BatchGetEvaluatorVersionsOApiRequest) IsSetIncludeDeleted() bool {
 	return p.IncludeDeleted != nil
+}
+
+func (p *BatchGetEvaluatorVersionsOApiRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *BatchGetEvaluatorVersionsOApiRequest) IsSetExtra() bool {
@@ -52603,6 +52625,14 @@ func (p *BatchGetEvaluatorVersionsOApiRequest) Read(iprot thrift.TProtocol) (err
 		case 3:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -52698,6 +52728,14 @@ func (p *BatchGetEvaluatorVersionsOApiRequest) ReadField3(iprot thrift.TProtocol
 	p.IncludeDeleted = _field
 	return nil
 }
+func (p *BatchGetEvaluatorVersionsOApiRequest) ReadField4(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *BatchGetEvaluatorVersionsOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -52731,6 +52769,10 @@ func (p *BatchGetEvaluatorVersionsOApiRequest) Write(oprot thrift.TProtocol) (er
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -52821,6 +52863,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *BatchGetEvaluatorVersionsOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 func (p *BatchGetEvaluatorVersionsOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -52881,6 +52941,9 @@ func (p *BatchGetEvaluatorVersionsOApiRequest) DeepEqual(ano *BatchGetEvaluatorV
 	if !p.Field3DeepEqual(ano.IncludeDeleted) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
@@ -52923,6 +52986,13 @@ func (p *BatchGetEvaluatorVersionsOApiRequest) Field3DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.IncludeDeleted != *src {
+		return false
+	}
+	return true
+}
+func (p *BatchGetEvaluatorVersionsOApiRequest) Field4DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -54662,9 +54732,11 @@ type RunEvaluatorOApiRequest struct {
 	WorkspaceID        *int64                        `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
 	InputData          *evaluator.EvaluatorInputData `thrift:"input_data,3,optional" frugal:"3,optional,evaluator.EvaluatorInputData" form:"input_data" json:"input_data,omitempty"`
 	EvaluatorRunConf   *evaluator.EvaluatorRunConfig `thrift:"evaluator_run_conf,4,optional" frugal:"4,optional,evaluator.EvaluatorRunConfig" form:"evaluator_run_conf" json:"evaluator_run_conf,omitempty"`
-	Ext                map[string]string             `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Extra              *extra.Extra                  `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base               *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 跨空间共享: 评估器来源空间
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,5,optional" frugal:"5,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty"`
+	Ext          map[string]string            `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Extra        *extra.Extra                 `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewRunEvaluatorOApiRequest() *RunEvaluatorOApiRequest {
@@ -54722,6 +54794,18 @@ func (p *RunEvaluatorOApiRequest) GetEvaluatorRunConf() (v *evaluator.EvaluatorR
 	return p.EvaluatorRunConf
 }
 
+var RunEvaluatorOApiRequest_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *RunEvaluatorOApiRequest) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return RunEvaluatorOApiRequest_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
+
 var RunEvaluatorOApiRequest_Ext_DEFAULT map[string]string
 
 func (p *RunEvaluatorOApiRequest) GetExt() (v map[string]string) {
@@ -54769,6 +54853,9 @@ func (p *RunEvaluatorOApiRequest) SetInputData(val *evaluator.EvaluatorInputData
 func (p *RunEvaluatorOApiRequest) SetEvaluatorRunConf(val *evaluator.EvaluatorRunConfig) {
 	p.EvaluatorRunConf = val
 }
+func (p *RunEvaluatorOApiRequest) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 func (p *RunEvaluatorOApiRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -54784,6 +54871,7 @@ var fieldIDToName_RunEvaluatorOApiRequest = map[int16]string{
 	2:   "workspace_id",
 	3:   "input_data",
 	4:   "evaluator_run_conf",
+	5:   "shared_option",
 	100: "ext",
 	254: "extra",
 	255: "Base",
@@ -54803,6 +54891,10 @@ func (p *RunEvaluatorOApiRequest) IsSetInputData() bool {
 
 func (p *RunEvaluatorOApiRequest) IsSetEvaluatorRunConf() bool {
 	return p.EvaluatorRunConf != nil
+}
+
+func (p *RunEvaluatorOApiRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *RunEvaluatorOApiRequest) IsSetExt() bool {
@@ -54862,6 +54954,14 @@ func (p *RunEvaluatorOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -54958,6 +55058,14 @@ func (p *RunEvaluatorOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.EvaluatorRunConf = _field
 	return nil
 }
+func (p *RunEvaluatorOApiRequest) ReadField5(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *RunEvaluatorOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -55024,6 +55132,10 @@ func (p *RunEvaluatorOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -55128,6 +55240,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *RunEvaluatorOApiRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *RunEvaluatorOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -55220,6 +55350,9 @@ func (p *RunEvaluatorOApiRequest) DeepEqual(ano *RunEvaluatorOApiRequest) bool {
 	if !p.Field4DeepEqual(ano.EvaluatorRunConf) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -55266,6 +55399,13 @@ func (p *RunEvaluatorOApiRequest) Field3DeepEqual(src *evaluator.EvaluatorInputD
 func (p *RunEvaluatorOApiRequest) Field4DeepEqual(src *evaluator.EvaluatorRunConfig) bool {
 
 	if !p.EvaluatorRunConf.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *RunEvaluatorOApiRequest) Field5DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -55872,9 +56012,11 @@ type AsyncRunEvaluatorOApiRequest struct {
 	InputData          *evaluator.EvaluatorInputData `thrift:"input_data,3,optional" frugal:"3,optional,evaluator.EvaluatorInputData" form:"input_data" json:"input_data,omitempty"`
 	EvaluatorRunConf   *evaluator.EvaluatorRunConfig `thrift:"evaluator_run_conf,4,optional" frugal:"4,optional,evaluator.EvaluatorRunConfig" form:"evaluator_run_conf" json:"evaluator_run_conf,omitempty"`
 	CallbackURL        *string                       `thrift:"callback_url,5,optional" frugal:"5,optional,string" form:"callback_url" json:"callback_url,omitempty"`
-	Ext                map[string]string             `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Extra              *extra.Extra                  `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base               *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 跨空间共享: 评估器来源空间
+	SharedOption *common.SharedResourceOption `thrift:"shared_option,6,optional" frugal:"6,optional,common.SharedResourceOption" form:"shared_option" json:"shared_option,omitempty"`
+	Ext          map[string]string            `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Extra        *extra.Extra                 `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewAsyncRunEvaluatorOApiRequest() *AsyncRunEvaluatorOApiRequest {
@@ -55944,6 +56086,18 @@ func (p *AsyncRunEvaluatorOApiRequest) GetCallbackURL() (v string) {
 	return *p.CallbackURL
 }
 
+var AsyncRunEvaluatorOApiRequest_SharedOption_DEFAULT *common.SharedResourceOption
+
+func (p *AsyncRunEvaluatorOApiRequest) GetSharedOption() (v *common.SharedResourceOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSharedOption() {
+		return AsyncRunEvaluatorOApiRequest_SharedOption_DEFAULT
+	}
+	return p.SharedOption
+}
+
 var AsyncRunEvaluatorOApiRequest_Ext_DEFAULT map[string]string
 
 func (p *AsyncRunEvaluatorOApiRequest) GetExt() (v map[string]string) {
@@ -55994,6 +56148,9 @@ func (p *AsyncRunEvaluatorOApiRequest) SetEvaluatorRunConf(val *evaluator.Evalua
 func (p *AsyncRunEvaluatorOApiRequest) SetCallbackURL(val *string) {
 	p.CallbackURL = val
 }
+func (p *AsyncRunEvaluatorOApiRequest) SetSharedOption(val *common.SharedResourceOption) {
+	p.SharedOption = val
+}
 func (p *AsyncRunEvaluatorOApiRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -56010,6 +56167,7 @@ var fieldIDToName_AsyncRunEvaluatorOApiRequest = map[int16]string{
 	3:   "input_data",
 	4:   "evaluator_run_conf",
 	5:   "callback_url",
+	6:   "shared_option",
 	100: "ext",
 	254: "extra",
 	255: "Base",
@@ -56033,6 +56191,10 @@ func (p *AsyncRunEvaluatorOApiRequest) IsSetEvaluatorRunConf() bool {
 
 func (p *AsyncRunEvaluatorOApiRequest) IsSetCallbackURL() bool {
 	return p.CallbackURL != nil
+}
+
+func (p *AsyncRunEvaluatorOApiRequest) IsSetSharedOption() bool {
+	return p.SharedOption != nil
 }
 
 func (p *AsyncRunEvaluatorOApiRequest) IsSetExt() bool {
@@ -56100,6 +56262,14 @@ func (p *AsyncRunEvaluatorOApiRequest) Read(iprot thrift.TProtocol) (err error) 
 		case 5:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -56207,6 +56377,14 @@ func (p *AsyncRunEvaluatorOApiRequest) ReadField5(iprot thrift.TProtocol) error 
 	p.CallbackURL = _field
 	return nil
 }
+func (p *AsyncRunEvaluatorOApiRequest) ReadField6(iprot thrift.TProtocol) error {
+	_field := common.NewSharedResourceOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SharedOption = _field
+	return nil
+}
 func (p *AsyncRunEvaluatorOApiRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -56277,6 +56455,10 @@ func (p *AsyncRunEvaluatorOApiRequest) Write(oprot thrift.TProtocol) (err error)
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -56399,6 +56581,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *AsyncRunEvaluatorOApiRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSharedOption() {
+		if err = oprot.WriteFieldBegin("shared_option", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SharedOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *AsyncRunEvaluatorOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -56494,6 +56694,9 @@ func (p *AsyncRunEvaluatorOApiRequest) DeepEqual(ano *AsyncRunEvaluatorOApiReque
 	if !p.Field5DeepEqual(ano.CallbackURL) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.SharedOption) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -56552,6 +56755,13 @@ func (p *AsyncRunEvaluatorOApiRequest) Field5DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.CallbackURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AsyncRunEvaluatorOApiRequest) Field6DeepEqual(src *common.SharedResourceOption) bool {
+
+	if !p.SharedOption.DeepEqual(src) {
 		return false
 	}
 	return true

@@ -2880,9 +2880,25 @@ func (e *EvalOpenAPIApplication) BatchGetEvaluatorVersionsOApi(ctx context.Conte
 		return nil, err
 	}
 
-	dos, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, gptr.Of(req.GetWorkspaceID()), req.EvaluatorVersionIds, req.GetIncludeDeleted())
+	sharedOption, err := parseSharedOptionOApi(req.SharedOption)
 	if err != nil {
 		return nil, err
+	}
+	// 跨空间读取：按 version id 全空间查出后逐条走白名单授权（读评估器内容必须命中 readable），未命中即拒
+	querySpaceID := gptr.Of(req.GetWorkspaceID())
+	if sharedOption.Enabled() {
+		querySpaceID = nil
+	}
+	dos, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, querySpaceID, req.EvaluatorVersionIds, req.GetIncludeDeleted())
+	if err != nil {
+		return nil, err
+	}
+	if sharedOption.Enabled() {
+		for _, do := range dos {
+			if _, err = authorizeEvaluatorAccess(ctx, e.resourceAccessAuthorizer, do, req.GetWorkspaceID(), sharedOption, consts.Read, true); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return &openapi.BatchGetEvaluatorVersionsOApiResponse{
@@ -2956,25 +2972,12 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
 	}
 
-	if !evaluator.Builtin {
-		if evaluator.SpaceID != req.GetWorkspaceID() {
-			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
-		}
-
-		var ownerID *string
-		if evaluator.BaseInfo != nil && evaluator.BaseInfo.CreatedBy != nil {
-			ownerID = evaluator.BaseInfo.CreatedBy.UserID
-		}
-		err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-			ObjectID:        strconv.FormatInt(evaluator.ID, 10),
-			SpaceID:         req.GetWorkspaceID(),
-			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-			OwnerID:         ownerID,
-			ResourceSpaceID: evaluator.SpaceID,
-		})
-		if err != nil {
-			return nil, err
-		}
+	sharedOption, err := parseSharedOptionOApi(req.SharedOption)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = authorizeEvaluatorAccess(ctx, e.resourceAccessAuthorizer, evaluator, req.GetWorkspaceID(), sharedOption, consts.Read, false); err != nil {
+		return nil, err
 	}
 
 	inputData := evaluator_convertor.OpenAPIEvaluatorInputDataDTO2DO(req.InputData)
@@ -2996,6 +2999,7 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 		InputData:          inputData,
 		EvaluatorRunConf:   runConf,
 		Ext:                req.Ext,
+		SharedOption:       sharedOption,
 	})
 	if err != nil {
 		return nil, err
@@ -3028,25 +3032,12 @@ func (e *EvalOpenAPIApplication) AsyncRunEvaluatorOApi(ctx context.Context, req 
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
 	}
 
-	if !evaluator.Builtin {
-		if evaluator.SpaceID != req.GetWorkspaceID() {
-			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
-		}
-
-		var ownerID *string
-		if evaluator.BaseInfo != nil && evaluator.BaseInfo.CreatedBy != nil {
-			ownerID = evaluator.BaseInfo.CreatedBy.UserID
-		}
-		err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-			ObjectID:        strconv.FormatInt(evaluator.ID, 10),
-			SpaceID:         req.GetWorkspaceID(),
-			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-			OwnerID:         ownerID,
-			ResourceSpaceID: evaluator.SpaceID,
-		})
-		if err != nil {
-			return nil, err
-		}
+	sharedOption, err := parseSharedOptionOApi(req.SharedOption)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = authorizeEvaluatorAccess(ctx, e.resourceAccessAuthorizer, evaluator, req.GetWorkspaceID(), sharedOption, consts.Read, false); err != nil {
+		return nil, err
 	}
 
 	inputData := evaluator_convertor.OpenAPIEvaluatorInputDataDTO2DO(req.InputData)
@@ -3070,6 +3061,7 @@ func (e *EvalOpenAPIApplication) AsyncRunEvaluatorOApi(ctx context.Context, req 
 		InputData:          inputData,
 		EvaluatorRunConf:   runConf,
 		Ext:                req.Ext,
+		SharedOption:       sharedOption,
 		AsyncCtx: &entity.EvalAsyncCtx{
 			Session:     &entity.Session{UserID: usersession.UserIDInCtxOrEmpty(ctx)},
 			CallbackURL: req.GetCallbackURL(),
@@ -3224,12 +3216,62 @@ func (e *EvalOpenAPIApplication) BatchGetEvaluatorRecordsOApi(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
+	if err = e.checkCrossSpaceRecordRead(ctx, req.GetWorkspaceID(), dos); err != nil {
+		return nil, err
+	}
 
 	return &openapi.BatchGetEvaluatorRecordsOApiResponse{
 		Data: &openapi.BatchGetEvaluatorRecordsOpenAPIData{
 			Records: evaluator_convertor.OpenAPIEvaluatorRecordDO2DTOs(dos),
 		},
 	}, nil
+}
+
+// checkCrossSpaceRecordRead 校验读取「不属于调用方空间」的评估记录：该记录的评估器必须已被其所在空间
+// 共享给调用方。记录归资源空间（跨空间调用的执行、trace、回写身份都在那里），所以调用方读自己发起的
+// 那条记录必然是跨空间读，这条路径是承重的，不能简单按空间过滤掉。
+// 未命中白名单时按开关处置：默认只告警放行（观察存量调用），开关打开后拒绝。
+func (e *EvalOpenAPIApplication) checkCrossSpaceRecordRead(ctx context.Context, callerSpaceID int64, records []*entity.EvaluatorRecord) error {
+	crossSpace := make([]*entity.EvaluatorRecord, 0, len(records))
+	versionIDs := make([]int64, 0, len(records))
+	for _, record := range records {
+		if record == nil || record.SpaceID == 0 || record.SpaceID == callerSpaceID {
+			continue
+		}
+		crossSpace = append(crossSpace, record)
+		versionIDs = append(versionIDs, record.EvaluatorVersionID)
+	}
+	if len(crossSpace) == 0 {
+		return nil
+	}
+	enforce := e.configer.GetCrossSpaceRecordReadEnforce(ctx)
+	evaluators, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, nil, versionIDs, true)
+	if err != nil {
+		return err
+	}
+	evaluatorByVersionID := make(map[int64]*entity.Evaluator, len(evaluators))
+	for _, ev := range evaluators {
+		evaluatorByVersionID[ev.GetEvaluatorVersionID()] = ev
+	}
+	for _, record := range crossSpace {
+		var authErr error
+		evaluatorDO, ok := evaluatorByVersionID[record.EvaluatorVersionID]
+		if !ok {
+			authErr = errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version of record not found"))
+		} else {
+			sharedOption := &entity.SharedResourceOption{IsShared: true, SourceSpaceID: gptr.Of(record.SpaceID)}
+			_, authErr = authorizeEvaluatorAccess(ctx, e.resourceAccessAuthorizer, evaluatorDO, callerSpaceID, sharedOption, consts.Read, false)
+		}
+		if authErr == nil {
+			continue
+		}
+		if enforce {
+			return authErr
+		}
+		logs.CtxWarn(ctx, "cross space evaluator record read not authorized, enforce off; recordID=%d recordSpace=%d callerSpace=%d err=%v",
+			record.ID, record.SpaceID, callerSpaceID, authErr)
+	}
+	return nil
 }
 
 func (e *EvalOpenAPIApplication) CreateExptTemplateOApi(ctx context.Context, req *openapi.CreateExptTemplateOApiRequest) (r *openapi.CreateExptTemplateOApiResponse, err error) {

@@ -124,6 +124,16 @@ func (c *configer) GetSandboxAgentNotifyConf(ctx context.Context) *entity.Sandbo
 	return entity.DefaultSandboxAgentNotifyConf()
 }
 
+// GetCrossSpaceRecordReadEnforce 未配置时返回 false：跨空间读取评估记录只告警放行。
+func (c *configer) GetCrossSpaceRecordReadEnforce(ctx context.Context) bool {
+	const key = "cross_space_record_read_conf"
+	var cfg *entity.CrossSpaceRecordReadConf
+	if err := c.loader.UnmarshalKey(ctx, key, &cfg); err != nil || cfg == nil {
+		return false
+	}
+	return cfg.Enforce
+}
+
 func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	const key = "system_maintainer_conf"
 	var maintainerConf *entity.SystemMaintainerConf

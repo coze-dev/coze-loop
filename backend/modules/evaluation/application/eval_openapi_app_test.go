@@ -4365,13 +4365,14 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 	tests := []struct {
 		name    string
 		req     *openapi.RunEvaluatorOApiRequest
-		setup   func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService)
+		setup   func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, authorizer *servicemocks.MockResourceAccessAuthorizer)
 		wantErr int32
 	}{
 		{
-			name:    "nil request",
-			req:     nil,
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService) {},
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService, authorizer *servicemocks.MockResourceAccessAuthorizer) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
@@ -4380,7 +4381,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(nil, nil)
 			},
 			wantErr: errno.ResourceNotFoundCode,
@@ -4391,7 +4392,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluator := &entity.Evaluator{
 					ID:      evaluatorVersionID,
 					SpaceID: workspaceID + 1,
@@ -4407,7 +4408,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				ownerID := gptr.Of("owner")
 				evaluator := &entity.Evaluator{
 					ID:      evaluatorVersionID,
@@ -4417,7 +4418,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 					},
 				}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+				authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(nil, errorx.NewByCode(errno.CommonNoPermissionCode))
 			},
 			wantErr: errno.CommonNoPermissionCode,
 		},
@@ -4427,7 +4428,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				ownerID := gptr.Of("owner")
 				evaluator := &entity.Evaluator{
 					ID:      evaluatorVersionID,
@@ -4437,7 +4438,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 					},
 				}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(&entity.ResourceAccessContext{CallerSpaceID: workspaceID, ResourceSpaceID: workspaceID, AccessMode: entity.AccessModeDirect}, nil)
 				evaluatorSvc.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("run failed"))
 			},
 			wantErr: -1,
@@ -4448,7 +4449,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				ownerID := gptr.Of("owner")
 				evaluator := &entity.Evaluator{
 					ID:      evaluatorVersionID,
@@ -4459,7 +4460,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 				}
 				record := &entity.EvaluatorRecord{ID: 4004}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(&entity.ResourceAccessContext{CallerSpaceID: workspaceID, ResourceSpaceID: workspaceID, AccessMode: entity.AccessModeDirect}, nil)
 				evaluatorSvc.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(record, nil)
 			},
 		},
@@ -4469,7 +4470,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluator := &entity.Evaluator{
 					ID:      evaluatorVersionID,
 					SpaceID: workspaceID + 999,
@@ -4492,12 +4493,14 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 
 			auth := rpcmocks.NewMockIAuthProvider(ctrl)
 			evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+			authorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
 			metric := &fakeOpenAPIMetric{}
 
 			app := &EvalOpenAPIApplication{
-				auth:             auth,
-				evaluatorService: evaluatorSvc,
-				metric:           metric,
+				auth:                     auth,
+				evaluatorService:         evaluatorSvc,
+				resourceAccessAuthorizer: authorizer,
+				metric:                   metric,
 			}
 
 			if tc.name == "nil request" {
@@ -4505,7 +4508,7 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				evaluatorSvc.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Times(0)
 			} else {
-				tc.setup(auth, evaluatorSvc)
+				tc.setup(auth, evaluatorSvc, authorizer)
 			}
 
 			resp, err := app.RunEvaluatorOApi(context.Background(), tc.req)
@@ -8801,13 +8804,13 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 	tests := []struct {
 		name    string
 		req     *openapi.AsyncRunEvaluatorOApiRequest
-		setup   func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, asyncRepo *repomocks.MockIEvalAsyncRepo)
+		setup   func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, asyncRepo *repomocks.MockIEvalAsyncRepo, authorizer *servicemocks.MockResourceAccessAuthorizer)
 		wantErr int32
 	}{
 		{
 			name: "nil request",
 			req:  nil,
-			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
@@ -8817,7 +8820,7 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(nil, nil)
 			},
 			wantErr: errno.ResourceNotFoundCode,
@@ -8828,7 +8831,7 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluator := &entity.Evaluator{ID: evaluatorVersionID, SpaceID: workspaceID + 1, Builtin: false}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
 			},
@@ -8840,13 +8843,13 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluator := &entity.Evaluator{
 					ID: evaluatorVersionID, SpaceID: workspaceID,
 					BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("owner")}},
 				}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+				authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(nil, errorx.NewByCode(errno.CommonNoPermissionCode))
 			},
 			wantErr: errno.CommonNoPermissionCode,
 		},
@@ -8856,13 +8859,13 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluator := &entity.Evaluator{
 					ID: evaluatorVersionID, SpaceID: workspaceID,
 					BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("owner")}},
 				}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(&entity.ResourceAccessContext{CallerSpaceID: workspaceID, ResourceSpaceID: workspaceID, AccessMode: entity.AccessModeDirect}, nil)
 				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("async run failed"))
 			},
 			wantErr: -1,
@@ -8873,14 +8876,14 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluator := &entity.Evaluator{
 					ID: evaluatorVersionID, SpaceID: workspaceID,
 					BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("owner")}},
 				}
 				record := &entity.EvaluatorRecord{ID: invokeID, Status: entity.EvaluatorRunStatusFail}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(&entity.ResourceAccessContext{CallerSpaceID: workspaceID, ResourceSpaceID: workspaceID, AccessMode: entity.AccessModeDirect}, nil)
 				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(record, errors.New("redis error"))
 			},
 			wantErr: -1,
@@ -8892,14 +8895,14 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 				CallbackURL:        gptr.Of("https://example.com/hook"),
 			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluator := &entity.Evaluator{
 					ID: evaluatorVersionID, SpaceID: workspaceID, Name: "agent-eval",
 					BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("owner")}},
 				}
 				record := &entity.EvaluatorRecord{ID: invokeID, Status: entity.EvaluatorRunStatusAsyncInvoking}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				authorizer.EXPECT().AuthorizeRead(gomock.Any(), gomock.Any()).Return(&entity.ResourceAccessContext{CallerSpaceID: workspaceID, ResourceSpaceID: workspaceID, AccessMode: entity.AccessModeDirect}, nil)
 				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 					require.NotNil(t, req.AsyncCtx)
 					assert.True(t, req.AsyncCtx.ResumeReady)
@@ -8914,7 +8917,7 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
 			},
-			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo) {
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService, _ *repomocks.MockIEvalAsyncRepo, authorizer *servicemocks.MockResourceAccessAuthorizer) {
 				evaluator := &entity.Evaluator{ID: evaluatorVersionID, SpaceID: workspaceID + 999, Builtin: true, Name: "builtin-agent"}
 				record := &entity.EvaluatorRecord{ID: invokeID, Status: entity.EvaluatorRunStatusAsyncInvoking}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
@@ -8938,14 +8941,16 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 
 			auth := rpcmocks.NewMockIAuthProvider(ctrl)
 			evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+			authorizer := servicemocks.NewMockResourceAccessAuthorizer(ctrl)
 			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 			metric := &fakeOpenAPIMetric{}
 
 			app := &EvalOpenAPIApplication{
-				auth:             auth,
-				evaluatorService: evaluatorSvc,
-				asyncRepo:        asyncRepo,
-				metric:           metric,
+				auth:                     auth,
+				evaluatorService:         evaluatorSvc,
+				resourceAccessAuthorizer: authorizer,
+				asyncRepo:                asyncRepo,
+				metric:                   metric,
 			}
 
 			if tc.name == "nil request" {
@@ -8953,7 +8958,7 @@ func TestEvalOpenAPIApplication_AsyncRunEvaluatorOApi(t *testing.T) {
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				evaluatorSvc.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Times(0)
 			} else {
-				tc.setup(auth, evaluatorSvc, asyncRepo)
+				tc.setup(auth, evaluatorSvc, asyncRepo, authorizer)
 			}
 
 			resp, err := app.AsyncRunEvaluatorOApi(context.Background(), tc.req)

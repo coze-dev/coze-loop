@@ -2041,6 +2041,10 @@ func (f *fakeRecordStorageConfiger) BuildEvalExt(ctx context.Context, spaceID in
 	return nil
 }
 
+func (f *fakeRecordStorageConfiger) GetCrossSpaceRecordReadEnforce(ctx context.Context) bool {
+	return false
+}
+
 func (f *fakeRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	return nil
 }

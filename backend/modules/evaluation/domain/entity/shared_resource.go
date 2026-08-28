@@ -16,6 +16,8 @@ const (
 	SharedResourceTypeEvalSet = "eval_set"
 	// SharedResourceTypeEvalTarget 评测对象共享资源类型
 	SharedResourceTypeEvalTarget = "eval_target"
+	// SharedResourceTypeEvaluator 评估器共享资源类型；恒按全部版本共享，不支持版本策略
+	SharedResourceTypeEvaluator = "eval_evaluator"
 )
 
 const (
@@ -27,6 +29,12 @@ const (
 
 // sharedAccessTargetAll 表示共享给所有空间的通配符，readable 和 execute 均支持。
 const sharedAccessTargetAll = "*"
+
+// CrossSpaceRecordReadConf 跨空间读取评估记录的收紧配置。
+type CrossSpaceRecordReadConf struct {
+	// Enforce 为 true 时，未命中共享白名单的跨空间读取直接拒绝；false 只告警放行。
+	Enforce bool `mapstructure:"enforce" json:"enforce"`
+}
 
 type SharedResourceInfo struct {
 	IsShared      bool
@@ -125,7 +133,7 @@ func (c *SharedResourceConfig) Lookup(sourceSpaceID int64, resourceType string, 
 		}
 		versionPolicy := res.VersionPolicy
 		specifiedVersions := res.SpecifiedVersions
-		if resourceType == SharedResourceTypeEvalTarget && targetType.ToOperatorBaseType() != EvalTargetTypeLoopPrompt {
+		if forceSharedAllVersions(resourceType, targetType) {
 			versionPolicy = SharedVersionPolicyAll
 			specifiedVersions = nil
 		} else if versionPolicy == "" {
@@ -150,6 +158,16 @@ func sharedResourceMatches(res *SharedResourceRule, resourceType string, targetT
 		return true
 	}
 	return targetType != 0 && res.TargetType.ToOperatorBaseType() == targetType.ToOperatorBaseType()
+}
+
+// forceSharedAllVersions 标记「版本策略不适用、恒按全部版本共享」的资源类型：
+// 评估器（版本不可变且调用方只持有 version id，无可操作的版本白名单语义）、
+// 以及非 loop prompt 类的评测对象。
+func forceSharedAllVersions(resourceType string, targetType EvalTargetType) bool {
+	if resourceType == SharedResourceTypeEvaluator {
+		return true
+	}
+	return resourceType == SharedResourceTypeEvalTarget && targetType.ToOperatorBaseType() != EvalTargetTypeLoopPrompt
 }
 
 // matchAccessLevel 在资源的访问规则中匹配调用方空间，返回命中的访问级别。
@@ -228,7 +246,7 @@ func (c *SharedResourceConfig) ListSharedTo(callerSpaceID int64, resourceType st
 			}
 			versionPolicy := res.VersionPolicy
 			specifiedVersions := res.SpecifiedVersions
-			if resourceType == SharedResourceTypeEvalTarget && targetType.ToOperatorBaseType() != EvalTargetTypeLoopPrompt {
+			if forceSharedAllVersions(resourceType, targetType) {
 				versionPolicy = SharedVersionPolicyAll
 				specifiedVersions = nil
 			} else if versionPolicy == "" {

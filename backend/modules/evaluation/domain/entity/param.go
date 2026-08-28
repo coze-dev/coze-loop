@@ -311,6 +311,8 @@ type RunEvaluatorRequest struct {
 	Alias string `json:"alias,omitempty"`
 	// ★ Builtin (含别名) / Inline 来源标记; 0/默认按 Builtin 处理
 	SourceType EvaluatorRecordSourceType `json:"source_type,omitempty"`
+	// SharedOption 跨空间共享调用声明; 由 app 层完成白名单授权后透传, 供领域层做来源空间一致性校验。
+	SharedOption *SharedResourceOption `json:"shared_option,omitempty"`
 }
 
 type AsyncRunEvaluatorRequest struct {
@@ -330,6 +332,8 @@ type AsyncRunEvaluatorRequest struct {
 	// AsyncCtx is persisted after the AsyncInvoking record is created and before the provider is dispatched.
 	// Experiment calls set ResumeReady=false; direct calls set it true.
 	AsyncCtx *EvalAsyncCtx `json:"-"`
+	// SharedOption 跨空间共享调用声明; 由 app 层完成白名单授权后透传, 供领域层做来源空间一致性校验。
+	SharedOption *SharedResourceOption `json:"shared_option,omitempty"`
 }
 
 type AsyncRunEvaluatorResponse struct {

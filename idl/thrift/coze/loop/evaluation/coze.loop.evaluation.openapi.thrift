@@ -1105,6 +1105,7 @@ struct BatchGetEvaluatorVersionsOApiRequest {
     1: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
     2: optional list<i64> evaluator_version_ids (api.body = "evaluator_version_ids", api.js_conv = "true", go.tag = 'json:"evaluator_version_ids"')
     3: optional bool include_deleted (api.body = "include_deleted")
+    4: optional common.SharedResourceOption shared_option (api.body = "shared_option") // 跨空间共享: 评估器来源空间
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
@@ -1151,6 +1152,7 @@ struct RunEvaluatorOApiRequest {
     2: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
     3: optional evaluator.EvaluatorInputData input_data (api.body = "input_data")
     4: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body = "evaluator_run_conf")
+    5: optional common.SharedResourceOption shared_option (api.body = "shared_option") // 跨空间共享: 评估器来源空间
 
     100: optional map<string, string> ext (api.body = "ext")
 
@@ -1177,6 +1179,7 @@ struct AsyncRunEvaluatorOApiRequest {
     3: optional evaluator.EvaluatorInputData input_data (api.body = "input_data")
     4: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body = "evaluator_run_conf")
     5: optional string callback_url (api.body = "callback_url")
+    6: optional common.SharedResourceOption shared_option (api.body = "shared_option") // 跨空间共享: 评估器来源空间
 
     100: optional map<string, string> ext (api.body = "ext")
 

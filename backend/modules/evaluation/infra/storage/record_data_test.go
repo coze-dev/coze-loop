@@ -67,6 +67,10 @@ func (f *fakeConfiger) BuildEvalExt(ctx context.Context, spaceID int64, turn *en
 	return nil
 }
 
+func (f *fakeConfiger) GetCrossSpaceRecordReadEnforce(ctx context.Context) bool {
+	return false
+}
+
 func (f *fakeConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	return nil
 }

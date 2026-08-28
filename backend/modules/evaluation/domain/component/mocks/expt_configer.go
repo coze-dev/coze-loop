@@ -85,6 +85,20 @@ func (mr *MockIConfigerMockRecorder) GetConsumerConf(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsumerConf", reflect.TypeOf((*MockIConfiger)(nil).GetConsumerConf), ctx)
 }
 
+// GetCrossSpaceRecordReadEnforce mocks base method.
+func (m *MockIConfiger) GetCrossSpaceRecordReadEnforce(ctx context.Context) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCrossSpaceRecordReadEnforce", ctx)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// GetCrossSpaceRecordReadEnforce indicates an expected call of GetCrossSpaceRecordReadEnforce.
+func (mr *MockIConfigerMockRecorder) GetCrossSpaceRecordReadEnforce(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossSpaceRecordReadEnforce", reflect.TypeOf((*MockIConfiger)(nil).GetCrossSpaceRecordReadEnforce), ctx)
+}
+
 // GetErrCtrl mocks base method.
 func (m *MockIConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl {
 	m.ctrl.T.Helper()
@@ -113,20 +127,6 @@ func (mr *MockIConfigerMockRecorder) GetErrRetryConf(ctx, spaceID, err any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetErrRetryConf", reflect.TypeOf((*MockIConfiger)(nil).GetErrRetryConf), ctx, spaceID, err)
 }
 
-// GetEvaluationRecordStorage mocks base method.
-func (m *MockIConfiger) GetEvaluationRecordStorage(ctx context.Context) *component.EvaluationRecordStorage {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvaluationRecordStorage", ctx)
-	ret0, _ := ret[0].(*component.EvaluationRecordStorage)
-	return ret0
-}
-
-// GetEvaluationRecordStorage indicates an expected call of GetEvaluationRecordStorage.
-func (mr *MockIConfigerMockRecorder) GetEvaluationRecordStorage(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationRecordStorage", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluationRecordStorage), ctx)
-}
-
 // GetEvalAsyncCtxTTL mocks base method.
 func (m *MockIConfiger) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
 	m.ctrl.T.Helper()
@@ -139,6 +139,20 @@ func (m *MockIConfiger) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) t
 func (mr *MockIConfigerMockRecorder) GetEvalAsyncCtxTTL(ctx, spaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalAsyncCtxTTL", reflect.TypeOf((*MockIConfiger)(nil).GetEvalAsyncCtxTTL), ctx, spaceID)
+}
+
+// GetEvaluationRecordStorage mocks base method.
+func (m *MockIConfiger) GetEvaluationRecordStorage(ctx context.Context) *component.EvaluationRecordStorage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvaluationRecordStorage", ctx)
+	ret0, _ := ret[0].(*component.EvaluationRecordStorage)
+	return ret0
+}
+
+// GetEvaluationRecordStorage indicates an expected call of GetEvaluationRecordStorage.
+func (mr *MockIConfigerMockRecorder) GetEvaluationRecordStorage(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationRecordStorage", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluationRecordStorage), ctx)
 }
 
 // GetExptExecConf mocks base method.

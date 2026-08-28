@@ -18,3 +18,6 @@ const (
 	DefaultListEvaluatorVersionPageNum  = 1
 	DefaultListEvaluatorVersionPageSize = 10
 )
+
+// EvaluatorRecordExtKeyCallerSpaceID 跨空间调用时记录里的调用方空间；记录本身归资源空间。
+const EvaluatorRecordExtKeyCallerSpaceID = "caller_space_id"
