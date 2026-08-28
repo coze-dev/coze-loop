@@ -116,6 +116,29 @@ func ParseItemZombieTimeoutErr(err error) (bool, string) {
 	return false, ""
 }
 
+// NewItemQuotaImpossibleErr 构造"申报量超过调度域上限、任何配置下都无法调度"错误。
+//
+// 与僵尸超时的本质区别：僵尸是"卡了太久"（时间维度），它是"结构上就放不下"（配置维度）——
+// 等多久都不会变化，所以调度器在授予点直接置失败而不是继续排队。key/amount/limit 一并写进
+// err_msg，让用户据此改小申报或调大上限后重建实验。
+func NewItemQuotaImpossibleErr(constraintKey string, amount, limit int64) error {
+	msg := fmt.Sprintf("实验行申报的 %s 资源量（%d）超过调度域上限（%d），任何配置下都无法调度，请改小申报或调大上限后重建实验",
+		constraintKey, amount, limit)
+	return &ErrImpl{
+		Code: ItemQuotaImpossibleCode,
+		Msg:  msg,
+	}
+}
+
+// ParseItemQuotaImpossibleErr 反解额度不可满足错误，返回 (是否命中, 用户可见的详细描述)。
+func ParseItemQuotaImpossibleErr(err error) (bool, string) {
+	ei, ok := ParseErrImpl(err)
+	if ok && ei.Code == ItemQuotaImpossibleCode {
+		return true, ei.ErrMsg()
+	}
+	return false, ""
+}
+
 // NewSandboxTerminatedBeforeReportErr 构造 "沙箱提前终态导致行失败" 错误。sandboxStatus 传沙箱返回的状态字面量（如 "Failed"/"Canceled"），
 // 用于把根因附在 err_msg 上供 API 展示。触发场景见 ExptSchedulerImpl.sweepTerminatedSandboxItems。
 func NewSandboxTerminatedBeforeReportErr(sandboxStatus string) error {
