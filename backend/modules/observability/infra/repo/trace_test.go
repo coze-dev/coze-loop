@@ -1485,7 +1485,7 @@ func TestTraceRepoImpl_getSpanInsertTable(t *testing.T) {
 			r := &TraceRepoImpl{
 				traceConfig: fields.traceConfig,
 			}
-			got, err := r.getSpanInsertTable(tt.args.ctx, tt.args.tenant, tt.args.ttl)
+			got, err := r.getSpanInsertTable(tt.args.ctx, tt.args.tenant, tt.args.ttl, "")
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -2228,12 +2228,12 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 
 	t.Run("workspace provider filters tables", func(t *testing.T) {
 		wsMock := wsmock.NewMockIWorkSpaceProvider(ctrl)
-		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", gomock.Any(), false).
-			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool) []string {
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", gomock.Any(), false, int64(0)).
+			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool, queryStartTimeMs int64) []string {
 				return []string{"spans_3d"}
 			})
-		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", gomock.Any(), false).
-			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool) []string {
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", gomock.Any(), false, int64(0)).
+			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool, queryStartTimeMs int64) []string {
 				return []string{"anno_3d"}
 			})
 
@@ -2241,7 +2241,7 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 			traceConfig:       traceConfigMock,
 			workspaceProvider: wsMock,
 		}
-		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "", false)
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "", false, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, []string{"spans_3d"}, cfg.SpanTables)
 		assert.Equal(t, []string{"anno_3d"}, cfg.AnnoTables)
@@ -2252,7 +2252,7 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 			traceConfig:       traceConfigMock,
 			workspaceProvider: nil,
 		}
-		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "", false)
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "", false, 0)
 		assert.NoError(t, err)
 		assert.Len(t, cfg.SpanTables, 2)
 		assert.Len(t, cfg.AnnoTables, 2)
@@ -2260,12 +2260,12 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 
 	t.Run("isGetTraceByID passed correctly", func(t *testing.T) {
 		wsMock := wsmock.NewMockIWorkSpaceProvider(ctrl)
-		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws2", gomock.Any(), true).
-			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool) []string {
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws2", gomock.Any(), true, int64(0)).
+			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool, queryStartTimeMs int64) []string {
 				return tables
 			})
-		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws2", gomock.Any(), true).
-			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool) []string {
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws2", gomock.Any(), true, int64(0)).
+			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool, queryStartTimeMs int64) []string {
 				return tables
 			})
 
@@ -2273,7 +2273,7 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 			traceConfig:       traceConfigMock,
 			workspaceProvider: wsMock,
 		}
-		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws2", "", true)
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws2", "", true, 0)
 		assert.NoError(t, err)
 		assert.Len(t, cfg.SpanTables, 2)
 		assert.Len(t, cfg.AnnoTables, 2)
@@ -2284,7 +2284,7 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 			traceConfig:       traceConfigMock,
 			workspaceProvider: nil,
 		}
-		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "abase", false)
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "abase", false, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, []string{"tenant1"}, cfg.SpanTables)
 		assert.Len(t, cfg.AnnoTables, 2)
@@ -2295,9 +2295,258 @@ func TestTraceRepoImpl_getQueryTenantTables_ClipTableByWorkspace(t *testing.T) {
 			traceConfig:       traceConfigMock,
 			workspaceProvider: nil,
 		}
-		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "clickhouse", false)
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "clickhouse", false, 0)
 		assert.NoError(t, err)
 		assert.Len(t, cfg.SpanTables, 2)
 		assert.Len(t, cfg.AnnoTables, 2)
+	})
+}
+
+func Test_expandShardTables(t *testing.T) {
+	t.Run("not support shard returns base table only", func(t *testing.T) {
+		got := expandShardTables("spans_7d", false, nil)
+		assert.Equal(t, []string{"spans_7d"}, got)
+	})
+
+	t.Run("support shard but empty list returns base table only", func(t *testing.T) {
+		got := expandShardTables("spans_7d", true, []string{})
+		assert.Equal(t, []string{"spans_7d"}, got)
+	})
+
+	t.Run("support shard with list returns shard tables", func(t *testing.T) {
+		got := expandShardTables("spans_7d", true, []string{"1", "2"})
+		assert.Equal(t, []string{"spans_7d_1", "spans_7d_2"}, got)
+	})
+}
+
+func Test_shardTableName(t *testing.T) {
+	t.Run("empty shard returns base table", func(t *testing.T) {
+		assert.Equal(t, "spans_7d", shardTableName("spans_7d", ""))
+	})
+
+	t.Run("non-empty shard appends suffix", func(t *testing.T) {
+		assert.Equal(t, "spans_7d_1", shardTableName("spans_7d", "1"))
+	})
+}
+
+func Test_resolveShardForSpace(t *testing.T) {
+	t.Run("nil shard config returns empty", func(t *testing.T) {
+		got := resolveShardForSpace(nil, config.TableCfg{}, "ws1")
+		assert.Equal(t, "", got)
+	})
+
+	t.Run("empty shard config returns empty", func(t *testing.T) {
+		got := resolveShardForSpace(map[string][]config.ShardEntry{}, config.TableCfg{}, "ws1")
+		assert.Equal(t, "", got)
+	})
+
+	t.Run("workspace not in any shard returns empty", func(t *testing.T) {
+		shardCfg := map[string][]config.ShardEntry{
+			"1": {{SpaceID: "ws_other"}},
+		}
+		tableCfg := config.TableCfg{SupportShard: true, ShardList: []string{"1"}}
+		got := resolveShardForSpace(shardCfg, tableCfg, "ws1")
+		assert.Equal(t, "", got)
+	})
+
+	t.Run("workspace in shard and shard in ShardList returns shard", func(t *testing.T) {
+		shardCfg := map[string][]config.ShardEntry{
+			"1": {{SpaceID: "ws1"}},
+		}
+		tableCfg := config.TableCfg{SupportShard: true, ShardList: []string{"1", "2"}}
+		got := resolveShardForSpace(shardCfg, tableCfg, "ws1")
+		assert.Equal(t, "1", got)
+	})
+
+	t.Run("workspace in shard but shard NOT in ShardList returns empty", func(t *testing.T) {
+		shardCfg := map[string][]config.ShardEntry{
+			"1": {{SpaceID: "ws1"}},
+		}
+		tableCfg := config.TableCfg{SupportShard: true, ShardList: []string{"2", "3"}}
+		got := resolveShardForSpace(shardCfg, tableCfg, "ws1")
+		assert.Equal(t, "", got)
+	})
+
+	t.Run("multiple entries in shard matches correct workspace", func(t *testing.T) {
+		shardCfg := map[string][]config.ShardEntry{
+			"1": {{SpaceID: "ws_a"}, {SpaceID: "ws_b"}},
+			"2": {{SpaceID: "ws_c"}},
+		}
+		tableCfg := config.TableCfg{SupportShard: true, ShardList: []string{"1", "2"}}
+		got := resolveShardForSpace(shardCfg, tableCfg, "ws_b")
+		assert.Equal(t, "1", got)
+	})
+}
+
+func TestTraceRepoImpl_getSpanInsertTable_Shard(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("no shard support returns base table", func(t *testing.T) {
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"tenant1": {
+					loop_span.TTL7d: {SpanTable: "spans_7d", AnnoTable: "anno_7d"},
+				},
+			},
+		}, nil)
+		r := &TraceRepoImpl{traceConfig: traceConfigMock}
+		table, err := r.getSpanInsertTable(context.Background(), "tenant1", loop_span.TTL7d, "ws1")
+		assert.NoError(t, err)
+		assert.Equal(t, "spans_7d", table)
+	})
+
+	t.Run("shard support with matching workspace returns shard table", func(t *testing.T) {
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"tenant1": {
+					loop_span.TTL7d: {SpanTable: "spans_7d", AnnoTable: "anno_7d", SupportShard: true, ShardList: []string{"1"}},
+				},
+			},
+			ShardConfig: map[string][]config.ShardEntry{
+				"1": {{SpaceID: "ws1"}},
+			},
+		}, nil)
+		r := &TraceRepoImpl{traceConfig: traceConfigMock}
+		table, err := r.getSpanInsertTable(context.Background(), "tenant1", loop_span.TTL7d, "ws1")
+		assert.NoError(t, err)
+		assert.Equal(t, "spans_7d_1", table)
+	})
+
+	t.Run("shard support but workspace not in config returns base table", func(t *testing.T) {
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"tenant1": {
+					loop_span.TTL7d: {SpanTable: "spans_7d", AnnoTable: "anno_7d", SupportShard: true, ShardList: []string{"1"}},
+				},
+			},
+			ShardConfig: map[string][]config.ShardEntry{
+				"1": {{SpaceID: "ws_other"}},
+			},
+		}, nil)
+		r := &TraceRepoImpl{traceConfig: traceConfigMock}
+		table, err := r.getSpanInsertTable(context.Background(), "tenant1", loop_span.TTL7d, "ws1")
+		assert.NoError(t, err)
+		assert.Equal(t, "spans_7d", table)
+	})
+
+	t.Run("tenant not found returns error", func(t *testing.T) {
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{},
+		}, nil)
+		r := &TraceRepoImpl{traceConfig: traceConfigMock}
+		_, err := r.getSpanInsertTable(context.Background(), "tenant1", loop_span.TTL7d, "ws1")
+		assert.Error(t, err)
+	})
+}
+
+func TestTraceRepoImpl_getAnnoInsertTable_Shard(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("no shard support returns base anno table", func(t *testing.T) {
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"tenant1": {
+					loop_span.TTL7d: {SpanTable: "spans_7d", AnnoTable: "anno_7d"},
+				},
+			},
+		}, nil)
+		r := &TraceRepoImpl{traceConfig: traceConfigMock}
+		table, err := r.getAnnoInsertTable(context.Background(), "tenant1", loop_span.TTL7d, "ws1")
+		assert.NoError(t, err)
+		assert.Equal(t, "anno_7d", table)
+	})
+
+	t.Run("shard support with matching workspace returns shard anno table", func(t *testing.T) {
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"tenant1": {
+					loop_span.TTL7d: {SpanTable: "spans_7d", AnnoTable: "anno_7d", SupportShard: true, ShardList: []string{"1"}},
+				},
+			},
+			ShardConfig: map[string][]config.ShardEntry{
+				"1": {{SpaceID: "ws1"}},
+			},
+		}, nil)
+		r := &TraceRepoImpl{traceConfig: traceConfigMock}
+		table, err := r.getAnnoInsertTable(context.Background(), "tenant1", loop_span.TTL7d, "ws1")
+		assert.NoError(t, err)
+		assert.Equal(t, "anno_7d_1", table)
+	})
+
+	t.Run("empty anno table returns empty", func(t *testing.T) {
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"tenant1": {
+					loop_span.TTL7d: {SpanTable: "spans_7d", AnnoTable: ""},
+				},
+			},
+		}, nil)
+		r := &TraceRepoImpl{traceConfig: traceConfigMock}
+		table, err := r.getAnnoInsertTable(context.Background(), "tenant1", loop_span.TTL7d, "ws1")
+		assert.NoError(t, err)
+		assert.Equal(t, "", table)
+	})
+}
+
+func TestTraceRepoImpl_getQueryTenantTables_WithShardExpansion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+		TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+			"tenant1": {
+				loop_span.TTL7d: {
+					SpanTable:    "spans_7d",
+					AnnoTable:    "anno_7d",
+					SupportShard: true,
+					ShardList:    []string{"1", "2"},
+				},
+			},
+		},
+		TenantsSupportAnnotation: map[string]bool{
+			"tenant1": true,
+		},
+	}, nil).AnyTimes()
+
+	t.Run("shard expansion produces shard tables", func(t *testing.T) {
+		r := &TraceRepoImpl{
+			traceConfig:       traceConfigMock,
+			workspaceProvider: nil,
+		}
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "", "", false, 0)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []string{"spans_7d_1", "spans_7d_2"}, cfg.SpanTables)
+		assert.ElementsMatch(t, []string{"anno_7d_1", "anno_7d_2"}, cfg.AnnoTables)
+	})
+
+	t.Run("shard expansion with workspace provider clips tables", func(t *testing.T) {
+		wsMock := wsmock.NewMockIWorkSpaceProvider(ctrl)
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", gomock.Any(), false, int64(0)).
+			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool, queryStartTimeMs int64) []string {
+				return []string{"spans_7d_1"}
+			})
+		wsMock.EXPECT().ClipTableByWorkspace(gomock.Any(), "ws1", gomock.Any(), false, int64(0)).
+			DoAndReturn(func(ctx context.Context, wsID string, tables []string, isGetTraceByID bool, queryStartTimeMs int64) []string {
+				return []string{"anno_7d_1"}
+			})
+
+		r := &TraceRepoImpl{
+			traceConfig:       traceConfigMock,
+			workspaceProvider: wsMock,
+		}
+		cfg, err := r.getQueryTenantTables(context.Background(), []string{"tenant1"}, "ws1", "", false, 0)
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"spans_7d_1"}, cfg.SpanTables)
+		assert.Equal(t, []string{"anno_7d_1"}, cfg.AnnoTables)
 	})
 }

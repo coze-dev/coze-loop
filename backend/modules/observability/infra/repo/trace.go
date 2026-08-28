@@ -186,7 +186,7 @@ func (t *TraceRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTrace
 	if spanDao == nil {
 		return errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	table, err := t.getSpanInsertTable(ctx, param.Tenant, param.TTL)
+	table, err := t.getSpanInsertTable(ctx, param.Tenant, param.TTL, param.WorkSpaceID)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 	if pageToken != nil {
 		filters = t.addPageTokenFilter(pageToken, req.Filters, req.AscByStartTime, req.PageTokenInclusive)
 	}
-	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, "", false, req.StartAt)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, "", true)
+	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants, req.WorkSpaceID, "", true, req.StartAt)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +491,7 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 	if param.SpanID == "" || param.TraceID == "" || param.WorkspaceId <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false, param.StartAt)
 	if err != nil {
 		return nil, err
 	} else if len(tableCfg.AnnoTables) == 0 {
@@ -523,7 +523,7 @@ func (t *TraceRepoImpl) ListWorkspaceAnnotations(ctx context.Context, param *rep
 	if annoDao == nil {
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false, param.StartAt)
 	if err != nil {
 		return nil, err
 	} else if len(tableCfg.AnnoTables) == 0 {
@@ -558,7 +558,7 @@ func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnota
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false, param.StartAt)
 	if err != nil {
 		return nil, err
 	} else if len(tableCfg.AnnoTables) == 0 {
@@ -587,7 +587,7 @@ func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Inser
 		return errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	table, err := t.getAnnoInsertTable(ctx, param.Tenant, param.TTL)
+	table, err := t.getAnnoInsertTable(ctx, param.Tenant, param.TTL, param.WorkSpaceID)
 	if err != nil {
 		return err
 	}
@@ -624,7 +624,7 @@ func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMe
 		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 
-	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false)
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants, param.WorkSpaceID, "", false, param.StartAt)
 	if err != nil {
 		return nil, err
 	}
@@ -654,7 +654,7 @@ type queryTableCfg struct {
 	NeedQueryAnno bool
 }
 
-func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []string, workspaceID string, storageName string, isGetTraceByID bool) (*queryTableCfg, error) {
+func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []string, workspaceID string, storageName string, isGetTraceByID bool, queryStartTimeMs int64) (*queryTableCfg, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant table config, %v", err)
@@ -673,10 +673,20 @@ func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []stri
 			continue
 		}
 		for _, tableCfg := range tables {
-			ret.SpanTables = append(ret.SpanTables, tableCfg.SpanTable)
+			spanTables := expandShardTables(tableCfg.SpanTable, tableCfg.SupportShard, tableCfg.ShardList)
+			annoTables := expandShardTables(tableCfg.AnnoTable, tableCfg.SupportShard, tableCfg.ShardList)
+			ret.SpanTables = append(ret.SpanTables, spanTables...)
+			for _, at := range annoTables {
+				if at != "" {
+					ret.AnnoTables = append(ret.AnnoTables, at)
+				}
+			}
 			if tableCfg.AnnoTable != "" {
-				ret.AnnoTables = append(ret.AnnoTables, tableCfg.AnnoTable)
-				ret.AnnoTableMap[tableCfg.SpanTable] = tableCfg.AnnoTable
+				for _, st := range spanTables {
+					for _, at := range annoTables {
+						ret.AnnoTableMap[st] = at
+					}
+				}
 			}
 		}
 	}
@@ -692,13 +702,13 @@ func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []stri
 		ret.SpanTables = tenants
 	}
 	if t.workspaceProvider != nil {
-		ret.SpanTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.SpanTables, isGetTraceByID)
-		ret.AnnoTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.AnnoTables, isGetTraceByID)
+		ret.SpanTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.SpanTables, isGetTraceByID, queryStartTimeMs)
+		ret.AnnoTables = t.workspaceProvider.ClipTableByWorkspace(ctx, workspaceID, ret.AnnoTables, isGetTraceByID, queryStartTimeMs)
 	}
 	return ret, nil
 }
 
-func (t *TraceRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL) (string, error) {
+func (t *TraceRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL, workspaceID string) (string, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant config, %v", err)
@@ -710,10 +720,14 @@ func (t *TraceRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, t
 	} else if tableCfg.SpanTable == "" {
 		return "", fmt.Errorf("no table config found for tenant %s with ttl %s", tenant, ttl)
 	}
+	if tableCfg.SupportShard {
+		shard := resolveShardForSpace(tenantTableCfg.ShardConfig, tableCfg, workspaceID)
+		return shardTableName(tableCfg.SpanTable, shard), nil
+	}
 	return tableCfg.SpanTable, nil
 }
 
-func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL) (string, error) {
+func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL, workspaceID string) (string, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant config, %v", err)
@@ -724,6 +738,10 @@ func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, t
 		return "", nil
 	} else if tableCfg.AnnoTable == "" {
 		return "", nil
+	}
+	if tableCfg.SupportShard {
+		shard := resolveShardForSpace(tenantTableCfg.ShardConfig, tableCfg, workspaceID)
+		return shardTableName(tableCfg.AnnoTable, shard), nil
 	}
 	return tableCfg.AnnoTable, nil
 }
@@ -801,4 +819,43 @@ func spanTimeRange(spans []*dao.Span) (int64, int64) {
 		}
 	}
 	return minStart, maxStart
+}
+
+func expandShardTables(baseTable string, supportShard bool, shardList []string) []string {
+	if !supportShard || len(shardList) == 0 {
+		return []string{baseTable}
+	}
+	tables := make([]string, 0, len(shardList))
+	for _, shard := range shardList {
+		tables = append(tables, shardTableName(baseTable, shard))
+	}
+	return tables
+}
+
+func shardTableName(baseTable, shard string) string {
+	if shard == "" {
+		return baseTable
+	}
+	return baseTable + "_" + shard
+}
+
+func resolveShardForSpace(shardConfig map[string][]config.ShardEntry, tableCfg config.TableCfg, workspaceID string) string {
+	if len(shardConfig) == 0 {
+		return ""
+	}
+	for shardID, entries := range shardConfig {
+		for _, entry := range entries {
+			if entry.SpaceID == workspaceID {
+				// 空间属于 shardID，但需要检查该 TTL 表是否支持此 shard
+				for _, s := range tableCfg.ShardList {
+					if s == shardID {
+						return shardID
+					}
+				}
+				// shard 不在此 TTL 的 ShardList 中，用原表
+				return ""
+			}
+		}
+	}
+	return ""
 }
