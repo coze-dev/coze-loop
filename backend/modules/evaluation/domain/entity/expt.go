@@ -507,6 +507,9 @@ type RunModeConfig struct {
 	SuaPETemplate string `json:"sua_pe_template,omitempty"`
 	// MaxTurns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
 	MaxTurns int `json:"max_turns,omitempty"`
+	// SkillsMode SandboxAgent 跑法的技能模式 (merge / disable_test_case)。入口 convertor 校白名单,
+	// 空即不透传; 原样落到 case-file experiment_info.skills_mode。
+	SkillsMode string `json:"skills_mode,omitempty"`
 }
 
 // ItemRunConf 题目级多轮/SUA 运行配置, 冻结进 expt_item_ref.item_config (ItemTargetConf.RunConf)。

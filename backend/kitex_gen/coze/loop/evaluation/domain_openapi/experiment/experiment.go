@@ -3057,6 +3057,9 @@ type RunModeConfig struct {
 	SuaPeTemplate *string `thrift:"sua_pe_template,9,optional" frugal:"9,optional,string" json:"sua_pe_template" form:"sua_pe_template" query:"sua_pe_template"`
 	// max_turns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
 	MaxTurns *int32 `thrift:"max_turns,10,optional" frugal:"10,optional,i32" json:"max_turns" form:"max_turns" query:"max_turns"`
+	// skills_mode SandboxAgent 跑法的技能模式, 原样透传到 case-file experiment_info.skills_mode。
+	// 合法值 merge / disable_test_case; 非法值在 convertor 报 CommonInvalidParamCode。
+	SkillsMode *string `thrift:"skills_mode,11,optional" frugal:"11,optional,string" json:"skills_mode" form:"skills_mode" query:"skills_mode"`
 }
 
 func NewRunModeConfig() *RunModeConfig {
@@ -3173,6 +3176,18 @@ func (p *RunModeConfig) GetMaxTurns() (v int32) {
 	}
 	return *p.MaxTurns
 }
+
+var RunModeConfig_SkillsMode_DEFAULT string
+
+func (p *RunModeConfig) GetSkillsMode() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkillsMode() {
+		return RunModeConfig_SkillsMode_DEFAULT
+	}
+	return *p.SkillsMode
+}
 func (p *RunModeConfig) SetRunMode(val *ExptRunMode) {
 	p.RunMode = val
 }
@@ -3200,6 +3215,9 @@ func (p *RunModeConfig) SetSuaPeTemplate(val *string) {
 func (p *RunModeConfig) SetMaxTurns(val *int32) {
 	p.MaxTurns = val
 }
+func (p *RunModeConfig) SetSkillsMode(val *string) {
+	p.SkillsMode = val
+}
 
 var fieldIDToName_RunModeConfig = map[int16]string{
 	1:  "run_mode",
@@ -3211,6 +3229,7 @@ var fieldIDToName_RunModeConfig = map[int16]string{
 	8:  "sua_behavioral_constraints",
 	9:  "sua_pe_template",
 	10: "max_turns",
+	11: "skills_mode",
 }
 
 func (p *RunModeConfig) IsSetRunMode() bool {
@@ -3247,6 +3266,10 @@ func (p *RunModeConfig) IsSetSuaPeTemplate() bool {
 
 func (p *RunModeConfig) IsSetMaxTurns() bool {
 	return p.MaxTurns != nil
+}
+
+func (p *RunModeConfig) IsSetSkillsMode() bool {
+	return p.SkillsMode != nil
 }
 
 func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -3334,6 +3357,14 @@ func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3467,6 +3498,17 @@ func (p *RunModeConfig) ReadField10(iprot thrift.TProtocol) error {
 	p.MaxTurns = _field
 	return nil
 }
+func (p *RunModeConfig) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SkillsMode = _field
+	return nil
+}
 
 func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3508,6 +3550,10 @@ func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -3690,6 +3736,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *RunModeConfig) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkillsMode() {
+		if err = oprot.WriteFieldBegin("skills_mode", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SkillsMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 
 func (p *RunModeConfig) String() string {
 	if p == nil {
@@ -3730,6 +3794,9 @@ func (p *RunModeConfig) DeepEqual(ano *RunModeConfig) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.MaxTurns) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.SkillsMode) {
 		return false
 	}
 	return true
@@ -3839,6 +3906,18 @@ func (p *RunModeConfig) Field10DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.MaxTurns != *src {
+		return false
+	}
+	return true
+}
+func (p *RunModeConfig) Field11DeepEqual(src *string) bool {
+
+	if p.SkillsMode == src {
+		return true
+	} else if p.SkillsMode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SkillsMode, *src) != 0 {
 		return false
 	}
 	return true

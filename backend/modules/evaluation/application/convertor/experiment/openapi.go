@@ -3114,7 +3114,32 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domain
 		}
 		out.SuaMode = gptr.Of(sm)
 	}
+	// skills_mode 与 run_mode/sua_mode 同为受控枚举: 白名单外的非空值直接报错, 不静默透传
+	// (原样落到 case-file 会让 runtime 收到无法识别的模式)。空/未设置放行, 表示不透传该字段。
+	if c.SkillsMode != nil && *c.SkillsMode != "" {
+		if !isValidSkillsMode(*c.SkillsMode) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"invalid skills_mode %q (supported: %s, %s)", *c.SkillsMode,
+				skillsModeMerge, skillsModeDisableTestCase)))
+		}
+		out.SkillsMode = c.SkillsMode
+	}
 	return out, nil
+}
+
+// skills_mode 全量枚举 (SandboxAgent 跑法的技能模式)。case-file experiment_info.skills_mode 原样带这两个值之一。
+const (
+	skillsModeMerge           = "merge"
+	skillsModeDisableTestCase = "disable_test_case"
+)
+
+func isValidSkillsMode(s string) bool {
+	switch s {
+	case skillsModeMerge, skillsModeDisableTestCase:
+		return true
+	default:
+		return false
+	}
 }
 
 // openAPIRunModeToDomain 将 OpenAPI ExptRunMode 字符串枚举转为内部 int 枚举; 未识别返回 false。
@@ -3176,6 +3201,8 @@ func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment
 		SuaPersona:               c.SuaPersona,
 		SuaBehavioralConstraints: c.SuaBehavioralConstraints,
 		SuaPeTemplate:            c.SuaPeTemplate,
+		// skills_mode 是受控枚举, 但存量落库的值都经过入口白名单校验, 回显原样带出即可。
+		SkillsMode: c.SkillsMode,
 	}
 	if c.RunMode != nil {
 		if rm, ok := domainRunModeToOpenAPI(*c.RunMode); ok {
