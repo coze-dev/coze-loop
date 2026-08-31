@@ -799,6 +799,29 @@ type ItemSystemInfo struct {
 	Error    *RunError
 	// EndTime item 执行结束时间，来源 expt_item_result.updated_at（item 到终态时最后一次更新）。
 	EndTime *time.Time
+	// TotalRuns item 在本实验中的运行次数（含重试），来源 expt_item_result_run_log 行数聚合；无记录时为 0。
+	TotalRuns int32
+	// RetryRecords item 在最新一轮运行内评测对象的历次调用明细（含系统自动重试），每次调用一条，
+	// 供详情逐次查看 replay 等日志；来源 eval_target_record。无记录时为空。
+	RetryRecords []*RetryRecord
+}
+
+// RetryRecord 评测对象一次调用（含自动重试）的明细，来源 eval_target_record 单行。
+type RetryRecord struct {
+	// RecordID eval_target_record.id
+	RecordID int64
+	// TraceID eval_target_record.trace_id
+	TraceID string
+	// Status 对齐 eval_target_record.status
+	Status int32
+	// CreatedAtMS 毫秒时间戳，来源 eval_target_record.created_at
+	CreatedAtMS int64
+	// IsFinal 是否为最终采用的那次（= expt_turn_result.target_result_id 指向）
+	IsFinal bool
+	// TurnID 多轮题区分轮次
+	TurnID int64
+	// FornaxSandboxLogURL 沙箱日志 URL 集合（原样透出的 JSON 串）：{orchestrator,agent,replay}
+	FornaxSandboxLogURL string
 }
 
 type RunError struct {

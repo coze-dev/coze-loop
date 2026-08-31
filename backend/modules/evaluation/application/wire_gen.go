@@ -156,7 +156,7 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	evaluationSetItemService := service.NewEvaluationSetItemServiceImpl(iDatasetRPCAdapter)
 	iEvaluationAnalysisService := service.NewEvaluationAnalysisService()
 	iFileProvider := foundation.NewFileRPCProvider(fileClient)
-	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, serviceEvaluatorService, iEvalTargetService, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator)
+	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, serviceEvaluatorService, iEvalTargetService, iEvalTargetRepo, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator)
 	iExptItemRefDAO := mysql.NewExptItemRefDAO(db2)
 	iExptItemRefRepo := experiment.NewExptItemRefRepo(iExptItemRefDAO)
 	iQuotaDAO := dao.NewQuotaDAO(cmdable)
@@ -282,7 +282,7 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	evaluationSetItemService := service.NewEvaluationSetItemServiceImpl(iDatasetRPCAdapter)
 	iTagRPCAdapter := tag.NewTagRPCProvider(tagClient)
 	iEvaluationAnalysisService := service.NewEvaluationAnalysisService()
-	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, evaluatorService, iEvalTargetService, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator)
+	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, evaluatorService, iEvalTargetService, iEvalTargetRepo, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator)
 	evaluationEvaluatorService := NewEvaluatorHandlerImpl(idgen2, iConfiger, iAuthProvider, evaluatorService, evaluatorRecordService, evaluatorTemplateService, evaluatorExecMetrics, userInfoService, auditClient, benefitSvc, iFileProvider, v, exptResultService, iEvalAsyncRepo)
 	return evaluationEvaluatorService, nil
 }
@@ -424,7 +424,7 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iExptTurnResultFilterRepo := experiment.NewExptTurnResultFilterRepo(iExptTurnResultFilterDAO, iExptTurnResultFilterKeyMappingDAO)
 	iEvaluationAnalysisService := service.NewEvaluationAnalysisService()
 	iFileProvider := foundation.NewFileRPCProvider(fileClient)
-	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, evaluatorService, iEvalTargetService, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator)
+	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, evaluatorService, iEvalTargetService, iEvalTargetRepo, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService, iFileProvider, iEvaluatorScoreCalculator)
 	iExptItemRefDAO := mysql.NewExptItemRefDAO(db2)
 	iExptItemRefRepo := experiment.NewExptItemRefRepo(iExptItemRefDAO)
 	iQuotaDAO := dao.NewQuotaDAO(cmdable)

@@ -1181,6 +1181,10 @@ func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.I
 			res.SystemInfo = &openapiExperiment.ItemSystemInfo{
 				RunState: ItemRunStateDO2DTO(item.SystemInfo.RunState),
 			}
+			res.SystemInfo.SetTotalRuns(gptr.Of(item.SystemInfo.TotalRuns))
+			if recs := OpenAPIRetryRecordsDO2DTOs(item.SystemInfo.RetryRecords); len(recs) > 0 {
+				res.SystemInfo.SetRetryRecords(recs)
+			}
 			if item.SystemInfo.LogID != nil && *item.SystemInfo.LogID != "" {
 				res.SystemInfo.SetLogID(gptr.Of(*item.SystemInfo.LogID))
 			}
@@ -1189,6 +1193,31 @@ func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.I
 			}
 		}
 		result = append(result, res)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func OpenAPIRetryRecordsDO2DTOs(from []*entity.RetryRecord) []*openapiExperiment.RetryRecord {
+	if len(from) == 0 {
+		return nil
+	}
+	result := make([]*openapiExperiment.RetryRecord, 0, len(from))
+	for _, r := range from {
+		if r == nil {
+			continue
+		}
+		result = append(result, &openapiExperiment.RetryRecord{
+			RecordID:            gptr.Of(r.RecordID),
+			TraceID:             gptr.Of(r.TraceID),
+			Status:              gptr.Of(r.Status),
+			CreatedAt:           gptr.Of(r.CreatedAtMS),
+			IsFinal:             gptr.Of(r.IsFinal),
+			TurnID:              gptr.Of(r.TurnID),
+			FornaxSandboxLogURL: gptr.Of(r.FornaxSandboxLogURL),
+		})
 	}
 	if len(result) == 0 {
 		return nil

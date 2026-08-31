@@ -234,6 +234,9 @@ func (p *ItemSystemInfo) IsValid() error {
 	}
 	return nil
 }
+func (p *RetryRecord) IsValid() error {
+	return nil
+}
 func (p *ExptTemplateMeta) IsValid() error {
 	return nil
 }

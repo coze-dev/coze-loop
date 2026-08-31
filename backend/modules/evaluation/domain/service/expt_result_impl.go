@@ -48,6 +48,7 @@ func NewExptResultService(
 	exptTurnResultFilterRepo repo.IExptTurnResultFilterRepo,
 	evaluatorService EvaluatorService,
 	evalTargetService IEvalTargetService,
+	evalTargetRepo repo.IEvalTargetRepo,
 	evaluationSetVersionService EvaluationSetVersionService,
 	evaluationSetService IEvaluationSetService,
 	evaluatorRecordService EvaluatorRecordService,
@@ -69,6 +70,7 @@ func NewExptResultService(
 		idgen:                       idgen,
 		exptTurnResultFilterRepo:    exptTurnResultFilterRepo,
 		evalTargetService:           evalTargetService,
+		evalTargetRepo:              evalTargetRepo,
 		evaluationSetVersionService: evaluationSetVersionService,
 		evaluationSetService:        evaluationSetService,
 		evaluatorService:            evaluatorService,
@@ -95,6 +97,7 @@ type ExptResultServiceImpl struct {
 	tagRPCAdapter            rpc.ITagRPCAdapter
 
 	evalTargetService           IEvalTargetService
+	evalTargetRepo              repo.IEvalTargetRepo
 	evaluationSetVersionService EvaluationSetVersionService
 	evaluationSetService        IEvaluationSetService
 	evaluatorService            EvaluatorService
@@ -569,7 +572,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		}
 	}
 
-	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, nil, nil, itemID2ItemRunState, e.fileProvider, e.scoreCalculator)
+	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptItemResultRepo, e.ExptAnnotateRepo, e.evalTargetRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, nil, nil, itemID2ItemRunState, e.fileProvider, e.scoreCalculator)
 
 	// 写回 item 级别 logid 到 payload.SystemInfo，供 BatchGetExperimentResult 返回给业务方
 	for _, item := range payloadBuilder.ItemResults {
@@ -1280,7 +1283,9 @@ type PayloadBuilder struct {
 
 	ExperimentRepo     repo.IExperimentRepo
 	ExptTurnResultRepo repo.IExptTurnResultRepo
+	ExptItemResultRepo repo.IExptItemResultRepo
 	ExptAnnotateRepo   repo.IExptAnnotateRepo
+	EvalTargetRepo     repo.IEvalTargetRepo
 
 	EvaluationSetItemService                    EvaluationSetItemService
 	EvaluationSetVersionService                 EvaluationSetVersionService
@@ -1308,7 +1313,9 @@ type PayloadBuilder struct {
 func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultParam, baselineExptID int64, baselineTurnResults []*entity.ExptTurnResult,
 	baselineItemResults []*entity.ExptItemResult, experimentRepo repo.IExperimentRepo,
 	exptTurnResultRepo repo.IExptTurnResultRepo,
+	exptItemResultRepo repo.IExptItemResultRepo,
 	exptAnnotateRepo repo.IExptAnnotateRepo,
+	evalTargetRepo repo.IEvalTargetRepo,
 	evalTargetService IEvalTargetService,
 	evaluatorRecordService EvaluatorRecordService,
 	evaluationSetItemService EvaluationSetItemService,
@@ -1329,6 +1336,8 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		BaseExptItemResultDO:        baselineItemResults,
 		ExperimentRepo:              experimentRepo,
 		ExptTurnResultRepo:          exptTurnResultRepo,
+		ExptItemResultRepo:          exptItemResultRepo,
+		EvalTargetRepo:              evalTargetRepo,
 		EvaluationSetItemService:    evaluationSetItemService,
 		EvaluationSetVersionService: evaluationSetVersionService,
 		EvaluationSetService:        evaluationSetService,
@@ -1388,6 +1397,53 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 	builder.ItemIDs = itemIDs
 	builder.TurnIDMap = turnIDMap
 
+	// 批量聚合本页 item 的运行次数（含系统自动重试），一次查询避免 N+1；无记录的 item 保持缺省 0。
+	// 数据源为 eval_target_record（评测对象每次实际调用一行，含自动重试），按最新一轮运行(experiment_run_id)统计。
+	itemID2TotalRuns := make(map[int64]int32)
+	// 最新一轮 = 本页结果里最大的 expt_run_id（turn/item 结果已携带各自的 ExptRunID，无需额外查询）。
+	latestExptRunID := int64(0)
+	for _, tr := range builder.BaseExptTurnResultDO {
+		if tr != nil && tr.ExptRunID > latestExptRunID {
+			latestExptRunID = tr.ExptRunID
+		}
+	}
+	for _, ir := range baselineItemResults {
+		if ir != nil && ir.ExptRunID > latestExptRunID {
+			latestExptRunID = ir.ExptRunID
+		}
+	}
+	if builder.EvalTargetRepo != nil && latestExptRunID > 0 && len(itemIDs) > 0 {
+		if counts, err := builder.EvalTargetRepo.CountItemRunsByRun(ctx, builder.SpaceID, latestExptRunID, itemIDs); err != nil {
+			logs.CtxWarn(ctx, "CountItemRunsByRun fail, spaceID=%d, exptRunID=%d, err=%v", builder.SpaceID, latestExptRunID, err)
+		} else {
+			itemID2TotalRuns = counts
+		}
+	}
+
+	// 批量拉取本页 item 的历次调用明细（含 replay 等日志 URL），供详情逐次查看；失败降级为空，不中断（对齐 total_runs 容错）。
+	itemID2RetryRecords := make(map[int64][]*entity.RetryRecord)
+	// finalRecordIDSet: expt_turn_result.target_result_id 指向的那条 record 即为最终采用的调用，用于标记 is_final。
+	finalRecordIDSet := make(map[int64]bool)
+	for _, tr := range builder.BaseExptTurnResultDO {
+		if tr != nil && tr.TargetResultID > 0 {
+			finalRecordIDSet[tr.TargetResultID] = true
+		}
+	}
+	if builder.EvalTargetRepo != nil && latestExptRunID > 0 && len(itemIDs) > 0 {
+		if records, err := builder.EvalTargetRepo.ListItemRetryRecordsByRun(ctx, builder.SpaceID, latestExptRunID, itemIDs); err != nil {
+			logs.CtxWarn(ctx, "ListItemRetryRecordsByRun fail, spaceID=%d, exptRunID=%d, err=%v", builder.SpaceID, latestExptRunID, err)
+		} else {
+			itemID2RetryRecords = records
+			for _, rrs := range itemID2RetryRecords {
+				for _, rr := range rrs {
+					if rr != nil {
+						rr.IsFinal = finalRecordIDSet[rr.RecordID]
+					}
+				}
+			}
+		}
+	}
+
 	// 初始化payload结构
 	for _, itemID := range itemIDs {
 		if itemIDItemResultPO[itemID] == nil {
@@ -1406,13 +1462,17 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		}
 		if state, ok := itemID2ItemRunState[itemID]; ok {
 			itemResult.SystemInfo = &entity.ItemSystemInfo{
-				RunState: state,
-				EndTime:  itemResultPO.UpdatedAt,
+				RunState:     state,
+				EndTime:      itemResultPO.UpdatedAt,
+				TotalRuns:    itemID2TotalRuns[itemID],
+				RetryRecords: itemID2RetryRecords[itemID],
 			}
 		} else {
 			itemResult.SystemInfo = &entity.ItemSystemInfo{
-				RunState: itemResultPO.Status,
-				EndTime:  itemResultPO.UpdatedAt,
+				RunState:     itemResultPO.Status,
+				EndTime:      itemResultPO.UpdatedAt,
+				TotalRuns:    itemID2TotalRuns[itemID],
+				RetryRecords: itemID2RetryRecords[itemID],
 			}
 		}
 		// 从 err_msg 反解出用户可见的 item 级错误（当前仅识别 item 僵尸超时；其他类型未来可扩展）
@@ -2813,7 +2873,7 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 		ExptIDs: []int64{exptID},
 	}
 	payloadBuilder := NewPayloadBuilder(ctx, param, exptID, allTurnResults, itemResults, e.ExperimentRepo,
-		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
+		e.ExptTurnResultRepo, e.ExptItemResultRepo, e.ExptAnnotateRepo, e.evalTargetRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
 
 	exptTurnResultFilters, err := payloadBuilder.BuildTurnResultFilter(ctx)
 	if err != nil {
@@ -3109,7 +3169,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 			ExptIDs: []int64{exptID},
 		}
 		payloadBuilder := NewPayloadBuilder(ctx, param, exptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo,
-			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
+			e.ExptTurnResultRepo, e.ExptItemResultRepo, e.ExptAnnotateRepo, e.evalTargetRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
 		itemResults, err := payloadBuilder.BuildItemResults(ctx)
 		if err != nil {
 			return err

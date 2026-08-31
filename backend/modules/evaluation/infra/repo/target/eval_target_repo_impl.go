@@ -328,6 +328,60 @@ func (e *EvalTargetRepoImpl) GetEvalTargetRecordByRunItemTurn(ctx context.Contex
 	return do, nil
 }
 
+func (e *EvalTargetRepoImpl) CountItemRunsByRun(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64]int32, error) {
+	return e.evalTargetRecordDao.CountRunsByRunItems(ctx, spaceID, experimentRunID, itemIDs)
+}
+
+// sandboxLogURLOutputFieldKey 沙箱日志链接在评测对象 output_fields 里的 key。
+// 权威定义见 application/standard_eval_output.go 的 standardEvalOutputSandboxLogURLKey；
+// repo 层不 import application，此处本地复制一份保持一致。
+const sandboxLogURLOutputFieldKey = "fornax_sandbox_log_url"
+
+// ListItemRetryRecordsByRun 列出各 item 在最新一轮运行内评测对象的历次调用记录，并原样透出沙箱日志 URL JSON 串。
+func (e *EvalTargetRepoImpl) ListItemRetryRecordsByRun(ctx context.Context, spaceID, experimentRunID int64, itemIDs []int64) (map[int64][]*entity.RetryRecord, error) {
+	poList, err := e.evalTargetRecordDao.ListRecordsByRunItems(ctx, spaceID, experimentRunID, itemIDs)
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[int64][]*entity.RetryRecord, len(poList))
+	for _, po := range poList {
+		if po == nil {
+			continue
+		}
+		rr := &entity.RetryRecord{
+			RecordID:    po.ID,
+			TraceID:     po.TraceID,
+			Status:      po.Status,
+			CreatedAtMS: po.CreatedAt.UnixMilli(),
+			TurnID:      po.TurnID,
+		}
+		// best-effort 原样取出 output_data 中的沙箱日志 URL JSON 串；取不到留空并继续，不影响其余记录。
+		rr.FornaxSandboxLogURL = getSandboxLogURLRaw(po)
+
+		res[po.ItemID] = append(res[po.ItemID], rr)
+	}
+	return res, nil
+}
+
+// getSandboxLogURLRaw 从 record 的 output_data 里取出 fornax_sandbox_log_url 那段原始 JSON 串，原样透出（不再解析内层）。
+// 结构：output_data(json) → EvalTargetOutputData.OutputFields["fornax_sandbox_log_url"].Text，该 Text 本身是一层 JSON 字符串
+//
+//	（内含 {orchestrator,agent,replay}），由上层消费方自行解析。
+//
+// 容错：OutputFields 为 nil / content 为 nil / GetText 为空 都返回 ""；PO2DO 失败也返回 ""。
+func getSandboxLogURLRaw(po *model.TargetRecord) string {
+	do, err := convertor.EvalTargetRecordPO2DO(po)
+	if err != nil || do == nil || do.EvalTargetOutputData == nil {
+		return ""
+	}
+	fields := do.EvalTargetOutputData.OutputFields
+	if len(fields) == 0 {
+		return ""
+	}
+	content := fields[sandboxLogURLOutputFieldKey]
+	return content.GetText() // Content.GetText 对 nil 安全
+}
+
 func (e *EvalTargetRepoImpl) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error) {
 	recordPOList, err := e.evalTargetRecordDao.ListByIDsAndSpaceID(ctx, recordIDs, spaceID)
 	if err != nil {
