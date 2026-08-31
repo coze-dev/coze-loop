@@ -1042,6 +1042,11 @@ func (p *GetExperimentsOApiResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateExptRunConfOApiRequest) IsValid() error {
+	if p.ExpectedQuotaConsumption != nil {
+		if err := p.ExpectedQuotaConsumption.IsValid(); err != nil {
+			return fmt.Errorf("field ExpectedQuotaConsumption not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)

@@ -238,6 +238,11 @@ func (p *UpdateExperimentResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateExptRunConfRequest) IsValid() error {
+	if p.ExpectedQuotaConsumption != nil {
+		if err := p.ExpectedQuotaConsumption.IsValid(); err != nil {
+			return fmt.Errorf("field ExpectedQuotaConsumption not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

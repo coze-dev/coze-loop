@@ -242,7 +242,7 @@ struct UpdateExperimentResponse {
     255: base.BaseResp BaseResp
 }
 
-// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数 / 调度参数）。
 // 仅对处于 Pending / Processing 状态的实验生效。
 struct UpdateExptRunConfRequest {
     1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
@@ -252,6 +252,13 @@ struct UpdateExptRunConfRequest {
     3: optional i32 item_concur_num (api.body='item_concur_num')
     // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
     4: optional i32 item_retry_num (api.body='item_retry_num')
+
+    // 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
+    // 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。
+    // 调度优先级：不传表示不修改。改完下一拍生效（调度器每拍从库重扫队列）。
+    92: optional i32 priority_level (api.body = 'priority_level')
+    // 单 item 预期资源消耗：不传表示不修改。改动会同步给该 run 在飞的预占重新计价。
+    93: optional expt.ExpectedQuotaConsumption expected_quota_consumption (api.body = 'expected_quota_consumption')
 
     255: optional base.Base Base
 }

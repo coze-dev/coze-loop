@@ -24487,6 +24487,34 @@ func (p *UpdateExptRunConfOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 60:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField60(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 61:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField61(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -24589,6 +24617,32 @@ func (p *UpdateExptRunConfOApiRequest) FastReadField45(buf []byte) (int, error) 
 	return offset, nil
 }
 
+func (p *UpdateExptRunConfOApiRequest) FastReadField60(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PriorityLevel = _field
+	return offset, nil
+}
+
+func (p *UpdateExptRunConfOApiRequest) FastReadField61(buf []byte) (int, error) {
+	offset := 0
+	_field := experiment.NewExpectedQuotaConsumption()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ExpectedQuotaConsumption = _field
+	return offset, nil
+}
+
 func (p *UpdateExptRunConfOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -24624,6 +24678,8 @@ func (p *UpdateExptRunConfOApiRequest) FastWriteNocopy(buf []byte, w thrift.Noco
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField45(buf[offset:], w)
+		offset += p.fastWriteField60(buf[offset:], w)
+		offset += p.fastWriteField61(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -24638,6 +24694,8 @@ func (p *UpdateExptRunConfOApiRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field20Length()
 		l += p.field45Length()
+		l += p.field60Length()
+		l += p.field61Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -24677,6 +24735,24 @@ func (p *UpdateExptRunConfOApiRequest) fastWriteField45(buf []byte, w thrift.Noc
 	if p.IsSetItemRetryNum() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 45)
 		offset += thrift.Binary.WriteI32(buf[offset:], *p.ItemRetryNum)
+	}
+	return offset
+}
+
+func (p *UpdateExptRunConfOApiRequest) fastWriteField60(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPriorityLevel() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 60)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.PriorityLevel)
+	}
+	return offset
+}
+
+func (p *UpdateExptRunConfOApiRequest) fastWriteField61(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExpectedQuotaConsumption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 61)
+		offset += p.ExpectedQuotaConsumption.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -24735,6 +24811,24 @@ func (p *UpdateExptRunConfOApiRequest) field45Length() int {
 	return l
 }
 
+func (p *UpdateExptRunConfOApiRequest) field60Length() int {
+	l := 0
+	if p.IsSetPriorityLevel() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *UpdateExptRunConfOApiRequest) field61Length() int {
+	l := 0
+	if p.IsSetExpectedQuotaConsumption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ExpectedQuotaConsumption.BLength()
+	}
+	return l
+}
+
 func (p *UpdateExptRunConfOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -24778,6 +24872,20 @@ func (p *UpdateExptRunConfOApiRequest) DeepCopy(s interface{}) error {
 		tmp := *src.ItemRetryNum
 		p.ItemRetryNum = &tmp
 	}
+
+	if src.PriorityLevel != nil {
+		tmp := *src.PriorityLevel
+		p.PriorityLevel = &tmp
+	}
+
+	var _expectedQuotaConsumption *experiment.ExpectedQuotaConsumption
+	if src.ExpectedQuotaConsumption != nil {
+		_expectedQuotaConsumption = &experiment.ExpectedQuotaConsumption{}
+		if err := _expectedQuotaConsumption.DeepCopy(src.ExpectedQuotaConsumption); err != nil {
+			return err
+		}
+	}
+	p.ExpectedQuotaConsumption = _expectedQuotaConsumption
 
 	var _extra *extra.Extra
 	if src.Extra != nil {

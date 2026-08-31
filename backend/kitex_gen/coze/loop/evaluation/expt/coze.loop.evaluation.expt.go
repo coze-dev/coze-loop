@@ -10601,7 +10601,7 @@ func (p *UpdateExperimentResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
-// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数 / 调度参数）。
 // 仅对处于 Pending / Processing 状态的实验生效。
 type UpdateExptRunConfRequest struct {
 	WorkspaceID int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
@@ -10609,8 +10609,14 @@ type UpdateExptRunConfRequest struct {
 	// 评测项并发度：不传或 0 表示不修改；范围 (0, MaxItemConcurNum]
 	ItemConcurNum *int32 `thrift:"item_concur_num,3,optional" frugal:"3,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
 	// 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
-	ItemRetryNum *int32     `thrift:"item_retry_num,4,optional" frugal:"4,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
-	Base         *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ItemRetryNum *int32 `thrift:"item_retry_num,4,optional" frugal:"4,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	// 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
+	// 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。
+	// 调度优先级：不传表示不修改。改完下一拍生效（调度器每拍从库重扫队列）。
+	PriorityLevel *int32 `thrift:"priority_level,92,optional" frugal:"92,optional,i32" form:"priority_level" json:"priority_level,omitempty"`
+	// 单 item 预期资源消耗：不传表示不修改。改动会同步给该 run 在飞的预占重新计价。
+	ExpectedQuotaConsumption *expt.ExpectedQuotaConsumption `thrift:"expected_quota_consumption,93,optional" frugal:"93,optional,expt.ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty"`
+	Base                     *base.Base                     `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateExptRunConfRequest() *UpdateExptRunConfRequest {
@@ -10658,6 +10664,30 @@ func (p *UpdateExptRunConfRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+var UpdateExptRunConfRequest_PriorityLevel_DEFAULT int32
+
+func (p *UpdateExptRunConfRequest) GetPriorityLevel() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriorityLevel() {
+		return UpdateExptRunConfRequest_PriorityLevel_DEFAULT
+	}
+	return *p.PriorityLevel
+}
+
+var UpdateExptRunConfRequest_ExpectedQuotaConsumption_DEFAULT *expt.ExpectedQuotaConsumption
+
+func (p *UpdateExptRunConfRequest) GetExpectedQuotaConsumption() (v *expt.ExpectedQuotaConsumption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedQuotaConsumption() {
+		return UpdateExptRunConfRequest_ExpectedQuotaConsumption_DEFAULT
+	}
+	return p.ExpectedQuotaConsumption
+}
+
 var UpdateExptRunConfRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateExptRunConfRequest) GetBase() (v *base.Base) {
@@ -10681,6 +10711,12 @@ func (p *UpdateExptRunConfRequest) SetItemConcurNum(val *int32) {
 func (p *UpdateExptRunConfRequest) SetItemRetryNum(val *int32) {
 	p.ItemRetryNum = val
 }
+func (p *UpdateExptRunConfRequest) SetPriorityLevel(val *int32) {
+	p.PriorityLevel = val
+}
+func (p *UpdateExptRunConfRequest) SetExpectedQuotaConsumption(val *expt.ExpectedQuotaConsumption) {
+	p.ExpectedQuotaConsumption = val
+}
 func (p *UpdateExptRunConfRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -10690,6 +10726,8 @@ var fieldIDToName_UpdateExptRunConfRequest = map[int16]string{
 	2:   "expt_id",
 	3:   "item_concur_num",
 	4:   "item_retry_num",
+	92:  "priority_level",
+	93:  "expected_quota_consumption",
 	255: "Base",
 }
 
@@ -10699,6 +10737,14 @@ func (p *UpdateExptRunConfRequest) IsSetItemConcurNum() bool {
 
 func (p *UpdateExptRunConfRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *UpdateExptRunConfRequest) IsSetPriorityLevel() bool {
+	return p.PriorityLevel != nil
+}
+
+func (p *UpdateExptRunConfRequest) IsSetExpectedQuotaConsumption() bool {
+	return p.ExpectedQuotaConsumption != nil
 }
 
 func (p *UpdateExptRunConfRequest) IsSetBase() bool {
@@ -10754,6 +10800,22 @@ func (p *UpdateExptRunConfRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 92:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField92(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 93:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField93(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10851,6 +10913,25 @@ func (p *UpdateExptRunConfRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemRetryNum = _field
 	return nil
 }
+func (p *UpdateExptRunConfRequest) ReadField92(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PriorityLevel = _field
+	return nil
+}
+func (p *UpdateExptRunConfRequest) ReadField93(iprot thrift.TProtocol) error {
+	_field := expt.NewExpectedQuotaConsumption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExpectedQuotaConsumption = _field
+	return nil
+}
 func (p *UpdateExptRunConfRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -10880,6 +10961,14 @@ func (p *UpdateExptRunConfRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField92(oprot); err != nil {
+			fieldId = 92
+			goto WriteFieldError
+		}
+		if err = p.writeField93(oprot); err != nil {
+			fieldId = 93
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -10972,6 +11061,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *UpdateExptRunConfRequest) writeField92(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriorityLevel() {
+		if err = oprot.WriteFieldBegin("priority_level", thrift.I32, 92); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PriorityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 92 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 92 end error: ", p), err)
+}
+func (p *UpdateExptRunConfRequest) writeField93(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedQuotaConsumption() {
+		if err = oprot.WriteFieldBegin("expected_quota_consumption", thrift.STRUCT, 93); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExpectedQuotaConsumption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 93 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 93 end error: ", p), err)
+}
 func (p *UpdateExptRunConfRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -11017,6 +11142,12 @@ func (p *UpdateExptRunConfRequest) DeepEqual(ano *UpdateExptRunConfRequest) bool
 	if !p.Field4DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
+	if !p.Field92DeepEqual(ano.PriorityLevel) {
+		return false
+	}
+	if !p.Field93DeepEqual(ano.ExpectedQuotaConsumption) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -11057,6 +11188,25 @@ func (p *UpdateExptRunConfRequest) Field4DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemRetryNum != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExptRunConfRequest) Field92DeepEqual(src *int32) bool {
+
+	if p.PriorityLevel == src {
+		return true
+	} else if p.PriorityLevel == nil || src == nil {
+		return false
+	}
+	if *p.PriorityLevel != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExptRunConfRequest) Field93DeepEqual(src *expt.ExpectedQuotaConsumption) bool {
+
+	if !p.ExpectedQuotaConsumption.DeepEqual(src) {
 		return false
 	}
 	return true

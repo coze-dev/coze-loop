@@ -734,7 +734,7 @@ struct GetExperimentsOApiResponse {
     255: base.BaseResp BaseResp
 }
 
-// UpdateExptRunConfOApiRequest 通过 OpenAPI 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// UpdateExptRunConfOApiRequest 通过 OpenAPI 修改进行中实验的运行配置（并发度 / Item 重试次数 / 调度参数）。
 // 仅对处于 Pending / Processing 状态的实验生效。
 struct UpdateExptRunConfOApiRequest {
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
@@ -744,6 +744,13 @@ struct UpdateExptRunConfOApiRequest {
     20: optional i32 item_concur_num (api.body = 'item_concur_num')
     // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
+
+    // 以下两个是中心调度特权参数，字段号与 CreateExperimentOApiRequest 对齐（60/61）。
+    // 未获授权的调用方传了会被丢弃并打 WARN，不报错。
+    // 调度优先级：不传表示不修改。改完下一拍生效（调度器每拍从库重扫队列）。
+    60: optional i32 priority_level (api.body = 'priority_level')
+    // 单 item 预期资源消耗：不传表示不修改。改动会同步给该 run 在飞的预占重新计价。
+    61: optional experiment.ExpectedQuotaConsumption expected_quota_consumption (api.body = 'expected_quota_consumption')
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
