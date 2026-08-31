@@ -34,7 +34,7 @@ func renderExptUpdate(t *testing.T, expt *model.Experiment) string {
 		Omit(schedulingFrozenColumns...).
 		Updates(expt)
 	// DryRun 下 Statement.SQL 可能为空，用 Explain 把 SQL + 参数一起还原成可断言的文本。
-	return gormDB.Dialector.Explain(tx.Statement.SQL.String(), tx.Statement.Vars...)
+	return gormDB.Explain(tx.Statement.SQL.String(), tx.Statement.Vars...)
 }
 
 // TestExptDAO_Update_NeverClobbersFrozenSchedulingColumns 守住「调度列创建时冻结」这条不变量。
