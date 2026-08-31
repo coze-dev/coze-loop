@@ -690,16 +690,6 @@ type ItemSnapshotVersionCond struct {
 	Cond *ItemSnapshotFilter `json:"cond,omitempty"`
 }
 
-func (c *ItemSnapshotVersionCond) HasCond() bool {
-	if c == nil || c.Cond == nil {
-		return false
-	}
-	return len(c.Cond.BoolMapFilters) > 0 ||
-		len(c.Cond.FloatMapFilters) > 0 ||
-		len(c.Cond.IntMapFilters) > 0 ||
-		len(c.Cond.StringMapFilters) > 0
-}
-
 type ExptTurnResultFilter struct {
 	TrunRunStateFilters []*TurnRunStateFilter
 	ScoreFilters        []*ScoreFilter

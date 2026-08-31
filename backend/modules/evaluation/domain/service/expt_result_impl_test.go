@@ -8711,3 +8711,172 @@ func TestExptResultServiceImpl_mapItemSnapshotFilter_UnqueryableGroupFallsBack(t
 		assert.True(t, filter.ItemSnapshotCondUnmatched)
 	})
 }
+
+// loadItemEvalSetRefs：未注入 repo / 空 itemIDs / 查询失败 / 正常映射四条分支。
+func TestExptResultServiceImpl_loadItemEvalSetRefs(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("未注入 repo 或 itemIDs 为空时返回 nil", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		assert.Nil(t, svc.loadItemEvalSetRefs(ctx, 1, 2, []int64{1}))
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc2 := ExptResultServiceImpl{exptItemRefRepo: repoMocks.NewMockIExptItemRefRepo(ctrl)}
+		assert.Nil(t, svc2.loadItemEvalSetRefs(ctx, 1, 2, nil))
+	})
+
+	// 查询失败只降级（退回按主集写），不能阻塞 etrf 写入
+	t.Run("查询失败返回 nil 不报错", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		refRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+		refRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), int64(1), int64(2), []int64{7}).
+			Return(nil, errors.New("db down")).Times(1)
+		svc := ExptResultServiceImpl{exptItemRefRepo: refRepo}
+		assert.Nil(t, svc.loadItemEvalSetRefs(ctx, 1, 2, []int64{7}))
+	})
+
+	t.Run("正常返回 itemID -> ref 映射并跳过 nil", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		refRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+		refRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), int64(1), int64(2), []int64{7, 8}).
+			Return([]*entity.ExptItemRef{
+				nil,
+				{ItemID: 7, EvalSetID: 10, EvalSetVersionID: 100},
+				{ItemID: 8, EvalSetID: 20, EvalSetVersionID: 200},
+			}, nil).Times(1)
+		svc := ExptResultServiceImpl{exptItemRefRepo: refRepo}
+		got := svc.loadItemEvalSetRefs(ctx, 1, 2, []int64{7, 8})
+		require.Len(t, got, 2)
+		assert.Equal(t, int64(100), got[7].EvalSetVersionID)
+		assert.Equal(t, int64(200), got[8].EvalSetVersionID)
+	})
+}
+
+// NewExptResultService 的 variadic exptItemRefRepo：传了就注入，不传保持 nil（老调用方兼容）。
+func TestNewExptResultService_VariadicItemRefRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	refRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+
+	withRepo := NewExptResultService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, refRepo).(*ExptResultServiceImpl)
+	assert.NotNil(t, withRepo.exptItemRefRepo)
+
+	without := NewExptResultService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil).(*ExptResultServiceImpl)
+	assert.Nil(t, without.exptItemRefRepo)
+}
+
+// translateItemSnapshotCond：四类 mapping、不支持的 mapping key、在线实验 record_ 后缀、nil 入参。
+func TestTranslateItemSnapshotCond(t *testing.T) {
+	ctx := context.Background()
+	mapping := map[string]*entity.ItemSnapshotFieldMapping{
+		"s": {FieldKey: "s", MappingKey: "string_map", MappingSubKey: "string_key_0"},
+		"f": {FieldKey: "f", MappingKey: "float_map", MappingSubKey: "float_key_0"},
+		"i": {FieldKey: "i", MappingKey: "int_map", MappingSubKey: "int_key_0"},
+		"b": {FieldKey: "b", MappingKey: "bool_map", MappingSubKey: "bool_key_0"},
+		"x": {FieldKey: "x", MappingKey: "unknown_map", MappingSubKey: "x_0"},
+	}
+
+	t.Run("nil 入参返回空条件且视为完整", func(t *testing.T) {
+		dst, full := translateItemSnapshotCond(ctx, nil, mapping, false, false)
+		require.NotNil(t, dst)
+		assert.True(t, full)
+		assert.Empty(t, dst.StringMapFilters)
+	})
+
+	t.Run("四类 mapping 分别落到对应桶", func(t *testing.T) {
+		src := &entity.ItemSnapshotFilter{StringMapFilters: []*entity.FieldFilter{
+			{Key: "s", Op: "=", Values: []any{"v"}},
+			{Key: "f", Op: ">", Values: []any{1.5}},
+			{Key: "i", Op: "=", Values: []any{2}},
+			{Key: "b", Op: "=", Values: []any{true}},
+		}}
+		dst, full := translateItemSnapshotCond(ctx, src, mapping, false, false)
+		assert.True(t, full)
+		require.Len(t, dst.StringMapFilters, 1)
+		assert.Equal(t, "string_key_0", dst.StringMapFilters[0].Key)
+		require.Len(t, dst.FloatMapFilters, 1)
+		assert.Equal(t, "float_key_0", dst.FloatMapFilters[0].Key)
+		require.Len(t, dst.IntMapFilters, 1)
+		assert.Equal(t, "int_key_0", dst.IntMapFilters[0].Key)
+		require.Len(t, dst.BoolMapFilters, 1)
+		assert.Equal(t, "bool_key_0", dst.BoolMapFilters[0].Key)
+	})
+
+	// 不认识的 mapping key 不能当"翻译成功"，否则该评测集会被当成条件已生效
+	t.Run("不支持的 mapping key => full=false", func(t *testing.T) {
+		src := &entity.ItemSnapshotFilter{StringMapFilters: []*entity.FieldFilter{
+			{Key: "x", Op: "=", Values: []any{"v"}},
+		}}
+		dst, full := translateItemSnapshotCond(ctx, src, mapping, false, false)
+		assert.False(t, full)
+		assert.Empty(t, dst.StringMapFilters)
+	})
+
+	t.Run("keyword=true 时统一改成 LIKE", func(t *testing.T) {
+		src := &entity.ItemSnapshotFilter{StringMapFilters: []*entity.FieldFilter{
+			{Key: "s", Op: "=", Values: []any{"v"}},
+		}}
+		dst, full := translateItemSnapshotCond(ctx, src, mapping, false, true)
+		assert.True(t, full)
+		assert.Equal(t, "LIKE", dst.StringMapFilters[0].Op)
+	})
+
+	// 在线实验草稿表一行存多个 record，需要额外用 record_<subkey> 锁定当前 record
+	t.Run("在线实验且有 RecordID 时补 record_ 条件", func(t *testing.T) {
+		online := map[string]*entity.ItemSnapshotFieldMapping{
+			"s": {FieldKey: "s", MappingKey: "string_map", MappingSubKey: "string_key_0", RecordID: 777},
+		}
+		src := &entity.ItemSnapshotFilter{StringMapFilters: []*entity.FieldFilter{
+			{Key: "s", Op: "=", Values: []any{"v"}},
+		}}
+		dst, full := translateItemSnapshotCond(ctx, src, online, true, false)
+		assert.True(t, full)
+		require.Len(t, dst.StringMapFilters, 2)
+		assert.Equal(t, "record_string_key_0", dst.StringMapFilters[1].Key)
+		assert.Equal(t, []any{"777"}, dst.StringMapFilters[1].Values)
+	})
+}
+
+// 主集 id/version 都为 0 的老数据：collectEvalSetVersionPairs 返回空，需退化成单集调用形态。
+func TestExptResultServiceImpl_mapItemSnapshotFilter_ZeroPairFallback(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	evalSetSvc := svcMocks.NewMockIEvaluationSetService(ctrl)
+	evalSetSvc.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+			assert.Equal(t, int64(0), req.DatasetID)
+			return []*entity.ItemSnapshotFieldMapping{
+				{FieldKey: "item_key", MappingKey: "string_map", MappingSubKey: "string_key_0"},
+			}, "2026-08-30", nil
+		}).Times(1)
+	svc := ExptResultServiceImpl{evaluationSetService: evalSetSvc}
+
+	filter := &entity.ExptTurnResultFilterAccelerator{
+		ItemSnapshotCond: &entity.ItemSnapshotFilter{
+			StringMapFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"v"}}},
+		},
+		KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+	}
+	expt := &entity.Experiment{SpaceID: 1, EvalSetID: 0, EvalSetVersionID: 0, ExptType: entity.ExptType_Offline}
+	require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, expt))
+
+	// version=0 不可查 => 不入组、也不置 unmatched，退回单值老路径
+	assert.Empty(t, filter.ItemSnapshotCondBySet)
+	assert.False(t, filter.ItemSnapshotCondUnmatched)
+	assert.Equal(t, "2026-08-30", filter.EvalSetSyncCkDate)
+}
+
+// ProvideExptItemRefRepos 把 repo 包成 slice 供 NewExptResultService 的 variadic 形参注入。
+func TestProvideExptItemRefRepos(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	r := repoMocks.NewMockIExptItemRefRepo(ctrl)
+	got := ProvideExptItemRefRepos(r)
+	require.Len(t, got, 1)
+	assert.Equal(t, r, got[0])
+}

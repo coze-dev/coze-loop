@@ -983,3 +983,109 @@ func TestExptTurnResultFilterDAOImpl_buildItemSnapshotConditions_PerSet(t *testi
 		assert.Equal(t, []interface{}{"v"}, args)
 	})
 }
+
+// per-set 相关的边界分支：nil cond / nil 组 / 组内条件为空 / 全组为空 / join 条件切换。
+func TestExptTurnResultFilterDAOImpl_PerSetEdgeCases(t *testing.T) {
+	d := &exptTurnResultFilterDAOImpl{}
+
+	t.Run("cond 为 nil 直接返回", func(t *testing.T) {
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildItemSnapshotConditions(nil, &whereSQL, &args)
+		assert.Empty(t, whereSQL)
+		assert.Empty(t, args)
+	})
+
+	t.Run("nil 组与空条件组都被跳过；全为空时拼恒假条件", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{
+				nil,
+				{EvalSetVersionID: "100", Cond: nil},
+				{EvalSetVersionID: "200", Cond: &ItemSnapshotFilter{}},
+			},
+		}
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+		assert.Equal(t, " AND 1=0", whereSQL)
+		assert.Empty(t, args)
+	})
+
+	t.Run("组内条件全部被 appendItemSnapshotMapCond 丢掉时也是恒假", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{
+				// 不支持的 Op，appendItemSnapshotMapCond 会直接 return，inner 为空
+				{EvalSetVersionID: "100", Cond: &ItemSnapshotFilter{
+					StringMapFilters: []*FieldFilter{{Key: "string_key_0", Op: "REGEXP", Values: []any{"v"}}},
+				}},
+			},
+		}
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+		assert.Equal(t, " AND 1=0", whereSQL)
+	})
+
+	t.Run("组不带 version 时不拼 version 谓词", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{
+				{EvalSetVersionID: "", Cond: &ItemSnapshotFilter{
+					StringMapFilters: []*FieldFilter{{Key: "string_key_0", Op: "=", Values: []any{"v"}}},
+				}},
+			},
+		}
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+		assert.NotContains(t, whereSQL, "dis.version_id")
+		assert.Equal(t, []interface{}{"v"}, args)
+	})
+
+	t.Run("appendItemSnapshotFilters 对 nil 直接返回", func(t *testing.T) {
+		whereSQL := ""
+		args := []interface{}{}
+		d.appendItemSnapshotFilters(nil, &whereSQL, &args)
+		assert.Empty(t, whereSQL)
+	})
+
+	t.Run("needJoinItemSnapshot: nil / 无条件 / per-set 有条件", func(t *testing.T) {
+		assert.False(t, d.needJoinItemSnapshot(nil))
+		assert.False(t, d.needJoinItemSnapshot(&ExptTurnResultFilterQueryCond{}))
+		assert.False(t, d.needJoinItemSnapshot(&ExptTurnResultFilterQueryCond{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{nil, {Cond: &ItemSnapshotFilter{}}},
+		}))
+		assert.True(t, d.needJoinItemSnapshot(&ExptTurnResultFilterQueryCond{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{{Cond: &ItemSnapshotFilter{
+				IntMapFilters: []*FieldFilter{{Key: "int_key_0", Op: "=", Values: []any{1}}},
+			}}},
+		}))
+	})
+
+	// ★ 存量多评测集实验的 etrf 行盖着主集 version，按它 join 会把快照表限死在主集版本，
+	// 所以有 per-set 条件时 join 只按 item_id 关联。
+	t.Run("有 per-set 条件时 join 不再按 etrf 的 version 关联", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCondBySet: []*ItemSnapshotVersionCond{
+				{EvalSetVersionID: "100", Cond: &ItemSnapshotFilter{
+					StringMapFilters: []*FieldFilter{{Key: "string_key_0", Op: "=", Values: []any{"v"}}},
+				}},
+			},
+		}
+		args := []interface{}{}
+		sql := d.buildBaseSQL(context.Background(), cond, "", "", &args)
+		assert.Contains(t, sql, "INNER JOIN")
+		assert.Contains(t, sql, "dis ON 1=1 AND etrf.item_id = dis.item_id")
+		assert.NotContains(t, sql, "etrf.eval_set_version_id = dis.version_id")
+	})
+
+	t.Run("无 per-set 条件时 join 保持原样", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCond: &ItemSnapshotFilter{
+				StringMapFilters: []*FieldFilter{{Key: "string_key_0", Op: "=", Values: []any{"v"}}},
+			},
+		}
+		args := []interface{}{}
+		sql := d.buildBaseSQL(context.Background(), cond, "", "", &args)
+		assert.Contains(t, sql, "etrf.eval_set_version_id = dis.version_id")
+	})
+}
