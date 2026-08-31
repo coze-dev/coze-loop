@@ -77,6 +77,31 @@ func fieldFiltersEntityToCK(src []*entity.FieldFilter) []*ck.FieldFilter {
 	return res
 }
 
+// itemSnapshotCondsEntityToCK 把 per-set 快照条件转成 DAO 层结构（评测集/版本 id 在 CK 里是 String 列）。
+func itemSnapshotCondsEntityToCK(src []*entity.ItemSnapshotVersionCond) []*ck.ItemSnapshotVersionCond {
+	if len(src) == 0 {
+		return nil
+	}
+	res := make([]*ck.ItemSnapshotVersionCond, 0, len(src))
+	for _, s := range src {
+		if s == nil || s.Cond == nil {
+			continue
+		}
+		res = append(res, &ck.ItemSnapshotVersionCond{
+			EvalSetID:        strconv.FormatInt(s.EvalSetID, 10),
+			EvalSetVersionID: strconv.FormatInt(s.EvalSetVersionID, 10),
+			SyncCkDate:       s.SyncCkDate,
+			Cond: &ck.ItemSnapshotFilter{
+				BoolMapFilters:   fieldFiltersEntityToCK(s.Cond.BoolMapFilters),
+				FloatMapFilters:  fieldFiltersEntityToCK(s.Cond.FloatMapFilters),
+				IntMapFilters:    fieldFiltersEntityToCK(s.Cond.IntMapFilters),
+				StringMapFilters: fieldFiltersEntityToCK(s.Cond.StringMapFilters),
+			},
+		})
+	}
+	return res
+}
+
 // QueryItemIDStates 实现 IExptTurnResultFilterRepo 接口的 QueryItemIDStates 方法
 func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator) (map[int64]entity.ItemRunState, int64, error) {
 	cond := &ck.ExptTurnResultFilterQueryCond{}
@@ -123,6 +148,9 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 			StringMapFilters: fieldFiltersEntityToCK(filter.ItemSnapshotCond.StringMapFilters),
 		}
 	}
+	// ★ 多评测集：per-set 条件透传，DAO 侧按 dis.version_id 分组 OR。
+	cond.ItemSnapshotCondBySet = itemSnapshotCondsEntityToCK(filter.ItemSnapshotCondBySet)
+	cond.ItemSnapshotCondUnmatched = filter.ItemSnapshotCondUnmatched
 	if filter.KeywordSearch != nil {
 		cond.KeywordSearch = &ck.KeywordMapCond{
 			ItemSnapshotFilter: &ck.ItemSnapshotFilter{

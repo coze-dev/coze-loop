@@ -58,8 +58,16 @@ func NewExptResultService(
 	analysisService IEvaluationAnalysisService,
 	fileProvider rpc.IFileProvider,
 	scoreCalculator IEvaluatorScoreCalculator,
+	// exptItemRefRepo ★ MultiSetConfig 实验按 item 回填 eval_set_id/eval_set_version_id 用。
+	// variadic 保持既有调用方（含商业化 wire）向后兼容。
+	exptItemRefRepo ...repo.IExptItemRefRepo,
 ) ExptResultService {
+	var itemRefRepo repo.IExptItemRefRepo
+	if len(exptItemRefRepo) > 0 {
+		itemRefRepo = exptItemRefRepo[0]
+	}
 	return &ExptResultServiceImpl{
+		exptItemRefRepo:             itemRefRepo,
 		ExptItemResultRepo:          exptItemResultRepo,
 		ExptTurnResultRepo:          exptTurnResultRepo,
 		ExptAnnotateRepo:            exptAnnotateRepo,
@@ -95,6 +103,9 @@ type ExptResultServiceImpl struct {
 	exptTurnResultFilterRepo repo.IExptTurnResultFilterRepo
 	ExptAnnotateRepo         repo.IExptAnnotateRepo
 	tagRPCAdapter            rpc.ITagRPCAdapter
+	// exptItemRefRepo ★ 多评测集实验 item -> (eval_set_id, eval_set_version_id) 的真值源；
+	// 可能为 nil（老调用方未注入），此时退化为按主集写入。
+	exptItemRefRepo repo.IExptItemRefRepo
 
 	evalTargetService           IEvalTargetService
 	evalTargetRepo              repo.IEvalTargetRepo
@@ -811,7 +822,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 			total = iTotal
 		} else {
 			logs.CtxInfo(ctx, "filter accelerator has filters, exptID: %v", baseExptID)
-			if err = e.mapItemSnapshotFilter(ctx, filterAccelerator, expt, expt.EvalSetVersionID); err != nil {
+			if err = e.mapItemSnapshotFilter(ctx, filterAccelerator, expt); err != nil {
 				logs.CtxError(ctx, "mapItemSnapshotFilter failed: %v", err)
 				errOccur = true
 			}
@@ -1308,6 +1319,11 @@ type PayloadBuilder struct {
 	LoadEvalTargetFullContent bool
 	// LoadEvalTargetOutputFieldKeys 非空时仅按需加载指定 output 字段的完整内容
 	LoadEvalTargetOutputFieldKeys []string
+
+	// ItemID2EvalSetRef ★ 多评测集实验 item -> 归属评测集(含版本) 的映射, 来源 expt_item_ref。
+	// 写 expt_turn_result_filter 时逐行按此回填 eval_set_id/eval_set_version_id;
+	// 为空则退化成全部按主集写(老行为)。
+	ItemID2EvalSetRef map[int64]*entity.ExptItemRef
 }
 
 func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultParam, baselineExptID int64, baselineTurnResults []*entity.ExptTurnResult,
@@ -1705,7 +1721,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 	if exptDO.ExptType == entity.ExptType_Online {
 		evalSetVersionID = 0
 	}
-	err = b.fillExptTurnResultFilters(ctx, exptDO.StartAt, evalSetID, evalSetVersionID)
+	err = b.fillExptTurnResultFilters(ctx, exptDO.StartAt, evalSetID, evalSetVersionID, exptDO.ExptType == entity.ExptType_Online)
 	if err != nil {
 		return nil, err
 	}
@@ -1713,7 +1729,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 	return b.ExptTurnResultFilters, nil
 }
 
-func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdDate *time.Time, evalSetID, evalSetVersionID int64) error {
+func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdDate *time.Time, evalSetID, evalSetVersionID int64, isOnline bool) error {
 	exptResultBuilder := b.ExptResultBuilders[0]
 	b.ExptTurnResultFilters = make([]*entity.ExptTurnResultFilterEntity, 0)
 	itemID2ItemIdx := make(map[int64]*entity.ExptItemResult)
@@ -1737,6 +1753,18 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 			CreatedDate:       ptr.From(createdDate),
 			EvalSetID:         evalSetID,
 			EvalSetVersionID:  evalSetVersionID,
+		}
+		// ★ 多评测集实验: 逐行回填该 item 真实归属的评测集(含版本)。
+		// 老实现给所有行盖同一个主集 version, 导致 CK 侧按 version 关联快照表时
+		// 非主集 item 恒关联不上, 内容筛选只在第一个评测集上生效。
+		if ref := b.ItemID2EvalSetRef[exptTurnResult.ItemID]; ref != nil {
+			if ref.EvalSetID > 0 {
+				exptTurnResultFilter.EvalSetID = ref.EvalSetID
+			}
+			// 在线实验 eval_set_version_id 固定写 0, 不覆盖。
+			if !isOnline && ref.EvalSetVersionID > 0 {
+				exptTurnResultFilter.EvalSetVersionID = ref.EvalSetVersionID
+			}
 		}
 		exptTurnResultFilter.ExptID = b.BaselineExptID
 		exptTurnResultFilter.SpaceID = b.SpaceID
@@ -2875,6 +2903,10 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 	payloadBuilder := NewPayloadBuilder(ctx, param, exptID, allTurnResults, itemResults, e.ExperimentRepo,
 		e.ExptTurnResultRepo, e.ExptItemResultRepo, e.ExptAnnotateRepo, e.evalTargetRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.evaluationSetVersionService, e.evaluationSetService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
 
+	// ★ 多评测集实验: 逐 item 取归属评测集(含版本), 供写 expt_turn_result_filter 时按行回填。
+	// 拿不到(老调用方未注入 repo / 查询失败)时只告警, 退化为按主集写, 不阻塞写入。
+	payloadBuilder.ItemID2EvalSetRef = e.loadItemEvalSetRefs(ctx, spaceID, exptID, itemIDs)
+
 	exptTurnResultFilters, err := payloadBuilder.BuildTurnResultFilter(ctx)
 	if err != nil {
 		return err
@@ -2887,158 +2919,204 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 	return nil
 }
 
-// 提取过滤器映射逻辑
-func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator, baseExpt *entity.Experiment, baseExptEvalSetVersionID int64) error {
-	hasCond := filter.ItemSnapshotCond != nil && len(filter.ItemSnapshotCond.StringMapFilters) > 0
-	hasKeywordCond := filter.KeywordSearch != nil && filter.KeywordSearch.ItemSnapshotFilter != nil &&
-		len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0
+// loadItemEvalSetRefs 取 item -> expt_item_ref 映射 (多评测集实验的评测集归属真值源)。
+// 失败/未注入 repo 时返回 nil, 调用方退化为按主集处理。
+func (e ExptResultServiceImpl) loadItemEvalSetRefs(ctx context.Context, spaceID, exptID int64, itemIDs []int64) map[int64]*entity.ExptItemRef {
+	if e.exptItemRefRepo == nil || len(itemIDs) == 0 {
+		return nil
+	}
+	refs, err := e.exptItemRefRepo.MGetByExptIDAndItemIDs(ctx, spaceID, exptID, itemIDs)
+	if err != nil {
+		logs.CtxWarn(ctx, "loadItemEvalSetRefs failed, exptID: %v, err: %v", exptID, err)
+		return nil
+	}
+	res := make(map[int64]*entity.ExptItemRef, len(refs))
+	for _, ref := range refs {
+		if ref == nil {
+			continue
+		}
+		res[ref.ItemID] = ref
+	}
+	return res
+}
+
+// mapItemSnapshotFilter 把「评测集列」筛选条件从 field_key 翻译成快照表 (dataset_item_snapshot /
+// dataset_item_draft) 上的 map subkey，并解析出查询必需的 sync_ck_date / 来源空间。
+//
+// ★ 多评测集 (MultiSetConfig) 关键点：mapping、sync_ck_date、来源空间三者都是按
+// (space_id, version_id) 存的，各评测集各一份。老实现只按主集 (baseExpt.EvalSetID/
+// EvalSetVersionID) 解析一次，非主集 item 在主集版本的分区下不存在 → 内容筛选只在第一个
+// 评测集上生效。这里改为遍历实验的全部 (set, version, sourceSpace)，每个集产出一组条件，
+// 由 DAO 侧分组查询后取 item_id 并集。单评测集实验只有 1 组，行为与改动前一致。
+func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter *entity.ExptTurnResultFilterAccelerator, baseExpt *entity.Experiment) error {
+	rawCond := filter.ItemSnapshotCond
+	var rawKeywordCond *entity.ItemSnapshotFilter
+	if filter.KeywordSearch != nil {
+		rawKeywordCond = filter.KeywordSearch.ItemSnapshotFilter
+	}
+
+	hasCond := rawCond != nil && len(rawCond.StringMapFilters) > 0
+	hasKeywordCond := rawKeywordCond != nil && len(rawKeywordCond.StringMapFilters) > 0
 	if !hasCond && !hasKeywordCond {
 		return nil
 	}
 	// map 类条件（评测集 schema 字段）需要 field_key → string_map/int_map/... 的映射，
-	// 对 mapping 是硬依赖：查不到就无法翻译条件，必须报错。
-	// 独立列条件（item_key 等 dataset_item_snapshot 上的物理列）不来自 schema、不需要 mapping。
-	//
-	// 但 mapping RPC 还顺带返回 sync_ck_date（快照表的分区列，下游查 dis 表要用），
-	// 所以这里不是简单跳过：只有独立列条件时仍**尽力**调一次拿 sync_ck_date，
-	// 失败只告警不报错 —— 否则评测集没有 fieldMapping 记录时会返回
-	// "createdVersion fieldMapping not found"，整条筛选链路 errOccur 退化成全量扫描。
-	needMapping := (filter.ItemSnapshotCond != nil && len(filter.ItemSnapshotCond.StringMapFilters) > 0) ||
-		(filter.KeywordSearch != nil && filter.KeywordSearch.ItemSnapshotFilter != nil &&
-			len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0)
-	itemSnapshotMappingsMap := make(map[string]*entity.ItemSnapshotFieldMapping)
-	// ★ 跨空间共享: item snapshot field mapping 按 (space_id, version_id) 存在**评测集来源空间**下，
-	// 用实验所在空间去查必然 not found，连带丢掉 sync_ck_date（快照表分区列，下游必需）。
-	// 用实验冻结的 EvalSetSpaceID（0=同空间）解析，与 expt_annotate_impl 读 item 同口径。
-	// 注意不能走 EvalSet.SharedInfo：本链路的实验来自 ExperimentRepo.MGetByID，只加载实验行 +
-	// 评估器 ref，EvalSet 为 nil。
-	evalSetSpaceID := resolveLoadSpaceID(baseExpt.SpaceID, baseExpt.EvalSetSpaceID)
-	req := &rpc.QueryItemSnapshotMappingRequest{
-		SpaceID:        evalSetSpaceID,
-		DatasetID:      baseExpt.EvalSetID,
-		IsDraftVersion: baseExpt.ExptType == entity.ExptType_Online,
-		VersionID:      gcond.If(baseExpt.ExptType == entity.ExptType_Online, ptr.Of(int64(0)), ptr.Of(baseExpt.EvalSetVersionID)),
-	}
-	itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, req)
-	if err != nil {
-		if needMapping {
-			return err
-		}
-		logs.CtxWarn(ctx, "QueryItemSnapshotMappings failed, proceeding with column-only filters, err: %v", err)
-	} else {
-		filter.EvalSetSyncCkDate = syncCkDate
-		for _, item := range itemSnapshotMappings {
-			itemSnapshotMappingsMap[item.FieldKey] = item
-		}
-	}
-	itemSnapshotFilter := &entity.ItemSnapshotFilter{
-		BoolMapFilters:   make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.BoolMapFilters)),
-		FloatMapFilters:  make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.FloatMapFilters)),
-		IntMapFilters:    make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.IntMapFilters)),
-		StringMapFilters: make([]*entity.FieldFilter, 0, len(filter.ItemSnapshotCond.StringMapFilters)),
-	}
-	for _, item := range filter.ItemSnapshotCond.StringMapFilters {
-		if itemSnapshotMappingsMap[item.Key] == nil {
-			logs.CtxWarn(ctx, "MGetExperimentResult found itemSnapshotMappingsMap not found, key: %v", item.Key)
-			continue
-		}
-		itemSnapshotMapping := itemSnapshotMappingsMap[item.Key]
-		switch itemSnapshotMapping.MappingKey {
-		case "string_map":
-			itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
-			})
-			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
-				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
-				})
-			}
-		case "float_map":
-			itemSnapshotFilter.FloatMapFilters = append(itemSnapshotFilter.FloatMapFilters, &entity.FieldFilter{
-				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
-			})
-			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
-				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
-				})
-			}
-		case "int_map":
-			itemSnapshotFilter.IntMapFilters = append(itemSnapshotFilter.IntMapFilters, &entity.FieldFilter{
-				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
-			})
-			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
-				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
-				})
-			}
-		case "bool_map":
-			itemSnapshotFilter.BoolMapFilters = append(itemSnapshotFilter.BoolMapFilters, &entity.FieldFilter{
-				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
-			})
-			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
-				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
-				})
-			}
-		}
-	}
-	filter.ItemSnapshotCond = itemSnapshotFilter
+	// 对 mapping 是硬依赖：所有评测集都查不到就无法翻译条件，必须报错（让上游走 errOccur
+	// 降级到保留分页的普通查询），而不是静默返回 0 条。
+	needMapping := hasCond || hasKeywordCond
 
-	// 处理keyword search
-	keywordItemSnapshotFilter := &entity.ItemSnapshotFilter{
-		BoolMapFilters:   make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.BoolMapFilters)),
-		FloatMapFilters:  make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.FloatMapFilters)),
-		IntMapFilters:    make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.IntMapFilters)),
-		StringMapFilters: make([]*entity.FieldFilter, 0, len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters)),
+	isOnline := baseExpt.ExptType == entity.ExptType_Online
+	pairs := collectEvalSetVersionPairs(baseExpt)
+	if len(pairs) == 0 {
+		// 边界：主集 id/version 都为 0 的老数据，保持原有单集调用形态。
+		pairs = []evalSetVersionPair{{
+			EvalSetID:        baseExpt.EvalSetID,
+			EvalSetVersionID: baseExpt.EvalSetVersionID,
+			SourceSpaceID:    baseExpt.EvalSetSpaceID,
+		}}
 	}
-	for _, item := range filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters {
-		if itemSnapshotMappingsMap[item.Key] == nil {
-			logs.CtxWarn(ctx, "MGetExperimentResult found itemSnapshotMappingsMap not found, key: %v", item.Key)
+
+	condBySet := make([]*entity.ItemSnapshotVersionCond, 0, len(pairs))
+	keywordCondBySet := make([]*entity.ItemSnapshotVersionCond, 0, len(pairs))
+	var (
+		firstErr        error
+		mappingResolved bool
+	)
+	for idx, p := range pairs {
+		// ★ 跨空间共享: item snapshot field mapping 按 (space_id, version_id) 存在**评测集来源空间**下，
+		// 用实验所在空间去查必然 not found，连带丢掉 sync_ck_date（快照表分区列，下游必需）。
+		// 多评测集时来源空间按 set 各自冻结，不能统一用主集的。
+		// 注意不能走 EvalSet.SharedInfo：本链路的实验来自 ExperimentRepo.MGetByID，只加载实验行 +
+		// 评估器 ref，EvalSet 为 nil。
+		req := &rpc.QueryItemSnapshotMappingRequest{
+			SpaceID:        resolveLoadSpaceID(baseExpt.SpaceID, p.SourceSpaceID),
+			DatasetID:      p.EvalSetID,
+			IsDraftVersion: isOnline,
+			VersionID:      gcond.If(isOnline, ptr.Of(int64(0)), ptr.Of(p.EvalSetVersionID)),
+		}
+		itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, req)
+		if err != nil {
+			// 单个评测集拉不到 mapping 只让该集贡献 0 条，其余集照常筛；全挂了才报错。
+			logs.CtxWarn(ctx, "QueryItemSnapshotMappings failed, evalSetID: %v, versionID: %v, err: %v", p.EvalSetID, p.EvalSetVersionID, err)
+			if firstErr == nil {
+				firstErr = err
+			}
 			continue
 		}
-		itemSnapshotMapping := itemSnapshotMappingsMap[item.Key]
-		switch itemSnapshotMapping.MappingKey {
-		case "string_map":
-			keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
-			})
-			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
-				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
-				})
+		mappingResolved = true
+		mappingMap := make(map[string]*entity.ItemSnapshotFieldMapping, len(itemSnapshotMappings))
+		for _, item := range itemSnapshotMappings {
+			mappingMap[item.FieldKey] = item
+		}
+
+		setCond, setCondFull := translateItemSnapshotCond(ctx, rawCond, mappingMap, isOnline, false)
+		setKeywordCond, setKeywordFull := translateItemSnapshotCond(ctx, rawKeywordCond, mappingMap, isOnline, true)
+
+		// 主集那一组回填单值字段，兼容尚未 per-set 化的下游（开源 DAO 的 JOIN 路径、老调用方）。
+		if idx == 0 {
+			filter.EvalSetSyncCkDate = syncCkDate
+			if hasCond {
+				filter.ItemSnapshotCond = setCond
 			}
-		case "float_map":
-			keywordItemSnapshotFilter.FloatMapFilters = append(keywordItemSnapshotFilter.FloatMapFilters, &entity.FieldFilter{
-				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
-			})
-			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
-				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
-				})
-			}
-		case "int_map":
-			keywordItemSnapshotFilter.IntMapFilters = append(keywordItemSnapshotFilter.IntMapFilters, &entity.FieldFilter{
-				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
-			})
-			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
-				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
-				})
-			}
-		case "bool_map":
-			keywordItemSnapshotFilter.BoolMapFilters = append(keywordItemSnapshotFilter.BoolMapFilters, &entity.FieldFilter{
-				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
-			})
-			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
-				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
-				})
+			if hasKeywordCond && filter.KeywordSearch != nil {
+				filter.KeywordSearch.ItemSnapshotFilter = setKeywordCond
 			}
 		}
+
+		// setCondFull=false 表示该集缺其中某个字段：条件不能只应用一半（会放宽成"少筛一个条件"），
+		// 该集直接不入组 → 贡献 0 条。
+		if hasCond && setCondFull {
+			condBySet = append(condBySet, &entity.ItemSnapshotVersionCond{
+				EvalSetID:        p.EvalSetID,
+				EvalSetVersionID: p.EvalSetVersionID,
+				SourceSpaceID:    p.SourceSpaceID,
+				SyncCkDate:       syncCkDate,
+				Cond:             setCond,
+			})
+		}
+		if hasKeywordCond && setKeywordFull {
+			keywordCondBySet = append(keywordCondBySet, &entity.ItemSnapshotVersionCond{
+				EvalSetID:        p.EvalSetID,
+				EvalSetVersionID: p.EvalSetVersionID,
+				SourceSpaceID:    p.SourceSpaceID,
+				SyncCkDate:       syncCkDate,
+				Cond:             setKeywordCond,
+			})
+		}
 	}
-	filter.KeywordSearch.ItemSnapshotFilter = keywordItemSnapshotFilter
+
+	if !mappingResolved && needMapping && firstErr != nil {
+		// 所有评测集都拉不到 mapping：报错让上游降级，别静默返回 0 条（用户无法区分
+		// 「筛选失败」和「真的没有匹配」）。
+		return firstErr
+	}
+
+	filter.ItemSnapshotCondBySet = condBySet
+	filter.KeywordItemSnapshotCondBySet = keywordCondBySet
+	// 带了条件却没有任何评测集能完整翻译出来 → 语义是命中 0 条。
+	// 老实现在这里把条件 continue 掉，退化成"不筛"，返回全量数据。
+	filter.ItemSnapshotCondUnmatched = (hasCond && len(condBySet) == 0) ||
+		(hasKeywordCond && len(keywordCondBySet) == 0)
+	if filter.ItemSnapshotCondUnmatched {
+		logs.CtxWarn(ctx, "item snapshot filter matched no eval set, exptID: %v, hasCond: %v, hasKeywordCond: %v", baseExpt.ID, hasCond, hasKeywordCond)
+	}
 
 	return nil
+}
+
+// translateItemSnapshotCond 用某个评测集版本的 field mapping，把 field_key 条件翻译成快照表上的
+// map subkey 条件。返回 full=false 表示存在该版本翻译不出来的 field_key（调用方据此让该集不参与筛选）。
+// keyword=true 时统一用 LIKE（全文搜索语义）。
+func translateItemSnapshotCond(ctx context.Context, src *entity.ItemSnapshotFilter, mappingMap map[string]*entity.ItemSnapshotFieldMapping, isOnline, keyword bool) (*entity.ItemSnapshotFilter, bool) {
+	dst := &entity.ItemSnapshotFilter{
+		BoolMapFilters:   make([]*entity.FieldFilter, 0),
+		FloatMapFilters:  make([]*entity.FieldFilter, 0),
+		IntMapFilters:    make([]*entity.FieldFilter, 0),
+		StringMapFilters: make([]*entity.FieldFilter, 0),
+	}
+	if src == nil {
+		return dst, true
+	}
+	dst.BoolMapFilters = make([]*entity.FieldFilter, 0, len(src.BoolMapFilters))
+	dst.FloatMapFilters = make([]*entity.FieldFilter, 0, len(src.FloatMapFilters))
+	dst.IntMapFilters = make([]*entity.FieldFilter, 0, len(src.IntMapFilters))
+	dst.StringMapFilters = make([]*entity.FieldFilter, 0, len(src.StringMapFilters))
+
+	full := true
+	for _, item := range src.StringMapFilters {
+		mapping := mappingMap[item.Key]
+		if mapping == nil {
+			logs.CtxWarn(ctx, "item snapshot field mapping not found, key: %v", item.Key)
+			full = false
+			continue
+		}
+		op := item.Op
+		if keyword {
+			op = "LIKE"
+		}
+		f := &entity.FieldFilter{Key: mapping.MappingSubKey, Op: op, Values: item.Values}
+		switch mapping.MappingKey {
+		case "string_map":
+			dst.StringMapFilters = append(dst.StringMapFilters, f)
+		case "float_map":
+			dst.FloatMapFilters = append(dst.FloatMapFilters, f)
+		case "int_map":
+			dst.IntMapFilters = append(dst.IntMapFilters, f)
+		case "bool_map":
+			dst.BoolMapFilters = append(dst.BoolMapFilters, f)
+		default:
+			logs.CtxWarn(ctx, "unsupported item snapshot mapping key: %v, field: %v", mapping.MappingKey, item.Key)
+			full = false
+			continue
+		}
+		// 在线实验的草稿表一行存多个 record，需要额外用 record_<subkey> 锁定当前 record。
+		if isOnline && mapping.RecordID > 0 {
+			dst.StringMapFilters = append(dst.StringMapFilters, &entity.FieldFilter{
+				Key: "record_" + mapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(mapping.RecordID, 10)},
+			})
+		}
+	}
+	return dst, full
 }
 
 // 提取MapCond映射逻辑
