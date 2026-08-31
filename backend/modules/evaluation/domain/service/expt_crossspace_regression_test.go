@@ -13,6 +13,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
+	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 )
 
 // TestBackfillRefEvalSetSourceSpace_MixedSpaceMultiSet 钉住调度侧(重试链路)的混合空间多集回归。
@@ -65,6 +66,50 @@ func TestBackfillRefEvalSetSourceSpace_SingleSetFallback(t *testing.T) {
 	refs2 := []*entity.ExptItemRef{{ItemID: 1, EvalSetID: 10, EvalSetSourceSpaceID: 123}}
 	backfillRefEvalSetSourceSpace(refs2, nil)
 	assert.Equal(t, int64(123), refs2[0].EvalSetSourceSpaceID)
+}
+
+// TestResolveItemCompleteMeta_CrossSpaceEvalSet 钉住 item-complete 组装侧的跨空间回归。
+// 与上面两条同因: 从 DB 读回的 ref 不带来源空间, 必须先回填再按来源空间加载 item。
+// 漏回填 → 用调用方空间读跨空间评测集 → 601103001 → itemMeta 空 → sendItemComplete
+// 静默 skip publish, 整个实验一条 item-complete 都不发, 下游离线分析拿不到任何数据。
+func TestResolveItemCompleteMeta_CrossSpaceEvalSet(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const (
+		consumerSpace = int64(9)
+		srcSpace      = int64(9001)
+		crossSet      = int64(71)
+		exptID        = int64(100)
+	)
+
+	expt := &entity.Experiment{
+		EvalSetSpaceID:    srcSpace,
+		EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+		EvalConf: &entity.EvaluationConfiguration{
+			EvalSetConfigs: []*entity.EvalSetConfig{{EvalSetID: crossSet, SourceSpaceID: srcSpace}},
+		},
+	}
+	event := &entity.ExptScheduleEvent{SpaceID: consumerSpace, ExptID: exptID, ExptRunID: 200}
+	items := []*entity.ExptEvalItem{{ItemID: 11}}
+
+	refRepo := repoMocks.NewMockIExptItemRefRepo(ctrl)
+	// 表无来源空间列(值只在 item_config blob 里), 读回的 ref 该字段恒为 0
+	refRepo.EXPECT().MGetByExptIDAndItemIDs(gomock.Any(), consumerSpace, exptID, []int64{11}).
+		Return([]*entity.ExptItemRef{{ItemID: 11, EvalSetID: crossSet, EvalSetVersionID: 81}}, nil)
+
+	setItemSvc := svcMocks.NewMockEvaluationSetItemService(ctrl)
+	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, p *entity.BatchGetEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, error) {
+			assert.Equal(t, srcSpace, p.SpaceID, "须按评测集来源空间加载, 不能用调用方空间")
+			return []*entity.EvaluationSetItem{{ItemID: 11, ItemKey: "k11", EvaluationSetID: crossSet}}, nil
+		})
+
+	svc := &ExptSchedulerImpl{exptItemRefRepo: refRepo, evaluationSetItemService: setItemSvc}
+	meta, ver := svc.resolveItemCompleteMeta(context.Background(), event, items, expt)
+
+	assert.Equal(t, "k11", meta[11].ItemKey, "meta 补齐才会发 item-complete")
+	assert.Equal(t, int64(81), ver[11])
 }
 
 // TestCompleteItemRunOnUnretriableErr 钉住"失败且不重试"的兜底落库。
