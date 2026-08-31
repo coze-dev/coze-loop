@@ -8880,3 +8880,55 @@ func TestProvideExptItemRefRepos(t *testing.T) {
 	require.Len(t, got, 1)
 	assert.Equal(t, r, got[0])
 }
+// TestNewPayloadBuilder_ItemQuotaImpossibleErrParsing 覆盖「额度不可满足」的反解分支。
+//
+// 为什么这层必须单测：错误码本身有单测（errno 包），但"结果层有没有真去读它"是另一回事 ——
+// 分支写错/漏接的表现不是报错，而是 item 显示成失败却没有原因，用户无从判断该改什么。
+func TestNewPayloadBuilder_ItemQuotaImpossibleErrParsing(t *testing.T) {
+	newBuilderWithErrMsg := func(t *testing.T, errMsg string) *PayloadBuilder {
+		t.Helper()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		return NewPayloadBuilder(
+			context.Background(),
+			&entity.MGetExperimentResultParam{SpaceID: 100, ExptIDs: []int64{1}},
+			1,
+			[]*entity.ExptTurnResult{{ID: 1, ItemID: 1, TurnID: 0, TurnIdx: 0}},
+			[]*entity.ExptItemResult{{ItemID: 1, ItemIdx: 0, Status: entity.ItemRunState_Fail, ErrMsg: errMsg}},
+			repoMocks.NewMockIExperimentRepo(ctrl),
+			repoMocks.NewMockIExptTurnResultRepo(ctrl),
+			repoMocks.NewMockIExptAnnotateRepo(ctrl),
+			svcMocks.NewMockIEvalTargetService(ctrl),
+			svcMocks.NewMockEvaluatorRecordService(ctrl),
+			svcMocks.NewMockEvaluationSetItemService(ctrl),
+			nil, nil, nil,
+			nil, nil,
+			map[int64]entity.ItemRunState{},
+			nil, nil,
+		)
+	}
+
+	t.Run("err_msg 命中额度不可满足时挂到 SystemInfo.Error", func(t *testing.T) {
+		builder := newBuilderWithErrMsg(t, errno.SerializeErr(
+			errno.NewItemQuotaImpossibleErr("sandbox|default", 5000, 8)))
+
+		require.Len(t, builder.ItemResults, 1)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo.Error)
+		assert.Equal(t, int64(errno.ItemQuotaImpossibleCode), builder.ItemResults[0].SystemInfo.Error.Code)
+		require.NotNil(t, builder.ItemResults[0].SystemInfo.Error.Detail)
+		// 具体维度与数值都要透到前端：只给一句"额度不足"用户不知道改哪一维、改到多少
+		assert.Contains(t, *builder.ItemResults[0].SystemInfo.Error.Detail, "sandbox|default")
+		assert.Contains(t, *builder.ItemResults[0].SystemInfo.Error.Detail, "5000")
+		assert.Contains(t, *builder.ItemResults[0].SystemInfo.Error.Detail, "8")
+	})
+
+	// ★ 两种失败原因共用 err_msg 字段、由结果层依次尝试反解，必须各归各位。
+	// 标错的后果是给出相反的处置建议：僵尸超时该等/重跑，额度不可满足该改配置。
+	t.Run("僵尸超时仍归僵尸码，不被额度分支抢走", func(t *testing.T) {
+		builder := newBuilderWithErrMsg(t, errno.SerializeErr(errno.NewItemZombieTimeoutErr(120, false)))
+
+		require.NotNil(t, builder.ItemResults[0].SystemInfo.Error)
+		assert.Equal(t, int64(errno.ItemZombieTimeoutCode), builder.ItemResults[0].SystemInfo.Error.Code)
+	})
+}
