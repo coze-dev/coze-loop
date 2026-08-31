@@ -292,29 +292,14 @@ func (e *experimentApplication) enforceSchedulingPrivilege(ctx context.Context, 
 		return
 	}
 
-	// caller PSM 取自 RPC 框架填充的 caller 字段，调用方无法在业务参数里伪造。
-	// 这与 trigger_type 有本质区别 —— 后者是请求体里的普通字段，任何人都能自称 "evalx"，
-	// 因此绝不能反过来拿 trigger_type 当授权判据。
-	callerPSM, _ := kitexutil.GetCaller(ctx)
-
-	// 邮箱取自已验证的 ByteTIM ticket claim（商业版 CtxUser 中间件写入），不是请求体字段。
-	userEmail := ""
-	if u, ok := session.UserInCtx(ctx); ok && u != nil {
-		userEmail = u.Email
-	}
-
-	subject := entity.ExptSchedulingPrivilegeSubject{
-		UserEmail: userEmail,
-		SpaceID:   req.GetWorkspaceID(),
-		CallerPSM: callerPSM,
-	}
-	if e.configer.GetExptSchedulingPrivilegeWhiteList(ctx).AllowSchedulingPrivilege(subject) {
+	allowed, subject := allowExptSchedulingPrivilege(ctx, e.configer, req.GetWorkspaceID())
+	if allowed {
 		return
 	}
 
 	logs.CtxWarn(ctx, "[ExptSchedulingPrivilege] caller not allowed to declare scheduling params, dropping them; "+
 		"priority: %v, has_quota: %v, trigger: %v, user_email: %v, space_id: %v, caller_psm: %v",
-		req.GetPriorityLevel(), declaresQuota, req.GetTriggerType(), userEmail, subject.SpaceID, callerPSM)
+		req.GetPriorityLevel(), declaresQuota, req.GetTriggerType(), subject.UserEmail, subject.SpaceID, subject.CallerPSM)
 
 	req.PriorityLevel = nil
 	req.ExpectedQuotaConsumption = nil
@@ -323,6 +308,86 @@ func (e *experimentApplication) enforceSchedulingPrivilege(ctx context.Context, 
 		// 但显式写入让落库值与日志一致、排查时不必再推导一层。
 		req.TriggerType = gptr.Of(domain_expt.Manual)
 	}
+}
+
+// allowExptSchedulingPrivilege 判定当前调用方能否申报中心调度特权参数，并回传用于日志的 subject。
+//
+// 做成包级函数供两个 application 共用（普通面在 experimentApplication、OpenAPI 面在
+// EvalOpenAPIApplication）：判据只能有一份，两处各写一遍迟早漂移成"某一面能绕过白名单"。
+//
+// 两个取值来源都不可由调用方在业务参数里伪造：caller PSM 由 RPC 框架填充，
+// 邮箱取自已验证的 ByteTIM ticket claim（商业版 CtxUser 中间件写入）。
+// 这与 trigger_type 有本质区别 —— 后者是请求体里的普通字段，任何人都能自称 "evalx"。
+func allowExptSchedulingPrivilege(ctx context.Context, configer component.IConfiger, spaceID int64) (bool, entity.ExptSchedulingPrivilegeSubject) {
+	callerPSM, _ := kitexutil.GetCaller(ctx)
+
+	userEmail := ""
+	if u, ok := session.UserInCtx(ctx); ok && u != nil {
+		userEmail = u.Email
+	}
+
+	subject := entity.ExptSchedulingPrivilegeSubject{
+		UserEmail: userEmail,
+		SpaceID:   spaceID,
+		CallerPSM: callerPSM,
+	}
+	if configer == nil {
+		// 配置缺席时不放行：这条路径决定"能不能申报特权"，缺省必须是最保守的那一侧。
+		return false, subject
+	}
+	return configer.GetExptSchedulingPrivilegeWhiteList(ctx).AllowSchedulingPrivilege(subject), subject
+}
+
+// resolveRunConfSchedulingParams 解析 UpdateExptRunConf 两面共用的中心调度特权参数。
+//
+// 命中白名单才生效；未命中一律丢弃 + WARN 而不报错 —— 与创建期 enforceSchedulingPrivilege
+// 同一口径，理由见那里（这两个字段已在 IDL 里，突然改成报错会打挂已经在传的调用方）。
+//
+// 校验刻意放在闸门之后：一来与创建期一致（那边先清字段、校验在下游），二来避免用
+// "报不报错"这件事把"你不在白名单里"泄漏给未授权调用方。
+func resolveRunConfSchedulingParams(
+	ctx context.Context,
+	configer component.IConfiger,
+	spaceID, exptID int64,
+	priorityLevel *int32,
+	quota *domain_expt.ExpectedQuotaConsumption,
+) (*int32, *entity.ExpectedQuotaConsumption, error) {
+	if priorityLevel == nil && quota == nil {
+		// 什么都没申报：省掉一次配置读取，也避免给未使用这些字段的调用方刷无关日志。
+		return nil, nil, nil
+	}
+
+	allowed, subject := allowExptSchedulingPrivilege(ctx, configer, spaceID)
+	if !allowed {
+		logs.CtxWarn(ctx, "[ExptSchedulingPrivilege] caller not allowed to update scheduling params, dropping them; "+
+			"expt_id: %v, priority: %v, has_quota: %v, user_email: %v, space_id: %v, caller_psm: %v",
+			exptID, gptr.Indirect(priorityLevel), quota != nil, subject.UserEmail, subject.SpaceID, subject.CallerPSM)
+		return nil, nil, nil
+	}
+
+	// 这里不接受 0 当"不修改"：nil 才是"不修改"。0 落到 Normalize 会被收敛成缺省优先级，
+	// 于是"我传了 0"和"我想设成缺省"变得无法区分，静默改掉一个本不该动的值。
+	if priorityLevel != nil && (*priorityLevel < entity.MinExptPriorityLevel || *priorityLevel > entity.MaxExptPriorityLevel) {
+		return nil, nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(
+			fmt.Sprintf("priority_level must be in range [%d, %d], got %d", entity.MinExptPriorityLevel, entity.MaxExptPriorityLevel, *priorityLevel)))
+	}
+
+	var consumption *entity.ExpectedQuotaConsumption
+	if quota != nil {
+		// 转换层遇到空 resources 会回 nil。放到这里报错而不是当"不修改"：调用方明明传了这个
+		// 字段，静默忽略等于让"我清空了向量"这个（不被支持的）意图看起来成功了。
+		consumption = experiment.ExpectedQuotaConsumptionDTO2DO(quota)
+		if consumption == nil {
+			return nil, nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+				errorx.WithExtraMsg("expected_quota_consumption must not be empty"))
+		}
+		consumption = consumption.Normalize()
+		if err := consumption.Validate(); err != nil {
+			return nil, nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+		}
+	}
+
+	return priorityLevel, consumption, nil
 }
 
 func (e *experimentApplication) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest) (r *expt.CreateExperimentTemplateResponse, err error) {
@@ -1473,12 +1538,21 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 		itemRetryNum = gptr.Of(v)
 	}
 
+	// 中心调度特权参数：命中白名单才生效，未命中丢弃 + WARN（与创建期同口径）。
+	priorityLevel, expectedQuota, err := resolveRunConfSchedulingParams(
+		ctx, e.configer, req.GetWorkspaceID(), req.GetExptID(), req.PriorityLevel, req.ExpectedQuotaConsumption)
+	if err != nil {
+		return nil, err
+	}
+
 	if err = e.manager.UpdateRunConf(ctx, &entity.UpdateRunConfParam{
-		ExptID:        req.GetExptID(),
-		SpaceID:       req.GetWorkspaceID(),
-		ItemConcurNum: itemConcurNum,
-		ItemRetryNum:  itemRetryNum,
-		Session:       session,
+		ExptID:                   req.GetExptID(),
+		SpaceID:                  req.GetWorkspaceID(),
+		ItemConcurNum:            itemConcurNum,
+		ItemRetryNum:             itemRetryNum,
+		PriorityLevel:            priorityLevel,
+		ExpectedQuotaConsumption: expectedQuota,
+		Session:                  session,
 	}); err != nil {
 		return nil, err
 	}

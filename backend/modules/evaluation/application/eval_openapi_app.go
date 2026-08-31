@@ -4097,12 +4097,23 @@ func (e *EvalOpenAPIApplication) UpdateExptRunConfOApi(ctx context.Context, req 
 		itemRetryNum = gptr.Of(v)
 	}
 
+	// 中心调度特权参数：与前端接口共用同一份白名单判据与校验（两处各写一遍必然漂移）。
+	// OpenAPI 的向量是另一套 IDL 类型，先转成 domain 形态再交给共用解析。
+	priorityLevel, expectedQuota, err := resolveRunConfSchedulingParams(
+		ctx, e.configer, req.GetWorkspaceID(), req.GetExperimentID(), req.PriorityLevel,
+		experiment_convertor.ExpectedQuotaConsumptionOpenAPI2Domain(req.ExpectedQuotaConsumption))
+	if err != nil {
+		return nil, err
+	}
+
 	if err = e.manager.UpdateRunConf(ctx, &entity.UpdateRunConfParam{
-		ExptID:        req.GetExperimentID(),
-		SpaceID:       req.GetWorkspaceID(),
-		ItemConcurNum: itemConcurNum,
-		ItemRetryNum:  itemRetryNum,
-		Session:       session,
+		ExptID:                   req.GetExperimentID(),
+		SpaceID:                  req.GetWorkspaceID(),
+		ItemConcurNum:            itemConcurNum,
+		ItemRetryNum:             itemRetryNum,
+		PriorityLevel:            priorityLevel,
+		ExpectedQuotaConsumption: expectedQuota,
+		Session:                  session,
 	}); err != nil {
 		return nil, err
 	}

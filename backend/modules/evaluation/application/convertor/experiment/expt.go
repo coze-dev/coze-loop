@@ -930,7 +930,7 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	// 都能自己声明 enforce 并伪造一个 scope，绕过额度管控、甚至去动别的环境的账本。
 	// IDL 里这两个字段不带 api.body 已挡住公网，但内部调用仍需这一层。
 	param.PriorityLevel = entity.NormalizeExptPriorityLevel(cer.GetPriorityLevel())
-	param.ExpectedQuotaConsumption = expectedQuotaConsumptionDTO2DO(cer.GetExpectedQuotaConsumption())
+	param.ExpectedQuotaConsumption = ExpectedQuotaConsumptionDTO2DO(cer.GetExpectedQuotaConsumption())
 	if cer.NotificationConf != nil {
 		notifConf, err := NotificationConfDTO2DO(cer.NotificationConf)
 		if err != nil {
@@ -1556,12 +1556,12 @@ func suaModeDO2DTO(m entity.SuaMode) domain_expt.SuaMode {
 	}
 }
 
-// expectedQuotaConsumptionDTO2DO 把申报的资源消耗向量转成领域对象。
+// ExpectedQuotaConsumptionDTO2DO 把申报的资源消耗向量转成领域对象。
 //
 // 不在此处做合法性校验（非空 / amount>0 / 键唯一 / 禁通配）：校验属于领域规则，
 // 收口在 entity.ExpectedQuotaConsumption.Validate()，由 CreateExpt 在冻结前调用。
 // 转换层只负责搬运，否则同一套规则会散落在转换与领域两处、各自演化。
-func expectedQuotaConsumptionDTO2DO(dto *domain_expt.ExpectedQuotaConsumption) *entity.ExpectedQuotaConsumption {
+func ExpectedQuotaConsumptionDTO2DO(dto *domain_expt.ExpectedQuotaConsumption) *entity.ExpectedQuotaConsumption {
 	if dto == nil || len(dto.GetResources()) == 0 {
 		return nil
 	}

@@ -44,6 +44,17 @@ type fakeGuard struct {
 
 	releaseErr   error
 	releaseCalls []releaseCall
+
+	repriceErr   error
+	repriceCalls []repriceCall
+}
+
+// repriceCall 记录一次改价调用。带上向量本身：只数次数会放过"调了但传的是旧向量"。
+type repriceCall struct {
+	Scope       string
+	ExptID      int64
+	RunID       int64
+	Consumption *entity.ExpectedQuotaConsumption
 }
 
 func (f *fakeGuard) ConfirmRunning(ctx context.Context, schedulerScope string, exptRunID, itemID int64) (bool, error) {
@@ -58,6 +69,21 @@ func (f *fakeGuard) Release(ctx context.Context, schedulerScope string, exptRunI
 	defer f.mu.Unlock()
 	f.releaseCalls = append(f.releaseCalls, releaseCall{Scope: schedulerScope, RunID: exptRunID, ItemID: itemID, Reason: reason})
 	return f.releaseErr
+}
+
+func (f *fakeGuard) RepriceRunConsumption(ctx context.Context, schedulerScope string, exptID, exptRunID int64, newConsumption *entity.ExpectedQuotaConsumption) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.repriceCalls = append(f.repriceCalls, repriceCall{Scope: schedulerScope, ExptID: exptID, RunID: exptRunID, Consumption: newConsumption})
+	return f.repriceErr
+}
+
+func (f *fakeGuard) reprices() []repriceCall {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]repriceCall, len(f.repriceCalls))
+	copy(out, f.repriceCalls)
+	return out
 }
 
 func (f *fakeGuard) releases() []releaseCall {
@@ -481,6 +507,11 @@ func (r *recordingGuard) ConfirmRunning(ctx context.Context, schedulerScope stri
 
 func (r *recordingGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, reason string) error {
 	*r.seq = append(*r.seq, "release")
+	return nil
+}
+
+func (r *recordingGuard) RepriceRunConsumption(ctx context.Context, schedulerScope string, exptID, exptRunID int64, newConsumption *entity.ExpectedQuotaConsumption) error {
+	*r.seq = append(*r.seq, "reprice")
 	return nil
 }
 

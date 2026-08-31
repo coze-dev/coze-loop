@@ -1745,8 +1745,8 @@ func (e *ExptMangerImpl) Update(ctx context.Context, expt *entity.Experiment, se
 	return e.exptRepo.Update(ctx, expt)
 }
 
-// UpdateRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）。
-// 采用 read-modify-write：读出完整实验 → 内存中仅覆盖指定字段 → 序列化完整 EvalConf → 只写 eval_conf 单列。
+// UpdateRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数 / 中心调度参数）。
+// 采用 read-modify-write：读出完整实验 → 内存中仅覆盖指定字段 → 序列化完整 EvalConf → 只写指定列。
 // 严禁用只含两字段的裸 EvalConf 覆盖该列（会清空 ConnectorConf/TimeRange/Ext）。
 func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.UpdateRunConfParam) error {
 	got, err := e.exptRepo.GetByID(ctx, param.ExptID, param.SpaceID)
@@ -1767,6 +1767,15 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.Update
 		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("EvalConfig is invalid"))
 	}
 
+	// 中心调度参数只对 enforce 实验有意义：legacy 实验既不参与优先级排序（调度器的扫描条件是
+	// scheduler_mode='enforce'）、也没有额度账本可改价。所以这里显式拒绝而不是照写 ——
+	// 写进去只会得到一个没人读的值，接口返回成功、用户以为改好了，是最难发现的一类问题。
+	if (param.PriorityLevel != nil || param.ExpectedQuotaConsumption != nil) &&
+		got.ExptDispatchMode != entity.ExptDispatchModeEnforce {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode,
+			errorx.WithExtraMsg("priority_level / expected_quota_consumption can only be modified for centrally-scheduled experiments"))
+	}
+
 	// read-modify-write：在完整 EvalConf 上仅覆盖需要修改的字段。
 	evalConf := got.EvalConf
 	if param.ItemConcurNum != nil {
@@ -1775,14 +1784,44 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.Update
 	if param.ItemRetryNum != nil {
 		evalConf.ItemRetryNum = param.ItemRetryNum
 	}
+	if param.ExpectedQuotaConsumption != nil {
+		evalConf.ExpectedQuotaConsumption = param.ExpectedQuotaConsumption
+	}
 
 	bytes, err := json.Marshal(evalConf)
 	if err != nil {
 		return errorx.Wrapf(err, "marshal EvalConf fail, expt_id: %v", param.ExptID)
 	}
 
-	// 只写 eval_conf 单列，与调度器的 status 写列级不重叠，爆炸半径最小。
-	return e.exptRepo.UpdateFields(ctx, param.ExptID, map[string]any{"eval_conf": &bytes})
+	// 写列级最小化，与调度器的 status 写不重叠。
+	//
+	// priority_level 走这条显式列名的路径，**不能**走 exptRepo.Update：那条是 struct Updates +
+	// Omit(schedulingFrozenColumns)，正是为了防止部分更新把 enforce 实验打回 legacy 而存在的
+	// （见 mysql/expt.go 的 schedulingFrozenColumns 注释）。这里给的是显式列名 map，
+	// 只可能改到写进 map 的那一列，改不到 scheduler_mode / scheduler_scope。
+	ufields := map[string]any{"eval_conf": &bytes}
+	if param.PriorityLevel != nil {
+		ufields["priority_level"] = *param.PriorityLevel
+	}
+	if err := e.exptRepo.UpdateFields(ctx, param.ExptID, ufields); err != nil {
+		return err
+	}
+
+	// 向量改了就要把该 run 在飞的预占一起改价，否则全量恢复的前提被打破 ——
+	// 完整论证在 component.ICentralReservationGuard.RepriceRunConsumption 的注释里。
+	//
+	// 顺序刻意是"先 MySQL 后账本"：MySQL 是恢复的唯一真值来源，先写它意味着即使这一步崩，
+	// 下一次全量恢复也会把账本收敛到新向量；反过来先改账本再写库，崩了就留下一本没有依据的账。
+	//
+	// 与沙箱名额同步（失败只告警）不同，这里失败必须上抛：名额没跟上只是暂时吃不满，
+	// 账本价错了会让额度长期算错，而调用方以为已经改好。
+	if param.ExpectedQuotaConsumption != nil && e.centralGuard != nil {
+		if err := e.centralGuard.RepriceRunConsumption(ctx, got.SchedulerScope, param.ExptID, got.LatestRunID, param.ExpectedQuotaConsumption); err != nil {
+			return errorx.Wrapf(err, "reprice in-flight reservations fail, expt_id: %v, expt_run_id: %v", param.ExptID, got.LatestRunID)
+		}
+	}
+
+	return nil
 }
 
 func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {

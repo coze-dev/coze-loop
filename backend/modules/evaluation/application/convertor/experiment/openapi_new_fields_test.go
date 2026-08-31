@@ -812,7 +812,7 @@ func TestExpectedQuotaConsumption_SourceSurvivesRoundTrip(t *testing.T) {
 			},
 		}
 
-		do := expectedQuotaConsumptionDTO2DO(dto)
+		do := ExpectedQuotaConsumptionDTO2DO(dto)
 		if assert.NotNil(t, do) && assert.Len(t, do.Resources, 2) {
 			assert.Equal(t, "litellm", do.Resources[0].Source, "source 必须搬进 DO")
 			assert.Empty(t, do.Resources[1].Source, "没申报来源时 DO 侧应为空串，不得凭空造值")

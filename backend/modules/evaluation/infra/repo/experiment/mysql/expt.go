@@ -103,7 +103,9 @@ func (d *exptDAOImpl) Create(ctx context.Context, expt *model.Experiment) error 
 // 同一个 run 出现两个派发驱动、绕过全局额度账本，正是设计上明令禁止的情形。
 // 且 scope 是零值会被跳过，最终留下 mode=legacy + scope 非空 的不可能组合。
 //
-// 这三列的唯一合法写入点是 Create（见 expt_manage_impl.go 的冻结逻辑）。
+// scheduler_mode / scheduler_scope 的唯一合法写入点是 Create（见 expt_manage_impl.go 的冻结逻辑）。
+// priority_level 多一个：UpdateRunConf 允许运行中改优先级，它走 UpdateFields 的显式列名 map，
+// 只能改到写进 map 的那一列 —— 这正是本 Omit 要防的"部分更新顺手重置"在那条路径上不成立的原因。
 var schedulingFrozenColumns = []string{"priority_level", "scheduler_mode", "scheduler_scope"}
 
 func (d *exptDAOImpl) Update(ctx context.Context, expt *model.Experiment) error {

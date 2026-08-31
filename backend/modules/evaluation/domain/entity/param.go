@@ -387,7 +387,16 @@ type UpdateRunConfParam struct {
 	SpaceID       int64
 	ItemConcurNum *int
 	ItemRetryNum  *int
-	Session       *Session
+
+	// PriorityLevel / ExpectedQuotaConsumption 中心调度参数，nil = 不修改。
+	// 两者只对 enforce 实验有意义，legacy 实验既不参与优先级排序也没有额度账本，
+	// 所以服务层遇到 legacy 会直接拒绝而不是写一个没人读的值。
+	PriorityLevel *int32
+	// 整向量替换而非增量：与创建期"冻结进 eval_conf"的语义一致，
+	// 增量语义会让"删掉一个资源维度"无法表达。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption
+
+	Session *Session
 }
 
 type CreateExptParam struct {

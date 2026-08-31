@@ -3,7 +3,11 @@
 
 package component
 
-import "context"
+import (
+	"context"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+)
 
 //go:generate mockgen -destination=mocks/central_reservation_guard.go -package=mocks . ICentralReservationGuard
 
@@ -35,6 +39,24 @@ type ICentralReservationGuard interface {
 	// Release 在 item 进入终态（成功/失败/终止/僵尸清理）时幂等释放额度。
 	// 重复调用为 no-op。
 	Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, reason string) error
+
+	// RepriceRunConsumption 把该 run 在飞的预占按新的单 item 消耗向量重新计价。
+	//
+	// 为什么改向量必须配一次重新计价：全量恢复是"账本不可信时的唯一出路"，所以它刻意只读
+	// MySQL（扫队列 + 实验冻结向量）重建 used，绝不读账本。于是它隐含一条前提 ——
+	// **每条活预占都是按实验当前向量计价的**。单改 MySQL 里的向量就打破了这条前提：
+	// 释放仍按每条 reservation 自存的旧 amount 走，而恢复会按新向量重算，两边对不上账，
+	// 雷正好埋在修账本的唯一手段里。所以改完向量要把在飞预占的存量金额一起改写，
+	// 让前提重新成立，恢复逻辑一行都不用动。
+	//
+	// newConsumption 由调用方传入而不是由实现方回查 MySQL：回查会撞上主从延迟，
+	// 按旧向量"重新计价"一遍且完全静默 —— 这类错误比失败更难发现。
+	//
+	// 只覆盖该 run 在飞的预占。持有预占的只有已派发 item，被并发上限卡着（不是题数），
+	// 通常几十条，一次原子操作就能全覆盖，不存在"只改一半"的中间态。
+	//
+	// **失败必须当错误上抛**：向量已经落库、账本还是旧价，此时返回成功会让调用方以为改好了。
+	RepriceRunConsumption(ctx context.Context, schedulerScope string, exptID, exptRunID int64, newConsumption *entity.ExpectedQuotaConsumption) error
 }
 
 // NewNoopCentralReservationGuard 返回开源部署使用的 noop 实现。
@@ -56,6 +78,14 @@ func (noopCentralReservationGuard) ConfirmRunning(ctx context.Context, scheduler
 // Release 无账本可释放，直接成功返回。
 // 不返回错误：终态收口路径不应因为额度模块缺席而失败。
 func (noopCentralReservationGuard) Release(ctx context.Context, schedulerScope string, exptRunID, itemID int64, reason string) error {
+	return nil
+}
+
+// RepriceRunConsumption 无账本可改价，直接成功返回。
+//
+// 与 ConfirmRunning 的 fail-closed 相反：这里没有"放行了就绕过额度"的风险 ——
+// 开源部署根本没有预占，改价是空操作。反过来若报错，会让开源部署连改向量都做不到。
+func (noopCentralReservationGuard) RepriceRunConsumption(ctx context.Context, schedulerScope string, exptID, exptRunID int64, newConsumption *entity.ExpectedQuotaConsumption) error {
 	return nil
 }
 
