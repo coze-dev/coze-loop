@@ -8897,7 +8897,9 @@ func TestNewPayloadBuilder_ItemQuotaImpossibleErrParsing(t *testing.T) {
 			[]*entity.ExptItemResult{{ItemID: 1, ItemIdx: 0, Status: entity.ItemRunState_Fail, ErrMsg: errMsg}},
 			repoMocks.NewMockIExperimentRepo(ctrl),
 			repoMocks.NewMockIExptTurnResultRepo(ctrl),
+			nil, // exptItemResultRepo
 			repoMocks.NewMockIExptAnnotateRepo(ctrl),
+			nil, // evalTargetRepo
 			svcMocks.NewMockIEvalTargetService(ctrl),
 			svcMocks.NewMockEvaluatorRecordService(ctrl),
 			svcMocks.NewMockEvaluationSetItemService(ctrl),
