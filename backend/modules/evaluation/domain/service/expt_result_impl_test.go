@@ -8631,3 +8631,83 @@ func TestPayloadBuilder_fillExptTurnResultFilters_OnlineKeepsZeroVersion(t *test
 	assert.Equal(t, int64(20), builder.ExptTurnResultFilters[0].EvalSetID)
 	assert.Equal(t, int64(0), builder.ExptTurnResultFilters[0].EvalSetVersionID)
 }
+
+// per-set 组「翻译出来了但不可查」（缺 version / 缺分区日期）时必须退回单值老路径，
+// 而不是拼出恒假谓词静默返回 0 条 —— 老路径有从 etrf 反查 version 的兜底。
+func TestExptResultServiceImpl_mapItemSnapshotFilter_UnqueryableGroupFallsBack(t *testing.T) {
+	newFilter := func() *entity.ExptTurnResultFilterAccelerator {
+		return &entity.ExptTurnResultFilterAccelerator{
+			ItemSnapshotCond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "item_key", Op: "=", Values: []any{"v"}}},
+			},
+			KeywordSearch: &entity.KeywordFilter{ItemSnapshotFilter: &entity.ItemSnapshotFilter{}},
+		}
+	}
+	mapping := []*entity.ItemSnapshotFieldMapping{
+		{FieldKey: "item_key", MappingKey: "string_map", MappingSubKey: "string_key_0"},
+	}
+
+	t.Run("离线实验缺 sync_ck_date => 不入组且不置 unmatched", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc0 := svcMocks.NewMockIEvaluationSetService(ctrl)
+		svc0.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return(mapping, "", nil).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: svc0}
+
+		filter := newFilter()
+		expt := &entity.Experiment{SpaceID: 1, EvalSetID: 10, EvalSetVersionID: 100, ExptType: entity.ExptType_Offline}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, expt))
+
+		assert.Empty(t, filter.ItemSnapshotCondBySet)
+		// 关键：不能置 unmatched，否则 DAO 会短路成 0 条
+		assert.False(t, filter.ItemSnapshotCondUnmatched)
+		// 单值字段仍被填好，DAO 走老路径照样能查
+		require.Len(t, filter.ItemSnapshotCond.StringMapFilters, 1)
+		assert.Equal(t, "string_key_0", filter.ItemSnapshotCond.StringMapFilters[0].Key)
+	})
+
+	t.Run("离线实验 version=0 的老数据 => 不入组且不置 unmatched", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc0 := svcMocks.NewMockIEvaluationSetService(ctrl)
+		svc0.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return(mapping, "2026-08-30", nil).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: svc0}
+
+		filter := newFilter()
+		expt := &entity.Experiment{SpaceID: 1, EvalSetID: 10, EvalSetVersionID: 0, ExptType: entity.ExptType_Offline}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, expt))
+
+		assert.Empty(t, filter.ItemSnapshotCondBySet)
+		assert.False(t, filter.ItemSnapshotCondUnmatched)
+	})
+
+	t.Run("在线实验只要有 dataset_id 就可查，不需要 version/分区日期", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc0 := svcMocks.NewMockIEvaluationSetService(ctrl)
+		svc0.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return(mapping, "", nil).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: svc0}
+
+		filter := newFilter()
+		expt := &entity.Experiment{SpaceID: 1, EvalSetID: 10, EvalSetVersionID: 0, ExptType: entity.ExptType_Online}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, expt))
+
+		require.Len(t, filter.ItemSnapshotCondBySet, 1)
+		assert.Equal(t, int64(10), filter.ItemSnapshotCondBySet[0].EvalSetID)
+		assert.False(t, filter.ItemSnapshotCondUnmatched)
+	})
+
+	t.Run("字段翻译不出来才置 unmatched", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc0 := svcMocks.NewMockIEvaluationSetService(ctrl)
+		svc0.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).
+			Return([]*entity.ItemSnapshotFieldMapping{{FieldKey: "other", MappingKey: "string_map", MappingSubKey: "string_key_0"}}, "2026-08-30", nil).Times(1)
+		svc := ExptResultServiceImpl{evaluationSetService: svc0}
+
+		filter := newFilter()
+		expt := &entity.Experiment{SpaceID: 1, EvalSetID: 10, EvalSetVersionID: 100, ExptType: entity.ExptType_Offline}
+		require.NoError(t, svc.mapItemSnapshotFilter(context.Background(), filter, expt))
+		assert.True(t, filter.ItemSnapshotCondUnmatched)
+	})
+}

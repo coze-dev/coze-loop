@@ -687,6 +687,12 @@ func (d *exptTurnResultFilterDAOImpl) buildBaseSQL(ctx context.Context, cond *Ex
 			itemTable = "dataset_item_draft"
 			joinCond = "etrf.eval_set_id = dis.dataset_id"
 		}
+		// ★ 多评测集：存量实验的 etrf 行全部盖着主集 eval_set_version_id（写侧缺陷），
+		// 拿它 join 会把快照表限死在主集版本，非主集 item 关联不上。per-set 条件已经在
+		// 每个分组里带了自己的 dis.version_id，这里只按 item_id 关联即可。
+		if len(cond.ItemSnapshotCondBySet) > 0 {
+			joinCond = "1=1"
+		}
 		sql += " INNER JOIN " + dbName + "." + itemTable + " dis ON " + joinCond + " AND etrf.item_id = dis.item_id"
 	}
 	sql += " FINAL WHERE 1=1"

@@ -2979,8 +2979,10 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 	condBySet := make([]*entity.ItemSnapshotVersionCond, 0, len(pairs))
 	keywordCondBySet := make([]*entity.ItemSnapshotVersionCond, 0, len(pairs))
 	var (
-		firstErr        error
-		mappingResolved bool
+		firstErr              error
+		mappingResolved       bool
+		translatedCond        bool
+		translatedKeywordCond bool
 	)
 	for idx, p := range pairs {
 		// ★ 跨空间共享: item snapshot field mapping 按 (space_id, version_id) 存在**评测集来源空间**下，
@@ -3026,6 +3028,24 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		// setCondFull=false 表示该集缺其中某个字段：条件不能只应用一半（会放宽成"少筛一个条件"），
 		// 该集直接不入组 → 贡献 0 条。
 		if hasCond && setCondFull {
+			translatedCond = true
+		}
+		if hasKeywordCond && setKeywordFull {
+			translatedKeywordCond = true
+		}
+		// 该组能否真的用于查快照表：离线必须有 version_id + 分区日期 sync_ck_date，
+		// 在线必须有 dataset_id。缺任何一样都不能拼成组 —— 拼了会得到 version_id='0'
+		// 之类的恒假谓词、静默返回 0 条。此时宁可让 per-set 列表为空，退回单值老路径
+		// (老路径有「从 etrf 反查 version」的兜底和显式报错)。
+		queryable := p.EvalSetID > 0
+		if !isOnline {
+			queryable = p.EvalSetVersionID > 0 && strings.TrimSpace(syncCkDate) != ""
+		}
+		if !queryable {
+			logs.CtxWarn(ctx, "item snapshot group not queryable, evalSetID: %v, versionID: %v, syncCkDate: %q", p.EvalSetID, p.EvalSetVersionID, syncCkDate)
+			continue
+		}
+		if hasCond && setCondFull {
 			condBySet = append(condBySet, &entity.ItemSnapshotVersionCond{
 				EvalSetID:        p.EvalSetID,
 				EvalSetVersionID: p.EvalSetVersionID,
@@ -3053,12 +3073,18 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 
 	filter.ItemSnapshotCondBySet = condBySet
 	filter.KeywordItemSnapshotCondBySet = keywordCondBySet
-	// 带了条件却没有任何评测集能完整翻译出来 → 语义是命中 0 条。
-	// 老实现在这里把条件 continue 掉，退化成"不筛"，返回全量数据。
-	filter.ItemSnapshotCondUnmatched = (hasCond && len(condBySet) == 0) ||
-		(hasKeywordCond && len(keywordCondBySet) == 0)
+	// Unmatched 只表示「字段翻译不出来」：任何评测集都没有该 field_key 的 mapping，
+	// 语义是命中 0 条（老实现在这里 continue 丢条件，退化成"不筛"、返回全量数据）。
+	//
+	// 注意与「翻译出来了但该组不可查」区分：后者(version/分区日期缺失)不置 Unmatched，
+	// per-set 列表为空 → DAO 退回单值老路径，保住老数据的兜底能力，绝不静默返 0。
+	filter.ItemSnapshotCondUnmatched = (hasCond && !translatedCond) ||
+		(hasKeywordCond && !translatedKeywordCond)
 	if filter.ItemSnapshotCondUnmatched {
 		logs.CtxWarn(ctx, "item snapshot filter matched no eval set, exptID: %v, hasCond: %v, hasKeywordCond: %v", baseExpt.ID, hasCond, hasKeywordCond)
+	}
+	if !filter.ItemSnapshotCondUnmatched && hasCond && len(condBySet) == 0 {
+		logs.CtxWarn(ctx, "item snapshot per-set conds all unqueryable, fallback to single-value path, exptID: %v", baseExpt.ID)
 	}
 
 	return nil
