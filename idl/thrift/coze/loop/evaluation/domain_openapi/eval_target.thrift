@@ -207,10 +207,16 @@ struct CustomAgent {
 typedef string SandboxAgentType (ts.enum="true")
 const SandboxAgentType SandboxAgentType_SingleRunCLI = "single_run_cli" // 单次运行 CLI 模式
 
-// 单/双沙箱模式；未填 / 未识别一律按 Single 处理。
+// 沙箱资源拓扑；未填 / 未识别一律按 Single 处理。
 typedef string SandboxCountMode (ts.enum="true")
-const SandboxCountMode SandboxCountMode_Single = "single" // 单沙箱执行链路
-const SandboxCountMode SandboxCountMode_Dual   = "dual"   // 先起从属沙箱拿 session id，再起主沙箱运行 sandbox-pipeline
+// 单沙箱执行链路
+const SandboxCountMode SandboxCountMode_Single = "single"
+// 先起从属沙箱拿 session id，再起主沙箱运行 sandbox-pipeline
+const SandboxCountMode SandboxCountMode_Dual = "dual"
+// Mac VM + orchestrator sandbox
+const SandboxCountMode SandboxCountMode_MacVMPlusSandbox = "mac_vm_plus_sandbox"
+// orchestrator + SSH/Runner sandbox + Mac VM Remote-SSH IDE
+const SandboxCountMode SandboxCountMode_MacVMPlusSSH = "mac_vm_plus_ssh"
 
 // 环境变量键值对
 struct SandboxEnvVar {
@@ -249,7 +255,7 @@ struct SandboxAgent {
     // 沙箱镜像
     8: optional string image
 
-    // 单/双沙箱模式；空值按 Single 处理
+    // 沙箱资源拓扑；空值按 Single 处理
     9: optional SandboxCountMode sandbox_count_mode
 }
 
