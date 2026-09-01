@@ -1329,15 +1329,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 			if e.sandboxSchedulerAdapter == nil {
 				return
 			}
-			executeIDs := e.debugSandboxExecuteIDs(ctx, req.GetWorkspaceID(), req.GetInvokeID())
-			if _, derr := e.sandboxSchedulerAdapter.Destroy(ctx, &rpc.SandboxDestroyRequest{
-				TaskID:      "sandbox_debug",
-				DestroyType: rpc.SandboxDestroyTypeExecute,
-				ExecuteIDs:  executeIDs,
-				WorkspaceID: req.GetWorkspaceID(),
-			}); derr != nil {
-				logs.CtxWarn(ctx, "[SandboxDestroy] destroy sandbox debug execute fail, invoke_id=%d, execute_ids=%v, err=%v", req.GetInvokeID(), executeIDs, derr)
-			}
+			// 回调超时/取消后仍必须先从 record 读到 operator 回传的真实 execute 列表，再销毁；
+			// 只在 Destroy 内剥离取消会让这里的 GetRecordByID 先失败并退化为裸 invokeID，
+			// mac_vm_plus_ssh 的 ssh/orch/mac 三个 execution 仍会全部漏掉。
+			e.cleanupDebugSandboxExecutions(ctx, req.GetWorkspaceID(), req.GetInvokeID())
 		}()
 		logs.CtxInfo(ctx, "report target record (debug), record_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
 	} else {
@@ -1434,6 +1429,41 @@ func (e *EvalOpenAPIApplication) debugSandboxExecuteIDs(ctx context.Context, spa
 		return fallback
 	}
 	return out
+}
+
+func (e *EvalOpenAPIApplication) cleanupDebugSandboxExecutions(ctx context.Context, spaceID, invokeID int64) {
+	cleanupCtx := context.WithoutCancel(ctx)
+	executeIDs := e.debugSandboxExecuteIDs(cleanupCtx, spaceID, invokeID)
+	e.destroyDebugSandboxExecutions(cleanupCtx, spaceID, invokeID, executeIDs)
+}
+
+// destroyDebugSandboxExecutions 按 execute 所属 task 分组销毁 Debug 资源。
+// mac_vm_plus_sandbox / mac_vm_plus_ssh 的 "-macvm" execution 属 sandbox_debug-macvm；
+// SSH 与 orchestrator execution 都属 sandbox_debug。Destroy 是 task 级接口，不能混发。
+func (e *EvalOpenAPIApplication) destroyDebugSandboxExecutions(ctx context.Context, spaceID, invokeID int64, executeIDs []string) {
+	if e == nil || e.sandboxSchedulerAdapter == nil || len(executeIDs) == 0 {
+		return
+	}
+	byTask := map[string][]string{}
+	for _, executeID := range executeIDs {
+		taskID := sandboxDebugTaskID
+		if strings.HasSuffix(executeID, sandboxMacVMTaskIDSuffix) {
+			taskID += sandboxMacVMTaskIDSuffix
+		}
+		byTask[taskID] = append(byTask[taskID], executeID)
+	}
+	destroyCtx := context.WithoutCancel(ctx)
+	for taskID, ids := range byTask {
+		if _, err := e.sandboxSchedulerAdapter.Destroy(destroyCtx, &rpc.SandboxDestroyRequest{
+			TaskID:      taskID,
+			DestroyType: rpc.SandboxDestroyTypeExecute,
+			ExecuteIDs:  ids,
+			WorkspaceID: spaceID,
+		}); err != nil {
+			logs.CtxWarn(destroyCtx, "[SandboxDestroy] destroy sandbox debug execute fail, invoke_id=%d, task_id=%s, execute_ids=%v, err=%v",
+				invokeID, taskID, ids, err)
+		}
+	}
 }
 
 // emitSandboxAgentInvokeFinished 组装 tags 并上报 invoke_finished / invoke_duration.
@@ -3812,21 +3842,25 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 		}, nil
 	case openapiEvalTarget.EvalTargetTypeSandboxAgent:
 		if e.sandboxSchedulerAdapter != nil {
+			mode := entity.SandboxCountModeSingle
+			if agent := req.GetSandboxAgent(); agent != nil {
+				mode = entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode()))
+			}
 			tenant := rpc.SandboxTenantDefault
-			if agent := req.GetSandboxAgent(); agent != nil &&
-				entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode())) == entity.SandboxCountModeDual {
+			switch mode {
+			case entity.SandboxCountModeDual:
 				// 双沙箱 debug 走**旧链路租户**: 本入口是评测对象级调试, 请求里没有实验、
 				// 也没有 run_mode_config, 无从判断新旧链路 (见 entity.IsNewRunModeLink)。
 				// 新链路租户只由实验提交/重试链路按 run_mode 推导, 见 experiment_app.go
 				// dualSandboxTenantByRunMode。
 				tenant = rpc.SandboxTenantFornaxTraeEvalDualSandbox
+			case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
+				tenant = rpc.SandboxTenantFornaxEvalGeneralGUI
 			}
-			if _, initErr := e.sandboxSchedulerAdapter.Init(ctx, &rpc.SandboxInitRequest{
-				TaskID:      "sandbox_debug",
-				Concurrency: 50,
-				WorkspaceID: req.GetWorkspaceID(),
-				Tenant:      tenant,
-			}); initErr != nil {
+			// Debug 没有 ItemConcurNum；保留原基础 task 的固定 50 execution 配额，
+			// Mac VM 拓扑新增同容量的独立 task。基础 task 在 SSH 模式下每次占 ssh+orch 两份。
+			if initErr := initSandboxTasksByTaskID(ctx, e.sandboxSchedulerAdapter, "debug target", sandboxDebugTaskID,
+				sandboxTaskConcurrency{sandbox: 50, macVM: 50}, req.GetWorkspaceID(), tenant); initErr != nil {
 				return nil, errorx.Wrapf(initErr, "init sandbox debug task fail")
 			}
 		}
@@ -4084,6 +4118,17 @@ func (e *EvalOpenAPIApplication) UpdateExptRunConfOApi(ctx context.Context, req 
 		Session:       session,
 	}); err != nil {
 		return nil, err
+	}
+
+	// 与内部面 UpdateExptRunConf 共用同一套 task 拓扑计算。OpenAPI 的 GetDetail 已填充
+	// Target，因此 mac_vm_plus_ssh 可以直接按基础 sandbox task=ssh+orch 两份、
+	// -macvm task=一份重置配额；不能按 GUI tenant 整体翻倍，否则会错误放大 Mac VM 名额。
+	// 与内部面保持一致：DB 更新已经成功后，re-Init 失败只告警，不让调用方误以为配置未落库。
+	if itemConcurNum != nil {
+		if initErr := reinitSandboxTaskForExperiment(ctx, "update run conf openapi", do, itemConcurNum, req.GetWorkspaceID(), e.targetSvc, e.sandboxSchedulerAdapter); initErr != nil {
+			logs.CtxWarn(ctx, "update run conf openapi: re-init sandbox task fail, sandbox quota still at the old value, expt_id=%d, item_concur_num=%d, err=%v",
+				req.GetExperimentID(), gptr.Indirect(itemConcurNum), initErr)
+		}
 	}
 
 	return &openapi.UpdateExptRunConfOApiResponse{}, nil

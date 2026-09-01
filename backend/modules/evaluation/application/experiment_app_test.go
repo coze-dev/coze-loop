@@ -913,6 +913,66 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 			wantCode: 0,
 		},
 		{
+			name: "mac_vm_plus_ssh submit uses split task concurrency",
+			req: &exptpb.SubmitExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				Name:        gptr.Of("mac_vm_plus_ssh_experiment"),
+				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_SandboxAgent),
+				},
+				Session: &common.Session{
+					UserID: gptr.Of(int64(789)),
+				},
+				ItemConcurNum:      gptr.Of(int32(1)),
+				TargetFieldMapping: &expt.TargetFieldMapping{},
+			},
+			mockSetup: func() {
+				sandboxExpt := *validExpt
+				sandboxExpt.Name = "mac_vm_plus_ssh_experiment"
+				sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
+				sandboxExpt.Target = &entity.EvalTarget{
+					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+						SandboxAgent:   &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeMacVMPlusSSH},
+					},
+				}
+				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), &entity.Session{UserID: "789", AppID: 0}).Return(&sandboxExpt, nil)
+
+				gotConcurrency := map[string]int32{}
+				gotResourceType := map[string]rpc.SandboxResourceType{}
+				mockSandboxScheduler.EXPECT().Init(gomock.Any(), gomock.Any()).Times(2).
+					DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+						gotConcurrency[req.TaskID] = req.Concurrency
+						gotResourceType[req.TaskID] = req.ResourceType
+						assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, req.Tenant)
+						return &rpc.SandboxInitResponse{}, nil
+					})
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
+				mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, gomock.Any(), validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
+				mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(context.Context, int64, int64, int64, int, *entity.Session, entity.ExptRunMode, map[string]string) error {
+						assert.Equal(t, int32(10), gotConcurrency["456"], "基础 task 每 item 有 ssh+orch 两个 execution")
+						assert.Equal(t, int32(5), gotConcurrency["456-macvm"], "Mac VM task 每 item 只有一个 execution")
+						assert.Equal(t, rpc.SandboxResourceTypeSandbox, gotResourceType["456"])
+						assert.Equal(t, rpc.SandboxResourceTypeMacVM, gotResourceType["456-macvm"])
+						return nil
+					})
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			wantResp: &exptpb.SubmitExperimentResponse{
+				Experiment: &expt.Experiment{
+					ID:     gptr.Of(validExptID),
+					Name:   gptr.Of("mac_vm_plus_ssh_experiment"),
+					Desc:   gptr.Of("test description"),
+					Status: gptr.Of(expt.ExptStatus_Pending),
+				},
+				RunID:    gptr.Of(validRunID),
+				BaseResp: base.NewBaseResp(),
+			},
+			wantErr: false,
+		},
+		{
 			name: "parameter validation failed - CreateEvalTargetParam is empty",
 			req: &exptpb.SubmitExperimentRequest{
 				WorkspaceID: validWorkspaceID,
@@ -7426,6 +7486,43 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 			ExptID:      gptr.Of(validExptID),
 		})
 		assert.NoError(t, err)
+	})
+
+	t.Run("SandboxAgent mac_vm_plus_ssh retry uses split task concurrency", func(t *testing.T) {
+		sandboxExpt := *baseExpt
+		sandboxExpt.TargetType = entity.EvalTargetTypeSandboxAgent
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&sandboxExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockEvalTargetSvc.EXPECT().GetEvalTargetVersion(gomock.Any(), validWorkspaceID, validTargetVersionID, false).
+			Return(&entity.EvalTarget{
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+					SandboxAgent:   &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeMacVMPlusSSH},
+				},
+			}, nil)
+
+		gotConcurrency := map[string]int32{}
+		gotResourceType := map[string]rpc.SandboxResourceType{}
+		mockSandboxScheduler.EXPECT().Init(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+				gotConcurrency[req.TaskID] = req.Concurrency
+				gotResourceType[req.TaskID] = req.ResourceType
+				assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, req.Tenant)
+				return &rpc.SandboxInitResponse{}, nil
+			})
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, int32(50), gotConcurrency["456"], "默认 item 并发 5，基础 task 按 ssh+orch 两倍再乘 buffer")
+		assert.Equal(t, int32(25), gotConcurrency["456-macvm"], "Mac VM task 不跟随基础 task 翻倍")
+		assert.Equal(t, rpc.SandboxResourceTypeSandbox, gotResourceType["456"])
+		assert.Equal(t, rpc.SandboxResourceTypeMacVM, gotResourceType["456-macvm"])
 	})
 
 	t.Run("shared SandboxAgent retry loads target from source space", func(t *testing.T) {

@@ -89,6 +89,51 @@ func TestUpdateExptRunConf_ReInitsSandboxTaskOnConcurrencyChange(t *testing.T) {
 		}
 	})
 
+	t.Run("mac_vm_plus_ssh → 基础 task 按 ssh+orch 翻倍，Mac VM task 不翻倍", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockManager := servicemocks.NewMockIExptManager(ctrl)
+		mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+		mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+		mockSched := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
+		mockTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+
+		// manager.Get 是基础查询，生产形态下不带 Target；Update 必须主动加载后再算 task 拓扑。
+		expt := &entity.Experiment{
+			ID: exptID, SpaceID: workspaceID, Status: entity.ExptStatus_Processing, CreatedBy: userID,
+			TargetType: entity.EvalTargetTypeSandboxAgent, TargetVersionID: 999,
+		}
+		mockManager.EXPECT().Get(gomock.Any(), exptID, workspaceID, &entity.Session{}).Return(expt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockConfiger.EXPECT().GetExptExecConf(gomock.Any(), workspaceID).Return(execConf).AnyTimes()
+		mockManager.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).Return(nil)
+		mockTargetSvc.EXPECT().GetEvalTargetVersion(gomock.Any(), workspaceID, int64(999), false).Return(&entity.EvalTarget{
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				SandboxAgent:   &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeMacVMPlusSSH},
+			},
+		}, nil)
+
+		gotConcurrency := map[string]int32{}
+		mockSched.EXPECT().Init(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+				gotConcurrency[req.TaskID] = req.Concurrency
+				assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, req.Tenant)
+				return &rpc.SandboxInitResponse{}, nil
+			})
+
+		app := &experimentApplication{
+			manager: mockManager, auth: mockAuth, configer: mockConfiger,
+			sandboxSchedulerAdapter: mockSched, evalTargetService: mockTargetSvc,
+		}
+		_, err := app.UpdateExptRunConf(context.Background(), &exptpb.UpdateExptRunConfRequest{
+			ExptID: exptID, WorkspaceID: workspaceID, ItemConcurNum: gptr.Of(int32(30)),
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, int32(300), gotConcurrency["456"], "基础 task 每 item 有 ssh+orch 两个 execution")
+		assert.Equal(t, int32(150), gotConcurrency["456-macvm"], "Mac VM task 每 item 只有一个 execution")
+	})
+
 	t.Run("只改重试数 → 不该动沙箱任务", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -158,15 +203,17 @@ func TestUpdateExptRunConf_ReInitsSandboxTaskOnConcurrencyChange(t *testing.T) {
 
 // TestInitSandboxTask 覆盖 initSandboxTask 的三条路径：
 //   - nil adapter：直接返回 nil，不触发任何 RPC；
-//   - GUI 租户（mac_vm_plus_sandbox）：Init 两个 task —— 基础 taskID(Sandbox) + taskID+"-macvm"(MacVM)，
-//     两者共用同一租户/并发；
+//   - GUI 租户：Init 两个 task —— 基础 taskID(Sandbox) + taskID+"-macvm"(MacVM)，
+//     两者共用租户，但使用各自的 task 并发；
 //   - GUI 租户下任一 Init 失败：整体返回 error。
 func TestInitSandboxTask(t *testing.T) {
 	const (
-		exptID      int64 = 42
-		workspaceID int64 = 7
-		concurrency int32 = 5
+		exptID             int64 = 42
+		workspaceID        int64 = 7
+		sandboxConcurrency int32 = 10
+		macVMConcurrency   int32 = 5
 	)
+	concurrency := sandboxTaskConcurrency{sandbox: sandboxConcurrency, macVM: macVMConcurrency}
 
 	t.Run("nil adapter 不触发 RPC", func(t *testing.T) {
 		app := &experimentApplication{}
@@ -179,13 +226,14 @@ func TestInitSandboxTask(t *testing.T) {
 		defer ctrl.Finish()
 		mockSched := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
 
-		got := map[string]rpc.SandboxResourceType{}
+		gotResourceType := map[string]rpc.SandboxResourceType{}
+		gotConcurrency := map[string]int32{}
 		mockSched.EXPECT().Init(gomock.Any(), gomock.Any()).Times(2).
 			DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
-				got[req.TaskID] = req.ResourceType
-				// 两个 task 必须共用 GUI 租户与同一并发
+				gotResourceType[req.TaskID] = req.ResourceType
+				gotConcurrency[req.TaskID] = req.Concurrency
+				// 两个 task 必须共用 GUI 租户，但并发度按各自 execution 数计算。
 				assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, req.Tenant)
-				assert.Equal(t, concurrency, req.Concurrency)
 				assert.Equal(t, workspaceID, req.WorkspaceID)
 				return &rpc.SandboxInitResponse{}, nil
 			})
@@ -193,8 +241,10 @@ func TestInitSandboxTask(t *testing.T) {
 		app := &experimentApplication{sandboxSchedulerAdapter: mockSched}
 		err := app.initSandboxTask(context.Background(), "test", exptID, concurrency, workspaceID, rpc.SandboxTenantFornaxEvalGeneralGUI)
 		assert.NoError(t, err)
-		assert.Equal(t, rpc.SandboxResourceTypeSandbox, got["42"], "基础 taskID 落 Sandbox")
-		assert.Equal(t, rpc.SandboxResourceTypeMacVM, got["42-macvm"], "-macvm taskID 落 MacVM")
+		assert.Equal(t, rpc.SandboxResourceTypeSandbox, gotResourceType["42"], "基础 taskID 落 Sandbox")
+		assert.Equal(t, rpc.SandboxResourceTypeMacVM, gotResourceType["42-macvm"], "-macvm taskID 落 MacVM")
+		assert.Equal(t, sandboxConcurrency, gotConcurrency["42"], "基础 task 使用 ssh+orch 的并发度")
+		assert.Equal(t, macVMConcurrency, gotConcurrency["42-macvm"], "Mac VM task 不应跟随基础 task 翻倍")
 	})
 
 	t.Run("GUI 租户任一 Init 失败即返回 error", func(t *testing.T) {

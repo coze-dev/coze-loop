@@ -9132,6 +9132,149 @@ func TestEvalOpenAPIApplication_UpdateExptRunConfOApi(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("mac_vm_plus_ssh 并发更新按 task 拆成 2/1", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := servicemocks.NewMockIExptManager(ctrl)
+		auth := rpcmocks.NewMockIAuthProvider(ctrl)
+		cfg := configermocks.NewMockIConfiger(ctrl)
+		scheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
+
+		sshDetail := &entity.Experiment{
+			ID: exptID, SpaceID: wsID, Status: entity.ExptStatus_Processing, CreatedBy: userID,
+			TargetType: entity.EvalTargetTypeSandboxAgent,
+			Target: &entity.EvalTarget{
+				EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					EvalTargetType: entity.EvalTargetTypeSandboxAgent,
+					SandboxAgent:   &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeMacVMPlusSSH},
+				},
+			},
+		}
+		mgr.EXPECT().GetDetail(gomock.Any(), exptID, wsID, gomock.Any()).Return(sshDetail, nil)
+		auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		cfg.EXPECT().GetExptExecConf(gomock.Any(), wsID).Return(execConf)
+		mgr.EXPECT().UpdateRunConf(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, p *entity.UpdateRunConfParam) error {
+				assert.Equal(t, 1, gptr.Indirect(p.ItemConcurNum))
+				return nil
+			})
+
+		gotConcurrency := map[string]int32{}
+		gotResourceType := map[string]rpc.SandboxResourceType{}
+		scheduler.EXPECT().Init(gomock.Any(), gomock.Any()).Times(2).
+			DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+				gotConcurrency[req.TaskID] = req.Concurrency
+				gotResourceType[req.TaskID] = req.ResourceType
+				assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, req.Tenant)
+				assert.Equal(t, wsID, req.WorkspaceID)
+				return &rpc.SandboxInitResponse{}, nil
+			})
+
+		app := &EvalOpenAPIApplication{
+			auth: auth, manager: mgr, configer: cfg,
+			sandboxSchedulerAdapter: scheduler, metric: &fakeOpenAPIMetric{},
+		}
+		_, err := app.UpdateExptRunConfOApi(context.Background(), &openapi.UpdateExptRunConfOApiRequest{
+			WorkspaceID: gptr.Of(wsID), ExperimentID: gptr.Of(exptID), ItemConcurNum: gptr.Of(int32(1)),
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, int32(10), gotConcurrency["456"], "基础 task 每 item 有 ssh+orch 两个 execution")
+		assert.Equal(t, int32(5), gotConcurrency["456-macvm"], "Mac VM task 每 item 只有一个 execution")
+		assert.Equal(t, rpc.SandboxResourceTypeSandbox, gotResourceType["456"])
+		assert.Equal(t, rpc.SandboxResourceTypeMacVM, gotResourceType["456-macvm"])
+	})
+}
+
+func TestEvalOpenAPIApplication_AsyncDebugEvalTargetOApi_MacVMPlusSSHInitsBothTasks(t *testing.T) {
+	const (
+		workspaceID int64 = 123
+		invokeID    int64 = 456
+	)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	scheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
+	targetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+	asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+
+	gotConcurrency := map[string]int32{}
+	gotResourceType := map[string]rpc.SandboxResourceType{}
+	scheduler.EXPECT().Init(gomock.Any(), gomock.Any()).Times(2).
+		DoAndReturn(func(_ context.Context, req *rpc.SandboxInitRequest) (*rpc.SandboxInitResponse, error) {
+			gotConcurrency[req.TaskID] = req.Concurrency
+			gotResourceType[req.TaskID] = req.ResourceType
+			assert.Equal(t, rpc.SandboxTenantFornaxEvalGeneralGUI, req.Tenant)
+			assert.Equal(t, workspaceID, req.WorkspaceID)
+			return &rpc.SandboxInitResponse{}, nil
+		})
+	targetSvc.EXPECT().AsyncDebugTarget(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, param *entity.DebugTargetParam) (*entity.EvalTargetRecord, string, error) {
+			require.NotNil(t, param.PatchyTarget)
+			require.NotNil(t, param.PatchyTarget.EvalTargetVersion)
+			require.NotNil(t, param.PatchyTarget.EvalTargetVersion.SandboxAgent)
+			assert.Equal(t, entity.SandboxCountModeMacVMPlusSSH, param.PatchyTarget.EvalTargetVersion.SandboxAgent.SandboxCountMode)
+			return &entity.EvalTargetRecord{ID: invokeID}, "sandbox-agent", nil
+		})
+	asyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(invokeID, 10), gomock.Any()).Return(nil)
+
+	app := &EvalOpenAPIApplication{
+		auth: auth, sandboxSchedulerAdapter: scheduler, targetSvc: targetSvc,
+		asyncRepo: asyncRepo, metric: &fakeOpenAPIMetric{},
+	}
+	resp, err := app.AsyncDebugEvalTargetOApi(context.Background(), &openapi.AsyncDebugEvalTargetOApiRequest{
+		WorkspaceID:    gptr.Of(workspaceID),
+		EvalTargetType: gptr.Of(openapiEvalTarget.EvalTargetTypeSandboxAgent),
+		Param:          gptr.Of("{}"),
+		SandboxAgent: &openapiEvalTarget.SandboxAgent{
+			SandboxCountMode: gptr.Of(string(entity.SandboxCountModeMacVMPlusSSH)),
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, invokeID, resp.GetData().GetInvokeID())
+	assert.Equal(t, int32(50), gotConcurrency[sandboxDebugTaskID])
+	assert.Equal(t, int32(50), gotConcurrency[sandboxDebugTaskID+sandboxMacVMTaskIDSuffix])
+	assert.Equal(t, rpc.SandboxResourceTypeSandbox, gotResourceType[sandboxDebugTaskID])
+	assert.Equal(t, rpc.SandboxResourceTypeMacVM, gotResourceType[sandboxDebugTaskID+sandboxMacVMTaskIDSuffix])
+}
+
+func TestEvalOpenAPIApplication_DestroyDebugSandboxExecutionsSplitsMacVMTask(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	scheduler := rpcmocks.NewMockISandboxSchedulerAdapter(ctrl)
+	targetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+
+	got := map[string][]string{}
+	targetSvc.EXPECT().GetRecordByID(gomock.Any(), int64(123), int64(456)).DoAndReturn(
+		func(ctx context.Context, _, _ int64) (*entity.EvalTargetRecord, error) {
+			assert.NoError(t, ctx.Err(), "读取真实 execute ID 也必须剥离已取消的请求 context")
+			return &entity.EvalTargetRecord{
+				ID: 456,
+				EvalTargetOutputData: &entity.EvalTargetOutputData{Ext: map[string]string{
+					consts.OutputDataExtKeySandboxExecuteIDs: `["456-ssh","456-orch","456-macvm"]`,
+				}},
+			}, nil
+		})
+	scheduler.EXPECT().Destroy(gomock.Any(), gomock.Any()).Times(2).
+		DoAndReturn(func(ctx context.Context, req *rpc.SandboxDestroyRequest) (*rpc.SandboxDestroyResponse, error) {
+			assert.NoError(t, ctx.Err(), "清理必须剥离已取消的请求 context")
+			got[req.TaskID] = append([]string(nil), req.ExecuteIDs...)
+			assert.Equal(t, int64(123), req.WorkspaceID)
+			assert.Equal(t, rpc.SandboxDestroyTypeExecute, req.DestroyType)
+			return &rpc.SandboxDestroyResponse{}, nil
+		})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	app := &EvalOpenAPIApplication{sandboxSchedulerAdapter: scheduler, targetSvc: targetSvc}
+	app.cleanupDebugSandboxExecutions(ctx, 123, 456)
+
+	assert.ElementsMatch(t, []string{"456-ssh", "456-orch"}, got[sandboxDebugTaskID])
+	assert.Equal(t, []string{"456-macvm"}, got[sandboxDebugTaskID+sandboxMacVMTaskIDSuffix])
 }
 
 // TestEvalOpenAPIApplication_emitSandboxAgentInvokeFinished 覆盖沙箱 agent 回调侧

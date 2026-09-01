@@ -89,6 +89,11 @@ type experimentApplication struct {
 
 const sandboxSchedulerInitTimeout = 5 * time.Second
 
+const (
+	sandboxDebugTaskID       = "sandbox_debug"
+	sandboxMacVMTaskIDSuffix = "-macvm"
+)
+
 // sandboxConcurrencyBuffer 是沙箱任务并发配额的余量系数（见 sandboxInitConcurrency）。
 //
 // 从 1.2 放大到 5：1.2 的余量隐含假设「item 跑完即归还名额」，实测该假设不成立 ——
@@ -624,14 +629,18 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	}
 
 	// SandboxAgent 评测对象：在 RunExperiment 前同步初始化沙箱任务。
-	// Concurrency 沿用实验并发度（ItemConcurNum）且做 NormalizeSubmitItemConcurNum 兜底；
-	// 双沙箱模式一次评测占用 2 个沙箱 execute，Init 上限放大 2 倍。
+	// Concurrency 沿用实验并发度（ItemConcurNum）且做 NormalizeSubmitItemConcurNum 兜底，
+	// 再按实际 task 拓扑计算：Dual 与 mac_vm_plus_ssh 的基础 task 每 item 占 2 个 execution；
+	// Mac VM 独立 task 每 item 始终只占 1 个，不能跟随基础 task 一起翻倍。
 	// Init 失败即视为启动实验失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
 	if e.sandboxSchedulerAdapter != nil &&
 		cresp.GetExperiment().GetEvalTarget().GetEvalTargetType() == domain_eval_target.EvalTargetType_SandboxAgent {
 		exptID := cresp.GetExperiment().GetID()
 		tenant := sandboxTenantForExperimentDTO(cresp.GetExperiment())
-		concurrency := sandboxInitConcurrency(ptr.ConvIntPtr[int32, int](req.ItemConcurNum), isDualSandboxTenant(tenant))
+		concurrency := sandboxTaskConcurrencyForMode(
+			ptr.ConvIntPtr[int32, int](req.ItemConcurNum),
+			sandboxCountModeForExperimentDTO(cresp.GetExperiment()),
+		)
 		if err := e.initSandboxTask(ctx, "submit experiment", exptID, concurrency, req.GetWorkspaceID(), tenant); err != nil {
 			return nil, err
 		}
@@ -1415,7 +1424,7 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 	// ⚠️ **原注释此处写着"tenant 由同一个实验推导，不会变"，该结论已失效**：它写于双沙箱租户恒定
 	// 的那一版，此后引入了按 run_mode 分新旧链路，同一个实验在不同代码版本下会推出不同 tenant
 	// （存量 task 上刻的是老租户，新代码推出新租户），于是本处 Init 也会撞上上面那条拒绝。
-	// 要定位是哪次改动引入的分流，用 git log -S isDualSandboxTenant / -S dualSandboxTenantByRunMode。
+	// 要定位是哪次改动引入的分流，用 git log -S dualSandboxTenantByRunMode。
 	//
 	// 与 Retry 不同，Init 失败**不**让整个更新失败：DB 里的 ItemConcurNum 已经改完了，此时返回错误
 	// 会让调用方以为没生效而重试，反而更乱。名额没跟上的后果是新并发暂时吃不满（老名额仍可用，
@@ -1425,12 +1434,10 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 	// 实际名额停在 Init 时那份，超出部分全部撞上面说的 601300702 fail-fast、item 成批永久失败
 	// —— 即上面"5 调到 30 挂 35 题"那个后果，却连一条错误都不冒（只有这条 warn）。
 	// 排查时若见并发调了不生效，先在日志里搜本条 warn 的 err 内容有没有 "cannot change tenant"。
-	if itemConcurNum != nil && e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
-		tenant := sandboxTenantForExperimentEntity(got)
-		concurrency := sandboxInitConcurrency(itemConcurNum, isDualSandboxTenant(tenant))
-		if initErr := e.initSandboxTask(ctx, "update run conf", req.GetExptID(), concurrency, req.GetWorkspaceID(), tenant); initErr != nil {
-			logs.CtxWarn(ctx, "update run conf: re-init sandbox task fail, sandbox quota still at the old value, expt_id=%d, item_concur_num=%d, concurrency=%d, err=%v",
-				req.GetExptID(), gptr.Indirect(itemConcurNum), concurrency, initErr)
+	if itemConcurNum != nil {
+		if initErr := reinitSandboxTaskForExperiment(ctx, "update run conf", got, itemConcurNum, req.GetWorkspaceID(), e.evalTargetService, e.sandboxSchedulerAdapter); initErr != nil {
+			logs.CtxWarn(ctx, "update run conf: re-init sandbox task fail, sandbox quota still at the old value, expt_id=%d, item_concur_num=%d, err=%v",
+				req.GetExptID(), gptr.Indirect(itemConcurNum), initErr)
 		}
 	}
 
@@ -1599,27 +1606,14 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 
 	// SandboxAgent 评测对象：重试前重新初始化沙箱任务。
 	// 首次运行结束后每条 execute 已被 destroy，沙箱侧任务不再持有可用 execute，Retry 必须重跑一次 Init 才能继续 SandboxRun。
-	// 与 Submit 保持一致：并发度先归一化，再按双沙箱模式放大 2 倍。
+	// 与 Submit 保持一致：并发度先归一化，再按实际 task 的 execution 数分别计算。
 	// Init 失败即视为重试失败，直接向调用方返回错误，避免后续 SandboxRun 依赖一个未成功初始化的沙箱任务。
 	if e.sandboxSchedulerAdapter != nil && isSandboxAgentExperiment(got) {
-		// e.manager.Get 走的是 basic 查询, 不会填充 got.Target;
-		// sandboxTenantForExperimentEntity 在 Target==nil 时会静默回落到 Default (=FornaxTraeEval),
-		// 若首次 Submit 是 Dual (=FornaxTraeEvalDoubleSandbox), 这里就会以错误 tenant 去 Init 已存在的沙箱任务,
-		// 触发 "cannot change tenant of active task"。故 Init 前显式补齐 target。
-		if got.Target == nil || got.Target.EvalTargetVersion == nil {
-			targetSpaceID := req.GetWorkspaceID()
-			if got.TargetSpaceID > 0 {
-				targetSpaceID = got.TargetSpaceID
-			}
-			target, err := e.evalTargetService.GetEvalTargetVersion(ctx, targetSpaceID, got.TargetVersionID, false)
-			if err != nil {
-				return nil, err
-			}
-			got.Target = target
+		var itemConcurNum *int
+		if got.EvalConf != nil {
+			itemConcurNum = got.EvalConf.ItemConcurNum
 		}
-		tenant := sandboxTenantForExperimentEntity(got)
-		concurrency := sandboxInitConcurrency(got.EvalConf.ItemConcurNum, isDualSandboxTenant(tenant))
-		if err := e.initSandboxTask(ctx, "retry experiment", req.GetExptID(), concurrency, req.GetWorkspaceID(), tenant); err != nil {
+		if err := reinitSandboxTaskForExperiment(ctx, "retry experiment", got, itemConcurNum, req.GetWorkspaceID(), e.evalTargetService, e.sandboxSchedulerAdapter); err != nil {
 			return nil, err
 		}
 	}
@@ -1655,15 +1649,29 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 	}, nil
 }
 
-func (e *experimentApplication) initSandboxTask(ctx context.Context, scene string, exptID int64, concurrency int32, workspaceID int64, tenant rpc.SandboxTenant) error {
-	if e == nil || e.sandboxSchedulerAdapter == nil {
+func (e *experimentApplication) initSandboxTask(ctx context.Context, scene string, exptID int64, concurrency sandboxTaskConcurrency, workspaceID int64, tenant rpc.SandboxTenant) error {
+	if e == nil {
+		return nil
+	}
+	return initSandboxTasks(ctx, e.sandboxSchedulerAdapter, scene, exptID, concurrency, workspaceID, tenant)
+}
+
+func initSandboxTasks(ctx context.Context, adapter rpc.ISandboxSchedulerAdapter, scene string, exptID int64, concurrency sandboxTaskConcurrency, workspaceID int64, tenant rpc.SandboxTenant) error {
+	return initSandboxTasksByTaskID(ctx, adapter, scene, strconv.FormatInt(exptID, 10), concurrency, workspaceID, tenant)
+}
+
+// initSandboxTasksByTaskID 同时服务实验 task 与固定的 sandbox_debug task，确保 Submit/Retry/Update/Debug
+// 对 Mac VM 拓扑使用完全相同的 task 划分。concurrency 已是 task 粒度的 execution 配额。
+func initSandboxTasksByTaskID(ctx context.Context, adapter rpc.ISandboxSchedulerAdapter, scene, taskID string, concurrency sandboxTaskConcurrency, workspaceID int64, tenant rpc.SandboxTenant) error {
+	if adapter == nil {
 		return nil
 	}
 
 	initCtx, cancel := context.WithTimeout(ctx, sandboxSchedulerInitTimeout)
 	defer cancel()
 
-	// mac_vm_plus_sandbox 链路：一次实验 Init 两个 task，共用 GUI 租户、同一并发，靠 ResourceType 区分：
+	// mac_vm_plus_sandbox / mac_vm_plus_ssh 链路：一次实验 Init 两个 task，共用 GUI 租户，
+	// 靠 ResourceType 区分并使用各自的 execution 并发：
 	//   - sandbox task：TaskID=expt_id，ResourceType=Sandbox（orchestrator 落 Linux 沙箱）
 	//   - mac_vm task ：TaskID=expt_id+"-macvm"，ResourceType=MacVM（被测桌面 agent 落 Mac VM warm pool）
 	// taskID 后缀必须与 operator 侧 macVMTaskID 一致（target_source_sandbox_agent_impl.go）。
@@ -1672,35 +1680,92 @@ func (e *experimentApplication) initSandboxTask(ctx context.Context, scene strin
 			taskID       string
 			resourceType rpc.SandboxResourceType
 		}{
-			{strconv.FormatInt(exptID, 10), rpc.SandboxResourceTypeSandbox},
-			{strconv.FormatInt(exptID, 10) + "-macvm", rpc.SandboxResourceTypeMacVM},
+			{taskID, rpc.SandboxResourceTypeSandbox},
+			{taskID + sandboxMacVMTaskIDSuffix, rpc.SandboxResourceTypeMacVM},
 		}
 		for _, t := range tasks {
-			if _, initErr := e.sandboxSchedulerAdapter.Init(initCtx, &rpc.SandboxInitRequest{
+			taskConcurrency := concurrency.sandbox
+			if t.resourceType == rpc.SandboxResourceTypeMacVM {
+				taskConcurrency = concurrency.macVM
+			}
+			if _, initErr := adapter.Init(initCtx, &rpc.SandboxInitRequest{
 				TaskID:       t.taskID,
-				Concurrency:  concurrency,
+				Concurrency:  taskConcurrency,
 				WorkspaceID:  workspaceID,
 				Tenant:       tenant,
 				ResourceType: t.resourceType,
 			}); initErr != nil {
-				logs.CtxWarn(initCtx, "init mac_vm+sandbox task fail, scene=%s, expt_id=%d, task_id=%s, resource_type=%d, err=%v", scene, exptID, t.taskID, t.resourceType, initErr)
-				return errorx.Wrapf(initErr, "init mac_vm+sandbox task fail, scene=%s, expt_id=%d, task_id=%s", scene, exptID, t.taskID)
+				logs.CtxWarn(initCtx, "init mac_vm+sandbox task fail, scene=%s, task_id=%s, resource_type=%d, err=%v", scene, t.taskID, t.resourceType, initErr)
+				return errorx.Wrapf(initErr, "init mac_vm+sandbox task fail, scene=%s, task_id=%s", scene, t.taskID)
 			}
 		}
-		logs.CtxInfo(initCtx, "init mac_vm+sandbox tasks success, scene=%s, expt_id=%d, workspace_id=%d, concurrency=%d", scene, exptID, workspaceID, concurrency)
+		logs.CtxInfo(initCtx, "init mac_vm+sandbox tasks success, scene=%s, task_id=%s, workspace_id=%d, sandbox_concurrency=%d, mac_vm_concurrency=%d",
+			scene, taskID, workspaceID, concurrency.sandbox, concurrency.macVM)
 		return nil
 	}
 
-	if _, initErr := e.sandboxSchedulerAdapter.Init(initCtx, &rpc.SandboxInitRequest{
-		TaskID:      strconv.FormatInt(exptID, 10),
-		Concurrency: concurrency,
+	if _, initErr := adapter.Init(initCtx, &rpc.SandboxInitRequest{
+		TaskID:      taskID,
+		Concurrency: concurrency.sandbox,
 		WorkspaceID: workspaceID,
 		Tenant:      tenant,
 	}); initErr != nil {
-		logs.CtxWarn(initCtx, "init sandbox task fail, scene=%s, expt_id=%d, workspace_id=%d, tenant=%d, err=%v", scene, exptID, workspaceID, tenant, initErr)
-		return errorx.Wrapf(initErr, "init sandbox task fail, scene=%s, expt_id=%d", scene, exptID)
+		logs.CtxWarn(initCtx, "init sandbox task fail, scene=%s, task_id=%s, workspace_id=%d, tenant=%d, err=%v", scene, taskID, workspaceID, tenant, initErr)
+		return errorx.Wrapf(initErr, "init sandbox task fail, scene=%s, task_id=%s", scene, taskID)
 	}
-	logs.CtxInfo(initCtx, "init sandbox task success, scene=%s, expt_id=%d, workspace_id=%d, tenant=%d", scene, exptID, workspaceID, tenant)
+	logs.CtxInfo(initCtx, "init sandbox task success, scene=%s, task_id=%s, workspace_id=%d, tenant=%d", scene, taskID, workspaceID, tenant)
+	return nil
+}
+
+// reinitSandboxTaskForExperiment 按实验的实际 topology 重新初始化 sandbox task 配额。
+// Submit 直接持有完整 DTO；Update / Retry 的基础查询可能不带 Target，需在这里统一补齐。
+func reinitSandboxTaskForExperiment(
+	ctx context.Context,
+	scene string,
+	expt *entity.Experiment,
+	itemConcurNum *int,
+	workspaceID int64,
+	targetSvc service.IEvalTargetService,
+	adapter rpc.ISandboxSchedulerAdapter,
+) error {
+	if adapter == nil || !isSandboxAgentExperiment(expt) {
+		return nil
+	}
+	if err := ensureSandboxExperimentTarget(ctx, targetSvc, expt, workspaceID); err != nil {
+		return err
+	}
+	tenant := sandboxTenantForExperimentEntity(expt)
+	concurrency := sandboxTaskConcurrencyForMode(itemConcurNum, sandboxCountModeForExperimentEntity(expt))
+	return initSandboxTasks(ctx, adapter, scene, expt.ID, concurrency, workspaceID, tenant)
+}
+
+// ensureSandboxExperimentTarget 补齐 manager.Get 基础查询中缺失的 target。
+//
+// 沙箱任务的 tenant 和 execution 拓扑都来自 target，不能在 Target==nil 时按 Single/Default
+// 静默兜底：存量 Dual 会换错 tenant，mac_vm_plus_ssh 则会把同一个基础 task 里的 ssh+orch
+// 两个 execution 错算成一个。共享评测对象必须到来源空间查询 target。
+func ensureSandboxExperimentTarget(ctx context.Context, targetSvc service.IEvalTargetService, expt *entity.Experiment, workspaceID int64) error {
+	if expt == nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment is nil"))
+	}
+	if expt.Target != nil && expt.Target.EvalTargetVersion != nil {
+		return nil
+	}
+	if targetSvc == nil {
+		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("eval target service is nil"))
+	}
+	targetSpaceID := workspaceID
+	if expt.TargetSpaceID > 0 {
+		targetSpaceID = expt.TargetSpaceID
+	}
+	target, err := targetSvc.GetEvalTargetVersion(ctx, targetSpaceID, expt.TargetVersionID, false)
+	if err != nil {
+		return err
+	}
+	if target == nil || target.EvalTargetVersion == nil {
+		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg(fmt.Sprintf("target version %d is empty", expt.TargetVersionID)))
+	}
+	expt.Target = target
 	return nil
 }
 
@@ -1720,34 +1785,42 @@ func isSandboxAgentExperiment(expt *entity.Experiment) bool {
 	return false
 }
 
-// sandboxInitConcurrency 计算 SandboxAgent 评测对象 Init 时下发的 Concurrency：
+// sandboxTaskConcurrency 描述一次 Init 中两个独立 task 的 execution 配额。
+// 非 Mac VM 拓扑只使用 sandbox；Mac VM 拓扑必须分别计算，不能按 GUI tenant 整体翻倍：
+// mac_vm_plus_ssh 的基础 task 每 item 有 ssh+orch 两个 execution，而 -macvm task 只有一个。
+type sandboxTaskConcurrency struct {
+	sandbox int32
+	macVM   int32
+}
+
+// sandboxTaskConcurrencyForMode 按实际 execution 拓扑计算 task 粒度配额：
+//   - single: sandbox=1/item
+//   - dual: sandbox=2/item
+//   - mac_vm_plus_sandbox: sandbox=1/item, mac_vm=1/item
+//   - mac_vm_plus_ssh: sandbox=2/item (ssh+orch), mac_vm=1/item
+func sandboxTaskConcurrencyForMode(itemConcurNum *int, mode entity.SandboxCountMode) sandboxTaskConcurrency {
+	mode = entity.ResolveSandboxCountMode(mode)
+	sandboxUsesTwoExecutions := mode == entity.SandboxCountModeDual || mode == entity.SandboxCountModeMacVMPlusSSH
+	return sandboxTaskConcurrency{
+		sandbox: sandboxInitConcurrency(itemConcurNum, sandboxUsesTwoExecutions),
+		macVM:   sandboxInitConcurrency(itemConcurNum, false),
+	}
+}
+
+// sandboxInitConcurrency 计算单个 sandbox task Init 时下发的 Concurrency：
 //  1. 先用 NormalizeSubmitItemConcurNum 兜底 nil/<=0 → DefaultSubmitItemConcurNum；
-//  2. 双沙箱模式一次评测占用 2 个沙箱 execute，需要额外放大到 2 倍上限，否则调度侧任务并发度不够；
-//  3. 再乘 1.2 向上取整留一点余量：配额是 execution 粒度的硬闸，卡住的 item 直接判永久失败、
+//  2. 该 task 每 item 有 2 个 execution 时放大到 2 倍上限；
+//  3. 再乘 sandboxConcurrencyBuffer 并向上取整留余量：配额是 execution 粒度的硬闸，卡住的 item 直接判永久失败、
 //     不重试不排队，所以宁可多给一点，也不要因为边界刚好贴死而整条 item 挂掉。
 //
 // 入参 itemConcurNum 允许来自 SubmitRequest.ItemConcurNum(int32) 或 EvalConf.ItemConcurNum(*int)，
 // 调用方自行转成 *int 后传入。
-func sandboxInitConcurrency(itemConcurNum *int, dual bool) int32 {
+func sandboxInitConcurrency(itemConcurNum *int, twoExecutionsPerItem bool) int32 {
 	normalized := gptr.Indirect(entity.NormalizeSubmitItemConcurNum(itemConcurNum))
-	if dual {
+	if twoExecutionsPerItem {
 		normalized *= 2
 	}
 	return int32(math.Ceil(float64(normalized) * sandboxConcurrencyBuffer))
-}
-
-// isDualSandboxTenant 判断 tenant 是否代表双沙箱链路。
-// ⚠️ 存在的理由：双沙箱一次评测占 2 个沙箱 execute，Concurrency 要 ×2（见 sandboxInitConcurrency）。
-// 这个判据必须跟着下面 sandboxTenantForExperiment* 的返回值走 —— 早先是在调用处内联写
-// `tenant == SandboxTenantFornaxTraeEvalDualSandbox`，三处散落；租户值一改就集体恒 false，
-// 双沙箱静默失去并发翻倍、item 撞配额直接判永久失败。收敛成一个函数，改租户只改这里。
-//
-// ⚠️ **新旧链路并存期必须同时认两个租户**：新链路(有合法 run_mode)走 FornaxEvalGeneral、
-// 旧链路走 FornaxTraeEvalDualSandbox，两者都是双沙箱、都要并发翻倍。只认一个会让另一条
-// 链路静默失去 ×2，撞配额的 item 直接判永久失败且不重试（601300702），没有任何一层报错。
-func isDualSandboxTenant(tenant rpc.SandboxTenant) bool {
-	return tenant == rpc.SandboxTenantFornaxEvalGeneral ||
-		tenant == rpc.SandboxTenantFornaxTraeEvalDualSandbox
 }
 
 // dualSandboxTenantByRunMode 在"已确定是双沙箱"的前提下，按新旧链路选租户。
@@ -1771,15 +1844,15 @@ func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant
 	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
 		return rpc.SandboxTenantDefault
 	}
+	countMode := sandboxCountModeForExperimentEntity(expt)
 	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
 	// 共用 GUI 专用租户、靠 ResourceType 区分。mac_vm_plus_ssh 的 orchestrator+SSH sandbox
 	// 共用 sandbox task（同 ResourceType=Sandbox），mac_vm 走 -macvm task，与本分支的两 task
 	// Init 列表一致，故同样路由到 GUI 租户。
-	if expt.Target.EvalTargetVersion.SandboxAgent.IsMacVMPlusSandbox() ||
-		expt.Target.EvalTargetVersion.SandboxAgent.IsMacVMPlusSSH() {
+	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
 	}
-	if !expt.Target.EvalTargetVersion.SandboxAgent.IsDualSandbox() {
+	if countMode != entity.SandboxCountModeDual {
 		return rpc.SandboxTenantDefault
 	}
 	var cfg *entity.RunModeConfig
@@ -1795,11 +1868,7 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 	if expt == nil {
 		return rpc.SandboxTenantDefault
 	}
-	agent := expt.GetEvalTarget().GetEvalTargetVersion().GetEvalTargetContent().GetSandboxAgent()
-	if agent == nil {
-		return rpc.SandboxTenantDefault
-	}
-	countMode := entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode()))
+	countMode := sandboxCountModeForExperimentDTO(expt)
 	// mac_vm_plus_sandbox / mac_vm_plus_ssh: 都要 Init 一对 task（sandbox + -macvm），
 	// 共用 GUI 专用租户、靠 ResourceType 区分（见 entity 版同处注释）。
 	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
@@ -1817,6 +1886,28 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 		return rpc.SandboxTenantFornaxTraeEvalDualSandbox
 	}
 	return rpc.SandboxTenantFornaxEvalGeneral
+}
+
+func sandboxCountModeForExperimentEntity(expt *entity.Experiment) entity.SandboxCountMode {
+	if expt == nil || expt.Target == nil || expt.Target.EvalTargetVersion == nil {
+		return entity.SandboxCountModeSingle
+	}
+	agent := expt.Target.EvalTargetVersion.SandboxAgent
+	if agent == nil {
+		return entity.SandboxCountModeSingle
+	}
+	return entity.ResolveSandboxCountMode(agent.SandboxCountMode)
+}
+
+func sandboxCountModeForExperimentDTO(expt *domain_expt.Experiment) entity.SandboxCountMode {
+	if expt == nil {
+		return entity.SandboxCountModeSingle
+	}
+	agent := expt.GetEvalTarget().GetEvalTargetVersion().GetEvalTargetContent().GetSandboxAgent()
+	if agent == nil {
+		return entity.SandboxCountModeSingle
+	}
+	return entity.ResolveSandboxCountMode(entity.SandboxCountMode(agent.GetSandboxCountMode()))
 }
 
 // isValidExptRunModeDTO 判断 DTO 侧 run_mode_config 是否携带合法跑法（即属于新链路）。
