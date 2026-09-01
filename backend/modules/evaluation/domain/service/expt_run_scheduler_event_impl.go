@@ -429,7 +429,7 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	// 每拍对账一次 expt_stats 计数行。放在归档之后：那一步刚把本拍完成的 item 记完账，
+	// 对账 expt_stats 计数行。放在归档之后：那一步刚把本拍完成的 item 记完账，
 	// 此刻主表与计数行"本该"一致，不一致就是真漂了。
 	e.reconcileExptStats(ctx, event, exptDetail)
 
@@ -1229,6 +1229,13 @@ func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, exp
 		expt.SchedulerScope, exptRunID, len(itemIDs), reason)
 }
 
+// exptStatsReconcileInterval 单个实验两次对账之间的最小间隔。
+//
+// 取 5 分钟而不是每拍（60s）：偏差只在"有人正看着"时才有意义，而实验进终态时
+// CompleteExpt 一定会 CalculateStats 全量重算兜底，所以对账只需要"最终会收敛"、
+// 不需要"实时精确"。拍是 60s，这一步把成本降到 1/5，再叠加下面的 enforce-only 过滤。
+const exptStatsReconcileInterval = 5 * time.Minute
+
 // reconcileExptStats 把 expt_stats 计数行对齐到主表的真实状态分布。
 //
 // 为什么需要它：expt_stats 是**增量计数**（ArithOperateCount 逐笔 ±1），而落终态的路径有多条
@@ -1246,8 +1253,34 @@ func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, exp
 //
 // 失败只告警：对账是自愈机制，它自己不能成为调度中断的理由。
 func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) {
-	if e.ExptItemResultRepo == nil || e.ExptStatsRepo == nil {
+	if e.ExptItemResultRepo == nil || e.ExptStatsRepo == nil || expt == nil {
 		return
+	}
+
+	// 只对 enforce 实验对账。
+	//
+	// legacy 的派发（handleToSubmits）把 run log、主表、turn 表、stats 四张**无条件一起写**，
+	// 任何一步失败都 return err 让 MQ 重投整批 —— 计数行天然镜像主表。
+	// 2026-09-01 PPE 实测两个正在跑的 legacy 实验（30 题 / 3 题）分毫不差，
+	// 而同泳道的 enforce 实验差 249/281。给 legacy 对账是纯开销。
+	if !entity.IsCentralDispatch(expt.ExptDispatchMode) {
+		return
+	}
+
+	// 节流：同一实验 5 分钟内只对一次。没有它就是"每实验每拍一条 GROUP BY"，
+	// 一个空间几百个在跑的实验会变成每分钟几百条 count。
+	//
+	// SetNX 出错时**跳过**而不是继续：Redis 抖动本来就该少做事，
+	// 反过来"出错就对账"会让 Redis 一挂就退化成每拍全量 count，正好是最不该发生的时候。
+	if e.Idem != nil {
+		ok, err := e.Idem.SetNX(ctx, fmt.Sprintf("expt_stats_reconcile:%d", event.ExptID), exptStatsReconcileInterval)
+		if err != nil {
+			logs.CtxWarn(ctx, "[ExptStatsReconcile] throttle key set failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+			return
+		}
+		if !ok {
+			return
+		}
 	}
 
 	actual, err := e.ExptItemResultRepo.CountItemsByStatus(ctx, event.SpaceID, event.ExptID)

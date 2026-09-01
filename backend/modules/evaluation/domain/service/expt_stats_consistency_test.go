@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	idemMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
@@ -172,19 +173,26 @@ func TestCentralReservation_NoStatsOpWhenMainTableWriteFails(t *testing.T) {
 
 // ---------- 每拍对账 ----------
 
-func reconcileFixture(t *testing.T) (*ExptSchedulerImpl, *repoMocks.MockIExptItemResultRepo, *repoMocks.MockIExptStatsRepo) {
+// enforceExptForReconcile 对账只对 enforce 实验做，本文件的用例统一用它。
+func enforceExptForReconcile() *entity.Experiment {
+	return &entity.Experiment{ID: 1, ExptDispatchMode: entity.ExptDispatchModeEnforce}
+}
+
+func reconcileFixture(t *testing.T) (*ExptSchedulerImpl, *repoMocks.MockIExptItemResultRepo, *repoMocks.MockIExptStatsRepo, *idemMocks.MockIdempotentService) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 	items := repoMocks.NewMockIExptItemResultRepo(ctrl)
 	stats := repoMocks.NewMockIExptStatsRepo(ctrl)
-	return &ExptSchedulerImpl{ExptItemResultRepo: items, ExptStatsRepo: stats}, items, stats
+	idm := idemMocks.NewMockIdempotentService(ctrl)
+	return &ExptSchedulerImpl{ExptItemResultRepo: items, ExptStatsRepo: stats, Idem: idm}, items, stats, idm
 }
 
 func TestReconcileExptStats_CorrectsDrift(t *testing.T) {
-	e, items, stats := reconcileFixture(t)
+	e, items, stats, idm := reconcileFixture(t)
 
 	// 线上实测过的形态：主表 597 success / 253 queueing，计数行却停在 352 / 530。
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[entity.ItemRunState]int64{
 		entity.ItemRunState_Queueing: 253, entity.ItemRunState_Processing: 11,
 		entity.ItemRunState_Success: 597, entity.ItemRunState_Fail: 39,
@@ -197,7 +205,7 @@ func TestReconcileExptStats_CorrectsDrift(t *testing.T) {
 	stats.EXPECT().UpdateByExptID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _, _ int64, s *entity.ExptStats) error { got = s; return nil })
 
-	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, nil)
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
 
 	require.NotNil(t, got, "漂了就必须写回")
 	assert.Equal(t, int32(253), got.PendingItemCnt)
@@ -207,8 +215,9 @@ func TestReconcileExptStats_CorrectsDrift(t *testing.T) {
 }
 
 func TestReconcileExptStats_NoWriteWhenConsistent(t *testing.T) {
-	e, items, stats := reconcileFixture(t)
+	e, items, stats, idm := reconcileFixture(t)
 
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[entity.ItemRunState]int64{
 		entity.ItemRunState_Queueing: 3, entity.ItemRunState_Processing: 10, entity.ItemRunState_Success: 17,
 	}, nil)
@@ -219,28 +228,67 @@ func TestReconcileExptStats_NoWriteWhenConsistent(t *testing.T) {
 	// 让"这行到底动没动"这个排查线索失效。
 	stats.EXPECT().UpdateByExptID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
-	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, nil)
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
 }
 
 func TestReconcileExptStats_SkipsWhenNoItemRows(t *testing.T) {
-	e, items, stats := reconcileFixture(t)
+	e, items, stats, idm := reconcileFixture(t)
 
 	// 实验刚建、item 还没落库。此时覆盖会把 finishExptStart 写下的 PendingItemCnt 抹成 0，
 	// 详情页看起来"一条待跑都没有"。
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[entity.ItemRunState]int64{}, nil)
 	stats.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	stats.EXPECT().UpdateByExptID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
-	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, nil)
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
 }
 
 func TestReconcileExptStats_SkipsOnCountError(t *testing.T) {
-	e, items, stats := reconcileFixture(t)
+	e, items, stats, idm := reconcileFixture(t)
 
 	// 对账是自愈机制，读不到真值时**什么都不做**，绝不能拿一个不完整的分布去覆盖。
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("db down"))
 	stats.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	stats.EXPECT().UpdateByExptID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
-	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, nil)
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
+}
+
+func TestReconcileExptStats_SkipsLegacyExperiment(t *testing.T) {
+	e, items, stats, idm := reconcileFixture(t)
+
+	// legacy 的派发是四张表无条件一起写、失败重投整批，计数行天然镜像主表。
+	// 实测两个正在跑的 legacy 实验分毫不差 —— 给它对账是纯开销，连节流键都不该占。
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	stats.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2},
+		&entity.Experiment{ID: 1, ExptDispatchMode: entity.ExptDispatchModeLegacy})
+}
+
+func TestReconcileExptStats_ThrottledWithinInterval(t *testing.T) {
+	e, items, stats, idm := reconcileFixture(t)
+
+	// 节流键还在（本周期已对过）→ 一条 GROUP BY 都不该发。
+	// 没有这道闸就是"每实验每拍一条 count"，几百个在跑的实验会打成每分钟几百条。
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	stats.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
+}
+
+func TestReconcileExptStats_SkipsWhenThrottleKeyErrors(t *testing.T) {
+	e, items, stats, idm := reconcileFixture(t)
+
+	// Redis 抖动时**少做事**：反过来"出错就对账"会让 Redis 一挂就退化成每拍全量 count，
+	// 正好是最不该加压的时候。
+	idm.EXPECT().SetNX(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, errors.New("redis down"))
+	items.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	stats.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	e.reconcileExptStats(context.Background(), &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 2}, enforceExptForReconcile())
 }
