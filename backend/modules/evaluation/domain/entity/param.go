@@ -244,6 +244,13 @@ type ExecuteEvalTargetParam struct {
 	// ExptGroupKey 实验分组 key (Experiment.ExperimentGroupKey, 默认为实验 id 字符串),
 	// 属实验级属性, 供评测对象 (如 SandboxAgent) 透传给外部执行侧。
 	ExptGroupKey string
+	// ExptSpaceID 发起实验所在空间 (消费方空间)。0 = 未知 (调试链路无实验)。
+	//
+	// 与本结构其它字段的关键区别: operator 收到的 spaceID 形参在跨空间共享评测对象时
+	// 是**对象来源空间**, 本字段才是发起实验的空间。消费方**只应**用它做"按空间取配置"
+	// 这类归属判断 (当前唯一消费方: SandboxAgent 的模型凭据替换规则);
+	// 沙箱 workspace、record 空间、AK/SK 一律继续用 spaceID 形参, 换了会撕裂销毁链与回传链。
+	ExptSpaceID int64
 }
 
 // EvalSetItemMeta 承载评测集与 item 层面的元数据快照, 用于评测对象 (如 SandboxAgent) 透传给外部执行侧。
