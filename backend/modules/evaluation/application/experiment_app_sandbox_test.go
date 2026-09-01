@@ -19,10 +19,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
-// TestSandboxInitConcurrency 归一化 + 双沙箱 2x 放大 + 1.2 倍余量向上取整：
+// TestSandboxInitConcurrency 归一化 + 单 task 双 execution 的 2x 放大 + buffer 余量：
 //   - nil / <=0 由 NormalizeSubmitItemConcurNum 兜底为 DefaultSubmitItemConcurNum。
-//   - Dual 模式在归一化基础上翻倍（一次评测占 2 个 sandbox execute），Single 不翻。
-//   - 最后一律 ×1.2 并向上取整留余量：配额是硬闸，卡住的 item 直接判永久失败、不重试不排队。
+//   - 单个 task 每 item 占 2 个 execution 时在归一化基础上翻倍，否则不翻。
+//   - 最后一律 ×sandboxConcurrencyBuffer 并向上取整留余量：配额是硬闸，卡住的 item 直接判永久失败、不重试不排队。
 //
 // 期望值写成字面量而非重算一遍公式：用公式算等于把实现抄进断言，实现算错时测试跟着错。
 func TestSandboxInitConcurrency(t *testing.T) {
@@ -275,26 +275,31 @@ func TestSandboxTenantForExperimentDTO(t *testing.T) {
 	})
 }
 
-// TestIsDualSandboxTenant 钉住"双沙箱判据"与租户取值的绑定关系。
-// 这条存在的理由：并发翻倍 (sandboxInitConcurrency 的 dual 入参) 完全依赖这个判据，
-// 判据和 sandboxTenantForExperiment* 的返回值一旦脱钩就会静默恒 false —— 双沙箱失去 ×2 配额、
-// item 撞并发上限直接判永久失败，且没有任何报错。改租户值时本测试必须同步失败。
-//
-// ⚠️ 新旧链路并存期：**两个双沙箱租户都必须被认得**。漏掉任一个，那条链路就静默失去 ×2。
-func TestIsDualSandboxTenant(t *testing.T) {
-	assert.True(t, isDualSandboxTenant(rpc.SandboxTenantFornaxEvalGeneral), "新链路双沙箱租户")
-	assert.True(t, isDualSandboxTenant(rpc.SandboxTenantFornaxTraeEvalDualSandbox), "旧链路双沙箱租户")
-	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantDefault))
-	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantGeneralAgent))
-	assert.False(t, isDualSandboxTenant(rpc.SandboxTenantLabelingAnalysis))
-
-	// 与两个推导函数对账：dual 模式推导出的租户必须被判据认得。
-	dualExpt := &entity.Experiment{Target: &entity.EvalTarget{
-		EvalTargetVersion: &entity.EvalTargetVersion{
-			SandboxAgent: &entity.SandboxAgent{SandboxCountMode: entity.SandboxCountModeDual},
-		},
-	}}
-	assert.True(t, isDualSandboxTenant(sandboxTenantForExperimentEntity(dualExpt)))
+// TestSandboxTaskConcurrencyForMode 钉住 mode → task 粒度 execution 配额。
+// mac_vm_plus_ssh 不能按 GUI tenant 整体翻倍：基础 task 有 ssh+orch 两个 execution，
+// -macvm task 每 item 仍只有一个；mac_vm_plus_sandbox 则两个 task 都只有一个。
+func TestSandboxTaskConcurrencyForMode(t *testing.T) {
+	itemConcurNum := gptr.Of(7)
+	cases := []struct {
+		name        string
+		mode        entity.SandboxCountMode
+		wantSandbox int32
+		wantMacVM   int32
+	}{
+		{name: "single", mode: entity.SandboxCountModeSingle, wantSandbox: 35, wantMacVM: 35},
+		{name: "dual", mode: entity.SandboxCountModeDual, wantSandbox: 70, wantMacVM: 35},
+		{name: "mac vm plus sandbox", mode: entity.SandboxCountModeMacVMPlusSandbox, wantSandbox: 35, wantMacVM: 35},
+		{name: "mac vm plus ssh", mode: entity.SandboxCountModeMacVMPlusSSH, wantSandbox: 70, wantMacVM: 35},
+		{name: "unknown falls back to single", mode: entity.SandboxCountMode("triple"), wantSandbox: 35, wantMacVM: 35},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			got := sandboxTaskConcurrencyForMode(itemConcurNum, c.mode)
+			assert.Equal(t, c.wantSandbox, got.sandbox)
+			assert.Equal(t, c.wantMacVM, got.macVM)
+		})
+	}
 }
 
 // TestIsValidExptSuaModeDTO 钉住入口 sua_mode 合法集。
