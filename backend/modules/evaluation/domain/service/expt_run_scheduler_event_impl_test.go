@@ -235,6 +235,11 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				tt.prepareMock(f, ctrl, tt.args) // Modification point: pass ctrl
 			}
 
+			// 每拍会做一次 expt_stats 对账（reconcileExptStats）。它与本组用例要断言的调度流程
+			// 无关，且读不到真值时自身就会跳过 —— 这里直接让它读到空分布并静默返回。
+			f.exptItemResultRepo.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil, nil).AnyTimes()
+
 			svc := &ExptSchedulerImpl{
 				Manager:                  f.manager,
 				ExptRepo:                 f.exptRepo,

@@ -69,6 +69,8 @@ type IExptItemResultRepo interface {
 	GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64) ([]*entity.ExptTurnResult, error)
 	MGetItemTurnResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptTurnResult, error)
 	UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemID []int64, ufields map[string]any) error
+	// CountItemsByStatus 返回该实验 item 的状态分布（status -> 行数），供 expt_stats 计数行对账。
+	CountItemsByStatus(ctx context.Context, spaceID, exptID int64) (map[entity.ItemRunState]int64, error)
 	GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64) (int32, error)
 
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*entity.ExptItemResultRunLog) error

@@ -333,11 +333,26 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			//
 			// 失败只告警不阻断：主表是展示投影，写不进去不影响执行与额度正确性，
 			// 而这里返回错误会让已经拿到执行权的 item 被 MQ 重投一遍。
+			//
+			// ★ 记账与主表推进必须**同一个判据**，见下方 expt_stats 那段的论证。
+			// 所以这里先读主表当前状态，只有真的发生「非 Processing → Processing」才动两处。
+			prevState, prevKnown := entity.ItemRunState_Unknown, false
 			if e.exptItemResultRepo != nil {
+				if got, gerr := e.exptItemResultRepo.BatchGet(ctx, event.SpaceID, event.ExptID, []int64{event.EvalSetItemID}); gerr != nil {
+					logs.CtxWarn(ctx, "[CentralReservation] read main table state failed, skip advancing (display only), expt_id: %v, item_id: %v: %v",
+						event.ExptID, event.EvalSetItemID, gerr)
+				} else if len(got) > 0 && got[0] != nil {
+					prevState, prevKnown = got[0].Status, true
+				}
+			}
+
+			advanced := prevKnown && prevState != entity.ItemRunState_Processing
+			if advanced {
 				if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID,
 					[]int64{event.EvalSetItemID}, map[string]any{"status": int32(entity.ItemRunState_Processing)}); err != nil {
 					logs.CtxWarn(ctx, "[CentralReservation] advance main table to Processing failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
 						event.ExptID, event.EvalSetItemID, err)
+					advanced = false
 				}
 			}
 
@@ -350,16 +365,26 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 			// 表现为 processing_turn_count 走负、pending_turn_count 永不下降。
 			// 实测：一个 14 题 enforce 实验 fail 累到 4 时 processing = -4，pending 恒 14。
 			//
-			// ★ 必须绑定 started（CAS 真的把 Queueing/reserved 翻成了 Processing/none）。
-			// started=false 是重复投递或已被 repair 修正，此时 item 早已计入 Processing，
-			// 再加一次就从"少计"变成"多计"——CAS 是这里唯一的恰好一次信号。
+			// ★ 判据是**主表真的发生了状态迁移**，不是 run log 的 CAS。
 			//
-			// 与主表同为展示投影，失败只告警不阻断：返回错误会让已取得执行权的 item 被 MQ 重投。
-			if started && e.exptStatsRepo != nil {
+			// 原先绑在 started（run log CAS）上，而主表推进是无条件的 —— 两个判据一分叉，
+			// 计数行就与主表对不上。而完成侧 statsCntOp 恰恰是**按主表状态**做「-1」的
+			// （`statsCntOp[itemResult.Status] -= 1`，见 expt_result_impl.go），
+			// 于是它会去减一个计数行里从来没加过的桶。
+			// 实测代价：PPE 一个 900 题 enforce 实验，pending 虚高 281、success 少 249，
+			// 而同泳道的 legacy 实验分毫不差 —— legacy 的派发是四张表无条件一起写的。
+			//
+			// 用 prevState 而不是写死 Queueing：中心调度派发时主表可能停在 Queueing，
+			// 也可能因为 repair/重投停在别的状态，减错桶同样会让计数行歪掉。
+			//
+			// 与主表同为展示投影，失败只告警不阻断：返回错误会让已取得执行权的 item 被 MQ 重投，
+			// 而重投一次 Agent 执行的代价远大于一次计数偏差。**残留的偏差由调度器每拍的对账收敛**
+			// （ExptSchedulerImpl.reconcileExptStats）。
+			if advanced && e.exptStatsRepo != nil {
 				if err := e.exptStatsRepo.ArithOperateCount(ctx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
 					OpStatusCnt: map[entity.ItemRunState]int{
 						entity.ItemRunState_Processing: 1,
-						entity.ItemRunState_Queueing:   -1,
+						prevState:                      -1,
 					},
 				}); err != nil {
 					logs.CtxWarn(ctx, "[CentralReservation] advance expt stats to Processing failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",

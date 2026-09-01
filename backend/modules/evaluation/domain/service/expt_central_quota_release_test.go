@@ -545,6 +545,9 @@ func TestHandleCentralReservation_AdvancesMainTableForDisplay(t *testing.T) {
 	var gotFields map[string]any
 	var gotItemIDs []int64
 	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	// 推进前会先读主表当前状态：判据是"真的发生了状态迁移"，见 expt_stats_consistency_test.go。
+	itemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResult{{ItemID: 4, Status: entity.ItemRunState_Queueing}}, nil)
 	itemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _, _ int64, itemIDs []int64, ufields map[string]any) error {
 			gotItemIDs = itemIDs
@@ -600,6 +603,8 @@ func TestHandleCentralReservation_AdvancesStatsToProcessing(t *testing.T) {
 		}, nil)
 
 	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	itemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResult{{ItemID: 4, Status: entity.ItemRunState_Queueing}}, nil)
 	itemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).AnyTimes()
 
@@ -636,13 +641,15 @@ func TestHandleCentralReservation_AdvancesStatsToProcessing(t *testing.T) {
 		"Queueing 必须 -1，否则 pending_turn_count 永不下降")
 }
 
-// TestHandleCentralReservation_SkipsStatsOnDuplicateDelivery 重复投递时**不得**再记 stats。
+// TestHandleCentralReservation_SkipsStatsOnDuplicateDelivery 主表已是 Processing 时**不得**再记 stats。
 //
-// started=false 表示 CAS 未命中 —— item 早已是 Processing（重复投递）或已被 repair 修正。
-// 此时再加一次就从"少计"变成"多计"，方向相反但同样是错的。
-// CAS 结果是这条路径上唯一的"恰好一次"信号，所以记账必须绑定它。
+// ⚠️ **本用例的判据换过一次**：原先绑的是 run log 的 CAS（started=false 就跳过），理由是
+// "CAS 未命中说明 item 早已计入 Processing"。那个假设在**首投就未命中**时不成立 ——
+// 于是那条 item 从来没被计过，Queueing 永不减。PPE 实测一个 900 题 enforce 实验
+// pending 虚高 281、success 少 249，同泳道 legacy 分毫不差。
 //
-// ★ 这条是上一个用例的反面：只断言"会记"，把记账写在 started 判断之外也能通过。
+// 现在判据是**主表实际发生了状态迁移**：主表既是完成侧做「-1」的锚点，也就该是记账的判据，
+// 两边同源才不可能分叉。"重复投递不得多记"这个原意保留，只是换了更可靠的信号。
 func TestHandleCentralReservation_SkipsStatsOnDuplicateDelivery(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -658,8 +665,12 @@ func TestHandleCentralReservation_SkipsStatsOnDuplicateDelivery(t *testing.T) {
 		}, nil)
 
 	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	// 主表已是 Processing —— 这才是"已经计过账"的可靠证据。
+	itemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResult{{ItemID: 4, Status: entity.ItemRunState_Processing}}, nil)
+	// 已是 Processing 就连主表都不该重写。
 	itemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil).AnyTimes()
+		Return(nil).Times(0)
 
 	statsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
 	// Times(0)：一次都不能调 —— 这是本用例的全部意义

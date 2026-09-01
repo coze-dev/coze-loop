@@ -429,6 +429,10 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
+	// 每拍对账一次 expt_stats 计数行。放在归档之后：那一步刚把本拍完成的 item 记完账，
+	// 此刻主表与计数行"本该"一致，不一致就是真漂了。
+	e.reconcileExptStats(ctx, event, exptDetail)
+
 	// ★ 中心化调度防双驱动：enforce 实验的新 item 派发权归中心调度器独有。
 	//
 	// 旧 per-experiment tick 在此**丢弃 toSubmit**，但保留其余全部职责 ——
@@ -1223,4 +1227,71 @@ func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, exp
 	}
 	logs.CtxInfo(ctx, "[CentralReservation] quota released for daemon-terminated items, scope: %v, expt_run_id: %v, count: %v, reason: %v",
 		expt.SchedulerScope, exptRunID, len(itemIDs), reason)
+}
+
+// reconcileExptStats 把 expt_stats 计数行对齐到主表的真实状态分布。
+//
+// 为什么需要它：expt_stats 是**增量计数**（ArithOperateCount 逐笔 ±1），而落终态的路径有多条
+// （正常完成 / zombie / 沙箱提前终态 sweep / 派发侧推进），每条都得自己"记得"记一笔账。
+// 漏一笔就永久偏一笔 —— 那些调用点全是 warn-only 或干脆没有记账，**没有任何机制会发现**。
+// 运行期此前也没有任何重算：CalculateStats 只在 CompleteExpt（终态收口）与在线实验 daemon 里调，
+// 于是偏差会一路显示给用户，还会经 webhook 的 progress 播报给下游。
+// 实测：PPE 一个 900 题 enforce 实验 pending 虚高 281、success 少 249，且**仍在增长**。
+//
+// 以主表为准而不是 turn 表：完成侧 statsCntOp 是按 items_result.Status 做「-1」的
+// （见 expt_result_impl.go），要能修正它就必须以同一张表为准；拿 turn 表对账会在多轮实验上
+// 得出另一套数字。CalculateStats 走的是 turn 表，所以这里不复用它。
+//
+// 代价是一条 GROUP BY（走 (space_id, expt_id) 前缀），每实验每拍一次，可接受。
+//
+// 失败只告警：对账是自愈机制，它自己不能成为调度中断的理由。
+func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) {
+	if e.ExptItemResultRepo == nil || e.ExptStatsRepo == nil {
+		return
+	}
+
+	actual, err := e.ExptItemResultRepo.CountItemsByStatus(ctx, event.SpaceID, event.ExptID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] count items by status failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+		return
+	}
+	if len(actual) == 0 {
+		// 一行 item 都没有：可能是刚建、还没落 item。此时覆盖会把 finishExptStart 写下的
+		// PendingItemCnt 抹成 0，让实验看起来"没有任何待跑"。
+		return
+	}
+
+	got, err := e.ExptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] get expt stats failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+		return
+	}
+	if got == nil {
+		return
+	}
+
+	want := &entity.ExptStats{
+		PendingItemCnt:    int32(actual[entity.ItemRunState_Queueing]),
+		SuccessItemCnt:    int32(actual[entity.ItemRunState_Success]),
+		FailItemCnt:       int32(actual[entity.ItemRunState_Fail]),
+		ProcessingItemCnt: int32(actual[entity.ItemRunState_Processing]),
+		TerminatedItemCnt: int32(actual[entity.ItemRunState_Terminal]),
+	}
+	if want.PendingItemCnt == got.PendingItemCnt && want.SuccessItemCnt == got.SuccessItemCnt &&
+		want.FailItemCnt == got.FailItemCnt && want.ProcessingItemCnt == got.ProcessingItemCnt &&
+		want.TerminatedItemCnt == got.TerminatedItemCnt {
+		return
+	}
+
+	// 一致时直接返回、不写库；只有真的漂了才写 —— 顺带让这条 Warn 成为"还在漏"的唯一信号。
+	// 谁把这条日志删了，漏点就重新变成静默的。
+	logs.CtxWarn(ctx, "[ExptStatsReconcile] expt stats drifted from item table, correcting; expt_id: %v, "+
+		"stats(pending/success/fail/processing/terminated)=%v/%v/%v/%v/%v, actual=%v/%v/%v/%v/%v",
+		event.ExptID,
+		got.PendingItemCnt, got.SuccessItemCnt, got.FailItemCnt, got.ProcessingItemCnt, got.TerminatedItemCnt,
+		want.PendingItemCnt, want.SuccessItemCnt, want.FailItemCnt, want.ProcessingItemCnt, want.TerminatedItemCnt)
+
+	if err := e.ExptStatsRepo.UpdateByExptID(ctx, event.ExptID, event.SpaceID, want); err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] correct expt stats failed, expt_id: %v: %v", event.ExptID, err)
+	}
 }
