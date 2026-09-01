@@ -93,6 +93,7 @@ var (
 		domainservice.EvaluationSetDomainServiceSet,
 		domainservice.TargetDomainServiceSet,
 		domainservice.NewExptResultService,
+		domainservice.ProvideExptItemRefRepos,
 		domainservice.NewEvaluationAnalysisService,
 		// Infrastructure Sets
 		infrahttp.NewHTTPClient,

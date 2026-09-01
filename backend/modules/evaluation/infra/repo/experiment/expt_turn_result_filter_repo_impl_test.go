@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck/gorm_gen/model"
 	ckmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck/mocks"
 	diffmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck/model"
@@ -17,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -389,4 +391,88 @@ func TestExptTurnResultFilterRepoImpl_GetByExptIDItemIDs(t *testing.T) {
 			}
 		})
 	}
+}
+
+// itemSnapshotCondsEntityToCK：多评测集 per-set 条件透传到 DAO 层的转换。
+func TestItemSnapshotCondsEntityToCK(t *testing.T) {
+	t.Run("空输入返回 nil", func(t *testing.T) {
+		assert.Nil(t, itemSnapshotCondsEntityToCK(nil))
+		assert.Nil(t, itemSnapshotCondsEntityToCK([]*entity.ItemSnapshotVersionCond{}))
+	})
+
+	t.Run("跳过 nil 项与 Cond 为 nil 的项", func(t *testing.T) {
+		got := itemSnapshotCondsEntityToCK([]*entity.ItemSnapshotVersionCond{
+			nil,
+			{EvalSetID: 1, EvalSetVersionID: 2},
+		})
+		assert.Empty(t, got)
+	})
+
+	t.Run("id 转字符串，四类 map 条件全部透传", func(t *testing.T) {
+		got := itemSnapshotCondsEntityToCK([]*entity.ItemSnapshotVersionCond{
+			{
+				EvalSetID: 10, EvalSetVersionID: 100, SyncCkDate: "2026-08-30",
+				Cond: &entity.ItemSnapshotFilter{
+					StringMapFilters: []*entity.FieldFilter{{Key: "string_key_0", Op: "LIKE", Values: []any{"v"}}},
+					IntMapFilters:    []*entity.FieldFilter{{Key: "int_key_0", Op: "=", Values: []any{1}}},
+					FloatMapFilters:  []*entity.FieldFilter{{Key: "float_key_0", Op: ">", Values: []any{1.5}}},
+					BoolMapFilters:   []*entity.FieldFilter{{Key: "bool_key_0", Op: "=", Values: []any{true}}},
+				},
+			},
+			{
+				EvalSetID: 20, EvalSetVersionID: 200, SyncCkDate: "2026-08-31",
+				Cond: &entity.ItemSnapshotFilter{
+					StringMapFilters: []*entity.FieldFilter{{Key: "string_key_3", Op: "=", Values: []any{"w"}}},
+				},
+			},
+		})
+		require.Len(t, got, 2)
+
+		assert.Equal(t, "10", got[0].EvalSetID)
+		assert.Equal(t, "100", got[0].EvalSetVersionID)
+		assert.Equal(t, "2026-08-30", got[0].SyncCkDate)
+		require.NotNil(t, got[0].Cond)
+		assert.Equal(t, "string_key_0", got[0].Cond.StringMapFilters[0].Key)
+		assert.Equal(t, "int_key_0", got[0].Cond.IntMapFilters[0].Key)
+		assert.Equal(t, "float_key_0", got[0].Cond.FloatMapFilters[0].Key)
+		assert.Equal(t, "bool_key_0", got[0].Cond.BoolMapFilters[0].Key)
+
+		assert.Equal(t, "20", got[1].EvalSetID)
+		assert.Equal(t, "200", got[1].EvalSetVersionID)
+		assert.Equal(t, "string_key_3", got[1].Cond.StringMapFilters[0].Key)
+	})
+}
+
+// QueryItemIDStates 透传 per-set 条件与 unmatched 标记到 DAO 层。
+func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_PerSetPassthrough(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	dao := ckmocks.NewMockIExptTurnResultFilterDAO(ctrl)
+	r := NewExptTurnResultFilterRepo(dao, mysqlmocks.NewMockIExptTurnResultFilterKeyMappingDAO(ctrl))
+
+	dao.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, cond *ck.ExptTurnResultFilterQueryCond) (map[string]int32, int64, error) {
+			require.Len(t, cond.ItemSnapshotCondBySet, 2)
+			assert.Equal(t, "100", cond.ItemSnapshotCondBySet[0].EvalSetVersionID)
+			assert.Equal(t, "200", cond.ItemSnapshotCondBySet[1].EvalSetVersionID)
+			assert.True(t, cond.ItemSnapshotCondUnmatched)
+			return map[string]int32{"1": 2}, 1, nil
+		}).Times(1)
+
+	states, total, err := r.QueryItemIDStates(context.Background(), &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1, ExptID: 2,
+		ItemSnapshotCondBySet: []*entity.ItemSnapshotVersionCond{
+			{EvalSetID: 10, EvalSetVersionID: 100, SyncCkDate: "d1", Cond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "string_key_0", Op: "=", Values: []any{"v"}}},
+			}},
+			{EvalSetID: 20, EvalSetVersionID: 200, SyncCkDate: "d2", Cond: &entity.ItemSnapshotFilter{
+				StringMapFilters: []*entity.FieldFilter{{Key: "string_key_3", Op: "=", Values: []any{"v"}}},
+			}},
+		},
+		ItemSnapshotCondUnmatched: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total)
+	assert.Equal(t, map[int64]entity.ItemRunState{1: entity.ItemRunState(2)}, states)
 }

@@ -11,6 +11,7 @@ import (
 	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	evaluatormtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
 	rmqproducer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
 	evaluatorrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
@@ -43,6 +44,9 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	// 商业版 fork 通过自己的 wire set 覆盖为真实的 Lark send。
 	NewSandboxAgentNotifier,
 	ProvideNoSandboxAgentNotifiers,
+	// ExptResultService 的 exptItemRefRepo 是 variadic(为兼容既有调用方), wire 需要显式的
+	// slice provider 才能注入。
+	ProvideExptItemRefRepos,
 	// Infrastructure Sets
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,
@@ -64,6 +68,12 @@ func ProvideNoSandboxAgentNotifiers() []ISandboxAgentNotifier {
 
 func ProvideNilItemCompletePublisher() component.IItemCompletePublisher {
 	return nil
+}
+
+// ProvideExptItemRefRepos 把 IExptItemRefRepo 包成 slice, 供 NewExptResultService 的
+// variadic 形参注入 (多评测集实验按 item 回填评测集归属用)。
+func ProvideExptItemRefRepos(r repo.IExptItemRefRepo) []repo.IExptItemRefRepo {
+	return []repo.IExptItemRefRepo{r}
 }
 
 // EvaluatorDomainServiceSet 提供所有 Evaluator 相关的 Domain Service

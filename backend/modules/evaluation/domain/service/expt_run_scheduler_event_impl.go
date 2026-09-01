@@ -551,6 +551,8 @@ func (e *ExptSchedulerImpl) resolveItemCompleteMeta(ctx context.Context, event *
 			logs.CtxWarn(ctx, "[ExptEval] item complete resolve refs fail, skip publish batch, expt_id: %v, err: %v", event.ExptID, err)
 			return itemMeta, itemVer
 		}
+		// 跨空间共享: DB 读回的 ref 未带来源空间, 从实验冻结信息回填后再按来源空间加载 item。
+		backfillRefEvalSetSourceSpace(refs, expt)
 		refByItem := make(map[int64]*entity.ExptItemRef, len(refs))
 		for _, ref := range refs {
 			if ref != nil {

@@ -671,6 +671,25 @@ type KeywordFilter struct {
 	Keyword               *string
 }
 
+// ItemSnapshotVersionCond 单个「评测集版本」维度的快照筛选条件。
+//
+// ★ 多评测集实验 (MultiSetConfig) 必须 per-set 组织：字段映射 (field_key -> string_map/int_map 的
+// subkey)、快照表分区列 sync_ck_date、评测集来源空间，三者都是按 (space_id, version_id) 存的，
+// 各评测集各一份、不保证一致。只用主集那一份去查，非主集的 item 在该版本分区下根本不存在，
+// 表现为「内容筛选只在第一个评测集上生效」。
+// 单评测集实验退化为 1 组，语义与改动前完全一致。
+type ItemSnapshotVersionCond struct {
+	EvalSetID        int64 `json:"eval_set_id"`
+	EvalSetVersionID int64 `json:"eval_set_version_id"`
+	// SourceSpaceID 该评测集来源空间 (跨空间共享)；0=同实验空间。
+	SourceSpaceID int64 `json:"source_space_id"`
+	// SyncCkDate 该版本快照表的分区列取值，由 mapping RPC 随 field mapping 一起返回。
+	// 快照表开了 force_index_by_date，缺它的查询会被直接拒绝，故为空的组不可查。
+	SyncCkDate string `json:"sync_ck_date"`
+	// Cond 已按**该版本**的 mapping 翻译成 subkey 的条件。
+	Cond *ItemSnapshotFilter `json:"cond,omitempty"`
+}
+
 type ExptTurnResultFilter struct {
 	TrunRunStateFilters []*TurnRunStateFilter
 	ScoreFilters        []*ScoreFilter
@@ -702,6 +721,17 @@ type ExptTurnResultFilterAccelerator struct {
 	KeywordSearch     *KeywordFilter `json:"keyword_search"`
 	Page              Page           `json:"page"`
 	EvalSetSyncCkDate string
+	// ItemSnapshotCondBySet 多评测集实验的 per-set 快照条件：每个评测集版本一组，组间是 OR
+	// (item 只属于一个评测集，取 item_id 并集即可)。非空时 DAO 优先用它，忽略单值的
+	// ItemSnapshotCond / EvalSetSyncCkDate / EvalSetSpaceID；后三者保留给尚未 per-set 化的
+	// 调用方兜底，取值为主集那一组。
+	ItemSnapshotCondBySet []*ItemSnapshotVersionCond `json:"item_snapshot_cond_by_set,omitempty"`
+	// KeywordItemSnapshotCondBySet 关键词搜索的 per-set 快照条件，语义同上。
+	KeywordItemSnapshotCondBySet []*ItemSnapshotVersionCond `json:"keyword_item_snapshot_cond_by_set,omitempty"`
+	// ItemSnapshotCondUnmatched 请求带了评测集列条件，但**没有任何**评测集版本能完整翻译出这些字段
+	// (字段不在任一 set 的 schema，或 mapping 缺失)。此时正确语义是「命中 0 条」而不是「不筛」——
+	// 老实现在翻译不到时 continue 丢条件，表现为筛选被静默忽略、返回全量数据。
+	ItemSnapshotCondUnmatched bool `json:"item_snapshot_cond_unmatched,omitempty"`
 	// IsOnlineExpt 是否在线实验，用于 QueryItemIDStates 拼接 SQL 时选择 join 的表名和条件
 	IsOnlineExpt bool `json:"is_online_expt"`
 }
@@ -727,6 +757,11 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 		len(e.KeywordSearch.ItemSnapshotFilter.IntMapFilters) > 0 ||
 		len(e.KeywordSearch.ItemSnapshotFilter.StringMapFilters) > 0)) ||
 		len(e.KeywordSearch.EvalTargetDataFilters) > 0))
+	// per-set 快照条件 / 「无任何评测集可满足」标记同样构成筛选条件：
+	// 后者语义是命中 0 条，若这里返回 false 会退回全量列表，等于筛选被忽略。
+	hasFilters = hasFilters || len(e.ItemSnapshotCondBySet) > 0 ||
+		len(e.KeywordItemSnapshotCondBySet) > 0 ||
+		e.ItemSnapshotCondUnmatched
 
 	return hasFilters
 }

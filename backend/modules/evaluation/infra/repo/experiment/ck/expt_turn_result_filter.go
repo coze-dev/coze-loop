@@ -59,6 +59,14 @@ type KeywordMapCond struct {
 	Keyword               *string
 }
 
+// ItemSnapshotVersionCond 单个评测集版本的快照筛选条件（多评测集实验 per-set 一组）。
+type ItemSnapshotVersionCond struct {
+	EvalSetID        string
+	EvalSetVersionID string
+	SyncCkDate       string
+	Cond             *ItemSnapshotFilter
+}
+
 type ExptTurnResultFilterQueryCond struct {
 	// 主表字段
 	SpaceID                 *string
@@ -77,6 +85,13 @@ type ExptTurnResultFilterQueryCond struct {
 	// 联表
 	ItemSnapshotCond  *ItemSnapshotFilter
 	EvalSetSyncCkDate string
+	// ItemSnapshotCondBySet 多评测集实验的 per-set 快照条件：每组 = 一个评测集版本 + 该版本自己的
+	// map subkey 条件。非空时优先于 ItemSnapshotCond，拼成
+	// `AND ((dis.version_id = v1 AND <c1>) OR (dis.version_id = v2 AND <c2>) ...)`，
+	// 保证非主集的 item 也能被筛到（老实现只按主集一份 mapping 翻译，非主集恒不命中）。
+	ItemSnapshotCondBySet []*ItemSnapshotVersionCond
+	// ItemSnapshotCondUnmatched 带了评测集列条件但没有任何评测集能翻译出来 → 命中 0 条。
+	ItemSnapshotCondUnmatched bool
 	// IsOnlineExpt 是否在线实验，在线实验时 join 使用 dataset_item_draft + etrf.eval_set_id = dis.dataset_id，离线使用 dataset_item_snapshot + etrf.eval_set_version_id = dis.version_id
 	IsOnlineExpt bool
 
@@ -452,10 +467,56 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 // buildItemSnapshotConditions 构建 dis 表（dataset_item_draft/snapshot）的 map 字段条件
 // 在线实验的 record 条件通过独立 FieldFilter 传入，如 Key="record_string_key_0", Op="=", Values=["7581751092564738049"]
 func (d *exptTurnResultFilterDAOImpl) buildItemSnapshotConditions(cond *ExptTurnResultFilterQueryCond, whereSQL *string, args *[]interface{}) {
+	if cond == nil {
+		return
+	}
+	// 带了评测集列条件但没有任何评测集版本能翻译出来 → 命中 0 条，而不是退化成不筛。
+	if cond.ItemSnapshotCondUnmatched {
+		*whereSQL += " AND 1=0"
+		return
+	}
+	// ★ 多评测集：按评测集版本分组 OR，每组用**该版本自己**的 map subkey。
+	// 单评测集时只有一组，等价于原来的单份条件。
+	if len(cond.ItemSnapshotCondBySet) > 0 {
+		groups := make([]string, 0, len(cond.ItemSnapshotCondBySet))
+		groupArgs := make([]interface{}, 0, len(cond.ItemSnapshotCondBySet)*2)
+		for _, set := range cond.ItemSnapshotCondBySet {
+			if set == nil || !d.hasItemSnapshotFilters(set.Cond) {
+				continue
+			}
+			inner := ""
+			innerArgs := make([]interface{}, 0, 4)
+			d.appendItemSnapshotFilters(set.Cond, &inner, &innerArgs)
+			if inner == "" {
+				continue
+			}
+			group := "(1=1"
+			if set.EvalSetVersionID != "" {
+				group += " AND dis.version_id = ?"
+				groupArgs = append(groupArgs, set.EvalSetVersionID)
+			}
+			groupArgs = append(groupArgs, innerArgs...)
+			groups = append(groups, group+inner+")")
+		}
+		if len(groups) == 0 {
+			*whereSQL += " AND 1=0"
+			return
+		}
+		*whereSQL += " AND (" + strings.Join(groups, " OR ") + ")"
+		*args = append(*args, groupArgs...)
+		return
+	}
 	if cond.ItemSnapshotCond == nil || !d.hasItemSnapshotFilters(cond.ItemSnapshotCond) {
 		return
 	}
-	f := cond.ItemSnapshotCond
+	d.appendItemSnapshotFilters(cond.ItemSnapshotCond, whereSQL, args)
+}
+
+// appendItemSnapshotFilters 把一组已翻译好的 map 条件拼进 SQL（形如 " AND dis.string_map['k'] = ?"）。
+func (d *exptTurnResultFilterDAOImpl) appendItemSnapshotFilters(f *ItemSnapshotFilter, whereSQL *string, args *[]interface{}) {
+	if f == nil {
+		return
+	}
 	for _, ff := range f.StringMapFilters {
 		d.appendItemSnapshotMapCond(whereSQL, args, "string_map", ff)
 	}
@@ -598,17 +659,39 @@ func (d *exptTurnResultFilterDAOImpl) hasItemSnapshotFilters(f *ItemSnapshotFilt
 		len(f.IntMapFilters) > 0 || len(f.StringMapFilters) > 0
 }
 
+// needJoinItemSnapshot 是否需要联快照表：单份条件或 per-set 任一组有条件都要 join。
+func (d *exptTurnResultFilterDAOImpl) needJoinItemSnapshot(cond *ExptTurnResultFilterQueryCond) bool {
+	if cond == nil {
+		return false
+	}
+	if d.hasItemSnapshotFilters(cond.ItemSnapshotCond) {
+		return true
+	}
+	for _, set := range cond.ItemSnapshotCondBySet {
+		if set != nil && d.hasItemSnapshotFilters(set.Cond) {
+			return true
+		}
+	}
+	return false
+}
+
 // buildBaseSQL 构建基础SQL语句
 // 当 ItemSnapshotCond 非空时，需 join 数据集 item 表：在线实验用 dataset_item_draft + etrf.eval_set_id = dis.dataset_id，离线用 dataset_item_snapshot + etrf.eval_set_version_id = dis.version_id
 func (d *exptTurnResultFilterDAOImpl) buildBaseSQL(ctx context.Context, cond *ExptTurnResultFilterQueryCond, whereSQL, keywordCond string, args *[]interface{}) string {
 	dbName := getClickHouseDatabaseName()
 	sql := "SELECT  etrf.item_id, etrf.status FROM " + dbName + ".expt_turn_result_filter etrf"
-	if cond != nil && cond.ItemSnapshotCond != nil && d.hasItemSnapshotFilters(cond.ItemSnapshotCond) {
+	if d.needJoinItemSnapshot(cond) {
 		itemTable := "dataset_item_snapshot"
 		joinCond := "etrf.eval_set_version_id = dis.version_id"
 		if cond.IsOnlineExpt {
 			itemTable = "dataset_item_draft"
 			joinCond = "etrf.eval_set_id = dis.dataset_id"
+		}
+		// ★ 多评测集：存量实验的 etrf 行全部盖着主集 eval_set_version_id（写侧缺陷），
+		// 拿它 join 会把快照表限死在主集版本，非主集 item 关联不上。per-set 条件已经在
+		// 每个分组里带了自己的 dis.version_id，这里只按 item_id 关联即可。
+		if len(cond.ItemSnapshotCondBySet) > 0 {
+			joinCond = "1=1"
 		}
 		sql += " INNER JOIN " + dbName + "." + itemTable + " dis ON " + joinCond + " AND etrf.item_id = dis.item_id"
 	}
