@@ -8880,6 +8880,7 @@ func TestProvideExptItemRefRepos(t *testing.T) {
 	require.Len(t, got, 1)
 	assert.Equal(t, r, got[0])
 }
+
 // TestNewPayloadBuilder_ItemQuotaImpossibleErrParsing 覆盖「额度不可满足」的反解分支。
 //
 // 为什么这层必须单测：错误码本身有单测（errno 包），但"结果层有没有真去读它"是另一回事 ——
