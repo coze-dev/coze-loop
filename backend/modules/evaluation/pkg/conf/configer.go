@@ -146,3 +146,9 @@ func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	}
 	return nil
 }
+
+// GetRetryYieldEnabled 读取"失败重试让位降权"灰度开关(expt_consumer_conf → expt_exec_conf → retry_yield)。
+// 仅在实验运行发起处调用一次(值随事件下传固化, §9.3.1); 未配置默认关闭。
+func (c *configer) GetRetryYieldEnabled(ctx context.Context, spaceID int64) bool {
+	return c.GetExptExecConf(ctx, spaceID).GetRetryYieldConf().IsSpaceEnabled(spaceID)
+}

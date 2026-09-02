@@ -109,6 +109,10 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetCrossSpaceRecordReadEnforce(ctx 
 	return false
 }
 
+func (f *fakeEvaluatorRecordStorageConfiger) GetRetryYieldEnabled(ctx context.Context, spaceID int64) bool {
+	return false
+}
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	return nil
 }

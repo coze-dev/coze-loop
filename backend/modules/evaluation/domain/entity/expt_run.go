@@ -221,6 +221,39 @@ type ExptExecConf struct {
 	SpaceExptConcurLimit int `json:"space_expt_concur_limit" mapstructure:"space_expt_concur_limit"`
 
 	ExptItemEvalConf *ExptItemEvalConf `json:"expt_item_eval_conf" mapstructure:"expt_item_eval_conf"`
+
+	// RetryYield 失败重试"让位降权"改造的灰度开关；nil / 默认关 → 保持改造前行为(执行侧重投 MQ + id asc 排序)。
+	// 值在实验运行发起时读一次并固化进 ExptScheduleEvent.Ext, 运行中不再现读, 详见技术方案 §9.3.1。
+	RetryYield *RetryYieldConf `json:"retry_yield" mapstructure:"retry_yield"`
+}
+
+// RetryYieldConf 让位降权改造的灰度开关：全局布尔 + 空间白名单两级。
+// RetryYieldExtKey 让位降权灰度开关值在 ExptScheduleEvent.Ext / ExptItemEvalEvent.Ext 中的键。
+// 运行发起时把开关值(configer 读取结果)写入该键, 消费侧读事件里的值而非现读配置(按 expt_run_id 固化, §9.3.1)。
+const RetryYieldExtKey = "retry_yield_enabled"
+
+type RetryYieldConf struct {
+	// Enabled 全局开关；true → 所有空间生效(白名单被忽略)。
+	Enabled bool `json:"enabled" mapstructure:"enabled"`
+	// SpaceIDs 空间级灰度白名单；仅在 Enabled=false 时生效, 命中即开。
+	SpaceIDs []int64 `json:"space_ids" mapstructure:"space_ids"`
+}
+
+// IsSpaceEnabled 判断该空间是否开启让位降权。
+// nil → 关闭；Enabled=true → 全局开；否则命中 SpaceIDs 才开。
+func (c *RetryYieldConf) IsSpaceEnabled(spaceID int64) bool {
+	if c == nil {
+		return false
+	}
+	if c.Enabled {
+		return true
+	}
+	for _, id := range c.SpaceIDs {
+		if id == spaceID {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *ExptExecConf) GetSpaceExptConcurLimit() int {
@@ -247,6 +280,14 @@ func (e *ExptExecConf) GetZombieIntervalSecond() int {
 func (e *ExptExecConf) GetExptItemEvalConf() *ExptItemEvalConf {
 	if e != nil {
 		return e.ExptItemEvalConf
+	}
+	return nil
+}
+
+// GetRetryYieldConf nil-safe 取让位降权灰度开关配置; 未配置返回 nil(IsSpaceEnabled 对 nil 返回 false)。
+func (e *ExptExecConf) GetRetryYieldConf() *RetryYieldConf {
+	if e != nil {
+		return e.RetryYield
 	}
 	return nil
 }

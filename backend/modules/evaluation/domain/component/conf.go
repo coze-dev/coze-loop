@@ -50,4 +50,8 @@ type IConfiger interface {
 	// GetCrossSpaceRecordReadEnforce 跨空间读取评估记录且未命中共享白名单时是否拒绝。
 	// 未配置默认 false：只告警放行，用于观察存量调用后再收紧。
 	GetCrossSpaceRecordReadEnforce(ctx context.Context) bool
+	// GetRetryYieldEnabled 返回该空间是否开启"失败重试让位降权"改造(全局布尔 + 空间白名单)。
+	// 仅在实验运行发起处调用一次, 结果写入 ExptScheduleEvent.Ext 固化下传, 运行中不再现读(§9.3.1)。
+	// 未配置 / 命中失败一律返回 false(缺省关闭, 与改造前行为一致)。
+	GetRetryYieldEnabled(ctx context.Context, spaceID int64) bool
 }

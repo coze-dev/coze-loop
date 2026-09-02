@@ -23,7 +23,6 @@ import (
 type MockIConfiger struct {
 	ctrl     *gomock.Controller
 	recorder *MockIConfigerMockRecorder
-	isgomock struct{}
 }
 
 // MockIConfigerMockRecorder is the mock recorder for MockIConfiger.
@@ -44,254 +43,268 @@ func (m *MockIConfiger) EXPECT() *MockIConfigerMockRecorder {
 }
 
 // BuildEvalExt mocks base method.
-func (m *MockIConfiger) BuildEvalExt(ctx context.Context, spaceID int64, turn *entity.Turn) map[string]string {
+func (m *MockIConfiger) BuildEvalExt(arg0 context.Context, arg1 int64, arg2 *entity.Turn) map[string]string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildEvalExt", ctx, spaceID, turn)
+	ret := m.ctrl.Call(m, "BuildEvalExt", arg0, arg1, arg2)
 	ret0, _ := ret[0].(map[string]string)
 	return ret0
 }
 
 // BuildEvalExt indicates an expected call of BuildEvalExt.
-func (mr *MockIConfigerMockRecorder) BuildEvalExt(ctx, spaceID, turn any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) BuildEvalExt(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildEvalExt", reflect.TypeOf((*MockIConfiger)(nil).BuildEvalExt), ctx, spaceID, turn)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildEvalExt", reflect.TypeOf((*MockIConfiger)(nil).BuildEvalExt), arg0, arg1, arg2)
 }
 
 // GetCKDBName mocks base method.
-func (m *MockIConfiger) GetCKDBName(ctx context.Context) *entity.CKDBConfig {
+func (m *MockIConfiger) GetCKDBName(arg0 context.Context) *entity.CKDBConfig {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCKDBName", ctx)
+	ret := m.ctrl.Call(m, "GetCKDBName", arg0)
 	ret0, _ := ret[0].(*entity.CKDBConfig)
 	return ret0
 }
 
 // GetCKDBName indicates an expected call of GetCKDBName.
-func (mr *MockIConfigerMockRecorder) GetCKDBName(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetCKDBName(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCKDBName", reflect.TypeOf((*MockIConfiger)(nil).GetCKDBName), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCKDBName", reflect.TypeOf((*MockIConfiger)(nil).GetCKDBName), arg0)
 }
 
 // GetConsumerConf mocks base method.
-func (m *MockIConfiger) GetConsumerConf(ctx context.Context) *entity.ExptConsumerConf {
+func (m *MockIConfiger) GetConsumerConf(arg0 context.Context) *entity.ExptConsumerConf {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConsumerConf", ctx)
+	ret := m.ctrl.Call(m, "GetConsumerConf", arg0)
 	ret0, _ := ret[0].(*entity.ExptConsumerConf)
 	return ret0
 }
 
 // GetConsumerConf indicates an expected call of GetConsumerConf.
-func (mr *MockIConfigerMockRecorder) GetConsumerConf(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetConsumerConf(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsumerConf", reflect.TypeOf((*MockIConfiger)(nil).GetConsumerConf), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsumerConf", reflect.TypeOf((*MockIConfiger)(nil).GetConsumerConf), arg0)
 }
 
 // GetCrossSpaceRecordReadEnforce mocks base method.
-func (m *MockIConfiger) GetCrossSpaceRecordReadEnforce(ctx context.Context) bool {
+func (m *MockIConfiger) GetCrossSpaceRecordReadEnforce(arg0 context.Context) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCrossSpaceRecordReadEnforce", ctx)
+	ret := m.ctrl.Call(m, "GetCrossSpaceRecordReadEnforce", arg0)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // GetCrossSpaceRecordReadEnforce indicates an expected call of GetCrossSpaceRecordReadEnforce.
-func (mr *MockIConfigerMockRecorder) GetCrossSpaceRecordReadEnforce(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetCrossSpaceRecordReadEnforce(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossSpaceRecordReadEnforce", reflect.TypeOf((*MockIConfiger)(nil).GetCrossSpaceRecordReadEnforce), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossSpaceRecordReadEnforce", reflect.TypeOf((*MockIConfiger)(nil).GetCrossSpaceRecordReadEnforce), arg0)
 }
 
 // GetErrCtrl mocks base method.
-func (m *MockIConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl {
+func (m *MockIConfiger) GetErrCtrl(arg0 context.Context) *entity.ExptErrCtrl {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetErrCtrl", ctx)
+	ret := m.ctrl.Call(m, "GetErrCtrl", arg0)
 	ret0, _ := ret[0].(*entity.ExptErrCtrl)
 	return ret0
 }
 
 // GetErrCtrl indicates an expected call of GetErrCtrl.
-func (mr *MockIConfigerMockRecorder) GetErrCtrl(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetErrCtrl(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetErrCtrl", reflect.TypeOf((*MockIConfiger)(nil).GetErrCtrl), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetErrCtrl", reflect.TypeOf((*MockIConfiger)(nil).GetErrCtrl), arg0)
 }
 
 // GetErrRetryConf mocks base method.
-func (m *MockIConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
+func (m *MockIConfiger) GetErrRetryConf(arg0 context.Context, arg1 int64, arg2 error) *entity.RetryConf {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetErrRetryConf", ctx, spaceID, err)
+	ret := m.ctrl.Call(m, "GetErrRetryConf", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*entity.RetryConf)
 	return ret0
 }
 
 // GetErrRetryConf indicates an expected call of GetErrRetryConf.
-func (mr *MockIConfigerMockRecorder) GetErrRetryConf(ctx, spaceID, err any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetErrRetryConf(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetErrRetryConf", reflect.TypeOf((*MockIConfiger)(nil).GetErrRetryConf), ctx, spaceID, err)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetErrRetryConf", reflect.TypeOf((*MockIConfiger)(nil).GetErrRetryConf), arg0, arg1, arg2)
 }
 
 // GetEvalAsyncCtxTTL mocks base method.
-func (m *MockIConfiger) GetEvalAsyncCtxTTL(ctx context.Context, spaceID int64) time.Duration {
+func (m *MockIConfiger) GetEvalAsyncCtxTTL(arg0 context.Context, arg1 int64) time.Duration {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvalAsyncCtxTTL", ctx, spaceID)
+	ret := m.ctrl.Call(m, "GetEvalAsyncCtxTTL", arg0, arg1)
 	ret0, _ := ret[0].(time.Duration)
 	return ret0
 }
 
 // GetEvalAsyncCtxTTL indicates an expected call of GetEvalAsyncCtxTTL.
-func (mr *MockIConfigerMockRecorder) GetEvalAsyncCtxTTL(ctx, spaceID any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetEvalAsyncCtxTTL(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalAsyncCtxTTL", reflect.TypeOf((*MockIConfiger)(nil).GetEvalAsyncCtxTTL), ctx, spaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalAsyncCtxTTL", reflect.TypeOf((*MockIConfiger)(nil).GetEvalAsyncCtxTTL), arg0, arg1)
 }
 
 // GetEvaluationRecordStorage mocks base method.
-func (m *MockIConfiger) GetEvaluationRecordStorage(ctx context.Context) *component.EvaluationRecordStorage {
+func (m *MockIConfiger) GetEvaluationRecordStorage(arg0 context.Context) *component.EvaluationRecordStorage {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvaluationRecordStorage", ctx)
+	ret := m.ctrl.Call(m, "GetEvaluationRecordStorage", arg0)
 	ret0, _ := ret[0].(*component.EvaluationRecordStorage)
 	return ret0
 }
 
 // GetEvaluationRecordStorage indicates an expected call of GetEvaluationRecordStorage.
-func (mr *MockIConfigerMockRecorder) GetEvaluationRecordStorage(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetEvaluationRecordStorage(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationRecordStorage", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluationRecordStorage), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationRecordStorage", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluationRecordStorage), arg0)
 }
 
 // GetExptExecConf mocks base method.
-func (m *MockIConfiger) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
+func (m *MockIConfiger) GetExptExecConf(arg0 context.Context, arg1 int64) *entity.ExptExecConf {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptExecConf", ctx, spaceID)
+	ret := m.ctrl.Call(m, "GetExptExecConf", arg0, arg1)
 	ret0, _ := ret[0].(*entity.ExptExecConf)
 	return ret0
 }
 
 // GetExptExecConf indicates an expected call of GetExptExecConf.
-func (mr *MockIConfigerMockRecorder) GetExptExecConf(ctx, spaceID any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetExptExecConf(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExecConf", reflect.TypeOf((*MockIConfiger)(nil).GetExptExecConf), ctx, spaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExecConf", reflect.TypeOf((*MockIConfiger)(nil).GetExptExecConf), arg0, arg1)
 }
 
 // GetExptExportWhiteList mocks base method.
-func (m *MockIConfiger) GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList {
+func (m *MockIConfiger) GetExptExportWhiteList(arg0 context.Context) *entity.ExptExportWhiteList {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptExportWhiteList", ctx)
+	ret := m.ctrl.Call(m, "GetExptExportWhiteList", arg0)
 	ret0, _ := ret[0].(*entity.ExptExportWhiteList)
 	return ret0
 }
 
 // GetExptExportWhiteList indicates an expected call of GetExptExportWhiteList.
-func (mr *MockIConfigerMockRecorder) GetExptExportWhiteList(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetExptExportWhiteList(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExportWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptExportWhiteList), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptExportWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptExportWhiteList), arg0)
 }
 
 // GetExptMultiSetWhiteList mocks base method.
-func (m *MockIConfiger) GetExptMultiSetWhiteList(ctx context.Context) *entity.ExptMultiSetWhiteList {
+func (m *MockIConfiger) GetExptMultiSetWhiteList(arg0 context.Context) *entity.ExptMultiSetWhiteList {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptMultiSetWhiteList", ctx)
+	ret := m.ctrl.Call(m, "GetExptMultiSetWhiteList", arg0)
 	ret0, _ := ret[0].(*entity.ExptMultiSetWhiteList)
 	return ret0
 }
 
 // GetExptMultiSetWhiteList indicates an expected call of GetExptMultiSetWhiteList.
-func (mr *MockIConfigerMockRecorder) GetExptMultiSetWhiteList(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetExptMultiSetWhiteList(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptMultiSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptMultiSetWhiteList), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptMultiSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptMultiSetWhiteList), arg0)
 }
 
 // GetExptTemplateUpdateEvalSetWhiteList mocks base method.
-func (m *MockIConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
+func (m *MockIConfiger) GetExptTemplateUpdateEvalSetWhiteList(arg0 context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptTemplateUpdateEvalSetWhiteList", ctx)
+	ret := m.ctrl.Call(m, "GetExptTemplateUpdateEvalSetWhiteList", arg0)
 	ret0, _ := ret[0].(*entity.ExptTemplateUpdateEvalSetWhiteList)
 	return ret0
 }
 
 // GetExptTemplateUpdateEvalSetWhiteList indicates an expected call of GetExptTemplateUpdateEvalSetWhiteList.
-func (mr *MockIConfigerMockRecorder) GetExptTemplateUpdateEvalSetWhiteList(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetExptTemplateUpdateEvalSetWhiteList(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTemplateUpdateEvalSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptTemplateUpdateEvalSetWhiteList), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTemplateUpdateEvalSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptTemplateUpdateEvalSetWhiteList), arg0)
 }
 
 // GetExptTurnResultFilterBmqProducerCfg mocks base method.
-func (m *MockIConfiger) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg {
+func (m *MockIConfiger) GetExptTurnResultFilterBmqProducerCfg(arg0 context.Context) *entity.BmqProducerCfg {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptTurnResultFilterBmqProducerCfg", ctx)
+	ret := m.ctrl.Call(m, "GetExptTurnResultFilterBmqProducerCfg", arg0)
 	ret0, _ := ret[0].(*entity.BmqProducerCfg)
 	return ret0
 }
 
 // GetExptTurnResultFilterBmqProducerCfg indicates an expected call of GetExptTurnResultFilterBmqProducerCfg.
-func (mr *MockIConfigerMockRecorder) GetExptTurnResultFilterBmqProducerCfg(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetExptTurnResultFilterBmqProducerCfg(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnResultFilterBmqProducerCfg", reflect.TypeOf((*MockIConfiger)(nil).GetExptTurnResultFilterBmqProducerCfg), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnResultFilterBmqProducerCfg", reflect.TypeOf((*MockIConfiger)(nil).GetExptTurnResultFilterBmqProducerCfg), arg0)
 }
 
 // GetExptTurnScoreHookConf mocks base method.
-func (m *MockIConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
+func (m *MockIConfiger) GetExptTurnScoreHookConf(arg0 context.Context, arg1, arg2 int64, arg3 []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptTurnScoreHookConf", ctx, spaceID, exptID, evaluatorRefs)
+	ret := m.ctrl.Call(m, "GetExptTurnScoreHookConf", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*entity.ExptTurnScoreHookConf)
 	ret1, _ := ret[1].(bool)
 	return ret0, ret1
 }
 
 // GetExptTurnScoreHookConf indicates an expected call of GetExptTurnScoreHookConf.
-func (mr *MockIConfigerMockRecorder) GetExptTurnScoreHookConf(ctx, spaceID, exptID, evaluatorRefs any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetExptTurnScoreHookConf(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnScoreHookConf", reflect.TypeOf((*MockIConfiger)(nil).GetExptTurnScoreHookConf), ctx, spaceID, exptID, evaluatorRefs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnScoreHookConf", reflect.TypeOf((*MockIConfiger)(nil).GetExptTurnScoreHookConf), arg0, arg1, arg2, arg3)
 }
 
 // GetMaintainerUserIDs mocks base method.
-func (m *MockIConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
+func (m *MockIConfiger) GetMaintainerUserIDs(arg0 context.Context) map[string]bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMaintainerUserIDs", ctx)
+	ret := m.ctrl.Call(m, "GetMaintainerUserIDs", arg0)
 	ret0, _ := ret[0].(map[string]bool)
 	return ret0
 }
 
 // GetMaintainerUserIDs indicates an expected call of GetMaintainerUserIDs.
-func (mr *MockIConfigerMockRecorder) GetMaintainerUserIDs(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetMaintainerUserIDs(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaintainerUserIDs", reflect.TypeOf((*MockIConfiger)(nil).GetMaintainerUserIDs), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaintainerUserIDs", reflect.TypeOf((*MockIConfiger)(nil).GetMaintainerUserIDs), arg0)
+}
+
+// GetRetryYieldEnabled mocks base method.
+func (m *MockIConfiger) GetRetryYieldEnabled(arg0 context.Context, arg1 int64) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRetryYieldEnabled", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// GetRetryYieldEnabled indicates an expected call of GetRetryYieldEnabled.
+func (mr *MockIConfigerMockRecorder) GetRetryYieldEnabled(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRetryYieldEnabled", reflect.TypeOf((*MockIConfiger)(nil).GetRetryYieldEnabled), arg0, arg1)
 }
 
 // GetSandboxAgentNotifyConf mocks base method.
-func (m *MockIConfiger) GetSandboxAgentNotifyConf(ctx context.Context) *entity.SandboxAgentNotifyConf {
+func (m *MockIConfiger) GetSandboxAgentNotifyConf(arg0 context.Context) *entity.SandboxAgentNotifyConf {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSandboxAgentNotifyConf", ctx)
+	ret := m.ctrl.Call(m, "GetSandboxAgentNotifyConf", arg0)
 	ret0, _ := ret[0].(*entity.SandboxAgentNotifyConf)
 	return ret0
 }
 
 // GetSandboxAgentNotifyConf indicates an expected call of GetSandboxAgentNotifyConf.
-func (mr *MockIConfigerMockRecorder) GetSandboxAgentNotifyConf(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetSandboxAgentNotifyConf(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandboxAgentNotifyConf", reflect.TypeOf((*MockIConfiger)(nil).GetSandboxAgentNotifyConf), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandboxAgentNotifyConf", reflect.TypeOf((*MockIConfiger)(nil).GetSandboxAgentNotifyConf), arg0)
 }
 
 // GetSchedulerAbortCtrl mocks base method.
-func (m *MockIConfiger) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
+func (m *MockIConfiger) GetSchedulerAbortCtrl(arg0 context.Context) *entity.SchedulerAbortCtrl {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSchedulerAbortCtrl", ctx)
+	ret := m.ctrl.Call(m, "GetSchedulerAbortCtrl", arg0)
 	ret0, _ := ret[0].(*entity.SchedulerAbortCtrl)
 	return ret0
 }
 
 // GetSchedulerAbortCtrl indicates an expected call of GetSchedulerAbortCtrl.
-func (mr *MockIConfigerMockRecorder) GetSchedulerAbortCtrl(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetSchedulerAbortCtrl(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulerAbortCtrl", reflect.TypeOf((*MockIConfiger)(nil).GetSchedulerAbortCtrl), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulerAbortCtrl", reflect.TypeOf((*MockIConfiger)(nil).GetSchedulerAbortCtrl), arg0)
 }
 
 // GetTargetTrajectoryConf mocks base method.
-func (m *MockIConfiger) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf {
+func (m *MockIConfiger) GetTargetTrajectoryConf(arg0 context.Context) *entity.TargetTrajectoryConf {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTargetTrajectoryConf", ctx)
+	ret := m.ctrl.Call(m, "GetTargetTrajectoryConf", arg0)
 	ret0, _ := ret[0].(*entity.TargetTrajectoryConf)
 	return ret0
 }
 
 // GetTargetTrajectoryConf indicates an expected call of GetTargetTrajectoryConf.
-func (mr *MockIConfigerMockRecorder) GetTargetTrajectoryConf(ctx any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetTargetTrajectoryConf(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTargetTrajectoryConf", reflect.TypeOf((*MockIConfiger)(nil).GetTargetTrajectoryConf), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTargetTrajectoryConf", reflect.TypeOf((*MockIConfiger)(nil).GetTargetTrajectoryConf), arg0)
 }
