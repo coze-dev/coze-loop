@@ -1401,6 +1401,7 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 		SuaBehavioralConstraints: dto.GetSuaBehavioralConstraints(),
 		SuaPETemplate:            dto.GetSuaPeTemplate(),
 		MaxTurns:                 int(dto.GetMaxTurns()),
+		SkillsMode:               dto.GetSkillsMode(),
 	}
 	if dto.IsSetRunMode() {
 		do.RunMode = suaRunModeDTO2DO(dto.GetRunMode())
@@ -1494,6 +1495,9 @@ func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 	}
 	if do.MaxTurns != 0 {
 		dto.MaxTurns = gptr.Of(int32(do.MaxTurns))
+	}
+	if do.SkillsMode != "" {
+		dto.SkillsMode = gptr.Of(do.SkillsMode)
 	}
 	return dto
 }

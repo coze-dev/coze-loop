@@ -115,6 +115,9 @@ struct RunModeConfig {
     9: optional string sua_pe_template (go.tag = 'json:"sua_pe_template"')
     // max_turns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
     10: optional i32 max_turns (go.tag = 'json:"max_turns"')
+    // skills_mode SandboxAgent 跑法的技能模式, 原样透传到 case-file experiment_info.skills_mode。
+    // 合法值 merge / disable_test_case; 校验在 OpenAPI convertor 做。
+    11: optional string skills_mode (go.tag = 'json:"skills_mode"')
 }
 
 typedef string Visibility(ts.enum="true")
