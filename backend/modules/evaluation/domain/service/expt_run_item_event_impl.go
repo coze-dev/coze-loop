@@ -391,6 +391,31 @@ func (e *ExptItemEventEvalServiceImpl) HandleCentralReservation(next RecordEvalE
 						event.ExptID, event.EvalSetItemID, err)
 				}
 			}
+
+			// turn 主表与 CK 加速表同为展示投影，legacy 的 handleToSubmits 派发时是与
+			// run log / 主表 / stats 一起五写的，中心调度这条路径此前只写了前三项。
+			//
+			// 漏 CK 的后果最隐蔽：`item_run_state` 筛选打的是 etrf.status，且开启加速器时
+			// 结果里的 run_state 也从 CK 读（QueryItemIDStates），于是执行期间按「运行中」筛
+			// 恒为空、按「排队中」筛反而捞出正在跑的 item 并显示成排队中。完成时那次 upsert
+			// 会把它纠回来，所以事后对着终态数据看不出问题。
+			// 实测：PPE 一个 enforce 实验，主表已 status=1，CK 仍为 0。
+			//
+			// 必须在主表推进之后调：CK 行的 status 是 BuildTurnResultFilter 按主表状态回填的。
+			// 与上面两项同样只告警不阻断（返回错误会让已取得执行权的 item 被 MQ 重投）。
+			if advanced && e.exptTurnResultRepo != nil {
+				if err := e.exptTurnResultRepo.UpdateTurnResultsWithItemIDs(ctx, event.ExptID, []int64{event.EvalSetItemID}, event.SpaceID,
+					map[string]any{"status": int32(entity.TurnRunState_Processing)}); err != nil {
+					logs.CtxWarn(ctx, "[CentralReservation] advance turn results to Processing failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
+						event.ExptID, event.EvalSetItemID, err)
+				}
+			}
+			if advanced && e.resultSvc != nil {
+				if err := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, []int64{event.EvalSetItemID}); err != nil {
+					logs.CtxWarn(ctx, "[CentralReservation] upsert turn result filter failed (display only, execution unaffected), expt_id: %v, item_id: %v: %v",
+						event.ExptID, event.EvalSetItemID, err)
+				}
+			}
 		}
 
 		// 执行链返回后释放额度：这是 consumer 侧的主释放点。
