@@ -207,6 +207,15 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		}
 
 		if needRetry {
+			// 让位降权改造: 开关按 expt_run_id 固化在 event.Ext(§9.3.1), 运行中不现读配置; 旧事件无该键 → 缺省关闭。
+			if event.Ext[entity.RetryYieldExtKey] == "true" {
+				// ★ 让位分支(替换原 MQ 重投): 把行从 Processing 退回 Queueing、retry_times+1, 让出并发名额,
+				// 重试改由调度器 scanToSubmit 唯一驱动。updated_at 由 DB 的 ON UPDATE CURRENT_TIMESTAMP 随本次
+				// UPDATE 刷新 → 下次重新提交后单行超时兜底按次尝试独立计时。
+				e.yieldItemRunForRetry(ctx, event, nextErr)
+				return nil
+			}
+
 			clone := &entity.ExptItemEvalEvent{}
 			if err := copier.CopyWithOption(clone, event, copier.Option{DeepCopy: true}); err != nil {
 				return errorx.Wrapf(err, "ExptItemEvalEvent copy fail")
@@ -264,6 +273,80 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 	if err := e.exptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(persistCtx, event.SpaceID, event.ExptID, event.ExptRunID,
 		[]int64{event.EvalSetItemID}, entity.TurnRunState_Fail); err != nil {
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr create/update turn run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+	}
+}
+
+// yieldItemRunForRetry 让位分支: 判定需重试时把行从 Processing 退回 Queueing 并递增持久 retry_times,
+// 让出并发名额, 重试改由调度器 scanToSubmit 唯一驱动(替换原执行侧 MQ 重投)。
+//
+// ★ 三件事必须成对同时发生, 缺一即统计漂移(技术方案 §7):
+//  1. run_log.status → Queueing + retry_times+1 + err_msg;
+//  2. expt_item_result.status → Queueing —— 不可省略: expt_result_impl.go 的 statsCntOp 以
+//     expt_item_result.status 当前值作减项, 两处不同步会使 processing_cnt 永不归零;
+//  3. ArithOperateCount{Processing:-1, Queueing:+1}。
+//
+// updated_at 由 DB 列的 ON UPDATE CURRENT_TIMESTAMP 随两条 UPDATE 自动刷新 → 单行超时兜底按次尝试独立计时。
+//
+// 写库失败只告警不阻断, 且任一步失败都收敛到"行停在 Processing、统计未动"这一种残留:
+// 第 1 步失败直接返回; 第 2 步失败会把第 1 步回滚回 Processing(见函数内说明)。
+// 该残留由僵尸清理(handleZombies)兜底, 统计守恒不破, 不会双跑。
+func (e *ExptItemEventEvalServiceImpl) yieldItemRunForRetry(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) {
+	if event == nil || e.exptItemResultRepo == nil {
+		return
+	}
+
+	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	defer cancel()
+
+	itemIDs := []int64{event.EvalSetItemID}
+
+	// 1) run_log: Processing → Queueing, retry_times+1, 记录本次错误。retry_times 递增用原地 UPDATE,
+	//    只作用于当前 run 的行, 与重跑新建行天然隔离(重跑是新 expt_run_id 新建行)。
+	runLogFields := map[string]any{
+		"status":      int32(entity.ItemRunState_Queueing),
+		"retry_times": int32(event.RetryTimes) + 1,
+	}
+	if evalErr != nil {
+		runLogFields["err_msg"] = errno.SerializeErr(evalErr)
+	}
+	if err := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, itemIDs, runLogFields, event.SpaceID); err != nil {
+		logs.CtxWarn(persistCtx, "yieldItemRunForRetry update item run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+		return
+	}
+
+	// 2) expt_item_result: 同步 Processing → Queueing(与 run_log 成对, 否则 statsCntOp 减项算错)。
+	//    ★ 失败时必须把第 1 步回滚: 否则 run_log 停在 Queueing 而 item_result 仍 Processing, 该行会被
+	//    scanToSubmit 再次捞起, 而 handleToSubmits 是无条件 ArithOperateCount{P:+n, Q:-n}
+	//    (expt_run_scheduler_event_impl.go 提交末尾), 同一 item 会被重复计入 processing_cnt、
+	//    pending_cnt 被减成负数 —— 违反"统计在任意路径下守恒"。回滚后行退回 Processing,
+	//    与统计口径一致, 由僵尸清理(handleZombies)兜底, 不双跑。
+	if err := e.exptItemResultRepo.UpdateItemsResult(persistCtx, event.SpaceID, event.ExptID, itemIDs, map[string]any{
+		"status": int32(entity.ItemRunState_Queueing),
+	}); err != nil {
+		logs.CtxWarn(persistCtx, "yieldItemRunForRetry update item result fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+
+		if rbErr := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, itemIDs,
+			map[string]any{"status": int32(entity.ItemRunState_Processing)}, event.SpaceID); rbErr != nil {
+			logs.CtxError(persistCtx, "yieldItemRunForRetry rollback run log status fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+				event.ExptID, event.ExptRunID, event.EvalSetItemID, rbErr)
+		}
+		return
+	}
+
+	// 3) 统计对账: Processing-1 / Queueing+1(与上面两处状态翻转成对)。
+	if e.exptStatsRepo == nil {
+		return
+	}
+	if err := e.exptStatsRepo.ArithOperateCount(persistCtx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
+		OpStatusCnt: map[entity.ItemRunState]int{
+			entity.ItemRunState_Processing: -1,
+			entity.ItemRunState_Queueing:   1,
+		},
+	}); err != nil {
+		logs.CtxWarn(persistCtx, "yieldItemRunForRetry arith operate count fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
 }

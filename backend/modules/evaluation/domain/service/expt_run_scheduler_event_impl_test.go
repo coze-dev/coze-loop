@@ -2838,3 +2838,94 @@ func TestExptSchedulerImpl_emitSandboxZombieInvokeFinished(t *testing.T) {
 		svc.emitSandboxZombieInvokeFinished(context.Background(), event, sandboxExpt, []int64{500}, map[int64][]int64{500: {10}})
 	})
 }
+
+// TestExptSchedulerImpl_handleToSubmits_BackfillRetryTimes 覆盖 §6.3:
+// handleToSubmits 把 ExptEvalItem.RetryTimes 回填进新建的 ExptItemEvalEvent.RetryTimes(纯新增字段),
+// 并透传 event.Ext(承载让位降权开关)。
+func TestExptSchedulerImpl_handleToSubmits_BackfillRetryTimes(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	itemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+	turnRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	statsRepo := mock_repo.NewMockIExptStatsRepo(ctrl)
+	configer := configmocks.NewMockIConfiger(ctrl)
+	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	metric := metricsmocks.NewMockExptMetric(ctrl)
+	resultSvc := svcmocks.NewMockExptResultService(ctrl)
+
+	svc := &ExptSchedulerImpl{
+		ExptItemResultRepo: itemRepo,
+		ExptTurnResultRepo: turnRepo,
+		ExptStatsRepo:      statsRepo,
+		Configer:           configer,
+		Publisher:          publisher,
+		Metric:             metric,
+		ResultSvc:          resultSvc,
+	}
+
+	configer.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Return(&entity.ExptExecConf{
+		ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 1, IntervalSecond: 1},
+	}).AnyTimes()
+
+	var captured []*entity.ExptItemEvalEvent
+	publisher.EXPECT().BatchPublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, events []*entity.ExptItemEvalEvent, _ *time.Duration) error {
+			captured = events
+			return nil
+		})
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil)
+	turnRepo.EXPECT().UpdateTurnResultsWithItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	metric.EXPECT().EmitItemExecEval(gomock.Any(), gomock.Any(), gomock.Any())
+
+	event := &entity.ExptScheduleEvent{
+		ExptID: 1, ExptRunID: 2, SpaceID: 3, ItemRetryTimes: 5,
+		Ext: map[string]string{entity.RetryYieldExtKey: "true"},
+	}
+	toSubmits := []*entity.ExptEvalItem{
+		{ItemID: 10, State: entity.ItemRunState_Queueing, RetryTimes: 0}, // 健康行
+		{ItemID: 11, State: entity.ItemRunState_Queueing, RetryTimes: 3}, // 让位重试行
+	}
+
+	err := svc.handleToSubmits(context.Background(), event, toSubmits)
+	assert.NoError(t, err)
+	assert.Len(t, captured, 2)
+	// RetryTimes 逐行回填, Ext / MaxRetryTimes 一并透传
+	assert.Equal(t, 0, captured[0].RetryTimes)
+	assert.Equal(t, 3, captured[1].RetryTimes)
+	for _, ev := range captured {
+		assert.Equal(t, 5, ev.MaxRetryTimes)
+		assert.Equal(t, "true", ev.Ext[entity.RetryYieldExtKey])
+	}
+}
+
+// TestExptSchedulerImpl_handleZombies_SkipQueueing 覆盖 §6.3 / §4.3:
+// handleZombies 判据只认 State==Processing → 让位后的 Queueing 行(即使 updated_at 早已超阈值)天然不被
+// 判为僵尸, 无需额外排除逻辑; 同批 Processing 行仍正常被判僵尸。
+func TestExptSchedulerImpl_handleZombies_SkipQueueing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	configer := configmocks.NewMockIConfiger(ctrl)
+	svc := &ExptSchedulerImpl{Configer: configer}
+
+	// zombie 阈值 1s, 传入 updated_at 为 1 小时前 → 远超阈值
+	configer.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{
+		ExptExecConf: &entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ZombieSecond: 1}},
+	}).AnyTimes()
+
+	old := time.Now().Add(-time.Hour)
+	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3}
+	items := []*entity.ExptEvalItem{
+		{ItemID: 10, State: entity.ItemRunState_Queueing, UpdatedAt: &old}, // 让位行, 不应被判僵尸
+	}
+
+	alives, zombies, err := svc.handleZombies(context.Background(), event, items, &entity.Experiment{})
+	assert.NoError(t, err)
+	assert.Empty(t, zombies, "queueing (yielded) row must never be treated as zombie")
+	assert.Empty(t, alives, "queueing row is filtered out by State==Processing guard, not counted as alive either")
+}

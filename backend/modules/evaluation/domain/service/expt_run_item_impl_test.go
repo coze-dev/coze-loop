@@ -1467,3 +1467,39 @@ func TestExptItemEvalCtxExecutor_storeTurnRunResult_AllEvaluatorsTerminalComplet
 	}
 	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
 }
+
+// Test_ExptItemEvalCtxExecutor_evalErrNeedRetry 覆盖 §6.4:
+// evalErrNeedRetry 依据 event.RetryTimes(由 handleToSubmits 从 run_log.retry_times 持久列回填)与上限比较,
+// event.MaxRetryTimes>0 时覆盖错误级配置。让位改造后 event.RetryTimes 即持久值, 该判据据此收敛。
+func Test_ExptItemEvalCtxExecutor_evalErrNeedRetry(t *testing.T) {
+	tests := []struct {
+		name       string
+		retryTimes int
+		maxRetry   int // event.MaxRetryTimes
+		confRetry  int // GetErrRetryConf().RetryTimes
+		evalErr    error
+		wantNeed   bool
+	}{
+		{name: "nil err -> no retry", evalErr: nil, confRetry: 3, wantNeed: false},
+		{name: "persist retry_times below conf limit -> retry", retryTimes: 1, confRetry: 3, evalErr: errors.New("e"), wantNeed: true},
+		{name: "persist retry_times at conf limit -> no retry (converge)", retryTimes: 3, confRetry: 3, evalErr: errors.New("e"), wantNeed: false},
+		{name: "MaxRetryTimes overrides conf: below -> retry", retryTimes: 2, maxRetry: 5, confRetry: 3, evalErr: errors.New("e"), wantNeed: true},
+		{name: "MaxRetryTimes overrides conf: at limit -> no retry", retryTimes: 5, maxRetry: 5, confRetry: 999, evalErr: errors.New("e"), wantNeed: false},
+		{name: "conf limit 0 -> first failure converges immediately", retryTimes: 0, confRetry: 0, evalErr: errors.New("e"), wantNeed: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockConfiger := configermocks.NewMockIConfiger(ctrl)
+			if tt.evalErr != nil {
+				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: tt.confRetry, RetryIntervalSecond: 60})
+			}
+			executor := &ExptItemEvalCtxExecutor{Configer: mockConfiger}
+			event := &entity.ExptItemEvalEvent{SpaceID: 3, RetryTimes: tt.retryTimes, MaxRetryTimes: tt.maxRetry}
+			need, _ := executor.evalErrNeedRetry(context.Background(), event, tt.evalErr)
+			assert.Equal(t, tt.wantNeed, need)
+		})
+	}
+}

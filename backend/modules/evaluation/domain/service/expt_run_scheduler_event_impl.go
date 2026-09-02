@@ -637,6 +637,7 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 			ExptRunMode:   event.ExptRunMode,
 			EvalSetItemID: ts.ItemID,
 			CreateAt:      now,
+			RetryTimes:    int(ts.RetryTimes), // ★ 回填持久重试次数: 让位后由调度器新建的事件据此判收敛(需重试→让位, 达上限→落 Fail)
 			MaxRetryTimes: event.ItemRetryTimes,
 			Ext:           event.Ext,
 			Session:       event.Session,

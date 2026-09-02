@@ -48,6 +48,8 @@ func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
 			ConcurNum:        3,
 		},
 	}).AnyTimes()
+	// 让位降权灰度开关: 运行发起处(Run/RetryItems/Invoke)会读一次写入 ext, 默认关闭。
+	configer.EXPECT().GetRetryYieldEnabled(gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 
 	return &ExptMangerImpl{
 		exptResultService:           svcMocks.NewMockExptResultService(ctrl),

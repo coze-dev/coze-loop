@@ -6041,3 +6041,146 @@ func TestExptTrialRunExec_ExptStart_OriginalPath(t *testing.T) {
 		})
 	}
 }
+
+// Test_exptBaseExec_scanToSubmit_OrderByRetryTimesFirst 覆盖降权排序开关经 event.Ext 传入 filter(§6.2/§6.2b):
+// - 开关开(Ext[RetryYieldExtKey]="true") → filter.OrderByRetryTimesFirst=true;
+// - 开关关 / Ext 缺该键 → false(缺省关闭, 保持原 id asc 语义);
+// - 返回的 ExptEvalItem 回填 RetryTimes(供 handleToSubmits 写事件驱动收敛)。
+func Test_exptBaseExec_scanToSubmit_OrderByRetryTimesFirst(t *testing.T) {
+	baseExpt := &entity.Experiment{
+		EvalSet: &entity.EvaluationSet{EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 99}},
+	}
+
+	tests := []struct {
+		name          string
+		ext           map[string]string
+		wantFlag      bool
+		returnedLogs  []*entity.ExptItemResultRunLog
+		wantItemRetry []int32
+	}{
+		{
+			name:     "flag on -> OrderByRetryTimesFirst true, backfill retry_times",
+			ext:      map[string]string{entity.RetryYieldExtKey: "true"},
+			wantFlag: true,
+			returnedLogs: []*entity.ExptItemResultRunLog{
+				{ItemID: 10, Status: int32(entity.ItemRunState_Queueing), RetryTimes: 0},
+				{ItemID: 11, Status: int32(entity.ItemRunState_Queueing), RetryTimes: 2},
+			},
+			wantItemRetry: []int32{0, 2},
+		},
+		{
+			name:          "flag off -> OrderByRetryTimesFirst false",
+			ext:           map[string]string{entity.RetryYieldExtKey: "false"},
+			wantFlag:      false,
+			returnedLogs:  []*entity.ExptItemResultRunLog{{ItemID: 10, Status: int32(entity.ItemRunState_Queueing), RetryTimes: 5}},
+			wantItemRetry: []int32{5},
+		},
+		{
+			name:          "ext missing key -> default off",
+			ext:           nil,
+			wantFlag:      false,
+			returnedLogs:  []*entity.ExptItemResultRunLog{{ItemID: 10, Status: int32(entity.ItemRunState_Queueing), RetryTimes: 1}},
+			wantItemRetry: []int32{1},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			itemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+			e := &exptBaseExec{exptItemResultRepo: itemRepo}
+			event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Ext: tt.ext}
+
+			itemRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(5), int64(3)).
+				DoAndReturn(func(_ context.Context, _, _ int64, filter *entity.ExptItemRunLogFilter, cursor, limit, _ int64) ([]*entity.ExptItemResultRunLog, int64, error) {
+					// 只查 Queueing 行, 排序意图按开关
+					assert.Equal(t, []entity.ItemRunState{entity.ItemRunState_Queueing}, filter.Status)
+					assert.Equal(t, tt.wantFlag, filter.OrderByRetryTimesFirst)
+					assert.Equal(t, int64(0), cursor) // 游标恒 0, 与排序模式互斥约束一致
+					return tt.returnedLogs, int64(0), nil
+				})
+
+			items, err := e.scanToSubmit(context.Background(), event, baseExpt, 5)
+			assert.NoError(t, err)
+			assert.Len(t, items, len(tt.wantItemRetry))
+			for i, it := range items {
+				assert.Equal(t, tt.wantItemRetry[i], it.RetryTimes)
+				assert.Equal(t, int64(99), it.EvalSetVersionID)
+			}
+		})
+	}
+}
+
+// Test_exptBaseExec_scanIncompleteAndComplete_NoOrderFlag 防回归(§6.2 附加断言):
+// scanIncompleteAndComplete 传入的 filter 绝不能带 OrderByRetryTimesFirst(会破坏游标分页协议),
+// 且始终用 RawFilter(Processing / Logged 判据)。
+func Test_exptBaseExec_scanIncompleteAndComplete_NoOrderFlag(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	itemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+	e := &exptBaseExec{exptItemResultRepo: itemRepo}
+	expt := &entity.Experiment{EvalSet: &entity.EvaluationSet{EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 99}}}
+	event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Ext: map[string]string{entity.RetryYieldExtKey: "true"}}
+
+	itemRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), gomock.Any(), gomock.Any(), int64(3)).
+		DoAndReturn(func(_ context.Context, _, _ int64, filter *entity.ExptItemRunLogFilter, _, _, _ int64) ([]*entity.ExptItemResultRunLog, int64, error) {
+			assert.False(t, filter.OrderByRetryTimesFirst, "scanIncompleteAndComplete must never set OrderByRetryTimesFirst (cursor-paging protocol)")
+			assert.True(t, filter.RawFilter)
+			return []*entity.ExptItemResultRunLog{
+				{ItemID: 10, Status: int32(entity.ItemRunState_Processing)},
+				{ItemID: 11, ResultState: int32(entity.ExptItemResultStateLogged)},
+			}, int64(0), nil
+		})
+
+	incomplete, complete, err := e.scanIncompleteAndComplete(context.Background(), event, expt)
+	assert.NoError(t, err)
+	assert.Len(t, incomplete, 1)
+	assert.Len(t, complete, 1)
+}
+
+// Test_exptBaseExec_hasPendingAfterRescan 防回归(§6.2 附加断言 + §4.2 收工判定):
+// - filter 覆盖 Queueing+Processing(让位行现为 Queueing, 必须被算作 pending, 否则会提前收工遗漏);
+// - filter 绝不带 OrderByRetryTimesFirst;
+// - 有 pending 行 → true, 无 → false。
+func Test_exptBaseExec_hasPendingAfterRescan(t *testing.T) {
+	tests := []struct {
+		name        string
+		returned    []*entity.ExptItemResultRunLog
+		wantPending bool
+	}{
+		{
+			name:        "queueing row present (yielded item) -> not finished",
+			returned:    []*entity.ExptItemResultRunLog{{ItemID: 10, Status: int32(entity.ItemRunState_Queueing)}},
+			wantPending: true,
+		},
+		{
+			name:        "no pending -> finished",
+			returned:    []*entity.ExptItemResultRunLog{},
+			wantPending: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			itemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+			e := &exptBaseExec{exptItemResultRepo: itemRepo}
+			event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Ext: map[string]string{entity.RetryYieldExtKey: "true"}}
+
+			itemRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), gomock.Any(), int64(1), int64(3)).
+				DoAndReturn(func(_ context.Context, _, _ int64, filter *entity.ExptItemRunLogFilter, _, _, _ int64) ([]*entity.ExptItemResultRunLog, int64, error) {
+					assert.False(t, filter.OrderByRetryTimesFirst, "hasPendingAfterRescan must never set OrderByRetryTimesFirst")
+					assert.ElementsMatch(t, []entity.ItemRunState{entity.ItemRunState_Queueing, entity.ItemRunState_Processing}, filter.Status)
+					return tt.returned, int64(0), nil
+				})
+
+			got, err := e.hasPendingAfterRescan(context.Background(), event)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantPending, got)
+		})
+	}
+}

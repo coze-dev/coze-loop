@@ -1274,7 +1274,13 @@ func (e *exptBaseExec) getItemConcurNum(ctx context.Context, expt *entity.Experi
 }
 
 func (e *exptBaseExec) scanToSubmit(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, limit int64) (items []*entity.ExptEvalItem, err error) {
-	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{Status: []entity.ItemRunState{entity.ItemRunState_Queueing}}, 0, limit, event.SpaceID)
+	// 让位降权开关只读事件里的值(按 expt_run_id 固化, §9.3.1); 开启时挑选序改为 retry_times asc, id asc,
+	// 健康行(retry_times=0)恒优先于让位重试行。旧事件 Ext 无该键 → false, 缺省关闭走原 id asc。
+	retryYield := event.Ext[entity.RetryYieldExtKey] == "true"
+	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
+		Status:                 []entity.ItemRunState{entity.ItemRunState_Queueing},
+		OrderByRetryTimesFirst: retryYield,
+	}, 0, limit, event.SpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -1286,6 +1292,7 @@ func (e *exptBaseExec) scanToSubmit(ctx context.Context, event *entity.ExptSched
 			EvalSetVersionID: expt.EvalSet.EvaluationSetVersion.ID,
 			ItemID:           log.ItemID,
 			State:            entity.ItemRunState(log.Status),
+			RetryTimes:       log.RetryTimes, // ★ 回填持久重试次数, 供 handleToSubmits 写入事件驱动收敛判定
 			UpdatedAt:        log.UpdatedAt,
 		})
 	}

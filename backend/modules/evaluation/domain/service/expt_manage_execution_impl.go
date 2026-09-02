@@ -293,6 +293,16 @@ func (e *ExptMangerImpl) CheckBenefit(ctx context.Context, expt *entity.Experime
 	return nil
 }
 
+// withRetryYieldExt 把让位降权灰度开关值写入 ext(键 entity.RetryYieldExtKey)。
+// ext 为 nil 时新建 map; 只写 "true"/"false" 字符串, 消费侧按 =="true" 判定, 旧事件无该键 → 缺省关闭。
+func withRetryYieldExt(ext map[string]string, enabled bool) map[string]string {
+	if ext == nil {
+		ext = make(map[string]string, 1)
+	}
+	ext[entity.RetryYieldExtKey] = strconv.FormatBool(enabled)
+	return ext
+}
+
 func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
 	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
 		return err
@@ -319,6 +329,10 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		}
 		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Run] online expt heartbeat lock acquired, expt_id: %v, run_id: %v, space_id: %v", exptID, runID, spaceID)
 	}
+
+	// 让位降权灰度开关: 在运行发起处读一次配置, 写入 ext 随事件下传并按 expt_run_id 固化,
+	// 消费侧/调度侧只读事件里的值, 运行中不再现读配置(§9.3.1)。
+	ext = withRetryYieldExt(ext, e.configer.GetRetryYieldEnabled(ctx, spaceID))
 
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:        spaceID,
@@ -403,6 +417,9 @@ func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID 
 	if err != nil {
 		return err
 	}
+
+	// 让位降权灰度开关: 发起处读一次并固化进 ext(§9.3.1)。
+	ext = withRetryYieldExt(ext, e.configer.GetRetryYieldEnabled(ctx, spaceID))
 
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:            spaceID,
@@ -1026,6 +1043,8 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 	}
 	logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt heartbeat lock acquired, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
 	logs.CtxInfo(ctx, "[Invoke] PublishExptScheduleEvent, exptID: %v ", invokeExptReq.ExptID)
+	// 让位降权灰度开关: 发起处读一次并固化进 ext(§9.3.1)。
+	invokeExptReq.Ext = withRetryYieldExt(invokeExptReq.Ext, e.configer.GetRetryYieldEnabled(ctx, invokeExptReq.SpaceID))
 	if err = e.publisher.PublishExptScheduleEvent(lockCtx, &entity.ExptScheduleEvent{
 		SpaceID:     invokeExptReq.SpaceID,
 		ExptID:      invokeExptReq.ExptID,
