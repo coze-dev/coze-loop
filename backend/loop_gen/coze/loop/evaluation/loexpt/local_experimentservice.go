@@ -324,6 +324,29 @@ func (l *LocalExperimentService) KillExperiment(ctx context.Context, req *expt.K
 	return result.GetSuccess(), nil
 }
 
+// TerminateExperimentItems
+// TerminateExperimentItems 终止实验中指定的若干行，实验自身状态不变
+func (l *LocalExperimentService) TerminateExperimentItems(ctx context.Context, req *expt.TerminateExperimentItemsRequest, callOptions ...callopt.Option) (*expt.TerminateExperimentItemsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceTerminateExperimentItemsArgs)
+		result := out.(*expt.ExperimentServiceTerminateExperimentItemsResult)
+		resp, err := l.impl.TerminateExperimentItems(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceTerminateExperimentItemsArgs{Req: req}
+	result := &expt.ExperimentServiceTerminateExperimentItemsResult{}
+	ctx = l.injectRPCInfo(ctx, "TerminateExperimentItems")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // BatchGetExperimentResult_
 // MGetExperimentResult 获取实验结果
 func (l *LocalExperimentService) BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentResultResponse, error) {

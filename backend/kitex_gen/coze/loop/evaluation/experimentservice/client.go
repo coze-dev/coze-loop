@@ -25,6 +25,7 @@ type Client interface {
 	RunExperiment(ctx context.Context, req *expt.RunExperimentRequest, callOptions ...callopt.Option) (r *expt.RunExperimentResponse, err error)
 	RetryExperiment(ctx context.Context, req *expt.RetryExperimentRequest, callOptions ...callopt.Option) (r *expt.RetryExperimentResponse, err error)
 	KillExperiment(ctx context.Context, req *expt.KillExperimentRequest, callOptions ...callopt.Option) (r *expt.KillExperimentResponse, err error)
+	TerminateExperimentItems(ctx context.Context, req *expt.TerminateExperimentItemsRequest, callOptions ...callopt.Option) (r *expt.TerminateExperimentItemsResponse, err error)
 	BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentResultResponse, err error)
 	MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (r *expt.MGetExperimentStandardEvalOutputsResponse, err error)
 	ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (r *expt.ListExperimentStandardEvalOutputsResponse, err error)
@@ -155,6 +156,11 @@ func (p *kExperimentServiceClient) RetryExperiment(ctx context.Context, req *exp
 func (p *kExperimentServiceClient) KillExperiment(ctx context.Context, req *expt.KillExperimentRequest, callOptions ...callopt.Option) (r *expt.KillExperimentResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.KillExperiment(ctx, req)
+}
+
+func (p *kExperimentServiceClient) TerminateExperimentItems(ctx context.Context, req *expt.TerminateExperimentItemsRequest, callOptions ...callopt.Option) (r *expt.TerminateExperimentItemsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.TerminateExperimentItems(ctx, req)
 }
 
 func (p *kExperimentServiceClient) BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentResultResponse, err error) {

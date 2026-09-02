@@ -378,3 +378,19 @@ func GetExperimentIDsByGroupOApi(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// TerminateExperimentItemsOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/terminate_items [POST]
+func TerminateExperimentItemsOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.TerminateExperimentItemsOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.TerminateExperimentItemsOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

@@ -256,6 +256,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_expt_id.POST("/insight_analysis", append(_insightanalysisexperimentMw(handler), apis.InsightAnalysisExperiment)...)
 					_expt_id.POST("/kill", append(_killexperimentMw(handler), apis.KillExperiment)...)
 					_expt_id.POST("/retry", append(_retryexperimentMw(handler), apis.RetryExperiment)...)
+					_expt_id.POST("/terminate_items", append(_terminateexperimentitemsMw(handler), apis.TerminateExperimentItems)...)
 					{
 						_annotate_record := _expt_id.Group("/annotate_record", _annotate_recordMw(handler)...)
 						_annotate_record.POST("/create", append(_createannotaterecordMw(handler), apis.CreateAnnotateRecord)...)
@@ -582,6 +583,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_results1.POST("/export", append(_exportexperimentresultoapiMw(handler), apis.ExportExperimentResultOApi)...)
 				_experiment_id.POST("/retry", append(_retryexperimentoapiMw(handler), apis.RetryExperimentOApi)...)
 				_experiment_id.PATCH("/run_conf", append(_updateexptrunconfoapiMw(handler), apis.UpdateExptRunConfOApi)...)
+				_experiment_id.POST("/terminate_items", append(_terminateexperimentitemsoapiMw(handler), apis.TerminateExperimentItemsOApi)...)
 				{
 					_export_records0 := _experiment_id.Group("/export_records", _export_records0Mw(handler)...)
 					_export_records0.GET("/:export_id", append(_getexperimentresultexportrecordoapiMw(handler), apis.GetExperimentResultExportRecordOApi)...)

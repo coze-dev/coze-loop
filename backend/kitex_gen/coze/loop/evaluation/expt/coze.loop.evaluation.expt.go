@@ -14208,6 +14208,605 @@ func (p *KillExperimentResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
+// TerminateExperimentItemsRequest 终止实验中指定的若干行（item）。
+// 与 KillExperiment 的区别：仅这些行进入已终止终态，实验自身状态不变、其余行继续执行。
+// 终止语义为「不再继续」而非瞬时 kill：排队中的行不再被调度，执行中的行当前一轮跑完后不再进入下一轮。
+type TerminateExperimentItemsRequest struct {
+	ExptID      *int64     `thrift:"expt_id,1,optional" frugal:"1,optional,i64" json:"expt_id" path:"expt_id" `
+	WorkspaceID *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
+	ItemIds     []int64    `thrift:"item_ids,3,optional" frugal:"3,optional,list<i64>" json:"item_ids" form:"item_ids" `
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewTerminateExperimentItemsRequest() *TerminateExperimentItemsRequest {
+	return &TerminateExperimentItemsRequest{}
+}
+
+func (p *TerminateExperimentItemsRequest) InitDefault() {
+}
+
+var TerminateExperimentItemsRequest_ExptID_DEFAULT int64
+
+func (p *TerminateExperimentItemsRequest) GetExptID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptID() {
+		return TerminateExperimentItemsRequest_ExptID_DEFAULT
+	}
+	return *p.ExptID
+}
+
+var TerminateExperimentItemsRequest_WorkspaceID_DEFAULT int64
+
+func (p *TerminateExperimentItemsRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return TerminateExperimentItemsRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var TerminateExperimentItemsRequest_ItemIds_DEFAULT []int64
+
+func (p *TerminateExperimentItemsRequest) GetItemIds() (v []int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemIds() {
+		return TerminateExperimentItemsRequest_ItemIds_DEFAULT
+	}
+	return p.ItemIds
+}
+
+var TerminateExperimentItemsRequest_Base_DEFAULT *base.Base
+
+func (p *TerminateExperimentItemsRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return TerminateExperimentItemsRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *TerminateExperimentItemsRequest) SetExptID(val *int64) {
+	p.ExptID = val
+}
+func (p *TerminateExperimentItemsRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *TerminateExperimentItemsRequest) SetItemIds(val []int64) {
+	p.ItemIds = val
+}
+func (p *TerminateExperimentItemsRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_TerminateExperimentItemsRequest = map[int16]string{
+	1:   "expt_id",
+	2:   "workspace_id",
+	3:   "item_ids",
+	255: "Base",
+}
+
+func (p *TerminateExperimentItemsRequest) IsSetExptID() bool {
+	return p.ExptID != nil
+}
+
+func (p *TerminateExperimentItemsRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *TerminateExperimentItemsRequest) IsSetItemIds() bool {
+	return p.ItemIds != nil
+}
+
+func (p *TerminateExperimentItemsRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *TerminateExperimentItemsRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TerminateExperimentItemsRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TerminateExperimentItemsRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExptID = _field
+	return nil
+}
+func (p *TerminateExperimentItemsRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *TerminateExperimentItemsRequest) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ItemIds = _field
+	return nil
+}
+func (p *TerminateExperimentItemsRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *TerminateExperimentItemsRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TerminateExperimentItemsRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TerminateExperimentItemsRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptID() {
+		if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExptID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TerminateExperimentItemsRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *TerminateExperimentItemsRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemIds() {
+		if err = oprot.WriteFieldBegin("item_ids", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.ItemIds)); err != nil {
+			return err
+		}
+		for _, v := range p.ItemIds {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *TerminateExperimentItemsRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *TerminateExperimentItemsRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TerminateExperimentItemsRequest(%+v)", *p)
+
+}
+
+func (p *TerminateExperimentItemsRequest) DeepEqual(ano *TerminateExperimentItemsRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ExptID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.ItemIds) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *TerminateExperimentItemsRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.ExptID == src {
+		return true
+	} else if p.ExptID == nil || src == nil {
+		return false
+	}
+	if *p.ExptID != *src {
+		return false
+	}
+	return true
+}
+func (p *TerminateExperimentItemsRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *TerminateExperimentItemsRequest) Field3DeepEqual(src []int64) bool {
+
+	if len(p.ItemIds) != len(src) {
+		return false
+	}
+	for i, v := range p.ItemIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *TerminateExperimentItemsRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TerminateExperimentItemsResponse struct {
+	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewTerminateExperimentItemsResponse() *TerminateExperimentItemsResponse {
+	return &TerminateExperimentItemsResponse{}
+}
+
+func (p *TerminateExperimentItemsResponse) InitDefault() {
+}
+
+var TerminateExperimentItemsResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *TerminateExperimentItemsResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return TerminateExperimentItemsResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *TerminateExperimentItemsResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_TerminateExperimentItemsResponse = map[int16]string{
+	255: "BaseResp",
+}
+
+func (p *TerminateExperimentItemsResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *TerminateExperimentItemsResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TerminateExperimentItemsResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TerminateExperimentItemsResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *TerminateExperimentItemsResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TerminateExperimentItemsResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TerminateExperimentItemsResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *TerminateExperimentItemsResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TerminateExperimentItemsResponse(%+v)", *p)
+
+}
+
+func (p *TerminateExperimentItemsResponse) DeepEqual(ano *TerminateExperimentItemsResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *TerminateExperimentItemsResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type CloneExperimentRequest struct {
 	ExptID      *int64     `thrift:"expt_id,1,optional" frugal:"1,optional,i64" json:"expt_id" path:"expt_id" `
 	WorkspaceID *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
@@ -44151,6 +44750,8 @@ type ExperimentService interface {
 	RetryExperiment(ctx context.Context, req *RetryExperimentRequest) (r *RetryExperimentResponse, err error)
 
 	KillExperiment(ctx context.Context, req *KillExperimentRequest) (r *KillExperimentResponse, err error)
+	// TerminateExperimentItems 终止实验中指定的若干行，实验自身状态不变
+	TerminateExperimentItems(ctx context.Context, req *TerminateExperimentItemsRequest) (r *TerminateExperimentItemsResponse, err error)
 	// MGetExperimentResult 获取实验结果
 	BatchGetExperimentResult_(ctx context.Context, req *BatchGetExperimentResultRequest) (r *BatchGetExperimentResultResponse, err error)
 
@@ -44363,6 +44964,15 @@ func (p *ExperimentServiceClient) KillExperiment(ctx context.Context, req *KillE
 	_args.Req = req
 	var _result ExperimentServiceKillExperimentResult
 	if err = p.Client_().Call(ctx, "KillExperiment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ExperimentServiceClient) TerminateExperimentItems(ctx context.Context, req *TerminateExperimentItemsRequest) (r *TerminateExperimentItemsResponse, err error) {
+	var _args ExperimentServiceTerminateExperimentItemsArgs
+	_args.Req = req
+	var _result ExperimentServiceTerminateExperimentItemsResult
+	if err = p.Client_().Call(ctx, "TerminateExperimentItems", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -44681,6 +45291,7 @@ func NewExperimentServiceProcessor(handler ExperimentService) *ExperimentService
 	self.AddToProcessorMap("RunExperiment", &experimentServiceProcessorRunExperiment{handler: handler})
 	self.AddToProcessorMap("RetryExperiment", &experimentServiceProcessorRetryExperiment{handler: handler})
 	self.AddToProcessorMap("KillExperiment", &experimentServiceProcessorKillExperiment{handler: handler})
+	self.AddToProcessorMap("TerminateExperimentItems", &experimentServiceProcessorTerminateExperimentItems{handler: handler})
 	self.AddToProcessorMap("BatchGetExperimentResult", &experimentServiceProcessorBatchGetExperimentResult_{handler: handler})
 	self.AddToProcessorMap("MGetExperimentStandardEvalOutputs", &experimentServiceProcessorMGetExperimentStandardEvalOutputs{handler: handler})
 	self.AddToProcessorMap("ListExperimentStandardEvalOutputs", &experimentServiceProcessorListExperimentStandardEvalOutputs{handler: handler})
@@ -45387,6 +45998,54 @@ func (p *experimentServiceProcessorKillExperiment) Process(ctx context.Context, 
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("KillExperiment", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorTerminateExperimentItems struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorTerminateExperimentItems) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceTerminateExperimentItemsArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("TerminateExperimentItems", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceTerminateExperimentItemsResult{}
+	var retval *TerminateExperimentItemsResponse
+	if retval, err2 = p.handler.TerminateExperimentItems(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing TerminateExperimentItems: "+err2.Error())
+		oprot.WriteMessageBegin("TerminateExperimentItems", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("TerminateExperimentItems", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -51701,6 +52360,350 @@ func (p *ExperimentServiceKillExperimentResult) DeepEqual(ano *ExperimentService
 }
 
 func (p *ExperimentServiceKillExperimentResult) Field0DeepEqual(src *KillExperimentResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceTerminateExperimentItemsArgs struct {
+	Req *TerminateExperimentItemsRequest `thrift:"req,1" frugal:"1,default,TerminateExperimentItemsRequest"`
+}
+
+func NewExperimentServiceTerminateExperimentItemsArgs() *ExperimentServiceTerminateExperimentItemsArgs {
+	return &ExperimentServiceTerminateExperimentItemsArgs{}
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) InitDefault() {
+}
+
+var ExperimentServiceTerminateExperimentItemsArgs_Req_DEFAULT *TerminateExperimentItemsRequest
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) GetReq() (v *TerminateExperimentItemsRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceTerminateExperimentItemsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceTerminateExperimentItemsArgs) SetReq(val *TerminateExperimentItemsRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceTerminateExperimentItemsArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceTerminateExperimentItemsArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewTerminateExperimentItemsRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TerminateExperimentItems_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceTerminateExperimentItemsArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) DeepEqual(ano *ExperimentServiceTerminateExperimentItemsArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsArgs) Field1DeepEqual(src *TerminateExperimentItemsRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceTerminateExperimentItemsResult struct {
+	Success *TerminateExperimentItemsResponse `thrift:"success,0,optional" frugal:"0,optional,TerminateExperimentItemsResponse"`
+}
+
+func NewExperimentServiceTerminateExperimentItemsResult() *ExperimentServiceTerminateExperimentItemsResult {
+	return &ExperimentServiceTerminateExperimentItemsResult{}
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) InitDefault() {
+}
+
+var ExperimentServiceTerminateExperimentItemsResult_Success_DEFAULT *TerminateExperimentItemsResponse
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) GetSuccess() (v *TerminateExperimentItemsResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceTerminateExperimentItemsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceTerminateExperimentItemsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TerminateExperimentItemsResponse)
+}
+
+var fieldIDToName_ExperimentServiceTerminateExperimentItemsResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceTerminateExperimentItemsResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewTerminateExperimentItemsResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TerminateExperimentItems_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceTerminateExperimentItemsResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) DeepEqual(ano *ExperimentServiceTerminateExperimentItemsResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceTerminateExperimentItemsResult) Field0DeepEqual(src *TerminateExperimentItemsResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

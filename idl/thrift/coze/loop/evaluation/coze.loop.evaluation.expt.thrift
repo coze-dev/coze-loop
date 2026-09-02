@@ -311,6 +311,21 @@ struct KillExperimentResponse {
     255: base.BaseResp BaseResp
 }
 
+// TerminateExperimentItemsRequest 终止实验中指定的若干行（item）。
+// 与 KillExperiment 的区别：仅这些行进入已终止终态，实验自身状态不变、其余行继续执行。
+// 终止语义为「不再继续」而非瞬时 kill：排队中的行不再被调度，执行中的行当前一轮跑完后不再进入下一轮。
+struct TerminateExperimentItemsRequest {
+    1: optional i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    2: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    3: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"', vt.min_size = "1", vt.max_size = "100")
+
+    255: optional base.Base Base
+}
+
+struct TerminateExperimentItemsResponse {
+    255: base.BaseResp BaseResp
+}
+
 struct CloneExperimentRequest {
     1: optional i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
     2: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
@@ -1019,6 +1034,11 @@ service ExperimentService {
 
     KillExperimentResponse KillExperiment(1: KillExperimentRequest req) (
         api.post = '/api/evaluation/v1/experiments/:expt_id/kill', api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
+
+    // TerminateExperimentItems 终止实验中指定的若干行，实验自身状态不变
+    TerminateExperimentItemsResponse TerminateExperimentItems(1: TerminateExperimentItemsRequest req) (
+        api.post = '/api/evaluation/v1/experiments/:expt_id/terminate_items', api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
     )
 
     // MGetExperimentResult 获取实验结果

@@ -783,6 +783,29 @@ func (l *LocalEvaluationOpenAPIService) KillExperimentOApi(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+// TerminateExperimentItemsOApi
+// 终止实验中指定的若干行
+func (l *LocalEvaluationOpenAPIService) TerminateExperimentItemsOApi(ctx context.Context, req *openapi.TerminateExperimentItemsOApiRequest, callOptions ...callopt.Option) (*openapi.TerminateExperimentItemsOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceTerminateExperimentItemsOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceTerminateExperimentItemsOApiResult)
+		resp, err := l.impl.TerminateExperimentItemsOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceTerminateExperimentItemsOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceTerminateExperimentItemsOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "TerminateExperimentItemsOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ExportExperimentResultOApi
 // 导出实验报告
 func (l *LocalEvaluationOpenAPIService) ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest, callOptions ...callopt.Option) (*openapi.ExportExperimentResultOApiResponse, error) {

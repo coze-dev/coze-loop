@@ -886,6 +886,24 @@ struct KillExperimentOApiResponse {
     255: base.BaseResp BaseResp
 }
 
+// TerminateExperimentItemsOApiRequest 通过 OpenAPI 终止实验中指定的若干行（item）。
+// 仅对处于 Processing 状态的实验生效；仅指定行进入已终止终态，实验自身状态不变、其余行继续执行。
+// 终止语义为「不再继续」而非瞬时 kill：排队中的行不再被调度，执行中的行当前一轮跑完后不再进入下一轮。
+struct TerminateExperimentItemsOApiRequest {
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = "true", go.tag = 'json:"workspace_id"')
+    2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv = "true", go.tag = 'json:"experiment_id"')
+    3: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = "true", go.tag = 'json:"item_ids"', vt.min_size = "1", vt.max_size = "100")
+
+    255: optional base.Base Base
+}
+
+struct TerminateExperimentItemsOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+
+    255: base.BaseResp BaseResp
+}
+
 // 3.6 导出实验报告
 struct ExportExperimentResultOApiRequest {
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = "true", go.tag = 'json:"workspace_id"')
@@ -1554,6 +1572,8 @@ service EvaluationOpenAPIService {
     RetryExperimentOApiResponse RetryExperimentOApi(1: RetryExperimentOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/retry")
     // 终止实验
     KillExperimentOApiResponse KillExperimentOApi(1: KillExperimentOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/kill")
+    // 终止实验中指定的若干行
+    TerminateExperimentItemsOApiResponse TerminateExperimentItemsOApi(1: TerminateExperimentItemsOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/terminate_items")
     // 导出实验报告
     ExportExperimentResultOApiResponse ExportExperimentResultOApi(1: ExportExperimentResultOApiRequest req) (api.category = "openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/results/export")
     // 查询实验报告导出记录（含下载链接）

@@ -245,6 +245,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"TerminateExperimentItemsOApi": kitex.NewMethodInfo(
+		terminateExperimentItemsOApiHandler,
+		newEvaluationOpenAPIServiceTerminateExperimentItemsOApiArgs,
+		newEvaluationOpenAPIServiceTerminateExperimentItemsOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ExportExperimentResultOApi": kitex.NewMethodInfo(
 		exportExperimentResultOApiHandler,
 		newEvaluationOpenAPIServiceExportExperimentResultOApiArgs,
@@ -1073,6 +1080,25 @@ func newEvaluationOpenAPIServiceKillExperimentOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceKillExperimentOApiResult()
 }
 
+func terminateExperimentItemsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceTerminateExperimentItemsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceTerminateExperimentItemsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).TerminateExperimentItemsOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceTerminateExperimentItemsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceTerminateExperimentItemsOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceTerminateExperimentItemsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceTerminateExperimentItemsOApiResult()
+}
+
 func exportExperimentResultOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.EvaluationOpenAPIServiceExportExperimentResultOApiArgs)
 	realResult := result.(*openapi.EvaluationOpenAPIServiceExportExperimentResultOApiResult)
@@ -1866,6 +1892,16 @@ func (p *kClient) KillExperimentOApi(ctx context.Context, req *openapi.KillExper
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceKillExperimentOApiResult
 	if err = p.c.Call(ctx, "KillExperimentOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) TerminateExperimentItemsOApi(ctx context.Context, req *openapi.TerminateExperimentItemsOApiRequest) (r *openapi.TerminateExperimentItemsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceTerminateExperimentItemsOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceTerminateExperimentItemsOApiResult
+	if err = p.c.Call(ctx, "TerminateExperimentItemsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
