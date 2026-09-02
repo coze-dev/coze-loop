@@ -248,6 +248,7 @@ type ExptItemResultRunLog struct {
 	ErrMsg        []byte
 	LogID         string
 	ResultState   int32
+	RetryTimes    int32 // ★ 本轮 expt_run 内该 item 已被系统自动重试的次数; 0=未重试; 仅内部调度降权用, 不透出
 	UpdatedAt     *time.Time
 }
 
@@ -267,6 +268,7 @@ type ExptEvalItem struct {
 	EvalSetVersionID int64
 	ItemID           int64
 	State            ItemRunState
+	RetryTimes       int32 // ★ 本轮 expt_run 内该 item 已被系统自动重试的次数; 供 handleToSubmits 回填事件
 	UpdatedAt        *time.Time
 }
 
@@ -577,6 +579,12 @@ type ExptItemRunLogFilter struct {
 
 	RawFilter bool
 	RawCond   clause.Expr
+
+	// OrderByRetryTimesFirst 让位降权排序意图：true → 挑选序改为 `retry_times asc, id asc`
+	// (并 ForceIndex 到 idx_expt_run_retry_pick), 让重试行降权、健康行优先; false → 维持原 `id asc`。
+	// ⚠️ 该排序模式与游标翻页(id > cursor)互斥, 仅允许 cursor==0 时使用(会漏行+重复行, 详见技术方案 §4.0);
+	// 且严禁在多个调用点无脑打开——目前仅 scanToSubmit 传 true。
+	OrderByRetryTimesFirst bool
 }
 
 func (e *ExptItemRunLogFilter) GetResultState() ExptItemResultState {

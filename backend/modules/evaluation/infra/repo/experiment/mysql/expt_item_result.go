@@ -293,14 +293,27 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 	// RawFilter: use raw gorm.DB Where(sql, vars...) to avoid gen clause conversion / unknown clause issues.
 	if filter.RawFilter && filter.RawCond.SQL != "" {
 		var res []*model.ExptItemResultRunLog
+		// ⚠️ ORDER BY 按 filter flag 局部决定, 不得无条件改: 本方法是游标分页协议(id > cursor 依赖 id asc),
+		// 无条件改排序会让走游标循环的调用方漏行+重复行(技术方案 §4.0)。
+		// flag=true(让位降权): ForceIndex 到复合索引 + retry_times asc, id asc; 与游标翻页互斥, 校验 cursor==0。
+		// flag=false: 一字不变, 维持 ForceIndex(uk_expt_run_item_turn) + id asc。
+		forceIndex := "uk_expt_run_item_turn"
+		orderBy := "id asc"
+		if filter.OrderByRetryTimesFirst {
+			if cursor > 0 {
+				return nil, 0, fmt.Errorf("ScanItemRunLogs OrderByRetryTimesFirst is incompatible with cursor paging, exptID=%d, exptRunID=%d, cursor=%d", exptID, exptRunID, cursor)
+			}
+			forceIndex = "idx_expt_run_retry_pick"
+			orderBy = "retry_times asc, id asc"
+		}
 		tx := session.WithContext(ctx).Model(&model.ExptItemResultRunLog{}).
-			Clauses(hints.ForceIndex("uk_expt_run_item_turn")).
+			Clauses(hints.ForceIndex(forceIndex)).
 			Where("space_id = ? AND expt_id = ? AND expt_run_id = ?", spaceID, exptID, exptRunID).
 			Where(filter.RawCond.SQL, filter.RawCond.Vars...)
 		if cursor > 0 {
 			tx = tx.Where("id > ?", cursor)
 		}
-		tx = tx.Order("id asc")
+		tx = tx.Order(orderBy)
 		if limit > 0 {
 			tx = tx.Limit(int(limit))
 		}
@@ -327,6 +340,29 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 	}
 	if cursor > 0 {
 		conds = append(conds, q.ID.Gt(cursor))
+	}
+
+	// gen 分支同样按 flag 局部决定 ORDER BY + ForceIndex(见上方 RawFilter 分支注释)。
+	// flag=true 时无条件保留 ForceIndex 到 idx_expt_run_retry_pick(索引未建成会显式报错, 这是刻意的失败设计, §4.4.3)。
+	if filter.OrderByRetryTimesFirst {
+		if cursor > 0 {
+			return nil, 0, fmt.Errorf("ScanItemRunLogs OrderByRetryTimesFirst is incompatible with cursor paging, exptID=%d, exptRunID=%d, cursor=%d", exptID, exptRunID, cursor)
+		}
+		query := q.WithContext(ctx).
+			Clauses(hints.ForceIndex("idx_expt_run_retry_pick")).
+			Where(conds...).
+			Order(q.RetryTimes, q.ID)
+		if limit > 0 {
+			query = query.Limit(int(limit))
+		}
+		res, err := query.Find()
+		if err != nil {
+			return nil, 0, errorx.Wrapf(err, "ScanItemRunLogs fail, exptID=%d, exptRunID=%d, cursor=%d", exptID, exptRunID, cursor)
+		}
+		if len(res) == 0 {
+			return nil, 0, nil
+		}
+		return res, res[len(res)-1].ID, nil
 	}
 
 	query := q.WithContext(ctx).
