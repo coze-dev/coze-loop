@@ -524,6 +524,24 @@ func (e *ExptItemEventEvalServiceImpl) requeueOrphanedItemOnReservationAbsent(ct
 					event.ExptID, event.EvalSetItemID, uerr)
 			}
 		}
+
+		// turn 主表与 CK 加速表也要跟着退回：派发侧推进的是这五项，回退只做前三项就会留下
+		// 「item 已回队列、turn 与 CK 仍显示执行中」的错位。它不会自愈 —— 实验若以 Failed
+		// 收口，CompleteExpt 的 default 分支只销毁沙箱、不动 turn 状态。
+		// 同样绑定 requeued（判据与 stats、主表一致），失败只告警。
+		if requeued && e.exptTurnResultRepo != nil {
+			if uerr := e.exptTurnResultRepo.UpdateTurnResultsWithItemIDs(ctx, event.ExptID, []int64{event.EvalSetItemID}, event.SpaceID,
+				map[string]any{"status": int32(entity.TurnRunState_Queueing)}); uerr != nil {
+				logs.CtxWarn(ctx, "[CentralReservation] rollback turn results to Queueing failed (display only), expt_id: %v, item_id: %v: %v",
+					event.ExptID, event.EvalSetItemID, uerr)
+			}
+		}
+		if requeued && e.resultSvc != nil {
+			if uerr := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, []int64{event.EvalSetItemID}); uerr != nil {
+				logs.CtxWarn(ctx, "[CentralReservation] rollback turn result filter failed (display only), expt_id: %v, item_id: %v: %v",
+					event.ExptID, event.EvalSetItemID, uerr)
+			}
+		}
 		return
 	}
 
