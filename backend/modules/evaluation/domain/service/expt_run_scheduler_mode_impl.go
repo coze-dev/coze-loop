@@ -1277,9 +1277,18 @@ func (e *exptBaseExec) scanToSubmit(ctx context.Context, event *entity.ExptSched
 	// 让位降权开关只读事件里的值(按 expt_run_id 固化, §9.3.1); 开启时挑选序改为 retry_times asc, id asc,
 	// 健康行(retry_times=0)恒优先于让位重试行。旧事件 Ext 无该键 → false, 缺省关闭走原 id asc。
 	retryYield := event.Ext[entity.RetryYieldExtKey] == "true"
+	// ★ 索引就绪标志与上面相反, 必须【现读配置】而非读事件: 它是 schema 事实而非业务灰度,
+	// 索引建成后翻配置应立即对在跑的实验生效, 不该等实验跑完或重跑(详见 RetryYieldConf.IndexReady 注释)。
+	// 仅在 retryYield 开启时才需要该值, 顺带省掉关闭态下的一次配置读取;
+	// configer 为 nil 时保守取 false(不下 ForceIndex hint), 绝不因取配置失败而让调度 panic 或报 Key doesn't exist。
+	indexReady := false
+	if retryYield && e.configer != nil {
+		indexReady = e.configer.GetExptExecConf(ctx, event.SpaceID).GetRetryYieldConf().IsIndexReady()
+	}
 	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
 		Status:                 []entity.ItemRunState{entity.ItemRunState_Queueing},
 		OrderByRetryTimesFirst: retryYield,
+		RetryPickIndexReady:    indexReady,
 	}, 0, limit, event.SpaceID)
 	if err != nil {
 		return nil, err

@@ -580,11 +580,17 @@ type ExptItemRunLogFilter struct {
 	RawFilter bool
 	RawCond   clause.Expr
 
-	// OrderByRetryTimesFirst 让位降权排序意图：true → 挑选序改为 `retry_times asc, id asc`
-	// (并 ForceIndex 到 idx_expt_run_retry_pick), 让重试行降权、健康行优先; false → 维持原 `id asc`。
+	// OrderByRetryTimesFirst 让位降权排序意图：true → 挑选序改为 `retry_times asc, id asc`,
+	// 让重试行降权、健康行优先; false → 维持原 `id asc`。
 	// ⚠️ 该排序模式与游标翻页(id > cursor)互斥, 仅允许 cursor==0 时使用(会漏行+重复行, 详见技术方案 §4.0);
 	// 且严禁在多个调用点无脑打开——目前仅 scanToSubmit 传 true。
 	OrderByRetryTimesFirst bool
+
+	// RetryPickIndexReady 声明 idx_expt_run_retry_pick 是否已建成, 仅在 OrderByRetryTimesFirst=true 时被读取。
+	// true → 下 ForceIndex(idx_expt_run_retry_pick) 取索引序 + LIMIT 提前停止;
+	// false → 不下 hint, 由优化器自选(退化 filesort)。★ 排序语义两者完全一致, 只差执行计划。
+	// 索引未建成却置 true 会直接报 Key doesn't exist(ForceIndex 刻意不静默降级), 故默认 false 是安全侧。
+	RetryPickIndexReady bool
 }
 
 func (e *ExptItemRunLogFilter) GetResultState() ExptItemResultState {

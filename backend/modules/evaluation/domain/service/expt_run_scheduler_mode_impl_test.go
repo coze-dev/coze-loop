@@ -6113,6 +6113,69 @@ func Test_exptBaseExec_scanToSubmit_OrderByRetryTimesFirst(t *testing.T) {
 	}
 }
 
+// Test_exptBaseExec_scanToSubmit_RetryPickIndexReady 覆盖「只加列不加索引」形态的配置传导:
+// RetryPickIndexReady 必须【现读配置】(而非读 event.Ext), 因为它是 schema 事实而非业务灰度——
+// 索引建成后翻 TCC 应立即对在跑的实验生效, 不等实验跑完或重跑。
+//
+// 三个断言点:
+//  1. 让位开关开 + IndexReady=true  → filter.RetryPickIndexReady=true (下 ForceIndex 取最优计划)
+//  2. 让位开关开 + IndexReady=false → filter.RetryPickIndexReady=false(不下 hint, 退化 filesort 但排序语义不变)
+//  3. 让位开关关                    → 根本不读配置(省一次 TCC 读), 恒 false
+func Test_exptBaseExec_scanToSubmit_RetryPickIndexReady(t *testing.T) {
+	baseExpt := &entity.Experiment{EvalSet: &entity.EvaluationSet{EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 99}}}
+
+	tests := []struct {
+		name           string
+		retryYieldOn   bool
+		indexReady     bool
+		wantIndexReady bool
+		wantConfigRead bool
+	}{
+		{name: "yield on + index ready -> force index", retryYieldOn: true, indexReady: true, wantIndexReady: true, wantConfigRead: true},
+		{name: "yield on + index NOT ready -> no hint", retryYieldOn: true, indexReady: false, wantIndexReady: false, wantConfigRead: true},
+		{name: "yield off -> config not read at all", retryYieldOn: false, indexReady: true, wantIndexReady: false, wantConfigRead: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			itemRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
+			configer := configmocks.NewMockIConfiger(ctrl)
+
+			// 关闭态下不得读配置: Times(0) 让多余的读取直接失败(验证短路)
+			readTimes := 0
+			if tt.wantConfigRead {
+				readTimes = 1
+			}
+			configer.EXPECT().GetExptExecConf(gomock.Any(), int64(3)).Times(readTimes).
+				Return(&entity.ExptExecConf{
+					RetryYield: &entity.RetryYieldConf{Enabled: true, IndexReady: tt.indexReady},
+				})
+
+			e := &exptBaseExec{exptItemResultRepo: itemRepo, configer: configer}
+			ext := map[string]string{entity.RetryYieldExtKey: "false"}
+			if tt.retryYieldOn {
+				ext[entity.RetryYieldExtKey] = "true"
+			}
+			event := &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, Ext: ext}
+
+			itemRepo.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), gomock.Any(), int64(0), int64(5), int64(3)).
+				DoAndReturn(func(_ context.Context, _, _ int64, filter *entity.ExptItemRunLogFilter, _, _, _ int64) ([]*entity.ExptItemResultRunLog, int64, error) {
+					assert.Equal(t, tt.wantIndexReady, filter.RetryPickIndexReady)
+					// 排序意图与索引就绪无关: 开关开着就必须按 retry_times 降权, 索引只影响执行计划
+					assert.Equal(t, tt.retryYieldOn, filter.OrderByRetryTimesFirst)
+					return []*entity.ExptItemResultRunLog{{ItemID: 10, Status: int32(entity.ItemRunState_Queueing)}}, int64(0), nil
+				})
+
+			items, err := e.scanToSubmit(context.Background(), event, baseExpt, 5)
+			assert.NoError(t, err)
+			assert.Len(t, items, 1)
+		})
+	}
+}
+
 // Test_exptBaseExec_scanIncompleteAndComplete_NoOrderFlag 防回归(§6.2 附加断言):
 // scanIncompleteAndComplete 传入的 filter 绝不能带 OrderByRetryTimesFirst(会破坏游标分页协议),
 // 且始终用 RawFilter(Processing / Logged 判据)。

@@ -79,7 +79,8 @@ func TestExptItemResultDAO_ScanItemRunLogs_GenBranch_FlagOff_Cursor(t *testing.T
 }
 
 // TestExptItemResultDAO_ScanItemRunLogs_GenBranch_FlagOn_RetryOrder 覆盖让位降权排序(§6.2a/§4.4.3):
-// flag=true + cursor==0 时 gen 分支 FORCE INDEX 到 idx_expt_run_retry_pick、ORDER BY retry_times,id。
+// flag=true + cursor==0 + 索引已建成(RetryPickIndexReady=true) 时,
+// gen 分支 FORCE INDEX 到 idx_expt_run_retry_pick、ORDER BY retry_times,id。
 func TestExptItemResultDAO_ScanItemRunLogs_GenBranch_FlagOn_RetryOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -94,10 +95,86 @@ func TestExptItemResultDAO_ScanItemRunLogs_GenBranch_FlagOn_RetryOrder(t *testin
 	res, ncursor, err := dao.ScanItemRunLogs(context.Background(), 1, 2, &entity.ExptItemRunLogFilter{
 		Status:                 []entity.ItemRunState{entity.ItemRunState_Queueing},
 		OrderByRetryTimesFirst: true,
+		RetryPickIndexReady:    true,
 	}, 0, 5, 3)
 	require.NoError(t, err)
 	assert.Len(t, res, 2)
 	assert.Equal(t, int64(102), ncursor)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestExptItemResultDAO_ScanItemRunLogs_GenBranch_FlagOn_IndexNotReady 覆盖「只加列不加索引」形态:
+// flag=true 但 RetryPickIndexReady=false(线上未建 idx_expt_run_retry_pick) 时,
+// gen 分支【不下 FORCE INDEX hint】、由优化器自选(退化 filesort), 但 ORDER BY 语义必须一字不变。
+//
+// 为何需要这条: 线上 expt_item_result_run_log 是高频写入热表(实测某库 99.6M 行 / 36.1GB),
+// 建 6 列复合索引的构建期风险与写放大高于 filesort 代价, 故先只加列。若此处误下 hint,
+// 挑选会直接报 Key doesn't exist 使整个实验调度瘫痪。
+func TestExptItemResultDAO_ScanItemRunLogs_GenBranch_FlagOn_IndexNotReady(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	dao, mock, closeFn := newItemResultTestDAO(t, ctrl)
+	defer closeFn()
+
+	// 断言 SELECT 之后紧跟 FROM 表名、中间【没有】FORCE INDEX 片段; ORDER BY 仍是 retry_times,id。
+	mock.ExpectQuery("SELECT \\* FROM `expt_item_result_run_log` WHERE.*ORDER BY `expt_item_result_run_log`\\.`retry_times`,`expt_item_result_run_log`\\.`id` LIMIT \\?$").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "item_id", "status", "retry_times"}).
+			AddRow(201, 20, 0, 0).
+			AddRow(202, 21, 0, 3))
+
+	res, ncursor, err := dao.ScanItemRunLogs(context.Background(), 1, 2, &entity.ExptItemRunLogFilter{
+		Status:                 []entity.ItemRunState{entity.ItemRunState_Queueing},
+		OrderByRetryTimesFirst: true,
+		RetryPickIndexReady:    false,
+	}, 0, 5, 3)
+	require.NoError(t, err)
+	assert.Len(t, res, 2)
+	assert.Equal(t, int64(202), ncursor)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestExptItemResultDAO_ScanItemRunLogs_RawBranch_FlagOn_IndexNotReady 同上, 覆盖 RawFilter 分支。
+// 该分支原先是无条件 Clauses(hints.ForceIndex(...)), 改造后需能整段省略 hint。
+func TestExptItemResultDAO_ScanItemRunLogs_RawBranch_FlagOn_IndexNotReady(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	dao, mock, closeFn := newItemResultTestDAO(t, ctrl)
+	defer closeFn()
+
+	mock.ExpectQuery("SELECT \\* FROM `expt_item_result_run_log` WHERE.*ORDER BY retry_times asc, id asc LIMIT \\?$").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "item_id", "status", "retry_times"}).
+			AddRow(301, 30, 0, 1))
+
+	res, _, err := dao.ScanItemRunLogs(context.Background(), 1, 2, &entity.ExptItemRunLogFilter{
+		RawFilter:              true,
+		RawCond:                clause.Expr{SQL: "status IN (?)", Vars: []interface{}{[]int32{0}}},
+		OrderByRetryTimesFirst: true,
+		RetryPickIndexReady:    false,
+	}, 0, 5, 3)
+	require.NoError(t, err)
+	assert.Len(t, res, 1)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestExptItemResultDAO_ScanItemRunLogs_RawBranch_FlagOn_IndexReady RawFilter 分支索引已建成时仍下 hint。
+func TestExptItemResultDAO_ScanItemRunLogs_RawBranch_FlagOn_IndexReady(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	dao, mock, closeFn := newItemResultTestDAO(t, ctrl)
+	defer closeFn()
+
+	mock.ExpectQuery("SELECT \\* FROM `expt_item_result_run_log` FORCE INDEX \\(`idx_expt_run_retry_pick`\\).*ORDER BY retry_times asc, id asc LIMIT \\?$").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "item_id", "status", "retry_times"}).
+			AddRow(401, 40, 0, 0))
+
+	res, _, err := dao.ScanItemRunLogs(context.Background(), 1, 2, &entity.ExptItemRunLogFilter{
+		RawFilter:              true,
+		RawCond:                clause.Expr{SQL: "status IN (?)", Vars: []interface{}{[]int32{0}}},
+		OrderByRetryTimesFirst: true,
+		RetryPickIndexReady:    true,
+	}, 0, 5, 3)
+	require.NoError(t, err)
+	assert.Len(t, res, 1)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 

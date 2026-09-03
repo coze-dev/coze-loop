@@ -237,6 +237,28 @@ type RetryYieldConf struct {
 	Enabled bool `json:"enabled" mapstructure:"enabled"`
 	// SpaceIDs 空间级灰度白名单；仅在 Enabled=false 时生效, 命中即开。
 	SpaceIDs []int64 `json:"space_ids" mapstructure:"space_ids"`
+	// IndexReady 声明降权索引 idx_expt_run_retry_pick 是否已在该环境的库上建成。
+	//
+	// ⚠️ 与 Enabled/SpaceIDs 语义不同, 这不是业务灰度而是 schema 事实声明, 故:
+	//   - 只影响执行计划(是否下 ForceIndex hint), 不改任何业务语义;
+	//   - 不随 expt_run 固化(不进 event.Ext), 每次挑选现读配置 —— 索引建成后翻此开关立即生效,
+	//     无需等运行中的实验跑完或重跑。
+	//
+	// false(默认): 不下 ForceIndex, 由优化器自选(实测退化为 filesort)。排序语义不变,
+	//   仍是 retry_times asc, id asc, 让位降权功能完整, 仅失去索引序 + LIMIT 提前停止。
+	// true: 下 ForceIndex(idx_expt_run_retry_pick) 取最优执行计划。
+	//   ★ 索引未建成时置 true 会让挑选直接报 Key doesn't exist(ForceIndex 不静默降级), 故务必先建索引再翻。
+	//
+	// 为何默认 false: 线上 expt_item_result_run_log 是高频写入热表(实测 CN 某库 99.6M 行 / 36.1GB,
+	// 日均新增约 830 万行), 加 6 列复合索引的构建期风险(online log 溢出致 DDL 失败)与长期写放大
+	// 高于 filesort 的代价, 故先只加列、索引后补。详见技术方案索引选型节。
+	IndexReady bool `json:"index_ready" mapstructure:"index_ready"`
+}
+
+// IsIndexReady 判断降权索引是否已建成(决定是否下 ForceIndex hint)。
+// nil → false, 保守走优化器自选, 绝不会因配置缺失而报 Key doesn't exist。
+func (c *RetryYieldConf) IsIndexReady() bool {
+	return c != nil && c.IndexReady
 }
 
 // IsSpaceEnabled 判断该空间是否开启让位降权。
