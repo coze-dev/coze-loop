@@ -20,6 +20,7 @@ import (
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 const (
@@ -590,4 +591,76 @@ func TestEvalTurns_StopsOnTerminatedItem(t *testing.T) {
 	asyncAbort, err := exec.EvalTurns(context.Background(), eiec)
 	assert.NoError(t, err)
 	assert.False(t, asyncAbort)
+}
+
+// TestParseItemVisibleRunError item 级 err_msg → 用户可见 RunError 的反解（对应 P1 #1）。
+//
+// 这是 spec 验收点「err_msg 为『该行被用户主动终止』语义（601205087）并透给前端展示」的回归防线：
+// ItemSystemInfo.Error 是 item 级错误透出前端的唯一赋值点，行级终止若不在此反解，
+// TerminateItems 步骤④ 写的 err_msg 就是白写，用户只能看到裸 Terminal 状态。
+func TestParseItemVisibleRunError(t *testing.T) {
+	t.Run("manually_terminated_is_surfaced_with_chinese_detail", func(t *testing.T) {
+		raw := []byte(errno.SerializeErr(errno.NewItemManuallyTerminatedErr()))
+
+		got := parseItemVisibleRunError(raw)
+
+		require.NotNil(t, got, "行级终止必须透出 RunError，否则前端看不到终止原因")
+		assert.Equal(t, int64(errno.ItemManuallyTerminatedCode), got.Code, "code 必须是 601205087")
+		require.NotNil(t, got.Detail)
+		assert.Equal(t, "该行被用户主动终止", *got.Detail, "Detail 必须是中文可读语义，不能是内部错误串")
+	})
+
+	t.Run("zombie_timeout_behavior_unchanged", func(t *testing.T) {
+		raw := []byte(errno.SerializeErr(errno.NewItemZombieTimeoutErr(600, false)))
+
+		got := parseItemVisibleRunError(raw)
+
+		require.NotNil(t, got)
+		assert.Equal(t, int64(errno.ItemZombieTimeoutCode), got.Code, "既有僵尸超时分支行为不变")
+		require.NotNil(t, got.Detail)
+		assert.Contains(t, *got.Detail, "僵尸")
+	})
+
+	t.Run("unknown_code_returns_nil", func(t *testing.T) {
+		// 非白名单错误码不透出（沿用既有语义，避免把内部错误串抖给前端）
+		assert.Nil(t, parseItemVisibleRunError([]byte(errno.SerializeErr(errno.NewTargetResultErr("internal boom")))))
+		assert.Nil(t, parseItemVisibleRunError([]byte("not a serialized err")))
+	})
+}
+
+// TestGetTurnSystemInfo_ManuallyTerminated turn 级 err_msg 反解（对应 P1 #1 + #3 联动）。
+// CreateOrUpdateItemsTurnRunLogStatus(Terminal) 写的是 ItemManuallyTerminated（非 turnOtherErrCode），
+// RecordItemRunLogs 会把它回抄进 turn result；读侧不接上，turn 级就只剩裸 Terminal 状态。
+func TestGetTurnSystemInfo_ManuallyTerminated(t *testing.T) {
+	ctx := context.Background()
+
+	newBuilder := func(errMsg string, status int32) *ExptResultBuilder {
+		return &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{1: {10: 100}},
+			turnResultDO: []*entity.ExptTurnResult{
+				{ID: 100, ItemID: 1, TurnID: 10, Status: status, LogID: "log1", ErrMsg: errMsg},
+			},
+		}
+	}
+
+	t.Run("terminated_turn_surfaces_manually_terminated", func(t *testing.T) {
+		b := newBuilder(errno.SerializeErr(errno.NewItemManuallyTerminatedErr()), int32(entity.TurnRunState_Terminal))
+
+		got := b.getTurnSystemInfo(ctx, 1, 10)
+
+		require.NotNil(t, got.Error, "turn 级也必须透出「被主动终止」，否则与 item 级自相矛盾")
+		assert.Equal(t, int64(errno.ItemManuallyTerminatedCode), got.Error.Code)
+		require.NotNil(t, got.Error.Detail)
+		assert.Equal(t, "该行被用户主动终止", *got.Error.Detail)
+	})
+
+	t.Run("turn_other_err_behavior_unchanged", func(t *testing.T) {
+		b := newBuilder(errno.SerializeErr(errno.NewTurnOtherErr("turn status not updated for long interval", errors.New("timeout"))), int32(entity.TurnRunState_Fail))
+
+		got := b.getTurnSystemInfo(ctx, 1, 10)
+
+		require.NotNil(t, got.Error, "既有 ParseTurnOtherErr 分支行为不变")
+		assert.Contains(t, *got.Error.Detail, "turn status not updated")
+		assert.Zero(t, got.Error.Code, "既有分支不设 Code，保持向前兼容")
+	})
 }

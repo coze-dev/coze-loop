@@ -1491,14 +1491,13 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 				RetryRecords: itemID2RetryRecords[itemID],
 			}
 		}
-		// 从 err_msg 反解出用户可见的 item 级错误（当前仅识别 item 僵尸超时；其他类型未来可扩展）
+		// 从 err_msg 反解出用户可见的 item 级错误。
+		// 当前识别两类：① 僵尸超时（系统判定失败）② 行级终止（用户主动放弃，601205087）。
+		// ★ 行级终止必须接在这里：ItemSystemInfo.Error 是 item 级错误透出前端的唯一赋值点，
+		//   TerminateItems 步骤④ 往主表写的 err_msg 若不在此反解，用户只能看到一个裸的 Terminal
+		//   状态、看不到「该行被用户主动终止」文案（spec 验收点）。
 		if len(itemResultPO.ErrMsg) > 0 {
-			if ok, msg := errno.ParseItemZombieTimeoutErr(errno.DeserializeErr([]byte(itemResultPO.ErrMsg))); ok {
-				itemResult.SystemInfo.Error = &entity.RunError{
-					Code:   int64(errno.ItemZombieTimeoutCode),
-					Detail: gptr.Of(msg),
-				}
-			}
+			itemResult.SystemInfo.Error = parseItemVisibleRunError([]byte(itemResultPO.ErrMsg))
 		}
 		for _, turnID := range itemID2TurnIDs[itemID] {
 			turnIndex := int64(0)
@@ -1517,6 +1516,29 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 	}
 
 	return builder
+}
+
+// parseItemVisibleRunError 把落库的 item 级 err_msg 反解成用户可见的 RunError；不认识的错误码返回 nil
+// （沿用既有语义：只白名单透出，避免把内部错误串抖给前端）。
+//
+// 白名单：
+//   - ItemZombieTimeoutCode    僵尸超时，系统判定失败
+//   - ItemManuallyTerminatedCode 行级终止，用户主动放弃（TerminateItems 写入）
+func parseItemVisibleRunError(errMsg []byte) *entity.RunError {
+	deserialized := errno.DeserializeErr(errMsg)
+	if ok, msg := errno.ParseItemZombieTimeoutErr(deserialized); ok {
+		return &entity.RunError{
+			Code:   int64(errno.ItemZombieTimeoutCode),
+			Detail: gptr.Of(msg),
+		}
+	}
+	if ok, msg := errno.ParseItemManuallyTerminatedErr(deserialized); ok {
+		return &entity.RunError{
+			Code:   int64(errno.ItemManuallyTerminatedCode),
+			Detail: gptr.Of(msg),
+		}
+	}
+	return nil
 }
 
 // ExptResultBuilder 构建单实验结果
@@ -2567,10 +2589,18 @@ func (e *ExptResultBuilder) getTurnSystemInfo(ctx context.Context, itemID, turnI
 	}
 
 	if len(turnResult.ErrMsg) > 0 {
+		deserialized := errno.DeserializeErr([]byte(turnResult.ErrMsg))
 		// 仅吐出评估器和评估对象之外的error
-		ok, errMsg := errno.ParseTurnOtherErr(errno.DeserializeErr([]byte(turnResult.ErrMsg)))
-		if ok {
+		if ok, errMsg := errno.ParseTurnOtherErr(deserialized); ok {
 			systemInfo.Error = &entity.RunError{
+				Detail: gptr.Of(errMsg),
+			}
+		} else if ok, errMsg := errno.ParseItemManuallyTerminatedErr(deserialized); ok {
+			// 行级终止：CreateOrUpdateItemsTurnRunLogStatus(Terminal) 往 turn run log 写的是
+			// ItemManuallyTerminated（601205087，非 turnOtherErrCode），RecordItemRunLogs 会把它回抄进
+			// turn result。不在这里接上，turn 级就只剩裸 Terminal 状态、看不到终止原因。
+			systemInfo.Error = &entity.RunError{
+				Code:   int64(errno.ItemManuallyTerminatedCode),
 				Detail: gptr.Of(errMsg),
 			}
 		}
