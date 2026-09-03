@@ -54,6 +54,11 @@ type IExptItemResultRepo interface {
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*entity.ExptItemResultRunLog) error
 	ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64) ([]*entity.ExptItemResultRunLog, int64, error)
 	UpdateItemRunLog(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error
+	// UpdateItemRunLogIfNotTerminal 与 UpdateItemRunLog 语义一致，但只更新当前 status 不为
+	// ItemRunState_Terminal 的行（一条原子 UPDATE ... WHERE status <> 5）。
+	// 用于「Terminal 是吸收态」的保证：行级终止后到达的在途执行结果 MUST NOT 回写 status。
+	// 未命中（全部已 Terminal）不返回 error —— 吸收态生效即预期结果。
+	UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error
 	GetItemRunLog(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) (*entity.ExptItemResultRunLog, error)
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptItemResultRunLog, error)
 }

@@ -332,6 +332,25 @@ func (mr *MockIExptItemResultDAOMockRecorder) UpdateItemRunLog(ctx, exptID, expt
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemRunLog", reflect.TypeOf((*MockIExptItemResultDAO)(nil).UpdateItemRunLog), varargs...)
 }
 
+// UpdateItemRunLogIfNotTerminal mocks base method.
+func (m *MockIExptItemResultDAO) UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, exptID, exptRunID, itemID, ufields, spaceID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateItemRunLogIfNotTerminal", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateItemRunLogIfNotTerminal indicates an expected call of UpdateItemRunLogIfNotTerminal.
+func (mr *MockIExptItemResultDAOMockRecorder) UpdateItemRunLogIfNotTerminal(ctx, exptID, exptRunID, itemID, ufields, spaceID any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, exptID, exptRunID, itemID, ufields, spaceID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemRunLogIfNotTerminal", reflect.TypeOf((*MockIExptItemResultDAO)(nil).UpdateItemRunLogIfNotTerminal), varargs...)
+}
+
 // UpdateItemsResult mocks base method.
 func (m *MockIExptItemResultDAO) UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemID []int64, ufields map[string]any, opts ...db.Option) error {
 	m.ctrl.T.Helper()

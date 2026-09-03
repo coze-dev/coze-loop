@@ -133,19 +133,28 @@ func TestCompleteItemRunOnUnretriableErr(t *testing.T) {
 	}
 	evalErr := errors.New("resource not found, get dataset_version 123")
 
-	// 写 status 前会读一次 run log 做 Terminal 覆盖保护; 非 Terminal 时仍走原有 Fail 落库分支。
+	// 写完后会读一次 run log 决定 turn 状态; 非 Terminal 时仍走原有 Fail 落库分支。
 	itemRepo.EXPECT().
 		GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		AnyTimes().
 		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 
+	// status/err_msg 走条件写(WHERE status <> Terminal), 保证 Terminal 吸收态原子生效
 	itemRepo.EXPECT().
-		UpdateItemRunLog(gomock.Any(), int64(1001), int64(2002), []int64{3003}, gomock.Any(), int64(7)).
+		UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1001), int64(2002), []int64{3003}, gomock.Any(), int64(7)).
 		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
 			// 字段须与 CompleteItemRun 失败分支一致
 			assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
 			assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
 			assert.NotEmpty(t, ufields["err_msg"])
+			return nil
+		})
+	// result_state 无条件补写, 让调度侧收口(即使该行已 Terminal)
+	itemRepo.EXPECT().
+		UpdateItemRunLog(gomock.Any(), int64(1001), int64(2002), []int64{3003}, gomock.Any(), int64(7)).
+		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+			assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
+			assert.NotContains(t, ufields, "status", "无条件写只补 result_state, MUST NOT 带 status")
 			return nil
 		})
 	// 必须同步补建/更新 turn run log 为 Fail (与僵尸清理路径同款)
@@ -181,6 +190,8 @@ func TestCompleteItemRunOnUnretriableErr_NoopAndTolerant(t *testing.T) {
 	itemRepo2.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		AnyTimes().
 		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
+	itemRepo2.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(errors.New("db down"))
 	itemRepo2.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(errors.New("db down"))
 	turnRepo2.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).

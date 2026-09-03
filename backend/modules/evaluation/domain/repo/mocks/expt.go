@@ -590,6 +590,20 @@ func (mr *MockIExptItemResultRepoMockRecorder) UpdateItemRunLog(arg0, arg1, arg2
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemRunLog", reflect.TypeOf((*MockIExptItemResultRepo)(nil).UpdateItemRunLog), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
+// UpdateItemRunLogIfNotTerminal mocks base method.
+func (m *MockIExptItemResultRepo) UpdateItemRunLogIfNotTerminal(arg0 context.Context, arg1, arg2 int64, arg3 []int64, arg4 map[string]any, arg5 int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateItemRunLogIfNotTerminal", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateItemRunLogIfNotTerminal indicates an expected call of UpdateItemRunLogIfNotTerminal.
+func (mr *MockIExptItemResultRepoMockRecorder) UpdateItemRunLogIfNotTerminal(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemRunLogIfNotTerminal", reflect.TypeOf((*MockIExptItemResultRepo)(nil).UpdateItemRunLogIfNotTerminal), arg0, arg1, arg2, arg3, arg4, arg5)
+}
+
 // UpdateItemsResult mocks base method.
 func (m *MockIExptItemResultRepo) UpdateItemsResult(arg0 context.Context, arg1, arg2 int64, arg3 []int64, arg4 map[string]any) error {
 	m.ctrl.T.Helper()

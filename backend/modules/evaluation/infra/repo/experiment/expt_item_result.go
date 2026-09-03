@@ -113,6 +113,15 @@ func (e ExptItemResultRepoImpl) UpdateItemRunLog(ctx context.Context, exptID, ex
 	return nil
 }
 
+func (e ExptItemResultRepoImpl) UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error {
+	logs.CtxInfo(ctx, "UpdateItemRunLogIfNotTerminal, expt_id: %v, expt_run_id: %v, item_ids: %v, ufields: %v", exptID, exptRunID, itemID, ufields)
+	err := e.exptItemResultDAO.UpdateItemRunLogIfNotTerminal(ctx, exptID, exptRunID, itemID, ufields, spaceID)
+	if err != nil {
+		return errorx.Wrapf(err, "UpdateItemRunLogIfNotTerminal fail, expt_id: %v, expt_run_id: %v, item_ids: %v, ufields: %v", exptID, exptRunID, itemID, ufields)
+	}
+	return nil
+}
+
 func (e ExptItemResultRepoImpl) ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64) (results []*entity.ExptItemResult, ncursor int64, err error) {
 	pos, ncursor, err := e.exptItemResultDAO.ScanItemResults(ctx, exptID, cursor, limit, status, spaceID)
 	if err != nil {

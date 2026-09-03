@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -160,13 +161,14 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 
 // isItemTerminated 查该 item 当前 run log 是否已被行级终止置为 Terminal。
 // 查询失败返回 false（不拦截）—— 宁可多跑一轮，也不能因一次查询抖动把正常行掐掉；
-// 真被终止的行还有 CompleteItemRun 的 Terminal 覆盖保护兜底。
+// 真被终止的行还有 CompleteItemRun 的条件 UPDATE（UpdateItemRunLogIfNotTerminal）兜底。
+// 强制读主库（WithCtxWriteDB）：从库延迟会让刚写下的 Terminal 读不到，闸门形同虚设。
 func (e *ExptItemEvalCtxExecutor) isItemTerminated(ctx context.Context, eiec *entity.ExptItemEvalCtx) bool {
 	if eiec == nil || eiec.Event == nil || e.ItemResultRepo == nil {
 		return false
 	}
 	event := eiec.Event
-	itemRunLog, err := e.ItemResultRepo.GetItemRunLog(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
+	itemRunLog, err := e.ItemResultRepo.GetItemRunLog(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
 	if err != nil {
 		logs.CtxWarn(ctx, "[ExptItemTerminate] check item terminated fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
@@ -508,18 +510,25 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		ufields["status"] = int32(entity.ItemRunState_Success)
 	}
 
-	// Terminal 是吸收态：该行已被用户行级终止时，在途执行的成功/失败结果 MUST NOT 回写 status
-	// （对应 spec「终止后到达的执行结果不覆盖终止状态」）。只写 result_state 让调度侧照常收口；
-	// err_msg 也不覆盖 —— 用户要看到的是"被主动终止"，而不是终止前那次执行的报错。
-	if e.isItemTerminated(persistCtx, eiec) {
-		logs.CtxInfo(persistCtx, "[ExptItemTerminate] keep terminal status on complete item run, expt_id: %v, expt_run_id: %v, item_id: %v, dropped_fields: %v",
-			event.ExptID, event.ExptRunID, event.EvalSetItemID, ufields)
-		ufields = map[string]any{
-			"result_state": entity.ExptItemResultStateLogged,
-		}
+	// Terminal 是吸收态：该行已被用户行级终止时，在途执行的成功/失败结果 MUST NOT 回写 status / err_msg
+	// （对应 spec「终止后到达的执行结果不覆盖终止状态」）—— 用户要看到的是"被主动终止"，而不是终止前
+	// 那次执行的报错。
+	//
+	// ⚠️ 这里刻意**不**用「先 SELECT 判 Terminal 再 UPDATE」：普通 SELECT 会被路由到只读从库
+	// （商业化侧 db 以 WithReadReplicas 构建），主从延迟窗口内会读回终止前的旧状态并把 Terminal
+	// 覆盖成 Success —— 该行还会被重新扫成成功行、发 item-complete MQ、记进 success_cnt，
+	// 用户的终止操作被静默吞掉。即便读主库，读-判-写之间仍有 TOCTOU 窗口。
+	// 故拆成两条写，用 DB 的 WHERE 做原子判定：
+	//	 (1) 条件写：status/err_msg/result_state，仅对 status <> Terminal 的行生效；
+	//	 (2) 无条件写：result_state=Logged —— 对已 Terminal 的行也必须落，否则调度侧收不了口。
+	//	     该字段与终止语义无冲突（TerminateItems 自己也写 Logged），重复写幂等。
+	if err := e.ItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+		return err
 	}
 
-	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{
+		"result_state": entity.ExptItemResultStateLogged,
+	}, event.SpaceID); err != nil {
 		return err
 	}
 

@@ -41,6 +41,9 @@ type IExptItemResultDAO interface {
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*model.ExptItemResultRunLog, opts ...db.Option) error
 	ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, int64, error)
 	UpdateItemRunLog(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error
+	// UpdateItemRunLogIfNotTerminal 与 UpdateItemRunLog 相同，但 WHERE 追加 status <> Terminal，
+	// 用一条原子 UPDATE 保证「Terminal 是吸收态」，替代「先 SELECT 判定再写」的非原子实现。
+	UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error
 	GetItemRunLog(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, opts ...db.Option) (*model.ExptItemResultRunLog, error)
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error)
 }
@@ -125,6 +128,11 @@ func (dao *exptItemResultDAOImpl) SaveItemRunLogs(ctx context.Context, itemRunLo
 
 func (dao *exptItemResultDAOImpl) GetItemRunLog(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, opts ...db.Option) (*model.ExptItemResultRunLog, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	// 读后写场景（如 Terminal 吸收态判定）需强制读主库：普通 SELECT 会被 dbresolver 路由到只读从库，
+	// 主从延迟窗口内会读回过期状态。与本文件 BatchGet 的写法一致，调用方用 contexts.WithCtxWriteDB 开启。
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptItemResultRunLog
 	found, err := q.WithContext(ctx).
 		Where(q.SpaceID.Eq(spaceID),
@@ -167,6 +175,37 @@ func (dao *exptItemResultDAOImpl) UpdateItemRunLog(ctx context.Context, exptID, 
 		UpdateColumns(ufields)
 	if err != nil {
 		return errorx.Wrapf(err, "ExptItemResultRepo.UpdateItemRunLog failed, expt_id: %v, run_id: %v, item_id: %v, ufields: %v", exptID, exptRunID, itemID, ufields)
+	}
+	return nil
+}
+
+// UpdateItemRunLogIfNotTerminal 条件更新：仅当当前 status 不是 Terminal 时才写入。
+//
+// 为什么必须是条件 UPDATE 而不是「先 SELECT 判 Terminal 再 UPDATE」：普通 SELECT 会被 dbresolver
+// 路由到只读从库（商业化侧 db 用 WithReadReplicas 构建），主从延迟窗口内会读回终止前的旧状态
+// (Processing)，把主库上已经写好的 Terminal 覆盖成 Success/Fail —— 用户的终止操作被静默吞掉，
+// 该行还会被重新扫成成功行、发 item-complete MQ、记进 success_cnt。
+// 即便强制读主库，读-判-写三步之间仍有 TOCTOU 窗口，故根治手段是把判定下沉进 WHERE。
+//
+// 影响行数为 0（即命中 Terminal 被拦下）不视为错误：吸收态生效就是预期结果，调用方按业务语义处理。
+func (dao *exptItemResultDAOImpl) UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error {
+	logs.CtxInfo(ctx, "UpdateItemRunLogIfNotTerminal, expt_id: %v, expt_run_id: %v, item_ids: %v, ufields: %v", exptID, exptRunID, itemID, ufields)
+	db := dao.provider.NewSession(ctx, opts...)
+	q := query.Use(db).ExptItemResultRunLog
+	info, err := q.WithContext(ctx).
+		Where(
+			q.SpaceID.Eq(spaceID),
+			q.ExptID.Eq(exptID),
+			q.ExptRunID.Eq(exptRunID),
+			q.ItemID.In(itemID...),
+			q.Status.Neq(int32(entity.ItemRunState_Terminal)),
+		).
+		UpdateColumns(ufields)
+	if err != nil {
+		return errorx.Wrapf(err, "ExptItemResultRepo.UpdateItemRunLogIfNotTerminal failed, expt_id: %v, run_id: %v, item_id: %v, ufields: %v", exptID, exptRunID, itemID, ufields)
+	}
+	if info.RowsAffected == 0 {
+		logs.CtxInfo(ctx, "[ExptItemTerminate] UpdateItemRunLogIfNotTerminal skipped by terminal absorbing state, expt_id: %v, expt_run_id: %v, item_ids: %v", exptID, exptRunID, itemID)
 	}
 	return nil
 }
