@@ -139,12 +139,13 @@ func (e *EvaluatorHandlerImpl) ListEvaluators(ctx context.Context, request *eval
 
 func buildSrvListEvaluatorRequest(request *evaluatorservice.ListEvaluatorsRequest) *entity.ListEvaluatorRequest {
 	srvReq := &entity.ListEvaluatorRequest{
-		SpaceID:     request.WorkspaceID,
-		SearchName:  request.GetSearchName(),
-		CreatorIDs:  request.GetCreatorIds(),
-		PageSize:    request.GetPageSize(),
-		PageNum:     request.GetPageNumber(),
-		WithVersion: request.GetWithVersion(),
+		SpaceID:           request.WorkspaceID,
+		SearchName:        request.GetSearchName(),
+		SearchDescription: request.GetSearchDescription(),
+		CreatorIDs:        request.GetCreatorIds(),
+		PageSize:          request.GetPageSize(),
+		PageNum:           request.GetPageNumber(),
+		WithVersion:       request.GetWithVersion(),
 	}
 	evaluatorType := make([]entity.EvaluatorType, 0, len(request.GetEvaluatorType()))
 	for _, et := range request.GetEvaluatorType() {

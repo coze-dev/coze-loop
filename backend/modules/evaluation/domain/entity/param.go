@@ -263,15 +263,16 @@ type EvalSetItemMeta struct {
 }
 
 type ListEvaluatorRequest struct {
-	SpaceID       int64                  `json:"space_id"`
-	SearchName    string                 `json:"search_name,omitempty"`
-	CreatorIDs    []int64                `json:"creator_ids,omitempty"`
-	EvaluatorType []EvaluatorType        `json:"evaluator_type,omitempty"`
-	FilterOption  *EvaluatorFilterOption `json:"filter_option,omitempty"` // 标签筛选条件
-	PageSize      int32                  `json:"page_size,omitempty"`
-	PageNum       int32                  `json:"page_num,omitempty"`
-	OrderBys      []*OrderBy             `json:"order_bys,omitempty"`
-	WithVersion   bool                   `json:"with_version,omitempty"`
+	SpaceID           int64                  `json:"space_id"`
+	SearchName        string                 `json:"search_name,omitempty"`
+	SearchDescription string                 `json:"search_description,omitempty"`
+	CreatorIDs        []int64                `json:"creator_ids,omitempty"`
+	EvaluatorType     []EvaluatorType        `json:"evaluator_type,omitempty"`
+	FilterOption      *EvaluatorFilterOption `json:"filter_option,omitempty"` // 标签筛选条件
+	PageSize          int32                  `json:"page_size,omitempty"`
+	PageNum           int32                  `json:"page_num,omitempty"`
+	OrderBys          []*OrderBy             `json:"order_bys,omitempty"`
+	WithVersion       bool                   `json:"with_version,omitempty"`
 }
 
 type ListBuiltinEvaluatorRequest struct {
