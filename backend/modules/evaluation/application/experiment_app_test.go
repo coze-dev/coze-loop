@@ -3171,6 +3171,153 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 	}
 }
 
+// TestExperimentApplication_TerminateExperimentItems 内部面（tasks 6.9）：
+//   - 实验非 Processing → TerminateNonRunningExperimentErrorCode，且不调 manager.TerminateItems
+//   - 无权限 → 返回鉴权错误，且不调 manager.TerminateItems
+//   - maintainer → 跳过鉴权直达 manager
+//   - **全程不碰实验状态**：不调 SetExptTerminating / CompleteRun / CompleteExpt（mock 不注册期望，
+//     一旦被调用即 Unexpected call 失败）
+func TestExperimentApplication_TerminateExperimentItems(t *testing.T) {
+	workspaceID := int64(123)
+	exptID := int64(456)
+	userID := int64(789)
+	runID := int64(999)
+	itemIDs := []int64{11, 12}
+
+	processingExpt := func() *entity.Experiment {
+		return &entity.Experiment{
+			ID:          exptID,
+			SpaceID:     workspaceID,
+			CreatedBy:   strconv.FormatInt(userID, 10),
+			LatestRunID: runID,
+			Status:      entity.ExptStatus_Processing,
+		}
+	}
+
+	tests := []struct {
+		name          string
+		mockSetup     func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, configer *componentMocks.MockIConfiger)
+		wantErr       bool
+		wantErrCode   int32
+		wantTerminate bool
+	}{
+		{
+			name: "maintainer bypasses auth and terminates",
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, configer *componentMocks.MockIConfiger) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(processingExpt(), nil)
+				configer.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(map[string]bool{
+					strconv.FormatInt(userID, 10): true,
+				})
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
+				mgr.EXPECT().TerminateItems(gomock.Any(), exptID, runID, workspaceID, itemIDs, gomock.Any()).Return(nil)
+			},
+			wantTerminate: true,
+		},
+		{
+			name: "regular user passes auth and terminates",
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, configer *componentMocks.MockIConfiger) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(processingExpt(), nil)
+				configer.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(map[string]bool{"other_user": true})
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), &rpc.AuthorizationWithoutSPIParam{
+					ObjectID:        strconv.FormatInt(exptID, 10),
+					SpaceID:         workspaceID,
+					ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+					OwnerID:         gptr.Of(strconv.FormatInt(userID, 10)),
+					ResourceSpaceID: workspaceID,
+				}).Return(nil)
+				mgr.EXPECT().TerminateItems(gomock.Any(), exptID, runID, workspaceID, itemIDs, gomock.Any()).Return(nil)
+			},
+			wantTerminate: true,
+		},
+		{
+			name: "non processing experiment rejected",
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, configer *componentMocks.MockIConfiger) {
+				expt := processingExpt()
+				expt.Status = entity.ExptStatus_Success
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(expt, nil)
+				// 状态校验在鉴权之前，鉴权与终止都不该发生
+				configer.EXPECT().GetMaintainerUserIDs(gomock.Any()).Times(0)
+				mgr.EXPECT().TerminateItems(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr:     true,
+			wantErrCode: errno.TerminateNonRunningExperimentErrorCode,
+		},
+		{
+			name: "no permission does not terminate",
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, configer *componentMocks.MockIConfiger) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(processingExpt(), nil)
+				configer.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(map[string]bool{"other_user": true})
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+				mgr.EXPECT().TerminateItems(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "experiment not found",
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, configer *componentMocks.MockIConfiger) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "domain terminate error propagates",
+			mockSetup: func(mgr *servicemocks.MockIExptManager, auth *rpcmocks.MockIAuthProvider, configer *componentMocks.MockIConfiger) {
+				mgr.EXPECT().Get(gomock.Any(), exptID, workspaceID, gomock.Any()).Return(processingExpt(), nil)
+				configer.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(map[string]bool{
+					strconv.FormatInt(userID, 10): true,
+				})
+				mgr.EXPECT().TerminateItems(gomock.Any(), exptID, runID, workspaceID, itemIDs, gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockManager := servicemocks.NewMockIExptManager(ctrl)
+			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+			mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+			tt.mockSetup(mockManager, mockAuth, mockConfiger)
+
+			app := &experimentApplication{
+				manager:  mockManager,
+				auth:     mockAuth,
+				configer: mockConfiger,
+			}
+
+			ctx := session.WithCtxUser(context.Background(), &session.User{ID: strconv.FormatInt(userID, 10)})
+			resp, err := app.TerminateExperimentItems(ctx, &exptpb.TerminateExperimentItemsRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				ExptID:      gptr.Of(exptID),
+				ItemIds:     itemIDs,
+			})
+
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					require.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+				return
+			}
+			require.NoError(t, err)
+			assert.NotNil(t, resp)
+			assert.NotNil(t, resp.BaseResp)
+		})
+	}
+}
+
 func TestExperimentApplication_KillExperiment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
