@@ -159,8 +159,30 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint)
 			return nil
 		}
 
+		// item 级闸门（实验级判定之后、正常执行之前）：该行已被用户行级终止 (TerminateItems) 则丢弃事件，
+		// 对应「排队中的行被终止后不再被调度」。判定失败只告警不拦截 —— 宁可多跑一次，
+		// 也不能因为一次查询抖动把正常行的执行掐掉（终止行即便漏拦，也有 CompleteItemRun 的 Terminal 覆盖保护兜底）。
+		if e.isItemTerminated(ctx, event) {
+			logs.CtxInfo(ctx, "[ExptItemTerminate] drop event of terminated item, expt_id: %v, expt_run_id: %v, item_id: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID)
+			return nil
+		}
+
 		return next(ctx, event)
 	}
+}
+
+// isItemTerminated 查该 item 当前 run log 是否已处于 Terminal。查询失败返回 false（不拦截），见 HandleEventCheck 注释。
+func (e *ExptItemEventEvalServiceImpl) isItemTerminated(ctx context.Context, event *entity.ExptItemEvalEvent) bool {
+	if event == nil || e.exptItemResultRepo == nil {
+		return false
+	}
+	itemRunLog, err := e.exptItemResultRepo.GetItemRunLog(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptItemTerminate] check item terminated fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+		return false
+	}
+	return itemRunLog != nil && entity.ItemRunState(itemRunLog.Status) == entity.ItemRunState_Terminal
 }
 
 func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) RecordEvalEndPoint {
@@ -247,10 +269,23 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer cancel()
 
+	// Terminal 是吸收态：该行已被用户行级终止时，在途的失败结果 MUST NOT 把 status 回写成 Fail。
+	// 只查一次，item / turn 两处共用同一判定，避免读到不一致的中间态。
+	terminated := e.isItemTerminated(persistCtx, event)
+
 	ufields := map[string]any{
 		"status":       int32(entity.ItemRunState_Fail),
 		"err_msg":      errno.SerializeErr(evalErr),
 		"result_state": int32(entity.ExptItemResultStateLogged),
+	}
+	// 已 Terminal：只补 result_state（保持 Logged 让调度收口），status / err_msg 都不覆盖 ——
+	// 用户要看到的是"被主动终止"，而不是终止前那次执行的报错。
+	if terminated {
+		logs.CtxInfo(persistCtx, "[ExptItemTerminate] keep terminal status on unretriable err, expt_id: %v, expt_run_id: %v, item_id: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID)
+		ufields = map[string]any{
+			"result_state": int32(entity.ExptItemResultStateLogged),
+		}
 	}
 	if err := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID,
 		[]int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
@@ -261,8 +296,14 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 	if e.exptTurnResultRepo == nil {
 		return
 	}
+	// turn run log 必须与 item run log 成对（见方法头注释）。item 已 Terminal 时 turn 也要写 Terminal，
+	// 否则 turn 落 Fail 会被 RecordItemRunLogs 回抄到 turn result，读侧出现「item 已终止 / turn 失败」的自相矛盾。
+	turnState := entity.TurnRunState_Fail
+	if terminated {
+		turnState = entity.TurnRunState_Terminal
+	}
 	if err := e.exptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(persistCtx, event.SpaceID, event.ExptID, event.ExptRunID,
-		[]int64{event.EvalSetItemID}, entity.TurnRunState_Fail); err != nil {
+		[]int64{event.EvalSetItemID}, turnState); err != nil {
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr create/update turn run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}

@@ -133,6 +133,11 @@ func Test_ExptItemEvalCtxExecutor_Eval(t *testing.T) {
 
 	mockTurnResultRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
 	mockItemResultRepo := repomocks.NewMockIExptItemResultRepo(ctrl)
+	// EvalTurns 每轮开始前 / CompleteItemRun 写 status 前都会读一次 run log 做 Terminal 判定;
+	// 这里固定返回非 Terminal，保证这些用例仍走原有执行与落库分支。
+	mockItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().
+		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 	mockConfiger := configermocks.NewMockIConfiger(ctrl)
 	mockConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
@@ -355,6 +360,10 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 
 	mockTurnResultRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
 	mockItemResultRepo := repomocks.NewMockIExptItemResultRepo(ctrl)
+	// CompleteItemRun 写 status 前读一次 run log 做 Terminal 覆盖保护; 固定非 Terminal 走原分支。
+	mockItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().
+		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 	mockConfiger := configermocks.NewMockIConfiger(ctrl)
 	mockConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
@@ -436,6 +445,10 @@ func Test_ExptItemEvalCtxExecutor_CompleteItemRun_NoItemCompletePublish(t *testi
 
 			ctrl := gomock.NewController(t)
 			itemResultRepo := repomocks.NewMockIExptItemResultRepo(ctrl)
+			// CompleteItemRun 写 status 前读一次 run log 做 Terminal 覆盖保护; 固定非 Terminal 走原分支。
+			itemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				AnyTimes().
+				Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 			configer := configermocks.NewMockIConfiger(ctrl)
 			publisher := &stubItemCompletePublisher{}
 			expt := &entity.Experiment{

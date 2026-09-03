@@ -456,11 +456,15 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 	}
 
 	for _, item := range completeItems {
-		if item.State != entity.ItemRunState_Fail && item.State != entity.ItemRunState_Success {
+		// ★ 白名单必须含 Terminal（design D4）：行级终止 (TerminateItems) 会把 item run log 直接置为
+		// Terminal + Logged，该行随即被 scanIncompleteAndComplete 归入 completeItems。若这里不放开，
+		// 调度 tick 每一拍都在这里 return error，整个实验卡死不再推进。
+		// 放开后 RecordItemRunLogs 会自动做正确的 stats 算术（Processing-1 / terminated_cnt+1）。
+		if item.State != entity.ItemRunState_Fail && item.State != entity.ItemRunState_Success && item.State != entity.ItemRunState_Terminal {
 			return fmt.Errorf("recordEvalItemRunLogs found invalid item run state: %v", item.State)
 		}
 
-		// item-complete(success) 发送点: 每个 item 一进来先发, 仅发成功行(fail/zombie 不发, 下游只消费成功行)。
+		// item-complete(success) 发送点: 每个 item 一进来先发, 仅发成功行(fail/zombie/terminal 不发, 下游只消费成功行)。
 		// 发失败必须 return 中断本次调度: 此处在 RecordItemRunLogs 落库之前, item 落库状态仍为 complete,
 		// 下次调度会重新扫入 completeItems 再次驱动发送, 从而保障"成功行必发一次 MQ"(发失败靠下次调度补发)。
 		// 是否真正投递由 producer 依空间开关(item_complete_space_config) + 评测对象 enable_analysis 判定, 此处不重复判;

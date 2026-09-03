@@ -133,6 +133,12 @@ func TestCompleteItemRunOnUnretriableErr(t *testing.T) {
 	}
 	evalErr := errors.New("resource not found, get dataset_version 123")
 
+	// 写 status 前会读一次 run log 做 Terminal 覆盖保护; 非 Terminal 时仍走原有 Fail 落库分支。
+	itemRepo.EXPECT().
+		GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().
+		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
+
 	itemRepo.EXPECT().
 		UpdateItemRunLog(gomock.Any(), int64(1001), int64(2002), []int64{3003}, gomock.Any(), int64(7)).
 		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
@@ -172,6 +178,9 @@ func TestCompleteItemRunOnUnretriableErr_NoopAndTolerant(t *testing.T) {
 	defer ctrl2.Finish()
 	itemRepo2 := repoMocks.NewMockIExptItemResultRepo(ctrl2)
 	turnRepo2 := repoMocks.NewMockIExptTurnResultRepo(ctrl2)
+	itemRepo2.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().
+		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 	itemRepo2.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(errors.New("db down"))
 	turnRepo2.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).

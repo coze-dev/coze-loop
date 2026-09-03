@@ -108,6 +108,15 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 	}
 
 	for _, turn := range eiec.EvalSetItem.Turns {
+		// 行级终止的「不再继续」语义：每轮开始前查一次该行是否已被终止，是则 break，
+		// 当前已跑完的轮次结果保留、后续轮次不再开始（对应 spec「执行中的行在当轮结束后停止」）。
+		// 放在循环体首部（而非尾部）是为了同时覆盖「排队中被终止、事件已在途」的情形。
+		if e.isItemTerminated(ctx, eiec) {
+			logs.CtxInfo(ctx, "[ExptItemTerminate] stop eval turns on terminated item, expt_id: %v, expt_run_id: %v, item_id: %v, turn_id: %v",
+				eiec.Event.ExptID, eiec.Event.ExptRunID, eiec.Event.EvalSetItemID, turn.ID)
+			break
+		}
+
 		etec, err := e.buildExptTurnEvalCtx(ctx, turn, eiec, history)
 		if err != nil {
 			return false, err
@@ -147,6 +156,23 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 	time.Sleep(time.Second * 1)
 
 	return false, nil
+}
+
+// isItemTerminated 查该 item 当前 run log 是否已被行级终止置为 Terminal。
+// 查询失败返回 false（不拦截）—— 宁可多跑一轮，也不能因一次查询抖动把正常行掐掉；
+// 真被终止的行还有 CompleteItemRun 的 Terminal 覆盖保护兜底。
+func (e *ExptItemEvalCtxExecutor) isItemTerminated(ctx context.Context, eiec *entity.ExptItemEvalCtx) bool {
+	if eiec == nil || eiec.Event == nil || e.ItemResultRepo == nil {
+		return false
+	}
+	event := eiec.Event
+	itemRunLog, err := e.ItemResultRepo.GetItemRunLog(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptItemTerminate] check item terminated fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+		return false
+	}
+	return itemRunLog != nil && entity.ItemRunState(itemRunLog.Status) == entity.ItemRunState_Terminal
 }
 
 func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *entity.ExptTurnEvalCtx, result *entity.ExptTurnRunResult) error {
@@ -480,6 +506,17 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, eiec *ent
 		ufields["err_msg"] = errno.SerializeErr(evalErr)
 	} else {
 		ufields["status"] = int32(entity.ItemRunState_Success)
+	}
+
+	// Terminal 是吸收态：该行已被用户行级终止时，在途执行的成功/失败结果 MUST NOT 回写 status
+	// （对应 spec「终止后到达的执行结果不覆盖终止状态」）。只写 result_state 让调度侧照常收口；
+	// err_msg 也不覆盖 —— 用户要看到的是"被主动终止"，而不是终止前那次执行的报错。
+	if e.isItemTerminated(persistCtx, eiec) {
+		logs.CtxInfo(persistCtx, "[ExptItemTerminate] keep terminal status on complete item run, expt_id: %v, expt_run_id: %v, item_id: %v, dropped_fields: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, ufields)
+		ufields = map[string]any{
+			"result_state": entity.ExptItemResultStateLogged,
+		}
 	}
 
 	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {

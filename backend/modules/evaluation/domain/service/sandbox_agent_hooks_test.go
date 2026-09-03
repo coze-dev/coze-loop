@@ -28,6 +28,11 @@ func buildFailPathExecutor(t *testing.T, ctrl *gomock.Controller, notifier ISand
 	configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 		AnyTimes().
 		Return(&entity.RetryConf{})
+	// CompleteItemRun 写 status 前会读一次当前 run log 做 Terminal 覆盖保护; 此处固定返回非 Terminal，
+	// 让这些用例仍走原有的 Fail / Success 写入分支。
+	itemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().
+		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 	exec := &ExptItemEvalCtxExecutor{
 		ItemResultRepo:       itemResultRepo,
 		Configer:             configer,

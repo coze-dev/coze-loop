@@ -54,6 +54,10 @@ type IExptExecutionManager interface {
 	CheckRun(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.ExptRunCheckOptionFn) error
 	Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error
 	RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error
+	// TerminateItems 行级终止：把指定的若干未完成行置为 Terminal，实验自身状态不变。
+	// 幂等——入参中已处于 Success / Fail / Terminal 的行会被静默跳过；全部已终态时不产生任何写操作。
+	// 沙箱等异步资源释放为 best-effort，其失败不影响返回值。
+	TerminateItems(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDs []int64, session *entity.Session) error
 
 	Invoke(ctx context.Context, invokeExptReq *entity.InvokeExptReq) error
 	Finish(ctx context.Context, exptID *entity.Experiment, exptRunID int64, session *entity.Session) error

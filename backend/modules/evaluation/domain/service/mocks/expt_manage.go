@@ -483,6 +483,20 @@ func (mr *MockIExptManagerMockRecorder) SetExptTerminating(arg0, arg1, arg2, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExptTerminating", reflect.TypeOf((*MockIExptManager)(nil).SetExptTerminating), arg0, arg1, arg2, arg3, arg4)
 }
 
+// TerminateItems mocks base method.
+func (m *MockIExptManager) TerminateItems(arg0 context.Context, arg1, arg2, arg3 int64, arg4 []int64, arg5 *entity.Session) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TerminateItems", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// TerminateItems indicates an expected call of TerminateItems.
+func (mr *MockIExptManagerMockRecorder) TerminateItems(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateItems", reflect.TypeOf((*MockIExptManager)(nil).TerminateItems), arg0, arg1, arg2, arg3, arg4, arg5)
+}
+
 // UnlockCompletingRun mocks base method.
 func (m *MockIExptManager) UnlockCompletingRun(arg0 context.Context, arg1, arg2, arg3 int64, arg4 *entity.Session) error {
 	m.ctrl.T.Helper()
