@@ -125,3 +125,22 @@ func NewSandboxTerminatedBeforeReportErr(sandboxStatus string) error {
 		Msg:  msg,
 	}
 }
+
+// NewItemManuallyTerminatedErr 构造"实验行被用户主动终止"错误。
+// 该错误由行级终止 (IExptExecutionManager.TerminateItems) 写入 item/turn 的 err_msg，
+// 经 ItemSystemInfo.Error 透给前端展示，故 message 必须是中文可读文案，而不是内部错误串。
+func NewItemManuallyTerminatedErr() error {
+	return &ErrImpl{
+		Code: ItemManuallyTerminatedCode,
+		Msg:  itemManuallyTerminatedMessage,
+	}
+}
+
+// ParseItemManuallyTerminatedErr 反解行级终止错误，返回 (是否命中, 用户可见的详细描述)。
+func ParseItemManuallyTerminatedErr(err error) (bool, string) {
+	ei, ok := ParseErrImpl(err)
+	if ok && ei.Code == ItemManuallyTerminatedCode {
+		return true, ei.ErrMsg()
+	}
+	return false, ""
+}

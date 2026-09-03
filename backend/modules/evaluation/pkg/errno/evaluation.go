@@ -459,6 +459,12 @@ const (
 	sandboxTerminatedBeforeReportMessage           = "沙箱在结果上报前已提前进入终态，该实验行已置为失败"
 	sandboxTerminatedBeforeReportNoAffectStability = false
 
+	// ItemManuallyTerminatedCode 行级终止（TerminateExperimentItems 触发）。用户主动放弃该行，不是系统故障，
+	// 故 noAffectStability = true，不计入稳定性口径。message 会经 err_msg 落库并由 ItemSystemInfo.Error 透给前端展示。
+	ItemManuallyTerminatedCode              = 601205087
+	itemManuallyTerminatedMessage           = "该行被用户主动终止"
+	itemManuallyTerminatedNoAffectStability = true
+
 	// SandboxAgent 评测对象阶段性错误码 (601206xxx)：按沙箱内执行阶段划分，便于按阶段做 metrics 分类与用户前端展示。
 	SandboxAgentSetupErrorCode              = 601206001 // sandbox agent target setup phase error: agent 初始化 / 环境依赖装载失败
 	sandboxAgentSetupErrorMessage           = "sandbox agent: agent setup failed"
@@ -1161,6 +1167,12 @@ func init() {
 		SandboxTerminatedBeforeReportCode,
 		sandboxTerminatedBeforeReportMessage,
 		code.WithAffectStability(!sandboxTerminatedBeforeReportNoAffectStability),
+	)
+
+	code.Register(
+		ItemManuallyTerminatedCode,
+		itemManuallyTerminatedMessage,
+		code.WithAffectStability(!itemManuallyTerminatedNoAffectStability),
 	)
 
 	code.Register(
