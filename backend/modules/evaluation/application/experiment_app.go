@@ -1898,6 +1898,48 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 	return &expt.KillExperimentResponse{BaseResp: base.NewBaseResp()}, nil
 }
 
+// TerminateExperimentItems 行级终止：终止实验中指定的若干行，**实验自身状态不变**。
+//
+// 与 KillExperiment 的关键差异（刻意的语义隔离，见 design D1/G3）：
+//   - **没有** SetExptTerminating —— 不把实验置 terminating；
+//   - **没有** goroutine + CompleteRun/CompleteExpt —— 不把实验推终态。
+//
+// 未被终止的行继续执行，实验终态仍由既有规则（所有行都有结果后）推导。同步返回，前端刷新即可看到「已终止」。
+func (e *experimentApplication) TerminateExperimentItems(ctx context.Context, req *expt.TerminateExperimentItemsRequest) (r *expt.TerminateExperimentItemsResponse, err error) {
+	session := entity.NewSession(ctx)
+	logs.CtxInfo(ctx, "TerminateExperimentItems receive req, expt_id: %v, item_ids: %v, user_id: %v", req.GetExptID(), req.GetItemIds(), session.UserID)
+
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 非运行中实验拒绝行级终止，复用实验级终止的错误码（不新增语义重复的码）
+	if got.Status != entity.ExptStatus_Processing {
+		return nil, errorx.NewByCode(errno.TerminateNonRunningExperimentErrorCode)
+	}
+
+	// 鉴权口径与 KillExperiment 完全一致：复用实验的 Run 权限，maintainer 走运维快捷路径
+	if !e.configer.GetMaintainerUserIDs(ctx)[session.UserID] {
+		if err := e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+			SpaceID:         req.GetWorkspaceID(),
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+			OwnerID:         gptr.Of(got.CreatedBy),
+			ResourceSpaceID: req.GetWorkspaceID(),
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	// item_ids 的非空 / 上限 100 校验由 IDL 的 vt.min_size / vt.max_size 在 BindAndValidate 阶段完成（design D6）
+	if err := e.manager.TerminateItems(ctx, req.GetExptID(), got.LatestRunID, req.GetWorkspaceID(), req.GetItemIds(), session); err != nil {
+		return nil, err
+	}
+
+	return &expt.TerminateExperimentItemsResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
 func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest) (r *expt.BatchGetExperimentResultResponse, err error) {
 	// 1. 如果指定了 BaselineExperimentID，先查出其真实的 SpaceID
 	var actualSpaceID int64

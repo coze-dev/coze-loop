@@ -2346,6 +2346,48 @@ func (e *EvalOpenAPIApplication) KillExperimentOApi(ctx context.Context, req *op
 	return &openapi.KillExperimentOApiResponse{}, nil
 }
 
+// TerminateExperimentItemsOApi 行级终止的开放面门面：显式鉴权后委派内部面。
+// 与 KillExperimentOApi 同构 —— 内部 TerminateExperimentItems 对 maintainer 用户会跳过鉴权（运维快捷路径），
+// 对外 OpenAPI 面 MUST NOT 享受该豁免，故在 wrapper 层强制校验实验的 Run 权限。
+func (e *EvalOpenAPIApplication) TerminateExperimentItemsOApi(ctx context.Context, req *openapi.TerminateExperimentItemsOApiRequest) (r *openapi.TerminateExperimentItemsOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	if req.GetExperimentID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_id is required"))
+	}
+
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 内部面再做状态校验（仅 Processing 可终止）与 item 级幂等过滤；item_ids 的非空/上限校验由 IDL vt 约束完成。
+	if _, err = e.experimentApp.TerminateExperimentItems(ctx, &exptpb.TerminateExperimentItemsRequest{
+		WorkspaceID: req.WorkspaceID,
+		ExptID:      req.ExperimentID,
+		ItemIds:     req.ItemIds,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &openapi.TerminateExperimentItemsOApiResponse{}, nil
+}
+
 func mapOpenAPIExptRetryMode(mode experiment.ExptRetryMode) (domain_expt.ExptRetryMode, error) {
 	switch mode {
 	case experiment.ExptRetryModeRetryAll:

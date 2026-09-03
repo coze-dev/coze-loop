@@ -358,15 +358,5 @@ func UpdateExptRunConf(ctx context.Context, c *app.RequestContext) {
 // TerminateExperimentItems .
 // @router /api/evaluation/v1/experiments/:expt_id/terminate_items [POST]
 func TerminateExperimentItems(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.TerminateExperimentItemsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(expt.TerminateExperimentItemsResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localExptSvc.TerminateExperimentItems)
 }
