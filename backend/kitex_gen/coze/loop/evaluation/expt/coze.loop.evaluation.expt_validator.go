@@ -52,6 +52,11 @@ func (p *CreateExperimentRequest) IsValid() error {
 			return fmt.Errorf("field TargetSharedOption not valid, %w", err)
 		}
 	}
+	if p.ExpectedQuotaConsumption != nil {
+		if err := p.ExpectedQuotaConsumption.IsValid(); err != nil {
+			return fmt.Errorf("field ExpectedQuotaConsumption not valid, %w", err)
+		}
+	}
 	if p.NotificationConf != nil {
 		if err := p.NotificationConf.IsValid(); err != nil {
 			return fmt.Errorf("field NotificationConf not valid, %w", err)
@@ -116,6 +121,11 @@ func (p *SubmitExperimentRequest) IsValid() error {
 	if p.TargetSharedOption != nil {
 		if err := p.TargetSharedOption.IsValid(); err != nil {
 			return fmt.Errorf("field TargetSharedOption not valid, %w", err)
+		}
+	}
+	if p.ExpectedQuotaConsumption != nil {
+		if err := p.ExpectedQuotaConsumption.IsValid(); err != nil {
+			return fmt.Errorf("field ExpectedQuotaConsumption not valid, %w", err)
 		}
 	}
 	if p.NotificationConf != nil {
@@ -228,6 +238,11 @@ func (p *UpdateExperimentResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateExptRunConfRequest) IsValid() error {
+	if p.ExpectedQuotaConsumption != nil {
+		if err := p.ExpectedQuotaConsumption.IsValid(); err != nil {
+			return fmt.Errorf("field ExpectedQuotaConsumption not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

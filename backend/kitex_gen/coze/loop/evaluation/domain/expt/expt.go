@@ -28,6 +28,8 @@ const (
 
 	Schedule = "schedule"
 
+	Evalx = "evalx"
+
 	FrequencyEveryday = "every_day"
 
 	FrequencyMonday = "monday"
@@ -2206,6 +2208,601 @@ func (p *RunModeConfig) Field11DeepEqual(src *string) bool {
 	return true
 }
 
+// ★ 中心化调度：单 item 预期资源消耗
+// 由创建方在 Create/Submit 时申报，服务端冻结进 eval_conf，供中心调度器预占额度使用。
+// category/resource_key 语义与额度上限配置一致；amount 的单位由上限配置的 unit 定义，调用方不传 unit。
+type ExpectedResourceConsumption struct {
+	// 资源类别：sandbox / agent_account / model / evaluator
+	Category string `thrift:"category,1,required" frugal:"1,required,string" form:"category,required" json:"category,required" query:"category,required"`
+	// 具体资源：default / doubao_pro / gpt5.5 ...；不允许传 "*"（通配仅用于上限配置）
+	ResourceKey string `thrift:"resource_key,2,required" frugal:"2,required,string" form:"resource_key,required" json:"resource_key,required" query:"resource_key,required"`
+	// 单 item 的预期占用量，必须 > 0
+	Amount int64 `thrift:"amount,3,required" frugal:"3,required,i64" form:"amount,required" json:"amount,required" query:"amount,required"`
+	// 资源来源/提供方（如 "litellm"、业务方自定义标识）。可选。
+	// 同一 resource_key 经不同来源可能是不同的池子（同一模型走 LiteLLM 与走业务方
+	// 自备通道，配额各自独立），带上它才能分开记账。
+	// 不填等于"不区分来源"，行为与该字段引入之前完全一致。不允许传 "*"。
+	Source *string `thrift:"source,4,optional" frugal:"4,optional,string" form:"source" json:"source,omitempty" query:"source"`
+}
+
+func NewExpectedResourceConsumption() *ExpectedResourceConsumption {
+	return &ExpectedResourceConsumption{}
+}
+
+func (p *ExpectedResourceConsumption) InitDefault() {
+}
+
+func (p *ExpectedResourceConsumption) GetCategory() (v string) {
+	if p != nil {
+		return p.Category
+	}
+	return
+}
+
+func (p *ExpectedResourceConsumption) GetResourceKey() (v string) {
+	if p != nil {
+		return p.ResourceKey
+	}
+	return
+}
+
+func (p *ExpectedResourceConsumption) GetAmount() (v int64) {
+	if p != nil {
+		return p.Amount
+	}
+	return
+}
+
+var ExpectedResourceConsumption_Source_DEFAULT string
+
+func (p *ExpectedResourceConsumption) GetSource() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSource() {
+		return ExpectedResourceConsumption_Source_DEFAULT
+	}
+	return *p.Source
+}
+func (p *ExpectedResourceConsumption) SetCategory(val string) {
+	p.Category = val
+}
+func (p *ExpectedResourceConsumption) SetResourceKey(val string) {
+	p.ResourceKey = val
+}
+func (p *ExpectedResourceConsumption) SetAmount(val int64) {
+	p.Amount = val
+}
+func (p *ExpectedResourceConsumption) SetSource(val *string) {
+	p.Source = val
+}
+
+var fieldIDToName_ExpectedResourceConsumption = map[int16]string{
+	1: "category",
+	2: "resource_key",
+	3: "amount",
+	4: "source",
+}
+
+func (p *ExpectedResourceConsumption) IsSetSource() bool {
+	return p.Source != nil
+}
+
+func (p *ExpectedResourceConsumption) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetCategory bool = false
+	var issetResourceKey bool = false
+	var issetAmount bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetCategory = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetResourceKey = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetAmount = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetCategory {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetResourceKey {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetAmount {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExpectedResourceConsumption[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ExpectedResourceConsumption[fieldId]))
+}
+
+func (p *ExpectedResourceConsumption) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Category = _field
+	return nil
+}
+func (p *ExpectedResourceConsumption) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ResourceKey = _field
+	return nil
+}
+func (p *ExpectedResourceConsumption) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Amount = _field
+	return nil
+}
+func (p *ExpectedResourceConsumption) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Source = _field
+	return nil
+}
+
+func (p *ExpectedResourceConsumption) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExpectedResourceConsumption"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExpectedResourceConsumption) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("category", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Category); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ExpectedResourceConsumption) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("resource_key", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.ResourceKey); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ExpectedResourceConsumption) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("amount", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.Amount); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ExpectedResourceConsumption) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSource() {
+		if err = oprot.WriteFieldBegin("source", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Source); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *ExpectedResourceConsumption) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExpectedResourceConsumption(%+v)", *p)
+
+}
+
+func (p *ExpectedResourceConsumption) DeepEqual(ano *ExpectedResourceConsumption) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Category) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ResourceKey) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Amount) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Source) {
+		return false
+	}
+	return true
+}
+
+func (p *ExpectedResourceConsumption) Field1DeepEqual(src string) bool {
+
+	if strings.Compare(p.Category, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ExpectedResourceConsumption) Field2DeepEqual(src string) bool {
+
+	if strings.Compare(p.ResourceKey, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ExpectedResourceConsumption) Field3DeepEqual(src int64) bool {
+
+	if p.Amount != src {
+		return false
+	}
+	return true
+}
+func (p *ExpectedResourceConsumption) Field4DeepEqual(src *string) bool {
+
+	if p.Source == src {
+		return true
+	} else if p.Source == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Source, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type ExpectedQuotaConsumption struct {
+	Resources []*ExpectedResourceConsumption `thrift:"resources,1,required" frugal:"1,required,list<ExpectedResourceConsumption>" form:"resources,required" json:"resources,required" query:"resources,required"`
+}
+
+func NewExpectedQuotaConsumption() *ExpectedQuotaConsumption {
+	return &ExpectedQuotaConsumption{}
+}
+
+func (p *ExpectedQuotaConsumption) InitDefault() {
+}
+
+func (p *ExpectedQuotaConsumption) GetResources() (v []*ExpectedResourceConsumption) {
+	if p != nil {
+		return p.Resources
+	}
+	return
+}
+func (p *ExpectedQuotaConsumption) SetResources(val []*ExpectedResourceConsumption) {
+	p.Resources = val
+}
+
+var fieldIDToName_ExpectedQuotaConsumption = map[int16]string{
+	1: "resources",
+}
+
+func (p *ExpectedQuotaConsumption) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetResources bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetResources = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetResources {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExpectedQuotaConsumption[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ExpectedQuotaConsumption[fieldId]))
+}
+
+func (p *ExpectedQuotaConsumption) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ExpectedResourceConsumption, 0, size)
+	values := make([]ExpectedResourceConsumption, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Resources = _field
+	return nil
+}
+
+func (p *ExpectedQuotaConsumption) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExpectedQuotaConsumption"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExpectedQuotaConsumption) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("resources", thrift.LIST, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Resources)); err != nil {
+		return err
+	}
+	for _, v := range p.Resources {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExpectedQuotaConsumption) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExpectedQuotaConsumption(%+v)", *p)
+
+}
+
+func (p *ExpectedQuotaConsumption) DeepEqual(ano *ExpectedQuotaConsumption) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Resources) {
+		return false
+	}
+	return true
+}
+
+func (p *ExpectedQuotaConsumption) Field1DeepEqual(src []*ExpectedResourceConsumption) bool {
+
+	if len(p.Resources) != len(src) {
+		return false
+	}
+	for i, v := range p.Resources {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
 type Experiment struct {
 	ID            *int64      `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
 	Name          *string     `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
@@ -2271,6 +2868,14 @@ type Experiment struct {
 	// 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
 	// 仅 SandboxAgent + MultiSetConfig 实验非空。SUA 模型的 api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
 	RunModeConfig *RunModeConfig `thrift:"run_mode_config,115,optional" frugal:"115,optional,RunModeConfig" form:"run_mode_config" json:"run_mode_config,omitempty" query:"run_mode_config"`
+	// ★ 新增段位 116~119: 中心化调度读视图
+	// 调度优先级回显 (1-99, 越大越优先); 直读 experiment 表同名列, 历史数据为 1
+	PriorityLevel *int32 `thrift:"priority_level,116,optional" frugal:"116,optional,i32" form:"priority_level" json:"priority_level,omitempty" query:"priority_level"`
+	// 执行模式回显: legacy(旧 per-experiment 链路) / enforce(中心调度); 直读 experiment 表同名列, 该列是唯一权威源
+	SchedulerMode *string `thrift:"scheduler_mode,117,optional" frugal:"117,optional,string" form:"scheduler_mode" json:"scheduler_mode,omitempty" query:"scheduler_mode"`
+	// 单 item 预期资源消耗向量回显: 从 experiment.eval_conf 反序列化, 与 Create/Submit 入参同构。
+	// "有则回显、无则省略": legacy 实验确实没申报向量, 省略比返回空结构更如实。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption `thrift:"expected_quota_consumption,118,optional" frugal:"118,optional,ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty" query:"expected_quota_consumption"`
 }
 
 func NewExperiment() *Experiment {
@@ -2843,6 +3448,42 @@ func (p *Experiment) GetRunModeConfig() (v *RunModeConfig) {
 	}
 	return p.RunModeConfig
 }
+
+var Experiment_PriorityLevel_DEFAULT int32
+
+func (p *Experiment) GetPriorityLevel() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriorityLevel() {
+		return Experiment_PriorityLevel_DEFAULT
+	}
+	return *p.PriorityLevel
+}
+
+var Experiment_SchedulerMode_DEFAULT string
+
+func (p *Experiment) GetSchedulerMode() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchedulerMode() {
+		return Experiment_SchedulerMode_DEFAULT
+	}
+	return *p.SchedulerMode
+}
+
+var Experiment_ExpectedQuotaConsumption_DEFAULT *ExpectedQuotaConsumption
+
+func (p *Experiment) GetExpectedQuotaConsumption() (v *ExpectedQuotaConsumption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedQuotaConsumption() {
+		return Experiment_ExpectedQuotaConsumption_DEFAULT
+	}
+	return p.ExpectedQuotaConsumption
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -2984,6 +3625,15 @@ func (p *Experiment) SetTotalItemCount(val *int64) {
 func (p *Experiment) SetRunModeConfig(val *RunModeConfig) {
 	p.RunModeConfig = val
 }
+func (p *Experiment) SetPriorityLevel(val *int32) {
+	p.PriorityLevel = val
+}
+func (p *Experiment) SetSchedulerMode(val *string) {
+	p.SchedulerMode = val
+}
+func (p *Experiment) SetExpectedQuotaConsumption(val *ExpectedQuotaConsumption) {
+	p.ExpectedQuotaConsumption = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:   "id",
@@ -3033,6 +3683,9 @@ var fieldIDToName_Experiment = map[int16]string{
 	113: "evaluators_concur_num",
 	114: "total_item_count",
 	115: "run_mode_config",
+	116: "priority_level",
+	117: "scheduler_mode",
+	118: "expected_quota_consumption",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -3221,6 +3874,18 @@ func (p *Experiment) IsSetTotalItemCount() bool {
 
 func (p *Experiment) IsSetRunModeConfig() bool {
 	return p.RunModeConfig != nil
+}
+
+func (p *Experiment) IsSetPriorityLevel() bool {
+	return p.PriorityLevel != nil
+}
+
+func (p *Experiment) IsSetSchedulerMode() bool {
+	return p.SchedulerMode != nil
+}
+
+func (p *Experiment) IsSetExpectedQuotaConsumption() bool {
+	return p.ExpectedQuotaConsumption != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -3612,6 +4277,30 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 115:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField115(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 116:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField116(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 117:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField117(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 118:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField118(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4225,6 +4914,36 @@ func (p *Experiment) ReadField115(iprot thrift.TProtocol) error {
 	p.RunModeConfig = _field
 	return nil
 }
+func (p *Experiment) ReadField116(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PriorityLevel = _field
+	return nil
+}
+func (p *Experiment) ReadField117(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SchedulerMode = _field
+	return nil
+}
+func (p *Experiment) ReadField118(iprot thrift.TProtocol) error {
+	_field := NewExpectedQuotaConsumption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExpectedQuotaConsumption = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4418,6 +5137,18 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField115(oprot); err != nil {
 			fieldId = 115
+			goto WriteFieldError
+		}
+		if err = p.writeField116(oprot); err != nil {
+			fieldId = 116
+			goto WriteFieldError
+		}
+		if err = p.writeField117(oprot); err != nil {
+			fieldId = 117
+			goto WriteFieldError
+		}
+		if err = p.writeField118(oprot); err != nil {
+			fieldId = 118
 			goto WriteFieldError
 		}
 	}
@@ -5343,6 +6074,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 115 end error: ", p), err)
 }
+func (p *Experiment) writeField116(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriorityLevel() {
+		if err = oprot.WriteFieldBegin("priority_level", thrift.I32, 116); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PriorityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 116 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 116 end error: ", p), err)
+}
+func (p *Experiment) writeField117(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchedulerMode() {
+		if err = oprot.WriteFieldBegin("scheduler_mode", thrift.STRING, 117); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SchedulerMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 117 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 117 end error: ", p), err)
+}
+func (p *Experiment) writeField118(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedQuotaConsumption() {
+		if err = oprot.WriteFieldBegin("expected_quota_consumption", thrift.STRUCT, 118); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExpectedQuotaConsumption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 118 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 118 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -5497,6 +6282,15 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field115DeepEqual(ano.RunModeConfig) {
+		return false
+	}
+	if !p.Field116DeepEqual(ano.PriorityLevel) {
+		return false
+	}
+	if !p.Field117DeepEqual(ano.SchedulerMode) {
+		return false
+	}
+	if !p.Field118DeepEqual(ano.ExpectedQuotaConsumption) {
 		return false
 	}
 	return true
@@ -6014,6 +6808,37 @@ func (p *Experiment) Field114DeepEqual(src *int64) bool {
 func (p *Experiment) Field115DeepEqual(src *RunModeConfig) bool {
 
 	if !p.RunModeConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field116DeepEqual(src *int32) bool {
+
+	if p.PriorityLevel == src {
+		return true
+	} else if p.PriorityLevel == nil || src == nil {
+		return false
+	}
+	if *p.PriorityLevel != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field117DeepEqual(src *string) bool {
+
+	if p.SchedulerMode == src {
+		return true
+	} else if p.SchedulerMode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SchedulerMode, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field118DeepEqual(src *ExpectedQuotaConsumption) bool {
+
+	if !p.ExpectedQuotaConsumption.DeepEqual(src) {
 		return false
 	}
 	return true

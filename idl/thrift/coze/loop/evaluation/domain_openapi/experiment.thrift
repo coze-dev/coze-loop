@@ -305,8 +305,41 @@ struct Experiment {
     // 用本文件已有的 RunModeConfig (字符串枚举), 不要 include domain/expt.thrift —— 会符号冲突。
     115: optional RunModeConfig run_mode_config
 
+    // ★ 中心化调度读视图。字段号 116~118 同样与 domain/expt.thrift 对齐。
+    // 调度优先级 (1-99, 越大越优先); 历史数据为 1。
+    // 注: 它只影响 scheduler_mode=enforce 的实验; legacy 实验此值虽有 (默认 1) 但不参与调度排序。
+    116: optional i32 priority_level
+    // 执行模式: legacy(旧 per-experiment 链路) / enforce(中心调度)。
+    // **legacy 实验也回显**: "为什么我的实验没进中心调度"是最高频疑问, 回显 legacy 可一眼确认。
+    117: optional string scheduler_mode
+    // 单 item 预期资源消耗向量; "有则回显、无则省略"(legacy 实验确实没申报)。
+    118: optional ExpectedQuotaConsumption expected_quota_consumption
+
+    // 注: scheduler_scope **不进读模型**。它是不透明调度域 ID, 对调用方无可用语义却泄露部署拓扑;
+    // 内部运维需要时直接查 experiment.scheduler_scope 列。
+
 
     100: optional common.BaseInfo base_info
+}
+
+// 单资源预期消耗。与 domain/expt.thrift 的 ExpectedResourceConsumption 同构 ——
+// 本文件另立一份而非 include, 与 RunModeConfig / ExptEvalSetSourceType 同套模式, 避免符号冲突。
+struct ExpectedResourceConsumption {
+    // 资源类别: sandbox / agent_account / model / evaluator
+    1: optional string category
+    // 资源标识: default / doubao_pro / gpt5.5 等
+    2: optional string resource_key
+    // 单 item 预期占用量; 单位由服务端 TCC 资源配置定义, 不由调用方指定
+    3: optional i64 amount (api.js_conv = 'true', go.tag = 'json:"amount"')
+    // 资源来源/提供方 (如 "litellm"、业务方自定义标识)。可选。
+    // 同一 resource_key 经不同来源可能是不同的池子, 带上它才能分开记账。
+    // 不填等于"不区分来源", 行为与该字段引入之前完全一致。不允许传 "*"。
+    4: optional string source
+}
+
+// 单 item 的多资源预期消耗向量。
+struct ExpectedQuotaConsumption {
+    1: optional list<ExpectedResourceConsumption> resources
 }
 
 // 列定义 - 评测集字段

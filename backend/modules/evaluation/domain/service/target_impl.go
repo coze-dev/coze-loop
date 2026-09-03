@@ -584,6 +584,8 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		LogID:               param.LogID,
 		ItemMeta:            param.ItemMeta,
 		ExptGroupKey:        param.ExptGroupKey,
+		// 透传发起实验的空间。注意这里**不能**用 spaceID —— 跨空间共享时它已是对象来源空间。
+		ExptSpaceID: param.ExptSpaceID,
 	})
 	if execErr != nil {
 		// If an asynchronous call fails, return immediately without logging the error or propagating the exception.

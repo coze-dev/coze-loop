@@ -74,6 +74,15 @@ type CreateExperimentRequest struct {
 	// 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
 	// 引用分组实验 id：填写时校验其为当前空间内的实验 id
 	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
+	// ★ 中心化调度入参 92~94
+	// 调度优先级：1-99，数值越大越优先；缺省 1。仅在中心调度模式下参与排序，legacy 模式忽略
+	PriorityLevel *int32 `thrift:"priority_level,92,optional" frugal:"92,optional,i32" form:"priority_level" json:"priority_level,omitempty"`
+	// 单 item 预期资源消耗向量：enforce 模式必填且非空，legacy 模式可选
+	// 服务端校验 (category,resource_key) 唯一、amount>0、禁止 resource_key="*"，随后冻结进 eval_conf；Retry 继承不可覆盖
+	ExpectedQuotaConsumption *expt.ExpectedQuotaConsumption `thrift:"expected_quota_consumption,93,optional" frugal:"93,optional,expt.ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty"`
+	// 执行模式：legacy / enforce。故意不加 api.body —— 公网调用方不得自行指定，仅允许 commercial wrapper 按灰度白名单填入
+	// 与 trigger_type 同为服务端内部覆写字段；落库后 experiment.scheduler_mode 列是唯一权威源
+	SchedulerMode *string `thrift:"scheduler_mode,94,optional" frugal:"94,optional,string" form:"scheduler_mode" json:"scheduler_mode,omitempty" query:"scheduler_mode"`
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Ext              map[string]string          `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
@@ -491,6 +500,42 @@ func (p *CreateExperimentRequest) GetRefGroupExperimentID() (v int64) {
 	return *p.RefGroupExperimentID
 }
 
+var CreateExperimentRequest_PriorityLevel_DEFAULT int32
+
+func (p *CreateExperimentRequest) GetPriorityLevel() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriorityLevel() {
+		return CreateExperimentRequest_PriorityLevel_DEFAULT
+	}
+	return *p.PriorityLevel
+}
+
+var CreateExperimentRequest_ExpectedQuotaConsumption_DEFAULT *expt.ExpectedQuotaConsumption
+
+func (p *CreateExperimentRequest) GetExpectedQuotaConsumption() (v *expt.ExpectedQuotaConsumption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedQuotaConsumption() {
+		return CreateExperimentRequest_ExpectedQuotaConsumption_DEFAULT
+	}
+	return p.ExpectedQuotaConsumption
+}
+
+var CreateExperimentRequest_SchedulerMode_DEFAULT string
+
+func (p *CreateExperimentRequest) GetSchedulerMode() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchedulerMode() {
+		return CreateExperimentRequest_SchedulerMode_DEFAULT
+	}
+	return *p.SchedulerMode
+}
+
 var CreateExperimentRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
 
 func (p *CreateExperimentRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
@@ -640,6 +685,15 @@ func (p *CreateExperimentRequest) SetTargetSharedOption(val *common.SharedResour
 func (p *CreateExperimentRequest) SetRefGroupExperimentID(val *int64) {
 	p.RefGroupExperimentID = val
 }
+func (p *CreateExperimentRequest) SetPriorityLevel(val *int32) {
+	p.PriorityLevel = val
+}
+func (p *CreateExperimentRequest) SetExpectedQuotaConsumption(val *expt.ExpectedQuotaConsumption) {
+	p.ExpectedQuotaConsumption = val
+}
+func (p *CreateExperimentRequest) SetSchedulerMode(val *string) {
+	p.SchedulerMode = val
+}
 func (p *CreateExperimentRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
 	p.NotificationConf = val
 }
@@ -688,6 +742,9 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	80:  "eval_set_shared_option",
 	81:  "target_shared_option",
 	91:  "ref_group_experiment_id",
+	92:  "priority_level",
+	93:  "expected_quota_consumption",
+	94:  "scheduler_mode",
 	110: "notification_conf",
 	100: "ext",
 	200: "session",
@@ -824,6 +881,18 @@ func (p *CreateExperimentRequest) IsSetTargetSharedOption() bool {
 
 func (p *CreateExperimentRequest) IsSetRefGroupExperimentID() bool {
 	return p.RefGroupExperimentID != nil
+}
+
+func (p *CreateExperimentRequest) IsSetPriorityLevel() bool {
+	return p.PriorityLevel != nil
+}
+
+func (p *CreateExperimentRequest) IsSetExpectedQuotaConsumption() bool {
+	return p.ExpectedQuotaConsumption != nil
+}
+
+func (p *CreateExperimentRequest) IsSetSchedulerMode() bool {
+	return p.SchedulerMode != nil
 }
 
 func (p *CreateExperimentRequest) IsSetNotificationConf() bool {
@@ -1129,6 +1198,30 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 91:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField91(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 92:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField92(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 93:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField93(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 94:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField94(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1626,6 +1719,36 @@ func (p *CreateExperimentRequest) ReadField91(iprot thrift.TProtocol) error {
 	p.RefGroupExperimentID = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField92(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PriorityLevel = _field
+	return nil
+}
+func (p *CreateExperimentRequest) ReadField93(iprot thrift.TProtocol) error {
+	_field := expt.NewExpectedQuotaConsumption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExpectedQuotaConsumption = _field
+	return nil
+}
+func (p *CreateExperimentRequest) ReadField94(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SchedulerMode = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField110(iprot thrift.TProtocol) error {
 	_field := expt.NewExptNotificationConf()
 	if err := _field.Read(iprot); err != nil {
@@ -1820,6 +1943,18 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField91(oprot); err != nil {
 			fieldId = 91
+			goto WriteFieldError
+		}
+		if err = p.writeField92(oprot); err != nil {
+			fieldId = 92
+			goto WriteFieldError
+		}
+		if err = p.writeField93(oprot); err != nil {
+			fieldId = 93
+			goto WriteFieldError
+		}
+		if err = p.writeField94(oprot); err != nil {
+			fieldId = 94
 			goto WriteFieldError
 		}
 		if err = p.writeField110(oprot); err != nil {
@@ -2509,6 +2644,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 91 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField92(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriorityLevel() {
+		if err = oprot.WriteFieldBegin("priority_level", thrift.I32, 92); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PriorityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 92 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 92 end error: ", p), err)
+}
+func (p *CreateExperimentRequest) writeField93(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedQuotaConsumption() {
+		if err = oprot.WriteFieldBegin("expected_quota_consumption", thrift.STRUCT, 93); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExpectedQuotaConsumption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 93 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 93 end error: ", p), err)
+}
+func (p *CreateExperimentRequest) writeField94(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchedulerMode() {
+		if err = oprot.WriteFieldBegin("scheduler_mode", thrift.STRING, 94); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SchedulerMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 94 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 94 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField110(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNotificationConf() {
 		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 110); err != nil {
@@ -2707,6 +2896,15 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field91DeepEqual(ano.RefGroupExperimentID) {
+		return false
+	}
+	if !p.Field92DeepEqual(ano.PriorityLevel) {
+		return false
+	}
+	if !p.Field93DeepEqual(ano.ExpectedQuotaConsumption) {
+		return false
+	}
+	if !p.Field94DeepEqual(ano.SchedulerMode) {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.NotificationConf) {
@@ -3102,6 +3300,37 @@ func (p *CreateExperimentRequest) Field91DeepEqual(src *int64) bool {
 	}
 	return true
 }
+func (p *CreateExperimentRequest) Field92DeepEqual(src *int32) bool {
+
+	if p.PriorityLevel == src {
+		return true
+	} else if p.PriorityLevel == nil || src == nil {
+		return false
+	}
+	if *p.PriorityLevel != *src {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field93DeepEqual(src *expt.ExpectedQuotaConsumption) bool {
+
+	if !p.ExpectedQuotaConsumption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field94DeepEqual(src *string) bool {
+
+	if p.SchedulerMode == src {
+		return true
+	} else if p.SchedulerMode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SchedulerMode, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *CreateExperimentRequest) Field110DeepEqual(src *expt.ExptNotificationConf) bool {
 
 	if !p.NotificationConf.DeepEqual(src) {
@@ -3431,6 +3660,15 @@ type SubmitExperimentRequest struct {
 	// 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
 	// 引用分组实验 id：填写时校验其为当前空间内的实验 id
 	RefGroupExperimentID *int64 `thrift:"ref_group_experiment_id,91,optional" frugal:"91,optional,i64" json:"ref_group_experiment_id" form:"ref_group_experiment_id" `
+	// ★ 中心化调度入参 92~94
+	// 调度优先级：1-99，数值越大越优先；缺省 1。仅在中心调度模式下参与排序，legacy 模式忽略
+	PriorityLevel *int32 `thrift:"priority_level,92,optional" frugal:"92,optional,i32" form:"priority_level" json:"priority_level,omitempty"`
+	// 单 item 预期资源消耗向量：enforce 模式必填且非空，legacy 模式可选
+	// 服务端校验 (category,resource_key) 唯一、amount>0、禁止 resource_key="*"，随后冻结进 eval_conf；Retry 继承不可覆盖
+	ExpectedQuotaConsumption *expt.ExpectedQuotaConsumption `thrift:"expected_quota_consumption,93,optional" frugal:"93,optional,expt.ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty"`
+	// 执行模式：legacy / enforce。故意不加 api.body —— 公网调用方不得自行指定，仅允许 commercial wrapper 按灰度白名单填入
+	// 与 trigger_type 同为服务端内部覆写字段；落库后 experiment.scheduler_mode 列是唯一权威源
+	SchedulerMode *string `thrift:"scheduler_mode,94,optional" frugal:"94,optional,string" form:"scheduler_mode" json:"scheduler_mode,omitempty" query:"scheduler_mode"`
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Session          *common.Session            `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
@@ -3883,6 +4121,42 @@ func (p *SubmitExperimentRequest) GetRefGroupExperimentID() (v int64) {
 	return *p.RefGroupExperimentID
 }
 
+var SubmitExperimentRequest_PriorityLevel_DEFAULT int32
+
+func (p *SubmitExperimentRequest) GetPriorityLevel() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriorityLevel() {
+		return SubmitExperimentRequest_PriorityLevel_DEFAULT
+	}
+	return *p.PriorityLevel
+}
+
+var SubmitExperimentRequest_ExpectedQuotaConsumption_DEFAULT *expt.ExpectedQuotaConsumption
+
+func (p *SubmitExperimentRequest) GetExpectedQuotaConsumption() (v *expt.ExpectedQuotaConsumption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedQuotaConsumption() {
+		return SubmitExperimentRequest_ExpectedQuotaConsumption_DEFAULT
+	}
+	return p.ExpectedQuotaConsumption
+}
+
+var SubmitExperimentRequest_SchedulerMode_DEFAULT string
+
+func (p *SubmitExperimentRequest) GetSchedulerMode() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchedulerMode() {
+		return SubmitExperimentRequest_SchedulerMode_DEFAULT
+	}
+	return *p.SchedulerMode
+}
+
 var SubmitExperimentRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
 
 func (p *SubmitExperimentRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
@@ -4029,6 +4303,15 @@ func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 func (p *SubmitExperimentRequest) SetRefGroupExperimentID(val *int64) {
 	p.RefGroupExperimentID = val
 }
+func (p *SubmitExperimentRequest) SetPriorityLevel(val *int32) {
+	p.PriorityLevel = val
+}
+func (p *SubmitExperimentRequest) SetExpectedQuotaConsumption(val *expt.ExpectedQuotaConsumption) {
+	p.ExpectedQuotaConsumption = val
+}
+func (p *SubmitExperimentRequest) SetSchedulerMode(val *string) {
+	p.SchedulerMode = val
+}
 func (p *SubmitExperimentRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
 	p.NotificationConf = val
 }
@@ -4077,6 +4360,9 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	81:  "target_shared_option",
 	100: "ext",
 	91:  "ref_group_experiment_id",
+	92:  "priority_level",
+	93:  "expected_quota_consumption",
+	94:  "scheduler_mode",
 	110: "notification_conf",
 	200: "session",
 	255: "Base",
@@ -4224,6 +4510,18 @@ func (p *SubmitExperimentRequest) IsSetExt() bool {
 
 func (p *SubmitExperimentRequest) IsSetRefGroupExperimentID() bool {
 	return p.RefGroupExperimentID != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetPriorityLevel() bool {
+	return p.PriorityLevel != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetExpectedQuotaConsumption() bool {
+	return p.ExpectedQuotaConsumption != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetSchedulerMode() bool {
+	return p.SchedulerMode != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetNotificationConf() bool {
@@ -4549,6 +4847,30 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 91:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField91(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 92:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField92(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 93:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField93(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 94:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField94(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5080,6 +5402,36 @@ func (p *SubmitExperimentRequest) ReadField91(iprot thrift.TProtocol) error {
 	p.RefGroupExperimentID = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField92(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PriorityLevel = _field
+	return nil
+}
+func (p *SubmitExperimentRequest) ReadField93(iprot thrift.TProtocol) error {
+	_field := expt.NewExpectedQuotaConsumption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExpectedQuotaConsumption = _field
+	return nil
+}
+func (p *SubmitExperimentRequest) ReadField94(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SchedulerMode = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField110(iprot thrift.TProtocol) error {
 	_field := expt.NewExptNotificationConf()
 	if err := _field.Read(iprot); err != nil {
@@ -5257,6 +5609,18 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField91(oprot); err != nil {
 			fieldId = 91
+			goto WriteFieldError
+		}
+		if err = p.writeField92(oprot); err != nil {
+			fieldId = 92
+			goto WriteFieldError
+		}
+		if err = p.writeField93(oprot); err != nil {
+			fieldId = 93
+			goto WriteFieldError
+		}
+		if err = p.writeField94(oprot); err != nil {
+			fieldId = 94
 			goto WriteFieldError
 		}
 		if err = p.writeField110(oprot); err != nil {
@@ -6004,6 +6368,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 91 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField92(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriorityLevel() {
+		if err = oprot.WriteFieldBegin("priority_level", thrift.I32, 92); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PriorityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 92 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 92 end error: ", p), err)
+}
+func (p *SubmitExperimentRequest) writeField93(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedQuotaConsumption() {
+		if err = oprot.WriteFieldBegin("expected_quota_consumption", thrift.STRUCT, 93); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExpectedQuotaConsumption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 93 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 93 end error: ", p), err)
+}
+func (p *SubmitExperimentRequest) writeField94(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchedulerMode() {
+		if err = oprot.WriteFieldBegin("scheduler_mode", thrift.STRING, 94); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SchedulerMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 94 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 94 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField110(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNotificationConf() {
 		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 110); err != nil {
@@ -6182,6 +6600,15 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field91DeepEqual(ano.RefGroupExperimentID) {
+		return false
+	}
+	if !p.Field92DeepEqual(ano.PriorityLevel) {
+		return false
+	}
+	if !p.Field93DeepEqual(ano.ExpectedQuotaConsumption) {
+		return false
+	}
+	if !p.Field94DeepEqual(ano.SchedulerMode) {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.NotificationConf) {
@@ -6602,6 +7029,37 @@ func (p *SubmitExperimentRequest) Field91DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.RefGroupExperimentID != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field92DeepEqual(src *int32) bool {
+
+	if p.PriorityLevel == src {
+		return true
+	} else if p.PriorityLevel == nil || src == nil {
+		return false
+	}
+	if *p.PriorityLevel != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field93DeepEqual(src *expt.ExpectedQuotaConsumption) bool {
+
+	if !p.ExpectedQuotaConsumption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field94DeepEqual(src *string) bool {
+
+	if p.SchedulerMode == src {
+		return true
+	} else if p.SchedulerMode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SchedulerMode, *src) != 0 {
 		return false
 	}
 	return true
@@ -10143,7 +10601,7 @@ func (p *UpdateExperimentResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
-// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数 / 调度参数）。
 // 仅对处于 Pending / Processing 状态的实验生效。
 type UpdateExptRunConfRequest struct {
 	WorkspaceID int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
@@ -10151,8 +10609,14 @@ type UpdateExptRunConfRequest struct {
 	// 评测项并发度：不传或 0 表示不修改；范围 (0, MaxItemConcurNum]
 	ItemConcurNum *int32 `thrift:"item_concur_num,3,optional" frugal:"3,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
 	// 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
-	ItemRetryNum *int32     `thrift:"item_retry_num,4,optional" frugal:"4,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
-	Base         *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ItemRetryNum *int32 `thrift:"item_retry_num,4,optional" frugal:"4,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	// 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
+	// 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。
+	// 调度优先级：不传表示不修改。改完下一拍生效（调度器每拍从库重扫队列）。
+	PriorityLevel *int32 `thrift:"priority_level,92,optional" frugal:"92,optional,i32" form:"priority_level" json:"priority_level,omitempty"`
+	// 单 item 预期资源消耗：不传表示不修改。改动会同步给该 run 在飞的预占重新计价。
+	ExpectedQuotaConsumption *expt.ExpectedQuotaConsumption `thrift:"expected_quota_consumption,93,optional" frugal:"93,optional,expt.ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty"`
+	Base                     *base.Base                     `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateExptRunConfRequest() *UpdateExptRunConfRequest {
@@ -10200,6 +10664,30 @@ func (p *UpdateExptRunConfRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+var UpdateExptRunConfRequest_PriorityLevel_DEFAULT int32
+
+func (p *UpdateExptRunConfRequest) GetPriorityLevel() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPriorityLevel() {
+		return UpdateExptRunConfRequest_PriorityLevel_DEFAULT
+	}
+	return *p.PriorityLevel
+}
+
+var UpdateExptRunConfRequest_ExpectedQuotaConsumption_DEFAULT *expt.ExpectedQuotaConsumption
+
+func (p *UpdateExptRunConfRequest) GetExpectedQuotaConsumption() (v *expt.ExpectedQuotaConsumption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExpectedQuotaConsumption() {
+		return UpdateExptRunConfRequest_ExpectedQuotaConsumption_DEFAULT
+	}
+	return p.ExpectedQuotaConsumption
+}
+
 var UpdateExptRunConfRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateExptRunConfRequest) GetBase() (v *base.Base) {
@@ -10223,6 +10711,12 @@ func (p *UpdateExptRunConfRequest) SetItemConcurNum(val *int32) {
 func (p *UpdateExptRunConfRequest) SetItemRetryNum(val *int32) {
 	p.ItemRetryNum = val
 }
+func (p *UpdateExptRunConfRequest) SetPriorityLevel(val *int32) {
+	p.PriorityLevel = val
+}
+func (p *UpdateExptRunConfRequest) SetExpectedQuotaConsumption(val *expt.ExpectedQuotaConsumption) {
+	p.ExpectedQuotaConsumption = val
+}
 func (p *UpdateExptRunConfRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -10232,6 +10726,8 @@ var fieldIDToName_UpdateExptRunConfRequest = map[int16]string{
 	2:   "expt_id",
 	3:   "item_concur_num",
 	4:   "item_retry_num",
+	92:  "priority_level",
+	93:  "expected_quota_consumption",
 	255: "Base",
 }
 
@@ -10241,6 +10737,14 @@ func (p *UpdateExptRunConfRequest) IsSetItemConcurNum() bool {
 
 func (p *UpdateExptRunConfRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *UpdateExptRunConfRequest) IsSetPriorityLevel() bool {
+	return p.PriorityLevel != nil
+}
+
+func (p *UpdateExptRunConfRequest) IsSetExpectedQuotaConsumption() bool {
+	return p.ExpectedQuotaConsumption != nil
 }
 
 func (p *UpdateExptRunConfRequest) IsSetBase() bool {
@@ -10296,6 +10800,22 @@ func (p *UpdateExptRunConfRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 92:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField92(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 93:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField93(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10393,6 +10913,25 @@ func (p *UpdateExptRunConfRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemRetryNum = _field
 	return nil
 }
+func (p *UpdateExptRunConfRequest) ReadField92(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PriorityLevel = _field
+	return nil
+}
+func (p *UpdateExptRunConfRequest) ReadField93(iprot thrift.TProtocol) error {
+	_field := expt.NewExpectedQuotaConsumption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExpectedQuotaConsumption = _field
+	return nil
+}
 func (p *UpdateExptRunConfRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -10422,6 +10961,14 @@ func (p *UpdateExptRunConfRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField92(oprot); err != nil {
+			fieldId = 92
+			goto WriteFieldError
+		}
+		if err = p.writeField93(oprot); err != nil {
+			fieldId = 93
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -10514,6 +11061,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *UpdateExptRunConfRequest) writeField92(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriorityLevel() {
+		if err = oprot.WriteFieldBegin("priority_level", thrift.I32, 92); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PriorityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 92 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 92 end error: ", p), err)
+}
+func (p *UpdateExptRunConfRequest) writeField93(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpectedQuotaConsumption() {
+		if err = oprot.WriteFieldBegin("expected_quota_consumption", thrift.STRUCT, 93); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExpectedQuotaConsumption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 93 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 93 end error: ", p), err)
+}
 func (p *UpdateExptRunConfRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -10559,6 +11142,12 @@ func (p *UpdateExptRunConfRequest) DeepEqual(ano *UpdateExptRunConfRequest) bool
 	if !p.Field4DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
+	if !p.Field92DeepEqual(ano.PriorityLevel) {
+		return false
+	}
+	if !p.Field93DeepEqual(ano.ExpectedQuotaConsumption) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -10599,6 +11188,25 @@ func (p *UpdateExptRunConfRequest) Field4DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemRetryNum != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExptRunConfRequest) Field92DeepEqual(src *int32) bool {
+
+	if p.PriorityLevel == src {
+		return true
+	} else if p.PriorityLevel == nil || src == nil {
+		return false
+	}
+	if *p.PriorityLevel != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExptRunConfRequest) Field93DeepEqual(src *expt.ExpectedQuotaConsumption) bool {
+
+	if !p.ExpectedQuotaConsumption.DeepEqual(src) {
 		return false
 	}
 	return true

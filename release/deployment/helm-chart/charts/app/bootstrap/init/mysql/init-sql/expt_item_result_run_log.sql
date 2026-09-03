@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS `expt_item_result_run_log`
     `deleted_at`      timestamp       NULL     DEFAULT NULL COMMENT '删除时间',
     `log_id`          varchar(128)    NOT NULL DEFAULT '' COMMENT '日志 id',
     `result_state`    int                      DEFAULT NULL COMMENT '回写结果表状态',
+    `quota_reservation_state` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '中心调度额度预占投影: 0=none, 1=reserved; Redis reservation 是账本真值, 本列仅供调度算准并发占用',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_run_item_turn` (`space_id`, `expt_id`, `expt_run_id`, `item_id`),
     KEY `idx_expt_item_turn` (`space_id`, `expt_id`, `item_id`),

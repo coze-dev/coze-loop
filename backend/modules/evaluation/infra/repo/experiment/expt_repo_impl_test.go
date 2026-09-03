@@ -710,3 +710,98 @@ func TestExptRepoImpl_GetIDsByGroupKey(t *testing.T) {
 		assert.Zero(t, total)
 	})
 }
+
+// TestExptRepo_ScanSchedulerQueue 覆盖跨空间调度队列扫描。
+//
+// 三条分支各对应一个真实后果：
+//   - 正常转换：PO→DO 少带字段，调度器会拿不到 priority/mode 而按缺省处理；
+//   - **单条 payload 损坏要跳过而非整批失败**：一条脏 eval_conf 若能让整次扫描报错，
+//     它会永久阻塞该 Scope 下所有实验的调度（不是这一条跑不了，是全都跑不了）；
+//   - DAO 出错必须上抛：静默回空会被调度器读成"队列里没有候选"，表现是集体不动。
+func TestExptRepo_ScanSchedulerQueue(t *testing.T) {
+	param := &entity.SchedulerQueueScanParam{
+		DispatchMode:   "enforce",
+		SchedulerScope: "scope-a",
+		Statuses:       []int32{2, 3},
+		Limit:          50,
+	}
+
+	t.Run("正常转换：入参原样下推，PO 转成 DO", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockDAO := mysqlMocks.NewMockIExptDAO(ctrl)
+		r := &exptRepoImpl{exptDAO: mockDAO}
+
+		// param 必须原样下推：Scope 若在这一层被丢掉，DAO 就会扫出别的 Scope 的实验
+		mockDAO.EXPECT().ScanSchedulerQueue(gomock.Any(), param).Return([]*model.Experiment{
+			{ID: 11, SpaceID: 100, Name: "a"},
+			{ID: 12, SpaceID: 100, Name: "b"},
+		}, nil)
+
+		got, err := r.ScanSchedulerQueue(context.Background(), param)
+		require.NoError(t, err)
+		require.Len(t, got, 2)
+		assert.Equal(t, int64(11), got[0].ID)
+		assert.Equal(t, int64(12), got[1].ID)
+		assert.Equal(t, int64(100), got[0].SpaceID)
+	})
+
+	t.Run("单条 eval_conf 损坏时跳过该条，其余照常返回", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockDAO := mysqlMocks.NewMockIExptDAO(ctrl)
+		r := &exptRepoImpl{exptDAO: mockDAO}
+
+		broken := []byte("{not-json")
+		mockDAO.EXPECT().ScanSchedulerQueue(gomock.Any(), gomock.Any()).Return([]*model.Experiment{
+			{ID: 21, SpaceID: 100},
+			{ID: 22, SpaceID: 100, EvalConf: &broken}, // PO2DO 在此报错
+			{ID: 23, SpaceID: 100},
+		}, nil)
+
+		got, err := r.ScanSchedulerQueue(context.Background(), param)
+		require.NoError(t, err, "★ 一条脏数据不能让整次扫描失败 —— 那会永久阻塞整个 Scope 的调度")
+		require.Len(t, got, 2)
+		assert.Equal(t, []int64{21, 23}, []int64{got[0].ID, got[1].ID}, "跳过的应恰好是损坏那条")
+	})
+
+	t.Run("DAO 出错必须上抛，不能静默回空", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockDAO := mysqlMocks.NewMockIExptDAO(ctrl)
+		r := &exptRepoImpl{exptDAO: mockDAO}
+
+		wantErr := errors.New("scan fail")
+		mockDAO.EXPECT().ScanSchedulerQueue(gomock.Any(), gomock.Any()).Return(nil, wantErr)
+
+		got, err := r.ScanSchedulerQueue(context.Background(), param)
+		require.ErrorIs(t, err, wantErr, "静默回空会被调度器读成「队列里没候选」，表现是所有实验集体不动")
+		assert.Nil(t, got)
+	})
+
+	t.Run("空队列返回空切片且不报错", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockDAO := mysqlMocks.NewMockIExptDAO(ctrl)
+		r := &exptRepoImpl{exptDAO: mockDAO}
+
+		mockDAO.EXPECT().ScanSchedulerQueue(gomock.Any(), gomock.Any()).Return(nil, nil)
+
+		got, err := r.ScanSchedulerQueue(context.Background(), param)
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+}
+
+func TestNewExptSchedulerQueueRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	r := NewExptSchedulerQueueRepo(mysqlMocks.NewMockIExptDAO(ctrl), mysqlMocks.NewMockIExptEvaluatorRefDAO(ctrl), nil)
+	require.NotNil(t, r)
+	// 窄接口的实现体仍是 exptRepoImpl：装配错了（比如漏传 exptDAO）会在首次扫描时 panic
+	impl, ok := r.(*exptRepoImpl)
+	require.True(t, ok)
+	assert.NotNil(t, impl.exptDAO)
+	assert.NotNil(t, impl.exptEvaluatorRefDAO)
+}

@@ -2223,6 +2223,14 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
 			assert.Equal(t, int64(777), gptr.Indirect(param.ExperimentRunID))
 			assert.Equal(t, int64(888), param.ItemID)
 			assert.Equal(t, int64(999), param.TurnID)
+			// ★ ExptSpaceID 必须是事件里的实验空间。
+			//
+			// 跨空间共享评测对象时，传给 AsyncExecuteTarget 的 spaceID 已被 resolveLoadSpaceID
+			// 换成**对象来源空间**，本字段是下游唯一能拿到"发起实验在哪个空间"的入口
+			// （SandboxAgent 据此选模型凭据的替换规则）。
+			// 若被改成从 ItemConfig 派生，多集实验会拿到 per-set 的来源空间 —— 那是另一个空间。
+			assert.Equal(t, etec.Event.SpaceID, param.ExptSpaceID,
+				"ExptSpaceID 必须恒等于事件里的实验空间，不能取 spaceID 形参、也不能从 ItemConfig 派生")
 			if assert.NotNil(t, input) {
 				assert.Equal(t, "payload", gptr.Indirect(input.InputFields["fieldA"].Text))
 				assert.Equal(t, "ext-val", input.Ext["ext-key"])
@@ -5504,4 +5512,99 @@ func TestDefaultExptTurnEvaluationImpl_MixedEvaluatorCompletionOrder(t *testing.
 		t.Parallel()
 		newCase(t, entity.EvaluatorRunStatusAsyncInvoking, true)
 	})
+}
+
+// TestDefaultExptTurnEvaluationImpl_callTarget_CrossSpaceCarriesExptSpaceID
+// ★ 跨空间共享评测对象时，ExecuteTargetCtx.ExptSpaceID 必须是**发起实验的空间**，
+// 而传给 AsyncExecuteTarget 的 spaceID 仍是**评测对象来源空间**。两者刻意不同。
+//
+// 为什么要专门造一个「两者不等」的 fixture：同空间实验里 Event.SpaceID 与 spaceID 形参
+// 恰好相等，写在那种 fixture 上的断言分辨不出实现到底取了哪一个 —— 而取错正是本字段
+// 要修的那个 bug（下游 SandboxAgent 据 ExptSpaceID 选模型凭据的替换规则）。
+func TestDefaultExptTurnEvaluationImpl_callTarget_CrossSpaceCarriesExptSpaceID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:            mockMetric,
+		evalTargetService: mockEvalTargetService,
+		evalAsyncRepo:     mockEvalAsyncRepo,
+	}
+
+	const (
+		exptSpaceID         = int64(42) // 发起实验的空间（消费方）
+		targetSourceSpaceID = int64(99) // 评测对象来源空间，由 CallTarget 经 resolveLoadSpaceID 算出后传入
+		targetID            = int64(101)
+		targetVersionID     = int64(202)
+	)
+
+	record := &entity.EvalTargetRecord{
+		ID:                   9999,
+		EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
+		Status:               gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+		TargetID:             targetID,
+		TargetVersionID:      targetVersionID,
+		SpaceID:              targetSourceSpaceID,
+	}
+
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Event: &entity.ExptItemEvalEvent{
+				ExptID: 555, ExptRunID: 777, SpaceID: exptSpaceID,
+				Session: &entity.Session{UserID: "user"},
+			},
+			Expt: &entity.Experiment{
+				SpaceID:         exptSpaceID,
+				TargetSpaceID:   targetSourceSpaceID, // >0 即跨空间共享
+				TargetVersionID: targetVersionID,
+				Target: &entity.EvalTarget{
+					ID:             targetID,
+					EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:              targetVersionID,
+						CustomRPCServer: &entity.CustomRPCServer{IsAsync: gptr.Of(true)},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						TargetConf: &entity.TargetConf{
+							TargetVersionID: targetVersionID,
+							IngressConf: &entity.TargetIngressConf{
+								EvalSetAdapter: &entity.FieldAdapter{
+									FieldConfs: []*entity.FieldConf{{FieldName: "fieldA", FromField: "fieldA"}},
+								},
+							},
+						},
+					},
+				},
+			},
+			EvalSetItem: &entity.EvaluationSetItem{ItemID: 888},
+		},
+		Turn: &entity.Turn{
+			ID: 999,
+			FieldDataList: []*entity.FieldData{
+				{Name: "fieldA", Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("payload")}},
+			},
+		},
+	}
+
+	// 埋点用的是实验空间(Event.SpaceID)，不是形参 —— 本身就与本次改动方向一致。
+	mockMetric.EXPECT().EmitTurnExecTargetResult(exptSpaceID, false)
+	// 第二个实参钉住 targetSourceSpaceID：加载/执行 target 仍走来源空间，本次改动不动它。
+	mockEvalTargetService.EXPECT().
+		AsyncExecuteTarget(gomock.Any(), targetSourceSpaceID, targetID, targetVersionID, gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _, _ int64, param *entity.ExecuteTargetCtx, _ *entity.EvalTargetInputData) (*entity.EvalTargetRecord, string, error) {
+			assert.Equal(t, exptSpaceID, param.ExptSpaceID,
+				"★ ExptSpaceID 必须是发起实验的空间(42)，不是评测对象来源空间(99) —— "+
+					"取错就是本字段要修的那个 bug：模型凭据会按对象所在空间取")
+			return record, "callee-service", nil
+		})
+	mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	got, err := service.callTarget(context.Background(), etec, nil, targetSourceSpaceID)
+	require.NoError(t, err)
+	require.NotNil(t, got)
 }

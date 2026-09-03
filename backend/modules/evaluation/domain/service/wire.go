@@ -47,6 +47,12 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	// ExptResultService 的 exptItemRefRepo 是 variadic(为兼容既有调用方), wire 需要显式的
 	// slice provider 才能注入。
 	ProvideExptItemRefRepos,
+	// 中心化调度额度闸：开源侧提供 noop（enforce 消息 fail-closed，legacy 不受影响）。
+	// 商业版在自己的 wire set 里注入真实账本适配器覆盖它。
+	component.NewNoopCentralReservationGuard,
+	component.NewNoopCentralSchedulerScopeOwner,
+	component.NewNoopCentralSchedulerScopeProvider,
+	component.NewNoopCentralAdmissionPolicy,
 	// Infrastructure Sets
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,

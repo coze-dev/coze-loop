@@ -480,6 +480,26 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.RunModeConfig = runModeConfigDO2DTO(experiment.EvalConf.RunModeConfig)
 	}
 
+	// ★ 中心化调度读视图 (IDL 116~118)。
+	//
+	// priority_level / scheduler_mode **对 legacy 实验也回显**, 不做"仅 enforce 才给"的裁剪:
+	// 放量期最高频的疑问是"我这个实验为什么没进中心调度", 那时最需要看的恰恰是一个 legacy
+	// 实验的 scheduler_mode —— 回显 legacy 就一眼确认没纳管, 不必去猜是 trigger 没带 evalx、
+	// 灰度范围没命中还是代码没生效。若只有 enforce 才给, 调用方还无法分辨"这实验是 legacy"
+	// 与"这接口版本不支持该字段"。二者都有 DB 默认值 (legacy / 1), 天然非空。
+	//
+	// ⚠️ scheduler_scope **一律不回显** (内部运维查库即可): 它是不透明调度域 ID
+	// (形如 fornax_boe_boe), 对调用方没有可用语义, 却泄露部署拓扑与环境划分。
+	// 业务代码本就不允许解析 Scope 字符串, 回显它只会诱使调用方依赖这个不稳定契约。
+	res.PriorityLevel = gptr.Of(entity.NormalizeExptPriorityLevel(experiment.PriorityLevel))
+	res.SchedulerMode = gptr.Of(entity.NormalizeExptDispatchMode(experiment.ExptDispatchMode))
+
+	// expected_quota_consumption 采用"有则回显、无则省略"的 optional 语义:
+	// legacy 实验确实没申报向量 (nil), 省略比返回空结构更如实。
+	if experiment.EvalConf != nil && experiment.EvalConf.ExpectedQuotaConsumption != nil {
+		res.ExpectedQuotaConsumption = expectedQuotaConsumptionDO2DTO(experiment.EvalConf.ExpectedQuotaConsumption)
+	}
+
 	// ★ §2 老字段降级投影 (新实验 MultiSetConfig): 老字段 = 主集封面/去重投影, 仅当 flat 来源为空才兜底
 	projectLegacyFieldsFromPrimarySet(experiment, res)
 
@@ -901,6 +921,16 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+
+	// ★ 中心化调度字段。
+	//
+	// priority 与 expected_quota_consumption 由调用方申报（EvalX 会带），透传即可。
+	// **scheduler_mode / scheduler_scope 刻意不从请求读取**：mode 由 trigger 派生、
+	// scope 由服务端按运行环境解析，两者都不接受调用方指定 —— 否则任何内部 RPC 调用方
+	// 都能自己声明 enforce 并伪造一个 scope，绕过额度管控、甚至去动别的环境的账本。
+	// IDL 里这两个字段不带 api.body 已挡住公网，但内部调用仍需这一层。
+	param.PriorityLevel = entity.NormalizeExptPriorityLevel(cer.GetPriorityLevel())
+	param.ExpectedQuotaConsumption = ExpectedQuotaConsumptionDTO2DO(cer.GetExpectedQuotaConsumption())
 	if cer.NotificationConf != nil {
 		notifConf, err := NotificationConfDTO2DO(cer.NotificationConf)
 		if err != nil {
@@ -1524,4 +1554,62 @@ func suaModeDO2DTO(m entity.SuaMode) domain_expt.SuaMode {
 	default:
 		return domain_expt.SuaMode_HumanLoop
 	}
+}
+
+// ExpectedQuotaConsumptionDTO2DO 把申报的资源消耗向量转成领域对象。
+//
+// 不在此处做合法性校验（非空 / amount>0 / 键唯一 / 禁通配）：校验属于领域规则，
+// 收口在 entity.ExpectedQuotaConsumption.Validate()，由 CreateExpt 在冻结前调用。
+// 转换层只负责搬运，否则同一套规则会散落在转换与领域两处、各自演化。
+func ExpectedQuotaConsumptionDTO2DO(dto *domain_expt.ExpectedQuotaConsumption) *entity.ExpectedQuotaConsumption {
+	if dto == nil || len(dto.GetResources()) == 0 {
+		return nil
+	}
+	resources := make([]*entity.ExpectedResourceConsumption, 0, len(dto.GetResources()))
+	for _, r := range dto.GetResources() {
+		if r == nil {
+			continue
+		}
+		resources = append(resources, &entity.ExpectedResourceConsumption{
+			Category:    r.GetCategory(),
+			ResourceKey: r.GetResourceKey(),
+			Amount:      r.GetAmount(),
+			Source:      r.GetSource(),
+		})
+	}
+	if len(resources) == 0 {
+		return nil
+	}
+	return &entity.ExpectedQuotaConsumption{Resources: resources}
+}
+
+// expectedQuotaConsumptionDO2DTO 把已冻结的资源消耗向量回显给调用方。
+//
+// 与 DTO2DO 同样只搬运不校验：回显的是创建时已通过校验并冻结的值，
+// 此处再校验一遍只会把"历史数据不合规"变成"读接口报错"，而读接口应当如实反映库里的状态。
+//
+// 全空时返回 nil 而非空结构：让 optional 字段在序列化时直接省略，
+// 调用方据此区分"没申报"（legacy 实验）与"申报了空向量"（不应存在的数据异常）。
+func expectedQuotaConsumptionDO2DTO(do *entity.ExpectedQuotaConsumption) *domain_expt.ExpectedQuotaConsumption {
+	if do == nil || len(do.Resources) == 0 {
+		return nil
+	}
+	resources := make([]*domain_expt.ExpectedResourceConsumption, 0, len(do.Resources))
+	for _, r := range do.Resources {
+		if r == nil {
+			continue
+		}
+		resources = append(resources, &domain_expt.ExpectedResourceConsumption{
+			Category:    r.Category,
+			ResourceKey: r.ResourceKey,
+			Amount:      r.Amount,
+			// 空 source 序列化时省略（IDL optional + entity omitempty），
+			// 让"没申报来源"与"申报了空来源"在回显里不可混淆。
+			Source: gptr.Of(r.Source),
+		})
+	}
+	if len(resources) == 0 {
+		return nil
+	}
+	return &domain_expt.ExpectedQuotaConsumption{Resources: resources}
 }

@@ -15,9 +15,13 @@ import (
 
 var ExperimentRepoSet = wire.NewSet(
 	NewExptRepo,
+	NewExptSchedulerQueueRepo,
 	NewExptStatsRepo,
 	NewExptAggrResultRepo,
 	NewExptItemResultRepo,
+	// 中心调度的 run log 派发投影（Queueing/reserved 与 Queueing/none 的读写）
+	NewExptItemDispatchRepo,
+	exptmysql.NewExptItemDispatchDAO,
 	NewExptTurnResultRepo,
 	NewExptItemRefRepo,
 	NewExptRunLogRepo,

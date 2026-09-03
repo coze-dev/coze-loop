@@ -184,6 +184,14 @@ type ExecuteTargetCtx struct {
 	ItemMeta *EvalSetItemMeta
 	// ExptGroupKey 实验分组 key (实验级属性), 供评测对象透传给外部执行侧。
 	ExptGroupKey string
+	// ExptSpaceID 发起实验所在空间 (消费方空间)。0 = 未知 (调试链路无实验)。
+	//
+	// 为什么需要它: 执行 target 用的 spaceID 在跨空间共享时被换成**评测对象来源空间**
+	// (见 resolveLoadSpaceID), 那是"去哪个空间读这个对象"的口径; 而"按哪个空间取模型凭据"
+	// 应当跟着发起实验的空间走 —— evaluator 侧早已如此 (evaluatorSpaceID = expt.SpaceID)。
+	// 两个口径必须并存, 所以另开一个字段, 不要去改那个 spaceID 形参: 它还同时决定
+	// 沙箱 workspace、record 落库/读取空间、空间 AK/SK 与 TCC 空间级配置。
+	ExptSpaceID int64
 }
 
 type TargetTrajectoryConf struct {

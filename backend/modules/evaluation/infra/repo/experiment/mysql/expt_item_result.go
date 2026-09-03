@@ -36,6 +36,9 @@ type IExptItemResultDAO interface {
 	GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64, opts ...db.Option) ([]*model.ExptTurnResult, error)
 	MGetItemTurnResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptTurnResult, error)
 	UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemID []int64, ufields map[string]any, opts ...db.Option) error
+	// CountItemsByStatus 按 status 聚合该实验的 item 行数，返回 status -> 行数。
+	// 供 expt_stats 计数行的对账使用：主表是完成侧记账的锚点，所以要对账就得以它为准。
+	CountItemsByStatus(ctx context.Context, spaceID, exptID int64, opts ...db.Option) (map[int32]int64, error)
 	GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64, opts ...db.Option) (int32, error)
 
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*model.ExptItemResultRunLog, opts ...db.Option) error
@@ -80,6 +83,36 @@ func (dao *exptItemResultDAOImpl) UpdateItemsResult(ctx context.Context, spaceID
 		return errorx.Wrapf(err, "UpdateItemsResult fail, expt_id: %v, item_id: %v, ufields: %v", exptID, itemIDs, ufields)
 	}
 	return nil
+}
+
+// CountItemsByStatus 一条 GROUP BY 拿到该实验 item 的状态分布。
+//
+// 走 (space_id, expt_id) 前缀，不带 item_id，所以是一次索引扫描而非逐行取。
+// 刻意只查主表不查 turn 表：完成侧的 statsCntOp 是按 items_result.Status 做「-1」的
+// （见 expt_result_impl.go），对账要能修正它就必须以同一张表为准 ——
+// 拿 turn 表对账会在多轮实验上得出另一套数字。
+func (dao *exptItemResultDAOImpl) CountItemsByStatus(ctx context.Context, spaceID, exptID int64, opts ...db.Option) (map[int32]int64, error) {
+	type row struct {
+		Status int32 `gorm:"column:status"`
+		Cnt    int64 `gorm:"column:cnt"`
+	}
+	var rows []*row
+	session := dao.provider.NewSession(ctx, opts...)
+	if err := session.Model(&model.ExptItemResult{}).
+		Select("status, count(*) as cnt").
+		Where("space_id = ? AND expt_id = ?", spaceID, exptID).
+		Group("status").
+		Find(&rows).Error; err != nil {
+		return nil, errorx.Wrapf(err, "CountItemsByStatus fail, expt_id: %v", exptID)
+	}
+	out := make(map[int32]int64, len(rows))
+	for _, r := range rows {
+		if r == nil {
+			continue
+		}
+		out[r.Status] = r.Cnt
+	}
+	return out, nil
 }
 
 func (dao *exptItemResultDAOImpl) GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64, opts ...db.Option) ([]*model.ExptTurnResult, error) {

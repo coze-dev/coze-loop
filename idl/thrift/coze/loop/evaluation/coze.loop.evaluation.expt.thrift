@@ -62,6 +62,16 @@ struct CreateExperimentRequest {
     // 引用分组实验 id：填写时校验其为当前空间内的实验 id
     91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
 
+    // ★ 中心化调度入参 92~94
+    // 调度优先级：1-99，数值越大越优先；缺省 1。仅在中心调度模式下参与排序，legacy 模式忽略
+    92: optional i32 priority_level (api.body = 'priority_level')
+    // 单 item 预期资源消耗向量：enforce 模式必填且非空，legacy 模式可选
+    // 服务端校验 (category,resource_key) 唯一、amount>0、禁止 resource_key="*"，随后冻结进 eval_conf；Retry 继承不可覆盖
+    93: optional expt.ExpectedQuotaConsumption expected_quota_consumption (api.body = 'expected_quota_consumption')
+    // 执行模式：legacy / enforce。故意不加 api.body —— 公网调用方不得自行指定，仅允许 commercial wrapper 按灰度白名单填入
+    // 与 trigger_type 同为服务端内部覆写字段；落库后 experiment.scheduler_mode 列是唯一权威源
+    94: optional string scheduler_mode
+
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
@@ -138,6 +148,16 @@ struct SubmitExperimentRequest {
     // 实验分组 key 默认为实验 id；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）
     // 引用分组实验 id：填写时校验其为当前空间内的实验 id
     91: optional i64 ref_group_experiment_id (api.js_conv = 'true', api.body = 'ref_group_experiment_id', go.tag='json:"ref_group_experiment_id"')
+
+    // ★ 中心化调度入参 92~94
+    // 调度优先级：1-99，数值越大越优先；缺省 1。仅在中心调度模式下参与排序，legacy 模式忽略
+    92: optional i32 priority_level (api.body = 'priority_level')
+    // 单 item 预期资源消耗向量：enforce 模式必填且非空，legacy 模式可选
+    // 服务端校验 (category,resource_key) 唯一、amount>0、禁止 resource_key="*"，随后冻结进 eval_conf；Retry 继承不可覆盖
+    93: optional expt.ExpectedQuotaConsumption expected_quota_consumption (api.body = 'expected_quota_consumption')
+    // 执行模式：legacy / enforce。故意不加 api.body —— 公网调用方不得自行指定，仅允许 commercial wrapper 按灰度白名单填入
+    // 与 trigger_type 同为服务端内部覆写字段；落库后 experiment.scheduler_mode 列是唯一权威源
+    94: optional string scheduler_mode
 
     // 通知配置
     110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
@@ -222,7 +242,7 @@ struct UpdateExperimentResponse {
     255: base.BaseResp BaseResp
 }
 
-// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// UpdateExptRunConfRequest 修改进行中实验的运行配置（并发度 / Item 重试次数 / 调度参数）。
 // 仅对处于 Pending / Processing 状态的实验生效。
 struct UpdateExptRunConfRequest {
     1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
@@ -232,6 +252,13 @@ struct UpdateExptRunConfRequest {
     3: optional i32 item_concur_num (api.body='item_concur_num')
     // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
     4: optional i32 item_retry_num (api.body='item_retry_num')
+
+    // 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
+    // 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。
+    // 调度优先级：不传表示不修改。改完下一拍生效（调度器每拍从库重扫队列）。
+    92: optional i32 priority_level (api.body = 'priority_level')
+    // 单 item 预期资源消耗：不传表示不修改。改动会同步给该 run 在飞的预占重新计价。
+    93: optional expt.ExpectedQuotaConsumption expected_quota_consumption (api.body = 'expected_quota_consumption')
 
     255: optional base.Base Base
 }

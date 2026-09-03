@@ -58,6 +58,10 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		EvalSetSpaceID:            experiment.EvalSetSpaceID,           // ★ 跨空间共享: 评测集来源空间
 		TargetSpaceID:             experiment.TargetSpaceID,            // ★ 跨空间共享: 评测对象来源空间
 		EvalSetAccessLevel:        experiment.EvalSetAccessLevel,       // ★ 跨空间共享: 冻结访问级别
+		// ★ 中心化调度: 两列都是 NOT NULL, 写入前收敛为合法值 —— 上游若漏传, 落 legacy/1 而非空串/0
+		PriorityLevel:  entity.NormalizeExptPriorityLevel(experiment.PriorityLevel),
+		SchedulerMode:  entity.NormalizeExptDispatchMode(experiment.ExptDispatchMode),
+		SchedulerScope: experiment.SchedulerScope,
 	}
 
 	if experiment.MaxAliveTime != 0 {
@@ -143,6 +147,10 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		EvalSetSpaceID:            expt.EvalSetSpaceID,                                  // ★ 跨空间共享: 评测集来源空间
 		TargetSpaceID:             expt.TargetSpaceID,                                   // ★ 跨空间共享: 评测对象来源空间
 		EvalSetAccessLevel:        expt.EvalSetAccessLevel,                              // ★ 跨空间共享: 冻结访问级别
+		// ★ 中心化调度: 历史行虽有 DB 默认值兜底, 仍过一遍 Normalize —— 脏数据按 legacy/1 处理而非中断读路径
+		PriorityLevel:    entity.NormalizeExptPriorityLevel(expt.PriorityLevel),
+		ExptDispatchMode: entity.NormalizeExptDispatchMode(expt.SchedulerMode),
+		SchedulerScope:   expt.SchedulerScope,
 	}
 
 	// 反序列化 notification_conf
