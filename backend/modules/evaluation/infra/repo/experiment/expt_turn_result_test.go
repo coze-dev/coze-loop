@@ -17,8 +17,31 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	mysqlMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
+
+// assertManuallyTerminatedErrMsg 断言落库的 turn err_msg 能被读侧反解成「被用户主动终止」。
+// 直接用生产读侧的反解函数（而不是比字符串），保证「写-读」两端真正对得上。
+func assertManuallyTerminatedErrMsg(t *testing.T, raw []byte) {
+	t.Helper()
+	deserialized := errno.DeserializeErr(raw)
+	ok, msg := errno.ParseItemManuallyTerminatedErr(deserialized)
+	require.True(t, ok, "err_msg 必须能被 ParseItemManuallyTerminatedErr 反解，否则前端看不到终止原因")
+	assert.NotEmpty(t, msg)
+	zombieOK, _ := errno.ParseTurnOtherErr(deserialized)
+	assert.False(t, zombieOK, "MUST NOT 命中僵尸超时反解，否则用户看到「长时间未更新超时」")
+}
+
+// assertZombieTimeoutErrMsg 断言既有 Fail 调用方（僵尸清理 / 沙箱 sweep）的 err_msg 行为不变。
+func assertZombieTimeoutErrMsg(t *testing.T, raw []byte) {
+	t.Helper()
+	deserialized := errno.DeserializeErr(raw)
+	ok, _ := errno.ParseTurnOtherErr(deserialized)
+	require.True(t, ok, "Fail 分支必须仍写 turnOtherErr（僵尸超时），否则僵尸链路的 turn 级错误透不出来")
+	terminatedOK, _ := errno.ParseItemManuallyTerminatedErr(deserialized)
+	assert.False(t, terminatedOK, "Fail 分支 MUST NOT 写成「被用户主动终止」")
+}
 
 func TestExptTurnResultRepoImpl_UpdateTurnResultsWithItemIDs(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -1874,7 +1897,10 @@ func TestExptTurnResultRepoImpl_CreateOrUpdateItemsTurnRunLogStatus(t *testing.T
 			wantErr: false,
 		},
 		{
-			name:      "Edge: Terminal state",
+			// ★ 行级终止的主场景：排队中的行只有 expt_turn_result、没有 turn run log，走 NX 新建分支。
+			// err_msg 必须是「被用户主动终止」(601205087)，MUST NOT 是僵尸超时文案 ——
+			// 否则读侧 getTurnSystemInfo 反解出「长时间未更新超时」，与 item 级语义自相矛盾。
+			name:      "Edge: Terminal state writes manually-terminated err_msg, not zombie timeout",
 			spaceID:   1,
 			exptID:    100,
 			exptRunID: 200,
@@ -1903,11 +1929,75 @@ func TestExptTurnResultRepoImpl_CreateOrUpdateItemsTurnRunLogStatus(t *testing.T
 					BatchCreateNXRunLog(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, runlogs []*model.ExptTurnResultRunLog, opts ...interface{}) error {
 						assert.Equal(t, int32(entity.TurnRunState_Terminal), runlogs[0].Status)
+						require.NotNil(t, runlogs[0].ErrMsg)
+						assertManuallyTerminatedErrMsg(t, *runlogs[0].ErrMsg)
 						return nil
 					})
 
 				mockExptTurnResultDAO.EXPECT().
-					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{1}, map[string]any{"status": int32(entity.TurnRunState_Terminal)}).
+					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{1}, gomock.Any()).
+					DoAndReturn(func(_ context.Context, _, _, _ int64, _ []int64, ufields map[string]any, _ ...any) error {
+						assert.Equal(t, int32(entity.TurnRunState_Terminal), ufields["status"])
+						// 已存在的 run log（终止前正在跑的行）也要覆盖 err_msg，否则会残留终止前那次执行的报错
+						raw, ok := ufields["err_msg"].([]byte)
+						require.True(t, ok, "Terminal 分支必须覆盖 err_msg")
+						assertManuallyTerminatedErrMsg(t, raw)
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			// 既有调用方行为回归防线：僵尸清理 / 沙箱提前终态 sweep 传的都是 Fail，
+			// 其 err_msg 必须仍是「长时间未更新超时」(turnOtherErrCode)，且能被 ParseTurnOtherErr 反解。
+			name:      "Regression: Fail state keeps zombie timeout err_msg for existing callers",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{9},
+			status:    entity.TurnRunState_Fail,
+			mockSetup: func() {
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{9}).
+					Return([]*model.ExptTurnResult{{ID: 9, SpaceID: 1, ExptID: 100, ItemID: 9, TurnID: 90, Status: int32(entity.TurnRunState_Processing)}}, nil)
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{1009}, nil)
+
+				mockExptTurnResultDAO.EXPECT().
+					BatchCreateNXRunLog(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, runlogs []*model.ExptTurnResultRunLog, opts ...interface{}) error {
+						require.NotNil(t, runlogs[0].ErrMsg)
+						assertZombieTimeoutErrMsg(t, *runlogs[0].ErrMsg)
+						return nil
+					})
+
+				mockExptTurnResultDAO.EXPECT().
+					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{9}, gomock.Any()).
+					DoAndReturn(func(_ context.Context, _, _, _ int64, _ []int64, ufields map[string]any, _ ...any) error {
+						assert.Equal(t, int32(entity.TurnRunState_Fail), ufields["status"])
+						raw, ok := ufields["err_msg"].([]byte)
+						require.True(t, ok)
+						assertZombieTimeoutErrMsg(t, raw)
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			// 非 Fail / 非 Terminal 状态（无生产调用方）行为不变：ufields 只带 status、不带 err_msg。
+			name:      "Regression: Success state still writes status only",
+			spaceID:   1,
+			exptID:    100,
+			exptRunID: 200,
+			itemIDs:   []int64{8},
+			status:    entity.TurnRunState_Success,
+			mockSetup: func() {
+				mockExptTurnResultDAO.EXPECT().
+					BatchGet(gomock.Any(), int64(1), int64(100), []int64{8}).
+					Return([]*model.ExptTurnResult{{ID: 8, SpaceID: 1, ExptID: 100, ItemID: 8, TurnID: 80}}, nil)
+				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{1008}, nil)
+				mockExptTurnResultDAO.EXPECT().BatchCreateNXRunLog(gomock.Any(), gomock.Any()).Return(nil)
+				mockExptTurnResultDAO.EXPECT().
+					UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(1), int64(100), int64(200), []int64{8}, map[string]any{"status": int32(entity.TurnRunState_Success)}).
 					Return(nil)
 			},
 			wantErr: false,

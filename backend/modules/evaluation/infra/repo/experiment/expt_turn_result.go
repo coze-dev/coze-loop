@@ -156,6 +156,24 @@ func (r *ExptTurnResultRepoImpl) UpdateTurnRunLogWithItemIDs(ctx context.Context
 	return r.exptTurnResultDAO.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, ufields)
 }
 
+// turnRunLogErrMsgOf 按传入的 turn 状态语义决定要落到 turn run log 的 err_msg。
+//
+// ⚠️ 这里必须随 status 分流，不能无条件写僵尸超时文案：本方法的 NX 新建分支会命中「排队中的行」
+// （submit 阶段只建了 expt_turn_result，turn run log 由 PreEval 在调度时才建），而行级终止
+// (TerminateItems) 的主场景恰恰是排队中的行。若给它们塞僵尸文案，读侧 getTurnSystemInfo 反解出的
+// turn 级错误会是「长时间未更新超时」，与 item 级「被用户主动终止」自相矛盾。
+//
+// 现状分流（生产调用方只会传 Fail / Terminal）：
+//   - Fail：僵尸超时 / 沙箱提前终态兜底 —— 保持既有文案与既有行为**完全不变**
+//   - Terminal：行级终止 —— 写 ItemManuallyTerminated（601205087），供 getTurnSystemInfo 反解
+//   - 其它状态：无生产调用方，沿用既有兜底文案，不改变既有行为
+func turnRunLogErrMsgOf(status entity.TurnRunState) []byte {
+	if status == entity.TurnRunState_Terminal {
+		return []byte(errno.SerializeErr(errno.NewItemManuallyTerminatedErr()))
+	}
+	return []byte(errno.SerializeErr(errno.NewTurnOtherErr("turn status not updated for long interval", fmt.Errorf("turn result failure with timeout"))))
+}
+
 func (r *ExptTurnResultRepoImpl) CreateOrUpdateItemsTurnRunLogStatus(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, status entity.TurnRunState) error {
 	// runlog might be not created, creating ignore existed
 	turnResults, err := r.exptTurnResultDAO.BatchGet(ctx, spaceID, exptID, itemIDs)
@@ -167,8 +185,8 @@ func (r *ExptTurnResultRepoImpl) CreateOrUpdateItemsTurnRunLogStatus(ctx context
 	if err != nil {
 		return err
 	}
-	// 状态为 Fail 时，同时把超时 err_msg 落到 turn runlog，用于 API 层 getTurnSystemInfo 反解 turn 级 error
-	zombieErrBytes := []byte(errno.SerializeErr(errno.NewTurnOtherErr("turn status not updated for long interval", fmt.Errorf("turn result failure with timeout"))))
+	// err_msg 随 status 语义走（见 turnRunLogErrMsgOf）：Fail=僵尸超时、Terminal=被用户主动终止
+	statusErrBytes := turnRunLogErrMsgOf(status)
 	runlogs := make([]*model.ExptTurnResultRunLog, 0, len(turnResults))
 	for idx := range turnResults {
 		runlogs = append(runlogs, &model.ExptTurnResultRunLog{
@@ -179,7 +197,7 @@ func (r *ExptTurnResultRepoImpl) CreateOrUpdateItemsTurnRunLogStatus(ctx context
 			ItemID:    turnResults[idx].ItemID,
 			TurnID:    turnResults[idx].TurnID,
 			Status:    int32(status),
-			ErrMsg:    gptr.Of(zombieErrBytes),
+			ErrMsg:    gptr.Of(statusErrBytes),
 		})
 	}
 
@@ -187,10 +205,12 @@ func (r *ExptTurnResultRepoImpl) CreateOrUpdateItemsTurnRunLogStatus(ctx context
 		return err
 	}
 
-	// 覆盖已存在 runlog 的 status/err_msg（BatchCreateNX 只对未存在的行写入，已存在的行由此更新兜底）
+	// 覆盖已存在 runlog 的 status/err_msg（BatchCreateNX 只对未存在的行写入，已存在的行由此更新兜底）。
+	// Terminal 也要覆盖 err_msg：这些行是「终止前正在跑」的行，其原 err_msg 是终止前那次执行的报错，
+	// 用户要看到的是「被主动终止」，与 item 级 (CompleteItemRun / TerminateItems) 的取舍一致。
 	ufields := map[string]any{"status": int32(status)}
-	if status == entity.TurnRunState_Fail {
-		ufields["err_msg"] = zombieErrBytes
+	if status == entity.TurnRunState_Fail || status == entity.TurnRunState_Terminal {
+		ufields["err_msg"] = statusErrBytes
 	}
 	if err := r.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, ufields); err != nil {
 		return err
