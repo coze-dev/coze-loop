@@ -147,6 +147,13 @@ func (e *DefaultExptTurnEvaluationImpl) validateEvalTargetCtx(etec *entity.ExptT
 // ConnectorConf.TargetConf serves as the config info for executing the target, and CheckConnector completes the validity check when creating experiment.
 // 仅记录型（*Online）不需要执行对象，跳过 target 节点
 func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) bool {
+	return shouldSkipTargetNode(expt)
+}
+
+func shouldSkipTargetNode(expt *entity.Experiment) bool {
+	if expt == nil {
+		return true
+	}
 	if expt.TargetVersionID == 0 {
 		return true
 	}

@@ -1262,6 +1262,7 @@ func TestExptRecordEvalModeFailRetry_PreEval(t *testing.T) {
 	mockResultSvc := svcmocks.NewMockExptResultService(ctrl)
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	mode := &ExptRecordEvalModeFailRetry{
 		resultSvc:          mockResultSvc,
@@ -1573,7 +1574,7 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			},
 		},
 		{
-			name:    "TargetResultID == 0, with evaluator records -> returns 0 and pruned results",
+			name:    "no target with evaluator records -> returns 0 and pruned results",
 			spaceID: 1,
 			tr: &entity.ExptTurnResult{
 				TargetResultID: 0,
@@ -1613,8 +1614,19 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			evalTarget := tt.setupEvalTarget(ctrl)
 			evalRecord := tt.setupEvalRecord(ctrl)
 
+			targetRequired := tt.tr != nil && tt.tr.TargetResultID > 0
+			var refs []*entity.ExptTurnEvaluatorResultRef
+			if tt.wantEvalResults != nil {
+				for versionID, recordID := range tt.tr.EvaluatorResults.EvalVerIDToResID {
+					refs = append(refs, &entity.ExptTurnEvaluatorResultRef{
+						ExptTurnResultID:   tt.tr.ID,
+						EvaluatorVersionID: versionID,
+						EvaluatorResultID:  recordID,
+					})
+				}
+			}
 			gotTargetID, gotEvalResults := failRetrySelectTurnRunLogRefs(
-				context.Background(), tt.spaceID, tt.tr, evalTarget, evalRecord,
+				context.Background(), tt.spaceID, targetRequired, tt.tr, evalTarget, evalRecord, refs,
 			)
 			assert.Equal(t, tt.wantTargetID, gotTargetID)
 			assert.Equal(t, tt.wantEvalResults, gotEvalResults)

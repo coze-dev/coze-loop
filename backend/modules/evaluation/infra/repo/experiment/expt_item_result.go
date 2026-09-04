@@ -201,6 +201,10 @@ func (e ExptItemResultRepoImpl) BatchCreateNXRunLogs(ctx context.Context, itemRe
 	return nil
 }
 
+func (e ExptItemResultRepoImpl) FillItemRunLogLogIDIfEmpty(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDToLogID map[int64]string) error {
+	return e.exptItemResultDAO.FillItemRunLogLogIDIfEmpty(ctx, exptID, exptRunID, spaceID, itemIDToLogID)
+}
+
 func (e ExptItemResultRepoImpl) GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64) (int32, error) {
 	return e.exptItemResultDAO.GetMaxItemIdxByExptID(ctx, exptID, spaceID)
 }

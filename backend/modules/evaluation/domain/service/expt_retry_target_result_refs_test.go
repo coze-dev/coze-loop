@@ -22,10 +22,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-// 重试重置回归: 三条 Single-set 重试路径以及批量失败重试, 都必须在 expt_turn_result 上
-// 同时清 target_result_id=0 并把 expt_run_id 同步到新 run。否则 batch_get 兜底按
-// tr.ExptRunID 分组去 turn_run_log 查不到新 run 的 target_result_id, 异步 target 阶段
-// eval_target_record 无法出现在返回结果里 (残留旧记录或空)。
+// 重试重置回归: RetryAll / RetryTargetItems 必须清 target_result_id 并把
+// expt_run_id 同步到新 run。RetryFailure 则按 target 终态分组: 成功 target 显式保留,
+// 失败或缺失 target 清零；两组都切到新 expt_run_id，避免异步 target 读侧回填旧 run。
 //
 // MultiSet 分支走 resetRetryRunLogsForItems helper, 现有 MultiSet 集成测试
 // (TestExptRetryAllExec_ExptStart_MultiSetConfig_ShouldUseItemRefs 等) 已对 map 内容做精确
@@ -56,9 +55,9 @@ func (m turnResetMapMatcher) String() string {
 	return "map{status:Queueing, target_result_id:0, expt_run_id:<new>}"
 }
 
-// TestExptFailRetryExec_ExptStart_ResetsTurnResultTargetAndRunID 覆盖批量失败重试:
-// UpdateTurnResults 必须包含 target_result_id=0 + expt_run_id=NEW_run_id。
-func TestExptFailRetryExec_ExptStart_ResetsTurnResultTargetAndRunID(t *testing.T) {
+// TestExptFailRetryExec_ExptStart_PreservesSuccessfulTargetAndClearsFailedTarget 覆盖批量失败重试:
+// 成功 target 保留 ID，失败 target 清零，且两组都写入新 expt_run_id。
+func TestExptFailRetryExec_ExptStart_PreservesSuccessfulTargetAndClearsFailedTarget(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -77,26 +76,48 @@ func TestExptFailRetryExec_ExptStart_ResetsTurnResultTargetAndRunID(t *testing.T
 	idem := idemmocks.NewMockIdempotentService(ctrl)
 	configer := configmocks.NewMockIConfiger(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+	targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
 
 	idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
-	// 首页扫出两条待重试 turn, 第二页为空退出扫描循环。
+	// 首页扫出两个待重试 turn：一个 target 已成功，一个 target 已失败。
 	exptTurnResultRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), gomock.Any(), gomock.Any(), spaceID).Return([]*entity.ExptTurnResult{
-		{ItemID: 100, TurnID: 1000, ItemVersionID: 10, Status: int32(entity.TurnRunState_Fail)},
-		{ItemID: 200, TurnID: 2000, ItemVersionID: 20, Status: int32(entity.TurnRunState_Terminal)},
+		{ID: 10000, ItemID: 100, TurnID: 1000, ItemVersionID: 10, Status: int32(entity.TurnRunState_Fail), TargetResultID: 10001},
+		{ID: 20000, ItemID: 200, TurnID: 2000, ItemVersionID: 20, Status: int32(entity.TurnRunState_Terminal), TargetResultID: 20001},
 	}, int64(0), nil).Times(1)
 	exptTurnResultRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), gomock.Any(), gomock.Any(), spaceID).Return([]*entity.ExptTurnResult{}, int64(0), nil).Times(1)
+	exptItemResultRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{100, 200}).Return([]*entity.ExptItemResult{
+		{ItemID: 100, ItemVersionID: 10, LogID: "item-log-100"},
+		{ItemID: 200, ItemVersionID: 20, LogID: "item-log-200"},
+	}, nil).Times(1)
+	exptItemResultRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, newRunID, []int64{100, 200}, spaceID).Return(nil, nil).Times(1)
+	exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, newRunID, []int64{100, 200}, spaceID).Return(nil, nil).Times(1)
+	success := entity.EvalTargetRunStatusSuccess
+	failed := entity.EvalTargetRunStatusFail
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{10001, 20001}).Return([]*entity.EvalTargetRecord{
+		{ID: 10001, Status: &success},
+		{ID: 20001, Status: &failed},
+	}, nil).Times(1)
 
 	idgen.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{9001, 9002}, nil).Times(1)
+	exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	exptItemResultRepo.EXPECT().FillItemRunLogLogIDIfEmpty(gomock.Any(), exptID, newRunID, spaceID, map[int64]string{
+		100: "item-log-100",
+		200: "item-log-200",
+	}).Return(nil).Times(1)
 	exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, gomock.Any(), map[string]any{
 		"status":      int32(entity.ItemRunState_Queueing),
 		"expt_run_id": newRunID,
 	}).Return(nil).Times(1)
 
-	// 核心断言: 重试重置 expt_turn_result 必须清 target_result_id 且同步到新 run_id。
-	exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, gomock.Any(), spaceID, turnResetMapMatcher{wantRunID: newRunID}).Return(nil).Times(1)
-
-	exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), spaceID, exptID, newRunID, gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	exptTurnResultRepo.EXPECT().UpdateTurnResults(
+		gomock.Any(), exptID, []*entity.ItemTurnID{{ItemID: 100, TurnID: 1000}}, spaceID,
+		failRetryTurnUpdateMatcher{wantRunID: newRunID},
+	).Return(nil).Times(1)
+	zero := int64(0)
+	exptTurnResultRepo.EXPECT().UpdateTurnResults(
+		gomock.Any(), exptID, []*entity.ItemTurnID{{ItemID: 200, TurnID: 2000}}, spaceID,
+		failRetryTurnUpdateMatcher{wantRunID: newRunID, wantTargetID: &zero},
+	).Return(nil).Times(1)
 	exptStatsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{FailItemCnt: 1, TerminatedItemCnt: 1}, nil).Times(1)
 	exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -113,6 +134,7 @@ func TestExptFailRetryExec_ExptStart_ResetsTurnResultTargetAndRunID(t *testing.T
 		idem:               idem,
 		configer:           configer,
 		publisher:          publisher,
+		evalTargetService:  targetSvc,
 	}
 
 	err := exec.ExptStart(session.WithCtxUser(context.Background(), &session.User{ID: "u"}), &entity.ExptScheduleEvent{
@@ -785,7 +807,12 @@ func TestExptFailRetryExec_ExptStart_UpdateTurnResultsError(t *testing.T) {
 	exptTurnResultRepo.EXPECT().ScanTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{
 		{ItemID: 1, TurnID: 10, Status: int32(entity.TurnRunState_Fail)},
 	}, int64(0), nil).Times(1)
+	exptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(3), int64(1), []int64{1}).Return([]*entity.ExptItemResult{{ItemID: 1, LogID: "item-log"}}, nil).Times(1)
+	exptItemResultRepo.EXPECT().MGetItemRunLog(gomock.Any(), int64(1), int64(2), []int64{1}, int64(3)).Return(nil, nil).Times(1)
+	exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{1}, int64(3)).Return(nil, nil).Times(1)
 	idgen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{1}, nil).Times(1)
+	exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	exptItemResultRepo.EXPECT().FillItemRunLogLogIDIfEmpty(gomock.Any(), int64(1), int64(2), int64(3), map[int64]string{1: "item-log"}).Return(nil).Times(1)
 	exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	// 核心断言: turn map 契约仍满足, 错误后不再触发下游。
 	exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), turnResetMapMatcher{wantRunID: 2}).Return(errors.New("boom")).Times(1)

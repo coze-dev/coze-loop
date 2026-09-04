@@ -47,36 +47,43 @@ func NewExperimentMetric(meter imetrics.Meter) metrics.ExptMetric {
 			panic(errorx.Wrapf(err, "new metric fail"))
 		}
 
+		if retryStartDependencyFailureMtr, err = meter.NewMetric(retryStartDependencyFailureMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter}, retryStartDependencyFailureTags()); err != nil {
+			panic(errorx.Wrapf(err, "new metric fail"))
+		}
+
 		exptMetricsImpl = &ExperimentMetricImpl{
-			exptEvalMtr:                exptEvalMtr,
-			exptItemMtr:                exptItemEvalMtr,
-			exptTurnMtr:                exptTurnEvalMtr,
-			getExptResultMtr:           getExptResultMtr,
-			calculateExptAggrResultMtr: calculateExptAggrResultMtr,
-			exptTurnResultFilterMtr:    exptTurnResultFilterMtr,
+			exptEvalMtr:                    exptEvalMtr,
+			exptItemMtr:                    exptItemEvalMtr,
+			exptTurnMtr:                    exptTurnEvalMtr,
+			getExptResultMtr:               getExptResultMtr,
+			calculateExptAggrResultMtr:     calculateExptAggrResultMtr,
+			exptTurnResultFilterMtr:        exptTurnResultFilterMtr,
+			retryStartDependencyFailureMtr: retryStartDependencyFailureMtr,
 		}
 	})
 	return exptMetricsImpl
 }
 
 type ExperimentMetricImpl struct {
-	exptEvalMtr                imetrics.Metric
-	exptItemMtr                imetrics.Metric
-	exptTurnMtr                imetrics.Metric
-	getExptResultMtr           imetrics.Metric
-	calculateExptAggrResultMtr imetrics.Metric
-	exptTurnResultFilterMtr    imetrics.Metric
+	exptEvalMtr                    imetrics.Metric
+	exptItemMtr                    imetrics.Metric
+	exptTurnMtr                    imetrics.Metric
+	getExptResultMtr               imetrics.Metric
+	calculateExptAggrResultMtr     imetrics.Metric
+	exptTurnResultFilterMtr        imetrics.Metric
+	retryStartDependencyFailureMtr imetrics.Metric
 }
 
-var exptEvalMtr, exptItemEvalMtr, exptTurnEvalMtr, getExptResultMtr, calculateExptAggrResultMtr, exptTurnResultFilterMtr imetrics.Metric
+var exptEvalMtr, exptItemEvalMtr, exptTurnEvalMtr, getExptResultMtr, calculateExptAggrResultMtr, exptTurnResultFilterMtr, retryStartDependencyFailureMtr imetrics.Metric
 
 const (
-	exptEvalMtrName                = "expt_eval"
-	exptItemEvalMtrName            = "expt_item_eval"
-	exptTurnEvalMtrName            = "expt_turn_eval"
-	getExptResultMtrName           = "get_expt_result"
-	calculateExptAggrResultMtrName = "calculate_expt_aggr_result"
-	exptTurnResultFilterMtrName    = "expt_turn_result_filter"
+	exptEvalMtrName                    = "expt_eval"
+	exptItemEvalMtrName                = "expt_item_eval"
+	exptTurnEvalMtrName                = "expt_turn_eval"
+	getExptResultMtrName               = "get_expt_result"
+	calculateExptAggrResultMtrName     = "calculate_expt_aggr_result"
+	exptTurnResultFilterMtrName        = "expt_turn_result_filter"
+	retryStartDependencyFailureMtrName = "expt_retry_start_dependency_failure"
 
 	runSuffix    = "run"
 	resultSuffix = "result"
@@ -103,6 +110,7 @@ const (
 	tagActualOutputDiff   = "actual_output_diff"
 	tagEvaluatorScoreDiff = "evaluator_score_diff"
 	tagResultMissing      = "result_missing"
+	tagDependency         = "dependency"
 )
 
 func exptEvalMtrTags() []string {
@@ -162,4 +170,8 @@ func exptTurnResultFilterTags() []string {
 		tagEvaluatorScoreDiff,
 		tagIsErr,
 	}
+}
+
+func retryStartDependencyFailureTags() []string {
+	return []string{tagSpaceID, tagDependency}
 }

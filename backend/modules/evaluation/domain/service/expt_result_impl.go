@@ -557,7 +557,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 					turnLogIDByItemTurn[noRunKey] = trl.LogID
 				}
 			}
-			if trl.TargetResultID > 0 {
+			if shouldFillTargetResultFromRunLog(trl) {
 				targetResultIDByRunItemTurn[k] = trl.TargetResultID
 			}
 		}
@@ -2006,7 +2006,7 @@ func (e *ExptResultBuilder) fillProcessingTargetResultID(ctx context.Context) er
 			return err
 		}
 		for _, turnRunLog := range turnRunLogs {
-			if turnRunLog == nil || turnRunLog.TargetResultID == 0 {
+			if !shouldFillTargetResultFromRunLog(turnRunLog) {
 				continue
 			}
 			targetResultIDByRunItemTurn[runItemTurnKey{
@@ -2028,6 +2028,11 @@ func (e *ExptResultBuilder) fillProcessingTargetResultID(ctx context.Context) er
 	}
 
 	return nil
+}
+
+func shouldFillTargetResultFromRunLog(runLog *entity.ExptTurnResultRunLog) bool {
+	return runLog != nil && runLog.TargetResultID > 0 &&
+		runLog.Status != entity.TurnRunState_Fail && runLog.Status != entity.TurnRunState_Terminal
 }
 
 func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {

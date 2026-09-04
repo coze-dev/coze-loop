@@ -7,8 +7,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 
 	"gorm.io/gen"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/hints"
 	"gorm.io/plugin/dbresolver"
@@ -42,6 +44,7 @@ type IExptItemResultDAO interface {
 	GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64, opts ...db.Option) (int32, error)
 
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*model.ExptItemResultRunLog, opts ...db.Option) error
+	FillItemRunLogLogIDIfEmpty(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDToLogID map[int64]string, opts ...db.Option) error
 	ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, int64, error)
 	UpdateItemRunLog(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error
 	GetItemRunLog(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, opts ...db.Option) (*model.ExptItemResultRunLog, error)
@@ -396,6 +399,37 @@ func (dao *exptItemResultDAOImpl) BatchCreateNXRunLogs(ctx context.Context, item
 	q := query.Use(db).ExptItemResultRunLog
 	if err := q.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(itemResults, 50); err != nil {
 		return errorx.Wrapf(err, "ExptItemResult.BatchCreateNXRunLogs fail, cnt: %v", len(itemResults))
+	}
+	return nil
+}
+
+func (dao *exptItemResultDAOImpl) FillItemRunLogLogIDIfEmpty(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDToLogID map[int64]string, opts ...db.Option) error {
+	if len(itemIDToLogID) == 0 {
+		return nil
+	}
+
+	itemIDs := make([]int64, 0, len(itemIDToLogID))
+	for itemID := range itemIDToLogID {
+		itemIDs = append(itemIDs, itemID)
+	}
+	sort.Slice(itemIDs, func(i, j int) bool { return itemIDs[i] < itemIDs[j] })
+
+	caseExpr := "CASE item_id"
+	args := make([]any, 0, len(itemIDs)*2)
+	for _, itemID := range itemIDs {
+		caseExpr += " WHEN ? THEN ?"
+		args = append(args, itemID, itemIDToLogID[itemID])
+	}
+	caseExpr += " ELSE log_id END"
+
+	session := dao.provider.NewSession(ctx, opts...)
+	// UpdateColumn intentionally avoids touching updated_at: retry selection uses run-log
+	// timestamps to choose the latest execution fact, and filling a missing LogID is not a new execution.
+	if err := session.WithContext(ctx).
+		Model(&model.ExptItemResultRunLog{}).
+		Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id IN ? AND log_id = ''", spaceID, exptID, exptRunID, itemIDs).
+		UpdateColumn("log_id", gorm.Expr(caseExpr, args...)).Error; err != nil {
+		return errorx.Wrapf(err, "FillItemRunLogLogIDIfEmpty fail, expt_id: %v, expt_run_id: %v, item_ids: %v", exptID, exptRunID, itemIDs)
 	}
 	return nil
 }

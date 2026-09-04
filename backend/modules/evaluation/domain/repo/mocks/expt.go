@@ -427,6 +427,20 @@ func (mr *MockIExptItemResultRepoMockRecorder) CountItemsByStatus(ctx, spaceID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountItemsByStatus", reflect.TypeOf((*MockIExptItemResultRepo)(nil).CountItemsByStatus), ctx, spaceID, exptID)
 }
 
+// FillItemRunLogLogIDIfEmpty mocks base method.
+func (m *MockIExptItemResultRepo) FillItemRunLogLogIDIfEmpty(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDToLogID map[int64]string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FillItemRunLogLogIDIfEmpty", ctx, exptID, exptRunID, spaceID, itemIDToLogID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FillItemRunLogLogIDIfEmpty indicates an expected call of FillItemRunLogLogIDIfEmpty.
+func (mr *MockIExptItemResultRepoMockRecorder) FillItemRunLogLogIDIfEmpty(ctx, exptID, exptRunID, spaceID, itemIDToLogID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FillItemRunLogLogIDIfEmpty", reflect.TypeOf((*MockIExptItemResultRepo)(nil).FillItemRunLogLogIDIfEmpty), ctx, exptID, exptRunID, spaceID, itemIDToLogID)
+}
+
 // GetItemIDListByExptID mocks base method.
 func (m *MockIExptItemResultRepo) GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) ([]int64, error) {
 	m.ctrl.T.Helper()

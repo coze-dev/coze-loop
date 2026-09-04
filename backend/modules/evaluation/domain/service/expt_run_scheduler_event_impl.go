@@ -107,6 +107,10 @@ func NewExptSchedulerSvc(
 	centralGuard component.ICentralReservationGuard,
 	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容旧单测
 ) ExptSchedulerEvent {
+	if factory, ok := schedulerModeFactory.(*DefaultSchedulerModeFactory); ok {
+		factory.evalTargetService = evalTargetService
+		factory.metric = metric
+	}
 	i := &ExptSchedulerImpl{
 		Manager:                  manager,
 		ExptRepo:                 exptRepo,
@@ -343,6 +347,9 @@ func userVisibleErrMsg(err error) string {
 func isSchedulerInfraError(err error) bool {
 	if err == nil {
 		return false
+	}
+	if errors.Is(err, errRetryStartDependencyFailure) {
+		return true
 	}
 	// context cancel / deadline exceeded 通常由Redis锁续期失败触发
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
