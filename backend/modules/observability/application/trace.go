@@ -598,6 +598,7 @@ func (t *TraceApplication) GetTracesMetaInfo(ctx context.Context, req *trace.Get
 		fMeta[k] = &trace.FieldMeta{
 			ValueType:                 filter.FieldType(v.FieldType),
 			SupportCustomizableOption: ptr.Of(v.SupportCustom),
+			IsSystem:                  ptr.Of(v.IsSystem),
 		}
 		if v.FieldOptions != nil {
 			fMeta[k].FieldOptions = &filter.FieldOptions{
