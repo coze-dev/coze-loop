@@ -270,7 +270,18 @@ func (anyV *AnyValue) UnmarshalJSON(data []byte) error {
 	case len(rawMap["intValue"]) > 0:
 		var v AnyValue_IntValue
 		if err := sonic.Unmarshal(rawMap["intValue"], &v.IntValue); err != nil {
-			return err
+			// OTLP/JSON (proto3 JSON mapping) encodes int64/uint64/fixed64/sfixed64 as string,
+			// e.g. {"intValue":"42"}. Standard OTel SDKs (Rust/Go/Python) emit this form, so fall
+			// back to parsing the string here instead of rejecting the whole request.
+			var s string
+			if strErr := sonic.Unmarshal(rawMap["intValue"], &s); strErr != nil {
+				return err
+			}
+			iv, parseErr := strconv.ParseInt(s, 10, 64)
+			if parseErr != nil {
+				return err
+			}
+			v.IntValue = iv
 		}
 		anyV.Value = &v
 	case len(rawMap["doubleValue"]) > 0:
