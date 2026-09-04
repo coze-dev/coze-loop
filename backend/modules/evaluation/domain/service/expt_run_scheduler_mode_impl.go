@@ -871,7 +871,8 @@ func (e *ExptFailRetryExec) buildPagePlan(ctx context.Context, event *entity.Exp
 			logs.CtxWarn(ctx, "[ExptFailRetryExec] item result missing, fallback to turn log_id, expt_id=%v, expt_run_id=%v, item_id=%v", event.ExptID, event.ExptRunID, itemID)
 		}
 	}
-	currentItemRunLogs, err := e.exptItemResultRepo.MGetItemRunLog(ctx, event.ExptID, event.ExptRunID, itemIDs, event.SpaceID)
+	currentRunCtx := contexts.WithCtxWriteDB(ctx)
+	currentItemRunLogs, err := e.exptItemResultRepo.MGetItemRunLog(currentRunCtx, event.ExptID, event.ExptRunID, itemIDs, event.SpaceID)
 	if err != nil {
 		logs.CtxWarn(ctx, "[ExptFailRetryExec] load current item run logs failed, fallback to canonical/turn log_id, expt_id=%v, expt_run_id=%v, err=%v", event.ExptID, event.ExptRunID, err)
 		currentItemRunLogs = nil
@@ -882,7 +883,7 @@ func (e *ExptFailRetryExec) buildPagePlan(ctx context.Context, event *entity.Exp
 			currentItemRunLogByID[runLog.ItemID] = runLog
 		}
 	}
-	currentTurnRunLogs, err := e.exptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, itemIDs, event.SpaceID)
+	currentTurnRunLogs, err := e.exptTurnResultRepo.MGetItemTurnRunLogs(currentRunCtx, event.ExptID, event.ExptRunID, itemIDs, event.SpaceID)
 	if err != nil {
 		return nil, e.retryStartDependencyError(ctx, event, "expt_turn_result_run_log", err)
 	}
@@ -963,7 +964,7 @@ func (e *ExptFailRetryExec) buildPagePlan(ctx context.Context, event *entity.Exp
 	}
 	for targetSpaceID, recordIDSet := range targetIDsBySpace {
 		recordIDs := sortedInt64Set(recordIDSet)
-		records, err := e.evalTargetService.BatchGetRecordByIDs(ctx, targetSpaceID, recordIDs)
+		records, err := e.evalTargetService.BatchGetRecordByIDs(currentRunCtx, targetSpaceID, recordIDs)
 		if err != nil {
 			return nil, e.retryStartDependencyError(ctx, event, "eval_target_record", err)
 		}

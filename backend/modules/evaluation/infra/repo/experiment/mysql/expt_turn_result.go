@@ -256,6 +256,9 @@ func (dao *ExptTurnResultDAOImpl) GetItemTurnRunLogs(ctx context.Context, exptID
 
 func (dao *ExptTurnResultDAOImpl) MGetItemTurnRunLogs(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResultRunLog, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	runLog := query.Use(db).ExptTurnResultRunLog
 	found, err := runLog.WithContext(ctx).
 		Where(

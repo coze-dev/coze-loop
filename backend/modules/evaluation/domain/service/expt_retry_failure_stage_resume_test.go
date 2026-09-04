@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 )
 
 func buildRetryFailureSingleSetExpt(spaceID int64, evaluatorVersionIDs ...int64) *entity.Experiment {
@@ -320,15 +321,30 @@ func TestExptFailRetryExec_ExptStart_ReusesSuccessfulTargetFromCurrentRunOnRedri
 	}}, int64(100), nil)
 	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(100), int64(50), spaceID).Return(nil, int64(0), nil)
 	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).Return([]*entity.ExptItemResult{{ItemID: itemID, LogID: "old-item-log"}}, nil)
-	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).Return([]*entity.ExptItemResultRunLog{{
-		ExptID: exptID, ExptRunID: newRunID, ItemID: itemID, LogID: "current-run-log",
-	}}, nil)
-	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).Return([]*entity.ExptTurnResultRunLog{{
-		ExptID: exptID, ExptRunID: newRunID, ItemID: itemID, TurnID: turnID, TargetResultID: currentTargetID,
-		EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 101}},
-	}}, nil)
+	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).DoAndReturn(
+		func(ctx context.Context, _, _ int64, _ []int64, _ int64) ([]*entity.ExptItemResultRunLog, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "current-run item log must read from primary on redrive")
+			return []*entity.ExptItemResultRunLog{{
+				ExptID: exptID, ExptRunID: newRunID, ItemID: itemID, LogID: "current-run-log",
+			}}, nil
+		},
+	)
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).DoAndReturn(
+		func(ctx context.Context, _, _ int64, _ []int64, _ int64) ([]*entity.ExptTurnResultRunLog, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "current-run turn log must read from primary on redrive")
+			return []*entity.ExptTurnResultRunLog{{
+				ExptID: exptID, ExptRunID: newRunID, ItemID: itemID, TurnID: turnID, TargetResultID: currentTargetID,
+				EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 101}},
+			}}, nil
+		},
+	)
 	success := entity.EvalTargetRunStatusSuccess
-	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{currentTargetID}).Return([]*entity.EvalTargetRecord{{ID: currentTargetID, Status: &success}}, nil)
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{currentTargetID}).DoAndReturn(
+		func(ctx context.Context, _ int64, _ []int64) ([]*entity.EvalTargetRecord, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "current-run target record must read from primary on redrive")
+			return []*entity.EvalTargetRecord{{ID: currentTargetID, Status: &success}}, nil
+		},
+	)
 	idgen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{900}, nil)
 	itemRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, got []*entity.ExptItemResultRunLog) error {
 		require.Len(t, got, 1)

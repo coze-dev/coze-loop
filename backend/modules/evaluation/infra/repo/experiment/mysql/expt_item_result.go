@@ -176,6 +176,9 @@ func (dao *exptItemResultDAOImpl) GetItemRunLog(ctx context.Context, exptID, exp
 
 func (dao *exptItemResultDAOImpl) MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptItemResultRunLog
 	found, err := q.WithContext(ctx).
 		Where(q.SpaceID.Eq(spaceID),
