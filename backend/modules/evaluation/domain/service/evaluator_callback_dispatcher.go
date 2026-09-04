@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -78,9 +79,8 @@ func (d *EvaluatorCallbackDispatcher) Dispatch(ctx context.Context, spaceID int6
 }
 
 func (d *EvaluatorCallbackDispatcher) doPost(ctx context.Context, turl string, body []byte, timestamp, nonce, signature string) error {
-	u, err := url.Parse(turl)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
-		return fmt.Errorf("invalid callback_url")
+	if err := validateEvaluatorCallbackURL(turl); err != nil {
+		return err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, turl, bytes.NewReader(body))
@@ -103,4 +103,37 @@ func (d *EvaluatorCallbackDispatcher) doPost(ctx context.Context, turl string, b
 		return fmt.Errorf("evaluator callback returned non-2xx status: %d", resp.StatusCode)
 	}
 	return nil
+}
+
+func validateEvaluatorCallbackURL(rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" {
+		return fmt.Errorf("invalid callback_url")
+	}
+	if u.User != nil {
+		return fmt.Errorf("invalid callback_url")
+	}
+
+	host := u.Hostname()
+	if ip := net.ParseIP(host); ip != nil {
+		if isBlockedEvaluatorCallbackIP(ip) {
+			return fmt.Errorf("invalid callback_url")
+		}
+		return nil
+	}
+
+	ips, err := net.LookupIP(host)
+	if err != nil || len(ips) == 0 {
+		return fmt.Errorf("invalid callback_url")
+	}
+	for _, ip := range ips {
+		if isBlockedEvaluatorCallbackIP(ip) {
+			return fmt.Errorf("invalid callback_url")
+		}
+	}
+	return nil
+}
+
+func isBlockedEvaluatorCallbackIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast()
 }
