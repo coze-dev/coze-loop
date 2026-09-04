@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 type stubItemCompletePublisher struct {
@@ -667,6 +668,36 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		err := executor.storeTurnRunResult(context.Background(), etec, result)
 		assert.NoError(t, err)
 		assert.Error(t, result.GetEvalErr())
+	})
+
+	t.Run("target成功后评估器调用错误保留评估器阶段", func(t *testing.T) {
+		turnResultLog := &entity.ExptTurnResultRunLog{ID: 1, TurnID: 1}
+		etec := &entity.ExptTurnEvalCtx{
+			Turn: &entity.Turn{ID: 1},
+			ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+				Expt:                &entity.Experiment{ID: 1, SourceID: "src", SpaceID: 2},
+				Event:               &entity.ExptItemEvalEvent{ExptRunID: 3},
+				EvalSetItem:         &entity.EvaluationSetItem{ItemID: 2},
+				ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{1: turnResultLog}},
+			},
+		}
+		result := &entity.ExptTurnRunResult{
+			TargetResult: &entity.EvalTargetRecord{ID: 10},
+			EvalErr:      errors.New("evaluator call failed"),
+		}
+
+		mockConfiger.EXPECT().GetErrCtrl(gomock.Any()).Return(entity.DefaultExptErrCtrl())
+		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
+			require.Len(t, logs, 1)
+			assert.Equal(t, int64(10), logs[0].TargetResultID)
+			assert.Equal(t, entity.TurnRunState_Fail, logs[0].Status)
+			isEvaluatorFailure, _ := errno.ParseEvaluatorResultErr(errno.DeserializeErr([]byte(logs[0].ErrMsg)))
+			assert.True(t, isEvaluatorFailure)
+			return nil
+		})
+
+		err := executor.storeTurnRunResult(context.Background(), etec, result)
+		assert.NoError(t, err)
 	})
 
 	t.Run("ctx取消后仍落turn失败状态", func(t *testing.T) {

@@ -1960,7 +1960,7 @@ func TestExptResultServiceImpl_MGetExperimentResult_FillsInFlightMultiTurnTarget
 	}}, nil).Times(2)
 	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, exptRunID, []int64{itemID}, spaceID).Return(nil, nil)
 	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, exptRunID, []int64{itemID}, spaceID).Return([]*entity.ExptTurnResultRunLog{
-		{SpaceID: spaceID, ExptID: exptID, ExptRunID: exptRunID, ItemID: itemID, TurnID: finishedTurnID, Status: entity.TurnRunState_Success, LogID: "finished-logid", TargetResultID: finishedTargetRecordID},
+		{SpaceID: spaceID, ExptID: exptID, ExptRunID: exptRunID, ItemID: itemID, TurnID: finishedTurnID, Status: entity.TurnRunState_Fail, LogID: "finished-logid", TargetResultID: finishedTargetRecordID, ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")), EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{8: 9}}},
 		{SpaceID: spaceID, ExptID: exptID, ExptRunID: exptRunID, ItemID: itemID, TurnID: processingTurnID, Status: entity.TurnRunState_Processing, LogID: "processing-logid", TargetResultID: processingTargetRecordID},
 	}, nil)
 	exptRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(expt, nil)

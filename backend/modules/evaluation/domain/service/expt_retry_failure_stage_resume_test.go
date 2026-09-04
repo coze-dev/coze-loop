@@ -23,6 +23,7 @@ import (
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 func buildRetryFailureSingleSetExpt(spaceID int64, evaluatorVersionIDs ...int64) *entity.Experiment {
@@ -1194,6 +1195,7 @@ func TestExptResultBuilder_FillProcessingTargetResultID_DoesNotRestoreFailedCurr
 	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).Return([]*entity.ExptTurnResultRunLog{{
 		ExptRunID: newRunID, ItemID: itemID, TurnID: turnID,
 		Status: entity.TurnRunState_Fail, TargetResultID: failedTargetID,
+		ErrMsg: errno.SerializeErr(errno.NewTargetResultErr("target failed")),
 	}}, nil)
 	builder := &ExptResultBuilder{
 		ExptID: exptID, SpaceID: spaceID, ExptTurnResultRepo: turnRepo,
@@ -1205,6 +1207,69 @@ func TestExptResultBuilder_FillProcessingTargetResultID_DoesNotRestoreFailedCurr
 
 	require.NoError(t, builder.fillProcessingTargetResultID(context.Background()))
 	assert.Zero(t, builder.turnResultDO[0].TargetResultID)
+}
+
+func TestExptResultBuilder_FillProcessingTargetResultID_RestoresSuccessfulTargetFromFailedTurn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	const (
+		spaceID        = int64(100)
+		exptID         = int64(200)
+		newRunID       = int64(300)
+		itemID         = int64(400)
+		turnID         = int64(500)
+		targetResultID = int64(600)
+	)
+
+	turnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).Return([]*entity.ExptTurnResultRunLog{{
+		ExptRunID: newRunID, ItemID: itemID, TurnID: turnID,
+		Status: entity.TurnRunState_Fail, TargetResultID: targetResultID,
+		ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")),
+	}}, nil)
+	builder := &ExptResultBuilder{
+		ExptID: exptID, SpaceID: spaceID, ExptTurnResultRepo: turnRepo,
+		turnResultDO: []*entity.ExptTurnResult{{
+			ExptRunID: newRunID, ItemID: itemID, TurnID: turnID,
+			Status: int32(entity.TurnRunState_Queueing), TargetResultID: 0,
+		}},
+	}
+
+	require.NoError(t, builder.fillProcessingTargetResultID(context.Background()))
+	assert.Equal(t, targetResultID, builder.turnResultDO[0].TargetResultID)
+}
+
+func TestShouldFillTargetResultFromRunLog_FailedTurnUsesFailureStage(t *testing.T) {
+	tests := []struct {
+		name string
+		log  *entity.ExptTurnResultRunLog
+		want bool
+	}{
+		{name: "target failure stays hidden", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1,
+			ErrMsg: errno.SerializeErr(errno.NewTargetResultErr("target failed")),
+		}},
+		{name: "evaluator failure preserves target", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1,
+			ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")),
+		}, want: true},
+		{name: "evaluator refs prove target completed", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1,
+			EvaluatorResultIds: &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{RecordID: 2}}},
+		}, want: true},
+		{name: "unknown failure without evaluator refs stays hidden", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1, ErrMsg: "unknown",
+		}},
+		{name: "terminal target stays hidden", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Terminal, TargetResultID: 1,
+			ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")),
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, shouldFillTargetResultFromRunLog(tt.log))
+		})
+	}
 }
 
 func TestExptResultBuilder_FillProcessingTargetResultID_DoesNotRestoreTerminalCurrentRunTarget(t *testing.T) {

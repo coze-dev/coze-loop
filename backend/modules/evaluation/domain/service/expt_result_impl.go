@@ -2031,8 +2031,23 @@ func (e *ExptResultBuilder) fillProcessingTargetResultID(ctx context.Context) er
 }
 
 func shouldFillTargetResultFromRunLog(runLog *entity.ExptTurnResultRunLog) bool {
-	return runLog != nil && runLog.TargetResultID > 0 &&
-		runLog.Status != entity.TurnRunState_Fail && runLog.Status != entity.TurnRunState_Terminal
+	if runLog == nil || runLog.TargetResultID <= 0 || runLog.Status == entity.TurnRunState_Terminal {
+		return false
+	}
+	if runLog.Status != entity.TurnRunState_Fail {
+		return true
+	}
+	// A failed turn can still contain a successful target when only evaluator execution failed.
+	// Restore only when the persisted error or evaluator refs prove execution reached the evaluator stage.
+	persistedErr := errno.DeserializeErr([]byte(runLog.ErrMsg))
+	if isTargetFailure, _ := errno.ParseTargetResultErr(persistedErr); isTargetFailure {
+		return false
+	}
+	if isEvaluatorFailure, _ := errno.ParseEvaluatorResultErr(persistedErr); isEvaluatorFailure {
+		return true
+	}
+	results := runLog.EvaluatorResultIds
+	return results != nil && (len(results.EvalVerIDToResID) > 0 || len(results.Registered) > 0 || len(results.Inline) > 0)
 }
 
 func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {

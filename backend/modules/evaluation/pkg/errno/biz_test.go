@@ -85,6 +85,44 @@ func TestParseItemZombieTimeoutErr(t *testing.T) {
 	})
 }
 
+func TestParseTargetResultErr(t *testing.T) {
+	t.Run("matches target result error after persistence round trip", func(t *testing.T) {
+		err := DeserializeErr(conv.UnsafeStringToBytes(SerializeErr(NewTargetResultErr("failed"))))
+		ok, msg := ParseTargetResultErr(err)
+		assert.True(t, ok)
+		assert.Equal(t, "failed", msg)
+	})
+
+	t.Run("does not match evaluator or unknown errors", func(t *testing.T) {
+		ok, msg := ParseTargetResultErr(NewEvaluatorResultErr("evaluator failed"))
+		assert.False(t, ok)
+		assert.Empty(t, msg)
+
+		ok, msg = ParseTargetResultErr(errors.New("plain"))
+		assert.False(t, ok)
+		assert.Empty(t, msg)
+	})
+}
+
+func TestParseEvaluatorResultErr(t *testing.T) {
+	t.Run("matches evaluator result error after persistence round trip", func(t *testing.T) {
+		err := DeserializeErr(conv.UnsafeStringToBytes(SerializeErr(NewEvaluatorResultErr("failed"))))
+		ok, msg := ParseEvaluatorResultErr(err)
+		assert.True(t, ok)
+		assert.Equal(t, "failed", msg)
+	})
+
+	t.Run("does not match target or unknown errors", func(t *testing.T) {
+		ok, msg := ParseEvaluatorResultErr(NewTargetResultErr("target failed"))
+		assert.False(t, ok)
+		assert.Empty(t, msg)
+
+		ok, msg = ParseEvaluatorResultErr(errors.New("plain"))
+		assert.False(t, ok)
+		assert.Empty(t, msg)
+	})
+}
+
 func TestNewSandboxTerminatedBeforeReportErr(t *testing.T) {
 	err := NewSandboxTerminatedBeforeReportErr("Failed")
 	ei, ok := ParseErrImpl(err)

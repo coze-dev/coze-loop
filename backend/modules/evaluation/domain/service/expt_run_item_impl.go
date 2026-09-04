@@ -199,8 +199,12 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		}
 	}
 
-	if result.EvalErr != nil {
-		evalErr = result.EvalErr
+	if result.EvalErr != nil && evalErr == nil {
+		if result.TargetResult != nil && result.TargetResult.ID > 0 {
+			evalErr = errno.WrapEvaluatorResultErr(result.EvalErr)
+		} else {
+			evalErr = result.EvalErr
+		}
 	} else if evalErr == nil {
 		evalErr = e.validateEvaluatorResultsComplete(etec, result)
 	}
