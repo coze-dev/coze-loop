@@ -613,7 +613,7 @@ func TestRetryFailure_ExptStartThroughExecution_ReusesSuccessfulTargetAndOnlyFai
 	evaluatorARecord := &entity.EvaluatorRecord{ID: evaluatorARecID, EvaluatorVersionID: evaluatorAVerID, Status: entity.EvaluatorRunStatusSuccess}
 
 	idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
-	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(0), int64(50), spaceID).Return([]*entity.ExptTurnResult{canonicalTurnResult}, int64(turnResultID), nil)
+	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(0), int64(50), spaceID).Return([]*entity.ExptTurnResult{canonicalTurnResult}, turnResultID, nil)
 	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), turnResultID, int64(50), spaceID).Return(nil, int64(0), nil)
 	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).Return([]*entity.ExptItemResult{{ItemID: itemID, LogID: "item-log"}}, nil)
 	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, runID, []int64{itemID}, spaceID).Return(nil, nil)
