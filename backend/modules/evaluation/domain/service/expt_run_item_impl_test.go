@@ -662,6 +662,8 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 			require.Len(t, logs, 1)
 			assert.Equal(t, entity.TurnRunState_Fail, logs[0].Status)
 			assert.Contains(t, logs[0].ErrMsg, "evaluator result missing")
+			isEvaluatorFailure, _ := errno.ParseEvaluatorResultErr(errno.DeserializeErr([]byte(logs[0].ErrMsg)))
+			assert.True(t, isEvaluatorFailure)
 			return nil
 		})
 
