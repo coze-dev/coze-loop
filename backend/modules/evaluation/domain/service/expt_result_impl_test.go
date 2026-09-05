@@ -7386,6 +7386,44 @@ func TestExptResultBuilder_getTurnSystemInfo(t *testing.T) {
 		assert.Equal(t, entity.TurnRunState(2), got.TurnRunState)
 		assert.Nil(t, got.Error)
 	})
+
+	t.Run("evaluator stage error remains visible", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultDO: []*entity.ExptTurnResult{
+				{
+					ID: 100, ItemID: 1, TurnID: 10, Status: int32(entity.TurnRunState_Fail), LogID: "log3",
+					ErrMsg: errno.SerializeErr(errno.NewEvaluatorStageErr("evaluator quota unavailable", errors.New("quota detail"))),
+				},
+			},
+		}
+
+		got := b.getTurnSystemInfo(ctx, 1, 10)
+
+		require.NotNil(t, got.Error)
+		require.NotNil(t, got.Error.Detail)
+		assert.Equal(t, "evaluator quota unavailable", *got.Error.Detail)
+	})
+
+	t.Run("evaluator record error stays on evaluator", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultDO: []*entity.ExptTurnResult{
+				{
+					ID: 100, ItemID: 1, TurnID: 10, Status: int32(entity.TurnRunState_Fail), LogID: "log4",
+					ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")),
+				},
+			},
+		}
+
+		got := b.getTurnSystemInfo(ctx, 1, 10)
+
+		assert.Nil(t, got.Error)
+	})
 }
 
 func TestExptResultServiceImpl_compareItemIndex(t *testing.T) {

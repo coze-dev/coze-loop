@@ -791,8 +791,8 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 	// 不清 run_log 的 target_result_id / evaluator_result_ids：
 	// zombie 场景是「终态失败」，需要保留已入库的 record id，
 	// 让 /results/batch_get 能返回 eval_target_record.id、evaluator_record.id 供用户查详情。
-	// 「清 id」的语义只属于「重跑起点」（见 clearExptTurnRunLogResultRefsOnItems 其他调用点：
-	// FailRetry / rerunItems / 手动重跑），失败落地不应触发。
+	// 「清 id」只属于需要完整重跑的起点（RetryAll / RetryTargetItems）；FailRetry 会按 target
+	// 终态选择性保留引用。失败落地本身不应触发清理。
 
 	// 沙箱 agent 实验: 每个 zombie item 单独发一张飞书失败卡, 帮助用户第一时间感知卡死的行。
 	// notifier 内部会先判 enabled (非沙箱 agent / FeishuNotification.Enable=false 直接跳过),

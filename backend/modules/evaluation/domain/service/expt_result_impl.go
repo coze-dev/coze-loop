@@ -2046,8 +2046,10 @@ func shouldFillTargetResultFromRunLog(runLog *entity.ExptTurnResultRunLog) bool 
 	if isEvaluatorFailure, _ := errno.ParseEvaluatorResultErr(persistedErr); isEvaluatorFailure {
 		return true
 	}
-	results := runLog.EvaluatorResultIds
-	return results != nil && (len(results.EvalVerIDToResID) > 0 || len(results.Registered) > 0 || len(results.Inline) > 0)
+	if isEvaluatorStageFailure, _ := errno.ParseEvaluatorStageErr(persistedErr); isEvaluatorStageFailure {
+		return true
+	}
+	return hasEvaluatorResultRefs(runLog.EvaluatorResultIds)
 }
 
 func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {
@@ -2593,8 +2595,13 @@ func (e *ExptResultBuilder) getTurnSystemInfo(ctx context.Context, itemID, turnI
 	}
 
 	if len(turnResult.ErrMsg) > 0 {
-		// 仅吐出评估器和评估对象之外的error
-		ok, errMsg := errno.ParseTurnOtherErr(errno.DeserializeErr([]byte(turnResult.ErrMsg)))
+		// Evaluator-result errors live on evaluator records. Evaluator-stage errors happen
+		// before a failed record exists, so keep their actionable message visible here.
+		persistedErr := errno.DeserializeErr([]byte(turnResult.ErrMsg))
+		ok, errMsg := errno.ParseTurnOtherErr(persistedErr)
+		if isEvaluatorStageFailure, evaluatorErrMsg := errno.ParseEvaluatorStageErr(persistedErr); isEvaluatorStageFailure {
+			ok, errMsg = true, evaluatorErrMsg
+		}
 		if ok {
 			systemInfo.Error = &entity.RunError{
 				Detail: gptr.Of(errMsg),
@@ -2603,6 +2610,10 @@ func (e *ExptResultBuilder) getTurnSystemInfo(ctx context.Context, itemID, turnI
 	}
 
 	return systemInfo
+}
+
+func hasEvaluatorResultRefs(results *entity.EvaluatorResults) bool {
+	return results != nil && (len(results.EvalVerIDToResID) > 0 || len(results.Registered) > 0 || len(results.Inline) > 0)
 }
 
 func (e ExptResultServiceImpl) MGetStats(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.ExptStats, error) {

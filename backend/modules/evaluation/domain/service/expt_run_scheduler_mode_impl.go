@@ -829,7 +829,7 @@ func (e *ExptFailRetryExec) retryStartDependencyError(ctx context.Context, event
 	if e.metric != nil {
 		e.metric.EmitRetryStartDependencyFailure(event.SpaceID, dependency)
 	}
-	return fmt.Errorf("%w: dependency=%s: %v", errRetryStartDependencyFailure, dependency, err)
+	return fmt.Errorf("%w: dependency=%s: %w", errRetryStartDependencyFailure, dependency, err)
 }
 
 func sortedInt64Set(values map[int64]struct{}) []int64 {
@@ -1066,7 +1066,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 	for i := 0; i < maxLoop; i++ {
 		logs.CtxInfo(ctx, "ExptFailRetryExec.ExptStart scan unsucess item result, expt_id: %v, expt_run_id: %v, cursor: %v, limit: %v", event.ExptID, event.ExptRunID, cursor, limit)
 
-		turnResults, ncursor, err := e.exptTurnResultRepo.ScanTurnResults(ctx, event.ExptID, status, cursor, limit, event.SpaceID)
+		turnResults, ncursor, err := e.exptTurnResultRepo.ScanTurnResults(contexts.WithCtxWriteDB(ctx), event.ExptID, status, cursor, limit, event.SpaceID)
 		if err != nil {
 			return err
 		}

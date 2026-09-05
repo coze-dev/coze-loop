@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -170,7 +171,10 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	clone.Ext = etec.Ext
 
-	var evalErr error
+	var (
+		evalErr           error
+		evaluatorStageErr bool
+	)
 
 	clone.ExptRunID = etec.Event.ExptRunID
 	if result.TargetResult != nil && result.TargetResult.ID > 0 {
@@ -199,12 +203,11 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		}
 	}
 
-	if result.EvalErr != nil && evalErr == nil {
-		if result.TargetResult != nil && result.TargetResult.ID > 0 {
-			evalErr = errno.WrapEvaluatorResultErr(result.EvalErr)
-		} else {
-			evalErr = result.EvalErr
+	if result.EvalErr != nil {
+		if evalErr == nil && result.TargetResult != nil && result.TargetResult.ID > 0 && gptr.Indirect(result.TargetResult.Status) == entity.EvalTargetRunStatusSuccess {
+			evaluatorStageErr = true
 		}
+		evalErr = result.EvalErr
 	} else if evalErr == nil {
 		evalErr = e.validateEvaluatorResultsComplete(etec, result)
 	}
@@ -235,8 +238,13 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 			evalErr = ei.SetErrMsg(errMsg).SetCause(clonedErr)
 		}
 
+		persistedErr := evalErr
+		if evaluatorStageErr {
+			persistedErr = errno.NewEvaluatorStageErr(errMsg, errno.CloneErr(evalErr))
+		}
+
 		clone.Status = entity.TurnRunState_Fail
-		clone.ErrMsg = errno.SerializeErr(evalErr)
+		clone.ErrMsg = errno.SerializeErr(persistedErr)
 	} else {
 		if !result.AsyncAbort {
 			clone.Status = entity.TurnRunState_Success
@@ -412,11 +420,15 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	if existTurnRunResult == nil {
 		return etec, nil
 	}
+	recordCtx := ctx
+	if eiec.Event.ExptRunMode == entity.EvaluationModeFailRetry {
+		recordCtx = contexts.WithCtxWriteDB(ctx)
+	}
 
 	if tid := existTurnRunResult.TargetResultID; tid > 0 {
 		// ★ 跨空间共享: 评测对象执行记录随执行落来源空间(冻结 TargetSpaceID), 按来源空间读;
 		// 用调用方空间读会得 nil → 异步回调 validateEvalTargetCtx 报 "target result must not be nil"。
-		targetRecord, err := e.evalTargetService.GetRecordByID(ctx, resolveLoadSpaceID(spaceID, eiec.TargetSourceSpaceID()), tid)
+		targetRecord, err := e.evalTargetService.GetRecordByID(recordCtx, resolveLoadSpaceID(spaceID, eiec.TargetSourceSpaceID()), tid)
 		if err != nil {
 			return nil, err
 		}
@@ -453,7 +465,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		}
 
 		if len(recordIDs) > 0 {
-			evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, recordIDs, false, false)
+			evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(recordCtx, recordIDs, false, false)
 			if err != nil {
 				return nil, err
 			}

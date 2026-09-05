@@ -206,11 +206,21 @@ func TestExptFailRetryExec_ExptStart_PreservesSuccessfulTargetAndItemLogID(t *te
 	targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
 
 	idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
-	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(0), int64(50), spaceID).Return([]*entity.ExptTurnResult{{
-		ID: 100, ItemID: itemID, TurnID: turnID, ItemVersionID: itemVersion,
-		Status: int32(entity.TurnRunState_Fail), TargetResultID: targetID, LogID: "turn-log",
-	}}, int64(100), nil)
-	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(100), int64(50), spaceID).Return(nil, int64(0), nil)
+	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(0), int64(50), spaceID).DoAndReturn(
+		func(ctx context.Context, _ int64, _ []int32, _, _ int64, _ int64) ([]*entity.ExptTurnResult, int64, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure canonical snapshot must read from primary")
+			return []*entity.ExptTurnResult{{
+				ID: 100, ItemID: itemID, TurnID: turnID, ItemVersionID: itemVersion,
+				Status: int32(entity.TurnRunState_Fail), TargetResultID: targetID, LogID: "turn-log",
+			}}, int64(100), nil
+		},
+	)
+	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(100), int64(50), spaceID).DoAndReturn(
+		func(ctx context.Context, _ int64, _ []int32, _, _ int64, _ int64) ([]*entity.ExptTurnResult, int64, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure pagination must keep reading from primary")
+			return nil, int64(0), nil
+		},
+	)
 	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).Return([]*entity.ExptItemResult{{
 		ItemID: itemID, ItemVersionID: itemVersion + 1, LogID: "item-log",
 	}}, nil)
@@ -433,7 +443,8 @@ func TestExptFailRetryExec_ExptStart_TargetBatchReadFailureIsObservableAndWriteF
 	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).Return([]*entity.ExptItemResult{{ItemID: itemID}}, nil)
 	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).Return(nil, nil)
 	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).Return(nil, nil)
-	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{targetID}).Return(nil, errors.New("target repo unavailable"))
+	dependencyErr := errors.New("target repo unavailable")
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{targetID}).Return(nil, dependencyErr)
 	metric.EXPECT().EmitRetryStartDependencyFailure(spaceID, "eval_target_record")
 
 	exec := &ExptFailRetryExec{
@@ -443,6 +454,7 @@ func TestExptFailRetryExec_ExptStart_TargetBatchReadFailureIsObservableAndWriteF
 	err := exec.ExptStart(context.Background(), &entity.ExptScheduleEvent{ExptID: exptID, ExptRunID: newRunID, SpaceID: spaceID}, buildMockExpt())
 	require.Error(t, err)
 	assert.True(t, isSchedulerInfraError(err))
+	assert.ErrorIs(t, err, dependencyErr)
 	assert.Contains(t, err.Error(), "eval_target_record")
 }
 
@@ -646,14 +658,32 @@ func TestRetryFailure_ExptStartThroughExecution_ReusesSuccessfulTargetAndOnlyFai
 	assert.Equal(t, runID, canonicalTurnResult.ExptRunID)
 	assert.Equal(t, targetRecordID, canonicalTurnResult.TargetResultID)
 
-	resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), exptID, itemID, spaceID, gomock.Any()).Return([]*entity.ExptTurnResult{canonicalTurnResult}, nil)
-	turnRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), spaceID, []int64{turnResultID}).Return([]*entity.ExptTurnEvaluatorResultRef{
-		{ExptTurnResultID: turnResultID, EvaluatorVersionID: evaluatorAVerID, EvaluatorResultID: evaluatorARecID},
-		{ExptTurnResultID: turnResultID, EvaluatorVersionID: evaluatorBVerID, EvaluatorResultID: evaluatorBRecID},
-	}, nil)
-	targetSvc.EXPECT().GetRecordByID(gomock.Any(), spaceID, targetRecordID).Return(targetRecord, nil).Times(2)
+	resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), exptID, itemID, spaceID, gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _, _, _ int64, _ *entity.Session) ([]*entity.ExptTurnResult, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure PreEval canonical snapshot must read from primary")
+			return []*entity.ExptTurnResult{canonicalTurnResult}, nil
+		},
+	)
+	turnRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), spaceID, []int64{turnResultID}).DoAndReturn(
+		func(ctx context.Context, _ int64, _ []int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure PreEval evaluator refs must read from primary")
+			return []*entity.ExptTurnEvaluatorResultRef{
+				{ExptTurnResultID: turnResultID, EvaluatorVersionID: evaluatorAVerID, EvaluatorResultID: evaluatorARecID},
+				{ExptTurnResultID: turnResultID, EvaluatorVersionID: evaluatorBVerID, EvaluatorResultID: evaluatorBRecID},
+			}, nil
+		},
+	)
+	var targetReadFromPrimary int
+	targetSvc.EXPECT().GetRecordByID(gomock.Any(), spaceID, targetRecordID).DoAndReturn(
+		func(ctx context.Context, _, _ int64) (*entity.EvalTargetRecord, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure target records must read from primary")
+			targetReadFromPrimary++
+			return targetRecord, nil
+		},
+	).Times(2)
 	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).DoAndReturn(
-		func(_ context.Context, ids []int64, _, _ bool) ([]*entity.EvaluatorRecord, error) {
+		func(ctx context.Context, ids []int64, _, _ bool) ([]*entity.EvaluatorRecord, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure PreEval evaluator records must read from primary")
 			assert.ElementsMatch(t, []int64{evaluatorARecID, evaluatorBRecID}, ids)
 			return []*entity.EvaluatorRecord{
 				evaluatorARecord,
@@ -677,7 +707,12 @@ func TestRetryFailure_ExptStartThroughExecution_ReusesSuccessfulTargetAndOnlyFai
 
 	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).Return(nil, nil)
 	configer.EXPECT().BuildEvalExt(gomock.Any(), spaceID, gomock.Any()).Return(nil)
-	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{evaluatorARecID}, false, false).Return([]*entity.EvaluatorRecord{evaluatorARecord}, nil)
+	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{evaluatorARecID}, false, false).DoAndReturn(
+		func(ctx context.Context, _ []int64, _, _ bool) ([]*entity.EvaluatorRecord, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure evaluator records must read from primary")
+			return []*entity.EvaluatorRecord{evaluatorARecord}, nil
+		},
+	)
 	executor := &ExptItemEvalCtxExecutor{
 		TurnResultRepo: turnRepo, ItemResultRepo: itemRepo, Configer: configer,
 		evalTargetService: targetSvc, evaluatorRecordService: evaluatorRecordSvc,
@@ -705,6 +740,7 @@ func TestRetryFailure_ExptStartThroughExecution_ReusesSuccessfulTargetAndOnlyFai
 	targetResult, err := turnEval.CallTarget(ctx, etec)
 	require.NoError(t, err)
 	assert.Equal(t, targetRecordID, targetResult.ID)
+	assert.Equal(t, 2, targetReadFromPrimary, "RetryFailure PreEval and execution target reads must use primary")
 	evaluatorResults, err := turnEval.CallEvaluators(ctx, etec, targetResult)
 	require.NoError(t, err)
 	require.Len(t, evaluatorResults, 2)
@@ -1251,6 +1287,10 @@ func TestShouldFillTargetResultFromRunLog_FailedTurnUsesFailureStage(t *testing.
 		{name: "evaluator failure preserves target", log: &entity.ExptTurnResultRunLog{
 			Status: entity.TurnRunState_Fail, TargetResultID: 1,
 			ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")),
+		}, want: true},
+		{name: "evaluator stage failure before record preserves target", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1,
+			ErrMsg: errno.SerializeErr(errno.NewEvaluatorStageErr("evaluator setup failed", nil)),
 		}, want: true},
 		{name: "evaluator refs prove target completed", log: &entity.ExptTurnResultRunLog{
 			Status: entity.TurnRunState_Fail, TargetResultID: 1,

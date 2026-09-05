@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -1017,6 +1018,9 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 }
 
 func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.Context, event *entity.ExptItemEvalEvent) (*entity.ExptItemEvalResult, error) {
+	if event.ExptRunMode == entity.EvaluationModeFailRetry {
+		ctx = contexts.WithCtxWriteDB(ctx)
+	}
 	turnRunLogs, err := e.exptTurnResultRepo.GetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
 	if err != nil {
 		return nil, err
@@ -1273,7 +1277,11 @@ func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRe
 	}
 
 	records, err := evalRecord.BatchGetEvaluatorRecord(ctx, ids, false, false)
-	if err != nil || len(records) == 0 {
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptFailRetry] load evaluator records failed, turn_result_id=%v, record_ids=%v, err=%v", tr.ID, ids, err)
+		return nil
+	}
+	if len(records) == 0 {
 		return nil
 	}
 	successIDs := make(map[int64]struct{}, len(records))
@@ -1345,7 +1353,8 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		return nil
 	}
 
-	itemTurnResults, err := e.resultSvc.GetExptItemTurnResults(ctx, eiec.Event.ExptID, eiec.Event.EvalSetItemID, eiec.Event.SpaceID, eiec.Event.Session)
+	snapshotCtx := contexts.WithCtxWriteDB(ctx)
+	itemTurnResults, err := e.resultSvc.GetExptItemTurnResults(snapshotCtx, eiec.Event.ExptID, eiec.Event.EvalSetItemID, eiec.Event.SpaceID, eiec.Event.Session)
 	if err != nil {
 		return err
 	}
@@ -1356,7 +1365,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 			turnResultIDs = append(turnResultIDs, tr.ID)
 		}
 	}
-	refs, err := e.exptTurnResultRepo.BatchGetTurnEvaluatorResultRef(ctx, eiec.Event.SpaceID, turnResultIDs)
+	refs, err := e.exptTurnResultRepo.BatchGetTurnEvaluatorResultRef(snapshotCtx, eiec.Event.SpaceID, turnResultIDs)
 	if err != nil {
 		return err
 	}
@@ -1381,7 +1390,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.ErrMsg = ""
 		// 跨空间共享: Target 记录随执行落来源空间(冻结 TargetSpaceID), 失败重试选引用时须按来源空间读;
 		// 用调用方空间读会得 nil → 误判 Target 非 Success → 清零 target_result_id 触发无谓重跑 Target。
-		targetID, evalIDs := failRetrySelectTurnRunLogRefs(ctx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), !shouldSkipTargetNode(eiec.Expt), tr, e.evalTargetService, e.evaluatorRecordSvc, refsByTurnResultID[tr.ID])
+		targetID, evalIDs := failRetrySelectTurnRunLogRefs(snapshotCtx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), !shouldSkipTargetNode(eiec.Expt), tr, e.evalTargetService, e.evaluatorRecordSvc, refsByTurnResultID[tr.ID])
 		runLog.TargetResultID = targetID
 		runLog.EvaluatorResultIds = evalIDs
 		turnRunLogDOs = append(turnRunLogDOs, runLog)
