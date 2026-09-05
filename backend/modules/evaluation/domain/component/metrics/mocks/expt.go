@@ -136,6 +136,18 @@ func (mr *MockExptMetricMockRecorder) EmitItemExecResult(spaceID, mode, isErr, r
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitItemExecResult", reflect.TypeOf((*MockExptMetric)(nil).EmitItemExecResult), spaceID, mode, isErr, retry, stable, code, startTime)
 }
 
+// EmitRetryStartDependencyFailure mocks base method.
+func (m *MockExptMetric) EmitRetryStartDependencyFailure(spaceID int64, dependency string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EmitRetryStartDependencyFailure", spaceID, dependency)
+}
+
+// EmitRetryStartDependencyFailure indicates an expected call of EmitRetryStartDependencyFailure.
+func (mr *MockExptMetricMockRecorder) EmitRetryStartDependencyFailure(spaceID, dependency any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitRetryStartDependencyFailure", reflect.TypeOf((*MockExptMetric)(nil).EmitRetryStartDependencyFailure), spaceID, dependency)
+}
+
 // EmitTurnExecEval mocks base method.
 func (m *MockExptMetric) EmitTurnExecEval(spaceID, mode int64) {
 	m.ctrl.T.Helper()

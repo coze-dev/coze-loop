@@ -26,6 +26,13 @@ func (e ExperimentMetricImpl) EmitExptExecResult(spaceID, typ, status int64, sta
 		metrics.Timer(int64(time.Since(start).Seconds()), metrics.WithSuffix(resultSuffix+latencySuffix)))
 }
 
+func (e ExperimentMetricImpl) EmitRetryStartDependencyFailure(spaceID int64, dependency string) {
+	e.retryStartDependencyFailureMtr.Emit([]metrics.T{
+		{Name: tagSpaceID, Value: strconv.FormatInt(spaceID, 10)},
+		{Name: tagDependency, Value: dependency},
+	}, metrics.Counter(1, metrics.WithSuffix(throughputSuffix)))
+}
+
 func (e ExperimentMetricImpl) EmitItemExecEval(spaceID, mode int64, cnt int) {
 	e.exptItemMtr.Emit([]metrics.T{
 		{Name: tagSpaceID, Value: strconv.FormatInt(spaceID, 10)},

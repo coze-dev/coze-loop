@@ -121,6 +121,25 @@ func (mr *MockIExptItemResultDAOMockRecorder) CountItemsByStatus(ctx, spaceID, e
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountItemsByStatus", reflect.TypeOf((*MockIExptItemResultDAO)(nil).CountItemsByStatus), varargs...)
 }
 
+// FillItemRunLogLogIDIfEmpty mocks base method.
+func (m *MockIExptItemResultDAO) FillItemRunLogLogIDIfEmpty(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDToLogID map[int64]string, opts ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, exptID, exptRunID, spaceID, itemIDToLogID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FillItemRunLogLogIDIfEmpty", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FillItemRunLogLogIDIfEmpty indicates an expected call of FillItemRunLogLogIDIfEmpty.
+func (mr *MockIExptItemResultDAOMockRecorder) FillItemRunLogLogIDIfEmpty(ctx, exptID, exptRunID, spaceID, itemIDToLogID any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, exptID, exptRunID, spaceID, itemIDToLogID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FillItemRunLogLogIDIfEmpty", reflect.TypeOf((*MockIExptItemResultDAO)(nil).FillItemRunLogLogIDIfEmpty), varargs...)
+}
+
 // GetItemIDListByExptID mocks base method.
 func (m *MockIExptItemResultDAO) GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) ([]int64, error) {
 	m.ctrl.T.Helper()

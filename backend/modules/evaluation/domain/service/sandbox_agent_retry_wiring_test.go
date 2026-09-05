@@ -11,7 +11,9 @@ import (
 
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	lockMocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
+	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	configmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
@@ -78,6 +80,22 @@ func TestNewSchedulerModeFactory_WithNotifier(t *testing.T) {
 	assert.Nil(t, f2.sandboxAgentNotifier)
 }
 
+func TestNewExptSchedulerSvc_InjectsFailRetryFactoryDependencies(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	metric := metricsmocks.NewMockExptMetric(ctrl)
+	factory := &DefaultSchedulerModeFactory{}
+
+	NewExptSchedulerSvc(
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		metric, nil, nil, nil, factory, targetSvc, nil, nil, nil,
+		component.NewNoopCentralReservationGuard(),
+	)
+
+	assert.Same(t, targetSvc, factory.evalTargetService)
+	assert.Same(t, metric, factory.metric)
+}
+
 // factory.NewSchedulerMode RetryAll 分派: 应把 notifier + resultSvc 注入到 exec。
 func TestFactoryDispatch_RetryAllInjectsNotifierAndResultSvc(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -118,16 +136,22 @@ func TestFactoryDispatch_RetryItemsInjectsNotifierAndResultSvc(t *testing.T) {
 	assert.Same(t, resultSvc, exec.resultSvc)
 }
 
-// factory.NewSchedulerMode FailRetry 分派: 传 resultSvc 但 notifier 不传给 FailRetry (不需要重置计时)。
-func TestFactoryDispatch_FailRetryInjectsResultSvcOnly(t *testing.T) {
+// factory.NewSchedulerMode FailRetry 分派: 透传 RetryFailure 启动规划所需依赖。
+func TestFactoryDispatch_FailRetryInjectsDependencies(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	notifier := svcmocks.NewMockISandboxAgentNotifier(ctrl)
 	resultSvc := svcmocks.NewMockExptResultService(ctrl)
+	itemRefRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
+	targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	metric := metricsmocks.NewMockExptMetric(ctrl)
 
 	f := &DefaultSchedulerModeFactory{
 		resultSvc:            resultSvc,
+		exptItemRefRepo:      itemRefRepo,
+		evalTargetService:    targetSvc,
+		metric:               metric,
 		sandboxAgentNotifier: notifier, // factory 有, 但 FailRetry 不接收
 	}
 	mode, err := f.NewSchedulerMode(entity.EvaluationModeFailRetry)
@@ -135,6 +159,9 @@ func TestFactoryDispatch_FailRetryInjectsResultSvcOnly(t *testing.T) {
 	exec, ok := mode.(*ExptFailRetryExec)
 	assert.True(t, ok)
 	assert.Same(t, resultSvc, exec.resultSvc)
+	assert.Same(t, itemRefRepo, exec.exptItemRefRepo)
+	assert.Same(t, targetSvc, exec.evalTargetService)
+	assert.Same(t, metric, exec.metric)
 }
 
 // RetryAll ExptStart 幂等短路: idem.Exist 返回 true 时直接返回 nil, 不触碰 notifier/resultSvc。

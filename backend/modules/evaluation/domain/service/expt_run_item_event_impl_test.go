@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	auditmocks "github.com/coze-dev/coze-loop/backend/infra/external/audit/mocks"
@@ -22,6 +23,7 @@ import (
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 )
 
 func TestNewExptRecordEvalService(t *testing.T) {
@@ -1059,6 +1061,39 @@ func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult(t *testing.T)
 	}
 }
 
+func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult_FailRetryReadsPrimary(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	turnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	event := &entity.ExptItemEvalEvent{
+		ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4,
+		ExptRunMode: entity.EvaluationModeFailRetry,
+	}
+
+	turnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID).DoAndReturn(
+		func(ctx context.Context, _, _, _, _ int64) ([]*entity.ExptTurnResultRunLog, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure current turn run-log must read from primary")
+			return []*entity.ExptTurnResultRunLog{{TurnID: 5}}, nil
+		},
+	)
+	itemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID).DoAndReturn(
+		func(ctx context.Context, _, _, _, _ int64) (*entity.ExptItemResultRunLog, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure current item run-log must read from primary")
+			return &entity.ExptItemResultRunLog{ItemID: event.EvalSetItemID}, nil
+		},
+	)
+
+	service := &ExptItemEventEvalServiceImpl{
+		exptTurnResultRepo: turnResultRepo,
+		exptItemResultRepo: itemResultRepo,
+	}
+	got, err := service.GetExistExptRecordEvalResult(context.Background(), event)
+
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	require.Contains(t, got.TurnResultRunLogs, int64(5))
+}
+
 func TestNewRecordEvalMode(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1262,6 +1297,7 @@ func TestExptRecordEvalModeFailRetry_PreEval(t *testing.T) {
 	mockResultSvc := svcmocks.NewMockExptResultService(ctrl)
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	mode := &ExptRecordEvalModeFailRetry{
 		resultSvc:          mockResultSvc,
@@ -1573,7 +1609,7 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			},
 		},
 		{
-			name:    "TargetResultID == 0, with evaluator records -> returns 0 and pruned results",
+			name:    "no target with evaluator records -> returns 0 and pruned results",
 			spaceID: 1,
 			tr: &entity.ExptTurnResult{
 				TargetResultID: 0,
@@ -1613,8 +1649,19 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			evalTarget := tt.setupEvalTarget(ctrl)
 			evalRecord := tt.setupEvalRecord(ctrl)
 
+			targetRequired := tt.tr != nil && tt.tr.TargetResultID > 0
+			var refs []*entity.ExptTurnEvaluatorResultRef
+			if tt.wantEvalResults != nil {
+				for versionID, recordID := range tt.tr.EvaluatorResults.EvalVerIDToResID {
+					refs = append(refs, &entity.ExptTurnEvaluatorResultRef{
+						ExptTurnResultID:   tt.tr.ID,
+						EvaluatorVersionID: versionID,
+						EvaluatorResultID:  recordID,
+					})
+				}
+			}
 			gotTargetID, gotEvalResults := failRetrySelectTurnRunLogRefs(
-				context.Background(), tt.spaceID, tt.tr, evalTarget, evalRecord,
+				context.Background(), tt.spaceID, targetRequired, tt.tr, evalTarget, evalRecord, refs,
 			)
 			assert.Equal(t, tt.wantTargetID, gotTargetID)
 			assert.Equal(t, tt.wantEvalResults, gotEvalResults)

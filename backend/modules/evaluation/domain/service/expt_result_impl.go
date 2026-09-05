@@ -557,7 +557,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 					turnLogIDByItemTurn[noRunKey] = trl.LogID
 				}
 			}
-			if trl.TargetResultID > 0 {
+			if shouldFillTargetResultFromRunLog(trl) {
 				targetResultIDByRunItemTurn[k] = trl.TargetResultID
 			}
 		}
@@ -2006,7 +2006,7 @@ func (e *ExptResultBuilder) fillProcessingTargetResultID(ctx context.Context) er
 			return err
 		}
 		for _, turnRunLog := range turnRunLogs {
-			if turnRunLog == nil || turnRunLog.TargetResultID == 0 {
+			if !shouldFillTargetResultFromRunLog(turnRunLog) {
 				continue
 			}
 			targetResultIDByRunItemTurn[runItemTurnKey{
@@ -2028,6 +2028,19 @@ func (e *ExptResultBuilder) fillProcessingTargetResultID(ctx context.Context) er
 	}
 
 	return nil
+}
+
+func shouldFillTargetResultFromRunLog(runLog *entity.ExptTurnResultRunLog) bool {
+	if runLog == nil || runLog.TargetResultID <= 0 {
+		return false
+	}
+	// Only an explicit target-stage error proves this record should stay hidden. Other terminal
+	// failures may still retain a target record so users can inspect its execution details.
+	persistedErr := errno.DeserializeErr([]byte(runLog.ErrMsg))
+	if isTargetFailure, _ := errno.ParseTargetResultErr(persistedErr); isTargetFailure {
+		return false
+	}
+	return true
 }
 
 func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {
@@ -2573,7 +2586,8 @@ func (e *ExptResultBuilder) getTurnSystemInfo(ctx context.Context, itemID, turnI
 	}
 
 	if len(turnResult.ErrMsg) > 0 {
-		// 仅吐出评估器和评估对象之外的error
+		// 仅吐出未落在评估器/评测对象 record 上的 TurnOther 错误；
+		// evaluator record 创建前的编排失败也归入该类，确保错误详情仍可见。
 		ok, errMsg := errno.ParseTurnOtherErr(errno.DeserializeErr([]byte(turnResult.ErrMsg)))
 		if ok {
 			systemInfo.Error = &entity.RunError{

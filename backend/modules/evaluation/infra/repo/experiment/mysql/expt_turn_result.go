@@ -90,6 +90,9 @@ func (dao *ExptTurnResultDAOImpl) UpdateTurnResults(ctx context.Context, exptID 
 
 func (dao *ExptTurnResultDAOImpl) ScanTurnResults(ctx context.Context, exptID int64, status []int32, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResult, int64, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	turnResult := query.Use(db).ExptTurnResult
 	conds := []gen.Condition{
 		turnResult.SpaceID.Eq(spaceID),
@@ -225,6 +228,9 @@ func (dao *ExptTurnResultDAOImpl) SaveTurnRunLogs(ctx context.Context, runLogs [
 
 func (dao *ExptTurnResultDAOImpl) GetItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResult, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	tr := query.Use(db).ExptTurnResult
 	found, err := tr.WithContext(ctx).
 		Where(
@@ -240,6 +246,9 @@ func (dao *ExptTurnResultDAOImpl) GetItemTurnResults(ctx context.Context, exptID
 
 func (dao *ExptTurnResultDAOImpl) GetItemTurnRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResultRunLog, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	runLog := query.Use(db).ExptTurnResultRunLog
 	found, err := runLog.WithContext(ctx).
 		Where(
@@ -256,6 +265,9 @@ func (dao *ExptTurnResultDAOImpl) GetItemTurnRunLogs(ctx context.Context, exptID
 
 func (dao *ExptTurnResultDAOImpl) MGetItemTurnRunLogs(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResultRunLog, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	runLog := query.Use(db).ExptTurnResultRunLog
 	found, err := runLog.WithContext(ctx).
 		Where(

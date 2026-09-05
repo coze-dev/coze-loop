@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -1017,6 +1018,9 @@ func (e *ExptItemEventEvalServiceImpl) BuildExptRecordEvalCtx(ctx context.Contex
 }
 
 func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.Context, event *entity.ExptItemEvalEvent) (*entity.ExptItemEvalResult, error) {
+	if event.ExptRunMode == entity.EvaluationModeFailRetry {
+		ctx = contexts.WithCtxWriteDB(ctx)
+	}
 	turnRunLogs, err := e.exptTurnResultRepo.GetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
 	if err != nil {
 		return nil, err
@@ -1163,24 +1167,76 @@ func (e *ExptRecordEvalModeSubmit) PostEval(ctx context.Context, eiec *entity.Ex
 func failRetrySelectTurnRunLogRefs(
 	ctx context.Context,
 	spaceID int64,
+	targetRequired bool,
 	tr *entity.ExptTurnResult,
 	evalTarget IEvalTargetService,
 	evalRecord EvaluatorRecordService,
+	refs []*entity.ExptTurnEvaluatorResultRef,
 ) (targetResultID int64, evalResults *entity.EvaluatorResults) {
 	if tr == nil {
 		return 0, nil
 	}
-	if tr.TargetResultID > 0 {
-		if evalTarget == nil {
-			return 0, nil
-		}
-		targetRec, err := evalTarget.GetRecordByID(ctx, spaceID, tr.TargetResultID)
-		if err != nil || targetRec == nil || gptr.Indirect(targetRec.Status) != entity.EvalTargetRunStatusSuccess {
-			return 0, nil
-		}
-		return tr.TargetResultID, pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr)
+	filterAmbiguousLegacyEvaluatorResults(tr, refs)
+	if !targetRequired {
+		return 0, pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr)
 	}
-	return 0, pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr)
+	if tr.TargetResultID <= 0 {
+		return 0, nil
+	}
+	if evalTarget == nil {
+		return 0, nil
+	}
+	targetRec, err := evalTarget.GetRecordByID(ctx, spaceID, tr.TargetResultID)
+	if err != nil || targetRec == nil || gptr.Indirect(targetRec.Status) != entity.EvalTargetRunStatusSuccess {
+		return 0, nil
+	}
+	return tr.TargetResultID, pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr)
+}
+
+func filterAmbiguousLegacyEvaluatorResults(tr *entity.ExptTurnResult, refs []*entity.ExptTurnEvaluatorResultRef) {
+	if tr == nil || tr.EvaluatorResults == nil || len(tr.EvaluatorResults.EvalVerIDToResID) == 0 {
+		return
+	}
+	if len(refs) == 0 {
+		tr.EvaluatorResults = nil
+		return
+	}
+
+	type refIdentity struct {
+		count     int
+		recordID  int64
+		ambiguous bool
+	}
+	byVersion := make(map[int64]*refIdentity)
+	for _, ref := range refs {
+		if ref == nil || ref.ExptTurnResultID != tr.ID {
+			continue
+		}
+		identity := byVersion[ref.EvaluatorVersionID]
+		if identity == nil {
+			identity = &refIdentity{}
+			byVersion[ref.EvaluatorVersionID] = identity
+		}
+		identity.count++
+		identity.recordID = ref.EvaluatorResultID
+		if ref.SourceType == int32(entity.EvaluatorRecordSourceTypeInline) || ref.Alias != "" {
+			identity.ambiguous = true
+		}
+	}
+
+	filtered := make(map[int64]int64)
+	for versionID, recordID := range tr.EvaluatorResults.EvalVerIDToResID {
+		identity := byVersion[versionID]
+		if identity == nil || identity.count != 1 || identity.ambiguous || identity.recordID != recordID {
+			continue
+		}
+		filtered[versionID] = recordID
+	}
+	if len(filtered) == 0 {
+		tr.EvaluatorResults = nil
+		return
+	}
+	tr.EvaluatorResults = &entity.EvaluatorResults{EvalVerIDToResID: filtered}
 }
 
 func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRecordService, tr *entity.ExptTurnResult) *entity.EvaluatorResults {
@@ -1221,7 +1277,11 @@ func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRe
 	}
 
 	records, err := evalRecord.BatchGetEvaluatorRecord(ctx, ids, false, false)
-	if err != nil || len(records) == 0 {
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptFailRetry] load evaluator records failed, turn_result_id=%v, record_ids=%v, err=%v", tr.ID, ids, err)
+		return nil
+	}
+	if len(records) == 0 {
 		return nil
 	}
 	successIDs := make(map[int64]struct{}, len(records))
@@ -1231,7 +1291,9 @@ func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRe
 			continue
 		}
 		successIDs[rec.ID] = struct{}{}
-		successVerID2RecID[rec.EvaluatorVersionID] = rec.ID
+		if rec.SourceType != entity.EvaluatorRecordSourceTypeInline && rec.Alias == "" {
+			successVerID2RecID[rec.EvaluatorVersionID] = rec.ID
+		}
 	}
 	if len(successIDs) == 0 {
 		return nil
@@ -1291,9 +1353,27 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		return nil
 	}
 
-	itemTurnResults, err := e.resultSvc.GetExptItemTurnResults(ctx, eiec.Event.ExptID, eiec.Event.EvalSetItemID, eiec.Event.SpaceID, eiec.Event.Session)
+	snapshotCtx := contexts.WithCtxWriteDB(ctx)
+	itemTurnResults, err := e.resultSvc.GetExptItemTurnResults(snapshotCtx, eiec.Event.ExptID, eiec.Event.EvalSetItemID, eiec.Event.SpaceID, eiec.Event.Session)
 	if err != nil {
 		return err
+	}
+
+	turnResultIDs := make([]int64, 0, len(itemTurnResults))
+	for _, tr := range itemTurnResults {
+		if tr != nil {
+			turnResultIDs = append(turnResultIDs, tr.ID)
+		}
+	}
+	refs, err := e.exptTurnResultRepo.BatchGetTurnEvaluatorResultRef(snapshotCtx, eiec.Event.SpaceID, turnResultIDs)
+	if err != nil {
+		return err
+	}
+	refsByTurnResultID := make(map[int64][]*entity.ExptTurnEvaluatorResultRef)
+	for _, ref := range refs {
+		if ref != nil {
+			refsByTurnResultID[ref.ExptTurnResultID] = append(refsByTurnResultID[ref.ExptTurnResultID], ref)
+		}
 	}
 
 	ids, err := e.idgen.GenMultiIDs(ctx, len(itemTurnResults))
@@ -1310,7 +1390,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.ErrMsg = ""
 		// 跨空间共享: Target 记录随执行落来源空间(冻结 TargetSpaceID), 失败重试选引用时须按来源空间读;
 		// 用调用方空间读会得 nil → 误判 Target 非 Success → 清零 target_result_id 触发无谓重跑 Target。
-		targetID, evalIDs := failRetrySelectTurnRunLogRefs(ctx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), tr, e.evalTargetService, e.evaluatorRecordSvc)
+		targetID, evalIDs := failRetrySelectTurnRunLogRefs(snapshotCtx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), !shouldSkipTargetNode(eiec.Expt), tr, e.evalTargetService, e.evaluatorRecordSvc, refsByTurnResultID[tr.ID])
 		runLog.TargetResultID = targetID
 		runLog.EvaluatorResultIds = evalIDs
 		turnRunLogDOs = append(turnRunLogDOs, runLog)

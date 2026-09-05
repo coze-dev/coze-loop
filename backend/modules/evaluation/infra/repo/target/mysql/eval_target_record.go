@@ -76,6 +76,9 @@ func (e *EvalTargetRecordDAOImpl) Create(ctx context.Context, record *model.Targ
 
 func (e *EvalTargetRecordDAOImpl) GetByIDAndSpaceID(ctx context.Context, recordID, spaceID int64) (*model.TargetRecord, error) {
 	q := e.query
+	if contexts.CtxWriteDB(ctx) {
+		q = q.WriteDB()
+	}
 	first, err := q.WithContext(ctx).TargetRecord.Where(q.TargetRecord.SpaceID.Eq(spaceID), q.TargetRecord.ID.Eq(recordID), q.TargetRecord.DeletedAt.IsNull()).First()
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {

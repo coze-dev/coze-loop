@@ -48,6 +48,14 @@ func NewTargetResultErr(msg string) error {
 	}
 }
 
+func ParseTargetResultErr(err error) (bool, string) {
+	ei, ok := ParseErrImpl(err)
+	if ok && ei.Code == targetResultErrCode {
+		return true, ei.ErrMsg()
+	}
+	return false, ""
+}
+
 func WrapEvaluatorResultErr(err error) error {
 	return &ErrImpl{
 		Code:  evaluatorResultErrCode,
@@ -60,6 +68,14 @@ func NewEvaluatorResultErr(msg string) error {
 		Code: evaluatorResultErrCode,
 		Msg:  msg,
 	}
+}
+
+func ParseEvaluatorResultErr(err error) (bool, string) {
+	ei, ok := ParseErrImpl(err)
+	if ok && ei.Code == evaluatorResultErrCode {
+		return true, ei.ErrMsg()
+	}
+	return false, ""
 }
 
 func WrapTurnOtherErr(err error) error {
