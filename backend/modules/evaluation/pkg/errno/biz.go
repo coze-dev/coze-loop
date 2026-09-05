@@ -8,7 +8,6 @@ const (
 	targetResultErrCode    = 11
 	evaluatorResultErrCode = 12
 	turnOtherErrCode       = 13
-	evaluatorStageErrCode  = 14
 
 	ServiceInternalErrMsg = "Server internal error"
 )
@@ -74,22 +73,6 @@ func NewEvaluatorResultErr(msg string) error {
 func ParseEvaluatorResultErr(err error) (bool, string) {
 	ei, ok := ParseErrImpl(err)
 	if ok && ei.Code == evaluatorResultErrCode {
-		return true, ei.ErrMsg()
-	}
-	return false, ""
-}
-
-func NewEvaluatorStageErr(msg string, cause error) error {
-	return &ErrImpl{
-		Code:  evaluatorStageErrCode,
-		Msg:   msg,
-		Cause: cause,
-	}
-}
-
-func ParseEvaluatorStageErr(err error) (bool, string) {
-	ei, ok := ParseErrImpl(err)
-	if ok && ei.Code == evaluatorStageErrCode {
 		return true, ei.ErrMsg()
 	}
 	return false, ""

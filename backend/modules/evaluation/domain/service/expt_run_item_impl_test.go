@@ -673,7 +673,7 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		assert.Error(t, result.GetEvalErr())
 	})
 
-	t.Run("target成功后评估器调用错误保留评估器阶段", func(t *testing.T) {
+	t.Run("target成功后评估器调用错误沿用TurnOther错误码", func(t *testing.T) {
 		turnResultLog := &entity.ExptTurnResultRunLog{ID: 1, TurnID: 1}
 		var savedRunLog *entity.ExptTurnResultRunLog
 		targetStatus := entity.EvalTargetRunStatusSuccess
@@ -698,8 +698,8 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 			require.Len(t, logs, 1)
 			assert.Equal(t, int64(10), logs[0].TargetResultID)
 			assert.Equal(t, entity.TurnRunState_Fail, logs[0].Status)
-			isEvaluatorStageFailure, errMsg := errno.ParseEvaluatorStageErr(errno.DeserializeErr([]byte(logs[0].ErrMsg)))
-			assert.True(t, isEvaluatorStageFailure)
+			isTurnOther, errMsg := errno.ParseTurnOtherErr(errno.DeserializeErr([]byte(logs[0].ErrMsg)))
+			assert.True(t, isTurnOther)
 			assert.Equal(t, "evaluator temporarily unavailable", errMsg)
 			savedRunLog = logs[0]
 			return nil
@@ -724,7 +724,7 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		assert.Equal(t, "evaluator temporarily unavailable", *systemInfo.Error.Detail)
 	})
 
-	t.Run("target成功后自定义评估器错误保留原始文案", func(t *testing.T) {
+	t.Run("target成功后自定义评估器错误沿用TurnOther错误码并保留原始文案", func(t *testing.T) {
 		turnResultLog := &entity.ExptTurnResultRunLog{ID: 1, TurnID: 1}
 		targetStatus := entity.EvalTargetRunStatusSuccess
 		etec := &entity.ExptTurnEvalCtx{
@@ -745,8 +745,8 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		}
 		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
 			require.Len(t, logs, 1)
-			isEvaluatorStageFailure, errMsg := errno.ParseEvaluatorStageErr(errno.DeserializeErr([]byte(logs[0].ErrMsg)))
-			assert.True(t, isEvaluatorStageFailure)
+			isTurnOther, errMsg := errno.ParseTurnOtherErr(errno.DeserializeErr([]byte(logs[0].ErrMsg)))
+			assert.True(t, isTurnOther)
 			assert.Contains(t, errMsg, "custom rpc evaluator failed")
 			return nil
 		})
@@ -794,8 +794,6 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		localTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
 			require.Len(t, logs, 1)
 			persistedErr := errno.DeserializeErr([]byte(logs[0].ErrMsg))
-			isEvaluatorStageFailure, _ := errno.ParseEvaluatorStageErr(persistedErr)
-			assert.False(t, isEvaluatorStageFailure)
 			isEvaluatorRecordFailure, _ := errno.ParseEvaluatorResultErr(persistedErr)
 			assert.False(t, isEvaluatorRecordFailure)
 			isTurnOther, errMsg := errno.ParseTurnOtherErr(persistedErr)
@@ -811,7 +809,7 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		assert.Contains(t, errMsg, "evaluator orchestration failed")
 	})
 
-	t.Run("target未成功时不标记评估器阶段错误", func(t *testing.T) {
+	t.Run("target未成功且缺少对象错误详情时沿用TurnOther错误码", func(t *testing.T) {
 		turnResultLog := &entity.ExptTurnResultRunLog{ID: 1, TurnID: 1}
 		targetStatus := entity.EvalTargetRunStatusFail
 		etec := &entity.ExptTurnEvalCtx{
@@ -833,8 +831,6 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		}}})
 		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
 			require.Len(t, logs, 1)
-			isEvaluatorStageFailure, _ := errno.ParseEvaluatorStageErr(errno.DeserializeErr([]byte(logs[0].ErrMsg)))
-			assert.False(t, isEvaluatorStageFailure)
 			isTurnOther, _ := errno.ParseTurnOtherErr(errno.DeserializeErr([]byte(logs[0].ErrMsg)))
 			assert.True(t, isTurnOther)
 			return nil

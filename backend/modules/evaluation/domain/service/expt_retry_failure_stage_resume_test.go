@@ -752,6 +752,298 @@ func TestRetryFailure_ExptStartThroughExecution_ReusesSuccessfulTargetAndOnlyFai
 	assert.Equal(t, evaluatorBVerID, byID[newEvaluatorBID].EvaluatorVersionID)
 }
 
+// Physical multi-turn items are not currently reachable through the EvaluationSet
+// experiment adapter. This test protects the service-chain behavior for when that
+// adapter eventually exposes multiple turns; it is not PPE end-to-end coverage.
+func TestRetryFailure_MultiTurnItem_ConvergesAllTurnsAndOnlyRerunsFailedStage(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	const (
+		exptID         = int64(1)
+		oldRunID       = int64(2)
+		newRunID       = int64(3)
+		spaceID        = int64(4)
+		itemID         = int64(10)
+		turn1ID        = int64(20)
+		turn2ID        = int64(21)
+		turn1ResultID  = int64(30)
+		turn2ResultID  = int64(31)
+		turn1TargetID  = int64(40)
+		turn2TargetID  = int64(41)
+		evaluatorVerID = int64(50)
+		turn1EvalRecID = int64(60)
+		turn2OldEvalID = int64(61)
+		turn2NewEvalID = int64(62)
+		itemRunLogID   = int64(70)
+		turn1RunLogID  = int64(71)
+		turn2RunLogID  = int64(72)
+		turn1RefID     = int64(80)
+		turn2RefID     = int64(81)
+	)
+
+	ctx := context.Background()
+	expt := buildRetryFailureSingleSetExpt(spaceID, evaluatorVerID)
+	turn1 := &entity.Turn{ID: turn1ID, ItemID: itemID}
+	turn2 := &entity.Turn{ID: turn2ID, ItemID: itemID}
+	evalSetItem := &entity.EvaluationSetItem{
+		ItemID: itemID,
+		Turns:  []*entity.Turn{turn1, turn2},
+		BaseInfo: &entity.BaseInfo{
+			CreatedAt: gptr.Of(int64(1)),
+		},
+	}
+	canonicalTurns := []*entity.ExptTurnResult{
+		{
+			ID: turn1ResultID, ExptID: exptID, ExptRunID: oldRunID, ItemID: itemID, TurnID: turn1ID,
+			Status: int32(entity.TurnRunState_Success), TargetResultID: turn1TargetID, LogID: "turn-1-log",
+			EvaluatorResults: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{evaluatorVerID: turn1EvalRecID}},
+		},
+		{
+			ID: turn2ResultID, ExptID: exptID, ExptRunID: oldRunID, ItemID: itemID, TurnID: turn2ID,
+			Status: int32(entity.TurnRunState_Fail), TargetResultID: turn2TargetID, LogID: "turn-2-log",
+			ErrMsg:           errno.SerializeErr(errno.NewTurnOtherErr("evaluator temporarily unavailable", nil)),
+			EvaluatorResults: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{evaluatorVerID: turn2OldEvalID}},
+		},
+	}
+	turnByID := map[int64]*entity.ExptTurnResult{turn1ID: canonicalTurns[0], turn2ID: canonicalTurns[1]}
+	targetStatus := entity.EvalTargetRunStatusSuccess
+	targetRecords := map[int64]*entity.EvalTargetRecord{
+		turn1TargetID: {
+			ID: turn1TargetID, Status: &targetStatus,
+			EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
+		},
+		turn2TargetID: {
+			ID: turn2TargetID, Status: &targetStatus,
+			EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
+		},
+	}
+	targetIDByTurnID := map[int64]int64{
+		turn1ID: turn1TargetID,
+		turn2ID: turn2TargetID,
+	}
+	turn1EvalRecord := &entity.EvaluatorRecord{
+		ID: turn1EvalRecID, EvaluatorVersionID: evaluatorVerID, Status: entity.EvaluatorRunStatusSuccess,
+	}
+	turn2OldEvalRecord := &entity.EvaluatorRecord{
+		ID: turn2OldEvalID, EvaluatorVersionID: evaluatorVerID, Status: entity.EvaluatorRunStatusFail,
+	}
+	turn2NewEvalRecord := &entity.EvaluatorRecord{
+		ID: turn2NewEvalID, EvaluatorVersionID: evaluatorVerID, Status: entity.EvaluatorRunStatusSuccess,
+	}
+
+	itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	turnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	statsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+	exptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	idem := idemmocks.NewMockIdempotentService(ctrl)
+	configer := configmocks.NewMockIConfiger(ctrl)
+	idgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	evaluatorRecordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
+	resultSvc := svcmocks.NewMockExptResultService(ctrl)
+
+	var itemRunLog *entity.ExptItemResultRunLog
+	turnRunLogs := make(map[int64]*entity.ExptTurnResultRunLog, 2)
+
+	idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
+	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(0), int64(50), spaceID).
+		Return([]*entity.ExptTurnResult{canonicalTurns[1]}, turn2ResultID, nil)
+	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), turn2ResultID, int64(50), spaceID).
+		Return(nil, int64(0), nil)
+	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).
+		Return([]*entity.ExptItemResult{{ItemID: itemID, Status: entity.ItemRunState_Fail, LogID: "item-log"}}, nil)
+	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).Return(nil, nil)
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, newRunID, []int64{itemID}, spaceID).Return(nil, nil)
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{turn2TargetID}).
+		Return([]*entity.EvalTargetRecord{targetRecords[turn2TargetID]}, nil)
+	idgen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{itemRunLogID}, nil)
+	itemRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, logs []*entity.ExptItemResultRunLog) error {
+		require.Len(t, logs, 1)
+		itemRunLog = logs[0]
+		assert.Equal(t, "item-log", itemRunLog.LogID)
+		return nil
+	})
+	itemRepo.EXPECT().FillItemRunLogLogIDIfEmpty(gomock.Any(), exptID, newRunID, spaceID, map[int64]string{itemID: "item-log"}).Return(nil)
+	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, []int64{itemID}, gomock.Any()).Return(nil)
+	turnRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, []*entity.ItemTurnID{{ItemID: itemID, TurnID: turn2ID}}, spaceID, failRetryTurnUpdateMatcher{
+		wantRunID: newRunID,
+	}).DoAndReturn(
+		func(_ context.Context, _ int64, _ []*entity.ItemTurnID, _ int64, fields map[string]any) error {
+			canonicalTurns[1].Status = fields["status"].(int32)
+			canonicalTurns[1].ExptRunID = fields["expt_run_id"].(int64)
+			return nil
+		},
+	)
+	statsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{FailItemCnt: 1}, nil)
+	statsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
+	exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+	configer.EXPECT().GetExptExecConf(gomock.Any(), spaceID).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1})
+	idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	startExec := &ExptFailRetryExec{
+		exptItemResultRepo: itemRepo, exptTurnResultRepo: turnRepo, exptStatsRepo: statsRepo,
+		idgenerator: idgen, exptRepo: exptRepo, idem: idem, configer: configer, evalTargetService: targetSvc,
+	}
+	require.NoError(t, startExec.ExptStart(ctx, &entity.ExptScheduleEvent{
+		ExptID: exptID, ExptRunID: newRunID, SpaceID: spaceID,
+	}, expt))
+	assert.Equal(t, oldRunID, canonicalTurns[0].ExptRunID, "successful sibling converges only when the item is recorded")
+	assert.Equal(t, newRunID, canonicalTurns[1].ExptRunID)
+	assert.Equal(t, turn2TargetID, canonicalTurns[1].TargetResultID)
+	require.NotNil(t, itemRunLog)
+
+	eiec := &entity.ExptItemEvalCtx{
+		Event: &entity.ExptItemEvalEvent{
+			ExptID: exptID, ExptRunID: newRunID, SpaceID: spaceID, EvalSetItemID: itemID,
+			ExptRunMode: entity.EvaluationModeFailRetry, Session: &entity.Session{UserID: "u"},
+		},
+		Expt: expt, EvalSetItem: evalSetItem,
+		ExistItemEvalResult: &entity.ExptItemEvalResult{
+			ItemResultRunLog:  itemRunLog,
+			TurnResultRunLogs: make(map[int64]*entity.ExptTurnResultRunLog),
+		},
+	}
+	resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), exptID, itemID, spaceID, gomock.Any()).
+		Return(canonicalTurns, nil)
+	turnRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), spaceID, []int64{turn1ResultID, turn2ResultID}).
+		Return([]*entity.ExptTurnEvaluatorResultRef{
+			{ExptTurnResultID: turn1ResultID, EvaluatorVersionID: evaluatorVerID, EvaluatorResultID: turn1EvalRecID},
+			{ExptTurnResultID: turn2ResultID, EvaluatorVersionID: evaluatorVerID, EvaluatorResultID: turn2OldEvalID},
+		}, nil)
+	for _, targetID := range []int64{turn1TargetID, turn2TargetID} {
+		targetSvc.EXPECT().GetRecordByID(gomock.Any(), spaceID, targetID).Return(targetRecords[targetID], nil).Times(2)
+	}
+	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{turn1EvalRecID}, false, false).
+		Return([]*entity.EvaluatorRecord{turn1EvalRecord}, nil)
+	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{turn2OldEvalID}, false, false).
+		Return([]*entity.EvaluatorRecord{turn2OldEvalRecord}, nil)
+	idgen.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{turn1RunLogID, turn2RunLogID}, nil)
+	turnRepo.EXPECT().BatchCreateNXRunLog(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
+		require.Len(t, logs, 2)
+		for _, log := range logs {
+			turnRunLogs[log.TurnID] = log
+		}
+		assert.Equal(t, turn1TargetID, turnRunLogs[turn1ID].TargetResultID)
+		assert.Equal(t, map[int64]int64{evaluatorVerID: turn1EvalRecID}, turnRunLogs[turn1ID].EvaluatorResultIds.EvalVerIDToResID)
+		assert.Equal(t, turn2TargetID, turnRunLogs[turn2ID].TargetResultID)
+		assert.Nil(t, turnRunLogs[turn2ID].EvaluatorResultIds)
+		return nil
+	})
+	preEval := &ExptRecordEvalModeFailRetry{
+		resultSvc: resultSvc, exptTurnResultRepo: turnRepo, idgen: idgen,
+		evalTargetService: targetSvc, evaluatorRecordSvc: evaluatorRecordSvc,
+	}
+	require.NoError(t, preEval.PreEval(ctx, eiec))
+
+	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).Return(nil, nil).Times(2)
+	configer.EXPECT().BuildEvalExt(gomock.Any(), spaceID, gomock.Any()).Return(nil).Times(2)
+	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{turn1EvalRecID}, false, false).
+		Return([]*entity.EvaluatorRecord{turn1EvalRecord}, nil).Times(1)
+
+	evaluatorSvc := svcmocks.NewMockEvaluatorService(ctrl)
+	benefitSvc := benefitmocks.NewMockIBenefitService(ctrl)
+	metric := metricsmocks.NewMockExptMetric(ctrl)
+	// Across two turns, exactly one benefit charge and one evaluator call proves
+	// the successful sibling is reused instead of being executed again.
+	benefitSvc.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil).Times(1)
+	evaluatorSvc.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, bool, error) {
+		assert.Equal(t, evaluatorVerID, req.EvaluatorVersionID)
+		return nil, false, nil
+	}).Times(1)
+	evaluatorSvc.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+		assert.Equal(t, evaluatorVerID, req.EvaluatorVersionID)
+		return turn2NewEvalRecord, nil
+	}).Times(1)
+	metric.EXPECT().EmitTurnExecEvaluatorResult(spaceID, false).Times(1)
+	turnEval := &DefaultExptTurnEvaluationImpl{
+		metric: metric, evalTargetService: targetSvc, evaluatorService: evaluatorSvc, benefitService: benefitSvc,
+		evaluatorRecordService: evaluatorRecordSvc,
+	}
+	executor := &ExptItemEvalCtxExecutor{
+		TurnResultRepo: turnRepo, ItemResultRepo: itemRepo, Configer: configer,
+		evalTargetService: targetSvc, evaluatorRecordService: evaluatorRecordSvc,
+	}
+	for _, turn := range evalSetItem.Turns {
+		etec, err := executor.buildExptTurnEvalCtx(ctx, turn, eiec, nil)
+		require.NoError(t, err)
+		targetResult, err := turnEval.CallTarget(ctx, etec)
+		require.NoError(t, err)
+		assert.Equal(t, targetIDByTurnID[turn.ID], targetResult.ID)
+		evaluatorResults, err := turnEval.CallEvaluators(ctx, etec, targetResult)
+		require.NoError(t, err)
+		result := &entity.ExptTurnRunResult{TargetResult: targetResult, EvaluatorResults: evaluatorResults}
+		turnRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
+			require.Len(t, logs, 1)
+			turnRunLogs[logs[0].TurnID] = logs[0]
+			return nil
+		})
+		require.NoError(t, executor.storeTurnRunResult(ctx, etec, result))
+	}
+	assert.Equal(t, turn1EvalRecID, turnRunLogs[turn1ID].EvaluatorResultIds.Registered[0].RecordID)
+	assert.Equal(t, turn2NewEvalID, turnRunLogs[turn2ID].EvaluatorResultIds.Registered[0].RecordID)
+
+	itemRunLog.Status = int32(entity.ItemRunState_Success)
+	itemRunLog.ResultState = int32(entity.ExptItemResultStateLogged)
+	itemRepo.EXPECT().GetItemRunLog(gomock.Any(), exptID, newRunID, itemID, spaceID).Return(itemRunLog, nil)
+	turnRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), exptID, newRunID, itemID, spaceID).DoAndReturn(
+		func(_ context.Context, _, _, _, _ int64) ([]*entity.ExptTurnResultRunLog, error) {
+			return []*entity.ExptTurnResultRunLog{turnRunLogs[turn1ID], turnRunLogs[turn2ID]}, nil
+		},
+	)
+	itemRepo.EXPECT().GetItemTurnResults(gomock.Any(), spaceID, exptID, itemID).Return(canonicalTurns, nil)
+	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).
+		Return([]*entity.ExptItemResult{{ItemID: itemID, Status: entity.ItemRunState_Processing}}, nil)
+	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{turn1EvalRecID}, false, false).
+		Return([]*entity.EvaluatorRecord{turn1EvalRecord}, nil).Times(1)
+	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{turn2NewEvalID}, false, false).
+		Return([]*entity.EvaluatorRecord{turn2NewEvalRecord}, nil).Times(1)
+	idgen.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{turn1RefID, turn2RefID}, nil)
+	turnRepo.EXPECT().CreateTurnEvaluatorRefs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, refs []*entity.ExptTurnEvaluatorResultRef) error {
+		require.Len(t, refs, 2)
+		byTurnResultID := make(map[int64]int64, len(refs))
+		for _, ref := range refs {
+			byTurnResultID[ref.ExptTurnResultID] = ref.EvaluatorResultID
+		}
+		assert.Equal(t, turn1EvalRecID, byTurnResultID[turn1ResultID])
+		assert.Equal(t, turn2NewEvalID, byTurnResultID[turn2ResultID])
+		return nil
+	})
+	turnRepo.EXPECT().SaveTurnResults(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, turns []*entity.ExptTurnResult) error {
+		require.Len(t, turns, 2)
+		for _, turn := range turns {
+			assert.Equal(t, newRunID, turn.ExptRunID)
+			assert.Equal(t, int32(entity.TurnRunState_Success), turn.Status)
+			assert.Empty(t, turn.ErrMsg)
+			assert.Equal(t, turnRunLogs[turn.TurnID].TargetResultID, turn.TargetResultID)
+			assert.Equal(t, turnRunLogs[turn.TurnID].LogID, turn.LogID)
+			assert.Same(t, turnByID[turn.TurnID], turn)
+		}
+		return nil
+	})
+	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, []int64{itemID}, gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ int64, _ int64, _ []int64, fields map[string]any) error {
+			assert.Equal(t, "item-log", fields["log_id"])
+			return nil
+		},
+	)
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), exptID, newRunID, []int64{itemID}, gomock.Any(), spaceID).Return(nil)
+	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), exptID, spaceID, gomock.Any()).Return(nil)
+
+	resultRecorder := ExptResultServiceImpl{
+		ExptItemResultRepo: itemRepo, ExptTurnResultRepo: turnRepo, ExptStatsRepo: statsRepo,
+		evaluatorRecordService: evaluatorRecordSvc, idgen: idgen,
+		scoreCalculator: NewEvaluatorScoreCalculator(nil, nil),
+	}
+	refs, err := resultRecorder.RecordItemRunLogs(ctx, exptID, newRunID, itemID, spaceID, expt)
+	require.NoError(t, err)
+	require.Len(t, refs, 2)
+	assert.Equal(t, newRunID, canonicalTurns[0].ExptRunID)
+	assert.Equal(t, newRunID, canonicalTurns[1].ExptRunID)
+	assert.Equal(t, turn1TargetID, canonicalTurns[0].TargetResultID)
+	assert.Equal(t, turn2TargetID, canonicalTurns[1].TargetResultID)
+	assert.Equal(t, "turn-1-log", canonicalTurns[0].LogID)
+	assert.Equal(t, "turn-2-log", canonicalTurns[1].LogID)
+}
+
 func TestRetryFailure_PreEvalThroughExecution_FailedTargetRerunsTargetAndAllEvaluators(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	const (

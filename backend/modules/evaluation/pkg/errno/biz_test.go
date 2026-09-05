@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 )
@@ -119,28 +118,6 @@ func TestParseEvaluatorResultErr(t *testing.T) {
 		assert.Empty(t, msg)
 
 		ok, msg = ParseEvaluatorResultErr(errors.New("plain"))
-		assert.False(t, ok)
-		assert.Empty(t, msg)
-	})
-}
-
-func TestParseEvaluatorStageErr(t *testing.T) {
-	t.Run("matches evaluator stage error after persistence round trip", func(t *testing.T) {
-		err := DeserializeErr(conv.UnsafeStringToBytes(SerializeErr(NewEvaluatorStageErr("failed before record", errors.New("raw cause")))))
-		ok, msg := ParseEvaluatorStageErr(err)
-		assert.True(t, ok)
-		assert.Equal(t, "failed before record", msg)
-		ei, parsed := ParseErrImpl(err)
-		require.True(t, parsed)
-		assert.Contains(t, ei.CauseMsg(), "raw cause")
-	})
-
-	t.Run("does not match evaluator record or target errors", func(t *testing.T) {
-		ok, msg := ParseEvaluatorStageErr(NewEvaluatorResultErr("evaluator failed"))
-		assert.False(t, ok)
-		assert.Empty(t, msg)
-
-		ok, msg = ParseEvaluatorStageErr(NewTargetResultErr("target failed"))
 		assert.False(t, ok)
 		assert.Empty(t, msg)
 	})

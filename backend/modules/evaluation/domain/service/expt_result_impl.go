@@ -2586,13 +2586,8 @@ func (e *ExptResultBuilder) getTurnSystemInfo(ctx context.Context, itemID, turnI
 	}
 
 	if len(turnResult.ErrMsg) > 0 {
-		// Evaluator-result errors live on evaluator records. Evaluator-stage errors happen
-		// before a failed record exists, so keep their actionable message visible here.
-		persistedErr := errno.DeserializeErr([]byte(turnResult.ErrMsg))
-		ok, errMsg := errno.ParseTurnOtherErr(persistedErr)
-		if isEvaluatorStageFailure, evaluatorErrMsg := errno.ParseEvaluatorStageErr(persistedErr); isEvaluatorStageFailure {
-			ok, errMsg = true, evaluatorErrMsg
-		}
+		// 仅吐出评估器和评估对象之外的error
+		ok, errMsg := errno.ParseTurnOtherErr(errno.DeserializeErr([]byte(turnResult.ErrMsg)))
 		if ok {
 			systemInfo.Error = &entity.RunError{
 				Detail: gptr.Of(errMsg),

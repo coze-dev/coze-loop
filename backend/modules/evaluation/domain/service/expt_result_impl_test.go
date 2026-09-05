@@ -4956,9 +4956,9 @@ func TestShouldFillTargetResultFromRunLog_OnlyHidesExplicitTargetFailure(t *test
 			Status: entity.TurnRunState_Fail, TargetResultID: 1,
 			ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")),
 		}, want: true},
-		{name: "evaluator stage failure preserves target", log: &entity.ExptTurnResultRunLog{
+		{name: "turn other evaluator failure preserves target", log: &entity.ExptTurnResultRunLog{
 			Status: entity.TurnRunState_Fail, TargetResultID: 1,
-			ErrMsg: errno.SerializeErr(errno.NewEvaluatorStageErr("evaluator setup failed", nil)),
+			ErrMsg: errno.SerializeErr(errno.NewTurnOtherErr("evaluator setup failed", nil)),
 		}, want: true},
 		{name: "unknown failure preserves current run target", log: &entity.ExptTurnResultRunLog{
 			Status: entity.TurnRunState_Fail, TargetResultID: 1, ErrMsg: "unknown",
@@ -7475,7 +7475,7 @@ func TestExptResultBuilder_getTurnSystemInfo(t *testing.T) {
 		assert.Nil(t, got.Error)
 	})
 
-	t.Run("evaluator stage error remains visible", func(t *testing.T) {
+	t.Run("turn other evaluator error remains visible", func(t *testing.T) {
 		b := &ExptResultBuilder{
 			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
 				1: {10: 100},
@@ -7483,7 +7483,7 @@ func TestExptResultBuilder_getTurnSystemInfo(t *testing.T) {
 			turnResultDO: []*entity.ExptTurnResult{
 				{
 					ID: 100, ItemID: 1, TurnID: 10, Status: int32(entity.TurnRunState_Fail), LogID: "log3",
-					ErrMsg: errno.SerializeErr(errno.NewEvaluatorStageErr("evaluator quota unavailable", errors.New("quota detail"))),
+					ErrMsg: errno.SerializeErr(errno.NewTurnOtherErr("evaluator quota unavailable", errors.New("quota detail"))),
 				},
 			},
 		}

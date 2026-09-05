@@ -171,10 +171,7 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	clone.Ext = etec.Ext
 
-	var (
-		evalErr           error
-		evaluatorStageErr bool
-	)
+	var evalErr error
 
 	clone.ExptRunID = etec.Event.ExptRunID
 	if result.TargetResult != nil && result.TargetResult.ID > 0 {
@@ -204,9 +201,6 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	}
 
 	if result.EvalErr != nil {
-		if evalErr == nil && result.TargetResult != nil && result.TargetResult.ID > 0 && gptr.Indirect(result.TargetResult.Status) == entity.EvalTargetRunStatusSuccess {
-			evaluatorStageErr = true
-		}
 		evalErr = result.EvalErr
 	} else if evalErr == nil {
 		evalErr = e.validateEvaluatorResultsComplete(etec, result)
@@ -238,13 +232,8 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 			evalErr = ei.SetErrMsg(errMsg).SetCause(clonedErr)
 		}
 
-		persistedErr := evalErr
-		if evaluatorStageErr {
-			persistedErr = errno.NewEvaluatorStageErr(errMsg, errno.CloneErr(evalErr))
-		}
-
 		clone.Status = entity.TurnRunState_Fail
-		clone.ErrMsg = errno.SerializeErr(persistedErr)
+		clone.ErrMsg = errno.SerializeErr(evalErr)
 	} else {
 		if !result.AsyncAbort {
 			clone.Status = entity.TurnRunState_Success
