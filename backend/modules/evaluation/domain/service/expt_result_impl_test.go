@@ -1772,7 +1772,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 	}
 }
 
-func TestExptResultServiceImpl_MGetExperimentResult_FillsProcessingTargetRecordFromRunLog(t *testing.T) {
+func TestExptResultServiceImpl_MGetExperimentResult_FillsZombieTargetRecordFromRunLog(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -1839,9 +1839,13 @@ func TestExptResultServiceImpl_MGetExperimentResult_FillsProcessingTargetRecordF
 		ExptRunID:      exptRunID,
 		ItemID:         itemID,
 		TurnID:         turnID,
-		Status:         entity.TurnRunState_Processing,
+		Status:         entity.TurnRunState_Fail,
 		LogID:          "target-logid",
 		TargetResultID: targetRecordID,
+		ErrMsg: errno.SerializeErr(errno.NewTurnOtherErr(
+			"turn status not updated for long interval",
+			errors.New("turn result failure with timeout"),
+		)),
 	}}, nil).Times(1)
 	mockExperimentRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(expt, nil).Times(1)
 	mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), spaceID, []int64{turnResultID}).Return(nil, nil).Times(1)
@@ -1855,7 +1859,7 @@ func TestExptResultServiceImpl_MGetExperimentResult_FillsProcessingTargetRecordF
 		ItemID: itemID,
 		Turns:  []*entity.Turn{{ID: turnID, ItemID: itemID}},
 	}}, nil).Times(1)
-	targetStatus := entity.EvalTargetRunStatusAsyncInvoking
+	targetStatus := entity.EvalTargetRunStatusFail
 	mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{targetRecordID}).Return([]*entity.EvalTargetRecord{{
 		ID:                   targetRecordID,
 		SpaceID:              spaceID,
@@ -4885,6 +4889,90 @@ func TestExptResultBuilder_fillProcessingTargetResultID(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, targetResultID, builder.turnResultDO[0].TargetResultID)
+}
+
+func TestExptResultBuilder_fillProcessingTargetResultID_RestoresZombieTargetResult(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	const (
+		spaceID        = int64(100)
+		exptID         = int64(200)
+		exptRunID      = int64(300)
+		itemID         = int64(400)
+		turnID         = int64(500)
+		targetResultID = int64(600)
+	)
+
+	mockTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockTurnResultRepo.EXPECT().
+		MGetItemTurnRunLogs(gomock.Any(), exptID, exptRunID, []int64{itemID}, spaceID).
+		Return([]*entity.ExptTurnResultRunLog{{
+			ExptRunID:      exptRunID,
+			ItemID:         itemID,
+			TurnID:         turnID,
+			Status:         entity.TurnRunState_Fail,
+			TargetResultID: targetResultID,
+			ErrMsg: errno.SerializeErr(errno.NewTurnOtherErr(
+				"turn status not updated for long interval",
+				errors.New("turn result failure with timeout"),
+			)),
+		}}, nil)
+
+	builder := &ExptResultBuilder{
+		ExptID:             exptID,
+		SpaceID:            spaceID,
+		ExptTurnResultRepo: mockTurnResultRepo,
+		turnResultDO: []*entity.ExptTurnResult{{
+			ID:        1,
+			ExptRunID: exptRunID,
+			ItemID:    itemID,
+			TurnID:    turnID,
+		}},
+	}
+
+	err := builder.fillProcessingTargetResultID(context.Background())
+
+	require.NoError(t, err)
+	assert.Equal(t, targetResultID, builder.turnResultDO[0].TargetResultID)
+}
+
+func TestShouldFillTargetResultFromRunLog_OnlyHidesExplicitTargetFailure(t *testing.T) {
+	tests := []struct {
+		name string
+		log  *entity.ExptTurnResultRunLog
+		want bool
+	}{
+		{name: "nil log", log: nil},
+		{name: "missing target record", log: &entity.ExptTurnResultRunLog{Status: entity.TurnRunState_Processing}},
+		{name: "target failure stays hidden", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1,
+			ErrMsg: errno.SerializeErr(errno.NewTargetResultErr("target failed")),
+		}},
+		{name: "zombie timeout preserves target for diagnosis", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1,
+			ErrMsg: errno.SerializeErr(errno.NewTurnOtherErr("turn status not updated for long interval", errors.New("timeout"))),
+		}, want: true},
+		{name: "evaluator result failure preserves target", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1,
+			ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")),
+		}, want: true},
+		{name: "evaluator stage failure preserves target", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1,
+			ErrMsg: errno.SerializeErr(errno.NewEvaluatorStageErr("evaluator setup failed", nil)),
+		}, want: true},
+		{name: "unknown failure preserves current run target", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1, ErrMsg: "unknown",
+		}, want: true},
+		{name: "terminal target remains inspectable", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Terminal, TargetResultID: 1,
+		}, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, shouldFillTargetResultFromRunLog(tt.log))
+		})
+	}
 }
 
 func TestExptResultBuilder_buildEvaluatorResult(t *testing.T) {

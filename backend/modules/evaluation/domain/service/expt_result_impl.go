@@ -2031,25 +2031,16 @@ func (e *ExptResultBuilder) fillProcessingTargetResultID(ctx context.Context) er
 }
 
 func shouldFillTargetResultFromRunLog(runLog *entity.ExptTurnResultRunLog) bool {
-	if runLog == nil || runLog.TargetResultID <= 0 || runLog.Status == entity.TurnRunState_Terminal {
+	if runLog == nil || runLog.TargetResultID <= 0 {
 		return false
 	}
-	if runLog.Status != entity.TurnRunState_Fail {
-		return true
-	}
-	// A failed turn can still contain a successful target when only evaluator execution failed.
-	// Restore only when the persisted error or evaluator refs prove execution reached the evaluator stage.
+	// Only an explicit target-stage error proves this record should stay hidden. Other terminal
+	// failures may still retain a target record so users can inspect its execution details.
 	persistedErr := errno.DeserializeErr([]byte(runLog.ErrMsg))
 	if isTargetFailure, _ := errno.ParseTargetResultErr(persistedErr); isTargetFailure {
 		return false
 	}
-	if isEvaluatorFailure, _ := errno.ParseEvaluatorResultErr(persistedErr); isEvaluatorFailure {
-		return true
-	}
-	if isEvaluatorStageFailure, _ := errno.ParseEvaluatorStageErr(persistedErr); isEvaluatorStageFailure {
-		return true
-	}
-	return hasEvaluatorResultRefs(runLog.EvaluatorResultIds)
+	return true
 }
 
 func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {
@@ -2610,10 +2601,6 @@ func (e *ExptResultBuilder) getTurnSystemInfo(ctx context.Context, itemID, turnI
 	}
 
 	return systemInfo
-}
-
-func hasEvaluatorResultRefs(results *entity.EvaluatorResults) bool {
-	return results != nil && (len(results.EvalVerIDToResID) > 0 || len(results.Registered) > 0 || len(results.Inline) > 0)
 }
 
 func (e ExptResultServiceImpl) MGetStats(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.ExptStats, error) {

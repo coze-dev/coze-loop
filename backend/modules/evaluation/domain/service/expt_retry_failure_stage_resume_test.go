@@ -1274,45 +1274,7 @@ func TestExptResultBuilder_FillProcessingTargetResultID_RestoresSuccessfulTarget
 	assert.Equal(t, targetResultID, builder.turnResultDO[0].TargetResultID)
 }
 
-func TestShouldFillTargetResultFromRunLog_FailedTurnUsesFailureStage(t *testing.T) {
-	tests := []struct {
-		name string
-		log  *entity.ExptTurnResultRunLog
-		want bool
-	}{
-		{name: "target failure stays hidden", log: &entity.ExptTurnResultRunLog{
-			Status: entity.TurnRunState_Fail, TargetResultID: 1,
-			ErrMsg: errno.SerializeErr(errno.NewTargetResultErr("target failed")),
-		}},
-		{name: "evaluator failure preserves target", log: &entity.ExptTurnResultRunLog{
-			Status: entity.TurnRunState_Fail, TargetResultID: 1,
-			ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")),
-		}, want: true},
-		{name: "evaluator stage failure before record preserves target", log: &entity.ExptTurnResultRunLog{
-			Status: entity.TurnRunState_Fail, TargetResultID: 1,
-			ErrMsg: errno.SerializeErr(errno.NewEvaluatorStageErr("evaluator setup failed", nil)),
-		}, want: true},
-		{name: "evaluator refs prove target completed", log: &entity.ExptTurnResultRunLog{
-			Status: entity.TurnRunState_Fail, TargetResultID: 1,
-			EvaluatorResultIds: &entity.EvaluatorResults{Registered: []*entity.RegisteredEvalResult{{RecordID: 2}}},
-		}, want: true},
-		{name: "unknown failure without evaluator refs stays hidden", log: &entity.ExptTurnResultRunLog{
-			Status: entity.TurnRunState_Fail, TargetResultID: 1, ErrMsg: "unknown",
-		}},
-		{name: "terminal target stays hidden", log: &entity.ExptTurnResultRunLog{
-			Status: entity.TurnRunState_Terminal, TargetResultID: 1,
-			ErrMsg: errno.SerializeErr(errno.NewEvaluatorResultErr("evaluator failed")),
-		}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, shouldFillTargetResultFromRunLog(tt.log))
-		})
-	}
-}
-
-func TestExptResultBuilder_FillProcessingTargetResultID_DoesNotRestoreTerminalCurrentRunTarget(t *testing.T) {
+func TestExptResultBuilder_FillProcessingTargetResultID_RestoresTerminalCurrentRunTarget(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	const (
 		spaceID        = int64(100)
@@ -1337,7 +1299,7 @@ func TestExptResultBuilder_FillProcessingTargetResultID_DoesNotRestoreTerminalCu
 	}
 
 	require.NoError(t, builder.fillProcessingTargetResultID(context.Background()))
-	assert.Zero(t, builder.turnResultDO[0].TargetResultID)
+	assert.Equal(t, failedTargetID, builder.turnResultDO[0].TargetResultID)
 }
 
 func TestExptResultBuilder_FillTargetResultID_NonRetryMultiTurnItemInFlight(t *testing.T) {
