@@ -2586,7 +2586,8 @@ func (e *ExptResultBuilder) getTurnSystemInfo(ctx context.Context, itemID, turnI
 	}
 
 	if len(turnResult.ErrMsg) > 0 {
-		// 仅吐出评估器和评估对象之外的error
+		// 仅吐出未落在评估器/评测对象 record 上的 TurnOther 错误；
+		// evaluator record 创建前的编排失败也归入该类，确保错误详情仍可见。
 		ok, errMsg := errno.ParseTurnOtherErr(errno.DeserializeErr([]byte(turnResult.ErrMsg)))
 		if ok {
 			systemInfo.Error = &entity.RunError{

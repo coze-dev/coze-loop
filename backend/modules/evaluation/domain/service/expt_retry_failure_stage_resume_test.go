@@ -1863,3 +1863,80 @@ func TestExptFailRetryExec_ExptStart_BatchesUnchangedSuccessfulTargetsIntoOneUpd
 		ExptID: exptID, ExptRunID: newRunID, SpaceID: spaceID,
 	}, buildMockExpt()))
 }
+
+func TestExptFailRetryExec_ExptStart_MaxPageUsesBoundedBatchCalls(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	const (
+		exptID   = int64(1)
+		newRunID = int64(2)
+		spaceID  = int64(3)
+		pageSize = 50
+	)
+
+	itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	turnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	statsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+	idgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	exptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	idem := idemmocks.NewMockIdempotentService(ctrl)
+	configer := configmocks.NewMockIConfiger(ctrl)
+	targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+
+	turnResults := make([]*entity.ExptTurnResult, 0, pageSize)
+	itemResults := make([]*entity.ExptItemResult, 0, pageSize)
+	itemIDs := make([]int64, 0, pageSize)
+	targetIDs := make([]int64, 0, pageSize)
+	runLogIDs := make([]int64, 0, pageSize)
+	itemTurnIDs := make([]*entity.ItemTurnID, 0, pageSize)
+	itemLogIDs := make(map[int64]string, pageSize)
+	targetRecords := make([]*entity.EvalTargetRecord, 0, pageSize)
+	success := entity.EvalTargetRunStatusSuccess
+	for i := int64(0); i < pageSize; i++ {
+		itemID := int64(1000) + i
+		turnID := int64(2000) + i
+		targetID := int64(3000) + i
+		turnResults = append(turnResults, &entity.ExptTurnResult{
+			ID: int64(4000) + i, ItemID: itemID, TurnID: turnID,
+			Status: int32(entity.TurnRunState_Fail), TargetResultID: targetID,
+		})
+		itemResults = append(itemResults, &entity.ExptItemResult{ItemID: itemID, LogID: "item-log"})
+		itemIDs = append(itemIDs, itemID)
+		targetIDs = append(targetIDs, targetID)
+		runLogIDs = append(runLogIDs, int64(5000)+i)
+		itemTurnIDs = append(itemTurnIDs, &entity.ItemTurnID{ItemID: itemID, TurnID: turnID})
+		itemLogIDs[itemID] = "item-log"
+		targetRecords = append(targetRecords, &entity.EvalTargetRecord{ID: targetID, Status: &success})
+	}
+
+	idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
+	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(0), int64(pageSize), spaceID).
+		Return(turnResults, turnResults[len(turnResults)-1].ID, nil).Times(1)
+	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), turnResults[len(turnResults)-1].ID, int64(pageSize), spaceID).
+		Return(nil, int64(0), nil).Times(1)
+	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, itemIDs).Return(itemResults, nil).Times(1)
+	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, newRunID, itemIDs, spaceID).Return(nil, nil).Times(1)
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, newRunID, itemIDs, spaceID).Return(nil, nil).Times(1)
+	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, targetIDs).Return(targetRecords, nil).Times(1)
+	idgen.EXPECT().GenMultiIDs(gomock.Any(), pageSize).Return(runLogIDs, nil).Times(1)
+	itemRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, logs []*entity.ExptItemResultRunLog) error {
+		require.Len(t, logs, pageSize)
+		return nil
+	}).Times(1)
+	itemRepo.EXPECT().FillItemRunLogLogIDIfEmpty(gomock.Any(), exptID, newRunID, spaceID, itemLogIDs).Return(nil).Times(1)
+	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, itemIDs, gomock.Any()).Return(nil).Times(1)
+	turnRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, itemTurnIDs, spaceID, failRetryTurnUpdateMatcher{wantRunID: newRunID}).Return(nil).Times(1)
+	statsRepo.EXPECT().Get(gomock.Any(), exptID, spaceID).Return(&entity.ExptStats{FailItemCnt: pageSize}, nil)
+	statsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
+	exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+	configer.EXPECT().GetExptExecConf(gomock.Any(), spaceID).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1})
+	idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	exec := &ExptFailRetryExec{
+		exptItemResultRepo: itemRepo, exptTurnResultRepo: turnRepo, exptStatsRepo: statsRepo,
+		idgenerator: idgen, exptRepo: exptRepo, idem: idem, configer: configer,
+		evalTargetService: targetSvc,
+	}
+	require.NoError(t, exec.ExptStart(context.Background(), &entity.ExptScheduleEvent{
+		ExptID: exptID, ExptRunID: newRunID, SpaceID: spaceID,
+	}, buildMockExpt()))
+}

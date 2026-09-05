@@ -4963,6 +4963,10 @@ func TestShouldFillTargetResultFromRunLog_OnlyHidesExplicitTargetFailure(t *test
 		{name: "unknown failure preserves current run target", log: &entity.ExptTurnResultRunLog{
 			Status: entity.TurnRunState_Fail, TargetResultID: 1, ErrMsg: "unknown",
 		}, want: true},
+		{name: "legacy unknown error code preserves target without panic", log: &entity.ExptTurnResultRunLog{
+			Status: entity.TurnRunState_Fail, TargetResultID: 1,
+			ErrMsg: `{"Code":14,"Msg":"legacy evaluator stage failure","Cause":""}`,
+		}, want: true},
 		{name: "terminal target remains inspectable", log: &entity.ExptTurnResultRunLog{
 			Status: entity.TurnRunState_Terminal, TargetResultID: 1,
 		}, want: true},
