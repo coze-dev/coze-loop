@@ -102,6 +102,7 @@ func TestFailRetrySelectTurnRunLogRefs_TargetRequirementControlsEvaluatorReuse(t
 				[]*entity.ExptTurnEvaluatorResultRef{{
 					ExptTurnResultID: 0, EvaluatorVersionID: 10, EvaluatorResultID: evaluatorRecordID,
 				}},
+				nil,
 			)
 			assert.Zero(t, targetID)
 			if tt.wantReuse {
@@ -155,7 +156,7 @@ func TestFailRetrySelectTurnRunLogRefs_DropsAmbiguousLegacyEvaluatorGroups(t *te
 			evalRecord := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
 			targetID, evaluatorResults := failRetrySelectTurnRunLogRefs(
-				context.Background(), 1, false, tt.tr, nil, evalRecord, tt.refs,
+				context.Background(), 1, false, tt.tr, nil, evalRecord, tt.refs, nil,
 			)
 			assert.Zero(t, targetID)
 			assert.Nil(t, evaluatorResults)
@@ -622,7 +623,7 @@ func TestRetryFailure_ExptStartThroughExecution_ReusesSuccessfulTargetAndOnlyFai
 		ID: targetRecordID, Status: &targetStatus,
 		EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
 	}
-	evaluatorARecord := &entity.EvaluatorRecord{ID: evaluatorARecID, EvaluatorVersionID: evaluatorAVerID, Status: entity.EvaluatorRunStatusSuccess}
+	evaluatorARecord := &entity.EvaluatorRecord{ID: evaluatorARecID, SpaceID: spaceID, ExperimentID: exptID, ExperimentRunID: 1, ItemID: itemID, TurnID: turnID, EvaluatorVersionID: evaluatorAVerID, Status: entity.EvaluatorRunStatusSuccess}
 
 	idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
 	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(0), int64(50), spaceID).Return([]*entity.ExptTurnResult{canonicalTurnResult}, turnResultID, nil)
@@ -673,6 +674,11 @@ func TestRetryFailure_ExptStartThroughExecution_ReusesSuccessfulTargetAndOnlyFai
 			}, nil
 		},
 	)
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, int64(1), []int64{itemID}, spaceID).
+		Return([]*entity.ExptTurnResultRunLog{{
+			SpaceID: spaceID, ExptID: exptID, ExptRunID: 1, ItemID: itemID, TurnID: turnID, TargetResultID: targetRecordID,
+			EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{evaluatorAVerID: evaluatorARecID, evaluatorBVerID: evaluatorBRecID}},
+		}}, nil)
 	var targetReadFromPrimary int
 	targetSvc.EXPECT().GetRecordByID(gomock.Any(), spaceID, targetRecordID).DoAndReturn(
 		func(ctx context.Context, _, _ int64) (*entity.EvalTargetRecord, error) {
@@ -821,7 +827,7 @@ func TestRetryFailure_MultiTurnItem_ConvergesAllTurnsAndOnlyRerunsFailedStage(t 
 		turn2ID: turn2TargetID,
 	}
 	turn1EvalRecord := &entity.EvaluatorRecord{
-		ID: turn1EvalRecID, EvaluatorVersionID: evaluatorVerID, Status: entity.EvaluatorRunStatusSuccess,
+		ID: turn1EvalRecID, SpaceID: spaceID, ExperimentID: exptID, ExperimentRunID: oldRunID, ItemID: itemID, TurnID: turn1ID, EvaluatorVersionID: evaluatorVerID, Status: entity.EvaluatorRunStatusSuccess,
 	}
 	turn2OldEvalRecord := &entity.EvaluatorRecord{
 		ID: turn2OldEvalID, EvaluatorVersionID: evaluatorVerID, Status: entity.EvaluatorRunStatusFail,
@@ -912,6 +918,11 @@ func TestRetryFailure_MultiTurnItem_ConvergesAllTurnsAndOnlyRerunsFailedStage(t 
 	for _, targetID := range []int64{turn1TargetID, turn2TargetID} {
 		targetSvc.EXPECT().GetRecordByID(gomock.Any(), spaceID, targetID).Return(targetRecords[targetID], nil).Times(2)
 	}
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, oldRunID, []int64{itemID}, spaceID).
+		Return([]*entity.ExptTurnResultRunLog{{
+			SpaceID: spaceID, ExptID: exptID, ExptRunID: oldRunID, ItemID: itemID, TurnID: turn1ID, TargetResultID: turn1TargetID,
+			EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{evaluatorVerID: turn1EvalRecID}},
+		}}, nil)
 	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{turn1EvalRecID}, false, false).
 		Return([]*entity.EvaluatorRecord{turn1EvalRecord}, nil)
 	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{turn2OldEvalID}, false, false).
@@ -990,14 +1001,12 @@ func TestRetryFailure_MultiTurnItem_ConvergesAllTurnsAndOnlyRerunsFailedStage(t 
 		},
 	)
 	itemRepo.EXPECT().GetItemTurnResults(gomock.Any(), spaceID, exptID, itemID).Return(canonicalTurns, nil)
-	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).
-		Return([]*entity.ExptItemResult{{ItemID: itemID, Status: entity.ItemRunState_Processing}}, nil)
 	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{turn1EvalRecID}, false, false).
 		Return([]*entity.EvaluatorRecord{turn1EvalRecord}, nil).Times(1)
 	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{turn2NewEvalID}, false, false).
 		Return([]*entity.EvaluatorRecord{turn2NewEvalRecord}, nil).Times(1)
 	idgen.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{turn1RefID, turn2RefID}, nil)
-	turnRepo.EXPECT().CreateTurnEvaluatorRefs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, refs []*entity.ExptTurnEvaluatorResultRef) error {
+	turnRepo.EXPECT().ApplyItemRunResults(gomock.Any(), exptID, newRunID, itemID, spaceID, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _, _, _, _ int64, turns []*entity.ExptTurnResult, refs []*entity.ExptTurnEvaluatorResultRef) (bool, error) {
 		require.Len(t, refs, 2)
 		byTurnResultID := make(map[int64]int64, len(refs))
 		for _, ref := range refs {
@@ -1005,9 +1014,6 @@ func TestRetryFailure_MultiTurnItem_ConvergesAllTurnsAndOnlyRerunsFailedStage(t 
 		}
 		assert.Equal(t, turn1EvalRecID, byTurnResultID[turn1ResultID])
 		assert.Equal(t, turn2NewEvalID, byTurnResultID[turn2ResultID])
-		return nil
-	})
-	turnRepo.EXPECT().SaveTurnResults(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, turns []*entity.ExptTurnResult) error {
 		require.Len(t, turns, 2)
 		for _, turn := range turns {
 			assert.Equal(t, newRunID, turn.ExptRunID)
@@ -1017,16 +1023,9 @@ func TestRetryFailure_MultiTurnItem_ConvergesAllTurnsAndOnlyRerunsFailedStage(t 
 			assert.Equal(t, turnRunLogs[turn.TurnID].LogID, turn.LogID)
 			assert.Same(t, turnByID[turn.TurnID], turn)
 		}
-		return nil
+		assert.Equal(t, "item-log", itemRunLog.LogID)
+		return true, nil
 	})
-	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), spaceID, exptID, []int64{itemID}, gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ int64, _ int64, _ []int64, fields map[string]any) error {
-			assert.Equal(t, "item-log", fields["log_id"])
-			return nil
-		},
-	)
-	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), exptID, newRunID, []int64{itemID}, gomock.Any(), spaceID).Return(nil)
-	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), exptID, spaceID, gomock.Any()).Return(nil)
 
 	resultRecorder := ExptResultServiceImpl{
 		ExptItemResultRepo: itemRepo, ExptTurnResultRepo: turnRepo, ExptStatsRepo: statsRepo,
@@ -1785,7 +1784,7 @@ func TestPruneSuccessfulEvaluatorRecords_HelperPreservesUnambiguousNewFormat(t *
 			Registered: []*entity.RegisteredEvalResult{{VersionID: 10, Alias: "judge-a", RecordID: registeredRecordID}},
 			Inline:     []*entity.InlineEvalResult{{InlineKey: "inline-a", RecordID: inlineRecordID}},
 		},
-	})
+	}, nil)
 
 	require.NotNil(t, got)
 	assert.Equal(t, []*entity.RegisteredEvalResult{{VersionID: 10, Alias: "judge-a", RecordID: registeredRecordID}}, got.Registered)
@@ -1804,7 +1803,7 @@ func TestPruneSuccessfulEvaluatorRecords_DoesNotMapAliasRecordIntoLegacyResult(t
 
 	got := pruneSuccessfulEvaluatorRecords(context.Background(), evalRecord, &entity.ExptTurnResult{
 		EvaluatorResults: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{10: recordID}},
-	})
+	}, nil)
 	assert.Nil(t, got)
 }
 

@@ -1596,7 +1596,7 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
 				m := svcmocks.NewMockEvaluatorRecordService(ctrl)
 				m.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return([]*entity.EvaluatorRecord{
-					{ID: 1001, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess},
+					{ID: 1001, SpaceID: 1, ExperimentID: 1, ExperimentRunID: 2, ItemID: 10, TurnID: 20, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess},
 					{ID: 1002, EvaluatorVersionID: 20, Status: entity.EvaluatorRunStatusFail},
 				}, nil)
 				return m
@@ -1660,8 +1660,24 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 					})
 				}
 			}
+			turnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+			sourceLogs := &retryEvaluatorSourceLogs{
+				repo:      turnRepo,
+				event:     &entity.ExptItemEvalEvent{ExptID: 1, EvalSetItemID: 10, SpaceID: tt.spaceID},
+				logsByRun: make(map[int64]map[int64]*entity.ExptTurnResultRunLog),
+			}
+			if tt.tr != nil {
+				tt.tr.ExptID, tt.tr.ItemID, tt.tr.TurnID = 1, 10, 20
+			}
+			if targetRequired && tt.wantEvalResults != nil {
+				turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, tt.spaceID).
+					Return([]*entity.ExptTurnResultRunLog{{
+						SpaceID: tt.spaceID, ExptID: 1, ExptRunID: 2, ItemID: 10, TurnID: 20, TargetResultID: 100,
+						EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{10: 1001, 20: 1002}},
+					}}, nil)
+			}
 			gotTargetID, gotEvalResults := failRetrySelectTurnRunLogRefs(
-				context.Background(), tt.spaceID, targetRequired, tt.tr, evalTarget, evalRecord, refs,
+				context.Background(), tt.spaceID, targetRequired, tt.tr, evalTarget, evalRecord, refs, sourceLogs,
 			)
 			assert.Equal(t, tt.wantTargetID, gotTargetID)
 			assert.Equal(t, tt.wantEvalResults, gotEvalResults)
@@ -1772,7 +1788,7 @@ func Test_pruneSuccessfulEvaluatorRecords(t *testing.T) {
 			defer ctrl.Finish()
 
 			evalRecord := tt.setupEvalRecord(ctrl)
-			got := pruneSuccessfulEvaluatorRecords(context.Background(), evalRecord, tt.tr)
+			got := pruneSuccessfulEvaluatorRecords(context.Background(), evalRecord, tt.tr, nil)
 			assert.Equal(t, tt.want, got)
 		})
 	}

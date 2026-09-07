@@ -77,6 +77,11 @@ func TestExptAggrResultServiceImpl_CreateExptAggrResult(t *testing.T) {
 					ScanTurnResults(gomock.Any(), int64(1), gomock.Any(), int64(0), int64(500), int64(100)).
 					Return([]*entity.ExptTurnResult{}, int64(0), nil)
 
+				mockExptAggrResultRepo.EXPECT().CreateExptAggrResult(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+
+				// Initial empty weighted row is versioned before score reads.
+				mockExptAggrResultRepo.EXPECT().UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_WeightedScore), "1").Return(int64(1), nil)
+				mockExptAggrResultRepo.EXPECT().UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).Return(nil)
 				// Mock BatchCreateExptAggrResult
 				mockExptAggrResultRepo.EXPECT().
 					BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
@@ -111,6 +116,9 @@ func TestExptAggrResultServiceImpl_CreateExptAggrResult(t *testing.T) {
 					ScanTurnResults(gomock.Any(), int64(1), gomock.Any(), int64(0), int64(500), int64(100)).
 					Return([]*entity.ExptTurnResult{}, int64(0), nil)
 
+				mockExptAggrResultRepo.EXPECT().CreateExptAggrResult(gomock.Any(), gomock.Any()).Return(nil)
+				mockExptAggrResultRepo.EXPECT().UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_WeightedScore), "1").Return(int64(1), nil)
+				mockExptAggrResultRepo.EXPECT().UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).Return(nil)
 				// Mock BatchCreateExptAggrResult for target metrics
 				mockExptAggrResultRepo.EXPECT().
 					BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
@@ -220,6 +228,12 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult(t *testing.T) {
 				mockExptAggrResultRepo.EXPECT().
 					UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
 					Return(int64(1), nil)
+
+				mockExptAggrResultRepo.EXPECT().GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_WeightedScore), "1").Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
+				mockExptAggrResultRepo.EXPECT().CreateExptAggrResult(gomock.Any(), gomock.Any()).Return(nil)
+				mockExptAggrResultRepo.EXPECT().UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_WeightedScore), "1").Return(int64(2), nil)
+				mockExptAggrResultRepo.EXPECT().UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(2)).Return(nil)
 
 				// updateExptAggrResult 会尝试刷新行级汇总分聚合：无行级 WeightedScore 时跳过
 				mockExptTurnResultRepo.EXPECT().
@@ -1441,6 +1455,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 			}(),
 			existedAggrResults: []*entity.ExptAggrResult{},
 			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo) {
+				mockExptAggrResultRepo.EXPECT().CreateExptAggrResult(gomock.Any(), gomock.Any()).Return(nil)
 				mockExptAggrResultRepo.EXPECT().
 					BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
 					Return(nil)
@@ -1470,14 +1485,11 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 					FieldType:    int32(entity.FieldType_EvaluatorScore),
 					FieldKey:     "1",
 					Score:        0.8,
+					Version:      2,
 					AggrResult:   []byte(`{"aggregator_results":[{"aggregator_type":1,"data":{"data_type":0,"value":0.8}}]}`),
 				},
 			},
 			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo) {
-				mockExptAggrResultRepo.EXPECT().
-					UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
-					Return(int64(2), nil)
-
 				mockExptAggrResultRepo.EXPECT().
 					UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(2)).
 					Return(nil)
@@ -1490,7 +1502,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "Skip update when aggregation results are identical",
+			name:    "Finish captured score version when aggregation results are identical",
 			spaceID: 100,
 			exptID:  1,
 			evaluatorInstanceKey2AggregatorGroup: map[string]*AggregatorGroup{
@@ -1513,10 +1525,12 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 					FieldType:    int32(entity.FieldType_EvaluatorScore),
 					FieldKey:     "1",
 					Score:        0.8,
+					Version:      2,
 					AggrResult:   []byte(`{"AggregatorResults":[{"AggregatorType":1,"Data":{"DataType":0,"Value":0.8,"ScoreDistribution":null,"OptionDistribution":null,"BooleanDistribution":null}},{"AggregatorType":2,"Data":{"DataType":0,"Value":0.8,"ScoreDistribution":null,"OptionDistribution":null,"BooleanDistribution":null}},{"AggregatorType":3,"Data":{"DataType":0,"Value":0.8,"ScoreDistribution":null,"OptionDistribution":null,"BooleanDistribution":null}},{"AggregatorType":4,"Data":{"DataType":0,"Value":0.8,"ScoreDistribution":null,"OptionDistribution":null,"BooleanDistribution":null}}]}`),
 				},
 			},
 			setup: func(mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo) {
+				mockExptAggrResultRepo.EXPECT().UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(2)).Return(nil)
 				// Target metrics will still be created
 				mockExptAggrResultRepo.EXPECT().
 					BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
@@ -2943,7 +2957,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 		// Mock createWeightedScoreAggrResult：ScanTurnResults 返回有加权得分的 turn results
 		mockExptTurnResultRepo.EXPECT().
 			ScanTurnResults(
-				ctx,
+				gomock.Any(),
 				experimentID,
 				[]int32{int32(entity.TurnRunState_Success)},
 				int64(0),
@@ -2956,13 +2970,17 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 				},
 			}, int64(0), nil)
 
-		// Mock BatchCreateExptAggrResult
+		var createdScores []*entity.ExptAggrResult
+		mockExptAggrResultRepo.EXPECT().CreateExptAggrResult(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, result *entity.ExptAggrResult) error {
+			createdScores = append(createdScores, result)
+			return nil
+		}).Times(2)
 		mockExptAggrResultRepo.EXPECT().
 			BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, results []*entity.ExptAggrResult) error {
 				// 验证包含加权得分聚合结果
 				hasWeightedScore := false
-				for _, result := range results {
+				for _, result := range createdScores {
 					if result.FieldType == int32(entity.FieldType_WeightedScore) {
 						hasWeightedScore = true
 						assert.Equal(t, strconv.FormatInt(experimentID, 10), result.FieldKey)
@@ -2996,7 +3014,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 
 		mockExptTurnResultRepo.EXPECT().
 			ScanTurnResults(
-				ctx,
+				gomock.Any(),
 				experimentID,
 				[]int32{int32(entity.TurnRunState_Success)},
 				int64(0),
@@ -3007,11 +3025,16 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 				{WeightedScore: gptr.Of(0.72)},
 			}, int64(0), nil)
 
+		var createdScores []*entity.ExptAggrResult
+		mockExptAggrResultRepo.EXPECT().CreateExptAggrResult(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, result *entity.ExptAggrResult) error {
+			createdScores = append(createdScores, result)
+			return nil
+		}).Times(2)
 		mockExptAggrResultRepo.EXPECT().
 			BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, results []*entity.ExptAggrResult) error {
 				hasWeightedScore := false
-				for _, result := range results {
+				for _, result := range createdScores {
 					if result.FieldType == int32(entity.FieldType_WeightedScore) {
 						hasWeightedScore = true
 					}
@@ -3043,7 +3066,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 		// Mock ScanTurnResults 返回错误
 		mockExptTurnResultRepo.EXPECT().
 			ScanTurnResults(
-				ctx,
+				gomock.Any(),
 				experimentID,
 				[]int32{int32(entity.TurnRunState_Success)},
 				int64(0),
@@ -3193,310 +3216,69 @@ func TestExptAggrResultServiceImpl_createWeightedScoreAggrResult(t *testing.T) {
 
 // TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore 测试 UpdateExptAggrResult 中加权得分聚合结果更新逻辑 (457-484行)
 func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
-	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
-	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-	// UpdateExptAggrResult / createWeightedScoreAggrResult 都会查 expt 做 MultiSetConfig 分流
-	mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return((*entity.Experiment)(nil), nil).AnyTimes()
-
-	svc := &ExptAggrResultServiceImpl{
-		exptAggrResultRepo:     mockExptAggrResultRepo,
-		exptTurnResultRepo:     mockExptTurnResultRepo,
-		evaluatorRecordService: mockEvaluatorRecordService,
-		metric:                 mockMetric,
-		experimentRepo:         mockExperimentRepo,
+	for _, tc := range []struct {
+		name            string
+		exists          bool
+		getErr, scanErr error
+	}{
+		{name: "create missing weighted result"},
+		{name: "update existing weighted result", exists: true},
+		{name: "retry weighted scan failure", scanErr: errors.New("scan error")},
+		{name: "retry weighted lookup failure", getErr: errors.New("db error")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			aggrRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
+			turns := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+			records := svcMocks.NewMockEvaluatorRecordService(ctrl)
+			metric := metricsMocks.NewMockExptMetric(ctrl)
+			svc := &ExptAggrResultServiceImpl{exptAggrResultRepo: aggrRepo, exptTurnResultRepo: turns, evaluatorRecordService: records, metric: metric}
+			aggrRepo.EXPECT().GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").Return(&entity.ExptAggrResult{}, nil)
+			aggrRepo.EXPECT().UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").Return(int64(1), nil)
+			weightedGet := aggrRepo.EXPECT().GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_WeightedScore), "1")
+			switch {
+			case tc.getErr != nil:
+				weightedGet.Return(nil, tc.getErr)
+			case tc.exists:
+				weightedGet.Return(&entity.ExptAggrResult{}, nil)
+			default:
+				weightedGet.Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+				aggrRepo.EXPECT().CreateExptAggrResult(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, result *entity.ExptAggrResult) error {
+					var empty entity.AggregateResult
+					assert.NoError(t, json.Unmarshal(result.AggrResult, &empty))
+					assert.Empty(t, empty.AggregatorResults)
+					return nil
+				})
+			}
+			if tc.getErr == nil {
+				aggrRepo.EXPECT().UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_WeightedScore), "1").Return(int64(2), nil)
+				turns.EXPECT().GetTurnEvaluatorResultRefByEvaluatorVersionID(gomock.Any(), int64(100), int64(1), int64(1)).Return([]*entity.ExptTurnEvaluatorResultRef{{EvaluatorResultID: 1}}, nil)
+				records.EXPECT().BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).Return([]*entity.EvaluatorRecordAggr{{ID: 1, Status: entity.EvaluatorRunStatusSuccess, Score: gptr.Of(0.8)}}, nil)
+				aggrRepo.EXPECT().UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).Return(nil)
+				turns.EXPECT().ScanTurnResults(gomock.Any(), int64(1), []int32{int32(entity.TurnRunState_Success)}, int64(0), int64(500), int64(100)).Return([]*entity.ExptTurnResult{{WeightedScore: gptr.Of(0.85)}}, int64(0), tc.scanErr)
+				if tc.scanErr == nil {
+					check := func(result *entity.ExptAggrResult) {
+						assert.Equal(t, int32(entity.FieldType_WeightedScore), result.FieldType)
+						assert.Equal(t, "1", result.FieldKey)
+						assert.Equal(t, 0.85, result.Score)
+					}
+					aggrRepo.EXPECT().UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(2)).DoAndReturn(func(_ context.Context, result *entity.ExptAggrResult, version int64) error {
+						check(result)
+						assert.Equal(t, version, result.Version)
+						return nil
+					})
+				}
+			}
+			wantErr := tc.getErr != nil || tc.scanErr != nil
+			metric.EXPECT().EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), wantErr, gomock.Any())
+			err := svc.UpdateExptAggrResult(context.Background(), &entity.UpdateExptAggrResultParam{SpaceID: 100, ExperimentID: 1, FieldType: entity.FieldType_EvaluatorScore, FieldKey: "1"})
+			if wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
-
-	ctx := context.Background()
-	param := &entity.UpdateExptAggrResultParam{
-		SpaceID:      100,
-		ExperimentID: 1,
-		FieldType:    entity.FieldType_EvaluatorScore,
-		FieldKey:     "1",
-	}
-
-	t.Run("实验启用加权得分，加权得分聚合结果不存在，创建新的", func(t *testing.T) {
-		// Mock GetExptAggrResult
-		mockExptAggrResultRepo.EXPECT().
-			GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
-			Return(&entity.ExptAggrResult{}, nil)
-
-		// Mock UpdateAndGetLatestVersion
-		mockExptAggrResultRepo.EXPECT().
-			UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
-			Return(int64(1), nil)
-
-		// Mock GetTurnEvaluatorResultRefByEvaluatorVersionID
-		mockExptTurnResultRepo.EXPECT().
-			GetTurnEvaluatorResultRefByEvaluatorVersionID(gomock.Any(), int64(100), int64(1), int64(1)).
-			Return([]*entity.ExptTurnEvaluatorResultRef{
-				{
-					EvaluatorResultID: 1,
-				},
-			}, nil)
-
-		// Mock BatchGetEvaluatorRecord
-		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
-			Return([]*entity.EvaluatorRecordAggr{
-				{
-					ID:     1,
-					Status: entity.EvaluatorRunStatusSuccess,
-					Score:  gptr.Of(0.8),
-				},
-			}, nil)
-
-		// Mock UpdateExptAggrResultByVersion
-		mockExptAggrResultRepo.EXPECT().
-			UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
-			Return(nil)
-
-		// Mock EmitCalculateExptAggrResult
-		mockMetric.EXPECT().
-			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
-			Return()
-
-		// Mock createWeightedScoreAggrResult 的依赖
-		mockExptTurnResultRepo.EXPECT().
-			ScanTurnResults(
-				ctx,
-				int64(1),
-				[]int32{int32(entity.TurnRunState_Success)},
-				int64(0),
-				int64(500),
-				int64(100),
-			).
-			Return([]*entity.ExptTurnResult{
-				{
-					WeightedScore: gptr.Of(0.85),
-				},
-			}, int64(0), nil)
-
-		// Mock GetExptAggrResult 返回 ResourceNotFound（加权得分聚合结果不存在）
-		mockExptAggrResultRepo.EXPECT().
-			GetExptAggrResult(ctx, int64(1), int32(entity.FieldType_WeightedScore), "1").
-			Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
-
-		// Mock BatchCreateExptAggrResult（创建加权得分聚合结果）
-		mockExptAggrResultRepo.EXPECT().
-			BatchCreateExptAggrResult(ctx, gomock.Any()).
-			Return(nil)
-
-		err := svc.UpdateExptAggrResult(ctx, param)
-		assert.NoError(t, err)
-	})
-
-	t.Run("实验启用加权得分，加权得分聚合结果已存在，更新", func(t *testing.T) {
-		// Mock GetExptAggrResult
-		mockExptAggrResultRepo.EXPECT().
-			GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
-			Return(&entity.ExptAggrResult{}, nil)
-
-		// Mock UpdateAndGetLatestVersion
-		mockExptAggrResultRepo.EXPECT().
-			UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
-			Return(int64(1), nil)
-
-		// Mock GetTurnEvaluatorResultRefByEvaluatorVersionID
-		mockExptTurnResultRepo.EXPECT().
-			GetTurnEvaluatorResultRefByEvaluatorVersionID(gomock.Any(), int64(100), int64(1), int64(1)).
-			Return([]*entity.ExptTurnEvaluatorResultRef{
-				{
-					EvaluatorResultID: 1,
-				},
-			}, nil)
-
-		// Mock BatchGetEvaluatorRecord
-		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
-			Return([]*entity.EvaluatorRecordAggr{
-				{
-					ID:     1,
-					Status: entity.EvaluatorRunStatusSuccess,
-					Score:  gptr.Of(0.8),
-				},
-			}, nil)
-
-		// Mock UpdateExptAggrResultByVersion
-		mockExptAggrResultRepo.EXPECT().
-			UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
-			Return(nil)
-
-		// Mock EmitCalculateExptAggrResult
-		mockMetric.EXPECT().
-			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
-			Return()
-
-		// Mock createWeightedScoreAggrResult 的依赖
-		mockExptTurnResultRepo.EXPECT().
-			ScanTurnResults(
-				ctx,
-				int64(1),
-				[]int32{int32(entity.TurnRunState_Success)},
-				int64(0),
-				int64(500),
-				int64(100),
-			).
-			Return([]*entity.ExptTurnResult{
-				{
-					WeightedScore: gptr.Of(0.85),
-				},
-			}, int64(0), nil)
-
-		// Mock GetExptAggrResult 返回已存在的加权得分聚合结果
-		mockExptAggrResultRepo.EXPECT().
-			GetExptAggrResult(ctx, int64(1), int32(entity.FieldType_WeightedScore), "1").
-			Return(&entity.ExptAggrResult{}, nil)
-
-		// Mock UpdateAndGetLatestVersion（更新版本）
-		mockExptAggrResultRepo.EXPECT().
-			UpdateAndGetLatestVersion(ctx, int64(1), int32(entity.FieldType_WeightedScore), "1").
-			Return(int64(2), nil)
-
-		// Mock UpdateExptAggrResultByVersion（更新加权得分聚合结果）
-		mockExptAggrResultRepo.EXPECT().
-			UpdateExptAggrResultByVersion(ctx, gomock.Any(), int64(2)).
-			DoAndReturn(func(ctx context.Context, result *entity.ExptAggrResult, version int64) error {
-				assert.Equal(t, int64(2), result.Version)
-				assert.Equal(t, int32(entity.FieldType_WeightedScore), result.FieldType)
-				return nil
-			}).
-			Return(nil)
-
-		err := svc.UpdateExptAggrResult(ctx, param)
-		assert.NoError(t, err)
-	})
-
-	t.Run("createWeightedScoreAggrResult返回错误，不返回错误（记录日志）", func(t *testing.T) {
-		// Mock GetExptAggrResult
-		mockExptAggrResultRepo.EXPECT().
-			GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
-			Return(&entity.ExptAggrResult{}, nil)
-
-		// Mock UpdateAndGetLatestVersion
-		mockExptAggrResultRepo.EXPECT().
-			UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
-			Return(int64(1), nil)
-
-		// Mock GetTurnEvaluatorResultRefByEvaluatorVersionID
-		mockExptTurnResultRepo.EXPECT().
-			GetTurnEvaluatorResultRefByEvaluatorVersionID(gomock.Any(), int64(100), int64(1), int64(1)).
-			Return([]*entity.ExptTurnEvaluatorResultRef{
-				{
-					EvaluatorResultID: 1,
-				},
-			}, nil)
-
-		// Mock BatchGetEvaluatorRecord
-		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
-			Return([]*entity.EvaluatorRecordAggr{
-				{
-					ID:     1,
-					Status: entity.EvaluatorRunStatusSuccess,
-					Score:  gptr.Of(0.8),
-				},
-			}, nil)
-
-		// Mock UpdateExptAggrResultByVersion
-		mockExptAggrResultRepo.EXPECT().
-			UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
-			Return(nil)
-
-		// Mock EmitCalculateExptAggrResult
-		mockMetric.EXPECT().
-			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
-			Return()
-
-		// Mock createWeightedScoreAggrResult 返回错误
-		mockExptTurnResultRepo.EXPECT().
-			ScanTurnResults(
-				ctx,
-				int64(1),
-				[]int32{int32(entity.TurnRunState_Success)},
-				int64(0),
-				int64(500),
-				int64(100),
-			).
-			Return(nil, int64(0), errors.New("scan error"))
-
-		// 即使 createWeightedScoreAggrResult 返回错误，UpdateExptAggrResult 也不应该返回错误
-		err := svc.UpdateExptAggrResult(ctx, param)
-		assert.NoError(t, err)
-	})
-
-	t.Run("GetExptAggrResult返回非ResourceNotFound错误，记录日志但不返回错误", func(t *testing.T) {
-		// Mock GetExptAggrResult
-		mockExptAggrResultRepo.EXPECT().
-			GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
-			Return(&entity.ExptAggrResult{}, nil)
-
-		// Mock UpdateAndGetLatestVersion
-		mockExptAggrResultRepo.EXPECT().
-			UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
-			Return(int64(1), nil)
-
-		// Mock GetTurnEvaluatorResultRefByEvaluatorVersionID
-		mockExptTurnResultRepo.EXPECT().
-			GetTurnEvaluatorResultRefByEvaluatorVersionID(gomock.Any(), int64(100), int64(1), int64(1)).
-			Return([]*entity.ExptTurnEvaluatorResultRef{
-				{
-					EvaluatorResultID: 1,
-				},
-			}, nil)
-
-		// Mock BatchGetEvaluatorRecord
-		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecordForAggr(gomock.Any(), []int64{1}).
-			Return([]*entity.EvaluatorRecordAggr{
-				{
-					ID:     1,
-					Status: entity.EvaluatorRunStatusSuccess,
-					Score:  gptr.Of(0.8),
-				},
-			}, nil)
-
-		// Mock UpdateExptAggrResultByVersion
-		mockExptAggrResultRepo.EXPECT().
-			UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
-			Return(nil)
-
-		// Mock EmitCalculateExptAggrResult
-		mockMetric.EXPECT().
-			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
-			Return()
-
-		// Mock createWeightedScoreAggrResult 的依赖
-		mockExptTurnResultRepo.EXPECT().
-			ScanTurnResults(
-				ctx,
-				int64(1),
-				[]int32{int32(entity.TurnRunState_Success)},
-				int64(0),
-				int64(500),
-				int64(100),
-			).
-			Return([]*entity.ExptTurnResult{
-				{
-					WeightedScore: gptr.Of(0.85),
-				},
-			}, int64(0), nil)
-
-		// Mock GetExptAggrResult 返回非ResourceNotFound错误
-		mockExptAggrResultRepo.EXPECT().
-			GetExptAggrResult(ctx, int64(1), int32(entity.FieldType_WeightedScore), "1").
-			Return(nil, errors.New("db error"))
-
-		// 即使 GetExptAggrResult 返回错误，UpdateExptAggrResult 也不应该返回错误
-		err := svc.UpdateExptAggrResult(ctx, param)
-		assert.NoError(t, err)
-	})
 }
 
 // TestExptAggrResultServiceImpl_calculateWeightedAggregateResults 测试 calculateWeightedAggregateResults 方法

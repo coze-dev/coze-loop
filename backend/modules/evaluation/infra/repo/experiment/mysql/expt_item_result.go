@@ -120,6 +120,9 @@ func (dao *exptItemResultDAOImpl) CountItemsByStatus(ctx context.Context, spaceI
 
 func (dao *exptItemResultDAOImpl) GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64, opts ...db.Option) ([]*model.ExptTurnResult, error) {
 	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
 	q := query.Use(db).ExptTurnResult
 	finds, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.Eq(itemID)).Find()
 	if err != nil {

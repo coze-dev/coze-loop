@@ -158,3 +158,21 @@ func TestExptTurnResultDAO_GetItemTurnRunLogs_ReadContextReadsReplica(t *testing
 	require.NoError(t, err)
 	require.NoError(t, replicaMock.ExpectationsWereMet())
 }
+
+func TestExptItemResultDAO_GetItemTurnResults_WriteContextReadsPrimary(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	gormDB, sourceMock, replicaMock := newRunLogResolverTestDB(t)
+	provider := dbmock.NewMockProvider(ctrl)
+	provider.EXPECT().NewSession(gomock.Any()).Return(gormDB)
+	dao := &exptItemResultDAOImpl{provider: provider}
+
+	sourceMock.ExpectQuery("SELECT .* FROM `expt_turn_result`").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "target_result_id"}).AddRow(int64(1), int64(202)))
+
+	turns, err := dao.GetItemTurnResults(contexts.WithCtxWriteDB(context.Background()), 4, 1, 3)
+	require.NoError(t, err)
+	require.Len(t, turns, 1)
+	require.Equal(t, int64(202), turns[0].TargetResultID)
+	require.NoError(t, sourceMock.ExpectationsWereMet())
+	require.NoError(t, replicaMock.ExpectationsWereMet())
+}

@@ -479,7 +479,10 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	}
 
 	if err := e.CheckBenefit(ctx, etec.Event.ExptID, etec.Event.SpaceID, etec.Expt.CreditCost == entity.CreditCostFree, etec.Event.Session); err != nil {
-		return nil, err
+		if len(evaluatorResults) == 0 {
+			return nil, err
+		}
+		return evaluatorResults, err
 	}
 
 	runEvalRes, evalErr := e.callEvaluators(ctx, pendingEvaluatorVersionIDs, etec, targetResult, etec.History)
@@ -546,7 +549,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	)
 
 	if err := evaluatorsConf.Valid(ctx); err != nil {
-		return nil, err
+		return collector.records, err
 	}
 
 	execEvalVerIDMap := gslice.ToMap(execEvaluatorVersionIDs, func(t int64) (int64, bool) { return t, true })
@@ -572,7 +575,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 
 	pool, err := goroutine.NewPool(evaluatorsConf.GetEvaluatorConcurNum())
 	if err != nil {
-		return nil, err
+		return collector.records, err
 	}
 	// 立即绑定释放到 pool 生命周期:即使下方循环中途提前 return(如 conf 为 nil / buildEvaluatorInputData 失败)
 	// 跳过了 ExecAll,也能释放底层 ants pool 及其常驻协程(purge / ticktock),避免 goroutine 泄漏。
@@ -589,12 +592,12 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 
 		ec := evaluatorsConf.GetEvaluatorConf(versionID)
 		if ec == nil {
-			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
+			return collector.records, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
 		inputData, err := e.buildEvaluatorInputData(ctx, evalSetSpaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext, expt.EvalConf)
 		if err != nil {
-			return nil, err
+			return collector.records, err
 		}
 
 		// 闭包捕获：必须在 Add 前将当前迭代的变量复制到局部变量，否则 goroutine 执行时可能读到最后一次循环的值
@@ -707,7 +710,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	)
 
 	if err := evaluatorsConf.Valid(ctx); err != nil {
-		return nil, err
+		return collector.records, err
 	}
 
 	// 按 versionID 建一个 Evaluator 索引, 用于 ItemConfig 循环里复用 (type/inputSchema 等元数据)。
@@ -816,7 +819,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 				SourceType:         entity.EvaluatorRecordSourceTypeBuiltin,
 			})
 			if serr != nil {
-				return nil, serr
+				return collector.records, serr
 			}
 			collector.store(skippedRecord)
 			continue
@@ -834,11 +837,11 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 
 		ev := evByVer[versionID]
 		if ev == nil {
-			return nil, fmt.Errorf("expt evaluator not found, evaluator_version_id: %d", versionID)
+			return collector.records, fmt.Errorf("expt evaluator not found, evaluator_version_id: %d", versionID)
 		}
 		ec := evaluatorsConf.GetEvaluatorConf(versionID)
 		if ec == nil {
-			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
+			return collector.records, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
 		// per-alias 动态参数: 用 icConf.DynamicParam 合成 RunConf 覆盖静态 ec.RunConf;
@@ -856,7 +859,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 
 		inputData, err := e.buildEvaluatorInputData(ctx, evalSetSpaceID, ev.EvaluatorType, ecForBuild, turn, targetFields, ev.GetInputSchemas(), etec.Ext, expt.EvalConf)
 		if err != nil {
-			return nil, err
+			return collector.records, err
 		}
 
 		pending = append(pending, pendingTask{
@@ -870,12 +873,12 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	}
 
 	if err := e.CheckBenefit(ctx, etec.Event.ExptID, etec.Event.SpaceID, etec.Expt.CreditCost == entity.CreditCostFree, etec.Event.Session); err != nil {
-		return nil, err
+		return collector.records, err
 	}
 
 	pool, err := goroutine.NewPool(evaluatorsConf.GetEvaluatorConcurNum())
 	if err != nil {
-		return nil, err
+		return collector.records, err
 	}
 
 	for idx := range pending {

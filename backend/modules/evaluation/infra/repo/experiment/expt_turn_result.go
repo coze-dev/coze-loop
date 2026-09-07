@@ -152,6 +152,18 @@ func (r *ExptTurnResultRepoImpl) SaveTurnRunLogs(ctx context.Context, runLogs []
 	return nil
 }
 
+func (r *ExptTurnResultRepoImpl) ApplyItemRunResults(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, turns []*entity.ExptTurnResult, refs []*entity.ExptTurnEvaluatorResultRef) (bool, error) {
+	turnPOs := make([]*model.ExptTurnResult, 0, len(turns))
+	for _, turn := range turns {
+		turnPOs = append(turnPOs, convert.NewExptTurnResultConvertor().DO2PO(turn))
+	}
+	refPOs := make([]*model.ExptTurnEvaluatorResultRef, 0, len(refs))
+	for _, ref := range refs {
+		refPOs = append(refPOs, convert.NewExptTurnEvaluatorResultRefConvertor().DO2PO(ref))
+	}
+	return r.exptTurnResultDAO.ApplyItemRunResults(ctx, exptID, exptRunID, itemID, spaceID, turnPOs, refPOs)
+}
+
 func (r *ExptTurnResultRepoImpl) UpdateTurnRunLogWithItemIDs(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, ufields map[string]any) error {
 	return r.exptTurnResultDAO.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, ufields)
 }

@@ -27,19 +27,17 @@ func TestCreateExptAggrResult_MultiSetConfig_ComputesEvaluatorGroupByAlias(t *te
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
+	aggrStore := newRetryAggrStore()
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 
-	mockExptAggrResultRepo.EXPECT().
-		GetExptAggrResultByExperimentID(gomock.Any(), gomock.Any()).
-		Return([]*entity.ExptAggrResult{}, nil)
 	mockExperimentRepo.EXPECT().
 		GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&entity.Experiment{
 			ID:                1,
 			EvalSetSourceType: entity.ExptEvalSetSourceType_MultiSetConfig,
+			EvalConf:          &entity.EvaluationConfiguration{EvalSetConfigs: []*entity.EvalSetConfig{{EvaluatorConfs: []*entity.ExptEvaluatorConf{{EvaluatorVersionID: 100, Alias: "judge_A"}, {EvaluatorVersionID: 100, Alias: "judge_B"}}}}},
 		}, nil).AnyTimes()
 
 	// computeEvaluatorAggrGroup: 同 version=100, 两个 alias (judge_A / judge_B) 各一条 record
@@ -69,28 +67,13 @@ func TestCreateExptAggrResult_MultiSetConfig_ComputesEvaluatorGroupByAlias(t *te
 		ScanTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return([]*entity.ExptTurnResult{}, int64(0), nil).AnyTimes()
 
-	// ★ 关键断言: 写入两条 EvaluatorScore 行, field_key 分别为 "100:judge_A" / "100:judge_B"
-	mockExptAggrResultRepo.EXPECT().
-		BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, results []*entity.ExptAggrResult) error {
-			fieldKeys := map[string]bool{}
-			for _, r := range results {
-				if r.FieldType == int32(entity.FieldType_EvaluatorScore) {
-					fieldKeys[r.FieldKey] = true
-				}
-			}
-			assert.True(t, fieldKeys["100:judge_A"], "应写 100:judge_A 桶")
-			assert.True(t, fieldKeys["100:judge_B"], "应写 100:judge_B 桶")
-			return nil
-		}).AnyTimes()
-
 	mockLocker := lockMocks.NewMockILocker(ctrl)
 	mockLocker.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
 	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
 	mockMetric.EXPECT().EmitCalculateExptAggrResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	svc := &ExptAggrResultServiceImpl{
-		exptAggrResultRepo:     mockExptAggrResultRepo,
+		exptAggrResultRepo:     aggrStore,
 		exptTurnResultRepo:     mockExptTurnResultRepo,
 		experimentRepo:         mockExperimentRepo,
 		evaluatorRecordService: mockEvaluatorRecordService,
@@ -100,6 +83,8 @@ func TestCreateExptAggrResult_MultiSetConfig_ComputesEvaluatorGroupByAlias(t *te
 
 	err := svc.CreateExptAggrResult(context.Background(), int64(100), int64(1))
 	assert.NoError(t, err)
+	assert.Equal(t, 0.8, retryAggrData(t, aggrStore, entity.FieldType_EvaluatorScore, "100:judge_A").AggregatorResults[0].GetScore())
+	assert.Equal(t, 0.4, retryAggrData(t, aggrStore, entity.FieldType_EvaluatorScore, "100:judge_B").AggregatorResults[0].GetScore())
 }
 
 // T2: MultiSetConfig 实验 createWeightedScoreAggrResult 不再跳过 ——

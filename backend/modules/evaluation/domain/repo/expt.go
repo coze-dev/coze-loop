@@ -92,6 +92,8 @@ type IExptTurnResultRepo interface {
 	BatchCreateNX(ctx context.Context, turnResults []*entity.ExptTurnResult) error
 	GetItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64) ([]*entity.ExptTurnResult, error)
 	SaveTurnResults(ctx context.Context, turnResults []*entity.ExptTurnResult) error
+	// ApplyItemRunResults atomically replaces the current item projection and evaluator refs, marks the run resulted, and adjusts status counts. Stale or already-resulted runs return false.
+	ApplyItemRunResults(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, turnResults []*entity.ExptTurnResult, refs []*entity.ExptTurnEvaluatorResultRef) (bool, error)
 	ScanTurnResults(ctx context.Context, exptID int64, status []int32, cursor, limit, spaceID int64) ([]*entity.ExptTurnResult, int64, error)
 	UpdateTurnResults(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, ufields map[string]any) error
 	UpdateTurnResultsWithItemIDs(ctx context.Context, exptID int64, itemIDs []int64, spaceID int64, ufields map[string]any) error
