@@ -32,6 +32,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task/taskservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
@@ -175,12 +176,18 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 		return nil, err
 	}
 	resourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, sharedResourceConfigProvider)
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics)
+	iCentralSchedulerScopeProvider := component.NewNoopCentralSchedulerScopeProvider()
+	iCentralAdmissionPolicy := component.NewNoopCentralAdmissionPolicy()
+	iCentralReservationGuard := component.NewNoopCentralReservationGuard()
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, componentIConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, serviceEvaluatorService, benefitSvc, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard)
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, componentIConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()
-	exptSchedulerEvent := service.NewExptSchedulerSvc(iExptManager, iExperimentRepo, iExptItemResultRepo, iExptTurnResultRepo, iEvaluatorRecordRepo, iExptStatsRepo, iExptRunLogRepo, idempotentService, componentIConfiger, quotaRepo, iLocker, exptEventPublisher, auditClient, exptMetric, exptResultService, idgen2, evaluationSetItemService, schedulerModeFactory, iEvalTargetService, iItemCompletePublisher, iExptItemRefRepo, sandboxAgentMetrics, v4...)
-	exptItemEvalEvent := service.NewExptRecordEvalService(iExptManager, componentIConfiger, exptEventPublisher, iExptItemResultRepo, iExptTurnResultRepo, iExptStatsRepo, iExperimentRepo, iExptItemRefRepo, quotaRepo, iLocker, idempotentService, auditClient, exptMetric, exptResultService, iEvalTargetService, evaluationSetItemService, evaluatorRecordService, serviceEvaluatorService, idgen2, benefitSvc, iEvalAsyncRepo, iItemCompletePublisher, sandboxAgentMetrics, v4...)
+	exptSchedulerEvent := service.NewExptSchedulerSvc(iExptManager, iExperimentRepo, iExptItemResultRepo, iExptTurnResultRepo, iEvaluatorRecordRepo, iExptStatsRepo, iExptRunLogRepo, idempotentService, componentIConfiger, quotaRepo, iLocker, exptEventPublisher, auditClient, exptMetric, exptResultService, idgen2, evaluationSetItemService, schedulerModeFactory, iEvalTargetService, iItemCompletePublisher, iExptItemRefRepo, sandboxAgentMetrics, iCentralReservationGuard, v4...)
+	iExptItemDispatchDAO := mysql.NewExptItemDispatchDAO(db2)
+	iExptItemDispatchRepo := experiment.NewExptItemDispatchRepo(iExptItemDispatchDAO)
+	iCentralSchedulerScopeOwner := component.NewNoopCentralSchedulerScopeOwner()
+	exptItemEvalEvent := service.NewExptRecordEvalService(iExptManager, componentIConfiger, exptEventPublisher, iExptItemResultRepo, iExptTurnResultRepo, iExptStatsRepo, iExperimentRepo, iExptItemRefRepo, quotaRepo, iLocker, idempotentService, auditClient, exptMetric, exptResultService, iEvalTargetService, evaluationSetItemService, evaluatorRecordService, serviceEvaluatorService, idgen2, benefitSvc, iEvalAsyncRepo, iItemCompletePublisher, sandboxAgentMetrics, iCentralReservationGuard, iExptItemDispatchRepo, iCentralSchedulerScopeOwner, v4...)
 	iExptAnnotateService := service.NewExptAnnotateService(db2, iExptAnnotateRepo, iExptTurnResultRepo, exptEventPublisher, evaluationSetItemService, iExperimentRepo, exptResultService, iExptTurnResultFilterRepo, iExptAggrResultRepo)
 	exptResultExportRecordDAO := mysql.NewExptResultExportRecordDAO(db2)
 	iExptResultExportRecordRepo := experiment.NewExptResultExportRecordRepo(exptResultExportRecordDAO, idgen2)
@@ -446,12 +453,18 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 		return nil, err
 	}
 	resourceAccessAuthorizer := service.NewResourceAccessAuthorizer(iAuthProvider, sharedResourceConfigProvider)
-	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics)
+	iCentralSchedulerScopeProvider := component.NewNoopCentralSchedulerScopeProvider()
+	iCentralAdmissionPolicy := component.NewNoopCentralAdmissionPolicy()
+	iCentralReservationGuard := component.NewNoopCentralReservationGuard()
+	iExptManager := service.NewExptManager(exptResultService, iExperimentRepo, iExptRunLogRepo, iExptStatsRepo, iExptItemResultRepo, iExptItemRefRepo, iExptTurnResultRepo, iConfiger, quotaRepo, iLocker, idempotentService, exptEventPublisher, auditClient, idgen2, exptMetric, iLatestWriteTracker, evaluationSetVersionService, iEvaluationSetService, iEvalTargetService, evaluatorService, benefitService, exptAggrResultService, iExptTemplateRepo, iExptTemplateManager, iNotifyRPCAdapter, iUserProvider, pipelineListAdapter, resourceAccessAuthorizer, sandboxAgentMetrics, iCentralSchedulerScopeProvider, iCentralAdmissionPolicy, iCentralReservationGuard)
 	v4 := service.ProvideNoSandboxAgentNotifiers()
 	schedulerModeFactory := service.NewSchedulerModeFactory(iExptManager, iExptItemResultRepo, iExptStatsRepo, iExptTurnResultRepo, idgen2, evaluationSetItemService, iExperimentRepo, iExptItemRefRepo, idempotentService, iConfiger, exptEventPublisher, evaluatorRecordService, exptResultService, iExptTemplateManager, iExptRunLogRepo, iLocker, v4...)
 	iItemCompletePublisher := service.ProvideNilItemCompletePublisher()
-	exptSchedulerEvent := service.NewExptSchedulerSvc(iExptManager, iExperimentRepo, iExptItemResultRepo, iExptTurnResultRepo, iEvaluatorRecordRepo, iExptStatsRepo, iExptRunLogRepo, idempotentService, iConfiger, quotaRepo, iLocker, exptEventPublisher, auditClient, exptMetric, exptResultService, idgen2, evaluationSetItemService, schedulerModeFactory, iEvalTargetService, iItemCompletePublisher, iExptItemRefRepo, sandboxAgentMetrics, v4...)
-	exptItemEvalEvent := service.NewExptRecordEvalService(iExptManager, iConfiger, exptEventPublisher, iExptItemResultRepo, iExptTurnResultRepo, iExptStatsRepo, iExperimentRepo, iExptItemRefRepo, quotaRepo, iLocker, idempotentService, auditClient, exptMetric, exptResultService, iEvalTargetService, evaluationSetItemService, evaluatorRecordService, evaluatorService, idgen2, benefitService, iEvalAsyncRepo, iItemCompletePublisher, sandboxAgentMetrics, v4...)
+	exptSchedulerEvent := service.NewExptSchedulerSvc(iExptManager, iExperimentRepo, iExptItemResultRepo, iExptTurnResultRepo, iEvaluatorRecordRepo, iExptStatsRepo, iExptRunLogRepo, idempotentService, iConfiger, quotaRepo, iLocker, exptEventPublisher, auditClient, exptMetric, exptResultService, idgen2, evaluationSetItemService, schedulerModeFactory, iEvalTargetService, iItemCompletePublisher, iExptItemRefRepo, sandboxAgentMetrics, iCentralReservationGuard, v4...)
+	iExptItemDispatchDAO := mysql.NewExptItemDispatchDAO(db2)
+	iExptItemDispatchRepo := experiment.NewExptItemDispatchRepo(iExptItemDispatchDAO)
+	iCentralSchedulerScopeOwner := component.NewNoopCentralSchedulerScopeOwner()
+	exptItemEvalEvent := service.NewExptRecordEvalService(iExptManager, iConfiger, exptEventPublisher, iExptItemResultRepo, iExptTurnResultRepo, iExptStatsRepo, iExperimentRepo, iExptItemRefRepo, quotaRepo, iLocker, idempotentService, auditClient, exptMetric, exptResultService, iEvalTargetService, evaluationSetItemService, evaluatorRecordService, evaluatorService, idgen2, benefitService, iEvalAsyncRepo, iItemCompletePublisher, sandboxAgentMetrics, iCentralReservationGuard, iExptItemDispatchRepo, iCentralSchedulerScopeOwner, v4...)
 	iExptAnnotateService := service.NewExptAnnotateService(db2, iExptAnnotateRepo, iExptTurnResultRepo, exptEventPublisher, evaluationSetItemService, iExperimentRepo, exptResultService, iExptTurnResultFilterRepo, iExptAggrResultRepo)
 	exptResultExportRecordDAO := mysql.NewExptResultExportRecordDAO(db2)
 	iExptResultExportRecordRepo := experiment.NewExptResultExportRecordRepo(exptResultExportRecordDAO, idgen2)

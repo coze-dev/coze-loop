@@ -86,6 +86,13 @@ func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Con
 	logs.CtxInfo(ctx, "feishu_notification: enter, expt_id: %d, to_status: %v, has_notification_conf: %v",
 		expt.ID, event.ToStatus, expt.NotificationConf != nil)
 
+	// 触发来源闸：evalx 实验一律不发。放在最前面 —— 它优先于 NotificationConf，
+	// 老实验（conf 为 nil）也一样挡住，否则 evalx 建的存量实验仍会在终态发卡。
+	if isFeishuNotifySuppressedByTrigger(expt) {
+		logs.CtxInfo(ctx, "feishu_notification: suppressed by trigger_type=%s, skip notify, expt_id: %d", expt.TriggerType, expt.ID)
+		return
+	}
+
 	// 兼容旧实验：NotificationConf 为 nil 时，保持旧行为（仅终态发送）
 	if expt.NotificationConf == nil {
 		switch event.ToStatus {

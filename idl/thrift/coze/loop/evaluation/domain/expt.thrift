@@ -128,6 +128,25 @@ typedef string ExptTriggerType (ts.enum="true")
 const ExptTriggerType Manual = "manual"
 const ExptTriggerType OpenAPI = "openapi"
 const ExptTriggerType Schedule = "schedule"
+const ExptTriggerType Evalx = "evalx"
+
+// ★ 中心化调度：单 item 预期资源消耗
+// 由创建方在 Create/Submit 时申报，服务端冻结进 eval_conf，供中心调度器预占额度使用。
+// category/resource_key 语义与额度上限配置一致；amount 的单位由上限配置的 unit 定义，调用方不传 unit。
+struct ExpectedResourceConsumption {
+    1: optional string category      // 资源类别：sandbox / agent_account / model / evaluator
+    2: optional string resource_key  // 具体资源：default / doubao_pro / gpt5.5 ...；不允许传 "*"（通配仅用于上限配置）
+    3: optional i64 amount           // 单 item 的预期占用量，必须 > 0
+    // 资源来源/提供方（如 "litellm"、业务方自定义标识）。可选。
+    // 同一 resource_key 经不同来源可能是不同的池子（同一模型走 LiteLLM 与走业务方
+    // 自备通道，配额各自独立），带上它才能分开记账。
+    // 不填等于"不区分来源"，行为与该字段引入之前完全一致。不允许传 "*"。
+    4: optional string source
+}
+
+struct ExpectedQuotaConsumption {
+    1: optional list<ExpectedResourceConsumption> resources
+}
 
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
@@ -202,6 +221,19 @@ struct Experiment {
     // 实验级多轮/SUA 跑法配置回显: 从 experiment.eval_conf.run_mode_config 反序列化, 与 Create/Submit 入参 run_mode_config 同构。
     // 仅 SandboxAgent + MultiSetConfig 实验非空。SUA 模型的 api_key/base_url 是运行时从 TCC 解析注入 case-file, 绝不回显。
     115: optional RunModeConfig run_mode_config
+
+    // ★ 新增段位 116~119: 中心化调度读视图
+    // 调度优先级回显 (1-99, 越大越优先); 直读 experiment 表同名列, 历史数据为 1
+    116: optional i32 priority_level
+    // 执行模式回显: legacy(旧 per-experiment 链路) / enforce(中心调度); 直读 experiment 表同名列, 该列是唯一权威源
+    117: optional string scheduler_mode
+    // 单 item 预期资源消耗向量回显: 从 experiment.eval_conf 反序列化, 与 Create/Submit 入参同构。
+    // "有则回显、无则省略": legacy 实验确实没申报向量, 省略比返回空结构更如实。
+    118: optional ExpectedQuotaConsumption expected_quota_consumption
+
+    // 注: scheduler_scope **刻意不进读视图**。它是不透明调度域 ID (形如 fornax_cn_prod),
+    // 对调用方没有可用语义却泄露部署拓扑; 业务代码本就不允许解析该字符串, 回显只会诱使
+    // 调用方依赖这个不稳定契约。内部运维需要时直接查 experiment.scheduler_scope 列。
 }
 
 // 实验模板基础信息

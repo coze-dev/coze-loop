@@ -35,6 +35,11 @@ type IConfiger interface {
 	GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg
 	GetCKDBName(ctx context.Context) *entity.CKDBConfig
 	GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList
+	// GetExptSchedulingPrivilegeWhiteList 谁可以申报中心调度的特权参数
+	// （priority / expected_quota_consumption / trigger_type=evalx 三者同一判据）。
+	// 未命中者的申报值一律被忽略：priority 走缺省、向量丢弃、trigger 降级 manual。
+	// 读取失败时按"谁都没有特权"处理。
+	GetExptSchedulingPrivilegeWhiteList(ctx context.Context) *entity.ExptSchedulingPrivilegeWhiteList
 	GetMaintainerUserIDs(ctx context.Context) map[string]bool
 	GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl
 	GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf

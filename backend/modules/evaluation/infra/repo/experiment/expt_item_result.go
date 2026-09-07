@@ -39,6 +39,18 @@ func (e ExptItemResultRepoImpl) BatchGet(ctx context.Context, spaceID, exptID in
 	return results, nil
 }
 
+func (e ExptItemResultRepoImpl) CountItemsByStatus(ctx context.Context, spaceID, exptID int64) (map[entity.ItemRunState]int64, error) {
+	got, err := e.exptItemResultDAO.CountItemsByStatus(ctx, spaceID, exptID)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[entity.ItemRunState]int64, len(got))
+	for status, cnt := range got {
+		out[entity.ItemRunState(status)] = cnt
+	}
+	return out, nil
+}
+
 func (e ExptItemResultRepoImpl) UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemIDs []int64, ufields map[string]any) error {
 	err := e.exptItemResultDAO.UpdateItemsResult(ctx, spaceID, exptID, itemIDs, ufields)
 	if err != nil {

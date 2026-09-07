@@ -101,6 +101,16 @@ func (c *configer) GetExptExportWhiteList(ctx context.Context) (eec *entity.Expt
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &eec) == nil, eec, entity.DefaultExptExportWhiteList())
 }
 
+// GetExptSchedulingPrivilegeWhiteList 谁可以申报中心调度的特权参数
+// （priority / expected_quota_consumption / trigger_type=evalx 三者同一判据）。
+//
+// 读取失败时回落到"谁都没有特权"而不是放行：这三样被滥用的后果都是"悄悄多占资源/插队"，
+// 配置中心抖动时宁可让大家退回缺省行为（可见且无损），也不要静默放开特权。
+func (c *configer) GetExptSchedulingPrivilegeWhiteList(ctx context.Context) (w *entity.ExptSchedulingPrivilegeWhiteList) {
+	const key = "expt_scheduling_privilege_white_list"
+	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil, w, entity.DefaultExptSchedulingPrivilegeWhiteList())
+}
+
 func (c *configer) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) (w *entity.ExptTemplateUpdateEvalSetWhiteList) {
 	const key = "expt_template_update_eval_set_white_list"
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil, w, entity.DefaultExptTemplateUpdateEvalSetWhiteList())

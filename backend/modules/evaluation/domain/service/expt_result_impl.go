@@ -1491,11 +1491,17 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 				RetryRecords: itemID2RetryRecords[itemID],
 			}
 		}
-		// 从 err_msg 反解出用户可见的 item 级错误（当前仅识别 item 僵尸超时；其他类型未来可扩展）
+		// 从 err_msg 反解出用户可见的 item 级错误（当前识别 item 僵尸超时与额度不可满足；其他类型未来可扩展）
 		if len(itemResultPO.ErrMsg) > 0 {
-			if ok, msg := errno.ParseItemZombieTimeoutErr(errno.DeserializeErr([]byte(itemResultPO.ErrMsg))); ok {
+			deserialized := errno.DeserializeErr([]byte(itemResultPO.ErrMsg))
+			if ok, msg := errno.ParseItemZombieTimeoutErr(deserialized); ok {
 				itemResult.SystemInfo.Error = &entity.RunError{
 					Code:   int64(errno.ItemZombieTimeoutCode),
+					Detail: gptr.Of(msg),
+				}
+			} else if ok, msg := errno.ParseItemQuotaImpossibleErr(deserialized); ok {
+				itemResult.SystemInfo.Error = &entity.RunError{
+					Code:   int64(errno.ItemQuotaImpossibleCode),
 					Detail: gptr.Of(msg),
 				}
 			}

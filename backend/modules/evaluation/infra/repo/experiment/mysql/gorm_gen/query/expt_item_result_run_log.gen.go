@@ -41,6 +41,7 @@ func newExptItemResultRunLog(db *gorm.DB, opts ...gen.DOOption) exptItemResultRu
 	_exptItemResultRunLog.LogID = field.NewString(tableName, "log_id")
 	_exptItemResultRunLog.ResultState = field.NewInt32(tableName, "result_state")
 	_exptItemResultRunLog.RetryTimes = field.NewInt32(tableName, "retry_times")
+	_exptItemResultRunLog.QuotaReservationState = field.NewInt32(tableName, "quota_reservation_state")
 
 	_exptItemResultRunLog.fillFieldMap()
 
@@ -51,21 +52,22 @@ func newExptItemResultRunLog(db *gorm.DB, opts ...gen.DOOption) exptItemResultRu
 type exptItemResultRunLog struct {
 	exptItemResultRunLogDo exptItemResultRunLogDo
 
-	ALL           field.Asterisk
-	ID            field.Int64  // id
-	SpaceID       field.Int64  // 空间 id
-	ExptID        field.Int64  // 实验 id
-	ExptRunID     field.Int64  // 实验运行 id
-	ItemID        field.Int64  // item_id
-	ItemVersionID field.Int64  // item 自身版本号; 0=旧数据/无版本概念; 真值源 expt_item_ref
-	Status        field.Int32  // 状态
-	ErrMsg        field.Bytes  // 错误信息
-	CreatedAt     field.Time   // 创建时间
-	UpdatedAt     field.Time   // 更新时间
-	DeletedAt     field.Field  // 删除时间
-	LogID         field.String // 日志 id
-	ResultState   field.Int32  // 回写结果表状态
-	RetryTimes    field.Int32  // 本轮实验运行中该 item 已被系统自动重试的次数; 0=未重试; 仅内部调度降权用, 不透出
+	ALL                   field.Asterisk
+	ID                    field.Int64  // id
+	SpaceID               field.Int64  // 空间 id
+	ExptID                field.Int64  // 实验 id
+	ExptRunID             field.Int64  // 实验运行 id
+	ItemID                field.Int64  // item_id
+	ItemVersionID         field.Int64  // item 自身版本号; 0=旧数据/无版本概念; 真值源 expt_item_ref
+	Status                field.Int32  // 状态
+	ErrMsg                field.Bytes  // 错误信息
+	CreatedAt             field.Time   // 创建时间
+	UpdatedAt             field.Time   // 更新时间
+	DeletedAt             field.Field  // 删除时间
+	LogID                 field.String // 日志 id
+	ResultState           field.Int32  // 回写结果表状态
+	RetryTimes            field.Int32  // 本轮实验运行中该 item 已被系统自动重试的次数; 0=未重试; 仅内部调度降权用, 不透出
+	QuotaReservationState field.Int32  // 中心调度额度预占投影: 0=none, 1=reserved; Redis reservation 是账本真值, 本列仅供调度算准并发占用
 
 	fieldMap map[string]field.Expr
 }
@@ -96,6 +98,7 @@ func (e *exptItemResultRunLog) updateTableName(table string) *exptItemResultRunL
 	e.LogID = field.NewString(table, "log_id")
 	e.ResultState = field.NewInt32(table, "result_state")
 	e.RetryTimes = field.NewInt32(table, "retry_times")
+	e.QuotaReservationState = field.NewInt32(table, "quota_reservation_state")
 
 	e.fillFieldMap()
 
@@ -124,7 +127,7 @@ func (e *exptItemResultRunLog) GetFieldByName(fieldName string) (field.OrderExpr
 }
 
 func (e *exptItemResultRunLog) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 14)
+	e.fieldMap = make(map[string]field.Expr, 15)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_id"] = e.ExptID
@@ -139,6 +142,7 @@ func (e *exptItemResultRunLog) fillFieldMap() {
 	e.fieldMap["log_id"] = e.LogID
 	e.fieldMap["result_state"] = e.ResultState
 	e.fieldMap["retry_times"] = e.RetryTimes
+	e.fieldMap["quota_reservation_state"] = e.QuotaReservationState
 }
 
 func (e exptItemResultRunLog) clone(db *gorm.DB) exptItemResultRunLog {

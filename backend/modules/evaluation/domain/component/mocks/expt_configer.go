@@ -196,6 +196,20 @@ func (mr *MockIConfigerMockRecorder) GetExptMultiSetWhiteList(arg0 any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptMultiSetWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptMultiSetWhiteList), arg0)
 }
 
+// GetExptSchedulingPrivilegeWhiteList mocks base method.
+func (m *MockIConfiger) GetExptSchedulingPrivilegeWhiteList(ctx context.Context) *entity.ExptSchedulingPrivilegeWhiteList {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExptSchedulingPrivilegeWhiteList", ctx)
+	ret0, _ := ret[0].(*entity.ExptSchedulingPrivilegeWhiteList)
+	return ret0
+}
+
+// GetExptSchedulingPrivilegeWhiteList indicates an expected call of GetExptSchedulingPrivilegeWhiteList.
+func (mr *MockIConfigerMockRecorder) GetExptSchedulingPrivilegeWhiteList(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptSchedulingPrivilegeWhiteList", reflect.TypeOf((*MockIConfiger)(nil).GetExptSchedulingPrivilegeWhiteList), ctx)
+}
+
 // GetExptTemplateUpdateEvalSetWhiteList mocks base method.
 func (m *MockIConfiger) GetExptTemplateUpdateEvalSetWhiteList(arg0 context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
 	m.ctrl.T.Helper()
