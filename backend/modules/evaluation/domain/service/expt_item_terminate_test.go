@@ -791,7 +791,7 @@ func TestEvalTurns_StopsOnTerminatedItem(t *testing.T) {
 
 // TestParseItemVisibleRunError item 级 err_msg → 用户可见 RunError 的反解（对应 P1 #1）。
 //
-// 这是 spec 验收点「err_msg 为『该行被用户主动终止』语义（601205087）并透给前端展示」的回归防线：
+// 这是 spec 验收点「err_msg 为『该行被用户主动终止』语义（601205088）并透给前端展示」的回归防线：
 // ItemSystemInfo.Error 是 item 级错误透出前端的唯一赋值点，行级终止若不在此反解，
 // TerminateItems 步骤④ 写的 err_msg 就是白写，用户只能看到裸 Terminal 状态。
 func TestParseItemVisibleRunError(t *testing.T) {
@@ -801,7 +801,7 @@ func TestParseItemVisibleRunError(t *testing.T) {
 		got := parseItemVisibleRunError(raw)
 
 		require.NotNil(t, got, "行级终止必须透出 RunError，否则前端看不到终止原因")
-		assert.Equal(t, int64(errno.ItemManuallyTerminatedCode), got.Code, "code 必须是 601205087")
+		assert.Equal(t, int64(errno.ItemManuallyTerminatedCode), got.Code, "code 必须是 601205088")
 		require.NotNil(t, got.Detail)
 		assert.Equal(t, "该行被用户主动终止", *got.Detail, "Detail 必须是中文可读语义，不能是内部错误串")
 	})

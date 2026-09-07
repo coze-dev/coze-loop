@@ -1898,7 +1898,7 @@ func TestExptTurnResultRepoImpl_CreateOrUpdateItemsTurnRunLogStatus(t *testing.T
 		},
 		{
 			// ★ 行级终止的主场景：排队中的行只有 expt_turn_result、没有 turn run log，走 NX 新建分支。
-			// err_msg 必须是「被用户主动终止」(601205087)，MUST NOT 是僵尸超时文案 ——
+			// err_msg 必须是「被用户主动终止」(601205088)，MUST NOT 是僵尸超时文案 ——
 			// 否则读侧 getTurnSystemInfo 反解出「长时间未更新超时」，与 item 级语义自相矛盾。
 			name:      "Edge: Terminal state writes manually-terminated err_msg, not zombie timeout",
 			spaceID:   1,

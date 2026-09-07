@@ -202,7 +202,8 @@ type Experiment struct {
 	MaxAliveTime int64
 	SourceType   SourceType
 	SourceID     string
-	// TriggerType 实验触发方式，与表字段 trigger_type 一致：manual / openapi / schedule
+	// TriggerType 实验触发方式，与表字段 trigger_type 一致：manual / openapi / schedule / evalx。
+	// evalx 来源的实验一律不发飞书通知，见 service.isFeishuNotifySuppressedByTrigger。
 	TriggerType string
 	// ExptSource 查询时填充：与一级字段 source_type/source_id 一致；Workflow 时由 Pipeline 补充 span_filter / scheduler / sampler
 	ExptSource        *ExptSource
@@ -216,6 +217,27 @@ type Experiment struct {
 	Visibility       Visibility            // 实验模板可见性，默认为空，可见
 	ThreadID         *string               // 关联的智能评测会话ID
 	NotificationConf *ExptNotificationConf // 通知配置（JSON序列化存储）
+
+	// PriorityLevel 调度优先级，1-99，数值越大越优先；与表字段 priority_level 一致，历史数据为 1。
+	// 仅中心化调度模式参与排序 (priority DESC, created_at ASC, id ASC)，legacy 模式不读该值。
+	PriorityLevel int32
+	// ExptDispatchMode 执行模式，与表字段 scheduler_mode 一致：legacy / enforce。
+	// 该 DB 列是唯一权威源：创建时按灰度白名单一次性冻结，Run/Retry/consumer 一律回查此列裁决，
+	// 配置热变更不得让存量实验在中心调度与旧 daemon 之间切换。
+	// 命名注意：本字段与 entity.ExptSchedulerMode (实验跑法调度器 interface) 是完全不同的概念，勿混用。
+	ExptDispatchMode string
+	// SchedulerScope 中心调度所有权与 Priority 排序边界，与表字段 scheduler_scope 一致。
+	//
+	// 服务端生成并在创建时冻结的**不透明稳定 ID**，回答"哪个中心调度器拥有这个实验、
+	// 它与哪些实验一起比较 Priority"。legacy 实验为空串。
+	//
+	// 为什么需要它：线上与各 PPE 泳道共用同一个库，而中心调度是跨空间扫全局的后台任务。
+	// 无此边界时泳道调度器会扫出线上实验并派发 item（结果写回共享库、线上侧无感知）。
+	//
+	// 业务代码**不得解析**该字符串：泳道 / 空间 / App / Region 都只是生成规则的输入，
+	// 未来改按空间拆分时只换生成规则，字段语义与查询结构不变。
+	// Retry 继承原值，不按当前运行环境重算。
+	SchedulerScope string
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
@@ -348,6 +370,97 @@ type EvaluationConfiguration struct {
 	// RunModeConfig 实验级跑法配置 (仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效)。
 	// 序列化进 experiment.eval_conf; 提交时展开到各 item 的 ItemTargetConf.RunConf 兜底默认值。
 	RunModeConfig *RunModeConfig `json:"run_mode_config,omitempty"`
+
+	// ExpectedQuotaConsumption 单 item 预期资源消耗向量 (中心化调度用)。
+	// 创建期一次性冻结进 experiment.eval_conf, 之后只读: 调度预占、释放、账本重建全部读这同一份快照,
+	// 运行期不再回查外部 RPC/缓存, 避免同一实验在不同时刻按不同规格扣额度。
+	// enforce 模式必填; legacy 模式为 nil。指针类型用于区分「未申报」与「申报了空列表」。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption `json:"expected_quota_consumption,omitempty"`
+}
+
+// ExpectedResourceConsumption 单 item 对一种具体资源的预期占用量。
+// amount 的单位由额度上限配置的 unit 定义 (seat / token_per_min / query_per_min ...), 调用方不申报 unit,
+// 避免伪造或与上限配置漂移。
+type ExpectedResourceConsumption struct {
+	Category    string `json:"category"`
+	ResourceKey string `json:"resource_key"`
+	Amount      int64  `json:"amount"`
+	// Source 该资源的来源/提供方（如 "litellm"、业务方自定义标识）。**可选**。
+	//
+	// 为什么需要它：同一个 resource_key 经不同来源拿到的可能是**不同的池子** ——
+	// 同一个模型走 LiteLLM 与走业务方自备通道，配额是各自独立的，
+	// 混在一个账本条目里记账会让两边互相挤占。
+	//
+	// ★ **空 source 不参与 key、不改变任何既有行为**（见 BuildQuotaConstraintKey 的论证）：
+	// 这是本字段能安全加进已有账本的前提 —— 存量 reservation 与存量上限配置都没有 source，
+	// 它们的 key 必须保持字节级不变，否则释放会找不到条目、上限会查不到登记。
+	//
+	// omitempty：不申报时不要在冻结进 eval_conf 的 JSON 里写空串 ——
+	// 让"没有 source"在数据里可区分，也让存量快照的字节形态不变。
+	Source string `json:"source,omitempty"`
+}
+
+// ExpectedQuotaConsumption 单 item 的多资源消耗向量。
+type ExpectedQuotaConsumption struct {
+	Resources []*ExpectedResourceConsumption `json:"resources,omitempty"`
+}
+
+// 并发也是一种「单 item 占用一份、终态归还一份」的资源，因此不新造计数器，
+// 而是登记成额度体系里的一个维度，直接复用预占 / 释放 / 木桶 / 优先级排序。
+//
+// 为什么必须有这一维：资源向量（sandbox seat / model token）管的是"耗多少外部资源"，
+// 管不住"同时有多少 item 在跑"。若某类实验只申报 model token 不申报 sandbox，
+// 并发就完全失控 —— 实测中心调度只受单实验 deficit + 资源额度两道约束，
+// 全 Scope 在跑 item 总数没有任何上限。
+const (
+	// QuotaCategoryConcurrency 并发维度的 category。
+	QuotaCategoryConcurrency = "concurrency"
+	// QuotaResourceKeyItem 并发维度下的资源键：一个正在执行的 item 占一份。
+	QuotaResourceKeyItem = "item"
+	// concurrencyAmountPerItem 单 item 的并发占用量恒为 1。
+	// 抽成常量而非字面量，是为了让"一个 item 占一份并发"这条语义在代码里可搜到。
+	concurrencyAmountPerItem = 1
+)
+
+// WithConcurrencyDimension 返回在原向量基础上补齐并发维度的**新**向量。
+//
+// 幂等：若调用方已显式申报 concurrency|item，保留其申报值不覆盖。
+// 这条路径**当前就能走通**（concurrency 在商业版 category 白名单内、Validate 也不拦），
+// 所以"重型 item 占 2 份并发"这类用法不需要改代码，申报即生效。
+//
+// 不原地改 receiver：ExpectedQuotaConsumption 是创建期冻结进 eval_conf 的快照，
+// 原地修改会让"冻结"语义失效（同一份快照在不同调用后变形）。
+func (c *ExpectedQuotaConsumption) WithConcurrencyDimension() *ExpectedQuotaConsumption {
+	// nil receiver 不会被生产触达（两个调用点都先挡了 nil：商业版 toRequirements 与
+	// frozenConstraintsOf），但这个分支必须留 —— 它是本方法唯一的 nil 安全保障，
+	// 删掉会让方法从"nil 安全"变成"nil 直接 panic"。
+	if c == nil {
+		return &ExpectedQuotaConsumption{
+			Resources: []*ExpectedResourceConsumption{{
+				Category:    QuotaCategoryConcurrency,
+				ResourceKey: QuotaResourceKeyItem,
+				Amount:      concurrencyAmountPerItem,
+			}},
+		}
+	}
+
+	out := &ExpectedQuotaConsumption{Resources: make([]*ExpectedResourceConsumption, 0, len(c.Resources)+1)}
+	for _, r := range c.Resources {
+		if r == nil {
+			continue
+		}
+		if r.Category == QuotaCategoryConcurrency && r.ResourceKey == QuotaResourceKeyItem {
+			// 已显式申报：原样保留，返回的向量与入参等价（幂等）
+			return c
+		}
+		out.Resources = append(out.Resources, r)
+	}
+	out.Resources = append(out.Resources, &ExpectedResourceConsumption{
+		Category:    QuotaCategoryConcurrency,
+		ResourceKey: QuotaResourceKeyItem,
+		Amount:      concurrencyAmountPerItem,
+	})
+	return out
 }
 
 // RunMode 实验级评测模式 (跑法)。与 runtime domain RunMode / IDL ExptRunMode 对齐。
@@ -877,6 +990,47 @@ type ExptItemConfig struct {
 	// 执行 target / hydrate 评测集大字段时据此切到各自来源空间; 0=同调用方空间。
 	EvalSetSourceSpaceID int64 `json:"eval_set_source_space_id,omitempty"` // 本行评测集来源空间
 	TargetSourceSpaceID  int64 `json:"target_source_space_id,omitempty"`   // 本行评测对象来源空间
+
+	// ExpectedQuotaConsumption 本行的资源消耗向量 (中心化调度用)。
+	//
+	// nil = 沿用实验级 eval_conf 里那份 (存量 item 全是 nil, 自动回落, 无需数据迁移)。
+	// 非 nil 时**完全覆盖**实验级向量, 不做逐维 merge —— 逐维 merge 会让"这行不用沙箱"
+	// 这类意图无法表达 (省略即继承, 无法显式清零)。
+	//
+	// 与 ItemTargetConf.RunConf 同构: 都是"首次调度冻结进 item_config、执行期只读"的
+	// 行级快照, 随既有 JSON 列走, 加字段无需 DDL。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption `json:"expected_quota_consumption,omitempty"`
+}
+
+// SameAs 判定两个向量是否**等价**(维度集合与各维用量完全一致, 不计顺序)。
+//
+// 中心调度按此把候选 item 分批预占: ReserveBatch 的 Requirements 是"同批共享"的,
+// Lua 侧靠 floor(available/amount) 一次除法算本批能放几个 —— 该算法要求同批各 item
+// 的 amount 严格相同, 否则除法失去意义。故只有等价向量才能进同一批。
+func (c *ExpectedQuotaConsumption) SameAs(other *ExpectedQuotaConsumption) bool {
+	toMap := func(v *ExpectedQuotaConsumption) map[string]int64 {
+		m := map[string]int64{}
+		if v == nil {
+			return m
+		}
+		for _, r := range v.Resources {
+			if r == nil {
+				continue
+			}
+			m[r.Category+"|"+r.ResourceKey] = r.Amount
+		}
+		return m
+	}
+	a, b := toMap(c), toMap(other)
+	if len(a) != len(b) {
+		return false
+	}
+	for k, av := range a {
+		if bv, ok := b[k]; !ok || bv != av {
+			return false
+		}
+	}
+	return true
 }
 
 // ItemTargetConf per-item target 运行配置

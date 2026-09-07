@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -232,6 +234,11 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 			if tt.prepareMock != nil {
 				tt.prepareMock(f, ctrl, tt.args) // Modification point: pass ctrl
 			}
+
+			// 每拍会做一次 expt_stats 对账（reconcileExptStats）。它与本组用例要断言的调度流程
+			// 无关，且读不到真值时自身就会跳过 —— 这里直接让它读到空分布并静默返回。
+			f.exptItemResultRepo.EXPECT().CountItemsByStatus(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil, nil).AnyTimes()
 
 			svc := &ExptSchedulerImpl{
 				Manager:                  f.manager,
@@ -503,6 +510,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 		nil, // itemCompletePublisher: 开源侧 nil, scheduler 循环内以非空守卫跳过发送
 		exptItemRefRepo,
 		metricsmocks.NewMockSandboxAgentMetrics(ctrl),
+		component.NewNoopCentralReservationGuard(),
 	)
 	assert.NotNil(t, svc)
 	assert.Implements(t, (*ExptSchedulerEvent)(nil), svc)
@@ -2480,7 +2488,15 @@ func TestExptSchedulerImpl_sweepTerminatedSandboxItems_CrossSpace(t *testing.T) 
 		).Times(1)
 		// 消费方侧写库仍然用 event.SpaceID=3
 		mockItemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{10}, gomock.Any(), int64(3)).Return(nil)
-		mockItemRepo.EXPECT().UpdateItemsResult(gomock.Any(), int64(3), int64(1), []int64{10}, gomock.Any()).Return(nil)
+		// ★ 与 handleZombies 同一条不变量：主表只写 err_msg，status 归 RecordItemRunLogs。
+		// 本处曾照抄 handleZombies 的写库形状（连 status 一起抄），把同一个净零 bug 复制了一份。
+		mockItemRepo.EXPECT().UpdateItemsResult(gomock.Any(), int64(3), int64(1), []int64{10}, gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any) error {
+				_, hasStatus := ufields["status"]
+				assert.False(t, hasStatus, "sandbox sweep 路径不得抢先写主表 status")
+				assert.NotNil(t, ufields["err_msg"])
+				return nil
+			})
 		mockTurnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), int64(3), int64(1), int64(2), []int64{10}, entity.TurnRunState_Fail).Return(nil)
 
 		items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}

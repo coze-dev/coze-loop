@@ -244,6 +244,13 @@ type ExecuteEvalTargetParam struct {
 	// ExptGroupKey 实验分组 key (Experiment.ExperimentGroupKey, 默认为实验 id 字符串),
 	// 属实验级属性, 供评测对象 (如 SandboxAgent) 透传给外部执行侧。
 	ExptGroupKey string
+	// ExptSpaceID 发起实验所在空间 (消费方空间)。0 = 未知 (调试链路无实验)。
+	//
+	// 与本结构其它字段的关键区别: operator 收到的 spaceID 形参在跨空间共享评测对象时
+	// 是**对象来源空间**, 本字段才是发起实验的空间。消费方**只应**用它做"按空间取配置"
+	// 这类归属判断 (当前唯一消费方: SandboxAgent 的模型凭据替换规则);
+	// 沙箱 workspace、record 空间、AK/SK 一律继续用 spaceID 形参, 换了会撕裂销毁链与回传链。
+	ExptSpaceID int64
 }
 
 // EvalSetItemMeta 承载评测集与 item 层面的元数据快照, 用于评测对象 (如 SandboxAgent) 透传给外部执行侧。
@@ -387,7 +394,16 @@ type UpdateRunConfParam struct {
 	SpaceID       int64
 	ItemConcurNum *int
 	ItemRetryNum  *int
-	Session       *Session
+
+	// PriorityLevel / ExpectedQuotaConsumption 中心调度参数，nil = 不修改。
+	// 两者只对 enforce 实验有意义，legacy 实验既不参与优先级排序也没有额度账本，
+	// 所以服务层遇到 legacy 会直接拒绝而不是写一个没人读的值。
+	PriorityLevel *int32
+	// 整向量替换而非增量：与创建期"冻结进 eval_conf"的语义一致，
+	// 增量语义会让"删掉一个资源维度"无法表达。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption
+
+	Session *Session
 }
 
 type CreateExptParam struct {
@@ -423,6 +439,17 @@ type CreateExptParam struct {
 	// 多评测集 MultiSetConfig 走 EvalSetConfigs 内每个元素的 shared_option。
 	EvalSetSharedOption *SharedResourceOption `json:"eval_set_shared_option,omitempty"`
 	TargetSharedOption  *SharedResourceOption `json:"target_shared_option,omitempty"`
+
+	// ★ 中心化调度 (仅 EvalX 发起的实验使用)：三个字段在创建时一次性冻结到 experiment 表。
+	//
+	// PriorityLevel 调度优先级 1-99，越大越优先；未申报按 1。
+	PriorityLevel int32 `json:"priority_level,omitempty"`
+	// SchedulerScope 调度所有权与排序边界，由服务端解析后写入，**不接受调用方指定**
+	// （见 ConvertCreateReq：请求里的同名字段被忽略）。legacy 实验为空串。
+	SchedulerScope string `json:"scheduler_scope,omitempty"`
+	// ExpectedQuotaConsumption 单 item 预期资源消耗向量，由 EvalX 申报。
+	// enforce 实验缺这个向量就无法预占额度，调度器只能跳过 —— 因此创建时即校验非空。
+	ExpectedQuotaConsumption *ExpectedQuotaConsumption `json:"expected_quota_consumption,omitempty"`
 }
 
 type ExptRunCheckOption struct {

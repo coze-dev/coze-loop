@@ -459,9 +459,15 @@ const (
 	sandboxTerminatedBeforeReportMessage           = "沙箱在结果上报前已提前进入终态，该实验行已置为失败"
 	sandboxTerminatedBeforeReportNoAffectStability = false
 
+	ItemQuotaImpossibleCode              = 601205087 // 实验行申报的资源量超过调度域登记上限，任何配置下都无法调度（central scheduler 每拍授予点触发）
+	itemQuotaImpossibleMessage           = "实验行申报的资源量超过调度域上限，任何配置下都无法调度，已被置为失败"
+	itemQuotaImpossibleNoAffectStability = true // 结构性配置错误（申报>上限），非系统稳定性问题
+
 	// ItemManuallyTerminatedCode 行级终止（TerminateExperimentItems 触发）。用户主动放弃该行，不是系统故障，
 	// 故 noAffectStability = true，不计入稳定性口径。message 会经 err_msg 落库并由 ItemSystemInfo.Error 透给前端展示。
-	ItemManuallyTerminatedCode              = 601205087
+	// ⚠️ 原取 601205087，与 main 上新增的 ItemQuotaImpossibleCode 撞号（两边并行开发各自取了下一个空位），
+	// 合并时本码顺延到 601205088；601205087 归 main 先到者。
+	ItemManuallyTerminatedCode              = 601205088
 	itemManuallyTerminatedMessage           = "该行被用户主动终止"
 	itemManuallyTerminatedNoAffectStability = true
 
@@ -1167,6 +1173,12 @@ func init() {
 		SandboxTerminatedBeforeReportCode,
 		sandboxTerminatedBeforeReportMessage,
 		code.WithAffectStability(!sandboxTerminatedBeforeReportNoAffectStability),
+	)
+
+	code.Register(
+		ItemQuotaImpossibleCode,
+		itemQuotaImpossibleMessage,
+		code.WithAffectStability(!itemQuotaImpossibleNoAffectStability),
 	)
 
 	code.Register(

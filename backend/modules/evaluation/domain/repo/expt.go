@@ -29,6 +29,26 @@ type IExperimentRepo interface {
 	GetEvaluatorRefByExptIDs(ctx context.Context, exptID []int64, spaceID int64) ([]*entity.ExptEvaluatorRef, error)
 }
 
+//go:generate mockgen -destination=mocks/expt_scheduler_queue.go -package=mocks . IExperimentSchedulerQueueRepo
+
+// IExperimentSchedulerQueueRepo 中心调度的候选实验扫描，单方法窄接口。
+//
+// 为什么不放进 IExperimentRepo：那个接口已有 15+ 方法、被十余处依赖（含大量手写 fake）。
+// 中心调度只需要"扫候选"这一件事，塞进去会让所有实现方和 fake 都被迫感知调度概念 ——
+// 实际后果已经发生过一次：ScanSchedulerQueue 曾并入宽接口，导致多处手写 fake 编译失败，
+// 而那个编译失败又掩盖了同包内既有的测试失败。窄接口让"加调度能力"不再波及无关调用方。
+//
+// 实现方仍是同一个 exptRepoImpl（同一张表、同一个 DAO），拆的只是消费侧契约。
+type IExperimentSchedulerQueueRepo interface {
+	// ScanSchedulerQueue 在指定 scheduler_scope 内跨空间扫描候选实验
+	// （按 priority DESC, created_at ASC, id ASC）。
+	//
+	// 不接受 spaceID —— 中心调度在 Scope 内按全局优先级排序，按空间分别扫描会使全局优先级失效。
+	// 但 param.SchedulerScope 必填：它是调度所有权边界（线上与各 PPE 泳道共库），
+	// 空值由实现方拒绝而非退化成扫全表。
+	ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*entity.Experiment, error)
+}
+
 type IExptStatsRepo interface {
 	Create(ctx context.Context, stats *entity.ExptStats) error
 	Get(ctx context.Context, exptID, spaceID int64) (*entity.ExptStats, error)
@@ -49,6 +69,8 @@ type IExptItemResultRepo interface {
 	GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64) ([]*entity.ExptTurnResult, error)
 	MGetItemTurnResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptTurnResult, error)
 	UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemID []int64, ufields map[string]any) error
+	// CountItemsByStatus 返回该实验 item 的状态分布（status -> 行数），供 expt_stats 计数行对账。
+	CountItemsByStatus(ctx context.Context, spaceID, exptID int64) (map[entity.ItemRunState]int64, error)
 	GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64) (int32, error)
 
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*entity.ExptItemResultRunLog) error

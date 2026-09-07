@@ -1492,7 +1492,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 			}
 		}
 		// 从 err_msg 反解出用户可见的 item 级错误。
-		// 当前识别两类：① 僵尸超时（系统判定失败）② 行级终止（用户主动放弃，601205087）。
+		// 当前识别三类：① 僵尸超时（系统判定失败）② 额度不可满足 ③ 行级终止（用户主动放弃）。
 		// ★ 行级终止必须接在这里：ItemSystemInfo.Error 是 item 级错误透出前端的唯一赋值点，
 		//   TerminateItems 步骤④ 往主表写的 err_msg 若不在此反解，用户只能看到一个裸的 Terminal
 		//   状态、看不到「该行被用户主动终止」文案（spec 验收点）。
@@ -1529,6 +1529,13 @@ func parseItemVisibleRunError(errMsg []byte) *entity.RunError {
 	if ok, msg := errno.ParseItemZombieTimeoutErr(deserialized); ok {
 		return &entity.RunError{
 			Code:   int64(errno.ItemZombieTimeoutCode),
+			Detail: gptr.Of(msg),
+		}
+	}
+	// main 侧新增：额度不可满足（合并 origin/main 时并入本 helper，保持调用点单一）
+	if ok, msg := errno.ParseItemQuotaImpossibleErr(deserialized); ok {
+		return &entity.RunError{
+			Code:   int64(errno.ItemQuotaImpossibleCode),
 			Detail: gptr.Of(msg),
 		}
 	}
@@ -2597,7 +2604,7 @@ func (e *ExptResultBuilder) getTurnSystemInfo(ctx context.Context, itemID, turnI
 			}
 		} else if ok, errMsg := errno.ParseItemManuallyTerminatedErr(deserialized); ok {
 			// 行级终止：CreateOrUpdateItemsTurnRunLogStatus(Terminal) 往 turn run log 写的是
-			// ItemManuallyTerminated（601205087，非 turnOtherErrCode），RecordItemRunLogs 会把它回抄进
+			// ItemManuallyTerminated（601205088，非 turnOtherErrCode），RecordItemRunLogs 会把它回抄进
 			// turn result。不在这里接上，turn 级就只剩裸 Terminal 状态、看不到终止原因。
 			systemInfo.Error = &entity.RunError{
 				Code:   int64(errno.ItemManuallyTerminatedCode),

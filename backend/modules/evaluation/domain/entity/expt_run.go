@@ -5,6 +5,7 @@ package entity
 
 import (
 	"context"
+	"maps"
 	"strings"
 	"time"
 
@@ -444,6 +445,21 @@ func (e *RetryConf) GetRetryInterval() time.Duration {
 
 type QuotaSpaceExpt struct {
 	ExptID2RunTime map[int64]int64 // id -> unix
+}
+
+// Clone 深拷贝全部字段，供 repo 层的 read-modify-write 构造 updater 入参。
+// 之前 repo 直接手工构造 &QuotaSpaceExpt{ExptID2RunTime: maps.Clone(...)}，只覆盖了当时唯一的字段；
+// 一旦本 struct 新增字段而 repo 未同步补上，新字段会在每次 CreateOrUpdate 时被零值静默覆盖回 Redis。
+// 统一走本方法后，新增字段只需在此处补一行，不必再记得改 repo。
+func (q *QuotaSpaceExpt) Clone() *QuotaSpaceExpt {
+	if q == nil {
+		return &QuotaSpaceExpt{ExptID2RunTime: make(map[int64]int64)}
+	}
+	cloned := &QuotaSpaceExpt{ExptID2RunTime: maps.Clone(q.ExptID2RunTime)}
+	if cloned.ExptID2RunTime == nil {
+		cloned.ExptID2RunTime = make(map[int64]int64)
+	}
+	return cloned
 }
 
 func (q *QuotaSpaceExpt) Serialize() ([]byte, error) {

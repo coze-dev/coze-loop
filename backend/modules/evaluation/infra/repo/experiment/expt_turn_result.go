@@ -165,7 +165,7 @@ func (r *ExptTurnResultRepoImpl) UpdateTurnRunLogWithItemIDs(ctx context.Context
 //
 // 现状分流（生产调用方只会传 Fail / Terminal）：
 //   - Fail：僵尸超时 / 沙箱提前终态兜底 —— 保持既有文案与既有行为**完全不变**
-//   - Terminal：行级终止 —— 写 ItemManuallyTerminated（601205087），供 getTurnSystemInfo 反解
+//   - Terminal：行级终止 —— 写 ItemManuallyTerminated（601205088），供 getTurnSystemInfo 反解
 //   - 其它状态：无生产调用方，沿用既有兜底文案，不改变既有行为
 func turnRunLogErrMsgOf(status entity.TurnRunState) []byte {
 	if status == entity.TurnRunState_Terminal {

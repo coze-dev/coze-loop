@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -618,7 +619,7 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 
 	// version_name / dataset_key: 按 item 归属集从内存查找（GetDetail 已批量拉全所有集详情）。
 	if es := findEvalSetForItem(eiec.Expt, datasetID); es != nil {
-		ev.DatasetKey = es.DatasetKey
+		ev.DatasetKey = utils.NormalizeDatasetKey(es.DatasetKey)
 		if ver := es.EvaluationSetVersion; ver != nil {
 			if ev.DatasetVersionID == "" {
 				ev.DatasetVersionID = strconv.FormatInt(ver.ID, 10)
