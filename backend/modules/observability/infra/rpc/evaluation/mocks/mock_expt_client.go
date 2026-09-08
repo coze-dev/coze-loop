@@ -22,7 +22,6 @@ import (
 type MockClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientMockRecorder
-	isgomock struct{}
 }
 
 // MockClientMockRecorder is the mock recorder for MockClient.
@@ -43,10 +42,10 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // AssociateAnnotationTag mocks base method.
-func (m *MockClient) AssociateAnnotationTag(ctx context.Context, req *expt.AssociateAnnotationTagReq, callOptions ...callopt.Option) (*expt.AssociateAnnotationTagResp, error) {
+func (m *MockClient) AssociateAnnotationTag(arg0 context.Context, arg1 *expt.AssociateAnnotationTagReq, arg2 ...callopt.Option) (*expt.AssociateAnnotationTagResp, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "AssociateAnnotationTag", varargs...)
@@ -56,17 +55,17 @@ func (m *MockClient) AssociateAnnotationTag(ctx context.Context, req *expt.Assoc
 }
 
 // AssociateAnnotationTag indicates an expected call of AssociateAnnotationTag.
-func (mr *MockClientMockRecorder) AssociateAnnotationTag(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) AssociateAnnotationTag(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssociateAnnotationTag", reflect.TypeOf((*MockClient)(nil).AssociateAnnotationTag), varargs...)
 }
 
 // BatchDeleteExperiments mocks base method.
-func (m *MockClient) BatchDeleteExperiments(ctx context.Context, req *expt.BatchDeleteExperimentsRequest, callOptions ...callopt.Option) (*expt.BatchDeleteExperimentsResponse, error) {
+func (m *MockClient) BatchDeleteExperiments(arg0 context.Context, arg1 *expt.BatchDeleteExperimentsRequest, arg2 ...callopt.Option) (*expt.BatchDeleteExperimentsResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BatchDeleteExperiments", varargs...)
@@ -76,17 +75,17 @@ func (m *MockClient) BatchDeleteExperiments(ctx context.Context, req *expt.Batch
 }
 
 // BatchDeleteExperiments indicates an expected call of BatchDeleteExperiments.
-func (mr *MockClientMockRecorder) BatchDeleteExperiments(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) BatchDeleteExperiments(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchDeleteExperiments", reflect.TypeOf((*MockClient)(nil).BatchDeleteExperiments), varargs...)
 }
 
 // BatchGetExperimentAggrResult_ mocks base method.
-func (m *MockClient) BatchGetExperimentAggrResult_(ctx context.Context, req *expt.BatchGetExperimentAggrResultRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentAggrResultResponse, error) {
+func (m *MockClient) BatchGetExperimentAggrResult_(arg0 context.Context, arg1 *expt.BatchGetExperimentAggrResultRequest, arg2 ...callopt.Option) (*expt.BatchGetExperimentAggrResultResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BatchGetExperimentAggrResult_", varargs...)
@@ -96,17 +95,17 @@ func (m *MockClient) BatchGetExperimentAggrResult_(ctx context.Context, req *exp
 }
 
 // BatchGetExperimentAggrResult_ indicates an expected call of BatchGetExperimentAggrResult_.
-func (mr *MockClientMockRecorder) BatchGetExperimentAggrResult_(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) BatchGetExperimentAggrResult_(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetExperimentAggrResult_", reflect.TypeOf((*MockClient)(nil).BatchGetExperimentAggrResult_), varargs...)
 }
 
 // BatchGetExperimentResult_ mocks base method.
-func (m *MockClient) BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentResultResponse, error) {
+func (m *MockClient) BatchGetExperimentResult_(arg0 context.Context, arg1 *expt.BatchGetExperimentResultRequest, arg2 ...callopt.Option) (*expt.BatchGetExperimentResultResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BatchGetExperimentResult_", varargs...)
@@ -116,17 +115,17 @@ func (m *MockClient) BatchGetExperimentResult_(ctx context.Context, req *expt.Ba
 }
 
 // BatchGetExperimentResult_ indicates an expected call of BatchGetExperimentResult_.
-func (mr *MockClientMockRecorder) BatchGetExperimentResult_(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) BatchGetExperimentResult_(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetExperimentResult_", reflect.TypeOf((*MockClient)(nil).BatchGetExperimentResult_), varargs...)
 }
 
 // BatchGetExperimentTemplate mocks base method.
-func (m *MockClient) BatchGetExperimentTemplate(ctx context.Context, req *expt.BatchGetExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentTemplateResponse, error) {
+func (m *MockClient) BatchGetExperimentTemplate(arg0 context.Context, arg1 *expt.BatchGetExperimentTemplateRequest, arg2 ...callopt.Option) (*expt.BatchGetExperimentTemplateResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BatchGetExperimentTemplate", varargs...)
@@ -136,17 +135,17 @@ func (m *MockClient) BatchGetExperimentTemplate(ctx context.Context, req *expt.B
 }
 
 // BatchGetExperimentTemplate indicates an expected call of BatchGetExperimentTemplate.
-func (mr *MockClientMockRecorder) BatchGetExperimentTemplate(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) BatchGetExperimentTemplate(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetExperimentTemplate", reflect.TypeOf((*MockClient)(nil).BatchGetExperimentTemplate), varargs...)
 }
 
 // BatchGetExperiments mocks base method.
-func (m *MockClient) BatchGetExperiments(ctx context.Context, req *expt.BatchGetExperimentsRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentsResponse, error) {
+func (m *MockClient) BatchGetExperiments(arg0 context.Context, arg1 *expt.BatchGetExperimentsRequest, arg2 ...callopt.Option) (*expt.BatchGetExperimentsResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "BatchGetExperiments", varargs...)
@@ -156,17 +155,17 @@ func (m *MockClient) BatchGetExperiments(ctx context.Context, req *expt.BatchGet
 }
 
 // BatchGetExperiments indicates an expected call of BatchGetExperiments.
-func (mr *MockClientMockRecorder) BatchGetExperiments(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) BatchGetExperiments(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetExperiments", reflect.TypeOf((*MockClient)(nil).BatchGetExperiments), varargs...)
 }
 
 // CalculateExperimentAggrResult_ mocks base method.
-func (m *MockClient) CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest, callOptions ...callopt.Option) (*expt.CalculateExperimentAggrResultResponse, error) {
+func (m *MockClient) CalculateExperimentAggrResult_(arg0 context.Context, arg1 *expt.CalculateExperimentAggrResultRequest, arg2 ...callopt.Option) (*expt.CalculateExperimentAggrResultResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CalculateExperimentAggrResult_", varargs...)
@@ -176,17 +175,17 @@ func (m *MockClient) CalculateExperimentAggrResult_(ctx context.Context, req *ex
 }
 
 // CalculateExperimentAggrResult_ indicates an expected call of CalculateExperimentAggrResult_.
-func (mr *MockClientMockRecorder) CalculateExperimentAggrResult_(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) CalculateExperimentAggrResult_(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateExperimentAggrResult_", reflect.TypeOf((*MockClient)(nil).CalculateExperimentAggrResult_), varargs...)
 }
 
 // CheckExperimentName mocks base method.
-func (m *MockClient) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest, callOptions ...callopt.Option) (*expt.CheckExperimentNameResponse, error) {
+func (m *MockClient) CheckExperimentName(arg0 context.Context, arg1 *expt.CheckExperimentNameRequest, arg2 ...callopt.Option) (*expt.CheckExperimentNameResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CheckExperimentName", varargs...)
@@ -196,17 +195,17 @@ func (m *MockClient) CheckExperimentName(ctx context.Context, req *expt.CheckExp
 }
 
 // CheckExperimentName indicates an expected call of CheckExperimentName.
-func (mr *MockClientMockRecorder) CheckExperimentName(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) CheckExperimentName(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckExperimentName", reflect.TypeOf((*MockClient)(nil).CheckExperimentName), varargs...)
 }
 
 // CheckExperimentTemplateName mocks base method.
-func (m *MockClient) CheckExperimentTemplateName(ctx context.Context, req *expt.CheckExperimentTemplateNameRequest, callOptions ...callopt.Option) (*expt.CheckExperimentTemplateNameResponse, error) {
+func (m *MockClient) CheckExperimentTemplateName(arg0 context.Context, arg1 *expt.CheckExperimentTemplateNameRequest, arg2 ...callopt.Option) (*expt.CheckExperimentTemplateNameResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CheckExperimentTemplateName", varargs...)
@@ -216,17 +215,17 @@ func (m *MockClient) CheckExperimentTemplateName(ctx context.Context, req *expt.
 }
 
 // CheckExperimentTemplateName indicates an expected call of CheckExperimentTemplateName.
-func (mr *MockClientMockRecorder) CheckExperimentTemplateName(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) CheckExperimentTemplateName(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckExperimentTemplateName", reflect.TypeOf((*MockClient)(nil).CheckExperimentTemplateName), varargs...)
 }
 
 // CloneExperiment mocks base method.
-func (m *MockClient) CloneExperiment(ctx context.Context, req *expt.CloneExperimentRequest, callOptions ...callopt.Option) (*expt.CloneExperimentResponse, error) {
+func (m *MockClient) CloneExperiment(arg0 context.Context, arg1 *expt.CloneExperimentRequest, arg2 ...callopt.Option) (*expt.CloneExperimentResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CloneExperiment", varargs...)
@@ -236,17 +235,17 @@ func (m *MockClient) CloneExperiment(ctx context.Context, req *expt.CloneExperim
 }
 
 // CloneExperiment indicates an expected call of CloneExperiment.
-func (mr *MockClientMockRecorder) CloneExperiment(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) CloneExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloneExperiment", reflect.TypeOf((*MockClient)(nil).CloneExperiment), varargs...)
 }
 
 // CreateAnnotateRecord mocks base method.
-func (m *MockClient) CreateAnnotateRecord(ctx context.Context, req *expt.CreateAnnotateRecordReq, callOptions ...callopt.Option) (*expt.CreateAnnotateRecordResp, error) {
+func (m *MockClient) CreateAnnotateRecord(arg0 context.Context, arg1 *expt.CreateAnnotateRecordReq, arg2 ...callopt.Option) (*expt.CreateAnnotateRecordResp, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CreateAnnotateRecord", varargs...)
@@ -256,17 +255,17 @@ func (m *MockClient) CreateAnnotateRecord(ctx context.Context, req *expt.CreateA
 }
 
 // CreateAnnotateRecord indicates an expected call of CreateAnnotateRecord.
-func (mr *MockClientMockRecorder) CreateAnnotateRecord(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) CreateAnnotateRecord(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnnotateRecord", reflect.TypeOf((*MockClient)(nil).CreateAnnotateRecord), varargs...)
 }
 
 // CreateExperiment mocks base method.
-func (m *MockClient) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest, callOptions ...callopt.Option) (*expt.CreateExperimentResponse, error) {
+func (m *MockClient) CreateExperiment(arg0 context.Context, arg1 *expt.CreateExperimentRequest, arg2 ...callopt.Option) (*expt.CreateExperimentResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CreateExperiment", varargs...)
@@ -276,17 +275,17 @@ func (m *MockClient) CreateExperiment(ctx context.Context, req *expt.CreateExper
 }
 
 // CreateExperiment indicates an expected call of CreateExperiment.
-func (mr *MockClientMockRecorder) CreateExperiment(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) CreateExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExperiment", reflect.TypeOf((*MockClient)(nil).CreateExperiment), varargs...)
 }
 
 // CreateExperimentTemplate mocks base method.
-func (m *MockClient) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.CreateExperimentTemplateResponse, error) {
+func (m *MockClient) CreateExperimentTemplate(arg0 context.Context, arg1 *expt.CreateExperimentTemplateRequest, arg2 ...callopt.Option) (*expt.CreateExperimentTemplateResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CreateExperimentTemplate", varargs...)
@@ -296,17 +295,17 @@ func (m *MockClient) CreateExperimentTemplate(ctx context.Context, req *expt.Cre
 }
 
 // CreateExperimentTemplate indicates an expected call of CreateExperimentTemplate.
-func (mr *MockClientMockRecorder) CreateExperimentTemplate(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) CreateExperimentTemplate(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExperimentTemplate", reflect.TypeOf((*MockClient)(nil).CreateExperimentTemplate), varargs...)
 }
 
 // DeleteAnnotationTag mocks base method.
-func (m *MockClient) DeleteAnnotationTag(ctx context.Context, req *expt.DeleteAnnotationTagReq, callOptions ...callopt.Option) (*expt.DeleteAnnotationTagResp, error) {
+func (m *MockClient) DeleteAnnotationTag(arg0 context.Context, arg1 *expt.DeleteAnnotationTagReq, arg2 ...callopt.Option) (*expt.DeleteAnnotationTagResp, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeleteAnnotationTag", varargs...)
@@ -316,17 +315,17 @@ func (m *MockClient) DeleteAnnotationTag(ctx context.Context, req *expt.DeleteAn
 }
 
 // DeleteAnnotationTag indicates an expected call of DeleteAnnotationTag.
-func (mr *MockClientMockRecorder) DeleteAnnotationTag(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) DeleteAnnotationTag(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAnnotationTag", reflect.TypeOf((*MockClient)(nil).DeleteAnnotationTag), varargs...)
 }
 
 // DeleteExperiment mocks base method.
-func (m *MockClient) DeleteExperiment(ctx context.Context, req *expt.DeleteExperimentRequest, callOptions ...callopt.Option) (*expt.DeleteExperimentResponse, error) {
+func (m *MockClient) DeleteExperiment(arg0 context.Context, arg1 *expt.DeleteExperimentRequest, arg2 ...callopt.Option) (*expt.DeleteExperimentResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeleteExperiment", varargs...)
@@ -336,17 +335,17 @@ func (m *MockClient) DeleteExperiment(ctx context.Context, req *expt.DeleteExper
 }
 
 // DeleteExperiment indicates an expected call of DeleteExperiment.
-func (mr *MockClientMockRecorder) DeleteExperiment(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) DeleteExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteExperiment", reflect.TypeOf((*MockClient)(nil).DeleteExperiment), varargs...)
 }
 
 // DeleteExperimentTemplate mocks base method.
-func (m *MockClient) DeleteExperimentTemplate(ctx context.Context, req *expt.DeleteExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.DeleteExperimentTemplateResponse, error) {
+func (m *MockClient) DeleteExperimentTemplate(arg0 context.Context, arg1 *expt.DeleteExperimentTemplateRequest, arg2 ...callopt.Option) (*expt.DeleteExperimentTemplateResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeleteExperimentTemplate", varargs...)
@@ -356,17 +355,17 @@ func (m *MockClient) DeleteExperimentTemplate(ctx context.Context, req *expt.Del
 }
 
 // DeleteExperimentTemplate indicates an expected call of DeleteExperimentTemplate.
-func (mr *MockClientMockRecorder) DeleteExperimentTemplate(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) DeleteExperimentTemplate(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteExperimentTemplate", reflect.TypeOf((*MockClient)(nil).DeleteExperimentTemplate), varargs...)
 }
 
 // DeleteExptInsightAnalysisRecord mocks base method.
-func (m *MockClient) DeleteExptInsightAnalysisRecord(ctx context.Context, req *expt.DeleteExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.DeleteExptInsightAnalysisRecordResponse, error) {
+func (m *MockClient) DeleteExptInsightAnalysisRecord(arg0 context.Context, arg1 *expt.DeleteExptInsightAnalysisRecordRequest, arg2 ...callopt.Option) (*expt.DeleteExptInsightAnalysisRecordResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeleteExptInsightAnalysisRecord", varargs...)
@@ -376,17 +375,17 @@ func (m *MockClient) DeleteExptInsightAnalysisRecord(ctx context.Context, req *e
 }
 
 // DeleteExptInsightAnalysisRecord indicates an expected call of DeleteExptInsightAnalysisRecord.
-func (mr *MockClientMockRecorder) DeleteExptInsightAnalysisRecord(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) DeleteExptInsightAnalysisRecord(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteExptInsightAnalysisRecord", reflect.TypeOf((*MockClient)(nil).DeleteExptInsightAnalysisRecord), varargs...)
 }
 
 // ExportExptResult_ mocks base method.
-func (m *MockClient) ExportExptResult_(ctx context.Context, req *expt.ExportExptResultRequest, callOptions ...callopt.Option) (*expt.ExportExptResultResponse, error) {
+func (m *MockClient) ExportExptResult_(arg0 context.Context, arg1 *expt.ExportExptResultRequest, arg2 ...callopt.Option) (*expt.ExportExptResultResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ExportExptResult_", varargs...)
@@ -396,17 +395,17 @@ func (m *MockClient) ExportExptResult_(ctx context.Context, req *expt.ExportExpt
 }
 
 // ExportExptResult_ indicates an expected call of ExportExptResult_.
-func (mr *MockClientMockRecorder) ExportExptResult_(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) ExportExptResult_(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportExptResult_", reflect.TypeOf((*MockClient)(nil).ExportExptResult_), varargs...)
 }
 
 // FeedbackExptInsightAnalysisReport mocks base method.
-func (m *MockClient) FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest, callOptions ...callopt.Option) (*expt.FeedbackExptInsightAnalysisReportResponse, error) {
+func (m *MockClient) FeedbackExptInsightAnalysisReport(arg0 context.Context, arg1 *expt.FeedbackExptInsightAnalysisReportRequest, arg2 ...callopt.Option) (*expt.FeedbackExptInsightAnalysisReportResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "FeedbackExptInsightAnalysisReport", varargs...)
@@ -416,17 +415,17 @@ func (m *MockClient) FeedbackExptInsightAnalysisReport(ctx context.Context, req 
 }
 
 // FeedbackExptInsightAnalysisReport indicates an expected call of FeedbackExptInsightAnalysisReport.
-func (mr *MockClientMockRecorder) FeedbackExptInsightAnalysisReport(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) FeedbackExptInsightAnalysisReport(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeedbackExptInsightAnalysisReport", reflect.TypeOf((*MockClient)(nil).FeedbackExptInsightAnalysisReport), varargs...)
 }
 
 // FinishExperiment mocks base method.
-func (m *MockClient) FinishExperiment(ctx context.Context, req *expt.FinishExperimentRequest, callOptions ...callopt.Option) (*expt.FinishExperimentResponse, error) {
+func (m *MockClient) FinishExperiment(arg0 context.Context, arg1 *expt.FinishExperimentRequest, arg2 ...callopt.Option) (*expt.FinishExperimentResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "FinishExperiment", varargs...)
@@ -436,17 +435,17 @@ func (m *MockClient) FinishExperiment(ctx context.Context, req *expt.FinishExper
 }
 
 // FinishExperiment indicates an expected call of FinishExperiment.
-func (mr *MockClientMockRecorder) FinishExperiment(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) FinishExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinishExperiment", reflect.TypeOf((*MockClient)(nil).FinishExperiment), varargs...)
 }
 
 // GetAnalysisRecordFeedbackVote mocks base method.
-func (m *MockClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (*expt.GetAnalysisRecordFeedbackVoteResponse, error) {
+func (m *MockClient) GetAnalysisRecordFeedbackVote(arg0 context.Context, arg1 *expt.GetAnalysisRecordFeedbackVoteRequest, arg2 ...callopt.Option) (*expt.GetAnalysisRecordFeedbackVoteResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetAnalysisRecordFeedbackVote", varargs...)
@@ -456,417 +455,17 @@ func (m *MockClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *exp
 }
 
 // GetAnalysisRecordFeedbackVote indicates an expected call of GetAnalysisRecordFeedbackVote.
-func (mr *MockClientMockRecorder) GetAnalysisRecordFeedbackVote(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) GetAnalysisRecordFeedbackVote(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnalysisRecordFeedbackVote", reflect.TypeOf((*MockClient)(nil).GetAnalysisRecordFeedbackVote), varargs...)
 }
 
-// GetExptInsightAnalysisRecord mocks base method.
-func (m *MockClient) GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.GetExptInsightAnalysisRecordResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetExptInsightAnalysisRecord", varargs...)
-	ret0, _ := ret[0].(*expt.GetExptInsightAnalysisRecordResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetExptInsightAnalysisRecord indicates an expected call of GetExptInsightAnalysisRecord.
-func (mr *MockClientMockRecorder) GetExptInsightAnalysisRecord(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptInsightAnalysisRecord", reflect.TypeOf((*MockClient)(nil).GetExptInsightAnalysisRecord), varargs...)
-}
-
-// GetExptResultExportRecord mocks base method.
-func (m *MockClient) GetExptResultExportRecord(ctx context.Context, req *expt.GetExptResultExportRecordRequest, callOptions ...callopt.Option) (*expt.GetExptResultExportRecordResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetExptResultExportRecord", varargs...)
-	ret0, _ := ret[0].(*expt.GetExptResultExportRecordResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetExptResultExportRecord indicates an expected call of GetExptResultExportRecord.
-func (mr *MockClientMockRecorder) GetExptResultExportRecord(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptResultExportRecord", reflect.TypeOf((*MockClient)(nil).GetExptResultExportRecord), varargs...)
-}
-
-// InsightAnalysisExperiment mocks base method.
-func (m *MockClient) InsightAnalysisExperiment(ctx context.Context, req *expt.InsightAnalysisExperimentRequest, callOptions ...callopt.Option) (*expt.InsightAnalysisExperimentResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "InsightAnalysisExperiment", varargs...)
-	ret0, _ := ret[0].(*expt.InsightAnalysisExperimentResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// InsightAnalysisExperiment indicates an expected call of InsightAnalysisExperiment.
-func (mr *MockClientMockRecorder) InsightAnalysisExperiment(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsightAnalysisExperiment", reflect.TypeOf((*MockClient)(nil).InsightAnalysisExperiment), varargs...)
-}
-
-// InvokeExperiment mocks base method.
-func (m *MockClient) InvokeExperiment(ctx context.Context, req *expt.InvokeExperimentRequest, callOptions ...callopt.Option) (*expt.InvokeExperimentResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "InvokeExperiment", varargs...)
-	ret0, _ := ret[0].(*expt.InvokeExperimentResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// InvokeExperiment indicates an expected call of InvokeExperiment.
-func (mr *MockClientMockRecorder) InvokeExperiment(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeExperiment", reflect.TypeOf((*MockClient)(nil).InvokeExperiment), varargs...)
-}
-
-// KillExperiment mocks base method.
-func (m *MockClient) KillExperiment(ctx context.Context, req *expt.KillExperimentRequest, callOptions ...callopt.Option) (*expt.KillExperimentResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "KillExperiment", varargs...)
-	ret0, _ := ret[0].(*expt.KillExperimentResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// KillExperiment indicates an expected call of KillExperiment.
-func (mr *MockClientMockRecorder) KillExperiment(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KillExperiment", reflect.TypeOf((*MockClient)(nil).KillExperiment), varargs...)
-}
-
-// ListExperimentStats mocks base method.
-func (m *MockClient) ListExperimentStats(ctx context.Context, req *expt.ListExperimentStatsRequest, callOptions ...callopt.Option) (*expt.ListExperimentStatsResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListExperimentStats", varargs...)
-	ret0, _ := ret[0].(*expt.ListExperimentStatsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListExperimentStats indicates an expected call of ListExperimentStats.
-func (mr *MockClientMockRecorder) ListExperimentStats(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExperimentStats", reflect.TypeOf((*MockClient)(nil).ListExperimentStats), varargs...)
-}
-
-// ListExperimentTemplates mocks base method.
-func (m *MockClient) ListExperimentTemplates(ctx context.Context, req *expt.ListExperimentTemplatesRequest, callOptions ...callopt.Option) (*expt.ListExperimentTemplatesResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListExperimentTemplates", varargs...)
-	ret0, _ := ret[0].(*expt.ListExperimentTemplatesResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListExperimentTemplates indicates an expected call of ListExperimentTemplates.
-func (mr *MockClientMockRecorder) ListExperimentTemplates(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExperimentTemplates", reflect.TypeOf((*MockClient)(nil).ListExperimentTemplates), varargs...)
-}
-
-// ListExperiments mocks base method.
-func (m *MockClient) ListExperiments(ctx context.Context, req *expt.ListExperimentsRequest, callOptions ...callopt.Option) (*expt.ListExperimentsResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListExperiments", varargs...)
-	ret0, _ := ret[0].(*expt.ListExperimentsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListExperiments indicates an expected call of ListExperiments.
-func (mr *MockClientMockRecorder) ListExperiments(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExperiments", reflect.TypeOf((*MockClient)(nil).ListExperiments), varargs...)
-}
-
-// ListExptInsightAnalysisComment mocks base method.
-func (m *MockClient) ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (*expt.ListExptInsightAnalysisCommentResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListExptInsightAnalysisComment", varargs...)
-	ret0, _ := ret[0].(*expt.ListExptInsightAnalysisCommentResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListExptInsightAnalysisComment indicates an expected call of ListExptInsightAnalysisComment.
-func (mr *MockClientMockRecorder) ListExptInsightAnalysisComment(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExptInsightAnalysisComment", reflect.TypeOf((*MockClient)(nil).ListExptInsightAnalysisComment), varargs...)
-}
-
-// ListExptInsightAnalysisRecord mocks base method.
-func (m *MockClient) ListExptInsightAnalysisRecord(ctx context.Context, req *expt.ListExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.ListExptInsightAnalysisRecordResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListExptInsightAnalysisRecord", varargs...)
-	ret0, _ := ret[0].(*expt.ListExptInsightAnalysisRecordResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListExptInsightAnalysisRecord indicates an expected call of ListExptInsightAnalysisRecord.
-func (mr *MockClientMockRecorder) ListExptInsightAnalysisRecord(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExptInsightAnalysisRecord", reflect.TypeOf((*MockClient)(nil).ListExptInsightAnalysisRecord), varargs...)
-}
-
-// ListExptResultExportRecord mocks base method.
-func (m *MockClient) ListExptResultExportRecord(ctx context.Context, req *expt.ListExptResultExportRecordRequest, callOptions ...callopt.Option) (*expt.ListExptResultExportRecordResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListExptResultExportRecord", varargs...)
-	ret0, _ := ret[0].(*expt.ListExptResultExportRecordResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListExptResultExportRecord indicates an expected call of ListExptResultExportRecord.
-func (mr *MockClientMockRecorder) ListExptResultExportRecord(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExptResultExportRecord", reflect.TypeOf((*MockClient)(nil).ListExptResultExportRecord), varargs...)
-}
-
-// RetryExperiment mocks base method.
-func (m *MockClient) RetryExperiment(ctx context.Context, req *expt.RetryExperimentRequest, callOptions ...callopt.Option) (*expt.RetryExperimentResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "RetryExperiment", varargs...)
-	ret0, _ := ret[0].(*expt.RetryExperimentResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RetryExperiment indicates an expected call of RetryExperiment.
-func (mr *MockClientMockRecorder) RetryExperiment(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryExperiment", reflect.TypeOf((*MockClient)(nil).RetryExperiment), varargs...)
-}
-
-// RunExperiment mocks base method.
-func (m *MockClient) RunExperiment(ctx context.Context, req *expt.RunExperimentRequest, callOptions ...callopt.Option) (*expt.RunExperimentResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "RunExperiment", varargs...)
-	ret0, _ := ret[0].(*expt.RunExperimentResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RunExperiment indicates an expected call of RunExperiment.
-func (mr *MockClientMockRecorder) RunExperiment(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExperiment", reflect.TypeOf((*MockClient)(nil).RunExperiment), varargs...)
-}
-
-// SubmitExperiment mocks base method.
-func (m *MockClient) SubmitExperiment(ctx context.Context, req *expt.SubmitExperimentRequest, callOptions ...callopt.Option) (*expt.SubmitExperimentResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "SubmitExperiment", varargs...)
-	ret0, _ := ret[0].(*expt.SubmitExperimentResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SubmitExperiment indicates an expected call of SubmitExperiment.
-func (mr *MockClientMockRecorder) SubmitExperiment(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitExperiment", reflect.TypeOf((*MockClient)(nil).SubmitExperiment), varargs...)
-}
-
-// SubmitExptFromTemplate mocks base method.
-func (m *MockClient) SubmitExptFromTemplate(ctx context.Context, req *expt.SubmitExptFromTemplateRequest, callOptions ...callopt.Option) (*expt.SubmitExptFromTemplateResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "SubmitExptFromTemplate", varargs...)
-	ret0, _ := ret[0].(*expt.SubmitExptFromTemplateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SubmitExptFromTemplate indicates an expected call of SubmitExptFromTemplate.
-func (mr *MockClientMockRecorder) SubmitExptFromTemplate(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitExptFromTemplate", reflect.TypeOf((*MockClient)(nil).SubmitExptFromTemplate), varargs...)
-}
-
-// UpdateAnnotateRecord mocks base method.
-func (m *MockClient) UpdateAnnotateRecord(ctx context.Context, req *expt.UpdateAnnotateRecordReq, callOptions ...callopt.Option) (*expt.UpdateAnnotateRecordResp, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateAnnotateRecord", varargs...)
-	ret0, _ := ret[0].(*expt.UpdateAnnotateRecordResp)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateAnnotateRecord indicates an expected call of UpdateAnnotateRecord.
-func (mr *MockClientMockRecorder) UpdateAnnotateRecord(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAnnotateRecord", reflect.TypeOf((*MockClient)(nil).UpdateAnnotateRecord), varargs...)
-}
-
-// UpdateExperiment mocks base method.
-func (m *MockClient) UpdateExperiment(ctx context.Context, req *expt.UpdateExperimentRequest, callOptions ...callopt.Option) (*expt.UpdateExperimentResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateExperiment", varargs...)
-	ret0, _ := ret[0].(*expt.UpdateExperimentResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateExperiment indicates an expected call of UpdateExperiment.
-func (mr *MockClientMockRecorder) UpdateExperiment(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExperiment", reflect.TypeOf((*MockClient)(nil).UpdateExperiment), varargs...)
-}
-
-// UpdateExperimentTemplate mocks base method.
-func (m *MockClient) UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.UpdateExperimentTemplateResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateExperimentTemplate", varargs...)
-	ret0, _ := ret[0].(*expt.UpdateExperimentTemplateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateExperimentTemplate indicates an expected call of UpdateExperimentTemplate.
-func (mr *MockClientMockRecorder) UpdateExperimentTemplate(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExperimentTemplate", reflect.TypeOf((*MockClient)(nil).UpdateExperimentTemplate), varargs...)
-}
-
-// UpdateExperimentTemplateMeta mocks base method.
-func (m *MockClient) UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest, callOptions ...callopt.Option) (*expt.UpdateExperimentTemplateMetaResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateExperimentTemplateMeta", varargs...)
-	ret0, _ := ret[0].(*expt.UpdateExperimentTemplateMetaResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateExperimentTemplateMeta indicates an expected call of UpdateExperimentTemplateMeta.
-func (mr *MockClientMockRecorder) UpdateExperimentTemplateMeta(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExperimentTemplateMeta", reflect.TypeOf((*MockClient)(nil).UpdateExperimentTemplateMeta), varargs...)
-}
-
-// UpdateExptRunConf mocks base method.
-func (m *MockClient) UpdateExptRunConf(ctx context.Context, req *expt.UpdateExptRunConfRequest, callOptions ...callopt.Option) (*expt.UpdateExptRunConfResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateExptRunConf", varargs...)
-	ret0, _ := ret[0].(*expt.UpdateExptRunConfResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateExptRunConf indicates an expected call of UpdateExptRunConf.
-func (mr *MockClientMockRecorder) UpdateExptRunConf(ctx, req any, callOptions ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptRunConf", reflect.TypeOf((*MockClient)(nil).UpdateExptRunConf), varargs...)
-}
-
 // GetExperimentIDsByGroup mocks base method.
-func (m *MockClient) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetExperimentIDsByGroupRequest, callOptions ...callopt.Option) (*expt.GetExperimentIDsByGroupResponse, error) {
+func (m *MockClient) GetExperimentIDsByGroup(arg0 context.Context, arg1 *expt.GetExperimentIDsByGroupRequest, arg2 ...callopt.Option) (*expt.GetExperimentIDsByGroupResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetExperimentIDsByGroup", varargs...)
@@ -876,17 +475,117 @@ func (m *MockClient) GetExperimentIDsByGroup(ctx context.Context, req *expt.GetE
 }
 
 // GetExperimentIDsByGroup indicates an expected call of GetExperimentIDsByGroup.
-func (mr *MockClientMockRecorder) GetExperimentIDsByGroup(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) GetExperimentIDsByGroup(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExperimentIDsByGroup", reflect.TypeOf((*MockClient)(nil).GetExperimentIDsByGroup), varargs...)
 }
 
-// ListExperimentStandardEvalOutputs mocks base method.
-func (m *MockClient) ListExperimentStandardEvalOutputs(ctx context.Context, req *expt.ListExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (*expt.ListExperimentStandardEvalOutputsResponse, error) {
+// GetExptInsightAnalysisRecord mocks base method.
+func (m *MockClient) GetExptInsightAnalysisRecord(arg0 context.Context, arg1 *expt.GetExptInsightAnalysisRecordRequest, arg2 ...callopt.Option) (*expt.GetExptInsightAnalysisRecordResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetExptInsightAnalysisRecord", varargs...)
+	ret0, _ := ret[0].(*expt.GetExptInsightAnalysisRecordResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExptInsightAnalysisRecord indicates an expected call of GetExptInsightAnalysisRecord.
+func (mr *MockClientMockRecorder) GetExptInsightAnalysisRecord(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptInsightAnalysisRecord", reflect.TypeOf((*MockClient)(nil).GetExptInsightAnalysisRecord), varargs...)
+}
+
+// GetExptResultExportRecord mocks base method.
+func (m *MockClient) GetExptResultExportRecord(arg0 context.Context, arg1 *expt.GetExptResultExportRecordRequest, arg2 ...callopt.Option) (*expt.GetExptResultExportRecordResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetExptResultExportRecord", varargs...)
+	ret0, _ := ret[0].(*expt.GetExptResultExportRecordResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExptResultExportRecord indicates an expected call of GetExptResultExportRecord.
+func (mr *MockClientMockRecorder) GetExptResultExportRecord(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptResultExportRecord", reflect.TypeOf((*MockClient)(nil).GetExptResultExportRecord), varargs...)
+}
+
+// InsightAnalysisExperiment mocks base method.
+func (m *MockClient) InsightAnalysisExperiment(arg0 context.Context, arg1 *expt.InsightAnalysisExperimentRequest, arg2 ...callopt.Option) (*expt.InsightAnalysisExperimentResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "InsightAnalysisExperiment", varargs...)
+	ret0, _ := ret[0].(*expt.InsightAnalysisExperimentResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InsightAnalysisExperiment indicates an expected call of InsightAnalysisExperiment.
+func (mr *MockClientMockRecorder) InsightAnalysisExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsightAnalysisExperiment", reflect.TypeOf((*MockClient)(nil).InsightAnalysisExperiment), varargs...)
+}
+
+// InvokeExperiment mocks base method.
+func (m *MockClient) InvokeExperiment(arg0 context.Context, arg1 *expt.InvokeExperimentRequest, arg2 ...callopt.Option) (*expt.InvokeExperimentResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "InvokeExperiment", varargs...)
+	ret0, _ := ret[0].(*expt.InvokeExperimentResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InvokeExperiment indicates an expected call of InvokeExperiment.
+func (mr *MockClientMockRecorder) InvokeExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeExperiment", reflect.TypeOf((*MockClient)(nil).InvokeExperiment), varargs...)
+}
+
+// KillExperiment mocks base method.
+func (m *MockClient) KillExperiment(arg0 context.Context, arg1 *expt.KillExperimentRequest, arg2 ...callopt.Option) (*expt.KillExperimentResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "KillExperiment", varargs...)
+	ret0, _ := ret[0].(*expt.KillExperimentResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// KillExperiment indicates an expected call of KillExperiment.
+func (mr *MockClientMockRecorder) KillExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KillExperiment", reflect.TypeOf((*MockClient)(nil).KillExperiment), varargs...)
+}
+
+// ListExperimentStandardEvalOutputs mocks base method.
+func (m *MockClient) ListExperimentStandardEvalOutputs(arg0 context.Context, arg1 *expt.ListExperimentStandardEvalOutputsRequest, arg2 ...callopt.Option) (*expt.ListExperimentStandardEvalOutputsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ListExperimentStandardEvalOutputs", varargs...)
@@ -896,17 +595,137 @@ func (m *MockClient) ListExperimentStandardEvalOutputs(ctx context.Context, req 
 }
 
 // ListExperimentStandardEvalOutputs indicates an expected call of ListExperimentStandardEvalOutputs.
-func (mr *MockClientMockRecorder) ListExperimentStandardEvalOutputs(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) ListExperimentStandardEvalOutputs(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExperimentStandardEvalOutputs", reflect.TypeOf((*MockClient)(nil).ListExperimentStandardEvalOutputs), varargs...)
 }
 
-// MGetExperimentStandardEvalOutputs mocks base method.
-func (m *MockClient) MGetExperimentStandardEvalOutputs(ctx context.Context, req *expt.MGetExperimentStandardEvalOutputsRequest, callOptions ...callopt.Option) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
+// ListExperimentStats mocks base method.
+func (m *MockClient) ListExperimentStats(arg0 context.Context, arg1 *expt.ListExperimentStatsRequest, arg2 ...callopt.Option) (*expt.ListExperimentStatsResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExperimentStats", varargs...)
+	ret0, _ := ret[0].(*expt.ListExperimentStatsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExperimentStats indicates an expected call of ListExperimentStats.
+func (mr *MockClientMockRecorder) ListExperimentStats(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExperimentStats", reflect.TypeOf((*MockClient)(nil).ListExperimentStats), varargs...)
+}
+
+// ListExperimentTemplates mocks base method.
+func (m *MockClient) ListExperimentTemplates(arg0 context.Context, arg1 *expt.ListExperimentTemplatesRequest, arg2 ...callopt.Option) (*expt.ListExperimentTemplatesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExperimentTemplates", varargs...)
+	ret0, _ := ret[0].(*expt.ListExperimentTemplatesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExperimentTemplates indicates an expected call of ListExperimentTemplates.
+func (mr *MockClientMockRecorder) ListExperimentTemplates(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExperimentTemplates", reflect.TypeOf((*MockClient)(nil).ListExperimentTemplates), varargs...)
+}
+
+// ListExperiments mocks base method.
+func (m *MockClient) ListExperiments(arg0 context.Context, arg1 *expt.ListExperimentsRequest, arg2 ...callopt.Option) (*expt.ListExperimentsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExperiments", varargs...)
+	ret0, _ := ret[0].(*expt.ListExperimentsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExperiments indicates an expected call of ListExperiments.
+func (mr *MockClientMockRecorder) ListExperiments(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExperiments", reflect.TypeOf((*MockClient)(nil).ListExperiments), varargs...)
+}
+
+// ListExptInsightAnalysisComment mocks base method.
+func (m *MockClient) ListExptInsightAnalysisComment(arg0 context.Context, arg1 *expt.ListExptInsightAnalysisCommentRequest, arg2 ...callopt.Option) (*expt.ListExptInsightAnalysisCommentResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExptInsightAnalysisComment", varargs...)
+	ret0, _ := ret[0].(*expt.ListExptInsightAnalysisCommentResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExptInsightAnalysisComment indicates an expected call of ListExptInsightAnalysisComment.
+func (mr *MockClientMockRecorder) ListExptInsightAnalysisComment(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExptInsightAnalysisComment", reflect.TypeOf((*MockClient)(nil).ListExptInsightAnalysisComment), varargs...)
+}
+
+// ListExptInsightAnalysisRecord mocks base method.
+func (m *MockClient) ListExptInsightAnalysisRecord(arg0 context.Context, arg1 *expt.ListExptInsightAnalysisRecordRequest, arg2 ...callopt.Option) (*expt.ListExptInsightAnalysisRecordResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExptInsightAnalysisRecord", varargs...)
+	ret0, _ := ret[0].(*expt.ListExptInsightAnalysisRecordResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExptInsightAnalysisRecord indicates an expected call of ListExptInsightAnalysisRecord.
+func (mr *MockClientMockRecorder) ListExptInsightAnalysisRecord(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExptInsightAnalysisRecord", reflect.TypeOf((*MockClient)(nil).ListExptInsightAnalysisRecord), varargs...)
+}
+
+// ListExptResultExportRecord mocks base method.
+func (m *MockClient) ListExptResultExportRecord(arg0 context.Context, arg1 *expt.ListExptResultExportRecordRequest, arg2 ...callopt.Option) (*expt.ListExptResultExportRecordResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExptResultExportRecord", varargs...)
+	ret0, _ := ret[0].(*expt.ListExptResultExportRecordResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExptResultExportRecord indicates an expected call of ListExptResultExportRecord.
+func (mr *MockClientMockRecorder) ListExptResultExportRecord(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExptResultExportRecord", reflect.TypeOf((*MockClient)(nil).ListExptResultExportRecord), varargs...)
+}
+
+// MGetExperimentStandardEvalOutputs mocks base method.
+func (m *MockClient) MGetExperimentStandardEvalOutputs(arg0 context.Context, arg1 *expt.MGetExperimentStandardEvalOutputsRequest, arg2 ...callopt.Option) (*expt.MGetExperimentStandardEvalOutputsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "MGetExperimentStandardEvalOutputs", varargs...)
@@ -916,17 +735,217 @@ func (m *MockClient) MGetExperimentStandardEvalOutputs(ctx context.Context, req 
 }
 
 // MGetExperimentStandardEvalOutputs indicates an expected call of MGetExperimentStandardEvalOutputs.
-func (mr *MockClientMockRecorder) MGetExperimentStandardEvalOutputs(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) MGetExperimentStandardEvalOutputs(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetExperimentStandardEvalOutputs", reflect.TypeOf((*MockClient)(nil).MGetExperimentStandardEvalOutputs), varargs...)
 }
 
-// UpsertExptTurnResultFilter mocks base method.
-func (m *MockClient) UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest, callOptions ...callopt.Option) (*expt.UpsertExptTurnResultFilterResponse, error) {
+// RetryExperiment mocks base method.
+func (m *MockClient) RetryExperiment(arg0 context.Context, arg1 *expt.RetryExperimentRequest, arg2 ...callopt.Option) (*expt.RetryExperimentResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, req}
-	for _, a := range callOptions {
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RetryExperiment", varargs...)
+	ret0, _ := ret[0].(*expt.RetryExperimentResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RetryExperiment indicates an expected call of RetryExperiment.
+func (mr *MockClientMockRecorder) RetryExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryExperiment", reflect.TypeOf((*MockClient)(nil).RetryExperiment), varargs...)
+}
+
+// RunExperiment mocks base method.
+func (m *MockClient) RunExperiment(arg0 context.Context, arg1 *expt.RunExperimentRequest, arg2 ...callopt.Option) (*expt.RunExperimentResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RunExperiment", varargs...)
+	ret0, _ := ret[0].(*expt.RunExperimentResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunExperiment indicates an expected call of RunExperiment.
+func (mr *MockClientMockRecorder) RunExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExperiment", reflect.TypeOf((*MockClient)(nil).RunExperiment), varargs...)
+}
+
+// SubmitExperiment mocks base method.
+func (m *MockClient) SubmitExperiment(arg0 context.Context, arg1 *expt.SubmitExperimentRequest, arg2 ...callopt.Option) (*expt.SubmitExperimentResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitExperiment", varargs...)
+	ret0, _ := ret[0].(*expt.SubmitExperimentResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitExperiment indicates an expected call of SubmitExperiment.
+func (mr *MockClientMockRecorder) SubmitExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitExperiment", reflect.TypeOf((*MockClient)(nil).SubmitExperiment), varargs...)
+}
+
+// SubmitExptFromTemplate mocks base method.
+func (m *MockClient) SubmitExptFromTemplate(arg0 context.Context, arg1 *expt.SubmitExptFromTemplateRequest, arg2 ...callopt.Option) (*expt.SubmitExptFromTemplateResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitExptFromTemplate", varargs...)
+	ret0, _ := ret[0].(*expt.SubmitExptFromTemplateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitExptFromTemplate indicates an expected call of SubmitExptFromTemplate.
+func (mr *MockClientMockRecorder) SubmitExptFromTemplate(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitExptFromTemplate", reflect.TypeOf((*MockClient)(nil).SubmitExptFromTemplate), varargs...)
+}
+
+// TerminateExperimentItems mocks base method.
+func (m *MockClient) TerminateExperimentItems(arg0 context.Context, arg1 *expt.TerminateExperimentItemsRequest, arg2 ...callopt.Option) (*expt.TerminateExperimentItemsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "TerminateExperimentItems", varargs...)
+	ret0, _ := ret[0].(*expt.TerminateExperimentItemsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TerminateExperimentItems indicates an expected call of TerminateExperimentItems.
+func (mr *MockClientMockRecorder) TerminateExperimentItems(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateExperimentItems", reflect.TypeOf((*MockClient)(nil).TerminateExperimentItems), varargs...)
+}
+
+// UpdateAnnotateRecord mocks base method.
+func (m *MockClient) UpdateAnnotateRecord(arg0 context.Context, arg1 *expt.UpdateAnnotateRecordReq, arg2 ...callopt.Option) (*expt.UpdateAnnotateRecordResp, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateAnnotateRecord", varargs...)
+	ret0, _ := ret[0].(*expt.UpdateAnnotateRecordResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAnnotateRecord indicates an expected call of UpdateAnnotateRecord.
+func (mr *MockClientMockRecorder) UpdateAnnotateRecord(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAnnotateRecord", reflect.TypeOf((*MockClient)(nil).UpdateAnnotateRecord), varargs...)
+}
+
+// UpdateExperiment mocks base method.
+func (m *MockClient) UpdateExperiment(arg0 context.Context, arg1 *expt.UpdateExperimentRequest, arg2 ...callopt.Option) (*expt.UpdateExperimentResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateExperiment", varargs...)
+	ret0, _ := ret[0].(*expt.UpdateExperimentResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateExperiment indicates an expected call of UpdateExperiment.
+func (mr *MockClientMockRecorder) UpdateExperiment(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExperiment", reflect.TypeOf((*MockClient)(nil).UpdateExperiment), varargs...)
+}
+
+// UpdateExperimentTemplate mocks base method.
+func (m *MockClient) UpdateExperimentTemplate(arg0 context.Context, arg1 *expt.UpdateExperimentTemplateRequest, arg2 ...callopt.Option) (*expt.UpdateExperimentTemplateResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateExperimentTemplate", varargs...)
+	ret0, _ := ret[0].(*expt.UpdateExperimentTemplateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateExperimentTemplate indicates an expected call of UpdateExperimentTemplate.
+func (mr *MockClientMockRecorder) UpdateExperimentTemplate(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExperimentTemplate", reflect.TypeOf((*MockClient)(nil).UpdateExperimentTemplate), varargs...)
+}
+
+// UpdateExperimentTemplateMeta mocks base method.
+func (m *MockClient) UpdateExperimentTemplateMeta(arg0 context.Context, arg1 *expt.UpdateExperimentTemplateMetaRequest, arg2 ...callopt.Option) (*expt.UpdateExperimentTemplateMetaResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateExperimentTemplateMeta", varargs...)
+	ret0, _ := ret[0].(*expt.UpdateExperimentTemplateMetaResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateExperimentTemplateMeta indicates an expected call of UpdateExperimentTemplateMeta.
+func (mr *MockClientMockRecorder) UpdateExperimentTemplateMeta(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExperimentTemplateMeta", reflect.TypeOf((*MockClient)(nil).UpdateExperimentTemplateMeta), varargs...)
+}
+
+// UpdateExptRunConf mocks base method.
+func (m *MockClient) UpdateExptRunConf(arg0 context.Context, arg1 *expt.UpdateExptRunConfRequest, arg2 ...callopt.Option) (*expt.UpdateExptRunConfResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateExptRunConf", varargs...)
+	ret0, _ := ret[0].(*expt.UpdateExptRunConfResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateExptRunConf indicates an expected call of UpdateExptRunConf.
+func (mr *MockClientMockRecorder) UpdateExptRunConf(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptRunConf", reflect.TypeOf((*MockClient)(nil).UpdateExptRunConf), varargs...)
+}
+
+// UpsertExptTurnResultFilter mocks base method.
+func (m *MockClient) UpsertExptTurnResultFilter(arg0 context.Context, arg1 *expt.UpsertExptTurnResultFilterRequest, arg2 ...callopt.Option) (*expt.UpsertExptTurnResultFilterResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "UpsertExptTurnResultFilter", varargs...)
@@ -936,8 +955,8 @@ func (m *MockClient) UpsertExptTurnResultFilter(ctx context.Context, req *expt.U
 }
 
 // UpsertExptTurnResultFilter indicates an expected call of UpsertExptTurnResultFilter.
-func (mr *MockClientMockRecorder) UpsertExptTurnResultFilter(ctx, req any, callOptions ...any) *gomock.Call {
+func (mr *MockClientMockRecorder) UpsertExptTurnResultFilter(arg0, arg1 any, arg2 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, req}, callOptions...)
+	varargs := append([]any{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertExptTurnResultFilter", reflect.TypeOf((*MockClient)(nil).UpsertExptTurnResultFilter), varargs...)
 }
