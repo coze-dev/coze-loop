@@ -6095,6 +6095,69 @@ func TestEvalOpenAPIApplication_ListEvaluatorsOApi(t *testing.T) {
 	}
 }
 
+func TestEvalOpenAPIApplication_ListEvaluatorsOApi_SearchDescription(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(1001)
+
+	tests := []struct {
+		name   string
+		req    *openapi.ListEvaluatorsOApiRequest
+		wantSD string
+	}{
+		{
+			name: "non-empty search_description passthrough",
+			req: &openapi.ListEvaluatorsOApiRequest{
+				WorkspaceID:       gptr.Of(workspaceID),
+				SearchDescription: gptr.Of("foo"),
+				PageSize:          gptr.Of(int32(10)),
+				PageNumber:        gptr.Of(int32(1)),
+			},
+			wantSD: "foo",
+		},
+		{
+			name: "nil search_description passthrough as empty",
+			req: &openapi.ListEvaluatorsOApiRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				PageSize:    gptr.Of(int32(10)),
+				PageNumber:  gptr.Of(int32(1)),
+			},
+			wantSD: "",
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
+			metric := &fakeOpenAPIMetric{}
+
+			app := &EvalOpenAPIApplication{
+				auth:             auth,
+				evaluatorService: evaluatorSvc,
+				metric:           metric,
+			}
+
+			auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			evaluatorSvc.EXPECT().ListEvaluator(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, arg *entity.ListEvaluatorRequest) ([]*entity.Evaluator, int64, error) {
+					assert.Equal(t, tc.wantSD, arg.SearchDescription)
+					return []*entity.Evaluator{}, int64(0), nil
+				})
+
+			resp, err := app.ListEvaluatorsOApi(context.Background(), tc.req)
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+		})
+	}
+}
+
 func TestEvalOpenAPIApplication_BatchGetEvaluatorsOApi(t *testing.T) {
 	t.Parallel()
 

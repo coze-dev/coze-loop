@@ -44205,18 +44205,19 @@ func (p *GetExperimentResultExportRecordOpenAPIData) Field1DeepEqual(src *experi
 // ===============================
 // 3.1 查询评估器列表
 type ListEvaluatorsOApiRequest struct {
-	WorkspaceID   *int64                           `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	SearchName    *string                          `thrift:"search_name,2,optional" frugal:"2,optional,string" form:"search_name" json:"search_name,omitempty"`
-	CreatorIds    []int64                          `thrift:"creator_ids,3,optional" frugal:"3,optional,list<i64>" json:"creator_ids" form:"creator_ids" `
-	EvaluatorType []evaluator.EvaluatorType        `thrift:"evaluator_type,4,optional" frugal:"4,optional,list<string>" form:"evaluator_type" json:"evaluator_type,omitempty"`
-	WithVersion   *bool                            `thrift:"with_version,5,optional" frugal:"5,optional,bool" form:"with_version" json:"with_version,omitempty"`
-	Builtin       *bool                            `thrift:"builtin,6,optional" frugal:"6,optional,bool" form:"builtin" json:"builtin,omitempty"`
-	FilterOption  *evaluator.EvaluatorFilterOption `thrift:"filter_option,7,optional" frugal:"7,optional,evaluator.EvaluatorFilterOption" form:"filter_option" json:"filter_option,omitempty"`
-	PageSize      *int32                           `thrift:"page_size,100,optional" frugal:"100,optional,i32" form:"page_size" json:"page_size,omitempty"`
-	PageNumber    *int32                           `thrift:"page_number,101,optional" frugal:"101,optional,i32" form:"page_number" json:"page_number,omitempty"`
-	OrderBys      []*common.OrderBy                `thrift:"order_bys,102,optional" frugal:"102,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty"`
-	Extra         *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base          *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID       *int64                           `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	SearchName        *string                          `thrift:"search_name,2,optional" frugal:"2,optional,string" form:"search_name" json:"search_name,omitempty"`
+	SearchDescription *string                          `thrift:"search_description,8,optional" frugal:"8,optional,string" form:"search_description" json:"search_description,omitempty"`
+	CreatorIds        []int64                          `thrift:"creator_ids,3,optional" frugal:"3,optional,list<i64>" json:"creator_ids" form:"creator_ids" `
+	EvaluatorType     []evaluator.EvaluatorType        `thrift:"evaluator_type,4,optional" frugal:"4,optional,list<string>" form:"evaluator_type" json:"evaluator_type,omitempty"`
+	WithVersion       *bool                            `thrift:"with_version,5,optional" frugal:"5,optional,bool" form:"with_version" json:"with_version,omitempty"`
+	Builtin           *bool                            `thrift:"builtin,6,optional" frugal:"6,optional,bool" form:"builtin" json:"builtin,omitempty"`
+	FilterOption      *evaluator.EvaluatorFilterOption `thrift:"filter_option,7,optional" frugal:"7,optional,evaluator.EvaluatorFilterOption" form:"filter_option" json:"filter_option,omitempty"`
+	PageSize          *int32                           `thrift:"page_size,100,optional" frugal:"100,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	PageNumber        *int32                           `thrift:"page_number,101,optional" frugal:"101,optional,i32" form:"page_number" json:"page_number,omitempty"`
+	OrderBys          []*common.OrderBy                `thrift:"order_bys,102,optional" frugal:"102,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty"`
+	Extra             *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base              *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListEvaluatorsOApiRequest() *ListEvaluatorsOApiRequest {
@@ -44248,6 +44249,18 @@ func (p *ListEvaluatorsOApiRequest) GetSearchName() (v string) {
 		return ListEvaluatorsOApiRequest_SearchName_DEFAULT
 	}
 	return *p.SearchName
+}
+
+var ListEvaluatorsOApiRequest_SearchDescription_DEFAULT string
+
+func (p *ListEvaluatorsOApiRequest) GetSearchDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSearchDescription() {
+		return ListEvaluatorsOApiRequest_SearchDescription_DEFAULT
+	}
+	return *p.SearchDescription
 }
 
 var ListEvaluatorsOApiRequest_CreatorIds_DEFAULT []int64
@@ -44375,6 +44388,9 @@ func (p *ListEvaluatorsOApiRequest) SetWorkspaceID(val *int64) {
 func (p *ListEvaluatorsOApiRequest) SetSearchName(val *string) {
 	p.SearchName = val
 }
+func (p *ListEvaluatorsOApiRequest) SetSearchDescription(val *string) {
+	p.SearchDescription = val
+}
 func (p *ListEvaluatorsOApiRequest) SetCreatorIds(val []int64) {
 	p.CreatorIds = val
 }
@@ -44409,6 +44425,7 @@ func (p *ListEvaluatorsOApiRequest) SetBase(val *base.Base) {
 var fieldIDToName_ListEvaluatorsOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "search_name",
+	8:   "search_description",
 	3:   "creator_ids",
 	4:   "evaluator_type",
 	5:   "with_version",
@@ -44427,6 +44444,10 @@ func (p *ListEvaluatorsOApiRequest) IsSetWorkspaceID() bool {
 
 func (p *ListEvaluatorsOApiRequest) IsSetSearchName() bool {
 	return p.SearchName != nil
+}
+
+func (p *ListEvaluatorsOApiRequest) IsSetSearchDescription() bool {
+	return p.SearchDescription != nil
 }
 
 func (p *ListEvaluatorsOApiRequest) IsSetCreatorIds() bool {
@@ -44498,6 +44519,14 @@ func (p *ListEvaluatorsOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -44632,6 +44661,17 @@ func (p *ListEvaluatorsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.SearchName = _field
+	return nil
+}
+func (p *ListEvaluatorsOApiRequest) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SearchDescription = _field
 	return nil
 }
 func (p *ListEvaluatorsOApiRequest) ReadField3(iprot thrift.TProtocol) error {
@@ -44786,6 +44826,10 @@ func (p *ListEvaluatorsOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 2
 			goto WriteFieldError
 		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
 			goto WriteFieldError
@@ -44879,6 +44923,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListEvaluatorsOApiRequest) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSearchDescription() {
+		if err = oprot.WriteFieldBegin("search_description", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SearchDescription); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 func (p *ListEvaluatorsOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCreatorIds() {
@@ -45105,6 +45167,9 @@ func (p *ListEvaluatorsOApiRequest) DeepEqual(ano *ListEvaluatorsOApiRequest) bo
 	if !p.Field2DeepEqual(ano.SearchName) {
 		return false
 	}
+	if !p.Field8DeepEqual(ano.SearchDescription) {
+		return false
+	}
 	if !p.Field3DeepEqual(ano.CreatorIds) {
 		return false
 	}
@@ -45158,6 +45223,18 @@ func (p *ListEvaluatorsOApiRequest) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.SearchName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluatorsOApiRequest) Field8DeepEqual(src *string) bool {
+
+	if p.SearchDescription == src {
+		return true
+	} else if p.SearchDescription == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SearchDescription, *src) != 0 {
 		return false
 	}
 	return true

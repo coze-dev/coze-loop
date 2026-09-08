@@ -2545,15 +2545,16 @@ func (e *EvalOpenAPIApplication) ListEvaluatorsOApi(ctx context.Context, req *op
 			evalTypes = append(evalTypes, evaluator_convertor.OpenAPIEvaluatorTypeDTO2DO(gptr.Of(t)))
 		}
 		dos, total, err = e.evaluatorService.ListEvaluator(ctx, &entity.ListEvaluatorRequest{
-			SpaceID:       req.GetWorkspaceID(),
-			SearchName:    req.GetSearchName(),
-			CreatorIDs:    req.CreatorIds,
-			EvaluatorType: evalTypes,
-			PageSize:      req.GetPageSize(),
-			PageNum:       req.GetPageNumber(),
-			OrderBys:      common.OpenAPIOrderBysDTO2DO(req.OrderBys),
-			WithVersion:   req.GetWithVersion(),
-			FilterOption:  evaluator_convertor.OpenAPIEvaluatorFilterOptionDTO2DO(req.FilterOption),
+			SpaceID:           req.GetWorkspaceID(),
+			SearchName:        req.GetSearchName(),
+			SearchDescription: req.GetSearchDescription(),
+			CreatorIDs:        req.CreatorIds,
+			EvaluatorType:     evalTypes,
+			PageSize:          req.GetPageSize(),
+			PageNum:           req.GetPageNumber(),
+			OrderBys:          common.OpenAPIOrderBysDTO2DO(req.OrderBys),
+			WithVersion:       req.GetWithVersion(),
+			FilterOption:      evaluator_convertor.OpenAPIEvaluatorFilterOptionDTO2DO(req.FilterOption),
 		})
 	}
 	if err != nil {
