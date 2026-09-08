@@ -196,6 +196,45 @@ func (p EvalTargetType) SupptTrajectory() bool {
 	}
 }
 
+// ConfigName 返回该类型在人工维护的配置（TCC 灰度白名单等）中使用的稳定名称。
+//
+// 与 String() 分开是因为两者的受众不同：String() 是驼峰名，用于日志和错误信息；
+// 本方法返回 snake_case，与 OpenAPI 公开枚举（domain_openapi/eval_target.thrift 的
+// `EvalTargetType_SandboxAgent = "sandbox_agent"`）以及 CLI 的 --target-type 取值一致。
+// 配置里写 "sandbox_agent" 比写 17 可读得多，也不会因枚举值调整而失配。
+//
+// 返回空串表示该类型未定义配置名 —— 调用方应视为"不匹配任何配置项"，
+// 而不是回落到某个默认类型（回落会让未登记的新类型意外命中灰度规则）。
+// 仅记录型（*Online）刻意不给配置名：它们不执行评测对象，不会进入调度。
+func (p EvalTargetType) ConfigName() string {
+	switch p {
+	case EvalTargetTypeCozeBot:
+		return "coze_bot"
+	case EvalTargetTypeLoopPrompt:
+		return "coze_loop_prompt"
+	case EvalTargetTypeLoopTrace:
+		return "trace"
+	case EvalTargetTypeCozeWorkflow:
+		return "coze_workflow"
+	case EvalTargetTypeVolcengineAgent:
+		return "volcengine_agent"
+	case EvalTargetTypeCustomRPCServer:
+		return "custom_rpc_server"
+	case EvalTargetTypeVolcengineAgentAgentkit:
+		return "volcengine_agent_agentkit"
+	case EvalTargetTypeWebAgent:
+		return "web_agent"
+	case EvalTargetTypeA2AAgent:
+		return "a2a_agent"
+	case EvalTargetTypeCustomAgent:
+		return "custom_agent"
+	case EvalTargetTypeSandboxAgent:
+		return "sandbox_agent"
+	default:
+		return ""
+	}
+}
+
 func EvalTargetTypePtr(v EvalTargetType) *EvalTargetType { return &v }
 
 func (p *EvalTargetType) Scan(value interface{}) (err error) {

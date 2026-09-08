@@ -60,6 +60,8 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.TrialRunItemCount = field.NewInt64(tableName, "trial_run_item_count")
 	_experiment.OfflineExptAnalysisStatus = field.NewInt32(tableName, "offline_expt_analysis_status")
 	_experiment.NotificationConf = field.NewBytes(tableName, "notification_conf")
+	_experiment.PriorityLevel = field.NewInt32(tableName, "priority_level")
+	_experiment.SchedulerMode = field.NewString(tableName, "scheduler_mode")
 
 	_experiment.fillFieldMap()
 
@@ -104,6 +106,8 @@ type experiment struct {
 	TrialRunItemCount         field.Int64  // 试运行行数
 	OfflineExptAnalysisStatus field.Int32  // 离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)
 	NotificationConf          field.Bytes  // 通知配置，json格式存储webhook/飞书通知配置
+	PriorityLevel             field.Int32  // 实验调度优先级，1-99，数值越大越优先
+	SchedulerMode             field.String // 调度模式：legacy(旧per-experiment链路)/enforce(中心调度)
 
 	fieldMap map[string]field.Expr
 }
@@ -179,7 +183,7 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 32)
+	e.fieldMap = make(map[string]field.Expr, 35)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -213,6 +217,8 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["trial_run_item_count"] = e.TrialRunItemCount
 	e.fieldMap["offline_expt_analysis_status"] = e.OfflineExptAnalysisStatus
 	e.fieldMap["notification_conf"] = e.NotificationConf
+	e.fieldMap["priority_level"] = e.PriorityLevel
+	e.fieldMap["scheduler_mode"] = e.SchedulerMode
 }
 
 func (e experiment) clone(db *gorm.DB) experiment {

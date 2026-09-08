@@ -6,7 +6,6 @@ package experiment
 import (
 	"context"
 	"fmt"
-	"maps"
 	"time"
 
 	"github.com/samber/lo"
@@ -62,9 +61,8 @@ func (q *QuotaRepoImpl) createOrUpdate(ctx context.Context, spaceID int64, updat
 
 	oldVal = lo.Ternary(oldVal != nil, oldVal, &entity.QuotaSpaceExpt{ExptID2RunTime: make(map[int64]int64)})
 
-	newVal, update, err := updater(&entity.QuotaSpaceExpt{
-		ExptID2RunTime: maps.Clone(oldVal.ExptID2RunTime),
-	})
+	// 走 entity.Clone 而非手工构造：手工只拷当时已知的字段，QuotaSpaceExpt 新增字段时会被零值静默覆盖回 Redis。
+	newVal, update, err := updater(oldVal.Clone())
 	if err != nil {
 		return err
 	}

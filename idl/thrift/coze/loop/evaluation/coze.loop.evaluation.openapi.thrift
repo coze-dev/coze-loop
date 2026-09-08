@@ -648,6 +648,25 @@ struct SubmitExperimentOApiRequest {
     // 通知配置
     50: optional experiment.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
+    // ★ 中心化调度特权参数 60~62
+    //
+    // ⚠️ 三者都是**特权申报**: 仅当调用方身份命中服务端白名单
+    // (TCC expt_scheduling_privilege_white_list 的 user_emails / space_ids / caller_psms)
+    // 时才生效。未授权的调用方传了**不报错**, 但会被静默丢弃 ——
+    // priority 走缺省值、向量丢弃、trigger 降级 manual (实验走 legacy 链路)。
+    // 不报错是为了兼容: 这几个字段可能已有调用方在传, 突然报错会打挂它们。
+    //
+    // 调度优先级: 1-99, 数值越大越优先; 缺省取服务端配置的 default_priority (未配则 1)。
+    // 仅在中心调度模式下参与排序, legacy 模式忽略。
+    60: optional i32 priority_level (api.body = 'priority_level')
+    // 单 item 预期资源消耗向量: 进入中心调度 (enforce) 的实验必填且非空。
+    // 服务端校验 (category,resource_key) 唯一、amount>0、禁止 resource_key="*", 随后冻结进 eval_conf;
+    // Retry 继承不可覆盖。category/resource_key 须与服务端 TCC 资源配置对得上。
+    61: optional experiment.ExpectedQuotaConsumption expected_quota_consumption (api.body = 'expected_quota_consumption')
+    // 触发来源: 填 "evalx" 且身份获授权时, 实验可进入中心调度 (enforce);
+    // 其余取值或未授权一律走 legacy。不填则按 openapi 处理。
+    62: optional string trigger_type (api.body = 'trigger_type')
+
     100: optional map<string, string> ext (api.body = 'ext')
 
     // 实验分组 key 默认以实验 ID 兜底；填写 ref_group_experiment_id 时复用该引用实验的 group key（归入同一分组）。
@@ -715,7 +734,7 @@ struct GetExperimentsOApiResponse {
     255: base.BaseResp BaseResp
 }
 
-// UpdateExptRunConfOApiRequest 通过 OpenAPI 修改进行中实验的运行配置（并发度 / Item 重试次数）。
+// UpdateExptRunConfOApiRequest 通过 OpenAPI 修改进行中实验的运行配置（并发度 / Item 重试次数 / 调度参数）。
 // 仅对处于 Pending / Processing 状态的实验生效。
 struct UpdateExptRunConfOApiRequest {
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
@@ -725,6 +744,13 @@ struct UpdateExptRunConfOApiRequest {
     20: optional i32 item_concur_num (api.body = 'item_concur_num')
     // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
+
+    // 以下两个是中心调度特权参数，字段号与 CreateExperimentOApiRequest 对齐（60/61）。
+    // 未获授权的调用方传了会被丢弃并打 WARN，不报错。
+    // 调度优先级：不传表示不修改。改完下一拍生效（调度器每拍从库重扫队列）。
+    60: optional i32 priority_level (api.body = 'priority_level')
+    // 单 item 预期资源消耗：不传表示不修改。改动会同步给该 run 在飞的预占重新计价。
+    61: optional experiment.ExpectedQuotaConsumption expected_quota_consumption (api.body = 'expected_quota_consumption')
 
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base

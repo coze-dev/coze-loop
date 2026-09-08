@@ -29,6 +29,37 @@ func TestEvalTargetType_String(t *testing.T) {
 	assert.Equal(t, "<UNSET>", unknown.String())
 }
 
+func TestEvalTargetType_ConfigName(t *testing.T) {
+	t.Parallel()
+
+	// 配置名必须与 OpenAPI 公开枚举（domain_openapi/eval_target.thrift）及
+	// CLI --target-type 的取值逐字一致 —— TCC 里写的就是这些字符串，
+	// 拼错不会报错、只会静默不命中灰度规则。
+	assert.Equal(t, "coze_bot", EvalTargetTypeCozeBot.ConfigName())
+	assert.Equal(t, "coze_loop_prompt", EvalTargetTypeLoopPrompt.ConfigName())
+	assert.Equal(t, "trace", EvalTargetTypeLoopTrace.ConfigName())
+	assert.Equal(t, "coze_workflow", EvalTargetTypeCozeWorkflow.ConfigName())
+	assert.Equal(t, "volcengine_agent", EvalTargetTypeVolcengineAgent.ConfigName())
+	assert.Equal(t, "custom_rpc_server", EvalTargetTypeCustomRPCServer.ConfigName())
+	assert.Equal(t, "volcengine_agent_agentkit", EvalTargetTypeVolcengineAgentAgentkit.ConfigName())
+	assert.Equal(t, "web_agent", EvalTargetTypeWebAgent.ConfigName())
+	assert.Equal(t, "a2a_agent", EvalTargetTypeA2AAgent.ConfigName())
+	assert.Equal(t, "custom_agent", EvalTargetTypeCustomAgent.ConfigName())
+	assert.Equal(t, "sandbox_agent", EvalTargetTypeSandboxAgent.ConfigName())
+
+	// 仅记录型不给配置名：它们不执行评测对象，不会进入调度。
+	assert.Empty(t, EvalTargetTypeCozeBotOnline.ConfigName())
+	assert.Empty(t, EvalTargetTypeCozeLoopPromptOnline.ConfigName())
+	assert.Empty(t, EvalTargetTypeCozeWorkflowOnline.ConfigName())
+	assert.Empty(t, EvalTargetTypeVolcengineAgentOnline.ConfigName())
+	assert.Empty(t, EvalTargetTypeCustomRPCServerOnline.ConfigName())
+	assert.Empty(t, EvalTargetTypeVolcengineAgentAgentkitOnline.ConfigName())
+
+	// 未登记类型返回空串而非回落到某个默认值：回落会让新类型意外命中灰度规则。
+	var unregistered EvalTargetType = 99
+	assert.Empty(t, unregistered.ConfigName())
+}
+
 func TestEvalTargetType_SupptTrajectory(t *testing.T) {
 	tests := []struct {
 		name       string

@@ -517,6 +517,83 @@ func TestHandleFeishuNotification_Disabled_BitsUT(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// TestHandleFeishuNotification_EvalxTrigger_Suppressed_BitsUT trigger_type=evalx 一律不发卡，
+// 且优先于 NotificationConf —— 显式 Enable=true + 命中 filter 的实验也挡，老实验(conf=nil)终态也挡。
+func TestHandleFeishuNotification_EvalxTrigger_Suppressed_BitsUT(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("feishu explicitly enabled but trigger is evalx", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		event := &entity.ExptLifecycleEvent{
+			ExptID: 1, SpaceID: 100,
+			ToStatus: entity.ExptStatus_Success,
+		}
+		expt := &entity.Experiment{
+			ID: 1, SpaceID: 100, CreatedBy: "user1",
+			TriggerType: "evalx",
+			NotificationConf: &entity.ExptNotificationConf{
+				FeishuNotification: &entity.FeishuNotificationConf{Enable: true},
+			},
+		}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+		// No SendMessageCard expected — suppressed by trigger_type
+
+		err := handler.HandleLifecycleEvent(ctx, event)
+		assert.NoError(t, err)
+	})
+
+	t.Run("legacy expt without NotificationConf, terminal status, trigger is evalx", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		event := &entity.ExptLifecycleEvent{
+			ExptID: 1, SpaceID: 100,
+			ToStatus: entity.ExptStatus_Success,
+		}
+		expt := &entity.Experiment{
+			ID: 1, SpaceID: 100, CreatedBy: "user1",
+			TriggerType:      "evalx",
+			NotificationConf: nil,
+		}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+		// No SendMessageCard expected — trigger gate precedes the legacy terminal-status branch
+
+		err := handler.HandleLifecycleEvent(ctx, event)
+		assert.NoError(t, err)
+	})
+
+	t.Run("manual trigger still sends", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		handler, mocks := newTestLifecycleEventHandler(ctrl)
+
+		event := &entity.ExptLifecycleEvent{
+			ExptID: 1, SpaceID: 100,
+			ToStatus: entity.ExptStatus_Success,
+		}
+		expt := &entity.Experiment{
+			ID: 1, SpaceID: 100, CreatedBy: "user1",
+			TriggerType: "manual",
+			NotificationConf: &entity.ExptNotificationConf{
+				FeishuNotification: &entity.FeishuNotificationConf{Enable: true},
+			},
+		}
+		mocks.exptRepo.EXPECT().GetByID(ctx, int64(1), int64(100)).Return(expt, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user1"}).Return([]*entity.UserInfo{
+			{Email: gptr.Of("user1@test.com")},
+		}, nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user1@test.com", "email", gomock.Any(), gomock.Any()).Return(nil)
+
+		err := handler.HandleLifecycleEvent(ctx, event)
+		assert.NoError(t, err)
+	})
+}
+
 func TestHandleFeishuNotification_LegacyNoConf_BitsUT(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

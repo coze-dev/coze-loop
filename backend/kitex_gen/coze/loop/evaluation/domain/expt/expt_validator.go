@@ -35,6 +35,12 @@ func (p *AgentSkillDeclare) IsValid() error {
 func (p *RunModeConfig) IsValid() error {
 	return nil
 }
+func (p *ExpectedResourceConsumption) IsValid() error {
+	return nil
+}
+func (p *ExpectedQuotaConsumption) IsValid() error {
+	return nil
+}
 func (p *Experiment) IsValid() error {
 	if p.EvalSet != nil {
 		if err := p.EvalSet.IsValid(); err != nil {
@@ -89,6 +95,11 @@ func (p *Experiment) IsValid() error {
 	if p.RunModeConfig != nil {
 		if err := p.RunModeConfig.IsValid(); err != nil {
 			return fmt.Errorf("field RunModeConfig not valid, %w", err)
+		}
+	}
+	if p.ExpectedQuotaConsumption != nil {
+		if err := p.ExpectedQuotaConsumption.IsValid(); err != nil {
+			return fmt.Errorf("field ExpectedQuotaConsumption not valid, %w", err)
 		}
 	}
 	return nil
