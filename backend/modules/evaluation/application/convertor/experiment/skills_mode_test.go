@@ -43,6 +43,16 @@ func TestOpenAPIRunModeConfigDTO2Domain_SkillsModeWhitelist(t *testing.T) {
 		assert.Equal(t, "disable_test_case", dom.GetSkillsMode())
 	})
 
+	t.Run("合法值 merge_exp_first 透传", func(t *testing.T) {
+		t.Parallel()
+		dom, err := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{
+			SkillsMode: gptr.Of("merge_exp_first"),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, dom)
+		assert.Equal(t, "merge_exp_first", dom.GetSkillsMode())
+	})
+
 	t.Run("未设置(nil) 放行, 不产出 skills_mode", func(t *testing.T) {
 		t.Parallel()
 		dom, err := OpenAPIRunModeConfigDTO2Domain(&openapiExperiment.RunModeConfig{})
@@ -68,6 +78,10 @@ func TestOpenAPIRunModeConfigDTO2Domain_SkillsModeWhitelist(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "skills_mode", "错误信息应点出出错的字段名")
+		// supported 列表必须带上全部合法值, 否则用户照着报错提示改配置会再撞一次墙。
+		assert.Contains(t, err.Error(), "merge")
+		assert.Contains(t, err.Error(), "disable_test_case")
+		assert.Contains(t, err.Error(), "merge_exp_first")
 	})
 }
 
@@ -76,7 +90,7 @@ func TestOpenAPIRunModeConfigDTO2Domain_SkillsModeWhitelist(t *testing.T) {
 func TestRunModeConfig_SkillsModeRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	for _, v := range []string{"merge", "disable_test_case"} {
+	for _, v := range []string{"merge", "disable_test_case", "merge_exp_first"} {
 		v := v
 		t.Run(v, func(t *testing.T) {
 			t.Parallel()
@@ -141,6 +155,7 @@ func TestIsValidSkillsMode(t *testing.T) {
 	t.Parallel()
 	assert.True(t, isValidSkillsMode("merge"))
 	assert.True(t, isValidSkillsMode("disable_test_case"))
+	assert.True(t, isValidSkillsMode("merge_exp_first"))
 	assert.False(t, isValidSkillsMode(""))
 	assert.False(t, isValidSkillsMode("MERGE"))
 	assert.False(t, isValidSkillsMode("bogus"))

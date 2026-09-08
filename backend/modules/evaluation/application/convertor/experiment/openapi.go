@@ -3164,23 +3164,71 @@ func OpenAPIRunModeConfigDTO2Domain(c *openapiExperiment.RunModeConfig) (*domain
 	if c.SkillsMode != nil && *c.SkillsMode != "" {
 		if !isValidSkillsMode(*c.SkillsMode) {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
-				"invalid skills_mode %q (supported: %s, %s)", *c.SkillsMode,
-				skillsModeMerge, skillsModeDisableTestCase)))
+				"invalid skills_mode %q (supported: %s, %s, %s)", *c.SkillsMode,
+				skillsModeMerge, skillsModeDisableTestCase, skillsModeMergeExpFirst)))
 		}
 		out.SkillsMode = c.SkillsMode
+	}
+	// skills 实验级技能声明: 平台仅校验 skill_key 非空 (空 key 无意义且 runtime 的 Skill.Validate
+	// 也会拒 —— 入口早拒省一轮实验创建开销); dist 等结构不做语义校验, 原样透传给 runtime 解释。
+	for i, s := range c.Skills {
+		if s.GetSkillKey() == "" {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf(
+				"skills[%d].skill_key is required", i)))
+		}
+	}
+	if len(c.Skills) > 0 {
+		out.Skills = openAPISkillsToDomain(c.Skills)
 	}
 	return out, nil
 }
 
-// skills_mode 全量枚举 (SandboxAgent 跑法的技能模式)。case-file experiment_info.skills_mode 原样带这两个值之一。
+// openAPISkillsToDomain 把 OpenAPI 的实验级 Agent Skills 声明逐元素逐字段拷贝为 domain 形态。
+// 平台不解释 dist 内部结构 (channel 合法性、版本格式等由 runtime 校验), 仅如实透传。
+func openAPISkillsToDomain(skills []*openapiExperiment.AgentSkillDeclare) []*domainExpt.AgentSkillDeclare {
+	out := make([]*domainExpt.AgentSkillDeclare, 0, len(skills))
+	for _, s := range skills {
+		if s == nil {
+			continue
+		}
+		out = append(out, &domainExpt.AgentSkillDeclare{
+			SkillKey:        s.SkillKey,
+			SkillVersion:    s.SkillVersion,
+			Dist:            openAPISkillDistToDomain(s.Dist),
+			SetupScript:     s.SetupScript,
+			CredentialsKeys: s.CredentialsKeys,
+		})
+	}
+	return out
+}
+
+func openAPISkillDistToDomain(d *openapiExperiment.SkillDistDeclare) *domainExpt.SkillDistDeclare {
+	if d == nil {
+		return nil
+	}
+	return &domainExpt.SkillDistDeclare{
+		ChannelType:            d.ChannelType,
+		FileURL:                d.FileURL,
+		AgentBuddySource:       d.AgentBuddySource,
+		AgentBuddySkillName:    d.AgentBuddySkillName,
+		AgentBuddySkillVersion: d.AgentBuddySkillVersion,
+		GitURL:                 d.GitURL,
+		Branch:                 d.Branch,
+		Dir:                    d.Dir,
+		CommitHash:             d.CommitHash,
+	}
+}
+
+// skills_mode 全量枚举 (SandboxAgent 跑法的技能模式)。case-file experiment_info.skills_mode 原样带其中一个值。
 const (
 	skillsModeMerge           = "merge"
 	skillsModeDisableTestCase = "disable_test_case"
+	skillsModeMergeExpFirst   = "merge_exp_first"
 )
 
 func isValidSkillsMode(s string) bool {
 	switch s {
-	case skillsModeMerge, skillsModeDisableTestCase:
+	case skillsModeMerge, skillsModeDisableTestCase, skillsModeMergeExpFirst:
 		return true
 	default:
 		return false
@@ -3249,6 +3297,9 @@ func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment
 		// skills_mode 是受控枚举, 但存量落库的值都经过入口白名单校验, 回显原样带出即可。
 		SkillsMode: c.SkillsMode,
 	}
+	if len(c.Skills) > 0 {
+		out.Skills = domainSkillsToOpenAPI(c.Skills)
+	}
 	if c.RunMode != nil {
 		if rm, ok := domainRunModeToOpenAPI(*c.RunMode); ok {
 			out.RunMode = gptr.Of(rm)
@@ -3260,6 +3311,42 @@ func RunModeConfigDomain2OpenAPI(c *domainExpt.RunModeConfig) *openapiExperiment
 		}
 	}
 	return out
+}
+
+// domainSkillsToOpenAPI 把 domain 的实验级 Agent Skills 声明逐元素逐字段拷贝为 OpenAPI 读模型
+// 形态 (openAPISkillsToDomain 的反向)。存量值原样带出, 不解释。
+func domainSkillsToOpenAPI(skills []*domainExpt.AgentSkillDeclare) []*openapiExperiment.AgentSkillDeclare {
+	out := make([]*openapiExperiment.AgentSkillDeclare, 0, len(skills))
+	for _, s := range skills {
+		if s == nil {
+			continue
+		}
+		out = append(out, &openapiExperiment.AgentSkillDeclare{
+			SkillKey:        s.SkillKey,
+			SkillVersion:    s.SkillVersion,
+			Dist:            domainSkillDistToOpenAPI(s.Dist),
+			SetupScript:     s.SetupScript,
+			CredentialsKeys: s.CredentialsKeys,
+		})
+	}
+	return out
+}
+
+func domainSkillDistToOpenAPI(d *domainExpt.SkillDistDeclare) *openapiExperiment.SkillDistDeclare {
+	if d == nil {
+		return nil
+	}
+	return &openapiExperiment.SkillDistDeclare{
+		ChannelType:            d.ChannelType,
+		FileURL:                d.FileURL,
+		AgentBuddySource:       d.AgentBuddySource,
+		AgentBuddySkillName:    d.AgentBuddySkillName,
+		AgentBuddySkillVersion: d.AgentBuddySkillVersion,
+		GitURL:                 d.GitURL,
+		Branch:                 d.Branch,
+		Dir:                    d.Dir,
+		CommitHash:             d.CommitHash,
+	}
 }
 
 // ExpectedQuotaConsumptionDomain2OpenAPI 把已冻结的资源消耗向量转成 OpenAPI 读模型。
