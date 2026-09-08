@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/bytedance/gg/gptr"
 	"gorm.io/gorm"
@@ -47,6 +48,14 @@ type IExptDAO interface {
 	GetIDsByGroupKey(ctx context.Context, spaceID int64, groupKey string, page, pageSize int32) ([]int64, int64, error)
 
 	ExistGroupKey(ctx context.Context, groupKey string, spaceID int64) (bool, error)
+
+	// ScanSchedulerQueue 在指定 scheduler_scope 内跨空间扫描中心调度候选实验。
+	//
+	// 与 List 的关键差别：不带 space_id 条件 —— 中心调度在 Scope 内按全局优先级排序，若按空间
+	// 分别扫描，低优空间的实验会先于高优空间被处理，全局优先级语义即失效。
+	// 但 scheduler_scope 必须带：它是调度所有权边界（线上/各 PPE 泳道共库）。
+	// 走 idx_scheduler_queue，keyset 分页保证翻页不重不漏。
+	ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*model.Experiment, error)
 }
 
 func NewExptDAO(db db.Provider) IExptDAO {
@@ -81,8 +90,28 @@ func (d *exptDAOImpl) Create(ctx context.Context, expt *model.Experiment) error 
 	return nil
 }
 
+// schedulingFrozenColumns 是创建时一次性冻结、此后任何 Update 都不得改写的调度列。
+//
+// 为什么必须显式 Omit：本方法用 struct 做 Updates，GORM 只跳过**零值**字段。
+// 而 DO2PO 会把未设置的调度字段 Normalize 成非零值（mode ""→"legacy"、priority 0→1，
+// 见 convert/expt.go），于是任何"只带 ID + 一两个业务字段"的部分更新（全仓 8 处，如
+// LogRun 写 latest_run_id、ScheduleStart 改 status）都会顺手把 enforce 实验改回 legacy、
+// 把申报的优先级重置为 1。
+//
+// 后果是静默且严重的：mode 变回 legacy 后中心调度再也扫不到它（扫描条件是
+// scheduler_mode='enforce'），而旧 daemon 的抑制判断读到 legacy 会**恢复自主派发** ——
+// 同一个 run 出现两个派发驱动、绕过全局额度账本，正是设计上明令禁止的情形。
+// 且 scope 是零值会被跳过，最终留下 mode=legacy + scope 非空 的不可能组合。
+//
+// scheduler_mode / scheduler_scope 的唯一合法写入点是 Create（见 expt_manage_impl.go 的冻结逻辑）。
+// priority_level 多一个：UpdateRunConf 允许运行中改优先级，它走 UpdateFields 的显式列名 map，
+// 只能改到写进 map 的那一列 —— 这正是本 Omit 要防的"部分更新顺手重置"在那条路径上不成立的原因。
+var schedulingFrozenColumns = []string{"priority_level", "scheduler_mode", "scheduler_scope"}
+
 func (d *exptDAOImpl) Update(ctx context.Context, expt *model.Experiment) error {
-	if err := d.db.NewSession(ctx).Model(&model.Experiment{}).Where("id = ?", expt.ID).Updates(expt).Error; err != nil {
+	if err := d.db.NewSession(ctx).Model(&model.Experiment{}).Where("id = ?", expt.ID).
+		Omit(schedulingFrozenColumns...).
+		Updates(expt).Error; err != nil {
 		return errorx.Wrapf(err, "update expt fail, expt_id: %v, updated: %v", expt.ID, json.Jsonify(expt))
 	}
 	return nil
@@ -461,4 +490,64 @@ func (d *exptDAOImpl) ExistGroupKey(ctx context.Context, groupKey string, spaceI
 		return false, errorx.Wrapf(err, "mysql exist experiment group key fail, group_key: %v", groupKey)
 	}
 	return cnt > 0, nil
+}
+
+// ScanSchedulerQueue 在指定 scheduler_scope 内跨空间扫描中心调度候选实验，走 idx_scheduler_queue。
+//
+// 用裸 gorm 而非 gen DSL：keyset 的三元组比较是一段带括号 OR 的复合条件，
+// gen 的链式 API 表达它需要嵌套多层 Or(...)，可读性远差于一条 SQL 片段。
+//
+// FORCE INDEX 的取舍：status IN (...) 是 range 条件，MySQL 可能因此放弃用索引满足 ORDER BY 而
+// 走 filesort；灰度期数据量小可接受，故此处不 FORCE，留给 EXPLAIN 实测后再决定 ——
+// 过早 FORCE INDEX 会在数据分布变化后反而选到更差的计划。
+func (d *exptDAOImpl) ScanSchedulerQueue(ctx context.Context, param *entity.SchedulerQueueScanParam) ([]*model.Experiment, error) {
+	if param == nil {
+		return nil, nil
+	}
+	limit := int(param.Limit)
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+
+	// Scope 为空时拒绝查询而非退化成扫全表。
+	//
+	// 这是"泳道不得调度线上实验"的物理闸门：一旦这里放行空 Scope，PPE 实例就会扫出
+	// 线上的 enforce 实验、为它们预占额度并派发 item（item 走泳道 topic、结果写回共享库），
+	// 而线上侧完全无感知。宁可这一拍报错（可见），也不能静默越界（不可见）。
+	if strings.TrimSpace(param.SchedulerScope) == "" {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+			errorx.WithExtraMsg("empty scheduler_scope for scheduler queue scan; refusing to scan across all scopes"))
+	}
+
+	tx := d.db.NewSession(ctx).Model(&model.Experiment{}).
+		Where("scheduler_mode = ?", param.DispatchMode).
+		Where("scheduler_scope = ?", param.SchedulerScope).
+		Where("deleted_at IS NULL").
+		// latest_run_id > 0 排除"只 Create 尚未 Run"的实验：它们没有 run 可供派发 item，
+		// 扫进来只会让每拍白跑一遍。
+		Where("latest_run_id > 0")
+
+	if len(param.Statuses) > 0 {
+		tx = tx.Where("status IN ?", param.Statuses)
+	}
+
+	if c := param.Cursor; c != nil {
+		// keyset：严格小于游标（按 priority DESC, created_at ASC, id ASC 的字典序）
+		tx = tx.Where(
+			"(priority_level < ?) OR (priority_level = ? AND created_at > FROM_UNIXTIME(?)) OR (priority_level = ? AND created_at = FROM_UNIXTIME(?) AND id > ?)",
+			c.PriorityLevel,
+			c.PriorityLevel, c.CreatedAtUnix,
+			c.PriorityLevel, c.CreatedAtUnix, c.ExptID,
+		)
+	}
+
+	var pos []*model.Experiment
+	if err := tx.
+		Order("priority_level DESC, created_at ASC, id ASC").
+		Limit(limit).
+		Find(&pos).Error; err != nil {
+		return nil, errorx.Wrapf(err, "mysql scan scheduler queue fail, mode: %v, scope: %v, statuses: %v",
+			param.DispatchMode, param.SchedulerScope, param.Statuses)
+	}
+	return pos, nil
 }

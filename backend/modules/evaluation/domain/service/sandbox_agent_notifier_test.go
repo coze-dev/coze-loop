@@ -90,6 +90,19 @@ func TestSandboxAgentNotifier_NotifyProgressIfDue_EnableFalse_Skip(t *testing.T)
 	assert.NoError(t, err)
 }
 
+// TestSandboxAgentNotifier_EvalxTrigger_Skip trigger_type=evalx 时两张卡都不发，
+// 即便实验是沙箱 agent 且 FeishuNotification.Enable=true —— 一个依赖都不该被调用。
+func TestSandboxAgentNotifier_EvalxTrigger_Skip(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	n, _, _, _, _ := newTestSandboxAgentNotifier(ctrl)
+	expt := buildSandboxAgentExpt(true, "ou_abc")
+	expt.TriggerType = "evalx"
+
+	assert.NoError(t, n.NotifyProgressIfDue(context.Background(), expt))
+	assert.NoError(t, n.NotifyItemFail(context.Background(), expt, 1, errors.New("boom")))
+}
+
 func TestSandboxAgentNotifier_NotifyProgressIfDue_EmptyCardID_Skip(t *testing.T) {
 	// consts.SandboxAgentProgressNotifyCardID 默认为 "",此测试保护 card 未配置时应静默。
 	// 若将来把 template ID 填进 consts,该测试需要一起改为设置临时空值再复位。

@@ -69,6 +69,13 @@ type ExptSchedulerImpl struct {
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
 	// sandboxAgentNotifier 每 1h 进度快照飞书通知; 允许为 nil (未接入通知)。
 	sandboxAgentNotifier ISandboxAgentNotifier
+	// centralGuard 中心调度额度闸，用于 zombie / 沙箱提前终态这两条**不经 consumer** 的
+	// 终态路径释放额度。consumer 侧的释放在 HandleCentralReservation 出口统一处理。
+	//
+	// 为什么这两条必须单独接：它们由 daemon 直接把 item 判为 Fail 落库，consumer 那条
+	// 消息可能已经卡死或永不返回 —— 不在这里释放，这些 item 的额度会永久泄漏。
+	// 允许为 nil（开源部署注入 noop）。
+	centralGuard component.ICentralReservationGuard
 }
 
 func NewExptSchedulerSvc(
@@ -94,6 +101,10 @@ func NewExptSchedulerSvc(
 	itemCompletePublisher component.IItemCompletePublisher,
 	exptItemRefRepo repo.IExptItemRefRepo,
 	sandboxAgentMetrics metrics.SandboxAgentMetrics,
+	// centralGuard 放在 variadic 之前（Go 只要求 variadic 最后）。不做 setter 注入：
+	// setter 会让 wire 构造出实例但无人调用、字段恒 nil，而 nil 在此被解释为"跳过释放"，
+	// 等于静默恢复额度泄漏。
+	centralGuard component.ICentralReservationGuard,
 	sandboxAgentNotifier ...ISandboxAgentNotifier, // variadic 兼容旧单测
 ) ExptSchedulerEvent {
 	i := &ExptSchedulerImpl{
@@ -115,6 +126,7 @@ func NewExptSchedulerSvc(
 		IDGen:                    idGen,
 		evaluationSetItemService: evaluationSetItemService,
 		schedulerModeFactory:     schedulerModeFactory,
+		centralGuard:             centralGuard,
 		evalTargetService:        evalTargetService,
 		itemCompletePublisher:    itemCompletePublisher,
 		exptItemRefRepo:          exptItemRefRepo,
@@ -417,7 +429,26 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
+	// 对账 expt_stats 计数行。放在归档之后：那一步刚把本拍完成的 item 记完账，
+	// 此刻主表与计数行"本该"一致，不一致就是真漂了。
+	e.reconcileExptStats(ctx, event, exptDetail)
+
+	// ★ 中心化调度防双驱动：enforce 实验的新 item 派发权归中心调度器独有。
+	//
+	// 旧 per-experiment tick 在此**丢弃 toSubmit**，但保留其余全部职责 ——
+	// 完成 item 归档（上面的 recordEvalItemRunLogs 已执行）、zombie/sandbox terminated 处理、
+	// run/实验终态收口、NextTick 续跳。若这里直接 return，实验会因为没人收口而永远停在 Processing。
+	//
+	// 为什么必须丢弃而不是"让它也派"：旧链路按实验自己的配置并发补 item，既不看全局优先级
+	// 也不经额度账本，两个驱动并存会直接超发。
+	dispatchByCentral := entity.IsCentralDispatch(exptDetail.ExptDispatchMode)
+	if dispatchByCentral {
+		if len(toSubmit) > 0 {
+			logs.CtxInfo(ctx, "[CentralDispatch] legacy tick suppressed %d to-submit item(s) for enforce experiment, expt_id: %v, expt_run_id: %v",
+				len(toSubmit), event.ExptID, event.ExptRunID)
+		}
+		toSubmit = nil
+	} else if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
 		return err
 	}
 
@@ -745,6 +776,11 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		return nil, nil, err
 	}
 
+	// item 已落终态 → 释放其额度预占。放在 run log 写库之后：调度侧判占用读的是
+	// run log（LoadDispatchRuntime 按 status IN (Queueing, Processing) 扫），
+	// 先落 Fail 再放额度，才不会留下"额度已归还、run log 仍算占用"的窗口。
+	e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, zombieItemIDs, "item zombie timeout")
+
 	// 不清 run_log 的 target_result_id / evaluator_result_ids：
 	// zombie 场景是「终态失败」，需要保留已入库的 record id，
 	// 让 /results/batch_get 能返回 eval_target_record.id、evaluator_record.id 供用户查详情。
@@ -946,7 +982,7 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 		false,
 	)
 
-	// 与 handleZombies 一致的写库形状，保证 UI (MGetExperimentResult) 拿到一致的 err_msg。
+	// 与 handleZombies 一致的写库形状（含只写 err_msg 不写 status 的理由，见那边注释）。
 	errBytes := []byte(errno.SerializeErr(errno.NewSandboxTerminatedBeforeReportErr(firstStatus)))
 
 	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, terminatedItemIDs, map[string]any{
@@ -964,6 +1000,10 @@ func (e *ExptSchedulerImpl) sweepTerminatedSandboxItems(ctx context.Context, eve
 	if err := e.ExptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(ctx, event.SpaceID, event.ExptID, event.ExptRunID, terminatedItemIDs, entity.TurnRunState_Fail); err != nil {
 		return nil, nil, err
 	}
+
+	// item 已落终态 → 释放额度预占。沙箱已提前终止，对应 consumer 消息不会再回来，
+	// 不在此释放则这些 item 的额度永久泄漏。
+	e.releaseCentralQuotaForItems(ctx, expt, event.ExptRunID, terminatedItemIDs, "sandbox terminated before report")
 
 	// 打点：复用沙箱 agent 评测对象的 EmitInvokeFinished，让"沙箱终态未回调 → 兜底失败"
 	// 与正常回调路径的 invoke_finished 在同一 dashboard 上可比。err_code 用
@@ -1153,4 +1193,138 @@ func sandboxAgentTargetTagsFromExpt(expt *entity.Experiment) (agentName string, 
 		agentName = expt.Target.EvalTargetVersion.SandboxAgent.Name
 	}
 	return
+}
+
+// releaseCentralQuotaForItems 为一批已被判为终态的 item 释放中心调度额度预占。
+//
+// 用于 zombie 清理与沙箱提前终态两条 daemon 路径：它们直接把 item 落成 Fail，
+// 对应的 consumer 消息可能已经卡死或永不返回，因此必须在这里释放，否则额度永久泄漏
+// （现象是"额度跑满后再也调度不动"，且看起来像上限配小了，极易误判）。
+//
+// legacy 实验直接返回：它们从不预占额度，调用释放只是无谓的 Redis 往返。
+// 全程 best-effort：单个 item 释放失败只告警，不影响 zombie 清理本身 ——
+// 清理失败会让实验永不收敛，比额度泄漏更严重，而额度有对账兜底。
+func (e *ExptSchedulerImpl) releaseCentralQuotaForItems(ctx context.Context, expt *entity.Experiment, exptRunID int64, itemIDs []int64, reason string) {
+	if e.centralGuard == nil || expt == nil || len(itemIDs) == 0 {
+		return
+	}
+	if !entity.IsCentralDispatch(expt.ExptDispatchMode) {
+		return
+	}
+	if expt.SchedulerScope == "" {
+		// enforce 却无 Scope：数据异常，无法确定去哪本账释放。告警交由对账处理，
+		// 不猜一本账 —— 猜错会归还别人的额度，比不归还更糟。
+		logs.CtxError(ctx, "[CentralReservation] enforce experiment without scheduler_scope, skip release, expt_id: %v, item_ids: %v",
+			expt.ID, itemIDs)
+		return
+	}
+
+	for _, itemID := range itemIDs {
+		if err := e.centralGuard.Release(ctx, expt.SchedulerScope, exptRunID, itemID, reason); err != nil {
+			logs.CtxWarn(ctx, "[CentralReservation] release quota fail, scope: %v, expt_run_id: %v, item_id: %v, reason: %v, err: %v",
+				expt.SchedulerScope, exptRunID, itemID, reason, err)
+		}
+	}
+	logs.CtxInfo(ctx, "[CentralReservation] quota released for daemon-terminated items, scope: %v, expt_run_id: %v, count: %v, reason: %v",
+		expt.SchedulerScope, exptRunID, len(itemIDs), reason)
+}
+
+// exptStatsReconcileInterval 单个实验两次对账之间的最小间隔。
+//
+// 取 5 分钟而不是每拍（60s）：偏差只在"有人正看着"时才有意义，而实验进终态时
+// CompleteExpt 一定会 CalculateStats 全量重算兜底，所以对账只需要"最终会收敛"、
+// 不需要"实时精确"。拍是 60s，这一步把成本降到 1/5，再叠加下面的 enforce-only 过滤。
+const exptStatsReconcileInterval = 5 * time.Minute
+
+// reconcileExptStats 把 expt_stats 计数行对齐到主表的真实状态分布。
+//
+// 为什么需要它：expt_stats 是**增量计数**（ArithOperateCount 逐笔 ±1），而落终态的路径有多条
+// （正常完成 / zombie / 沙箱提前终态 sweep / 派发侧推进），每条都得自己"记得"记一笔账。
+// 漏一笔就永久偏一笔 —— 那些调用点全是 warn-only 或干脆没有记账，**没有任何机制会发现**。
+// 运行期此前也没有任何重算：CalculateStats 只在 CompleteExpt（终态收口）与在线实验 daemon 里调，
+// 于是偏差会一路显示给用户，还会经 webhook 的 progress 播报给下游。
+// 实测：PPE 一个 900 题 enforce 实验 pending 虚高 281、success 少 249，且**仍在增长**。
+//
+// 以主表为准而不是 turn 表：完成侧 statsCntOp 是按 items_result.Status 做「-1」的
+// （见 expt_result_impl.go），要能修正它就必须以同一张表为准；拿 turn 表对账会在多轮实验上
+// 得出另一套数字。CalculateStats 走的是 turn 表，所以这里不复用它。
+//
+// 代价是一条 GROUP BY（走 (space_id, expt_id) 前缀），每实验每拍一次，可接受。
+//
+// 失败只告警：对账是自愈机制，它自己不能成为调度中断的理由。
+func (e *ExptSchedulerImpl) reconcileExptStats(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) {
+	if e.ExptItemResultRepo == nil || e.ExptStatsRepo == nil || expt == nil {
+		return
+	}
+
+	// 只对 enforce 实验对账。
+	//
+	// legacy 的派发（handleToSubmits）把 run log、主表、turn 表、stats 四张**无条件一起写**，
+	// 任何一步失败都 return err 让 MQ 重投整批 —— 计数行天然镜像主表。
+	// 2026-09-01 PPE 实测两个正在跑的 legacy 实验（30 题 / 3 题）分毫不差，
+	// 而同泳道的 enforce 实验差 249/281。给 legacy 对账是纯开销。
+	if !entity.IsCentralDispatch(expt.ExptDispatchMode) {
+		return
+	}
+
+	// 节流：同一实验 5 分钟内只对一次。没有它就是"每实验每拍一条 GROUP BY"，
+	// 一个空间几百个在跑的实验会变成每分钟几百条 count。
+	//
+	// SetNX 出错时**跳过**而不是继续：Redis 抖动本来就该少做事，
+	// 反过来"出错就对账"会让 Redis 一挂就退化成每拍全量 count，正好是最不该发生的时候。
+	if e.Idem != nil {
+		ok, err := e.Idem.SetNX(ctx, fmt.Sprintf("expt_stats_reconcile:%d", event.ExptID), exptStatsReconcileInterval)
+		if err != nil {
+			logs.CtxWarn(ctx, "[ExptStatsReconcile] throttle key set failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+			return
+		}
+		if !ok {
+			return
+		}
+	}
+
+	actual, err := e.ExptItemResultRepo.CountItemsByStatus(ctx, event.SpaceID, event.ExptID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] count items by status failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+		return
+	}
+	if len(actual) == 0 {
+		// 一行 item 都没有：可能是刚建、还没落 item。此时覆盖会把 finishExptStart 写下的
+		// PendingItemCnt 抹成 0，让实验看起来"没有任何待跑"。
+		return
+	}
+
+	got, err := e.ExptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] get expt stats failed, skip this tick, expt_id: %v: %v", event.ExptID, err)
+		return
+	}
+	if got == nil {
+		return
+	}
+
+	want := &entity.ExptStats{
+		PendingItemCnt:    int32(actual[entity.ItemRunState_Queueing]),
+		SuccessItemCnt:    int32(actual[entity.ItemRunState_Success]),
+		FailItemCnt:       int32(actual[entity.ItemRunState_Fail]),
+		ProcessingItemCnt: int32(actual[entity.ItemRunState_Processing]),
+		TerminatedItemCnt: int32(actual[entity.ItemRunState_Terminal]),
+	}
+	if want.PendingItemCnt == got.PendingItemCnt && want.SuccessItemCnt == got.SuccessItemCnt &&
+		want.FailItemCnt == got.FailItemCnt && want.ProcessingItemCnt == got.ProcessingItemCnt &&
+		want.TerminatedItemCnt == got.TerminatedItemCnt {
+		return
+	}
+
+	// 一致时直接返回、不写库；只有真的漂了才写 —— 顺带让这条 Warn 成为"还在漏"的唯一信号。
+	// 谁把这条日志删了，漏点就重新变成静默的。
+	logs.CtxWarn(ctx, "[ExptStatsReconcile] expt stats drifted from item table, correcting; expt_id: %v, "+
+		"stats(pending/success/fail/processing/terminated)=%v/%v/%v/%v/%v, actual=%v/%v/%v/%v/%v",
+		event.ExptID,
+		got.PendingItemCnt, got.SuccessItemCnt, got.FailItemCnt, got.ProcessingItemCnt, got.TerminatedItemCnt,
+		want.PendingItemCnt, want.SuccessItemCnt, want.FailItemCnt, want.ProcessingItemCnt, want.TerminatedItemCnt)
+
+	if err := e.ExptStatsRepo.UpdateByExptID(ctx, event.ExptID, event.SpaceID, want); err != nil {
+		logs.CtxWarn(ctx, "[ExptStatsReconcile] correct expt stats failed, expt_id: %v: %v", event.ExptID, err)
+	}
 }

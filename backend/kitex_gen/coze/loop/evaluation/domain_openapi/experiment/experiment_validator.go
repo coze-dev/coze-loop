@@ -160,11 +160,22 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field RunModeConfig not valid, %w", err)
 		}
 	}
+	if p.ExpectedQuotaConsumption != nil {
+		if err := p.ExpectedQuotaConsumption.IsValid(); err != nil {
+			return fmt.Errorf("field ExpectedQuotaConsumption not valid, %w", err)
+		}
+	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *ExpectedResourceConsumption) IsValid() error {
+	return nil
+}
+func (p *ExpectedQuotaConsumption) IsValid() error {
 	return nil
 }
 func (p *ColumnEvalSetField) IsValid() error {

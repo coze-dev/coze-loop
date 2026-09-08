@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"go.uber.org/mock/gomock"
@@ -1784,6 +1786,9 @@ func TestNewExptManager(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		component.NewNoopCentralSchedulerScopeProvider(),
+		component.NewNoopCentralAdmissionPolicy(),
+		component.NewNoopCentralReservationGuard(),
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)

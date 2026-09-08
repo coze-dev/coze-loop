@@ -66,6 +66,16 @@ func NewExptManager(
 	pipelineListAdapter rpc.IPipelineListAdapter,
 	resourceAccessAuthorizer ResourceAccessAuthorizer,
 	sandboxAgentMetrics metrics.SandboxAgentMetrics,
+	// centralScopeProvider 创建 enforce 实验时解析要冻结的 scheduler_scope。
+	// 开源部署注入 noop（返回空 Scope），配合"仅 EvalX trigger 才 enforce"的 admission，
+	// 开源侧不会产生 enforce 实验，因此拿不到 Scope 无影响。
+	centralScopeProvider component.ICentralSchedulerScopeProvider,
+	// centralAdmissionPolicy 在 trigger 判据之上收窄 enforce 范围（按空间/评测对象类型/ID 灰度）。
+	// 开源部署注入 noop（恒定放行）。
+	centralAdmissionPolicy component.ICentralAdmissionPolicy,
+	// centralGuard 额度闸。CompleteExpt 用它释放实验终态时仍未跑完的 item 预占。
+	// 开源部署注入 noop（Release 直接返回 nil）。
+	centralGuard component.ICentralReservationGuard,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -98,6 +108,9 @@ func NewExptManager(
 		pipelineListAdapter:         pipelineListAdapter,
 		resourceAccessAuthorizer:    resourceAccessAuthorizer,
 		sandboxAgentMetrics:         sandboxAgentMetrics,
+		centralScopeProvider:        centralScopeProvider,
+		centralAdmissionPolicy:      centralAdmissionPolicy,
+		centralGuard:                centralGuard,
 	}
 }
 
@@ -133,6 +146,16 @@ type ExptMangerImpl struct {
 	resourceAccessAuthorizer    ResourceAccessAuthorizer
 	// 沙箱 agent 稳定性打点，CompleteExpt 里上报 experiment_finished / experiment_duration
 	sandboxAgentMetrics metrics.SandboxAgentMetrics
+	// centralScopeProvider 解析新建 enforce 实验要冻结的 scheduler_scope。
+	centralScopeProvider component.ICentralSchedulerScopeProvider
+	// centralAdmissionPolicy 在 trigger 判据之上收窄 enforce 范围。
+	centralAdmissionPolicy component.ICentralAdmissionPolicy
+	// centralGuard 中心调度额度闸，仅用于 CompleteExpt 释放"实验终态时仍未跑完"的 item 预占。
+	//
+	// 为什么这里必须有一份：Kill / Cancel / 实验级 Failed 都收口在 CompleteExpt，而那些
+	// item 的 consumer 消息可能永远不会到达（实验已终态，item 不再被执行），
+	// 于是 consumer 侧的释放点根本不会被触发 —— 不在这里释放就是永久泄漏。
+	centralGuard component.ICentralReservationGuard
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -415,6 +438,30 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 	expts, err := e.exptRepo.MGetByID(ctx, exptIDs, spaceID)
 	if err != nil {
 		return err
+	}
+
+	// ★ 删除前必须归还中心调度额度，且**必须在 MDelete 之前**。
+	//
+	// 为什么删除是一条独立的泄漏路径（不能指望别处兜住）：
+	//   ① 实验被软删后 consumer 侧 GetByID 拿不到实验、直接退出，那些 item **永不执行**，
+	//      于是"item 到终态才释放"的出口永远不会被走到；
+	//   ② 删除**不经过** CompleteExpt —— 那里的释放（见 releaseCentralQuotaForIncompleteItems）
+	//      压根不在这条路径上。而 CompleteExpt 自己对已删实验还有一条 early return，
+	//      所以"先删再 kill"同样救不回来；
+	//   ③ 软删后 `ScanSchedulerQueue` 带 `deleted_at IS NULL`，**连 full recovery 都扫不到它** ——
+	//      也就是说这些 reservation 会永久留在账本里，比其它泄漏更彻底。
+	//
+	// 顺序放在删除之前而不是之后：删完再释放的话，中途任何失败都让额度彻底失去归还机会
+	// （实验已不可查，`SchedulerScope` / `LatestRunID` 都拿不到了）。
+	// 反过来"先释放但删除失败"只是让一个仍存在的实验少占额度，下一拍调度会重新预占，无损。
+	//
+	// best-effort：释放失败只告警不阻断删除 —— 让"额度归还失败"挡住用户删实验，
+	// 是把一个后台问题升级成前台故障。
+	for _, expt := range expts {
+		if expt == nil {
+			continue
+		}
+		e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
 	}
 
 	// 批量删除实验
@@ -1292,6 +1339,66 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 		experimentGroupKey = refExpt.ExperimentGroupKey
 	}
+	// ★ 中心化调度模式在创建时一次性冻结。
+	//
+	// 准入是三道闸的 AND：
+	//  ① trigger 判据 —— 只有 EvalX 发起的实验有资格，因为它是内部平台，会按约定申报
+	//     priority 与 expected_quota_consumption。其它入口（控制台手动、OpenAPI、定时）
+	//     保持 legacy，行为与引入中心调度前完全一致。
+	//  ② 实验类型判据 —— 在线实验一律排除，它缺"实验级 36h 超时"这道兜底
+	//     （daemon 每拍刷 event.CreatedAt，绝对时钟永不到期）。详见
+	//     entity.ShouldEnforceByTriggerAndType 的注释。
+	//  ③ admission policy —— 在①②的基础上按空间 / 评测对象类型 / 评测对象 ID 收窄灰度范围。
+	//
+	// 三道闸是 AND 而非 OR：policy 只能收窄、不能扩大。若 policy 能把非 EvalX 入口的实验
+	// 也拽进 enforce，那些实验没有申报向量的字段，结果要么在下面的向量校验处报错、
+	// 要么（若放宽校验）被调度器永远跳过 —— 后者表现为"实验建好了但一个 item 都不跑"。
+	//
+	// 模式由 trigger + 类型派生而非取请求字段：请求里的 scheduler_mode 不可信（任何内部
+	// 调用方都能声明 enforce），而 trigger_type 是上游身份的既有表达，已被其它逻辑依赖。
+	dispatchMode := entity.ExptDispatchModeLegacy
+	schedulerScope := ""
+	expectedQuota := req.ExpectedQuotaConsumption
+	// defaultPriority 未申报优先级时的缺省值。0 表示"没有意见"，由
+	// NormalizeExptPriorityLevelWithDefault 回落到 entity.DefaultExptPriorityLevel。
+	var defaultPriority int32
+	if entity.ShouldEnforceByTriggerAndType(triggerType, req.ExptType) {
+		// 灰度收窄闸。先判 policy 再校验向量：policy 不放行时该实验走 legacy，
+		// 此时缺向量是正常的（EvalX 对未纳管空间也可能不传），不该报错。
+		decision, err := e.allowCentralScheduling(ctx, req.WorkspaceID, tuple, expectedQuota)
+		if err != nil {
+			// 配置不可判定时拒绝创建 enforce 实验，而不是放行或降级 legacy：
+			// 放行会让本该受额度管控的实验绕过管控；静默降级会让 EvalX 以为受管控。
+			return nil, err
+		}
+		if decision.Admitted {
+			// enforce 实验必须有合法的资源消耗向量：没有向量就无法预占额度，
+			// 调度器只能永远跳过它 —— 表现为"实验建好了但一个 item 都不跑"，且那条分支静默。
+			// 因此在创建时就拒绝，把问题暴露在调用方能看到的地方。
+			if expectedQuota == nil {
+				return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+					errorx.WithExtraMsg("expected_quota_consumption is required for evalx-triggered experiment"))
+			}
+			expectedQuota = expectedQuota.Normalize()
+			if err := expectedQuota.Validate(); err != nil {
+				return nil, err
+			}
+
+			scope, err := e.resolveSchedulerScope(ctx, req.WorkspaceID)
+			if err != nil {
+				// Scope 解析失败不静默降级成 legacy：降级会让 EvalX 以为实验受中心调度管控，
+				// 实际却走旧链路自主派发、绕过全局额度。报错让调用方立刻知道。
+				return nil, err
+			}
+			dispatchMode = entity.ExptDispatchModeEnforce
+			schedulerScope = scope
+			// 缺省优先级由灰度配置给出（commercial 的 default_priority）。
+			// 只在 enforce 分支采纳：legacy 实验不参与优先级排序，给它套一个非 1 的缺省
+			// 只会让 DB 里出现一堆没有意义的值，反而干扰排查。
+			defaultPriority = decision.DefaultPriority
+		}
+	}
+
 	do := &entity.Experiment{
 		ID:                  ids[0],
 		SpaceID:             req.WorkspaceID,
@@ -1312,6 +1419,13 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		TrialRunItemCount:   req.TrialRunItemCount,
 		TriggerType:         triggerType,
 
+		// 中心化调度冻结值。legacy 时 mode=legacy / scope="" / priority 仍落 1（DB 默认值语义）。
+		// expected_quota_consumption 不在此处 —— 它属于 EvalConf（序列化进 eval_conf 列），
+		// 见下方赋值；调度侧 frozenConsumptionOf 正是从 EvalConf 读取。
+		PriorityLevel:    entity.NormalizeExptPriorityLevelWithDefault(req.PriorityLevel, defaultPriority),
+		ExptDispatchMode: dispatchMode,
+		SchedulerScope:   schedulerScope,
+
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
@@ -1321,6 +1435,16 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		TargetSpaceID:      targetSpaceID,
 		EvalSetAccessLevel: evalSetAccessLevel,
 	}
+	// ★ 把消耗向量冻结进 eval_conf。
+	//
+	// 放在 EvalConf 而非 Experiment 顶层字段：调度侧 frozenConsumptionOf 读的是
+	// EvalConf.ExpectedQuotaConsumption，而 eval_conf 是既有的 JSON 列，加字段无需 DDL。
+	// 冻结后运行期只读这份快照，不回查外部 —— 否则同一实验在不同时刻可能按不同规格扣额度，
+	// 释放时也就对不上账（释放按 reservation 快照走，与此处一致）。
+	if expectedQuota != nil && do.EvalConf != nil {
+		do.EvalConf.ExpectedQuotaConsumption = expectedQuota
+	}
+
 	// 同空间语义归零: 落库 0/"" 表示同消费方空间 (向后兼容, 执行期 fallback 消费方空间)
 	if do.EvalSetSpaceID == req.WorkspaceID {
 		do.EvalSetSpaceID = 0
@@ -1621,8 +1745,8 @@ func (e *ExptMangerImpl) Update(ctx context.Context, expt *entity.Experiment, se
 	return e.exptRepo.Update(ctx, expt)
 }
 
-// UpdateRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数）。
-// 采用 read-modify-write：读出完整实验 → 内存中仅覆盖指定字段 → 序列化完整 EvalConf → 只写 eval_conf 单列。
+// UpdateRunConf 修改进行中实验的运行配置（并发度 / Item 重试次数 / 中心调度参数）。
+// 采用 read-modify-write：读出完整实验 → 内存中仅覆盖指定字段 → 序列化完整 EvalConf → 只写指定列。
 // 严禁用只含两字段的裸 EvalConf 覆盖该列（会清空 ConnectorConf/TimeRange/Ext）。
 func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.UpdateRunConfParam) error {
 	got, err := e.exptRepo.GetByID(ctx, param.ExptID, param.SpaceID)
@@ -1643,6 +1767,15 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.Update
 		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("EvalConfig is invalid"))
 	}
 
+	// 中心调度参数只对 enforce 实验有意义：legacy 实验既不参与优先级排序（调度器的扫描条件是
+	// scheduler_mode='enforce'）、也没有额度账本可改价。所以这里显式拒绝而不是照写 ——
+	// 写进去只会得到一个没人读的值，接口返回成功、用户以为改好了，是最难发现的一类问题。
+	if (param.PriorityLevel != nil || param.ExpectedQuotaConsumption != nil) &&
+		got.ExptDispatchMode != entity.ExptDispatchModeEnforce {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode,
+			errorx.WithExtraMsg("priority_level / expected_quota_consumption can only be modified for centrally-scheduled experiments"))
+	}
+
 	// read-modify-write：在完整 EvalConf 上仅覆盖需要修改的字段。
 	evalConf := got.EvalConf
 	if param.ItemConcurNum != nil {
@@ -1651,14 +1784,44 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.Update
 	if param.ItemRetryNum != nil {
 		evalConf.ItemRetryNum = param.ItemRetryNum
 	}
+	if param.ExpectedQuotaConsumption != nil {
+		evalConf.ExpectedQuotaConsumption = param.ExpectedQuotaConsumption
+	}
 
 	bytes, err := json.Marshal(evalConf)
 	if err != nil {
 		return errorx.Wrapf(err, "marshal EvalConf fail, expt_id: %v", param.ExptID)
 	}
 
-	// 只写 eval_conf 单列，与调度器的 status 写列级不重叠，爆炸半径最小。
-	return e.exptRepo.UpdateFields(ctx, param.ExptID, map[string]any{"eval_conf": &bytes})
+	// 写列级最小化，与调度器的 status 写不重叠。
+	//
+	// priority_level 走这条显式列名的路径，**不能**走 exptRepo.Update：那条是 struct Updates +
+	// Omit(schedulingFrozenColumns)，正是为了防止部分更新把 enforce 实验打回 legacy 而存在的
+	// （见 mysql/expt.go 的 schedulingFrozenColumns 注释）。这里给的是显式列名 map，
+	// 只可能改到写进 map 的那一列，改不到 scheduler_mode / scheduler_scope。
+	ufields := map[string]any{"eval_conf": &bytes}
+	if param.PriorityLevel != nil {
+		ufields["priority_level"] = *param.PriorityLevel
+	}
+	if err := e.exptRepo.UpdateFields(ctx, param.ExptID, ufields); err != nil {
+		return err
+	}
+
+	// 向量改了就要把该 run 在飞的预占一起改价，否则全量恢复的前提被打破 ——
+	// 完整论证在 component.ICentralReservationGuard.RepriceRunConsumption 的注释里。
+	//
+	// 顺序刻意是"先 MySQL 后账本"：MySQL 是恢复的唯一真值来源，先写它意味着即使这一步崩，
+	// 下一次全量恢复也会把账本收敛到新向量；反过来先改账本再写库，崩了就留下一本没有依据的账。
+	//
+	// 与沙箱名额同步（失败只告警）不同，这里失败必须上抛：名额没跟上只是暂时吃不满，
+	// 账本价错了会让额度长期算错，而调用方以为已经改好。
+	if param.ExpectedQuotaConsumption != nil && e.centralGuard != nil {
+		if err := e.centralGuard.RepriceRunConsumption(ctx, got.SchedulerScope, param.ExptID, got.LatestRunID, param.ExpectedQuotaConsumption); err != nil {
+			return errorx.Wrapf(err, "reprice in-flight reservations fail, expt_id: %v, expt_run_id: %v", param.ExptID, got.LatestRunID)
+		}
+	}
+
+	return nil
 }
 
 func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
@@ -1669,6 +1832,11 @@ func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, sess
 	if err != nil {
 		return err
 	}
+
+	// ★ 与 MDelete 同理：软删前必须归还中心调度额度，且必须在删除之前。
+	// 完整论证见 MDelete 里那段注释（三条独立原因 + 为什么顺序不能反）。
+	// 两个删除入口都要改 —— 只改一个等于留一半泄漏。
+	e.releaseCentralQuotaForIncompleteItems(ctx, expt, nil, entity.ExptStatus_Terminated)
 
 	// 删除实验
 	if err := e.exptRepo.Delete(ctx, exptID, spaceID); err != nil {
@@ -1701,4 +1869,56 @@ func (e *ExptMangerImpl) Clone(ctx context.Context, exptID, spaceID int64, sessi
 	expt.ID = id
 
 	return expt, e.Create(ctx, expt, session)
+}
+
+// allowCentralScheduling 判定该实验是否落在中心调度的灰度范围内，并取回缺省优先级。
+//
+// 只在 trigger 已判定为 EvalX 后调用，因此它的语义是"收窄"而非"准入"：
+// Admitted=false 表示该实验本轮不纳管，走 legacy —— 这是正常结果，不是错误。
+//
+// policy 未注入时放行：保持引入本闸之前的行为（trigger 判据单独生效）。
+// 开源部署注入 noop 也是恒定放行，二者一致。两种情况都不指定缺省优先级
+// （DefaultPriority=0 → 调用方按 1 处理），与引入 default_priority 之前的行为一致。
+func (e *ExptMangerImpl) allowCentralScheduling(ctx context.Context, spaceID int64, tuple *entity.ExptTuple, expectedQuota *entity.ExpectedQuotaConsumption) (component.CentralAdmissionDecision, error) {
+	if e.centralAdmissionPolicy == nil {
+		return component.CentralAdmissionDecision{Admitted: true}, nil
+	}
+
+	subject := component.CentralAdmissionSubject{
+		SpaceID: spaceID,
+		// 申报的 category 交给 policy 校验：登记表在 commercial，OSS 只交出事实。
+		// expectedQuota 为 nil 时是空列表 —— 那种情况下 policy 不该因"没有 category"
+		// 而拒绝：缺向量本身由调用方在 Admitted 之后单独判（见 CreateExpt）。
+		QuotaCategories: expectedQuota.Categories(),
+	}
+	// tuple.Target 为 nil 是合法场景：--skip-target 允许创建无评测对象的实验。
+	// 此时 TargetType/TargetID 保持零值，由 policy 决定这类实验算不算命中
+	// （通常不该命中按 target 维度配置的灰度规则）。
+	if tuple != nil && tuple.Target != nil {
+		subject.TargetType = tuple.Target.EvalTargetType.ConfigName()
+		subject.TargetID = tuple.Target.ID
+	}
+
+	return e.centralAdmissionPolicy.AllowCentralScheduling(ctx, subject)
+}
+
+// resolveSchedulerScope 解析新建 enforce 实验应冻结的 scheduler_scope。
+//
+// 空 Scope 一律报错而非放行：enforce + 空 Scope 的实验不属于任何调度域，任何调度器的
+// 候选查询（WHERE scheduler_scope = ?）都扫不到它 —— 实验会永久停在 Pending，
+// 而现象是"提交成功但完全不动"，比创建时报错难查得多。
+func (e *ExptMangerImpl) resolveSchedulerScope(ctx context.Context, spaceID int64) (string, error) {
+	if e.centralScopeProvider == nil {
+		return "", errorx.NewByCode(errno.CommonInternalErrorCode,
+			errorx.WithExtraMsg("central scheduler scope provider not wired; refusing to create enforce experiment"))
+	}
+	scope, err := e.centralScopeProvider.ResolveSchedulerScope(ctx, spaceID)
+	if err != nil {
+		return "", err
+	}
+	if scope == "" {
+		return "", errorx.NewByCode(errno.CommonInternalErrorCode,
+			errorx.WithExtraMsg("resolved empty scheduler_scope; central scheduling is not available in this deployment"))
+	}
+	return scope, nil
 }

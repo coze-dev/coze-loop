@@ -84,6 +84,21 @@ func (mr *MockIExptDAOMockRecorder) ExistGroupKey(arg0, arg1, arg2 any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistGroupKey", reflect.TypeOf((*MockIExptDAO)(nil).ExistGroupKey), arg0, arg1, arg2)
 }
 
+// ScanSchedulerQueue mocks base method.
+func (m *MockIExptDAO) ScanSchedulerQueue(arg0 context.Context, arg1 *entity.SchedulerQueueScanParam) ([]*model.Experiment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScanSchedulerQueue", arg0, arg1)
+	ret0, _ := ret[0].([]*model.Experiment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ScanSchedulerQueue indicates an expected call of ScanSchedulerQueue.
+func (mr *MockIExptDAOMockRecorder) ScanSchedulerQueue(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanSchedulerQueue", reflect.TypeOf((*MockIExptDAO)(nil).ScanSchedulerQueue), arg0, arg1)
+}
+
 // GetByID mocks base method.
 func (m *MockIExptDAO) GetByID(arg0 context.Context, arg1 int64) (*model.Experiment, error) {
 	m.ctrl.T.Helper()

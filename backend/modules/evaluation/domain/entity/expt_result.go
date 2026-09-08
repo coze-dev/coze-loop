@@ -249,6 +249,34 @@ type ExptItemResultRunLog struct {
 	LogID         string
 	ResultState   int32
 	UpdatedAt     *time.Time
+	// QuotaReservationState 中心调度的额度预占投影，与表字段 quota_reservation_state 一致。
+	//
+	// 它**不是** Redis reservation 状态机的复制品：Redis 侧有 Reserved/Dispatched/
+	// DispatchUncertain/Running 四个非终态，这里只保留 none/reserved 两值。
+	// 存在的意义是让调度器不查 Redis 就能算准并发占用 ——
+	//   并发占用 = status=Processing 的 item + status=Queueing 且 reserved 的 item
+	//   可授予候选 = status=Queueing 且 none 的 item
+	// 缺了它，已预占未消费的 item 在 MySQL 里仍是纯 Queueing，会被反复选中导致 deficit 高估，
+	// 高优实验为同一批 item 反复抢额度、挤掉低优实验。
+	//
+	// Redis reservation 仍是额度账本真值；本列只是调度投影，不进入 IDL/OpenAPI/Stats。
+	QuotaReservationState QuotaReservationState
+}
+
+// QuotaReservationState run log 上的额度预占投影，只有两值。
+type QuotaReservationState int32
+
+const (
+	// QuotaReservationStateNone 未预占。Queueing+none 才是可授予候选。
+	QuotaReservationStateNone QuotaReservationState = 0
+	// QuotaReservationStateReserved 已在 Redis 预占额度、尚未被 consumer 消费。
+	// 计入并发占用且不得再次进入待授予队列。
+	QuotaReservationStateReserved QuotaReservationState = 1
+)
+
+// IsQuotaReserved 报告该 run log 是否处于已预占状态。
+func (s QuotaReservationState) IsQuotaReserved() bool {
+	return s == QuotaReservationStateReserved
 }
 
 type ExptItemEvalResult struct {
