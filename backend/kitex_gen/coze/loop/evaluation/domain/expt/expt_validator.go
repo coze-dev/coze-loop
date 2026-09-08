@@ -21,6 +21,17 @@ var (
 	_ = time.Nanosecond
 )
 
+func (p *SkillDistDeclare) IsValid() error {
+	return nil
+}
+func (p *AgentSkillDeclare) IsValid() error {
+	if p.Dist != nil {
+		if err := p.Dist.IsValid(); err != nil {
+			return fmt.Errorf("field Dist not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *RunModeConfig) IsValid() error {
 	return nil
 }

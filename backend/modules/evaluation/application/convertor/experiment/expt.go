@@ -1432,6 +1432,7 @@ func runModeConfigDTO2DO(dto *domain_expt.RunModeConfig) *entity.RunModeConfig {
 		SuaPETemplate:            dto.GetSuaPeTemplate(),
 		MaxTurns:                 int(dto.GetMaxTurns()),
 		SkillsMode:               dto.GetSkillsMode(),
+		Skills:                   skillsDTO2DO(dto.GetSkills()),
 	}
 	if dto.IsSetRunMode() {
 		do.RunMode = suaRunModeDTO2DO(dto.GetRunMode())
@@ -1529,7 +1530,84 @@ func runModeConfigDO2DTO(do *entity.RunModeConfig) *domain_expt.RunModeConfig {
 	if do.SkillsMode != "" {
 		dto.SkillsMode = gptr.Of(do.SkillsMode)
 	}
+	if len(do.Skills) > 0 {
+		dto.Skills = skillsDO2DTO(do.Skills)
+	}
 	return dto
+}
+
+// skillsDTO2DO 把 domain DTO 的实验级 Agent Skills 声明逐元素逐字段拷贝为 entity 形态落库
+// (与题目级 skills 不同, 实验级走 EvalConf JSON, 无 schema 迁移)。
+func skillsDTO2DO(skills []*domain_expt.AgentSkillDeclare) []*entity.AgentSkillDeclare {
+	if len(skills) == 0 {
+		return nil
+	}
+	out := make([]*entity.AgentSkillDeclare, 0, len(skills))
+	for _, s := range skills {
+		if s == nil {
+			continue
+		}
+		out = append(out, &entity.AgentSkillDeclare{
+			SkillKey:        s.GetSkillKey(),
+			SkillVersion:    s.GetSkillVersion(),
+			Dist:            skillDistDTO2DO(s.GetDist()),
+			SetupScript:     s.GetSetupScript(),
+			CredentialsKeys: s.GetCredentialsKeys(),
+		})
+	}
+	return out
+}
+
+func skillDistDTO2DO(d *domain_expt.SkillDistDeclare) *entity.SkillDistDeclare {
+	if d == nil {
+		return nil
+	}
+	return &entity.SkillDistDeclare{
+		ChannelType:            d.GetChannelType(),
+		FileURL:                d.GetFileURL(),
+		AgentBuddySource:       d.GetAgentBuddySource(),
+		AgentBuddySkillName:    d.GetAgentBuddySkillName(),
+		AgentBuddySkillVersion: d.GetAgentBuddySkillVersion(),
+		GitURL:                 d.GetGitURL(),
+		Branch:                 d.GetBranch(),
+		Dir:                    d.GetDir(),
+		CommitHash:             d.GetCommitHash(),
+	}
+}
+
+// skillsDO2DTO 把 entity 的实验级 Agent Skills 声明回显给 DTO (skillsDTO2DO 的反向)。
+func skillsDO2DTO(skills []*entity.AgentSkillDeclare) []*domain_expt.AgentSkillDeclare {
+	out := make([]*domain_expt.AgentSkillDeclare, 0, len(skills))
+	for _, s := range skills {
+		if s == nil {
+			continue
+		}
+		out = append(out, &domain_expt.AgentSkillDeclare{
+			SkillKey:        gptr.Of(s.SkillKey),
+			SkillVersion:    gptr.Of(s.SkillVersion),
+			Dist:            skillDistDO2DTO(s.Dist),
+			SetupScript:     gptr.Of(s.SetupScript),
+			CredentialsKeys: s.CredentialsKeys,
+		})
+	}
+	return out
+}
+
+func skillDistDO2DTO(d *entity.SkillDistDeclare) *domain_expt.SkillDistDeclare {
+	if d == nil {
+		return nil
+	}
+	return &domain_expt.SkillDistDeclare{
+		ChannelType:            gptr.Of(d.ChannelType),
+		FileURL:                gptr.Of(d.FileURL),
+		AgentBuddySource:       gptr.Of(d.AgentBuddySource),
+		AgentBuddySkillName:    gptr.Of(d.AgentBuddySkillName),
+		AgentBuddySkillVersion: gptr.Of(d.AgentBuddySkillVersion),
+		GitURL:                 gptr.Of(d.GitURL),
+		Branch:                 gptr.Of(d.Branch),
+		Dir:                    gptr.Of(d.Dir),
+		CommitHash:             gptr.Of(d.CommitHash),
+	}
 }
 
 func suaRunModeDO2DTO(m entity.RunMode) domain_expt.ExptRunMode {

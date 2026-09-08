@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -449,6 +450,9 @@ func buildItemStandardEvalOutput(ctx context.Context, item *entity.ItemResult, o
 	if res.Eval, err = mergeStandardEvalOutputField(std.Eval, fields, "eval"); err != nil {
 		return nil, err
 	}
+	if err := normalizeStandardEvalDatasetKeys(res.Eval); err != nil {
+		return nil, err
+	}
 	if res.Extra, err = mergeStandardEvalOutputField(std.Extra, fields, "extra"); err != nil {
 		return nil, err
 	}
@@ -495,6 +499,45 @@ func mergeStandardEvalOutputField(platformVal any, fields map[string]*entity.Con
 	}
 	merged := deepMergeStandardEvalOutput(normalizeToJSONValue(platformVal), objVal)
 	return inlineJSONContent(merged)
+}
+
+// normalizeStandardEvalDatasetKeys runs after merging all reported output formats.
+func normalizeStandardEvalDatasetKeys(content *expt.StandardEvalOutputContent) error {
+	if content == nil || content.GetContentOmitted() || content.FullContent != nil || !json.Valid([]byte(content.GetText())) {
+		return nil
+	}
+	var eval map[string]any
+	decoder := json.NewDecoder(strings.NewReader(content.GetText()))
+	decoder.UseNumber()
+	if err := decoder.Decode(&eval); err != nil {
+		return nil
+	}
+	taskConfig, _ := eval["task_config"].(map[string]any)
+	items, _ := taskConfig["items"].([]any)
+	changed := false
+	for _, item := range items {
+		entry, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		key, ok := entry["dataset_key"].(string)
+		if !ok {
+			continue
+		}
+		if normalized := utils.NormalizeDatasetKey(key); normalized != key {
+			entry["dataset_key"] = normalized
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
+	}
+	text, err := json.MarshalString(eval)
+	if err != nil {
+		return err
+	}
+	content.Text = gptr.Of(text)
+	return nil
 }
 
 func isItemStandardEvalOutputContentReady(item *entity.ItemResult) bool {
@@ -698,13 +741,13 @@ func datasetKeyFromItem(item *entity.ItemResult) string {
 		return ""
 	}
 	if item.Ext != nil && item.Ext["dataset_key"] != "" {
-		return item.Ext["dataset_key"]
+		return utils.NormalizeDatasetKey(item.Ext["dataset_key"])
 	}
 	for _, payload := range standardPayloads(item, 0) {
 		if payload == nil || payload.EvalSet == nil || payload.EvalSet.DatasetKey == "" {
 			continue
 		}
-		return payload.EvalSet.DatasetKey
+		return utils.NormalizeDatasetKey(payload.EvalSet.DatasetKey)
 	}
 	return ""
 }

@@ -66,7 +66,9 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 			assert.True(t, *param.LoadEvaluatorFullContent)
 			require.NotNil(t, param.LoadEvalTargetFullContent)
 			assert.True(t, *param.LoadEvalTargetFullContent)
-			return makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targetRecordID), nil
+			result := makeStandardEvalOutputReportResult(exptID, exptRunID, itemID, turnID, targetRecordID)
+			result.ItemResults[0].Ext["dataset_key"] = "dataset-1_new_runtime_schema_v0_1"
+			return result, nil
 		},
 	)
 
@@ -96,6 +98,9 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 	var eval map[string]any
 	require.NoError(t, json.Unmarshal([]byte(got.GetEval().GetText()), &eval))
 	assert.Contains(t, eval, "task_config")
+	items := standardEvalTaskConfigItems(t, got.GetEval())
+	require.Len(t, items, 1)
+	assert.Equal(t, "dataset-1", items[0]["dataset_key"])
 	assert.Contains(t, eval, "detail")
 	assert.NotContains(t, eval, "rounds") // 平台兜底只补 detail
 
@@ -128,6 +133,7 @@ func TestExperimentApplication_MGetExperimentStandardEvalOutputs(t *testing.T) {
 
 func TestBuildItemStandardEvalOutput_ProcessingOnlyReturnsMetadata(t *testing.T) {
 	item := makeStandardEvalOutputReportResult(20, 30, 10, 1, 100).ItemResults[0]
+	item.Ext["dataset_key"] = "dataset-1_new_runtime"
 	item.SystemInfo.RunState = entity.ItemRunState_Processing
 
 	got, err := buildItemStandardEvalOutput(context.Background(), item, standardEvalOutputBuildOptions{ExptID: 20})
@@ -287,7 +293,10 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 			assert.True(t, *param.LoadEvaluatorFullContent)
 			require.NotNil(t, param.LoadEvalTargetFullContent)
 			assert.True(t, *param.LoadEvalTargetFullContent)
-			return makeStandardEvalOutputReportResult(2, 3, 4, 5, 6), nil
+			result := makeStandardEvalOutputReportResult(2, 3, 4, 5, 6)
+			result.ItemResults[0].Ext["dataset_key"] = "dataset-1_schema_v0_1"
+			injectFornaxField(result.ItemResults[0], "FORNAX_eval", `{"task_config":{"items":[{"dataset_key":"dataset-1_new_runtime"}]}}`)
+			return result, nil
 		},
 	)
 
@@ -302,6 +311,10 @@ func TestExperimentApplication_ListExperimentStandardEvalOutputs(t *testing.T) {
 	require.NotNil(t, resp.Total)
 	assert.Equal(t, int64(1), *resp.Total)
 	got := resp.Items[0]
+	assert.Equal(t, "dataset-1", got.GetDatasetKey())
+	items := standardEvalTaskConfigItems(t, got.GetEval())
+	require.Len(t, items, 1)
+	assert.Equal(t, "dataset-1", items[0]["dataset_key"])
 	assert.Equal(t, standardEvalOutputExptCreateUnix, got.GetExperimentCreateTime())
 	assert.Equal(t, standardEvalOutputCreatedBy, got.GetCreatedBy())
 	assert.Equal(t, standardEvalOutputItemEndUnix, got.GetItemEndTime())
