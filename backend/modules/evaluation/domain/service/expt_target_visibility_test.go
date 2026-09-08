@@ -43,10 +43,14 @@ func TestExptTargetVisibility_CurrentRunLifecycle(t *testing.T) {
 				{"reused_successful_target", 5, entity.TurnRunState_Processing, entity.EvalTargetRunStatusSuccess, 1, false},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
-					runLog := &entity.ExptTurnResultRunLog{SpaceID: 100, ExptID: 1, ExptRunID: 2, ItemID: 3, TurnID: 0,
-						Status: tc.turnStatus, TargetResultID: 5, LogID: "target-logid"}
-					record := &entity.EvalTargetRecord{ID: 5, SpaceID: 100, ExperimentRunID: tc.targetRunID, ItemID: 3, TurnID: 0,
-						Status: gptr.Of(tc.targetStatus), LogID: "target-logid", TraceID: "target-trace", EvalTargetOutputData: &entity.EvalTargetOutputData{}}
+					runLog := &entity.ExptTurnResultRunLog{
+						SpaceID: 100, ExptID: 1, ExptRunID: 2, ItemID: 3, TurnID: 0,
+						Status: tc.turnStatus, TargetResultID: 5, LogID: "target-logid",
+					}
+					record := &entity.EvalTargetRecord{
+						ID: 5, SpaceID: 100, ExperimentRunID: tc.targetRunID, ItemID: 3, TurnID: 0,
+						Status: gptr.Of(tc.targetStatus), LogID: "target-logid", TraceID: "target-trace", EvalTargetOutputData: &entity.EvalTargetOutputData{},
+					}
 					if tc.failure {
 						runLog.ErrMsg = errno.SerializeErr(errno.NewTargetResultErr("current target failed"))
 						record.EvalTargetOutputData.EvalTargetRunError = &entity.EvalTargetRunError{Code: 500, Message: "current target failed"}
@@ -100,7 +104,8 @@ func TestExptTargetVisibility_DoesNotInventOrRestoreOldTarget(t *testing.T) {
 }
 
 func readTargetVisibilityFixture(t *testing.T, baseline bool, canonicalTargetID int64, canonicalStatus entity.TurnRunState,
-	currentLogs []*entity.ExptTurnResultRunLog, currentRecord *entity.EvalTargetRecord) *entity.TurnTargetOutput {
+	currentLogs []*entity.ExptTurnResultRunLog, currentRecord *entity.EvalTargetRecord,
+) *entity.TurnTargetOutput {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
@@ -117,17 +122,21 @@ func readTargetVisibilityFixture(t *testing.T, baseline bool, canonicalTargetID 
 	metric := metricsMocks.NewMockExptMetric(ctrl)
 	lwt := lwtMocks.NewMockILatestWriteTracker(ctrl)
 	expt := &entity.Experiment{ID: exptID, SpaceID: spaceID, EvalSetID: 10, EvalSetVersionID: 11, ExptType: entity.ExptType_Offline}
-	canonical := &entity.ExptTurnResult{ID: resultID, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID,
-		TurnID: turnID, TargetResultID: canonicalTargetID, Status: int32(canonicalStatus)}
+	canonical := &entity.ExptTurnResult{
+		ID: resultID, SpaceID: spaceID, ExptID: exptID, ExptRunID: runID, ItemID: itemID,
+		TurnID: turnID, TargetResultID: canonicalTargetID, Status: int32(canonicalStatus),
+	}
 	// A previous failed generation exists, but only the requested current generation may be read.
 	logsByRun := map[int64][]*entity.ExptTurnResultRunLog{
-		1: {{SpaceID: spaceID, ExptID: exptID, ExptRunID: 1, ItemID: itemID, TurnID: turnID, TargetResultID: 6,
-			Status: entity.TurnRunState_Fail, ErrMsg: errno.SerializeErr(errno.NewTargetResultErr("previous target failed"))}},
+		1: {{
+			SpaceID: spaceID, ExptID: exptID, ExptRunID: 1, ItemID: itemID, TurnID: turnID, TargetResultID: 6,
+			Status: entity.TurnRunState_Fail, ErrMsg: errno.SerializeErr(errno.NewTargetResultErr("previous target failed")),
+		}},
 		runID: currentLogs,
 	}
 	if baseline || canonicalTargetID == 0 {
 		turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, runID, []int64{itemID}, spaceID).
-			DoAndReturn(func(_ context.Context, _ int64, requestedRunID int64, _ []int64, _ int64) ([]*entity.ExptTurnResultRunLog, error) {
+			DoAndReturn(func(_ context.Context, _, requestedRunID int64, _ []int64, _ int64) ([]*entity.ExptTurnResultRunLog, error) {
 				return logsByRun[requestedRunID], nil
 			}).MinTimes(1).MaxTimes(2)
 	}
@@ -138,8 +147,10 @@ func readTargetVisibilityFixture(t *testing.T, baseline bool, canonicalTargetID 
 	setItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), &entity.BatchGetEvaluationSetItemsParam{
 		SpaceID: spaceID, EvaluationSetID: 10, VersionID: gptr.Of(int64(11)), ItemIDs: []int64{itemID},
 	}).Return([]*entity.EvaluationSetItem{{ItemID: itemID, Turns: []*entity.Turn{{ID: turnID, ItemID: itemID}}}}, nil)
-	oldRecord := &entity.EvalTargetRecord{ID: 6, SpaceID: spaceID, ExperimentRunID: 1, ItemID: itemID, TurnID: turnID,
-		Status: gptr.Of(entity.EvalTargetRunStatusFail), EvalTargetOutputData: &entity.EvalTargetOutputData{EvalTargetRunError: &entity.EvalTargetRunError{Code: 500, Message: "previous target failed"}}}
+	oldRecord := &entity.EvalTargetRecord{
+		ID: 6, SpaceID: spaceID, ExperimentRunID: 1, ItemID: itemID, TurnID: turnID,
+		Status: gptr.Of(entity.EvalTargetRunStatusFail), EvalTargetOutputData: &entity.EvalTargetOutputData{EvalTargetRunError: &entity.EvalTargetRunError{Code: 500, Message: "previous target failed"}},
+	}
 	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ int64, ids []int64) ([]*entity.EvalTargetRecord, error) {
 			var records []*entity.EvalTargetRecord
@@ -157,10 +168,12 @@ func readTargetVisibilityFixture(t *testing.T, baseline bool, canonicalTargetID 
 	annotateRepo.EXPECT().GetAnnotateRecordsByIDs(gomock.Any(), spaceID, []int64{}).Return(nil, nil)
 	if !baseline {
 		turnRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).Return([]*entity.ExptTurnResult{canonical}, nil)
-		builder := &ExptResultBuilder{ExptID: exptID, BaselineExptID: 99, SpaceID: spaceID, ItemIDs: []int64{itemID},
+		builder := &ExptResultBuilder{
+			ExptID: exptID, BaselineExptID: 99, SpaceID: spaceID, ItemIDs: []int64{itemID},
 			ExperimentRepo: exptRepo, ExptTurnResultRepo: turnRepo, ExptAnnotateRepo: annotateRepo,
 			evalTargetService: targetSvc, evaluationSetVersionService: setVersionSvc, evaluationSetItemService: setItemSvc,
-			evaluatorRecordService: evaluatorSvc, analysisService: analysisSvc}
+			evaluatorRecordService: evaluatorSvc, analysisService: analysisSvc,
+		}
 		require.NoError(t, builder.build(ctx))
 		return builder.getTurnTargetOutput(ctx, itemID, turnID)
 	}
@@ -175,9 +188,11 @@ func readTargetVisibilityFixture(t *testing.T, baseline bool, canonicalTargetID 
 	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, runID, []int64{itemID}, spaceID).Return(nil, nil)
 	annotateRepo.EXPECT().BatchGetExptTurnResultTagRefs(gomock.Any(), []int64{exptID}, spaceID).Return(nil, nil)
 	analysisSvc.EXPECT().BatchGetAnalysisRecordByUniqueKeys(gomock.Any(), []string{"100_1_3_0"}).Return(map[string]*entity.AnalysisRecord{}, nil)
-	svc := ExptResultServiceImpl{ExptTurnResultRepo: turnRepo, ExperimentRepo: exptRepo, ExptItemResultRepo: itemRepo,
+	svc := ExptResultServiceImpl{
+		ExptTurnResultRepo: turnRepo, ExperimentRepo: exptRepo, ExptItemResultRepo: itemRepo,
 		ExptAnnotateRepo: annotateRepo, evalTargetService: targetSvc, evaluationSetVersionService: setVersionSvc,
-		evaluationSetItemService: setItemSvc, evaluatorRecordService: evaluatorSvc, analysisService: analysisSvc, Metric: metric, lwt: lwt}
+		evaluationSetItemService: setItemSvc, evaluatorRecordService: evaluatorSvc, analysisService: analysisSvc, Metric: metric, lwt: lwt,
+	}
 	got, err := svc.MGetExperimentResult(ctx, &entity.MGetExperimentResultParam{SpaceID: spaceID, ExptIDs: []int64{exptID}, BaseExptID: gptr.Of(exptID)})
 	require.NoError(t, err)
 	require.Len(t, got.ItemResults, 1)
