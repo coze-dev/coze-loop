@@ -1507,7 +1507,7 @@ func TestExptFailRetryExec_BuildPagePlan_SingleSetBatchesAndDeduplicatesTargetRe
 	assert.Empty(t, plan.restoreTurnsByTargetID)
 }
 
-func TestExptResultBuilder_FillProcessingTargetResultID_DoesNotRestoreFailedCurrentRunTarget(t *testing.T) {
+func TestExptResultBuilder_FillProcessingTargetResultID_PreservesFailedCurrentRunTargetForDiagnosis(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	const (
 		spaceID        = int64(100)
@@ -1533,7 +1533,7 @@ func TestExptResultBuilder_FillProcessingTargetResultID_DoesNotRestoreFailedCurr
 	}
 
 	require.NoError(t, builder.fillProcessingTargetResultID(context.Background()))
-	assert.Zero(t, builder.turnResultDO[0].TargetResultID)
+	assert.Equal(t, failedTargetID, builder.turnResultDO[0].TargetResultID)
 }
 
 func TestExptResultBuilder_FillProcessingTargetResultID_RestoresSuccessfulTargetFromFailedTurn(t *testing.T) {

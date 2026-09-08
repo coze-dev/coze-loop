@@ -4453,7 +4453,7 @@ func TestExptResultBuilder_fillProcessingTargetResultID_RestoresZombieTargetResu
 	assert.Equal(t, targetResultID, builder.turnResultDO[0].TargetResultID)
 }
 
-func TestShouldFillTargetResultFromRunLog_OnlyHidesExplicitTargetFailure(t *testing.T) {
+func TestShouldFillTargetResultFromRunLog_PreservesDiagnosticRecords(t *testing.T) {
 	tests := []struct {
 		name string
 		log  *entity.ExptTurnResultRunLog
@@ -4461,10 +4461,10 @@ func TestShouldFillTargetResultFromRunLog_OnlyHidesExplicitTargetFailure(t *test
 	}{
 		{name: "nil log", log: nil},
 		{name: "missing target record", log: &entity.ExptTurnResultRunLog{Status: entity.TurnRunState_Processing}},
-		{name: "target failure stays hidden", log: &entity.ExptTurnResultRunLog{
+		{name: "target failure preserves record for diagnosis", log: &entity.ExptTurnResultRunLog{
 			Status: entity.TurnRunState_Fail, TargetResultID: 1,
 			ErrMsg: errno.SerializeErr(errno.NewTargetResultErr("target failed")),
-		}},
+		}, want: true},
 		{name: "zombie timeout preserves target for diagnosis", log: &entity.ExptTurnResultRunLog{
 			Status: entity.TurnRunState_Fail, TargetResultID: 1,
 			ErrMsg: errno.SerializeErr(errno.NewTurnOtherErr("turn status not updated for long interval", errors.New("timeout"))),

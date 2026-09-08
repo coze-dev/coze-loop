@@ -2004,12 +2004,6 @@ func shouldFillTargetResultFromRunLog(runLog *entity.ExptTurnResultRunLog) bool 
 	if runLog == nil || runLog.TargetResultID <= 0 {
 		return false
 	}
-	// Only an explicit target-stage error proves this record should stay hidden. Other terminal
-	// failures may still retain a target record so users can inspect its execution details.
-	persistedErr := errno.DeserializeErr([]byte(runLog.ErrMsg))
-	if isTargetFailure, _ := errno.ParseTargetResultErr(persistedErr); isTargetFailure {
-		return false
-	}
 	return true
 }
 
