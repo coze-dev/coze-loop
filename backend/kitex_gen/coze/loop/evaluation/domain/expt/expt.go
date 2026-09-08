@@ -1303,6 +1303,1309 @@ type InsightAnalysisReportVoteType = string
 // 反馈动作
 type FeedbackActionType = string
 
+// SkillDistDeclare Agent Skill 的 channel-tagged 分发声明。字段与 runtime testcase.SkillDist
+// 的 wire 结构逐字对齐 (json tag 一致), 平台不解释, 评测侧按 channel_type 分发。
+type SkillDistDeclare struct {
+	ChannelType            *string `thrift:"channel_type,1,optional" frugal:"1,optional,string" json:"channel_type" form:"channel_type" query:"channel_type"`
+	FileURL                *string `thrift:"file_url,2,optional" frugal:"2,optional,string" json:"file_url" form:"file_url" query:"file_url"`
+	AgentBuddySource       *string `thrift:"agent_buddy_source,3,optional" frugal:"3,optional,string" json:"agent_buddy_source" form:"agent_buddy_source" query:"agent_buddy_source"`
+	AgentBuddySkillName    *string `thrift:"agent_buddy_skill_name,4,optional" frugal:"4,optional,string" json:"agent_buddy_skill_name" form:"agent_buddy_skill_name" query:"agent_buddy_skill_name"`
+	AgentBuddySkillVersion *string `thrift:"agent_buddy_skill_version,5,optional" frugal:"5,optional,string" json:"agent_buddy_skill_version" form:"agent_buddy_skill_version" query:"agent_buddy_skill_version"`
+	GitURL                 *string `thrift:"git_url,6,optional" frugal:"6,optional,string" json:"git_url" form:"git_url" query:"git_url"`
+	Branch                 *string `thrift:"branch,7,optional" frugal:"7,optional,string" json:"branch" form:"branch" query:"branch"`
+	Dir                    *string `thrift:"dir,8,optional" frugal:"8,optional,string" json:"dir" form:"dir" query:"dir"`
+	CommitHash             *string `thrift:"commit_hash,9,optional" frugal:"9,optional,string" json:"commit_hash" form:"commit_hash" query:"commit_hash"`
+}
+
+func NewSkillDistDeclare() *SkillDistDeclare {
+	return &SkillDistDeclare{}
+}
+
+func (p *SkillDistDeclare) InitDefault() {
+}
+
+var SkillDistDeclare_ChannelType_DEFAULT string
+
+func (p *SkillDistDeclare) GetChannelType() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetChannelType() {
+		return SkillDistDeclare_ChannelType_DEFAULT
+	}
+	return *p.ChannelType
+}
+
+var SkillDistDeclare_FileURL_DEFAULT string
+
+func (p *SkillDistDeclare) GetFileURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFileURL() {
+		return SkillDistDeclare_FileURL_DEFAULT
+	}
+	return *p.FileURL
+}
+
+var SkillDistDeclare_AgentBuddySource_DEFAULT string
+
+func (p *SkillDistDeclare) GetAgentBuddySource() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentBuddySource() {
+		return SkillDistDeclare_AgentBuddySource_DEFAULT
+	}
+	return *p.AgentBuddySource
+}
+
+var SkillDistDeclare_AgentBuddySkillName_DEFAULT string
+
+func (p *SkillDistDeclare) GetAgentBuddySkillName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentBuddySkillName() {
+		return SkillDistDeclare_AgentBuddySkillName_DEFAULT
+	}
+	return *p.AgentBuddySkillName
+}
+
+var SkillDistDeclare_AgentBuddySkillVersion_DEFAULT string
+
+func (p *SkillDistDeclare) GetAgentBuddySkillVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentBuddySkillVersion() {
+		return SkillDistDeclare_AgentBuddySkillVersion_DEFAULT
+	}
+	return *p.AgentBuddySkillVersion
+}
+
+var SkillDistDeclare_GitURL_DEFAULT string
+
+func (p *SkillDistDeclare) GetGitURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetGitURL() {
+		return SkillDistDeclare_GitURL_DEFAULT
+	}
+	return *p.GitURL
+}
+
+var SkillDistDeclare_Branch_DEFAULT string
+
+func (p *SkillDistDeclare) GetBranch() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBranch() {
+		return SkillDistDeclare_Branch_DEFAULT
+	}
+	return *p.Branch
+}
+
+var SkillDistDeclare_Dir_DEFAULT string
+
+func (p *SkillDistDeclare) GetDir() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDir() {
+		return SkillDistDeclare_Dir_DEFAULT
+	}
+	return *p.Dir
+}
+
+var SkillDistDeclare_CommitHash_DEFAULT string
+
+func (p *SkillDistDeclare) GetCommitHash() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCommitHash() {
+		return SkillDistDeclare_CommitHash_DEFAULT
+	}
+	return *p.CommitHash
+}
+func (p *SkillDistDeclare) SetChannelType(val *string) {
+	p.ChannelType = val
+}
+func (p *SkillDistDeclare) SetFileURL(val *string) {
+	p.FileURL = val
+}
+func (p *SkillDistDeclare) SetAgentBuddySource(val *string) {
+	p.AgentBuddySource = val
+}
+func (p *SkillDistDeclare) SetAgentBuddySkillName(val *string) {
+	p.AgentBuddySkillName = val
+}
+func (p *SkillDistDeclare) SetAgentBuddySkillVersion(val *string) {
+	p.AgentBuddySkillVersion = val
+}
+func (p *SkillDistDeclare) SetGitURL(val *string) {
+	p.GitURL = val
+}
+func (p *SkillDistDeclare) SetBranch(val *string) {
+	p.Branch = val
+}
+func (p *SkillDistDeclare) SetDir(val *string) {
+	p.Dir = val
+}
+func (p *SkillDistDeclare) SetCommitHash(val *string) {
+	p.CommitHash = val
+}
+
+var fieldIDToName_SkillDistDeclare = map[int16]string{
+	1: "channel_type",
+	2: "file_url",
+	3: "agent_buddy_source",
+	4: "agent_buddy_skill_name",
+	5: "agent_buddy_skill_version",
+	6: "git_url",
+	7: "branch",
+	8: "dir",
+	9: "commit_hash",
+}
+
+func (p *SkillDistDeclare) IsSetChannelType() bool {
+	return p.ChannelType != nil
+}
+
+func (p *SkillDistDeclare) IsSetFileURL() bool {
+	return p.FileURL != nil
+}
+
+func (p *SkillDistDeclare) IsSetAgentBuddySource() bool {
+	return p.AgentBuddySource != nil
+}
+
+func (p *SkillDistDeclare) IsSetAgentBuddySkillName() bool {
+	return p.AgentBuddySkillName != nil
+}
+
+func (p *SkillDistDeclare) IsSetAgentBuddySkillVersion() bool {
+	return p.AgentBuddySkillVersion != nil
+}
+
+func (p *SkillDistDeclare) IsSetGitURL() bool {
+	return p.GitURL != nil
+}
+
+func (p *SkillDistDeclare) IsSetBranch() bool {
+	return p.Branch != nil
+}
+
+func (p *SkillDistDeclare) IsSetDir() bool {
+	return p.Dir != nil
+}
+
+func (p *SkillDistDeclare) IsSetCommitHash() bool {
+	return p.CommitHash != nil
+}
+
+func (p *SkillDistDeclare) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SkillDistDeclare[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SkillDistDeclare) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ChannelType = _field
+	return nil
+}
+func (p *SkillDistDeclare) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FileURL = _field
+	return nil
+}
+func (p *SkillDistDeclare) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AgentBuddySource = _field
+	return nil
+}
+func (p *SkillDistDeclare) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AgentBuddySkillName = _field
+	return nil
+}
+func (p *SkillDistDeclare) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AgentBuddySkillVersion = _field
+	return nil
+}
+func (p *SkillDistDeclare) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.GitURL = _field
+	return nil
+}
+func (p *SkillDistDeclare) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Branch = _field
+	return nil
+}
+func (p *SkillDistDeclare) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Dir = _field
+	return nil
+}
+func (p *SkillDistDeclare) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CommitHash = _field
+	return nil
+}
+
+func (p *SkillDistDeclare) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SkillDistDeclare"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SkillDistDeclare) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetChannelType() {
+		if err = oprot.WriteFieldBegin("channel_type", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ChannelType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SkillDistDeclare) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFileURL() {
+		if err = oprot.WriteFieldBegin("file_url", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FileURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SkillDistDeclare) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentBuddySource() {
+		if err = oprot.WriteFieldBegin("agent_buddy_source", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AgentBuddySource); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *SkillDistDeclare) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentBuddySkillName() {
+		if err = oprot.WriteFieldBegin("agent_buddy_skill_name", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AgentBuddySkillName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *SkillDistDeclare) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentBuddySkillVersion() {
+		if err = oprot.WriteFieldBegin("agent_buddy_skill_version", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AgentBuddySkillVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *SkillDistDeclare) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGitURL() {
+		if err = oprot.WriteFieldBegin("git_url", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.GitURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *SkillDistDeclare) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBranch() {
+		if err = oprot.WriteFieldBegin("branch", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Branch); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *SkillDistDeclare) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDir() {
+		if err = oprot.WriteFieldBegin("dir", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Dir); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *SkillDistDeclare) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCommitHash() {
+		if err = oprot.WriteFieldBegin("commit_hash", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CommitHash); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *SkillDistDeclare) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SkillDistDeclare(%+v)", *p)
+
+}
+
+func (p *SkillDistDeclare) DeepEqual(ano *SkillDistDeclare) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ChannelType) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.FileURL) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.AgentBuddySource) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.AgentBuddySkillName) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.AgentBuddySkillVersion) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.GitURL) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.Branch) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.Dir) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.CommitHash) {
+		return false
+	}
+	return true
+}
+
+func (p *SkillDistDeclare) Field1DeepEqual(src *string) bool {
+
+	if p.ChannelType == src {
+		return true
+	} else if p.ChannelType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ChannelType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillDistDeclare) Field2DeepEqual(src *string) bool {
+
+	if p.FileURL == src {
+		return true
+	} else if p.FileURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FileURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillDistDeclare) Field3DeepEqual(src *string) bool {
+
+	if p.AgentBuddySource == src {
+		return true
+	} else if p.AgentBuddySource == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AgentBuddySource, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillDistDeclare) Field4DeepEqual(src *string) bool {
+
+	if p.AgentBuddySkillName == src {
+		return true
+	} else if p.AgentBuddySkillName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AgentBuddySkillName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillDistDeclare) Field5DeepEqual(src *string) bool {
+
+	if p.AgentBuddySkillVersion == src {
+		return true
+	} else if p.AgentBuddySkillVersion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AgentBuddySkillVersion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillDistDeclare) Field6DeepEqual(src *string) bool {
+
+	if p.GitURL == src {
+		return true
+	} else if p.GitURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.GitURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillDistDeclare) Field7DeepEqual(src *string) bool {
+
+	if p.Branch == src {
+		return true
+	} else if p.Branch == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Branch, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillDistDeclare) Field8DeepEqual(src *string) bool {
+
+	if p.Dir == src {
+		return true
+	} else if p.Dir == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Dir, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillDistDeclare) Field9DeepEqual(src *string) bool {
+
+	if p.CommitHash == src {
+		return true
+	} else if p.CommitHash == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CommitHash, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+// AgentSkillDeclare 实验级 Agent Skill 声明, 对齐 runtime testcase.Skill 的 wire 结构。
+// 仅 SandboxAgent + 多评测集实验生效; 平台仅校验 skill_key 非空, 其余结构/语义校验在 runtime。
+type AgentSkillDeclare struct {
+	SkillKey        *string           `thrift:"skill_key,1,optional" frugal:"1,optional,string" json:"skill_key" form:"skill_key" query:"skill_key"`
+	SkillVersion    *string           `thrift:"skill_version,2,optional" frugal:"2,optional,string" json:"skill_version" form:"skill_version" query:"skill_version"`
+	Dist            *SkillDistDeclare `thrift:"dist,3,optional" frugal:"3,optional,SkillDistDeclare" json:"dist" form:"dist" query:"dist"`
+	SetupScript     *string           `thrift:"setup_script,4,optional" frugal:"4,optional,string" json:"setup_script" form:"setup_script" query:"setup_script"`
+	CredentialsKeys []string          `thrift:"credentials_keys,5,optional" frugal:"5,optional,list<string>" json:"credentials_keys" form:"credentials_keys" query:"credentials_keys"`
+}
+
+func NewAgentSkillDeclare() *AgentSkillDeclare {
+	return &AgentSkillDeclare{}
+}
+
+func (p *AgentSkillDeclare) InitDefault() {
+}
+
+var AgentSkillDeclare_SkillKey_DEFAULT string
+
+func (p *AgentSkillDeclare) GetSkillKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkillKey() {
+		return AgentSkillDeclare_SkillKey_DEFAULT
+	}
+	return *p.SkillKey
+}
+
+var AgentSkillDeclare_SkillVersion_DEFAULT string
+
+func (p *AgentSkillDeclare) GetSkillVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkillVersion() {
+		return AgentSkillDeclare_SkillVersion_DEFAULT
+	}
+	return *p.SkillVersion
+}
+
+var AgentSkillDeclare_Dist_DEFAULT *SkillDistDeclare
+
+func (p *AgentSkillDeclare) GetDist() (v *SkillDistDeclare) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDist() {
+		return AgentSkillDeclare_Dist_DEFAULT
+	}
+	return p.Dist
+}
+
+var AgentSkillDeclare_SetupScript_DEFAULT string
+
+func (p *AgentSkillDeclare) GetSetupScript() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSetupScript() {
+		return AgentSkillDeclare_SetupScript_DEFAULT
+	}
+	return *p.SetupScript
+}
+
+var AgentSkillDeclare_CredentialsKeys_DEFAULT []string
+
+func (p *AgentSkillDeclare) GetCredentialsKeys() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCredentialsKeys() {
+		return AgentSkillDeclare_CredentialsKeys_DEFAULT
+	}
+	return p.CredentialsKeys
+}
+func (p *AgentSkillDeclare) SetSkillKey(val *string) {
+	p.SkillKey = val
+}
+func (p *AgentSkillDeclare) SetSkillVersion(val *string) {
+	p.SkillVersion = val
+}
+func (p *AgentSkillDeclare) SetDist(val *SkillDistDeclare) {
+	p.Dist = val
+}
+func (p *AgentSkillDeclare) SetSetupScript(val *string) {
+	p.SetupScript = val
+}
+func (p *AgentSkillDeclare) SetCredentialsKeys(val []string) {
+	p.CredentialsKeys = val
+}
+
+var fieldIDToName_AgentSkillDeclare = map[int16]string{
+	1: "skill_key",
+	2: "skill_version",
+	3: "dist",
+	4: "setup_script",
+	5: "credentials_keys",
+}
+
+func (p *AgentSkillDeclare) IsSetSkillKey() bool {
+	return p.SkillKey != nil
+}
+
+func (p *AgentSkillDeclare) IsSetSkillVersion() bool {
+	return p.SkillVersion != nil
+}
+
+func (p *AgentSkillDeclare) IsSetDist() bool {
+	return p.Dist != nil
+}
+
+func (p *AgentSkillDeclare) IsSetSetupScript() bool {
+	return p.SetupScript != nil
+}
+
+func (p *AgentSkillDeclare) IsSetCredentialsKeys() bool {
+	return p.CredentialsKeys != nil
+}
+
+func (p *AgentSkillDeclare) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AgentSkillDeclare[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AgentSkillDeclare) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SkillKey = _field
+	return nil
+}
+func (p *AgentSkillDeclare) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SkillVersion = _field
+	return nil
+}
+func (p *AgentSkillDeclare) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewSkillDistDeclare()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Dist = _field
+	return nil
+}
+func (p *AgentSkillDeclare) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SetupScript = _field
+	return nil
+}
+func (p *AgentSkillDeclare) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.CredentialsKeys = _field
+	return nil
+}
+
+func (p *AgentSkillDeclare) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AgentSkillDeclare"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AgentSkillDeclare) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkillKey() {
+		if err = oprot.WriteFieldBegin("skill_key", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SkillKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *AgentSkillDeclare) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkillVersion() {
+		if err = oprot.WriteFieldBegin("skill_version", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SkillVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *AgentSkillDeclare) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDist() {
+		if err = oprot.WriteFieldBegin("dist", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Dist.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *AgentSkillDeclare) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSetupScript() {
+		if err = oprot.WriteFieldBegin("setup_script", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SetupScript); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *AgentSkillDeclare) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCredentialsKeys() {
+		if err = oprot.WriteFieldBegin("credentials_keys", thrift.LIST, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.CredentialsKeys)); err != nil {
+			return err
+		}
+		for _, v := range p.CredentialsKeys {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *AgentSkillDeclare) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AgentSkillDeclare(%+v)", *p)
+
+}
+
+func (p *AgentSkillDeclare) DeepEqual(ano *AgentSkillDeclare) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.SkillKey) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SkillVersion) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Dist) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.SetupScript) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.CredentialsKeys) {
+		return false
+	}
+	return true
+}
+
+func (p *AgentSkillDeclare) Field1DeepEqual(src *string) bool {
+
+	if p.SkillKey == src {
+		return true
+	} else if p.SkillKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SkillKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AgentSkillDeclare) Field2DeepEqual(src *string) bool {
+
+	if p.SkillVersion == src {
+		return true
+	} else if p.SkillVersion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SkillVersion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AgentSkillDeclare) Field3DeepEqual(src *SkillDistDeclare) bool {
+
+	if !p.Dist.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *AgentSkillDeclare) Field4DeepEqual(src *string) bool {
+
+	if p.SetupScript == src {
+		return true
+	} else if p.SetupScript == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SetupScript, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AgentSkillDeclare) Field5DeepEqual(src []string) bool {
+
+	if len(p.CredentialsKeys) != len(src) {
+		return false
+	}
+	for i, v := range p.CredentialsKeys {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // RunModeConfig 实验级跑法配置 (对齐 runtime RunModeConfig)。run_mode 是顶层跑法总开关;
 // sua_mode 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
 // 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
@@ -1339,8 +2642,13 @@ type RunModeConfig struct {
 	// max_turns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
 	MaxTurns *int32 `thrift:"max_turns,10,optional" frugal:"10,optional,i32" json:"max_turns" form:"max_turns" query:"max_turns"`
 	// skills_mode SandboxAgent 跑法的技能模式, 原样透传到 case-file experiment_info.skills_mode。
-	// 合法值 merge / disable_test_case; 校验在 OpenAPI convertor 做。
+	// 合法值 merge / disable_test_case / merge_exp_first (skill_key 冲突时实验级赢);
+	// 校验在 OpenAPI convertor 做。
 	SkillsMode *string `thrift:"skills_mode,11,optional" frugal:"11,optional,string" json:"skills_mode" form:"skills_mode" query:"skills_mode"`
+	// skills 实验级 Agent Skills 声明, 原样透传到 case-file experiment_info.skills。
+	// 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
+	// skills_mode 与题目级 dataset_item.skills 合并安装。
+	Skills []*AgentSkillDeclare `thrift:"skills,12,optional" frugal:"12,optional,list<AgentSkillDeclare>" json:"skills" form:"skills" query:"skills"`
 }
 
 func NewRunModeConfig() *RunModeConfig {
@@ -1469,6 +2777,18 @@ func (p *RunModeConfig) GetSkillsMode() (v string) {
 	}
 	return *p.SkillsMode
 }
+
+var RunModeConfig_Skills_DEFAULT []*AgentSkillDeclare
+
+func (p *RunModeConfig) GetSkills() (v []*AgentSkillDeclare) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkills() {
+		return RunModeConfig_Skills_DEFAULT
+	}
+	return p.Skills
+}
 func (p *RunModeConfig) SetRunMode(val *ExptRunMode) {
 	p.RunMode = val
 }
@@ -1499,6 +2819,9 @@ func (p *RunModeConfig) SetMaxTurns(val *int32) {
 func (p *RunModeConfig) SetSkillsMode(val *string) {
 	p.SkillsMode = val
 }
+func (p *RunModeConfig) SetSkills(val []*AgentSkillDeclare) {
+	p.Skills = val
+}
 
 var fieldIDToName_RunModeConfig = map[int16]string{
 	1:  "run_mode",
@@ -1511,6 +2834,7 @@ var fieldIDToName_RunModeConfig = map[int16]string{
 	9:  "sua_pe_template",
 	10: "max_turns",
 	11: "skills_mode",
+	12: "skills",
 }
 
 func (p *RunModeConfig) IsSetRunMode() bool {
@@ -1551,6 +2875,10 @@ func (p *RunModeConfig) IsSetMaxTurns() bool {
 
 func (p *RunModeConfig) IsSetSkillsMode() bool {
 	return p.SkillsMode != nil
+}
+
+func (p *RunModeConfig) IsSetSkills() bool {
+	return p.Skills != nil
 }
 
 func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -1646,6 +2974,14 @@ func (p *RunModeConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1792,6 +3128,29 @@ func (p *RunModeConfig) ReadField11(iprot thrift.TProtocol) error {
 	p.SkillsMode = _field
 	return nil
 }
+func (p *RunModeConfig) ReadField12(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*AgentSkillDeclare, 0, size)
+	values := make([]AgentSkillDeclare, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Skills = _field
+	return nil
+}
 
 func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1837,6 +3196,10 @@ func (p *RunModeConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -2037,6 +3400,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *RunModeConfig) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkills() {
+		if err = oprot.WriteFieldBegin("skills", thrift.LIST, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Skills)); err != nil {
+			return err
+		}
+		for _, v := range p.Skills {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 
 func (p *RunModeConfig) String() string {
 	if p == nil {
@@ -2080,6 +3469,9 @@ func (p *RunModeConfig) DeepEqual(ano *RunModeConfig) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.SkillsMode) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.Skills) {
 		return false
 	}
 	return true
@@ -2202,6 +3594,19 @@ func (p *RunModeConfig) Field11DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.SkillsMode, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *RunModeConfig) Field12DeepEqual(src []*AgentSkillDeclare) bool {
+
+	if len(p.Skills) != len(src) {
+		return false
+	}
+	for i, v := range p.Skills {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

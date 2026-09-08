@@ -507,9 +507,37 @@ type RunModeConfig struct {
 	SuaPETemplate string `json:"sua_pe_template,omitempty"`
 	// MaxTurns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
 	MaxTurns int `json:"max_turns,omitempty"`
-	// SkillsMode SandboxAgent 跑法的技能模式 (merge / disable_test_case)。入口 convertor 校白名单,
-	// 空即不透传; 原样落到 case-file experiment_info.skills_mode。
+	// SkillsMode SandboxAgent 跑法的技能模式 (merge / disable_test_case / merge_exp_first)。
+	// 入口 convertor 校白名单, 空即不透传; 原样落到 case-file experiment_info.skills_mode。
 	SkillsMode string `json:"skills_mode,omitempty"`
+	// Skills 实验级 Agent Skills 声明, 原样落到 case-file experiment_info.skills, 由 runtime
+	// 按 skills_mode 与题目级 dataset_item.skills 合并安装。平台仅校验 skill_key 非空,
+	// 其余结构/语义校验在 runtime。
+	Skills []*AgentSkillDeclare `json:"skills,omitempty"`
+}
+
+// SkillDistDeclare Agent Skill 的 channel-tagged 分发声明。字段与 runtime testcase.SkillDist
+// 的 wire 结构逐字对齐 (json tag 一致), 平台不解释, 评测侧按 channel_type 分发。
+type SkillDistDeclare struct {
+	ChannelType            string `json:"channel_type,omitempty"`
+	FileURL                string `json:"file_url,omitempty"`
+	AgentBuddySource       string `json:"agent_buddy_source,omitempty"`
+	AgentBuddySkillName    string `json:"agent_buddy_skill_name,omitempty"`
+	AgentBuddySkillVersion string `json:"agent_buddy_skill_version,omitempty"`
+	GitURL                 string `json:"git_url,omitempty"`
+	Branch                 string `json:"branch,omitempty"`
+	Dir                    string `json:"dir,omitempty"`
+	CommitHash             string `json:"commit_hash,omitempty"`
+}
+
+// AgentSkillDeclare 实验级 Agent Skill 声明, 对齐 runtime testcase.Skill 的 wire 结构。
+// 仅 SandboxAgent + 多评测集实验生效; 平台仅校验 skill_key 非空, 其余结构/语义校验在 runtime。
+type AgentSkillDeclare struct {
+	SkillKey        string            `json:"skill_key,omitempty"`
+	SkillVersion    string            `json:"skill_version,omitempty"`
+	Dist            *SkillDistDeclare `json:"dist,omitempty"`
+	SetupScript     string            `json:"setup_script,omitempty"`
+	CredentialsKeys []string          `json:"credentials_keys,omitempty"`
 }
 
 // ItemRunConf 题目级多轮/SUA 运行配置, 冻结进 expt_item_ref.item_config (ItemTargetConf.RunConf)。

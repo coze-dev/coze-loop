@@ -80,6 +80,30 @@ enum SuaMode {
     Fixed     = 3
 }
 
+// SkillDistDeclare Agent Skill 的 channel-tagged 分发声明。字段与 runtime testcase.SkillDist
+// 的 wire 结构逐字对齐 (json tag 一致), 平台不解释, 评测侧按 channel_type 分发。
+struct SkillDistDeclare {
+    1: optional string channel_type (go.tag = 'json:"channel_type"')
+    2: optional string file_url (go.tag = 'json:"file_url"')
+    3: optional string agent_buddy_source (go.tag = 'json:"agent_buddy_source"')
+    4: optional string agent_buddy_skill_name (go.tag = 'json:"agent_buddy_skill_name"')
+    5: optional string agent_buddy_skill_version (go.tag = 'json:"agent_buddy_skill_version"')
+    6: optional string git_url (go.tag = 'json:"git_url"')
+    7: optional string branch (go.tag = 'json:"branch"')
+    8: optional string dir (go.tag = 'json:"dir"')
+    9: optional string commit_hash (go.tag = 'json:"commit_hash"')
+}
+
+// AgentSkillDeclare 实验级 Agent Skill 声明, 对齐 runtime testcase.Skill 的 wire 结构。
+// 仅 SandboxAgent + 多评测集实验生效; 平台仅校验 skill_key 非空, 其余结构/语义校验在 runtime。
+struct AgentSkillDeclare {
+    1: optional string skill_key (go.tag = 'json:"skill_key"')
+    2: optional string skill_version (go.tag = 'json:"skill_version"')
+    3: optional SkillDistDeclare dist (go.tag = 'json:"dist"')
+    4: optional string setup_script (go.tag = 'json:"setup_script"')
+    5: optional list<string> credentials_keys (go.tag = 'json:"credentials_keys"')
+}
+
 // RunModeConfig 实验级跑法配置 (对齐 runtime RunModeConfig)。run_mode 是顶层跑法总开关;
 // sua_mode 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
 // 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
@@ -116,8 +140,13 @@ struct RunModeConfig {
     // max_turns 实验级轮数上限 (题目级同名字段在 ItemRunConf, 题目级优先)。
     10: optional i32 max_turns (go.tag = 'json:"max_turns"')
     // skills_mode SandboxAgent 跑法的技能模式, 原样透传到 case-file experiment_info.skills_mode。
-    // 合法值 merge / disable_test_case; 校验在 OpenAPI convertor 做。
+    // 合法值 merge / disable_test_case / merge_exp_first (skill_key 冲突时实验级赢);
+    // 校验在 OpenAPI convertor 做。
     11: optional string skills_mode (go.tag = 'json:"skills_mode"')
+    // skills 实验级 Agent Skills 声明, 原样透传到 case-file experiment_info.skills。
+    // 与 skills_mode 同容器同链路; 结构对齐 runtime testcase.Skill, 由 runtime 按
+    // skills_mode 与题目级 dataset_item.skills 合并安装。
+    12: optional list<AgentSkillDeclare> skills (go.tag = 'json:"skills"')
 }
 
 typedef string Visibility(ts.enum="true")
