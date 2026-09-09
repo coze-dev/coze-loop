@@ -43,26 +43,6 @@ func (m *MockExptTurnResultDAO) EXPECT() *MockExptTurnResultDAOMockRecorder {
 	return m.recorder
 }
 
-// ApplyItemRunResults mocks base method.
-func (m *MockExptTurnResultDAO) ApplyItemRunResults(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, turns []*model.ExptTurnResult, refs []*model.ExptTurnEvaluatorResultRef, opts ...db.Option) (bool, error) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, exptID, exptRunID, itemID, spaceID, turns, refs}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ApplyItemRunResults", varargs...)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ApplyItemRunResults indicates an expected call of ApplyItemRunResults.
-func (mr *MockExptTurnResultDAOMockRecorder) ApplyItemRunResults(ctx, exptID, exptRunID, itemID, spaceID, turns, refs any, opts ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, exptID, exptRunID, itemID, spaceID, turns, refs}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyItemRunResults", reflect.TypeOf((*MockExptTurnResultDAO)(nil).ApplyItemRunResults), varargs...)
-}
-
 // BatchCreateNX mocks base method.
 func (m *MockExptTurnResultDAO) BatchCreateNX(ctx context.Context, turnResults []*model.ExptTurnResult, opts ...db.Option) error {
 	m.ctrl.T.Helper()

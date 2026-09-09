@@ -30,7 +30,6 @@ type ExptTurnExecMtr interface {
 type ExptExecMetrics interface {
 	EmitExptExecRun(spaceID, mode int64)
 	EmitExptExecResult(spaceID, typ, status int64, start time.Time)
-	EmitRetryStartDependencyFailure(spaceID int64, dependency string)
 }
 
 type ExptResultMetrics interface {

@@ -20,7 +20,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -118,7 +117,6 @@ type DefaultSchedulerModeFactory struct {
 	exptRunLogRepo           repo.IExptRunLogRepo
 	mutex                    lock.ILocker
 	evalTargetService        IEvalTargetService
-	metric                   metrics.ExptMetric
 	sandboxAgentNotifier     ISandboxAgentNotifier // 沙箱 agent 通知器,传递给三种重试执行器
 }
 
@@ -134,7 +132,6 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 		exec := NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.resultSvc)
 		exec.exptItemRefRepo = f.exptItemRefRepo
 		exec.evalTargetService = f.evalTargetService
-		exec.metric = f.metric
 		return exec, nil
 	case entity.EvaluationModeAppend:
 		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.mutex), nil
@@ -776,7 +773,6 @@ type ExptFailRetryExec struct {
 	evaluatorRecordService EvaluatorRecordService
 	templateManager        IExptTemplateManager
 	evalTargetService      IEvalTargetService
-	metric                 metrics.ExptMetric
 	resultSvc              ExptResultService // 重试 reset 后主动刷 CK expt_turn_result_filter,避免加速器读到旧终态
 }
 
@@ -818,7 +814,6 @@ var errRetryStartDependencyFailure = errors.New("retry start dependency failure"
 type failRetryPagePlan struct {
 	itemIDs                []int64
 	itemRunLogs            []*entity.ExptItemResultRunLog
-	itemIDToLogID          map[int64]string
 	preserveTargetTurns    []*entity.ItemTurnID
 	restoreTurnsByTargetID map[int64][]*entity.ItemTurnID
 	clearTargetTurns       []*entity.ItemTurnID
@@ -826,9 +821,6 @@ type failRetryPagePlan struct {
 
 func (e *ExptFailRetryExec) retryStartDependencyError(ctx context.Context, event *entity.ExptScheduleEvent, dependency string, err error) error {
 	logs.CtxError(ctx, "[ExptFailRetryExec] retry start dependency failed, dependency=%s, expt_id=%v, expt_run_id=%v, err=%v", dependency, event.ExptID, event.ExptRunID, err)
-	if e.metric != nil {
-		e.metric.EmitRetryStartDependencyFailure(event.SpaceID, dependency)
-	}
 	return fmt.Errorf("%w: dependency=%s: %w", errRetryStartDependencyFailure, dependency, err)
 }
 
@@ -844,45 +836,16 @@ func sortedInt64Set(values map[int64]struct{}) []int64 {
 func (e *ExptFailRetryExec) buildPagePlan(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, turnResults []*entity.ExptTurnResult) (*failRetryPagePlan, error) {
 	itemIDSet := make(map[int64]struct{})
 	itemVersionIDs := make(map[int64]int64)
-	turnsByItem := make(map[int64][]*entity.ExptTurnResult)
 	for _, tr := range turnResults {
 		if tr == nil {
 			continue
 		}
 		itemIDSet[tr.ItemID] = struct{}{}
 		itemVersionIDs[tr.ItemID] = tr.ItemVersionID
-		turnsByItem[tr.ItemID] = append(turnsByItem[tr.ItemID], tr)
 	}
 	itemIDs := sortedInt64Set(itemIDSet)
 
-	itemResults, err := e.exptItemResultRepo.BatchGet(ctx, event.SpaceID, event.ExptID, itemIDs)
-	if err != nil {
-		logs.CtxWarn(ctx, "[ExptFailRetryExec] load item results failed, fallback to turn data, expt_id=%v, expt_run_id=%v, err=%v", event.ExptID, event.ExptRunID, err)
-		itemResults = nil
-	}
-	itemResultByID := make(map[int64]*entity.ExptItemResult, len(itemResults))
-	for _, itemResult := range itemResults {
-		if itemResult != nil {
-			itemResultByID[itemResult.ItemID] = itemResult
-		}
-	}
-	for _, itemID := range itemIDs {
-		if itemResultByID[itemID] == nil {
-			logs.CtxWarn(ctx, "[ExptFailRetryExec] item result missing, fallback to turn log_id, expt_id=%v, expt_run_id=%v, item_id=%v", event.ExptID, event.ExptRunID, itemID)
-		}
-	}
 	currentRunCtx := contexts.WithCtxWriteDB(ctx)
-	currentItemRunLogs, err := e.exptItemResultRepo.MGetItemRunLog(currentRunCtx, event.ExptID, event.ExptRunID, itemIDs, event.SpaceID)
-	if err != nil {
-		logs.CtxWarn(ctx, "[ExptFailRetryExec] load current item run logs failed, fallback to canonical/turn log_id, expt_id=%v, expt_run_id=%v, err=%v", event.ExptID, event.ExptRunID, err)
-		currentItemRunLogs = nil
-	}
-	currentItemRunLogByID := make(map[int64]*entity.ExptItemResultRunLog, len(currentItemRunLogs))
-	for _, runLog := range currentItemRunLogs {
-		if runLog != nil {
-			currentItemRunLogByID[runLog.ItemID] = runLog
-		}
-	}
 	currentTurnRunLogs, err := e.exptTurnResultRepo.MGetItemTurnRunLogs(currentRunCtx, event.ExptID, event.ExptRunID, itemIDs, event.SpaceID)
 	if err != nil {
 		return nil, e.retryStartDependencyError(ctx, event, "expt_turn_result_run_log", err)
@@ -956,11 +919,7 @@ func (e *ExptFailRetryExec) buildPagePlan(ctx context.Context, event *entity.Exp
 	}
 	targetSuccess := make(map[targetRecordKey]bool)
 	if len(targetIDsBySpace) > 0 && e.evalTargetService == nil {
-		logs.CtxError(ctx, "[ExptFailRetryExec] eval target service is nil, fallback to rerun target, expt_id=%v, expt_run_id=%v", event.ExptID, event.ExptRunID)
-		if e.metric != nil {
-			e.metric.EmitRetryStartDependencyFailure(event.SpaceID, "eval_target_service")
-		}
-		targetIDsBySpace = nil
+		return nil, e.retryStartDependencyError(ctx, event, "eval_target_service", errors.New("service is nil"))
 	}
 	for targetSpaceID, recordIDSet := range targetIDsBySpace {
 		recordIDs := sortedInt64Set(recordIDSet)
@@ -982,38 +941,14 @@ func (e *ExptFailRetryExec) buildPagePlan(ctx context.Context, event *entity.Exp
 	plan := &failRetryPagePlan{
 		itemIDs:                itemIDs,
 		itemRunLogs:            make([]*entity.ExptItemResultRunLog, 0, len(itemIDs)),
-		itemIDToLogID:          make(map[int64]string, len(itemIDs)),
 		preserveTargetTurns:    make([]*entity.ItemTurnID, 0, len(turnResults)),
 		restoreTurnsByTargetID: make(map[int64][]*entity.ItemTurnID),
 		clearTargetTurns:       make([]*entity.ItemTurnID, 0, len(turnResults)),
 	}
 	for idx, itemID := range itemIDs {
-		logID := ""
-		if currentRunLog := currentItemRunLogByID[itemID]; currentRunLog != nil {
-			logID = currentRunLog.LogID
-		}
-		if logID == "" {
-			if itemResult := itemResultByID[itemID]; itemResult != nil {
-				logID = itemResult.LogID
-			}
-		}
-		if logID == "" {
-			turns := turnsByItem[itemID]
-			sort.Slice(turns, func(i, j int) bool { return turns[i].ID < turns[j].ID })
-			for _, tr := range turns {
-				if tr.LogID != "" {
-					logID = tr.LogID
-					break
-				}
-			}
-		}
-		if logID == "" {
-			logID = logs.NewLogID()
-		}
-		plan.itemIDToLogID[itemID] = logID
 		plan.itemRunLogs = append(plan.itemRunLogs, &entity.ExptItemResultRunLog{
 			ID: ids[idx], SpaceID: event.SpaceID, ExptID: event.ExptID, ExptRunID: event.ExptRunID,
-			ItemID: itemID, ItemVersionID: itemVersionIDs[itemID], Status: int32(entity.ItemRunState_Queueing), LogID: logID,
+			ItemID: itemID, ItemVersionID: itemVersionIDs[itemID], Status: int32(entity.ItemRunState_Queueing),
 		})
 	}
 	for _, tr := range turnResults {
@@ -1083,9 +1018,6 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		}
 
 		if err := e.exptItemResultRepo.BatchCreateNXRunLogs(ctx, plan.itemRunLogs); err != nil {
-			return err
-		}
-		if err := e.exptItemResultRepo.FillItemRunLogLogIDIfEmpty(ctx, event.ExptID, event.ExptRunID, event.SpaceID, plan.itemIDToLogID); err != nil {
 			return err
 		}
 

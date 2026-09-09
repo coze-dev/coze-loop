@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -710,6 +711,11 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			return nil
 		}
 
+		// A failed snapshot read must not turn successful source stages into empty failed runlogs.
+		if event.ExptRunMode == entity.EvaluationModeFailRetry && errors.Is(nextErr, errRetryStartDependencyFailure) {
+			return nextErr
+		}
+
 		if retryConf.IsInDebt {
 			completeCID := fmt.Sprintf("terminate:indebt:%d", event.ExptRunID)
 
@@ -873,28 +879,77 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 	}
 }
 
-// yieldItemRunForRetry preserves terminal state, current-run ownership and counters in one transaction.
+// yieldItemRunForRetry 让位分支: 判定需重试时把行从 Processing 退回 Queueing 并递增持久 retry_times,
+// 让出并发名额, 重试改由调度器 scanToSubmit 唯一驱动(替换原执行侧 MQ 重投)。
+//
+// ★ 三件事必须成对同时发生, 缺一即统计漂移(技术方案 §7):
+//  1. run_log.status → Queueing + retry_times+1 + err_msg;
+//  2. expt_item_result.status → Queueing —— 不可省略: expt_result_impl.go 的 statsCntOp 以
+//     expt_item_result.status 当前值作减项, 两处不同步会使 processing_cnt 永不归零;
+//  3. ArithOperateCount{Processing:-1, Queueing:+1}。
+//
+// updated_at 由 DB 列的 ON UPDATE CURRENT_TIMESTAMP 随两条 UPDATE 自动刷新 → 单行超时兜底按次尝试独立计时。
+//
+// 写库失败只告警不阻断, 且任一步失败都收敛到"行停在 Processing、统计未动"这一种残留:
+// 第 1 步失败直接返回; 第 2 步失败会把第 1 步回滚回 Processing(见函数内说明)。
+// 该残留由僵尸清理(handleZombies)兜底, 统计守恒不破, 不会双跑。
 func (e *ExptItemEventEvalServiceImpl) yieldItemRunForRetry(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) {
 	if event == nil || e.exptItemResultRepo == nil {
 		return
 	}
-	if event.RetryTimes < 0 || int64(event.RetryTimes) >= 1<<31-1 {
-		logs.CtxWarn(ctx, "retry yield invalid attempt, expt_id: %v, expt_run_id: %v, item_id: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID)
-		return
-	}
+
 	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer cancel()
-	errMsg := ""
-	if evalErr != nil {
-		errMsg = errno.SerializeErr(evalErr)
+
+	itemIDs := []int64{event.EvalSetItemID}
+
+	// 1) run_log: Processing → Queueing, retry_times+1, 记录本次错误。retry_times 递增用原地 UPDATE,
+	//    只作用于当前 run 的行, 与重跑新建行天然隔离(重跑是新 expt_run_id 新建行)。
+	runLogFields := map[string]any{
+		"status":      int32(entity.ItemRunState_Queueing),
+		"retry_times": int32(event.RetryTimes) + 1,
 	}
-	applied, err := e.exptItemResultRepo.YieldItemRunForRetry(persistCtx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID, int32(event.RetryTimes), errMsg)
-	if err != nil {
-		logs.CtxWarn(persistCtx, "retry yield transaction failed, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+	if evalErr != nil {
+		runLogFields["err_msg"] = errno.SerializeErr(evalErr)
+	}
+	if err := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, itemIDs, runLogFields, event.SpaceID); err != nil {
+		logs.CtxWarn(persistCtx, "yieldItemRunForRetry update item run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 		return
 	}
-	if !applied {
-		logs.CtxInfo(persistCtx, "retry yield skipped stale or completed attempt, expt_id: %v, expt_run_id: %v, item_id: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID)
+
+	// 2) expt_item_result: 同步 Processing → Queueing(与 run_log 成对, 否则 statsCntOp 减项算错)。
+	//    ★ 失败时必须把第 1 步回滚: 否则 run_log 停在 Queueing 而 item_result 仍 Processing, 该行会被
+	//    scanToSubmit 再次捞起, 而 handleToSubmits 是无条件 ArithOperateCount{P:+n, Q:-n}
+	//    (expt_run_scheduler_event_impl.go 提交末尾), 同一 item 会被重复计入 processing_cnt、
+	//    pending_cnt 被减成负数 —— 违反"统计在任意路径下守恒"。回滚后行退回 Processing,
+	//    与统计口径一致, 由僵尸清理(handleZombies)兜底, 不双跑。
+	if err := e.exptItemResultRepo.UpdateItemsResult(persistCtx, event.SpaceID, event.ExptID, itemIDs, map[string]any{
+		"status": int32(entity.ItemRunState_Queueing),
+	}); err != nil {
+		logs.CtxWarn(persistCtx, "yieldItemRunForRetry update item result fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+
+		if rbErr := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, itemIDs,
+			map[string]any{"status": int32(entity.ItemRunState_Processing)}, event.SpaceID); rbErr != nil {
+			logs.CtxError(persistCtx, "yieldItemRunForRetry rollback run log status fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+				event.ExptID, event.ExptRunID, event.EvalSetItemID, rbErr)
+		}
+		return
+	}
+
+	// 3) 统计对账: Processing-1 / Queueing+1(与上面两处状态翻转成对)。
+	if e.exptStatsRepo == nil {
+		return
+	}
+	if err := e.exptStatsRepo.ArithOperateCount(persistCtx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
+		OpStatusCnt: map[entity.ItemRunState]int{
+			entity.ItemRunState_Processing: -1,
+			entity.ItemRunState_Queueing:   1,
+		},
+	}); err != nil {
+		logs.CtxWarn(persistCtx, "yieldItemRunForRetry arith operate count fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
 }
 
@@ -1240,9 +1295,7 @@ func (e *ExptRecordEvalModeSubmit) PostEval(ctx context.Context, eiec *entity.Ex
 	return nil
 }
 
-// failRetrySelectTurnRunLogRefs 失败重试时为新建的 turn run_log 选择保留的 Target / 评估器引用：
-// - Target：仅当存在 target_result_id 且对应 Target 记录状态为 Success 时保留，否则清零并重跑 Target。
-// - 评估器：仅保留 Success 且来源 run_log 与当前 Target 配对的记录；无 Target 时只校验成功态。
+// failRetrySelectTurnRunLogRefs keeps successful stages that belong to the reused target.
 func failRetrySelectTurnRunLogRefs(
 	ctx context.Context,
 	spaceID int64,
@@ -1252,28 +1305,35 @@ func failRetrySelectTurnRunLogRefs(
 	evalRecord EvaluatorRecordService,
 	refs []*entity.ExptTurnEvaluatorResultRef,
 	sourceLogs *retryEvaluatorSourceLogs,
-) (targetResultID int64, evalResults *entity.EvaluatorResults) {
+) (targetResultID int64, evalResults *entity.EvaluatorResults, err error) {
 	if tr == nil {
-		return 0, nil
+		return 0, nil, nil
 	}
-	filterAmbiguousLegacyEvaluatorResults(tr, refs)
+	snapshot := *tr
+	snapshot.EvaluatorResults = retryEvaluatorResultsFromRefs(tr.ID, refs)
+	tr = &snapshot
 	if !targetRequired {
-		return 0, pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr, nil)
+		results, err := pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr, nil)
+		return 0, results, err
 	}
 	if tr.TargetResultID <= 0 {
-		return 0, nil
+		return 0, nil, nil
 	}
 	if evalTarget == nil {
-		return 0, nil
+		return 0, nil, errors.New("eval target service is nil")
 	}
 	targetRec, err := evalTarget.GetRecordByID(ctx, spaceID, tr.TargetResultID)
-	if err != nil || targetRec == nil || gptr.Indirect(targetRec.Status) != entity.EvalTargetRunStatusSuccess {
-		return 0, nil
+	if err != nil {
+		return 0, nil, err
+	}
+	if targetRec == nil || gptr.Indirect(targetRec.Status) != entity.EvalTargetRunStatusSuccess {
+		return 0, nil, nil
 	}
 	if sourceLogs == nil {
-		return tr.TargetResultID, nil
+		return tr.TargetResultID, nil, nil
 	}
-	return tr.TargetResultID, pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr, sourceLogs)
+	results, err := pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr, sourceLogs)
+	return tr.TargetResultID, results, err
 }
 
 type retryEvaluatorSourceLogs struct {
@@ -1282,19 +1342,17 @@ type retryEvaluatorSourceLogs struct {
 	logsByRun map[int64]map[int64]*entity.ExptTurnResultRunLog
 }
 
-func (s *retryEvaluatorSourceLogs) matches(ctx context.Context, tr *entity.ExptTurnResult, record *entity.EvaluatorRecord) bool {
+func (s *retryEvaluatorSourceLogs) matches(ctx context.Context, tr *entity.ExptTurnResult, record *entity.EvaluatorRecord) (bool, error) {
 	if record.ExperimentRunID <= 0 || record.ExperimentID != s.event.ExptID ||
 		record.ItemID != s.event.EvalSetItemID || tr.ItemID != s.event.EvalSetItemID || record.TurnID != tr.TurnID {
-		return false
+		return false, nil
 	}
 	byTurn, loaded := s.logsByRun[record.ExperimentRunID]
 	if !loaded {
 		// Shared evaluator records can live in a resource space; run logs belong to the experiment's space.
 		runLogs, err := s.repo.MGetItemTurnRunLogs(ctx, s.event.ExptID, record.ExperimentRunID, []int64{s.event.EvalSetItemID}, s.event.SpaceID)
 		if err != nil {
-			logs.CtxWarn(ctx, "[ExptFailRetry] load evaluator source run log failed, rerun unverified evaluators, expt_id=%d, expt_run_id=%d, item_id=%d, source_run_id=%d, err=%v", s.event.ExptID, s.event.ExptRunID, s.event.EvalSetItemID, record.ExperimentRunID, err)
-			s.logsByRun[record.ExperimentRunID] = nil
-			return false
+			return false, err
 		}
 		byTurn = make(map[int64]*entity.ExptTurnResultRunLog, len(runLogs))
 		for _, runLog := range runLogs {
@@ -1307,71 +1365,54 @@ func (s *retryEvaluatorSourceLogs) matches(ctx context.Context, tr *entity.ExptT
 	}
 	origin := byTurn[tr.TurnID]
 	if origin == nil || origin.TargetResultID != tr.TargetResultID || origin.EvaluatorResultIds == nil {
-		return false
+		return false, nil
 	}
 	refs := origin.EvaluatorResultIds
 	for _, ref := range refs.Registered {
 		if ref != nil && ref.RecordID == record.ID && ref.VersionID == record.EvaluatorVersionID && ref.Alias == record.Alias {
-			return true
+			return true, nil
 		}
 	}
 	for _, ref := range refs.Inline {
 		if ref != nil && ref.RecordID == record.ID && ref.InlineKey == record.InlineKey {
-			return true
+			return true, nil
 		}
 	}
-	return record.SourceType != entity.EvaluatorRecordSourceTypeInline && record.Alias == "" && refs.EvalVerIDToResID[record.EvaluatorVersionID] == record.ID
+	return record.SourceType != entity.EvaluatorRecordSourceTypeInline && record.Alias == "" && refs.EvalVerIDToResID[record.EvaluatorVersionID] == record.ID, nil
 }
 
-func filterAmbiguousLegacyEvaluatorResults(tr *entity.ExptTurnResult, refs []*entity.ExptTurnEvaluatorResultRef) {
-	if tr == nil || tr.EvaluatorResults == nil || len(tr.EvaluatorResults.EvalVerIDToResID) == 0 {
-		return
-	}
-	if len(refs) == 0 {
-		tr.EvaluatorResults = nil
-		return
-	}
-
-	type refIdentity struct {
-		count     int
-		recordID  int64
-		ambiguous bool
-	}
-	byVersion := make(map[int64]*refIdentity)
+func retryEvaluatorResultsFromRefs(turnResultID int64, refs []*entity.ExptTurnEvaluatorResultRef) *entity.EvaluatorResults {
+	results := &entity.EvaluatorResults{}
 	for _, ref := range refs {
-		if ref == nil || ref.ExptTurnResultID != tr.ID {
+		if ref == nil || ref.ExptTurnResultID != turnResultID || ref.EvaluatorResultID <= 0 {
 			continue
 		}
-		identity := byVersion[ref.EvaluatorVersionID]
-		if identity == nil {
-			identity = &refIdentity{}
-			byVersion[ref.EvaluatorVersionID] = identity
-		}
-		identity.count++
-		identity.recordID = ref.EvaluatorResultID
-		if ref.SourceType == int32(entity.EvaluatorRecordSourceTypeInline) || ref.Alias != "" {
-			identity.ambiguous = true
+		if ref.SourceType == int32(entity.EvaluatorRecordSourceTypeInline) {
+			results.Inline = append(results.Inline, &entity.InlineEvalResult{InlineKey: ref.InlineKey, RecordID: ref.EvaluatorResultID})
+		} else {
+			results.Registered = append(results.Registered, &entity.RegisteredEvalResult{VersionID: ref.EvaluatorVersionID, Alias: ref.Alias, RecordID: ref.EvaluatorResultID})
 		}
 	}
-
-	filtered := make(map[int64]int64)
-	for versionID, recordID := range tr.EvaluatorResults.EvalVerIDToResID {
-		identity := byVersion[versionID]
-		if identity == nil || identity.count != 1 || identity.ambiguous || identity.recordID != recordID {
-			continue
+	if len(results.Registered) == 0 && len(results.Inline) == 0 {
+		return nil
+	}
+	legacy := len(results.Inline) == 0
+	for _, ref := range results.Registered {
+		legacy = legacy && ref.Alias == ""
+	}
+	if legacy {
+		results.EvalVerIDToResID = make(map[int64]int64, len(results.Registered))
+		for _, ref := range results.Registered {
+			results.EvalVerIDToResID[ref.VersionID] = ref.RecordID
 		}
-		filtered[versionID] = recordID
+		results.Registered = nil
 	}
-	if len(filtered) == 0 {
-		tr.EvaluatorResults = nil
-		return
-	}
-	tr.EvaluatorResults = &entity.EvaluatorResults{EvalVerIDToResID: filtered}
+	return results
 }
 
-func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRecordService, tr *entity.ExptTurnResult, sourceLogs *retryEvaluatorSourceLogs) *entity.EvaluatorResults {
+func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRecordService, tr *entity.ExptTurnResult, sourceLogs *retryEvaluatorSourceLogs) (*entity.EvaluatorResults, error) {
 	if evalRecord == nil || tr.EvaluatorResults == nil {
-		return nil
+		return nil, nil
 	}
 	erids := tr.EvaluatorResults
 
@@ -1403,16 +1444,15 @@ func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRe
 		addID(id)
 	}
 	if len(ids) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	records, err := evalRecord.BatchGetEvaluatorRecord(ctx, ids, false, false)
 	if err != nil {
-		logs.CtxWarn(ctx, "[ExptFailRetry] load evaluator records failed, turn_result_id=%v, record_ids=%v, err=%v", tr.ID, ids, err)
-		return nil
+		return nil, err
 	}
 	if len(records) == 0 {
-		return nil
+		return nil, nil
 	}
 	successIDs := make(map[int64]struct{}, len(records))
 	successVerID2RecID := make(map[int64]int64)
@@ -1420,8 +1460,14 @@ func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRe
 		if rec == nil || rec.Status != entity.EvaluatorRunStatusSuccess {
 			continue
 		}
-		if sourceLogs != nil && !sourceLogs.matches(ctx, tr, rec) {
-			continue
+		if sourceLogs != nil {
+			matches, err := sourceLogs.matches(ctx, tr, rec)
+			if err != nil {
+				return nil, err
+			}
+			if !matches {
+				continue
+			}
 		}
 		successIDs[rec.ID] = struct{}{}
 		if rec.SourceType != entity.EvaluatorRecordSourceTypeInline && rec.Alias == "" {
@@ -1429,7 +1475,7 @@ func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRe
 		}
 	}
 	if len(successIDs) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// 保持原格式回填, 保留 (VersionID, Alias) / InlineKey 元数据; 老数据兜底走 EvalVerIDToResID。
@@ -1464,9 +1510,9 @@ func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRe
 		out.EvalVerIDToResID = successVerID2RecID
 	}
 	if len(out.Registered) == 0 && len(out.Inline) == 0 && len(out.EvalVerIDToResID) == 0 {
-		return nil
+		return nil, nil
 	}
-	return out
+	return out, nil
 }
 
 type ExptRecordEvalModeFailRetry struct {
@@ -1489,7 +1535,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 	snapshotCtx := contexts.WithCtxWriteDB(ctx)
 	itemTurnResults, err := e.resultSvc.GetExptItemTurnResults(snapshotCtx, eiec.Event.ExptID, eiec.Event.EvalSetItemID, eiec.Event.SpaceID, eiec.Event.Session)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", errRetryStartDependencyFailure, err)
 	}
 
 	turnResultIDs := make([]int64, 0, len(itemTurnResults))
@@ -1500,7 +1546,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 	}
 	refs, err := e.exptTurnResultRepo.BatchGetTurnEvaluatorResultRef(snapshotCtx, eiec.Event.SpaceID, turnResultIDs)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", errRetryStartDependencyFailure, err)
 	}
 	refsByTurnResultID := make(map[int64][]*entity.ExptTurnEvaluatorResultRef)
 	for _, ref := range refs {
@@ -1527,7 +1573,10 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.ErrMsg = ""
 		// 跨空间共享: Target 记录随执行落来源空间(冻结 TargetSpaceID), 失败重试选引用时须按来源空间读;
 		// 用调用方空间读会得 nil → 误判 Target 非 Success → 清零 target_result_id 触发无谓重跑 Target。
-		targetID, evalIDs := failRetrySelectTurnRunLogRefs(snapshotCtx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), !shouldSkipTargetNode(eiec.Expt), tr, e.evalTargetService, e.evaluatorRecordSvc, refsByTurnResultID[tr.ID], sourceLogs)
+		targetID, evalIDs, err := failRetrySelectTurnRunLogRefs(snapshotCtx, resolveLoadSpaceID(eiec.Event.SpaceID, eiec.TargetSourceSpaceID()), !shouldSkipTargetNode(eiec.Expt), tr, e.evalTargetService, e.evaluatorRecordSvc, refsByTurnResultID[tr.ID], sourceLogs)
+		if err != nil {
+			return fmt.Errorf("%w: %w", errRetryStartDependencyFailure, err)
+		}
 		runLog.TargetResultID = targetID
 		runLog.EvaluatorResultIds = evalIDs
 		turnRunLogDOs = append(turnRunLogDOs, runLog)

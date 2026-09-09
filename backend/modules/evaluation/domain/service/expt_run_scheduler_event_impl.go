@@ -109,7 +109,6 @@ func NewExptSchedulerSvc(
 ) ExptSchedulerEvent {
 	if factory, ok := schedulerModeFactory.(*DefaultSchedulerModeFactory); ok {
 		factory.evalTargetService = evalTargetService
-		factory.metric = metric
 	}
 	i := &ExptSchedulerImpl{
 		Manager:                  manager,
@@ -663,48 +662,71 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 	if len(toSubmits) == 0 {
 		return nil
 	}
-	claimed := make([]*entity.ExptEvalItem, 0, len(toSubmits))
-	rollback := func() {
-		persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
-		defer cancel()
-		for _, item := range claimed {
-			if _, err := e.ExptItemResultRepo.RollbackItemRunSubmit(persistCtx, event.ExptID, event.ExptRunID, item.ItemID, event.SpaceID, item.RetryTimes); err != nil {
-				logs.CtxWarn(persistCtx, "rollback item submission failed, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, item.ItemID, err)
-			}
-		}
-	}
-	for _, item := range toSubmits {
-		if entity.IsItemRunFinished(item.State) {
+
+	now := time.Now().Unix()
+	itemIDs := make([]int64, 0, len(toSubmits))
+	itemEvalEvents := make([]*entity.ExptItemEvalEvent, 0, len(toSubmits))
+	for _, ts := range toSubmits {
+		if entity.IsItemRunFinished(ts.State) {
 			continue
 		}
-		applied, err := e.ExptItemResultRepo.ClaimItemRunForSubmit(ctx, event.ExptID, event.ExptRunID, item.ItemID, event.SpaceID, item.RetryTimes)
-		if err != nil {
-			rollback()
-			return err
-		}
-		if applied {
-			claimed = append(claimed, item)
-		}
+		itemIDs = append(itemIDs, ts.ItemID)
+		itemEvalEvents = append(itemEvalEvents, &entity.ExptItemEvalEvent{
+			SpaceID:       event.SpaceID,
+			ExptID:        event.ExptID,
+			ExptRunID:     event.ExptRunID,
+			ExptRunMode:   event.ExptRunMode,
+			EvalSetItemID: ts.ItemID,
+			CreateAt:      now,
+			RetryTimes:    int(ts.RetryTimes), // ★ 回填持久重试次数: 让位后由调度器新建的事件据此判收敛(需重试→让位, 达上限→落 Fail)
+			MaxRetryTimes: event.ItemRetryTimes,
+			Ext:           event.Ext,
+			Session:       event.Session,
+		})
 	}
-	if len(claimed) == 0 {
-		return nil
-	}
-	now := time.Now().Unix()
-	itemIDs := make([]int64, 0, len(claimed))
-	itemEvents := make([]*entity.ExptItemEvalEvent, 0, len(claimed))
-	for _, item := range claimed {
-		itemIDs = append(itemIDs, item.ItemID)
-		itemEvents = append(itemEvents, &entity.ExptItemEvalEvent{SpaceID: event.SpaceID, ExptID: event.ExptID, ExptRunID: event.ExptRunID, ExptRunMode: event.ExptRunMode, EvalSetItemID: item.ItemID, CreateAt: now, RetryTimes: int(item.RetryTimes), MaxRetryTimes: event.ItemRetryTimes, Ext: event.Ext, Session: event.Session})
-	}
+
+	logs.CtxInfo(ctx, "submit item eval events: %v", json.Jsonify(itemEvalEvents))
+
 	interval := e.Configer.GetExptExecConf(ctx, event.SpaceID).GetExptItemEvalConf().GetInterval()
-	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, itemEvents, gptr.Of(interval)); err != nil {
-		rollback()
+	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, itemEvalEvents, gptr.Of(interval)); err != nil {
 		return err
 	}
-	e.Metric.EmitItemExecEval(event.SpaceID, int64(event.ExptRunMode), len(claimed))
-	if err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs); err != nil {
-		logs.CtxError(ctx, "handleToSubmits UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+
+	defer e.Metric.EmitItemExecEval(event.SpaceID, int64(event.ExptRunMode), len(toSubmits))
+
+	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, itemIDs, map[string]any{"status": int32(entity.ItemRunState_Processing)},
+		event.SpaceID); err != nil {
+		return err
 	}
+
+	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, itemIDs, map[string]any{"status": int32(entity.ItemRunState_Processing)}); err != nil {
+		return err
+	}
+
+	err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs)
+	if err != nil {
+		logs.CtxError(ctx, "ExptSubmitExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+	}
+	logs.CtxInfo(ctx, "ExptSchedulerImpl handleToSubmits UpsertExptTurnResultFilter success, expt_id: %v", event.ExptID)
+
+	if err := e.ExptTurnResultRepo.UpdateTurnResultsWithItemIDs(ctx, event.ExptID, itemIDs, event.SpaceID, map[string]any{"status": int32(entity.TurnRunState_Processing)}); err != nil {
+		return err
+	}
+
+	itemResults, err := e.ExptItemResultRepo.BatchGet(ctx, event.SpaceID, event.ExptID, itemIDs)
+	if err != nil {
+		return err
+	}
+
+	if err := e.ExptStatsRepo.ArithOperateCount(ctx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
+		OpStatusCnt: map[entity.ItemRunState]int{
+			entity.ItemRunState_Processing: len(itemResults),
+			entity.ItemRunState_Queueing:   0 - len(itemResults),
+		},
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 

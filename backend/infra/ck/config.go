@@ -3,10 +3,7 @@
 
 package ck
 
-import (
-	"net"
-	"time"
-)
+import "time"
 
 type (
 	CompressionMethod string
@@ -39,6 +36,4 @@ type Config struct {
 	Settings          map[string]any    `yaml:"setting"`
 	MaxOpenConns      int               `yaml:"maxOpenConns"`
 	MaxIdleConns      int               `yaml:"maxIdleConns"`
-	// Resolver is injected in code; nil preserves the process default.
-	Resolver *net.Resolver `json:"-" yaml:"-" mapstructure:"-"`
 }

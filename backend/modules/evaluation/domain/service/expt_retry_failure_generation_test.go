@@ -181,7 +181,7 @@ func TestRetryFailure_PreEvalEvaluatorGeneration(t *testing.T) {
 			f.expt.Target.EvalTargetType = entity.EvalTargetTypeCustomRPCServerOnline
 			f.records[1].ExperimentRunID = 0
 		}, wantIDs: map[int64]int64{401: 301, 402: 302}, wantReads: map[int64]int{}, wantTarget: 0},
-		{name: "existing record read failure policy unchanged", change: func(f *retryGenerationFixture) { f.recordErr = errors.New("record read unavailable") }, wantReads: map[int64]int{}, wantTarget: 201},
+		{name: "record read failure preserves source", change: func(f *retryGenerationFixture) { f.recordErr = errors.New("record read unavailable") }, wantReads: map[int64]int{}, wantTarget: 201},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -190,6 +190,13 @@ func TestRetryFailure_PreEvalEvaluatorGeneration(t *testing.T) {
 				tt.change(fixture)
 			}
 			saved, reads, writes, err := runRetryGenerationPreEval(t, fixture)
+			if fixture.recordErr != nil {
+				require.ErrorIs(t, err, fixture.recordErr)
+				assert.Zero(t, writes)
+				assert.Empty(t, saved)
+				assert.Empty(t, reads)
+				return
+			}
 			require.NoError(t, err)
 			require.Equal(t, 1, writes)
 			require.Len(t, saved, 1)
@@ -205,29 +212,25 @@ func TestRetryFailure_PreEvalEvaluatorGeneration(t *testing.T) {
 	}
 }
 
-func TestRetryFailure_PreEvalSourceReadFailureKeepsVerifiedStages(t *testing.T) {
+func TestRetryFailure_PreEvalSourceReadFailureDoesNotWritePartialSnapshot(t *testing.T) {
 	f := newRetryGenerationFixture()
 	f.sourceErr = errors.New("source run log unavailable")
 	saved, reads, writes, err := runRetryGenerationPreEval(t, f)
-	require.NoError(t, err)
-	require.Len(t, saved, 1)
-	assert.Equal(t, 1, writes)
-	assert.Equal(t, int64(201), saved[0].TargetResultID)
-	require.NotNil(t, saved[0].EvaluatorResultIds)
-	assert.Equal(t, map[int64]int64{401: 301}, saved[0].EvaluatorResultIds.EvalVerIDToResID)
+	require.ErrorIs(t, err, f.sourceErr)
+	assert.Empty(t, saved)
+	assert.Zero(t, writes)
 	assert.Equal(t, map[int64]int{101: 1, 102: 1}, reads)
+	assert.Equal(t, int64(201), f.turns[0].TargetResultID)
 }
 
-func TestRetryFailure_PreEvalCachesSourceReadErrors(t *testing.T) {
+func TestRetryFailure_PreEvalStopsOnFirstSourceReadError(t *testing.T) {
 	f := newRetryGenerationFixture()
 	f.records[0].ExperimentRunID = 102
 	f.sourceErr = errors.New("source run log unavailable")
 	saved, reads, writes, err := runRetryGenerationPreEval(t, f)
-	require.NoError(t, err)
-	require.Len(t, saved, 1)
-	assert.Equal(t, 1, writes)
-	assert.Equal(t, int64(201), saved[0].TargetResultID)
-	assert.Nil(t, saved[0].EvaluatorResultIds)
+	require.ErrorIs(t, err, f.sourceErr)
+	assert.Empty(t, saved)
+	assert.Zero(t, writes)
 	assert.Equal(t, map[int64]int{102: 1}, reads)
 }
 
@@ -355,12 +358,12 @@ func TestRetryFailure_DifferentTargetGenerationRerunsEvaluator(t *testing.T) {
 	idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
 	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), int64(0), int64(50), spaceID).Return([]*entity.ExptTurnResult{canonicalTurn}, turnResultID, nil)
 	turnRepo.EXPECT().ScanTurnResults(gomock.Any(), exptID, gomock.Any(), turnResultID, int64(50), spaceID).Return(nil, int64(0), nil)
-	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), exptID, run3, []int64{itemID}, spaceID).Return(nil, nil)
+
 	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), exptID, run3, []int64{itemID}, spaceID).Return(nil, nil)
 	targetSvc.EXPECT().BatchGetRecordByIDs(gomock.Any(), spaceID, []int64{target2}).Return([]*entity.EvalTargetRecord{t2}, nil)
 	idgen.EXPECT().GenMultiIDs(gomock.Any(), 1).Return([]int64{800}, nil).AnyTimes()
 	itemRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil)
-	itemRepo.EXPECT().FillItemRunLogLogIDIfEmpty(gomock.Any(), exptID, run3, spaceID, gomock.Any()).Return(nil)
+
 	turnRepo.EXPECT().UpdateTurnResults(gomock.Any(), exptID, []*entity.ItemTurnID{{ItemID: itemID, TurnID: turnID}}, spaceID, gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, _ []*entity.ItemTurnID, _ int64, fields map[string]any) error {
 		canonicalTurn.Status = fields["status"].(int32)
 		canonicalTurn.ExptRunID = fields["expt_run_id"].(int64)
@@ -419,12 +422,15 @@ func TestRetryFailure_DifferentTargetGenerationRerunsEvaluator(t *testing.T) {
 	turnRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), exptID, run3, itemID, spaceID).Return([]*entity.ExptTurnResultRunLog{r3log}, nil)
 	itemRepo.EXPECT().GetItemTurnResults(gomock.Any(), spaceID, exptID, itemID).Return([]*entity.ExptTurnResult{canonicalTurn}, nil)
 	evaluatorRecordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{freshEvaluatorID}, false, false).Return(results, nil)
-	turnRepo.EXPECT().ApplyItemRunResults(gomock.Any(), exptID, run3, itemID, spaceID, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, _, _, _, _ int64, _ []*entity.ExptTurnResult, refs []*entity.ExptTurnEvaluatorResultRef) (bool, error) {
+	turnRepo.EXPECT().CreateTurnEvaluatorRefs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, refs []*entity.ExptTurnEvaluatorResultRef) error {
 		require.Len(t, refs, 1)
 		assert.Equal(t, freshEvaluatorID, refs[0].EvaluatorResultID)
 		canonicalRefs = refs
-		return true, nil
+		return nil
 	})
+	turnRepo.EXPECT().SaveTurnResults(gomock.Any(), gomock.Any()).Return(nil)
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), exptID, run3, []int64{itemID}, gomock.Any(), spaceID).Return(nil)
+	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), exptID, spaceID, gomock.Any()).Return(nil)
 	_, err = resultSvc.RecordItemRunLogs(ctx, exptID, run3, itemID, spaceID, expt)
 	require.NoError(t, err)
 	assert.Equal(t, run3, canonicalTurn.ExptRunID)
@@ -490,7 +496,8 @@ func TestRetryFailure_SourceLogMembershipPreservesNewFormatIdentity(t *testing.T
 			}, nil)
 			turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(101), []int64{10}, int64(3)).Return([]*entity.ExptTurnResultRunLog{nil, origin}, nil)
 			sources := &retryEvaluatorSourceLogs{repo: turnRepo, event: &entity.ExptItemEvalEvent{ExptID: 1, EvalSetItemID: 10, SpaceID: 3}, logsByRun: make(map[int64]map[int64]*entity.ExptTurnResultRunLog)}
-			targetID, got := failRetrySelectTurnRunLogRefs(context.Background(), 3, true, tr, targetSvc, recordSvc, nil, sources)
+			targetID, got, selectErr := failRetrySelectTurnRunLogRefs(context.Background(), 3, true, tr, targetSvc, recordSvc, []*entity.ExptTurnEvaluatorResultRef{{ExptTurnResultID: tr.ID, EvaluatorVersionID: 401, Alias: "judge-a", EvaluatorResultID: 301}, {ExptTurnResultID: tr.ID, InlineKey: "inline-a", SourceType: int32(entity.EvaluatorRecordSourceTypeInline), EvaluatorResultID: 302}}, sources)
+			require.NoError(t, selectErr)
 			assert.Equal(t, int64(201), targetID)
 			if !tt.registered && !tt.inline {
 				assert.Nil(t, got)

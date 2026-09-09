@@ -156,7 +156,6 @@ func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptI
 }
 
 func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error) {
-	ctx = contexts.WithCtxWriteDB(ctx)
 	itemRunLog, err := e.ExptItemResultRepo.GetItemRunLog(ctx, exptID, exptRunID, itemID, spaceID)
 	if err != nil {
 		return nil, err
@@ -175,12 +174,27 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 		return nil, err
 	}
 
+	itemResults, err := e.ExptItemResultRepo.BatchGet(ctx, spaceID, exptID, []int64{itemID})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(itemResults) == 0 {
+		logs.CtxWarn(ctx, "[ExptEval] found empty item results, expt_id=%v, expt_run_id=%v, item_id=%v", exptID, exptRunID, itemID)
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
+	}
+
+	itemResult := itemResults[0]
+
+	statsCntOp := &entity.StatsCntArithOp{OpStatusCnt: make(map[entity.ItemRunState]int)}
+	statsCntOp.OpStatusCnt[itemResult.Status] = statsCntOp.OpStatusCnt[itemResult.Status] - 1
+	statsCntOp.OpStatusCnt[entity.ItemRunState(itemRunLog.Status)] = statsCntOp.OpStatusCnt[entity.ItemRunState(itemRunLog.Status)] + 1
 	turn2RunLog := make(map[int64]*entity.ExptTurnResultRunLog, len(turnRunLogs))
 	for _, trl := range turnRunLogs {
 		turn2RunLog[trl.TurnID] = trl
 	}
 
-	logs.CtxInfo(ctx, "[ExptEval] recording item run log, expt_id=%v, expt_run_id=%v, item_id=%v", exptID, exptRunID, itemID)
+	logs.CtxInfo(ctx, "[ExptEval] expt item result with recording run_log, expt_id=%v, expt_run_id=%v, item_id=%v, cnt_op: %v", exptID, exptRunID, itemID, json.Jsonify(statsCntOp))
 
 	// 加载实验配置构建行维度加权 scoreWeights：按实验类型分流（新链路 MultiSetConfig 从带 alias 的
 	// EvalSetConfigs[].EvaluatorConfs 聚合，key 含 alias；老链路从 EvaluatorConf 取，key 退化裸 versionID）。
@@ -203,7 +217,6 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 		result.ErrMsg = rl.ErrMsg
 		result.LogID = rl.LogID
 		result.ExptRunID = rl.ExptRunID
-		result.WeightedScore = nil
 
 		turnEvaluatorRefs = append(turnEvaluatorRefs, NewTurnEvaluatorResultRefs(0, result.ExptID, result.ID, spaceID, rl.EvaluatorResultIds)...)
 
@@ -256,14 +269,31 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 			ref.ID = ids[idx]
 		}
 
+		if err := e.ExptTurnResultRepo.CreateTurnEvaluatorRefs(ctx, turnEvaluatorRefs); err != nil {
+			return nil, err
+		}
 	}
-	applied, err := e.ExptTurnResultRepo.ApplyItemRunResults(ctx, exptID, exptRunID, itemID, spaceID, turnResults, turnEvaluatorRefs)
-	if err != nil {
+
+	if err := e.ExptTurnResultRepo.SaveTurnResults(ctx, turnResults); err != nil {
 		return nil, err
 	}
-	if !applied {
-		logs.CtxInfo(ctx, "[ExptEval] skip stale or resulted item projection, expt_id=%v, expt_run_id=%v, item_id=%v", exptID, exptRunID, itemID)
-		return nil, nil
+
+	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, spaceID, exptID, []int64{itemID}, map[string]any{
+		"status":  itemRunLog.Status,
+		"log_id":  itemRunLog.LogID,
+		"err_msg": itemRunLog.ErrMsg,
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, exptID, exptRunID, []int64{itemID}, map[string]any{
+		"result_state": int32(entity.ExptItemResultStateResulted),
+	}, spaceID); err != nil {
+		return nil, err
+	}
+
+	if err := e.ExptStatsRepo.ArithOperateCount(ctx, exptID, spaceID, statsCntOp); err != nil {
+		return nil, err
 	}
 
 	return turnEvaluatorRefs, nil
@@ -527,7 +557,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 					turnLogIDByItemTurn[noRunKey] = trl.LogID
 				}
 			}
-			if shouldFillTargetResultFromRunLog(trl) {
+			if trl.TargetResultID > 0 {
 				targetResultIDByRunItemTurn[k] = trl.TargetResultID
 			}
 		}
@@ -1999,7 +2029,7 @@ func (e *ExptResultBuilder) fillProcessingTargetResultID(ctx context.Context) er
 			return err
 		}
 		for _, turnRunLog := range turnRunLogs {
-			if !shouldFillTargetResultFromRunLog(turnRunLog) {
+			if turnRunLog == nil || turnRunLog.TargetResultID == 0 {
 				continue
 			}
 			targetResultIDByRunItemTurn[runItemTurnKey{
@@ -2021,13 +2051,6 @@ func (e *ExptResultBuilder) fillProcessingTargetResultID(ctx context.Context) er
 	}
 
 	return nil
-}
-
-func shouldFillTargetResultFromRunLog(runLog *entity.ExptTurnResultRunLog) bool {
-	if runLog == nil || runLog.TargetResultID <= 0 {
-		return false
-	}
-	return true
 }
 
 func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {
@@ -2574,7 +2597,7 @@ func (e *ExptResultBuilder) getTurnSystemInfo(ctx context.Context, itemID, turnI
 
 	if len(turnResult.ErrMsg) > 0 {
 		deserialized := errno.DeserializeErr([]byte(turnResult.ErrMsg))
-		// TurnOther 包括 evaluator record 创建前的编排失败。
+		// 仅吐出评估器和评估对象之外的error
 		if ok, errMsg := errno.ParseTurnOtherErr(deserialized); ok {
 			systemInfo.Error = &entity.RunError{
 				Detail: gptr.Of(errMsg),

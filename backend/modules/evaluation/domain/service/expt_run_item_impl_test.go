@@ -687,8 +687,7 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 			require.Len(t, logs, 1)
 			assert.Equal(t, entity.TurnRunState_Fail, logs[0].Status)
 			assert.Contains(t, logs[0].ErrMsg, "evaluator result missing")
-			isEvaluatorFailure, _ := errno.ParseEvaluatorResultErr(errno.DeserializeErr([]byte(logs[0].ErrMsg)))
-			assert.True(t, isEvaluatorFailure)
+
 			return nil
 		})
 
@@ -818,8 +817,6 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		localTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, logs []*entity.ExptTurnResultRunLog) error {
 			require.Len(t, logs, 1)
 			persistedErr := errno.DeserializeErr([]byte(logs[0].ErrMsg))
-			isEvaluatorRecordFailure, _ := errno.ParseEvaluatorResultErr(persistedErr)
-			assert.False(t, isEvaluatorRecordFailure)
 			isTurnOther, errMsg := errno.ParseTurnOtherErr(persistedErr)
 			assert.True(t, isTurnOther)
 			assert.Contains(t, errMsg, "evaluator orchestration failed")

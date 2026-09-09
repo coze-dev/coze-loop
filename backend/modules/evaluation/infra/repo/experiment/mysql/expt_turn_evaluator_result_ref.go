@@ -33,9 +33,6 @@ func NewExptTurnEvaluatorResultRefDAO(db db.Provider) IExptTurnEvaluatorResultRe
 
 func (dao *ExptTurnEvaluatorResultRefDAOImpl) GetByExptEvaluatorVersionID(ctx context.Context, spaceID, exptID, evaluatorVersionID int64, opts ...db.Option) ([]*model.ExptTurnEvaluatorResultRef, error) {
 	db := dao.provider.NewSession(ctx, opts...)
-	if contexts.CtxWriteDB(ctx) {
-		db = db.Clauses(dbresolver.Write)
-	}
 	q := query.Use(db).ExptTurnEvaluatorResultRef
 	ret, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID),
 		q.ExptID.Eq(exptID),
@@ -49,9 +46,6 @@ func (dao *ExptTurnEvaluatorResultRefDAOImpl) GetByExptEvaluatorVersionID(ctx co
 
 func (dao *ExptTurnEvaluatorResultRefDAOImpl) GetByExptID(ctx context.Context, spaceID, exptID int64, opts ...db.Option) ([]*model.ExptTurnEvaluatorResultRef, error) {
 	db := dao.provider.NewSession(ctx, opts...)
-	if contexts.CtxWriteDB(ctx) {
-		db = db.Clauses(dbresolver.Write)
-	}
 	q := query.Use(db).ExptTurnEvaluatorResultRef
 	ret, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID),
 		q.ExptID.Eq(exptID)).Find()

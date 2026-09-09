@@ -549,7 +549,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	)
 
 	if err := evaluatorsConf.Valid(ctx); err != nil {
-		return collector.records, err
+		return nil, err
 	}
 
 	execEvalVerIDMap := gslice.ToMap(execEvaluatorVersionIDs, func(t int64) (int64, bool) { return t, true })
@@ -575,7 +575,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 
 	pool, err := goroutine.NewPool(evaluatorsConf.GetEvaluatorConcurNum())
 	if err != nil {
-		return collector.records, err
+		return nil, err
 	}
 	// 立即绑定释放到 pool 生命周期:即使下方循环中途提前 return(如 conf 为 nil / buildEvaluatorInputData 失败)
 	// 跳过了 ExecAll,也能释放底层 ants pool 及其常驻协程(purge / ticktock),避免 goroutine 泄漏。
@@ -710,7 +710,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluatorsByItemConfig(
 	)
 
 	if err := evaluatorsConf.Valid(ctx); err != nil {
-		return collector.records, err
+		return nil, err
 	}
 
 	// 按 versionID 建一个 Evaluator 索引, 用于 ItemConfig 循环里复用 (type/inputSchema 等元数据)。

@@ -41,7 +41,7 @@ func NewCKFromConfig(cfg *Config) (Provider, error) {
 		HttpHeaders: cfg.HttpHeaders,
 		Settings:    cfg.Settings,
 	}
-	opt.DialContext = newRetryDialer(cfg.DialTimeout, cfg.Resolver)
+	opt.DialContext = newRetryDialer(cfg.DialTimeout)
 	switch cfg.CompressionMethod {
 	case CompressionMethodLZ4:
 		opt.Compression = &std_ck.Compression{
@@ -89,12 +89,12 @@ func NewCKFromConfig(cfg *Config) (Provider, error) {
 	return &provider{db: ckDb}, nil
 }
 
-func newRetryDialer(timeout time.Duration, resolver *net.Resolver) func(ctx context.Context, addr string) (net.Conn, error) {
+func newRetryDialer(timeout time.Duration) func(ctx context.Context, addr string) (net.Conn, error) {
 	if timeout == 0 {
 		timeout = 5 * time.Second
 	}
 	return func(ctx context.Context, addr string) (net.Conn, error) {
-		d := net.Dialer{Timeout: timeout, Resolver: resolver}
+		d := net.Dialer{Timeout: timeout}
 		var lastErr error
 		for i := 0; i < 3; i++ {
 			conn, err := d.DialContext(ctx, "tcp", addr)

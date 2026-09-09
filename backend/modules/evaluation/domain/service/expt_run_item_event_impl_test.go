@@ -1523,7 +1523,7 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			wantEvalResults: nil,
 		},
 		{
-			name:    "TargetResultID > 0, evalTarget is nil -> returns 0, nil",
+			name:    "TargetResultID > 0, evalTarget is nil -> dependency error",
 			spaceID: 1,
 			tr: &entity.ExptTurnResult{
 				TargetResultID: 100,
@@ -1677,9 +1677,14 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 						EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{10: 1001, 20: 1002}},
 					}}, nil)
 			}
-			gotTargetID, gotEvalResults := failRetrySelectTurnRunLogRefs(
+			gotTargetID, gotEvalResults, selectErr := failRetrySelectTurnRunLogRefs(
 				context.Background(), tt.spaceID, targetRequired, tt.tr, evalTarget, evalRecord, refs, sourceLogs,
 			)
+			if tt.name == "TargetResultID > 0, evalTarget is nil -> dependency error" || tt.name == "TargetResultID > 0, GetRecordByID returns error -> returns 0, nil" {
+				require.Error(t, selectErr)
+			} else {
+				require.NoError(t, selectErr)
+			}
 			assert.Equal(t, tt.wantTargetID, gotTargetID)
 			assert.Equal(t, tt.wantEvalResults, gotEvalResults)
 		})
@@ -1789,7 +1794,12 @@ func Test_pruneSuccessfulEvaluatorRecords(t *testing.T) {
 			defer ctrl.Finish()
 
 			evalRecord := tt.setupEvalRecord(ctrl)
-			got := pruneSuccessfulEvaluatorRecords(context.Background(), evalRecord, tt.tr, nil)
+			got, pruneErr := pruneSuccessfulEvaluatorRecords(context.Background(), evalRecord, tt.tr, nil)
+			if tt.name == "BatchGetEvaluatorRecord returns error -> nil" {
+				require.Error(t, pruneErr)
+			} else {
+				require.NoError(t, pruneErr)
+			}
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -1797,7 +1807,7 @@ func Test_pruneSuccessfulEvaluatorRecords(t *testing.T) {
 
 // TestExptItemEventEvalServiceImpl_HandleEventErr_Yield 覆盖让位降权改造(§6.1):
 // 灰度开关经 event.Ext[RetryYieldExtKey] 固化下传。开启 + 需重试 → 走让位分支(run_log/item_result
-// 状态、retry_times 和计数同事务更新，且不再重投 MQ); 关闭 → 保持原 MQ 重投;
+// 双翻 Queueing + retry_times+1 + ArithOperateCount{P:-1,Q:+1}, 且不再重投 MQ); 关闭 → 保持原 MQ 重投;
 // 达上限 / CtxForceNoRetry / 额度类终止 → 一律不让位、不增 retry_times。
 func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 	tests := []struct {
@@ -1809,7 +1819,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager)
 	}{
 		{
-			name: "flag on + needRetry -> atomic yield, no MQ republish",
+			name: "flag on + needRetry -> yield (double flip Queueing + retry_times+1 + P-1/Q+1, no MQ republish)",
 			// RetryTimes=1 < RetryTimes(3) => needRetry
 			event: &entity.ExptItemEvalEvent{
 				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
@@ -1819,14 +1829,31 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
 				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
 			) {
-				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.RetryConf{RetryTimes: 3})
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
-				itemRepo.EXPECT().YieldItemRunForRetry(gomock.Any(), int64(1), int64(2), int64(7), int64(3), int32(1), gomock.Any()).
-					DoAndReturn(func(_ context.Context, _, _, _, _ int64, attempt int32, message string) (bool, error) {
-						assert.Equal(t, int32(1), attempt)
-						assert.NotEmpty(t, message)
-						return true, nil
+				// run_log: status=Queueing, retry_times = RetryTimes(1)+1 = 2, err_msg 存在
+				itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
+					DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+						assert.Equal(t, int32(entity.ItemRunState_Queueing), ufields["status"])
+						assert.Equal(t, int32(2), ufields["retry_times"])
+						assert.Contains(t, ufields, "err_msg")
+						return nil
 					})
+				// item_result: 同步 status=Queueing
+				itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), int64(3), int64(1), []int64{7}, gomock.Any()).
+					DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any) error {
+						assert.Equal(t, int32(entity.ItemRunState_Queueing), ufields["status"])
+						return nil
+					})
+				// 统计对账: Processing-1 / Queueing+1
+				statsRepo.EXPECT().ArithOperateCount(gomock.Any(), int64(1), int64(3), gomock.Any()).
+					DoAndReturn(func(_ context.Context, _, _ int64, op *entity.StatsCntArithOp) error {
+						assert.Equal(t, -1, op.OpStatusCnt[entity.ItemRunState_Processing])
+						assert.Equal(t, 1, op.OpStatusCnt[entity.ItemRunState_Queueing])
+						return nil
+					})
+				// 不重投 MQ: 不设置 pub.EXPECT() -> gomock 会在被调用时 fail
 			},
 		},
 		{
@@ -1952,7 +1979,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			// yield 第 2 步(UpdateItemsResult)失败 → 必须把第 1 步写的 run_log 回滚为 Processing, 并且不执行第 3 步统计对账。
 			// 不回滚会让 run_log 停在 Queueing / item_result 停在 Processing, 被 scanToSubmit 再次捞起 → handleToSubmits 无条件
 			// P+1/Q-1 使 processing_cnt 重复计入、pending_cnt 被减成负数, 违反"统计在任意路径守恒"。
-			name: "yield rejected stale or completed attempt -> no extra writes",
+			name: "flag on + step2 UpdateItemsResult fail -> rollback run_log to Processing, no ArithOperateCount",
 			event: &entity.ExptItemEvalEvent{
 				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
 				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
@@ -1961,14 +1988,34 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
 				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
 			) {
-				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.RetryConf{RetryTimes: 3})
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
-				itemRepo.EXPECT().YieldItemRunForRetry(gomock.Any(), int64(1), int64(2), int64(7), int64(3), int32(1), gomock.Any()).Return(false, nil)
+				gomock.InOrder(
+					// 第 1 步: run_log status=Queueing + retry_times = RetryTimes(1)+1 = 2, 成功
+					itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
+						DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+							assert.Equal(t, int32(entity.ItemRunState_Queueing), ufields["status"])
+							assert.Equal(t, int32(2), ufields["retry_times"])
+							return nil
+						}),
+					// 回滚: 第二次调用 run_log status=Processing(不带 retry_times)
+					itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
+						DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+							assert.Equal(t, int32(entity.ItemRunState_Processing), ufields["status"])
+							assert.NotContains(t, ufields, "retry_times")
+							return nil
+						}),
+				)
+				// 第 2 步: item_result 更新失败, 触发回滚
+				itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), int64(3), int64(1), []int64{7}, gomock.Any()).
+					Return(errors.New("update item result fail"))
+				// 统计未动: 不设置 statsRepo.ArithOperateCount EXPECT() -> 被调用即 fail
 			},
 		},
 		{
 			// yield 第 1 步(UpdateItemRunLog)首次即失败 → 直接返回, 后续 UpdateItemsResult / ArithOperateCount 都不应发生。
-			name: "yield transaction error -> no extra writes",
+			name: "flag on + step1 UpdateItemRunLog fail -> return early, no UpdateItemsResult/no ArithOperateCount",
 			event: &entity.ExptItemEvalEvent{
 				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
 				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
@@ -1977,14 +2024,22 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
 				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
 			) {
-				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.RetryConf{RetryTimes: 3})
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
-				itemRepo.EXPECT().YieldItemRunForRetry(gomock.Any(), int64(1), int64(2), int64(7), int64(3), int32(1), gomock.Any()).Return(false, errors.New("yield transaction failed"))
+				// 第 1 步失败: 首次即返回 error, 恰好调用一次(无回滚二次调用)
+				itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
+					DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+						assert.Equal(t, int32(entity.ItemRunState_Queueing), ufields["status"])
+						assert.Equal(t, int32(2), ufields["retry_times"])
+						return errors.New("update run log fail")
+					}).Times(1)
+				// 不设置 UpdateItemsResult / ArithOperateCount EXPECT() -> 被调用即 fail
 			},
 		},
 		{
 			// yield 第 2 步失败且回滚本身也失败 → 只告警不 panic, HandleEventErr 仍返回 nil。
-			name: "yield rollback error -> no extra writes",
+			name: "flag on + step2 fail + rollback fail -> no panic, HandleEventErr returns nil",
 			event: &entity.ExptItemEvalEvent{
 				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
 				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
@@ -1993,9 +2048,27 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
 				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
 			) {
-				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.RetryConf{RetryTimes: 3})
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
-				itemRepo.EXPECT().YieldItemRunForRetry(gomock.Any(), int64(1), int64(2), int64(7), int64(3), int32(1), gomock.Any()).Return(false, errors.New("yield rollback failed"))
+				gomock.InOrder(
+					// 第 1 步: 成功写 Queueing
+					itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
+						DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+							assert.Equal(t, int32(entity.ItemRunState_Queueing), ufields["status"])
+							return nil
+						}),
+					// 回滚(第二次)也失败: 写 Processing 返回 error, 只告警不阻断
+					itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
+						DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+							assert.Equal(t, int32(entity.ItemRunState_Processing), ufields["status"])
+							return errors.New("rollback run log fail")
+						}),
+				)
+				// 第 2 步失败触发回滚
+				itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), int64(3), int64(1), []int64{7}, gomock.Any()).
+					Return(errors.New("update item result fail"))
+				// 统计未动: 不设置 statsRepo.ArithOperateCount EXPECT()
 			},
 		},
 	}

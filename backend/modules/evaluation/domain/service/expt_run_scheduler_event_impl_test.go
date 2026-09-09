@@ -402,8 +402,6 @@ func TestExptSchedulerImpl_SubmitItemEval(t *testing.T) {
 				},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // Modification: add ctrl parameter
-				f.exptItemResultRepo.EXPECT().ClaimItemRunForSubmit(gomock.Any(), int64(1), int64(2), int64(3), int64(3), int32(0)).Return(true, nil)
-				f.exptItemResultRepo.EXPECT().ClaimItemRunForSubmit(gomock.Any(), int64(1), int64(2), int64(4), int64(3), int32(0)).Return(false, nil)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptItemResultRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).AnyTimes()
@@ -2928,8 +2926,11 @@ func TestExptSchedulerImpl_handleToSubmits_BackfillRetryTimes(t *testing.T) {
 			captured = events
 			return nil
 		})
-	itemRepo.EXPECT().ClaimItemRunForSubmit(gomock.Any(), int64(1), int64(2), int64(10), int64(3), int32(0)).Return(true, nil)
-	itemRepo.EXPECT().ClaimItemRunForSubmit(gomock.Any(), int64(1), int64(2), int64(11), int64(3), int32(3)).Return(true, nil)
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil)
+	turnRepo.EXPECT().UpdateTurnResultsWithItemIDs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	statsRepo.EXPECT().ArithOperateCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	metric.EXPECT().EmitItemExecEval(gomock.Any(), gomock.Any(), gomock.Any())
 

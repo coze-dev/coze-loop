@@ -815,15 +815,11 @@ func TestExptFailRetryExec_ExptStart(t *testing.T) {
 					{ItemID: 2, TurnID: 2, Status: int32(entity.TurnRunState_Terminal), LogID: "turn-log-2"},
 				}, int64(0), nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().ScanTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{}, int64(0), nil).Times(1)
-				f.exptItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(3), int64(1), []int64{1, 2}).Return([]*entity.ExptItemResult{
-					{ItemID: 1, LogID: "item-log-1"},
-					{ItemID: 2, LogID: "item-log-2"},
-				}, nil).Times(1)
-				f.exptItemResultRepo.EXPECT().MGetItemRunLog(gomock.Any(), int64(1), int64(2), []int64{1, 2}, int64(3)).Return(nil, nil).Times(1)
+
 				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{1, 2}, int64(3)).Return(nil, nil).Times(1)
 				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2}, nil).AnyTimes()
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				f.exptItemResultRepo.EXPECT().FillItemRunLogLogIDIfEmpty(gomock.Any(), int64(1), int64(2), int64(3), map[int64]string{1: "item-log-1", 2: "item-log-2"}).Return(nil).Times(1)
+
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptStatsRepo.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptStats{

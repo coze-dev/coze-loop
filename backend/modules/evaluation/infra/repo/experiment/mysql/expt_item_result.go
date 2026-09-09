@@ -7,10 +7,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"sort"
 
 	"gorm.io/gen"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/hints"
 	"gorm.io/plugin/dbresolver"
@@ -44,15 +42,11 @@ type IExptItemResultDAO interface {
 	GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64, opts ...db.Option) (int32, error)
 
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*model.ExptItemResultRunLog, opts ...db.Option) error
-	FillItemRunLogLogIDIfEmpty(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDToLogID map[int64]string, opts ...db.Option) error
 	ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, int64, error)
 	UpdateItemRunLog(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error
 	// UpdateItemRunLogIfNotTerminal 与 UpdateItemRunLog 相同，但 WHERE 追加 status <> Terminal，
 	// 用一条原子 UPDATE 保证「Terminal 是吸收态」，替代「先 SELECT 判定再写」的非原子实现。
 	UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64, opts ...db.Option) error
-	YieldItemRunForRetry(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, errMsg string, opts ...db.Option) (bool, error)
-	ClaimItemRunForSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, opts ...db.Option) (bool, error)
-	RollbackItemRunSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, opts ...db.Option) (bool, error)
 	GetItemRunLog(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, opts ...db.Option) (*model.ExptItemResultRunLog, error)
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error)
 }
@@ -126,9 +120,6 @@ func (dao *exptItemResultDAOImpl) CountItemsByStatus(ctx context.Context, spaceI
 
 func (dao *exptItemResultDAOImpl) GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64, opts ...db.Option) ([]*model.ExptTurnResult, error) {
 	db := dao.provider.NewSession(ctx, opts...)
-	if contexts.CtxWriteDB(ctx) {
-		db = db.Clauses(dbresolver.Write)
-	}
 	q := query.Use(db).ExptTurnResult
 	finds, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.Eq(itemID)).Find()
 	if err != nil {
@@ -190,9 +181,6 @@ func (dao *exptItemResultDAOImpl) GetItemRunLog(ctx context.Context, exptID, exp
 
 func (dao *exptItemResultDAOImpl) MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error) {
 	db := dao.provider.NewSession(ctx, opts...)
-	if contexts.CtxWriteDB(ctx) {
-		db = db.Clauses(dbresolver.Write)
-	}
 	q := query.Use(db).ExptItemResultRunLog
 	found, err := q.WithContext(ctx).
 		Where(q.SpaceID.Eq(spaceID),
@@ -496,37 +484,6 @@ func (dao *exptItemResultDAOImpl) BatchCreateNXRunLogs(ctx context.Context, item
 	return nil
 }
 
-func (dao *exptItemResultDAOImpl) FillItemRunLogLogIDIfEmpty(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDToLogID map[int64]string, opts ...db.Option) error {
-	if len(itemIDToLogID) == 0 {
-		return nil
-	}
-
-	itemIDs := make([]int64, 0, len(itemIDToLogID))
-	for itemID := range itemIDToLogID {
-		itemIDs = append(itemIDs, itemID)
-	}
-	sort.Slice(itemIDs, func(i, j int) bool { return itemIDs[i] < itemIDs[j] })
-
-	caseExpr := "CASE item_id"
-	args := make([]any, 0, len(itemIDs)*2)
-	for _, itemID := range itemIDs {
-		caseExpr += " WHEN ? THEN ?"
-		args = append(args, itemID, itemIDToLogID[itemID])
-	}
-	caseExpr += " ELSE log_id END"
-
-	session := dao.provider.NewSession(ctx, opts...)
-	// UpdateColumn intentionally avoids touching updated_at: retry selection uses run-log
-	// timestamps to choose the latest execution fact, and filling a missing LogID is not a new execution.
-	if err := session.WithContext(ctx).
-		Model(&model.ExptItemResultRunLog{}).
-		Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id IN ? AND log_id = ''", spaceID, exptID, exptRunID, itemIDs).
-		UpdateColumn("log_id", gorm.Expr(caseExpr, args...)).Error; err != nil {
-		return errorx.Wrapf(err, "FillItemRunLogLogIDIfEmpty fail, expt_id: %v, expt_run_id: %v, item_ids: %v", exptID, exptRunID, itemIDs)
-	}
-	return nil
-}
-
 func (dao *exptItemResultDAOImpl) GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64, opts ...db.Option) (int32, error) {
 	db := dao.provider.NewSession(ctx, opts...)
 	q := query.Use(db).ExptItemResult
@@ -547,121 +504,4 @@ func (dao *exptItemResultDAOImpl) GetMaxItemIdxByExptID(ctx context.Context, exp
 		return 0, nil // 无记录
 	}
 	return result.MaxItemIdx.Int32, nil
-}
-
-// YieldItemRunForRetry uses the same item-then-run lock order as result projection.
-func (dao *exptItemResultDAOImpl) YieldItemRunForRetry(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, errMsg string, opts ...db.Option) (bool, error) {
-	if expectedRetryTimes < 0 || expectedRetryTimes >= 1<<31-1 {
-		return false, fmt.Errorf("invalid retry attempt: %d", expectedRetryTimes)
-	}
-	applied := false
-	err := dao.provider.NewSession(ctx, opts...).Clauses(dbresolver.Write).Transaction(func(tx *gorm.DB) error {
-		var item model.ExptItemResult
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id = ? AND expt_id = ? AND item_id = ?", spaceID, exptID, itemID).First(&item).Error; err != nil {
-			return err
-		}
-		if item.ExptRunID != exptRunID || item.Status != int32(entity.ItemRunState_Processing) {
-			return nil
-		}
-		var runLog model.ExptItemResultRunLog
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ?", spaceID, exptID, exptRunID, itemID).First(&runLog).Error; err != nil {
-			return err
-		}
-		if runLog.Status != int32(entity.ItemRunState_Processing) || runLog.RetryTimes != expectedRetryTimes {
-			return nil
-		}
-		result := tx.Model(&model.ExptItemResultRunLog{}).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ? AND status = ? AND retry_times = ?", spaceID, exptID, exptRunID, itemID, int32(entity.ItemRunState_Processing), expectedRetryTimes).UpdateColumns(map[string]any{
-			"status": int32(entity.ItemRunState_Queueing), "retry_times": expectedRetryTimes + 1, "err_msg": errMsg,
-		})
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected != 1 {
-			return fmt.Errorf("retry yield lost processing attempt, expt_id=%d, run_id=%d, item_id=%d", exptID, exptRunID, itemID)
-		}
-		result = tx.Model(&model.ExptItemResult{}).Where("space_id = ? AND expt_id = ? AND item_id = ? AND expt_run_id = ? AND status = ?", spaceID, exptID, itemID, exptRunID, int32(entity.ItemRunState_Processing)).UpdateColumn("status", int32(entity.ItemRunState_Queueing))
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected != 1 {
-			return fmt.Errorf("retry yield lost current item, expt_id=%d, run_id=%d, item_id=%d", exptID, exptRunID, itemID)
-		}
-		result = tx.Model(&model.ExptStats{}).Where("space_id = ? AND expt_id = ?", spaceID, exptID).UpdateColumns(map[string]any{
-			"processing_cnt": gorm.Expr("processing_cnt - ?", 1), "pending_cnt": gorm.Expr("pending_cnt + ?", 1),
-		})
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected != 1 {
-			return fmt.Errorf("retry yield stats missing, expt_id=%d", exptID)
-		}
-		applied = true
-		return nil
-	})
-	return applied && err == nil, err
-}
-
-func (dao *exptItemResultDAOImpl) ClaimItemRunForSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, opts ...db.Option) (bool, error) {
-	return dao.setItemRunSubmission(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes, true, opts...)
-}
-
-func (dao *exptItemResultDAOImpl) RollbackItemRunSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, opts ...db.Option) (bool, error) {
-	return dao.setItemRunSubmission(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes, false, opts...)
-}
-
-// Submission and its compensation lock the same current attempt as final projection.
-func (dao *exptItemResultDAOImpl) setItemRunSubmission(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, claim bool, opts ...db.Option) (bool, error) {
-	from, to := entity.ItemRunState_Queueing, entity.ItemRunState_Processing
-	if !claim {
-		from, to = to, from
-	}
-	applied := false
-	err := dao.provider.NewSession(ctx, opts...).Clauses(dbresolver.Write).Transaction(func(tx *gorm.DB) error {
-		var item model.ExptItemResult
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id = ? AND expt_id = ? AND item_id = ?", spaceID, exptID, itemID).First(&item).Error; err != nil {
-			return err
-		}
-		if item.ExptRunID != exptRunID || item.Status != int32(from) {
-			return nil
-		}
-		var runLog model.ExptItemResultRunLog
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ?", spaceID, exptID, exptRunID, itemID).First(&runLog).Error; err != nil {
-			return err
-		}
-		if runLog.Status != int32(from) || runLog.RetryTimes != expectedRetryTimes || (runLog.ResultState != nil && *runLog.ResultState != int32(entity.ExptItemResultStateDefault)) {
-			return nil
-		}
-		result := tx.Model(&model.ExptItemResultRunLog{}).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ? AND status = ? AND retry_times = ?", spaceID, exptID, exptRunID, itemID, int32(from), expectedRetryTimes).UpdateColumn("status", int32(to))
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected != 1 {
-			return fmt.Errorf("item submission lost attempt, expt_id=%d, run_id=%d, item_id=%d", exptID, exptRunID, itemID)
-		}
-		result = tx.Model(&model.ExptItemResult{}).Where("space_id = ? AND expt_id = ? AND item_id = ? AND expt_run_id = ? AND status = ?", spaceID, exptID, itemID, exptRunID, int32(from)).UpdateColumn("status", int32(to))
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected != 1 {
-			return fmt.Errorf("item submission lost owner, expt_id=%d, run_id=%d, item_id=%d", exptID, exptRunID, itemID)
-		}
-		turnStatus := entity.TurnRunState_Processing
-		if !claim {
-			turnStatus = entity.TurnRunState_Queueing
-		}
-		if err := tx.Model(&model.ExptTurnResult{}).Where("space_id = ? AND expt_id = ? AND item_id = ? AND expt_run_id = ? AND status <> ?", spaceID, exptID, itemID, exptRunID, int32(entity.TurnRunState_Terminal)).UpdateColumn("status", int32(turnStatus)).Error; err != nil {
-			return err
-		}
-		fromColumn, toColumn := ItemRunStateStatsField(from), ItemRunStateStatsField(to)
-		result = tx.Model(&model.ExptStats{}).Where("space_id = ? AND expt_id = ?", spaceID, exptID).UpdateColumns(map[string]any{fromColumn: gorm.Expr(fromColumn+" - ?", 1), toColumn: gorm.Expr(toColumn+" + ?", 1)})
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected != 1 {
-			return fmt.Errorf("item submission stats missing, expt_id=%d", exptID)
-		}
-		applied = true
-		return nil
-	})
-	return applied && err == nil, err
 }

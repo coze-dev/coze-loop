@@ -210,34 +210,6 @@ func (e ExptItemResultRepoImpl) BatchCreateNXRunLogs(ctx context.Context, itemRe
 	return nil
 }
 
-func (e ExptItemResultRepoImpl) FillItemRunLogLogIDIfEmpty(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDToLogID map[int64]string) error {
-	return e.exptItemResultDAO.FillItemRunLogLogIDIfEmpty(ctx, exptID, exptRunID, spaceID, itemIDToLogID)
-}
-
 func (e ExptItemResultRepoImpl) GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64) (int32, error) {
 	return e.exptItemResultDAO.GetMaxItemIdxByExptID(ctx, exptID, spaceID)
-}
-
-func (e ExptItemResultRepoImpl) YieldItemRunForRetry(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, errMsg string) (bool, error) {
-	applied, err := e.exptItemResultDAO.YieldItemRunForRetry(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes, errMsg)
-	if err != nil {
-		return false, errorx.Wrapf(err, "YieldItemRunForRetry fail, expt_id: %v, expt_run_id: %v, item_id: %v", exptID, exptRunID, itemID)
-	}
-	return applied, nil
-}
-
-func (e ExptItemResultRepoImpl) ClaimItemRunForSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32) (bool, error) {
-	applied, err := e.exptItemResultDAO.ClaimItemRunForSubmit(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes)
-	if err != nil {
-		return false, errorx.Wrapf(err, "ClaimItemRunForSubmit fail, expt_id: %v, expt_run_id: %v, item_id: %v", exptID, exptRunID, itemID)
-	}
-	return applied, nil
-}
-
-func (e ExptItemResultRepoImpl) RollbackItemRunSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32) (bool, error) {
-	applied, err := e.exptItemResultDAO.RollbackItemRunSubmit(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes)
-	if err != nil {
-		return false, errorx.Wrapf(err, "RollbackItemRunSubmit fail, expt_id: %v, expt_run_id: %v, item_id: %v", exptID, exptRunID, itemID)
-	}
-	return applied, nil
 }

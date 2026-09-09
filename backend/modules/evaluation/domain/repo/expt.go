@@ -74,7 +74,6 @@ type IExptItemResultRepo interface {
 	GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64) (int32, error)
 
 	BatchCreateNXRunLogs(ctx context.Context, itemRunLogs []*entity.ExptItemResultRunLog) error
-	FillItemRunLogLogIDIfEmpty(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDToLogID map[int64]string) error
 	ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64) ([]*entity.ExptItemResultRunLog, int64, error)
 	UpdateItemRunLog(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error
 	// UpdateItemRunLogIfNotTerminal 与 UpdateItemRunLog 语义一致，但只更新当前 status 不为
@@ -82,10 +81,6 @@ type IExptItemResultRepo interface {
 	// 用于「Terminal 是吸收态」的保证：行级终止后到达的在途执行结果 MUST NOT 回写 status。
 	// 未命中（全部已 Terminal）不返回 error —— 吸收态生效即预期结果。
 	UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error
-	// YieldItemRunForRetry atomically requeues the current processing attempt and adjusts counts; stale or completed attempts return false.
-	YieldItemRunForRetry(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, errMsg string) (bool, error)
-	ClaimItemRunForSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32) (bool, error)
-	RollbackItemRunSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32) (bool, error)
 	GetItemRunLog(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) (*entity.ExptItemResultRunLog, error)
 	MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptItemResultRunLog, error)
 }
@@ -101,8 +96,6 @@ type IExptTurnResultRepo interface {
 	BatchCreateNX(ctx context.Context, turnResults []*entity.ExptTurnResult) error
 	GetItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64) ([]*entity.ExptTurnResult, error)
 	SaveTurnResults(ctx context.Context, turnResults []*entity.ExptTurnResult) error
-	// ApplyItemRunResults atomically replaces the current item projection and evaluator refs, marks the run resulted, and adjusts status counts. Stale or already-resulted runs return false.
-	ApplyItemRunResults(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, turnResults []*entity.ExptTurnResult, refs []*entity.ExptTurnEvaluatorResultRef) (bool, error)
 	ScanTurnResults(ctx context.Context, exptID int64, status []int32, cursor, limit, spaceID int64) ([]*entity.ExptTurnResult, int64, error)
 	UpdateTurnResults(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, ufields map[string]any) error
 	UpdateTurnResultsWithItemIDs(ctx context.Context, exptID int64, itemIDs []int64, spaceID int64, ufields map[string]any) error

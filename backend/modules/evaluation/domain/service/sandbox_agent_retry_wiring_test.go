@@ -93,7 +93,6 @@ func TestNewExptSchedulerSvc_InjectsFailRetryFactoryDependencies(t *testing.T) {
 	)
 
 	assert.Same(t, targetSvc, factory.evalTargetService)
-	assert.Same(t, metric, factory.metric)
 }
 
 // factory.NewSchedulerMode RetryAll 分派: 应把 notifier + resultSvc 注入到 exec。
@@ -145,13 +144,11 @@ func TestFactoryDispatch_FailRetryInjectsDependencies(t *testing.T) {
 	resultSvc := svcmocks.NewMockExptResultService(ctrl)
 	itemRefRepo := mock_repo.NewMockIExptItemRefRepo(ctrl)
 	targetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
-	metric := metricsmocks.NewMockExptMetric(ctrl)
 
 	f := &DefaultSchedulerModeFactory{
 		resultSvc:            resultSvc,
 		exptItemRefRepo:      itemRefRepo,
 		evalTargetService:    targetSvc,
-		metric:               metric,
 		sandboxAgentNotifier: notifier, // factory 有, 但 FailRetry 不接收
 	}
 	mode, err := f.NewSchedulerMode(entity.EvaluationModeFailRetry)
@@ -161,7 +158,6 @@ func TestFactoryDispatch_FailRetryInjectsDependencies(t *testing.T) {
 	assert.Same(t, resultSvc, exec.resultSvc)
 	assert.Same(t, itemRefRepo, exec.exptItemRefRepo)
 	assert.Same(t, targetSvc, exec.evalTargetService)
-	assert.Same(t, metric, exec.metric)
 }
 
 // RetryAll ExptStart 幂等短路: idem.Exist 返回 true 时直接返回 nil, 不触碰 notifier/resultSvc。

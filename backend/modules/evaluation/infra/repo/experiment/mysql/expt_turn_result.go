@@ -5,9 +5,6 @@ package mysql
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/bytedance/gg/gptr"
 
 	"gorm.io/gen"
 	"gorm.io/gorm"
@@ -36,7 +33,6 @@ type ExptTurnResultDAO interface {
 	BatchCreateNX(ctx context.Context, turnResults []*model.ExptTurnResult, opts ...db.Option) error
 	GetItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResult, error)
 	SaveTurnResults(ctx context.Context, turnResults []*model.ExptTurnResult, opts ...db.Option) error
-	ApplyItemRunResults(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, turns []*model.ExptTurnResult, refs []*model.ExptTurnEvaluatorResultRef, opts ...db.Option) (bool, error)
 	ScanTurnResults(ctx context.Context, exptID int64, status []int32, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResult, int64, error)
 	UpdateTurnResults(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, ufields map[string]any, opts ...db.Option) error
 	UpdateTurnResultsWithItemIDs(ctx context.Context, exptID int64, itemIDs []int64, spaceID int64, ufields map[string]any, opts ...db.Option) error
@@ -205,93 +201,6 @@ func (dao *ExptTurnResultDAOImpl) SaveTurnResults(ctx context.Context, turnResul
 		return errorx.Wrapf(err, "ExptTurnResultRepo.SaveTurnRunLogs fail, models: %v", json.Jsonify(turnResults))
 	}
 	return nil
-}
-
-func (dao *ExptTurnResultDAOImpl) ApplyItemRunResults(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, turns []*model.ExptTurnResult, refs []*model.ExptTurnEvaluatorResultRef, opts ...db.Option) (bool, error) {
-	turnIDs := make([]int64, 0, len(turns))
-	turnIDSet := make(map[int64]bool, len(turns))
-	for _, turn := range turns {
-		if turn == nil || turn.ID <= 0 || turn.SpaceID != spaceID || turn.ExptID != exptID || turn.ExptRunID != exptRunID || turn.ItemID != itemID {
-			return false, fmt.Errorf("invalid item projection turn scope, expt_id=%d, run_id=%d, item_id=%d", exptID, exptRunID, itemID)
-		}
-		if !turnIDSet[turn.ID] {
-			turnIDs = append(turnIDs, turn.ID)
-			turnIDSet[turn.ID] = true
-		}
-	}
-	for _, ref := range refs {
-		if ref == nil || ref.SpaceID != spaceID || ref.ExptID != exptID || !turnIDSet[ref.ExptTurnResultID] {
-			return false, fmt.Errorf("invalid item projection evaluator ref scope, expt_id=%d, item_id=%d", exptID, itemID)
-		}
-	}
-
-	applied := false
-	err := dao.provider.NewSession(ctx, opts...).Clauses(dbresolver.Write).Transaction(func(tx *gorm.DB) error {
-		var item model.ExptItemResult
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id = ? AND expt_id = ? AND item_id = ?", spaceID, exptID, itemID).First(&item).Error; err != nil {
-			return err
-		}
-		if item.ExptRunID != exptRunID {
-			return nil
-		}
-		var runLog model.ExptItemResultRunLog
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ?", spaceID, exptID, exptRunID, itemID).First(&runLog).Error; err != nil {
-			return err
-		}
-		if gptr.Indirect(runLog.ResultState) != int32(entity.ExptItemResultStateLogged) {
-			return nil
-		}
-		if len(turnIDs) > 0 {
-			var owned []*model.ExptTurnResult
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id").Where("space_id = ? AND expt_id = ? AND item_id = ? AND id IN ?", spaceID, exptID, itemID, turnIDs).Find(&owned).Error; err != nil {
-				return err
-			}
-			if len(owned) != len(turnIDs) {
-				return fmt.Errorf("item projection turn missing, expt_id=%d, item_id=%d", exptID, itemID)
-			}
-			if err := tx.Unscoped().Where("space_id = ? AND expt_id = ? AND expt_turn_result_id IN ?", spaceID, exptID, turnIDs).Delete(&model.ExptTurnEvaluatorResultRef{}).Error; err != nil {
-				return err
-			}
-		}
-		for _, turn := range turns {
-			if err := tx.Model(&model.ExptTurnResult{}).Where("space_id = ? AND expt_id = ? AND item_id = ? AND id = ?", spaceID, exptID, itemID, turn.ID).Updates(map[string]any{
-				"status": turn.Status, "target_result_id": turn.TargetResultID, "expt_run_id": exptRunID,
-				"weighted_score": turn.WeightedScore, "err_msg": turn.ErrMsg, "log_id": turn.LogID,
-			}).Error; err != nil {
-				return err
-			}
-		}
-		if len(refs) > 0 {
-			if err := tx.CreateInBatches(refs, 50).Error; err != nil {
-				return err
-			}
-		}
-		if err := tx.Model(&model.ExptItemResult{}).Where("space_id = ? AND expt_id = ? AND item_id = ? AND expt_run_id = ?", spaceID, exptID, itemID, exptRunID).Updates(map[string]any{
-			"status": runLog.Status, "log_id": runLog.LogID, "err_msg": runLog.ErrMsg,
-		}).Error; err != nil {
-			return err
-		}
-		if err := tx.Model(&model.ExptItemResultRunLog{}).Where("space_id = ? AND expt_id = ? AND expt_run_id = ? AND item_id = ?", spaceID, exptID, exptRunID, itemID).Update("result_state", int32(entity.ExptItemResultStateResulted)).Error; err != nil {
-			return err
-		}
-		counts := make(map[string]any, 2)
-		if item.Status != runLog.Status {
-			if column := ItemRunStateStatsField(entity.ItemRunState(item.Status)); column != "" {
-				counts[column] = gorm.Expr(column+" - ?", 1)
-			}
-			if column := ItemRunStateStatsField(entity.ItemRunState(runLog.Status)); column != "" {
-				counts[column] = gorm.Expr(column+" + ?", 1)
-			}
-		}
-		if len(counts) > 0 {
-			if err := tx.Model(&model.ExptStats{}).Where("space_id = ? AND expt_id = ?", spaceID, exptID).Updates(counts).Error; err != nil {
-				return err
-			}
-		}
-		applied = true
-		return nil
-	})
-	return applied && err == nil, err
 }
 
 func (dao *ExptTurnResultDAOImpl) UpdateTurnRunLogWithItemIDs(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, ufields map[string]any, opts ...db.Option) error {
