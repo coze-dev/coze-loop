@@ -22,6 +22,19 @@ func TestManageImplReadsParamSchemaDefaultVal(t *testing.T) {
       param_schemas:
         - name: temperature
           default_val: "0.7"
+  - id: 2
+    param_config:
+      param_schemas:
+        - name: temperature
+          default_value: "0.8"
+  - id: 3
+    param_config:
+      param_schemas:
+        - name: response_format
+          properties:
+            - name: type
+              default_value: legacy
+              default_val: canonical
 `
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "model_config.yaml"), []byte(config), 0o600))
 
@@ -30,7 +43,15 @@ func TestManageImplReadsParamSchemaDefaultVal(t *testing.T) {
 	))
 	require.NoError(t, err)
 
-	model, err := manage.GetModel(context.Background(), 1)
+	shippedConfigModel, err := manage.GetModel(context.Background(), 1)
 	require.NoError(t, err)
-	require.Equal(t, "0.7", model.ParamConfig.ParamSchemas[0].DefaultValue)
+	require.Equal(t, "0.7", shippedConfigModel.ParamConfig.ParamSchemas[0].DefaultValue)
+
+	legacyConfigModel, err := manage.GetModel(context.Background(), 2)
+	require.NoError(t, err)
+	require.Equal(t, "0.8", legacyConfigModel.ParamConfig.ParamSchemas[0].DefaultValue)
+
+	bothKeysModel, err := manage.GetModel(context.Background(), 3)
+	require.NoError(t, err)
+	require.Equal(t, "canonical", bothKeysModel.ParamConfig.ParamSchemas[0].Properties[0].DefaultValue)
 }

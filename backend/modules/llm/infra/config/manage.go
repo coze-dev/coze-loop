@@ -18,6 +18,19 @@ type ManageImpl struct {
 	loader conf.IConfigLoader
 }
 
+type modelConfigAliases struct {
+	ParamConfig *paramConfigAliases `mapstructure:"param_config"`
+}
+
+type paramConfigAliases struct {
+	ParamSchemas []*paramSchemaAliases `mapstructure:"param_schemas"`
+}
+
+type paramSchemaAliases struct {
+	DefaultVal *string               `mapstructure:"default_val"`
+	Properties []*paramSchemaAliases `mapstructure:"properties"`
+}
+
 func NewManage(ctx context.Context, factory conf.IConfigLoaderFactory) (llm_conf.IConfigManage, error) {
 	loader, err := factory.NewConfigLoader("model_config.yaml")
 	if err != nil {
@@ -68,5 +81,31 @@ func (m *ManageImpl) readConfig(ctx context.Context) ([]*entity.Model, error) {
 	if err := m.loader.UnmarshalKey(ctx, "models", &models); err != nil {
 		return nil, err
 	}
+
+	// default_value was the original decoder key, while every shipped model
+	// config uses default_val. Read the shipped spelling separately so both
+	// existing custom configs and the bundled configs remain supported.
+	var aliases []*modelConfigAliases
+	if err := m.loader.UnmarshalKey(ctx, "models", &aliases); err != nil {
+		return nil, err
+	}
+	for i, alias := range aliases {
+		if i >= len(models) || alias == nil || alias.ParamConfig == nil || models[i] == nil || models[i].ParamConfig == nil {
+			continue
+		}
+		applyParamSchemaAliases(models[i].ParamConfig.ParamSchemas, alias.ParamConfig.ParamSchemas)
+	}
 	return models, nil
+}
+
+func applyParamSchemaAliases(schemas []*entity.ParamSchema, aliases []*paramSchemaAliases) {
+	for i, alias := range aliases {
+		if i >= len(schemas) || alias == nil || schemas[i] == nil {
+			continue
+		}
+		if alias.DefaultVal != nil {
+			schemas[i].DefaultValue = *alias.DefaultVal
+		}
+		applyParamSchemaAliases(schemas[i].Properties, alias.Properties)
+	}
 }
