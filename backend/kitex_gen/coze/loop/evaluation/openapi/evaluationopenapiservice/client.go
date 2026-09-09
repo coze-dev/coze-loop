@@ -44,6 +44,7 @@ type Client interface {
 	GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentAggrResultOApiResponse, err error)
 	RetryExperimentOApi(ctx context.Context, req *openapi.RetryExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.RetryExperimentOApiResponse, err error)
 	KillExperimentOApi(ctx context.Context, req *openapi.KillExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.KillExperimentOApiResponse, err error)
+	TerminateExperimentItemsOApi(ctx context.Context, req *openapi.TerminateExperimentItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.TerminateExperimentItemsOApiResponse, err error)
 	ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ExportExperimentResultOApiResponse, err error)
 	GetExperimentResultExportRecordOApi(ctx context.Context, req *openapi.GetExperimentResultExportRecordOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentResultExportRecordOApiResponse, err error)
 	ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluatorsOApiResponse, err error)
@@ -262,6 +263,11 @@ func (p *kEvaluationOpenAPIServiceClient) RetryExperimentOApi(ctx context.Contex
 func (p *kEvaluationOpenAPIServiceClient) KillExperimentOApi(ctx context.Context, req *openapi.KillExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.KillExperimentOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.KillExperimentOApi(ctx, req)
+}
+
+func (p *kEvaluationOpenAPIServiceClient) TerminateExperimentItemsOApi(ctx context.Context, req *openapi.TerminateExperimentItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.TerminateExperimentItemsOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.TerminateExperimentItemsOApi(ctx, req)
 }
 
 func (p *kEvaluationOpenAPIServiceClient) ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ExportExperimentResultOApiResponse, err error) {

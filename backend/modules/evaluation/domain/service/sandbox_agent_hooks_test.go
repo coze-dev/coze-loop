@@ -28,6 +28,11 @@ func buildFailPathExecutor(t *testing.T, ctrl *gomock.Controller, notifier ISand
 	configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 		AnyTimes().
 		Return(&entity.RetryConf{})
+	// CompleteItemRun 写 status 前会读一次当前 run log 做 Terminal 覆盖保护; 此处固定返回非 Terminal，
+	// 让这些用例仍走原有的 Fail / Success 写入分支。
+	itemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().
+		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 	exec := &ExptItemEvalCtxExecutor{
 		ItemResultRepo:       itemResultRepo,
 		Configer:             configer,
@@ -58,6 +63,10 @@ func TestCompleteItemRun_FailBranch_InvokesNotifier(t *testing.T) {
 	exec, itemResultRepo, _ := buildFailPathExecutor(t, ctrl, notifier)
 
 	failErr := errors.New("target timeout")
+	// CompleteItemRun 拆两条写: 条件写 status/err_msg + 无条件补 result_state（Terminal 吸收态）
+	itemResultRepo.EXPECT().
+		UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).
+		Return(nil)
 	itemResultRepo.EXPECT().
 		UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).
 		Return(nil)
@@ -81,6 +90,7 @@ func TestCompleteItemRun_SuccessBranch_SkipsNotifier(t *testing.T) {
 	notifier := servicemocks.NewMockISandboxAgentNotifier(ctrl)
 	exec, itemResultRepo, _ := buildFailPathExecutor(t, ctrl, notifier)
 
+	itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	itemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	// notifier.EXPECT() 不注册, 表示"未被调用"。
 
@@ -97,6 +107,7 @@ func TestCompleteItemRun_FailBranch_NilNotifier(t *testing.T) {
 	defer ctrl.Finish()
 
 	exec, itemResultRepo, _ := buildFailPathExecutor(t, ctrl, nil)
+	itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	itemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	eiec := &entity.ExptItemEvalCtx{
@@ -114,6 +125,7 @@ func TestCompleteItemRun_FailBranch_NotifierErrIgnored(t *testing.T) {
 	notifier := servicemocks.NewMockISandboxAgentNotifier(ctrl)
 	exec, itemResultRepo, _ := buildFailPathExecutor(t, ctrl, notifier)
 
+	itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	itemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	notifier.EXPECT().
 		NotifyItemFail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -243,6 +255,7 @@ func TestCompleteItemRun_FailBranch_NotifierReceivesExpectedArgs(t *testing.T) {
 	expt := sandboxExpt()
 	failErr := errors.New("failed reason")
 
+	itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(11), int64(22), []int64{33}, gomock.Any(), int64(44)).Return(nil)
 	itemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(11), int64(22), []int64{33}, gomock.Any(), int64(44)).Return(nil)
 	notifier.EXPECT().
 		NotifyItemFail(gomock.Any(), gomock.AssignableToTypeOf(&entity.Experiment{}), int64(33), failErr).

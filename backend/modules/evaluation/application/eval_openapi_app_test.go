@@ -3355,6 +3355,11 @@ type fakeExperimentApp struct {
 	killErr     error
 	lastKillReq *exptpb.KillExperimentRequest
 
+	terminateItemsResp *exptpb.TerminateExperimentItemsResponse
+	terminateItemsErr  error
+	lastTerminateReq   *exptpb.TerminateExperimentItemsRequest
+	terminateCalls     int
+
 	exportResp    *exptpb.ExportExptResultResponse
 	exportErr     error
 	lastExportReq *exptpb.ExportExptResultRequest
@@ -3400,6 +3405,15 @@ func (f *fakeExperimentApp) KillExperiment(_ context.Context, req *exptpb.KillEx
 		return f.killResp, f.killErr
 	}
 	return &exptpb.KillExperimentResponse{}, nil
+}
+
+func (f *fakeExperimentApp) TerminateExperimentItems(_ context.Context, req *exptpb.TerminateExperimentItemsRequest) (*exptpb.TerminateExperimentItemsResponse, error) {
+	f.lastTerminateReq = req
+	f.terminateCalls++
+	if f.terminateItemsResp != nil || f.terminateItemsErr != nil {
+		return f.terminateItemsResp, f.terminateItemsErr
+	}
+	return &exptpb.TerminateExperimentItemsResponse{}, nil
 }
 
 func (f *fakeExperimentApp) ExportExptResult_(_ context.Context, req *exptpb.ExportExptResultRequest) (*exptpb.ExportExptResultResponse, error) {
@@ -8514,6 +8528,149 @@ func TestEvalOpenAPIApplication_KillExperimentOApi(t *testing.T) {
 					assert.Equal(t, workspaceID, fakeApp.lastKillReq.GetWorkspaceID())
 					assert.Equal(t, experimentID, fakeApp.lastKillReq.GetExptID())
 				}
+			}
+
+			if req != nil {
+				assert.True(t, metric.called)
+				assert.Equal(t, req.GetWorkspaceID(), metric.spaceID)
+			}
+		})
+	}
+}
+
+// TestEvalOpenAPIApplication_TerminateExperimentItemsOApi 开放面门面（tasks 6.10）：
+// 参数校验返回 CommonInvalidParamCode 且不鉴权；鉴权失败**不委派**内部面；成功时按原样透传
+// workspace_id / experiment_id / item_ids。⛔ 开放面无 maintainer 豁免，鉴权必须显式发生。
+func TestEvalOpenAPIApplication_TerminateExperimentItemsOApi(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(92001)
+	experimentID := int64(92002)
+	itemIDs := []int64{1, 2, 3}
+
+	buildBaseReq := func() *openapi.TerminateExperimentItemsOApiRequest {
+		return &openapi.TerminateExperimentItemsOApiRequest{
+			WorkspaceID:  gptr.Of(workspaceID),
+			ExperimentID: gptr.Of(experimentID),
+			ItemIds:      itemIDs,
+		}
+	}
+
+	tests := []struct {
+		name          string
+		buildReq      func() *openapi.TerminateExperimentItemsOApiRequest
+		setup         func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp)
+		wantErr       int32
+		wantDelegated bool
+	}{
+		{
+			name:     "nil request",
+			buildReq: func() *openapi.TerminateExperimentItemsOApiRequest { return nil },
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "missing experiment_id",
+			buildReq: func() *openapi.TerminateExperimentItemsOApiRequest {
+				req := buildBaseReq()
+				req.ExperimentID = gptr.Of(int64(0))
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "missing workspace_id",
+			buildReq: func() *openapi.TerminateExperimentItemsOApiRequest {
+				req := buildBaseReq()
+				req.WorkspaceID = gptr.Of(int64(0))
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name:     "auth failed does not delegate to inner app",
+			buildReq: buildBaseReq,
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name:     "inner app error propagates",
+			buildReq: buildBaseReq,
+			setup: func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				fakeApp.terminateItemsErr = errors.New("terminate failed")
+			},
+			wantErr:       -1,
+			wantDelegated: true,
+		},
+		{
+			name:     "success",
+			buildReq: buildBaseReq,
+			setup: func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				fakeApp.terminateItemsResp = &exptpb.TerminateExperimentItemsResponse{}
+			},
+			wantDelegated: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			metric := &fakeOpenAPIMetric{}
+			fakeApp := &fakeExperimentApp{}
+
+			app := &EvalOpenAPIApplication{
+				auth:          auth,
+				experimentApp: fakeApp,
+				metric:        metric,
+			}
+
+			req := tc.buildReq()
+			if tc.setup != nil {
+				tc.setup(auth, fakeApp)
+			}
+
+			resp, err := app.TerminateExperimentItemsOApi(context.Background(), req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+
+			if tc.wantDelegated {
+				if assert.NotNil(t, fakeApp.lastTerminateReq) {
+					assert.Equal(t, workspaceID, fakeApp.lastTerminateReq.GetWorkspaceID())
+					assert.Equal(t, experimentID, fakeApp.lastTerminateReq.GetExptID())
+					assert.Equal(t, itemIDs, fakeApp.lastTerminateReq.GetItemIds())
+				}
+			} else {
+				assert.Zero(t, fakeApp.terminateCalls, "参数非法/鉴权失败时 MUST NOT 委派内部面")
 			}
 
 			if req != nil {

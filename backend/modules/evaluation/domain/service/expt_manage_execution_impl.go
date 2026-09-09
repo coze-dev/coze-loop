@@ -608,7 +608,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 
 	status := opt.Status
 	if !entity.IsExptFinished(status) {
-		if stats.FailItemCnt > 0 || stats.TerminatedItemCnt > 0 || stats.ProcessingItemCnt > 0 || stats.PendingItemCnt > 0 {
+		// ⚠️ 判据中**不含** stats.TerminatedItemCnt（design D5）：terminated 是用户主动放弃的行，不是跑失败。
+		// 保留它会让「用户终止了 2 行、其余全绿」的实验渲染成红色 Failed 并触发失败侧 webhook。
+		// 实验级 Kill 不受影响：它走 opt.Status=Terminated，IsExptFinished 为真、根本不进这个分支。
+		if stats.FailItemCnt > 0 || stats.ProcessingItemCnt > 0 || stats.PendingItemCnt > 0 {
 			status = entity.ExptStatus_Failed
 		} else {
 			status = entity.ExptStatus_Success
@@ -1124,6 +1127,200 @@ func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, i
 	}
 
 	return nil
+}
+
+// TerminateItems 行级终止：把 itemIDs 中仍未进入终态的行置为 Terminal，**实验自身状态一律不碰**。
+//
+// 与 terminateItemTurns（实验被整体 Kill 时的收口路径）的关键差异，踩错会炸掉整个实验：
+//   - **不预写主表 status**（design D2）：主表 expt_item_result 只补 err_msg。本方法跑在「实验仍运行中」
+//     的路径上，后面还有调度 tick 的 RecordItemRunLogs 接手，其 statsCntOp 会读当前 items_result.Status
+//     做「-1」；若这里预写 status=Terminal，Processing 的减项就丢了，实验 stats 的 processing_cnt
+//     永远归不了零、实验永远不完成。status 统一由 RecordItemRunLogs 从 item run log 写入。
+//     terminateItemTurns 之所以能写主表 status，是因为它跑在 CompleteExpt 的终态收口路径上、后面没有
+//     RecordItemRunLogs 再算 stats。
+//   - **必须成对写 turn run log**（design D3）：只改 item run log 不改 turn run log，RecordItemRunLogs
+//     会报 "found null turn log result"，把「单行终止」放大成「整实验 Failed」。
+//
+// ⚠️ 写序刻意是「turn run log 先、item run log 后」（原为反序，见下）。这两步不在同一事务里
+// （repo 层无跨表事务），中途失败必然留下中间态，区别只在于留下的是哪一种：
+//
+//	反序（item 先）：item=Terminal+Logged 而 turn run log 缺失 —— 这是**致命且不可自愈**的中间态。
+//	    致命：该行立刻被 scanIncompleteAndComplete 按 result_state=Logged 扫成 complete →
+//	          RecordItemRunLogs 命中 "found null turn log result" → backoff 5min 仍失败 →
+//	          ExptSchedulerImpl.HandleEventErr 把**整个实验**判 Failed。
+//	    不可自愈：重放时 ① 的幂等过滤读到该行已 Terminal（IsItemRunFinished 为真）直接跳过，
+//	          targetIDs 为空 return nil，②之后的步骤永远补不上（沙箱也一并泄漏）。
+//	正序（turn 先）：turn run log=Terminal 而 item run log 仍是 Queueing/Processing —— **良性且可自愈**。
+//	    良性：item 未 Logged 就不会被扫成 complete，RecordItemRunLogs 根本不会被触发，实验不受影响。
+//	    可自愈：重放时该行仍非终态、必然重新进入 targetIDs，③ 幂等重写 + ② 补齐，成对语义最终成立。
+//
+// 另外 ① 的幂等过滤对「已 Terminal 但本 run 没有任何 turn run log」的行**不跳过**，用于兜底修复
+// 历史遗留 / 极端并发下产生的不成对状态，让重放真正能补齐（见 partitionTerminateTargets）。
+//
+// 幂等：入参中已 Success / Fail、以及已收敛的 Terminal 行被静默跳过；全部已终态时不产生任何写操作并返回 nil，
+// 因此调用方（前端重试 / 重复点击）可安全重放。
+// 沙箱销毁与 CK 读侧刷新为 best-effort，失败仅记日志、不影响返回值。
+func (e *ExptMangerImpl) TerminateItems(ctx context.Context, exptID, exptRunID, spaceID int64, itemIDs []int64, session *entity.Session) error {
+	if len(itemIDs) == 0 {
+		logs.CtxInfo(ctx, "[ExptItemTerminate] skip with empty item_ids, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
+		return nil
+	}
+
+	logs.CtxInfo(ctx, "[ExptItemTerminate] start, expt_id: %v, expt_run_id: %v, space_id: %v, req_item_ids: %v", exptID, exptRunID, spaceID, itemIDs)
+
+	// ① 幂等过滤：只终止仍未进入终态的行（外加「Terminal 但 turn run log 缺失」的待补齐行）
+	runLogs, err := e.itemResultRepo.MGetItemRunLog(ctx, exptID, exptRunID, itemIDs, spaceID)
+	if err != nil {
+		return err
+	}
+
+	targetIDs, skippedIDs, err := e.partitionTerminateTargets(ctx, exptID, exptRunID, spaceID, runLogs)
+	if err != nil {
+		return err
+	}
+
+	logs.CtxInfo(ctx, "[ExptItemTerminate] idempotent filter done, expt_id: %v, expt_run_id: %v, targets: %v, skipped_finished: %v", exptID, exptRunID, targetIDs, skippedIDs)
+
+	if len(targetIDs) == 0 {
+		return nil
+	}
+
+	// 主表 / run log 的 err_msg 都写这条业务错误，供 API 层（ItemSystemInfo.Error）向用户展示终止原因
+	errBytes := []byte(errno.SerializeErr(errno.NewItemManuallyTerminatedErr()))
+
+	// ② turn run log 先落 Terminal（与 ③ 成对，design D3）。
+	// ⚠️ 必须排在 item run log 之前，理由见方法头注释「写序」段：反过来会留下不可自愈的致命中间态。
+	if err := e.turnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(ctx, spaceID, exptID, exptRunID, targetIDs, entity.TurnRunState_Terminal); err != nil {
+		return err
+	}
+
+	// ③ item run log 落 Terminal + Logged，让调度 tick 把它扫进 completeItems。
+	// 走到这里 ② 已成功，「成对」语义成立后才允许该行被扫成 complete。
+	if err := e.itemResultRepo.UpdateItemRunLog(ctx, exptID, exptRunID, targetIDs, map[string]any{
+		"status":       int32(entity.ItemRunState_Terminal),
+		"result_state": int32(entity.ExptItemResultStateLogged),
+		"err_msg":      errBytes,
+	}, spaceID); err != nil {
+		return err
+	}
+
+	// ④ 主表**只补 err_msg**，⛔ 不写 status（design D2，见方法头注释）
+	if err := e.itemResultRepo.UpdateItemsResult(ctx, spaceID, exptID, targetIDs, map[string]any{
+		"err_msg": errBytes,
+	}); err != nil {
+		return err
+	}
+
+	// ⑤ 读侧 turn result 置 Terminal，避免「item 已终止、turn 仍显示执行中」
+	itemTurnIDs, err := e.listItemTurnIDs(ctx, spaceID, exptID, targetIDs)
+	if err != nil {
+		return err
+	}
+	if len(itemTurnIDs) > 0 {
+		if err := e.turnResultRepo.UpdateTurnResults(ctx, exptID, itemTurnIDs, spaceID, map[string]any{
+			"status": int32(entity.TurnRunState_Terminal),
+		}); err != nil {
+			return err
+		}
+	}
+
+	// ⑥ 刷 CK 读侧过滤表：best-effort，失败不阻断（下次调度 tick 的 UpsertExptTurnResultFilter 会补）
+	if err := e.exptResultService.UpsertExptTurnResultFilter(ctx, spaceID, exptID, targetIDs); err != nil {
+		logs.CtxWarn(ctx, "[ExptItemTerminate] UpsertExptTurnResultFilter fail, expt_id: %v, item_ids: %v, err: %v", exptID, targetIDs, err)
+	}
+
+	// ⑦ 释放该行占用的异步资源（沙箱）：best-effort，失败仅记日志。
+	// 内部对非 SandboxAgent 的 record 天然 no-op，且按 record id 去重，重复调用无副作用。
+	got, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptItemTerminate] GetByID fail, skip sandbox destroy, expt_id: %v, err: %v", exptID, err)
+	} else {
+		e.terminateSandboxExecutesForCancelledItems(ctx, spaceID, got.TargetSpaceID, exptID, &exptRunID, targetIDs)
+	}
+
+	logs.CtxInfo(ctx, "[ExptItemTerminate] done, expt_id: %v, expt_run_id: %v, terminated_item_ids: %v", exptID, exptRunID, targetIDs)
+
+	return nil
+}
+
+// partitionTerminateTargets 把入参 run log 拆成「需要终止/补齐的行」与「可静默跳过的行」。
+//
+// 常规判据：非终态（Queueing / Processing）→ 目标行。
+//
+// ★ 自愈判据（本方法存在的理由）：已 Terminal 的行**不能一律跳过**。TerminateItems 的 ②③ 不在同一
+// 事务里，若上一次调用在 ② (turn run log) 成功、③ (item run log) 之后的某步失败，或历史遗留数据里
+// 存在「item 已 Terminal 但本 run 没有任何 turn run log」的不成对状态，一律跳过就意味着这些行永远
+// 补不齐 turn run log —— 该行一旦被扫成 complete，RecordItemRunLogs 就报 "found null turn log result"，
+// 把单行问题放大成整实验 Failed，且用户怎么重试都没用。故对 Terminal 行额外查一次 turn run log：
+// 缺失才纳入目标行（后续 ②~⑦ 全部幂等，重复执行只是覆盖同值），已存在则照常跳过。
+//
+// Success / Fail 行始终跳过：它们是正常跑完的行，不属于终止语义，不需要补齐。
+func (e *ExptMangerImpl) partitionTerminateTargets(ctx context.Context, exptID, exptRunID, spaceID int64, runLogs []*entity.ExptItemResultRunLog) (targetIDs, skippedIDs []int64, err error) {
+	targetIDs = make([]int64, 0, len(runLogs))
+	skippedIDs = make([]int64, 0, len(runLogs))
+
+	terminatedIDs := make([]int64, 0, len(runLogs))
+	for _, rl := range runLogs {
+		if rl == nil {
+			continue
+		}
+		state := entity.ItemRunState(rl.Status)
+		if state == entity.ItemRunState_Terminal {
+			terminatedIDs = append(terminatedIDs, rl.ItemID)
+			continue
+		}
+		if entity.IsItemRunFinished(state) {
+			skippedIDs = append(skippedIDs, rl.ItemID)
+			continue
+		}
+		targetIDs = append(targetIDs, rl.ItemID)
+	}
+
+	if len(terminatedIDs) == 0 {
+		return targetIDs, skippedIDs, nil
+	}
+
+	// 已 Terminal 的行：只有 turn run log 缺失（上一次调用没走完）才需要重放补齐。
+	turnRunLogs, err := e.turnResultRepo.MGetItemTurnRunLogs(ctx, exptID, exptRunID, terminatedIDs, spaceID)
+	if err != nil {
+		return nil, nil, err
+	}
+	itemsWithTurnRunLog := make(map[int64]struct{}, len(turnRunLogs))
+	for _, trl := range turnRunLogs {
+		if trl == nil {
+			continue
+		}
+		itemsWithTurnRunLog[trl.ItemID] = struct{}{}
+	}
+	for _, itemID := range terminatedIDs {
+		if _, ok := itemsWithTurnRunLog[itemID]; ok {
+			skippedIDs = append(skippedIDs, itemID)
+			continue
+		}
+		logs.CtxWarn(ctx, "[ExptItemTerminate] found terminal item without turn run log, replay to repair, expt_id: %v, expt_run_id: %v, item_id: %v", exptID, exptRunID, itemID)
+		targetIDs = append(targetIDs, itemID)
+	}
+
+	return targetIDs, skippedIDs, nil
+}
+
+// listItemTurnIDs 取这些 item 名下全部 turn 的 (item_id, turn_id)，供 UpdateTurnResults 精确更新。
+// 取全部而非只取未完成 turn 是刻意的：② 的 CreateOrUpdateItemsTurnRunLogStatus 会把这些 item 的所有
+// turn run log 一起置 Terminal，后续 RecordItemRunLogs 又会把 run log status 回抄进 turn result，
+// 这里若只更新部分 turn 反而与最终态不一致。
+func (e *ExptMangerImpl) listItemTurnIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ItemTurnID, error) {
+	turnResults, err := e.turnResultRepo.BatchGet(ctx, spaceID, exptID, itemIDs)
+	if err != nil {
+		return nil, err
+	}
+	itemTurnIDs := make([]*entity.ItemTurnID, 0, len(turnResults))
+	for _, tr := range turnResults {
+		if tr == nil {
+			continue
+		}
+		itemTurnIDs = append(itemTurnIDs, &entity.ItemTurnID{ItemID: tr.ItemID, TurnID: tr.TurnID})
+	}
+	return itemTurnIDs, nil
 }
 
 // terminateSandboxExecutesForCancelledItems 在实验到达终态 (人工终止 Terminated / 失败 Failed 等)

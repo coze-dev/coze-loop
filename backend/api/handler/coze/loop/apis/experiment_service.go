@@ -354,3 +354,9 @@ func GetExperimentIDsByGroup(ctx context.Context, c *app.RequestContext) {
 func UpdateExptRunConf(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localExptSvc.UpdateExptRunConf)
 }
+
+// TerminateExperimentItems .
+// @router /api/evaluation/v1/experiments/:expt_id/terminate_items [POST]
+func TerminateExperimentItems(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.TerminateExperimentItems)
+}

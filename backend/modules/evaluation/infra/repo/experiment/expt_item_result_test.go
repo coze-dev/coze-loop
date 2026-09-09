@@ -648,3 +648,35 @@ func TestExptItemResultRepoImpl_GetMaxItemIdxByExptID(t *testing.T) {
 		})
 	}
 }
+
+// TestExptItemResultRepoImpl_UpdateItemRunLogIfNotTerminal 钉住条件更新的 repo 层契约（对应 P1 #4）：
+// 「Terminal 是吸收态」由 DAO 层的 WHERE status <> Terminal 原子保证，repo 层只做透传 + 错误包装。
+// 一旦有人把实现改回「先 SELECT 判定再无条件 UpdateItemRunLog」，这里的 DAO 期望就会落空。
+func TestExptItemResultRepoImpl_UpdateItemRunLogIfNotTerminal(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockDAO := mocks.NewMockIExptItemResultDAO(ctrl)
+	repo := &ExptItemResultRepoImpl{exptItemResultDAO: mockDAO}
+
+	t.Run("delegates_to_conditional_dao_method", func(t *testing.T) {
+		ufields := map[string]any{
+			"status":  int32(entity.ItemRunState_Success),
+			"err_msg": "boom",
+		}
+		mockDAO.EXPECT().
+			UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{3}, ufields, int64(4)).
+			Return(nil)
+		// ★ 不得走无条件的 UpdateItemRunLog —— 未注册该期望，走了就是 Unexpected call
+		assert.NoError(t, repo.UpdateItemRunLogIfNotTerminal(context.Background(), 1, 2, []int64{3}, ufields, 4))
+	})
+
+	t.Run("dao_err_propagates", func(t *testing.T) {
+		mockDAO.EXPECT().
+			UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("dao error"))
+		err := repo.UpdateItemRunLogIfNotTerminal(context.Background(), 1, 2, []int64{3}, map[string]any{}, 4)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "dao error")
+	})
+}

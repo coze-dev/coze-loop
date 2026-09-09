@@ -189,6 +189,17 @@ func TestHandleEventErr_ReleasesQuotaOnUnretriableErr(t *testing.T) {
 	mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 	mockMetric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+	// ⚠️ 断言的是 UpdateItemRunLogIfNotTerminal 而非 UpdateItemRunLog：
+	// 行级终止把 Terminal 做成吸收态后，completeItemRunOnUnretriableErr 的落 Fail 改成了
+	// 「WHERE status <> Terminal」的原子条件写（见 expt_run_item_event_impl.go 注释）。
+	// 若这里仍断言旧方法，本用例会因 mock 未预期而失败——这是合并 main 时的语义冲突，git 检测不到。
+	// 行级终止的 turn 侧闸门会查一次 run log（isItemTerminated，强制读主库）；
+	// 本用例场景是「非终止行的不可重试失败」，故返回 nil 让闸门放行。
+	mockItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil).AnyTimes()
+	// 落 Fail 拆成两次写：① 条件写 status/err_msg（WHERE status <> Terminal）
+	//                    ② 无条件补 result_state=Logged（否则调度侧收不了口）
+	mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	mockTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 

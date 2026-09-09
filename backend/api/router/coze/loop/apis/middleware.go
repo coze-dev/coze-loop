@@ -2489,3 +2489,13 @@ func _getexperimentidsbygroupoapiMw(handler *apis.APIHandler) []app.HandlerFunc 
 	// your code...
 	return nil
 }
+
+func _terminateexperimentitemsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _terminateexperimentitemsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
