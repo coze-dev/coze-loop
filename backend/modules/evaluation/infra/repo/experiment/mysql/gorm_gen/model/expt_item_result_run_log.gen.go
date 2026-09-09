@@ -27,7 +27,8 @@ type ExptItemResultRunLog struct {
 	DeletedAt             gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                                                                                                                             // 删除时间
 	LogID                 string         `gorm:"column:log_id;type:varchar(128);not null;comment:日志 id" json:"log_id"`                                                                                                                                        // 日志 id
 	ResultState           *int32         `gorm:"column:result_state;type:int(11);index:idx_expt_run_result_state,priority:4;comment:回写结果表状态" json:"result_state"`                                                                                             // 回写结果表状态
-	QuotaReservationState int32          `gorm:"column:quota_reservation_state;type:tinyint(3) unsigned;not null;comment:中心调度额度预占投影: 0=none, 1=reserved" json:"quota_reservation_state"`                                                                      // 中心调度额度预占投影
+	RetryTimes            int32          `gorm:"column:retry_times;type:int(11) unsigned;not null;comment:本轮实验运行中该 item 已被系统自动重试的次数; 0=未重试; 仅内部调度降权用, 不透出" json:"retry_times"`                                                                                // 本轮实验运行中该 item 已被系统自动重试的次数; 0=未重试; 仅内部调度降权用, 不透出
+	QuotaReservationState int32          `gorm:"column:quota_reservation_state;type:tinyint(4) unsigned;not null;comment:中心调度额度预占投影: 0=none, 1=reserved; Redis reservation 是账本真值, 本列仅供调度算准并发占用" json:"quota_reservation_state"`                               // 中心调度额度预占投影: 0=none, 1=reserved; Redis reservation 是账本真值, 本列仅供调度算准并发占用
 }
 
 // TableName ExptItemResultRunLog's table name

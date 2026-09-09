@@ -2419,7 +2419,8 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 					EXPECT().
 					PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
 					Do(func(_ context.Context, event *entity.ExptScheduleEvent, _ *time.Duration) {
-						assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, event.Ext)
+						// 让位降权开关(默认关)会在发起处写入 ext, 与原有 key 并存
+						assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2", entity.RetryYieldExtKey: "false"}, event.Ext)
 					}).
 					Return(nil)
 			},
@@ -2541,7 +2542,8 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 					EXPECT().
 					PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
 					Do(func(_ context.Context, event *entity.ExptScheduleEvent, _ *time.Duration) {
-						assert.Equal(t, map[string]string{}, event.Ext)
+						// 空 ext 也会被写入让位降权开关键(默认关)
+						assert.Equal(t, map[string]string{entity.RetryYieldExtKey: "false"}, event.Ext)
 					}).
 					Return(nil)
 			},

@@ -248,6 +248,7 @@ type ExptItemResultRunLog struct {
 	ErrMsg        []byte
 	LogID         string
 	ResultState   int32
+	RetryTimes    int32 // ★ 本轮 expt_run 内该 item 已被系统自动重试的次数; 0=未重试; 仅内部调度降权用, 不透出
 	UpdatedAt     *time.Time
 	// QuotaReservationState 中心调度的额度预占投影，与表字段 quota_reservation_state 一致。
 	//
@@ -295,6 +296,7 @@ type ExptEvalItem struct {
 	EvalSetVersionID int64
 	ItemID           int64
 	State            ItemRunState
+	RetryTimes       int32 // ★ 本轮 expt_run 内该 item 已被系统自动重试的次数; 供 handleToSubmits 回填事件
 	UpdatedAt        *time.Time
 }
 
@@ -605,6 +607,18 @@ type ExptItemRunLogFilter struct {
 
 	RawFilter bool
 	RawCond   clause.Expr
+
+	// OrderByRetryTimesFirst 让位降权排序意图：true → 挑选序改为 `retry_times asc, id asc`,
+	// 让重试行降权、健康行优先; false → 维持原 `id asc`。
+	// ⚠️ 该排序模式与游标翻页(id > cursor)互斥, 仅允许 cursor==0 时使用(会漏行+重复行, 详见技术方案 §4.0);
+	// 且严禁在多个调用点无脑打开——目前仅 scanToSubmit 传 true。
+	OrderByRetryTimesFirst bool
+
+	// RetryPickIndexReady 声明 idx_expt_run_retry_pick 是否已建成, 仅在 OrderByRetryTimesFirst=true 时被读取。
+	// true → 下 ForceIndex(idx_expt_run_retry_pick) 取索引序 + LIMIT 提前停止;
+	// false → 不下 hint, 由优化器自选(退化 filesort)。★ 排序语义两者完全一致, 只差执行计划。
+	// 索引未建成却置 true 会直接报 Key doesn't exist(ForceIndex 刻意不静默降级), 故默认 false 是安全侧。
+	RetryPickIndexReady bool
 }
 
 func (e *ExptItemRunLogFilter) GetResultState() ExptItemResultState {
