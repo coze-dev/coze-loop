@@ -494,11 +494,15 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 	}
 
 	for _, item := range completeItems {
-		if item.State != entity.ItemRunState_Fail && item.State != entity.ItemRunState_Success {
+		// ★ 白名单必须含 Terminal（design D4）：行级终止 (TerminateItems) 会把 item run log 直接置为
+		// Terminal + Logged，该行随即被 scanIncompleteAndComplete 归入 completeItems。若这里不放开，
+		// 调度 tick 每一拍都在这里 return error，整个实验卡死不再推进。
+		// 放开后 RecordItemRunLogs 会自动做正确的 stats 算术（Processing-1 / terminated_cnt+1）。
+		if item.State != entity.ItemRunState_Fail && item.State != entity.ItemRunState_Success && item.State != entity.ItemRunState_Terminal {
 			return fmt.Errorf("recordEvalItemRunLogs found invalid item run state: %v", item.State)
 		}
 
-		// item-complete(success) 发送点: 每个 item 一进来先发, 仅发成功行(fail/zombie 不发, 下游只消费成功行)。
+		// item-complete(success) 发送点: 每个 item 一进来先发, 仅发成功行(fail/zombie/terminal 不发, 下游只消费成功行)。
 		// 发失败必须 return 中断本次调度: 此处在 RecordItemRunLogs 落库之前, item 落库状态仍为 complete,
 		// 下次调度会重新扫入 completeItems 再次驱动发送, 从而保障"成功行必发一次 MQ"(发失败靠下次调度补发)。
 		// 是否真正投递由 producer 依空间开关(item_complete_space_config) + 评测对象 enable_analysis 判定, 此处不重复判;
@@ -659,70 +663,48 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 	if len(toSubmits) == 0 {
 		return nil
 	}
-
-	now := time.Now().Unix()
-	itemIDs := make([]int64, 0, len(toSubmits))
-	itemEvalEvents := make([]*entity.ExptItemEvalEvent, 0, len(toSubmits))
-	for _, ts := range toSubmits {
-		if entity.IsItemRunFinished(ts.State) {
+	claimed := make([]*entity.ExptEvalItem, 0, len(toSubmits))
+	rollback := func() {
+		persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+		defer cancel()
+		for _, item := range claimed {
+			if _, err := e.ExptItemResultRepo.RollbackItemRunSubmit(persistCtx, event.ExptID, event.ExptRunID, item.ItemID, event.SpaceID, item.RetryTimes); err != nil {
+				logs.CtxWarn(persistCtx, "rollback item submission failed, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, item.ItemID, err)
+			}
+		}
+	}
+	for _, item := range toSubmits {
+		if entity.IsItemRunFinished(item.State) {
 			continue
 		}
-		itemIDs = append(itemIDs, ts.ItemID)
-		itemEvalEvents = append(itemEvalEvents, &entity.ExptItemEvalEvent{
-			SpaceID:       event.SpaceID,
-			ExptID:        event.ExptID,
-			ExptRunID:     event.ExptRunID,
-			ExptRunMode:   event.ExptRunMode,
-			EvalSetItemID: ts.ItemID,
-			CreateAt:      now,
-			MaxRetryTimes: event.ItemRetryTimes,
-			Ext:           event.Ext,
-			Session:       event.Session,
-		})
+		applied, err := e.ExptItemResultRepo.ClaimItemRunForSubmit(ctx, event.ExptID, event.ExptRunID, item.ItemID, event.SpaceID, item.RetryTimes)
+		if err != nil {
+			rollback()
+			return err
+		}
+		if applied {
+			claimed = append(claimed, item)
+		}
 	}
-
-	logs.CtxInfo(ctx, "submit item eval events: %v", json.Jsonify(itemEvalEvents))
-
+	if len(claimed) == 0 {
+		return nil
+	}
+	now := time.Now().Unix()
+	itemIDs := make([]int64, 0, len(claimed))
+	itemEvents := make([]*entity.ExptItemEvalEvent, 0, len(claimed))
+	for _, item := range claimed {
+		itemIDs = append(itemIDs, item.ItemID)
+		itemEvents = append(itemEvents, &entity.ExptItemEvalEvent{SpaceID: event.SpaceID, ExptID: event.ExptID, ExptRunID: event.ExptRunID, ExptRunMode: event.ExptRunMode, EvalSetItemID: item.ItemID, CreateAt: now, RetryTimes: int(item.RetryTimes), MaxRetryTimes: event.ItemRetryTimes, Ext: event.Ext, Session: event.Session})
+	}
 	interval := e.Configer.GetExptExecConf(ctx, event.SpaceID).GetExptItemEvalConf().GetInterval()
-	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, itemEvalEvents, gptr.Of(interval)); err != nil {
+	if err := e.Publisher.BatchPublishExptRecordEvalEvent(ctx, itemEvents, gptr.Of(interval)); err != nil {
+		rollback()
 		return err
 	}
-
-	defer e.Metric.EmitItemExecEval(event.SpaceID, int64(event.ExptRunMode), len(toSubmits))
-
-	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, itemIDs, map[string]any{"status": int32(entity.ItemRunState_Processing)},
-		event.SpaceID); err != nil {
-		return err
+	e.Metric.EmitItemExecEval(event.SpaceID, int64(event.ExptRunMode), len(claimed))
+	if err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs); err != nil {
+		logs.CtxError(ctx, "handleToSubmits UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
 	}
-
-	if err := e.ExptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, itemIDs, map[string]any{"status": int32(entity.ItemRunState_Processing)}); err != nil {
-		return err
-	}
-
-	err := e.ResultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, itemIDs)
-	if err != nil {
-		logs.CtxError(ctx, "ExptSubmitExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
-	}
-	logs.CtxInfo(ctx, "ExptSchedulerImpl handleToSubmits UpsertExptTurnResultFilter success, expt_id: %v", event.ExptID)
-
-	if err := e.ExptTurnResultRepo.UpdateTurnResultsWithItemIDs(ctx, event.ExptID, itemIDs, event.SpaceID, map[string]any{"status": int32(entity.TurnRunState_Processing)}); err != nil {
-		return err
-	}
-
-	itemResults, err := e.ExptItemResultRepo.BatchGet(ctx, event.SpaceID, event.ExptID, itemIDs)
-	if err != nil {
-		return err
-	}
-
-	if err := e.ExptStatsRepo.ArithOperateCount(ctx, event.ExptID, event.SpaceID, &entity.StatsCntArithOp{
-		OpStatusCnt: map[entity.ItemRunState]int{
-			entity.ItemRunState_Processing: len(itemResults),
-			entity.ItemRunState_Queueing:   0 - len(itemResults),
-		},
-	}); err != nil {
-		return err
-	}
-
 	return nil
 }
 

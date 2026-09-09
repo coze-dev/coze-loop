@@ -412,6 +412,21 @@ func (mr *MockIExptItemResultRepoMockRecorder) BatchGet(ctx, spaceID, exptID, it
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGet", reflect.TypeOf((*MockIExptItemResultRepo)(nil).BatchGet), ctx, spaceID, exptID, itemIDs)
 }
 
+// ClaimItemRunForSubmit mocks base method.
+func (m *MockIExptItemResultRepo) ClaimItemRunForSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClaimItemRunForSubmit", ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClaimItemRunForSubmit indicates an expected call of ClaimItemRunForSubmit.
+func (mr *MockIExptItemResultRepoMockRecorder) ClaimItemRunForSubmit(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimItemRunForSubmit", reflect.TypeOf((*MockIExptItemResultRepo)(nil).ClaimItemRunForSubmit), ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes)
+}
+
 // CountItemsByStatus mocks base method.
 func (m *MockIExptItemResultRepo) CountItemsByStatus(ctx context.Context, spaceID, exptID int64) (map[entity.ItemRunState]int64, error) {
 	m.ctrl.T.Helper()
@@ -562,6 +577,21 @@ func (mr *MockIExptItemResultRepoMockRecorder) MGetItemTurnResults(ctx, spaceID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetItemTurnResults", reflect.TypeOf((*MockIExptItemResultRepo)(nil).MGetItemTurnResults), ctx, spaceID, exptID, itemIDs)
 }
 
+// RollbackItemRunSubmit mocks base method.
+func (m *MockIExptItemResultRepo) RollbackItemRunSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RollbackItemRunSubmit", ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RollbackItemRunSubmit indicates an expected call of RollbackItemRunSubmit.
+func (mr *MockIExptItemResultRepoMockRecorder) RollbackItemRunSubmit(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackItemRunSubmit", reflect.TypeOf((*MockIExptItemResultRepo)(nil).RollbackItemRunSubmit), ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes)
+}
+
 // SaveItemResults mocks base method.
 func (m *MockIExptItemResultRepo) SaveItemResults(ctx context.Context, itemResults []*entity.ExptItemResult) error {
 	m.ctrl.T.Helper()
@@ -622,6 +652,20 @@ func (mr *MockIExptItemResultRepoMockRecorder) UpdateItemRunLog(ctx, exptID, exp
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemRunLog", reflect.TypeOf((*MockIExptItemResultRepo)(nil).UpdateItemRunLog), ctx, exptID, exptRunID, itemID, ufields, spaceID)
 }
 
+// UpdateItemRunLogIfNotTerminal mocks base method.
+func (m *MockIExptItemResultRepo) UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateItemRunLogIfNotTerminal", ctx, exptID, exptRunID, itemID, ufields, spaceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateItemRunLogIfNotTerminal indicates an expected call of UpdateItemRunLogIfNotTerminal.
+func (mr *MockIExptItemResultRepoMockRecorder) UpdateItemRunLogIfNotTerminal(ctx, exptID, exptRunID, itemID, ufields, spaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemRunLogIfNotTerminal", reflect.TypeOf((*MockIExptItemResultRepo)(nil).UpdateItemRunLogIfNotTerminal), ctx, exptID, exptRunID, itemID, ufields, spaceID)
+}
+
 // UpdateItemsResult mocks base method.
 func (m *MockIExptItemResultRepo) UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemID []int64, ufields map[string]any) error {
 	m.ctrl.T.Helper()
@@ -634,6 +678,21 @@ func (m *MockIExptItemResultRepo) UpdateItemsResult(ctx context.Context, spaceID
 func (mr *MockIExptItemResultRepoMockRecorder) UpdateItemsResult(ctx, spaceID, exptID, itemID, ufields any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateItemsResult", reflect.TypeOf((*MockIExptItemResultRepo)(nil).UpdateItemsResult), ctx, spaceID, exptID, itemID, ufields)
+}
+
+// YieldItemRunForRetry mocks base method.
+func (m *MockIExptItemResultRepo) YieldItemRunForRetry(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, errMsg string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "YieldItemRunForRetry", ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes, errMsg)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// YieldItemRunForRetry indicates an expected call of YieldItemRunForRetry.
+func (mr *MockIExptItemResultRepoMockRecorder) YieldItemRunForRetry(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes, errMsg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "YieldItemRunForRetry", reflect.TypeOf((*MockIExptItemResultRepo)(nil).YieldItemRunForRetry), ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes, errMsg)
 }
 
 // MockIExptTurnResultRepo is a mock of IExptTurnResultRepo interface.

@@ -31,6 +31,7 @@ func (c *ExptItemResultRunLogConverter) PO2DO(rl *model.ExptItemResultRunLog) *e
 		ErrMsg:                gptr.Indirect(rl.ErrMsg),
 		LogID:                 rl.LogID,
 		ResultState:           gptr.Indirect(rl.ResultState),
+		RetryTimes:            rl.RetryTimes, // ★
 		QuotaReservationState: entity.QuotaReservationState(rl.QuotaReservationState),
 		UpdatedAt:             gptr.Of(rl.UpdatedAt),
 	}
@@ -53,6 +54,7 @@ func (c *ExptItemResultRunLogConverter) DO2PO(do *entity.ExptItemResultRunLog) *
 		ErrMsg:                gptr.Of(do.ErrMsg),
 		LogID:                 do.LogID,
 		ResultState:           gptr.Of(do.ResultState),
+		RetryTimes:            do.RetryTimes, // ★
 		QuotaReservationState: int32(do.QuotaReservationState),
 	}
 

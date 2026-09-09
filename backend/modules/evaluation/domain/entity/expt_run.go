@@ -222,6 +222,61 @@ type ExptExecConf struct {
 	SpaceExptConcurLimit int `json:"space_expt_concur_limit" mapstructure:"space_expt_concur_limit"`
 
 	ExptItemEvalConf *ExptItemEvalConf `json:"expt_item_eval_conf" mapstructure:"expt_item_eval_conf"`
+
+	// RetryYield 失败重试"让位降权"改造的灰度开关；nil / 默认关 → 保持改造前行为(执行侧重投 MQ + id asc 排序)。
+	// 值在实验运行发起时读一次并固化进 ExptScheduleEvent.Ext, 运行中不再现读, 详见技术方案 §9.3.1。
+	RetryYield *RetryYieldConf `json:"retry_yield" mapstructure:"retry_yield"`
+}
+
+// RetryYieldConf 让位降权改造的灰度开关：全局布尔 + 空间白名单两级。
+// RetryYieldExtKey 让位降权灰度开关值在 ExptScheduleEvent.Ext / ExptItemEvalEvent.Ext 中的键。
+// 运行发起时把开关值(configer 读取结果)写入该键, 消费侧读事件里的值而非现读配置(按 expt_run_id 固化, §9.3.1)。
+const RetryYieldExtKey = "retry_yield_enabled"
+
+type RetryYieldConf struct {
+	// Enabled 全局开关；true → 所有空间生效(白名单被忽略)。
+	Enabled bool `json:"enabled" mapstructure:"enabled"`
+	// SpaceIDs 空间级灰度白名单；仅在 Enabled=false 时生效, 命中即开。
+	SpaceIDs []int64 `json:"space_ids" mapstructure:"space_ids"`
+	// IndexReady 声明降权索引 idx_expt_run_retry_pick 是否已在该环境的库上建成。
+	//
+	// ⚠️ 与 Enabled/SpaceIDs 语义不同, 这不是业务灰度而是 schema 事实声明, 故:
+	//   - 只影响执行计划(是否下 ForceIndex hint), 不改任何业务语义;
+	//   - 不随 expt_run 固化(不进 event.Ext), 每次挑选现读配置 —— 索引建成后翻此开关立即生效,
+	//     无需等运行中的实验跑完或重跑。
+	//
+	// false(默认): 不下 ForceIndex, 由优化器自选(实测退化为 filesort)。排序语义不变,
+	//   仍是 retry_times asc, id asc, 让位降权功能完整, 仅失去索引序 + LIMIT 提前停止。
+	// true: 下 ForceIndex(idx_expt_run_retry_pick) 取最优执行计划。
+	//   ★ 索引未建成时置 true 会让挑选直接报 Key doesn't exist(ForceIndex 不静默降级), 故务必先建索引再翻。
+	//
+	// 为何默认 false: 线上 expt_item_result_run_log 是高频写入热表(实测 CN 某库 99.6M 行 / 36.1GB,
+	// 日均新增约 830 万行), 加 6 列复合索引的构建期风险(online log 溢出致 DDL 失败)与长期写放大
+	// 高于 filesort 的代价, 故先只加列、索引后补。详见技术方案索引选型节。
+	IndexReady bool `json:"index_ready" mapstructure:"index_ready"`
+}
+
+// IsIndexReady 判断降权索引是否已建成(决定是否下 ForceIndex hint)。
+// nil → false, 保守走优化器自选, 绝不会因配置缺失而报 Key doesn't exist。
+func (c *RetryYieldConf) IsIndexReady() bool {
+	return c != nil && c.IndexReady
+}
+
+// IsSpaceEnabled 判断该空间是否开启让位降权。
+// nil → 关闭；Enabled=true → 全局开；否则命中 SpaceIDs 才开。
+func (c *RetryYieldConf) IsSpaceEnabled(spaceID int64) bool {
+	if c == nil {
+		return false
+	}
+	if c.Enabled {
+		return true
+	}
+	for _, id := range c.SpaceIDs {
+		if id == spaceID {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *ExptExecConf) GetSpaceExptConcurLimit() int {
@@ -248,6 +303,14 @@ func (e *ExptExecConf) GetZombieIntervalSecond() int {
 func (e *ExptExecConf) GetExptItemEvalConf() *ExptItemEvalConf {
 	if e != nil {
 		return e.ExptItemEvalConf
+	}
+	return nil
+}
+
+// GetRetryYieldConf nil-safe 取让位降权灰度开关配置; 未配置返回 nil(IsSpaceEnabled 对 nil 返回 false)。
+func (e *ExptExecConf) GetRetryYieldConf() *RetryYieldConf {
+	if e != nil {
+		return e.RetryYield
 	}
 	return nil
 }

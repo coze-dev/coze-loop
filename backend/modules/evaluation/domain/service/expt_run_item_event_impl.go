@@ -182,8 +182,31 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint)
 			return nil
 		}
 
+		// item 级闸门（实验级判定之后、正常执行之前）：该行已被用户行级终止 (TerminateItems) 则丢弃事件，
+		// 对应「排队中的行被终止后不再被调度」。判定失败只告警不拦截 —— 宁可多跑一次，
+		// 也不能因为一次查询抖动把正常行的执行掐掉（终止行即便漏拦，也有 CompleteItemRun 的 Terminal 覆盖保护兜底）。
+		if e.isItemTerminated(ctx, event) {
+			logs.CtxInfo(ctx, "[ExptItemTerminate] drop event of terminated item, expt_id: %v, expt_run_id: %v, item_id: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID)
+			return nil
+		}
+
 		return next(ctx, event)
 	}
+}
+
+// isItemTerminated 查该 item 当前 run log 是否已处于 Terminal。查询失败返回 false（不拦截），见 HandleEventCheck 注释。
+// 强制读主库（WithCtxWriteDB）：从库延迟会让刚写下的 Terminal 读不到，闸门形同虚设。
+func (e *ExptItemEventEvalServiceImpl) isItemTerminated(ctx context.Context, event *entity.ExptItemEvalEvent) bool {
+	if event == nil || e.exptItemResultRepo == nil {
+		return false
+	}
+	itemRunLog, err := e.exptItemResultRepo.GetItemRunLog(contexts.WithCtxWriteDB(ctx), event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptItemTerminate] check item terminated fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+		return false
+	}
+	return itemRunLog != nil && entity.ItemRunState(itemRunLog.Status) == entity.ItemRunState_Terminal
 }
 
 // HandleCentralAdmission 判定该 item 消息是否该由本进程执行，并把实验挂到 ctx 供下游复用。
@@ -709,6 +732,15 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		}
 
 		if needRetry {
+			// 让位降权改造: 开关按 expt_run_id 固化在 event.Ext(§9.3.1), 运行中不现读配置; 旧事件无该键 → 缺省关闭。
+			if event.Ext[entity.RetryYieldExtKey] == "true" {
+				// ★ 让位分支(替换原 MQ 重投): 把行从 Processing 退回 Queueing、retry_times+1, 让出并发名额,
+				// 重试改由调度器 scanToSubmit 唯一驱动。updated_at 由 DB 的 ON UPDATE CURRENT_TIMESTAMP 随本次
+				// UPDATE 刷新 → 下次重新提交后单行超时兜底按次尝试独立计时。
+				e.yieldItemRunForRetry(ctx, event, nextErr)
+				return nil
+			}
+
 			clone := &entity.ExptItemEvalEvent{}
 			if err := copier.CopyWithOption(clone, event, copier.Option{DeepCopy: true}); err != nil {
 				return errorx.Wrapf(err, "ExptItemEvalEvent copy fail")
@@ -798,24 +830,71 @@ func (e *ExptItemEventEvalServiceImpl) completeItemRunOnUnretriableErr(ctx conte
 	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
 	defer cancel()
 
-	ufields := map[string]any{
-		"status":       int32(entity.ItemRunState_Fail),
-		"err_msg":      errno.SerializeErr(evalErr),
-		"result_state": int32(entity.ExptItemResultStateLogged),
-	}
-	if err := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID,
-		[]int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+	// Terminal 是吸收态：该行已被用户行级终止时，在途的失败结果 MUST NOT 把 status / err_msg 回写成 Fail。
+	// ⚠️ 与 CompleteItemRun 同理，这里不能靠「先 SELECT 判定再写」（从库延迟 + TOCTOU 会让吸收态失效），
+	// 而是拆成「条件写 + 无条件补 result_state」，让 DB 的 WHERE status <> Terminal 做原子判定。
+	if err := e.exptItemResultRepo.UpdateItemRunLogIfNotTerminal(persistCtx, event.ExptID, event.ExptRunID,
+		[]int64{event.EvalSetItemID}, map[string]any{
+			"status":       int32(entity.ItemRunState_Fail),
+			"err_msg":      errno.SerializeErr(evalErr),
+			"result_state": int32(entity.ExptItemResultStateLogged),
+		}, event.SpaceID); err != nil {
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr update item run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+	}
+
+	// result_state 必须无条件落 Logged（即使该行已 Terminal），否则调度侧收不了口。
+	// 该字段与终止语义无冲突（TerminateItems 自己也写 Logged），重复写幂等。
+	if err := e.exptItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID,
+		[]int64{event.EvalSetItemID}, map[string]any{
+			"result_state": int32(entity.ExptItemResultStateLogged),
+		}, event.SpaceID); err != nil {
+		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr update item run log result_state fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
 	}
 
 	if e.exptTurnResultRepo == nil {
 		return
 	}
+	// turn run log 必须与 item run log 成对（见方法头注释）。item 已 Terminal 时 turn 也要写 Terminal，
+	// 否则 turn 落 Fail 会被 RecordItemRunLogs 回抄到 turn result，读侧出现「item 已终止 / turn 失败」的自相矛盾。
+	// ★ 在**写完之后**才读判定：此时 item run log 的 status 已是最终结果（Fail 或被拦下的 Terminal），
+	// 读到什么就照抄什么，不会像「写前判定」那样与实际落库结果分叉。
+	turnState := entity.TurnRunState_Fail
+	if e.isItemTerminated(persistCtx, event) {
+		logs.CtxInfo(persistCtx, "[ExptItemTerminate] keep terminal status on unretriable err, expt_id: %v, expt_run_id: %v, item_id: %v",
+			event.ExptID, event.ExptRunID, event.EvalSetItemID)
+		turnState = entity.TurnRunState_Terminal
+	}
 	if err := e.exptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(persistCtx, event.SpaceID, event.ExptID, event.ExptRunID,
-		[]int64{event.EvalSetItemID}, entity.TurnRunState_Fail); err != nil {
+		[]int64{event.EvalSetItemID}, turnState); err != nil {
 		logs.CtxWarn(persistCtx, "completeItemRunOnUnretriableErr create/update turn run log fail, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v",
 			event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+	}
+}
+
+// yieldItemRunForRetry preserves terminal state, current-run ownership and counters in one transaction.
+func (e *ExptItemEventEvalServiceImpl) yieldItemRunForRetry(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) {
+	if event == nil || e.exptItemResultRepo == nil {
+		return
+	}
+	if event.RetryTimes < 0 || int64(event.RetryTimes) >= 1<<31-1 {
+		logs.CtxWarn(ctx, "retry yield invalid attempt, expt_id: %v, expt_run_id: %v, item_id: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID)
+		return
+	}
+	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	defer cancel()
+	errMsg := ""
+	if evalErr != nil {
+		errMsg = errno.SerializeErr(evalErr)
+	}
+	applied, err := e.exptItemResultRepo.YieldItemRunForRetry(persistCtx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID, int32(event.RetryTimes), errMsg)
+	if err != nil {
+		logs.CtxWarn(persistCtx, "retry yield transaction failed, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID, err)
+		return
+	}
+	if !applied {
+		logs.CtxInfo(persistCtx, "retry yield skipped stale or completed attempt, expt_id: %v, expt_run_id: %v, item_id: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID)
 	}
 }
 

@@ -146,7 +146,7 @@ func TestRetryFailure_SourceReadErrorOuterClosurePreservesTargets(t *testing.T) 
 	}).AnyTimes()
 	itemLog := &entity.ExptItemResultRunLog{ExptID: exptID, ExptRunID: runID, ItemID: itemID, SpaceID: spaceID, Status: int32(entity.ItemRunState_Processing), LogID: "item-log"}
 	itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), exptID, runID, []int64{itemID}, gomock.Any(), spaceID).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+	applyItemFields := func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
 		if status, ok := fields["status"].(int32); ok {
 			itemLog.Status = status
 		}
@@ -157,8 +157,10 @@ func TestRetryFailure_SourceReadErrorOuterClosurePreservesTargets(t *testing.T) 
 			itemLog.ErrMsg = []byte(msg)
 		}
 		return nil
-	}).AnyTimes()
-	itemRepo.EXPECT().GetItemRunLog(gomock.Any(), exptID, runID, itemID, spaceID).Return(itemLog, nil)
+	}
+	itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), exptID, runID, []int64{itemID}, gomock.Any(), spaceID).DoAndReturn(applyItemFields)
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), exptID, runID, []int64{itemID}, gomock.Any(), spaceID).DoAndReturn(applyItemFields)
+	itemRepo.EXPECT().GetItemRunLog(gomock.Any(), exptID, runID, itemID, spaceID).Return(itemLog, nil).Times(2)
 	itemRepo.EXPECT().GetItemTurnResults(gomock.Any(), spaceID, exptID, itemID).Return(canonical, nil)
 	itemRepo.EXPECT().BatchGet(gomock.Any(), spaceID, exptID, []int64{itemID}).Return([]*entity.ExptItemResult{{ItemID: itemID, Status: entity.ItemRunState_Processing}}, nil).AnyTimes()
 	stats := repoMocks.NewMockIExptStatsRepo(ctrl)

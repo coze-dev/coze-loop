@@ -24,6 +24,7 @@ import (
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 )
 
 func TestNewExptRecordEvalService(t *testing.T) {
@@ -1790,6 +1791,250 @@ func Test_pruneSuccessfulEvaluatorRecords(t *testing.T) {
 			evalRecord := tt.setupEvalRecord(ctrl)
 			got := pruneSuccessfulEvaluatorRecords(context.Background(), evalRecord, tt.tr, nil)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestExptItemEventEvalServiceImpl_HandleEventErr_Yield 覆盖让位降权改造(§6.1):
+// 灰度开关经 event.Ext[RetryYieldExtKey] 固化下传。开启 + 需重试 → 走让位分支(run_log/item_result
+// 状态、retry_times 和计数同事务更新，且不再重投 MQ); 关闭 → 保持原 MQ 重投;
+// 达上限 / CtxForceNoRetry / 额度类终止 → 一律不让位、不增 retry_times。
+func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
+	tests := []struct {
+		name    string
+		event   *entity.ExptItemEvalEvent
+		nextErr error
+		ctxFn   func(event *entity.ExptItemEvalEvent) context.Context
+		prepare func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+			itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager)
+	}{
+		{
+			name: "flag on + needRetry -> atomic yield, no MQ republish",
+			// RetryTimes=1 < RetryTimes(3) => needRetry
+			event: &entity.ExptItemEvalEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
+				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
+			},
+			nextErr: errors.New("retryable error"),
+			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
+			) {
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.RetryConf{RetryTimes: 3})
+				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
+				itemRepo.EXPECT().YieldItemRunForRetry(gomock.Any(), int64(1), int64(2), int64(7), int64(3), int32(1), gomock.Any()).
+					DoAndReturn(func(_ context.Context, _, _, _, _ int64, attempt int32, message string) (bool, error) {
+						assert.Equal(t, int32(1), attempt)
+						assert.NotEmpty(t, message)
+						return true, nil
+					})
+			},
+		},
+		{
+			name: "flag off + needRetry -> original MQ republish, no yield",
+			event: &entity.ExptItemEvalEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
+				Ext: map[string]string{entity.RetryYieldExtKey: "false"},
+			},
+			nextErr: errors.New("retryable error"),
+			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
+			) {
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
+				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
+				pub.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				// 不让位: 不设置 itemRepo / statsRepo 的 EXPECT()
+			},
+		},
+		{
+			name: "flag missing (old event) + needRetry -> default off, MQ republish",
+			event: &entity.ExptItemEvalEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
+				// Ext 无该键 -> 缺省关闭
+			},
+			nextErr: errors.New("retryable error"),
+			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
+			) {
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
+				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
+				pub.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name: "flag on + retry limit exceeded -> unretriable complete Fail, no yield/no MQ/no retry_times bump",
+			// RetryTimes=3, RetryTimes conf=3 => needRetry false
+			event: &entity.ExptItemEvalEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 3,
+				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
+			},
+			nextErr: errors.New("retryable error"),
+			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
+			) {
+				itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+					assert.Equal(t, int32(entity.ItemRunState_Fail), fields["status"])
+					assert.NotEmpty(t, fields["err_msg"])
+					return nil
+				})
+				itemRepo.EXPECT().GetItemRunLog(gomock.Any(), int64(1), int64(2), int64(7), int64(3)).Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Fail)}, nil)
+
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
+				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, false, gomock.Any(), gomock.Any(), gomock.Any())
+				// 走 completeItemRunOnUnretriableErr: run_log status=Fail + result_state=Logged, turn 置 Fail
+				itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
+					DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+						assert.NotContains(t, ufields, "status")
+						assert.NotContains(t, ufields, "err_msg")
+						assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
+						assert.NotContains(t, ufields, "retry_times")
+						return nil
+					})
+				turnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), int64(3), int64(1), int64(2), []int64{7}, entity.TurnRunState_Fail).Return(nil)
+				// 无 yield(UpdateItemsResult status=Queueing) / 无 MQ / 无 ArithOperateCount
+			},
+		},
+		{
+			name: "flag on + CtxForceNoRetry -> no retry, unretriable complete, no yield",
+			event: &entity.ExptItemEvalEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 0,
+				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
+			},
+			nextErr: errors.New("retryable error"),
+			ctxFn: func(event *entity.ExptItemEvalEvent) context.Context {
+				ctx := ctxcache.Init(context.Background())
+				event.WithCtxForceNoRetry(ctx)
+				return ctx
+			},
+			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
+			) {
+				itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+					assert.Equal(t, int32(entity.ItemRunState_Fail), fields["status"])
+					assert.NotEmpty(t, fields["err_msg"])
+					return nil
+				})
+				itemRepo.EXPECT().GetItemRunLog(gomock.Any(), int64(1), int64(2), int64(7), int64(3)).Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Fail)}, nil)
+
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
+				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, false, gomock.Any(), gomock.Any(), gomock.Any())
+				itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
+					DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+						assert.NotContains(t, ufields, "status")
+						assert.NotContains(t, ufields, "err_msg")
+						return nil
+					})
+				turnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.TurnRunState_Fail).Return(nil)
+			},
+		},
+		{
+			name: "flag on + in-debt (quota) termination -> terminate expt, no yield/no retry_times bump",
+			event: &entity.ExptItemEvalEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 0,
+				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
+			},
+			nextErr: errors.New("quota error"),
+			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
+			) {
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: true})
+				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+				mgr.EXPECT().CompleteRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mgr.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				// 无让位: 不设置 itemRepo/statsRepo EXPECT()
+			},
+		},
+		{
+			// yield 第 2 步(UpdateItemsResult)失败 → 必须把第 1 步写的 run_log 回滚为 Processing, 并且不执行第 3 步统计对账。
+			// 不回滚会让 run_log 停在 Queueing / item_result 停在 Processing, 被 scanToSubmit 再次捞起 → handleToSubmits 无条件
+			// P+1/Q-1 使 processing_cnt 重复计入、pending_cnt 被减成负数, 违反"统计在任意路径守恒"。
+			name: "yield rejected stale or completed attempt -> no extra writes",
+			event: &entity.ExptItemEvalEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
+				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
+			},
+			nextErr: errors.New("retryable error"),
+			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
+			) {
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.RetryConf{RetryTimes: 3})
+				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
+				itemRepo.EXPECT().YieldItemRunForRetry(gomock.Any(), int64(1), int64(2), int64(7), int64(3), int32(1), gomock.Any()).Return(false, nil)
+			},
+		},
+		{
+			// yield 第 1 步(UpdateItemRunLog)首次即失败 → 直接返回, 后续 UpdateItemsResult / ArithOperateCount 都不应发生。
+			name: "yield transaction error -> no extra writes",
+			event: &entity.ExptItemEvalEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
+				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
+			},
+			nextErr: errors.New("retryable error"),
+			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
+			) {
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.RetryConf{RetryTimes: 3})
+				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
+				itemRepo.EXPECT().YieldItemRunForRetry(gomock.Any(), int64(1), int64(2), int64(7), int64(3), int32(1), gomock.Any()).Return(false, errors.New("yield transaction failed"))
+			},
+		},
+		{
+			// yield 第 2 步失败且回滚本身也失败 → 只告警不 panic, HandleEventErr 仍返回 nil。
+			name: "yield rollback error -> no extra writes",
+			event: &entity.ExptItemEvalEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3, EvalSetItemID: 7, RetryTimes: 1,
+				Ext: map[string]string{entity.RetryYieldExtKey: "true"},
+			},
+			nextErr: errors.New("retryable error"),
+			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
+				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
+			) {
+				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.RetryConf{RetryTimes: 3})
+				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
+				itemRepo.EXPECT().YieldItemRunForRetry(gomock.Any(), int64(1), int64(2), int64(7), int64(3), int32(1), gomock.Any()).Return(false, errors.New("yield rollback failed"))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockManager := svcmocks.NewMockIExptManager(ctrl)
+			mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+			mockPublisher := eventmocks.NewMockExptEventPublisher(ctrl)
+			mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+			mockItemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+			mockTurnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+			mockStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+
+			service := &ExptItemEventEvalServiceImpl{
+				manager:            mockManager,
+				configer:           mockConfiger,
+				publisher:          mockPublisher,
+				metric:             mockMetric,
+				exptItemResultRepo: mockItemRepo,
+				exptTurnResultRepo: mockTurnRepo,
+				exptStatsRepo:      mockStatsRepo,
+			}
+
+			tt.prepare(mockConfiger, mockPublisher, mockMetric, mockItemRepo, mockTurnRepo, mockStatsRepo, mockManager)
+
+			next := func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+				return tt.nextErr
+			}
+			ctx := context.Background()
+			if tt.ctxFn != nil {
+				ctx = tt.ctxFn(tt.event)
+			}
+			handler := service.HandleEventErr(next)
+			err := handler(ctx, tt.event)
+			assert.NoError(t, err)
 		})
 	}
 }

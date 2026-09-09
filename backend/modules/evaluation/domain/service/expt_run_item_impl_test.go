@@ -135,6 +135,11 @@ func Test_ExptItemEvalCtxExecutor_Eval(t *testing.T) {
 
 	mockTurnResultRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
 	mockItemResultRepo := repomocks.NewMockIExptItemResultRepo(ctrl)
+	// EvalTurns 每轮开始前 / CompleteItemRun 写 status 前都会读一次 run log 做 Terminal 判定;
+	// 这里固定返回非 Terminal，保证这些用例仍走原有执行与落库分支。
+	mockItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().
+		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 	mockConfiger := configermocks.NewMockIConfiger(ctrl)
 	mockConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
@@ -209,6 +214,8 @@ func Test_ExptItemEvalCtxExecutor_Eval(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
+				// CompleteItemRun 拆两条写: 条件写 status/err_msg(Terminal 吸收态) + 无条件补 result_state
+				mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false, RetryTimes: 1, RetryIntervalSecond: 1})
 				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
@@ -235,7 +242,7 @@ func Test_ExptItemEvalCtxExecutor_Eval(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
-				mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mock updateitemrunlog error"))
+				mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mock updateitemrunlog error"))
 				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false, RetryTimes: 1, RetryIntervalSecond: 1})
 			},
 			wantErr:    true,
@@ -357,6 +364,10 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 
 	mockTurnResultRepo := repomocks.NewMockIExptTurnResultRepo(ctrl)
 	mockItemResultRepo := repomocks.NewMockIExptItemResultRepo(ctrl)
+	// CompleteItemRun 写 status 前读一次 run log 做 Terminal 覆盖保护; 固定非 Terminal 走原分支。
+	mockItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().
+		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 	mockConfiger := configermocks.NewMockIConfiger(ctrl)
 	mockConfiger.EXPECT().BuildEvalExt(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
 	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
@@ -379,6 +390,7 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 	mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false, RetryTimes: 1, RetryIntervalSecond: 1})
 
 	t.Run("正常流程", func(t *testing.T) {
+		mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		eiec := &entity.ExptItemEvalCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4}}
 		err := executor.CompleteItemRun(context.Background(), eiec, nil)
@@ -386,7 +398,7 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 	})
 
 	t.Run("UpdateItemRunLog返回错误", func(t *testing.T) {
-		mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mock updateitemrunlog error"))
+		mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mock updateitemrunlog error"))
 		eiec := &entity.ExptItemEvalCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4}}
 		err := executor.CompleteItemRun(context.Background(), eiec, nil)
 		assert.Error(t, err)
@@ -398,12 +410,13 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 		cancel()
 
 		mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), int64(4), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false})
-		mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).
+		mockItemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).
 			DoAndReturn(func(ctx context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
 				require.NoError(t, ctx.Err())
 				assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
 				return nil
 			})
+		mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).Return(nil)
 
 		eiec := &entity.ExptItemEvalCtx{Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4, RetryTimes: 1}}
 		err := executor.CompleteItemRun(ctx, eiec, errors.New("target timeout"))
@@ -438,6 +451,10 @@ func Test_ExptItemEvalCtxExecutor_CompleteItemRun_NoItemCompletePublish(t *testi
 
 			ctrl := gomock.NewController(t)
 			itemResultRepo := repomocks.NewMockIExptItemResultRepo(ctrl)
+			// CompleteItemRun 写 status 前读一次 run log 做 Terminal 覆盖保护; 固定非 Terminal 走原分支。
+			itemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				AnyTimes().
+				Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Processing)}, nil)
 			configer := configermocks.NewMockIConfiger(ctrl)
 			publisher := &stubItemCompletePublisher{}
 			expt := &entity.Experiment{
@@ -470,10 +487,17 @@ func Test_ExptItemEvalCtxExecutor_CompleteItemRun_NoItemCompletePublish(t *testi
 					Times(2).
 					Return(&entity.RetryConf{})
 			}
-			itemResultRepo.EXPECT().UpdateItemRunLog(
+			itemResultRepo.EXPECT().UpdateItemRunLogIfNotTerminal(
 				gomock.Any(), exptID, exptRunID, []int64{itemID}, gomock.Any(), spaceID,
 			).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
 				require.Equal(t, wantFields, fields)
+				return nil
+			})
+			// 无条件补 result_state 的第二条写
+			itemResultRepo.EXPECT().UpdateItemRunLog(
+				gomock.Any(), exptID, exptRunID, []int64{itemID}, gomock.Any(), spaceID,
+			).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+				require.Equal(t, map[string]any{"result_state": entity.ExptItemResultStateLogged}, fields)
 				return nil
 			})
 
@@ -1637,4 +1661,40 @@ func TestExptItemEvalCtxExecutor_storeTurnRunResult_AllEvaluatorsTerminalComplet
 		},
 	}
 	require.NoError(t, executor.storeTurnRunResult(context.Background(), etec, result))
+}
+
+// Test_ExptItemEvalCtxExecutor_evalErrNeedRetry 覆盖 §6.4:
+// evalErrNeedRetry 依据 event.RetryTimes(由 handleToSubmits 从 run_log.retry_times 持久列回填)与上限比较,
+// event.MaxRetryTimes>0 时覆盖错误级配置。让位改造后 event.RetryTimes 即持久值, 该判据据此收敛。
+func Test_ExptItemEvalCtxExecutor_evalErrNeedRetry(t *testing.T) {
+	tests := []struct {
+		name       string
+		retryTimes int
+		maxRetry   int // event.MaxRetryTimes
+		confRetry  int // GetErrRetryConf().RetryTimes
+		evalErr    error
+		wantNeed   bool
+	}{
+		{name: "nil err -> no retry", evalErr: nil, confRetry: 3, wantNeed: false},
+		{name: "persist retry_times below conf limit -> retry", retryTimes: 1, confRetry: 3, evalErr: errors.New("e"), wantNeed: true},
+		{name: "persist retry_times at conf limit -> no retry (converge)", retryTimes: 3, confRetry: 3, evalErr: errors.New("e"), wantNeed: false},
+		{name: "MaxRetryTimes overrides conf: below -> retry", retryTimes: 2, maxRetry: 5, confRetry: 3, evalErr: errors.New("e"), wantNeed: true},
+		{name: "MaxRetryTimes overrides conf: at limit -> no retry", retryTimes: 5, maxRetry: 5, confRetry: 999, evalErr: errors.New("e"), wantNeed: false},
+		{name: "conf limit 0 -> first failure converges immediately", retryTimes: 0, confRetry: 0, evalErr: errors.New("e"), wantNeed: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockConfiger := configermocks.NewMockIConfiger(ctrl)
+			if tt.evalErr != nil {
+				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.RetryConf{RetryTimes: tt.confRetry, RetryIntervalSecond: 60})
+			}
+			executor := &ExptItemEvalCtxExecutor{Configer: mockConfiger}
+			event := &entity.ExptItemEvalEvent{SpaceID: 3, RetryTimes: tt.retryTimes, MaxRetryTimes: tt.maxRetry}
+			need, _ := executor.evalErrNeedRetry(context.Background(), event, tt.evalErr)
+			assert.Equal(t, tt.wantNeed, need)
+		})
+	}
 }

@@ -125,6 +125,15 @@ func (e ExptItemResultRepoImpl) UpdateItemRunLog(ctx context.Context, exptID, ex
 	return nil
 }
 
+func (e ExptItemResultRepoImpl) UpdateItemRunLogIfNotTerminal(ctx context.Context, exptID, exptRunID int64, itemID []int64, ufields map[string]any, spaceID int64) error {
+	logs.CtxInfo(ctx, "UpdateItemRunLogIfNotTerminal, expt_id: %v, expt_run_id: %v, item_ids: %v, ufields: %v", exptID, exptRunID, itemID, ufields)
+	err := e.exptItemResultDAO.UpdateItemRunLogIfNotTerminal(ctx, exptID, exptRunID, itemID, ufields, spaceID)
+	if err != nil {
+		return errorx.Wrapf(err, "UpdateItemRunLogIfNotTerminal fail, expt_id: %v, expt_run_id: %v, item_ids: %v, ufields: %v", exptID, exptRunID, itemID, ufields)
+	}
+	return nil
+}
+
 func (e ExptItemResultRepoImpl) ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64) (results []*entity.ExptItemResult, ncursor int64, err error) {
 	pos, ncursor, err := e.exptItemResultDAO.ScanItemResults(ctx, exptID, cursor, limit, status, spaceID)
 	if err != nil {
@@ -207,4 +216,28 @@ func (e ExptItemResultRepoImpl) FillItemRunLogLogIDIfEmpty(ctx context.Context, 
 
 func (e ExptItemResultRepoImpl) GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64) (int32, error) {
 	return e.exptItemResultDAO.GetMaxItemIdxByExptID(ctx, exptID, spaceID)
+}
+
+func (e ExptItemResultRepoImpl) YieldItemRunForRetry(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32, errMsg string) (bool, error) {
+	applied, err := e.exptItemResultDAO.YieldItemRunForRetry(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes, errMsg)
+	if err != nil {
+		return false, errorx.Wrapf(err, "YieldItemRunForRetry fail, expt_id: %v, expt_run_id: %v, item_id: %v", exptID, exptRunID, itemID)
+	}
+	return applied, nil
+}
+
+func (e ExptItemResultRepoImpl) ClaimItemRunForSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32) (bool, error) {
+	applied, err := e.exptItemResultDAO.ClaimItemRunForSubmit(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes)
+	if err != nil {
+		return false, errorx.Wrapf(err, "ClaimItemRunForSubmit fail, expt_id: %v, expt_run_id: %v, item_id: %v", exptID, exptRunID, itemID)
+	}
+	return applied, nil
+}
+
+func (e ExptItemResultRepoImpl) RollbackItemRunSubmit(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expectedRetryTimes int32) (bool, error) {
+	applied, err := e.exptItemResultDAO.RollbackItemRunSubmit(ctx, exptID, exptRunID, itemID, spaceID, expectedRetryTimes)
+	if err != nil {
+		return false, errorx.Wrapf(err, "RollbackItemRunSubmit fail, expt_id: %v, expt_run_id: %v, item_id: %v", exptID, exptRunID, itemID)
+	}
+	return applied, nil
 }

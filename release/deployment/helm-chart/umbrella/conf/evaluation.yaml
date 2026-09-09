@@ -5,6 +5,16 @@ evaluation_record_storage:
       max_size: 204800
 
 expt_consumer_conf:
+  # 失败重试"让位降权"改造的灰度开关（默认关，行为与改造前完全一致：执行侧重投 MQ + 挑选序 id asc + 重试期占名额）。
+  # 开启后：可重试失败时把行从 Processing 退回 Queueing 让出并发名额，retry_times 持久化 +1，重试由调度器
+  # scanToSubmit 按 (retry_times asc, id asc) 唯一驱动、健康行不再饿死。开关值在实验运行发起时读一次并随事件
+  # 固化，运行中不再现读（同一 expt_run 内不混态）。⚠️ 开 enabled/命中 space_ids 前，线上必须先建成索引
+  # idx_expt_run_retry_pick（否则该实验调度报 Key doesn't exist；关开关即恢复、不伤数据）。
+  # expt_exec_conf:
+  #   retry_yield:
+  #     enabled: false        # 全局开关；true 则所有空间生效（忽略 space_ids）
+  #     space_ids: []         # 空间级灰度白名单；仅在 enabled=false 时生效，命中即开
+  #     # ⚠️ 若某空间在 space_expt_exec_conf 下有独立条目，retry_yield 需配到该空间自己的条目里（GetExptExecConf 命中 per-space 后不再回退全局）
   space_expt_exec_conf:
     "7485314682719338497":
       expt_item_eval_conf:

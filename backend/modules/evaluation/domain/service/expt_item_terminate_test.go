@@ -1,0 +1,862 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package service
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
+	idemMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
+	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
+	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	entityMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity/mocks"
+	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
+	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
+	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+)
+
+const (
+	terminateTestExptID    = int64(1001)
+	terminateTestRunID     = int64(2002)
+	terminateTestSpaceID   = int64(7)
+	terminateTestTargetSpc = int64(0)
+)
+
+// terminateRunLog 构造指定状态的 item run log。
+func terminateRunLog(itemID int64, state entity.ItemRunState) *entity.ExptItemResultRunLog {
+	return &entity.ExptItemResultRunLog{
+		SpaceID:   terminateTestSpaceID,
+		ExptID:    terminateTestExptID,
+		ExptRunID: terminateTestRunID,
+		ItemID:    itemID,
+		Status:    int32(state),
+	}
+}
+
+// TestExptMangerImpl_TerminateItems_HappyPath 正常路径（tasks 6.1 + 6.2）：
+//   - turn run log 先落 TurnRunState_Terminal（design D3 成对写，且必须排在 item run log 之前）
+//   - item run log 落 Terminal + Logged + 非空 err_msg
+//   - **主表 ufields 只含 err_msg、不含 status**（design D2 回归防线）
+func TestExptMangerImpl_TerminateItems_HappyPath(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+	itemIDs := []int64{11, 12}
+
+	itemRepo := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo)
+	turnRepo := mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo)
+	exptRepo := mgr.exptRepo.(*repoMocks.MockIExperimentRepo)
+	resultSvc := mgr.exptResultService.(*svcMocks.MockExptResultService)
+	targetSvc := mgr.evalTargetService.(*svcMocks.MockIEvalTargetService)
+
+	itemRepo.EXPECT().
+		MGetItemRunLog(ctx, terminateTestExptID, terminateTestRunID, itemIDs, terminateTestSpaceID).
+		Return([]*entity.ExptItemResultRunLog{
+			terminateRunLog(11, entity.ItemRunState_Processing),
+			terminateRunLog(12, entity.ItemRunState_Queueing),
+		}, nil)
+
+	// ★ 写序回归防线：turn run log 必须**先于** item run log 落库。
+	// 反序会留下「item 已 Terminal+Logged 而 turn run log 缺失」的中间态 ——
+	// 该态会让 RecordItemRunLogs 报 null turn log 把整实验判 Failed，且重放无法自愈。
+	turnRunLogWritten := false
+
+	// ② turn run log 与 ③ 成对（D3）
+	turnRepo.EXPECT().
+		CreateOrUpdateItemsTurnRunLogStatus(ctx, terminateTestSpaceID, terminateTestExptID, terminateTestRunID, []int64{11, 12}, entity.TurnRunState_Terminal).
+		DoAndReturn(func(_ context.Context, _, _, _ int64, _ []int64, _ entity.TurnRunState) error {
+			turnRunLogWritten = true
+			return nil
+		})
+
+	// ③ item run log: Terminal + Logged + err_msg
+	itemRepo.EXPECT().
+		UpdateItemRunLog(ctx, terminateTestExptID, terminateTestRunID, []int64{11, 12}, gomock.Any(), terminateTestSpaceID).
+		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+			assert.True(t, turnRunLogWritten, "turn run log 必须先写：反序会留下不可自愈的致命中间态")
+			assert.Equal(t, int32(entity.ItemRunState_Terminal), ufields["status"])
+			assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
+			assert.NotEmpty(t, ufields["err_msg"], "err_msg 必须落库，前端要展示终止原因")
+			return nil
+		})
+
+	// ④ 主表只补 err_msg —— D2 回归防线：一旦有人加回 status，statsCntOp 的 Processing 减项会丢，
+	// processing_cnt 永远归不了零，实验永远不完成。
+	itemRepo.EXPECT().
+		UpdateItemsResult(ctx, terminateTestSpaceID, terminateTestExptID, []int64{11, 12}, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any) error {
+			assert.NotEmpty(t, ufields["err_msg"])
+			_, hasStatus := ufields["status"]
+			assert.False(t, hasStatus, "D2: 主表 UpdateItemsResult 禁止预写 status")
+			assert.Len(t, ufields, 1, "D2: 主表 ufields 只允许 err_msg 一个字段")
+			return nil
+		})
+
+	// ⑤ 读侧 turn result
+	turnRepo.EXPECT().
+		BatchGet(ctx, terminateTestSpaceID, terminateTestExptID, []int64{11, 12}).
+		Return([]*entity.ExptTurnResult{
+			{ItemID: 11, TurnID: 101},
+			{ItemID: 12, TurnID: 102},
+		}, nil)
+	turnRepo.EXPECT().
+		UpdateTurnResults(ctx, terminateTestExptID, gomock.Any(), terminateTestSpaceID, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ int64, itemTurnIDs []*entity.ItemTurnID, _ int64, ufields map[string]any) error {
+			assert.Equal(t, int32(entity.TurnRunState_Terminal), ufields["status"])
+			assert.Len(t, itemTurnIDs, 2)
+			return nil
+		})
+
+	// ⑥ CK 读侧刷新
+	resultSvc.EXPECT().
+		UpsertExptTurnResultFilter(ctx, terminateTestSpaceID, terminateTestExptID, []int64{11, 12}).
+		Return(nil)
+
+	// ⑦ 沙箱释放
+	exptRepo.EXPECT().
+		GetByID(ctx, terminateTestExptID, terminateTestSpaceID).
+		Return(&entity.Experiment{ID: terminateTestExptID, SpaceID: terminateTestSpaceID, TargetSpaceID: terminateTestTargetSpc}, nil)
+	turnRepo.EXPECT().
+		MGetItemTurnRunLogs(ctx, terminateTestExptID, terminateTestRunID, []int64{11, 12}, terminateTestSpaceID).
+		Return([]*entity.ExptTurnResultRunLog{{ItemID: 11, TargetResultID: 9001}}, nil)
+	targetSvc.EXPECT().
+		TerminateAsyncRecordsAndDestroySandbox(ctx, terminateTestSpaceID, []int64{9001}, gomock.Any(), gomock.Any(), false).
+		Times(1)
+
+	require.NoError(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+}
+
+// TestExptMangerImpl_TerminateItems_Idempotent 幂等（tasks 6.3）：
+// 混合列表只处理可终止行；全部已终态时不产生任何写调用且返回 nil。
+func TestExptMangerImpl_TerminateItems_Idempotent(t *testing.T) {
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+
+	t.Run("mixed_list_only_processes_unfinished", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemRepo := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo)
+		turnRepo := mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo)
+		exptRepo := mgr.exptRepo.(*repoMocks.MockIExperimentRepo)
+		resultSvc := mgr.exptResultService.(*svcMocks.MockExptResultService)
+
+		// 21=已终止(且 turn run log 已就绪→已收敛可跳过) / 22=成功 / 23=失败 / 24=执行中 → 只有 24 该被处理
+		itemIDs := []int64{21, 22, 23, 24}
+		itemRepo.EXPECT().
+			MGetItemRunLog(ctx, terminateTestExptID, terminateTestRunID, itemIDs, terminateTestSpaceID).
+			Return([]*entity.ExptItemResultRunLog{
+				terminateRunLog(21, entity.ItemRunState_Terminal),
+				terminateRunLog(22, entity.ItemRunState_Success),
+				terminateRunLog(23, entity.ItemRunState_Fail),
+				terminateRunLog(24, entity.ItemRunState_Processing),
+			}, nil)
+
+		// 已 Terminal 的 21 需再确认 turn run log 是否已成对：已存在 → 收敛完成，静默跳过
+		turnRepo.EXPECT().
+			MGetItemTurnRunLogs(ctx, terminateTestExptID, terminateTestRunID, []int64{21}, terminateTestSpaceID).
+			Return([]*entity.ExptTurnResultRunLog{{ItemID: 21, TurnID: 210}}, nil)
+
+		onlyLive := []int64{24}
+		itemRepo.EXPECT().
+			UpdateItemRunLog(ctx, terminateTestExptID, terminateTestRunID, onlyLive, gomock.Any(), terminateTestSpaceID).
+			Return(nil)
+		turnRepo.EXPECT().
+			CreateOrUpdateItemsTurnRunLogStatus(ctx, terminateTestSpaceID, terminateTestExptID, terminateTestRunID, onlyLive, entity.TurnRunState_Terminal).
+			Return(nil)
+		itemRepo.EXPECT().
+			UpdateItemsResult(ctx, terminateTestSpaceID, terminateTestExptID, onlyLive, gomock.Any()).
+			Return(nil)
+		turnRepo.EXPECT().
+			BatchGet(ctx, terminateTestSpaceID, terminateTestExptID, onlyLive).
+			Return([]*entity.ExptTurnResult{{ItemID: 24, TurnID: 240}}, nil)
+		turnRepo.EXPECT().
+			UpdateTurnResults(ctx, terminateTestExptID, gomock.Any(), terminateTestSpaceID, gomock.Any()).
+			Return(nil)
+		resultSvc.EXPECT().
+			UpsertExptTurnResultFilter(ctx, terminateTestSpaceID, terminateTestExptID, onlyLive).
+			Return(nil)
+		exptRepo.EXPECT().
+			GetByID(ctx, terminateTestExptID, terminateTestSpaceID).
+			Return(&entity.Experiment{ID: terminateTestExptID, SpaceID: terminateTestSpaceID}, nil)
+		turnRepo.EXPECT().
+			MGetItemTurnRunLogs(ctx, terminateTestExptID, terminateTestRunID, onlyLive, terminateTestSpaceID).
+			Return(nil, nil)
+
+		require.NoError(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+
+	t.Run("all_finished_no_write_at_all", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemIDs := []int64{31, 32}
+		mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().
+			MGetItemRunLog(ctx, terminateTestExptID, terminateTestRunID, itemIDs, terminateTestSpaceID).
+			Return([]*entity.ExptItemResultRunLog{
+				terminateRunLog(31, entity.ItemRunState_Terminal),
+				terminateRunLog(32, entity.ItemRunState_Success),
+			}, nil)
+		// 31 已 Terminal 且 turn run log 已成对 → 已收敛，跳过
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).EXPECT().
+			MGetItemTurnRunLogs(ctx, terminateTestExptID, terminateTestRunID, []int64{31}, terminateTestSpaceID).
+			Return([]*entity.ExptTurnResultRunLog{{ItemID: 31, TurnID: 310}}, nil)
+		// 不注册任何写调用期望 —— 一旦有写就会被 gomock 判为 Unexpected call
+
+		require.NoError(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+
+	t.Run("empty_item_ids_returns_nil", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		require.NoError(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, nil, session))
+	})
+}
+
+// TestExptMangerImpl_TerminateItems_BestEffort best-effort（tasks 6.4）：
+// CK 刷新失败、实验读取失败、沙箱销毁链路失败，均不影响 TerminateItems 返回 nil。
+func TestExptMangerImpl_TerminateItems_BestEffort(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+	itemIDs := []int64{41}
+
+	itemRepo := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo)
+	turnRepo := mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo)
+
+	itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptItemResultRunLog{terminateRunLog(41, entity.ItemRunState_Processing)}, nil)
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	turnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	turnRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.ExptTurnResult{{ItemID: 41, TurnID: 410}}, nil)
+	turnRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	// ⑥ CK 刷新失败 → 仅日志
+	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
+		UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(errors.New("ck unavailable"))
+
+	// ⑦ 沙箱释放链路失败 → 仅日志
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+		GetByID(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.Experiment{ID: terminateTestExptID, SpaceID: terminateTestSpaceID}, nil)
+	turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("db down"))
+
+	require.NoError(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session),
+		"资源释放失败 MUST NOT 导致终止请求失败")
+}
+
+// TestExptMangerImpl_TerminateItems_WriteErrPropagates ②③④⑤ 任一失败必须向上抛错，
+// 让前端提示失败、用户可安全重试（①的幂等过滤 + 补齐判据保证重放安全，见 ReplayHealsPartialWrite）。
+func TestExptMangerImpl_TerminateItems_WriteErrPropagates(t *testing.T) {
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+	itemIDs := []int64{51}
+
+	t.Run("mget_run_log_err", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().
+			MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, errors.New("db down"))
+
+		assert.Error(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+
+	// ② turn run log 失败：此时 item run log **还没写**，不产生任何中间态（这正是调换写序的收益）
+	t.Run("turn_run_log_err_leaves_no_intermediate_state", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemRepo := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo)
+		itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptItemResultRunLog{terminateRunLog(51, entity.ItemRunState_Processing)}, nil)
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).EXPECT().
+			CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("db down"))
+		// ★ 关键断言：**没有**注册 UpdateItemRunLog 期望。② 失败后 item run log MUST NOT 被写成
+		// Terminal+Logged —— 否则该行会被扫成 complete、RecordItemRunLogs 报 null turn log、整实验 Failed。
+		// 一旦有人把写序改回去，这里就会因 Unexpected call 而失败。
+
+		assert.Error(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+
+	// ③ item run log 失败：turn run log 已是 Terminal，属良性中间态（item 未 Logged 不会被扫成 complete）
+	t.Run("update_item_run_log_err", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemRepo := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo)
+		itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptItemResultRunLog{terminateRunLog(51, entity.ItemRunState_Processing)}, nil)
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).EXPECT().
+			CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("db down"))
+
+		assert.Error(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+
+	// ④ 主表 err_msg 失败
+	t.Run("update_items_result_err", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemRepo := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo)
+		turnRepo := mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo)
+		itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptItemResultRunLog{terminateRunLog(51, entity.ItemRunState_Processing)}, nil)
+		turnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("db down"))
+
+		assert.Error(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+
+	// ⑤ 读侧 turn result 失败（BatchGet / UpdateTurnResults 两个子步骤都要抛）
+	t.Run("turn_result_batch_get_err", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemRepo := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo)
+		turnRepo := mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo)
+		itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptItemResultRunLog{terminateRunLog(51, entity.ItemRunState_Processing)}, nil)
+		turnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		turnRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, errors.New("db down"))
+
+		assert.Error(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+
+	t.Run("update_turn_results_err", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemRepo := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo)
+		turnRepo := mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo)
+		itemRepo.EXPECT().MGetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptItemResultRunLog{terminateRunLog(51, entity.ItemRunState_Processing)}, nil)
+		turnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		itemRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		turnRepo.EXPECT().BatchGet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptTurnResult{{ItemID: 51, TurnID: 510}}, nil)
+		turnRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("db down"))
+
+		assert.Error(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+}
+
+// TestExptMangerImpl_TerminateItems_ReplayHealsPartialWrite ★ 关键回归防线（对应 P1 #2 的「重放自愈」）：
+// 上一次调用在 ② 之后失败、留下「item 已 Terminal 但本 run 没有 turn run log」的不成对状态时，
+// 重放 TerminateItems 必须**不跳过**该行，把 ②~⑤ 全部补齐 —— 否则该行会被扫成 complete、
+// RecordItemRunLogs 报 null turn log 把整实验判 Failed，且用户怎么重试都没用。
+func TestExptMangerImpl_TerminateItems_ReplayHealsPartialWrite(t *testing.T) {
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+
+	t.Run("terminal_without_turn_run_log_is_repaired", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemRepo := mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo)
+		turnRepo := mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo)
+
+		itemIDs := []int64{61}
+		// 该行上一次已被置 Terminal（②③ 之间断电 / ③ 之后某步失败）
+		itemRepo.EXPECT().
+			MGetItemRunLog(ctx, terminateTestExptID, terminateTestRunID, itemIDs, terminateTestSpaceID).
+			Return([]*entity.ExptItemResultRunLog{terminateRunLog(61, entity.ItemRunState_Terminal)}, nil)
+		// 但本 run 下没有任何 turn run log → 不成对，必须补齐
+		turnRepo.EXPECT().
+			MGetItemTurnRunLogs(ctx, terminateTestExptID, terminateTestRunID, []int64{61}, terminateTestSpaceID).
+			Return(nil, nil)
+
+		repaired := []int64{61}
+		turnRepo.EXPECT().
+			CreateOrUpdateItemsTurnRunLogStatus(ctx, terminateTestSpaceID, terminateTestExptID, terminateTestRunID, repaired, entity.TurnRunState_Terminal).
+			Return(nil)
+		itemRepo.EXPECT().
+			UpdateItemRunLog(ctx, terminateTestExptID, terminateTestRunID, repaired, gomock.Any(), terminateTestSpaceID).
+			Return(nil)
+		itemRepo.EXPECT().
+			UpdateItemsResult(ctx, terminateTestSpaceID, terminateTestExptID, repaired, gomock.Any()).
+			Return(nil)
+		turnRepo.EXPECT().
+			BatchGet(ctx, terminateTestSpaceID, terminateTestExptID, repaired).
+			Return([]*entity.ExptTurnResult{{ItemID: 61, TurnID: 610}}, nil)
+		turnRepo.EXPECT().
+			UpdateTurnResults(ctx, terminateTestExptID, gomock.Any(), terminateTestSpaceID, gomock.Any()).
+			Return(nil)
+		mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
+			UpsertExptTurnResultFilter(ctx, terminateTestSpaceID, terminateTestExptID, repaired).
+			Return(nil)
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
+			GetByID(ctx, terminateTestExptID, terminateTestSpaceID).
+			Return(&entity.Experiment{ID: terminateTestExptID, SpaceID: terminateTestSpaceID}, nil)
+		// ⑦ 沙箱释放会再查一次 turn run log（此时已由 ② 补建，返回空即视为无沙箱 record）
+		turnRepo.EXPECT().
+			MGetItemTurnRunLogs(ctx, terminateTestExptID, terminateTestRunID, repaired, terminateTestSpaceID).
+			Return(nil, nil)
+
+		require.NoError(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session),
+			"重放必须能补齐不成对状态，否则整实验会被判 Failed 且不可自愈")
+	})
+
+	t.Run("success_and_fail_rows_are_never_repaired", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemIDs := []int64{71, 72}
+		// Success / Fail 是正常跑完的行，不属于终止语义，即便 turn run log 缺失也不该被本接口改写
+		mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().
+			MGetItemRunLog(ctx, terminateTestExptID, terminateTestRunID, itemIDs, terminateTestSpaceID).
+			Return([]*entity.ExptItemResultRunLog{
+				terminateRunLog(71, entity.ItemRunState_Success),
+				terminateRunLog(72, entity.ItemRunState_Fail),
+			}, nil)
+		// 不注册 MGetItemTurnRunLogs / 任何写调用期望
+
+		require.NoError(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+
+	t.Run("partition_returns_err_when_turn_run_log_query_fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		itemIDs := []int64{81}
+		mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).EXPECT().
+			MGetItemRunLog(ctx, terminateTestExptID, terminateTestRunID, itemIDs, terminateTestSpaceID).
+			Return([]*entity.ExptItemResultRunLog{terminateRunLog(81, entity.ItemRunState_Terminal)}, nil)
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).EXPECT().
+			MGetItemTurnRunLogs(ctx, terminateTestExptID, terminateTestRunID, []int64{81}, terminateTestSpaceID).
+			Return(nil, errors.New("db down"))
+
+		assert.Error(t, mgr.TerminateItems(ctx, terminateTestExptID, terminateTestRunID, terminateTestSpaceID, itemIDs, session))
+	})
+}
+
+// TestRecordEvalItemRunLogs_AllowsTerminalState 调度白名单放开 Terminal（tasks 6.5，design D4）：
+// Terminal 不再报错（否则调度 tick 每拍失败、实验卡死），且 **不触发 sendItemComplete**
+// （下游只消费成功行；itemCompletePublisher 为 stub，断言其 events 为空）。
+func TestRecordEvalItemRunLogs_AllowsTerminalState(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	stub := &stubItemCompletePublisher{}
+	resultSvc := svcMocks.NewMockExptResultService(ctrl)
+	publisher := eventsMocks.NewMockExptEventPublisher(ctrl)
+	mode := entityMocks.NewMockExptSchedulerMode(ctrl)
+
+	svc := &ExptSchedulerImpl{
+		itemCompletePublisher: stub,
+		ResultSvc:             resultSvc,
+		Publisher:             publisher,
+	}
+
+	event := &entity.ExptScheduleEvent{SpaceID: 9, ExptID: 100, ExptRunID: 200}
+	items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Terminal}}
+
+	resultSvc.EXPECT().RecordItemRunLogs(gomock.Any(), int64(100), int64(200), int64(10), int64(9), gomock.Any()).
+		Return(nil, nil).Times(1)
+	mode.EXPECT().PublishResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	resultSvc.EXPECT().UpsertExptTurnResultFilter(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	publisher.EXPECT().PublishExptTurnResultFilterEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+	err := svc.recordEvalItemRunLogs(context.Background(), event, items, mode, &entity.Experiment{})
+	assert.NoError(t, err, "D4: Terminal 必须在白名单内，否则调度 tick 报错、实验卡死")
+	assert.Empty(t, stub.events, "Terminal 不是成功行，MUST NOT 发 item-complete")
+}
+
+// TestRecordEvalItemRunLogs_RejectsNonTerminalState 白名单只放开三个终态，其余（如 Processing）仍必须报错。
+func TestRecordEvalItemRunLogs_RejectsNonTerminalState(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	svc := &ExptSchedulerImpl{ResultSvc: svcMocks.NewMockExptResultService(ctrl)}
+	event := &entity.ExptScheduleEvent{SpaceID: 9, ExptID: 100, ExptRunID: 200}
+	items := []*entity.ExptEvalItem{{ItemID: 10, State: entity.ItemRunState_Processing}}
+
+	err := svc.recordEvalItemRunLogs(context.Background(), event, items, entityMocks.NewMockExptSchedulerMode(ctrl), &entity.Experiment{})
+	assert.ErrorContains(t, err, "invalid item run state")
+}
+
+// TestExptMangerImpl_CompleteExpt_TerminatedNotFailed 终态推导双向覆盖（tasks 6.6，design D5）：
+//   - 有 terminated 行、无 fail 行 → Success（不能因为用户主动终止就把实验判失败）
+//   - 有 fail 行 → 仍 Failed（不误伤既有失败判定）
+func TestExptMangerImpl_CompleteExpt_TerminatedNotFailed(t *testing.T) {
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+	const exptID, spaceID = int64(123), int64(789)
+	runID := int64(456)
+
+	t.Run("terminated_without_fail_is_success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		var captured *entity.Experiment
+		mgr.idem.(*idemMocks.MockIdempotentService).EXPECT().Exist(gomock.Any(), gomock.Any()).AnyTimes().Return(false, nil)
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByID(ctx, exptID, spaceID).
+			Return(&entity.Experiment{ID: exptID, SpaceID: spaceID, ExptType: entity.ExptType_Offline}, nil)
+		mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().CalculateStats(ctx, exptID, spaceID, session).
+			Return(&entity.ExptCalculateStats{SuccessItemCnt: 253, TerminatedItemCnt: 2}, nil)
+		mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().GetIncompleteTurns(ctx, exptID, spaceID, session).
+			Return([]*entity.ItemTurnID{}, nil)
+		mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).EXPECT().UpdateByExptID(ctx, exptID, spaceID, gomock.Any()).Return(nil)
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Update(ctx, gomock.Any()).
+			DoAndReturn(func(_ context.Context, e *entity.Experiment) error { captured = e; return nil })
+		mgr.quotaRepo.(*repoMocks.MockQuotaRepo).EXPECT().CreateOrUpdate(ctx, spaceID, gomock.Any(), session).Return(nil)
+		mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).EXPECT().
+			PublishExptAggrResultEvent(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+		mgr.publisher.(*eventsMocks.MockExptEventPublisher).EXPECT().
+			PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+		mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().
+			EmitExptExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		require.NoError(t, mgr.CompleteExpt(ctx, exptID, &runID, spaceID, session))
+		require.NotNil(t, captured)
+		assert.Equal(t, entity.ExptStatus_Success, captured.Status,
+			"D5: terminated 是用户主动放弃，不参与 Failed 推导")
+	})
+
+	t.Run("fail_still_failed", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		var captured *entity.Experiment
+		mgr.idem.(*idemMocks.MockIdempotentService).EXPECT().Exist(gomock.Any(), gomock.Any()).AnyTimes().Return(false, nil)
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByID(ctx, exptID, spaceID).
+			Return(&entity.Experiment{ID: exptID, SpaceID: spaceID, ExptType: entity.ExptType_Offline}, nil)
+		mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().CalculateStats(ctx, exptID, spaceID, session).
+			Return(&entity.ExptCalculateStats{SuccessItemCnt: 250, FailItemCnt: 3, TerminatedItemCnt: 2}, nil)
+		mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().GetIncompleteTurns(ctx, exptID, spaceID, session).
+			Return([]*entity.ItemTurnID{}, nil)
+		mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).EXPECT().UpdateByExptID(ctx, exptID, spaceID, gomock.Any()).Return(nil)
+		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Update(ctx, gomock.Any()).
+			DoAndReturn(func(_ context.Context, e *entity.Experiment) error { captured = e; return nil })
+		mgr.quotaRepo.(*repoMocks.MockQuotaRepo).EXPECT().CreateOrUpdate(ctx, spaceID, gomock.Any(), session).Return(nil)
+		mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).EXPECT().
+			PublishExptAggrResultEvent(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+		mgr.publisher.(*eventsMocks.MockExptEventPublisher).EXPECT().
+			PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+		mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().
+			EmitExptExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		require.NoError(t, mgr.CompleteExpt(ctx, exptID, &runID, spaceID, session))
+		require.NotNil(t, captured)
+		assert.Equal(t, entity.ExptStatus_Failed, captured.Status, "有 fail 行仍必须判 Failed")
+	})
+}
+
+// TestCompleteItemRun_TerminalNotOverwritten Terminal 吸收态（tasks 6.7 + P1 #4）：
+// 吸收态由**条件 UPDATE**（UpdateItemRunLogIfNotTerminal，WHERE status <> Terminal）原子保证，
+// 而不是「先 SELECT 判定再写」—— 后者的 SELECT 会走从库，延迟窗口内会把 Terminal 覆盖成 Success/Fail。
+// 断言：
+//   - status / err_msg 一律走条件写，不管当前状态是什么（判定下沉到 DB 的 WHERE）
+//   - result_state=Logged 另走一条无条件写，保证已 Terminal 的行也能被调度侧收口
+func TestCompleteItemRun_TerminalNotOverwritten(t *testing.T) {
+	newExec := func(ctrl *gomock.Controller) (*ExptItemEvalCtxExecutor, *repoMocks.MockIExptItemResultRepo) {
+		itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+		configer := componentMocks.NewMockIConfiger(ctrl)
+		configer.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&entity.RetryConf{})
+		return &ExptItemEvalCtxExecutor{ItemResultRepo: itemRepo, Configer: configer}, itemRepo
+	}
+	eiec := func() *entity.ExptItemEvalCtx {
+		return &entity.ExptItemEvalCtx{
+			Event: &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4, RetryTimes: 1},
+			Expt:  &entity.Experiment{ID: 1},
+		}
+	}
+	// expectUnconditionalResultState 无条件补 result_state 的那一条写：只允许带 result_state。
+	expectUnconditionalResultState := func(t *testing.T, itemRepo *repoMocks.MockIExptItemResultRepo) {
+		itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+				assert.Equal(t, entity.ExptItemResultStateLogged, ufields["result_state"])
+				assert.NotContains(t, ufields, "status", "无条件写 MUST NOT 带 status，否则会覆盖 Terminal")
+				assert.NotContains(t, ufields, "err_msg", "无条件写 MUST NOT 带 err_msg")
+				assert.Len(t, ufields, 1)
+				return nil
+			})
+	}
+
+	t.Run("success_result_goes_through_conditional_update", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		exec, itemRepo := newExec(ctrl)
+
+		// ★ status 必须走条件写：这是 Terminal 吸收态的唯一保证（DB 层 WHERE status <> Terminal）。
+		// 一旦有人改回无条件 UpdateItemRunLog，这里会因 Unexpected call 而失败。
+		itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+				assert.Equal(t, int32(entity.ItemRunState_Success), ufields["status"])
+				assert.Equal(t, entity.ExptItemResultStateLogged, ufields["result_state"])
+				return nil
+			})
+		expectUnconditionalResultState(t, itemRepo)
+		require.NoError(t, exec.CompleteItemRun(context.Background(), eiec(), nil))
+	})
+
+	t.Run("fail_result_goes_through_conditional_update", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		exec, itemRepo := newExec(ctrl)
+
+		itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+				assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
+				assert.NotEmpty(t, ufields["err_msg"], "err_msg 与 status 同批写，一起被 WHERE 拦下或一起生效")
+				return nil
+			})
+		expectUnconditionalResultState(t, itemRepo)
+		require.NoError(t, exec.CompleteItemRun(context.Background(), eiec(), errors.New("target boom")))
+	})
+
+	t.Run("conditional_update_err_propagates", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		exec, itemRepo := newExec(ctrl)
+
+		itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(errors.New("db down"))
+		assert.Error(t, exec.CompleteItemRun(context.Background(), eiec(), nil))
+	})
+}
+
+// TestUpdateItemRunLogIfNotTerminal_AbsorbingSemantics 的 DAO / repo 层语义断言放在
+// infra/repo/experiment 包（见 TestExptItemResultRepoImpl_UpdateItemRunLogIfNotTerminal）。
+
+// TestCompleteItemRunOnUnretriableErr_TerminalNotOverwritten Terminal 吸收态第二点（tasks 6.7 + P1 #4）：
+// 兜底落 Fail 路径同样用条件 UPDATE 保证不覆盖 Terminal；turn run log 随之写 Terminal 而非 Fail
+// （保持 item/turn 一致），且 turn 状态在**写完之后**才读判定，不与实际落库结果分叉。
+func TestCompleteItemRunOnUnretriableErr_TerminalNotOverwritten(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	turnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	svc := &ExptItemEventEvalServiceImpl{exptItemResultRepo: itemRepo, exptTurnResultRepo: turnRepo}
+
+	event := &entity.ExptItemEvalEvent{SpaceID: 7, ExptID: 1001, ExptRunID: 2002, EvalSetItemID: 3003}
+
+	itemRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Terminal)}, nil)
+	// status/err_msg 走条件写：DB 层的 WHERE status <> Terminal 会把它整条拦下
+	itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+			assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
+			assert.NotEmpty(t, ufields["err_msg"])
+			return nil
+		})
+	// result_state 无条件补写，让已 Terminal 的行也能被调度侧收口
+	itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+			assert.NotContains(t, ufields, "status", "无条件写 MUST NOT 带 status，否则会覆盖 Terminal")
+			assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
+			return nil
+		})
+	turnRepo.EXPECT().
+		CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), int64(7), int64(1001), int64(2002), []int64{3003}, entity.TurnRunState_Terminal).
+		Return(nil)
+
+	svc.completeItemRunOnUnretriableErr(context.Background(), event, errors.New("build ctx failed"))
+}
+
+// TestHandleEventCheck_ItemLevelTerminalGate item 级闸门（tasks 6.8）：
+// 该行已 Terminal → 返回 nil 且 **不进入** next（对应「排队中的行被终止后不再被调度」）。
+// 闸门优先级：实验级终态判定 > item 级 Terminal 判定 > 正常执行。
+func TestHandleEventCheck_ItemLevelTerminalGate(t *testing.T) {
+	event := &entity.ExptItemEvalEvent{SpaceID: 7, ExptID: 1001, ExptRunID: 2002, EvalSetItemID: 3003}
+
+	newSvc := func(ctrl *gomock.Controller, itemState entity.ItemRunState) (*ExptItemEventEvalServiceImpl, *bool) {
+		manager := svcMocks.NewMockIExptManager(ctrl)
+		manager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Processing)}, nil)
+		itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+		itemRepo.EXPECT().GetItemRunLog(gomock.Any(), int64(1001), int64(2002), int64(3003), int64(7)).
+			Return(&entity.ExptItemResultRunLog{Status: int32(itemState)}, nil)
+		reached := false
+		return &ExptItemEventEvalServiceImpl{manager: manager, exptItemResultRepo: itemRepo}, &reached
+	}
+
+	t.Run("terminated_item_event_dropped", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc, reached := newSvc(ctrl, entity.ItemRunState_Terminal)
+
+		err := svc.HandleEventCheck(func(context.Context, *entity.ExptItemEvalEvent) error {
+			*reached = true
+			return nil
+		})(context.Background(), event)
+
+		assert.NoError(t, err)
+		assert.False(t, *reached, "已 Terminal 的行 MUST NOT 进入执行")
+	})
+
+	t.Run("live_item_event_passes_through", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		svc, reached := newSvc(ctrl, entity.ItemRunState_Processing)
+
+		err := svc.HandleEventCheck(func(context.Context, *entity.ExptItemEvalEvent) error {
+			*reached = true
+			return nil
+		})(context.Background(), event)
+
+		assert.NoError(t, err)
+		assert.True(t, *reached, "未终止的行必须照常执行")
+	})
+
+	t.Run("expt_finished_gate_wins_before_item_query", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		manager := svcMocks.NewMockIExptManager(ctrl)
+		manager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
+		// itemRepo 不注册任何期望：实验级闸门先命中，不该再查 item run log
+		svc := &ExptItemEventEvalServiceImpl{manager: manager, exptItemResultRepo: repoMocks.NewMockIExptItemResultRepo(ctrl)}
+
+		reached := false
+		err := svc.HandleEventCheck(func(context.Context, *entity.ExptItemEvalEvent) error {
+			reached = true
+			return nil
+		})(context.Background(), event)
+
+		assert.NoError(t, err)
+		assert.False(t, reached)
+	})
+}
+
+// TestEvalTurns_StopsOnTerminatedItem 多轮循环闸门（tasks 4.3 对应验证）：
+// item 已 Terminal 时第一轮就不开跑（不调用 buildExptTurnEvalCtx 依赖的任何服务），直接返回 nil。
+func TestEvalTurns_StopsOnTerminatedItem(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	itemRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	itemRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Terminal)}, nil)
+
+	// TurnResultRepo / evalTargetService 等一概不注册期望：一旦真的开跑就会 Unexpected call
+	exec := &ExptItemEvalCtxExecutor{ItemResultRepo: itemRepo}
+
+	eiec := &entity.ExptItemEvalCtx{
+		Event:       &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4},
+		Expt:        &entity.Experiment{ID: 1},
+		EvalSetItem: &entity.EvaluationSetItem{Turns: []*entity.Turn{{ID: 11}, {ID: 12}}},
+	}
+
+	asyncAbort, err := exec.EvalTurns(context.Background(), eiec)
+	assert.NoError(t, err)
+	assert.False(t, asyncAbort)
+}
+
+// TestParseItemVisibleRunError item 级 err_msg → 用户可见 RunError 的反解（对应 P1 #1）。
+//
+// 这是 spec 验收点「err_msg 为『该行被用户主动终止』语义（601205088）并透给前端展示」的回归防线：
+// ItemSystemInfo.Error 是 item 级错误透出前端的唯一赋值点，行级终止若不在此反解，
+// TerminateItems 步骤④ 写的 err_msg 就是白写，用户只能看到裸 Terminal 状态。
+func TestParseItemVisibleRunError(t *testing.T) {
+	t.Run("manually_terminated_is_surfaced_with_chinese_detail", func(t *testing.T) {
+		raw := []byte(errno.SerializeErr(errno.NewItemManuallyTerminatedErr()))
+
+		got := parseItemVisibleRunError(raw)
+
+		require.NotNil(t, got, "行级终止必须透出 RunError，否则前端看不到终止原因")
+		assert.Equal(t, int64(errno.ItemManuallyTerminatedCode), got.Code, "code 必须是 601205088")
+		require.NotNil(t, got.Detail)
+		assert.Equal(t, "该行被用户主动终止", *got.Detail, "Detail 必须是中文可读语义，不能是内部错误串")
+	})
+
+	t.Run("zombie_timeout_behavior_unchanged", func(t *testing.T) {
+		raw := []byte(errno.SerializeErr(errno.NewItemZombieTimeoutErr(600, false)))
+
+		got := parseItemVisibleRunError(raw)
+
+		require.NotNil(t, got)
+		assert.Equal(t, int64(errno.ItemZombieTimeoutCode), got.Code, "既有僵尸超时分支行为不变")
+		require.NotNil(t, got.Detail)
+		assert.Contains(t, *got.Detail, "僵尸")
+	})
+
+	t.Run("unknown_code_returns_nil", func(t *testing.T) {
+		// 非白名单错误码不透出（沿用既有语义，避免把内部错误串抖给前端）
+		assert.Nil(t, parseItemVisibleRunError([]byte(errno.SerializeErr(errno.NewTargetResultErr("internal boom")))))
+		assert.Nil(t, parseItemVisibleRunError([]byte("not a serialized err")))
+	})
+}
+
+// TestGetTurnSystemInfo_ManuallyTerminated turn 级 err_msg 反解（对应 P1 #1 + #3 联动）。
+// CreateOrUpdateItemsTurnRunLogStatus(Terminal) 写的是 ItemManuallyTerminated（非 turnOtherErrCode），
+// RecordItemRunLogs 会把它回抄进 turn result；读侧不接上，turn 级就只剩裸 Terminal 状态。
+func TestGetTurnSystemInfo_ManuallyTerminated(t *testing.T) {
+	ctx := context.Background()
+
+	newBuilder := func(errMsg string, status int32) *ExptResultBuilder {
+		return &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{1: {10: 100}},
+			turnResultDO: []*entity.ExptTurnResult{
+				{ID: 100, ItemID: 1, TurnID: 10, Status: status, LogID: "log1", ErrMsg: errMsg},
+			},
+		}
+	}
+
+	t.Run("terminated_turn_surfaces_manually_terminated", func(t *testing.T) {
+		b := newBuilder(errno.SerializeErr(errno.NewItemManuallyTerminatedErr()), int32(entity.TurnRunState_Terminal))
+
+		got := b.getTurnSystemInfo(ctx, 1, 10)
+
+		require.NotNil(t, got.Error, "turn 级也必须透出「被主动终止」，否则与 item 级自相矛盾")
+		assert.Equal(t, int64(errno.ItemManuallyTerminatedCode), got.Error.Code)
+		require.NotNil(t, got.Error.Detail)
+		assert.Equal(t, "该行被用户主动终止", *got.Error.Detail)
+	})
+
+	t.Run("turn_other_err_behavior_unchanged", func(t *testing.T) {
+		b := newBuilder(errno.SerializeErr(errno.NewTurnOtherErr("turn status not updated for long interval", errors.New("timeout"))), int32(entity.TurnRunState_Fail))
+
+		got := b.getTurnSystemInfo(ctx, 1, 10)
+
+		require.NotNil(t, got.Error, "既有 ParseTurnOtherErr 分支行为不变")
+		assert.Contains(t, *got.Error.Detail, "turn status not updated")
+		assert.Zero(t, got.Error.Code, "既有分支不设 Code，保持向前兼容")
+	})
+}

@@ -463,6 +463,14 @@ const (
 	itemQuotaImpossibleMessage           = "实验行申报的资源量超过调度域上限，任何配置下都无法调度，已被置为失败"
 	itemQuotaImpossibleNoAffectStability = true // 结构性配置错误（申报>上限），非系统稳定性问题
 
+	// ItemManuallyTerminatedCode 行级终止（TerminateExperimentItems 触发）。用户主动放弃该行，不是系统故障，
+	// 故 noAffectStability = true，不计入稳定性口径。message 会经 err_msg 落库并由 ItemSystemInfo.Error 透给前端展示。
+	// ⚠️ 原取 601205087，与 main 上新增的 ItemQuotaImpossibleCode 撞号（两边并行开发各自取了下一个空位），
+	// 合并时本码顺延到 601205088；601205087 归 main 先到者。
+	ItemManuallyTerminatedCode              = 601205088
+	itemManuallyTerminatedMessage           = "该行被用户主动终止"
+	itemManuallyTerminatedNoAffectStability = true
+
 	// SandboxAgent 评测对象阶段性错误码 (601206xxx)：按沙箱内执行阶段划分，便于按阶段做 metrics 分类与用户前端展示。
 	SandboxAgentSetupErrorCode              = 601206001 // sandbox agent target setup phase error: agent 初始化 / 环境依赖装载失败
 	sandboxAgentSetupErrorMessage           = "sandbox agent: agent setup failed"
@@ -1171,6 +1179,12 @@ func init() {
 		ItemQuotaImpossibleCode,
 		itemQuotaImpossibleMessage,
 		code.WithAffectStability(!itemQuotaImpossibleNoAffectStability),
+	)
+
+	code.Register(
+		ItemManuallyTerminatedCode,
+		itemManuallyTerminatedMessage,
+		code.WithAffectStability(!itemManuallyTerminatedNoAffectStability),
 	)
 
 	code.Register(

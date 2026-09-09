@@ -40,6 +40,7 @@ func newExptItemResultRunLog(db *gorm.DB, opts ...gen.DOOption) exptItemResultRu
 	_exptItemResultRunLog.DeletedAt = field.NewField(tableName, "deleted_at")
 	_exptItemResultRunLog.LogID = field.NewString(tableName, "log_id")
 	_exptItemResultRunLog.ResultState = field.NewInt32(tableName, "result_state")
+	_exptItemResultRunLog.RetryTimes = field.NewInt32(tableName, "retry_times")
 	_exptItemResultRunLog.QuotaReservationState = field.NewInt32(tableName, "quota_reservation_state")
 
 	_exptItemResultRunLog.fillFieldMap()
@@ -65,7 +66,8 @@ type exptItemResultRunLog struct {
 	DeletedAt             field.Field  // 删除时间
 	LogID                 field.String // 日志 id
 	ResultState           field.Int32  // 回写结果表状态
-	QuotaReservationState field.Int32  // 中心调度额度预占投影: 0=none, 1=reserved
+	RetryTimes            field.Int32  // 本轮实验运行中该 item 已被系统自动重试的次数; 0=未重试; 仅内部调度降权用, 不透出
+	QuotaReservationState field.Int32  // 中心调度额度预占投影: 0=none, 1=reserved; Redis reservation 是账本真值, 本列仅供调度算准并发占用
 
 	fieldMap map[string]field.Expr
 }
@@ -95,6 +97,7 @@ func (e *exptItemResultRunLog) updateTableName(table string) *exptItemResultRunL
 	e.DeletedAt = field.NewField(table, "deleted_at")
 	e.LogID = field.NewString(table, "log_id")
 	e.ResultState = field.NewInt32(table, "result_state")
+	e.RetryTimes = field.NewInt32(table, "retry_times")
 	e.QuotaReservationState = field.NewInt32(table, "quota_reservation_state")
 
 	e.fillFieldMap()
@@ -124,7 +127,7 @@ func (e *exptItemResultRunLog) GetFieldByName(fieldName string) (field.OrderExpr
 }
 
 func (e *exptItemResultRunLog) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 14)
+	e.fieldMap = make(map[string]field.Expr, 15)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_id"] = e.ExptID
@@ -138,6 +141,7 @@ func (e *exptItemResultRunLog) fillFieldMap() {
 	e.fieldMap["deleted_at"] = e.DeletedAt
 	e.fieldMap["log_id"] = e.LogID
 	e.fieldMap["result_state"] = e.ResultState
+	e.fieldMap["retry_times"] = e.RetryTimes
 	e.fieldMap["quota_reservation_state"] = e.QuotaReservationState
 }
 

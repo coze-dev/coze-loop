@@ -378,3 +378,9 @@ func GetExperimentIDsByGroupOApi(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// TerminateExperimentItemsOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/terminate_items [POST]
+func TerminateExperimentItemsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.TerminateExperimentItemsOApi)
+}

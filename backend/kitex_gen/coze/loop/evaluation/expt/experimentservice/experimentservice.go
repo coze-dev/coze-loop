@@ -111,6 +111,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"TerminateExperimentItems": kitex.NewMethodInfo(
+		terminateExperimentItemsHandler,
+		newExperimentServiceTerminateExperimentItemsArgs,
+		newExperimentServiceTerminateExperimentItemsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"BatchGetExperimentResult": kitex.NewMethodInfo(
 		batchGetExperimentResult_Handler,
 		newExperimentServiceBatchGetExperimentResultArgs,
@@ -625,6 +632,25 @@ func newExperimentServiceKillExperimentArgs() interface{} {
 
 func newExperimentServiceKillExperimentResult() interface{} {
 	return expt.NewExperimentServiceKillExperimentResult()
+}
+
+func terminateExperimentItemsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceTerminateExperimentItemsArgs)
+	realResult := result.(*expt.ExperimentServiceTerminateExperimentItemsResult)
+	success, err := handler.(expt.ExperimentService).TerminateExperimentItems(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceTerminateExperimentItemsArgs() interface{} {
+	return expt.NewExperimentServiceTerminateExperimentItemsArgs()
+}
+
+func newExperimentServiceTerminateExperimentItemsResult() interface{} {
+	return expt.NewExperimentServiceTerminateExperimentItemsResult()
 }
 
 func batchGetExperimentResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1363,6 +1389,16 @@ func (p *kClient) KillExperiment(ctx context.Context, req *expt.KillExperimentRe
 	_args.Req = req
 	var _result expt.ExperimentServiceKillExperimentResult
 	if err = p.c.Call(ctx, "KillExperiment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) TerminateExperimentItems(ctx context.Context, req *expt.TerminateExperimentItemsRequest) (r *expt.TerminateExperimentItemsResponse, err error) {
+	var _args expt.ExperimentServiceTerminateExperimentItemsArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceTerminateExperimentItemsResult
+	if err = p.c.Call(ctx, "TerminateExperimentItems", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

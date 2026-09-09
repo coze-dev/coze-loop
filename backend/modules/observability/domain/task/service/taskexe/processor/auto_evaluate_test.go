@@ -263,6 +263,10 @@ func (f *fakeExperimentClient) KillExperiment(ctx context.Context, req *expt.Kil
 	return nil, nil
 }
 
+func (f *fakeExperimentClient) TerminateExperimentItems(ctx context.Context, req *expt.TerminateExperimentItemsRequest, callOptions ...callopt.Option) (*expt.TerminateExperimentItemsResponse, error) {
+	return nil, nil
+}
+
 func (f *fakeExperimentClient) BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentResultResponse, error) {
 	return nil, nil
 }
