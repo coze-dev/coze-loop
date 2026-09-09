@@ -19,6 +19,7 @@ type ManageImpl struct {
 }
 
 type modelConfigAliases struct {
+	ID          int64               `mapstructure:"id"`
 	ParamConfig *paramConfigAliases `mapstructure:"param_config"`
 }
 
@@ -27,6 +28,7 @@ type paramConfigAliases struct {
 }
 
 type paramSchemaAliases struct {
+	Name       string                `mapstructure:"name"`
 	DefaultVal *string               `mapstructure:"default_val"`
 	Properties []*paramSchemaAliases `mapstructure:"properties"`
 }
@@ -89,23 +91,43 @@ func (m *ManageImpl) readConfig(ctx context.Context) ([]*entity.Model, error) {
 	if err := m.loader.UnmarshalKey(ctx, "models", &aliases); err != nil {
 		return nil, err
 	}
-	for i, alias := range aliases {
-		if i >= len(models) || alias == nil || alias.ParamConfig == nil || models[i] == nil || models[i].ParamConfig == nil {
+	modelsByID := make(map[int64]*entity.Model, len(models))
+	for _, model := range models {
+		if model != nil {
+			modelsByID[model.ID] = model
+		}
+	}
+	for _, alias := range aliases {
+		if alias == nil || alias.ParamConfig == nil {
 			continue
 		}
-		applyParamSchemaAliases(models[i].ParamConfig.ParamSchemas, alias.ParamConfig.ParamSchemas)
+		model := modelsByID[alias.ID]
+		if model == nil || model.ParamConfig == nil {
+			continue
+		}
+		applyParamSchemaAliases(model.ParamConfig.ParamSchemas, alias.ParamConfig.ParamSchemas)
 	}
 	return models, nil
 }
 
 func applyParamSchemaAliases(schemas []*entity.ParamSchema, aliases []*paramSchemaAliases) {
-	for i, alias := range aliases {
-		if i >= len(schemas) || alias == nil || schemas[i] == nil {
+	schemasByName := make(map[string]*entity.ParamSchema, len(schemas))
+	for _, schema := range schemas {
+		if schema != nil {
+			schemasByName[schema.Name] = schema
+		}
+	}
+	for _, alias := range aliases {
+		if alias == nil {
+			continue
+		}
+		schema := schemasByName[alias.Name]
+		if schema == nil {
 			continue
 		}
 		if alias.DefaultVal != nil {
-			schemas[i].DefaultValue = *alias.DefaultVal
+			schema.DefaultValue = *alias.DefaultVal
 		}
-		applyParamSchemaAliases(schemas[i].Properties, alias.Properties)
+		applyParamSchemaAliases(schema.Properties, alias.Properties)
 	}
 }
