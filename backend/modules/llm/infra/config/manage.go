@@ -18,21 +18,6 @@ type ManageImpl struct {
 	loader conf.IConfigLoader
 }
 
-type modelConfigAliases struct {
-	ID          int64               `mapstructure:"id"`
-	ParamConfig *paramConfigAliases `mapstructure:"param_config"`
-}
-
-type paramConfigAliases struct {
-	ParamSchemas []*paramSchemaAliases `mapstructure:"param_schemas"`
-}
-
-type paramSchemaAliases struct {
-	Name       string                `mapstructure:"name"`
-	DefaultVal *string               `mapstructure:"default_val"`
-	Properties []*paramSchemaAliases `mapstructure:"properties"`
-}
-
 func NewManage(ctx context.Context, factory conf.IConfigLoaderFactory) (llm_conf.IConfigManage, error) {
 	loader, err := factory.NewConfigLoader("model_config.yaml")
 	if err != nil {
@@ -85,49 +70,26 @@ func (m *ManageImpl) readConfig(ctx context.Context) ([]*entity.Model, error) {
 	}
 
 	// default_value was the original decoder key, while every shipped model
-	// config uses default_val. Read the shipped spelling separately so both
-	// existing custom configs and the bundled configs remain supported.
-	var aliases []*modelConfigAliases
-	if err := m.loader.UnmarshalKey(ctx, "models", &aliases); err != nil {
-		return nil, err
-	}
-	modelsByID := make(map[int64]*entity.Model, len(models))
+	// config uses default_val. Normalize the alias from the same decoded
+	// snapshot so both spellings remain supported during live config reloads.
 	for _, model := range models {
-		if model != nil {
-			modelsByID[model.ID] = model
-		}
-	}
-	for _, alias := range aliases {
-		if alias == nil || alias.ParamConfig == nil {
-			continue
-		}
-		model := modelsByID[alias.ID]
 		if model == nil || model.ParamConfig == nil {
 			continue
 		}
-		applyParamSchemaAliases(model.ParamConfig.ParamSchemas, alias.ParamConfig.ParamSchemas)
+		normalizeParamSchemaDefaultValues(model.ParamConfig.ParamSchemas)
 	}
 	return models, nil
 }
 
-func applyParamSchemaAliases(schemas []*entity.ParamSchema, aliases []*paramSchemaAliases) {
-	schemasByName := make(map[string]*entity.ParamSchema, len(schemas))
+func normalizeParamSchemaDefaultValues(schemas []*entity.ParamSchema) {
 	for _, schema := range schemas {
-		if schema != nil {
-			schemasByName[schema.Name] = schema
-		}
-	}
-	for _, alias := range aliases {
-		if alias == nil {
-			continue
-		}
-		schema := schemasByName[alias.Name]
 		if schema == nil {
 			continue
 		}
-		if alias.DefaultVal != nil {
-			schema.DefaultValue = *alias.DefaultVal
+		if schema.DefaultVal != nil {
+			schema.DefaultValue = *schema.DefaultVal
+			schema.DefaultVal = nil
 		}
-		applyParamSchemaAliases(schema.Properties, alias.Properties)
+		normalizeParamSchemaDefaultValues(schema.Properties)
 	}
 }
