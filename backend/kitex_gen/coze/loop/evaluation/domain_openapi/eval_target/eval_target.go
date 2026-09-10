@@ -59,10 +59,14 @@ const (
 	HTTPMethodPost = "post"
 
 	SandboxAgentTypeSingleRunCLI = "single_run_cli"
-
+	// 单沙箱执行链路
 	SandboxCountModeSingle = "single"
-
+	// 先起从属沙箱拿 session id，再起主沙箱运行 sandbox-pipeline
 	SandboxCountModeDual = "dual"
+	// Mac VM + orchestrator sandbox
+	SandboxCountModeMacVMPlusSandbox = "mac_vm_plus_sandbox"
+	// orchestrator + SSH/Runner sandbox + Mac VM Remote-SSH IDE
+	SandboxCountModeMacVMPlusSSH = "mac_vm_plus_ssh"
 )
 
 type EvalTargetType = string
@@ -82,7 +86,7 @@ type HTTPMethod = string
 // 沙箱 Agent 子类型，内置路由标识，路由到对应的执行流水线
 type SandboxAgentType = string
 
-// 单/双沙箱模式；未填 / 未识别一律按 Single 处理。
+// 沙箱资源拓扑；未填 / 未识别一律按 Single 处理。
 type SandboxCountMode = string
 
 type CustomEvalTarget struct {
@@ -8834,7 +8838,7 @@ type SandboxAgent struct {
 	Envs []*SandboxEnvVar `thrift:"envs,7,optional" frugal:"7,optional,list<SandboxEnvVar>" form:"envs" json:"envs,omitempty" query:"envs"`
 	// 沙箱镜像
 	Image *string `thrift:"image,8,optional" frugal:"8,optional,string" form:"image" json:"image,omitempty" query:"image"`
-	// 单/双沙箱模式；空值按 Single 处理
+	// 沙箱资源拓扑；空值按 Single 处理
 	SandboxCountMode *SandboxCountMode `thrift:"sandbox_count_mode,9,optional" frugal:"9,optional,string" form:"sandbox_count_mode" json:"sandbox_count_mode,omitempty" query:"sandbox_count_mode"`
 }
 
