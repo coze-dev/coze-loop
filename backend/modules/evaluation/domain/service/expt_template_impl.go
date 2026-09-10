@@ -373,6 +373,9 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		if param.CreateEvalTargetParam.AgentConnection != nil {
 			opts = append(opts, entity.WithAgentConnection(param.CreateEvalTargetParam.AgentConnection))
 		}
+		if param.CreateEvalTargetParam.SandboxAgent != nil {
+			opts = append(opts, entity.WithSandboxAgent(param.CreateEvalTargetParam.SandboxAgent))
+		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, sourceTargetID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
 		if err != nil {
 			return nil, errorx.Wrapf(err, "CreateEvalTarget failed, param: %v", param.CreateEvalTargetParam)
@@ -1963,6 +1966,9 @@ func (e *ExptTemplateManagerImpl) resolveTargetForCreate(ctx context.Context, pa
 		}
 		if param.CreateEvalTargetParam.AgentConnection != nil {
 			opts = append(opts, entity.WithAgentConnection(param.CreateEvalTargetParam.AgentConnection))
+		}
+		if param.CreateEvalTargetParam.SandboxAgent != nil {
+			opts = append(opts, entity.WithSandboxAgent(param.CreateEvalTargetParam.SandboxAgent))
 		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
 		if err != nil {
