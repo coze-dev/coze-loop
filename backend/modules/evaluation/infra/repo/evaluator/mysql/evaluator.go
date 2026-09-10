@@ -218,13 +218,14 @@ func (dao *EvaluatorDAOImpl) CheckNameExist(ctx context.Context, spaceID, evalua
 }
 
 type ListEvaluatorRequest struct {
-	SpaceID       int64
-	SearchName    string
-	CreatorIDs    []int64
-	EvaluatorType []int32
-	PageSize      int32
-	PageNum       int32
-	OrderBy       []*OrderBy
+	SpaceID           int64
+	SearchName        string
+	SearchDescription string
+	CreatorIDs        []int64
+	EvaluatorType     []int32
+	PageSize          int32
+	PageNum           int32
+	OrderBy           []*OrderBy
 }
 
 // ListBuiltinEvaluatorRequest 专用于内置评估器查询
@@ -250,6 +251,11 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 	// 添加名称模糊搜索
 	if len(req.SearchName) > 0 {
 		query = query.Where("name LIKE ?", "%"+req.SearchName+"%")
+	}
+
+	// 添加描述模糊搜索
+	if len(req.SearchDescription) > 0 {
+		query = query.Where("description LIKE ?", "%"+req.SearchDescription+"%")
 	}
 
 	// 添加创建者过滤

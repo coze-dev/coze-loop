@@ -681,13 +681,14 @@ func (r *EvaluatorRepoImpl) ListEvaluator(ctx context.Context, req *repo.ListEva
 		})
 	}
 	daoReq := &mysql.ListEvaluatorRequest{
-		SpaceID:       req.SpaceID,
-		SearchName:    req.SearchName,
-		CreatorIDs:    req.CreatorIDs,
-		EvaluatorType: evaluatorTypes,
-		PageSize:      req.PageSize,
-		PageNum:       req.PageNum,
-		OrderBy:       orderBys,
+		SpaceID:           req.SpaceID,
+		SearchName:        req.SearchName,
+		SearchDescription: req.SearchDescription,
+		CreatorIDs:        req.CreatorIDs,
+		EvaluatorType:     evaluatorTypes,
+		PageSize:          req.PageSize,
+		PageNum:           req.PageNum,
+		OrderBy:           orderBys,
 	}
 	evaluatorPOS, err := r.evaluatorDao.ListEvaluator(ctx, daoReq)
 	if err != nil {

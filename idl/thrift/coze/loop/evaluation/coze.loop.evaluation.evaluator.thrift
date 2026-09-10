@@ -7,6 +7,7 @@ include "./domain/evaluator.thrift"
 struct ListEvaluatorsRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional string search_name (api.body='search_name')
+    6: optional string search_description (api.body='search_description')
     3: optional list<i64> creator_ids (api.body='creator_ids', api.js_conv='true', go.tag='json:"creator_ids"')
     4: optional list<evaluator.EvaluatorType> evaluator_type (api.body='evaluator_type')
     5: optional bool with_version (api.body='with_version')
