@@ -208,6 +208,15 @@ struct RunModeConfig {
     12: optional list<AgentSkillDeclare> skills (go.tag = 'json:"skills"')
 }
 
+// Kept structurally aligned with domain/expt.thrift without cross-domain includes.
+typedef string VerificationMode (ts.enum="true")
+const VerificationMode VerificationMode_NopOnly = "nop_only"
+const VerificationMode VerificationMode_OracleOnly = "oracle_only"
+const VerificationMode VerificationMode_F2P = "f2p"
+struct VerificationConfig {
+    1: optional VerificationMode mode
+}
+
 // per-set 运行期增量信息 (纯读模型; Get 全填含详情, List 只填 id/count)
 struct ExptEvalSetDetail {
     1: optional i64 eval_set_id (api.js_conv = "true", go.tag = 'json:"eval_set_id"')
@@ -343,6 +352,7 @@ struct Experiment {
     117: optional string scheduler_mode
     // 单 item 预期资源消耗向量; "有则回显、无则省略"(legacy 实验确实没申报)。
     118: optional ExpectedQuotaConsumption expected_quota_consumption
+    119: optional VerificationConfig verification_config
 
     // 注: scheduler_scope **不进读模型**。它是不透明调度域 ID, 对调用方无可用语义却泄露部署拓扑;
     // 内部运维需要时直接查 experiment.scheduler_scope 列。
@@ -509,6 +519,7 @@ struct ExptScoreWeight {
 
 // 实验模板
 struct ExptTemplate {
+    11: optional VerificationConfig verification_config
     1: optional ExptTemplateMeta meta
     2: optional ExptTuple triple_config
     3: optional ExptFieldMapping field_mapping_config

@@ -42,6 +42,10 @@ const (
 	SandboxCountModeSingle = "single"
 
 	SandboxCountModeDual = "dual"
+
+	SandboxCountModeMacVMPlusSandbox = "mac_vm_plus_sandbox"
+
+	SandboxCountModeMacVMPlusSSH = "mac_vm_plus_ssh"
 )
 
 type EvalTargetType int64

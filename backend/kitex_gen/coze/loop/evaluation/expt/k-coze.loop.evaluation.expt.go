@@ -57,6 +57,20 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 			break
 		}
 		switch fieldId {
+		case 52:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField52(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
@@ -654,6 +668,18 @@ SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 RequiredFieldNotSetError:
 	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_CreateExperimentRequest[fieldId]))
+}
+
+func (p *CreateExperimentRequest) FastReadField52(buf []byte) (int, error) {
+	offset := 0
+	_field := expt.NewVerificationConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.VerificationConfig = _field
+	return offset, nil
 }
 
 func (p *CreateExperimentRequest) FastReadField1(buf []byte) (int, error) {
@@ -1317,6 +1343,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField47(buf[offset:], w)
 		offset += p.fastWriteField91(buf[offset:], w)
 		offset += p.fastWriteField92(buf[offset:], w)
+		offset += p.fastWriteField52(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
@@ -1351,6 +1378,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 func (p *CreateExperimentRequest) BLength() int {
 	l := 0
 	if p != nil {
+		l += p.field52Length()
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
@@ -1395,6 +1423,15 @@ func (p *CreateExperimentRequest) BLength() int {
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
+}
+
+func (p *CreateExperimentRequest) fastWriteField52(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVerificationConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 52)
+		offset += p.VerificationConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
 }
 
 func (p *CreateExperimentRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
@@ -1808,6 +1845,15 @@ func (p *CreateExperimentRequest) fastWriteField255(buf []byte, w thrift.NocopyW
 	return offset
 }
 
+func (p *CreateExperimentRequest) field52Length() int {
+	l := 0
+	if p.IsSetVerificationConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.VerificationConfig.BLength()
+	}
+	return l
+}
+
 func (p *CreateExperimentRequest) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -2202,6 +2248,15 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
+
+	var _verificationConfig *expt.VerificationConfig
+	if src.VerificationConfig != nil {
+		_verificationConfig = &expt.VerificationConfig{}
+		if err := _verificationConfig.DeepCopy(src.VerificationConfig); err != nil {
+			return err
+		}
+	}
+	p.VerificationConfig = _verificationConfig
 
 	p.WorkspaceID = src.WorkspaceID
 
@@ -2705,6 +2760,20 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 			break
 		}
 		switch fieldId {
+		case 52:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField52(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
@@ -3330,6 +3399,18 @@ SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 RequiredFieldNotSetError:
 	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_SubmitExperimentRequest[fieldId]))
+}
+
+func (p *SubmitExperimentRequest) FastReadField52(buf []byte) (int, error) {
+	offset := 0
+	_field := expt.NewVerificationConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.VerificationConfig = _field
+	return offset, nil
 }
 
 func (p *SubmitExperimentRequest) FastReadField1(buf []byte) (int, error) {
@@ -4011,6 +4092,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField47(buf[offset:], w)
 		offset += p.fastWriteField91(buf[offset:], w)
 		offset += p.fastWriteField92(buf[offset:], w)
+		offset += p.fastWriteField52(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
@@ -4047,6 +4129,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 func (p *SubmitExperimentRequest) BLength() int {
 	l := 0
 	if p != nil {
+		l += p.field52Length()
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
@@ -4093,6 +4176,15 @@ func (p *SubmitExperimentRequest) BLength() int {
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
+}
+
+func (p *SubmitExperimentRequest) fastWriteField52(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVerificationConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 52)
+		offset += p.VerificationConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
 }
 
 func (p *SubmitExperimentRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
@@ -4523,6 +4615,15 @@ func (p *SubmitExperimentRequest) fastWriteField255(buf []byte, w thrift.NocopyW
 	return offset
 }
 
+func (p *SubmitExperimentRequest) field52Length() int {
+	l := 0
+	if p.IsSetVerificationConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.VerificationConfig.BLength()
+	}
+	return l
+}
+
 func (p *SubmitExperimentRequest) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -4935,6 +5036,15 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
+
+	var _verificationConfig *expt.VerificationConfig
+	if src.VerificationConfig != nil {
+		_verificationConfig = &expt.VerificationConfig{}
+		if err := _verificationConfig.DeepCopy(src.VerificationConfig); err != nil {
+			return err
+		}
+	}
+	p.VerificationConfig = _verificationConfig
 
 	p.WorkspaceID = src.WorkspaceID
 
@@ -19546,6 +19656,20 @@ func (p *CreateExperimentTemplateRequest) FastRead(buf []byte) (int, error) {
 			break
 		}
 		switch fieldId {
+		case 25:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField25(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
@@ -19753,6 +19877,18 @@ RequiredFieldNotSetError:
 	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_CreateExperimentTemplateRequest[fieldId]))
 }
 
+func (p *CreateExperimentTemplateRequest) FastReadField25(buf []byte) (int, error) {
+	offset := 0
+	_field := expt.NewVerificationConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.VerificationConfig = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentTemplateRequest) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
@@ -19927,6 +20063,7 @@ func (p *CreateExperimentTemplateRequest) FastWriteNocopy(buf []byte, w thrift.N
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField24(buf[offset:], w)
+		offset += p.fastWriteField25(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
@@ -19945,6 +20082,7 @@ func (p *CreateExperimentTemplateRequest) FastWriteNocopy(buf []byte, w thrift.N
 func (p *CreateExperimentTemplateRequest) BLength() int {
 	l := 0
 	if p != nil {
+		l += p.field25Length()
 		l += p.field1Length()
 		l += p.field10Length()
 		l += p.field11Length()
@@ -19961,6 +20099,15 @@ func (p *CreateExperimentTemplateRequest) BLength() int {
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
+}
+
+func (p *CreateExperimentTemplateRequest) fastWriteField25(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVerificationConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 25)
+		offset += p.VerificationConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
 }
 
 func (p *CreateExperimentTemplateRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
@@ -20076,6 +20223,15 @@ func (p *CreateExperimentTemplateRequest) fastWriteField255(buf []byte, w thrift
 		offset += p.Base.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
+}
+
+func (p *CreateExperimentTemplateRequest) field25Length() int {
+	l := 0
+	if p.IsSetVerificationConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.VerificationConfig.BLength()
+	}
+	return l
 }
 
 func (p *CreateExperimentTemplateRequest) field1Length() int {
@@ -20198,6 +20354,15 @@ func (p *CreateExperimentTemplateRequest) DeepCopy(s interface{}) error {
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
+
+	var _verificationConfig *expt.VerificationConfig
+	if src.VerificationConfig != nil {
+		_verificationConfig = &expt.VerificationConfig{}
+		if err := _verificationConfig.DeepCopy(src.VerificationConfig); err != nil {
+			return err
+		}
+	}
+	p.VerificationConfig = _verificationConfig
 
 	p.WorkspaceID = src.WorkspaceID
 
@@ -21395,6 +21560,20 @@ func (p *UpdateExperimentTemplateRequest) FastRead(buf []byte) (int, error) {
 			break
 		}
 		switch fieldId {
+		case 25:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField25(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
@@ -21608,6 +21787,18 @@ RequiredFieldNotSetError:
 	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_UpdateExperimentTemplateRequest[fieldId]))
 }
 
+func (p *UpdateExperimentTemplateRequest) FastReadField25(buf []byte) (int, error) {
+	offset := 0
+	_field := expt.NewVerificationConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.VerificationConfig = _field
+	return offset, nil
+}
+
 func (p *UpdateExperimentTemplateRequest) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
@@ -21785,6 +21976,7 @@ func (p *UpdateExperimentTemplateRequest) FastWriteNocopy(buf []byte, w thrift.N
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField24(buf[offset:], w)
+		offset += p.fastWriteField25(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
@@ -21802,6 +21994,7 @@ func (p *UpdateExperimentTemplateRequest) FastWriteNocopy(buf []byte, w thrift.N
 func (p *UpdateExperimentTemplateRequest) BLength() int {
 	l := 0
 	if p != nil {
+		l += p.field25Length()
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field10Length()
@@ -21818,6 +22011,15 @@ func (p *UpdateExperimentTemplateRequest) BLength() int {
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
+}
+
+func (p *UpdateExperimentTemplateRequest) fastWriteField25(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVerificationConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 25)
+		offset += p.VerificationConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
 }
 
 func (p *UpdateExperimentTemplateRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
@@ -21931,6 +22133,15 @@ func (p *UpdateExperimentTemplateRequest) fastWriteField255(buf []byte, w thrift
 		offset += p.Base.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
+}
+
+func (p *UpdateExperimentTemplateRequest) field25Length() int {
+	l := 0
+	if p.IsSetVerificationConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.VerificationConfig.BLength()
+	}
+	return l
 }
 
 func (p *UpdateExperimentTemplateRequest) field1Length() int {
@@ -22051,6 +22262,15 @@ func (p *UpdateExperimentTemplateRequest) DeepCopy(s interface{}) error {
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
+
+	var _verificationConfig *expt.VerificationConfig
+	if src.VerificationConfig != nil {
+		_verificationConfig = &expt.VerificationConfig{}
+		if err := _verificationConfig.DeepCopy(src.VerificationConfig); err != nil {
+			return err
+		}
+	}
+	p.VerificationConfig = _verificationConfig
 
 	p.WorkspaceID = src.WorkspaceID
 

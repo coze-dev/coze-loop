@@ -1829,6 +1829,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		// ★ 透传引用分组实验 id: 命中当前空间实验则复用其 group key(归入同一分组); 缺省则以实验 id 兜底。
 		RefGroupExperimentID: req.RefGroupExperimentID,
 		RunModeConfig:        runModeConfig,
+		VerificationConfig:   experiment_convertor.VerificationConfigOpenAPI2Domain(req.VerificationConfig),
 		// ★ 中心化调度特权参数：同上，透传后由下游按白名单裁决。
 		PriorityLevel:            req.PriorityLevel,
 		ExpectedQuotaConsumption: experiment_convertor.ExpectedQuotaConsumptionOpenAPI2Domain(req.ExpectedQuotaConsumption),

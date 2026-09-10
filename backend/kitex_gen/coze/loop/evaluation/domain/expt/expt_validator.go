@@ -32,6 +32,9 @@ func (p *AgentSkillDeclare) IsValid() error {
 	}
 	return nil
 }
+func (p *VerificationConfig) IsValid() error {
+	return nil
+}
 func (p *RunModeConfig) IsValid() error {
 	return nil
 }
@@ -102,6 +105,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ExpectedQuotaConsumption not valid, %w", err)
 		}
 	}
+	if p.VerificationConfig != nil {
+		if err := p.VerificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field VerificationConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {
@@ -137,6 +145,11 @@ func (p *ExptScoreWeight) IsValid() error {
 	return nil
 }
 func (p *ExptTemplate) IsValid() error {
+	if p.VerificationConfig != nil {
+		if err := p.VerificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field VerificationConfig not valid, %w", err)
+		}
+	}
 	if p.Meta != nil {
 		if err := p.Meta.IsValid(); err != nil {
 			return fmt.Errorf("field Meta not valid, %w", err)

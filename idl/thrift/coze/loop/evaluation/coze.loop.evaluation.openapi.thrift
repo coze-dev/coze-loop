@@ -611,6 +611,7 @@ struct GetEvaluationSetIOJobOApiResponse {
 
 // 3.1 创建评测实验
 struct SubmitExperimentOApiRequest {
+    52: optional experiment.VerificationConfig verification_config (api.body = 'verification_config')
     // 基础信息
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = "true", go.tag = 'json:"workspace_id"')
     2: optional string name (api.body = 'name')
@@ -1334,6 +1335,7 @@ struct ValidateEvaluatorOpenAPIData {
 
 // 4.1 创建实验模板
 struct CreateExptTemplateOApiRequest {
+    25: optional experiment.VerificationConfig verification_config (api.body = 'verification_config')
     1: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
     2: optional experiment.ExptTemplateMeta meta (api.body = "meta")
     3: optional experiment.ExptTuple triple_config (api.body = "triple_config")
@@ -1406,6 +1408,7 @@ struct UpdateExptTemplateMetaOpenAPIData {
 
 // 4.4 更新实验模板
 struct UpdateExptTemplateOApiRequest {
+    25: optional experiment.VerificationConfig verification_config (api.body = 'verification_config')
     1: optional i64 template_id (api.path = "template_id", api.js_conv = "true", go.tag = 'json:"template_id"')
     2: optional i64 workspace_id (api.body = "workspace_id", api.js_conv = "true", go.tag = 'json:"workspace_id"')
     3: optional experiment.ExptTemplateMeta meta (api.body = "meta")

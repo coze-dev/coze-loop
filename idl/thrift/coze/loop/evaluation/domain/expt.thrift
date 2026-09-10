@@ -104,6 +104,17 @@ struct AgentSkillDeclare {
     5: optional list<string> credentials_keys (go.tag = 'json:"credentials_keys"')
 }
 
+// 实验级数据集验证模式；不由评测对象名称或 runtime_param JSON 推断。
+typedef string VerificationMode (ts.enum="true")
+const VerificationMode VerificationMode_NopOnly = "nop_only"
+const VerificationMode VerificationMode_OracleOnly = "oracle_only"
+const VerificationMode VerificationMode_F2P = "f2p"
+
+struct VerificationConfig {
+    // 配置存在时必须指定合法模式，缺省或未知值由服务端拒绝。
+    1: optional VerificationMode mode
+}
+
 // RunModeConfig 实验级跑法配置 (对齐 runtime RunModeConfig)。run_mode 是顶层跑法总开关;
 // sua_mode 是 SUA 专属子字段, 仅 run_mode ∈ {sua_multi_turn, goal} 时生效。
 // 仅 SandboxAgent 评测对象 + MultiSetConfig 实验生效。
@@ -259,6 +270,8 @@ struct Experiment {
     // 单 item 预期资源消耗向量回显: 从 experiment.eval_conf 反序列化, 与 Create/Submit 入参同构。
     // "有则回显、无则省略": legacy 实验确实没申报向量, 省略比返回空结构更如实。
     118: optional ExpectedQuotaConsumption expected_quota_consumption
+    // 从 experiment.eval_conf 回显；缺省表示普通评测。
+    119: optional VerificationConfig verification_config
 
     // 注: scheduler_scope **刻意不进读视图**。它是不透明调度域 ID (形如 fornax_cn_prod),
     // 对调用方没有可用语义却泄露部署拓扑; 业务代码本就不允许解析该字符串, 回显只会诱使
@@ -303,6 +316,7 @@ struct ExptScoreWeight {
 }
 
 struct ExptTemplate {
+    11: optional VerificationConfig verification_config
     1: optional ExptTemplateMeta meta
     2: optional ExptTuple triple_config
     3: optional ExptFieldMapping field_mapping_config

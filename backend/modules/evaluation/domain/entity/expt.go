@@ -353,6 +353,7 @@ func (e *ExptEvaluatorVersionRef) String() string {
 }
 
 type EvaluationConfiguration struct {
+	VerificationConfig      *VerificationConfig `json:"verification_config,omitempty"`
 	ConnectorConf           Connector
 	ItemConcurNum           *int
 	ItemRetryNum            *int

@@ -417,6 +417,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	// 跑法配置回显 (115): 写侧 SubmitExperimentRequest 能配, 读侧此前无字段, OpenAPI 调用方
 	// 查不到自己配了什么跑法 —— 内部接口一直能回显, 属两套读模型的不对称, 2026-08 补齐。
 	result.RunModeConfig = RunModeConfigDomain2OpenAPI(dto.RunModeConfig)
+	result.VerificationConfig = verificationConfigDomain2OpenAPI(dto.VerificationConfig)
 	// 中心化调度读视图 (116~118)。与 run_mode_config 同理: 内部读模型能回显, OpenAPI 侧此前没有,
 	// 调用方查不到自己的实验有没有被中心调度纳管、申报了多少额度。
 	// scheduler_scope 刻意不透出, 见 domain_openapi/experiment.thrift 的字段注释。
@@ -776,6 +777,11 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	}
 
 	result.NotificationConf = entityNotificationConfToOpenAPI(experiment.NotificationConf)
+	verification, cleanedRuntime, verificationErr := experiment.EvalConf.ResolveVerificationConfig(experiment.Target)
+	result.VerificationConfig = verificationConfigDomain2OpenAPI(verificationConfigDO2DTO(verification))
+	if verification != nil && verificationErr == nil && result.TargetRuntimeParam != nil {
+		result.TargetRuntimeParam.JSONValue = gptr.Of(cleanedRuntime)
+	}
 
 	// item-centric 多评测集字段回填 (110/111/112/113/114): 与 DomainExperimentDTO2OpenAPI / ToExptDTO 等价, 但走 entity 直转,
 	// 供 GetExperimentsOApi 单实验 Get 使用 (其上游 manager.GetDetail 已 enrichEvalSetDetails 填好 EvalSetDetails/TotalItemCount)。
@@ -2257,8 +2263,9 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 		ExptType:    OpenAPIExptTypeDO2DTO(template.Meta.ExptType),
 	}
 	dto := &openapiExperiment.ExptTemplate{
-		Meta:     metaDTO,
-		BaseInfo: common.OpenAPIBaseInfoDO2DTO(template.BaseInfo),
+		VerificationConfig: verificationConfigDomain2OpenAPI(ToExptTemplateDTO(template).VerificationConfig),
+		Meta:               metaDTO,
+		BaseInfo:           common.OpenAPIBaseInfoDO2DTO(template.BaseInfo),
 	}
 
 	if template.TripleConfig != nil {
@@ -2654,6 +2661,12 @@ func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequ
 		param.NotificationConf = entityConf
 	}
 
+	if req.VerificationConfig != nil {
+		if param.TemplateConf == nil {
+			param.TemplateConf = &entity.ExptTemplateConfiguration{}
+		}
+		param.TemplateConf.VerificationConfig = verificationConfigDTO2DO(VerificationConfigOpenAPI2Domain(req.VerificationConfig))
+	}
 	return param, nil
 }
 
@@ -2771,6 +2784,12 @@ func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequ
 		param.NotificationConf = entityConf
 	}
 
+	if req.VerificationConfig != nil {
+		if param.TemplateConf == nil {
+			param.TemplateConf = &entity.ExptTemplateConfiguration{}
+		}
+		param.TemplateConf.VerificationConfig = verificationConfigDTO2DO(VerificationConfigOpenAPI2Domain(req.VerificationConfig))
+	}
 	return param, nil
 }
 
@@ -3397,9 +3416,9 @@ func ExpectedQuotaConsumptionOpenAPI2Domain(c *openapiExperiment.ExpectedQuotaCo
 			continue
 		}
 		resources = append(resources, &domainExpt.ExpectedResourceConsumption{
-			Category:    r.GetCategory(),
-			ResourceKey: r.GetResourceKey(),
-			Amount:      r.GetAmount(),
+			Category:    r.Category,
+			ResourceKey: r.ResourceKey,
+			Amount:      r.Amount,
 			Source:      gptr.Of(r.GetSource()),
 		})
 	}

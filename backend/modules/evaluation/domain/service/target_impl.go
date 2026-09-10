@@ -476,6 +476,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		return nil, err
 	}
 	outputData, runStatus, err = e.typedOperators[evalTargetDO.EvalTargetType].Execute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+		VerificationConfig:  param.VerificationConfig,
 		ExptID:              gptr.Indirect(param.ExperimentID),
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
@@ -570,6 +571,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	ctx = looptracer.GetTracer().Inject(ctx)
 
 	invokeID, callee, ext, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+		VerificationConfig:  param.VerificationConfig,
 		ExptID:              gptr.Indirect(param.ExperimentID),
 		ExptRunID:           gptr.Indirect(param.ExperimentRunID),
 		TargetID:            targetID,

@@ -100,6 +100,12 @@ const (
 
 	SuaModeFixed = "fixed"
 
+	VerificationModeNopOnly = "nop_only"
+
+	VerificationModeOracleOnly = "oracle_only"
+
+	VerificationModeF2P = "f2p"
+
 	ColumnEvalTargetNameActualOutput = "actual_output"
 
 	ColumnEvalTargetNameTrajectory = "trajectory"
@@ -263,6 +269,9 @@ type ExptRunMode = string
 
 // SuaMode 模拟用户(SUA)生成下一轮 query 的模式, 对齐 domain SuaMode。
 type SuaMode = string
+
+// Kept structurally aligned with domain/expt.thrift without cross-domain includes.
+type VerificationMode = string
 
 // ===============================
 // 筛选能力结构（与 domain/expt.thrift 结构一致）
@@ -5328,6 +5337,187 @@ func (p *RunModeConfig) Field12DeepEqual(src []*AgentSkillDeclare) bool {
 	return true
 }
 
+type VerificationConfig struct {
+	Mode *VerificationMode `thrift:"mode,1,optional" frugal:"1,optional,string" form:"mode" json:"mode,omitempty" query:"mode"`
+}
+
+func NewVerificationConfig() *VerificationConfig {
+	return &VerificationConfig{}
+}
+
+func (p *VerificationConfig) InitDefault() {
+}
+
+var VerificationConfig_Mode_DEFAULT VerificationMode
+
+func (p *VerificationConfig) GetMode() (v VerificationMode) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMode() {
+		return VerificationConfig_Mode_DEFAULT
+	}
+	return *p.Mode
+}
+func (p *VerificationConfig) SetMode(val *VerificationMode) {
+	p.Mode = val
+}
+
+var fieldIDToName_VerificationConfig = map[int16]string{
+	1: "mode",
+}
+
+func (p *VerificationConfig) IsSetMode() bool {
+	return p.Mode != nil
+}
+
+func (p *VerificationConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_VerificationConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *VerificationConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *VerificationMode
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Mode = _field
+	return nil
+}
+
+func (p *VerificationConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("VerificationConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *VerificationConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMode() {
+		if err = oprot.WriteFieldBegin("mode", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Mode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *VerificationConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("VerificationConfig(%+v)", *p)
+
+}
+
+func (p *VerificationConfig) DeepEqual(ano *VerificationConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Mode) {
+		return false
+	}
+	return true
+}
+
+func (p *VerificationConfig) Field1DeepEqual(src *VerificationMode) bool {
+
+	if p.Mode == src {
+		return true
+	} else if p.Mode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Mode, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 // per-set 运行期增量信息 (纯读模型; Get 全填含详情, List 只填 id/count)
 type ExptEvalSetDetail struct {
 	EvalSetID        *int64 `thrift:"eval_set_id,1,optional" frugal:"1,optional,i64" json:"eval_set_id" form:"eval_set_id" query:"eval_set_id"`
@@ -9062,6 +9252,7 @@ type Experiment struct {
 	SchedulerMode *string `thrift:"scheduler_mode,117,optional" frugal:"117,optional,string" form:"scheduler_mode" json:"scheduler_mode,omitempty" query:"scheduler_mode"`
 	// 单 item 预期资源消耗向量; "有则回显、无则省略"(legacy 实验确实没申报)。
 	ExpectedQuotaConsumption *ExpectedQuotaConsumption `thrift:"expected_quota_consumption,118,optional" frugal:"118,optional,ExpectedQuotaConsumption" form:"expected_quota_consumption" json:"expected_quota_consumption,omitempty" query:"expected_quota_consumption"`
+	VerificationConfig       *VerificationConfig       `thrift:"verification_config,119,optional" frugal:"119,optional,VerificationConfig" form:"verification_config" json:"verification_config,omitempty" query:"verification_config"`
 	// 注: scheduler_scope **不进读模型**。它是不透明调度域 ID, 对调用方无可用语义却泄露部署拓扑;
 	// 内部运维需要时直接查 experiment.scheduler_scope 列。
 	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
@@ -9422,6 +9613,18 @@ func (p *Experiment) GetExpectedQuotaConsumption() (v *ExpectedQuotaConsumption)
 	return p.ExpectedQuotaConsumption
 }
 
+var Experiment_VerificationConfig_DEFAULT *VerificationConfig
+
+func (p *Experiment) GetVerificationConfig() (v *VerificationConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVerificationConfig() {
+		return Experiment_VerificationConfig_DEFAULT
+	}
+	return p.VerificationConfig
+}
+
 var Experiment_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *Experiment) GetBaseInfo() (v *common.BaseInfo) {
@@ -9520,6 +9723,9 @@ func (p *Experiment) SetSchedulerMode(val *string) {
 func (p *Experiment) SetExpectedQuotaConsumption(val *ExpectedQuotaConsumption) {
 	p.ExpectedQuotaConsumption = val
 }
+func (p *Experiment) SetVerificationConfig(val *VerificationConfig) {
+	p.VerificationConfig = val
+}
 func (p *Experiment) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -9554,6 +9760,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	116: "priority_level",
 	117: "scheduler_mode",
 	118: "expected_quota_consumption",
+	119: "verification_config",
 	100: "base_info",
 }
 
@@ -9671,6 +9878,10 @@ func (p *Experiment) IsSetSchedulerMode() bool {
 
 func (p *Experiment) IsSetExpectedQuotaConsumption() bool {
 	return p.ExpectedQuotaConsumption != nil
+}
+
+func (p *Experiment) IsSetVerificationConfig() bool {
+	return p.VerificationConfig != nil
 }
 
 func (p *Experiment) IsSetBaseInfo() bool {
@@ -9922,6 +10133,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 118:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField118(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 119:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField119(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10304,6 +10523,14 @@ func (p *Experiment) ReadField118(iprot thrift.TProtocol) error {
 	p.ExpectedQuotaConsumption = _field
 	return nil
 }
+func (p *Experiment) ReadField119(iprot thrift.TProtocol) error {
+	_field := NewVerificationConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.VerificationConfig = _field
+	return nil
+}
 func (p *Experiment) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -10433,6 +10660,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField118(oprot); err != nil {
 			fieldId = 118
+			goto WriteFieldError
+		}
+		if err = p.writeField119(oprot); err != nil {
+			fieldId = 119
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -11011,6 +11242,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 118 end error: ", p), err)
 }
+func (p *Experiment) writeField119(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVerificationConfig() {
+		if err = oprot.WriteFieldBegin("verification_config", thrift.STRUCT, 119); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.VerificationConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 119 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 119 end error: ", p), err)
+}
 func (p *Experiment) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -11129,6 +11378,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field118DeepEqual(ano.ExpectedQuotaConsumption) {
+		return false
+	}
+	if !p.Field119DeepEqual(ano.VerificationConfig) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -11440,6 +11692,13 @@ func (p *Experiment) Field117DeepEqual(src *string) bool {
 func (p *Experiment) Field118DeepEqual(src *ExpectedQuotaConsumption) bool {
 
 	if !p.ExpectedQuotaConsumption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field119DeepEqual(src *VerificationConfig) bool {
+
+	if !p.VerificationConfig.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -18807,11 +19066,12 @@ func (p *ExptScoreWeight) Field2DeepEqual(src map[int64]float64) bool {
 
 // 实验模板
 type ExptTemplate struct {
-	Meta                    *ExptTemplateMeta `thrift:"meta,1,optional" frugal:"1,optional,ExptTemplateMeta" form:"meta" json:"meta,omitempty" query:"meta"`
-	TripleConfig            *ExptTuple        `thrift:"triple_config,2,optional" frugal:"2,optional,ExptTuple" form:"triple_config" json:"triple_config,omitempty" query:"triple_config"`
-	FieldMappingConfig      *ExptFieldMapping `thrift:"field_mapping_config,3,optional" frugal:"3,optional,ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty" query:"field_mapping_config"`
-	ScoreWeightConfig       *ExptScoreWeight  `thrift:"score_weight_config,4,optional" frugal:"4,optional,ExptScoreWeight" json:"score_weight_config" form:"score_weight_config" query:"score_weight_config"`
-	EnableExtractTrajectory *bool             `thrift:"enable_extract_trajectory,5,optional" frugal:"5,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty" query:"enable_extract_trajectory"`
+	VerificationConfig      *VerificationConfig `thrift:"verification_config,11,optional" frugal:"11,optional,VerificationConfig" form:"verification_config" json:"verification_config,omitempty" query:"verification_config"`
+	Meta                    *ExptTemplateMeta   `thrift:"meta,1,optional" frugal:"1,optional,ExptTemplateMeta" form:"meta" json:"meta,omitempty" query:"meta"`
+	TripleConfig            *ExptTuple          `thrift:"triple_config,2,optional" frugal:"2,optional,ExptTuple" form:"triple_config" json:"triple_config,omitempty" query:"triple_config"`
+	FieldMappingConfig      *ExptFieldMapping   `thrift:"field_mapping_config,3,optional" frugal:"3,optional,ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty" query:"field_mapping_config"`
+	ScoreWeightConfig       *ExptScoreWeight    `thrift:"score_weight_config,4,optional" frugal:"4,optional,ExptScoreWeight" json:"score_weight_config" form:"score_weight_config" query:"score_weight_config"`
+	EnableExtractTrajectory *bool               `thrift:"enable_extract_trajectory,5,optional" frugal:"5,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty" query:"enable_extract_trajectory"`
 	// 通知配置
 	NotificationConf *ExptNotificationConf `thrift:"notification_conf,10,optional" frugal:"10,optional,ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty" query:"notification_conf"`
 	BaseInfo         *common.BaseInfo      `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
@@ -18822,6 +19082,18 @@ func NewExptTemplate() *ExptTemplate {
 }
 
 func (p *ExptTemplate) InitDefault() {
+}
+
+var ExptTemplate_VerificationConfig_DEFAULT *VerificationConfig
+
+func (p *ExptTemplate) GetVerificationConfig() (v *VerificationConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVerificationConfig() {
+		return ExptTemplate_VerificationConfig_DEFAULT
+	}
+	return p.VerificationConfig
 }
 
 var ExptTemplate_Meta_DEFAULT *ExptTemplateMeta
@@ -18907,6 +19179,9 @@ func (p *ExptTemplate) GetBaseInfo() (v *common.BaseInfo) {
 	}
 	return p.BaseInfo
 }
+func (p *ExptTemplate) SetVerificationConfig(val *VerificationConfig) {
+	p.VerificationConfig = val
+}
 func (p *ExptTemplate) SetMeta(val *ExptTemplateMeta) {
 	p.Meta = val
 }
@@ -18930,6 +19205,7 @@ func (p *ExptTemplate) SetBaseInfo(val *common.BaseInfo) {
 }
 
 var fieldIDToName_ExptTemplate = map[int16]string{
+	11:  "verification_config",
 	1:   "meta",
 	2:   "triple_config",
 	3:   "field_mapping_config",
@@ -18937,6 +19213,10 @@ var fieldIDToName_ExptTemplate = map[int16]string{
 	5:   "enable_extract_trajectory",
 	10:  "notification_conf",
 	100: "base_info",
+}
+
+func (p *ExptTemplate) IsSetVerificationConfig() bool {
+	return p.VerificationConfig != nil
 }
 
 func (p *ExptTemplate) IsSetMeta() bool {
@@ -18985,6 +19265,14 @@ func (p *ExptTemplate) Read(iprot thrift.TProtocol) (err error) {
 		}
 
 		switch fieldId {
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 1:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField1(iprot); err != nil {
@@ -19070,6 +19358,14 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
+func (p *ExptTemplate) ReadField11(iprot thrift.TProtocol) error {
+	_field := NewVerificationConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.VerificationConfig = _field
+	return nil
+}
 func (p *ExptTemplate) ReadField1(iprot thrift.TProtocol) error {
 	_field := NewExptTemplateMeta()
 	if err := _field.Read(iprot); err != nil {
@@ -19136,6 +19432,10 @@ func (p *ExptTemplate) Write(oprot thrift.TProtocol) (err error) {
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
 			goto WriteFieldError
@@ -19182,6 +19482,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *ExptTemplate) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVerificationConfig() {
+		if err = oprot.WriteFieldBegin("verification_config", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.VerificationConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *ExptTemplate) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMeta() {
 		if err = oprot.WriteFieldBegin("meta", thrift.STRUCT, 1); err != nil {
@@ -19323,6 +19641,9 @@ func (p *ExptTemplate) DeepEqual(ano *ExptTemplate) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field11DeepEqual(ano.VerificationConfig) {
+		return false
+	}
 	if !p.Field1DeepEqual(ano.Meta) {
 		return false
 	}
@@ -19347,6 +19668,13 @@ func (p *ExptTemplate) DeepEqual(ano *ExptTemplate) bool {
 	return true
 }
 
+func (p *ExptTemplate) Field11DeepEqual(src *VerificationConfig) bool {
+
+	if !p.VerificationConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *ExptTemplate) Field1DeepEqual(src *ExptTemplateMeta) bool {
 
 	if !p.Meta.DeepEqual(src) {

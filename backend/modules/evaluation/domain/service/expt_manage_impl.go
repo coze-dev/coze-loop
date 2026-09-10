@@ -1081,6 +1081,9 @@ func (e *ExptMangerImpl) authorizeSharedResource(
 }
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
+	if err := req.PrepareVerificationTarget(); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	if req.ExptType == entity.ExptType_Online && req.CreateEvalTargetParam != nil {
 		et := gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
 		srcID := ""
@@ -1579,6 +1582,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 	}
 
+	if err := do.EvalConf.NormalizeVerificationConfig(do.Target); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	err = e.CheckRun(ctx, do, req.WorkspaceID, session, entity.WithCheckBenefit())
 	if err != nil {
 		return nil, err

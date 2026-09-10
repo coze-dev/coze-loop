@@ -756,7 +756,8 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		NotificationConf:     req.NotificationConf,
 		// ★ wiring fix: 透传 run_mode_config 到 CreateExperimentRequest，否则落不进 eval_conf，
 		// operator 读不到 → 走默认 sua_multi_turn 兜底，用户选的 single_turn 被静默忽略。nil 安全。
-		RunModeConfig: req.RunModeConfig,
+		RunModeConfig:      req.RunModeConfig,
+		VerificationConfig: req.VerificationConfig,
 		// ★ 跨空间共享: Submit 的 shared_option (field 80/81) 透传到 Create，
 		// 否则 SubmitExperiment 路径丢失来源空间，发起鉴权/加载会退化成消费方空间。
 		EvalSetSharedOption: req.EvalSetSharedOption,

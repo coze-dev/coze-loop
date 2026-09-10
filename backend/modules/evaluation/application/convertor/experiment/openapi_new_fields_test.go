@@ -737,8 +737,8 @@ func TestDomainExperimentDTO2OpenAPI_SchedulingReadView(t *testing.T) {
 		SchedulerMode: gptr.Of("enforce"),
 		ExpectedQuotaConsumption: &domainExpt.ExpectedQuotaConsumption{
 			Resources: []*domainExpt.ExpectedResourceConsumption{
-				{Category: "sandbox", ResourceKey: "default", Amount: 1},
-				{Category: "model", ResourceKey: "gpt5.5", Amount: 1000},
+				{Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("default"), Amount: gptr.Of[int64](1)},
+				{Category: gptr.Of("model"), ResourceKey: gptr.Of("gpt5.5"), Amount: gptr.Of[int64](1000)},
 			},
 		},
 	})
@@ -787,7 +787,7 @@ func TestExpectedQuotaConsumptionDomain2OpenAPI(t *testing.T) {
 	got := ExpectedQuotaConsumptionDomain2OpenAPI(&domainExpt.ExpectedQuotaConsumption{
 		Resources: []*domainExpt.ExpectedResourceConsumption{
 			nil,
-			{Category: "evaluator", ResourceKey: "*", Amount: 3},
+			{Category: gptr.Of("evaluator"), ResourceKey: gptr.Of("*"), Amount: gptr.Of[int64](3)},
 		},
 	})
 	assert.NotNil(t, got)
@@ -807,8 +807,8 @@ func TestExpectedQuotaConsumption_SourceSurvivesRoundTrip(t *testing.T) {
 	t.Run("内部 DTO→DO→DTO", func(t *testing.T) {
 		dto := &domainExpt.ExpectedQuotaConsumption{
 			Resources: []*domainExpt.ExpectedResourceConsumption{
-				{Category: "model", ResourceKey: "kimi-k3", Amount: 6, Source: gptr.Of("litellm")},
-				{Category: "model", ResourceKey: "kimi-k3", Amount: 6}, // 同资源、无来源
+				{Category: gptr.Of("model"), ResourceKey: gptr.Of("kimi-k3"), Amount: gptr.Of[int64](6), Source: gptr.Of("litellm")},
+				{Category: gptr.Of("model"), ResourceKey: gptr.Of("kimi-k3"), Amount: gptr.Of[int64](6)}, // 同资源、无来源
 			},
 		}
 
@@ -828,7 +828,7 @@ func TestExpectedQuotaConsumption_SourceSurvivesRoundTrip(t *testing.T) {
 	t.Run("OpenAPI↔domain 双向", func(t *testing.T) {
 		domainDTO := &domainExpt.ExpectedQuotaConsumption{
 			Resources: []*domainExpt.ExpectedResourceConsumption{
-				{Category: "sandbox", ResourceKey: "mac", Amount: 1, Source: gptr.Of("self-hosted")},
+				{Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("mac"), Amount: gptr.Of[int64](1), Source: gptr.Of("self-hosted")},
 			},
 		}
 

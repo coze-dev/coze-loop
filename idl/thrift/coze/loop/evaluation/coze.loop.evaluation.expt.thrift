@@ -9,6 +9,8 @@ include "./domain/expt.thrift"
 include "./domain/evaluator.thrift"
 
 struct CreateExperimentRequest {
+    // 数据集验证配置，保存到 experiment.eval_conf，不依赖应用名称。
+    52: optional expt.VerificationConfig verification_config (api.body = 'verification_config')
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional i64 eval_set_version_id (api.body='eval_set_version_id', api.js_conv='true', go.tag='json:"eval_set_version_id"')
     3: optional i64 target_version_id (api.body='target_version_id', api.js_conv='true', go.tag='json:"target_version_id"')
@@ -89,6 +91,7 @@ struct CreateExperimentResponse {
 }
 
 struct SubmitExperimentRequest {
+    52: optional expt.VerificationConfig verification_config (api.body = 'verification_config')
     1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional i64 eval_set_version_id (api.body='eval_set_version_id',api.js_conv='true', go.tag='json:"eval_set_version_id"')
     3: optional i64 target_version_id (api.body='target_version_id',api.js_conv='true', go.tag='json:"target_version_id"')
@@ -589,6 +592,7 @@ struct ListExperimentStatsResponse {
 // =========================
 
 struct CreateExperimentTemplateRequest {
+    25: optional expt.VerificationConfig verification_config (api.body = 'verification_config')
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
 
     // 模板结构，与 ExptTemplate 保持一致
@@ -652,6 +656,7 @@ struct UpdateExperimentTemplateMetaResponse {
 
 
 struct UpdateExperimentTemplateRequest {
+    25: optional expt.VerificationConfig verification_config (api.body = 'verification_config')
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 template_id (api.path='template_id', api.js_conv='true', go.tag='json:"template_id"')
 
