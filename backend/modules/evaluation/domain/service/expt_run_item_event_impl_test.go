@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	auditmocks "github.com/coze-dev/coze-loop/backend/infra/external/audit/mocks"
@@ -22,6 +23,7 @@ import (
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 )
 
@@ -1060,6 +1062,39 @@ func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult(t *testing.T)
 	}
 }
 
+func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult_FailRetryReadsPrimary(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	turnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	itemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	event := &entity.ExptItemEvalEvent{
+		ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4,
+		ExptRunMode: entity.EvaluationModeFailRetry,
+	}
+
+	turnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID).DoAndReturn(
+		func(ctx context.Context, _, _, _, _ int64) ([]*entity.ExptTurnResultRunLog, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure current turn run-log must read from primary")
+			return []*entity.ExptTurnResultRunLog{{TurnID: 5}}, nil
+		},
+	)
+	itemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID).DoAndReturn(
+		func(ctx context.Context, _, _, _, _ int64) (*entity.ExptItemResultRunLog, error) {
+			assert.True(t, contexts.CtxWriteDB(ctx), "RetryFailure current item run-log must read from primary")
+			return &entity.ExptItemResultRunLog{ItemID: event.EvalSetItemID}, nil
+		},
+	)
+
+	service := &ExptItemEventEvalServiceImpl{
+		exptTurnResultRepo: turnResultRepo,
+		exptItemResultRepo: itemResultRepo,
+	}
+	got, err := service.GetExistExptRecordEvalResult(context.Background(), event)
+
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	require.Contains(t, got.TurnResultRunLogs, int64(5))
+}
+
 func TestNewRecordEvalMode(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1263,6 +1298,7 @@ func TestExptRecordEvalModeFailRetry_PreEval(t *testing.T) {
 	mockResultSvc := svcmocks.NewMockExptResultService(ctrl)
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	mode := &ExptRecordEvalModeFailRetry{
 		resultSvc:          mockResultSvc,
@@ -1487,7 +1523,7 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			wantEvalResults: nil,
 		},
 		{
-			name:    "TargetResultID > 0, evalTarget is nil -> returns 0, nil",
+			name:    "TargetResultID > 0, evalTarget is nil -> dependency error",
 			spaceID: 1,
 			tr: &entity.ExptTurnResult{
 				TargetResultID: 100,
@@ -1561,7 +1597,7 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
 				m := svcmocks.NewMockEvaluatorRecordService(ctrl)
 				m.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return([]*entity.EvaluatorRecord{
-					{ID: 1001, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess},
+					{ID: 1001, SpaceID: 1, ExperimentID: 1, ExperimentRunID: 2, ItemID: 10, TurnID: 20, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess},
 					{ID: 1002, EvaluatorVersionID: 20, Status: entity.EvaluatorRunStatusFail},
 				}, nil)
 				return m
@@ -1574,7 +1610,7 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			},
 		},
 		{
-			name:    "TargetResultID == 0, with evaluator records -> returns 0 and pruned results",
+			name:    "no target with evaluator records -> returns 0 and pruned results",
 			spaceID: 1,
 			tr: &entity.ExptTurnResult{
 				TargetResultID: 0,
@@ -1614,9 +1650,41 @@ func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
 			evalTarget := tt.setupEvalTarget(ctrl)
 			evalRecord := tt.setupEvalRecord(ctrl)
 
-			gotTargetID, gotEvalResults := failRetrySelectTurnRunLogRefs(
-				context.Background(), tt.spaceID, tt.tr, evalTarget, evalRecord,
+			targetRequired := tt.tr != nil && tt.tr.TargetResultID > 0
+			var refs []*entity.ExptTurnEvaluatorResultRef
+			if tt.wantEvalResults != nil {
+				for versionID, recordID := range tt.tr.EvaluatorResults.EvalVerIDToResID {
+					refs = append(refs, &entity.ExptTurnEvaluatorResultRef{
+						ExptTurnResultID:   tt.tr.ID,
+						EvaluatorVersionID: versionID,
+						EvaluatorResultID:  recordID,
+					})
+				}
+			}
+			turnRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+			sourceLogs := &retryEvaluatorSourceLogs{
+				repo:      turnRepo,
+				event:     &entity.ExptItemEvalEvent{ExptID: 1, EvalSetItemID: 10, SpaceID: tt.spaceID},
+				logsByRun: make(map[int64]map[int64]*entity.ExptTurnResultRunLog),
+			}
+			if tt.tr != nil {
+				tt.tr.ExptID, tt.tr.ItemID, tt.tr.TurnID = 1, 10, 20
+			}
+			if targetRequired && tt.wantEvalResults != nil {
+				turnRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{10}, tt.spaceID).
+					Return([]*entity.ExptTurnResultRunLog{{
+						SpaceID: tt.spaceID, ExptID: 1, ExptRunID: 2, ItemID: 10, TurnID: 20, TargetResultID: 100,
+						EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{10: 1001, 20: 1002}},
+					}}, nil)
+			}
+			gotTargetID, gotEvalResults, selectErr := failRetrySelectTurnRunLogRefs(
+				context.Background(), tt.spaceID, targetRequired, tt.tr, evalTarget, evalRecord, refs, sourceLogs,
 			)
+			if tt.name == "TargetResultID > 0, evalTarget is nil -> dependency error" || tt.name == "TargetResultID > 0, GetRecordByID returns error -> returns 0, nil" {
+				require.Error(t, selectErr)
+			} else {
+				require.NoError(t, selectErr)
+			}
 			assert.Equal(t, tt.wantTargetID, gotTargetID)
 			assert.Equal(t, tt.wantEvalResults, gotEvalResults)
 		})
@@ -1726,7 +1794,12 @@ func Test_pruneSuccessfulEvaluatorRecords(t *testing.T) {
 			defer ctrl.Finish()
 
 			evalRecord := tt.setupEvalRecord(ctrl)
-			got := pruneSuccessfulEvaluatorRecords(context.Background(), evalRecord, tt.tr)
+			got, pruneErr := pruneSuccessfulEvaluatorRecords(context.Background(), evalRecord, tt.tr, nil)
+			if tt.name == "BatchGetEvaluatorRecord returns error -> nil" {
+				require.Error(t, pruneErr)
+			} else {
+				require.NoError(t, pruneErr)
+			}
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -1827,13 +1900,21 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
 				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
 			) {
+				itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+					assert.Equal(t, int32(entity.ItemRunState_Fail), fields["status"])
+					assert.NotEmpty(t, fields["err_msg"])
+					return nil
+				})
+				itemRepo.EXPECT().GetItemRunLog(gomock.Any(), int64(1), int64(2), int64(7), int64(3)).Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Fail)}, nil)
+
 				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, false, gomock.Any(), gomock.Any(), gomock.Any())
 				// 走 completeItemRunOnUnretriableErr: run_log status=Fail + result_state=Logged, turn 置 Fail
 				itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
 					DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
-						assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
+						assert.NotContains(t, ufields, "status")
+						assert.NotContains(t, ufields, "err_msg")
 						assert.Equal(t, int32(entity.ExptItemResultStateLogged), ufields["result_state"])
 						assert.NotContains(t, ufields, "retry_times")
 						return nil
@@ -1857,12 +1938,20 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr_Yield(t *testing.T) {
 			prepare: func(cfg *componentMocks.MockIConfiger, pub *eventmocks.MockExptEventPublisher, metric *metricsmocks.MockExptMetric,
 				itemRepo *repoMocks.MockIExptItemResultRepo, turnRepo *repoMocks.MockIExptTurnResultRepo, statsRepo *repoMocks.MockIExptStatsRepo, mgr *svcmocks.MockIExptManager,
 			) {
+				itemRepo.EXPECT().UpdateItemRunLogIfNotTerminal(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, fields map[string]any, _ int64) error {
+					assert.Equal(t, int32(entity.ItemRunState_Fail), fields["status"])
+					assert.NotEmpty(t, fields["err_msg"])
+					return nil
+				})
+				itemRepo.EXPECT().GetItemRunLog(gomock.Any(), int64(1), int64(2), int64(7), int64(3)).Return(&entity.ExptItemResultRunLog{Status: int32(entity.ItemRunState_Fail)}, nil)
+
 				cfg.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.RetryConf{RetryTimes: 3, RetryIntervalSecond: 60, IsInDebt: false})
 				metric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, false, gomock.Any(), gomock.Any(), gomock.Any())
 				itemRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{7}, gomock.Any(), int64(3)).
 					DoAndReturn(func(_ context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
-						assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
+						assert.NotContains(t, ufields, "status")
+						assert.NotContains(t, ufields, "err_msg")
 						return nil
 					})
 				turnRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), entity.TurnRunState_Fail).Return(nil)

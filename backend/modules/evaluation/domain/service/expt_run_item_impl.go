@@ -437,11 +437,15 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	if existTurnRunResult == nil {
 		return etec, nil
 	}
+	recordCtx := ctx
+	if eiec.Event.ExptRunMode == entity.EvaluationModeFailRetry {
+		recordCtx = contexts.WithCtxWriteDB(ctx)
+	}
 
 	if tid := existTurnRunResult.TargetResultID; tid > 0 {
 		// ★ 跨空间共享: 评测对象执行记录随执行落来源空间(冻结 TargetSpaceID), 按来源空间读;
 		// 用调用方空间读会得 nil → 异步回调 validateEvalTargetCtx 报 "target result must not be nil"。
-		targetRecord, err := e.evalTargetService.GetRecordByID(ctx, resolveLoadSpaceID(spaceID, eiec.TargetSourceSpaceID()), tid)
+		targetRecord, err := e.evalTargetService.GetRecordByID(recordCtx, resolveLoadSpaceID(spaceID, eiec.TargetSourceSpaceID()), tid)
 		if err != nil {
 			return nil, err
 		}
@@ -478,7 +482,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		}
 
 		if len(recordIDs) > 0 {
-			evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, recordIDs, false, false)
+			evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(recordCtx, recordIDs, false, false)
 			if err != nil {
 				return nil, err
 			}

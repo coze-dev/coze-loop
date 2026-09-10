@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"testing"
@@ -1577,6 +1578,11 @@ func TestIsSchedulerInfraError(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "retry start dependency failure",
+			err:  fmt.Errorf("wrapped: %w", errRetryStartDependencyFailure),
+			want: true,
+		},
+		{
 			name: "send batch message fail",
 			err:  errors.New("send batch message fail, producer_key: expt_scheduler_event_rmq"),
 			want: true,
@@ -1647,6 +1653,22 @@ func TestExptSchedulerImpl_HandleEventErr(t *testing.T) {
 			},
 		},
 		{
+			name: "retry start dependency failure - reschedule success",
+			event: &entity.ExptScheduleEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3,
+				InfraErrorRetryTimes: 0,
+				Session:              &entity.Session{UserID: "user1"},
+			},
+			nextErr: fmt.Errorf("%w: dependency=eval_target_record", errRetryStartDependencyFailure),
+			prepareMock: func(f *handleEventErrFields) {
+				f.publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			wantErr: false,
+			assertEvent: func(t *testing.T, event *entity.ExptScheduleEvent) {
+				assert.Equal(t, 1, event.InfraErrorRetryTimes)
+			},
+		},
+		{
 			name: "infra error - reschedule publish fails, return error for MQ retry",
 			event: &entity.ExptScheduleEvent{
 				ExptID: 1, ExptRunID: 2, SpaceID: 3,
@@ -1670,6 +1692,20 @@ func TestExptSchedulerImpl_HandleEventErr(t *testing.T) {
 				Session:              &entity.Session{UserID: "user1"},
 			},
 			nextErr: context.Canceled,
+			prepareMock: func(f *handleEventErrFields) {
+				f.manager.EXPECT().CompleteRun(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name: "retry start dependency failure - retry exhausted terminates experiment",
+			event: &entity.ExptScheduleEvent{
+				ExptID: 1, ExptRunID: 2, SpaceID: 3,
+				InfraErrorRetryTimes: 10,
+				Session:              &entity.Session{UserID: "user1"},
+			},
+			nextErr: fmt.Errorf("%w: dependency=expt_item_ref", errRetryStartDependencyFailure),
 			prepareMock: func(f *handleEventErrFields) {
 				f.manager.EXPECT().CompleteRun(gomock.Any(), int64(1), int64(2), int64(3), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), gomock.Any(), int64(3), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
