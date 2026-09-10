@@ -14,14 +14,14 @@ func VerificationConfigOpenAPI2Domain(config *openapiExperiment.VerificationConf
 	if config == nil {
 		return nil
 	}
-	return &expt.VerificationConfig{Mode: gptr.Of(expt.VerificationMode(config.GetMode()))}
+	return &expt.VerificationConfig{Mode: gptr.Of(config.GetMode())}
 }
 
 func verificationConfigDomain2OpenAPI(config *expt.VerificationConfig) *openapiExperiment.VerificationConfig {
 	if config == nil {
 		return nil
 	}
-	return &openapiExperiment.VerificationConfig{Mode: gptr.Of(openapiExperiment.VerificationMode(config.GetMode()))}
+	return &openapiExperiment.VerificationConfig{Mode: gptr.Of(config.GetMode())}
 }
 
 func verificationConfigDTO2DO(config *expt.VerificationConfig) *entity.VerificationConfig {

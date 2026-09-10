@@ -43,7 +43,7 @@ func TestVerificationReadAndTemplatePropagation(t *testing.T) {
 	dto := ToExptDTO(experiment)
 	require.Equal(t, verificationConfigDO2DTO(config), dto.VerificationConfig)
 	require.JSONEq(t, `{"binary_version":"pinned"}`, dto.TargetRuntimeParam.GetJSONValue())
-	require.Equal(t, "f2p", string(DomainExperimentDTO2OpenAPI(dto).VerificationConfig.GetMode()))
+	require.Equal(t, "f2p", DomainExperimentDTO2OpenAPI(dto).VerificationConfig.GetMode())
 	template := &entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{ID: 1}, TemplateConf: &entity.ExptTemplateConfiguration{VerificationConfig: config, ConnectorConf: connector}, Target: target}
 	require.Equal(t, dto.VerificationConfig, ToExptTemplateDTO(template).VerificationConfig)
 	require.Equal(t, dto.VerificationConfig, TemplateToSubmitExperimentRequest(template, "copy", 1).VerificationConfig)

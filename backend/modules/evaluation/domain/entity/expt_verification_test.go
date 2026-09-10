@@ -102,7 +102,8 @@ func TestPrepareVerificationTarget(t *testing.T) {
 }
 
 func TestVerificationMultiSetCannotOverrideExperimentMode(t *testing.T) {
-	config := &EvaluationConfiguration{VerificationConfig: &VerificationConfig{Mode: VerificationModeF2P},
+	config := &EvaluationConfiguration{
+		VerificationConfig: &VerificationConfig{Mode: VerificationModeF2P},
 		EvalSetConfigs: []*EvalSetConfig{{TargetConfs: []*ExptTargetConf{{RuntimeParam: map[string]string{
 			consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"verification":{"mode":"oracle_only"}}`,
 		}}}}},
