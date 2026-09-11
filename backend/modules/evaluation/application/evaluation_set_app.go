@@ -460,7 +460,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 	}
 	// is_shared=true：按共享配置枚举「共享给调用方空间」的评测集（source 为空则跨全部来源空间）。
 	if req.SharedOption != nil && req.SharedOption.GetIsShared() {
-		return e.listSharedEvaluationSets(ctx, req)
+		return e.listSharedEvaluationSets(ctx, req, tagFilter)
 	}
 	// domain调用
 	sets, total, nextPageToken, err := e.evaluationSetService.ListEvaluationSets(ctx, &entity.ListEvaluationSetsParam{
@@ -491,16 +491,14 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSets(ctx context.Context, r
 // listSharedEvaluationSets 按共享配置枚举「共享给调用方空间」的评测集。
 // source_space_id 为空 → 跨全部来源空间枚举；有值 → 限定该来源空间。
 // 逐来源空间加载资源并回填共享元信息；空配置 → 空列表（fail-closed）。
-func (e *EvaluationSetApplicationImpl) listSharedEvaluationSets(ctx context.Context, req *eval_set.ListEvaluationSetsRequest) (*eval_set.ListEvaluationSetsResponse, error) {
-	if (req.Name != nil && strings.TrimSpace(*req.Name) != "") ||
-		len(req.Creators) > 0 ||
+func (e *EvaluationSetApplicationImpl) listSharedEvaluationSets(ctx context.Context, req *eval_set.ListEvaluationSetsRequest, tagFilter *entity.TagFilter) (*eval_set.ListEvaluationSetsResponse, error) {
+	if len(req.Creators) > 0 ||
 		req.Type != nil ||
 		len(req.DatasetKeys) > 0 ||
-		req.TagFilter != nil ||
 		len(req.OrderBys) > 0 {
 		return nil, errorx.NewByCode(
 			errno.CommonInvalidParamCode,
-			errorx.WithExtraMsg("content filters and order_bys are not supported for shared evaluation sets"),
+			errorx.WithExtraMsg("creators, type, dataset_keys and order_bys are not supported for shared evaluation sets"),
 		)
 	}
 	var sourceFilter *int64
@@ -512,6 +510,11 @@ func (e *EvaluationSetApplicationImpl) listSharedEvaluationSets(ctx context.Cont
 		ResourceType:      entity.SharedResourceTypeEvalSet,
 		SourceSpaceFilter: sourceFilter,
 	})
+	if err != nil {
+		return nil, err
+	}
+	// 内容过滤必须发生在分页之前：分页是 offset 型的纯内存切片，切完再过滤会让 total 与翻页都错。
+	accessCtxs, err = filterSharedAccessContextsByContent(ctx, e.evaluationSetService, accessCtxs, req.Name, tagFilter)
 	if err != nil {
 		return nil, err
 	}
