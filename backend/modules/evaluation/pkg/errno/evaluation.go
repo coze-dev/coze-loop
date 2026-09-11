@@ -144,6 +144,30 @@ const (
 	refGroupExperimentInvalidMessage           = "ref group experiment id is not a valid experiment in current space"
 	refGroupExperimentInvalidNoAffectStability = true
 
+	EvalTaskNameExistedCode              = 601204020 // evaluation task name already existed in the workspace
+	evalTaskNameExistedMessage           = "evaluation task name already existed"
+	evalTaskNameExistedNoAffectStability = true
+
+	EvalTaskRunModeInvalidCode              = 601204021 // evaluation task run mode is invalid or required run mode config is missing
+	evalTaskRunModeInvalidMessage           = "evaluation task run mode is invalid"
+	evalTaskRunModeInvalidNoAffectStability = true
+
+	EvalSetRunModeUnsupportedCode              = 601204022 // eval set does not support the given run mode
+	evalSetRunModeUnsupportedMessage           = "eval set does not support the given run mode"
+	evalSetRunModeUnsupportedNoAffectStability = true
+
+	EvalTaskTemplateConstraintUnsatisfiedCode              = 601204023 // analysis template constraint is not satisfied
+	evalTaskTemplateConstraintUnsatisfiedMessage           = "analysis template constraint is not satisfied"
+	evalTaskTemplateConstraintUnsatisfiedNoAffectStability = true
+
+	EvalTaskStatusNotAllowedCode              = 601204024 // operation is not allowed in current evaluation task status
+	evalTaskStatusNotAllowedMessage           = "operation is not allowed in current evaluation task status"
+	evalTaskStatusNotAllowedNoAffectStability = true
+
+	EvalTaskConfigNotEditableCode              = 601204025 // the given evaluation task config field is not editable
+	evalTaskConfigNotEditableMessage           = "the given evaluation task config field is not editable"
+	evalTaskConfigNotEditableNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -705,6 +729,42 @@ func init() {
 		RefGroupExperimentInvalidCode,
 		refGroupExperimentInvalidMessage,
 		code.WithAffectStability(!refGroupExperimentInvalidNoAffectStability),
+	)
+
+	code.Register(
+		EvalTaskNameExistedCode,
+		evalTaskNameExistedMessage,
+		code.WithAffectStability(!evalTaskNameExistedNoAffectStability),
+	)
+
+	code.Register(
+		EvalTaskRunModeInvalidCode,
+		evalTaskRunModeInvalidMessage,
+		code.WithAffectStability(!evalTaskRunModeInvalidNoAffectStability),
+	)
+
+	code.Register(
+		EvalSetRunModeUnsupportedCode,
+		evalSetRunModeUnsupportedMessage,
+		code.WithAffectStability(!evalSetRunModeUnsupportedNoAffectStability),
+	)
+
+	code.Register(
+		EvalTaskTemplateConstraintUnsatisfiedCode,
+		evalTaskTemplateConstraintUnsatisfiedMessage,
+		code.WithAffectStability(!evalTaskTemplateConstraintUnsatisfiedNoAffectStability),
+	)
+
+	code.Register(
+		EvalTaskStatusNotAllowedCode,
+		evalTaskStatusNotAllowedMessage,
+		code.WithAffectStability(!evalTaskStatusNotAllowedNoAffectStability),
+	)
+
+	code.Register(
+		EvalTaskConfigNotEditableCode,
+		evalTaskConfigNotEditableMessage,
+		code.WithAffectStability(!evalTaskConfigNotEditableNoAffectStability),
 	)
 
 	code.Register(
