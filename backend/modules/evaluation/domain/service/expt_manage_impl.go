@@ -1790,6 +1790,19 @@ func (e *ExptMangerImpl) UpdateRunConf(ctx context.Context, param *entity.Update
 	if param.ItemRetryNum != nil {
 		evalConf.ItemRetryNum = param.ItemRetryNum
 	}
+	// 跑法配置只对尚未调度的题次生效：消费侧每题现读 experiment.eval_conf，已在执行中的题次
+	// 沿用它启动时读到的那份。单轮实验整块 RunModeConfig 可能为 nil，须先建再赋值。
+	if param.MaxRunMinutes != nil || param.MaxTurns != nil {
+		if evalConf.RunModeConfig == nil {
+			evalConf.RunModeConfig = &entity.RunModeConfig{}
+		}
+		if param.MaxRunMinutes != nil {
+			evalConf.RunModeConfig.MaxRunMinutes = *param.MaxRunMinutes
+		}
+		if param.MaxTurns != nil {
+			evalConf.RunModeConfig.MaxTurns = *param.MaxTurns
+		}
+	}
 	if param.ExpectedQuotaConsumption != nil {
 		evalConf.ExpectedQuotaConsumption = param.ExpectedQuotaConsumption
 	}

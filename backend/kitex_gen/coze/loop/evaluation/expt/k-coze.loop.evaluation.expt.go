@@ -8023,6 +8023,34 @@ func (p *UpdateExptRunConfRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 92:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField92(buf[offset:])
@@ -8150,6 +8178,34 @@ func (p *UpdateExptRunConfRequest) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *UpdateExptRunConfRequest) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxRunMinutes = _field
+	return offset, nil
+}
+
+func (p *UpdateExptRunConfRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxTurns = _field
+	return offset, nil
+}
+
 func (p *UpdateExptRunConfRequest) FastReadField92(buf []byte) (int, error) {
 	offset := 0
 
@@ -8199,6 +8255,8 @@ func (p *UpdateExptRunConfRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWr
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField92(buf[offset:], w)
 		offset += p.fastWriteField93(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -8214,6 +8272,8 @@ func (p *UpdateExptRunConfRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field92Length()
 		l += p.field93Length()
 		l += p.field255Length()
@@ -8250,6 +8310,24 @@ func (p *UpdateExptRunConfRequest) fastWriteField4(buf []byte, w thrift.NocopyWr
 	if p.IsSetItemRetryNum() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 4)
 		offset += thrift.Binary.WriteI32(buf[offset:], *p.ItemRetryNum)
+	}
+	return offset
+}
+
+func (p *UpdateExptRunConfRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxRunMinutes() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 5)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxRunMinutes)
+	}
+	return offset
+}
+
+func (p *UpdateExptRunConfRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxTurns() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 6)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxTurns)
 	}
 	return offset
 }
@@ -8313,6 +8391,24 @@ func (p *UpdateExptRunConfRequest) field4Length() int {
 	return l
 }
 
+func (p *UpdateExptRunConfRequest) field5Length() int {
+	l := 0
+	if p.IsSetMaxRunMinutes() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *UpdateExptRunConfRequest) field6Length() int {
+	l := 0
+	if p.IsSetMaxTurns() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *UpdateExptRunConfRequest) field92Length() int {
 	l := 0
 	if p.IsSetPriorityLevel() {
@@ -8358,6 +8454,16 @@ func (p *UpdateExptRunConfRequest) DeepCopy(s interface{}) error {
 	if src.ItemRetryNum != nil {
 		tmp := *src.ItemRetryNum
 		p.ItemRetryNum = &tmp
+	}
+
+	if src.MaxRunMinutes != nil {
+		tmp := *src.MaxRunMinutes
+		p.MaxRunMinutes = &tmp
+	}
+
+	if src.MaxTurns != nil {
+		tmp := *src.MaxTurns
+		p.MaxTurns = &tmp
 	}
 
 	if src.PriorityLevel != nil {

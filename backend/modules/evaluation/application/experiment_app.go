@@ -1545,6 +1545,25 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 		itemRetryNum = gptr.Of(v)
 	}
 
+	// MaxRunMinutes / MaxTurns：nil = 不修改；必须 > 0。
+	// 0 不当作"不修改"处理 —— max_turns 落 0 会让多轮跑法静默退化成只跑 1 轮，
+	// 静默比报错难查得多，所以显式拒绝。
+	var maxRunMinutes, maxTurns *int
+	if req.IsSetMaxRunMinutes() {
+		v := int(req.GetMaxRunMinutes())
+		if v <= 0 {
+			return nil, errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("max run minutes must be positive"))
+		}
+		maxRunMinutes = gptr.Of(v)
+	}
+	if req.IsSetMaxTurns() {
+		v := int(req.GetMaxTurns())
+		if v <= 0 {
+			return nil, errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("max turns must be positive"))
+		}
+		maxTurns = gptr.Of(v)
+	}
+
 	// 中心调度特权参数：命中白名单才生效，未命中丢弃 + WARN（与创建期同口径）。
 	priorityLevel, expectedQuota, err := resolveRunConfSchedulingParams(
 		ctx, e.configer, req.GetWorkspaceID(), req.GetExptID(), req.PriorityLevel, req.ExpectedQuotaConsumption)
@@ -1557,6 +1576,8 @@ func (e *experimentApplication) UpdateExptRunConf(ctx context.Context, req *expt
 		SpaceID:                  req.GetWorkspaceID(),
 		ItemConcurNum:            itemConcurNum,
 		ItemRetryNum:             itemRetryNum,
+		MaxRunMinutes:            maxRunMinutes,
+		MaxTurns:                 maxTurns,
 		PriorityLevel:            priorityLevel,
 		ExpectedQuotaConsumption: expectedQuota,
 		Session:                  session,
