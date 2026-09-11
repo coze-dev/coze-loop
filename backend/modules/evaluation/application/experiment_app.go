@@ -91,10 +91,7 @@ type experimentApplication struct {
 
 const sandboxSchedulerInitTimeout = 5 * time.Second
 
-const (
-	sandboxDebugTaskID       = "sandbox_debug"
-	sandboxMacVMTaskIDSuffix = "-macvm"
-)
+const sandboxMacVMTaskIDSuffix = "-macvm"
 
 // sandboxConcurrencyBuffer 是沙箱任务并发配额的余量系数（见 sandboxInitConcurrency）。
 //

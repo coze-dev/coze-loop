@@ -46,6 +46,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+const sandboxDebugTaskID = "sandbox_debug"
+
 type IEvalOpenAPIApplication = evaluation.EvalOpenAPIService
 
 type SourceEvalTargetLister interface {
