@@ -737,8 +737,8 @@ func TestDomainExperimentDTO2OpenAPI_SchedulingReadView(t *testing.T) {
 		SchedulerMode: gptr.Of("enforce"),
 		ExpectedQuotaConsumption: &domainExpt.ExpectedQuotaConsumption{
 			Resources: []*domainExpt.ExpectedResourceConsumption{
-				{Category: "sandbox", ResourceKey: "default", Amount: 1},
-				{Category: "model", ResourceKey: "gpt5.5", Amount: 1000},
+				{Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("default"), Amount: gptr.Of[int64](1)},
+				{Category: gptr.Of("model"), ResourceKey: gptr.Of("gpt5.5"), Amount: gptr.Of[int64](1000)},
 			},
 		},
 	})
@@ -787,13 +787,73 @@ func TestExpectedQuotaConsumptionDomain2OpenAPI(t *testing.T) {
 	got := ExpectedQuotaConsumptionDomain2OpenAPI(&domainExpt.ExpectedQuotaConsumption{
 		Resources: []*domainExpt.ExpectedResourceConsumption{
 			nil,
-			{Category: "evaluator", ResourceKey: "*", Amount: 3},
+			{Category: gptr.Of("evaluator"), ResourceKey: gptr.Of("*"), Amount: gptr.Of[int64](3)},
 		},
 	})
 	assert.NotNil(t, got)
 	assert.Len(t, got.GetResources(), 1)
 	assert.Equal(t, "evaluator", got.GetResources()[0].GetCategory())
 	assert.Equal(t, int64(3), got.GetResources()[0].GetAmount())
+}
+
+func TestExpectedQuotaConsumptionOpenAPI2Domain(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, ExpectedQuotaConsumptionOpenAPI2Domain(nil))
+	assert.Nil(t, ExpectedQuotaConsumptionOpenAPI2Domain(&openapiExperiment.ExpectedQuotaConsumption{}))
+	assert.Nil(t, ExpectedQuotaConsumptionOpenAPI2Domain(&openapiExperiment.ExpectedQuotaConsumption{
+		Resources: []*openapiExperiment.ExpectedResourceConsumption{nil, nil},
+	}))
+
+	for _, tt := range []struct {
+		name  string
+		input *openapiExperiment.ExpectedResourceConsumption
+		want  *domainExpt.ExpectedResourceConsumption
+	}{
+		{
+			name:  "omitted fields use getter defaults",
+			input: &openapiExperiment.ExpectedResourceConsumption{},
+			want: &domainExpt.ExpectedResourceConsumption{
+				Category: gptr.Of(""), ResourceKey: gptr.Of(""), Amount: gptr.Of[int64](0), Source: gptr.Of(""),
+			},
+		},
+		{
+			name: "explicit zero values are preserved",
+			input: &openapiExperiment.ExpectedResourceConsumption{
+				Category: gptr.Of(""), ResourceKey: gptr.Of(""), Amount: gptr.Of[int64](0), Source: gptr.Of(""),
+			},
+			want: &domainExpt.ExpectedResourceConsumption{
+				Category: gptr.Of(""), ResourceKey: gptr.Of(""), Amount: gptr.Of[int64](0), Source: gptr.Of(""),
+			},
+		},
+		{
+			name: "populated fields are copied",
+			input: &openapiExperiment.ExpectedResourceConsumption{
+				Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("mac"), Amount: gptr.Of[int64](3), Source: gptr.Of("self-hosted"),
+			},
+			want: &domainExpt.ExpectedResourceConsumption{
+				Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("mac"), Amount: gptr.Of[int64](3), Source: gptr.Of("self-hosted"),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			original := *tt.input
+			got := ExpectedQuotaConsumptionOpenAPI2Domain(&openapiExperiment.ExpectedQuotaConsumption{
+				Resources: []*openapiExperiment.ExpectedResourceConsumption{nil, tt.input},
+			})
+			if assert.NotNil(t, got) && assert.Len(t, got.Resources, 1) {
+				assert.Equal(t, tt.want, got.Resources[0])
+				assert.Equal(t, original, *tt.input, "conversion must not populate omitted input fields")
+				if tt.input.Category != nil {
+					assert.NotSame(t, tt.input.Category, got.Resources[0].Category)
+					assert.NotSame(t, tt.input.ResourceKey, got.Resources[0].ResourceKey)
+					assert.NotSame(t, tt.input.Amount, got.Resources[0].Amount)
+					assert.NotSame(t, tt.input.Source, got.Resources[0].Source)
+				}
+			}
+		})
+	}
 }
 
 // TestExpectedQuotaConsumption_SourceSurvivesRoundTrip
@@ -807,8 +867,8 @@ func TestExpectedQuotaConsumption_SourceSurvivesRoundTrip(t *testing.T) {
 	t.Run("内部 DTO→DO→DTO", func(t *testing.T) {
 		dto := &domainExpt.ExpectedQuotaConsumption{
 			Resources: []*domainExpt.ExpectedResourceConsumption{
-				{Category: "model", ResourceKey: "kimi-k3", Amount: 6, Source: gptr.Of("litellm")},
-				{Category: "model", ResourceKey: "kimi-k3", Amount: 6}, // 同资源、无来源
+				{Category: gptr.Of("model"), ResourceKey: gptr.Of("kimi-k3"), Amount: gptr.Of[int64](6), Source: gptr.Of("litellm")},
+				{Category: gptr.Of("model"), ResourceKey: gptr.Of("kimi-k3"), Amount: gptr.Of[int64](6)}, // 同资源、无来源
 			},
 		}
 
@@ -828,7 +888,7 @@ func TestExpectedQuotaConsumption_SourceSurvivesRoundTrip(t *testing.T) {
 	t.Run("OpenAPI↔domain 双向", func(t *testing.T) {
 		domainDTO := &domainExpt.ExpectedQuotaConsumption{
 			Resources: []*domainExpt.ExpectedResourceConsumption{
-				{Category: "sandbox", ResourceKey: "mac", Amount: 1, Source: gptr.Of("self-hosted")},
+				{Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("mac"), Amount: gptr.Of[int64](1), Source: gptr.Of("self-hosted")},
 			},
 		}
 

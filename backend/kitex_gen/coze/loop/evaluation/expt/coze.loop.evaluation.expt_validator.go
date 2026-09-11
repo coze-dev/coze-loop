@@ -22,6 +22,11 @@ var (
 )
 
 func (p *CreateExperimentRequest) IsValid() error {
+	if p.VerificationConfig != nil {
+		if err := p.VerificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field VerificationConfig not valid, %w", err)
+		}
+	}
 	if p.TargetFieldMapping != nil {
 		if err := p.TargetFieldMapping.IsValid(); err != nil {
 			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
@@ -88,6 +93,11 @@ func (p *CreateExperimentResponse) IsValid() error {
 	return nil
 }
 func (p *SubmitExperimentRequest) IsValid() error {
+	if p.VerificationConfig != nil {
+		if err := p.VerificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field VerificationConfig not valid, %w", err)
+		}
+	}
 	if p.TargetFieldMapping != nil {
 		if err := p.TargetFieldMapping.IsValid(); err != nil {
 			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
@@ -607,6 +617,11 @@ func (p *ListExperimentStatsResponse) IsValid() error {
 	return nil
 }
 func (p *CreateExperimentTemplateRequest) IsValid() error {
+	if p.VerificationConfig != nil {
+		if err := p.VerificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field VerificationConfig not valid, %w", err)
+		}
+	}
 	if p.Meta != nil {
 		if err := p.Meta.IsValid(); err != nil {
 			return fmt.Errorf("field Meta not valid, %w", err)
@@ -710,6 +725,11 @@ func (p *UpdateExperimentTemplateMetaResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateExperimentTemplateRequest) IsValid() error {
+	if p.VerificationConfig != nil {
+		if err := p.VerificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field VerificationConfig not valid, %w", err)
+		}
+	}
 	if p.Meta != nil {
 		if err := p.Meta.IsValid(); err != nil {
 			return fmt.Errorf("field Meta not valid, %w", err)

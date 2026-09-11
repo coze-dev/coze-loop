@@ -35,7 +35,7 @@ func privilegedReq() *expt.CreateExperimentRequest {
 		TriggerType:   gptr.Of(domain_expt.Evalx),
 		ExpectedQuotaConsumption: &domain_expt.ExpectedQuotaConsumption{
 			Resources: []*domain_expt.ExpectedResourceConsumption{
-				{Category: "sandbox", ResourceKey: "default", Amount: 1},
+				{Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("default"), Amount: gptr.Of[int64](1)},
 			},
 		},
 	}
@@ -207,7 +207,7 @@ func TestEnforceSchedulingPrivilege_QuotaOnlyDeclarationStillGated(t *testing.T)
 		WorkspaceID: 456,
 		ExpectedQuotaConsumption: &domain_expt.ExpectedQuotaConsumption{
 			Resources: []*domain_expt.ExpectedResourceConsumption{
-				{Category: "sandbox", ResourceKey: "default", Amount: 1},
+				{Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("default"), Amount: gptr.Of[int64](1)},
 			},
 		},
 	}

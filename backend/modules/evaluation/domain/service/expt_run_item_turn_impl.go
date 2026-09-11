@@ -307,14 +307,33 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	}
 
 	var targetRecord *entity.EvalTargetRecord
+	var typedVerification *entity.VerificationConfig
+	if etec.Expt.EvalConf != nil {
+		typedVerification = etec.Expt.EvalConf.VerificationConfig
+	}
+	verificationConfig, cleanedRuntime, verificationErr := entity.ResolveVerificationConfig(
+		typedVerification, entity.VerificationAgent(etec.Expt.Target), ext[consts.TargetExecuteExtRuntimeParamKey])
+	if verificationErr != nil {
+		return nil, verificationErr
+	}
+	if verificationConfig != nil {
+		if etec.Expt.EvalConf != nil && etec.Expt.EvalConf.RunModeConfig != nil {
+			return nil, fmt.Errorf("verification_config and run_mode_config are mutually exclusive")
+		}
+		if ext == nil {
+			ext = make(map[string]string)
+		}
+		ext[consts.TargetExecuteExtRuntimeParamKey] = cleanedRuntime
+	}
 	etc := &entity.ExecuteTargetCtx{
-		ExperimentID:    gptr.Of(etec.Event.ExptID),
-		ExperimentRunID: gptr.Of(etec.Event.ExptRunID),
-		ItemID:          etec.EvalSetItem.ItemID,
-		TurnID:          etec.Turn.ID,
-		LogID:           logs.GetLogID(ctx),
-		ItemMeta:        buildEvalSetItemMeta(etec),
-		ExptGroupKey:    etec.Expt.ExperimentGroupKey,
+		VerificationConfig: verificationConfig,
+		ExperimentID:       gptr.Of(etec.Event.ExptID),
+		ExperimentRunID:    gptr.Of(etec.Event.ExptRunID),
+		ItemID:             etec.EvalSetItem.ItemID,
+		TurnID:             etec.Turn.ID,
+		LogID:              logs.GetLogID(ctx),
+		ItemMeta:           buildEvalSetItemMeta(etec),
+		ExptGroupKey:       etec.Expt.ExperimentGroupKey,
 		// ★ 恒取事件里的实验空间, **不要**从 ItemConfig 派生。
 		// 多集执行恒用顶层 target, 而 ItemConfig 的来源空间是 per-set 的
 		// (见 ExptItemEvalCtx.TargetSourceSpaceID 的论证) —— 按 per-set 派生会重演

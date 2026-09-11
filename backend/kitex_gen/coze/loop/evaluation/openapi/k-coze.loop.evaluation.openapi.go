@@ -20845,6 +20845,20 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 			break
 		}
 		switch fieldId {
+		case 52:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField52(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
@@ -21183,6 +21197,18 @@ ReadFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SubmitExperimentOApiRequest[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *SubmitExperimentOApiRequest) FastReadField52(buf []byte) (int, error) {
+	offset := 0
+	_field := experiment.NewVerificationConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.VerificationConfig = _field
+	return offset, nil
 }
 
 func (p *SubmitExperimentOApiRequest) FastReadField1(buf []byte) (int, error) {
@@ -21553,6 +21579,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField46(buf[offset:], w)
 		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
+		offset += p.fastWriteField52(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -21578,6 +21605,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 func (p *SubmitExperimentOApiRequest) BLength() int {
 	l := 0
 	if p != nil {
+		l += p.field52Length()
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
@@ -21604,6 +21632,15 @@ func (p *SubmitExperimentOApiRequest) BLength() int {
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField52(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVerificationConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 52)
+		offset += p.VerificationConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
 }
 
 func (p *SubmitExperimentOApiRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
@@ -21842,6 +21879,15 @@ func (p *SubmitExperimentOApiRequest) fastWriteField255(buf []byte, w thrift.Noc
 	return offset
 }
 
+func (p *SubmitExperimentOApiRequest) field52Length() int {
+	l := 0
+	if p.IsSetVerificationConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.VerificationConfig.BLength()
+	}
+	return l
+}
+
 func (p *SubmitExperimentOApiRequest) field1Length() int {
 	l := 0
 	if p.IsSetWorkspaceID() {
@@ -22072,6 +22118,15 @@ func (p *SubmitExperimentOApiRequest) DeepCopy(s interface{}) error {
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
+
+	var _verificationConfig *experiment.VerificationConfig
+	if src.VerificationConfig != nil {
+		_verificationConfig = &experiment.VerificationConfig{}
+		if err := _verificationConfig.DeepCopy(src.VerificationConfig); err != nil {
+			return err
+		}
+	}
+	p.VerificationConfig = _verificationConfig
 
 	if src.WorkspaceID != nil {
 		tmp := *src.WorkspaceID
@@ -45013,6 +45068,20 @@ func (p *CreateExptTemplateOApiRequest) FastRead(buf []byte) (int, error) {
 			break
 		}
 		switch fieldId {
+		case 25:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField25(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
@@ -45171,6 +45240,18 @@ SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
+func (p *CreateExptTemplateOApiRequest) FastReadField25(buf []byte) (int, error) {
+	offset := 0
+	_field := experiment.NewVerificationConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.VerificationConfig = _field
+	return offset, nil
+}
+
 func (p *CreateExptTemplateOApiRequest) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
@@ -45307,6 +45388,7 @@ func (p *CreateExptTemplateOApiRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
+		offset += p.fastWriteField25(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -45322,6 +45404,7 @@ func (p *CreateExptTemplateOApiRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 func (p *CreateExptTemplateOApiRequest) BLength() int {
 	l := 0
 	if p != nil {
+		l += p.field25Length()
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
@@ -45335,6 +45418,15 @@ func (p *CreateExptTemplateOApiRequest) BLength() int {
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
+}
+
+func (p *CreateExptTemplateOApiRequest) fastWriteField25(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVerificationConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 25)
+		offset += p.VerificationConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
 }
 
 func (p *CreateExptTemplateOApiRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
@@ -45425,6 +45517,15 @@ func (p *CreateExptTemplateOApiRequest) fastWriteField255(buf []byte, w thrift.N
 		offset += p.Base.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
+}
+
+func (p *CreateExptTemplateOApiRequest) field25Length() int {
+	l := 0
+	if p.IsSetVerificationConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.VerificationConfig.BLength()
+	}
+	return l
 }
 
 func (p *CreateExptTemplateOApiRequest) field1Length() int {
@@ -45522,6 +45623,15 @@ func (p *CreateExptTemplateOApiRequest) DeepCopy(s interface{}) error {
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
+
+	var _verificationConfig *experiment.VerificationConfig
+	if src.VerificationConfig != nil {
+		_verificationConfig = &experiment.VerificationConfig{}
+		if err := _verificationConfig.DeepCopy(src.VerificationConfig); err != nil {
+			return err
+		}
+	}
+	p.VerificationConfig = _verificationConfig
 
 	if src.WorkspaceID != nil {
 		tmp := *src.WorkspaceID
@@ -47483,6 +47593,20 @@ func (p *UpdateExptTemplateOApiRequest) FastRead(buf []byte) (int, error) {
 			break
 		}
 		switch fieldId {
+		case 25:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField25(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
@@ -47655,6 +47779,18 @@ SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
+func (p *UpdateExptTemplateOApiRequest) FastReadField25(buf []byte) (int, error) {
+	offset := 0
+	_field := experiment.NewVerificationConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.VerificationConfig = _field
+	return offset, nil
+}
+
 func (p *UpdateExptTemplateOApiRequest) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
@@ -47806,6 +47942,7 @@ func (p *UpdateExptTemplateOApiRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
+		offset += p.fastWriteField25(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
@@ -47821,6 +47958,7 @@ func (p *UpdateExptTemplateOApiRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 func (p *UpdateExptTemplateOApiRequest) BLength() int {
 	l := 0
 	if p != nil {
+		l += p.field25Length()
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
@@ -47835,6 +47973,15 @@ func (p *UpdateExptTemplateOApiRequest) BLength() int {
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
+}
+
+func (p *UpdateExptTemplateOApiRequest) fastWriteField25(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVerificationConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 25)
+		offset += p.VerificationConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
 }
 
 func (p *UpdateExptTemplateOApiRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
@@ -47934,6 +48081,15 @@ func (p *UpdateExptTemplateOApiRequest) fastWriteField255(buf []byte, w thrift.N
 		offset += p.Base.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
+}
+
+func (p *UpdateExptTemplateOApiRequest) field25Length() int {
+	l := 0
+	if p.IsSetVerificationConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.VerificationConfig.BLength()
+	}
+	return l
 }
 
 func (p *UpdateExptTemplateOApiRequest) field1Length() int {
@@ -48040,6 +48196,15 @@ func (p *UpdateExptTemplateOApiRequest) DeepCopy(s interface{}) error {
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
+
+	var _verificationConfig *experiment.VerificationConfig
+	if src.VerificationConfig != nil {
+		_verificationConfig = &experiment.VerificationConfig{}
+		if err := _verificationConfig.DeepCopy(src.VerificationConfig); err != nil {
+			return err
+		}
+	}
+	p.VerificationConfig = _verificationConfig
 
 	if src.TemplateID != nil {
 		tmp := *src.TemplateID

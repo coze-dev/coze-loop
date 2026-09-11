@@ -29092,6 +29092,7 @@ func (p *GetEvaluationSetIOJobOApiResponse) Field255DeepEqual(src *base.BaseResp
 // ===============================
 // 3.1 创建评测实验
 type SubmitExperimentOApiRequest struct {
+	VerificationConfig *experiment.VerificationConfig `thrift:"verification_config,52,optional" frugal:"52,optional,experiment.VerificationConfig" form:"verification_config" json:"verification_config,omitempty"`
 	// 基础信息
 	WorkspaceID *int64  `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
 	Name        *string `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty"`
@@ -29152,6 +29153,18 @@ func NewSubmitExperimentOApiRequest() *SubmitExperimentOApiRequest {
 }
 
 func (p *SubmitExperimentOApiRequest) InitDefault() {
+}
+
+var SubmitExperimentOApiRequest_VerificationConfig_DEFAULT *experiment.VerificationConfig
+
+func (p *SubmitExperimentOApiRequest) GetVerificationConfig() (v *experiment.VerificationConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVerificationConfig() {
+		return SubmitExperimentOApiRequest_VerificationConfig_DEFAULT
+	}
+	return p.VerificationConfig
 }
 
 var SubmitExperimentOApiRequest_WorkspaceID_DEFAULT int64
@@ -29429,6 +29442,9 @@ func (p *SubmitExperimentOApiRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *SubmitExperimentOApiRequest) SetVerificationConfig(val *experiment.VerificationConfig) {
+	p.VerificationConfig = val
+}
 func (p *SubmitExperimentOApiRequest) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
@@ -29500,6 +29516,7 @@ func (p *SubmitExperimentOApiRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
+	52:  "verification_config",
 	1:   "workspace_id",
 	2:   "name",
 	3:   "description",
@@ -29523,6 +29540,10 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	102: "ref_group_experiment_id",
 	254: "extra",
 	255: "Base",
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetVerificationConfig() bool {
+	return p.VerificationConfig != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetWorkspaceID() bool {
@@ -29635,6 +29656,14 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		}
 
 		switch fieldId {
+		case 52:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField52(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
@@ -29848,6 +29877,14 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
+func (p *SubmitExperimentOApiRequest) ReadField52(iprot thrift.TProtocol) error {
+	_field := experiment.NewVerificationConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.VerificationConfig = _field
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -30135,6 +30172,10 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField52(oprot); err != nil {
+			fieldId = 52
+			goto WriteFieldError
+		}
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
 			goto WriteFieldError
@@ -30245,6 +30286,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *SubmitExperimentOApiRequest) writeField52(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVerificationConfig() {
+		if err = oprot.WriteFieldBegin("verification_config", thrift.STRUCT, 52); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.VerificationConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 52 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 52 end error: ", p), err)
+}
 func (p *SubmitExperimentOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetWorkspaceID() {
 		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
@@ -30709,6 +30768,9 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field52DeepEqual(ano.VerificationConfig) {
+		return false
+	}
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
@@ -30781,6 +30843,13 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 	return true
 }
 
+func (p *SubmitExperimentOApiRequest) Field52DeepEqual(src *experiment.VerificationConfig) bool {
+
+	if !p.VerificationConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *SubmitExperimentOApiRequest) Field1DeepEqual(src *int64) bool {
 
 	if p.WorkspaceID == src {
@@ -62790,6 +62859,7 @@ func (p *ValidateEvaluatorOpenAPIData) Field3DeepEqual(src *evaluator.EvaluatorO
 // ===============================
 // 4.1 创建实验模板
 type CreateExptTemplateOApiRequest struct {
+	VerificationConfig         *experiment.VerificationConfig   `thrift:"verification_config,25,optional" frugal:"25,optional,experiment.VerificationConfig" form:"verification_config" json:"verification_config,omitempty"`
 	WorkspaceID                *int64                           `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
 	Meta                       *experiment.ExptTemplateMeta     `thrift:"meta,2,optional" frugal:"2,optional,experiment.ExptTemplateMeta" form:"meta" json:"meta,omitempty"`
 	TripleConfig               *experiment.ExptTuple            `thrift:"triple_config,3,optional" frugal:"3,optional,experiment.ExptTuple" form:"triple_config" json:"triple_config,omitempty"`
@@ -62808,6 +62878,18 @@ func NewCreateExptTemplateOApiRequest() *CreateExptTemplateOApiRequest {
 }
 
 func (p *CreateExptTemplateOApiRequest) InitDefault() {
+}
+
+var CreateExptTemplateOApiRequest_VerificationConfig_DEFAULT *experiment.VerificationConfig
+
+func (p *CreateExptTemplateOApiRequest) GetVerificationConfig() (v *experiment.VerificationConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVerificationConfig() {
+		return CreateExptTemplateOApiRequest_VerificationConfig_DEFAULT
+	}
+	return p.VerificationConfig
 }
 
 var CreateExptTemplateOApiRequest_WorkspaceID_DEFAULT int64
@@ -62929,6 +63011,9 @@ func (p *CreateExptTemplateOApiRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *CreateExptTemplateOApiRequest) SetVerificationConfig(val *experiment.VerificationConfig) {
+	p.VerificationConfig = val
+}
 func (p *CreateExptTemplateOApiRequest) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
@@ -62961,6 +63046,7 @@ func (p *CreateExptTemplateOApiRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_CreateExptTemplateOApiRequest = map[int16]string{
+	25:  "verification_config",
 	1:   "workspace_id",
 	2:   "meta",
 	3:   "triple_config",
@@ -62971,6 +63057,10 @@ var fieldIDToName_CreateExptTemplateOApiRequest = map[int16]string{
 	30:  "notification_conf",
 	254: "extra",
 	255: "Base",
+}
+
+func (p *CreateExptTemplateOApiRequest) IsSetVerificationConfig() bool {
+	return p.VerificationConfig != nil
 }
 
 func (p *CreateExptTemplateOApiRequest) IsSetWorkspaceID() bool {
@@ -63031,6 +63121,14 @@ func (p *CreateExptTemplateOApiRequest) Read(iprot thrift.TProtocol) (err error)
 		}
 
 		switch fieldId {
+		case 25:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField25(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
@@ -63140,6 +63238,14 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
+func (p *CreateExptTemplateOApiRequest) ReadField25(iprot thrift.TProtocol) error {
+	_field := experiment.NewVerificationConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.VerificationConfig = _field
+	return nil
+}
 func (p *CreateExptTemplateOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -63236,6 +63342,10 @@ func (p *CreateExptTemplateOApiRequest) Write(oprot thrift.TProtocol) (err error
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField25(oprot); err != nil {
+			fieldId = 25
+			goto WriteFieldError
+		}
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
 			goto WriteFieldError
@@ -63294,6 +63404,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *CreateExptTemplateOApiRequest) writeField25(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVerificationConfig() {
+		if err = oprot.WriteFieldBegin("verification_config", thrift.STRUCT, 25); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.VerificationConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 end error: ", p), err)
+}
 func (p *CreateExptTemplateOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetWorkspaceID() {
 		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
@@ -63489,6 +63617,9 @@ func (p *CreateExptTemplateOApiRequest) DeepEqual(ano *CreateExptTemplateOApiReq
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field25DeepEqual(ano.VerificationConfig) {
+		return false
+	}
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
@@ -63522,6 +63653,13 @@ func (p *CreateExptTemplateOApiRequest) DeepEqual(ano *CreateExptTemplateOApiReq
 	return true
 }
 
+func (p *CreateExptTemplateOApiRequest) Field25DeepEqual(src *experiment.VerificationConfig) bool {
+
+	if !p.VerificationConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *CreateExptTemplateOApiRequest) Field1DeepEqual(src *int64) bool {
 
 	if p.WorkspaceID == src {
@@ -66224,6 +66362,7 @@ func (p *UpdateExptTemplateMetaOpenAPIData) Field1DeepEqual(src *experiment.Expt
 
 // 4.4 更新实验模板
 type UpdateExptTemplateOApiRequest struct {
+	VerificationConfig         *experiment.VerificationConfig   `thrift:"verification_config,25,optional" frugal:"25,optional,experiment.VerificationConfig" form:"verification_config" json:"verification_config,omitempty"`
 	TemplateID                 *int64                           `thrift:"template_id,1,optional" frugal:"1,optional,i64" json:"template_id" path:"template_id" `
 	WorkspaceID                *int64                           `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
 	Meta                       *experiment.ExptTemplateMeta     `thrift:"meta,3,optional" frugal:"3,optional,experiment.ExptTemplateMeta" form:"meta" json:"meta,omitempty"`
@@ -66243,6 +66382,18 @@ func NewUpdateExptTemplateOApiRequest() *UpdateExptTemplateOApiRequest {
 }
 
 func (p *UpdateExptTemplateOApiRequest) InitDefault() {
+}
+
+var UpdateExptTemplateOApiRequest_VerificationConfig_DEFAULT *experiment.VerificationConfig
+
+func (p *UpdateExptTemplateOApiRequest) GetVerificationConfig() (v *experiment.VerificationConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVerificationConfig() {
+		return UpdateExptTemplateOApiRequest_VerificationConfig_DEFAULT
+	}
+	return p.VerificationConfig
 }
 
 var UpdateExptTemplateOApiRequest_TemplateID_DEFAULT int64
@@ -66376,6 +66527,9 @@ func (p *UpdateExptTemplateOApiRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *UpdateExptTemplateOApiRequest) SetVerificationConfig(val *experiment.VerificationConfig) {
+	p.VerificationConfig = val
+}
 func (p *UpdateExptTemplateOApiRequest) SetTemplateID(val *int64) {
 	p.TemplateID = val
 }
@@ -66411,6 +66565,7 @@ func (p *UpdateExptTemplateOApiRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_UpdateExptTemplateOApiRequest = map[int16]string{
+	25:  "verification_config",
 	1:   "template_id",
 	2:   "workspace_id",
 	3:   "meta",
@@ -66422,6 +66577,10 @@ var fieldIDToName_UpdateExptTemplateOApiRequest = map[int16]string{
 	30:  "notification_conf",
 	254: "extra",
 	255: "Base",
+}
+
+func (p *UpdateExptTemplateOApiRequest) IsSetVerificationConfig() bool {
+	return p.VerificationConfig != nil
 }
 
 func (p *UpdateExptTemplateOApiRequest) IsSetTemplateID() bool {
@@ -66486,6 +66645,14 @@ func (p *UpdateExptTemplateOApiRequest) Read(iprot thrift.TProtocol) (err error)
 		}
 
 		switch fieldId {
+		case 25:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField25(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
@@ -66603,6 +66770,14 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
+func (p *UpdateExptTemplateOApiRequest) ReadField25(iprot thrift.TProtocol) error {
+	_field := experiment.NewVerificationConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.VerificationConfig = _field
+	return nil
+}
 func (p *UpdateExptTemplateOApiRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -66710,6 +66885,10 @@ func (p *UpdateExptTemplateOApiRequest) Write(oprot thrift.TProtocol) (err error
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField25(oprot); err != nil {
+			fieldId = 25
+			goto WriteFieldError
+		}
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
 			goto WriteFieldError
@@ -66772,6 +66951,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *UpdateExptTemplateOApiRequest) writeField25(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVerificationConfig() {
+		if err = oprot.WriteFieldBegin("verification_config", thrift.STRUCT, 25); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.VerificationConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 end error: ", p), err)
+}
 func (p *UpdateExptTemplateOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTemplateID() {
 		if err = oprot.WriteFieldBegin("template_id", thrift.I64, 1); err != nil {
@@ -66985,6 +67182,9 @@ func (p *UpdateExptTemplateOApiRequest) DeepEqual(ano *UpdateExptTemplateOApiReq
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field25DeepEqual(ano.VerificationConfig) {
+		return false
+	}
 	if !p.Field1DeepEqual(ano.TemplateID) {
 		return false
 	}
@@ -67021,6 +67221,13 @@ func (p *UpdateExptTemplateOApiRequest) DeepEqual(ano *UpdateExptTemplateOApiReq
 	return true
 }
 
+func (p *UpdateExptTemplateOApiRequest) Field25DeepEqual(src *experiment.VerificationConfig) bool {
+
+	if !p.VerificationConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *UpdateExptTemplateOApiRequest) Field1DeepEqual(src *int64) bool {
 
 	if p.TemplateID == src {

@@ -22,7 +22,7 @@ import (
 func quotaDTO(amount int64) *domain_expt.ExpectedQuotaConsumption {
 	return &domain_expt.ExpectedQuotaConsumption{
 		Resources: []*domain_expt.ExpectedResourceConsumption{
-			{Category: "sandbox", ResourceKey: "default", Amount: amount},
+			{Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("default"), Amount: gptr.Of[int64](amount)},
 		},
 	}
 }
@@ -97,7 +97,7 @@ func TestResolveRunConfSchedulingParams_RejectsInvalidVector(t *testing.T) {
 	cases := map[string]*domain_expt.ExpectedQuotaConsumption{
 		"空 resources": {Resources: nil},
 		"amount 非正":   quotaDTO(0),
-		"申报了通配":       {Resources: []*domain_expt.ExpectedResourceConsumption{{Category: "sandbox", ResourceKey: "*", Amount: 1}}},
+		"申报了通配":       {Resources: []*domain_expt.ExpectedResourceConsumption{{Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("*"), Amount: gptr.Of[int64](1)}}},
 	}
 	for name, dto := range cases {
 		t.Run(name, func(t *testing.T) {

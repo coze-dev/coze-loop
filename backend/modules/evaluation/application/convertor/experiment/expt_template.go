@@ -260,6 +260,7 @@ func buildTemplateConfForCreate(
 	itemConcurNum *int32,
 ) *entity.ExptTemplateConfiguration {
 	templateConf := &entity.ExptTemplateConfiguration{
+		VerificationConfig:  verificationConfigDTO2DO(req.GetVerificationConfig()),
 		ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 		EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 		ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),
@@ -424,6 +425,7 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	if template == nil {
 		return nil
 	}
+	patchTemplateEvalTargetTypeFromTriple(template)
 
 	dto := &domain_expt.ExptTemplate{}
 
@@ -433,6 +435,11 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	dto.ScoreWeightConfig = buildTemplateScoreWeightConfigDTO(template)
 	if template.TemplateConf != nil {
 		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+		config, cleaned, err := templateVerificationConfig(template)
+		dto.VerificationConfig = verificationConfigDO2DTO(config)
+		if config != nil && err == nil && dto.FieldMappingConfig != nil && dto.FieldMappingConfig.TargetRuntimeParam != nil {
+			dto.FieldMappingConfig.TargetRuntimeParam.JSONValue = gptr.Of(cleaned)
+		}
 	}
 
 	// 填充关联数据（EvalSet、EvalTarget、Evaluators）到 TripleConfig
@@ -1089,6 +1096,8 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		Name:           gptr.Of(name),
 		ExptTemplateID: gptr.Of(template.Meta.ID),
 	}
+	config, _, _ := templateVerificationConfig(template)
+	req.VerificationConfig = verificationConfigDO2DTO(config)
 
 	if template.TripleConfig == nil {
 		return req
@@ -1390,8 +1399,9 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	hasConcurNum := itemConcurNum != nil || req.DefaultEvaluatorsConcurNum != nil
 	hasEnableExtractTrajectory := req.IsSetEnableExtractTrajectory()
 
-	if hasFieldMapping || hasScoreWeight || hasConcurNum || hasEnableExtractTrajectory {
+	if hasFieldMapping || hasScoreWeight || hasConcurNum || hasEnableExtractTrajectory || req.IsSetVerificationConfig() {
 		templateConf := &entity.ExptTemplateConfiguration{
+			VerificationConfig:  verificationConfigDTO2DO(req.GetVerificationConfig()),
 			ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 			ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),

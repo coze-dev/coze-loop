@@ -35,9 +35,10 @@ type EvalConfConvert struct{}
 
 func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (*entity.EvaluationConfiguration, error) {
 	ec := &entity.EvaluationConfiguration{
-		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
-		Ext:           cer.Ext,
-		RunModeConfig: runModeConfigDTO2DO(cer.GetRunModeConfig()),
+		VerificationConfig: verificationConfigDTO2DO(cer.GetVerificationConfig()),
+		ItemConcurNum:      entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
+		Ext:                cer.Ext,
+		RunModeConfig:      runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
 
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
@@ -492,6 +493,12 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	// (形如 fornax_boe_boe), 对调用方没有可用语义, 却泄露部署拓扑与环境划分。
 	// 业务代码本就不允许解析 Scope 字符串, 回显它只会诱使调用方依赖这个不稳定契约。
 	res.PriorityLevel = gptr.Of(entity.NormalizeExptPriorityLevel(experiment.PriorityLevel))
+	config, runtimeParam, verificationErr := experiment.EvalConf.ResolveVerificationConfig(experiment.Target)
+	res.VerificationConfig = verificationConfigDO2DTO(config)
+	// Preserve malformed historical modes for display; execution rejects them.
+	if config != nil && verificationErr == nil && res.TargetRuntimeParam != nil {
+		res.TargetRuntimeParam.JSONValue = gptr.Of(runtimeParam)
+	}
 	res.SchedulerMode = gptr.Of(entity.NormalizeExptDispatchMode(experiment.ExptDispatchMode))
 
 	// expected_quota_consumption 采用"有则回显、无则省略"的 optional 语义:
@@ -1012,9 +1019,10 @@ func buildExptConfFromEvalSetConfigs(cer *expt.CreateExperimentRequest, runConfi
 	}
 
 	ec := &entity.EvaluationConfiguration{
-		ItemConcurNum: entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
-		Ext:           cer.Ext,
-		RunModeConfig: runModeConfigDTO2DO(cer.GetRunModeConfig()),
+		VerificationConfig: verificationConfigDTO2DO(cer.GetVerificationConfig()),
+		ItemConcurNum:      entity.NormalizeSubmitItemConcurNum(ptr.ConvIntPtr[int32, int](cer.ItemConcurNum)),
+		Ext:                cer.Ext,
+		RunModeConfig:      runModeConfigDTO2DO(cer.GetRunModeConfig()),
 	}
 	if cer.GetItemRetryNum() > 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
@@ -1678,9 +1686,9 @@ func expectedQuotaConsumptionDO2DTO(do *entity.ExpectedQuotaConsumption) *domain
 			continue
 		}
 		resources = append(resources, &domain_expt.ExpectedResourceConsumption{
-			Category:    r.Category,
-			ResourceKey: r.ResourceKey,
-			Amount:      r.Amount,
+			Category:    gptr.Of(r.Category),
+			ResourceKey: gptr.Of(r.ResourceKey),
+			Amount:      gptr.Of(r.Amount),
 			// 空 source 序列化时省略（IDL optional + entity omitempty），
 			// 让"没申报来源"与"申报了空来源"在回显里不可混淆。
 			Source: gptr.Of(r.Source),

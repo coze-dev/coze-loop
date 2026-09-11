@@ -168,7 +168,8 @@ const (
 )
 
 type ExecuteTargetCtx struct {
-	ExperimentID *int64
+	VerificationConfig *VerificationConfig
+	ExperimentID       *int64
 	// 实验执行ID
 	ExperimentRunID *int64
 	// 评测集数据项ID

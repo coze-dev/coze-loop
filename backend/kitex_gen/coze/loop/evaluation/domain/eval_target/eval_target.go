@@ -38,10 +38,14 @@ const (
 	HTTPMethodPost = "post"
 
 	SandboxAgentTypeSingleRunCLI = "single_run_cli"
-
+	// 单沙箱执行链路
 	SandboxCountModeSingle = "single"
-
+	// 先起从属沙箱拿 session id，再起主沙箱运行 sandbox-pipeline
 	SandboxCountModeDual = "dual"
+	// Mac VM + orchestrator sandbox
+	SandboxCountModeMacVMPlusSandbox = "mac_vm_plus_sandbox"
+	// orchestrator + SSH/Runner sandbox + Mac VM Remote-SSH IDE
+	SandboxCountModeMacVMPlusSSH = "mac_vm_plus_ssh"
 )
 
 type EvalTargetType int64
@@ -381,7 +385,7 @@ type HTTPMethod = string
 // 沙箱 Agent 子类型，内置路由标识，路由到对应的执行流水线
 type SandboxAgentType = string
 
-// 单/双沙箱模式；未填 / 未识别一律按 Single 处理。
+// 沙箱资源拓扑；未填 / 未识别一律按 Single 处理。
 type SandboxCountMode = string
 
 // 沙箱 Agent 自定义输出字段 schema。DO 侧 entity.CustomFieldSchema 的对外投影，
@@ -11274,7 +11278,7 @@ type SandboxAgent struct {
 	// 是否开启分析：由创建评测对象时从 application.usages 反查（含 "analysis"）固化，
 	// 控制 item-complete MQ 是否发送（与 TCC 空间白名单 AND）
 	EnableAnalysis *bool `thrift:"enable_analysis,9,optional" frugal:"9,optional,bool" form:"enable_analysis" json:"enable_analysis,omitempty" query:"enable_analysis"`
-	// 单/双沙箱模式；空值按 Single 处理
+	// 沙箱资源拓扑；空值按 Single 处理
 	SandboxCountMode *SandboxCountMode `thrift:"sandbox_count_mode,10,optional" frugal:"10,optional,string" form:"sandbox_count_mode" json:"sandbox_count_mode,omitempty" query:"sandbox_count_mode"`
 	// 自定义输出字段 schema，创建评测对象时从 application.custom_field_schemas 反查固化。
 	// 供实验创建流程中评估器字段映射步骤读取，标识 sandbox agent 可用的输出字段。

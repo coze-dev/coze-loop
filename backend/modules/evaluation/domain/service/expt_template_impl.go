@@ -93,6 +93,19 @@ func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, sp
 }
 
 func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.CreateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
+	if param.TemplateConf != nil && param.TemplateConf.VerificationConfig != nil {
+		adapter := &entity.CreateExptParam{
+			ExptType:              param.ExptType,
+			TargetID:              gptr.Of(param.TargetID),
+			TargetVersionID:       param.TargetVersionID,
+			CreateEvalTargetParam: param.CreateEvalTargetParam,
+			ExptConf:              &entity.EvaluationConfiguration{VerificationConfig: param.TemplateConf.VerificationConfig},
+		}
+		if err := adapter.PrepareVerificationTarget(); err != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+		}
+		param.CreateEvalTargetParam = adapter.CreateEvalTargetParam
+	}
 	// 验证名称：按 expt_type 隔离，避免在线/离线模板互相判重
 	pass, err := e.CheckName(ctx, param.Name, param.SpaceID, param.ExptType, session)
 	if err != nil {
@@ -129,6 +142,9 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 	finalTargetID, finalTargetVersionID, targetType, err := e.resolveTargetForCreate(ctx, param)
 	if err != nil {
 		return nil, err
+	}
+	if param.TemplateConf != nil && param.TemplateConf.VerificationConfig != nil && targetType != entity.EvalTargetTypeSandboxAgent {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("verification_config requires a SandboxAgent execution target"))
 	}
 
 	// 构建模板实体
@@ -357,6 +373,9 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		if param.CreateEvalTargetParam.AgentConnection != nil {
 			opts = append(opts, entity.WithAgentConnection(param.CreateEvalTargetParam.AgentConnection))
 		}
+		if param.CreateEvalTargetParam.SandboxAgent != nil {
+			opts = append(opts, entity.WithSandboxAgent(param.CreateEvalTargetParam.SandboxAgent))
+		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, sourceTargetID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
 		if err != nil {
 			return nil, errorx.Wrapf(err, "CreateEvalTarget failed, param: %v", param.CreateEvalTargetParam)
@@ -486,7 +505,11 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	// 如果 TemplateConf 为空，保持原有值
 	if updatedTemplate.TemplateConf == nil {
 		updatedTemplate.TemplateConf = existingTemplate.TemplateConf
-	} else if existingTemplate.TemplateConf != nil && existingTemplate.TemplateConf.ExptSource != nil {
+	} else if existingTemplate.TemplateConf != nil {
+		// Old clients updating unrelated template fields must not erase verification.
+		if updatedTemplate.TemplateConf.VerificationConfig == nil {
+			updatedTemplate.TemplateConf.VerificationConfig = existingTemplate.TemplateConf.VerificationConfig
+		}
 		// 增量更新请求未带 expt_source 时，避免整份 template_conf 覆盖导致 DB 中 expt_source 丢失
 		if updatedTemplate.TemplateConf.ExptSource == nil {
 			updatedTemplate.TemplateConf.ExptSource = existingTemplate.TemplateConf.ExptSource
@@ -504,6 +527,12 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重
 	e.buildFieldMappingConfigAndEnableScoreWeight(updatedTemplate, updatedTemplate.TemplateConf)
+
+	if updatedTemplate.TemplateConf != nil && updatedTemplate.TemplateConf.VerificationConfig != nil {
+		if updatedMeta.ExptType == entity.ExptType_Online || targetType != entity.EvalTargetTypeSandboxAgent {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("verification_config requires an offline SandboxAgent experiment"))
+		}
+	}
 
 	// 转换为评估器引用DO
 	refs := updatedTemplate.ToEvaluatorRefDO()
@@ -1937,6 +1966,9 @@ func (e *ExptTemplateManagerImpl) resolveTargetForCreate(ctx context.Context, pa
 		}
 		if param.CreateEvalTargetParam.AgentConnection != nil {
 			opts = append(opts, entity.WithAgentConnection(param.CreateEvalTargetParam.AgentConnection))
+		}
+		if param.CreateEvalTargetParam.SandboxAgent != nil {
+			opts = append(opts, entity.WithSandboxAgent(param.CreateEvalTargetParam.SandboxAgent))
 		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
 		if err != nil {

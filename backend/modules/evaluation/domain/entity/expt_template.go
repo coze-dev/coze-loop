@@ -197,6 +197,7 @@ func (e *ExptTemplateEvaluatorVersionRef) String() string {
 // 包含评估器列表、字段映射、加权配置、默认并发及调度等
 // 该配置会序列化为JSON存储在数据库的template_conf字段中
 type ExptTemplateConfiguration struct {
+	VerificationConfig *VerificationConfig `json:"verification_config,omitempty"`
 	// 字段映射 & 运行时参数（使用与EvaluationConfiguration类似的结构）
 	ConnectorConf Connector
 	ItemConcurNum *int
@@ -376,6 +377,9 @@ func (e *ExptTemplateUpdateFields) ToFieldMap() (map[string]any, error) {
 func (c *ExptTemplateConfiguration) Valid(ctx context.Context) error {
 	if c == nil {
 		return fmt.Errorf("nil ExptTemplateConfiguration")
+	}
+	if err := c.VerificationConfig.Validate(); err != nil {
+		return err
 	}
 	// 验证并发数配置
 	if c.ItemConcurNum != nil && *c.ItemConcurNum <= 0 {

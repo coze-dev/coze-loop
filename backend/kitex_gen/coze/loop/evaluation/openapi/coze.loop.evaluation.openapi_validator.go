@@ -908,6 +908,11 @@ func (p *GetEvaluationSetIOJobOApiResponse) IsValid() error {
 	return nil
 }
 func (p *SubmitExperimentOApiRequest) IsValid() error {
+	if p.VerificationConfig != nil {
+		if err := p.VerificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field VerificationConfig not valid, %w", err)
+		}
+	}
 	if p.EvalSetParam != nil {
 		if err := p.EvalSetParam.IsValid(); err != nil {
 			return fmt.Errorf("field EvalSetParam not valid, %w", err)
@@ -1869,6 +1874,11 @@ func (p *ValidateEvaluatorOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *CreateExptTemplateOApiRequest) IsValid() error {
+	if p.VerificationConfig != nil {
+		if err := p.VerificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field VerificationConfig not valid, %w", err)
+		}
+	}
 	if p.Meta != nil {
 		if err := p.Meta.IsValid(); err != nil {
 			return fmt.Errorf("field Meta not valid, %w", err)
@@ -1996,6 +2006,11 @@ func (p *UpdateExptTemplateMetaOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *UpdateExptTemplateOApiRequest) IsValid() error {
+	if p.VerificationConfig != nil {
+		if err := p.VerificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field VerificationConfig not valid, %w", err)
+		}
+	}
 	if p.Meta != nil {
 		if err := p.Meta.IsValid(); err != nil {
 			return fmt.Errorf("field Meta not valid, %w", err)
