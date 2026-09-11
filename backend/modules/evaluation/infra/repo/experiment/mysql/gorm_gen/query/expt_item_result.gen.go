@@ -35,6 +35,7 @@ func newExptItemResult(db *gorm.DB, opts ...gen.DOOption) exptItemResult {
 	_exptItemResult.ItemVersionID = field.NewInt64(tableName, "item_version_id")
 	_exptItemResult.ItemIdx = field.NewInt32(tableName, "item_idx")
 	_exptItemResult.Status = field.NewInt32(tableName, "status")
+	_exptItemResult.BackflowStatus = field.NewInt32(tableName, "backflow_status")
 	_exptItemResult.ErrMsg = field.NewBytes(tableName, "err_msg")
 	_exptItemResult.CreatedAt = field.NewTime(tableName, "created_at")
 	_exptItemResult.UpdatedAt = field.NewTime(tableName, "updated_at")
@@ -51,21 +52,22 @@ func newExptItemResult(db *gorm.DB, opts ...gen.DOOption) exptItemResult {
 type exptItemResult struct {
 	exptItemResultDo exptItemResultDo
 
-	ALL           field.Asterisk
-	ID            field.Int64  // id
-	SpaceID       field.Int64  // 空间 id
-	ExptID        field.Int64  // 实验 id
-	ExptRunID     field.Int64  // 实验运行 id
-	ItemID        field.Int64  // item_id
-	ItemVersionID field.Int64  // item 自身版本号; 0=旧数据/无版本概念; 真值源 expt_item_ref
-	ItemIdx       field.Int32  // item 序号
-	Status        field.Int32  // 状态
-	ErrMsg        field.Bytes  // 错误信息
-	CreatedAt     field.Time   // 创建时间
-	UpdatedAt     field.Time   // 更新时间
-	DeletedAt     field.Field  // 删除时间
-	LogID         field.String // 日志 id
-	Ext           field.Bytes  // 补充信息
+	ALL            field.Asterisk
+	ID             field.Int64  // id
+	SpaceID        field.Int64  // 空间 id
+	ExptID         field.Int64  // 实验 id
+	ExptRunID      field.Int64  // 实验运行 id
+	ItemID         field.Int64  // item_id
+	ItemVersionID  field.Int64  // item 自身版本号; 0=旧数据/无版本概念; 真值源 expt_item_ref
+	ItemIdx        field.Int32  // item 序号
+	Status         field.Int32  // 状态
+	BackflowStatus field.Int32  // 回流段状态; 0=不适用(未接入回流的历史实验)
+	ErrMsg         field.Bytes  // 错误信息
+	CreatedAt      field.Time   // 创建时间
+	UpdatedAt      field.Time   // 更新时间
+	DeletedAt      field.Field  // 删除时间
+	LogID          field.String // 日志 id
+	Ext            field.Bytes  // 补充信息
 
 	fieldMap map[string]field.Expr
 }
@@ -90,6 +92,7 @@ func (e *exptItemResult) updateTableName(table string) *exptItemResult {
 	e.ItemVersionID = field.NewInt64(table, "item_version_id")
 	e.ItemIdx = field.NewInt32(table, "item_idx")
 	e.Status = field.NewInt32(table, "status")
+	e.BackflowStatus = field.NewInt32(table, "backflow_status")
 	e.ErrMsg = field.NewBytes(table, "err_msg")
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
@@ -124,7 +127,7 @@ func (e *exptItemResult) GetFieldByName(fieldName string) (field.OrderExpr, bool
 }
 
 func (e *exptItemResult) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 14)
+	e.fieldMap = make(map[string]field.Expr, 15)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_id"] = e.ExptID
@@ -133,6 +136,7 @@ func (e *exptItemResult) fillFieldMap() {
 	e.fieldMap["item_version_id"] = e.ItemVersionID
 	e.fieldMap["item_idx"] = e.ItemIdx
 	e.fieldMap["status"] = e.Status
+	e.fieldMap["backflow_status"] = e.BackflowStatus
 	e.fieldMap["err_msg"] = e.ErrMsg
 	e.fieldMap["created_at"] = e.CreatedAt
 	e.fieldMap["updated_at"] = e.UpdatedAt
