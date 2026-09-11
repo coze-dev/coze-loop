@@ -1089,3 +1089,50 @@ func TestExptTurnResultFilterDAOImpl_PerSetEdgeCases(t *testing.T) {
 		assert.Contains(t, sql, "etrf.eval_set_version_id = dis.version_id")
 	})
 }
+
+func TestExptTurnResultFilterDAOImpl_buildMainTableConditions_EvalSetIDs(t *testing.T) {
+	d := &exptTurnResultFilterDAOImpl{}
+
+	t.Run("无评测集条件时不产生 SQL", func(t *testing.T) {
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildMainTableConditions(&ExptTurnResultFilterQueryCond{}, &whereSQL, &args)
+		assert.NotContains(t, whereSQL, "etrf.eval_set_id")
+		assert.Empty(t, args)
+	})
+
+	t.Run("按操作符拼接评测集条件", func(t *testing.T) {
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildMainTableConditions(&ExptTurnResultFilterQueryCond{
+			EvalSetIDs: []*FieldFilter{
+				{Key: "eval_set_id", Op: "IN", Values: []any{"1", "2"}},
+				{Key: "eval_set_id", Op: "=", Values: []any{"3"}},
+				{Key: "eval_set_id", Op: "!=", Values: []any{"4"}},
+				{Key: "eval_set_id", Op: "NOT IN", Values: []any{"5", "6"}},
+				{Key: "eval_set_id", Op: "BETWEEN", Values: []any{"7", "8"}},
+			},
+		}, &whereSQL, &args)
+		assert.Contains(t, whereSQL, " AND etrf.eval_set_id IN ?")
+		assert.Contains(t, whereSQL, " AND etrf.eval_set_id = ?")
+		assert.Contains(t, whereSQL, " AND etrf.eval_set_id != ?")
+		assert.Contains(t, whereSQL, " AND etrf.eval_set_id NOT IN ?")
+		// 不支持的操作符被忽略，不落条件也不落参数
+		assert.Equal(t, []interface{}{[]any{"1", "2"}, "3", "4", []any{"5", "6"}}, args)
+	})
+
+	t.Run("与其它主表条件共存", func(t *testing.T) {
+		whereSQL := ""
+		args := []interface{}{}
+		d.buildMainTableConditions(&ExptTurnResultFilterQueryCond{
+			SpaceID:          ptr.Of("1"),
+			ExptID:           ptr.Of("2"),
+			EvalSetVersionID: ptr.Of("3"),
+			EvalSetIDs:       []*FieldFilter{{Key: "eval_set_id", Op: "IN", Values: []any{"4"}}},
+		}, &whereSQL, &args)
+		assert.Contains(t, whereSQL, " AND etrf.space_id = ?")
+		assert.Contains(t, whereSQL, " AND etrf.expt_id = ?")
+		assert.Contains(t, whereSQL, " AND etrf.eval_set_id IN ?")
+		assert.Contains(t, whereSQL, " AND etrf.eval_set_version_id = ?")
+	})
+}

@@ -756,6 +756,8 @@ type ExptTurnResultFilterAccelerator struct {
 	ItemIDs                 []*FieldFilter `json:"item_id"`
 	ItemRunStatus           []*FieldFilter `json:"item_status"`
 	TurnRunStatus           []*FieldFilter `json:"turn_status"`
+	// EvalSetIDs 多评测集实验下按评测集筛明细，落到主表 eval_set_id 列上。
+	EvalSetIDs []*FieldFilter `json:"eval_set_id"`
 	// map类查询条件
 	MapCond          *ExptTurnResultFilterMapCond `json:"map_cond,omitempty"`
 	ItemSnapshotCond *ItemSnapshotFilter          `json:"item_snapshot_cond,omitempty"`
@@ -782,7 +784,8 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 	hasFilters := e.EvaluatorScoreCorrected != nil ||
 		len(e.ItemIDs) > 0 ||
 		len(e.ItemRunStatus) > 0 ||
-		len(e.TurnRunStatus) > 0
+		len(e.TurnRunStatus) > 0 ||
+		len(e.EvalSetIDs) > 0
 	hasFilters = hasFilters || (e.MapCond != nil && (len(e.MapCond.EvalTargetDataFilters) > 0 ||
 		len(e.MapCond.EvaluatorScoreFilters) > 0 ||
 		e.MapCond.EvaluatorWeightedScoreFilter != nil ||

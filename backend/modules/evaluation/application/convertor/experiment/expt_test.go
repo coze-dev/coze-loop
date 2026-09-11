@@ -1255,6 +1255,33 @@ func TestConvertExptTurnResultFilterAccelerator_EvalTargetMetrics(t *testing.T) 
 	}
 }
 
+func TestConvertExptTurnResultFilterAccelerator_EvalSetID(t *testing.T) {
+	filter := &domain_expt.ExperimentFilter{
+		Filters: &domain_expt.Filters{
+			LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+			FilterConditions: []*domain_expt.FilterCondition{
+				{
+					Field: &domain_expt.FilterField{
+						FieldType: domain_expt.FieldType_EvalSetID,
+						FieldKey:  ptr.Of("eval_set_id"),
+					},
+					Operator: domain_expt.FilterOperatorType_In,
+					Value:    "101,102",
+				},
+			},
+		},
+	}
+
+	got, err := ConvertExptTurnResultFilterAccelerator(filter)
+	assert.NoError(t, err)
+	assert.Equal(t, []*entity.FieldFilter{{
+		Key:    "eval_set_id",
+		Op:     "IN",
+		Values: []any{"101", "102"},
+	}}, got.EvalSetIDs)
+	assert.True(t, got.HasFilters())
+}
+
 func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 	tests := []struct {
 		name                       string
