@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"encoding/base64"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -121,6 +122,66 @@ func normalizeSharedAccessContexts(
 		return sortedAccessCtxs[i].ResourceID < sortedAccessCtxs[j].ResourceID
 	})
 	return sortedAccessCtxs
+}
+
+// filterSharedAccessContextsByContent 用 name / tagFilter 收窄共享资源集合，返回过滤后的授权上下文。
+//
+// 做法是把过滤下推给来源空间的 ListEvaluationSets、只取命中的 ID 当白名单，而不是把共享集合
+// 全量取回内存里自己比：tagFilter 带 and/or 关系语义，在应用层重实现一套匹配规则等于把下游的
+// 过滤语义复制一份，必然漂移。
+//
+// name / tagFilter 都为空时原样返回、零额外 RPC —— 不带过滤的共享列表行为因此完全不变。
+func filterSharedAccessContextsByContent(
+	ctx context.Context,
+	evaluationSetService service.IEvaluationSetService,
+	accessCtxs []*entity.ResourceAccessContext,
+	name *string,
+	tagFilter *entity.TagFilter,
+) ([]*entity.ResourceAccessContext, error) {
+	if len(accessCtxs) == 0 || (gptr.Indirect(name) == "" && tagFilter == nil) {
+		return accessCtxs, nil
+	}
+
+	idsBySource := make(map[int64][]int64)
+	for _, accessCtx := range accessCtxs {
+		if accessCtx == nil {
+			continue
+		}
+		idsBySource[accessCtx.ResourceSpaceID] = append(idsBySource[accessCtx.ResourceSpaceID], accessCtx.ResourceID)
+	}
+
+	matched := make(map[string]struct{})
+	for sourceSpaceID, evaluationSetIDs := range idsBySource {
+		for chunk := range slices.Chunk(evaluationSetIDs, maxSharedPageSize) {
+			sets, _, _, err := evaluationSetService.ListEvaluationSets(ctx, &entity.ListEvaluationSetsParam{
+				SpaceID:          sourceSpaceID,
+				EvaluationSetIDs: chunk,
+				Name:             name,
+				TagFilter:        tagFilter,
+				PageSize:         gptr.Of(int32(maxSharedPageSize)),
+				SharedOption:     &entity.SharedResourceOption{IsShared: true, SourceSpaceID: gptr.Of(sourceSpaceID)},
+			})
+			if err != nil {
+				return nil, err
+			}
+			for _, set := range sets {
+				if set != nil {
+					matched[sharedResourceKey(sourceSpaceID, set.ID)] = struct{}{}
+				}
+			}
+		}
+	}
+
+	filtered := make([]*entity.ResourceAccessContext, 0, len(accessCtxs))
+	for _, accessCtx := range accessCtxs {
+		if accessCtx == nil {
+			continue
+		}
+		if _, ok := matched[sharedResourceKey(accessCtx.ResourceSpaceID, accessCtx.ResourceID)]; ok {
+			filtered = append(filtered, accessCtx)
+		}
+	}
+	return filtered, nil
 }
 
 func batchGetSharedEvaluationSets(
