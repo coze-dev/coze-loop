@@ -4,12 +4,27 @@
 package entity
 
 import (
+	"context"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/stretchr/testify/require"
 )
+
+func TestExptTemplateConfigurationVerificationValidation(t *testing.T) {
+	for _, mode := range []VerificationMode{VerificationModeNopOnly, VerificationModeOracleOnly, VerificationModeF2P, "unknown"} {
+		t.Run(string(mode), func(t *testing.T) {
+			conf := &ExptTemplateConfiguration{VerificationConfig: &VerificationConfig{Mode: mode}}
+			err := conf.Valid(context.Background())
+			if mode == "unknown" {
+				require.ErrorContains(t, err, "verification_config.mode")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestVerificationConfigurationOptionalBoundaries(t *testing.T) {
 	var absent *EvaluationConfiguration

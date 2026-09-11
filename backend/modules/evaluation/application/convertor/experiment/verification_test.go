@@ -45,8 +45,31 @@ func TestVerificationReadAndTemplatePropagation(t *testing.T) {
 	require.JSONEq(t, `{"binary_version":"pinned"}`, dto.TargetRuntimeParam.GetJSONValue())
 	require.Equal(t, "f2p", DomainExperimentDTO2OpenAPI(dto).VerificationConfig.GetMode())
 	template := &entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{ID: 1}, TemplateConf: &entity.ExptTemplateConfiguration{VerificationConfig: config, ConnectorConf: connector}, Target: target}
-	require.Equal(t, dto.VerificationConfig, ToExptTemplateDTO(template).VerificationConfig)
+	template.FieldMappingConfig = &entity.ExptFieldMapping{TargetRuntimeParam: &entity.RuntimeParam{
+		JSONValue: gptr.Of(connector.TargetConf.IngressConf.CustomConf.FieldConfs[0].Value),
+	}}
+	templateDTO := ToExptTemplateDTO(template)
+	require.Equal(t, dto.VerificationConfig, templateDTO.VerificationConfig)
+	require.NotNil(t, templateDTO.FieldMappingConfig)
+	require.NotNil(t, templateDTO.FieldMappingConfig.TargetRuntimeParam)
+	require.JSONEq(t, `{"binary_version":"pinned"}`, templateDTO.FieldMappingConfig.TargetRuntimeParam.GetJSONValue())
+	require.JSONEq(t, `{"verification":{"mode":"f2p"},"binary_version":"pinned"}`, *template.FieldMappingConfig.TargetRuntimeParam.JSONValue)
 	require.Equal(t, dto.VerificationConfig, TemplateToSubmitExperimentRequest(template, "copy", 1).VerificationConfig)
+}
+
+func TestTemplateVerificationUpdateOnly(t *testing.T) {
+	for _, mode := range []domainExpt.VerificationMode{"nop_only", "oracle_only", "f2p"} {
+		t.Run(mode, func(t *testing.T) {
+			cfg := &domainExpt.VerificationConfig{Mode: gptr.Of(mode)}
+			param, err := ConvertUpdateExptTemplateReq(&expt.UpdateExperimentTemplateRequest{VerificationConfig: cfg})
+			require.NoError(t, err)
+			require.NotNil(t, param.TemplateConf)
+			require.Equal(t, verificationConfigDTO2DO(cfg), param.TemplateConf.VerificationConfig)
+		})
+	}
+	param, err := ConvertUpdateExptTemplateReq(&expt.UpdateExperimentTemplateRequest{})
+	require.NoError(t, err)
+	require.Nil(t, param.TemplateConf, "an omitted verification field is not an explicit reset")
 }
 
 func TestOpenAPITemplateVerificationInput(t *testing.T) {

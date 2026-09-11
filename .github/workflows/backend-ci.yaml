@@ -67,10 +67,16 @@ jobs:
         run: |
           go test -gcflags="all=-N -l" -race -v -coverprofile=coverage.out -coverpkg=./... ./...
 
+      - name: Compact Coverage Profile
+        # -coverpkg=./... repeats blocks for each test package. Coalesce them
+        # with go tool cover semantics without changing files or coverage.
+        run: go run ./script/coveragecompact -input coverage.out -output coverage.compact.out
+
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: ./coverage.out
+          files: ./backend/coverage.compact.out
+          disable_search: true
           flags: unittests
           fail_ci_if_error: false
           verbose: true
