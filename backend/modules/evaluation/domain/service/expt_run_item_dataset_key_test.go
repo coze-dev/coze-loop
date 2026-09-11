@@ -49,7 +49,7 @@ func TestBuildItemCompleteEvent_NormalizesDatasetKey(t *testing.T) {
 					EvalSetVersionID: 800,
 				}
 				fromItem := buildItemCompleteEvent(ctx)
-				fromScheduler := buildItemCompleteEventFromScheduler(1, 100, 200, experiment,
+				fromScheduler := BuildItemCompleteEventFromScheduler(1, 100, 200, experiment,
 					&entity.ExptEvalItem{ItemID: 300}, evalSetItem, 800)
 
 				assert.Equal(t, tt.want, fromItem.DatasetKey)

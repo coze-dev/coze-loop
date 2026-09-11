@@ -635,7 +635,7 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 	return ev
 }
 
-// buildItemCompleteEventFromScheduler 供链路B(scheduler daemon)组装 item-complete 事件。
+// BuildItemCompleteEventFromScheduler 供链路B(scheduler daemon)组装 item-complete 事件。
 // 链路B 循环里只有 event(*ExptScheduleEvent) + item(*ExptEvalItem, 仅 ItemID 可信) + expt(全量详情),
 // 缺 ItemKey/归属集/per-item 版本; 调用方须在循环外用 expt_item_ref + BatchGetEvaluationSetItems 批量补出:
 //   - evalSetItem: 提供 ItemKey / SpaceID / EvaluationSetID(归属集);
@@ -643,7 +643,10 @@ func buildItemCompleteEvent(eiec *entity.ExptItemEvalCtx) *component.ItemComplet
 //     切勿用 ExptEvalItem.EvalSetVersionID —— 那是 scanIncompleteAndComplete 硬编码的主集版本(张冠李戴)。
 //
 // 组装逻辑复用 buildItemCompleteEvent(构造最小 ExptItemEvalCtx), 与链路A 逐字段等价、单一实现不漂移。
-func buildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID int64, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) *component.ItemCompleteEvent {
+//
+// 导出而非包内私有: 下游发行版需要在「重新触发某批 item 的完成事件」场景复用同一份组装。
+// 入参全是导出类型, 直接调用即可 —— 若改回私有, 下游只能照抄这十余个字段的组装, 两份必然漂移。
+func BuildItemCompleteEventFromScheduler(spaceID, exptID, exptRunID int64, expt *entity.Experiment, item *entity.ExptEvalItem, evalSetItem *entity.EvaluationSetItem, evalSetVersionID int64) *component.ItemCompleteEvent {
 	eiec := &entity.ExptItemEvalCtx{
 		Event: &entity.ExptItemEvalEvent{
 			SpaceID:       spaceID,
