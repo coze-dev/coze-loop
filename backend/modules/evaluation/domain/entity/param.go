@@ -396,6 +396,10 @@ type UpdateRunConfParam struct {
 	ItemConcurNum *int
 	ItemRetryNum  *int
 
+	// MaxRunMinutes / MaxTurns 落在 eval_conf.run_mode_config 上，nil = 不修改。
+	MaxRunMinutes *int
+	MaxTurns      *int
+
 	// PriorityLevel / ExpectedQuotaConsumption 中心调度参数，nil = 不修改。
 	// 两者只对 enforce 实验有意义，legacy 实验既不参与优先级排序也没有额度账本，
 	// 所以服务层遇到 legacy 会直接拒绝而不是写一个没人读的值。

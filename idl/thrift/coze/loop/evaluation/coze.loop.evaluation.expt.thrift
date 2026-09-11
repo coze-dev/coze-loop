@@ -255,6 +255,12 @@ struct UpdateExptRunConfRequest {
     3: optional i32 item_concur_num (api.body='item_concur_num')
     // 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
     4: optional i32 item_retry_num (api.body='item_retry_num')
+    // 以下两项落在 eval_conf.run_mode_config 上，仅对尚未调度的题次生效；
+    // 已在执行中的题次沿用旧配置跑完。字段号顺延 item_retry_num，未与 92/93 特权参数冲突。
+    // 单题最长运行时间（分钟）：不传表示不修改；必须 > 0。
+    5: optional i32 max_run_minutes (api.body='max_run_minutes')
+    // 多轮单题最长执行轮次：不传表示不修改；必须 > 0 —— 0 会让多轮跑法静默退化成只跑 1 轮，故拒绝。
+    6: optional i32 max_turns (api.body='max_turns')
 
     // 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
     // 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。

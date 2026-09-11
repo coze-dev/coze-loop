@@ -2709,6 +2709,88 @@ func TestExptMangerImpl_UpdateRunConf(t *testing.T) {
 		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session})
 		assert.Error(t, err)
 	})
+
+	t.Run("RunModeConfig 为 nil 时按需建块再写最长时间与轮次", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockRepo}
+
+		mockRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(buildExpt(entity.ExptStatus_Processing), nil)
+		mockRepo.EXPECT().UpdateFields(gomock.Any(), exptID, gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ int64, ufields map[string]any) error {
+				raw := ufields["eval_conf"].(*[]byte)
+				var got entity.EvaluationConfiguration
+				assert.NoError(t, json.Unmarshal(*raw, &got))
+				assert.NotNil(t, got.RunModeConfig)
+				assert.Equal(t, 30, got.RunModeConfig.MaxRunMinutes)
+				assert.Equal(t, 8, got.RunModeConfig.MaxTurns)
+				// 其它字段不受影响
+				assert.Equal(t, 3, gptr.Indirect(got.ItemConcurNum))
+				assert.Equal(t, "v", got.Ext["k"])
+				return nil
+			})
+
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{
+			ExptID: exptID, SpaceID: spaceID,
+			MaxRunMinutes: gptr.Of(30), MaxTurns: gptr.Of(8), Session: session,
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("只传轮次时保留已有跑法配置的其它字段", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockRepo}
+
+		expt := buildExpt(entity.ExptStatus_Processing)
+		expt.EvalConf.RunModeConfig = &entity.RunModeConfig{
+			RunMode:       entity.RunModeSUALoopMultiTurn,
+			SuaMode:       entity.SuaModeLoop,
+			MaxRunMinutes: 20,
+			MaxTurns:      3,
+		}
+		mockRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(expt, nil)
+		mockRepo.EXPECT().UpdateFields(gomock.Any(), exptID, gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ int64, ufields map[string]any) error {
+				raw := ufields["eval_conf"].(*[]byte)
+				var got entity.EvaluationConfiguration
+				assert.NoError(t, json.Unmarshal(*raw, &got))
+				assert.Equal(t, 9, got.RunModeConfig.MaxTurns)
+				assert.Equal(t, 20, got.RunModeConfig.MaxRunMinutes)
+				assert.Equal(t, entity.RunModeSUALoopMultiTurn, got.RunModeConfig.RunMode)
+				assert.Equal(t, entity.SuaModeLoop, got.RunModeConfig.SuaMode)
+				return nil
+			})
+
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{
+			ExptID: exptID, SpaceID: spaceID, MaxTurns: gptr.Of(9), Session: session,
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("两项都不传时不创建 RunModeConfig", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockRepo}
+
+		mockRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(buildExpt(entity.ExptStatus_Pending), nil)
+		mockRepo.EXPECT().UpdateFields(gomock.Any(), exptID, gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ int64, ufields map[string]any) error {
+				raw := ufields["eval_conf"].(*[]byte)
+				var got entity.EvaluationConfiguration
+				assert.NoError(t, json.Unmarshal(*raw, &got))
+				assert.Nil(t, got.RunModeConfig)
+				return nil
+			})
+
+		err := mgr.UpdateRunConf(context.Background(), &entity.UpdateRunConfParam{
+			ExptID: exptID, SpaceID: spaceID, ItemConcurNum: gptr.Of(10), Session: session,
+		})
+		assert.NoError(t, err)
+	})
 }
 
 func TestExptMangerImpl_CheckExpt_ItemRetryNumBounds(t *testing.T) {

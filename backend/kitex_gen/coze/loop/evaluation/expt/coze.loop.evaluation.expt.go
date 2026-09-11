@@ -10749,6 +10749,12 @@ type UpdateExptRunConfRequest struct {
 	ItemConcurNum *int32 `thrift:"item_concur_num,3,optional" frugal:"3,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
 	// 数据行 Item 最大重试次数：不传表示不修改；0 表示显式设为不重试；范围 [0, 10]
 	ItemRetryNum *int32 `thrift:"item_retry_num,4,optional" frugal:"4,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	// 以下两项落在 eval_conf.run_mode_config 上，仅对尚未调度的题次生效；
+	// 已在执行中的题次沿用旧配置跑完。字段号顺延 item_retry_num，未与 92/93 特权参数冲突。
+	// 单题最长运行时间（分钟）：不传表示不修改；必须 > 0。
+	MaxRunMinutes *int32 `thrift:"max_run_minutes,5,optional" frugal:"5,optional,i32" form:"max_run_minutes" json:"max_run_minutes,omitempty"`
+	// 多轮单题最长执行轮次：不传表示不修改；必须 > 0 —— 0 会让多轮跑法静默退化成只跑 1 轮，故拒绝。
+	MaxTurns *int32 `thrift:"max_turns,6,optional" frugal:"6,optional,i32" form:"max_turns" json:"max_turns,omitempty"`
 	// 以下两个是中心调度特权参数，字段号与 CreateExperimentRequest 对齐（92/93），
 	// 便于两处对照。未获授权的调用方传了会被丢弃并打 WARN，不报错。
 	// 调度优先级：不传表示不修改。改完下一拍生效（调度器每拍从库重扫队列）。
@@ -10803,6 +10809,30 @@ func (p *UpdateExptRunConfRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+var UpdateExptRunConfRequest_MaxRunMinutes_DEFAULT int32
+
+func (p *UpdateExptRunConfRequest) GetMaxRunMinutes() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxRunMinutes() {
+		return UpdateExptRunConfRequest_MaxRunMinutes_DEFAULT
+	}
+	return *p.MaxRunMinutes
+}
+
+var UpdateExptRunConfRequest_MaxTurns_DEFAULT int32
+
+func (p *UpdateExptRunConfRequest) GetMaxTurns() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxTurns() {
+		return UpdateExptRunConfRequest_MaxTurns_DEFAULT
+	}
+	return *p.MaxTurns
+}
+
 var UpdateExptRunConfRequest_PriorityLevel_DEFAULT int32
 
 func (p *UpdateExptRunConfRequest) GetPriorityLevel() (v int32) {
@@ -10850,6 +10880,12 @@ func (p *UpdateExptRunConfRequest) SetItemConcurNum(val *int32) {
 func (p *UpdateExptRunConfRequest) SetItemRetryNum(val *int32) {
 	p.ItemRetryNum = val
 }
+func (p *UpdateExptRunConfRequest) SetMaxRunMinutes(val *int32) {
+	p.MaxRunMinutes = val
+}
+func (p *UpdateExptRunConfRequest) SetMaxTurns(val *int32) {
+	p.MaxTurns = val
+}
 func (p *UpdateExptRunConfRequest) SetPriorityLevel(val *int32) {
 	p.PriorityLevel = val
 }
@@ -10865,6 +10901,8 @@ var fieldIDToName_UpdateExptRunConfRequest = map[int16]string{
 	2:   "expt_id",
 	3:   "item_concur_num",
 	4:   "item_retry_num",
+	5:   "max_run_minutes",
+	6:   "max_turns",
 	92:  "priority_level",
 	93:  "expected_quota_consumption",
 	255: "Base",
@@ -10876,6 +10914,14 @@ func (p *UpdateExptRunConfRequest) IsSetItemConcurNum() bool {
 
 func (p *UpdateExptRunConfRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *UpdateExptRunConfRequest) IsSetMaxRunMinutes() bool {
+	return p.MaxRunMinutes != nil
+}
+
+func (p *UpdateExptRunConfRequest) IsSetMaxTurns() bool {
+	return p.MaxTurns != nil
 }
 
 func (p *UpdateExptRunConfRequest) IsSetPriorityLevel() bool {
@@ -10939,6 +10985,22 @@ func (p *UpdateExptRunConfRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11052,6 +11114,28 @@ func (p *UpdateExptRunConfRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemRetryNum = _field
 	return nil
 }
+func (p *UpdateExptRunConfRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxRunMinutes = _field
+	return nil
+}
+func (p *UpdateExptRunConfRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxTurns = _field
+	return nil
+}
 func (p *UpdateExptRunConfRequest) ReadField92(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -11100,6 +11184,14 @@ func (p *UpdateExptRunConfRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField92(oprot); err != nil {
@@ -11200,6 +11292,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *UpdateExptRunConfRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxRunMinutes() {
+		if err = oprot.WriteFieldBegin("max_run_minutes", thrift.I32, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxRunMinutes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *UpdateExptRunConfRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxTurns() {
+		if err = oprot.WriteFieldBegin("max_turns", thrift.I32, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxTurns); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *UpdateExptRunConfRequest) writeField92(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPriorityLevel() {
 		if err = oprot.WriteFieldBegin("priority_level", thrift.I32, 92); err != nil {
@@ -11281,6 +11409,12 @@ func (p *UpdateExptRunConfRequest) DeepEqual(ano *UpdateExptRunConfRequest) bool
 	if !p.Field4DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.MaxRunMinutes) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.MaxTurns) {
+		return false
+	}
 	if !p.Field92DeepEqual(ano.PriorityLevel) {
 		return false
 	}
@@ -11327,6 +11461,30 @@ func (p *UpdateExptRunConfRequest) Field4DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemRetryNum != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExptRunConfRequest) Field5DeepEqual(src *int32) bool {
+
+	if p.MaxRunMinutes == src {
+		return true
+	} else if p.MaxRunMinutes == nil || src == nil {
+		return false
+	}
+	if *p.MaxRunMinutes != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExptRunConfRequest) Field6DeepEqual(src *int32) bool {
+
+	if p.MaxTurns == src {
+		return true
+	} else if p.MaxTurns == nil || src == nil {
+		return false
+	}
+	if *p.MaxTurns != *src {
 		return false
 	}
 	return true
