@@ -796,6 +796,66 @@ func TestExpectedQuotaConsumptionDomain2OpenAPI(t *testing.T) {
 	assert.Equal(t, int64(3), got.GetResources()[0].GetAmount())
 }
 
+func TestExpectedQuotaConsumptionOpenAPI2Domain(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, ExpectedQuotaConsumptionOpenAPI2Domain(nil))
+	assert.Nil(t, ExpectedQuotaConsumptionOpenAPI2Domain(&openapiExperiment.ExpectedQuotaConsumption{}))
+	assert.Nil(t, ExpectedQuotaConsumptionOpenAPI2Domain(&openapiExperiment.ExpectedQuotaConsumption{
+		Resources: []*openapiExperiment.ExpectedResourceConsumption{nil, nil},
+	}))
+
+	for _, tt := range []struct {
+		name  string
+		input *openapiExperiment.ExpectedResourceConsumption
+		want  *domainExpt.ExpectedResourceConsumption
+	}{
+		{
+			name:  "omitted fields use getter defaults",
+			input: &openapiExperiment.ExpectedResourceConsumption{},
+			want: &domainExpt.ExpectedResourceConsumption{
+				Category: gptr.Of(""), ResourceKey: gptr.Of(""), Amount: gptr.Of[int64](0), Source: gptr.Of(""),
+			},
+		},
+		{
+			name: "explicit zero values are preserved",
+			input: &openapiExperiment.ExpectedResourceConsumption{
+				Category: gptr.Of(""), ResourceKey: gptr.Of(""), Amount: gptr.Of[int64](0), Source: gptr.Of(""),
+			},
+			want: &domainExpt.ExpectedResourceConsumption{
+				Category: gptr.Of(""), ResourceKey: gptr.Of(""), Amount: gptr.Of[int64](0), Source: gptr.Of(""),
+			},
+		},
+		{
+			name: "populated fields are copied",
+			input: &openapiExperiment.ExpectedResourceConsumption{
+				Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("mac"), Amount: gptr.Of[int64](3), Source: gptr.Of("self-hosted"),
+			},
+			want: &domainExpt.ExpectedResourceConsumption{
+				Category: gptr.Of("sandbox"), ResourceKey: gptr.Of("mac"), Amount: gptr.Of[int64](3), Source: gptr.Of("self-hosted"),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			original := *tt.input
+			got := ExpectedQuotaConsumptionOpenAPI2Domain(&openapiExperiment.ExpectedQuotaConsumption{
+				Resources: []*openapiExperiment.ExpectedResourceConsumption{nil, tt.input},
+			})
+			if assert.NotNil(t, got) && assert.Len(t, got.Resources, 1) {
+				assert.Equal(t, tt.want, got.Resources[0])
+				assert.Equal(t, original, *tt.input, "conversion must not populate omitted input fields")
+				if tt.input.Category != nil {
+					assert.NotSame(t, tt.input.Category, got.Resources[0].Category)
+					assert.NotSame(t, tt.input.ResourceKey, got.Resources[0].ResourceKey)
+					assert.NotSame(t, tt.input.Amount, got.Resources[0].Amount)
+					assert.NotSame(t, tt.input.Source, got.Resources[0].Source)
+				}
+			}
+		})
+	}
+}
+
 // TestExpectedQuotaConsumption_SourceSurvivesRoundTrip
 // ★ source 必须在四个转换点上都不丢。
 //

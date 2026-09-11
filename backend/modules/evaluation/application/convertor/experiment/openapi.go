@@ -3416,9 +3416,9 @@ func ExpectedQuotaConsumptionOpenAPI2Domain(c *openapiExperiment.ExpectedQuotaCo
 			continue
 		}
 		resources = append(resources, &domainExpt.ExpectedResourceConsumption{
-			Category:    r.Category,
-			ResourceKey: r.ResourceKey,
-			Amount:      r.Amount,
+			Category:    gptr.Of(r.GetCategory()),
+			ResourceKey: gptr.Of(r.GetResourceKey()),
+			Amount:      gptr.Of(r.GetAmount()),
 			Source:      gptr.Of(r.GetSource()),
 		})
 	}
