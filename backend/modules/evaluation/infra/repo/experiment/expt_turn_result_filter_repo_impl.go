@@ -118,6 +118,7 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 	cond.ItemIDs = fieldFiltersEntityToCK(filter.ItemIDs)
 	cond.ItemRunStatus = fieldFiltersEntityToCK(filter.ItemRunStatus)
 	cond.TurnRunStatus = fieldFiltersEntityToCK(filter.TurnRunStatus)
+	cond.EvalSetIDs = fieldFiltersEntityToCK(filter.EvalSetIDs)
 	if !filter.CreatedDate.IsZero() {
 		createdDate := filter.CreatedDate
 		cond.CreatedDate = ptr.Of(createdDate)

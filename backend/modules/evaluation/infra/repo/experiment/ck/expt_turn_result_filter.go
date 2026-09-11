@@ -74,6 +74,7 @@ type ExptTurnResultFilterQueryCond struct {
 	ItemIDs                 []*FieldFilter // 支持多组itemID筛选
 	ItemRunStatus           []*FieldFilter // 支持多组item状态筛选
 	TurnRunStatus           []*FieldFilter // 支持多组turn状态筛选
+	EvalSetIDs              []*FieldFilter // 支持多组评测集筛选
 	EvaluatorScoreCorrected *FieldFilter
 
 	CreatedDate      *time.Time
@@ -227,6 +228,24 @@ func (d *exptTurnResultFilterDAOImpl) buildMainTableConditions(cond *ExptTurnRes
 	if cond.CreatedDate != nil {
 		*whereSQL += " AND etrf.created_date = ?"
 		*args = append(*args, cond.CreatedDate.Format(time.DateOnly))
+	}
+	// 多组评测集 filter：多评测集实验按评测集筛明细。主表 eval_set_id 已逐行回填，
+	// 无需下探快照表，也与 ItemSnapshotCondBySet 的 per-set 快照条件互不干扰。
+	for _, f := range cond.EvalSetIDs {
+		switch f.Op {
+		case "in", "IN":
+			*whereSQL += " AND etrf.eval_set_id IN ?"
+			*args = append(*args, f.Values)
+		case "=":
+			*whereSQL += " AND etrf.eval_set_id = ?"
+			*args = append(*args, f.Values[0])
+		case "!=":
+			*whereSQL += " AND etrf.eval_set_id != ?"
+			*args = append(*args, f.Values[0])
+		case "NOT IN":
+			*whereSQL += " AND etrf.eval_set_id NOT IN ?"
+			*args = append(*args, f.Values)
+		}
 	}
 	if cond.EvalSetVersionID != nil {
 		*whereSQL += " AND etrf.eval_set_version_id = ?"

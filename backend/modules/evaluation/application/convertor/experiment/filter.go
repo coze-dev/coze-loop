@@ -580,6 +580,7 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 		ItemIDs:       []*entity.FieldFilter{},
 		ItemRunStatus: []*entity.FieldFilter{},
 		TurnRunStatus: []*entity.FieldFilter{},
+		EvalSetIDs:    []*entity.FieldFilter{},
 		MapCond: &entity.ExptTurnResultFilterMapCond{
 			EvalTargetDataFilters:    []*entity.FieldFilter{},
 			EvaluatorScoreFilters:    []*entity.FieldFilter{},
@@ -703,6 +704,8 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 			//	}
 			case domain_expt.FieldType_ItemID:
 				result.ItemIDs = append(result.ItemIDs, fieldFilter)
+			case domain_expt.FieldType_EvalSetID:
+				result.EvalSetIDs = append(result.EvalSetIDs, fieldFilter)
 			case domain_expt.FieldType_TotalLatency:
 				// 使用固定key：total_latency
 				fieldFilter.Key = "total_latency"

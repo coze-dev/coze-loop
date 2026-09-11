@@ -476,3 +476,27 @@ func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_PerSetPassthrough(t *tes
 	assert.Equal(t, int64(1), total)
 	assert.Equal(t, map[int64]entity.ItemRunState{1: entity.ItemRunState(2)}, states)
 }
+
+func TestExptTurnResultFilterRepoImpl_QueryItemIDStates_EvalSetIDs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptTurnResultFilterDAO := ckmocks.NewMockIExptTurnResultFilterDAO(ctrl)
+	mockExptTurnResultFilterKeyMappingDAO := mysqlmocks.NewMockIExptTurnResultFilterKeyMappingDAO(ctrl)
+	repo := NewExptTurnResultFilterRepo(mockExptTurnResultFilterDAO, mockExptTurnResultFilterKeyMappingDAO)
+
+	mockExptTurnResultFilterDAO.EXPECT().QueryItemIDStates(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, cond *ck.ExptTurnResultFilterQueryCond) (map[string]int32, int64, error) {
+			assert.Equal(t, []*ck.FieldFilter{{Key: "eval_set_id", Op: "IN", Values: []any{"7", "8"}}}, cond.EvalSetIDs)
+			return map[string]int32{}, 0, nil
+		})
+
+	_, _, err := repo.QueryItemIDStates(context.Background(), &entity.ExptTurnResultFilterAccelerator{
+		SpaceID: 1,
+		ExptID:  2,
+		EvalSetIDs: []*entity.FieldFilter{
+			{Key: "eval_set_id", Op: "IN", Values: []any{"7", "8"}},
+		},
+	})
+	assert.NoError(t, err)
+}
