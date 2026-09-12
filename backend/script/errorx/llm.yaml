@@ -27,11 +27,11 @@ error_code:
   - name: RequestNotValid
     code: 5007
     message: request not valid
-    no_affect_stability: false
+    no_affect_stability: true
   - name: RequestNotCompatibleWithModelAbility
     code: 5008
     message: request is not compatible with model ability
-    no_affect_stability: false
+    no_affect_stability: true
   - name: CallModelFailed
     code: 5009
     message: call model failed
@@ -47,4 +47,40 @@ error_code:
   - name: CallModelTimeout
     code: 5012
     message: call model timeout
+    no_affect_stability: true
+
+  - name: ModelNotExist
+    code: 5101
+    message: model not exist
+    description: 模型不存在
+    no_affect_stability: true
+  - name: InterfaceNotAvailableInHouse
+    code: 5102
+    message: the interface is not available
+    description: 当前接口无法使用
+    no_affect_stability: true
+  - name: GetModelListFailed
+    code: 5103
+    message: get model list failed
+    description: 请求模型列表接口失败
+    no_affect_stability: true
+  - name: GetModelFailed
+    code: 5104
+    message: get model failed
+    description: 请求模型详情接口失败
+    no_affect_stability: true
+  - name: GetModelListParamFailed
+    code: 5105
+    message: get model list param failed
+    description: 请求模型列表参数接口失败
+    no_affect_stability: true
+  - name: GetModelUsageFailed
+    code: 5106
+    message: get model usage failed
+    description: 请求模型用量接口失败
+    no_affect_stability: true
+  - name: GetModelConfigFailed
+    code: 5107
+    message: get model config failed
+    description: 获取模型配置失败
     no_affect_stability: true
