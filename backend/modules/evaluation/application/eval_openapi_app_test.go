@@ -5992,6 +5992,39 @@ func TestEvalOpenAPIApplication_BatchGetEvaluatorRecordsOApi(t *testing.T) {
 	}
 }
 
+func TestEvalOpenAPIApplication_BatchGetEvaluatorRecordsOApi_EvidenceArchiveSignFailureIsFailOpen(t *testing.T) {
+	t.Parallel()
+	const workspaceID = int64(1001)
+	records := []*entity.EvaluatorRecord{
+		newEvidenceArchiveRecordForTest(100, workspaceID, "evidence/a.tar.gz", "complete"),
+		newEvidenceArchiveRecordForTest(200, workspaceID, "evidence/a.tar.gz", "complete"),
+	}
+	ctrl := gomock.NewController(t)
+	auth := rpcmocks.NewMockIAuthProvider(ctrl)
+	recordService := servicemocks.NewMockEvaluatorRecordService(ctrl)
+	provider := &evidenceArchiveURLProviderStub{err: errors.New("sign failed")}
+	app := &EvalOpenAPIApplication{
+		auth:                   auth,
+		evaluatorRecordService: recordService,
+		fileProvider:           provider,
+		metric:                 &fakeOpenAPIMetric{},
+	}
+	auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	recordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{100, 200}, false, false).Return(records, nil)
+
+	resp, err := app.BatchGetEvaluatorRecordsOApi(context.Background(), &openapi.BatchGetEvaluatorRecordsOApiRequest{
+		WorkspaceID:        gptr.Of(workspaceID),
+		EvaluatorRecordIds: []int64{100, 200},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp.GetData())
+	require.Len(t, resp.GetData().GetRecords(), 2)
+	assert.Equal(t, []string{"evidence/a.tar.gz"}, provider.gotKeys)
+	for _, record := range resp.GetData().GetRecords() {
+		assert.Empty(t, record.GetEvaluatorOutputData().GetEvidenceArchive().GetFornaxEvaluatorLogURL())
+	}
+}
+
 func TestEvalOpenAPIApplication_ListEvaluatorsOApi(t *testing.T) {
 	t.Parallel()
 
@@ -6981,13 +7014,21 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			},
 		},
 		{
-			name: "callback url present -> dispatch called",
+			name: "callback url present preserves evidence archive separately from extra output",
 			req: &openapi.ReportEvaluatorInvokeResultRequest{
 				WorkspaceID: gptr.Of(workspaceID),
 				InvokeID:    gptr.Of(invokeID),
 				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
 				Output: &spi.InvokeEvaluatorOutputData{
 					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9))},
+					ExtraOutput:      &spi.EvaluatorExtraOutputContent{URI: gptr.Of("extra/output.html"), URL: gptr.Of("https://example.com/extra")},
+					EvidenceArchive: &spi.EvaluatorEvidenceArchive{
+						SchemaVersion:         gptr.Of("1"),
+						ObjectKey:             gptr.Of("evidence/callback.tar.gz"),
+						Status:                gptr.Of("uploaded"),
+						Sha256:                gptr.Of("sha-callback"),
+						FornaxEvaluatorLogURL: gptr.Of("https://untrusted.example/callback-url"),
+					},
 				},
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher, dispatcher *servicemocks.MockIEvaluatorCallbackDispatcher) {
@@ -6998,13 +7039,34 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					EvaluatorVersionID: 9,
 					CallbackURL:        "https://cb.example.com/hook",
 				}, nil)
-				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(entity.ReportEvaluatorResultApplied, nil)
+				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.ReportEvaluatorRecordParam) (entity.ReportEvaluatorResultOutcome, error) {
+						if assert.NotNil(t, param.OutputData) && assert.NotNil(t, param.OutputData.EvidenceArchive) {
+							assert.Equal(t, "evidence/callback.tar.gz", param.OutputData.EvidenceArchive.ObjectKey)
+							assert.Equal(t, "sha-callback", param.OutputData.EvidenceArchive.SHA256)
+							assert.Empty(t, param.OutputData.EvidenceArchive.FornaxEvaluatorLogURL)
+						}
+						if assert.NotNil(t, param.OutputData.ExtraOutput) {
+							assert.Equal(t, "extra/output.html", gptr.Indirect(param.OutputData.ExtraOutput.URI))
+						}
+						return entity.ReportEvaluatorResultApplied, nil
+					},
+				)
 				dispatcher.EXPECT().Dispatch(gomock.Any(), workspaceID, "https://cb.example.com/hook", gomock.Any()).
 					DoAndReturn(func(_ context.Context, _ int64, _ string, p *openapi.EvaluatorCallbackPayloadOApi) error {
 						assert.Equal(t, invokeID, p.GetInvokeID())
 						assert.Equal(t, workspaceID, p.GetWorkspaceID())
 						assert.Equal(t, int64(9), p.GetEvaluatorVersionID())
 						assert.Equal(t, "success", p.GetStatus())
+						if assert.NotNil(t, p.Output) && assert.NotNil(t, p.Output.EvidenceArchive) {
+							assert.Equal(t, "evidence/callback.tar.gz", p.Output.EvidenceArchive.GetObjectKey())
+							assert.Equal(t, "sha-callback", p.Output.EvidenceArchive.GetSha256())
+							assert.Empty(t, p.Output.EvidenceArchive.GetFornaxEvaluatorLogURL())
+							assert.Nil(t, p.Output.EvidenceArchive.FornaxEvaluatorLogURL, "read-only URL must be omitted until the authorized read path signs it")
+						}
+						if assert.NotNil(t, p.Output.ExtraOutput) {
+							assert.Equal(t, "https://example.com/extra", p.Output.ExtraOutput.GetURL())
+						}
 						return nil
 					})
 			},
