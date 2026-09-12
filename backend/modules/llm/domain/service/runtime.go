@@ -105,11 +105,14 @@ func (r *RuntimeImpl) HandleMsgsPreCallModel(ctx context.Context, model *entity.
 
 func (r *RuntimeImpl) ValidModelAndRequest(ctx context.Context, model *entity.Model, input []*entity.Message, opts ...entity.Option) error {
 	// 如果msg中有多模态输入，看模型是否支持多模态
-	var hasMultiModal, hasImageURL, hasImageBinary bool
+	var hasMultiModal, hasImageURL, hasImageBinary, hasVideo bool
 	var maxImageCnt, maxImageSizeInByte int64
 	for _, msg := range input {
 		if msg.HasMultiModalContent() {
 			hasMultiModal = true
+			if msg.HasVideoContent() {
+				hasVideo = true
+			}
 			tmpHasImageURL, tmpHasImageBinary, tmpMaxImageCnt, tmpMaxImageSizeInByte := msg.GetImageCountAndMaxSize()
 			if tmpHasImageURL {
 				hasImageURL = true
@@ -127,6 +130,9 @@ func (r *RuntimeImpl) ValidModelAndRequest(ctx context.Context, model *entity.Mo
 	}
 	if hasMultiModal && !model.SupportMultiModalInput() {
 		return errorx.NewByCode(llm_errorx.RequestNotCompatibleWithModelAbilityCode, errorx.WithExtraMsg("messages have multi modal content, but this model does not support multi modal"))
+	}
+	if hasVideo && !model.SupportVideoInput() {
+		return errorx.NewByCode(llm_errorx.RequestNotCompatibleWithModelAbilityCode, errorx.WithExtraMsg("messages have video input, but this model does not support video input"))
 	}
 	if hasImageURL {
 		s, cnt := model.SupportImageURL()

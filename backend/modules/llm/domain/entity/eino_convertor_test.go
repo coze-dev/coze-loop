@@ -245,12 +245,15 @@ func TestEinoConvertor_MoreFromDO(t *testing.T) {
 				Content: "hello",
 				MultiModalContent: []*ChatMessagePart{
 					{Type: ChatMessagePartTypeImageURL, ImageURL: &ChatMessageImageURL{URL: "url"}},
+					{Type: ChatMessagePartTypeVideoURL, VideoURL: &ChatMessageVideoURL{URL: "video-url", MIMEType: "video/mp4"}},
 				},
 			},
 		}
 		res := FromDOMessages(dos)
 		assert.Len(t, res, 1)
 		assert.Equal(t, schema.User, res[0].Role)
+		assert.Equal(t, "video-url", res[0].MultiContent[1].VideoURL.URL)
+		assert.Equal(t, "video/mp4", res[0].MultiContent[1].VideoURL.MIMEType)
 	})
 
 	t.Run("FromDOImageURL_nil", func(t *testing.T) {
@@ -299,11 +302,15 @@ func TestEinoConvertor_MoreToDO(t *testing.T) {
 		cms := []schema.ChatMessagePart{
 			{Type: schema.ChatMessagePartTypeText, Text: "txt"},
 			{Type: schema.ChatMessagePartTypeImageURL, ImageURL: &schema.ChatMessageImageURL{URL: "url"}},
+			{Type: schema.ChatMessagePartTypeVideoURL, VideoURL: &schema.ChatMessageVideoURL{URL: "video-url", MIMEType: "video/mp4"}},
 		}
 		res := ToDOMultiContents(cms)
-		assert.Len(t, res, 2)
+		assert.Len(t, res, 3)
 		assert.Equal(t, ChatMessagePartTypeText, res[0].Type)
 		assert.Equal(t, ChatMessagePartTypeImageURL, res[1].Type)
+		assert.Equal(t, ChatMessagePartTypeVideoURL, res[2].Type)
+		assert.Equal(t, "video-url", res[2].VideoURL.URL)
+		assert.Equal(t, "video/mp4", res[2].VideoURL.MIMEType)
 	})
 
 	t.Run("GetReasoningContent", func(t *testing.T) {

@@ -96,6 +96,7 @@ func ChatMessagePartDTO2DO(dto *druntime.ChatMessagePart) (do *entity.ChatMessag
 		Type:     entity.ChatMessagePartType(dto.GetType()),
 		Text:     dto.GetText(),
 		ImageURL: ChatMessageImageURLDTO2DO(dto.GetImageURL()),
+		VideoURL: ChatMessageVideoURLDTO2DO(dto.GetVideoURL()),
 	}
 }
 
@@ -108,6 +109,24 @@ func ChatMessageImageURLDTO2DO(dto *druntime.ChatMessageImageURL) (do *entity.Ch
 		Detail:   entity.ImageURLDetail(dto.GetDetail()),
 		MIMEType: dto.GetMimeType(),
 	}
+}
+
+func ChatMessageVideoURLDTO2DO(dto *druntime.ChatMessageVideoURL) (do *entity.ChatMessageVideoURL) {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ChatMessageVideoURL{
+		URL:      dto.GetURL(),
+		Detail:   VideoURLDetailDTO2DO(dto.GetDetail()),
+		MIMEType: dto.GetMimeType(),
+	}
+}
+
+func VideoURLDetailDTO2DO(dto *druntime.VideoURLDetail) (do *entity.VideoURLDetail) {
+	if dto == nil {
+		return nil
+	}
+	return &entity.VideoURLDetail{FPS: dto.GetFps()}
 }
 
 func MessageDO2DTO(do *entity.Message) (dto *druntime.Message) {
@@ -188,6 +207,7 @@ func ChatMessagePartDO2DTO(do *entity.ChatMessagePart) (dto *druntime.ChatMessag
 		Type:     ptr.Of(druntime.ChatMessagePartType(do.Type)),
 		Text:     ptr.Of(do.Text),
 		ImageURL: ChatMessageImageURLDO2DTO(do.ImageURL),
+		VideoURL: ChatMessageVideoURLDO2DTO(do.VideoURL),
 	}
 }
 
@@ -200,4 +220,22 @@ func ChatMessageImageURLDO2DTO(do *entity.ChatMessageImageURL) (dto *druntime.Ch
 		Detail:   ptr.Of(druntime.ImageURLDetail(do.Detail)),
 		MimeType: ptr.Of(do.MIMEType),
 	}
+}
+
+func ChatMessageVideoURLDO2DTO(do *entity.ChatMessageVideoURL) (dto *druntime.ChatMessageVideoURL) {
+	if do == nil {
+		return nil
+	}
+	return &druntime.ChatMessageVideoURL{
+		URL:      ptr.Of(do.URL),
+		Detail:   VideoURLDetailDO2DTO(do.Detail),
+		MimeType: ptr.Of(do.MIMEType),
+	}
+}
+
+func VideoURLDetailDO2DTO(do *entity.VideoURLDetail) (dto *druntime.VideoURLDetail) {
+	if do == nil {
+		return nil
+	}
+	return &druntime.VideoURLDetail{Fps: ptr.Of(do.FPS)}
 }
