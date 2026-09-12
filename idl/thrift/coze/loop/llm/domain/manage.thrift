@@ -96,6 +96,7 @@ struct ProtocolConfig {
     10: optional ProtocolConfigQianfan protocol_config_qianfan
     11: optional ProtocolConfigGemini protocol_config_gemini
     12: optional ProtocolConfigArkbot protocol_config_arkbot
+    13: optional ProtocolConfigMiniMax protocol_config_minimax
 }
 
 struct ProtocolConfigArk {
@@ -155,6 +156,10 @@ struct ProtocolConfigQianfan {
     6: optional string response_format_json_schema
 }
 
+struct ProtocolConfigMiniMax {
+    1: optional string response_format_type
+}
+
 struct ProtocolConfigArkbot {
     1: optional string region // Default: "cn-beijing"
     2: optional string access_key
@@ -212,6 +217,7 @@ const Protocol protocol_gemini = "gemini"
 const Protocol protocol_qwen = "qwen"
 const Protocol protocol_qianfan = "qianfan"
 const Protocol protocol_arkbot = "arkbot"
+const Protocol protocol_minimax = "minimax"
 
 typedef string ParamType (ts.enum="true")
 const ParamType param_type_float = "float"
