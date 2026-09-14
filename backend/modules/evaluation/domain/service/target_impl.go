@@ -478,6 +478,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	outputData, runStatus, err = e.typedOperators[evalTargetDO.EvalTargetType].Execute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		VerificationConfig:  param.VerificationConfig,
 		ExptID:              gptr.Indirect(param.ExperimentID),
+		ExptRunID:           gptr.Indirect(param.ExperimentRunID),
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
 		SourceTargetID:      evalTargetDO.SourceTargetID,
@@ -487,6 +488,11 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		EvalTarget:          evalTargetDO,
 		EvalSetItemID:       gptr.Of(param.ItemID),
 		EvalSetTurnID:       gptr.Of(param.TurnID),
+		LogID:               param.LogID,
+		ItemMeta:            param.ItemMeta,
+		ExptGroupKey:        param.ExptGroupKey,
+		// 透传发起实验的空间。注意这里**不能**用 spaceID —— 跨空间共享时它已是对象来源空间。
+		ExptSpaceID: param.ExptSpaceID,
 	})
 	if err != nil {
 		return nil, err
