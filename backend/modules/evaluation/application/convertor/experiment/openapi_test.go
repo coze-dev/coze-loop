@@ -816,6 +816,13 @@ func TestOpenAPIEvaluatorRecordDO2DTO(t *testing.T) {
 				Message: "err",
 			},
 			TimeConsumingMS: 30,
+			EvidenceArchive: &entity.EvaluatorEvidenceArchive{
+				SchemaVersion:         "1",
+				ObjectKey:             "evidence/result.tar.gz",
+				Status:                "uploaded",
+				SHA256:                "sha-result",
+				FornaxEvaluatorLogURL: "https://signed.example/result?ttl=600",
+			},
 		},
 	}
 
@@ -827,9 +834,27 @@ func TestOpenAPIEvaluatorRecordDO2DTO(t *testing.T) {
 			assert.Equal(t, score, gptr.Indirect(converted.EvaluatorOutputData.EvaluatorResult_.Score))
 			assert.Equal(t, int64(10), gptr.Indirect(converted.EvaluatorOutputData.EvaluatorUsage.InputTokens))
 			assert.Equal(t, int32(1), gptr.Indirect(converted.EvaluatorOutputData.EvaluatorRunError.Code))
+			if assert.NotNil(t, converted.EvaluatorOutputData.EvidenceArchive) {
+				assert.Equal(t, "evidence/result.tar.gz", converted.EvaluatorOutputData.EvidenceArchive.GetObjectKey())
+				assert.Equal(t, "sha-result", converted.EvaluatorOutputData.EvidenceArchive.GetSha256())
+				assert.Equal(t, "https://signed.example/result?ttl=600", converted.EvaluatorOutputData.EvidenceArchive.GetFornaxEvaluatorLogURL())
+			}
 		}
 	}
 	assert.Nil(t, openAPIEvaluatorRecordDO2DTO(nil))
+}
+
+func TestOpenAPIEvaluatorOutputDataDO2DTO_EvidenceArchiveOnly(t *testing.T) {
+	converted := openAPIEvaluatorOutputDataDO2DTO(&entity.EvaluatorOutputData{
+		EvidenceArchive: &entity.EvaluatorEvidenceArchive{
+			ObjectKey:             "evidence/only.tar.gz",
+			FornaxEvaluatorLogURL: "https://signed.example/only?ttl=600",
+		},
+	})
+	if assert.NotNil(t, converted) && assert.NotNil(t, converted.EvidenceArchive) {
+		assert.Equal(t, "evidence/only.tar.gz", converted.EvidenceArchive.GetObjectKey())
+		assert.Equal(t, "https://signed.example/only?ttl=600", converted.EvidenceArchive.GetFornaxEvaluatorLogURL())
+	}
 }
 
 func TestOpenAPIAggregatorTypeDO2DTO(t *testing.T) {
