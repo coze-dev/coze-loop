@@ -165,7 +165,9 @@ func (h *DatasetApplicationImpl) ListDatasetItems(ctx context.Context, req *data
 		}
 	}
 	// TODO: 改为超过固定数值不允许 offset 访问
+	itemIDs := parseItemIDFilter(req.GetFilter())
 	query := repo.NewListItemsParamsOfDataset(req.GetWorkspaceID(), req.GetDatasetID(), func(p *repo.ListItemsParams) {
+		p.ItemIDs = itemIDs
 		p.Paginator = pagination.New(
 			repo.ItemOrderBy(gptr.Indirect(orderBy.Field)),
 			pagination.WithOrderByAsc(gptr.Indirect(orderBy.IsAsc)),
