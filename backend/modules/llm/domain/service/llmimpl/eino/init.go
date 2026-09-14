@@ -55,6 +55,8 @@ func NewLLM(ctx context.Context, model *entity.Model, opts ...entity.Option) (*L
 		chatModel, err = qianfanBuilder(ctx, model, opts...)
 	case entity.ProtocolArkBot:
 		chatModel, err = arkBotBuilder(ctx, model, opts...)
+	case entity.ProtocolMiniMax:
+		chatModel, err = miniMaxBuilder(ctx, model, opts...)
 	default:
 		err = errors.Errorf("eino unsupport the protocol:%s", model.Protocol)
 	}
@@ -440,4 +442,45 @@ func arkBotBuilder(ctx context.Context, model *entity.Model, opts ...entity.Opti
 		}
 	}
 	return arkbot.NewChatModel(ctx, cfg)
+}
+
+func miniMaxBuilder(ctx context.Context, model *entity.Model, opts ...entity.Option) (einoModel.ToolCallingChatModel, error) {
+	if err := checkModelBeforeBuild(model); err != nil {
+		return nil, err
+	}
+	p := model.ProtocolConfig
+	ops := entity.ApplyOptions(nil, opts...)
+
+	baseURL := p.BaseURL
+	if baseURL == "" {
+		baseURL = "https://api.minimax.io/v1"
+	}
+
+	cfg := &openai.ChatModelConfig{
+		APIKey:           p.APIKey,
+		BaseURL:          baseURL,
+		Model:            p.Model,
+		MaxTokens:        ops.MaxTokens,
+		Temperature:      ops.Temperature,
+		TopP:             ops.TopP,
+		Stop:             ops.Stop,
+		FrequencyPenalty: ops.FrequencyPenalty,
+		PresencePenalty:  ops.PresencePenalty,
+	}
+	if p.TimeoutMs != nil {
+		cfg.Timeout = time.Duration(*p.TimeoutMs) * time.Millisecond
+	}
+	if pc := p.ProtocolConfigMiniMax; pc != nil {
+		if pc.ResponseFormatType != "" {
+			cfg.ResponseFormat = &acl_openai.ChatCompletionResponseFormat{
+				Type: acl_openai.ChatCompletionResponseFormatType(pc.ResponseFormatType),
+			}
+		}
+	}
+	if ops.ResponseFormat != nil {
+		cfg.ResponseFormat = &acl_openai.ChatCompletionResponseFormat{
+			Type: acl_openai.ChatCompletionResponseFormatType(ops.ResponseFormat.Type),
+		}
+	}
+	return openai.NewChatModel(ctx, cfg)
 }
