@@ -678,6 +678,7 @@ func TestNewTaskCallbackServiceImpl(t *testing.T) {
 			mockTenant,
 			mockConfig,
 			mockBenefit,
+			nil,
 		)
 
 		assert.NotNil(t, impl)

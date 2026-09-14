@@ -10,6 +10,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
@@ -36,6 +37,7 @@ type TaskCallbackServiceImpl struct {
 	tenantProvider tenant.ITenantProvider
 	config         config.ITraceConfig
 	benefitSvc     benefit.IBenefitService
+	evalSvc        rpc.IEvaluatorRPCAdapter
 }
 
 func NewTaskCallbackServiceImpl(
@@ -45,6 +47,7 @@ func NewTaskCallbackServiceImpl(
 	tenantProvider tenant.ITenantProvider,
 	config config.ITraceConfig,
 	benefitSvc benefit.IBenefitService,
+	evalSvc rpc.IEvaluatorRPCAdapter,
 ) ITaskCallbackService {
 	return &TaskCallbackServiceImpl{
 		taskRepo:       taskRepo,
@@ -53,6 +56,7 @@ func NewTaskCallbackServiceImpl(
 		tenantProvider: tenantProvider,
 		config:         config,
 		benefitSvc:     benefitSvc,
+		evalSvc:        evalSvc,
 	}
 }
 
@@ -112,6 +116,8 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			// Continue processing without interrupting the flow
 		}
 
+		taskName, evaluatorName := t.resolveAnnotationKeyNames(ctx, turn.GetTaskIDFromExt(), turn.EvaluatorVersionID, workspaceID)
+
 		_, err = span.AddAutoEvalAnnotation(
 			turn.GetTaskIDFromExt(),
 			turn.EvaluatorRecordID,
@@ -121,6 +127,8 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			turn.GetUserID(),
 			event.ExptID,
 			turn.GetExptTemplateIDFromExt(),
+			taskName,
+			evaluatorName,
 		)
 		if err != nil {
 			return err
@@ -266,6 +274,31 @@ func (t *TaskCallbackServiceImpl) getSpan(ctx context.Context, tenants []string,
 	logs.CtxInfo(ctx, "list span, spans: %v", spans)
 
 	return spans, nil
+}
+
+func (t *TaskCallbackServiceImpl) resolveAnnotationKeyNames(ctx context.Context, taskID, evaluatorVersionID, workspaceID int64) (string, string) {
+	var taskName, evaluatorName string
+
+	task, err := t.taskRepo.GetTask(ctx, taskID, nil, nil)
+	if err != nil {
+		logs.CtxWarn(ctx, "failed to get task name for annotation key, taskID=%d, err=%v", taskID, err)
+	} else if task != nil {
+		taskName = task.Name
+	}
+
+	if t.evalSvc != nil {
+		evaluators, _, err := t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+			WorkspaceID:         workspaceID,
+			EvaluatorVersionIds: []int64{evaluatorVersionID},
+		})
+		if err != nil {
+			logs.CtxWarn(ctx, "failed to get evaluator name for annotation key, evaluatorVersionID=%d, err=%v", evaluatorVersionID, err)
+		} else if len(evaluators) > 0 {
+			evaluatorName = evaluators[0].EvaluatorName
+		}
+	}
+
+	return taskName, evaluatorName
 }
 
 // updateTaskRunStatusCount updates the Redis count based on Status

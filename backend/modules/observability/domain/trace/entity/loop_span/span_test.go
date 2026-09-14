@@ -5,7 +5,6 @@ package loop_span
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -710,7 +709,7 @@ func TestSpan_MergeHistoryContext(t *testing.T) {
 			WorkspaceID: "1",
 			StartTime:   time.Now().UnixMicro(),
 		}
-		anno, err := span.AddAutoEvalAnnotation(1, 2, 3, 0.5, "reason", "user1", 0, 0)
+		anno, err := span.AddAutoEvalAnnotation(1, 2, 3, 0.5, "reason", "user1", 0, 0, "test-task", "test-evaluator")
 		assert.NoError(t, err)
 		assert.NotNil(t, anno)
 		assert.Equal(t, AnnotationTypeAutoEvaluate, anno.AnnotationType)
@@ -1279,12 +1278,12 @@ func TestSpan_AddAutoEvalAnnotation_WithExptFields(t *testing.T) {
 	exptID := int64(100)
 	exptTemplateID := int64(200)
 
-	annotation, err := span.AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersionID, score, reasoning, userID, exptID, exptTemplateID)
+	annotation, err := span.AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersionID, score, reasoning, userID, exptID, exptTemplateID, "my-task", "my-evaluator")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, annotation)
 	assert.Equal(t, AnnotationTypeAutoEvaluate, annotation.AnnotationType)
-	assert.Equal(t, fmt.Sprintf("%d:%d", taskID, evaluatorVersionID), annotation.Key)
+	assert.Equal(t, "my-task:my-evaluator", annotation.Key)
 	assert.NotNil(t, annotation.Metadata)
 
 	metadata, ok := annotation.Metadata.(*AutoEvaluateMetadata)

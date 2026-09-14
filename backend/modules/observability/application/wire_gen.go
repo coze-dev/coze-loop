@@ -325,7 +325,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	if err != nil {
 		return nil, err
 	}
-	iTaskCallbackService := service3.NewTaskCallbackServiceImpl(iTaskRepo, iTraceRepo, taskProcessor, iTenantProvider, iTraceConfig, benefit2)
+	iTaskCallbackService := service3.NewTaskCallbackServiceImpl(iTaskRepo, iTraceRepo, taskProcessor, iTenantProvider, iTraceConfig, benefit2, iEvaluatorRPCAdapter)
 	v := NewScheduledTask(iLocker, iTraceConfig, iTraceHubService, iTaskService, taskProcessor, iTaskRepo)
 	iTaskApplication, err := NewTaskApplication(iTaskService, iAuthProvider, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iUserProvider, iTraceHubService, taskProcessor, iTaskCallbackService, v, iTraceRepo)
 	if err != nil {
