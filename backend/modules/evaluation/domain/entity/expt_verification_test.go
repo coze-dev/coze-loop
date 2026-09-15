@@ -14,7 +14,7 @@ import (
 
 func TestResolveVerificationConfig(t *testing.T) {
 	for _, mode := range []VerificationMode{VerificationModeNopOnly, VerificationModeOracleOnly, VerificationModeF2P} {
-		for _, topology := range []SandboxCountMode{"", SandboxCountModeSingle, SandboxCountModeDual, SandboxCountModeMacVMPlusSandbox, SandboxCountModeMacVMPlusSSH} {
+		for _, topology := range []SandboxCountMode{"", SandboxCountModeSingle, SandboxCountModeDual, SandboxCountModeMacVMPlusSandbox, SandboxCountModeMacVMPlusSSH, SandboxCountModeShared} {
 			agent := &SandboxAgent{Name: "any application name", SandboxCountMode: topology}
 			cfg := &VerificationConfig{Mode: mode}
 			got, raw, err := ResolveVerificationConfig(cfg, agent, `{"binary_version":"pinned"}`)
@@ -62,6 +62,23 @@ func TestResolveVerificationConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+// 这个白名单是 sandbox_count_mode 的**穷举式** fail-closed 门，不是精选子集。shared 只是把
+// Runner 与 Orchestrator 并进同一个沙箱，verification 的执行模型（nop/oracle/f2p，沙箱里没有
+// 被测 agent 进程）与它无冲突；漏一个取值的现象是配了 shared 的评测对象一提 verification 实验就整体报错。
+func TestResolveVerificationConfigAdmitsSharedSandbox(t *testing.T) {
+	cfg := &VerificationConfig{Mode: VerificationModeF2P}
+	agent := &SandboxAgent{Name: "remote faas application", SandboxCountMode: SandboxCountModeShared}
+	got, raw, err := ResolveVerificationConfig(cfg, agent, `{"verification":{"mode":"f2p"},"binary_version":"pinned"}`)
+	require.NoError(t, err)
+	require.Equal(t, VerificationModeF2P, got.Mode)
+	require.JSONEq(t, `{"binary_version":"pinned"}`, raw, "进了白名单也仍要摘掉 legacy verification 键")
+
+	// 补一条 shared 不等于"什么都放过"：拼写差一个大小写仍旧 fail-closed，与 ResolveSandboxCountMode 的
+	// 大小写不容错对齐 —— 否则这里放过、那里回落 Single，实验会静默按旧扁平链路跑完。
+	_, _, err = ResolveVerificationConfig(cfg, &SandboxAgent{SandboxCountMode: "Shared"}, "")
+	require.ErrorContains(t, err, `unsupported verification sandbox_count_mode "Shared"`)
 }
 
 func TestVerificationStoredInExistingConfiguration(t *testing.T) {
