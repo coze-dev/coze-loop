@@ -446,9 +446,19 @@ func TestTraceHubServiceImpl_preDispatchConcurrent(t *testing.T) {
 		}).
 		AnyTimes()
 
-	// 模拟 Lock/Unlock：总是成功
-	mockLocker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
-	mockLocker.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
+	// 模拟 Lock/Unlock：按 key 互斥（还原线上分布式锁语义），
+	// 已被占用的 key 返回未获取，保证并发下同一 key 只有一个持有者。
+	var heldLocks sync.Map
+	mockLocker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, key string, _ time.Duration) (bool, error) {
+			_, loaded := heldLocks.LoadOrStore(key, struct{}{})
+			return !loaded, nil
+		}).AnyTimes()
+	mockLocker.EXPECT().Unlock(gomock.Any()).
+		DoAndReturn(func(key string) (bool, error) {
+			heldLocks.Delete(key)
+			return true, nil
+		}).AnyTimes()
 
 	safeProc := &concurrentStubProcessor{
 		createAction: func() error {

@@ -558,6 +558,80 @@ func TestEvaluatorHandlerImpl_GetEvaluator(t *testing.T) {
 	}
 }
 
+// TestEvaluatorHandlerImpl_BatchGetEvaluators_CrossTenant 覆盖跨租户越权：
+// 攻击者用自己的 WorkspaceID 提交他人 EvaluatorId，服务端按对象级鉴权应拒绝，不得返回他人对象。
+func TestEvaluatorHandlerImpl_BatchGetEvaluators_CrossTenant(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		userInfoService:  mockUserInfoService,
+	}
+
+	attackerWorkspaceID := int64(1001)
+	victimSpaceID := int64(2002)
+	victimEvaluatorID := int64(456)
+	victimEvaluator := &entity.Evaluator{
+		ID:            victimEvaluatorID,
+		SpaceID:       victimSpaceID,
+		Name:          "victim evaluator",
+		EvaluatorType: entity.EvaluatorTypePrompt,
+	}
+
+	// 查询按 id 返回了他人 space 的对象（DAO 不按 space 过滤），鉴权必须拦住
+	mockEvaluatorService.EXPECT().
+		BatchGetEvaluator(gomock.Any(), attackerWorkspaceID, []int64{victimEvaluatorID}, false).
+		Return([]*entity.Evaluator{victimEvaluator}, nil)
+	// 对象级鉴权针对对象归属的 victimSpaceID，攻击者无权 -> 返回错误
+	mockAuth.EXPECT().
+		Authorization(gomock.Any(), &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(victimEvaluatorID, 10),
+			SpaceID:       victimSpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		}).
+		Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+
+	resp, err := app.BatchGetEvaluators(context.Background(), &evaluatorservice.BatchGetEvaluatorsRequest{
+		WorkspaceID:  attackerWorkspaceID,
+		EvaluatorIds: []int64{victimEvaluatorID},
+	})
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+}
+
+// TestEvaluatorHandlerImpl_DeleteEvaluator_CrossTenant 覆盖跨租户越权删除：
+// 目标评估器归属 space 与请求 WorkspaceID 不一致时，必须在删除前拒绝。
+func TestEvaluatorHandlerImpl_DeleteEvaluator_CrossTenant(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	app := &EvaluatorHandlerImpl{evaluatorService: mockEvaluatorService}
+
+	attackerWorkspaceID := int64(1001)
+	victimSpaceID := int64(2002)
+	victimEvaluatorID := int64(456)
+
+	mockEvaluatorService.EXPECT().
+		BatchGetEvaluator(gomock.Any(), attackerWorkspaceID, []int64{victimEvaluatorID}, false).
+		Return([]*entity.Evaluator{{ID: victimEvaluatorID, SpaceID: victimSpaceID}}, nil)
+	// 归属校验先于 DeleteEvaluator：不应调用底层删除
+	mockEvaluatorService.EXPECT().DeleteEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	resp, err := app.DeleteEvaluator(context.Background(), &evaluatorservice.DeleteEvaluatorRequest{
+		WorkspaceID: attackerWorkspaceID,
+		EvaluatorID: &victimEvaluatorID,
+	})
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+}
+
 // TestEvaluatorHandlerImpl_GetEvaluatorVersion 测试 GetEvaluatorVersion 方法
 func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -7208,12 +7282,12 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluators(t *testing.T) {
 					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
 					Return([]string{strconv.FormatInt(builtinWorkspaceID, 10)})
 
-				// 普通评估器鉴权
+				// 普通评估器按对象级鉴权
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(workspaceID, 10),
-						SpaceID:       workspaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+						ObjectID:      strconv.FormatInt(normalEvaluator.ID, 10),
+						SpaceID:       normalEvaluator.SpaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
 					}).Return(nil)
 
 				mockUserInfoService.EXPECT().
@@ -7269,12 +7343,12 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluators(t *testing.T) {
 					BatchGetEvaluator(gomock.Any(), workspaceID, []int64{1}, false).
 					Return([]*entity.Evaluator{normalEvaluator}, nil)
 
-				// 普通评估器鉴权失败 - 使用正确的参数匹配
+				// 普通评估器对象级鉴权失败
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(workspaceID, 10),
-						SpaceID:       workspaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+						ObjectID:      strconv.FormatInt(normalEvaluator.ID, 10),
+						SpaceID:       normalEvaluator.SpaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
 					}).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
 
 				// 由于鉴权失败，函数会提前返回，PackUserInfo不应该被调用

@@ -189,34 +189,27 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluators(ctx context.Context, request *
 	}
 	// 对预置评估器/普通评估器需要分别鉴权
 	builtinSpaceIDs := make(map[int64]struct{})
-	normalSpaceIDs := make(map[int64]struct{})
 	for _, draft := range drafts {
 		if draft == nil {
 			continue
 		}
 		if draft.Builtin {
 			builtinSpaceIDs[draft.SpaceID] = struct{}{}
-		} else {
-			normalSpaceIDs[draft.SpaceID] = struct{}{}
+			continue
+		}
+		// 普通评估器按对象级鉴权，防止跨租户越权读取（与 GetEvaluator 保持一致）
+		if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(draft.ID, 10),
+			SpaceID:       draft.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		}); err != nil {
+			return nil, err
 		}
 	}
 	if len(builtinSpaceIDs) > 0 {
 		for spaceID := range builtinSpaceIDs {
 			// 预置评估器鉴权
 			err = e.authBuiltinManagement(ctx, spaceID, spaceTypeBuiltin, false)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	if len(normalSpaceIDs) > 0 {
-		for spaceID := range normalSpaceIDs {
-			// 普通评估器鉴权
-			err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-				ObjectID:      strconv.FormatInt(spaceID, 10),
-				SpaceID:       spaceID,
-				ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-			})
 			if err != nil {
 				return nil, err
 			}
@@ -533,6 +526,10 @@ func (e *EvaluatorHandlerImpl) DeleteEvaluator(ctx context.Context, request *eva
 			continue
 		}
 		curEvaluator := evaluatorDO
+		// 归属校验：拒绝删除不属于请求 workspace 的评估器，防止跨租户越权删除
+		if curEvaluator.SpaceID != request.GetWorkspaceID() {
+			return nil, errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg(fmt.Sprintf("evaluator %d not found in workspace %d", curEvaluator.ID, request.GetWorkspaceID())))
+		}
 		g.Go(func() error {
 			defer func() {
 				if r := recover(); r != nil {
