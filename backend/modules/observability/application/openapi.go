@@ -748,7 +748,7 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 		logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	}
 
-	return &openapi.SearchTraceTreeOApiResponse{
+	resp := &openapi.SearchTraceTreeOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
 			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, nil, false),
 			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
@@ -758,7 +758,12 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 				},
 			},
 		},
-	}, nil
+	}
+	if req.PageSize != nil || req.PageToken != nil {
+		resp.Data.NextPageToken = &sResp.NextPageToken
+		resp.Data.HasMore = &sResp.HasMore
+	}
+	return resp, nil
 }
 
 func (o *OpenAPIApplication) validateSearchTraceTreeOApiReq(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest) error {
@@ -768,6 +773,8 @@ func (o *OpenAPIApplication) validateSearchTraceTreeOApiReq(ctx context.Context,
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("at least need trace_id or log_id"))
 	} else if req.Limit > MaxTraceTreeLength || req.Limit < 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid limit"))
+	} else if req.PageSize != nil && (req.GetPageSize() < 0 || req.GetPageSize() > MaxTraceTreeLength) {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid page_size"))
 	}
 	v := utils.DateValidator{
 		Start:        req.GetStartTime(),
@@ -799,6 +806,15 @@ func (o *OpenAPIApplication) buildSearchTraceTreeOApiReq(ctx context.Context, re
 		Limit:                 req.GetLimit(),
 		PlatformType:          platformType,
 		WithDetail:            false,
+		PageToken:             req.GetPageToken(),
+	}
+	if req.PageSize != nil {
+		ret.Limit = req.GetPageSize()
+		if ret.Limit == 0 {
+			ret.Limit = 10
+		}
+	} else if req.PageToken != nil && ret.Limit == 0 {
+		ret.Limit = 10
 	}
 
 	if len(ret.Tenants) == 0 {

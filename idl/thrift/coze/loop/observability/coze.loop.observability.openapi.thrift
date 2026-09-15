@@ -112,6 +112,8 @@ struct SearchTraceTreeOApiRequest {
     6: required i32 limit (api.body="limit")
     8: optional common.PlatformType platform_type (api.body="platform_type")
     10: optional filter.FilterFields filters (api.body="filters")
+    11: optional i32 page_size (api.body="page_size") // 0 defaults to 10; 1-10000 overrides limit
+    12: optional string page_token (api.body="page_token")
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base

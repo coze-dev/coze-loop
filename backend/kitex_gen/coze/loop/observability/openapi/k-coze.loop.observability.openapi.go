@@ -3849,6 +3849,34 @@ func (p *SearchTraceTreeOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -3997,6 +4025,34 @@ func (p *SearchTraceTreeOApiRequest) FastReadField10(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SearchTraceTreeOApiRequest) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PageSize = _field
+	return offset, nil
+}
+
+func (p *SearchTraceTreeOApiRequest) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PageToken = _field
+	return offset, nil
+}
+
 func (p *SearchTraceTreeOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -4032,9 +4088,11 @@ func (p *SearchTraceTreeOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocopy
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -4052,6 +4110,8 @@ func (p *SearchTraceTreeOApiRequest) BLength() int {
 		l += p.field6Length()
 		l += p.field8Length()
 		l += p.field10Length()
+		l += p.field11Length()
+		l += p.field12Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -4116,6 +4176,24 @@ func (p *SearchTraceTreeOApiRequest) fastWriteField10(buf []byte, w thrift.Nocop
 	if p.IsSetFilters() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
 		offset += p.Filters.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *SearchTraceTreeOApiRequest) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPageSize() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 11)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.PageSize)
+	}
+	return offset
+}
+
+func (p *SearchTraceTreeOApiRequest) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPageToken() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PageToken)
 	}
 	return offset
 }
@@ -4199,6 +4277,24 @@ func (p *SearchTraceTreeOApiRequest) field10Length() int {
 	return l
 }
 
+func (p *SearchTraceTreeOApiRequest) field11Length() int {
+	l := 0
+	if p.IsSetPageSize() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *SearchTraceTreeOApiRequest) field12Length() int {
+	l := 0
+	if p.IsSetPageToken() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.PageToken)
+	}
+	return l
+}
+
 func (p *SearchTraceTreeOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -4261,6 +4357,19 @@ func (p *SearchTraceTreeOApiRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Filters = _filters
+
+	if src.PageSize != nil {
+		tmp := *src.PageSize
+		p.PageSize = &tmp
+	}
+
+	if src.PageToken != nil {
+		var tmp string
+		if *src.PageToken != "" {
+			tmp = kutils.StringDeepCopy(*src.PageToken)
+		}
+		p.PageToken = &tmp
+	}
 
 	var _extra *extra.Extra
 	if src.Extra != nil {
