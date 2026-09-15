@@ -3922,6 +3922,10 @@ func (e *EvalOpenAPIApplication) AsyncDebugEvalTargetOApi(ctx context.Context, r
 				tenant = rpc.SandboxTenantFornaxTraeEvalDualSandbox
 			case entity.SandboxCountModeMacVMPlusSandbox, entity.SandboxCountModeMacVMPlusSSH:
 				tenant = rpc.SandboxTenantFornaxEvalGeneralGUI
+			case entity.SandboxCountModeShared:
+				// 共享沙箱走通用评测租户, 与实验链路一致 —— 它用的是同一套 runtime 编排,
+				// 不存在 Dual 那种新旧两条实现并存的问题, 所以这里不需要像 Dual 那样回落旧租户。
+				tenant = rpc.SandboxTenantFornaxEvalGeneral
 			}
 			// Debug 没有 ItemConcurNum；保留原基础 task 的固定 50 execution 配额，
 			// Mac VM 拓扑新增同容量的独立 task。基础 task 在 SSH 模式下每次占 ssh+orch 两份。

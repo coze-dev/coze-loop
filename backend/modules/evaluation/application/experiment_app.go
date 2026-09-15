@@ -1954,6 +1954,8 @@ type sandboxTaskConcurrency struct {
 //   - dual: sandbox=2/item
 //   - mac_vm_plus_sandbox: sandbox=1/item, mac_vm=1/item
 //   - mac_vm_plus_ssh: sandbox=2/item (ssh+orch), mac_vm=1/item
+//   - shared: sandbox=1/item —— **两个进程不是两个 execution**。共享拓扑省掉的正是第二个沙箱，
+//     按 2 倍给会让配额虚高一倍（配额是 execution 粒度的硬闸，虚高不会报错，只是白占）。
 func sandboxTaskConcurrencyForMode(itemConcurNum *int, mode entity.SandboxCountMode) sandboxTaskConcurrency {
 	mode = entity.ResolveSandboxCountMode(mode)
 	sandboxUsesTwoExecutions := mode == entity.SandboxCountModeDual || mode == entity.SandboxCountModeMacVMPlusSSH
@@ -2008,6 +2010,13 @@ func sandboxTenantForExperimentEntity(expt *entity.Experiment) rpc.SandboxTenant
 	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
 	}
+	// shared（远程 FaaS 对象的单沙箱拓扑）：只 Init 一个 sandbox task，走与新双沙箱链路
+	// 相同的通用评测租户 —— 它用的是同一套 runtime 编排（operator 组 case-file、拉 binary），
+	// 区别只在少建一个沙箱。放在 Dual 判断之前：countMode != Dual 会把它扔回 Default，
+	// 那是**旧扁平链路**的租户，实验会静默跑成沙箱内 sandbox-pipeline 而不报错。
+	if countMode == entity.SandboxCountModeShared {
+		return rpc.SandboxTenantFornaxEvalGeneral
+	}
 	if countMode != entity.SandboxCountModeDual {
 		return rpc.SandboxTenantDefault
 	}
@@ -2029,6 +2038,13 @@ func sandboxTenantForExperimentDTO(expt *domain_expt.Experiment) rpc.SandboxTena
 	// 共用 GUI 专用租户、靠 ResourceType 区分（见 entity 版同处注释）。
 	if countMode == entity.SandboxCountModeMacVMPlusSandbox || countMode == entity.SandboxCountModeMacVMPlusSSH {
 		return rpc.SandboxTenantFornaxEvalGeneralGUI
+	}
+	// shared（远程 FaaS 对象的单沙箱拓扑）：只 Init 一个 sandbox task，走与新双沙箱链路
+	// 相同的通用评测租户 —— 它用的是同一套 runtime 编排（operator 组 case-file、拉 binary），
+	// 区别只在少建一个沙箱。放在 Dual 判断之前：countMode != Dual 会把它扔回 Default，
+	// 那是**旧扁平链路**的租户，实验会静默跑成沙箱内 sandbox-pipeline 而不报错。
+	if countMode == entity.SandboxCountModeShared {
+		return rpc.SandboxTenantFornaxEvalGeneral
 	}
 	if countMode != entity.SandboxCountModeDual {
 		return rpc.SandboxTenantDefault
