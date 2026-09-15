@@ -77,5 +77,6 @@ func (c *RMQConf) ToConsumerCfg() mq.ConsumerConfig {
 	if gptr.Indirect(c.DisableConsume) {
 		cfg.IsEnabled = gptr.Of(false)
 	}
+	cfg.EnablePPE = gptr.Of(true)
 	return cfg
 }
