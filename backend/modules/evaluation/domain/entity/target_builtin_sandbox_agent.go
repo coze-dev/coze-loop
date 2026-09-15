@@ -19,6 +19,11 @@ const SandboxAgentExtKeyExtraExecuteID = "sandbox_agent_extra_execute_id"
 //   - Dual:            先起一个从属沙箱拿到 session id，再起一个主沙箱运行 sandbox-pipeline
 //   - MacVMPlusSandbox: 一次评测同时租借 1 台 Mac VM（跑被测桌面 agent）+ 1 台 Sandbox（跑 orchestrator），
 //     两者靠 runtime 侧 WebSocket 互联。下游用同一租户 + ResourceType 区分两个 task。
+//   - Shared:          远程 FaaS 对象专用：**一个沙箱里跑两个进程**（Runner + Orchestrator），
+//     走 loopback 互联。之所以能省掉第二个沙箱，是因为远程对象跑在 ByteFaaS 上，
+//     沙箱里根本没有 agent 进程 —— 双沙箱要隔离的那个不可信域不在这个沙箱里。
+//     ⚠️ 只对远程 FaaS 对象成立；配给本地 CLI/GUI 对象会让防 Reward Hacking 的边界静默消失，
+//     runtime 侧有 fail-closed 门拦截（cmd/orchestrator: validateSandboxTopologyScope）。
 //   - MacVMPlusSSH:     一次评测租借 3 台资源：1 台主控 orchestrator Sandbox + 1 台 SSH Sandbox
 //     （Runner 就地，跑 workspace/命令/评估，被 IDE 经 Remote-SSH 挂上来）+ 1 台 Mac VM（只跑 IDE 桌面，被 CUA 驱动）。
 //     控制面走 HTTP（复用双沙箱链路），触达 Mac VM 只经 AIC gexec→CUA，无新增 WebSocket。
@@ -29,9 +34,15 @@ const (
 	SandboxCountModeDual             SandboxCountMode = "dual"
 	SandboxCountModeMacVMPlusSandbox SandboxCountMode = "mac_vm_plus_sandbox"
 	SandboxCountModeMacVMPlusSSH     SandboxCountMode = "mac_vm_plus_ssh"
+	SandboxCountModeShared           SandboxCountMode = "shared"
 )
 
 // ResolveSandboxCountMode 空/未识别值一律回退到 Single，保持默认行为。
+//
+// ⚠️ **这个回退是 fail-OPEN 的，新增取值时必须同时改这里。** 少加一个 case 的现象是：
+// 控制面明明配了新拓扑，实验却静默按 Single 的旧扁平链路跑完并报成功 —— 没有任何一层报错。
+// 这也是为什么 runtime 侧的 fail-closed 兜不住控制面：一旦在这里回落成 Single，
+// 那条链路压根不启动 runtime，runtime 的校验没有执行机会。
 func ResolveSandboxCountMode(mode SandboxCountMode) SandboxCountMode {
 	switch mode {
 	case SandboxCountModeDual:
@@ -40,6 +51,8 @@ func ResolveSandboxCountMode(mode SandboxCountMode) SandboxCountMode {
 		return SandboxCountModeMacVMPlusSandbox
 	case SandboxCountModeMacVMPlusSSH:
 		return SandboxCountModeMacVMPlusSSH
+	case SandboxCountModeShared:
+		return SandboxCountModeShared
 	default:
 		return SandboxCountModeSingle
 	}
@@ -59,6 +72,15 @@ func (a *SandboxAgent) IsMacVMPlusSandbox() bool {
 		return false
 	}
 	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeMacVMPlusSandbox
+}
+
+// IsSharedSandbox 判断 SandboxAgent 是否处于共享沙箱模式（Runner 与 Orchestrator 同处一个沙箱）；
+// nil / 未填字段一律按 Single 处理。
+func (a *SandboxAgent) IsSharedSandbox() bool {
+	if a == nil {
+		return false
+	}
+	return ResolveSandboxCountMode(a.SandboxCountMode) == SandboxCountModeShared
 }
 
 // IsMacVMPlusSSH 判断 SandboxAgent 是否处于 Mac VM + SSH Sandbox 三资源模式（Remote-SSH IDE 评测）；
