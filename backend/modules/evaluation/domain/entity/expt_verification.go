@@ -79,7 +79,7 @@ func ResolveVerificationConfig(config *VerificationConfig, agent *SandboxAgent, 
 		return config, raw, fmt.Errorf("verification_config requires a SandboxAgent execution target")
 	}
 	switch agent.SandboxCountMode {
-	case "", SandboxCountModeSingle, SandboxCountModeDual, SandboxCountModeMacVMPlusSandbox, SandboxCountModeMacVMPlusSSH:
+	case "", SandboxCountModeSingle, SandboxCountModeDual, SandboxCountModeMacVMPlusSandbox, SandboxCountModeMacVMPlusSSH, SandboxCountModeShared:
 	default:
 		return config, raw, fmt.Errorf("unsupported verification sandbox_count_mode %q", agent.SandboxCountMode)
 	}
