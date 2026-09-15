@@ -5048,8 +5048,11 @@ type SearchTraceTreeOApiRequest struct {
 	Limit        int32                `thrift:"limit,6,required" frugal:"6,required,i32" form:"limit,required" json:"limit,required"`
 	PlatformType *common.PlatformType `thrift:"platform_type,8,optional" frugal:"8,optional,string" form:"platform_type" json:"platform_type,omitempty"`
 	Filters      *filter.FilterFields `thrift:"filters,10,optional" frugal:"10,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
-	Extra        *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 0 defaults to 10; 1-10000 overrides limit
+	PageSize  *int32       `thrift:"page_size,11,optional" frugal:"11,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	PageToken *string      `thrift:"page_token,12,optional" frugal:"12,optional,string" form:"page_token" json:"page_token,omitempty"`
+	Extra     *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base      *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewSearchTraceTreeOApiRequest() *SearchTraceTreeOApiRequest {
@@ -5138,6 +5141,30 @@ func (p *SearchTraceTreeOApiRequest) GetFilters() (v *filter.FilterFields) {
 	return p.Filters
 }
 
+var SearchTraceTreeOApiRequest_PageSize_DEFAULT int32
+
+func (p *SearchTraceTreeOApiRequest) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return SearchTraceTreeOApiRequest_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
+var SearchTraceTreeOApiRequest_PageToken_DEFAULT string
+
+func (p *SearchTraceTreeOApiRequest) GetPageToken() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageToken() {
+		return SearchTraceTreeOApiRequest_PageToken_DEFAULT
+	}
+	return *p.PageToken
+}
+
 var SearchTraceTreeOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *SearchTraceTreeOApiRequest) GetExtra() (v *extra.Extra) {
@@ -5182,6 +5209,12 @@ func (p *SearchTraceTreeOApiRequest) SetPlatformType(val *common.PlatformType) {
 func (p *SearchTraceTreeOApiRequest) SetFilters(val *filter.FilterFields) {
 	p.Filters = val
 }
+func (p *SearchTraceTreeOApiRequest) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+func (p *SearchTraceTreeOApiRequest) SetPageToken(val *string) {
+	p.PageToken = val
+}
 func (p *SearchTraceTreeOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -5197,6 +5230,8 @@ var fieldIDToName_SearchTraceTreeOApiRequest = map[int16]string{
 	6:   "limit",
 	8:   "platform_type",
 	10:  "filters",
+	11:  "page_size",
+	12:  "page_token",
 	254: "extra",
 	255: "Base",
 }
@@ -5223,6 +5258,14 @@ func (p *SearchTraceTreeOApiRequest) IsSetPlatformType() bool {
 
 func (p *SearchTraceTreeOApiRequest) IsSetFilters() bool {
 	return p.Filters != nil
+}
+
+func (p *SearchTraceTreeOApiRequest) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *SearchTraceTreeOApiRequest) IsSetPageToken() bool {
+	return p.PageToken != nil
 }
 
 func (p *SearchTraceTreeOApiRequest) IsSetExtra() bool {
@@ -5304,6 +5347,22 @@ func (p *SearchTraceTreeOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5434,6 +5493,28 @@ func (p *SearchTraceTreeOApiRequest) ReadField10(iprot thrift.TProtocol) error {
 	p.Filters = _field
 	return nil
 }
+func (p *SearchTraceTreeOApiRequest) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
+func (p *SearchTraceTreeOApiRequest) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageToken = _field
+	return nil
+}
 func (p *SearchTraceTreeOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -5483,6 +5564,14 @@ func (p *SearchTraceTreeOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -5635,6 +5724,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *SearchTraceTreeOApiRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+func (p *SearchTraceTreeOApiRequest) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageToken() {
+		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PageToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 func (p *SearchTraceTreeOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -5705,6 +5830,12 @@ func (p *SearchTraceTreeOApiRequest) DeepEqual(ano *SearchTraceTreeOApiRequest) 
 		return false
 	}
 	if !p.Field10DeepEqual(ano.Filters) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.PageSize) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.PageToken) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -5786,6 +5917,30 @@ func (p *SearchTraceTreeOApiRequest) Field8DeepEqual(src *common.PlatformType) b
 func (p *SearchTraceTreeOApiRequest) Field10DeepEqual(src *filter.FilterFields) bool {
 
 	if !p.Filters.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SearchTraceTreeOApiRequest) Field11DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *SearchTraceTreeOApiRequest) Field12DeepEqual(src *string) bool {
+
+	if p.PageToken == src {
+		return true
+	} else if p.PageToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PageToken, *src) != 0 {
 		return false
 	}
 	return true

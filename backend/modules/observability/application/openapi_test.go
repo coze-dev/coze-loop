@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -2948,65 +2949,113 @@ func TestOpenAPIApplication_buildSearchTraceTreeOApiReq(t *testing.T) {
 
 // Add comprehensive unit tests for SearchTraceTreeOApi.
 func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
-	t.Run("successful search trace tree", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
+	for _, page := range []struct {
+		name           string
+		pageSize       *int32
+		wantLimit      int32
+		wantPagination bool
+		requestToken   *string
+		nextToken      string
+		hasMore        bool
+	}{
+		{name: "legacy limit", wantLimit: 10, nextToken: "next-page", hasMore: true},
+		{name: "zero page size", pageSize: ptr.Of(int32(0)), wantLimit: 10, wantPagination: true, nextToken: "next-page", hasMore: true},
+		{name: "first page", pageSize: ptr.Of(int32(100)), wantLimit: 100, wantPagination: true, nextToken: "next-page", hasMore: true},
+		{name: "middle page", pageSize: ptr.Of(int32(100)), wantLimit: 100, wantPagination: true, requestToken: ptr.Of("previous-page"), nextToken: "next-page", hasMore: true},
+		{name: "token only", wantLimit: 10, wantPagination: true, requestToken: ptr.Of("previous-page"), nextToken: "next-page", hasMore: true},
+		{name: "empty token", wantLimit: 10, wantPagination: true, requestToken: ptr.Of(""), nextToken: "next-page", hasMore: true},
+		{name: "last page", pageSize: ptr.Of(int32(100)), wantLimit: 100, wantPagination: true, requestToken: ptr.Of("previous-page")},
+	} {
+		t.Run(page.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-		traceServiceMock := servicemocks.NewMockITraceService(ctrl)
-		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-		authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
-		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
-		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
-		rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
-		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
-		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
-		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+			traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+			authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+			authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
+			benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+			tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+			workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+			rateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+			traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+			metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+			collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 
-		// Set expectations.
-		authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
-		rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
-		traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
-		workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
-		tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1", "tenant2"})
-		traceServiceMock.EXPECT().SearchTraceOApi(gomock.Any(), gomock.Any()).Return(&service.SearchTraceOApiResp{
-			Spans: []*loop_span.Span{{SpanID: "test"}},
-		}, nil)
-		metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-		collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			// Set expectations.
+			authMock.EXPECT().CheckQueryPermission(gomock.Any(), "123", "platform").Return(nil)
+			rateLimiter.EXPECT().AllowN(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&limiter.Result{Allowed: true}, nil)
+			traceConfigMock.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil)
+			workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+			tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"tenant1", "tenant2"})
+			traceServiceMock.EXPECT().SearchTraceOApi(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.SearchTraceOApiReq) (*service.SearchTraceOApiResp, error) {
+				assert.Equal(t, page.wantLimit, req.Limit)
+				assert.Equal(t, ptr.From(page.requestToken), req.PageToken)
+				assert.False(t, req.WithDetail)
+				return &service.SearchTraceOApiResp{
+					Spans:         []*loop_span.Span{{SpanID: "test"}},
+					NextPageToken: page.nextToken,
+					HasMore:       page.hasMore,
+				}, nil
+			})
+			metricsMock.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			collectorMock.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-		app := &OpenAPIApplication{
-			traceService: traceServiceMock,
-			auth:         authMock,
-			benefit:      benefitMock,
-			tenant:       tenantMock,
-			workspace:    workspaceMock,
-			rateLimiter:  rateLimiter,
-			traceConfig:  traceConfigMock,
-			metrics:      metricsMock,
-			collector:    collectorMock,
-		}
+			app := &OpenAPIApplication{
+				traceService: traceServiceMock,
+				auth:         authMock,
+				benefit:      benefitMock,
+				tenant:       tenantMock,
+				workspace:    workspaceMock,
+				rateLimiter:  rateLimiter,
+				traceConfig:  traceConfigMock,
+				metrics:      metricsMock,
+				collector:    collectorMock,
+			}
 
-		now := time.Now().UnixMilli()
-		startTime := now - 3600000 // 1 hour ago
-		endTime := now             // current time
-		req := &openapi.SearchTraceTreeOApiRequest{
-			WorkspaceID:  ptr.Of(int64(123)),
-			TraceID:      ptr.Of("trace123"),
-			StartTime:    &startTime,
-			EndTime:      &endTime,
-			Limit:        10,
-			PlatformType: ptr.Of(common.PlatformType("platform")),
-			Extra:        &extra.Extra{Src: ptr.Of("test")},
-		}
+			now := time.Now().UnixMilli()
+			startTime := now - 3600000 // 1 hour ago
+			endTime := now             // current time
+			req := &openapi.SearchTraceTreeOApiRequest{
+				WorkspaceID:  ptr.Of(int64(123)),
+				TraceID:      ptr.Of("trace123"),
+				StartTime:    &startTime,
+				EndTime:      &endTime,
+				Limit:        10,
+				PageSize:     page.pageSize,
+				PageToken:    page.requestToken,
+				PlatformType: ptr.Of(common.PlatformType("platform")),
+				Extra:        &extra.Extra{Src: ptr.Of("test")},
+			}
 
-		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
-		assert.NoError(t, err)
-		assert.NotNil(t, resp)
-		assert.NotNil(t, resp.Data)
-		assert.NotNil(t, resp.Data.TracesAdvanceInfo)
-		assert.NotNil(t, resp.Data.TracesAdvanceInfo.Tokens)
-	})
+			resp, err := app.SearchTraceTreeOApi(context.Background(), req)
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+			assert.NotNil(t, resp.Data)
+			assert.NotNil(t, resp.Data.TracesAdvanceInfo)
+			assert.NotNil(t, resp.Data.TracesAdvanceInfo.Tokens)
+			assert.Len(t, resp.Data.Spans, 1)
+			encoded, err := json.Marshal(resp.Data)
+			assert.NoError(t, err)
+			var data map[string]json.RawMessage
+			assert.NoError(t, json.Unmarshal(encoded, &data))
+			if page.wantPagination {
+				assert.NotNil(t, resp.Data.NextPageToken)
+				assert.NotNil(t, resp.Data.HasMore)
+				assert.Equal(t, page.nextToken, resp.Data.GetNextPageToken())
+				assert.Equal(t, page.hasMore, resp.Data.GetHasMore())
+				assert.Contains(t, data, "next_page_token")
+				assert.Contains(t, data, "has_more")
+				if !page.hasMore {
+					assert.JSONEq(t, "false", string(data["has_more"]))
+				}
+			} else {
+				assert.Nil(t, resp.Data.NextPageToken)
+				assert.Nil(t, resp.Data.HasMore)
+				assert.NotContains(t, data, "next_page_token")
+				assert.NotContains(t, data, "has_more")
+			}
+		})
+	}
 
 	t.Run("invalid request", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -3739,6 +3788,94 @@ func TestOpenAPIApplication_CreateAnnotation_ValueSizeLimit(t *testing.T) {
 			_, err := o.CreateAnnotation(context.Background(), tt.req)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "4MB")
+		})
+	}
+}
+
+func TestOpenAPIApplication_validateSearchTraceTreeOApiReq_Pagination(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		pageSize *int32
+		wantErr  bool
+	}{
+		{name: "legacy"},
+		{name: "minimum", pageSize: ptr.Of(int32(1))},
+		{name: "previous maximum", pageSize: ptr.Of(int32(200))},
+		{name: "above previous maximum", pageSize: ptr.Of(int32(201))},
+		{name: "previous expanded maximum", pageSize: ptr.Of(int32(2000))},
+		{name: "above previous expanded maximum", pageSize: ptr.Of(int32(2001))},
+		{name: "maximum", pageSize: ptr.Of(int32(10000))},
+		{name: "zero defaults", pageSize: ptr.Of(int32(0))},
+		{name: "negative", pageSize: ptr.Of(int32(-1)), wantErr: true},
+		{name: "too large", pageSize: ptr.Of(int32(10001)), wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app := &OpenAPIApplication{}
+			req := &openapi.SearchTraceTreeOApiRequest{
+				TraceID:   ptr.Of("trace-id"),
+				StartTime: ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+				EndTime:   ptr.Of(time.Now().UnixMilli()),
+				PageSize:  tc.pageSize,
+			}
+			err := app.validateSearchTraceTreeOApiReq(context.Background(), req)
+			if tc.wantErr {
+				assert.ErrorContains(t, err, "invalid page_size")
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestOpenAPIApplication_buildSearchTraceTreeOApiReq_Pagination(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		limit     int32
+		pageSize  *int32
+		pageToken *string
+		wantLimit int32
+	}{
+		{name: "legacy zero limit"},
+		{name: "zero page size defaults", pageSize: ptr.Of(int32(0)), wantLimit: 10},
+		{name: "zero page size overrides limit", limit: 10000, pageSize: ptr.Of(int32(0)), wantLimit: 10},
+		{name: "zero page size with token", limit: 10000, pageSize: ptr.Of(int32(0)), pageToken: ptr.Of("cursor"), wantLimit: 10},
+		{name: "legacy limit", limit: 10000, wantLimit: 10000},
+		{name: "page size overrides limit", limit: 10000, pageSize: ptr.Of(int32(100)), wantLimit: 100},
+		{name: "maximum page size", limit: 10000, pageSize: ptr.Of(int32(10000)), wantLimit: 10000},
+		{name: "next page", pageSize: ptr.Of(int32(100)), pageToken: ptr.Of("cursor"), wantLimit: 100},
+		{name: "token only default", pageToken: ptr.Of("cursor"), wantLimit: 10},
+		{name: "empty token default", pageToken: ptr.Of(""), wantLimit: 10},
+		{name: "token with legacy limit", limit: 50, pageToken: ptr.Of("cursor"), wantLimit: 50},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+			workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+			tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant1"})
+			workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(123)).Return("third-party-123")
+			app := &OpenAPIApplication{tenant: tenantMock, workspace: workspaceMock}
+			req := &openapi.SearchTraceTreeOApiRequest{
+				WorkspaceID: ptr.Of(int64(123)),
+				TraceID:     ptr.Of("trace-id"),
+				Limit:       tc.limit,
+				PageSize:    tc.pageSize,
+				PageToken:   tc.pageToken,
+				Filters: &filter.FilterFields{FilterFields: []*filter.FilterField{{
+					FieldName: ptr.Of("span_type"), QueryType: ptr.Of(filter.QueryTypeEq), Values: []string{"model"},
+				}}},
+			}
+			result, err := app.buildSearchTraceTreeOApiReq(context.Background(), req)
+			assert.NoError(t, err)
+			if !assert.NotNil(t, result) {
+				return
+			}
+			assert.Equal(t, tc.wantLimit, result.Limit)
+			assert.Equal(t, req.GetPageToken(), result.PageToken)
+			assert.False(t, result.WithDetail)
+			if assert.NotNil(t, result.Filters) && assert.Len(t, result.Filters.FilterFields, 1) {
+				assert.Equal(t, "span_type", result.Filters.FilterFields[0].FieldName)
+				assert.Equal(t, []string{"model"}, result.Filters.FilterFields[0].Values)
+			}
 		})
 	}
 }
