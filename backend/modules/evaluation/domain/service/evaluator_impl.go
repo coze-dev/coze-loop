@@ -144,6 +144,7 @@ func buildListEvaluatorRequest(ctx context.Context, request *entity.ListEvaluato
 		SpaceID:      request.SpaceID,
 		SearchName:   request.SearchName,
 		CreatorIDs:   request.CreatorIDs,
+		UpdaterIDs:   request.UpdaterIDs,
 		FilterOption: request.FilterOption, // 传递FilterOption
 		PageSize:     request.PageSize,
 		PageNum:      request.PageNum,

@@ -221,6 +221,7 @@ type ListEvaluatorRequest struct {
 	SpaceID       int64
 	SearchName    string
 	CreatorIDs    []int64
+	UpdaterIDs    []int64
 	EvaluatorType []int32
 	PageSize      int32
 	PageNum       int32
@@ -255,6 +256,11 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 	// 添加创建者过滤
 	if len(req.CreatorIDs) > 0 {
 		query = query.Where("created_by IN (?)", req.CreatorIDs)
+	}
+
+	// 添加更新者过滤
+	if len(req.UpdaterIDs) > 0 {
+		query = query.Where("updated_by IN (?)", req.UpdaterIDs)
 	}
 
 	// 添加评测器类型过滤

@@ -684,6 +684,7 @@ func (r *EvaluatorRepoImpl) ListEvaluator(ctx context.Context, req *repo.ListEva
 		SpaceID:       req.SpaceID,
 		SearchName:    req.SearchName,
 		CreatorIDs:    req.CreatorIDs,
+		UpdaterIDs:    req.UpdaterIDs,
 		EvaluatorType: evaluatorTypes,
 		PageSize:      req.PageSize,
 		PageNum:       req.PageNum,

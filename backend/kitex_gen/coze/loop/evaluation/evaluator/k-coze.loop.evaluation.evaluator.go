@@ -120,6 +120,20 @@ func (p *ListEvaluatorsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 11:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField11(buf[offset:])
@@ -319,6 +333,30 @@ func (p *ListEvaluatorsRequest) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListEvaluatorsRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.UpdaterIds = _field
+	return offset, nil
+}
+
 func (p *ListEvaluatorsRequest) FastReadField11(buf []byte) (int, error) {
 	offset := 0
 
@@ -425,6 +463,7 @@ func (p *ListEvaluatorsRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrite
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -441,6 +480,7 @@ func (p *ListEvaluatorsRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field101Length()
@@ -505,6 +545,22 @@ func (p *ListEvaluatorsRequest) fastWriteField5(buf []byte, w thrift.NocopyWrite
 	if p.IsSetWithVersion() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithVersion)
+	}
+	return offset
+}
+
+func (p *ListEvaluatorsRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetUpdaterIds() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 6)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.UpdaterIds {
+			length++
+			offset += thrift.Binary.WriteI64(buf[offset:], v)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
 	}
 	return offset
 }
@@ -619,6 +675,17 @@ func (p *ListEvaluatorsRequest) field5Length() int {
 	return l
 }
 
+func (p *ListEvaluatorsRequest) field6Length() int {
+	l := 0
+	if p.IsSetUpdaterIds() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		l +=
+			thrift.Binary.I64Length() * len(p.UpdaterIds)
+	}
+	return l
+}
+
 func (p *ListEvaluatorsRequest) field11Length() int {
 	l := 0
 	if p.IsSetBuiltin() {
@@ -714,6 +781,15 @@ func (p *ListEvaluatorsRequest) DeepCopy(s interface{}) error {
 	if src.WithVersion != nil {
 		tmp := *src.WithVersion
 		p.WithVersion = &tmp
+	}
+
+	if src.UpdaterIds != nil {
+		p.UpdaterIds = make([]int64, 0, len(src.UpdaterIds))
+		for _, elem := range src.UpdaterIds {
+			var _elem int64
+			_elem = elem
+			p.UpdaterIds = append(p.UpdaterIds, _elem)
+		}
 	}
 
 	if src.Builtin != nil {
