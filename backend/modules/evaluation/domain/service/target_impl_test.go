@@ -1398,6 +1398,36 @@ func TestEvalTargetServiceImpl_ExtractTrajectory_RejectsPersistentlyIncompleteTr
 	assert.Nil(t, got)
 }
 
+// TestEvalTargetServiceImpl_ExtractTrajectory_RetryWindowCoversRootSpanLanding 复现线上偶发丢轨迹的第二层根因:
+// observability 侧 span 落库最终一致, 抽取发起时顶层 root span 尚未可见, ListTrajectory 只返回 {id, agent_steps}
+// 而 RootStep=nil → IsValid()=false。root span 往往在数十秒后才落库, 因此重试必须坚持到 root_step 出现;
+// 若窗口只有旧的 3 次, root_step 在第 5 次才出现时会被判 incomplete 丢弃。这里让前 4 次 incomplete、第 5 次 complete,
+// 断言仍能抽到——等价要求 trajectoryExtractAttempts >= 5。
+func TestEvalTargetServiceImpl_ExtractTrajectory_RetryWindowCoversRootSpanLanding(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	adapter := trajectorymocks.NewMockITrajectoryAdapter(ctrl)
+	traceID := "trace-late-root"
+	incomplete := &entity.Trajectory{ID: &traceID}                                      // 仅 agent_steps, root span 未落库
+	complete := &entity.Trajectory{ID: &traceID, RootStep: &kitextrajectory.RootStep{}} // root span 落库后
+	const rootSpanLandsOnAttempt = 5
+
+	call := 0
+	adapter.EXPECT().ListTrajectory(gomock.Any(), int64(1), []string{traceID}, nil).
+		DoAndReturn(func(_ context.Context, _ int64, _ []string, _ *int64) ([]*entity.Trajectory, error) {
+			call++
+			if call >= rootSpanLandsOnAttempt {
+				return []*entity.Trajectory{complete}, nil
+			}
+			return []*entity.Trajectory{incomplete}, nil
+		}).MinTimes(rootSpanLandsOnAttempt)
+
+	svc := &EvalTargetServiceImpl{trajectoryAdapter: adapter, trajectoryRetryInterval: time.Millisecond}
+	got, err := svc.ExtractTrajectory(context.Background(), 1, traceID, nil)
+	require.NoError(t, err)
+	assert.Same(t, complete, got)
+}
+
 // TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer 验证抽取 trajectory 时下界额外向前预留 1 分钟 buffer;
 // startTimeMS 为 nil 时保持 nil 不做偏移。
 func TestEvalTargetServiceImpl_ExtractTrajectory_StartTimeBuffer(t *testing.T) {
@@ -1585,7 +1615,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryBudgetCoversAllAtte
 
 	traceID := record.TraceID
 	incomplete := &entity.Trajectory{ID: &traceID}                                      // 无 RootStep → IsValid()=false, 触发重试
-	complete := &entity.Trajectory{ID: &traceID, RootStep: &kitextrajectory.RootStep{}} // 第三次抽到完整
+	complete := &entity.Trajectory{ID: &traceID, RootStep: &kitextrajectory.RootStep{}} // 最后一次抽到完整
 
 	lastRemainingCh := make(chan time.Duration, 1)
 	call := 0
@@ -1614,7 +1644,9 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_TrajectoryBudgetCoversAllAtte
 		evalTargetRepo:    repo,
 		trajectoryAdapter: trajectoryAdapter,
 		configer:          configer,
-		// 用默认 retryInterval(1s), 贴近生产: (attempts-1)*retryInterval=2s。
+		// 用毫秒级 retryInterval 把重试等待压到可忽略: 本测试只验"工作预算覆盖 attempts 次 RPC",
+		// 与重试间隔长短无关; 用生产默认(10s)会让 UT 空等数十秒。
+		trajectoryRetryInterval: time.Millisecond,
 	}
 
 	err := svc.ReportInvokeRecords(requestCtx, param)

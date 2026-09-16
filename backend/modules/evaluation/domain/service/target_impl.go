@@ -69,8 +69,12 @@ const defaultSandboxDestroyRetryBudget = 10 * time.Second
 const trajectoryStartTimeBufferMS = int64(60 * 1000)
 
 const (
-	trajectoryExtractAttempts      = 3
-	defaultTrajectoryRetryInterval = time.Second
+	// trajectoryExtractAttempts / defaultTrajectoryRetryInterval 决定抽取轨迹时对"最终一致未就绪"的坚持窗口。
+	// observability 侧 span 落库最终一致, 顶层 root span 常在抽取发起后数十秒才可见; 在此之前 ListTrajectory
+	// 只返回 {id, agent_steps} 而 RootStep=nil, IsValid()=false。窗口过短(旧值 3 次 x 1s)会在 root span 落库前
+	// 就判 incomplete 放弃, 且不再补抽 → 轨迹永久缺失。取 6 次 x 10s(重试期 50s)覆盖实测落库延迟。
+	trajectoryExtractAttempts      = 6
+	defaultTrajectoryRetryInterval = 10 * time.Second
 	// trajectoryListPerAttemptTimeout 是单次 ListTrajectory RPC 的时间预算。计算后台抽取 ctx 总预算时
 	// 必须按 attempts 次 RPC 预留, 否则 trace 未最终一致触发多次重试时, 最后一次 RPC 会拿到近乎 0 的
 	// 剩余预算, 以 timeout=0s 立即失败并丢掉 trajectory。observability 侧实测单次约 1.5s, 取 3s 留余量。
